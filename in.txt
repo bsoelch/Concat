@@ -1,0 +1,43 @@
+DECLARE I64 A
+  ADD 
+    CONST I64 1 
+    CONST I64 1
+DECLARE I64 B
+  MULTIPLY
+    SUBTRACT
+      GET A
+      CONST I64 1
+    CONST I64 3
+    
+SET A NEG GET B
+
+IF 
+  GET A
+  
+ELIF 
+ AND2
+   GET B 
+   XOR
+     GET A
+     CONST I64 42
+
+ELSE
+
+END
+
+DECLARE I64 C 
+  CONST I64 10
+  
+WHILE 
+  GET C
+
+SET C
+  SUBTRACT 
+    GET C
+    CONST I64 1
+    
+END
+
+  
+    
+  
