@@ -29,6 +29,7 @@ typedef struct{
 }IntOrError;
 
 typedef enum{
+  OP_PRINT,
   OP_CONSTANT,
   
   OP_LOCAL_READ,
@@ -47,6 +48,10 @@ typedef enum{
   BLOCK_DO,        // do{
   BLOCK_WHILE_END, // }while( EXPR );
   BLOCK_END,       // }
+  
+  //TODO implement procedures
+  BLOCK_PROCEDURE, // id,inTypes,outTypes
+  OP_RETURN,       // types     
 }OpType;
 typedef enum{
   TYPE_UNDEFINED=-1,
@@ -54,7 +59,7 @@ typedef enum{
   TYPE_I32,
   TYPE_I64,
   TYPE_FLOAT,
-  TYPE_PTR,//TODO typed pointers
+  TYPE_PTR,//TODO typed pointers, structs, unions, procedure pointers
 }DataType;
 typedef enum{
   ADD,
@@ -108,6 +113,35 @@ SizeOrError compileOp(FILE* target,const Operation* op){
   SizeOrError r;
   size_t size=1;
   switch(op->opType){
+    case OP_PRINT:
+      fputs("printf(\"%",target);
+      switch(op->dataType){
+        case TYPE_I8:
+          fputs("\"PRIi8\"",target);
+          break;
+        case TYPE_I32:
+          fputs("\"PRIi32\"",target);
+          break;
+        case TYPE_I64:
+          fputs("\"PRIi64\"",target);
+          break;
+        case TYPE_FLOAT:
+          fputs("f",target);
+          break;
+        case TYPE_PTR:
+          fputs("p",target);
+          break;
+        default:
+          fprintf(stderr,"printing %s is not supported",typeName(op->dataType));
+          return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+      }
+      fputs("\\n\",",target);
+      r=compileOp(target,op+1);
+      if(r.isError)
+        return r;
+      fputs(");\n",target);
+      size+=r.as.size;
+      break;
     case OP_CONSTANT:
       switch(op->dataType){
         case TYPE_I8:
@@ -387,14 +421,20 @@ DataType readType(char** code,size_t* codeSize){
     return TYPE_FLOAT;
   if(wordEquals(&name,"PTR"))//TODO typed pointers
     return TYPE_PTR;
-  fprintf(stderr,"unkown type: %.*s",(int)name.length,name.chars);
+  fprintf(stderr,"unkown type name: %.*s \n",(int)name.length,name.chars);
   return TYPE_UNDEFINED;
 }
 SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
   String word=nextWord(code,codeSize);
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
-  if(wordEquals(&word,"CONST")){
+  if(wordEquals(&word,"PRINT")){
+    DataType type=readType(code,codeSize);
+    if(type==TYPE_UNDEFINED)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+    (*op)=(Operation){.opType=OP_PRINT,.dataType=type,.dataAs={.id=0}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"CONST")){
     DataType type=readType(code,codeSize);
     if(type==TYPE_UNDEFINED)
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
@@ -494,6 +534,7 @@ Program compileToOps(char* code,size_t codeSize){
   }
   return (Program){.ops=compileOps,.opCount=opCount};
 }
+//TODO typecheck program
 
 /* Copied from StackOverflow
  * fp is assumed to be non null
@@ -553,6 +594,7 @@ int main(int argc,char** argv){
 		//compile program to C
 		if(p.ops==NULL)
 		  return ERROR_SYNTAX;
+	  printf("compile %zu operations\n",p.opCount);
     FILE* out=fopen("./out.c","w");
     int err=compileToC(out,p.ops,p.opCount);
     if(err)
