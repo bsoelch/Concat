@@ -57,30 +57,66 @@ typedef enum{
 typedef enum{
   TYPECLASS_UNDEFINED,
   TYPECLASS_PRIMITIVE,
-  TYPECLASS_POINTER,//TODO typed pointers, structs, unions, procedure pointers
-  TYPECLASS_STRUCT,
+  TYPECLASS_POINTER,
+  TYPECLASS_TUPLE,
+  TYPECLASS_FLAT_TUPLE,//behaves like tuple but will not be directly used
   TYPECLASS_UNION,
   TYPECLASS_PROCEDURE,
 }TypeClass;
 typedef enum{
+  PRIMITIVE_BOOL,
   PRIMITIVE_I8,
   PRIMITIVE_I32,
   PRIMITIVE_I64,
   PRIMITIVE_FLOAT,
 }PrimitiveType;
+typedef struct CompositeType CompositeType;
+typedef CompositeType TupleType;
+typedef CompositeType UnionType;
+typedef struct ProcedureType ProcedureType;
 typedef struct DataType{
   TypeClass typeClass;
   union{
     PrimitiveType primitive;
     struct DataType* type;
-    //TODO Array{DataType} structure/union
-    //TODO 2x Array{DataType} procedure
+    CompositeType* composite;
+    TupleType* tuple;//name alias for composite
+    UnionType* unionType;//name alias for composite
+    ProcedureType* procedure;
   }typeDataAs;
 }DataType;
-DataType TYPE_UNDEFINED=(DataType){.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
-#define MAX_TYPES 1024
+#define FLAG_IS_TUPLE 1
+#define FLAG_IS_UNION 2
+#define FLAG_IS_FLAT_TUPLE 4
+struct CompositeType{
+  DataType* types;
+  int32_t id;
+  int16_t typeCount;
+  int16_t flags;
+};
+struct ProcedureType{
+  int32_t id;
+  struct DataType* inType;
+  struct DataType* outType;
+};
+
+const DataType TYPE_UNDEFINED=(DataType){.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
+
+#define MAX_TYPES  4096
+#define MAX_COMPOSITE 1024
+#define MAX_COMPOSITE_ELEMENTS 1024
+#define MAX_PROC_TYPES 1024
+
 size_t typeCount=0;
 DataType typeData[MAX_TYPES];
+int32_t compositeCount=0;
+CompositeType compositeTypes[MAX_COMPOSITE];
+//temporary buffer for construction of composite elements
+DataType compositeBuffer[MAX_COMPOSITE_ELEMENTS];
+size_t procTypeCount=0;
+ProcedureType procTypes[MAX_PROC_TYPES];
+
+
 bool typeEquals(DataType a,DataType b){
   if(a.typeClass!=b.typeClass)
     return false;
@@ -90,7 +126,11 @@ bool typeEquals(DataType a,DataType b){
     return a.typeDataAs.primitive==b.typeDataAs.primitive;
   if(a.typeClass==TYPECLASS_POINTER)
     return typeEquals(*a.typeDataAs.type,*b.typeDataAs.type);
-  //TODO compare other types
+  if(a.typeClass==TYPECLASS_TUPLE||a.typeClass==TYPECLASS_UNION)
+    return a.typeDataAs.composite->id==b.typeDataAs.composite->id;
+  if(a.typeClass==TYPECLASS_PROCEDURE)
+    return typeEquals(*a.typeDataAs.procedure->inType,*b.typeDataAs.procedure->inType)&&
+            typeEquals(*a.typeDataAs.procedure->outType,*b.typeDataAs.procedure->outType);
   return false;
 }
 DataType primitiveType(PrimitiveType id){
@@ -104,11 +144,81 @@ DataType pointerType(DataType target){
   if(typeCount+1>=MAX_TYPES){
     return TYPE_UNDEFINED;
   }
+  typeData[typeCount]=target;
   return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++}};
+}
+DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
+  if(eltCount==1)
+    return elements[0];//auto unwrap 1-element tuple/union
+  int16_t classFlag=typeClass==TYPECLASS_UNION?FLAG_IS_UNION:typeClass==TYPECLASS_FLAT_TUPLE?FLAG_IS_FLAT_TUPLE:FLAG_IS_TUPLE;
+  int64_t match=-1;
+  for(int32_t i=0;i<compositeCount;i++){
+    if(compositeTypes[i].typeCount==eltCount||(match==-1&&compositeTypes[i].typeCount>eltCount)){
+      bool isMatch=true;
+      for(int32_t a=0;a<eltCount;a++){//TODO? allow matches of sub-lists
+        if(!typeEquals(compositeTypes[i].types[a],elements[a])){
+          isMatch=false;
+          break;
+        }
+      }
+      if(!isMatch)
+        continue;
+      if(compositeTypes[i].typeCount==eltCount){
+        compositeTypes[i].flags|=classFlag;
+        return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+i};
+      }
+      match=i;
+    }
+  }
+  if(compositeCount+1>=MAX_COMPOSITE)
+    return TYPE_UNDEFINED;
+  DataType* types;
+  if(match!=-1){
+    compositeTypes[match].flags|=classFlag;
+    types=compositeTypes[match].types;
+  }else{
+    types=malloc(eltCount*sizeof(DataType));//will persist until program exits
+    memcpy(types,elements,eltCount*sizeof(DataType));
+  }
+  if(types==NULL)
+    return TYPE_UNDEFINED;
+  compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.flags=classFlag};
+  return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)}};
+}
+DataType procedureType(DataType inType,DataType outType){
+  for(size_t i=0;i<procTypeCount;i++){
+    if(typeEquals(*procTypes[i].inType,inType)&&typeEquals(*procTypes[i].outType,outType))
+      return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i}};
+  }
+  int32_t inId=-1,outId=-1;
+  for(size_t i=0;i<typeCount&&(inId==-1||outId==-1);i++){
+    if(inId==-1&&typeEquals(inType,typeData[i]))
+      inId=i;
+    if(outId==-1&&typeEquals(outType,typeData[i]))
+      outId=i;
+  }
+  if(inId==-1){
+    if(typeCount+1>=MAX_TYPES){
+      return TYPE_UNDEFINED;
+    }
+    inId=typeCount;
+    typeData[typeCount++]=inType;
+  }
+  if(outId==-1){
+    if(typeCount+1>=MAX_TYPES){
+      return TYPE_UNDEFINED;
+    }
+    outId=typeCount;
+    typeData[typeCount++]=outType;
+  }
+  procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=typeData+inId,.outType=typeData+outId};
+  return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++}};
 }
 
 const char* primitiveName(PrimitiveType t){
   switch(t){
+    case PRIMITIVE_BOOL:
+      return "bool";
     case PRIMITIVE_I8:
       return "int8_t";
     case PRIMITIVE_I32:
@@ -134,12 +244,14 @@ int printTypeName(DataType type,FILE* file){
         return i;
       j=fputs("*",file);
       return j<0?j:(i+j);
-    case TYPECLASS_STRUCT://TODO printing of composite types
-      return fputs("struct ?",file);
+    case TYPECLASS_FLAT_TUPLE:
+      return fprintf(file,"flatTuple%"PRIi32,type.typeDataAs.composite->id);
+    case TYPECLASS_TUPLE:
+      return fprintf(file,"tuple%"PRIi32,type.typeDataAs.composite->id);
     case TYPECLASS_UNION:
-      return fputs("union ?",file);
+      return fprintf(file,"union%"PRIi32,type.typeDataAs.composite->id);
     case TYPECLASS_PROCEDURE:
-      return fputs("procedure ?",file);
+      return fprintf(file,"procPtr%"PRIi32,type.typeDataAs.procedure->id);
   }
   return fprintf(file,"unknown type-class %i\n",type.typeClass);
 }
@@ -183,6 +295,9 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       switch(op->dataType.typeClass){
         case TYPECLASS_PRIMITIVE:
           switch(op->dataType.typeDataAs.primitive){
+             case PRIMITIVE_BOOL:
+              fputs("\"PRIi8\"",target);//TODO print true/false
+              break;
              case PRIMITIVE_I8:
               fputs("\"PRIi8\"",target);
               break;
@@ -224,6 +339,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
       }
       switch(op->dataType.typeDataAs.primitive){
+        case PRIMITIVE_BOOL:
         case PRIMITIVE_I8:
         case PRIMITIVE_I32:
         case PRIMITIVE_I64:
@@ -361,6 +477,44 @@ SizeOrError compileOp(FILE* target,const Operation* op){
     case BLOCK_END:
       fputs("}\n",target);
       break;
+    case BLOCK_PROCEDURE:{
+      if(op->dataType.typeClass!=TYPECLASS_PROCEDURE)
+        return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+      printTypeName(*op->dataType.typeDataAs.procedure->outType,target);
+      fprintf(target," procedure%" PRIu64" (",op->dataAs.id);
+      DataType* inType=op->dataType.typeDataAs.procedure->inType;
+      if(inType->typeClass!=TYPECLASS_FLAT_TUPLE)
+        return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+      CompositeType* inTypes=inType->typeDataAs.composite;
+      for(int32_t e=0;e<inTypes->typeCount;e++){
+        if(e>0)
+          fputs(", ",target);
+        printTypeName(inTypes->types[e],target);
+      }    
+      fputs("){\n",target);
+    }break;
+    case OP_RETURN:
+      fputs("return ",target);
+      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
+        r=compileOp(target,op+1);
+        if(r.isError)
+          return r;
+        fputs(";\n",target);
+        size+=r.as.size;
+        break;
+      }
+      fprintf(target,"(tuple%"PRIi32"){",op->dataType.typeDataAs.composite->id);
+      for(int32_t e=0;e<op->dataType.typeDataAs.composite->typeCount;e++){
+        if(e>0)
+          fputs(",",target);
+        fprintf(target,".e%"PRIi32"=",e);
+        r=compileOp(target,op+e+1);
+        if(r.isError)
+          return r;
+        size+=r.as.size;
+      }
+      fputs("};\n",target);
+      break;
     default:
       fprintf(stderr,"operation %i is not implemented\n",op->opType);
       return (SizeOrError){.isError=true,.as={.error=ERROR_UNIMPLEMENTED}};
@@ -373,6 +527,51 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount){
   fputs("#include <inttypes.h>\n",target);
   fputs("#include <string.h>\n",target);
   fputs("#include <stdbool.h>\n",target);
+  //declare composite types
+  for(int32_t i=0;i<compositeCount;i++){
+    if(compositeTypes[i].flags&FLAG_IS_TUPLE){
+      fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",i,i);
+    }//no else
+    if(compositeTypes[i].flags&FLAG_IS_UNION){
+      fprintf(target,"typedef union union%"PRIi32"Impl union%"PRIi32";\n",i,i);
+    }
+  }
+  //declare procedure pointers
+  for(size_t i=0;i<procTypeCount;i++){
+    fputs("typedef ",target);
+    printTypeName(*procTypes[i].outType,target);
+    fprintf(target," (*procPtr%zu) (",i);
+    if(procTypes[i].inType->typeClass==TYPECLASS_FLAT_TUPLE){//auto-unwrap procedure arguments
+      CompositeType* inTypes=procTypes[i].inType->typeDataAs.composite;
+      for(int32_t j=0;j<inTypes->typeCount;j++){
+        if(j>0)
+          fputs(",",target);
+        printTypeName(inTypes->types[j],target);
+      }
+    }else{
+      printTypeName(*procTypes[i].inType,target);
+    }
+    fputs(");\n",target);
+  }
+  //initialize composite types
+  for(int32_t i=0;i<compositeCount;i++){
+    bool used=false;
+    if(compositeTypes[i].flags&FLAG_IS_TUPLE){
+      fprintf(target,"struct tuple%"PRIi32"Impl{\n",i);
+      used=true;
+    }//no else
+    if(compositeTypes[i].flags&FLAG_IS_UNION){
+      fprintf(target,"union union%"PRIi32"Impl{\n",i);
+      used=true;
+    }
+    if(!used)
+      continue;
+    for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
+      printTypeName(compositeTypes[i].types[e],target);
+      fprintf(target," e%"PRIi16";\n",e);
+    }
+    fputs("};\n",target);
+  }
   fputs("int main(void){\n",target);
   SizeOrError r;
   for(size_t p=0;p<opCount;){
@@ -456,15 +655,18 @@ String nextWord(char** code,size_t* codeSize){
     (*code)[wordLength]=0;//zero terminate command
   char* wordChars=*code;
   //move code-pointer to position after word
-  (*code)+=wordLength+(wordLength<*codeSize?1:0);//do not exceed codesize
+  (*code)+=wordLength+(wordLength<*codeSize?1:0);//do not exceed code size
   (*codeSize)-=wordLength+(wordLength<*codeSize?1:0);
   return (String){.chars=wordChars,.length=wordLength};
 }
 
+DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize);//predeclare
 DataType readType(char** code,size_t* codeSize){
   String name=nextWord(code,codeSize);
   if(name.length==0)
     return TYPE_UNDEFINED;
+  if(wordEquals(&name,"BOOL"))
+    return primitiveType(PRIMITIVE_BOOL);
   if(wordEquals(&name,"I8")||wordEquals(&name,"CHAR"))
     return primitiveType(PRIMITIVE_I8);
   if(wordEquals(&name,"I32"))
@@ -479,9 +681,42 @@ DataType readType(char** code,size_t* codeSize){
       return TYPE_UNDEFINED;
     return pointerType(target);
   }
+  if(wordEquals(&name,"TUPLE")){
+    return readCompositeType(TYPECLASS_TUPLE,code,codeSize);
+  }
+  if(wordEquals(&name,"UNION")){
+    return readCompositeType(TYPECLASS_UNION,code,codeSize);
+  }
+  if(wordEquals(&name,"PROC")||wordEquals(&name,"PROCEDURE")){
+    DataType inTypes=readCompositeType(TYPECLASS_FLAT_TUPLE,code,codeSize);
+    if(typeEquals(inTypes,TYPE_UNDEFINED))
+      return TYPE_UNDEFINED;
+    DataType outType=readType(code,codeSize);
+    if(typeEquals(outType,TYPE_UNDEFINED))
+      return TYPE_UNDEFINED;
+    return procedureType(inTypes,outType);
+  }
   fprintf(stderr,"unkown type name: %.*s \n",(int)name.length,name.chars);
   return TYPE_UNDEFINED;
 }
+DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){//FIXME offset compositeBuffer when reading nested composites
+  IntOrError count=parseInt(nextWord(code,codeSize));
+  if(count.isError){
+    fprintf(stderr,"parser error %i while reading type\n",count.as.error);//TODO better error handling
+    return TYPE_UNDEFINED;
+  }
+  if(count.as.i64>MAX_COMPOSITE_ELEMENTS){
+    fprintf(stderr,"structure size %"PRIi64" exceed maximum size %"PRIi16" \n",count.as.i64,MAX_COMPOSITE_ELEMENTS);
+    return TYPE_UNDEFINED;
+  }
+  for(int16_t k=0;k<count.as.i64;k++){
+    compositeBuffer[k]=readType(code,codeSize);
+    if(typeEquals(compositeBuffer[k],TYPE_UNDEFINED))
+      return TYPE_UNDEFINED;
+  }
+  return compositeType(typeClass,compositeBuffer,count.as.i64);
+}
+
 SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
   String word=nextWord(code,codeSize);
   if(word.length==0)
@@ -505,6 +740,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     
     String constValue=nextWord(code,codeSize);
     switch(type.typeDataAs.primitive){
+      case PRIMITIVE_BOOL:
       case PRIMITIVE_I8:
       case PRIMITIVE_I32:
       case PRIMITIVE_I64:
@@ -543,7 +779,11 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     //TODO distinguish local and global declarations
     //TODO store variables by name
-    (*op)=(Operation){.opType=OP_LOCAL_DECLARE,.dataType=type,.dataAs={.id=(uint64_t)varName.chars[0]}};
+    if(type.typeClass==TYPECLASS_PROCEDURE){
+      (*op)=(Operation){.opType=BLOCK_PROCEDURE,.dataType=type,.dataAs={.id=(uint64_t)varName.chars[0]}};
+    }else{
+      (*op)=(Operation){.opType=OP_LOCAL_DECLARE,.dataType=type,.dataAs={.id=(uint64_t)varName.chars[0]}};
+    }
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ADD")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=ADD}};
@@ -580,6 +820,10 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"END")){
     (*op)=(Operation){.opType=BLOCK_END,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"RETURN")){
+    //TODO make type of return out-type of current procedure
+    (*op)=(Operation){.opType=OP_RETURN,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else{
     printf("unknown command %.*s\n",(int)word.length,word.chars);
