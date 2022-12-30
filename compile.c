@@ -53,14 +53,97 @@ typedef enum{
   BLOCK_PROCEDURE, // id,inTypes,outTypes
   OP_RETURN,       // types     
 }OpType;
+//types
 typedef enum{
-  TYPE_UNDEFINED=-1,
-  TYPE_I8=0,
-  TYPE_I32,
-  TYPE_I64,
-  TYPE_FLOAT,
-  TYPE_PTR,//TODO typed pointers, structs, unions, procedure pointers
+  TYPECLASS_UNDEFINED,
+  TYPECLASS_PRIMITIVE,
+  TYPECLASS_POINTER,//TODO typed pointers, structs, unions, procedure pointers
+  TYPECLASS_STRUCT,
+  TYPECLASS_UNION,
+  TYPECLASS_PROCEDURE,
+}TypeClass;
+typedef enum{
+  PRIMITIVE_I8,
+  PRIMITIVE_I32,
+  PRIMITIVE_I64,
+  PRIMITIVE_FLOAT,
+}PrimitiveType;
+typedef struct DataType{
+  TypeClass typeClass;
+  union{
+    PrimitiveType primitive;
+    struct DataType* type;
+    //TODO Array{DataType} structure/union
+    //TODO 2x Array{DataType} procedure
+  }typeDataAs;
 }DataType;
+DataType TYPE_UNDEFINED=(DataType){.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
+#define MAX_TYPES 1024
+size_t typeCount=0;
+DataType typeData[MAX_TYPES];
+bool typeEquals(DataType a,DataType b){
+  if(a.typeClass!=b.typeClass)
+    return false;
+  if(a.typeClass==TYPECLASS_UNDEFINED)
+    return true;//all undefined types are equal
+  if(a.typeClass==TYPECLASS_PRIMITIVE)
+    return a.typeDataAs.primitive==b.typeDataAs.primitive;
+  if(a.typeClass==TYPECLASS_POINTER)
+    return typeEquals(*a.typeDataAs.type,*b.typeDataAs.type);
+  //TODO compare other types
+  return false;
+}
+DataType primitiveType(PrimitiveType id){
+  return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id}};
+}
+DataType pointerType(DataType target){
+  for(size_t i=0;i<typeCount;i++){
+    if(typeEquals(target,typeData[i]))
+      return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+i}};
+  }
+  if(typeCount+1>=MAX_TYPES){
+    return TYPE_UNDEFINED;
+  }
+  return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++}};
+}
+
+const char* primitiveName(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+      return "int8_t";
+    case PRIMITIVE_I32:
+      return "int32_t";
+    case PRIMITIVE_I64:
+      return "int64_t";
+    case PRIMITIVE_FLOAT:
+      return "double";
+  }
+  fprintf(stderr,"unexpected primitive type %i",t);
+  return "";
+}
+int printTypeName(DataType type,FILE* file){
+  int i,j;
+  switch(type.typeClass){
+    case TYPECLASS_UNDEFINED:
+      return fputs("void",file);
+    case TYPECLASS_PRIMITIVE:
+      return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
+    case TYPECLASS_POINTER:
+      i=printTypeName(*type.typeDataAs.type,file);
+      if(i<0)
+        return i;
+      j=fputs("*",file);
+      return j<0?j:(i+j);
+    case TYPECLASS_STRUCT://TODO printing of composite types
+      return fputs("struct ?",file);
+    case TYPECLASS_UNION:
+      return fputs("union ?",file);
+    case TYPECLASS_PROCEDURE:
+      return fputs("procedure ?",file);
+  }
+  return fprintf(file,"unknown type-class %i\n",type.typeClass);
+}
+//operators
 typedef enum{
   ADD,
   SUBTRACT,
@@ -90,24 +173,6 @@ typedef struct{
   }dataAs;
 }Operation;
 
-const char* typeName(const DataType t){
-  switch(t){
-    case TYPE_UNDEFINED:
-      return "void";
-    case TYPE_I8:
-      return "int8_t";
-    case TYPE_I32:
-      return "int32_t";
-    case TYPE_I64:
-      return "int64_t";
-    case TYPE_FLOAT:
-      return "double";
-    case TYPE_PTR:
-      return "void*";
-  }
-  fprintf(stderr,"unexpected type %i",t);
-  return "";
-}
 
 SizeOrError compileOp(FILE* target,const Operation* op){
   SizeOrError r;
@@ -115,24 +180,33 @@ SizeOrError compileOp(FILE* target,const Operation* op){
   switch(op->opType){
     case OP_PRINT:
       fputs("printf(\"%",target);
-      switch(op->dataType){
-        case TYPE_I8:
-          fputs("\"PRIi8\"",target);
+      switch(op->dataType.typeClass){
+        case TYPECLASS_PRIMITIVE:
+          switch(op->dataType.typeDataAs.primitive){
+             case PRIMITIVE_I8:
+              fputs("\"PRIi8\"",target);
+              break;
+            case PRIMITIVE_I32:
+              fputs("\"PRIi32\"",target);
+              break;
+            case PRIMITIVE_I64:
+              fputs("\"PRIi64\"",target);
+              break;
+            case PRIMITIVE_FLOAT:
+              fputs("f",target);
+              break;
+            default:
+              fprintf(stderr,"printing primitive Type %s is not supported\n",primitiveName(op->dataType.typeDataAs.primitive));
+              return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+          }
           break;
-        case TYPE_I32:
-          fputs("\"PRIi32\"",target);
-          break;
-        case TYPE_I64:
-          fputs("\"PRIi64\"",target);
-          break;
-        case TYPE_FLOAT:
-          fputs("f",target);
-          break;
-        case TYPE_PTR:
+        case TYPECLASS_POINTER:
           fputs("p",target);
           break;
         default:
-          fprintf(stderr,"printing %s is not supported",typeName(op->dataType));
+          fputs("printing values of type ",stderr);
+          printTypeName(op->dataType,stderr);
+          fputs(" is (currently) not supported\n",stderr);
           return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
       }
       fputs("\\n\",",target);
@@ -143,14 +217,20 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       size+=r.as.size;
       break;
     case OP_CONSTANT:
-      switch(op->dataType){
-        case TYPE_I8:
-        case TYPE_I32:
-        case TYPE_I64:
-          fprintf(target,"((%s)%" PRIu64 ")",typeName(op->dataType),op->dataAs.i64);
+      if(op->dataType.typeClass!=TYPECLASS_PRIMITIVE){
+          fputs("constants of non-primitive type ",stderr);
+          printTypeName(op->dataType,stderr);
+          fputs(" are not supported\n",stderr);
+          return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+      }
+      switch(op->dataType.typeDataAs.primitive){
+        case PRIMITIVE_I8:
+        case PRIMITIVE_I32:
+        case PRIMITIVE_I64:
+          fprintf(target,"((%s)%" PRIu64 ")",primitiveName(op->dataType.typeDataAs.primitive),op->dataAs.i64);
           break;
         default:
-          fprintf(stderr,"%s constants are (currently) not supported",typeName(op->dataType));
+          fprintf(stderr,"%s constants are (currently) not supported",primitiveName(op->dataType.typeDataAs.primitive));
           return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
       }
       break;
@@ -166,7 +246,8 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       size+=r.as.size;
       break;
     case OP_LOCAL_DECLARE:
-      fprintf(target,"%s local%" PRIu64 " = ",typeName(op->dataType),op->dataAs.id);
+      printTypeName(op->dataType,target);
+      fprintf(target," local%" PRIu64 " = ",op->dataAs.id);
       r=compileOp(target,op+1);
       if(r.isError)
         return r;
@@ -305,33 +386,6 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount){
   return 0;
 }
 
-#define OPS_LENGTH 23
-Operation ops[OPS_LENGTH]={
-  {.opType=OP_LOCAL_DECLARE,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=OP_BINARY_OPERATOR,.dataType=TYPE_I64,.dataAs={.binOp=ADD}},
-  {.opType=OP_CONSTANT,.dataType=TYPE_I64,.dataAs={.i64=1}},
-  {.opType=OP_CONSTANT,.dataType=TYPE_I64,.dataAs={.i64=1}},
-  {.opType=OP_LOCAL_DECLARE,.dataType=TYPE_I64,.dataAs={.id=1}},
-  {.opType=OP_BINARY_OPERATOR,.dataType=TYPE_I64,.dataAs={.binOp=MULTIPLY}},
-  {.opType=OP_BINARY_OPERATOR,.dataType=TYPE_I64,.dataAs={.binOp=SUBTRACT}},
-  {.opType=OP_LOCAL_READ,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=OP_CONSTANT,.dataType=TYPE_I64,.dataAs={.i64=2}},
-  {.opType=OP_CONSTANT,.dataType=TYPE_I64,.dataAs={.i64=3}},
-  {.opType=OP_LOCAL_ASSIGN,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=OP_UNARY_PREFIX,.dataType=TYPE_I64,.dataAs={.unOp=NEGATE}},
-  {.opType=OP_LOCAL_READ,.dataType=TYPE_I64,.dataAs={.id=1}},
-  {.opType=BLOCK_IF,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=OP_LOCAL_READ,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=BLOCK_ELIF,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=OP_BINARY_OPERATOR,.dataType=TYPE_I64,.dataAs={.binOp=FAST_AND}},
-  {.opType=OP_LOCAL_READ,.dataType=TYPE_I64,.dataAs={.id=1}},
-  {.opType=OP_BINARY_OPERATOR,.dataType=TYPE_I64,.dataAs={.binOp=XOR}},
-  {.opType=OP_LOCAL_READ,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=OP_CONSTANT,.dataType=TYPE_I64,.dataAs={.i64=42}},
-  {.opType=BLOCK_ELSE,.dataType=TYPE_I64,.dataAs={.id=0}},
-  {.opType=BLOCK_END,.dataType=TYPE_I64,.dataAs={.id=0}},
-};
-
 typedef struct{
   Operation* ops;
   size_t opCount;
@@ -412,15 +466,19 @@ DataType readType(char** code,size_t* codeSize){
   if(name.length==0)
     return TYPE_UNDEFINED;
   if(wordEquals(&name,"I8")||wordEquals(&name,"CHAR"))
-    return TYPE_I8;
+    return primitiveType(PRIMITIVE_I8);
   if(wordEquals(&name,"I32"))
-    return TYPE_I32;
+    return primitiveType(PRIMITIVE_I32);
   if(wordEquals(&name,"I64"))
-    return TYPE_I64;
+    return primitiveType(PRIMITIVE_I64);
   if(wordEquals(&name,"FLOAT"))
-    return TYPE_FLOAT;
-  if(wordEquals(&name,"PTR"))//TODO typed pointers
-    return TYPE_PTR;
+    return primitiveType(PRIMITIVE_FLOAT);
+  if(wordEquals(&name,"PTR")){
+    DataType target=readType(code,codeSize);
+    if(typeEquals(target,TYPE_UNDEFINED))
+      return TYPE_UNDEFINED;
+    return pointerType(target);
+  }
   fprintf(stderr,"unkown type name: %.*s \n",(int)name.length,name.chars);
   return TYPE_UNDEFINED;
 }
@@ -430,19 +488,26 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     return (SizeOrError){.isError=false,.as={.size=0}};
   if(wordEquals(&word,"PRINT")){
     DataType type=readType(code,codeSize);
-    if(type==TYPE_UNDEFINED)
+    if(typeEquals(type,TYPE_UNDEFINED))
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
     (*op)=(Operation){.opType=OP_PRINT,.dataType=type,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"CONST")){
     DataType type=readType(code,codeSize);
-    if(type==TYPE_UNDEFINED)
+    if(typeEquals(type,TYPE_UNDEFINED))
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+    if(type.typeClass!=TYPECLASS_PRIMITIVE){
+      fputs("constants of non-primitive type ",stderr);
+      printTypeName(type,stderr);
+      fputs(" are not supported \n",stderr);
+      return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+    }
+    
     String constValue=nextWord(code,codeSize);
-    switch(type){
-      case TYPE_I8:
-      case TYPE_I32:
-      case TYPE_I64:
+    switch(type.typeDataAs.primitive){
+      case PRIMITIVE_I8:
+      case PRIMITIVE_I32:
+      case PRIMITIVE_I64:
         IntOrError val=parseInt(constValue);
         if(val.isError){
           printf("cannot parse \"%.*s\" to an integer \n",(int)constValue.length,constValue.chars);
@@ -451,7 +516,8 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
         (*op)=(Operation){.opType=OP_CONSTANT,.dataType=type,.dataAs={.i64=val.as.i64}};
         return (SizeOrError){.isError=false,.as={.size=1}};
       default:
-        printf("constants of type %s (currently) not supported \n",typeName(type));
+        fprintf(stderr,"constants of type %s are currently not supported",primitiveName(type.typeDataAs.primitive));
+        return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
     }
     return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
   }else if(wordEquals(&word,"GET")){
@@ -470,7 +536,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"DECLARE")){
     DataType type=readType(code,codeSize);
-    if(type==TYPE_UNDEFINED)
+    if(typeEquals(type,TYPE_UNDEFINED))
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
     String varName=nextWord(code,codeSize);
     if(varName.length==0)
@@ -560,12 +626,8 @@ int main(int argc,char** argv){
   int64_t codeSize;
   path=*(argv++);
   if(*argv==NULL){
-    FILE* out=fopen("./out.c","w");
-    int err=compileToC(out,ops,OPS_LENGTH);
-    if(err)
-      fprintf(stderr,"error %i\n",err);
-    fclose(out);
-    return err;
+    printf("usage: inputFile");
+    return 0;
   }
   srcFile=*(argv++);
   FILE *file = fopen(srcFile, "r");
