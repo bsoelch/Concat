@@ -12,6 +12,7 @@
 #define ERROR_TYPE 1
 #define ERROR_SYNTAX 2
 #define ERROR_PARSE_INT 3
+#define ERROR_REDECLARATION 4
 
 typedef struct{
   bool isError;
@@ -27,6 +28,20 @@ typedef struct{
     int    error;
   }as;
 }IntOrError;
+typedef struct{
+  char* chars;
+  size_t length;
+}String;
+int stringCompare(String a,String b){
+  return strncmp(a.chars,b.chars,a.length<b.length?a.length:b.length);
+}
+int32_t stringHash(String s){
+  int32_t hash=0;
+  for(size_t i=0;i<s.length;i++){
+    hash=31*hash+s.chars[i];
+  }
+  return hash;
+}
 
 typedef enum{
   OP_PRINT,
@@ -49,7 +64,6 @@ typedef enum{
   BLOCK_WHILE_END, // }while( EXPR );
   BLOCK_END,       // }
   
-  //TODO implement procedures
   BLOCK_PROCEDURE, // id,inTypes,outTypes
   OP_RETURN,       // types     
 }OpType;
@@ -111,10 +125,11 @@ size_t typeCount=0;
 DataType typeData[MAX_TYPES];
 int32_t compositeCount=0;
 CompositeType compositeTypes[MAX_COMPOSITE];
-//temporary buffer for construction of composite elements
-DataType compositeBuffer[MAX_COMPOSITE_ELEMENTS];
 size_t procTypeCount=0;
 ProcedureType procTypes[MAX_PROC_TYPES];
+//temporary buffer for construction of composite elements
+int64_t bufferOffset=0;
+DataType compositeBuffer[MAX_COMPOSITE_ELEMENTS];
 
 
 bool typeEquals(DataType a,DataType b){
@@ -267,11 +282,19 @@ typedef enum{
   XOR,
   FAST_AND,
   FAST_OR,
+  GT,
+  GE,
+  EQ,
+  NE,
+  LE,
+  LT,
 }BinaryOperator;
 typedef enum{
   NEGATE,
   INCREMENT,
   DECREMENT,
+  NOT,
+  FLIP,
 }UnaryOperator;
 
 typedef struct{
@@ -292,11 +315,13 @@ SizeOrError compileOp(FILE* target,const Operation* op){
   switch(op->opType){
     case OP_PRINT:
       fputs("printf(\"%",target);
+      bool boolMode=false;
       switch(op->dataType.typeClass){
         case TYPECLASS_PRIMITIVE:
           switch(op->dataType.typeDataAs.primitive){
              case PRIMITIVE_BOOL:
-              fputs("\"PRIi8\"",target);//TODO print true/false
+              fputs("s",target);
+              boolMode=true;
               break;
              case PRIMITIVE_I8:
               fputs("\"PRIi8\"",target);
@@ -328,6 +353,9 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       r=compileOp(target,op+1);
       if(r.isError)
         return r;
+      if(boolMode){
+        fputs("?\"true\":\"false\"",target);
+      }
       fputs(");\n",target);
       size+=r.as.size;
       break;
@@ -382,6 +410,12 @@ SizeOrError compileOp(FILE* target,const Operation* op){
         case DECREMENT:
           fputs("--",target);
           break;
+        case NOT:
+          fputs("!",target);
+          break;
+        case FLIP:
+          fputs("~",target);
+          break;
       }
       r=compileOp(target,op+size);
       if(r.isError)
@@ -425,6 +459,24 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           break;
         case FAST_OR:
           fputs("||",target);
+          break;
+        case GT:
+          fputs(">",target);
+          break;
+        case GE:
+          fputs(">=",target);
+          break;
+        case EQ:
+          fputs("==",target);
+          break;
+        case NE:
+          fputs("!=",target);
+          break;
+        case LE:
+          fputs("<=",target);
+          break;
+        case LT:
+          fputs("<",target);
           break;
       }
       r=compileOp(target,op+size);
@@ -585,11 +637,102 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount){
   return 0;
 }
 
+#define SCOPE_NODE_CAP 8192
+#define SCOPE_CAP 256
+#define SCOPE_MAP_CAP 1024
+typedef struct ScopeNode ScopeNode;
+struct ScopeNode{
+  String key;
+  int32_t id;
+  int32_t identifierType;
+  ScopeNode* next;
+};
+typedef struct Scope{
+  ScopeNode** nodes;
+  
+  size_t nodeBufferOffset;
+  struct Scope* parent;
+}Scope;
+ScopeNode scopeNodeBuffer [SCOPE_NODE_CAP];
+size_t scopeNodeCount=0;
+Scope scopeBuffer [SCOPE_CAP];
+size_t scopeCount=0;
+ScopeNode* allocScopeNode(){
+  if(scopeNodeCount+1>=SCOPE_NODE_CAP){
+    fprintf(stderr,"exceeded maximum allowed number of variables %i",SCOPE_NODE_CAP);
+    return NULL;
+  }
+  return scopeNodeBuffer+(scopeNodeCount++);
+}
+Scope* openScope(){
+  if(scopeCount+1>=SCOPE_CAP){
+    fprintf(stderr,"exceeded maximum allowed number of nested scopes %i",SCOPE_CAP);
+    return NULL;
+  }
+  scopeBuffer[scopeCount].nodes=malloc(SCOPE_MAP_CAP*sizeof(ScopeNode*));
+  scopeBuffer[scopeCount].nodeBufferOffset=0;
+  scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
+  return scopeBuffer+(scopeCount++);
+}
+void closeScope(){
+  if(scopeCount>0)
+  scopeCount--;
+  free(scopeBuffer[scopeCount].nodes);
+  scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
+}
+ScopeNode** findNode(Scope* scope,String name){
+  if(scope==NULL)
+    return NULL;
+  int32_t hash=stringHash(name);
+  ScopeNode** node=scope->nodes+(hash%SCOPE_MAP_CAP);
+  while(*node!=NULL){
+    if(stringCompare((*node)->key,name)==0)
+      return node;
+    node=&((*node)->next);
+  }
+  return node;
+}
+int declareIdentifier(String name,int32_t identifierType,ScopeNode** out){
+  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),name);
+  if(node==NULL)
+    return ERROR_MEMORY;
+  if(*node!=NULL)
+    return ERROR_REDECLARATION;
+  //TODO check for shadowed variable
+  *node=allocScopeNode();
+  if(*node==NULL)
+    return ERROR_MEMORY;
+  (*node)->key=name;
+  (*node)->identifierType=identifierType;
+  (*node)->id=scopeNodeCount;
+  (*node)->next=NULL;
+  *out=*node;
+  return 0;
+}
+int getIdentifier(String name,ScopeNode** out){
+  int32_t level=scopeCount-1;
+  ScopeNode** node;
+  *out=NULL;
+  while(level>=0){
+    node=findNode(scopeBuffer+level,name);
+    if(node==NULL)
+      return ERROR_MEMORY;
+    if(*node!=NULL){
+      *out=*node;
+      return 0;
+    }
+    level--;
+  }
+  return ERROR_SYNTAX;
+}
+
 typedef struct{
   Operation* ops;
   size_t opCount;
-  //TODO variable info
+  Scope* globalScope;
 }Program;
+
+
 
 void skipWhitespaces(char** code,size_t* codeSize){
   while(*codeSize>0&&((**code)==0||isspace(**code))){
@@ -597,10 +740,6 @@ void skipWhitespaces(char** code,size_t* codeSize){
     (*code)++;
   }
 }
-typedef struct{
-  char* chars;
-  size_t length;
-}String;
 bool wordEquals(const String* word,const char* string){
   return strncasecmp(word->chars,string,word->length)==0;
 }
@@ -699,22 +838,26 @@ DataType readType(char** code,size_t* codeSize){
   fprintf(stderr,"unkown type name: %.*s \n",(int)name.length,name.chars);
   return TYPE_UNDEFINED;
 }
-DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){//FIXME offset compositeBuffer when reading nested composites
+DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){
   IntOrError count=parseInt(nextWord(code,codeSize));
   if(count.isError){
     fprintf(stderr,"parser error %i while reading type\n",count.as.error);//TODO better error handling
     return TYPE_UNDEFINED;
   }
-  if(count.as.i64>MAX_COMPOSITE_ELEMENTS){
+  if(count.as.i64>MAX_COMPOSITE_ELEMENTS-bufferOffset){
     fprintf(stderr,"structure size %"PRIi64" exceed maximum size %"PRIi16" \n",count.as.i64,MAX_COMPOSITE_ELEMENTS);
     return TYPE_UNDEFINED;
   }
-  for(int16_t k=0;k<count.as.i64;k++){
-    compositeBuffer[k]=readType(code,codeSize);
-    if(typeEquals(compositeBuffer[k],TYPE_UNDEFINED))
+  size_t initOffset=bufferOffset;
+  for(int16_t k=0;k<count.as.i64;k++,bufferOffset++){
+    compositeBuffer[bufferOffset]=readType(code,codeSize);
+    if(typeEquals(compositeBuffer[bufferOffset],TYPE_UNDEFINED)){
+      bufferOffset=initOffset;
       return TYPE_UNDEFINED;
+    }
   }
-  return compositeType(typeClass,compositeBuffer,count.as.i64);
+  bufferOffset=initOffset;
+  return compositeType(typeClass,compositeBuffer+bufferOffset,count.as.i64);
 }
 
 SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
@@ -760,15 +903,21 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     String varName=nextWord(code,codeSize);
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
-    //TODO store variables by name
-    (*op)=(Operation){.opType=OP_LOCAL_READ,.dataType=TYPE_UNDEFINED,.dataAs={.id=(uint64_t)varName.chars[0]}};
+    ScopeNode* id;
+    int r=getIdentifier(varName,&id);
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error=r}};
+    (*op)=(Operation){.opType=OP_LOCAL_READ,.dataType=TYPE_UNDEFINED,.dataAs={.id=id->id}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET")){
     String varName=nextWord(code,codeSize);
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
-    //TODO store variables by name
-    (*op)=(Operation){.opType=OP_LOCAL_ASSIGN,.dataType=TYPE_UNDEFINED,.dataAs={.id=(uint64_t)varName.chars[0]}};
+    ScopeNode* id;
+    int r=getIdentifier(varName,&id);
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error=r}};
+    (*op)=(Operation){.opType=OP_LOCAL_ASSIGN,.dataType=TYPE_UNDEFINED,.dataAs={.id=id->id}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"DECLARE")){
     DataType type=readType(code,codeSize);
@@ -778,11 +927,14 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     //TODO distinguish local and global declarations
-    //TODO store variables by name
+    ScopeNode* id;//TODO open/close scopes at block boundaries
+    int r=declareIdentifier(varName,0,&id);//TODO correct id-type
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error=r}};
     if(type.typeClass==TYPECLASS_PROCEDURE){
-      (*op)=(Operation){.opType=BLOCK_PROCEDURE,.dataType=type,.dataAs={.id=(uint64_t)varName.chars[0]}};
+      (*op)=(Operation){.opType=BLOCK_PROCEDURE,.dataType=type,.dataAs={.id=id->id}};
     }else{
-      (*op)=(Operation){.opType=OP_LOCAL_DECLARE,.dataType=type,.dataAs={.id=(uint64_t)varName.chars[0]}};
+      (*op)=(Operation){.opType=OP_LOCAL_DECLARE,.dataType=type,.dataAs={.id=id->id}};
     }
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ADD")){
@@ -833,16 +985,20 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
 }
 Program compileToOps(char* code,size_t codeSize){
   size_t opCount=0;
-  size_t opsCap=100;
+  size_t opsCap=256;
   SizeOrError r;
   Operation* compileOps=malloc(opsCap*sizeof(Operation));
+  openScope();
   while(codeSize>0){
     r=readOperation(compileOps+opCount,&code,&codeSize);
     if(r.isError)
       return (Program){.ops=NULL,.opCount=0};//TODO better error value
     opCount+=r.as.size;
+    if(opCount>=opsCap-5){
+      return (Program){.ops=NULL,.opCount=0};//TODO ensure there is enough capacity
+    }
   }
-  return (Program){.ops=compileOps,.opCount=opCount};
+  return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer};
 }
 //TODO typecheck program
 

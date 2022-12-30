@@ -44,6 +44,4 @@ SET C
     
 END
 
-  
-    
-  
+PRINT BOOL CONST BOOL 1
