@@ -47,9 +47,22 @@ typedef enum{
   OP_PRINT,
   OP_CONSTANT,
   
-  OP_LOCAL_READ,
-  OP_LOCAL_DECLARE,
-  OP_LOCAL_ASSIGN,
+  OP_DECLARE_LOCAL,
+  OP_GET_LOCAL,
+  OP_SET_LOCAL,
+  //TODO tuple operations, access to function parameters
+  //OP_GET/SET_ARG     //procedure arguments
+  //OP_GET/SET_ELEMENT //tuple elements
+  //OP_BUILD (tuple,union)
+  //OP_MULTI_DECLARE (_LOCAL) //declare multiple variables from a single tuple variable
+  /*                             C-code:
+                                    type1 name1;type2 name2;...typeN nameN;
+                                    {
+                                      tupleType tmpName=tupleExpr;
+                                      name1=tmpName.e1;name2=tmpName.e2;...nameN=tmpName.eN;
+                                    }
+  */
+  //OP_MULTI_SET     (_LOCAL) //set multiple variables from a single tuple variable
   
   OP_BINARY_OPERATOR, 
   OP_UNARY_PREFIX,  
@@ -64,8 +77,10 @@ typedef enum{
   BLOCK_WHILE_END, // }while( EXPR );
   BLOCK_END,       // }
   
-  BLOCK_PROCEDURE, // id,inTypes,outTypes
-  OP_RETURN,       // types     
+  BLOCK_PROCEDURE, 
+  OP_RETURN,       
+  OP_CALL,         // procType procId
+  ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END 
 }OpType;
 //types
 typedef enum{
@@ -78,6 +93,7 @@ typedef enum{
   TYPECLASS_PROCEDURE,
 }TypeClass;
 typedef enum{
+  PRIMITIVE_VOID,
   PRIMITIVE_BOOL,
   PRIMITIVE_I8,
   PRIMITIVE_I32,
@@ -163,6 +179,8 @@ DataType pointerType(DataType target){
   return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++}};
 }
 DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
+  if(eltCount==0)
+    return primitiveType(PRIMITIVE_VOID);//empty tuple/union -> void
   if(eltCount==1)
     return elements[0];//auto unwrap 1-element tuple/union
   int16_t classFlag=typeClass==TYPECLASS_UNION?FLAG_IS_UNION:typeClass==TYPECLASS_FLAT_TUPLE?FLAG_IS_FLAT_TUPLE:FLAG_IS_TUPLE;
@@ -232,6 +250,8 @@ DataType procedureType(DataType inType,DataType outType){
 
 const char* primitiveName(PrimitiveType t){
   switch(t){
+    case PRIMITIVE_VOID:
+      return "void";
     case PRIMITIVE_BOOL:
       return "bool";
     case PRIMITIVE_I8:
@@ -378,10 +398,10 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
       }
       break;
-    case OP_LOCAL_READ:
+    case OP_GET_LOCAL:
       fprintf(target,"local%" PRIu64,op->dataAs.id);
       break;
-    case OP_LOCAL_ASSIGN:
+    case OP_SET_LOCAL:
       fprintf(target,"local%" PRIu64" = ",op->dataAs.id);
       r=compileOp(target,op+1);
       if(r.isError)
@@ -389,7 +409,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       fputs(";\n",target);
       size+=r.as.size;
       break;
-    case OP_LOCAL_DECLARE:
+    case OP_DECLARE_LOCAL:
       printTypeName(op->dataType,target);
       fprintf(target," local%" PRIu64 " = ",op->dataAs.id);
       r=compileOp(target,op+1);
@@ -535,19 +555,29 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       printTypeName(*op->dataType.typeDataAs.procedure->outType,target);
       fprintf(target," procedure%" PRIu64" (",op->dataAs.id);
       DataType* inType=op->dataType.typeDataAs.procedure->inType;
-      if(inType->typeClass!=TYPECLASS_FLAT_TUPLE)
-        return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
-      CompositeType* inTypes=inType->typeDataAs.composite;
-      for(int32_t e=0;e<inTypes->typeCount;e++){
-        if(e>0)
-          fputs(", ",target);
-        printTypeName(inTypes->types[e],target);
-      }    
+      if(inType->typeClass==TYPECLASS_FLAT_TUPLE){
+        CompositeType* inTypes=inType->typeDataAs.composite;
+        for(int32_t e=0;e<inTypes->typeCount;e++){
+          if(e>0)
+            fputs(", ",target);
+          printTypeName(inTypes->types[e],target);
+          fprintf(target," arg%"PRIi32,e);
+        } 
+      }else if(inType->typeClass==TYPECLASS_PRIMITIVE&&inType->typeDataAs.primitive==PRIMITIVE_VOID){
+        fputs("void",target);
+      }else{
+        printTypeName(*inType,target);
+        fputs(" arg0",target);
+      }         
       fputs("){\n",target);
     }break;
     case OP_RETURN:
       fputs("return ",target);
-      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
+      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE &&op->dataType.typeClass!=TYPECLASS_TUPLE){//XXX remove check for tuple once compiler can detect types
+        if(op->dataType.typeClass==TYPECLASS_PRIMITIVE&&op->dataType.typeDataAs.primitive==PRIMITIVE_VOID){
+          fputs(";\n",target);
+          break;
+        }
         r=compileOp(target,op+1);
         if(r.isError)
           return r;
@@ -567,13 +597,41 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       }
       fputs("};\n",target);
       break;
+    case ENTRY_POINT:
+      fputs("int main(void){\n",target);
+      break;
+    case OP_CALL:
+      fprintf(target,"procedure%"PRIu64"(",op->dataAs.id);
+      DataType* in=op->dataType.typeDataAs.procedure->inType;
+      DataType* out=op->dataType.typeDataAs.procedure->outType;
+      if(in->typeClass==TYPECLASS_FLAT_TUPLE){
+        for(int32_t e=0;e<in->typeDataAs.composite->typeCount;e++){
+          if(e>0)
+            fputs(",",target);
+          r=compileOp(target,op+e+1);
+          if(r.isError)
+            return r;
+          size+=r.as.size;
+        }
+      }else if(in->typeClass!=TYPECLASS_PRIMITIVE||in->typeDataAs.primitive!=PRIMITIVE_VOID){
+        r=compileOp(target,op+1);
+        if(r.isError)
+          return r;
+        size+=r.as.size;
+      }
+      if(out->typeClass==TYPECLASS_PRIMITIVE&&out->typeDataAs.primitive==PRIMITIVE_VOID){//function without return value terminates statement
+        fputs(");\n",target);
+        break;
+      }
+      fputs(")",target);
+      break;
     default:
       fprintf(stderr,"operation %i is not implemented\n",op->opType);
       return (SizeOrError){.isError=true,.as={.error=ERROR_UNIMPLEMENTED}};
   }
   return (SizeOrError){.isError=false,.as={.size=size}};
 }
-int compileToC(FILE* target,const Operation* ops,size_t opCount){
+int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint){
   fputs("#include <stdlib.h>\n",target);
   fputs("#include <stdio.h>\n",target);
   fputs("#include <inttypes.h>\n",target);
@@ -585,7 +643,7 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount){
       fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",i,i);
     }//no else
     if(compositeTypes[i].flags&FLAG_IS_UNION){
-      fprintf(target,"typedef union union%"PRIi32"Impl union%"PRIi32";\n",i,i);
+      fprintf(target,"typedef struct union%"PRIi32"Impl union%"PRIi32";\n",i,i);
     }
   }
   //declare procedure pointers
@@ -607,24 +665,27 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount){
   }
   //initialize composite types
   for(int32_t i=0;i<compositeCount;i++){
-    bool used=false;
     if(compositeTypes[i].flags&FLAG_IS_TUPLE){
       fprintf(target,"struct tuple%"PRIi32"Impl{\n",i);
-      used=true;
+      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
+        printTypeName(compositeTypes[i].types[e],target);
+        fprintf(target," e%"PRIi16";\n",e);
+      }
+      fputs("};\n",target);
     }//no else
     if(compositeTypes[i].flags&FLAG_IS_UNION){
-      fprintf(target,"union union%"PRIi32"Impl{\n",i);
-      used=true;
+      fprintf(target,"struct union%"PRIi32"Impl{\n"
+                     "%s state;\n"
+                     "union{\n",i,primitiveName(PRIMITIVE_I32));
+      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
+        printTypeName(compositeTypes[i].types[e],target);
+        fprintf(target," e%"PRIi16";\n",e);
+      }
+      fputs("}value;\n};\n",target);
     }
-    if(!used)
-      continue;
-    for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-      printTypeName(compositeTypes[i].types[e],target);
-      fprintf(target," e%"PRIi16";\n",e);
-    }
-    fputs("};\n",target);
   }
-  fputs("int main(void){\n",target);
+  if(!hasEntryPoint)//auto-wrap programs without entry point into a main function
+    fputs("int main(void){\n",target);
   SizeOrError r;
   for(size_t p=0;p<opCount;){
     r=compileOp(target,ops+p);
@@ -632,8 +693,10 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount){
       return r.as.error;
     p+=r.as.size;
   }
-  fputs("return 0;\n",target);
-  fputs("}\n",target);
+  if(!hasEntryPoint){
+    fputs("return 0;\n",target);
+    fputs("}\n",target);
+  }
   return 0;
 }
 
@@ -644,7 +707,7 @@ typedef struct ScopeNode ScopeNode;
 struct ScopeNode{
   String key;
   int32_t id;
-  int32_t identifierType;
+  DataType type;
   ScopeNode* next;
 };
 typedef struct Scope{
@@ -670,15 +733,17 @@ Scope* openScope(){
     return NULL;
   }
   scopeBuffer[scopeCount].nodes=malloc(SCOPE_MAP_CAP*sizeof(ScopeNode*));
-  scopeBuffer[scopeCount].nodeBufferOffset=0;
+  scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
   scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
   return scopeBuffer+(scopeCount++);
 }
-void closeScope(){
-  if(scopeCount>0)
+bool closeScope(){
+  if(scopeCount<=0)
+    return false;
   scopeCount--;
   free(scopeBuffer[scopeCount].nodes);
   scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
+  return true;
 }
 ScopeNode** findNode(Scope* scope,String name){
   if(scope==NULL)
@@ -692,7 +757,7 @@ ScopeNode** findNode(Scope* scope,String name){
   }
   return node;
 }
-int declareIdentifier(String name,int32_t identifierType,ScopeNode** out){
+int declareIdentifier(String name,DataType type,ScopeNode** out){
   ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),name);
   if(node==NULL)
     return ERROR_MEMORY;
@@ -703,7 +768,7 @@ int declareIdentifier(String name,int32_t identifierType,ScopeNode** out){
   if(*node==NULL)
     return ERROR_MEMORY;
   (*node)->key=name;
-  (*node)->identifierType=identifierType;
+  (*node)->type=type;
   (*node)->id=scopeNodeCount;
   (*node)->next=NULL;
   *out=*node;
@@ -729,9 +794,19 @@ int getIdentifier(String name,ScopeNode** out){
 typedef struct{
   Operation* ops;
   size_t opCount;
+  
   Scope* globalScope;
+  bool hasEntryPoint;
 }Program;
 
+typedef struct{
+  int32_t currentProcId;
+  int32_t procScope;
+  Scope* currentScope;
+  int32_t scopeLevel;
+  
+  bool hasEntryPoint;
+}CompilerState;
 
 
 void skipWhitespaces(char** code,size_t* codeSize){
@@ -804,6 +879,8 @@ DataType readType(char** code,size_t* codeSize){
   String name=nextWord(code,codeSize);
   if(name.length==0)
     return TYPE_UNDEFINED;
+  if(wordEquals(&name,"VOID"))
+    return primitiveType(PRIMITIVE_VOID);
   if(wordEquals(&name,"BOOL"))
     return primitiveType(PRIMITIVE_BOOL);
   if(wordEquals(&name,"I8")||wordEquals(&name,"CHAR"))
@@ -860,7 +937,7 @@ DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){
   return compositeType(typeClass,compositeBuffer+bufferOffset,count.as.i64);
 }
 
-SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
+SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerState* state){
   String word=nextWord(code,codeSize);
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
@@ -907,7 +984,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     int r=getIdentifier(varName,&id);
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error=r}};
-    (*op)=(Operation){.opType=OP_LOCAL_READ,.dataType=TYPE_UNDEFINED,.dataAs={.id=id->id}};
+    (*op)=(Operation){.opType=OP_GET_LOCAL,.dataType=id->type,.dataAs={.id=id->id}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET")){
     String varName=nextWord(code,codeSize);
@@ -917,7 +994,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     int r=getIdentifier(varName,&id);
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error=r}};
-    (*op)=(Operation){.opType=OP_LOCAL_ASSIGN,.dataType=TYPE_UNDEFINED,.dataAs={.id=id->id}};
+    (*op)=(Operation){.opType=OP_SET_LOCAL,.dataType=id->type,.dataAs={.id=id->id}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"DECLARE")){
     DataType type=readType(code,codeSize);
@@ -927,14 +1004,26 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     //TODO distinguish local and global declarations
-    ScopeNode* id;//TODO open/close scopes at block boundaries
-    int r=declareIdentifier(varName,0,&id);//TODO correct id-type
+    ScopeNode* id;
+    int r=declareIdentifier(varName,type,&id);
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error=r}};
     if(type.typeClass==TYPECLASS_PROCEDURE){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.length,varName.chars);
+        return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
+      }
+      Scope* newScope=openScope();
+      if(newScope==NULL)
+        return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+      state->currentScope=newScope;
+      state->scopeLevel++;
+      state->procScope=state->scopeLevel;
+      state->currentProcId=type.typeDataAs.procedure->id;
+            
       (*op)=(Operation){.opType=BLOCK_PROCEDURE,.dataType=type,.dataAs={.id=id->id}};
     }else{
-      (*op)=(Operation){.opType=OP_LOCAL_DECLARE,.dataType=type,.dataAs={.id=id->id}};
+      (*op)=(Operation){.opType=OP_DECLARE_LOCAL,.dataType=type,.dataAs={.id=id->id}};
     }
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ADD")){
@@ -959,26 +1048,87 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize){
     (*op)=(Operation){.opType=OP_UNARY_PREFIX,.dataType=TYPE_UNDEFINED,.dataAs={.unOp=NEGATE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"IF")){
+    Scope* newScope=openScope();
+    if(newScope==NULL)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    
     (*op)=(Operation){.opType=BLOCK_IF,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ELIF")){
+    closeScope();
+    Scope* newScope=openScope();
+    if(newScope==NULL)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+    state->currentScope=newScope;
+    
     (*op)=(Operation){.opType=BLOCK_ELIF,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"WHILE")){
+    Scope* newScope=openScope();
+    if(newScope==NULL)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    
     (*op)=(Operation){.opType=BLOCK_WHILE,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ELSE")){
+    closeScope();
+    Scope* newScope=openScope();
+    if(newScope==NULL)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+    state->currentScope=newScope;
+    
     (*op)=(Operation){.opType=BLOCK_ELSE,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"END")){
+    closeScope();
+    state->scopeLevel--;
+    if(state->scopeLevel<state->procScope){//exited procedure
+      state->currentProcId=-1;
+      state->procScope=-1;
+    }
+    
     (*op)=(Operation){.opType=BLOCK_END,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"RETURN")){
-    //TODO make type of return out-type of current procedure
-    (*op)=(Operation){.opType=OP_RETURN,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
+    if(state->currentProcId<0){
+      fputs("unexpected return statement\n",stderr);
+    }
+    
+    
+    (*op)=(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.dataAs={.id=0}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"CALL")){
+    String procName=nextWord(code,codeSize);
+    if(procName.length==0)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
+    ScopeNode* id;
+    int r=getIdentifier(procName,&id);
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error=r}};
+    if(id->type.typeClass!=TYPECLASS_PROCEDURE)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+    (*op)=(Operation){.opType=OP_CALL,.dataType=id->type,.dataAs={.id=id->id}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"START")){
+    if(state->hasEntryPoint){
+      fputs("program can only have one entry point",stderr);
+      return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
+    }
+    Scope* newScope=openScope();
+    if(newScope==NULL)
+      return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    
+    state->hasEntryPoint=true;
+    (*op)=(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.dataAs={.id=0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else{
-    printf("unknown command %.*s\n",(int)word.length,word.chars);
+    fprintf(stderr,"unknown command %.*s\n",(int)word.length,word.chars);
     return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
   }
   return (SizeOrError){.isError=false,.as={.size=0}};
@@ -989,8 +1139,9 @@ Program compileToOps(char* code,size_t codeSize){
   SizeOrError r;
   Operation* compileOps=malloc(opsCap*sizeof(Operation));
   openScope();
+  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false};
   while(codeSize>0){
-    r=readOperation(compileOps+opCount,&code,&codeSize);
+    r=readOperation(compileOps+opCount,&code,&codeSize,&state);
     if(r.isError)
       return (Program){.ops=NULL,.opCount=0};//TODO better error value
     opCount+=r.as.size;
@@ -998,7 +1149,7 @@ Program compileToOps(char* code,size_t codeSize){
       return (Program){.ops=NULL,.opCount=0};//TODO ensure there is enough capacity
     }
   }
-  return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer};
+  return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint};
 }
 //TODO typecheck program
 
@@ -1058,7 +1209,7 @@ int main(int argc,char** argv){
 		  return ERROR_SYNTAX;
 	  printf("compile %zu operations\n",p.opCount);
     FILE* out=fopen("./out.c","w");
-    int err=compileToC(out,p.ops,p.opCount);
+    int err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint);
     if(err)
       fprintf(stderr,"error %i\n",err);
     fclose(out);
