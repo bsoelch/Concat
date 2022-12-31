@@ -5,14 +5,18 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+//errors in C code -> negative values
 #define ERROR_MEMORY -1
 #define ERROR_IO -2
 #define ERROR_UNIMPLEMENTED -3
-
+//errors in compiled code -> positive values
 #define ERROR_TYPE 1
-#define ERROR_SYNTAX 2
+//TODO split into less general errors
+#define ERROR_SYNTAX 2 
 #define ERROR_PARSE_INT 3
 #define ERROR_REDECLARATION 4
+//maximum integer value of any error constant
+#define MAX_ERROR 5
 
 typedef struct{
   bool isError;
@@ -51,7 +55,7 @@ typedef enum{
   OP_GET,
   OP_SET,
   //TODO tuple operations, access to function parameters
-  //OP_SET_AT *(EXPR1)=EXPR2
+  //ADDR_OF (pointer to given value)
   //OP_BUILD (tuple,union)
   //OP_MULTI_DECLARE //declare multiple variables from a single tuple variable
   /*                             C-code:
@@ -79,7 +83,6 @@ typedef enum{
   BLOCK_PROCEDURE, 
   OP_RETURN,       
   OP_CALL,         // procType procId
-  //TODO OP_CALL_EXPR // CALL_EXPR EXPR ARGS
   ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END 
 }OpType;
 //types
@@ -321,8 +324,9 @@ typedef enum{
   ID_GLOBAL_VAR,
   ID_ARGUMENT,
   ID_PROCEDURE,
-  ID_TUPLE_ELEMENT
+  ID_TUPLE_ELEMENT,
   //TODO GET/SET for union values
+  ID_POINTER
 }IdentiferType;
 typedef struct{
   int32_t id;
@@ -433,6 +437,11 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           //2. get element
           fprintf(target,").e%" PRIi32,op->dataAs.idInfo.id);
           break;
+        case ID_POINTER:
+          fputs("*((",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fprintf(target,")+%"PRIi32")",op->dataAs.idInfo.id);
+          break;
       }
       break;
     case OP_SET:
@@ -456,6 +465,11 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           //2. set element
           fprintf(target,").e%" PRIi32" = ",op->dataAs.idInfo.id);
           break;
+        case ID_POINTER:
+          fputs("*((",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fprintf(target,")+%"PRIi32") = ",op->dataAs.idInfo.id);
+          break;
       }
       COMPILE_OP_RETURN_ERROR(target,op);
       fputs(";\n",target);
@@ -477,6 +491,9 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
         case ID_TUPLE_ELEMENT:
           fputs("cannot declare tuple elements",stderr);
+          return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
+        case ID_POINTER:
+          fputs("cannot declare pointers",stderr);
           return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
       }
       COMPILE_OP_RETURN_ERROR(target,op);
@@ -507,7 +524,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
     case OP_BINARY_OPERATOR:
       fputs("(",target);
       COMPILE_OP_RETURN_ERROR(target,op);
-      switch(op->dataAs.binOp){//TODO? use array instead
+      switch(op->dataAs.binOp){//TODO? use array/map instead
         case ADD:
           fputs("+",target);
           break;
@@ -616,7 +633,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
     }break;
     case OP_RETURN:
       fputs("return ",target);
-      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE &&op->dataType.typeClass!=TYPECLASS_TUPLE){//XXX remove check for tuple once compiler can detect types
+      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE &&op->dataType.typeClass!=TYPECLASS_TUPLE){//TODO remove check for tuple once compiler can detect types
         if(op->dataType.typeClass==TYPECLASS_PRIMITIVE&&op->dataType.typeDataAs.primitive==PRIMITIVE_VOID){
           fputs(";\n",target);
           break;
@@ -657,6 +674,11 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           COMPILE_OP_RETURN_ERROR(target,op);
           //2. call element
           fprintf(target,".e%"PRIi32"(",op->dataAs.idInfo.id);
+          break;
+        case ID_POINTER:
+          fputs("*((",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fprintf(target,")+%"PRIi32")(",op->dataAs.idInfo.id);
           break;
       }
       DataType* in=op->dataType.typeDataAs.procedure->inType;
@@ -912,9 +934,58 @@ IntOrError parseInt(String number){
   }
   return (IntOrError){.isError=false,.as={.i64=negate?-value:value}};
 }
-
-String nextWord(char** code,size_t* codeSize){
+String readStringLiteral(char** code,size_t* codeSize,char end,bool doEspaceSeqs,int* errorFlag){
+  if(*codeSize<1){
+    *errorFlag=ERROR_SYNTAX;
+    return (String){.chars=*code,.length=0};
+  }
+  //skip first char
+  (*code)++;
+  (*codeSize)--;
+  size_t wordLength=0;
+  while(wordLength<*codeSize&&(*code)[wordLength]!=end){
+    if(doEspaceSeqs&&(*code)[wordLength]=='\\'){//escaped characters
+      if(wordLength+1>=*codeSize){
+        *errorFlag=ERROR_SYNTAX;
+        return (String){.chars=*code,.length=0};
+      }
+      wordLength++;//TODO decode escape sequence
+    }
+    wordLength++;
+  }
+  if(wordLength+1>=*codeSize){
+    *errorFlag=ERROR_SYNTAX;
+    fprintf(stderr,"unfinished comment or string literal %.*s \n",(int)wordLength,*code);
+    return (String){.chars=*code,.length=0};//TODO error handling
+  }
+  if(wordLength<*codeSize)
+    (*code)[wordLength]=0;//zero terminate string
+  char* wordChars=*code;
+  //move code-pointer to position after word
+  (*code)+=wordLength+(wordLength<*codeSize?1:0);//do not exceed code size
+  (*codeSize)-=wordLength+(wordLength<*codeSize?1:0);
+  return (String){.chars=wordChars,.length=wordLength};
+}
+//constants for the wordType flag of nextWord
+//allow to determine which type of word was read
+//positive values are used to indicate syntax errors
+#define WORD_TYPE_STRING (MAX_ERROR+1)
+#define WORD_TYPE_CHAR   (MAX_ERROR+2)
+String nextWord(char** code,size_t* codeSize,int* wordType){
   skipWhitespaces(code,codeSize);
+  if(*codeSize<=0)
+    return (String){.chars=*code,.length=0};
+  if(**code=='"'){
+    if(wordType)
+      *wordType=WORD_TYPE_STRING;
+    return readStringLiteral(code,codeSize,'"',true,wordType);
+  }else if(**code=='\''){
+    if(wordType)
+      *wordType=WORD_TYPE_CHAR;
+    return readStringLiteral(code,codeSize,'\'',true,wordType);
+  }else if(**code=='#'){//TODO? inline comments, start comment with double hash
+    readStringLiteral(code,codeSize,'\n',false,wordType);//ignore everything up to next new-line
+  } 
   size_t wordLength=0;
   while(wordLength<*codeSize&&(*code)[wordLength]!=0&&!isspace((*code)[wordLength])){
     wordLength++;
@@ -930,7 +1001,7 @@ String nextWord(char** code,size_t* codeSize){
 
 DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize);//predeclare
 DataType readType(char** code,size_t* codeSize){
-  String name=nextWord(code,codeSize);
+  String name=nextWord(code,codeSize,NULL);
   if(name.length==0)
     return TYPE_UNDEFINED;
   if(wordEquals(&name,"VOID"))
@@ -966,11 +1037,11 @@ DataType readType(char** code,size_t* codeSize){
       return TYPE_UNDEFINED;
     return procedureType(inTypes,outType);
   }
-  fprintf(stderr,"unkown type name: %.*s \n",(int)name.length,name.chars);
+  fprintf(stderr,"unknown type name: %.*s \n",(int)name.length,name.chars);
   return TYPE_UNDEFINED;
 }
 DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){
-  IntOrError count=parseInt(nextWord(code,codeSize));
+  IntOrError count=parseInt(nextWord(code,codeSize,NULL));
   if(count.isError){
     fprintf(stderr,"parser error %i while reading type\n",count.as.error);//TODO better error handling
     return TYPE_UNDEFINED;
@@ -992,7 +1063,15 @@ DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){
 }
 
 SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerState* state){
-  String word=nextWord(code,codeSize);
+  int wordType=0;
+  String word=nextWord(code,codeSize,&wordType);
+  if(wordType==WORD_TYPE_STRING)//TODO handle strings and chars
+    return (SizeOrError){.isError=false,.as={.size=0}};
+  if(wordType==WORD_TYPE_CHAR)
+    return (SizeOrError){.isError=false,.as={.size=0}};
+  if(wordType!=0)
+    return (SizeOrError){.isError=true,.as={.size=wordType}};
+  
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
   if(wordEquals(&word,"PRINT")){
@@ -1012,7 +1091,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
     }
     
-    String constValue=nextWord(code,codeSize);
+    String constValue=nextWord(code,codeSize,NULL);
     switch(type.typeDataAs.primitive){
       case PRIMITIVE_BOOL:
       case PRIMITIVE_I8:
@@ -1031,7 +1110,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     }
     return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
   }else if(wordEquals(&word,"GET")){
-    String varName=nextWord(code,codeSize);
+    String varName=nextWord(code,codeSize,NULL);
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     ScopeNode* id;
@@ -1041,7 +1120,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     (*op)=(Operation){.opType=OP_GET,.dataType=id->type,.dataAs={.idInfo={.type=id->idType,.id=id->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET")){
-    String varName=nextWord(code,codeSize);
+    String varName=nextWord(code,codeSize,NULL);
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     ScopeNode* id;
@@ -1054,7 +1133,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     DataType type=readType(code,codeSize);
     if(typeEquals(type,TYPE_UNDEFINED))
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
-    String varName=nextWord(code,codeSize);
+    String varName=nextWord(code,codeSize,NULL);
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     IdentiferType idType=type.typeClass==TYPECLASS_PROCEDURE?ID_PROCEDURE:state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
@@ -1081,16 +1160,46 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     }
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"GET_ELEMENT")){
-    IntOrError index=parseInt(nextWord(code,codeSize));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET_ELEMENT")){
-    IntOrError index=parseInt(nextWord(code,codeSize));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"ARG")||wordEquals(&word,"GET_ARG")){
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    if(index.isError)
+      return (SizeOrError){.isError=true,.as={.error=index.as.error}};
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"SET_ARG")){
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    if(index.isError)
+      return (SizeOrError){.isError=true,.as={.error=index.as.error}};
+    (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"VALUE_AT")||wordEquals(&word,"GET_VALUE_AT")){
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"SET_VALUE_AT")){
+    (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"[]")){
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    if(index.isError)
+      return (SizeOrError){.isError=true,.as={.error=index.as.error}};
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=index.as.i64}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"[]=")){
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    if(index.isError)
+      return (SizeOrError){.isError=true,.as={.error=index.as.error}};
+    (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ADD")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=ADD}};
@@ -1168,7 +1277,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     (*op)=(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"CALL")){
-    String procName=nextWord(code,codeSize);
+    String procName=nextWord(code,codeSize,NULL);
     if(procName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     ScopeNode* id;
@@ -1195,7 +1304,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     (*op)=(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else{
-    fprintf(stderr,"unknown command %.*s\n",(int)word.length,word.chars);
+    fprintf(stderr,"unknown command: %.*s\n",(int)word.length,word.chars);
     return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
   }
   return (SizeOrError){.isError=false,.as={.size=0}};
@@ -1251,7 +1360,7 @@ int main(int argc,char** argv){
   FILE *file = fopen(srcFile, "r");
 	if(file!=NULL){
 		long int size=fsize(file);
-		if(size<0){//XXX recover form Undetected fileSize (if seek worked)
+		if(size<0){//TODO?? recover form undetected fileSize (if seek worked)
 			fputs("IO Error while detecting file-size\n",stderr);
 			return ERROR_IO;
 		}else{
@@ -1260,7 +1369,7 @@ int main(int argc,char** argv){
 				printf("Memory Error\n");
 				return ERROR_MEMORY;
 			}
-			codeSize=fread(code,sizeof(char),size,file);//XXX perform multiple reads if necessary
+			codeSize=fread(code,sizeof(char),size,file);//TODO perform multiple reads if necessary
 			if(codeSize<0){
 				printf("IO Error while reading file\n");
 				free(code);

@@ -59,6 +59,11 @@ START
       CONST I64 1
       
   END
-
+  
   PRINT BOOL CONST BOOL 1
 END
+
+"Strings are ignored"
+'This is a \' char'
+# Comments are now enabled
+
