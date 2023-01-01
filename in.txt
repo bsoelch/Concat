@@ -63,7 +63,8 @@ START
   PRINT BOOL CONST BOOL 1
 END
 
-"Strings are ignored"
-'This is a \' char'
+DECLARE STRING s0 "Strings are \"ignored\"  "
 # Comments are now enabled
-
+DECLARE CHAR c0 'A' 
+DECLARE STRING s1 "This is a unicode™ multi-line
+ string"

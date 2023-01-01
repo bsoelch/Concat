@@ -37,7 +37,10 @@ typedef struct{
   size_t length;
 }String;
 int stringCompare(String a,String b){
-  return strncmp(a.chars,b.chars,a.length<b.length?a.length:b.length);
+  int c=strncmp(a.chars,b.chars,a.length<b.length?a.length:b.length);
+  if(c==0&&a.length!=b.length)
+    return a.length<b.length?-1:1;
+  return c;
 }
 int32_t stringHash(String s){
   int32_t hash=0;
@@ -46,10 +49,28 @@ int32_t stringHash(String s){
   }
   return hash;
 }
+int64_t indexOfString(const String base,const String child){
+  if(child.length>base.length)
+    return -1;
+  bool isMatch;
+  for(size_t off=0;off<base.length-child.length;off++){
+    isMatch=true;
+    for(size_t i=0;i<child.length;i++){
+      if(base.chars[i+off]!=child.chars[i]){
+        isMatch=false;
+        break;
+      }
+    }
+    if(isMatch)
+      return off;
+  }
+  return -1;
+}
 
 typedef enum{
   OP_PRINT,
   OP_CONSTANT,
+  OP_STRING_CONST,
   
   OP_DECLARE,
   OP_GET,
@@ -90,6 +111,7 @@ typedef enum{
   TYPECLASS_UNDEFINED,
   TYPECLASS_PRIMITIVE,
   TYPECLASS_POINTER,
+  TYPECLASS_CONST_POINTER,
   TYPECLASS_TUPLE,
   TYPECLASS_FLAT_TUPLE,//behaves like tuple but will not be directly used
   TYPECLASS_UNION,
@@ -158,7 +180,7 @@ bool typeEquals(DataType a,DataType b){
     return true;//all undefined types are equal
   if(a.typeClass==TYPECLASS_PRIMITIVE)
     return a.typeDataAs.primitive==b.typeDataAs.primitive;
-  if(a.typeClass==TYPECLASS_POINTER)
+  if(a.typeClass==TYPECLASS_POINTER||a.typeClass==TYPECLASS_CONST_POINTER)
     return typeEquals(*a.typeDataAs.type,*b.typeDataAs.type);
   if(a.typeClass==TYPECLASS_TUPLE||a.typeClass==TYPECLASS_UNION)
     return a.typeDataAs.composite->id==b.typeDataAs.composite->id;
@@ -180,6 +202,13 @@ DataType pointerType(DataType target){
   }
   typeData[typeCount]=target;
   return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++}};
+}
+DataType constPointerType(DataType target){
+  DataType t=pointerType(target);
+  if(t.typeClass==TYPECLASS_UNDEFINED)
+    return t;
+  t.typeClass=TYPECLASS_CONST_POINTER;//otherwise identical to pointer
+  return t;
 }
 DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
   if(eltCount==0)
@@ -276,6 +305,9 @@ int printTypeName(DataType type,FILE* file){
       return fputs("void",file);
     case TYPECLASS_PRIMITIVE:
       return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
+    case TYPECLASS_CONST_POINTER:
+      fputs("const ",file); //only difference to TYPECLASS_POINTER
+      // fall through
     case TYPECLASS_POINTER:
       i=printTypeName(*type.typeDataAs.type,file);
       if(i<0)
@@ -344,6 +376,59 @@ typedef struct{
   }dataAs;
 }Operation;
 
+
+typedef struct{
+  String  value;
+  int32_t stringId;
+  int32_t charsId;
+  int32_t charsOffset;
+  bool    isBaseString;//true if this string has its own char Array, false if the chars of this string are a sub-string of a previous string
+}ProgramString;
+
+#define MAX_PROG_STRINGS 1024
+size_t progStringCount=0;
+ProgramString programStrings[MAX_PROG_STRINGS];
+
+DataType progStringType(){
+    DataType stringElts[2]={constPointerType(primitiveType(PRIMITIVE_I8)),primitiveType(PRIMITIVE_I64)};
+    return compositeType(TYPECLASS_TUPLE,stringElts,2);//ensure string-type exists
+}
+IntOrError addProgString(String s){
+  if(progStringCount+1>=MAX_PROG_STRINGS)
+    return (IntOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+  //TODO find duplicate strings
+  programStrings[progStringCount]=(ProgramString){.value=s,.stringId=progStringCount,.charsId=-1,.charsOffset=-1};
+  return (IntOrError){.isError=false,.as={.i64=progStringCount++}};
+}
+int progStringCmp(const void* a,const void* b){
+  return -stringCompare(((ProgramString*)a)->value,((ProgramString*)b)->value);
+}
+void initProgStringChars(){
+  qsort(programStrings,progStringCount,sizeof(ProgramString),&progStringCmp);
+  int32_t charId=-1,charOff=0,charIds=0;
+  bool isBaseString=true;
+  for(size_t i=0;i<progStringCount;i++){
+    isBaseString=true;
+    for(size_t j=0;j<i;j++){
+      if(programStrings[j].isBaseString){//search all previous base-strings
+         charOff=indexOfString(programStrings[j].value,programStrings[i].value);
+         if(charOff>-1){
+           charId=j;
+           isBaseString=false;
+           break;
+         }
+      }
+    }
+    if(isBaseString){
+      charId=charIds++;
+      charOff=0;
+    }
+    programStrings[i].charsId=charId;
+    programStrings[i].charsOffset=charOff;
+    programStrings[i].isBaseString=isBaseString;
+  }
+}
+
 #define COMPILE_OP_RETURN_ERROR(target, op)\
                 r=compileOp(target,op+size);\
                 if(r.isError)\
@@ -382,6 +467,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           }
           break;
         case TYPECLASS_POINTER:
+        case TYPECLASS_CONST_POINTER:
           fputs("p",target);
           break;
         default:
@@ -409,12 +495,15 @@ SizeOrError compileOp(FILE* target,const Operation* op){
         case PRIMITIVE_I8:
         case PRIMITIVE_I32:
         case PRIMITIVE_I64:
-          fprintf(target,"((%s)%" PRIu64 ")",primitiveName(op->dataType.typeDataAs.primitive),op->dataAs.i64);
+          fprintf(target,"((%s)%" PRIi64 ")",primitiveName(op->dataType.typeDataAs.primitive),op->dataAs.i64);
           break;
         default:
           fprintf(stderr,"%s constants are (currently) not supported",primitiveName(op->dataType.typeDataAs.primitive));
           return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
       }
+      break;
+    case OP_STRING_CONST:
+      fprintf(target,"(string%" PRIi64")",op->dataAs.i64);
       break;
     case OP_GET:
       switch(op->dataAs.idInfo.type){
@@ -704,12 +793,19 @@ SizeOrError compileOp(FILE* target,const Operation* op){
   }
   return (SizeOrError){.isError=false,.as={.size=size}};
 }
+
 int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint){
   fputs("#include <stdlib.h>\n",target);
   fputs("#include <stdio.h>\n",target);
   fputs("#include <inttypes.h>\n",target);
   fputs("#include <string.h>\n",target);
   fputs("#include <stdbool.h>\n",target);
+  //initialize strings
+  DataType stringType=TYPE_UNDEFINED;
+  if(progStringCount>0){
+    stringType=progStringType();//ensure string-type exists
+    initProgStringChars();//initialize characters
+  }
   //declare composite types
   for(int32_t i=0;i<compositeCount;i++){
     if(compositeTypes[i].flags&FLAG_IS_TUPLE){
@@ -757,6 +853,24 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
       fputs("}value;\n};\n",target);
     }
   }
+  //initialize strings
+  for(size_t i=0;i<progStringCount;i++){
+    if(programStrings[i].isBaseString){
+      fprintf(target,"const %s stringChars%"PRIi32"[%zu] = {",primitiveName(PRIMITIVE_I8),programStrings[i].charsId,programStrings[i].value.length);
+      for(size_t j=0;j<programStrings[i].value.length;j++){
+        if(j>0)
+          fputs(",",target);
+        if(programStrings[i].value.chars[j]<0)
+          fprintf(target,"-0x%"PRIx8,-programStrings[i].value.chars[j]);
+        else
+          fprintf(target,"0x%"PRIx8,programStrings[i].value.chars[j]);
+      }
+      fputs("};\n",target);
+    }
+    fprintf(target,"const tuple%"PRIi32" string%"PRIi32" = (tuple%"PRIi32"){.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu};\n",
+      stringType.typeDataAs.tuple->id,programStrings[i].stringId,stringType.typeDataAs.tuple->id,
+      programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
+  }
   if(!hasEntryPoint)//auto-wrap programs without entry point into a main function
     fputs("int main(void){\n",target);
   SizeOrError r;
@@ -796,14 +910,14 @@ Scope scopeBuffer [SCOPE_CAP];
 size_t scopeCount=0;
 ScopeNode* allocScopeNode(){
   if(scopeNodeCount+1>=SCOPE_NODE_CAP){
-    fprintf(stderr,"exceeded maximum allowed number of variables %i",SCOPE_NODE_CAP);
+    fprintf(stderr,"exceeded maximum allowed number of variables %i\n",SCOPE_NODE_CAP);
     return NULL;
   }
   return scopeNodeBuffer+(scopeNodeCount++);
 }
 Scope* openScope(){
   if(scopeCount+1>=SCOPE_CAP){
-    fprintf(stderr,"exceeded maximum allowed number of nested scopes %i",SCOPE_CAP);
+    fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
     return NULL;
   }
   scopeBuffer[scopeCount].nodes=malloc(SCOPE_MAP_CAP*sizeof(ScopeNode*));
@@ -866,6 +980,7 @@ int getIdentifier(String name,ScopeNode** out){
   fprintf(stderr,"cannot find identfier %.*s\n",(int)name.length,name.chars);
   return ERROR_SYNTAX;
 }
+
 
 typedef struct{
   Operation* ops;
@@ -985,17 +1100,17 @@ String nextWord(char** code,size_t* codeSize,int* wordType){
     return readStringLiteral(code,codeSize,'\'',true,wordType);
   }else if(**code=='#'){//TODO? inline comments, start comment with double hash
     readStringLiteral(code,codeSize,'\n',false,wordType);//ignore everything up to next new-line
-  } 
+    return (String){.chars=*code,.length=0};
+  }
+  char* wordChars=*code;
   size_t wordLength=0;
-  while(wordLength<*codeSize&&(*code)[wordLength]!=0&&!isspace((*code)[wordLength])){
+  while(*codeSize>0&&(**code)!=0&&!isspace(**code)){
+    (*code)++;
+    (*codeSize)--;
     wordLength++;
   }
-  if(wordLength<*codeSize)
-    (*code)[wordLength]=0;//zero terminate command
-  char* wordChars=*code;
-  //move code-pointer to position after word
-  (*code)+=wordLength+(wordLength<*codeSize?1:0);//do not exceed code size
-  (*codeSize)-=wordLength+(wordLength<*codeSize?1:0);
+  if(*codeSize>0)
+    **code=0;//zero terminate command
   return (String){.chars=wordChars,.length=wordLength};
 }
 
@@ -1016,6 +1131,8 @@ DataType readType(char** code,size_t* codeSize){
     return primitiveType(PRIMITIVE_I64);
   if(wordEquals(&name,"FLOAT"))
     return primitiveType(PRIMITIVE_FLOAT);
+  if(wordEquals(&name,"STRING"))
+    return progStringType();
   if(wordEquals(&name,"PTR")){
     DataType target=readType(code,codeSize);
     if(typeEquals(target,TYPE_UNDEFINED))
@@ -1065,12 +1182,23 @@ DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){
 SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerState* state){
   int wordType=0;
   String word=nextWord(code,codeSize,&wordType);
-  if(wordType==WORD_TYPE_STRING)//TODO handle strings and chars
-    return (SizeOrError){.isError=false,.as={.size=0}};
-  if(wordType==WORD_TYPE_CHAR)
-    return (SizeOrError){.isError=false,.as={.size=0}};
+  if(wordType==WORD_TYPE_STRING){
+    IntOrError strId=addProgString(word);
+    if(strId.isError)
+      return (SizeOrError){.isError=true,.as={.error=strId.as.error}};
+    (*op)=(Operation){.opType=OP_STRING_CONST,.dataType=TYPE_UNDEFINED,.dataAs={.i64=strId.as.i64}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }
+  if(wordType==WORD_TYPE_CHAR){
+    if(word.length!=1){//TODO? handle unicode characters
+      fprintf(stderr,"character literal '%.*s' contains more that one character\n",(int)word.length,word.chars);
+      return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
+    }
+    (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_I8),.dataAs={.i64=word.chars[0]}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }
   if(wordType!=0)
-    return (SizeOrError){.isError=true,.as={.size=wordType}};
+    return (SizeOrError){.isError=true,.as={.error=wordType}};
   
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
@@ -1285,7 +1413,8 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error=r}};
     //type has to be procedure or pointer to procedure
-    if(id->type.typeClass!=TYPECLASS_PROCEDURE&&(id->type.typeClass!=TYPECLASS_POINTER||id->type.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE))
+    if(id->type.typeClass!=TYPECLASS_PROCEDURE&&
+      ((id->type.typeClass!=TYPECLASS_POINTER&&id->type.typeClass!=TYPECLASS_CONST_POINTER)||id->type.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE))
       return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
     (*op)=(Operation){.opType=OP_CALL,.dataType=id->type,.dataAs={.idInfo={.type=id->idType,.id=id->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1353,7 +1482,7 @@ int main(int argc,char** argv){
   int64_t codeSize;
   path=*(argv++);
   if(*argv==NULL){
-    printf("usage: inputFile");
+    printf("usage: inputFile\n");
     return 0;
   }
   srcFile=*(argv++);
@@ -1364,7 +1493,7 @@ int main(int argc,char** argv){
 			fputs("IO Error while detecting file-size\n",stderr);
 			return ERROR_IO;
 		}else{
-			code = malloc((size+1)*sizeof(char));
+			code = malloc((size+1)*sizeof(char));//will be freed when the program exits
 			if(code==NULL){
 				printf("Memory Error\n");
 				return ERROR_MEMORY;
@@ -1379,7 +1508,6 @@ int main(int argc,char** argv){
 			memset(code+codeSize,0,(size+1-codeSize)*sizeof(char));//fill remaining path of file with 0
 		}
 		Program p=compileToOps(code,codeSize);
-		free(code);//code no longer needed
 		//compile program to C
 		if(p.ops==NULL)
 		  return ERROR_SYNTAX;
