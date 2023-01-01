@@ -15,8 +15,10 @@
 #define ERROR_SYNTAX 2 
 #define ERROR_PARSE_INT 3
 #define ERROR_REDECLARATION 4
+#define ERROR_UNSUPPORTED_ESCAPE_SEQUENCE 5
+#define ERROR_EOF 6 //end of file
 //maximum integer value of any error constant
-#define MAX_ERROR 5
+#define MAX_ERROR 7
 
 typedef struct{
   bool isError;
@@ -65,6 +67,61 @@ int64_t indexOfString(const String base,const String child){
       return off;
   }
   return -1;
+}
+//writes an Unicode code-point to target
+int writeUnicodeChar(int64_t codepoint,char* target){
+  if(codepoint<(1<<7)){//0 *******
+    *target=codepoint;
+    return 1;
+  }
+  if(codepoint<(1<<11)){//110 ***** 10 ******
+    *target=0xc0|(codepoint>>6);
+    *(target+1)=0x80|(codepoint&0x3f);
+    return 2;
+  }
+  if(codepoint<(1<<16)){//1110 **** 10 ****** 10 ******
+    *target=0xe0|(codepoint>>12);
+    *(target+1)=0x80|((codepoint>>6)&0x3f);
+    *(target+2)=0x80|(codepoint&0x3f);
+    return 3;
+  }
+  if(codepoint<(1<<21)){//11110 *** 10 ****** 10 ****** 10 ******
+    *target=0xf0|(codepoint>>18);
+    *(target+1)=0x80|((codepoint>>12)&0x3f);
+    *(target+2)=0x80|((codepoint>>6)&0x3f);
+    *(target+3)=0x80|(codepoint&0x3f);
+    return 4;
+  }
+  //not valid Unicode code-points but still valid sequences following the UTF-8 encoding scheme 
+  if(codepoint<(1<<26)){//111110 ** 10 ****** 10 ****** 10 ****** 10 ******
+    *target=0xf8|(codepoint>>24);
+    *(target+1)=0x80|((codepoint>>18)&0x3f);
+    *(target+2)=0x80|((codepoint>>12)&0x3f);
+    *(target+3)=0x80|((codepoint>>6)&0x3f);
+    *(target+4)=0x80|(codepoint&0x3f);
+    return 5;
+  }
+  if(codepoint<(1LL<<32)){//1111110 * 10 ****** 10 ****** 10 ****** 10 ****** 10 ******
+    *target=0xfc|(codepoint>>30);
+    *(target+1)=0x80|((codepoint>>24)&0x3f);
+    *(target+2)=0x80|((codepoint>>18)&0x3f);
+    *(target+3)=0x80|((codepoint>>12)&0x3f);
+    *(target+4)=0x80|((codepoint>>6)&0x3f);
+    *(target+5)=0x80|(codepoint&0x3f);
+    return 6;
+  }
+  if(codepoint<(1LL<<37)){//11111110 10 ****** 10 ****** 10 ****** 10 ****** 10 ****** 10 ******
+    *target=0xfe|(codepoint>>36);
+    *(target+1)=0x80|((codepoint>>30)&0x3f);
+    *(target+2)=0x80|((codepoint>>24)&0x3f);
+    *(target+3)=0x80|((codepoint>>18)&0x3f);
+    *(target+4)=0x80|((codepoint>>12)&0x3f);
+    *(target+5)=0x80|((codepoint>>6)&0x3f);
+    *(target+6)=0x80|(codepoint&0x3f);
+    return 7;
+  }
+  //invalid code-point
+  return 0;
 }
 
 typedef enum{
@@ -856,14 +913,15 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
   //initialize strings
   for(size_t i=0;i<progStringCount;i++){
     if(programStrings[i].isBaseString){
-      fprintf(target,"const %s stringChars%"PRIi32"[%zu] = {",primitiveName(PRIMITIVE_I8),programStrings[i].charsId,programStrings[i].value.length);
-      for(size_t j=0;j<programStrings[i].value.length;j++){
+      fprintf(target,"const %s stringChars%"PRIi32"[] = {",primitiveName(PRIMITIVE_I8),programStrings[i].charsId/*,programStrings[i].value.length*/);
+      String str=programStrings[i].value;
+      for(size_t j=0;j<str.length;j++){
         if(j>0)
           fputs(",",target);
-        if(programStrings[i].value.chars[j]<0)
-          fprintf(target,"-0x%"PRIx8,-programStrings[i].value.chars[j]);
+        if(str.chars[j]<0)
+          fprintf(target,"-0x%"PRIx8,-str.chars[j]);
         else
-          fprintf(target,"0x%"PRIx8,programStrings[i].value.chars[j]);
+          fprintf(target,"0x%"PRIx8,str.chars[j]);
       }
       fputs("};\n",target);
     }
@@ -1018,8 +1076,10 @@ int toDigit(char c){
     return c-'a'+10;
   return -1;
 }
-IntOrError parseInt(String number){
-  int base=10;
+IntOrError parseInt(String number,int base){
+  bool detectBase=(base==0);
+  if(detectBase)
+    base=10;
   size_t i=0;
   int digit;
   uint64_t value=0;
@@ -1030,7 +1090,7 @@ IntOrError parseInt(String number){
     i++;
     negate=true;
   }
-  if(number.length>i+1&&number.chars[i]=='0'){
+  if(detectBase&&number.length>i+1&&number.chars[i]=='0'){
     i++;
     if(number.chars[i]=='x'||number.chars[i]=='X'){
       base=16;
@@ -1051,34 +1111,86 @@ IntOrError parseInt(String number){
 }
 String readStringLiteral(char** code,size_t* codeSize,char end,bool doEspaceSeqs,int* errorFlag){
   if(*codeSize<1){
-    *errorFlag=ERROR_SYNTAX;
+    *errorFlag=ERROR_EOF;
     return (String){.chars=*code,.length=0};
   }
   //skip first char
   (*code)++;
   (*codeSize)--;
-  size_t wordLength=0;
-  while(wordLength<*codeSize&&(*code)[wordLength]!=end){
-    if(doEspaceSeqs&&(*code)[wordLength]=='\\'){//escaped characters
-      if(wordLength+1>=*codeSize){
-        *errorFlag=ERROR_SYNTAX;
+  char* wordChars=*code;
+  size_t wordLength=0,delta=0;
+  while(*codeSize>0&&**code!=end){
+    if(doEspaceSeqs&&**code=='\\'){//escaped characters
+      if(*codeSize<=1){
+        *errorFlag=ERROR_EOF;
         return (String){.chars=*code,.length=0};
       }
-      wordLength++;//TODO decode escape sequence
+      delta++;
+      (*codeSize)--;//ignore the \ character
+      (*code)++;
+      switch(**code){//decode escape sequence
+        case 'b':
+          **code='\b';
+          break;
+        case 'n':
+          **code='\n';
+          break;
+        case 't':
+          **code='\t';
+          break;
+        case 'r':
+          **code='\r';
+          break;
+        case 'f':
+          **code='\f';
+          break;
+        case 'v':
+          **code='\v';
+          break;
+        case '\'':
+        case '\\':
+        case '"':
+          break; //keep the original character
+        case 'u':
+          if(*codeSize<5){
+            if(errorFlag)
+              *errorFlag=ERROR_EOF;
+            return (String){.chars=*code,.length=0};
+          }
+          IntOrError val=parseInt((String){.chars=(*code)+1,.length=4},16);
+          if(val.isError){
+            if(errorFlag)
+              *errorFlag=val.as.error;
+            return (String){.chars=*code,.length=0};
+          }
+          int l=writeUnicodeChar(val.as.i64,wordChars+wordLength);
+          wordLength+=l;
+          delta+=5-l;
+          (*code)+=5;
+          (*codeSize)-=5;
+          continue;//do to next iteration of loop
+        default://TODO add support for \U******** \x**
+          if(errorFlag)
+            *errorFlag=ERROR_UNSUPPORTED_ESCAPE_SEQUENCE;
+          break; 
+      }
+    }
+    if(delta>0){//copy chars to position in unescaped string
+      wordChars[wordLength]=**code;
     }
     wordLength++;
+    (*codeSize)--;
+    (*code)++;
   }
-  if(wordLength+1>=*codeSize){
-    *errorFlag=ERROR_SYNTAX;
+  if(*codeSize==0){
+    *errorFlag=ERROR_EOF;
     fprintf(stderr,"unfinished comment or string literal %.*s \n",(int)wordLength,*code);
     return (String){.chars=*code,.length=0};//TODO error handling
   }
-  if(wordLength<*codeSize)
-    (*code)[wordLength]=0;//zero terminate string
-  char* wordChars=*code;
   //move code-pointer to position after word
-  (*code)+=wordLength+(wordLength<*codeSize?1:0);//do not exceed code size
-  (*codeSize)-=wordLength+(wordLength<*codeSize?1:0);
+  (*codeSize)--;
+  (*code)++;
+  wordChars[wordLength]=0;//zero terminate string
   return (String){.chars=wordChars,.length=wordLength};
 }
 //constants for the wordType flag of nextWord
@@ -1158,7 +1270,7 @@ DataType readType(char** code,size_t* codeSize){
   return TYPE_UNDEFINED;
 }
 DataType readCompositeType(TypeClass typeClass,char** code,size_t* codeSize){
-  IntOrError count=parseInt(nextWord(code,codeSize,NULL));
+  IntOrError count=parseInt(nextWord(code,codeSize,NULL),0);
   if(count.isError){
     fprintf(stderr,"parser error %i while reading type\n",count.as.error);//TODO better error handling
     return TYPE_UNDEFINED;
@@ -1225,7 +1337,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       case PRIMITIVE_I8:
       case PRIMITIVE_I32:
       case PRIMITIVE_I64:
-        IntOrError val=parseInt(constValue);
+        IntOrError val=parseInt(constValue,0);
         if(val.isError){
           printf("cannot parse \"%.*s\" to an integer \n",(int)constValue.length,constValue.chars);
           return (SizeOrError){.isError=true,.as={.error=val.as.error}};
@@ -1288,25 +1400,25 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     }
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"GET_ELEMENT")){
-    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET_ELEMENT")){
-    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ARG")||wordEquals(&word,"GET_ARG")){
-    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET_ARG")){
-    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
@@ -1318,13 +1430,13 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"[]")){
-    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"[]=")){
-    IntOrError index=parseInt(nextWord(code,codeSize,NULL));
+    IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=index.as.i64}}};
