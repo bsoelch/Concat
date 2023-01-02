@@ -1171,8 +1171,12 @@ void skipWhitespaces(char** code,size_t* codeSize){
     (*code)++;
   }
 }
-bool wordEquals(const String* word,const char* string){//FIXME will return wrong value if string is shorter than word
-  return strncasecmp(word->chars,string,word->length)==0;
+//!!! This method may segfault if word contains \0 characters !!! 
+bool wordEquals(const String* word,const char* string){
+  int c=strncasecmp(word->chars,string,word->length);
+  if(c!=0)
+    return false;
+  return string[word->length]=='\0';//check if string has same length as word (length is >= because c was 0)
 }
 int toDigit(char c){
   if(c>='0'&&c<='9')
@@ -1914,7 +1918,7 @@ TypeOrError typeCheckExpression(Program prog,size_t* offset){
         case ID_POINTER:
           break;
       }
-      //TODO get pointer/get element
+      //TODO get pointer
       break;
     //n to 1:
     case OP_UNARY_OPERATOR:
