@@ -1208,7 +1208,7 @@ IntOrError parseInt(String number,int base){
     }
   }
   for(;i<number.length;i++){
-    //TODO warning if value overflow
+    //TODO warning if value overflows
     value*=base;
     digit=toDigit(number.chars[i]);
     if(digit<0)
@@ -1707,12 +1707,126 @@ typedef struct{
     int error;
   } as;
 }TypeOrError;
+
+int numberRank(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+      return 8;
+    case PRIMITIVE_I32:
+      return 32;
+    case PRIMITIVE_I64:
+      return 64;
+    case PRIMITIVE_FLOAT:
+      return 65;
+    case PRIMITIVE_VOID:
+      return -1;
+    case PRIMITIVE_BOOL:
+      return -1;
+  }
+  return false;
+}
+PrimitiveType numberByRank(int t){
+  switch(t){
+    case 8:
+      return PRIMITIVE_I8;
+    case 32:
+      return PRIMITIVE_I32;
+    case 64:
+      return PRIMITIVE_I64;
+    case 65:
+      return PRIMITIVE_FLOAT;
+  }
+  return PRIMITIVE_VOID;
+}
+bool isInteger(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+    case PRIMITIVE_I32:
+    case PRIMITIVE_I64:
+      return true;
+    case PRIMITIVE_VOID:
+    case PRIMITIVE_BOOL:
+    case PRIMITIVE_FLOAT:
+      return false;
+  }
+  return false;
+}
+DataType typeCheckPointerArithmetic(DataType a,DataType b,bool subtract){
+  if(a.typeClass!=TYPECLASS_POINTER&&a.typeClass!=TYPECLASS_CONST_POINTER)
+    return TYPE_UNDEFINED;//a is no pointer
+  if(b.typeClass==TYPECLASS_PRIMITIVE&&isInteger(b.typeDataAs.primitive)){
+    return a;
+  }
+  if(subtract&&typeEquals(a,b)){
+    return primitiveType(PRIMITIVE_I64);
+  }
+  return TYPE_UNDEFINED;
+}
+DataType typeCheckArithmetic(DataType a,DataType b){
+  if(a.typeClass!=TYPECLASS_PRIMITIVE||b.typeClass!=TYPECLASS_PRIMITIVE)
+    return TYPE_UNDEFINED;//arithmetic only on primitive types
+  int r1=numberRank(a.typeDataAs.primitive);
+  int r2=numberRank(b.typeDataAs.primitive);
+  if(isInteger(a.typeDataAs.primitive)!=isInteger(b.typeDataAs.primitive))
+    return TYPE_UNDEFINED;//implicit int to float conversion
+  if(r1<=0||r2<=0)
+    return TYPE_UNDEFINED;
+  PrimitiveType res=numberByRank(r1>r2?r1:r2);
+  if(res==PRIMITIVE_VOID)
+    return TYPE_UNDEFINED;
+  return primitiveType(res);
+}
+TypeOrError typeCheckExpression(Program prog,size_t* offset);
+TypeOrError typeCheckCall(DataType calledType,Program prog,size_t* offset){
+  //TODO call of function pointer
+  //  need check for value of pointer
+  if(calledType.typeClass!=TYPECLASS_PROCEDURE&&
+    ((calledType.typeClass!=TYPECLASS_POINTER&&calledType.typeClass!=TYPECLASS_CONST_POINTER)||
+      calledType.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE)){//not procedure or pointer to procedure 
+    fputs("cannot call objects of type ",stderr);
+    printTypeName(calledType,stderr);
+    fputs("\n",stderr);
+    return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+  }
+  if(calledType.typeClass!=TYPECLASS_PROCEDURE)
+    calledType=*calledType.typeDataAs.type;//dereference procedure-pointer
+  ProcedureType* procType=calledType.typeDataAs.procedure;
+  if(procType->inType->typeClass==TYPECLASS_PRIMITIVE&&procType->inType->typeDataAs.primitive==PRIMITIVE_VOID)
+    return (TypeOrError){.isError=false,.as={.type=procType->outType}};//void function
+  TypeOrError r=typeCheckExpression(prog,offset);//first argument
+  if(r.isError)
+    return (TypeOrError){.isError=true,.as={.error=r.as.error}};
+  if(procType->inType->typeClass!=TYPECLASS_FLAT_TUPLE){//function takes single argument
+    if(!typeEquals(*procType->inType,*r.as.type)){
+      typeErrorMessage("procedure argument",*procType->inType,*r.as.type);
+      return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+    }
+    return (TypeOrError){.isError=false,.as={.type=procType->outType}};
+  }
+  CompositeType* inTypes=procType->inType->typeDataAs.composite;
+  if(!typeEquals(inTypes->types[0],*r.as.type)){
+      typeErrorMessage("procedure argument",inTypes->types[0],*r.as.type);
+      return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+  }
+  for(int32_t i=1;i<inTypes->typeCount;i++){
+    r=typeCheckExpression(prog,offset);//i-th argument
+    if(r.isError)
+      return (TypeOrError){.isError=true,.as={.error=r.as.error}};
+    if(!typeEquals(inTypes->types[i],*r.as.type)){
+        typeErrorMessage("procedure argument",inTypes->types[i],*r.as.type);
+        return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+    }
+  }
+  return (TypeOrError){.isError=false,.as={.type=procType->outType}};//all arguments correct
+}
 TypeOrError typeCheckExpression(Program prog,size_t* offset){
   if(*offset>=prog.opCount)//unexpected end of program
     return (TypeOrError){.isError=true,.as={.error=ERROR_EOF}};
   Operation* op=prog.ops+*offset;
   DataType* type;
+  DataType tmpType;
   (*offset)++;
+  TypeOrError r;
   switch(op->opType){
     //0 to 1:
     case OP_CONSTANT:
@@ -1726,9 +1840,80 @@ TypeOrError typeCheckExpression(Program prog,size_t* offset){
       break;
     //n to 1:
     case OP_UNARY_OPERATOR:
-    case OP_BINARY_OPERATOR:
-    case OP_CALL:
+      r=typeCheckExpression(prog,offset);//operand
+      if(r.isError)
+        return (TypeOrError){.isError=true,.as={.error=r.as.error}};
+      op->dataType=*r.as.type;//unary operator returns value of same type
+      switch(op->dataAs.unOp){
+        case NEGATE:
+        case FLIP:
+        case INCREMENT://TODO check if value can be incremented/decremented
+        case DECREMENT:
+          if(r.as.type->typeClass!=TYPECLASS_PRIMITIVE||!isInteger(r.as.type->typeDataAs.primitive)){
+            fputs("wrong type for unary operator  expected integer ",stderr);//TODO print operator name
+            fputs(" got ",stderr);
+            printTypeName(*r.as.type,stderr);
+            fputs("\n",stderr);
+            return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+          }
+          return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
+        case NOT:
+          if(r.as.type->typeClass!=TYPECLASS_PRIMITIVE||r.as.type->typeDataAs.primitive!=PRIMITIVE_BOOL){
+            typeErrorMessage("unary operator NOT",primitiveType(PRIMITIVE_BOOL),*r.as.type);
+            return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+          }
+          return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
+      }
       break;
+    case OP_BINARY_OPERATOR:
+      r=typeCheckExpression(prog,offset);//first operand
+      if(r.isError)
+        return (TypeOrError){.isError=true,.as={.error=r.as.error}};
+      tmpType=*r.as.type;//remember first operand
+      r=typeCheckExpression(prog,offset);//second operand
+      if(r.isError)
+        return (TypeOrError){.isError=true,.as={.error=r.as.error}};
+      switch(op->dataAs.binOp){
+        case ADD:
+        case SUBTRACT:
+          op->dataType=typeCheckPointerArithmetic(tmpType,*r.as.type,op->dataAs.binOp==SUBTRACT);
+          if(op->dataType.typeClass!=TYPECLASS_UNDEFINED)
+            return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
+          // fall through
+        case MULTIPLY:
+        case DIVIDE:
+        case MOD:
+          op->dataType=typeCheckArithmetic(tmpType,*r.as.type);
+          if(op->dataType.typeClass!=TYPECLASS_UNDEFINED)
+            return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
+          break;
+        case AND:
+        case OR:
+        case XOR:
+          //integer bool ops
+          
+          // fall through
+        case FAST_AND:
+        case FAST_OR:
+          //bool ops
+          break;
+        case EQ:
+        case NE:
+          //pointer equality 
+          
+          // fall through
+        case GT:
+        case GE:
+        case LE:
+        case LT:
+          //number comparison
+          break;
+      }
+      //TODO implement remaining cases
+      //TODO error message for fall-through cases
+      break;
+    case OP_CALL:
+      return typeCheckCall(op->dataType,prog,offset);
     //n to 0:
     case OP_DECLARE:
     case OP_SET:
@@ -1737,6 +1922,7 @@ TypeOrError typeCheckExpression(Program prog,size_t* offset){
     case OP_CODE_BLOCK:
     case OP_DECLARE_PROCEDURE:
     case ENTRY_POINT:
+      fprintf(stderr,"unexpected operation %i\n",op->opType);
       return (TypeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
   }
   fprintf(stderr,"type-checking operation %i is not implemented\n",op->opType);
@@ -1751,18 +1937,55 @@ int typeCheckStatement(Program prog,size_t* offset){
   switch(op->opType){
     //n to 0:
     case OP_PRINT:
+      r=typeCheckExpression(prog,offset);
+      if(r.isError)
+        return r.as.error;
+      if(r.as.type->typeClass==TYPECLASS_POINTER||r.as.type->typeClass==TYPECLASS_CONST_POINTER)
+        return 0;//printing pointer is always possible
+      if(r.as.type->typeClass!=TYPECLASS_PRIMITIVE||r.as.type->typeDataAs.primitive==PRIMITIVE_VOID){
+        fputs("cannot print values of type ",stderr);
+        printTypeName(*r.as.type,stderr);
+        fputs("\n",stderr);
+        return ERROR_TYPE;
+      }
+      return 0;//non-void primitive
       break;
     case OP_DECLARE:
     case OP_SET:
       r=typeCheckExpression(prog,offset);
       if(r.isError)
         return r.as.error;
-      //TODO check for SET POINTER/SET ELEMENT
-      if(!typeEquals(op->dataType,*r.as.type)){//TODO allow implicit casts
-        typeErrorMessage("variable assignment",op->dataType,*r.as.type);
-        return ERROR_TYPE;
-      }
-      return 0;
+      switch(op->dataAs.idInfo.type){
+        case ID_LOCAL_VAR:
+        case ID_GLOBAL_VAR:
+        case ID_ARGUMENT:
+          if(op->dataAs.idInfo.type==ID_ARGUMENT&&op->opType==OP_DECLARE){
+            fputs("cannot declare procedure arguments",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(!typeEquals(op->dataType,*r.as.type)){//TODO allow implicit casts
+            typeErrorMessage("variable assignment",op->dataType,*r.as.type);
+            return ERROR_TYPE;
+          }
+          return 0;
+        case ID_TUPLE_ELEMENT:
+          if(op->opType==OP_DECLARE){
+            fputs("cannot declare tuple elements",stderr);
+            return ERROR_SYNTAX;
+          }
+          //TODO type check set tuple element
+          break;
+        case ID_POINTER:
+          if(op->opType==OP_DECLARE){
+            fputs("cannot declare value at pointer",stderr);
+            return ERROR_SYNTAX;
+          }
+          break;
+        case ID_PROCEDURE:
+          fputs("procedures cannot be modified",stderr);
+          return ERROR_SYNTAX;
+        }
+        break;
     case OP_RETURN:
       if(op->dataType.typeClass==TYPECLASS_PRIMITIVE&&op->dataType.typeDataAs.primitive==PRIMITIVE_VOID)
         return 0;//no types to check
@@ -1812,6 +2035,14 @@ int typeCheckStatement(Program prog,size_t* offset){
           return 0;//no types to check
       }
       break;
+    case OP_CALL:
+      r=typeCheckCall(op->dataType,prog,offset);
+      if(r.isError)
+        return r.as.error;
+      if(r.as.type->typeClass!=TYPECLASS_PRIMITIVE||r.as.type->typeDataAs.primitive!=PRIMITIVE_VOID){
+        fputs("return value of procedure is ignored",stderr);
+      }
+      return 0;
     case OP_DECLARE_PROCEDURE:
     case ENTRY_POINT:
       return 0;//no types to check
@@ -1822,7 +2053,7 @@ int typeCheckStatement(Program prog,size_t* offset){
     //n to 1:
     case OP_UNARY_OPERATOR:
     case OP_BINARY_OPERATOR:
-    case OP_CALL:
+      fprintf(stderr,"unexpected operation %i\n",op->opType);
       return ERROR_SYNTAX;
   }
   fprintf(stderr,"type-checking operation %i is not implemented\n",op->opType);
