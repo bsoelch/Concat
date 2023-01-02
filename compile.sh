@@ -1,3 +1,3 @@
 #!/bin/sh
 
-gcc -g -Wall -Wextra -Wshadow ./compile.c && ./a.out "./in.txt"
+gcc -g -Wall -Wextra -Wshadow -Wold-style-definition -Wcast-qual ./compile.c && ./a.out "./in.txt"
