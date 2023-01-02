@@ -39,13 +39,13 @@ typedef struct{
   char* chars;
   size_t length;
 }String;
-int stringCompare(String a,String b){
+int stringCompare(const String a,const String b){
   int c=strncmp(a.chars,b.chars,a.length<b.length?a.length:b.length);
   if(c==0&&a.length!=b.length)
     return a.length<b.length?-1:1;
   return c;
 }
-int32_t stringHash(String s){
+int32_t stringHash(const String s){
   int32_t hash=0;
   for(size_t i=0;i<s.length;i++){
     hash=31*hash+s.chars[i];
@@ -331,7 +331,101 @@ DataType procedureType(DataType inType,DataType outType){
   return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++}};
 }
 
+const char* typeClassName(TypeClass cls){
+  switch(cls){
+    case TYPECLASS_UNDEFINED:
+      return "UNDEFINED";
+    case TYPECLASS_PRIMITIVE:
+      return "PRIMITIVE";
+    case TYPECLASS_POINTER:
+      return "POINTER";
+    case TYPECLASS_CONST_POINTER:
+      return "CONST_POINTER";
+    case TYPECLASS_TUPLE:
+      return "TUPLE";
+    case TYPECLASS_FLAT_TUPLE:
+      return "FLAT_TUPLE";
+    case TYPECLASS_UNION:
+      return "UNION";
+    case TYPECLASS_PROCEDURE:
+      return "PRODECURE";
+  }
+  fprintf(stderr,"unexpected type-class %i",cls);
+  return "";
+}
 const char* primitiveName(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_VOID:
+      return "void";
+    case PRIMITIVE_BOOL:
+      return "bool";
+    case PRIMITIVE_I8:
+      return "i8";
+    case PRIMITIVE_I32:
+      return "i32";
+    case PRIMITIVE_I64:
+      return "i64";
+    case PRIMITIVE_FLOAT:
+      return "float";
+  }
+  fprintf(stderr,"unexpected primitive type %i",t);
+  return "";
+}
+int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
+  int i,j;
+  switch(type.typeClass){
+    case TYPECLASS_UNDEFINED:
+      return fputs("UNDEFINED",file);
+    case TYPECLASS_PRIMITIVE:
+      return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
+    case TYPECLASS_CONST_POINTER:
+    case TYPECLASS_POINTER:
+      i=fprintf(file,"%s ",typeClassName(type.typeClass));
+      if(i<0)
+        return i;
+      j=printTypeNameIntenal(*type.typeDataAs.type,file,noRecurse);
+      return j<0?j:(i+j);
+    case TYPECLASS_FLAT_TUPLE:
+    case TYPECLASS_TUPLE:
+    case TYPECLASS_UNION:
+      i=fprintf(file,"%s (%"PRIi32")",typeClassName(type.typeClass),type.typeDataAs.composite->id);
+      if(noRecurse||i<0)
+        return i;
+      for(int32_t e=0;e<type.typeDataAs.composite->typeCount;e++){
+        if(e>0){
+          j=fputs(" ",file);
+          if(j<0)
+            return j;
+          i+=j;
+        }
+        j=printTypeNameIntenal(type.typeDataAs.composite->types[e],file,true);//only one recursion level
+        if(j<0)
+          return j;
+        i+=j;
+      } 
+      return i;
+    case TYPECLASS_PROCEDURE:
+      i=fprintf(file,"%s (%"PRIi32")",typeClassName(type.typeClass),type.typeDataAs.procedure->id);
+      if(noRecurse||i<0)
+        return i;
+      j=printTypeNameIntenal(*type.typeDataAs.procedure->inType,file,true);
+      if(j<0)
+        return j;
+      i+=j;
+      j=fputs(" ",file);
+      if(j<0)
+        return j;
+      i+=j;
+      j=printTypeNameIntenal(*type.typeDataAs.procedure->outType,file,true);
+      return j<0?j:(i+j);
+  }
+  return fprintf(file,"unknown type-class %i\n",type.typeClass);
+}
+int printTypeName(DataType type,FILE* file){
+  return printTypeNameIntenal(type,file,false);
+}
+
+const char* primitiveNameC(PrimitiveType t){
   switch(t){
     case PRIMITIVE_VOID:
       return "void";
@@ -349,20 +443,23 @@ const char* primitiveName(PrimitiveType t){
   fprintf(stderr,"unexpected primitive type %i",t);
   return "";
 }
-int printTypeName(DataType type,FILE* file){
+int printTypeNameC(DataType type,FILE* file){
   int i,j;
   switch(type.typeClass){
     case TYPECLASS_UNDEFINED:
       return fputs("void",file);
     case TYPECLASS_PRIMITIVE:
-      return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
+      return fprintf(file,"%s",primitiveNameC(type.typeDataAs.primitive));
     case TYPECLASS_CONST_POINTER:
-      fputs("const ",file); //only difference to TYPECLASS_POINTER
-      // fall through
-    case TYPECLASS_POINTER:
-      i=printTypeName(*type.typeDataAs.type,file);
+      i=fputs("const ",file); //only difference to TYPECLASS_POINTER
       if(i<0)
         return i;
+      // fall through
+    case TYPECLASS_POINTER:
+      j=printTypeNameC(*type.typeDataAs.type,file);
+      if(j<0)
+        return j;
+      i+=j;
       j=fputs("*",file);
       return j<0?j:(i+j);
     case TYPECLASS_FLAT_TUPLE:
@@ -452,7 +549,7 @@ typedef struct{
 size_t progStringCount=0;
 ProgramString programStrings[MAX_PROG_STRINGS];
 
-DataType progStringType(){
+DataType progStringType(void){
     DataType stringElts[2]={constPointerType(primitiveType(PRIMITIVE_I8)),primitiveType(PRIMITIVE_I64)};
     return compositeType(TYPECLASS_TUPLE,stringElts,2);//ensure string-type exists
 }
@@ -464,9 +561,9 @@ IntOrError addProgString(String s){
   return (IntOrError){.isError=false,.as={.i64=progStringCount++}};
 }
 int progStringCmp(const void* a,const void* b){
-  return -stringCompare(((ProgramString*)a)->value,((ProgramString*)b)->value);
+  return -stringCompare(((const ProgramString*)a)->value,((const ProgramString*)b)->value);
 }
-void initProgStringChars(){
+void initProgStringChars(void){
   qsort(programStrings,progStringCount,sizeof(ProgramString),&progStringCmp);
   int32_t charId=-1,charOff=0,charIds=0;
   bool isBaseString=true;
@@ -558,7 +655,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
         case PRIMITIVE_I8:
         case PRIMITIVE_I32:
         case PRIMITIVE_I64:
-          fprintf(target,"((%s)%" PRIi64 ")",primitiveName(op->dataType.typeDataAs.primitive),op->dataAs.i64);
+          fprintf(target,"((%s)%" PRIi64 ")",primitiveNameC(op->dataType.typeDataAs.primitive),op->dataAs.i64);
           break;
         default:
           fprintf(stderr,"%s constants are (currently) not supported",primitiveName(op->dataType.typeDataAs.primitive));
@@ -627,7 +724,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       fputs(";\n",target);
       break;
     case OP_DECLARE:
-      printTypeName(op->dataType,target);
+      printTypeNameC(op->dataType,target);
       switch(op->dataAs.idInfo.type){
         case ID_LOCAL_VAR:
           fprintf(target," local%" PRIi32 " = ",op->dataAs.idInfo.id);
@@ -768,7 +865,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
     case OP_DECLARE_PROCEDURE:{
       if(op->dataType.typeClass!=TYPECLASS_PROCEDURE)
         return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
-      printTypeName(*op->dataType.typeDataAs.procedure->outType,target);
+      printTypeNameC(*op->dataType.typeDataAs.procedure->outType,target);
       fprintf(target," procedure%" PRIi32" (",op->dataAs.idInfo.id);
       DataType* inType=op->dataType.typeDataAs.procedure->inType;
       if(inType->typeClass==TYPECLASS_FLAT_TUPLE){
@@ -776,20 +873,20 @@ SizeOrError compileOp(FILE* target,const Operation* op){
         for(int32_t e=0;e<inTypes->typeCount;e++){
           if(e>0)
             fputs(", ",target);
-          printTypeName(inTypes->types[e],target);
+          printTypeNameC(inTypes->types[e],target);
           fprintf(target," arg%"PRIi32,e);
         } 
       }else if(inType->typeClass==TYPECLASS_PRIMITIVE&&inType->typeDataAs.primitive==PRIMITIVE_VOID){
         fputs("void",target);
       }else{
-        printTypeName(*inType,target);
+        printTypeNameC(*inType,target);
         fputs(" arg0",target);
       }         
       fputs("){\n",target);
     }break;
     case OP_RETURN:
       fputs("return ",target);
-      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE &&op->dataType.typeClass!=TYPECLASS_TUPLE){//TODO remove check for tuple once compiler can detect types
+      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
         if(op->dataType.typeClass==TYPECLASS_PRIMITIVE&&op->dataType.typeDataAs.primitive==PRIMITIVE_VOID){
           fputs(";\n",target);
           break;
@@ -885,17 +982,17 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
   //declare procedure pointers
   for(size_t i=0;i<procTypeCount;i++){
     fputs("typedef ",target);
-    printTypeName(*procTypes[i].outType,target);
+    printTypeNameC(*procTypes[i].outType,target);
     fprintf(target," (*procPtr%zu) (",i);
     if(procTypes[i].inType->typeClass==TYPECLASS_FLAT_TUPLE){//auto-unwrap procedure arguments
       CompositeType* inTypes=procTypes[i].inType->typeDataAs.composite;
       for(int32_t j=0;j<inTypes->typeCount;j++){
         if(j>0)
           fputs(",",target);
-        printTypeName(inTypes->types[j],target);
+        printTypeNameC(inTypes->types[j],target);
       }
     }else{
-      printTypeName(*procTypes[i].inType,target);
+      printTypeNameC(*procTypes[i].inType,target);
     }
     fputs(");\n",target);
   }
@@ -904,7 +1001,7 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
     if(compositeTypes[i].flags&FLAG_IS_TUPLE){
       fprintf(target,"struct tuple%"PRIi32"Impl{\n",i);
       for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        printTypeName(compositeTypes[i].types[e],target);
+        printTypeNameC(compositeTypes[i].types[e],target);
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("};\n",target);
@@ -912,9 +1009,9 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
     if(compositeTypes[i].flags&FLAG_IS_UNION){
       fprintf(target,"struct union%"PRIi32"Impl{\n"
                      "%s state;\n"
-                     "union{\n",i,primitiveName(PRIMITIVE_I32));
+                     "union{\n",i,primitiveNameC(PRIMITIVE_I32));
       for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        printTypeName(compositeTypes[i].types[e],target);
+        printTypeNameC(compositeTypes[i].types[e],target);
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("}value;\n};\n",target);
@@ -923,7 +1020,7 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
   //initialize strings
   for(size_t i=0;i<progStringCount;i++){
     if(programStrings[i].isBaseString){
-      fprintf(target,"const %s stringChars%"PRIi32"[] = {",primitiveName(PRIMITIVE_I8),programStrings[i].charsId/*,programStrings[i].value.length*/);
+      fprintf(target,"const %s stringChars%"PRIi32"[] = {",primitiveNameC(PRIMITIVE_I8),programStrings[i].charsId/*,programStrings[i].value.length*/);
       String str=programStrings[i].value;
       for(size_t j=0;j<str.length;j++){
         if(j>0)
@@ -976,14 +1073,14 @@ ScopeNode scopeNodeBuffer [SCOPE_NODE_CAP];
 size_t scopeNodeCount=0;
 Scope scopeBuffer [SCOPE_CAP];
 size_t scopeCount=0;
-ScopeNode* allocScopeNode(){
+ScopeNode* allocScopeNode(void){
   if(scopeNodeCount+1>=SCOPE_NODE_CAP){
     fprintf(stderr,"exceeded maximum allowed number of variables %i\n",SCOPE_NODE_CAP);
     return NULL;
   }
   return scopeNodeBuffer+(scopeNodeCount++);
 }
-Scope* openScope(){
+Scope* openScope(void){
   if(scopeCount+1>=SCOPE_CAP){
     fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
     return NULL;
@@ -993,7 +1090,7 @@ Scope* openScope(){
   scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
   return scopeBuffer+(scopeCount++);
 }
-bool closeScope(){
+bool closeScope(void){
   if(scopeCount<=0)
     return false;
   scopeCount--;
@@ -1321,7 +1418,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     IntOrError strId=addProgString(word);
     if(strId.isError)
       return (SizeOrError){.isError=true,.as={.error=strId.as.error}};
-    (*op)=(Operation){.opType=OP_STRING_CONST,.dataType=TYPE_UNDEFINED,.dataAs={.i64=strId.as.i64}};
+    (*op)=(Operation){.opType=OP_STRING_CONST,.dataType=progStringType(),.dataAs={.i64=strId.as.i64}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
   if(wordType==WORD_TYPE_CHAR){
@@ -1438,6 +1535,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     IntOrError index=parseInt(nextWord(code,codeSize,NULL),0);
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
+    //TODO determine type of argument
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET_ARG")){
@@ -1485,7 +1583,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
   }else if(wordEquals(&word,"NEG")||wordEquals(&word,"NEGATE")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.unOp=NEGATE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"IF")){
+  }else if(wordEquals(&word,"IF")){//TODO check scope boundaries 
     Scope* newScope=openScope();
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
@@ -1595,17 +1693,37 @@ Program compileToOps(char* code,size_t codeSize){
 }
 
 //TODO find correct error positions in file
-
-int typeCheckExpression(Program prog,size_t* offset){
-  if(*offset>=prog.opCount)
-    return ERROR_EOF;//unexpected end of program
+void typeErrorMessage(const char* exprName,DataType expected,DataType got){
+  fprintf(stderr,"wrong type for %s: expected ",exprName);
+  printTypeName(expected,stderr);
+  fputs(" got ",stderr);
+  printTypeName(got,stderr);
+  fputs("\n",stderr);
+}
+typedef struct{
+  bool isError;
+  union{
+    DataType* type;
+    int error;
+  } as;
+}TypeOrError;
+TypeOrError typeCheckExpression(Program prog,size_t* offset){
+  if(*offset>=prog.opCount)//unexpected end of program
+    return (TypeOrError){.isError=true,.as={.error=ERROR_EOF}};
   Operation* op=prog.ops+*offset;
+  DataType* type;
+  (*offset)++;
   switch(op->opType){
     //0 to 1:
     case OP_CONSTANT:
     case OP_STRING_CONST:
+      return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
     case OP_GET:
-      break; 
+      type=&(op->dataType);
+      if(type->typeClass!=TYPECLASS_UNDEFINED)
+        return (TypeOrError){.isError=false,.as={.type=type}};
+      //TODO get pointer/get element
+      break;
     //n to 1:
     case OP_UNARY_OPERATOR:
     case OP_BINARY_OPERATOR:
@@ -1616,30 +1734,87 @@ int typeCheckExpression(Program prog,size_t* offset){
     case OP_SET:
     case OP_RETURN:
     case OP_PRINT:
-    //0 to 0:
     case OP_CODE_BLOCK:
     case OP_DECLARE_PROCEDURE:
     case ENTRY_POINT:
-      return ERROR_SYNTAX;
+      return (TypeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
   }
-  return 0;
+  fprintf(stderr,"type-checking operation %i is not implemented\n",op->opType);
+  return (TypeOrError){.isError=true,.as={.error=ERROR_UNIMPLEMENTED}};//unexpected operation
 }
 int typeCheckStatement(Program prog,size_t* offset){
   if(*offset>=prog.opCount)
-    return 0;//nothing to do TODO check if all code-block are closed
+    return 0;//nothing to do
   Operation* op=prog.ops+*offset;
+  TypeOrError r;
+  (*offset)++;
   switch(op->opType){
     //n to 0:
-    case OP_DECLARE:
-    case OP_SET:
-    case OP_RETURN:
     case OP_PRINT:
       break;
-    //0 to 0:
+    case OP_DECLARE:
+    case OP_SET:
+      r=typeCheckExpression(prog,offset);
+      if(r.isError)
+        return r.as.error;
+      //TODO check for SET POINTER/SET ELEMENT
+      if(!typeEquals(op->dataType,*r.as.type)){//TODO allow implicit casts
+        typeErrorMessage("variable assignment",op->dataType,*r.as.type);
+        return ERROR_TYPE;
+      }
+      return 0;
+    case OP_RETURN:
+      if(op->dataType.typeClass==TYPECLASS_PRIMITIVE&&op->dataType.typeDataAs.primitive==PRIMITIVE_VOID)
+        return 0;//no types to check
+      r=typeCheckExpression(prog,offset);
+      if(r.isError)
+        return r.as.error;
+      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE&&typeEquals(op->dataType,*r.as.type))
+        return 0;
+      if(op->dataType.typeClass!=TYPECLASS_TUPLE&&op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
+        typeErrorMessage("return statement",op->dataType,*r.as.type);
+        return ERROR_TYPE;
+      }
+      //try to auto-wrap tuple data
+      op->dataType=(DataType){.typeClass=TYPECLASS_FLAT_TUPLE,.typeDataAs=op->dataType.typeDataAs};//notify compiler
+      if(!typeEquals(op->dataType.typeDataAs.composite->types[0],*r.as.type)){
+        typeErrorMessage("return statement",op->dataType.typeDataAs.composite->types[0],*r.as.type);
+        return ERROR_TYPE;
+      }
+      for(int32_t i=1;i<op->dataType.typeDataAs.composite->typeCount;i++){
+        r=typeCheckExpression(prog,offset);
+        if(r.isError)
+          return r.as.error;
+        if(!typeEquals(op->dataType.typeDataAs.composite->types[i],*r.as.type)){
+          typeErrorMessage("return statement",op->dataType.typeDataAs.composite->types[i],*r.as.type);
+          return ERROR_TYPE;
+        }
+      }
+      return 0;
     case OP_CODE_BLOCK:
+      switch(op->dataAs.block){
+        case BLOCK_IF:
+        case BLOCK_WHILE:
+        case BLOCK_WHILE_END:
+        case BLOCK_ELIF://consume one bool
+          r=typeCheckExpression(prog,offset);
+          if(r.isError)
+            return r.as.error;
+          if(r.as.type->typeClass!=TYPECLASS_PRIMITIVE||r.as.type->typeDataAs.primitive!=PRIMITIVE_BOOL){
+            typeErrorMessage("condition parameter",primitiveType(PRIMITIVE_BOOL),*r.as.type);
+            return ERROR_TYPE;
+          }
+          return 0;
+        case BLOCK_START:
+        case BLOCK_ELSE:
+        case BLOCK_DO:
+        case BLOCK_END:
+          return 0;//no types to check
+      }
+      break;
     case OP_DECLARE_PROCEDURE:
     case ENTRY_POINT:
-      break;
+      return 0;//no types to check
     //0 to 1:
     case OP_CONSTANT:
     case OP_STRING_CONST:
@@ -1650,9 +1825,10 @@ int typeCheckStatement(Program prog,size_t* offset){
     case OP_CALL:
       return ERROR_SYNTAX;
   }
-  return 0;
+  fprintf(stderr,"type-checking operation %i is not implemented\n",op->opType);
+  return ERROR_UNIMPLEMENTED;
 }
-int typecheckProgram(Program prog){
+int typeCheckProgram(Program prog){
   size_t offset=0;
   int err;
   while(offset<prog.opCount){
@@ -1664,6 +1840,8 @@ int typecheckProgram(Program prog){
 }
 
 /* Copied from StackOverflow
+ * finds the size of the FILE at fp in byts 
+ * returns a negative value if finding the size fails
  * fp is assumed to be non null
  * */
 long int fsize(FILE *fp){
@@ -1712,18 +1890,29 @@ int main(int argc,char** argv){
 			fclose(file);//file no longer needed
 			memset(code+codeSize,0,(size+1-codeSize)*sizeof(char));//fill remaining path of file with 0
 		}
+		//1. compile file to operations
 		Program p=compileToOps(code,codeSize);
-		//compile program to C
 		if(p.ops==NULL)
 		  return ERROR_SYNTAX;
-	  printf("compile %zu operations\n",p.opCount);
-    FILE* out=fopen("./out.c","w");
-    int err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint);
-    if(err)
+	  printf("found %zu operations\n",p.opCount);
+		//2. type-check operations
+	  int err=typeCheckProgram(p);
+	  if(err){
       fprintf(stderr,"error %i\n",err);
+      //return err; TODO finish implementation of type-checker
+    }
+	  puts("type-checked program");
+		//3. compile operations to C
+    FILE* out=fopen("./out.c","w");
+    err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint);
+    if(err){
+      fprintf(stderr,"error %i\n",err);
+      goto RETURN;
+    }
+	  puts("compiled program");
+  RETURN:
     fclose(out);
     return err;
-		return ERROR_UNIMPLEMENTED;
 	}else{
 		fprintf(stderr,"IO Error while opening File: %s\n",srcFile);
 		return ERROR_IO;
