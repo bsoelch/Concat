@@ -16,9 +16,10 @@
 #define ERROR_PARSE_INT 3
 #define ERROR_REDECLARATION 4
 #define ERROR_UNSUPPORTED_ESCAPE_SEQUENCE 5
-#define ERROR_EOF 6 //end of file
+#define WARNING_CODEPOINT_OUT_OF_RANGE 6
+#define ERROR_EOF 7 //end of file
 //maximum integer value of any error constant
-#define MAX_ERROR 7
+#define MAX_ERROR 8
 
 typedef struct{
   bool isError;
@@ -68,6 +69,7 @@ int64_t indexOfString(const String base,const String child){
   }
   return -1;
 }
+#define MAX_CODEPOINT 0x10FFFF
 //writes an Unicode code-point to target
 int writeUnicodeChar(int64_t codepoint,char* target){
   if(codepoint<(1<<7)){//0 *******
@@ -1101,6 +1103,7 @@ IntOrError parseInt(String number,int base){
     }
   }
   for(;i<number.length;i++){
+    //TODO warning if value overflow
     value*=base;
     digit=toDigit(number.chars[i]);
     if(digit<0)
@@ -1119,6 +1122,7 @@ String readStringLiteral(char** code,size_t* codeSize,char end,bool doEspaceSeqs
   (*codeSize)--;
   char* wordChars=*code;
   size_t wordLength=0,delta=0;
+  size_t sequenceLength;//length of escape sequence for multi-char sequences
   while(*codeSize>0&&**code!=end){
     if(doEspaceSeqs&&**code=='\\'){//escaped characters
       if(*codeSize<=1){
@@ -1151,25 +1155,36 @@ String readStringLiteral(char** code,size_t* codeSize,char end,bool doEspaceSeqs
         case '\\':
         case '"':
           break; //keep the original character
+        case 'x':
         case 'u':
-          if(*codeSize<5){
+        case 'U':
+          sequenceLength=**code=='U'?9:**code=='u'?5:3;
+          if(*codeSize<sequenceLength){
             if(errorFlag)
               *errorFlag=ERROR_EOF;
             return (String){.chars=*code,.length=0};
           }
-          IntOrError val=parseInt((String){.chars=(*code)+1,.length=4},16);
+          IntOrError val=parseInt((String){.chars=(*code)+1,.length=(sequenceLength-1)},16);
           if(val.isError){
             if(errorFlag)
               *errorFlag=val.as.error;
             return (String){.chars=*code,.length=0};
           }
-          int l=writeUnicodeChar(val.as.i64,wordChars+wordLength);
+          int l;
+          if(**code=='x'){
+            wordChars[wordLength]=val.as.i64;
+            l=1;
+          }else{
+            if(errorFlag&&(val.as.i64<0||val.as.i64>MAX_CODEPOINT))
+              *errorFlag=WARNING_CODEPOINT_OUT_OF_RANGE;
+            l=writeUnicodeChar(val.as.i64,wordChars+wordLength);
+          }
           wordLength+=l;
-          delta+=5-l;
-          (*code)+=5;
-          (*codeSize)-=5;
-          continue;//do to next iteration of loop
-        default://TODO add support for \U******** \x**
+          delta+=sequenceLength-l;
+          (*code)+=sequenceLength;
+          (*codeSize)-=sequenceLength;
+          continue;//skip to next iteration of loop
+        default:
           if(errorFlag)
             *errorFlag=ERROR_UNSUPPORTED_ESCAPE_SEQUENCE;
           break; 
@@ -1559,8 +1574,10 @@ Program compileToOps(char* code,size_t codeSize){
   CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false};
   while(codeSize>0){
     r=readOperation(compileOps+opCount,&code,&codeSize,&state);
-    if(r.isError)
+    if(r.isError){
+      fprintf(stderr,"error %i\n",r.as.error);
       return (Program){.ops=NULL,.opCount=0};//TODO better error value
+    }
     opCount+=r.as.size;
     if(opCount>=opsCap-5){
       return (Program){.ops=NULL,.opCount=0};//TODO ensure there is enough capacity
