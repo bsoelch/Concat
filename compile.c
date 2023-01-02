@@ -1171,7 +1171,7 @@ void skipWhitespaces(char** code,size_t* codeSize){
     (*code)++;
   }
 }
-bool wordEquals(const String* word,const char* string){
+bool wordEquals(const String* word,const char* string){//FIXME will return wrong value if string is shorter than word
   return strncasecmp(word->chars,string,word->length)==0;
 }
 int toDigit(char c){
@@ -1571,6 +1571,18 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
   }else if(wordEquals(&word,"MULTIPLY")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=MULTIPLY}};
     return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"DIVIDE")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=DIVIDE}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"MOD")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=MOD}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"AND")||wordEquals(&word,"^")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=AND}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"OR")||wordEquals(&word,"^")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=OR}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"XOR")||wordEquals(&word,"^")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=XOR}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1579,6 +1591,24 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"OR2")||wordEquals(&word,"||")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=FAST_OR}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"EQ")||wordEquals(&word,"==")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=EQ}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"NE")||wordEquals(&word,"NEQ")||wordEquals(&word,"!=")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=NE}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"GT")||wordEquals(&word,">")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=GT}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"GE")||wordEquals(&word,">=")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=GE}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"LE")||wordEquals(&word,"<=")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=LE}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"LT")||wordEquals(&word,"<")){
+    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=LT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"NEG")||wordEquals(&word,"NEGATE")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.unOp=NEGATE}};
@@ -1776,6 +1806,30 @@ DataType typeCheckArithmetic(DataType a,DataType b){
     return TYPE_UNDEFINED;
   return primitiveType(res);
 }
+DataType typeCheckCompare(DataType a,DataType b){
+  if(a.typeClass!=TYPECLASS_PRIMITIVE||b.typeClass!=TYPECLASS_PRIMITIVE)
+    return TYPE_UNDEFINED;//comparison only on primitive types
+  int r1=numberRank(a.typeDataAs.primitive);
+  int r2=numberRank(b.typeDataAs.primitive);
+  if(isInteger(a.typeDataAs.primitive)!=isInteger(b.typeDataAs.primitive))
+    return TYPE_UNDEFINED;//implicit int to float conversion
+  if(r1<=0||r2<=0)
+    return TYPE_UNDEFINED;//comparison only between numbers
+  return primitiveType(PRIMITIVE_BOOL);
+}
+DataType typeCheckIntLogic(DataType a,DataType b){
+  if(a.typeClass!=TYPECLASS_PRIMITIVE||b.typeClass!=TYPECLASS_PRIMITIVE)
+    return TYPE_UNDEFINED;//comparison only on primitive types
+  if(!isInteger(a.typeDataAs.primitive)||!isInteger(b.typeDataAs.primitive))
+    return TYPE_UNDEFINED;//both arguments have to be integers
+  int r1=numberRank(a.typeDataAs.primitive);
+  int r2=numberRank(b.typeDataAs.primitive);
+  //r1 and r2 both are valid numbers
+  PrimitiveType res=numberByRank(r1>r2?r1:r2);
+  if(res==PRIMITIVE_VOID)
+    return TYPE_UNDEFINED;
+  return primitiveType(res);
+}
 TypeOrError typeCheckExpression(Program prog,size_t* offset);
 TypeOrError typeCheckCall(DataType calledType,Program prog,size_t* offset){
   //TODO call of function pointer
@@ -1833,9 +1887,33 @@ TypeOrError typeCheckExpression(Program prog,size_t* offset){
     case OP_STRING_CONST:
       return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
     case OP_GET:
-      type=&(op->dataType);
-      if(type->typeClass!=TYPECLASS_UNDEFINED)
-        return (TypeOrError){.isError=false,.as={.type=type}};
+      switch(op->dataAs.idInfo.type){
+        case ID_LOCAL_VAR:
+        case ID_GLOBAL_VAR:
+        case ID_ARGUMENT:
+        case ID_PROCEDURE:
+          type=&(op->dataType);
+          if(type->typeClass!=TYPECLASS_UNDEFINED)
+            return (TypeOrError){.isError=false,.as={.type=type}};
+          return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+        case ID_TUPLE_ELEMENT:
+          r=typeCheckExpression(prog,offset);//tuple
+          if(r.isError)
+            return (TypeOrError){.isError=true,.as={.error=r.as.error}};
+          if(r.as.type->typeClass!=TYPECLASS_TUPLE){
+            printTypeName(*r.as.type,stderr);
+            fputs(" is not a tuple\n",stderr);
+            return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+          }
+          CompositeType* tuple=r.as.type->typeDataAs.composite;
+          if(tuple->typeCount<op->dataAs.idInfo.id){
+            fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
+            return (TypeOrError){.isError=true,.as={.error=ERROR_TYPE}};
+          }
+          return (TypeOrError){.isError=false,.as={.type=tuple->types+op->dataAs.idInfo.id}};
+        case ID_POINTER:
+          break;
+      }
       //TODO get pointer/get element
       break;
     //n to 1:
@@ -1891,11 +1969,18 @@ TypeOrError typeCheckExpression(Program prog,size_t* offset){
         case OR:
         case XOR:
           //integer bool ops
-          
+          op->dataType=typeCheckIntLogic(tmpType,*r.as.type);
+          if(op->dataType.typeClass!=TYPECLASS_UNDEFINED)
+            return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
           // fall through
         case FAST_AND:
         case FAST_OR:
           //bool ops
+          if(tmpType.typeClass==TYPECLASS_PRIMITIVE&&tmpType.typeDataAs.primitive==PRIMITIVE_BOOL&&
+              r.as.type->typeClass==TYPECLASS_PRIMITIVE&&r.as.type->typeDataAs.primitive==PRIMITIVE_BOOL){
+            op->dataType=primitiveType(PRIMITIVE_BOOL);
+            return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
+          }
           break;
         case EQ:
         case NE:
@@ -1907,6 +1992,9 @@ TypeOrError typeCheckExpression(Program prog,size_t* offset){
         case LE:
         case LT:
           //number comparison
+          op->dataType=typeCheckCompare(tmpType,*r.as.type);
+          if(op->dataType.typeClass!=TYPECLASS_UNDEFINED)
+            return (TypeOrError){.isError=false,.as={.type=&(op->dataType)}};
           break;
       }
       //TODO implement remaining cases
@@ -1973,8 +2061,24 @@ int typeCheckStatement(Program prog,size_t* offset){
             fputs("cannot declare tuple elements",stderr);
             return ERROR_SYNTAX;
           }
-          //TODO type check set tuple element
-          break;
+          if(r.as.type->typeClass!=TYPECLASS_TUPLE){
+            printTypeName(*r.as.type,stderr);
+            fputs(" is not a tuple\n",stderr);
+            return ERROR_TYPE;
+          }
+          CompositeType* tuple=r.as.type->typeDataAs.composite;
+          if(tuple->typeCount<op->dataAs.idInfo.id){
+            fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
+            return ERROR_TYPE;
+          }
+          r=typeCheckExpression(prog,offset);
+          if(r.isError)
+            return r.as.error;
+          if(!typeEquals(tuple->types[op->dataAs.idInfo.id],*r.as.type)){
+            typeErrorMessage("tuple element assignment",tuple->types[op->dataAs.idInfo.id],*r.as.type);
+            return ERROR_TYPE;
+          }
+          return 0;
         case ID_POINTER:
           if(op->opType==OP_DECLARE){
             fputs("cannot declare value at pointer",stderr);
@@ -2130,7 +2234,7 @@ int main(int argc,char** argv){
 	  int err=typeCheckProgram(p);
 	  if(err){
       fprintf(stderr,"error %i\n",err);
-      //return err; TODO finish implementation of type-checker
+      return err;
     }
 	  puts("type-checked program");
 		//3. compile operations to C

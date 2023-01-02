@@ -30,13 +30,15 @@ START
   SET_ELEMENT 0 GET tmp GET_ELEMENT 1 GET tmp 
 
   IF 
-    GET A
+    != GET A CONST I64 0
     
     PRINT I64 CONST I64 1  
   ELIF 
-   AND2
-     GET B 
-     XOR
+   &&
+     !=
+      GET B 
+      CONST I64 0
+     >=
        GET A
        CONST I64 42
        
@@ -50,7 +52,7 @@ START
     CONST I64 10
     
   WHILE 
-    GET C
+    > GET C CONST I64 0
 
   PRINT I64 GET C
   SET C
