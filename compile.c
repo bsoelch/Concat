@@ -148,19 +148,11 @@ typedef enum{
   //OP_MULTI_SET     //set multiple variables from a single tuple variable
   
   OP_BINARY_OPERATOR, 
-  OP_UNARY_PREFIX,  
-  //TODO? post-fix unary
+  OP_UNARY_OPERATOR,  
   
-  BLOCK_START,     // {
-  BLOCK_IF,        // if( EXPR ){
-  BLOCK_ELIF,      // } else if(EXPR){
-  BLOCK_ELSE,      // }else{
-  BLOCK_WHILE,     // while( EXPR ){
-  BLOCK_DO,        // do{
-  BLOCK_WHILE_END, // }while( EXPR );
-  BLOCK_END,       // }
+  OP_CODE_BLOCK,  
   
-  BLOCK_PROCEDURE, 
+  OP_DECLARE_PROCEDURE, 
   OP_RETURN,       
   OP_CALL,         // procType procId
   ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END 
@@ -403,7 +395,7 @@ typedef enum{
   LE,
   LT,
 }BinaryOperator;
-typedef enum{
+typedef enum{//TODO? postfix unary operators (POST_INCREMENT)
   NEGATE,
   INCREMENT,
   DECREMENT,
@@ -424,6 +416,17 @@ typedef struct{
   IdentiferType type;
 }IdentiferInfo;
 
+typedef enum{
+  BLOCK_START,     // {
+  BLOCK_IF,        // if( EXPR ){
+  BLOCK_ELIF,      // } else if(EXPR){
+  BLOCK_ELSE,      // }else{
+  BLOCK_WHILE,     // while( EXPR ){
+  BLOCK_DO,        // do{
+  BLOCK_WHILE_END, // }while( EXPR );
+  BLOCK_END,       // }
+}BlockType;
+
 typedef struct{
   OpType opType;
   DataType dataType;
@@ -432,6 +435,7 @@ typedef struct{
     BinaryOperator binOp;
     UnaryOperator unOp;
     IdentiferInfo idInfo;
+    BlockType block;
   }dataAs;
 }Operation;
 
@@ -632,7 +636,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           fprintf(target," global%" PRIi32 " = ",op->dataAs.idInfo.id);
           break;
         case ID_PROCEDURE:
-          fputs("use BLOCK_PROCEDURE to declare a procedure ",stderr);
+          fputs("use OP_DECLARE_PROCEDURE to declare a procedure ",stderr);
           return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
         case ID_ARGUMENT:
           fputs("cannot declare arguments",stderr);
@@ -647,7 +651,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       COMPILE_OP_RETURN_ERROR(target,op);
       fputs(";\n",target);
       break;
-    case OP_UNARY_PREFIX:
+    case OP_UNARY_OPERATOR:
       fputs("(",target);
       switch(op->dataAs.unOp){
         case NEGATE:
@@ -725,39 +729,43 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       COMPILE_OP_RETURN_ERROR(target,op);
       fputs(")",target);
       break;
-    case BLOCK_START:
-      fputs("{\n",target);
+    case OP_CODE_BLOCK:
+      switch(op->dataAs.block){
+        case BLOCK_START:
+          fputs("{\n",target);
+          break;
+        case BLOCK_IF:
+          fputs("if(",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs("){\n",target);
+          break;
+        case BLOCK_ELIF:
+          fputs("}else if(",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs("){\n",target);
+          break;
+        case BLOCK_WHILE:
+          fputs("while(",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs("){\n",target);
+          break;
+        case BLOCK_DO:
+          fputs("do{\n",target);
+          break;
+        case BLOCK_ELSE:
+          fputs("}else{\n",target);
+          break;
+        case BLOCK_WHILE_END:
+          fputs("}while(",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs(");\n",target);
+          break;
+        case BLOCK_END:
+          fputs("}\n",target);
+          break;
+      }
       break;
-    case BLOCK_IF:
-      fputs("if(",target);
-      COMPILE_OP_RETURN_ERROR(target,op);
-      fputs("){\n",target);
-      break;
-    case BLOCK_ELIF:
-      fputs("}else if(",target);
-      COMPILE_OP_RETURN_ERROR(target,op);
-      fputs("){\n",target);
-      break;
-    case BLOCK_WHILE:
-      fputs("while(",target);
-      COMPILE_OP_RETURN_ERROR(target,op);
-      fputs("){\n",target);
-      break;
-    case BLOCK_DO:
-      fputs("do{\n",target);
-      break;
-    case BLOCK_ELSE:
-      fputs("}else{\n",target);
-      break;
-    case BLOCK_WHILE_END:
-      fputs("}while(",target);
-      COMPILE_OP_RETURN_ERROR(target,op);
-      fputs(");\n",target);
-      break;
-    case BLOCK_END:
-      fputs("}\n",target);
-      break;
-    case BLOCK_PROCEDURE:{
+    case OP_DECLARE_PROCEDURE:{
       if(op->dataType.typeClass!=TYPECLASS_PROCEDURE)
         return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
       printTypeName(*op->dataType.typeDataAs.procedure->outType,target);
@@ -1409,7 +1417,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       state->procScope=state->scopeLevel;
       state->currentProcId=type.typeDataAs.procedure->id;
             
-      (*op)=(Operation){.opType=BLOCK_PROCEDURE,.dataType=type,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+      (*op)=(Operation){.opType=OP_DECLARE_PROCEDURE,.dataType=type,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     }else{
       (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     }
@@ -1475,7 +1483,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.binOp=FAST_OR}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"NEG")||wordEquals(&word,"NEGATE")){
-    (*op)=(Operation){.opType=OP_UNARY_PREFIX,.dataType=TYPE_UNDEFINED,.dataAs={.unOp=NEGATE}};
+    (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.dataAs={.unOp=NEGATE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"IF")){
     Scope* newScope=openScope();
@@ -1484,7 +1492,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     state->currentScope=newScope;
     state->scopeLevel++;
     
-    (*op)=(Operation){.opType=BLOCK_IF,.dataType=TYPE_UNDEFINED,.dataAs={0}};
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_IF}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ELIF")){
     closeScope();
@@ -1493,7 +1501,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
     
-    (*op)=(Operation){.opType=BLOCK_ELIF,.dataType=TYPE_UNDEFINED,.dataAs={0}};
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_ELIF}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"WHILE")){
     Scope* newScope=openScope();
@@ -1502,7 +1510,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     state->currentScope=newScope;
     state->scopeLevel++;
     
-    (*op)=(Operation){.opType=BLOCK_WHILE,.dataType=TYPE_UNDEFINED,.dataAs={0}};
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_WHILE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ELSE")){
     closeScope();
@@ -1511,7 +1519,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
     
-    (*op)=(Operation){.opType=BLOCK_ELSE,.dataType=TYPE_UNDEFINED,.dataAs={0}};
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_ELSE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"END")){
     closeScope();
@@ -1521,7 +1529,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       state->procScope=-1;
     }
     
-    (*op)=(Operation){.opType=BLOCK_END,.dataType=TYPE_UNDEFINED,.dataAs={0}};
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_END}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"RETURN")){
     if(state->currentProcId<0){
@@ -1585,7 +1593,75 @@ Program compileToOps(char* code,size_t codeSize){
   }
   return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint};
 }
-//TODO typecheck program
+
+//TODO find correct error positions in file
+
+int typeCheckExpression(Program prog,size_t* offset){
+  if(*offset>=prog.opCount)
+    return ERROR_EOF;//unexpected end of program
+  Operation* op=prog.ops+*offset;
+  switch(op->opType){
+    //0 to 1:
+    case OP_CONSTANT:
+    case OP_STRING_CONST:
+    case OP_GET:
+      break; 
+    //n to 1:
+    case OP_UNARY_OPERATOR:
+    case OP_BINARY_OPERATOR:
+    case OP_CALL:
+      break;
+    //n to 0:
+    case OP_DECLARE:
+    case OP_SET:
+    case OP_RETURN:
+    case OP_PRINT:
+    //0 to 0:
+    case OP_CODE_BLOCK:
+    case OP_DECLARE_PROCEDURE:
+    case ENTRY_POINT:
+      return ERROR_SYNTAX;
+  }
+  return 0;
+}
+int typeCheckStatement(Program prog,size_t* offset){
+  if(*offset>=prog.opCount)
+    return 0;//nothing to do TODO check if all code-block are closed
+  Operation* op=prog.ops+*offset;
+  switch(op->opType){
+    //n to 0:
+    case OP_DECLARE:
+    case OP_SET:
+    case OP_RETURN:
+    case OP_PRINT:
+      break;
+    //0 to 0:
+    case OP_CODE_BLOCK:
+    case OP_DECLARE_PROCEDURE:
+    case ENTRY_POINT:
+      break;
+    //0 to 1:
+    case OP_CONSTANT:
+    case OP_STRING_CONST:
+    case OP_GET:
+    //n to 1:
+    case OP_UNARY_OPERATOR:
+    case OP_BINARY_OPERATOR:
+    case OP_CALL:
+      return ERROR_SYNTAX;
+  }
+  return 0;
+}
+int typecheckProgram(Program prog){
+  size_t offset=0;
+  int err;
+  while(offset<prog.opCount){
+    err=typeCheckStatement(prog,&offset);
+    if(err!=0)
+      return err;
+  }
+  return 0;
+}
 
 /* Copied from StackOverflow
  * fp is assumed to be non null
