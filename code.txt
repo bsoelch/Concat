@@ -1,0 +1,49 @@
+
+PROC I32 I32 => I32 I32 END DECLARE proc0
+  0 1 RETURN
+END
+PROC => END DECLARE doNothing
+    RETURN
+END
+PROC UNION I32 I64 END => I64 I64 END DECLARE typeTest
+  
+END
+
+ENTRY_POINT 
+  1 1 ADD  I64 DECLARE A
+  A 1 SUBTRACT 3 MULTIPLY  I64 DECLARE B 
+  
+  A PRINT
+  B PRINT
+  B NEG SET A
+  
+  1 2 proc0  TUPLE I64 I64 END DECLARE tmp 
+  doNothing
+  
+  tmp GET_ELEMENT 1  tmp SET_ELEMENT 0
+
+  A 0 != IF 
+    1 PRINT 
+  EL  B 0 !=  A 42 >=  && IF 
+    2 PRINT
+  ELSE
+    3 PRINT
+  END
+
+  10 I64 DECLARE C 
+    
+  WHILE C 0 > DO
+    C PRINT
+    C 1 SUBTRACT SET C 
+    
+  END
+  
+  true PRINT
+END
+
+"Strings are \"ignored\"  " STRING DECLARE s0
+# Comments are now enabled
+'A' CHAR DECLARE c0  
+"This is a unicode\u2122 multi-line
+ string" STRING DECLARE s1
+ 
