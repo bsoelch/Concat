@@ -538,6 +538,16 @@ typedef enum{//TODO? postfix unary operators (POST_INCREMENT)
   NOT,
   FLIP,
 }UnaryOperator;
+const char* unOpName(UnaryOperator op){
+  switch(op){
+    case NEGATE:return "NEGATE";
+    case INCREMENT:return "INCREMENT";
+    case DECREMENT:return "DECREMENT";
+    case NOT:return "NOT";
+    case FLIP:return "FLIP";
+  }
+  return "UNDEFINED";
+}
 typedef enum{
   ID_LOCAL_VAR,
   ID_GLOBAL_VAR,
@@ -1939,27 +1949,46 @@ typedef struct{
 }TypeCheckState;
 
 //returns true when allocation fails
-bool ensureOpCap(TypeCheckState* state,size_t newSize){
-  if(state->opCap>newSize)
+bool ensureCap(void** mList,size_t* cap,size_t eltSize,size_t newSize){
+  if(*cap>newSize)
     return false;
   size_t newCap=newSize;
-  newCap+=(state->opCap>>4)+16;//add some space depending on previous capacity
+  newCap+=((*cap)>>4)+16;//add some space depending on previous capacity
   //round up to next multiple of 64
   newCap&=~0x3f;
   if((newSize&0x3f)!=0)
     newCap+=0x40;
-  Operation* newOps=realloc(state->compiledOperations,newCap*sizeof(Operation));
-  if(newOps==NULL)
+  void* newList=realloc(*mList,newCap*eltSize);
+  if(newList==NULL)
     return true;
-  state->compiledOperations=newOps;
-  state->opCap=newCap;
+  *mList=newList;
+  *cap=newCap;
   return false;
+}
+bool ensureOpCap(TypeCheckState* state,size_t newSize){
+  void* mList=state->compiledOperations;//void* and operation* may have different size
+  bool res=ensureCap(&mList,&(state->opCap),sizeof(Operation),newSize);
+  state->compiledOperations=(Operation*)mList;
+  return res;
+}
+bool ensureOpStackCap(TypeCheckState* state,size_t newSize){
+  void* mList=state->opStack;
+  bool res=ensureCap(&mList,&(state->opStackCap),sizeof(Operation),newSize);
+  state->opStack=(Operation*)mList;
+  return res;
+}
+bool ensureTypeStackCap(TypeCheckState* state,size_t newSize){
+  void* mList=state->typeStack;
+  bool res=ensureCap(&mList,&(state->typeStackCap),sizeof(TypeInfo),newSize);
+  state->typeStack=(TypeInfo*)mList;
+  return res;
 }
 void freeContents(TypeCheckState* state){
   free(state->compiledOperations);//freeing NULL has no check for null necessary
   free(state->opStack);
   free(state->typeStack);
 }
+//TODO extract shifting of types/operations into their own functions
 
 bool checkNonemptyStack(TypeCheckState* state,const char* message){
   if(state->opStackCount>0){
@@ -1969,27 +1998,146 @@ bool checkNonemptyStack(TypeCheckState* state,const char* message){
   }
   return false;
 }
-void pushConstant(TypeCheckState* state,Operation op){
+int pushValue(TypeCheckState* state,Operation op,bool isConst){
+  if(ensureOpStackCap(state,state->opStackCount+1)||ensureTypeStackCap(state,state->typeCount+1))
+    return ERROR_MEMORY;
   state->opStack[state->opStackCount++]=op;
-  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1,.isPure=true};
+  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1,.isPure=isConst};
+  return 0;
+}
+
+int typeCheckCall(Operation* op,TypeCheckState* state){
+  DataType calledType=op->dataType;
+  //TODO call of function pointer
+  //  need check for value of pointer
+  if(calledType.typeClass!=TYPECLASS_PROCEDURE&&
+    ((calledType.typeClass!=TYPECLASS_POINTER&&calledType.typeClass!=TYPECLASS_CONST_POINTER)||
+      calledType.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE)){//not procedure or pointer to procedure 
+    fputs("cannot call objects of type ",stderr);
+    printTypeName(calledType,stderr);
+    fputs("\n",stderr);
+    return ERROR_TYPE;
+  }
+  ProcedureType* procType=calledType.typeDataAs.procedure;
+  size_t argCount=1;
+  size_t totalOps=0;
+  if(procType->inType->typeClass==TYPECLASS_PRIMITIVE&&procType->inType->typeDataAs.primitive==PRIMITIVE_VOID){//no arguments
+    if(ensureOpCap(state,state->opCount+1))
+      return ERROR_MEMORY;
+    state->compiledOperations[state->opCount++]=*op;
+    argCount=0;
+    //don't return, output still has to be handled
+  }
+  if(procType->inType->typeClass==TYPECLASS_FLAT_TUPLE){
+    argCount=procType->inType->typeDataAs.composite->typeCount;
+  }
+  if(state->typeCount<argCount){
+    fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
+    return ERROR_TYPE;
+  }
+  size_t offset=state->typeCount-argCount;
+  
+  if(argCount==1){//function takes single argument, the single argument will not be a flat tuple (tuples have >= 2 elements)
+    if(!typeEquals(*procType->inType,state->typeStack[offset].type)){
+      typeErrorMessage("procedure argument",*procType->inType,state->typeStack[offset].type);
+      return ERROR_TYPE;
+    }
+    totalOps=state->typeStack[offset].opCount;
+  }
+  if(argCount>1){//argument is flat tuple
+    CompositeType* inTypes=procType->inType->typeDataAs.composite;
+    for(int32_t i=0;i<inTypes->typeCount;i++){
+      if(!typeEquals(inTypes->types[i],state->typeStack[offset+i].type)){
+          typeErrorMessage("procedure argument",inTypes->types[i],state->typeStack[offset+i].type);
+          return ERROR_TYPE;
+      }
+      totalOps+=state->typeStack[offset+i].opCount;
+    }
+  }
+  
+  DataType outType=*(procType->outType);
+  if(outType.typeClass==TYPECLASS_PRIMITIVE&&outType.typeDataAs.primitive==PRIMITIVE_VOID){//no return values
+    state->typeCount-=argCount;
+    state->opStackCount-=totalOps;
+    if(ensureOpCap(state,state->opCount+totalOps+1))
+        return ERROR_MEMORY;
+    state->compiledOperations[state->opCount++]=*op;
+    memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
+    state->opCount+=totalOps;
+    return 0;
+  }
+  if(outType.typeClass==TYPECLASS_FLAT_TUPLE){//TODO auto-unwarp multi-return values using flat-tuple return values
+    outType.typeClass=TYPECLASS_TUPLE;//convert flat tuple to tuple until there is auto-unwrapping 
+  }
+  //update op-stack
+  if(ensureOpStackCap(state,state->opStackCount+1))
+    return ERROR_MEMORY;
+  memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+  state->opStack[state->opStackCount-totalOps]=*op;
+  state->opStackCount++;
+  //update type stack
+  if(argCount<1&&ensureTypeStackCap(state,state->typeCount+1))
+    return ERROR_MEMORY;
+  state->typeCount-=argCount;
+  state->typeStack[state->typeCount++]=(TypeInfo){.type=outType,.opCount=totalOps+1,.isPure=false};//TODO? pure functions
+  return 0;
 }
 
 int typeCheckOperation(Program* prog,TypeCheckState* state){
   Operation op=prog->ops[state->index++];
   size_t totalOps=0;
+  int32_t offset;
+  bool isPure;
   switch(op.opType){
     case OP_CONSTANT:
     case OP_STRING_CONST:
-      pushConstant(state,op);
-      return 0;
+      return pushValue(state,op,true);
     case OP_UNARY_OPERATOR:
-      break;
-    case OP_BINARY_OPERATOR:
-      if(state->opStackCount<2){
-        fprintf(stderr,"not enough operands for binary operator %s: expected 2 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
+      if(state->typeCount<1){
+        fprintf(stderr,"not enough operands for unary operator %s: need 1 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
         return ERROR_TYPE;
       }
-      int offset=state->typeCount-2;
+      offset=state->typeCount-1;
+      isPure=true;
+      op.dataType=state->typeStack[offset].type;//unary operator returns value of same type
+      switch(op.dataAs.unOp){
+        case INCREMENT:
+        case DECREMENT:
+          isPure=false;//TODO check if value can be incremented/decremented
+          //fall through
+        case NEGATE:
+        case FLIP:
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||!isInteger(state->typeStack[offset].type.typeDataAs.primitive)){
+            fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));//TODO print operator name
+            fputs(" got ",stderr);
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs("\n",stderr);
+            return ERROR_TYPE;
+          }
+          break;
+        case NOT:
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||state->typeStack[offset].type.typeDataAs.primitive!=PRIMITIVE_BOOL){
+            typeErrorMessage("unary operator NOT",primitiveType(PRIMITIVE_BOOL),state->typeStack[offset].type);
+            return ERROR_TYPE;
+          }
+          break;
+      }
+      //update op-stack
+      totalOps=state->typeStack[offset].opCount;
+      isPure&=state->typeStack[offset].isPure;
+      if(ensureOpStackCap(state,state->opStackCount+1))
+        return ERROR_MEMORY;
+      memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+      state->opStack[state->opStackCount-totalOps]=op;
+      state->opStackCount++;
+      //typeStack does not change
+      return 0;
+    case OP_BINARY_OPERATOR:
+      if(state->typeCount<2){
+        fprintf(stderr,"not enough operands for binary operator %s: need 2 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
+        return ERROR_TYPE;
+      }
+      offset=state->typeCount-2;
       bool typesMatch=false;
       switch(op.dataAs.binOp){
         case ADD:
@@ -2056,22 +2204,159 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
         return ERROR_TYPE;
       }
       //operator has matching types
-      state->compiledOperations[state->opCount++]=op;
+      //update operation stack
       totalOps=state->typeStack[offset].opCount+state->typeStack[offset+1].opCount;
-      if(ensureOpCap(state,state->opCount+totalOps))
+      isPure=state->typeStack[offset].isPure&&state->typeStack[offset+1].isPure;
+      if(ensureOpStackCap(state,state->opStackCount+1))
         return ERROR_MEMORY;
-      memcpy(state->compiledOperations+state->opCount,state->opStack,totalOps*sizeof(Operation));
-      state->opCount+=totalOps;
-      state->typeCount-=2;
-      state->opStackCount-=2;
+      memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+      state->opStack[state->opStackCount-totalOps]=op;
+      state->opStackCount++;
+      state->typeCount--;
+      state->typeStack[state->typeCount-1]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1,.isPure=isPure};
       return 0;
     case OP_PRINT:
+      if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+        return ERROR_TYPE;
+      }
+      offset=state->typeCount-1;
+      //can only print non-void primitive
+      if(state->typeStack[offset].type.typeClass!=TYPECLASS_POINTER&&state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER&&
+          (state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||state->typeStack[offset].type.typeDataAs.primitive==PRIMITIVE_VOID)){
+        fputs("cannot print values of type ",stderr);
+        printTypeName(state->typeStack[offset].type,stderr);
+        fputs("\n",stderr);
+        return ERROR_TYPE;
+      }
+      //update operations
+      totalOps=state->typeStack[offset].opCount;
+      if(ensureOpCap(state,state->opCount+totalOps+1))
+        return ERROR_MEMORY;
+      state->compiledOperations[state->opCount++]=op;
+      memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
+      state->opCount+=totalOps;
+      state->typeCount-=1;
+      state->opStackCount-=totalOps;
+      return 0;
+    case OP_GET:
+      switch(op.dataAs.idInfo.type){
+        case ID_LOCAL_VAR:
+        case ID_GLOBAL_VAR:
+        case ID_ARGUMENT:
+        case ID_PROCEDURE:
+          if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
+            return pushValue(state,op,false);
+          //unexpected type error
+          return ERROR_TYPE;
+        case ID_TUPLE_ELEMENT:
+          if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            return ERROR_TYPE;
+          }
+          offset=state->typeCount-1;
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_TUPLE){
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs(" is not a tuple\n",stderr);
+            return ERROR_TYPE;
+          }
+          CompositeType* tuple=state->typeStack[offset].type.typeDataAs.composite;
+          if(tuple->typeCount<op.dataAs.idInfo.id){
+            fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op.dataAs.idInfo.id,tuple->typeCount);
+            return ERROR_TYPE;
+          }
+          //update operation stack
+          totalOps=state->typeStack[offset].opCount;
+          if(ensureOpStackCap(state,state->opStackCount+1))
+            return ERROR_MEMORY;
+          memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+          state->opStack[state->opStackCount-totalOps]=op;
+          state->opStackCount++;
+          //update type-stack
+          state->typeStack[offset].type=tuple->types[op.dataAs.idInfo.id];
+          return 0;
+        case ID_POINTER:
+          break;
+      }
       break;
     case OP_DECLARE:
-    case OP_GET:
     case OP_SET:
+      switch(op.dataAs.idInfo.type){
+        case ID_LOCAL_VAR:
+        case ID_GLOBAL_VAR:
+        case ID_ARGUMENT:
+          if(op.dataAs.idInfo.type==ID_ARGUMENT&&op.opType==OP_DECLARE){
+            fputs("cannot declare procedure arguments",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            return ERROR_TYPE;
+          }
+          offset=state->typeCount-1;
+          if(!typeEquals(op.dataType,state->typeStack[offset].type)){//TODO allow implicit casts
+            typeErrorMessage("variable assignment",op.dataType,state->typeStack[offset].type);
+            return ERROR_TYPE;
+          }
+          totalOps=state->typeStack[offset].opCount;
+          if(ensureOpCap(state,state->opCount+totalOps+1))
+            return ERROR_MEMORY;
+          state->compiledOperations[state->opCount++]=op;
+          memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
+          state->opCount+=totalOps;
+          state->typeCount-=1;
+          state->opStackCount-=totalOps;
+          return 0;
+        case ID_TUPLE_ELEMENT:// tuple element SET
+          if(op.opType==OP_DECLARE){
+            fputs("cannot declare tuple elements",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(state->typeCount<2){
+            fprintf(stderr,"not enough operands for operation %s: need 2 got %zu\n",opName(op.opType),state->typeCount);
+            return ERROR_TYPE;
+          }
+          offset=state->typeCount-2;
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_TUPLE){
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs(" is not a tuple\n",stderr);
+            return ERROR_TYPE;
+          }
+          CompositeType* tuple=state->typeStack[offset].type.typeDataAs.composite;
+          if(tuple->typeCount<op.dataAs.idInfo.id){
+            fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op.dataAs.idInfo.id,tuple->typeCount);
+            return ERROR_TYPE;
+          }
+          if(!typeEquals(tuple->types[op.dataAs.idInfo.id],state->typeStack[offset+1].type)){
+            typeErrorMessage("tuple element assignment",tuple->types[op.dataAs.idInfo.id],state->typeStack[offset+1].type);
+            return ERROR_TYPE;
+          }
+          totalOps=state->typeStack[offset].opCount+state->typeStack[offset+1].opCount;
+          if(ensureOpCap(state,state->opCount+totalOps+1))
+            return ERROR_MEMORY;
+          state->compiledOperations[state->opCount++]=op;
+          memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
+          state->opCount+=totalOps;
+          state->typeCount-=2;
+          state->opStackCount-=totalOps;
+          return 0;
+        case ID_POINTER:// pointer value SET
+          if(op.opType==OP_DECLARE){
+            fputs("cannot declare value at pointer",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(state->typeCount<2){
+            fprintf(stderr,"not enough operands for operation %s: need 2 got %zu\n",opName(op.opType),state->typeCount);
+            return ERROR_TYPE;
+          }
+          offset=state->typeCount-2;
+          //TODO set pointer
+          break;
+        case ID_PROCEDURE:
+          fputs("procedures cannot be modified",stderr);
+          return ERROR_SYNTAX;
+      }
       break;
-      
     case OP_CODE_BLOCK:
       switch(op.dataAs.block){
         case BLOCK_IF:
@@ -2086,13 +2371,14 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
           if(checkNonemptyStack(state,"unfinished local operation")){
             return ERROR_SYNTAX;
           }
+          if(ensureOpCap(state,state->opCount+1))
+            return ERROR_MEMORY;
           state->compiledOperations[state->opCount++]=op;
           return 0;
       }
       break;
-    
     case OP_CALL:
-      break;
+      return typeCheckCall(&op,state);
     case OP_RETURN:     
       if(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID)
         return checkNonemptyStack(state,"unfinished operation at end of procedure")?ERROR_SYNTAX:0;//no types to check
@@ -2108,9 +2394,9 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
           typeErrorMessage("return statement",op.dataType,state->typeStack[0].type);
           return ERROR_TYPE;
         }
-        state->compiledOperations[state->opCount++]=op;
-        if(ensureOpCap(state,state->opCount+state->typeStack[0].opCount))
+        if(ensureOpCap(state,state->opCount+state->typeStack[0].opCount+1))
           return ERROR_MEMORY;
+        state->compiledOperations[state->opCount++]=op;
         memcpy(state->compiledOperations+state->opCount,state->opStack,state->typeStack[0].opCount*sizeof(Operation));
         state->opCount+=state->typeStack[0].opCount;
         state->typeCount=0;
@@ -2136,9 +2422,9 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
           return ERROR_TYPE;
         }
       }
-      state->compiledOperations[state->opCount++]=op;
-      if(ensureOpCap(state,state->opCount+totalOps))
+      if(ensureOpCap(state,state->opCount+totalOps+1))
         return ERROR_MEMORY;
+      state->compiledOperations[state->opCount++]=op;
       memcpy(state->compiledOperations+state->opCount,state->opStack,totalOps*sizeof(Operation));
       state->opCount+=totalOps;
       state->typeCount=0;
@@ -2149,10 +2435,12 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
       if(checkNonemptyStack(state,"unfinished global operation")){
         return ERROR_SYNTAX;
       }
+      if(ensureOpCap(state,state->opCount+1))
+        return ERROR_MEMORY;
       state->compiledOperations[state->opCount++]=op;
       return 0;
   }
-  printf("type checking op %s is not implemented\n",opName(op.opType));
+  printf("type checking %s is not implemented\n",opName(op.opType));
   return ERROR_UNIMPLEMENTED;
 }
 int typeCheckProgram(Program* prog){
