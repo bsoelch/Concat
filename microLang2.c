@@ -241,7 +241,6 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 int64_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
 
-
 bool typeEquals(DataType a,DataType b){
   if(a.typeClass!=b.typeClass)
     return false;
@@ -481,7 +480,6 @@ int printTypeNameC(DataType type,FILE* file){
       j=fputs("*",file);
       return j<0?j:(i+j);
     case TYPECLASS_FLAT_TUPLE:
-      return fprintf(file,"flatTuple%"PRIi32,type.typeDataAs.composite->id);
     case TYPECLASS_TUPLE:
       return fprintf(file,"tuple%"PRIi32,type.typeDataAs.composite->id);
     case TYPECLASS_UNION:
@@ -563,6 +561,7 @@ typedef struct{
 }IdentiferInfo;
 
 typedef enum{
+  BLOCK_PROCEDURE, 
   BLOCK_START,     // {
   BLOCK_IF,        // if( EXPR ){
   BLOCK_ELIF,      // } else if(EXPR){
@@ -877,6 +876,9 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       break;
     case OP_CODE_BLOCK:
       switch(op->dataAs.block){
+        case BLOCK_PROCEDURE:
+          fputs("block procedure should be eliminated at compile time",stderr);
+          return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
         case BLOCK_START:
           fputs("{\n",target);
           break;
@@ -1018,6 +1020,11 @@ int compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoi
   if(progStringCount>0){
     stringType=progStringType();//ensure string-type exists
     initProgStringChars();//initialize characters
+  }
+  for(size_t i=0;i<procTypeCount;i++){
+    if(procTypes[i].outType->typeClass==TYPECLASS_FLAT_TUPLE){//ensure flat-tuple return types are generated as tuples for code generation
+      procTypes[i].outType->typeDataAs.composite->flags|=FLAG_IS_TUPLE;
+    }
   }
   //declare composite types
   for(int32_t i=0;i<compositeCount;i++){
@@ -1654,8 +1661,8 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"IF")){//TODO check scope boundaries 
-    Scope* newScope=openScope();
+  }else if(wordEquals(&word,"IF")){
+    Scope* newScope=openScope();//FIXME don't open scope for IF after EL
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
@@ -1688,7 +1695,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
         
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_START}};
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_DO}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ELSE")){
     closeScope();
@@ -1934,6 +1941,23 @@ typedef struct{
   int32_t opCount;
   bool isPure;//checks if code block represents pure function
 }TypeInfo;
+
+typedef struct{
+  size_t elsePos;
+  int32_t elifCount;
+}IfBlockInfo;
+typedef struct{
+  bool hasDo;
+}DoBlockInfo;
+typedef struct{
+  BlockType type;
+  size_t blockStart;
+  union{
+    int64_t i64;
+    IfBlockInfo ifBlock;
+    DoBlockInfo doBlock;
+  }blockDataAs;
+}BlockInfo;
 typedef struct{
   Operation* compiledOperations;
   size_t opCap;
@@ -1944,6 +1968,10 @@ typedef struct{
   TypeInfo* typeStack;
   size_t typeStackCap;
   size_t typeCount;  
+  
+  BlockInfo* openBlocks;
+  size_t blockCap;
+  size_t blockCount;
   
   size_t index;
 }TypeCheckState;
@@ -1983,10 +2011,34 @@ bool ensureTypeStackCap(TypeCheckState* state,size_t newSize){
   state->typeStack=(TypeInfo*)mList;
   return res;
 }
+bool pushBlock(TypeCheckState* state,BlockInfo newBlock){
+  //ensure cap
+  void* blocks=state->openBlocks;
+  if(ensureCap(&blocks,&(state->blockCap),sizeof(BlockInfo),state->blockCount+1))
+    return true;
+  state->openBlocks=(BlockInfo*)blocks;
+  state->openBlocks[state->blockCount++]=newBlock;
+  return false;
+}
+BlockInfo peekBlock(TypeCheckState* state){
+  if(state->blockCount>0)
+    return state->openBlocks[state->blockCount-1];
+  return (BlockInfo){.type=BLOCK_END,.blockStart=0,.blockDataAs={0}};
+}
+BlockInfo popBlock(TypeCheckState* state){
+  if(state->blockCount>0)
+    return state->openBlocks[--state->blockCount];
+  return (BlockInfo){.type=BLOCK_END,.blockStart=0,.blockDataAs={0}};
+}
 void freeContents(TypeCheckState* state){
   free(state->compiledOperations);//freeing NULL has no check for null necessary
+  state->compiledOperations=NULL;
   free(state->opStack);
+  state->opStack=NULL;
   free(state->typeStack);
+  state->typeStack=NULL;
+  free(state->openBlocks);
+  state->openBlocks=NULL;
 }
 //TODO extract shifting of types/operations into their own functions
 
@@ -2072,7 +2124,7 @@ int typeCheckCall(Operation* op,TypeCheckState* state){
   //update op-stack
   if(ensureOpStackCap(state,state->opStackCount+1))
     return ERROR_MEMORY;
-  memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+  memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
   state->opStack[state->opStackCount-totalOps]=*op;
   state->opStackCount++;
   //update type stack
@@ -2083,11 +2135,11 @@ int typeCheckCall(Operation* op,TypeCheckState* state){
   return 0;
 }
 
-int typeCheckOperation(Program* prog,TypeCheckState* state){
-  Operation op=prog->ops[state->index++];
+int typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
   int32_t offset;
   bool isPure;
+  BlockInfo blockInfo;
   switch(op.opType){
     case OP_CONSTANT:
     case OP_STRING_CONST:
@@ -2127,10 +2179,11 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
       isPure&=state->typeStack[offset].isPure;
       if(ensureOpStackCap(state,state->opStackCount+1))
         return ERROR_MEMORY;
-      memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+      memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
       state->opStack[state->opStackCount-totalOps]=op;
       state->opStackCount++;
-      //typeStack does not change
+      //update type-stack
+      state->typeStack[state->typeCount-1].opCount++;
       return 0;
     case OP_BINARY_OPERATOR:
       if(state->typeCount<2){
@@ -2209,7 +2262,7 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
       isPure=state->typeStack[offset].isPure&&state->typeStack[offset+1].isPure;
       if(ensureOpStackCap(state,state->opStackCount+1))
         return ERROR_MEMORY;
-      memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+      memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
       state->opStack[state->opStackCount-totalOps]=op;
       state->opStackCount++;
       state->typeCount--;
@@ -2229,6 +2282,7 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
         fputs("\n",stderr);
         return ERROR_TYPE;
       }
+      op.dataType=state->typeStack[offset].type;
       //update operations
       totalOps=state->typeStack[offset].opCount;
       if(ensureOpCap(state,state->opCount+totalOps+1))
@@ -2269,11 +2323,12 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
           totalOps=state->typeStack[offset].opCount;
           if(ensureOpStackCap(state,state->opStackCount+1))
             return ERROR_MEMORY;
-          memmove(state->opStack+state->opStackCount-totalOps,state->opStack+state->opStackCount-totalOps+1,totalOps*sizeof(Operation));
+          memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
           state->opStack[state->opStackCount-totalOps]=op;
           state->opStackCount++;
           //update type-stack
           state->typeStack[offset].type=tuple->types[op.dataAs.idInfo.id];
+          state->typeStack[offset].opCount++;
           return 0;
         case ID_POINTER:
           break;
@@ -2357,31 +2412,199 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
           return ERROR_SYNTAX;
       }
       break;
-    case OP_CODE_BLOCK:
+    case OP_CODE_BLOCK://TODO allow operations to cross block boundaries (within procedures)
       switch(op.dataAs.block){
         case BLOCK_IF:
-        case BLOCK_ELIF:
-        case BLOCK_DO:
-        case BLOCK_WHILE_END:
-        case BLOCK_WHILE:
-          break;
-        case BLOCK_START:
+          blockInfo=peekBlock(state);
+          if(blockInfo.type==BLOCK_END){//block stack underflow
+            fputs("unexpected IF statement, IF statements cannot be declared at global level\n",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(blockInfo.type==BLOCK_ELIF){//TODO? better handling of elif blocks
+            state->blockCount--;//remove block
+            blockInfo.type=BLOCK_IF;
+          }else{
+            blockInfo=(BlockInfo){.type=BLOCK_IF,.blockStart=state->opCount,.blockDataAs={0}};
+          }
+          if(pushBlock(state,blockInfo))
+            return ERROR_MEMORY;
+          
+          if(state->typeCount<1){
+            fprintf(stderr,"not enough operands if-condition: need 1 got %zu\n",state->typeCount);
+            return ERROR_TYPE;
+          }
+          offset=state->typeCount-1;
+          if(!typeEquals(primitiveType(PRIMITIVE_BOOL),state->typeStack[offset].type)){
+            typeErrorMessage("variable assignment",op.dataType,state->typeStack[offset].type);
+            return ERROR_TYPE;
+          }
+          totalOps=state->typeStack[offset].opCount;
+          if(ensureOpCap(state,state->opCount+totalOps+1))
+            return ERROR_MEMORY;
+          state->compiledOperations[state->opCount++]=op;
+          memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
+          state->opCount+=totalOps;
+          state->typeCount-=1;
+          state->opStackCount-=totalOps;
+          if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
+            return ERROR_SYNTAX;
+          }
+          return 0;
         case BLOCK_ELSE:
-        case BLOCK_END://TODO allow operations to cross block boundaries (within procedures)
+          blockInfo=popBlock(state);
+          if(blockInfo.type!=BLOCK_IF){//wrong position for ELSE
+            fputs("ELSE can only appear in IF blocks\n",stderr);
+            return ERROR_SYNTAX;
+          }
           if(checkNonemptyStack(state,"unfinished local operation")){
             return ERROR_SYNTAX;
           }
+            //push updated block
+          blockInfo.type=BLOCK_ELSE;
+          blockInfo.blockDataAs.ifBlock.elsePos=state->opCount;
+          if(pushBlock(state,blockInfo))
+            return ERROR_MEMORY;
           if(ensureOpCap(state,state->opCount+1))
             return ERROR_MEMORY;
           state->compiledOperations[state->opCount++]=op;
           return 0;
+        case BLOCK_ELIF:
+          blockInfo=popBlock(state);
+          if(blockInfo.type!=BLOCK_IF){//wrong position for EL ... IF
+            fputs("EL ... IF can only appear in IF blocks\n",stderr);
+            printf("%u\n",blockInfo.type);
+            return ERROR_SYNTAX;
+          }
+          
+          if(checkNonemptyStack(state,"unfinished local operation")){
+            return ERROR_SYNTAX;
+          }
+          //push updated block
+          blockInfo.type=BLOCK_ELIF;
+          blockInfo.blockDataAs.ifBlock.elifCount++;
+          blockInfo.blockDataAs.ifBlock.elsePos=state->opCount;
+          if(pushBlock(state,blockInfo))
+            return ERROR_MEMORY;
+          if(ensureOpCap(state,state->opCount+1))
+            return ERROR_MEMORY;
+          state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_ELSE}};
+          return 0;
+        case BLOCK_WHILE:
+          if(checkNonemptyStack(state,"unfinished local operation")){
+            return ERROR_SYNTAX;
+          }
+          if(pushBlock(state,(BlockInfo){.type=BLOCK_DO,.blockStart=state->opCount,.blockDataAs={0}}))
+            return ERROR_MEMORY;
+          if(ensureOpCap(state,state->opCount+1))
+            return ERROR_MEMORY;
+          //1. start block as DO ... WHILE_END
+          state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_DO}};
+          return 0;
+        case BLOCK_DO:
+          blockInfo=popBlock(state);
+          if(blockInfo.type!=BLOCK_DO){//wrong position for DO
+            fputs("DO can only appear in WHILE-DO blocks\n",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(blockInfo.blockDataAs.doBlock.hasDo){//wrong position for DO
+            fputs("DO cannot appear more than once per WHILE block\n",stderr);
+            return ERROR_SYNTAX;
+          }
+          if(state->opCount==blockInfo.blockStart+1){//if do-body empty switch to WHILE ... END
+            blockInfo.type=BLOCK_WHILE;
+            if(pushBlock(state,blockInfo))
+              return ERROR_MEMORY;
+            if(state->compiledOperations[blockInfo.blockStart].opType!=OP_CODE_BLOCK)
+              return ERROR_MEMORY;//memory got corrupted, op at block start is no longer start of block
+            state->compiledOperations[blockInfo.blockStart].dataAs.block=BLOCK_WHILE;
+            //read while operation
+            if(state->typeCount<1){
+              fprintf(stderr,"not enough operands for while-condition: need 1 got %zu\n",state->typeCount);
+              return ERROR_TYPE;
+            }
+            offset=state->typeCount-1;
+            if(!typeEquals(primitiveType(PRIMITIVE_BOOL),state->typeStack[offset].type)){
+              typeErrorMessage("variable assignment",op.dataType,state->typeStack[offset].type);
+              return ERROR_TYPE;
+            }
+            totalOps=state->typeStack[offset].opCount;
+            if(ensureOpCap(state,state->opCount+totalOps+1))
+              return ERROR_MEMORY;
+            memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
+            state->opCount+=totalOps;
+            state->typeCount-=1;
+            state->opStackCount-=totalOps;
+            if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
+              return ERROR_SYNTAX;
+            }
+            return 0;
+          }
+          blockInfo.blockDataAs.doBlock.hasDo=true;
+          if(pushBlock(state,blockInfo))
+            return ERROR_MEMORY;
+          //TODO general do-while block
+          break;
+        case BLOCK_WHILE_END:
+          fputs("WHILE_END blocks are not supported use WHILE ... DO END to build a do-while statement",stderr);
+          return ERROR_SYNTAX;
+          /* general Loop code    WHILE F C DO G END
+            {
+              bool loop2=false; 
+              do{
+                if(loop2){
+                 G
+                }
+                loop2=true;
+                F
+              }while(C);
+            }
+          */
+        case BLOCK_START:
+          if(checkNonemptyStack(state,"unfinished local operation")){
+            return ERROR_SYNTAX;
+          }
+          if(pushBlock(state,(BlockInfo){.type=BLOCK_START,.blockStart=state->opCount,.blockDataAs={0}}))
+            return ERROR_MEMORY;
+          if(ensureOpCap(state,state->opCount+1))
+            return ERROR_MEMORY;
+          state->compiledOperations[state->opCount++]=op;
+          return 0;
+        case BLOCK_END:
+          blockInfo=popBlock(state);
+          if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_ELIF||(blockInfo.type==BLOCK_DO&&!blockInfo.blockDataAs.doBlock.hasDo)){
+            fputs("unexpected END statement\n",stderr);
+            return ERROR_SYNTAX;
+          }
+          //TODO check for procedures with missing return statements
+          if(checkNonemptyStack(state,"unfinished local operation")){
+            return ERROR_SYNTAX;
+          }
+          int32_t endCount=1;
+          if(blockInfo.type==BLOCK_IF||blockInfo.type==BLOCK_ELSE){
+            endCount+=blockInfo.blockDataAs.ifBlock.elifCount;
+          }
+          if(ensureOpCap(state,state->opCount+endCount))
+            return ERROR_MEMORY;
+          while(endCount-->0){
+            state->compiledOperations[state->opCount++]=op;
+          }
+          return 0;
+        case BLOCK_PROCEDURE:
+          fputs("blocks of type BLOCK_PROCEDURE are not supported, procedure blocks start with the DECLARE_PROCEDURE operation",stderr);
+          return ERROR_SYNTAX;
       }
       break;
     case OP_CALL:
       return typeCheckCall(&op,state);
     case OP_RETURN:     
-      if(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID)
-        return checkNonemptyStack(state,"unfinished operation at end of procedure")?ERROR_SYNTAX:0;//no types to check
+      if(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID){
+          if(checkNonemptyStack(state,"unfinished operation at end of procedure"))
+            return ERROR_SYNTAX;
+        if(ensureOpCap(state,state->opCount+state->typeStack[0].opCount+1))
+          return ERROR_MEMORY;
+        state->compiledOperations[state->opCount++]=op;
+        return 0;
+      }
       if(state->opStackCount==0){
         fputs("missing return value",stderr);
         return ERROR_SYNTAX;
@@ -2435,6 +2658,8 @@ int typeCheckOperation(Program* prog,TypeCheckState* state){
       if(checkNonemptyStack(state,"unfinished global operation")){
         return ERROR_SYNTAX;
       }
+      if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={0}}))
+        return ERROR_MEMORY;
       if(ensureOpCap(state,state->opCount+1))
         return ERROR_MEMORY;
       state->compiledOperations[state->opCount++]=op;
@@ -2448,6 +2673,7 @@ int typeCheckProgram(Program* prog){
   TypeCheckState state=(TypeCheckState){.compiledOperations=malloc(opCap*sizeof(Operation)),.opCap=opCap,.opCount=0,
     .opStack=malloc(INIT_CAP*sizeof(Operation)),.opStackCap=INIT_CAP,.opStackCount=0,
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
+    .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
     .index=0};
   if(state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL){//memory allocation failed
     freeContents(&state);
@@ -2455,14 +2681,22 @@ int typeCheckProgram(Program* prog){
   }
   int r;
   while(state.index<prog->opCount){
-    //TODO ensure size
-    r=typeCheckOperation(prog,&state);
+    r=typeCheckOperation(prog->ops[state.index++],&state);
     if(r!=0){
       freeContents(&state);
       return r;
     }
   }
-  return ERROR_UNIMPLEMENTED;
+  if(state.blockCount>0){
+    fputs("unfinished code-block\n",stderr);
+    return ERROR_SYNTAX;
+  }
+  free(prog->ops);
+  prog->ops=state.compiledOperations;
+  prog->opCount=state.opCount;
+  state.compiledOperations=NULL;
+  freeContents(&state);
+  return 0;
 }
 
 /* Copied from StackOverflow
@@ -2527,7 +2761,13 @@ int main(int argc,char** argv){
       fprintf(stderr,"error %i\n",err);
       return err;
     }
-	  puts("type-checked program");
+    printf("compiled to %zu operations\n",p.opCount);
+    for(size_t i=0;i<p.opCount;i++){
+      printf("%s ",opName(p.ops[i].opType));
+      printTypeName(p.ops[i].dataType,stdout);
+      puts("");
+    }
+    puts("");
 		//3. compile operations to C
     FILE* out=fopen("./out.c","w");
     err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint);
