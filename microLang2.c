@@ -1122,6 +1122,7 @@ struct ScopeNode{
 typedef struct Scope{
   ScopeNode** nodes;
   
+  BlockType scopeType;
   size_t nodeBufferOffset;
   struct Scope* parent;
 }Scope;
@@ -1136,15 +1137,21 @@ ScopeNode* allocScopeNode(void){
   }
   return scopeNodeBuffer+(scopeNodeCount++);
 }
-Scope* openScope(void){
+Scope* openScope(BlockType scopeType){
   if(scopeCount+1>=SCOPE_CAP){
     fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
     return NULL;
   }
   scopeBuffer[scopeCount].nodes=malloc(SCOPE_MAP_CAP*sizeof(ScopeNode*));
   scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
+  scopeBuffer[scopeCount].scopeType=scopeType;
   scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
   return scopeBuffer+(scopeCount++);
+}
+BlockType currentScopeType(void){
+  if(scopeCount<=0)
+    return BLOCK_END;
+  return scopeBuffer[scopeCount-1].scopeType;
 }
 bool closeScope(void){
   if(scopeCount<=0)
@@ -1556,7 +1563,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
           fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.length,varName.chars);
           return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
         }
-        Scope* newScope=openScope();
+        Scope* newScope=openScope(BLOCK_PROCEDURE);
         if(newScope==NULL)
           return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
         state->currentScope=newScope;
@@ -1662,25 +1669,27 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     (*op)=(Operation){.opType=OP_SET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"IF")){
-    Scope* newScope=openScope();//FIXME don't open scope for IF after EL
-    if(newScope==NULL)
-      return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
-    state->currentScope=newScope;
-    state->scopeLevel++;
-    
+    if(currentScopeType()!=BLOCK_ELIF){//don't open scope for IF after EL
+      Scope* newScope=openScope(BLOCK_IF);
+      if(newScope==NULL)
+        return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
+      state->currentScope=newScope;
+      state->scopeLevel++;
+    }
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_IF}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"EL")){
     closeScope();
-    Scope* newScope=openScope();
+    Scope* newScope=openScope(BLOCK_ELIF);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
+    //scope count does not change
     
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_ELIF}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"WHILE")){
-    Scope* newScope=openScope();
+    Scope* newScope=openScope(BLOCK_WHILE);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
@@ -1690,19 +1699,21 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"DO")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
     closeScope();
-    Scope* newScope=openScope();
+    Scope* newScope=openScope(BLOCK_DO);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
+    //scope count does not change
         
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_DO}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"ELSE")){
     closeScope();
-    Scope* newScope=openScope();
+    Scope* newScope=openScope(BLOCK_ELSE);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
+    //scope count does not change
     
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.dataAs={.block=BLOCK_ELSE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1727,7 +1738,7 @@ SizeOrError readOperation(Operation* op,char** code,size_t* codeSize,CompilerSta
       fputs("program can only have one entry point",stderr);
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
     }
-    Scope* newScope=openScope();
+    Scope* newScope=openScope(BLOCK_PROCEDURE);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error=ERROR_MEMORY}};
     state->currentScope=newScope;
@@ -1810,7 +1821,7 @@ Program compileToOps(char* code,size_t codeSize){
   size_t opsCap=256;
   SizeOrError r;
   Operation* compileOps=malloc(opsCap*sizeof(Operation));
-  openScope();
+  openScope(BLOCK_START);
   CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false};
   while(codeSize>0){
     r=readOperation(compileOps+opCount,&code,&codeSize,&state);
@@ -2058,6 +2069,18 @@ int pushValue(TypeCheckState* state,Operation op,bool isConst){
   return 0;
 }
 
+//append op and the first stackOps operations from the stack to the program, remove types elements from the typestack
+int addCompiledOp(TypeCheckState* state,Operation op,size_t stackOps,size_t types){
+  if(ensureOpCap(state,state->opCount+stackOps+1))
+      return ERROR_MEMORY;
+  state->compiledOperations[state->opCount++]=op;
+  memcpy(state->compiledOperations+state->opCount,state->opStack+state->opStackCount-stackOps,stackOps*sizeof(Operation));
+  state->opCount+=stackOps;
+  state->opStackCount-=stackOps;
+  state->typeCount-=types;
+  return 0;
+}
+
 int typeCheckCall(Operation* op,TypeCheckState* state){
   DataType calledType=op->dataType;
   //TODO call of function pointer
@@ -2109,14 +2132,7 @@ int typeCheckCall(Operation* op,TypeCheckState* state){
   
   DataType outType=*(procType->outType);
   if(outType.typeClass==TYPECLASS_PRIMITIVE&&outType.typeDataAs.primitive==PRIMITIVE_VOID){//no return values
-    state->typeCount-=argCount;
-    state->opStackCount-=totalOps;
-    if(ensureOpCap(state,state->opCount+totalOps+1))
-        return ERROR_MEMORY;
-    state->compiledOperations[state->opCount++]=*op;
-    memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
-    state->opCount+=totalOps;
-    return 0;
+    return addCompiledOp(state,*op,totalOps,argCount);
   }
   if(outType.typeClass==TYPECLASS_FLAT_TUPLE){//TODO auto-unwarp multi-return values using flat-tuple return values
     outType.typeClass=TYPECLASS_TUPLE;//convert flat tuple to tuple until there is auto-unwrapping 
@@ -2137,7 +2153,7 @@ int typeCheckCall(Operation* op,TypeCheckState* state){
 
 int typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
-  int32_t offset;
+  int32_t offset,r;
   bool isPure;
   BlockInfo blockInfo;
   switch(op.opType){
@@ -2284,15 +2300,7 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
       }
       op.dataType=state->typeStack[offset].type;
       //update operations
-      totalOps=state->typeStack[offset].opCount;
-      if(ensureOpCap(state,state->opCount+totalOps+1))
-        return ERROR_MEMORY;
-      state->compiledOperations[state->opCount++]=op;
-      memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
-      state->opCount+=totalOps;
-      state->typeCount-=1;
-      state->opStackCount-=totalOps;
-      return 0;
+      return addCompiledOp(state,op,state->typeStack[offset].opCount,1);
     case OP_GET:
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
@@ -2353,15 +2361,7 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
             typeErrorMessage("variable assignment",op.dataType,state->typeStack[offset].type);
             return ERROR_TYPE;
           }
-          totalOps=state->typeStack[offset].opCount;
-          if(ensureOpCap(state,state->opCount+totalOps+1))
-            return ERROR_MEMORY;
-          state->compiledOperations[state->opCount++]=op;
-          memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
-          state->opCount+=totalOps;
-          state->typeCount-=1;
-          state->opStackCount-=totalOps;
-          return 0;
+          return addCompiledOp(state,op,state->typeStack[offset].opCount,1);
         case ID_TUPLE_ELEMENT:// tuple element SET
           if(op.opType==OP_DECLARE){
             fputs("cannot declare tuple elements",stderr);
@@ -2386,15 +2386,7 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
             typeErrorMessage("tuple element assignment",tuple->types[op.dataAs.idInfo.id],state->typeStack[offset+1].type);
             return ERROR_TYPE;
           }
-          totalOps=state->typeStack[offset].opCount+state->typeStack[offset+1].opCount;
-          if(ensureOpCap(state,state->opCount+totalOps+1))
-            return ERROR_MEMORY;
-          state->compiledOperations[state->opCount++]=op;
-          memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
-          state->opCount+=totalOps;
-          state->typeCount-=2;
-          state->opStackCount-=totalOps;
-          return 0;
+          return addCompiledOp(state,op,state->typeStack[offset].opCount+state->typeStack[offset+1].opCount,2);
         case ID_POINTER:// pointer value SET
           if(op.opType==OP_DECLARE){
             fputs("cannot declare value at pointer",stderr);
@@ -2420,8 +2412,8 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("unexpected IF statement, IF statements cannot be declared at global level\n",stderr);
             return ERROR_SYNTAX;
           }
-          if(blockInfo.type==BLOCK_ELIF){//TODO? better handling of elif blocks
-            state->blockCount--;//remove block
+          if(blockInfo.type==BLOCK_ELIF){
+            state->blockCount--;//update old block instead of creating new block
             blockInfo.type=BLOCK_IF;
           }else{
             blockInfo=(BlockInfo){.type=BLOCK_IF,.blockStart=state->opCount,.blockDataAs={0}};
@@ -2438,14 +2430,9 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
             typeErrorMessage("variable assignment",op.dataType,state->typeStack[offset].type);
             return ERROR_TYPE;
           }
-          totalOps=state->typeStack[offset].opCount;
-          if(ensureOpCap(state,state->opCount+totalOps+1))
-            return ERROR_MEMORY;
-          state->compiledOperations[state->opCount++]=op;
-          memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
-          state->opCount+=totalOps;
-          state->typeCount-=1;
-          state->opStackCount-=totalOps;
+          r=addCompiledOp(state,op,state->typeStack[offset].opCount,1); 
+          if(r!=0)
+            return r;
           if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
             return ERROR_SYNTAX;
           }
@@ -2516,7 +2503,9 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
               return ERROR_MEMORY;
             if(state->compiledOperations[blockInfo.blockStart].opType!=OP_CODE_BLOCK)
               return ERROR_MEMORY;//memory got corrupted, op at block start is no longer start of block
-            state->compiledOperations[blockInfo.blockStart].dataAs.block=BLOCK_WHILE;
+            //remove previous operation to be updated by addCompiledOp
+            op=state->compiledOperations[--state->opCount];
+            op.dataAs.block=BLOCK_WHILE;
             //read while operation
             if(state->typeCount<1){
               fprintf(stderr,"not enough operands for while-condition: need 1 got %zu\n",state->typeCount);
@@ -2527,13 +2516,9 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
               typeErrorMessage("variable assignment",op.dataType,state->typeStack[offset].type);
               return ERROR_TYPE;
             }
-            totalOps=state->typeStack[offset].opCount;
-            if(ensureOpCap(state,state->opCount+totalOps+1))
-              return ERROR_MEMORY;
-            memcpy(state->compiledOperations+state->opCount,state->opStack+offset,totalOps*sizeof(Operation));
-            state->opCount+=totalOps;
-            state->typeCount-=1;
-            state->opStackCount-=totalOps;
+            r=addCompiledOp(state,op,state->typeStack[offset].opCount,1); 
+            if(r!=0)
+              return r;
             if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
               return ERROR_SYNTAX;
             }
@@ -2617,14 +2602,7 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
           typeErrorMessage("return statement",op.dataType,state->typeStack[0].type);
           return ERROR_TYPE;
         }
-        if(ensureOpCap(state,state->opCount+state->typeStack[0].opCount+1))
-          return ERROR_MEMORY;
-        state->compiledOperations[state->opCount++]=op;
-        memcpy(state->compiledOperations+state->opCount,state->opStack,state->typeStack[0].opCount*sizeof(Operation));
-        state->opCount+=state->typeStack[0].opCount;
-        state->typeCount=0;
-        state->opStackCount=0;
-        return 0;
+        return addCompiledOp(state,op,state->typeStack[0].opCount,1);
       }
       if(op.dataType.typeClass!=TYPECLASS_TUPLE&&op.dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
         checkNonemptyStack(state,"unfinished operation at end of procedure");//this should always return true
@@ -2645,14 +2623,7 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
           return ERROR_TYPE;
         }
       }
-      if(ensureOpCap(state,state->opCount+totalOps+1))
-        return ERROR_MEMORY;
-      state->compiledOperations[state->opCount++]=op;
-      memcpy(state->compiledOperations+state->opCount,state->opStack,totalOps*sizeof(Operation));
-      state->opCount+=totalOps;
-      state->typeCount=0;
-      state->opStackCount=0;
-      return 0;
+      return addCompiledOp(state,op,totalOps,state->typeCount);
     case OP_DECLARE_PROCEDURE:
     case ENTRY_POINT://start of procedure
       if(checkNonemptyStack(state,"unfinished global operation")){
