@@ -134,18 +134,9 @@ typedef enum{
   OP_DECLARE,
   OP_GET,
   OP_SET,
-  //TODO tuple operations, access to function parameters
+  //TODO tuple operations
   //ADDR_OF (pointer to given value)
   //OP_BUILD (tuple,union)
-  //OP_MULTI_DECLARE //declare multiple variables from a single tuple variable
-  /*                             C-code:
-                                    type1 name1;type2 name2;...typeN nameN;
-                                    {
-                                      tupleType tmpName=tupleExpr;
-                                      name1=tmpName.e1;name2=tmpName.e2;...nameN=tmpName.eN;
-                                    }
-  */
-  //OP_MULTI_SET     //set multiple variables from a single tuple variable
   
   OP_BINARY_OPERATOR, 
   OP_UNARY_OPERATOR,  
@@ -1371,7 +1362,7 @@ String readStringLiteral(char** code,size_t* codeSize,char end,bool doEspaceSeqs
   if(*codeSize==0){
     *errorFlag=ERROR_EOF;
     fprintf(stderr,"unfinished comment or string literal %.*s \n",(int)wordLength,*code);
-    return (String){.chars=*code,.length=0};//TODO error handling
+    return (String){.chars=*code,.length=0};
   }
   //move code-pointer to position after word
   (*codeSize)--;
@@ -2176,7 +2167,7 @@ int typeCheckOperation(Operation op,TypeCheckState* state){
         case NEGATE:
         case FLIP:
           if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||!isInteger(state->typeStack[offset].type.typeDataAs.primitive)){
-            fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));//TODO print operator name
+            fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
             fputs(" got ",stderr);
             printTypeName(state->typeStack[offset].type,stderr);
             fputs("\n",stderr);
