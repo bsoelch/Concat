@@ -31,7 +31,7 @@ ENTRY_POINT
   END
 
   10 I32 DECLARE C 
-    
+
   WHILE C 0 > DO
     C PRINT
     C 1 SUBTRACT SET C 

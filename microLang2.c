@@ -15,17 +15,18 @@
 //TODO split into less general errors
 #define ERROR_SYNTAX 2 
 #define ERROR_PARSE_INT 3
-#define ERROR_REDECLARATION 4
-#define ERROR_UNSUPPORTED_ESCAPE_SEQUENCE 5
-#define WARNING_CODEPOINT_OUT_OF_RANGE 6
-#define ERROR_EOF 7 //end of file
+#define ERROR_INT_OVERFLOW 4
+#define ERROR_REDECLARATION 5
+#define ERROR_UNSUPPORTED_ESCAPE_SEQUENCE 6
+#define WARNING_CODEPOINT_OUT_OF_RANGE 7
+#define ERROR_EOF 8 //end of file
 //maximum integer value of any error constant
-#define MAX_ERROR 7
+#define MAX_ERROR 8
 
 //negate indices (internal errors have negative error codes)
 const char* const internalErrors [] = {[-ERROR_MEMORY]="ERROR_MEMORY",[-ERROR_IO]="ERROR_IO",[-ERROR_UNIMPLEMENTED]="ERROR_UNIMPLEMENTED",};
 const char* const compilerErrors [] = {
-[ERROR_TYPE]="type error",[ERROR_SYNTAX]="syntax error",[ERROR_PARSE_INT]="invalid character while parsing integer",
+[ERROR_TYPE]="type error",[ERROR_SYNTAX]="syntax error",[ERROR_PARSE_INT]="invalid character while parsing integer",[ERROR_INT_OVERFLOW]="integer exceeds maximum allowed value",
 [ERROR_REDECLARATION]="redeclaration",[ERROR_UNSUPPORTED_ESCAPE_SEQUENCE]="unsupported escape sequence",[WARNING_CODEPOINT_OUT_OF_RANGE]="code-point out of range",
 [ERROR_EOF]="unexpected end of file",};
 const char* errorName(int errorCode){
@@ -433,7 +434,7 @@ int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
     case TYPECLASS_FLAT_TUPLE:
     case TYPECLASS_TUPLE:
     case TYPECLASS_UNION:
-      i=fprintf(file,"%s (%"PRIi32")",typeClassName(type.typeClass),type.typeDataAs.composite->id);
+      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type.typeClass),type.typeDataAs.composite->id);
       if(noRecurse||i<0)
         return i;
       for(int32_t e=0;e<type.typeDataAs.composite->typeCount;e++){
@@ -450,7 +451,7 @@ int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
       } 
       return i;
     case TYPECLASS_PROCEDURE:
-      i=fprintf(file,"%s (%"PRIi32")",typeClassName(type.typeClass),type.typeDataAs.procedure->id);
+      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type.typeClass),type.typeDataAs.procedure->id);
       if(noRecurse||i<0)
         return i;
       j=printTypeNameIntenal(*type.typeDataAs.procedure->inType,file,true);
@@ -1317,13 +1318,21 @@ IntOrErrorCode parseInt(String number,int base){
       i++;
     }
   }
+  bool overflow=false;
+  uint64_t maxSaveValue=negate?(INT64_MAX/base):-(INT64_MIN/base);
   for(;i<number.length;i++){
-    //TODO warning if value overflows
+    if(value>maxSaveValue){
+      overflow=true;//check if remaining word is integer before returning overflow error
+    }
     value*=base;
     digit=toDigit(number.chars[i]);
     if(digit<0||digit>=base)
       return (IntOrErrorCode){.isError=true,.as={.error=ERROR_PARSE_INT}};
     value+=digit;
+  }
+  if(overflow){
+    fprintf(stderr,"value %.*s does not fit in a 64-bit integer\n",(int)number.length,number.chars);
+    return (IntOrErrorCode){.isError=true,.as={.error=ERROR_INT_OVERFLOW}};
   }
   return (IntOrErrorCode){.isError=false,.as={.i64=negate?-value:value}};
 }
@@ -1579,6 +1588,8 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(isI32?PRIMITIVE_I32:PRIMITIVE_I64),.filePos=wordPos,.dataAs={.i64=asInt.as.i64}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
+  if(asInt.as.error!=ERROR_PARSE_INT)
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=asInt.as.error,.pos=wordPos}}};
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
   err=readType(word,codeFile);//try to parse word as type
@@ -2100,7 +2111,9 @@ void freeContents(TypeCheckState* state){
 bool checkNonemptyStack(TypeCheckState* state,const char* message){
   if(state->opStackCount>0){
     fputs(message,stderr);
-    fprintf(stderr," %s\n",opName(state->opStack[0].opType));
+    fprintf(stderr,": %s at ",opName(state->opStack[0].opType));
+    printFilePosition(state->opStack[0].filePos,stderr);
+    fputs("\n",stderr);
     return true;
   }
   return false;
