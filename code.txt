@@ -15,12 +15,15 @@ ENTRY_POINT
   
   A PRINT
   B PRINT
-  B NEG SET A
   
-  1 2 proc0  TUPLE I32 I32 END DECLARE tmp 
+  A 1 ADD B 1 SUBTRACT SET A SET B
+  
+  1 2 proc0  I32 DECLARE tmp2 I32 DECLARE tmp1
+  
+  ## tmp1 tmp2 TUPLE I32 I32 END DECLARE tmp  ## enable once there is implicit tuple building
   doNothing
   
-  tmp tmp GET_ELEMENT 1  SET_ELEMENT 0
+  ## tmp tmp GET_ELEMENT 1  SET_ELEMENT 0   ## enable once there is implicit tuple building
 
   A 0 != IF 
     1 PRINT 
@@ -35,7 +38,6 @@ ENTRY_POINT
   WHILE C 0 > DO
     C PRINT
     C 1 SUBTRACT SET C 
-    
   END
   
   true PRINT
