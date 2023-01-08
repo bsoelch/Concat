@@ -12,7 +12,6 @@
 #define MIN_ERROR -3
 //errors in compiled code -> positive values
 #define ERROR_TYPE 1
-//TODO split into less general errors
 #define ERROR_SYNTAX 2 
 #define ERROR_PARSE_INT 3
 #define ERROR_INT_OVERFLOW 4
@@ -22,6 +21,9 @@
 #define ERROR_EOF 8 //end of file
 //maximum integer value of any error constant
 #define MAX_ERROR 8
+
+//exit codes for errors in compiled program
+#define PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE 1
 
 //negate indices (internal errors have negative error codes)
 const char* const internalErrors [] = {[-ERROR_MEMORY]="ERROR_MEMORY",[-ERROR_IO]="ERROR_IO",[-ERROR_UNIMPLEMENTED]="ERROR_UNIMPLEMENTED",};
@@ -181,6 +183,7 @@ typedef enum{
   OP_BINARY_OPERATOR, 
   OP_UNARY_OPERATOR,  
   
+  OP_CHECK_ARRAY_BOUNDS,//special operation for checking array bounds   checkBounds id  length  compiles to  if(tmpId<0||tmpId>=LENGTH) exit(ARRAY_ACCESS);
   OP_CODE_BLOCK,  
   
   OP_DECLARE_PROCEDURE, 
@@ -206,6 +209,7 @@ const char* opName(OpType type){
     case OP_NEW:return "OP_NEW";
     case OP_CAST:return "OP_CAST";
     case OP_ADDR_OF:return "OP_ADDR_OF";
+    case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
   }
   return "UNDEFINED";
 }
@@ -397,6 +401,69 @@ DataType asConstType(DataType src){
   src.isAddressable=false;
   src.isWritable=false;
   return src;
+}
+
+int numberRank(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+      return 8;
+    case PRIMITIVE_I32:
+      return 32;
+    case PRIMITIVE_I64:
+      return 64;
+    case PRIMITIVE_FLOAT:
+      return 65;
+    case PRIMITIVE_VOID:
+      return -1;
+    case PRIMITIVE_BOOL:
+      return -1;
+  }
+  return false;
+}
+PrimitiveType numberByRank(int t){
+  switch(t){
+    case 8:
+      return PRIMITIVE_I8;
+    case 32:
+      return PRIMITIVE_I32;
+    case 64:
+      return PRIMITIVE_I64;
+    case 65:
+      return PRIMITIVE_FLOAT;
+  }
+  return PRIMITIVE_VOID;
+}
+bool isInteger(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+    case PRIMITIVE_I32:
+    case PRIMITIVE_I64:
+      return true;
+    case PRIMITIVE_VOID:
+    case PRIMITIVE_BOOL:
+    case PRIMITIVE_FLOAT:
+      return false;
+  }
+  return false;
+}
+bool isIntType(DataType* type){
+  return type->typeClass==TYPECLASS_PRIMITIVE&&isInteger(type->typeDataAs.primitive);
+}
+bool isPointerType(DataType* type){
+  return type->typeClass==TYPECLASS_POINTER||type->typeClass==TYPECLASS_CONST_POINTER;
+}
+//checks id type is an array-type  a tuple consisting of a pointer and an integer
+bool isArrayType(DataType* type){
+  if(type->typeClass!=TYPECLASS_TUPLE)
+    return false;
+  CompositeType* elts=type->typeDataAs.composite;
+  if(elts->typeCount!=2)
+    return false;
+  if(!isPointerType(elts->types+0))
+    return false;
+  if(!isIntType(elts->types+1))
+    return false;
+  return true;
 }
 
 const char* typeClassName(TypeClass cls){
@@ -661,6 +728,7 @@ void printOperation(Operation op,FILE* out){
     case OP_DECLARE:
     case OP_DECLARE_PROCEDURE:
     case OP_CALL:
+    case OP_CHECK_ARRAY_BOUNDS:
       fputs(" ",out);
       printIdInfo(op.dataAs.idInfo,out);
       break;
@@ -806,6 +874,14 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       break;
     case OP_STRING_CONST:
       fprintf(target,"(string%" PRIi64")",op->dataAs.i64);
+      break;
+    case OP_CHECK_ARRAY_BOUNDS:
+      fputs("{ //check array bounds \n  int64_t arrayLength=",target);
+      COMPILE_OP_RETURN_ERROR(target,op);
+      fprintf(target,";\n  if(tmp%" PRIi32"<0 || tmp%"PRIi32">=arrayLength){ \n",op->dataAs.idInfo.id,op->dataAs.idInfo.id);
+      fprintf(target,"    fprintf(stderr,\"array index out of bounds: %%\"PRIi64\" size: %%\"PRIi64\"\\n\",(int64_t)tmp%"PRIi32",arrayLength);\n",op->dataAs.idInfo.id);
+      fprintf(target,"    exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
+      fputs("  }\n}\n",target);
       break;
     case OP_GET:
       switch(op->dataAs.idInfo.type){
@@ -1543,9 +1619,14 @@ String nextWord(CodeFile* codeFile,int* wordType){
     if(wordType)
       *wordType=WORD_TYPE_CHAR;
     return readStringLiteral(codeFile,'\'',true,wordType);
-  }else if(*(codeFile->code)=='#'){//TODO? inline comments, start comment with double hash
-    readStringLiteral(codeFile,'\n',false,wordType);//ignore everything up to next new-line
-    return (String){.chars=codeFile->code,.length=0};
+  }else if(codeFile->codeSize>=2&&*(codeFile->code)=='#'){
+    if(*(codeFile->code+1)=='#'){//line comment
+      readStringLiteral(codeFile,'\n',false,wordType);//ignore everything up to next new-line
+      return (String){.chars=codeFile->code,.length=0};
+    }else if(*(codeFile->code+1)=='+'){//inline comment
+      readStringLiteral(codeFile,'#',false,wordType);//TODO end with '+#' not #
+      return (String){.chars=codeFile->code,.length=0};
+    }
   }
   char* wordChars=codeFile->code;
   size_t wordLength=0;
@@ -1686,12 +1767,17 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=false,.as={.size=0}};
   err=readType(word,codeFile);//try to parse word as type
   if(err==0){//is type
-    DataType type=typeBuffer[--bufferedTypes];
     //read operation that takes type as argument
-    word=nextWord(codeFile,&err);
-    if(err!=0){
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};//err >MAX_ERROR means word is a string or character
-    }
+    do{
+      word=nextWord(codeFile,&err);
+      if(err!=0){
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};//err >MAX_ERROR means word is a string or character
+      }
+      if(wordEquals(&word,"PTR")){
+        err=readType(word,codeFile);
+      }
+    }while(wordEquals(&word,"PTR"));
+    DataType type=typeBuffer[--bufferedTypes];
     wordPos=codeFile->wordStart;//set operation position to start of op-name instead of type
     if(wordEquals(&word,"DECLARE")){
       if(typeEquals(type,TYPE_UNDEFINED))
@@ -1825,6 +1911,9 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"[]")){
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"ADDR_OF")){
+    (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"IF")){
     if(currentScopeType()!=BLOCK_ELIF){//don't open scope for IF after EL
@@ -1988,55 +2077,11 @@ typedef struct{
   } as;
 }TypeOrError;
 
-int numberRank(PrimitiveType t){
-  switch(t){
-    case PRIMITIVE_I8:
-      return 8;
-    case PRIMITIVE_I32:
-      return 32;
-    case PRIMITIVE_I64:
-      return 64;
-    case PRIMITIVE_FLOAT:
-      return 65;
-    case PRIMITIVE_VOID:
-      return -1;
-    case PRIMITIVE_BOOL:
-      return -1;
-  }
-  return false;
-}
-PrimitiveType numberByRank(int t){
-  switch(t){
-    case 8:
-      return PRIMITIVE_I8;
-    case 32:
-      return PRIMITIVE_I32;
-    case 64:
-      return PRIMITIVE_I64;
-    case 65:
-      return PRIMITIVE_FLOAT;
-  }
-  return PRIMITIVE_VOID;
-}
-bool isInteger(PrimitiveType t){
-  switch(t){
-    case PRIMITIVE_I8:
-    case PRIMITIVE_I32:
-    case PRIMITIVE_I64:
-      return true;
-    case PRIMITIVE_VOID:
-    case PRIMITIVE_BOOL:
-    case PRIMITIVE_FLOAT:
-      return false;
-  }
-  return false;
-}
 DataType typeCheckPointerArithmetic(DataType a,DataType b,bool subtract){
-  if(a.typeClass!=TYPECLASS_POINTER&&a.typeClass!=TYPECLASS_CONST_POINTER)
+  if(!isPointerType(&a))
     return TYPE_UNDEFINED;//a is no pointer
-  if(b.typeClass==TYPECLASS_PRIMITIVE&&isInteger(b.typeDataAs.primitive)){
+  if(isIntType(&b))
     return a;
-  }
   if(subtract&&typeEquals(a,b)){
     return primitiveType(PRIMITIVE_I64);
   }
@@ -2287,6 +2332,14 @@ Error insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
   return (Error){.errorCode=0,.pos=op.filePos};;
 }
 
+Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+}
+Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+}
+//TODO more operation generator function
+
 //prepares state for the adding of op and the top stackOps operations / type types on the stack
 Error prepareAddCompiledOp(TypeCheckState* state,size_t skipedStackOps,size_t skippedTypes,size_t stackOps,size_t types,FilePosition pos){
   (void)skipedStackOps;
@@ -2314,11 +2367,9 @@ Error prepareAddCompiledOp(TypeCheckState* state,size_t skipedStackOps,size_t sk
         newOps+=shiftCount;
         //store impure operations in temporary variables that are evaluated before the current operation
         FilePosition tmpPos=state->opStack[offset].filePos;//take position of first operation in compiled code (~ last op in file)
-        state->compiledOperations[state->opCount++]=(Operation){.opType=OP_DECLARE,.dataType=state->typeStack[i].type,
-          .filePos=tmpPos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=state->tmpCount}}};
+        state->compiledOperations[state->opCount++]=opDeclareTmpVar(&(state->typeStack[i].type),state->tmpCount,tmpPos);
         memcpy(state->compiledOperations+state->opCount,state->opStack+offset,state->typeStack[i].opCount*sizeof(Operation));//move code section to variable
-        state->opStack[newOps++]=(Operation){.opType=OP_GET,.dataType=state->typeStack[i].type,//temp vars are not writable
-          .filePos=tmpPos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=state->tmpCount}}};
+        state->opStack[newOps++]=opGetTmpVar(&(state->typeStack[i].type),state->tmpCount,tmpPos);
         state->tmpCount++;//TODO handle tmp-ids
         state->opCount+=state->typeStack[i].opCount;
         shiftTarget=newOps;
@@ -2367,7 +2418,7 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
   //TODO call of function pointer
   //  need check for value of pointer
   if(calledType.typeClass!=TYPECLASS_PROCEDURE&&
-    ((calledType.typeClass!=TYPECLASS_POINTER&&calledType.typeClass!=TYPECLASS_CONST_POINTER)||
+    ((!isPointerType(&calledType))||
       calledType.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE)){//not procedure or pointer to procedure 
     fputs("cannot call objects of type ",stderr);
     printTypeName(calledType,stderr);
@@ -2430,16 +2481,15 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
   //auto-unwrap multi-return values using flat-tuple return values
   outType.typeClass=TYPECLASS_TUPLE;//convert flat tuple to tuple for correct variable type
   int32_t tmpId=state->tmpCount++;
-  addCompiledOp(state,(Operation){.opType=OP_DECLARE,.dataType=outType,.filePos=op->filePos,//TODO check if conversion of impure values works correctly
-      .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}},totalOps+1,argCount);//add call as operation, removes arguments from type stack
+  //TODO check if conversion of impure values works
+  addCompiledOp(state,opDeclareTmpVar(&outType,tmpId,op->filePos),totalOps+1,argCount);//add call as operation, removes arguments from type stack  correctly
   ensureTypeStackCap(state,state->typeCount+outType.typeDataAs.composite->typeCount);
   ensureOpStackCap(state,state->opStackCount+outType.typeDataAs.composite->typeCount);
   for(int32_t e=0;e<outType.typeDataAs.composite->typeCount;e++){
-    state->typeStack[state->typeCount++]=(TypeInfo){.type=outType.typeDataAs.composite->types[e],.opCount=2,.isPure=true};//value will not be modified
+    state->typeStack[state->typeCount++]=(TypeInfo){.type=outType.typeDataAs.composite->types[e],.opCount=2,.isPure=true};//temp vars are not writable
     state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outType.typeDataAs.composite->types[e],.filePos=op->filePos,
-      .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e}}};//temp vars are not writable
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outType.typeDataAs.composite->types[e],.filePos=op->filePos,
-      .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+      .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e}}};
+    state->opStack[state->opStackCount++]=opGetTmpVar(&outType.typeDataAs.composite->types[e],tmpId,op->filePos);
   }
   return (Error){.errorCode=0,.pos=op->filePos};
 }
@@ -2471,6 +2521,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           isPure=false;
+          if(isPointerType(&(state->typeStack[offset].type))){
+            break;//pointer is an allowed type for increment
+          }
           //fall through
         case NEGATE:
           if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||numberRank(state->typeStack[offset].type.typeDataAs.primitive)<0){
@@ -2482,7 +2535,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           }
           break;
         case FLIP:
-          if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||!isInteger(state->typeStack[offset].type.typeDataAs.primitive)){
+          if(!isIntType(&(state->typeStack[offset].type))){
             fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
             fputs(" got ",stderr);
             printTypeName(state->typeStack[offset].type,stderr);
@@ -2504,7 +2557,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(r.errorCode!=0)
         return r;
       //update type-stack
-      state->typeStack[state->typeCount-1].type=asConstType(state->typeStack[offset].type);
+      state->typeStack[state->typeCount-1].type=op.dataType;
       state->typeStack[state->typeCount-1].isPure=isPure;
       state->typeStack[state->typeCount-1].opCount++;
       return (Error){.errorCode=0,.pos=op.filePos};
@@ -2595,8 +2648,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       offset=state->typeCount-1;
-      //can only print non-void primitive
-      if(state->typeStack[offset].type.typeClass!=TYPECLASS_POINTER&&state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER&&
+      //can only print pointer or non-void primitive
+      if(!isPointerType(&(state->typeStack[offset].type))&&
           (state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||state->typeStack[offset].type.typeDataAs.primitive==PRIMITIVE_VOID)){
         fputs("cannot print values of type ",stderr);
         printTypeName(state->typeStack[offset].type,stderr);
@@ -2606,6 +2659,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       op.dataType=state->typeStack[offset].type;
       //update operations
       return addCompiledOp(state,op,state->typeStack[offset].opCount,1);
+    case OP_CHECK_ARRAY_BOUNDS:
+      break;
     case OP_GET:
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
@@ -2648,7 +2703,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           offset=state->typeCount-1;
-          if(state->typeStack[offset].type.typeClass!=TYPECLASS_POINTER&&state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER){
+          if(!isPointerType(&(state->typeStack[offset].type))){
             fprintf(stderr,"invalid operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
             printTypeName(state->typeStack[offset].type,stderr);
             fputs(" is not a pointer\n",stderr);
@@ -2667,35 +2722,57 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           state->typeStack[offset].opCount++;
           return (Error){.errorCode=0,.pos=op.filePos};
         case ID_POINTER_OFFSET:
-          /*
-            TODO allow using POINTER_OFFSET on array-like types ( TUPLE ? PTR I64 END )
-            arrayLike i []
-
-            DECLARE TMP_VAR 2
-              i
-            DECLARE TMP_VAR 1
-              arrayLike
-            CHECK_BOUNDS  
-              GET TMP_VAR 1  
-              GET TUPLE_ELEMENT 1  
-              GET TMP_VAR 2 
-            GET ID_POINTER_OFFSET  GET TMP_VAR 1  GET TUPLE_ELEMENT 0  i
-          */
           if(state->typeCount<2){
             fprintf(stderr,"not enough operands for operation %s %s: need 2 got %zu\n",opName(op.opType),idNames[op.dataAs.idInfo.type],state->typeCount);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           offset=state->typeCount-2;
-          if(state->typeStack[offset].type.typeClass!=TYPECLASS_POINTER&&state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER){
-            fprintf(stderr,"invalid first operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
-            printTypeName(state->typeStack[offset].type,stderr);
-            fputs(" is not a pointer\n",stderr);
-            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-          }
-          if(state->typeStack[offset+1].type.typeClass!=TYPECLASS_PRIMITIVE||!isInteger(state->typeStack[offset+1].type.typeDataAs.primitive)){
+          if(!isIntType(&(state->typeStack[offset+1].type))){
             fprintf(stderr,"invalid second operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
             printTypeName(state->typeStack[offset+1].type,stderr);
             fputs(" expected an integer\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          if(isArrayType(&(state->typeStack[offset].type))){//handle wrapped array types
+            //1. store array and index in temporary varables
+            size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
+            DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
+            r=addCompiledStackOps(state,opDeclareTmpVar(&indexType,indexId,op.filePos),state->typeStack[offset].opCount,1,state->typeStack[offset+1].opCount,1,true);
+            if(r.errorCode!=0){
+              return r;
+            }      
+            r=addCompiledStackOps(state,opDeclareTmpVar(&arrayType,arrayId,op.filePos),0,0,state->typeStack[offset].opCount,1,true);
+            if(r.errorCode!=0){
+              return r;
+            }      
+            //2. check array-bounds
+            if(ensureOpCap(state,state->opCount+3))
+              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+            state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
+              .dataAs={.idInfo={.type=ID_TMP_VAR,.id=indexId}}};
+            state->compiledOperations[state->opCount++]=(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
+              .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1}}};
+            state->compiledOperations[state->opCount++]=opGetTmpVar(&arrayType,arrayId,op.filePos);
+            
+            //3. array access
+            if(ensureOpStackCap(state,state->opStackCount+4))
+              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+            op.dataType=*(arrayType.typeDataAs.composite->types[0].typeDataAs.type);//target-type of pointer in first element of tuple
+            if(arrayType.typeDataAs.composite->types[0].typeClass!=TYPECLASS_CONST_POINTER)
+              op.dataType=asWritableType(op.dataType,false);
+            state->opStack[state->opStackCount++]=op;//get pointer offset
+            state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
+              .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=0}}};
+            state->opStack[state->opStackCount++]=opGetTmpVar(&arrayType,arrayId,op.filePos);
+            state->opStack[state->opStackCount++]=opGetTmpVar(&indexType,indexId,op.filePos);
+            //update type-stack
+            state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=4,.isPure=false};
+            return (Error){.errorCode=0,.pos=op.filePos};
+          }
+          if(!isPointerType(&(state->typeStack[offset].type))){
+            fprintf(stderr,"invalid first operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs(" is not a pointer\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           op.dataType=*state->typeStack[offset].type.typeDataAs.type;
@@ -2788,6 +2865,25 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_CAST:
       break;
     case OP_ADDR_OF:
+      if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s : need 1 got %zu\n",opName(op.opType),state->typeCount);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          offset=state->typeCount-1;
+          if(!state->typeStack[offset].type.isAddressable){
+              fprintf(stderr,"the operand of %s has to be an addressable type \n",opName(op.opType));
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          op.dataType=pointerType(state->typeStack[offset].type);
+          //update operation stack
+          totalOps=state->typeStack[offset].opCount;
+          r=insertStackOperation(state,op,totalOps);
+          if(r.errorCode!=0)
+            return r;
+          //update type-stack
+          state->typeStack[offset].type=op.dataType;
+          state->typeStack[offset].opCount++;
+          return (Error){.errorCode=0,.pos=op.filePos};
       break;
     case OP_CODE_BLOCK://TODO allow operations to cross block boundaries (within procedures)
       switch(op.dataAs.block){

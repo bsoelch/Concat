@@ -18,7 +18,7 @@ ENTRY_POINT
   
   A 1 ADD B 1 SUBTRACT A SET_VALUE B SET_VALUE
   
-  1 2 proc0  TUPLE I64 I64 END NEW TUPLE I64 I64 END DECLARE tmp  ## replace explicit tuple creation conve there is implicit tuple building once there is implicit tuple building
+  1 2 proc0  TUPLE I64 I64 END NEW TUPLE I64 I64 END DECLARE tmp  ## remove explicit tuple creation once there is implicit tuple building
   
   A INC PRINT
   
@@ -26,7 +26,7 @@ ENTRY_POINT
   
   tmp GET_ELEMENT 1  tmp GET_ELEMENT 0 SET_VALUE
   
-  "Hello" GET_ELEMENT 0  0 [] PRINT
+  "Hello" 1 [] PRINT
 
   A 0 != IF 
     1 PRINT 
@@ -35,6 +35,9 @@ ENTRY_POINT
   ELSE
     3 PRINT
   END
+  
+  A ADDR_OF  I32 PTR DECLARE aPtr
+  2  aPtr INC VALUE_AT SET_VALUE 
 
   10 I32 DECLARE C 
 
@@ -47,7 +50,7 @@ ENTRY_POINT
 END
 
 "Strings are \"ignored\"  " STRING DECLARE s0
-# Comments are now enabled
+## Comments are now enabled
 'A' CHAR DECLARE c0  
 "This is a unicode\u2122 multi-line
  string" STRING DECLARE s1
