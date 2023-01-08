@@ -16,16 +16,13 @@ ENTRY_POINT
   A PRINT
   B PRINT
   
-  A 1 ADD B 1 SUBTRACT SET A SET B
+  A 1 ADD B 1 SUBTRACT A SET_VALUE B SET_VALUE
   
-  1 2 proc0  I32 DECLARE tmp2 I64 DECLARE tmp1
+  1 2 proc0  TUPLE I64 I64 END NEW TUPLE I64 I64 END DECLARE tmp  ## replace explicit tuple creation conve there is implicit tuple building once there is implicit tuple building
   
-  1 2 TUPLE I32 I32 END NEW GET_ELEMENT 0 PRINT
-  
-  ## tmp1 tmp2 TUPLE I32 I32 END DECLARE tmp  ## enable once there is implicit tuple building
   doNothing
   
-  ## tmp tmp GET_ELEMENT 1  SET_ELEMENT 0   ## enable once there is implicit tuple building
+  tmp GET_ELEMENT 1  tmp GET_ELEMENT 0 SET_VALUE
 
   A 0 != IF 
     1 PRINT 
@@ -39,7 +36,7 @@ ENTRY_POINT
 
   WHILE C 0 > DO
     C PRINT
-    C 1 SUBTRACT SET C 
+    C 1 SUBTRACT C SET_VALUE
   END
   
   true PRINT
