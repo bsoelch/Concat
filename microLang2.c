@@ -242,6 +242,7 @@ typedef struct DataType{
     UnionType* unionType;//name alias for composite
     ProcedureType* procedure;
   }typeDataAs;
+  bool isAddressable;
   bool isWritable;
 }DataType;
 #define FLAG_IS_TUPLE 1
@@ -259,7 +260,7 @@ struct ProcedureType{
   struct DataType* outType;
 };
 
-const DataType TYPE_UNDEFINED=(DataType){.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0},.isWritable=false};
+const DataType TYPE_UNDEFINED=(DataType){.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0},.isAddressable=false,.isWritable=false};
 
 #define MAX_TYPES  4096
 #define MAX_COMPOSITE 1024
@@ -293,18 +294,18 @@ bool typeEquals(DataType a,DataType b){
   return false;
 }
 DataType primitiveType(PrimitiveType id){
-  return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id},.isWritable=false};
+  return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id},.isAddressable=false,.isWritable=false};
 }
 DataType pointerType(DataType target){
   for(size_t i=0;i<typeCount;i++){
     if(typeEquals(target,typeData[i]))
-      return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+i},.isWritable=false};
+      return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+i},.isAddressable=false,.isWritable=false};
   }
   if(typeCount+1>=MAX_TYPES){
     return TYPE_UNDEFINED;
   }
   typeData[typeCount]=target;
-  return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++},.isWritable=false};
+  return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++},.isAddressable=false,.isWritable=false};
 }
 DataType constPointerType(DataType target){
   DataType t=pointerType(target);
@@ -333,7 +334,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
         continue;
       if(compositeTypes[i].typeCount==eltCount){
         compositeTypes[i].flags|=classFlag;
-        return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+i,.isWritable=false};
+        return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+i,.isAddressable=false,.isWritable=false};
       }
       match=i;
     }
@@ -351,12 +352,12 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
   if(types==NULL)
     return TYPE_UNDEFINED;
   compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.flags=classFlag};
-  return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)},.isWritable=false};
+  return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)},.isAddressable=false,.isWritable=false};
 }
 DataType procedureType(DataType inType,DataType outType){
   for(size_t i=0;i<procTypeCount;i++){
     if(typeEquals(*procTypes[i].inType,inType)&&typeEquals(*procTypes[i].outType,outType))
-      return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i},.isWritable=false};
+      return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i},.isAddressable=false,.isWritable=false};
   }
   int32_t inId=-1,outId=-1;
   for(size_t i=0;i<typeCount&&(inId==-1||outId==-1);i++){
@@ -380,10 +381,21 @@ DataType procedureType(DataType inType,DataType outType){
     typeData[typeCount++]=outType;
   }
   procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=typeData+inId,.outType=typeData+outId};
-  return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++},.isWritable=false};
+  return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++},.isAddressable=false,.isWritable=false};
 }
-DataType asWritableType(DataType src){
+DataType asWritableType(DataType src,bool isAddressable){
+  src.isAddressable=isAddressable;
   src.isWritable=true;
+  return src;
+}
+DataType asAddressableType(DataType src){
+  src.isAddressable=true;
+  src.isWritable=false;
+  return src;
+}
+DataType asConstType(DataType src){
+  src.isAddressable=false;
+  src.isWritable=false;
   return src;
 }
 
@@ -568,7 +580,7 @@ const char* binOpName(BinaryOperator op){
   }
   return "UNDEFINED";
 }
-typedef enum{//TODO? postfix unary operators (POST_INCREMENT)
+typedef enum{
   NEGATE,
   INCREMENT,
   DECREMENT,
@@ -593,6 +605,7 @@ typedef enum{
   ID_TUPLE_ELEMENT,
   //TODO GET/SET for union values
   ID_POINTER,
+  ID_POINTER_OFFSET,
   ID_TMP_VAR,
 }IdentiferType;
 typedef struct{
@@ -600,7 +613,7 @@ typedef struct{
   IdentiferType type;
 }IdentiferInfo;
 const char* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
-  [ID_PROCEDURE]="procedure",[ID_TUPLE_ELEMENT]="tuple element",[ID_POINTER]="pointer value",[ID_TMP_VAR]="temporary variable"};
+  [ID_PROCEDURE]="procedure",[ID_TUPLE_ELEMENT]="tuple element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",[ID_TMP_VAR]="temporary variable"};
 void printIdInfo(IdentiferInfo info,FILE* out){
   fprintf(out,"%s (%"PRIi32")",idNames[info.type],info.id);
 }
@@ -819,9 +832,16 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           fprintf(target,").e%" PRIi32,op->dataAs.idInfo.id);
           break;
         case ID_POINTER:
-          fputs("*((",target);
+          fputs("(*(",target);
           COMPILE_OP_RETURN_ERROR(target,op);
-          fprintf(target,")+%"PRIi32")",op->dataAs.idInfo.id);
+          fputs("))",target);
+          break;
+        case ID_POINTER_OFFSET:
+          fputs("(*((",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs(")+(",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs(")))",target);
           break;
       }
       break;
@@ -832,10 +852,12 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       fputs(";\n",target);
       break;
     case OP_DECLARE:
+      if(op->dataAs.idInfo.type==ID_TMP_VAR)
+        fputs("const ",target);//temp-vars are constant
       printTypeNameC(op->dataType,target);
       switch(op->dataAs.idInfo.type){
         case ID_TMP_VAR:
-          fprintf(target," tmp%" PRIi32 " = ",op->dataAs.idInfo.id);
+          fprintf(target," tmp%" PRIi32 " = ",op->dataAs.idInfo.id);//temp vars are constant
           break;
         case ID_LOCAL_VAR:
           fprintf(target," local%" PRIi32 " = ",op->dataAs.idInfo.id);
@@ -853,6 +875,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           fputs("cannot declare tuple elements",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
         case ID_POINTER:
+        case ID_POINTER_OFFSET:
           fputs("cannot declare pointers",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
       }
@@ -881,7 +904,10 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       fputs(")",target);
       break;
     case OP_ADDR_OF:
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=op->filePos}}};//TODO implement op address-of 
+      fputs("&(",target);
+      COMPILE_OP_RETURN_ERROR(target,op);
+      fputs(")",target);
+      break;
     case OP_UNARY_OPERATOR:
       fputs("(",target);
       switch(op->dataAs.unOp){
@@ -1069,9 +1095,16 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           fprintf(target,".e%"PRIi32"(",op->dataAs.idInfo.id);
           break;
         case ID_POINTER:
-          fputs("*((",target);
+          fputs("(*(",target);
           COMPILE_OP_RETURN_ERROR(target,op);
-          fprintf(target,")+%"PRIi32")(",op->dataAs.idInfo.id);
+          fputs("))(",target);
+          break;
+        case ID_POINTER_OFFSET:
+          fputs("(*((",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs(")+",target);
+          COMPILE_OP_RETURN_ERROR(target,op);
+          fputs("))(",target);
           break;
       }
       DataType* in=op->dataType.typeDataAs.procedure->inType;
@@ -1770,6 +1803,12 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"NEG")||wordEquals(&word,"NEGATE")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=NEGATE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"INC")||wordEquals(&word,"++")){
+    (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=INCREMENT}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"DEC")||wordEquals(&word,"--")){
+    (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=DECREMENT}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET_VALUE")){
     (*op)=(Operation){.opType=OP_SET_VALUE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1780,6 +1819,12 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     if(index.isError)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=index.as.error,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"VALUE_AT")||wordEquals(&word,"GET_VALUE_AT")){
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"[]")){
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"IF")){
     if(currentScopeType()!=BLOCK_ELIF){//don't open scope for IF after EL
@@ -1871,7 +1916,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
   if(r==0){//identifier
     if(asIdentifier->idType!=ID_PROCEDURE)
-      asIdentifier->type=asWritableType(asIdentifier->type);
+      asIdentifier->type=asWritableType(asIdentifier->type,true);
     (*op)=(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
       .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1884,12 +1929,6 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error=index.as.error}};
     //TODO determine type of argument
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
-    return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"[]")){
-    IntOrErrorCode index=parseInt(nextWord(code,codeSize,NULL),0);
-    if(index.isError)
-      return (SizeOrError){.isError=true,.as={.error=index.as.error}};
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_POINTER,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"CALL")){
     String procName=nextWord(code,codeSize,NULL);
@@ -2422,13 +2461,26 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       offset=state->typeCount-1;
       isPure=true;
-      op.dataType=state->typeStack[offset].type;//unary operator returns value of same type
+      //result of operation is neither addressable nor writable
+      op.dataType=asConstType(state->typeStack[offset].type);//unary operator returns value of same type
       switch(op.dataAs.unOp){
         case INCREMENT:
         case DECREMENT:
-          isPure=false;//TODO check if value can be incremented/decremented
+          if(!state->typeStack[offset].type.isWritable){//value has to be 
+            fprintf(stderr,"operand of unary operator %s has to be writable \n",unOpName(op.dataAs.unOp));
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          isPure=false;
           //fall through
         case NEGATE:
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||numberRank(state->typeStack[offset].type.typeDataAs.primitive)<0){
+            fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
+            fputs(" got ",stderr);
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs("\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          break;
         case FLIP:
           if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||!isInteger(state->typeStack[offset].type.typeDataAs.primitive)){
             fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
@@ -2452,6 +2504,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(r.errorCode!=0)
         return r;
       //update type-stack
+      state->typeStack[state->typeCount-1].type=asConstType(state->typeStack[offset].type);
       state->typeStack[state->typeCount-1].isPure=isPure;
       state->typeStack[state->typeCount-1].opCount++;
       return (Error){.errorCode=0,.pos=op.filePos};
@@ -2579,7 +2632,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op.dataAs.idInfo.id,tuple->typeCount);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
-          op.dataType=asWritableType(tuple->types[op.dataAs.idInfo.id]);
+          op.dataType=asWritableType(tuple->types[op.dataAs.idInfo.id],true);
           //update operation stack
           totalOps=state->typeStack[offset].opCount;
           r=insertStackOperation(state,op,totalOps);
@@ -2590,14 +2643,81 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           state->typeStack[offset].opCount++;
           return (Error){.errorCode=0,.pos=op.filePos};
         case ID_POINTER:
-          break;
+          if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s %s: need 1 got %zu\n",opName(op.opType),idNames[op.dataAs.idInfo.type],state->typeCount);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          offset=state->typeCount-1;
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_POINTER&&state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER){
+            fprintf(stderr,"invalid operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs(" is not a pointer\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          op.dataType=*state->typeStack[offset].type.typeDataAs.type;
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER)
+            op.dataType=asWritableType(op.dataType,false);//dereferenced pointer are writable but not addressableID_TMP
+          //update operation stack
+          totalOps=state->typeStack[offset].opCount;
+          r=insertStackOperation(state,op,totalOps);
+          if(r.errorCode!=0)
+            return r;
+          //update type-stack
+          state->typeStack[offset].type=op.dataType;
+          state->typeStack[offset].opCount++;
+          return (Error){.errorCode=0,.pos=op.filePos};
+        case ID_POINTER_OFFSET:
+          /*
+            TODO allow using POINTER_OFFSET on array-like types ( TUPLE ? PTR I64 END )
+            arrayLike i []
+
+            DECLARE TMP_VAR 2
+              i
+            DECLARE TMP_VAR 1
+              arrayLike
+            CHECK_BOUNDS  
+              GET TMP_VAR 1  
+              GET TUPLE_ELEMENT 1  
+              GET TMP_VAR 2 
+            GET ID_POINTER_OFFSET  GET TMP_VAR 1  GET TUPLE_ELEMENT 0  i
+          */
+          if(state->typeCount<2){
+            fprintf(stderr,"not enough operands for operation %s %s: need 2 got %zu\n",opName(op.opType),idNames[op.dataAs.idInfo.type],state->typeCount);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          offset=state->typeCount-2;
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_POINTER&&state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER){
+            fprintf(stderr,"invalid first operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs(" is not a pointer\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          if(state->typeStack[offset+1].type.typeClass!=TYPECLASS_PRIMITIVE||!isInteger(state->typeStack[offset+1].type.typeDataAs.primitive)){
+            fprintf(stderr,"invalid second operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
+            printTypeName(state->typeStack[offset+1].type,stderr);
+            fputs(" expected an integer\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          op.dataType=*state->typeStack[offset].type.typeDataAs.type;
+          if(state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER)
+            op.dataType=asWritableType(op.dataType,false);//dereferenced pointer are writable but not addressable
+          //update operation stack
+          totalOps=state->typeStack[offset].opCount+state->typeStack[offset+1].opCount;
+          r=insertStackOperation(state,op,totalOps);
+          if(r.errorCode!=0)
+            return r;
+          //update type-stack
+          state->typeCount--;
+          state->typeStack[offset].type=op.dataType;
+          state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
+          return (Error){.errorCode=0,.pos=op.filePos};
         case ID_TMP_VAR:
           break;
       }
       break;
     case OP_SET_VALUE:
       if(state->typeCount<2){
-        fprintf(stderr,"not enough operands for operation %s: need 2 got %zu\n",opName(op.opType),state->typeCount);
+        fprintf(stderr,"not enough operands for operation %s : need 2 got %zu\n",opName(op.opType),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       if(!state->typeStack[state->typeCount-1].type.isWritable){
@@ -2605,8 +2725,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       //update type of operation
-      op.dataType=state->typeStack[state->typeCount-1].type;
-      op.dataType.isWritable=false;
+      op.dataType=asConstType(state->typeStack[state->typeCount-1].type);
       //add compiled op to program
       r=addCompiledStackOps(state,op,state->typeStack[state->typeCount-2].opCount,1,state->typeStack[state->typeCount-1].opCount,1,true);
       if(r.errorCode!=0){
@@ -2634,6 +2753,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return addCompiledOp(state,op,state->typeStack[offset].opCount,1);
         case ID_TUPLE_ELEMENT:
         case ID_POINTER:
+        case ID_POINTER_OFFSET:
         case ID_PROCEDURE:
         case ID_TMP_VAR:
         case ID_ARGUMENT:

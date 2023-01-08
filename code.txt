@@ -20,9 +20,13 @@ ENTRY_POINT
   
   1 2 proc0  TUPLE I64 I64 END NEW TUPLE I64 I64 END DECLARE tmp  ## replace explicit tuple creation conve there is implicit tuple building once there is implicit tuple building
   
+  A INC PRINT
+  
   doNothing
   
   tmp GET_ELEMENT 1  tmp GET_ELEMENT 0 SET_VALUE
+  
+  "Hello" GET_ELEMENT 0  0 [] PRINT
 
   A 0 != IF 
     1 PRINT 
