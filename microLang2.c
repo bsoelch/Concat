@@ -268,7 +268,7 @@ struct ProcedureType{
   struct DataType* outType;
 };
 
-const DataType TYPE_UNDEFINED=(DataType){.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0},.isAddressable=false,.isWritable=false};
+const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0},.isAddressable=false,.isWritable=false};
 
 #define MAX_TYPES  4096
 #define MAX_COMPOSITE 1024
@@ -747,6 +747,7 @@ void printOperation(Operation op,FILE* out){
       break;
     default:
       //ignore remaining types
+      break;
   }
   fputs("\n",out);
 }
@@ -1289,14 +1290,13 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
       }
       fputs("};\n",target);
     }
-    fprintf(target,"const tuple%"PRIi32" string%"PRIi32" = (tuple%"PRIi32"){.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu};\n",
-      stringType.typeDataAs.tuple->id,programStrings[i].stringId,stringType.typeDataAs.tuple->id,
-      programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
+    fprintf(target,"const tuple%"PRIi32" string%"PRIi32" = {.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu};\n",
+      stringType.typeDataAs.tuple->id,programStrings[i].stringId,programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
   }
   if(hasCheckBounds){
     fprintf(target,"void %s(int64_t index,int64_t length){\n",CHECK_BOUNDS_NAME);
     fputs("  if(index>=0 && index<length)\n    return;\n",target);
-    fputs("  fprintf(stderr,\"array index out of bounds: %%\"PRIi64\" size: %%\"PRIi64\"\\n\",index,length);\n",target);
+    fputs("  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\"\\n\",index,length);\n",target);
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
     fputs("}\n",target);
   }
@@ -1922,11 +1922,11 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"SET_VALUE")||wordEquals(&word,"=")){
     (*op)=(Operation){.opType=OP_SET_VALUE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"GET_ELEMENT")){//TODO use .index / .name instead of GET INDEX 
-    IntOrErrorCode index=parseInt(nextWord(codeFile,&err),0);
-    if(err!=0)
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
-    if(index.isError)
+  }else if(word.length>1&&word.chars[0]=='.'){
+    word.chars++;//remove first character
+    word.length--;
+    IntOrErrorCode index=parseInt(word,10);
+    if(index.isError)//XXX allow named elements
       return (SizeOrError){.isError=true,.as={.error={.errorCode=index.as.error,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};

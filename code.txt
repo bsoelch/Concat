@@ -16,7 +16,7 @@ ENTRY_POINT
   A PRINT
   B PRINT
   
-  A 1 ADD B 1 SUBTRACT A SET_VALUE B SET_VALUE
+  A 1 ADD B 1 SUBTRACT A = B =
   
   1 2 proc0  TUPLE I64 I64 END NEW TUPLE I64 I64 END DECLARE tmp  ## remove explicit tuple creation once there is implicit tuple building
   
@@ -24,7 +24,7 @@ ENTRY_POINT
   
   doNothing
   
-  tmp GET_ELEMENT 1  tmp GET_ELEMENT 0 SET_VALUE
+  tmp .1  tmp .0 =
   
   "Hello" 1 [] PRINT
 
@@ -37,13 +37,13 @@ ENTRY_POINT
   END
   
   A ADDR_OF  I32 PTR DECLARE aPtr
-  2  aPtr INC VALUE_AT SET_VALUE 
+  2  aPtr INC VALUE_AT = 
 
   10 I32 DECLARE C 
 
   WHILE C 0 > DO
     C PRINT
-    C 1 SUBTRACT C SET_VALUE
+    C 1 SUBTRACT C =
   END
   
   true PRINT
