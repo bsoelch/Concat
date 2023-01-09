@@ -213,6 +213,7 @@ const char* opName(OpType type){
   }
   return "UNDEFINED";
 }
+const char* CHECK_BOUNDS_NAME="microLangInternal_checkArrayBounds";
 //types
 typedef enum{
   TYPECLASS_UNDEFINED,
@@ -224,6 +225,9 @@ typedef enum{
   TYPECLASS_UNION,
   TYPECLASS_PROCEDURE,
 }TypeClass;
+//TODO? TYPECLASS_META_TYPE
+//    -> META_TYPE integer/number/array as argument for requireType
+//    -> META_TYPE auto (id) as types for auto-type variables
 typedef enum{
   PRIMITIVE_VOID,
   PRIMITIVE_BOOL,
@@ -876,12 +880,11 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       fprintf(target,"(string%" PRIi64")",op->dataAs.i64);
       break;
     case OP_CHECK_ARRAY_BOUNDS:
-      fputs("{ //check array bounds \n  int64_t arrayLength=",target);
-      COMPILE_OP_RETURN_ERROR(target,op);
-      fprintf(target,";\n  if(tmp%" PRIi32"<0 || tmp%"PRIi32">=arrayLength){ \n",op->dataAs.idInfo.id,op->dataAs.idInfo.id);
-      fprintf(target,"    fprintf(stderr,\"array index out of bounds: %%\"PRIi64\" size: %%\"PRIi64\"\\n\",(int64_t)tmp%"PRIi32",arrayLength);\n",op->dataAs.idInfo.id);
-      fprintf(target,"    exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
-      fputs("  }\n}\n",target);
+      fprintf(target,"%s(",CHECK_BOUNDS_NAME);
+      COMPILE_OP_RETURN_ERROR(target,op);//index
+      fputs(",",target);
+      COMPILE_OP_RETURN_ERROR(target,op);//length
+      fputs(");\n",target);
       break;
     case OP_GET:
       switch(op->dataAs.idInfo.type){
@@ -1207,7 +1210,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
   return (SizeOrError){.isError=false,.as={.size=size}};
 }
 
-Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint){
+Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint,bool hasCheckBounds){
   fputs("#include <stdlib.h>\n",target);
   fputs("#include <stdio.h>\n",target);
   fputs("#include <inttypes.h>\n",target);
@@ -1289,6 +1292,13 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
     fprintf(target,"const tuple%"PRIi32" string%"PRIi32" = (tuple%"PRIi32"){.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu};\n",
       stringType.typeDataAs.tuple->id,programStrings[i].stringId,stringType.typeDataAs.tuple->id,
       programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
+  }
+  if(hasCheckBounds){
+    fprintf(target,"void %s(int64_t index,int64_t length){\n",CHECK_BOUNDS_NAME);
+    fputs("  if(index>=0 && index<length)\n    return;\n",target);
+    fputs("  fprintf(stderr,\"array index out of bounds: %%\"PRIi64\" size: %%\"PRIi64\"\\n\",index,length);\n",target);
+    fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
+    fputs("}\n",target);
   }
   if(!hasEntryPoint)//auto-wrap programs without entry point into a main function
     fputs("int main(void){\n",target);
@@ -1419,6 +1429,7 @@ typedef struct{
   
   Scope* globalScope;
   bool hasEntryPoint;
+  bool hasCheckBounds;
 }Program;
 
 typedef struct{
@@ -1779,7 +1790,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     }while(wordEquals(&word,"PTR"));
     DataType type=typeBuffer[--bufferedTypes];
     wordPos=codeFile->wordStart;//set operation position to start of op-name instead of type
-    if(wordEquals(&word,"DECLARE")){
+    if(wordEquals(&word,"DECLARE")||wordEquals(&word,":=")){
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       String varName=nextWord(codeFile,&err);
@@ -1838,25 +1849,25 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"false")){
     (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_BOOL),.filePos=wordPos,.dataAs={.i64=false}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"ADD")){
+  }else if(wordEquals(&word,"ADD")||wordEquals(&word,"+")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=ADD}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"SUBTRACT")){
+  }else if(wordEquals(&word,"SUBTRACT")||wordEquals(&word,"-")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=SUBTRACT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"MULTIPLY")){
+  }else if(wordEquals(&word,"MULTIPLY")||wordEquals(&word,"*")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=MULTIPLY}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"DIVIDE")){
+  }else if(wordEquals(&word,"DIVIDE")||wordEquals(&word,"/")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=DIVIDE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"MOD")){
+  }else if(wordEquals(&word,"MOD")||wordEquals(&word,"%")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=MOD}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"AND")||wordEquals(&word,"^")){
+  }else if(wordEquals(&word,"AND")||wordEquals(&word,"&")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=AND}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"OR")||wordEquals(&word,"^")){
+  }else if(wordEquals(&word,"OR")||wordEquals(&word,"|")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=OR}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"XOR")||wordEquals(&word,"^")){
@@ -1895,10 +1906,23 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"DEC")||wordEquals(&word,"--")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=DECREMENT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"SET_VALUE")){
+  }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
+    String varName=nextWord(codeFile,&err);
+      if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+    if(varName.length==0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+    IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    ScopeNode* id;
+    int r=declareIdentifier(varName,TYPE_UNDEFINED,idType,&id);
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
+    (*op)=(Operation){.opType=OP_DECLARE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"SET_VALUE")||wordEquals(&word,"=")){
     (*op)=(Operation){.opType=OP_SET_VALUE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"GET_ELEMENT")){
+  }else if(wordEquals(&word,"GET_ELEMENT")){//TODO use .index / .name instead of GET INDEX 
     IntOrErrorCode index=parseInt(nextWord(codeFile,&err),0);
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
@@ -2167,6 +2191,7 @@ typedef struct{
   int32_t tmpCount;
   
   size_t index;
+  bool hasCheckBounds;
 }TypeCheckState;
 
 //prints the type stack (for debug purposes)
@@ -2669,6 +2694,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_PROCEDURE:
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
             return pushValue(state,op,false);
+          //FIXME detect types of auto-declared variables
           //unexpected type error
           return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
         case ID_TUPLE_ELEMENT:
@@ -2746,13 +2772,14 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
               return r;
             }      
             //2. check array-bounds
-            if(ensureOpCap(state,state->opCount+3))
+            if(ensureOpCap(state,state->opCount+4))
               return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-            state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
-              .dataAs={.idInfo={.type=ID_TMP_VAR,.id=indexId}}};
+            state->hasCheckBounds=1;
+            state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={0}};
+            state->compiledOperations[state->opCount++]=opGetTmpVar(&indexType,indexId,op.filePos);//index
             state->compiledOperations[state->opCount++]=(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
               .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1}}};
-            state->compiledOperations[state->opCount++]=opGetTmpVar(&arrayType,arrayId,op.filePos);
+            state->compiledOperations[state->opCount++]=opGetTmpVar(&arrayType,arrayId,op.filePos);//length
             
             //3. array access
             if(ensureOpStackCap(state,state->opStackCount+4))
@@ -2823,9 +2850,13 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           offset=state->typeCount-1;
-          r=(Error){.errorCode=requireTypes("variable declaration",state,&op.dataType,1,op.filePos),.pos=op.filePos};
-          if(r.errorCode!=0){
-            return r;
+          if(op.dataType.typeClass==TYPECLASS_UNDEFINED){
+            op.dataType=state->typeStack[offset].type;//XXX? unwrap flat-tuples
+          }else{
+            r=(Error){.errorCode=requireTypes("variable declaration",state,&op.dataType,1,op.filePos),.pos=op.filePos};
+            if(r.errorCode!=0){
+              return r;
+            }
           }
           return addCompiledOp(state,op,state->typeStack[offset].opCount,1);
         case ID_TUPLE_ELEMENT:
@@ -3140,6 +3171,7 @@ Error typeCheckProgram(Program* prog,CodeFile* src){
   free(prog->ops);
   prog->ops=state.compiledOperations;
   prog->opCount=state.opCount;
+  prog->hasCheckBounds=state.hasCheckBounds;
   state.compiledOperations=NULL;
   freeContents(&state);
   return (Error){.errorCode=0,.pos=src->currentPos};
@@ -3217,7 +3249,7 @@ int main(int argc,char** argv){
     puts("");
 		//3. compile operations to C
     FILE* out=fopen("./out.c","w");
-    err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint);
+    err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint,p.hasCheckBounds);
     if(err.errorCode){
       printError(err,stderr);
       goto RETURN;
