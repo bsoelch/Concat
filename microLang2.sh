@@ -2,8 +2,8 @@
 compilerSrc="./microLang2.c"
 compilerTarget="./microLang2"
 codeSrc="./code.txt"
-codeCTarget="./out.c"
-codeTarget="./a.out"
+codeCTarget="./code.c"
+codeTarget="./code"
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
 
 echo "${cArgs[@]}"

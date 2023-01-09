@@ -3197,17 +3197,24 @@ long int fsize(FILE *fp){
 
 const char* path;
 const char* srcFile;
+const char* targetFile;
 int main(int argc,char** argv){
   (void)argc;
   char* code;
   int64_t codeSize;
   path=*(argv++);
   if(*argv==NULL){
-    printf("usage: inputFile\n");
+    printf("usage: %s inputFile\n",path);
+    printf("or     %s inputFile outputFile\n",path);
     return 0;
   }
   srcFile=*(argv++);
   FILE *file = fopen(srcFile, "r");
+  if(*argv==NULL){
+    targetFile="./out.c";
+  }else{
+    targetFile=*(argv++);
+  }
 	if(file!=NULL){
 		long int size=fsize(file);
 		if(size<0){//TODO?? recover form undetected fileSize (if seek worked)
@@ -3248,7 +3255,7 @@ int main(int argc,char** argv){
     }
     puts("");
 		//3. compile operations to C
-    FILE* out=fopen("./out.c","w");
+    FILE* out=fopen(targetFile,"w");
     err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint,p.hasCheckBounds);
     if(err.errorCode){
       printError(err,stderr);

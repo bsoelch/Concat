@@ -1,4 +1,4 @@
 *.o
-*.out
-out.c
+*.s
 microLang2
+code
