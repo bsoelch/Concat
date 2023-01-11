@@ -1,5 +1,7 @@
 *.o
 *.s
 *.zip
-microLang2
+*.ll
+*.bc
+concat
 code

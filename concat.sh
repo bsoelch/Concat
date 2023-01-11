@@ -1,6 +1,6 @@
 #!/bin/sh
-compilerSrc="./microLang2.c"
-compilerTarget="./microLang2"
+compilerSrc="./concat.c"
+compilerTarget="./concat"
 codeSrc="./code.txt"
 codeCTarget="./code.c"
 codeTarget="./code"
@@ -15,7 +15,7 @@ echo "-----------------------------------------"
 gcc ${cArgs[@]} $compilerSrc -o $compilerTarget && {
   echo "compile program"
   echo "-----------------------------------------"
-  ./microLang2 $codeSrc $codeCTarget
+  $compilerTarget $codeSrc $codeCTarget
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"
