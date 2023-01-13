@@ -621,8 +621,6 @@ typedef enum{
   AND,
   OR,
   XOR,
-  FAST_AND,
-  FAST_OR,
   GT,
   GE,
   EQ,
@@ -640,8 +638,6 @@ const char* binOpName(BinaryOperator op){
     case AND:return "AND";
     case OR:return "OR";
     case XOR:return "XOR";
-    case FAST_AND:return "FAST_AND";
-    case FAST_OR:return "FAST_OR";
     case GT:return "GT";
     case GE:return "GE";
     case EQ:return "EQ";
@@ -677,14 +673,15 @@ typedef enum{
   //TODO GET/SET for union values
   ID_POINTER,
   ID_POINTER_OFFSET,
-  ID_TMP_VAR,
+  ID_INTERMEDIATE_RESULT,
 }IdentiferType;
 typedef struct{
   int32_t id;
   IdentiferType type;
 }IdentiferInfo;
 const char* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
-  [ID_PROCEDURE]="procedure",[ID_TUPLE_ELEMENT]="tuple element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",[ID_TMP_VAR]="temporary variable"};
+  [ID_PROCEDURE]="procedure",[ID_TUPLE_ELEMENT]="tuple element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
+  [ID_INTERMEDIATE_RESULT]="intermediate result"};
 void printIdInfo(IdentiferInfo info,FILE* out){
   fprintf(out,"%s (%"PRIi32")",idNames[info.type],info.id);
 }
@@ -889,7 +886,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       break;
     case OP_GET:
       switch(op->dataAs.idInfo.type){
-        case ID_TMP_VAR:
+        case ID_INTERMEDIATE_RESULT:
           fprintf(target,"tmp%" PRIi32,op->dataAs.idInfo.id);
           break;
         case ID_LOCAL_VAR:
@@ -932,12 +929,10 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       fputs(";\n",target);
       break;
     case OP_DECLARE:
-      if(op->dataAs.idInfo.type==ID_TMP_VAR)
-        fputs("const ",target);//temp-vars are constant
       printTypeNameC(op->dataType,target);
       switch(op->dataAs.idInfo.type){
-        case ID_TMP_VAR:
-          fprintf(target," tmp%" PRIi32 " = ",op->dataAs.idInfo.id);//temp vars are constant
+        case ID_INTERMEDIATE_RESULT:
+          fprintf(target," const tmp%" PRIi32 " = ",op->dataAs.idInfo.id);//intermediate results are constant
           break;
         case ID_LOCAL_VAR:
           fprintf(target," local%" PRIi32 " = ",op->dataAs.idInfo.id);
@@ -1038,12 +1033,6 @@ SizeOrError compileOp(FILE* target,const Operation* op){
         case XOR:
           fputs("^",target);
           break;
-        case FAST_AND:
-          fputs("&&",target);
-          break;
-        case FAST_OR:
-          fputs("||",target);
-          break;
         case GT:
           fputs(">",target);
           break;
@@ -1085,9 +1074,9 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           fputs("){\n",target);
           break;
         case BLOCK_WHILE:
-          fputs("while(",target);
+          fputs("if(!",target);
           COMPILE_OP_RETURN_ERROR(target,op);
-          fputs("){\n",target);
+          fputs(")\n  break;\n",target);
           break;
         case BLOCK_DO:
           fputs("do{\n",target);
@@ -1096,9 +1085,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
           fputs("}else{\n",target);
           break;
         case BLOCK_WHILE_END:
-          fputs("}while(",target);
-          COMPILE_OP_RETURN_ERROR(target,op);
-          fputs(");\n",target);
+          fputs("}while(1);\n",target);
           break;
         case BLOCK_END:
           fputs("}\n",target);
@@ -1152,7 +1139,7 @@ SizeOrError compileOp(FILE* target,const Operation* op){
       break;
     case OP_CALL:
       switch(op->dataAs.idInfo.type){
-        case ID_TMP_VAR:
+        case ID_INTERMEDIATE_RESULT:
           fprintf(target,"tmp%"PRIi32"(",op->dataAs.idInfo.id);
           break;
         case ID_LOCAL_VAR:
@@ -1873,12 +1860,10 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"XOR")||wordEquals(&word,"^")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=XOR}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"AND2")||wordEquals(&word,"&&")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=FAST_AND}};
-    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"AND2")||wordEquals(&word,"&&")){//TODO? implement shortcut and/or using code-blocks
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
   }else if(wordEquals(&word,"OR2")||wordEquals(&word,"||")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=FAST_OR}};
-    return (SizeOrError){.isError=false,.as={.size=1}};
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
   }else if(wordEquals(&word,"EQ")||wordEquals(&word,"==")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=EQ}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1970,7 +1955,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"DO")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
     closeScope();
-    Scope* newScope=openScope(BLOCK_DO);
+    Scope* newScope=openScope(BLOCK_WHILE);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
     state->currentScope=newScope;
@@ -2154,7 +2139,6 @@ DataType typeCheckIntLogic(DataType a,DataType b){
 typedef struct{
   DataType type;
   int32_t opCount;
-  bool isPure;//checks if code block represents pure function
 }TypeInfo;
 
 typedef struct{
@@ -2163,14 +2147,14 @@ typedef struct{
 }IfBlockInfo;
 typedef struct{
   bool hasDo;
-}DoBlockInfo;
+}WhileBlockInfo;
 typedef struct{
   BlockType type;
   size_t blockStart;
   union{
     int64_t i64;
     IfBlockInfo ifBlock;
-    DoBlockInfo doBlock;
+    WhileBlockInfo whileBlock;
   }blockDataAs;
 }BlockInfo;
 typedef struct{
@@ -2199,7 +2183,7 @@ void printTypeStack(TypeCheckState* state,FILE* out){
   size_t offset=0;
   for(size_t k=0;k<state->typeCount;k++){
     printTypeName(state->typeStack[k].type,out);
-    fprintf(out," %s %"PRIi32":\n",state->typeStack[k].isPure?"true":"false",state->typeStack[k].opCount);
+    fprintf(out," %"PRIi32":\n",state->typeStack[k].opCount);
     for(int32_t i=0;i<state->typeStack[k].opCount;i++){
       fputs("    ",out);//indent operations
       printOperation(state->opStack[offset++],out);
@@ -2340,11 +2324,11 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
   return 0;
 }
 
-Error pushValue(TypeCheckState* state,Operation op,bool isConst){
+Error pushValue(TypeCheckState* state,Operation op){
   if(ensureOpStackCap(state,state->opStackCount+1)||ensureTypeStackCap(state,state->typeCount+1))
     return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
   state->opStack[state->opStackCount++]=op;
-  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1,.isPure=isConst};
+  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1};
   return (Error){.errorCode=0,.pos=op.filePos};
 }
 
@@ -2357,85 +2341,34 @@ Error insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
   return (Error){.errorCode=0,.pos=op.filePos};;
 }
 
-Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
 }
-Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+Operation opGetIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
 }
 //TODO more operation generator function
 
-//prepares state for the adding of op and the top stackOps operations / type types on the stack
-Error prepareAddCompiledOp(TypeCheckState* state,size_t skipedStackOps,size_t skippedTypes,size_t stackOps,size_t types,FilePosition pos){
-  (void)skipedStackOps;
-  size_t impureCount=0,impureOps=0;
-  if(state->typeCount>types+skippedTypes){
-    for(size_t i=0;i<state->typeCount-types-skippedTypes;i++){
-      if(!state->typeStack[i].isPure){
-        impureCount++;
-        impureOps+=state->typeStack[i].opCount;
-      }
-    }
-  }
-  if(ensureOpCap(state,state->opCount+stackOps+skipedStackOps+1+impureCount+impureOps))//already allocate space for skipped operations
-      return (Error){.errorCode=ERROR_MEMORY,.pos=pos};
-  size_t newOps;
-  if(impureCount>0){//store impure operations in temporary variables    
-    size_t offset=0;
-    newOps=0;
-    size_t shiftTarget=0,shiftSrc=0,shiftCount=0;
-    for(size_t i=0;i<state->typeCount-types-skippedTypes;i++){
-      if(!state->typeStack[i].isPure){
-        if(shiftSrc!=shiftTarget){
-          memmove(state->opStack+shiftTarget,state->opStack+shiftSrc,shiftCount*sizeof(Operation));//shift all previous operations to fill space
-        }
-        newOps+=shiftCount;
-        //store impure operations in temporary variables that are evaluated before the current operation
-        FilePosition tmpPos=state->opStack[offset].filePos;//take position of first operation in compiled code (~ last op in file)
-        state->compiledOperations[state->opCount++]=opDeclareTmpVar(&(state->typeStack[i].type),state->tmpCount,tmpPos);
-        memcpy(state->compiledOperations+state->opCount,state->opStack+offset,state->typeStack[i].opCount*sizeof(Operation));//move code section to variable
-        state->opStack[newOps++]=opGetTmpVar(&(state->typeStack[i].type),state->tmpCount,tmpPos);
-        state->tmpCount++;//TODO handle tmp-ids
-        state->opCount+=state->typeStack[i].opCount;
-        shiftTarget=newOps;
-        shiftSrc=offset+state->typeStack[i].opCount;
-        shiftCount=0;
-        state->typeStack[i].opCount=1;
-        state->typeStack[i].isPure=true;//temp vars are immutable
-      }else{
-        shiftCount+=state->typeStack[i].opCount;
-      }
-      offset+=state->typeStack[i].opCount;
-    }
-    if(shiftSrc!=shiftTarget){//shift remaining operations
-      memmove(state->opStack+shiftTarget,state->opStack+shiftSrc,(shiftCount+skipedStackOps)*sizeof(Operation));
-    }
-    newOps+=shiftCount+skipedStackOps;
-  }else{
-    newOps=state->opStackCount-stackOps;
-  }
-  state->opStackCount=newOps;
-  state->typeCount-=types;
-  return (Error){.errorCode=0,.pos=pos};
-}
+
 //append the first stackOps operations from the stack to the program, remove types elements from the type-stack
 //if appendOp is true op will be appended to the program (before any stack operations are appended)
-//the skipped types/stack-elements will be kept in their original state after preparing the stack (for use in multi-part operations)
-Error addCompiledStackOps(TypeCheckState* state,Operation op,size_t skipedStackOps,size_t skippedTypes,size_t stackOps,size_t types,bool appendOp){
-  Error r;
+//already allocate space for skippedStackOps 
+Error addCompiledStackOps(TypeCheckState* state,Operation op,size_t skippedStackOps,size_t stackOps,size_t types,bool appendOp){
   size_t oldStackCount=state->opStackCount;
-  r=prepareAddCompiledOp(state,skipedStackOps,skippedTypes,stackOps,types,op.filePos);
-  if(r.errorCode!=0)
-    return r;
+  if(ensureOpCap(state,state->opCount+stackOps+skippedStackOps+1))//already allocate space for skipped operations
+      return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+  state->opStackCount-=stackOps;
+  state->typeCount-=types;
+  //TODO extract composite operands to temp variables
   if(appendOp)
     state->compiledOperations[state->opCount++]=op;
   memcpy(state->compiledOperations+state->opCount,state->opStack+oldStackCount-stackOps,stackOps*sizeof(Operation));
   state->opCount+=stackOps;
-  return r;
+  return (Error){.errorCode=0,.pos=op.filePos};
 }
 //append op and the first stackOps operations from the stack to the program, remove types elements from the typestack
 Error addCompiledOp(TypeCheckState* state,Operation op,size_t stackOps,size_t types){
-  return addCompiledStackOps(state,op,0,0,stackOps,types,true);
+  return addCompiledStackOps(state,op,0,stackOps,types,true);
 }
 
 Error typeCheckCall(Operation* op,TypeCheckState* state){
@@ -2490,52 +2423,46 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
   if(outType.typeClass==TYPECLASS_PRIMITIVE&&outType.typeDataAs.primitive==PRIMITIVE_VOID){//no return values
     return addCompiledOp(state,*op,totalOps,argCount);
   }
+  //store result in temp variable
+  int32_t tmpId=state->tmpCount++;
+  state->compiledOperations[state->opCount++]=opDeclareIntermediate(procType->outType,tmpId,op->filePos);
   //update op-stack
-  Error r=insertStackOperation(state,*op,totalOps);
+  Error r=addCompiledOp(state,*op,totalOps,argCount);
   if(r.errorCode!=0)
     return r;
-  //update type stack
-  if(argCount<1&&ensureTypeStackCap(state,state->typeCount+1))
-    return (Error){.errorCode=ERROR_MEMORY,.pos=op->filePos};
   //add values of call
   if(outType.typeClass!=TYPECLASS_FLAT_TUPLE){//single return value
-    state->typeCount-=argCount;
-    state->typeStack[state->typeCount++]=(TypeInfo){.type=outType,.opCount=totalOps+1,.isPure=false};//TODO? pure functions
-    return (Error){.errorCode=0,.pos=op->filePos};
+    return pushValue(state,opGetIntermediate(&(op->dataType),tmpId,op->filePos));
   }
   //auto-unwrap multi-return values using flat-tuple return values
   outType.typeClass=TYPECLASS_TUPLE;//convert flat tuple to tuple for correct variable type
-  int32_t tmpId=state->tmpCount++;
-  //TODO check if conversion of impure values works
-  addCompiledOp(state,opDeclareTmpVar(&outType,tmpId,op->filePos),totalOps+1,argCount);//add call as operation, removes arguments from type stack  correctly
   ensureTypeStackCap(state,state->typeCount+outType.typeDataAs.composite->typeCount);
   ensureOpStackCap(state,state->opStackCount+outType.typeDataAs.composite->typeCount);
   for(int32_t e=0;e<outType.typeDataAs.composite->typeCount;e++){
-    state->typeStack[state->typeCount++]=(TypeInfo){.type=outType.typeDataAs.composite->types[e],.opCount=2,.isPure=true};//temp vars are not writable
+    state->typeStack[state->typeCount++]=(TypeInfo){.type=outType.typeDataAs.composite->types[e],.opCount=2};
     state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outType.typeDataAs.composite->types[e],.filePos=op->filePos,
       .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e}}};
-    state->opStack[state->opStackCount++]=opGetTmpVar(&outType.typeDataAs.composite->types[e],tmpId,op->filePos);
+    state->opStack[state->opStackCount++]=opGetIntermediate(&outType.typeDataAs.composite->types[e],tmpId,op->filePos);
   }
   return (Error){.errorCode=0,.pos=op->filePos};
 }
 
-Error typeCheckOperation(Operation op,TypeCheckState* state){
+//TODO only allow compile time code at global level (only constants and addresses)
+Error typeCheckOperation(Operation op,TypeCheckState* state){//TODO split code into primitive operations ( 1 2 ADD 3 MULT ->  tmp1=1+2;tmp2=tmp1*3; ... )
   size_t totalOps=0;
-  int32_t offset;
+  int32_t offset,tmpId;
   Error r;
-  bool isPure;
   BlockInfo blockInfo;
   switch(op.opType){
     case OP_CONSTANT:
     case OP_STRING_CONST:
-      return pushValue(state,op,true);
+      return pushValue(state,op);
     case OP_UNARY_OPERATOR:
       if(state->typeCount<1){
         fprintf(stderr,"not enough operands for unary operator %s: need 1 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       offset=state->typeCount-1;
-      isPure=true;
       //result of operation is neither addressable nor writable
       op.dataType=asConstType(state->typeStack[offset].type);//unary operator returns value of same type
       switch(op.dataAs.unOp){
@@ -2545,7 +2472,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"operand of unary operator %s has to be writable \n",unOpName(op.dataAs.unOp));
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
-          isPure=false;
           if(isPointerType(&(state->typeStack[offset].type))){
             break;//pointer is an allowed type for increment
           }
@@ -2577,15 +2503,14 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       //update op-stack
       totalOps=state->typeStack[offset].opCount;
-      isPure&=state->typeStack[offset].isPure;
-      r=insertStackOperation(state,op,totalOps);
+      //store result in temp variable
+      tmpId=state->tmpCount++;
+      state->compiledOperations[state->opCount++]=opDeclareIntermediate(&op.dataType,tmpId,op.filePos);
+      r=addCompiledOp(state,op,state->typeStack[offset].opCount,1);
       if(r.errorCode!=0)
         return r;
-      //update type-stack
-      state->typeStack[state->typeCount-1].type=op.dataType;
-      state->typeStack[state->typeCount-1].isPure=isPure;
-      state->typeStack[state->typeCount-1].opCount++;
-      return (Error){.errorCode=0,.pos=op.filePos};
+      //update stack
+      return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_BINARY_OPERATOR:
       if(state->typeCount<2){
         fprintf(stderr,"not enough operands for binary operator %s: need 2 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
@@ -2620,9 +2545,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             typesMatch=true;
             break;
           }
-          // fall through
-        case FAST_AND:
-        case FAST_OR:
           //bool ops
           if(state->typeStack[offset].type.typeClass==TYPECLASS_PRIMITIVE&&state->typeStack[offset].type.typeDataAs.primitive==PRIMITIVE_BOOL&&
               state->typeStack[offset+1].type.typeClass==TYPECLASS_PRIMITIVE&&state->typeStack[offset+1].type.typeDataAs.primitive==PRIMITIVE_BOOL){
@@ -2660,13 +2582,14 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //operator has matching types
       //update operation stack
       totalOps=state->typeStack[offset].opCount+state->typeStack[offset+1].opCount;
-      isPure=state->typeStack[offset].isPure&&state->typeStack[offset+1].isPure;
-      r=insertStackOperation(state,op,totalOps);
+      //store result in temp variable
+      tmpId=state->tmpCount++;
+      state->compiledOperations[state->opCount++]=opDeclareIntermediate(&op.dataType,tmpId,op.filePos);
+      r=addCompiledOp(state,op,totalOps,2);
       if(r.errorCode!=0)
         return r;
-      state->typeCount--;
-      state->typeStack[state->typeCount-1]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1,.isPure=isPure};
-      return (Error){.errorCode=0,.pos=op.filePos};
+      //update stack
+      return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_PRINT:
       if(state->typeCount<1){
             fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
@@ -2693,7 +2616,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_ARGUMENT:
         case ID_PROCEDURE:
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
-            return pushValue(state,op,false);
+            return pushValue(state,op);
           //FIXME detect types of auto-declared variables
           //unexpected type error
           return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -2760,41 +2683,40 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           if(isArrayType(&(state->typeStack[offset].type))){//handle wrapped array types
-            //1. store array and index in temporary varables
+            //1. store array and index in temporary variables
             size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
             DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
-            r=addCompiledStackOps(state,opDeclareTmpVar(&indexType,indexId,op.filePos),state->typeStack[offset].opCount,1,state->typeStack[offset+1].opCount,1,true);
+            r=addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op.filePos),state->typeStack[offset].opCount,state->typeStack[offset+1].opCount,1,true);
             if(r.errorCode!=0){
               return r;
             }      
-            r=addCompiledStackOps(state,opDeclareTmpVar(&arrayType,arrayId,op.filePos),0,0,state->typeStack[offset].opCount,1,true);
+            r=addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op.filePos),0,state->typeStack[offset].opCount,1,true);
             if(r.errorCode!=0){
               return r;
             }      
             //2. check array-bounds
-            if(ensureOpCap(state,state->opCount+4))
+            if(ensureOpCap(state,state->opCount+9))
               return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
             state->hasCheckBounds=1;
             state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={0}};
-            state->compiledOperations[state->opCount++]=opGetTmpVar(&indexType,indexId,op.filePos);//index
+            state->compiledOperations[state->opCount++]=opGetIntermediate(&indexType,indexId,op.filePos);//index
             state->compiledOperations[state->opCount++]=(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
               .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1}}};
-            state->compiledOperations[state->opCount++]=opGetTmpVar(&arrayType,arrayId,op.filePos);//length
+            state->compiledOperations[state->opCount++]=opGetIntermediate(&arrayType,arrayId,op.filePos);//length
             
             //3. array access
-            if(ensureOpStackCap(state,state->opStackCount+4))
-              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
             op.dataType=*(arrayType.typeDataAs.composite->types[0].typeDataAs.type);//target-type of pointer in first element of tuple
             if(arrayType.typeDataAs.composite->types[0].typeClass!=TYPECLASS_CONST_POINTER)
               op.dataType=asWritableType(op.dataType,false);
-            state->opStack[state->opStackCount++]=op;//get pointer offset
-            state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
+            tmpId=state->tmpCount++;
+            state->compiledOperations[state->opCount++]=opDeclareIntermediate(&op.dataType,tmpId,op.filePos);
+            state->compiledOperations[state->opCount++]=op;//get pointer offset
+            state->compiledOperations[state->opCount++]=(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
               .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=0}}};
-            state->opStack[state->opStackCount++]=opGetTmpVar(&arrayType,arrayId,op.filePos);
-            state->opStack[state->opStackCount++]=opGetTmpVar(&indexType,indexId,op.filePos);
-            //update type-stack
-            state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=4,.isPure=false};
-            return (Error){.errorCode=0,.pos=op.filePos};
+            state->compiledOperations[state->opCount++]=opGetIntermediate(&arrayType,arrayId,op.filePos);
+            state->compiledOperations[state->opCount++]=opGetIntermediate(&indexType,indexId,op.filePos);
+            //update stack
+            return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
           }
           if(!isPointerType(&(state->typeStack[offset].type))){
             fprintf(stderr,"invalid first operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
@@ -2815,7 +2737,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           state->typeStack[offset].type=op.dataType;
           state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
           return (Error){.errorCode=0,.pos=op.filePos};
-        case ID_TMP_VAR:
+        case ID_INTERMEDIATE_RESULT:
           break;
       }
       break;
@@ -2831,7 +2753,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update type of operation
       op.dataType=asConstType(state->typeStack[state->typeCount-1].type);
       //add compiled op to program
-      r=addCompiledStackOps(state,op,state->typeStack[state->typeCount-2].opCount,1,state->typeStack[state->typeCount-1].opCount,1,true);
+      r=addCompiledStackOps(state,op,state->typeStack[state->typeCount-2].opCount,state->typeStack[state->typeCount-1].opCount,1,true);
       if(r.errorCode!=0){
         return r;
       }      
@@ -2840,7 +2762,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(r.errorCode!=0){
         return r;
       }
-      return addCompiledStackOps(state,op,0,0,state->typeStack[state->typeCount-1].opCount,1,false);
+      return addCompiledStackOps(state,op,0,state->typeStack[state->typeCount-1].opCount,1,false);
     case OP_DECLARE:
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
@@ -2863,7 +2785,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_POINTER:
         case ID_POINTER_OFFSET:
         case ID_PROCEDURE:
-        case ID_TMP_VAR:
+        case ID_INTERMEDIATE_RESULT:
         case ID_ARGUMENT:
             fputs("cannot (directly) declare ",stderr);
             printIdInfo(op.dataAs.idInfo,stderr);
@@ -2880,43 +2802,42 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return r;
         }
         totalOps=0;
-        isPure=true;
         for(int32_t e=0;e<op.dataType.typeDataAs.composite->typeCount;e++){
           totalOps+=state->typeStack[offset+e].opCount;
-          isPure&=state->typeStack[offset+e].isPure;
         }
-        r=insertStackOperation(state,op,totalOps);
+        //store result in temp variable
+        tmpId=state->tmpCount++;
+        state->compiledOperations[state->opCount++]=opDeclareIntermediate(&op.dataType,tmpId,op.filePos);
+        r=addCompiledOp(state,op,totalOps,op.dataType.typeDataAs.composite->typeCount);
         if(r.errorCode!=0)
           return r;
-        state->typeCount=offset;
-        state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1,.isPure=isPure};
-        return (Error){.errorCode=0,.pos=op.filePos};
+        //update stack
+        return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
       }
       break;
     case OP_CAST:
       break;
     case OP_ADDR_OF:
       if(state->typeCount<1){
-            fprintf(stderr,"not enough operands for operation %s : need 1 got %zu\n",opName(op.opType),state->typeCount);
-            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-          }
-          offset=state->typeCount-1;
-          if(!state->typeStack[offset].type.isAddressable){
-              fprintf(stderr,"the operand of %s has to be an addressable type \n",opName(op.opType));
-            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-          }
-          op.dataType=pointerType(state->typeStack[offset].type);
-          //update operation stack
-          totalOps=state->typeStack[offset].opCount;
-          r=insertStackOperation(state,op,totalOps);
-          if(r.errorCode!=0)
-            return r;
-          //update type-stack
-          state->typeStack[offset].type=op.dataType;
-          state->typeStack[offset].opCount++;
-          return (Error){.errorCode=0,.pos=op.filePos};
-      break;
+        fprintf(stderr,"not enough operands for operation %s : need 1 got %zu\n",opName(op.opType),state->typeCount);
+        return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+      }
+      offset=state->typeCount-1;
+      if(!state->typeStack[offset].type.isAddressable){
+          fprintf(stderr,"the operand of %s has to be an addressable type \n",opName(op.opType));
+        return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+      }
+      op.dataType=pointerType(state->typeStack[offset].type);
+      //store result in temp variable
+      tmpId=state->tmpCount++;
+      state->compiledOperations[state->opCount++]=opDeclareIntermediate(&op.dataType,tmpId,op.filePos);
+      r=addCompiledOp(state,op,state->typeStack[offset].opCount,1);
+      if(r.errorCode!=0)
+        return r;
+      //update stack
+      return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_CODE_BLOCK://TODO allow operations to cross block boundaries (within procedures)
+      printOperation(op,stdout);
       switch(op.dataAs.block){
         case BLOCK_IF:
           blockInfo=peekBlock(state);
@@ -2989,7 +2910,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           if(checkNonemptyStack(state,"unfinished local operation")){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          if(pushBlock(state,(BlockInfo){.type=BLOCK_DO,.blockStart=state->opCount,.blockDataAs={0}}))
+          if(pushBlock(state,(BlockInfo){.type=BLOCK_WHILE,.blockStart=state->opCount,.blockDataAs={0}}))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
           if(ensureOpCap(state,state->opCount+1))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
@@ -2998,11 +2919,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_DO:
           blockInfo=popBlock(state);
-          if(blockInfo.type!=BLOCK_DO){//wrong position for DO
+          if(blockInfo.type!=BLOCK_WHILE){//wrong position for DO
             fputs("DO can only appear in WHILE-DO blocks\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          if(blockInfo.blockDataAs.doBlock.hasDo){//wrong position for DO
+          if(blockInfo.blockDataAs.whileBlock.hasDo){//wrong position for DO
             fputs("DO cannot appear more than once per WHILE block\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
@@ -3030,25 +2951,33 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             }
             return (Error){.errorCode=0,.pos=op.filePos};
           }
-          blockInfo.blockDataAs.doBlock.hasDo=true;
+          blockInfo.blockDataAs.whileBlock.hasDo=true;
           if(pushBlock(state,blockInfo))
-            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
-          //TODO general do-while block
-          break;
+            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+          op.dataType=primitiveType(PRIMITIVE_BOOL);
+          op.dataAs.block=BLOCK_WHILE;
+          r=(Error){.errorCode=requireTypes("if-condition",state,&op.dataType,1,op.filePos),.pos=op.filePos};
+          if(r.errorCode!=0){
+            return r;
+          }
+          offset=state->typeCount-1;
+          r=addCompiledOp(state,op,state->typeStack[offset].opCount,1); 
+          if(r.errorCode!=0)
+            return r;
+          if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          }
+          return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_WHILE_END:
           fputs("WHILE_END blocks are not supported use WHILE ... DO END to build a do-while statement",stderr);
           return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           /* general Loop code    WHILE F C DO G END
-            {
-              bool loop2=false; 
-              do{
-                if(loop2){
-                 G
-                }
-                loop2=true;
-                F
-              }while(C);
-            }
+            do{
+              F
+              if(!C) //while(C)
+                break;
+              G
+            }while(true);
           */
         case BLOCK_START:
           if(checkNonemptyStack(state,"unfinished local operation")){
@@ -3062,9 +2991,12 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_END:
           blockInfo=popBlock(state);
-          if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_ELIF||(blockInfo.type==BLOCK_DO&&!blockInfo.blockDataAs.doBlock.hasDo)){
+          if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_ELIF||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
             fputs("unexpected END statement\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          }
+          if(blockInfo.type==BLOCK_WHILE){
+            op.dataAs.block=BLOCK_WHILE_END;
           }
           //TODO check for procedures with missing return statements
           if(checkNonemptyStack(state,"unfinished local operation")){

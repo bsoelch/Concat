@@ -30,7 +30,7 @@ ENTRY_POINT
 
   A 0 != IF 
     1 PRINT 
-  EL  B 0 !=  A 42 >=  && IF 
+  EL  B 0 != A 42 >=  & IF 
     2 PRINT
   ELSE
     3 PRINT
@@ -45,7 +45,7 @@ ENTRY_POINT
     C PRINT
     C 1 SUBTRACT C =
   END
-  
+
   true PRINT
 END
 

@@ -51,38 +51,55 @@ tuple2 procedure3 (union1 arg0){
 return (tuple2){.e0=((int64_t)12345678987654321),.e1=((int64_t)98765432123456789)};
 }
 int main(void){
-int32_t local4 = (((int32_t)1)+((int32_t)1));
-int32_t local5 = ((local4-((int32_t)1))*((int32_t)3));
+int32_t const tmp0 = (((int32_t)1)+((int32_t)1));
+int32_t local4 = tmp0;
+int32_t const tmp1 = (local4-((int32_t)1));
+int32_t const tmp2 = (tmp1*((int32_t)3));
+int32_t local5 = tmp2;
 printf("%"PRIi32"\n",local4);
 printf("%"PRIi32"\n",local5);
-const int32_t tmp0 = (local4+((int32_t)1));
-local4 = (local5-((int32_t)1));
-local5 = tmp0;
-const tuple0 tmp1 = procedure1(((int32_t)1),((int32_t)2));
-tuple2 local6 = (tuple2){.e0=((int64_t)(tmp1).e0),.e1=((int64_t)(tmp1).e1)};
-printf("%"PRIi32"\n",(++local4));
+int32_t const tmp3 = (local4+((int32_t)1));
+int32_t const tmp4 = (local5-((int32_t)1));
+local4 = tmp4;
+local5 = tmp3;
+tuple0 const tmp5 = procedure1(((int32_t)1),((int32_t)2));
+tuple2 const tmp6 = (tuple2){.e0=((int64_t)(tmp5).e0),.e1=((int64_t)(tmp5).e1)};
+tuple2 local6 = tmp6;
+int32_t const tmp7 = (++local4);
+printf("%"PRIi32"\n",tmp7);
 procedure2();
 (local6).e0 = (local6).e1;
-const int32_t tmp2 = ((int32_t)1);
-const tuple3 tmp3 = (string0);
-microLangInternal_checkArrayBounds(tmp2,(tmp3).e1);
-printf("%"PRIi8"\n",(*(((tmp3).e0)+(tmp2))));
-if((local4!=((int32_t)0))){
+int32_t const tmp8 = ((int32_t)1);
+tuple3 const tmp9 = (string0);
+microLangInternal_checkArrayBounds(tmp8,(tmp9).e1);
+int8_t const tmp10 = (*(((tmp9).e0)+(tmp8)));
+printf("%"PRIi8"\n",tmp10);
+bool const tmp11 = (local4!=((int32_t)0));
+if(tmp11){
 printf("%"PRIi32"\n",((int32_t)1));
 }else{
-if(((local5!=((int32_t)0))&&(local4>=((int32_t)42)))){
+bool const tmp12 = (local5!=((int32_t)0));
+bool const tmp13 = (local4>=((int32_t)42));
+bool const tmp14 = (tmp12&tmp13);
+if(tmp14){
 printf("%"PRIi32"\n",((int32_t)2));
 }else{
 printf("%"PRIi32"\n",((int32_t)3));
 }
 }
-int32_t* local7 = &(local4);
-(*((++local7))) = ((int32_t)2);
+int32_t* const tmp15 = &(local4);
+int32_t* local7 = tmp15;
+int32_t* const tmp16 = (++local7);
+(*(tmp16)) = ((int32_t)2);
 int32_t local8 = ((int32_t)10);
-while((local8>((int32_t)0))){
+do{
+bool const tmp17 = (local8>((int32_t)0));
+if(!tmp17)
+  break;
 printf("%"PRIi32"\n",local8);
-local8 = (local8-((int32_t)1));
-}
+int32_t const tmp18 = (local8-((int32_t)1));
+local8 = tmp18;
+}while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }
 tuple3 global4 = (string1);
