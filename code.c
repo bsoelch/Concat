@@ -53,12 +53,13 @@ void microLangInternal_checkArrayBounds(int64_t index,int64_t length){
   exit(1);
 }
 tuple0 procedure1 (int32_t arg0, int32_t arg1){
-return (tuple0){.e0=((int32_t)0),.e1=((int32_t)1)};
+return (tuple0){.e0=arg0,.e1=arg1};
 }
 void procedure2 (void){
 return ;
 }
 tuple2 procedure3 (union1 arg0){
+union1 local4 = arg0;
 return (tuple2){.e0=((int64_t)12345678987654321),.e1=((int64_t)98765432123456789)};
 }
 tuple4 procedure4 (void){
@@ -97,42 +98,44 @@ int32_t const tmp17 = (*((tmp16)+(((int32_t)0))));
 printf("%"PRIi32"\n",tmp17);
 int64_t const tmp18 = (local7).e1;
 (local7).e0 = tmp18;
-tuple2* const tmp19 = &(local7);
-tuple2* local8 = tmp19;
-int64_t const tmp20 = ((local8)+(((int32_t)0)))->e0;
-printf("%"PRIi64"\n",tmp20);
-int32_t const tmp21 = ((int32_t)1);
-tuple5 const tmp22 = (string0);
-const int8_t* const tmp23 = (tmp22).e0;
-int64_t const tmp24 = (tmp22).e1;
-microLangInternal_checkArrayBounds(tmp21,tmp24);
-int8_t const tmp25 = (*((tmp23)+(tmp21)));
-printf("%"PRIi8"\n",tmp25);
-bool const tmp26 = (local5!=((int32_t)0));
-if(tmp26){
+int64_t* const tmp19 = &((local7).e0);
+printf("%p\n",(void*)tmp19);
+tuple2* const tmp20 = &(local7);
+tuple2* local8 = tmp20;
+int64_t const tmp21 = ((local8)+(((int32_t)0)))->e0;
+printf("%"PRIi64"\n",tmp21);
+int32_t const tmp22 = ((int32_t)1);
+tuple5 const tmp23 = (string0);
+const int8_t* const tmp24 = (tmp23).e0;
+int64_t const tmp25 = (tmp23).e1;
+microLangInternal_checkArrayBounds(tmp22,tmp25);
+int8_t const tmp26 = (*((tmp24)+(tmp22)));
+printf("%"PRIi8"\n",tmp26);
+bool const tmp27 = (local5!=((int32_t)0));
+if(tmp27){
 printf("%"PRIi32"\n",((int32_t)1));
 }else{
-bool const tmp27 = (local6!=((int32_t)0));
-bool const tmp28 = (local5>=((int32_t)42));
-bool const tmp29 = (tmp27&tmp28);
-if(tmp29){
+bool const tmp28 = (local6!=((int32_t)0));
+bool const tmp29 = (local5>=((int32_t)42));
+bool const tmp30 = (tmp28&tmp29);
+if(tmp30){
 printf("%"PRIi32"\n",((int32_t)2));
 }else{
 printf("%"PRIi32"\n",((int32_t)3));
 }
 }
-int32_t* const tmp30 = &(local5);
-int32_t* local9 = tmp30;
-int32_t* const tmp31 = (++local9);
-(*(tmp31)) = ((int32_t)2);
+int32_t* const tmp31 = &(local5);
+int32_t* local9 = tmp31;
+int32_t* const tmp32 = (++local9);
+(*(tmp32)) = ((int32_t)2);
 int32_t local10 = ((int32_t)10);
 do{
-bool const tmp32 = (local10>((int32_t)0));
-if(!tmp32)
+bool const tmp33 = (local10>((int32_t)0));
+if(!tmp33)
   break;
 printf("%"PRIi32"\n",local10);
-int32_t const tmp33 = (local10-((int32_t)1));
-local10 = tmp33;
+int32_t const tmp34 = (local10-((int32_t)1));
+local10 = tmp34;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }

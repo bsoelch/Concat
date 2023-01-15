@@ -2580,6 +2580,22 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
   }
   return (Error){.errorCode=0,.pos=op->filePos};
 }
+Error pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
+  if(procType->typeClass!=TYPECLASS_PROCEDURE)
+     return (Error){.errorCode=ERROR_TYPE,.pos=pos};
+  DataType* inType=procType->typeDataAs.procedure->inType;
+  if(inType->typeClass==TYPECLASS_PRIMITIVE&&inType->typeDataAs.primitive==PRIMITIVE_VOID)
+    return (Error){.errorCode=0,.pos=pos};//no input arguments
+  if(inType->typeClass!=TYPECLASS_FLAT_TUPLE)
+    return pushValue(state,(Operation){.opType=OP_GET,.dataType=*inType,.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=0}}});
+  Error r;
+  for(int32_t i=0;i<inType->typeDataAs.composite->typeCount;i++){
+    r=pushValue(state,(Operation){.opType=OP_GET,.dataType=inType->typeDataAs.composite->types[i],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=i}}});
+    if(r.errorCode!=0)
+      return r;
+  }
+  return (Error){.errorCode=0,.pos=pos};
+}
 
 //TODO only allow compile time code at global level (only constants and addresses)
 //     run all global code before procedure implementations
@@ -3032,14 +3048,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       op.dataType=pointerType(state->typeStack[offset].type);
       //store result in temp variable
-      r=extractCompositeOps(state,1);
-      if(r.errorCode!=0)
-        return r;
       if(ensureOpCap(state,state->opCount+state->typeStack[offset].opCount+1))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
       tmpId=state->tmpCount++;
       state->compiledOperations[state->opCount++]=opDeclareIntermediate(&op.dataType,tmpId,op.filePos);
-      r=addCompiledOp(state,op,1);
+      r=addCompiledStackOps(state,op,0,state->typeStack[offset].opCount,1,true);
       if(r.errorCode!=0)
         return r;
       //update stack
@@ -3269,7 +3282,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       //check tuple elements  XXX? let requireTypes handle the type-number
       if(op.dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op.dataType.typeDataAs.composite->typeCount){
-        fprintf(stderr,"wrong number of return values: expected %zu got %i",state->typeCount,op.dataType.typeDataAs.composite->typeCount);
+        fprintf(stderr,"wrong number of return values: expected %zu got %i\n",state->typeCount,op.dataType.typeDataAs.composite->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       r=(Error){.errorCode=requireTypes("return statement",state,op.dataType.typeDataAs.composite->types,state->typeCount,op.filePos),.pos=op.filePos};
@@ -3290,7 +3303,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(ensureOpCap(state,state->opCount+1))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
       state->compiledOperations[state->opCount++]=op;
-      //TODO? push procedure arguments onto type-stack
+      if(op.opType==OP_DECLARE_PROCEDURE)
+        return pushProcArgs(state,&op.dataType,op.filePos);
       return (Error){.errorCode=0,.pos=op.filePos};
   }
   printf("type checking %s is not implemented\n",opName(op.opType));
