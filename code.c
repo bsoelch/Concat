@@ -112,33 +112,35 @@ microLangInternal_checkArrayBounds(tmp22,tmp25);
 int8_t const tmp26 = (*((tmp24)+(tmp22)));
 printf("%"PRIi8"\n",tmp26);
 bool const tmp27 = (local5!=((int32_t)0));
+int32_t tmp29;
 if(tmp27){
 int32_t const tmp28 = (((int32_t)1)+((int32_t)1));
-printf("%"PRIi32"\n",tmp28);
+tmp29 = tmp28;
 }else{
-bool const tmp29 = (local6!=((int32_t)0));
-bool const tmp30 = (local5>=((int32_t)42));
-bool const tmp31 = (tmp29&tmp30);
-if(tmp31){
-int32_t const tmp32 = (((int32_t)1)+((int32_t)2));
-printf("%"PRIi32"\n",tmp32);
+bool const tmp30 = (local6!=((int32_t)0));
+bool const tmp31 = (local5>=((int32_t)42));
+bool const tmp32 = (tmp30&tmp31);
+if(tmp32){
+int32_t const tmp33 = (((int32_t)1)+((int32_t)2));
+tmp29 = tmp33;
 }else{
-int32_t const tmp33 = (((int32_t)1)+((int32_t)3));
-printf("%"PRIi32"\n",tmp33);
+int32_t const tmp34 = (((int32_t)1)+((int32_t)3));
+tmp29 = tmp34;
 }
 }
-int32_t* const tmp34 = &(local5);
-int32_t* local9 = tmp34;
-int32_t* const tmp35 = (++local9);
-(*(tmp35)) = ((int32_t)2);
+printf("%"PRIi32"\n",tmp29);
+int32_t* const tmp35 = &(local5);
+int32_t* local9 = tmp35;
+int32_t* const tmp36 = (++local9);
+(*(tmp36)) = ((int32_t)2);
 int32_t local10 = ((int32_t)10);
 do{
-bool const tmp36 = (local10>((int32_t)0));
-if(!tmp36)
+bool const tmp37 = (local10>((int32_t)0));
+if(!tmp37)
   break;
 printf("%"PRIi32"\n",local10);
-int32_t const tmp37 = (local10-((int32_t)1));
-local10 = tmp37;
+int32_t const tmp38 = (local10-((int32_t)1));
+local10 = tmp38;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }
