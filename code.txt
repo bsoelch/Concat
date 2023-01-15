@@ -16,7 +16,7 @@ PROC => TUPLE TUPLE I32 I32 PTR END PTR I32 END END DECLARE ptrTest
   y ADDR_OF 0 TUPLE TUPLE I32  I32 PTR END PTR I32 END NEW return
 END
 
-ENTRY_POINT 
+ENTRY_POINT
   1 1 ADD  I32 DECLARE A
   A 1 SUBTRACT 3 MULTIPLY  I32 DECLARE B
   
@@ -40,13 +40,15 @@ ENTRY_POINT
   
   "Hello" 1 [] PRINT
 
-  A 0 != IF 
-    1 PRINT 
-  EL  B 0 != A 42 >=  & IF 
-    2 PRINT
-  ELSE
-    3 PRINT
-  END
+  1  
+    A 0 != IF 
+      1 + PRINT
+    EL  B 0 != A 42 >=  & IF 
+      2 + PRINT
+    ELSE
+      3 + PRINT
+    END 
+  ## TODO move print outside statement
   
   A ADDR_OF  I32 PTR DECLARE aPtr
   2  aPtr INC VALUE_AT = 

@@ -113,29 +113,32 @@ int8_t const tmp26 = (*((tmp24)+(tmp22)));
 printf("%"PRIi8"\n",tmp26);
 bool const tmp27 = (local5!=((int32_t)0));
 if(tmp27){
-printf("%"PRIi32"\n",((int32_t)1));
+int32_t const tmp28 = (((int32_t)1)+((int32_t)1));
+printf("%"PRIi32"\n",tmp28);
 }else{
-bool const tmp28 = (local6!=((int32_t)0));
-bool const tmp29 = (local5>=((int32_t)42));
-bool const tmp30 = (tmp28&tmp29);
-if(tmp30){
-printf("%"PRIi32"\n",((int32_t)2));
+bool const tmp29 = (local6!=((int32_t)0));
+bool const tmp30 = (local5>=((int32_t)42));
+bool const tmp31 = (tmp29&tmp30);
+if(tmp31){
+int32_t const tmp32 = (((int32_t)1)+((int32_t)2));
+printf("%"PRIi32"\n",tmp32);
 }else{
-printf("%"PRIi32"\n",((int32_t)3));
+int32_t const tmp33 = (((int32_t)1)+((int32_t)3));
+printf("%"PRIi32"\n",tmp33);
 }
 }
-int32_t* const tmp31 = &(local5);
-int32_t* local9 = tmp31;
-int32_t* const tmp32 = (++local9);
-(*(tmp32)) = ((int32_t)2);
+int32_t* const tmp34 = &(local5);
+int32_t* local9 = tmp34;
+int32_t* const tmp35 = (++local9);
+(*(tmp35)) = ((int32_t)2);
 int32_t local10 = ((int32_t)10);
 do{
-bool const tmp33 = (local10>((int32_t)0));
-if(!tmp33)
+bool const tmp36 = (local10>((int32_t)0));
+if(!tmp36)
   break;
 printf("%"PRIi32"\n",local10);
-int32_t const tmp34 = (local10-((int32_t)1));
-local10 = tmp34;
+int32_t const tmp37 = (local10-((int32_t)1));
+local10 = tmp37;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }

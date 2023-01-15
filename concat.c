@@ -2216,8 +2216,24 @@ typedef struct{
 }TypeInfo;
 
 typedef struct{
+  TypeInfo* types;
+  size_t typeCount;
+  Operation* ops;
+  size_t opCount;
+
+}StackState;
+typedef struct{
   size_t elsePos;
   int32_t elifCount;
+  
+  StackState inStack;
+  /*
+  
+  
+  TypeInfo* outTypes
+  size_t outTypeCount;
+  Operation* outOps;
+  */
 }IfBlockInfo;
 typedef struct{
   bool hasDo;
@@ -2342,6 +2358,15 @@ bool checkNonemptyStack(TypeCheckState* state,const char* message){
     fputs("\n",stderr);
     return true;
   }
+  return false;
+}
+bool resetStack(TypeCheckState* state,StackState* prevState){
+  if(ensureOpStackCap(state,prevState->opCount)||ensureTypeStackCap(state,prevState->typeCount))
+    return true;
+  state->typeCount=prevState->typeCount;
+  state->opStackCount=prevState->opCount;
+  memcpy(state->typeStack,prevState->types,prevState->typeCount*sizeof(TypeInfo));
+  memcpy(state->opStack,prevState->ops,prevState->opCount*sizeof(Operation));
   return false;
 }
 
@@ -3070,6 +3095,17 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             blockInfo.type=BLOCK_IF;
           }else{
             blockInfo=(BlockInfo){.type=BLOCK_IF,.blockStart=state->opCount,.blockDataAs={0}};
+            //store in-types
+            if(state->typeCount>1){
+              blockInfo.blockDataAs.ifBlock.inStack.typeCount=state->typeCount-1;
+              blockInfo.blockDataAs.ifBlock.inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
+              blockInfo.blockDataAs.ifBlock.inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
+              blockInfo.blockDataAs.ifBlock.inStack.ops=malloc((blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
+              if(blockInfo.blockDataAs.ifBlock.inStack.types==NULL||blockInfo.blockDataAs.ifBlock.inStack.ops==NULL)
+                return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+              memcpy(blockInfo.blockDataAs.ifBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
+              memcpy(blockInfo.blockDataAs.ifBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
+            }
           }
           if(pushBlock(state,blockInfo))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
@@ -3086,9 +3122,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           r=addCompiledOp(state,op,1); 
           if(r.errorCode!=0)
             return r;
-          if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
-            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-          }
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_ELSE:
           blockInfo=popBlock(state);
@@ -3096,10 +3129,15 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("ELSE can only appear in IF blocks\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
+          //TODO check out-types (elsePos==0 -> create / elsePos!=0 -> compare) 
           if(checkNonemptyStack(state,"unfinished local operation")){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-            //push updated block
+          //reset stack to in-types 
+          if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack))){
+            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+          }
+          //push updated block
           blockInfo.type=BLOCK_ELSE;
           blockInfo.blockDataAs.ifBlock.elsePos=state->opCount;
           if(pushBlock(state,blockInfo))
@@ -3116,8 +3154,13 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
           
+          //TODO check out-types (elsePos==0 -> create / elsePos!=0 -> compare) 
           if(checkNonemptyStack(state,"unfinished local operation")){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          }
+          //reset stack to in-types 
+          if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack))){
+            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           }
           //push updated block
           blockInfo.type=BLOCK_ELIF;
