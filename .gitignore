@@ -3,5 +3,6 @@
 *.zip
 *.ll
 *.bc
+a.out
 concat
 code

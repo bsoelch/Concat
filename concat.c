@@ -225,9 +225,6 @@ typedef enum{
   TYPECLASS_UNION,
   TYPECLASS_PROCEDURE,
 }TypeClass;
-//TODO? TYPECLASS_META_TYPE
-//    -> META_TYPE integer/number/array as argument for requireType
-//    -> META_TYPE auto (id) as types for auto-type variables
 typedef enum{
   PRIMITIVE_VOID,
   PRIMITIVE_BOOL,
@@ -249,6 +246,7 @@ typedef struct DataType{
     TupleType* tuple;//name alias for composite
     UnionType* unionType;//name alias for composite
     ProcedureType* procedure;
+    int64_t predeclaredId;
   }typeDataAs;
   bool isAddressable;
   bool isWritable;
@@ -514,6 +512,9 @@ int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
   int i,j;
   switch(type.typeClass){
     case TYPECLASS_UNDEFINED:
+      if(type.typeDataAs.predeclaredId>0){
+        return fprintf(file,"PREDECLARED %"PRIi64,type.typeDataAs.predeclaredId);
+      }
       return fputs("UNDEFINED",file);
     case TYPECLASS_PRIMITIVE:
       return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
@@ -1406,7 +1407,7 @@ Scope* openScope(BlockType scopeType){
     fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
     return NULL;
   }
-  scopeBuffer[scopeCount].nodes=malloc(SCOPE_MAP_CAP*sizeof(ScopeNode*));
+  scopeBuffer[scopeCount].nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
   scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
   scopeBuffer[scopeCount].scopeType=scopeType;
   scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
@@ -1484,6 +1485,7 @@ typedef struct{
   size_t opCount;
   
   Scope* globalScope;
+  int32_t predeclaredTypes;
   bool hasEntryPoint;
   bool hasCheckBounds;
 }Program;
@@ -1494,6 +1496,7 @@ typedef struct{
   Scope* currentScope;
   int32_t scopeLevel;
   
+  int32_t predeclaredTypes;
   bool hasEntryPoint;
 }CompilerState;
 
@@ -1887,7 +1890,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       fputs(" is currently not supported for operator new\n",stderr);
       //TODO new union, ? new pointer
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-    }else if(wordEquals(&word,"CAST")){
+    }else if(wordEquals(&word,"CAST")){ 
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
@@ -1897,7 +1900,10 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }
   if(err!=ERROR_TYPE)//unexpected error while reading type
     return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
-  
+  if(wordEquals(&word,"DECLARE")||wordEquals(&word,"=:")||wordEquals(&word,"NEW")||wordEquals(&word,"CAST")){
+    fprintf(stderr,"missing type argument for operator: %.*s\n",(int)word.length,word.chars);
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+  }
   if(wordEquals(&word,"true")){
     (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_BOOL),.filePos=wordPos,.dataAs={.i64=true}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -1966,11 +1972,13 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    DataType mType=TYPE_UNDEFINED;
+    mType.typeDataAs.predeclaredId=++state->predeclaredTypes;//store predeceased id in type
     ScopeNode* id;
-    int r=declareIdentifier(varName,TYPE_UNDEFINED,idType,&id);
+    int r=declareIdentifier(varName,mType,idType,&id);
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"SET_VALUE")||wordEquals(&word,"=")){
     (*op)=(Operation){.opType=OP_SET_VALUE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
@@ -1983,7 +1991,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=index.as.error,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"VALUE_AT")||wordEquals(&word,"GET_VALUE_AT")){
+  }else if(wordEquals(&word,"@")||wordEquals(&word,"VALUE_AT")){
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"[]")){
@@ -2087,16 +2095,14 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
+  //TODO save identifiers as OP_IDENTIFIER
+  //  remember global variable declarations
+  //  if identifier matches global var def during type-check phase replace with global var
+  
+  
   //old parser code TODO update when needed
   /*
-  if(wordEquals(&word,"ARG")||wordEquals(&word,"GET_ARG")){
-    IntOrErrorCode index=parseInt(nextWord(code,codeSize,NULL),0);
-    if(index.isError)
-      return (SizeOrError){.isError=true,.as={.error=index.as.error}};
-    //TODO determine type of argument
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=index.as.i64}}};
-    return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"CALL")){
+  if(wordEquals(&word,"CALL")){
     String procName=nextWord(code,codeSize,NULL);
     if(procName.length==0)
       return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
@@ -2124,7 +2130,7 @@ Program compileToOps(CodeFile* codeFile){
   SizeOrError r;
   Operation* compileOps=malloc(opsCap*sizeof(Operation));
   openScope(BLOCK_START);
-  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false};
+  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0};
   while(codeFile->codeSize>0){
     r=readOperation(compileOps+opCount,codeFile,&state);
     if(r.isError){
@@ -2136,7 +2142,7 @@ Program compileToOps(CodeFile* codeFile){
       return (Program){.ops=NULL,.opCount=0};//TODO ensure there is enough capacity
     }
   }
-  return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint};
+  return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(const char* exprName,DataType expected,DataType got){
@@ -2243,6 +2249,8 @@ typedef struct{
   int32_t tmpCount;
   
   size_t index;
+  int32_t nPredeclaredTypes;
+  DataType* predeclaredTypes;
   bool hasCheckBounds;
 }TypeCheckState;
 
@@ -2322,6 +2330,8 @@ void freeContents(TypeCheckState* state){
   state->typeStack=NULL;
   free(state->openBlocks);
   state->openBlocks=NULL;
+  free(state->predeclaredTypes);
+  state->predeclaredTypes=NULL;
 }
 
 bool checkNonemptyStack(TypeCheckState* state,const char* message){
@@ -2365,7 +2375,6 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
       continue;
     }
     typeErrorMessage(opName,types[k],state->typeStack[state->typeCount-nTypes+k].type);
-    //TODO try auto-building of tuples
     return ERROR_TYPE;
   }
   if(directMatch)
@@ -2573,6 +2582,7 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
 }
 
 //TODO only allow compile time code at global level (only constants and addresses)
+//     run all global code before procedure implementations
 Error typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
   int32_t offset,tmpId;
@@ -2753,8 +2763,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_PROCEDURE:
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
             return pushValue(state,op);
-          //FIXME detect types of auto-declared variables
-          //unexpected type error
+          if(op.dataType.typeDataAs.predeclaredId<=0||op.dataType.typeDataAs.predeclaredId>state->nPredeclaredTypes)
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          op.dataType=state->predeclaredTypes[op.dataType.typeDataAs.predeclaredId-1];//get predeceased type
+          if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
+            return pushValue(state,op);
           return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
         case ID_TUPLE_ELEMENT:
           if(state->typeCount<1){
@@ -2949,7 +2962,12 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           }
           offset=state->typeCount-1;
           if(op.dataType.typeClass==TYPECLASS_UNDEFINED){
-            op.dataType=state->typeStack[offset].type;//XXX? unwrap flat-tuples
+            if(op.dataType.typeDataAs.predeclaredId<=0||op.dataType.typeDataAs.predeclaredId>state->nPredeclaredTypes)
+                return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+            //XXX? unwrap flat-tuples 
+            //TODO don't set constant variables to type writable
+            state->predeclaredTypes[op.dataType.typeDataAs.predeclaredId-1]=asWritableType(state->typeStack[offset].type,true);//set predeceased type
+            op.dataType=asWritableType(state->typeStack[offset].type,true);
           }else{
             r=(Error){.errorCode=requireTypes("variable declaration",state,&op.dataType,1,op.filePos),.pos=op.filePos};
             if(r.errorCode!=0){
@@ -3249,7 +3267,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(op.dataType.typeClass==TYPECLASS_TUPLE){
         op.dataType.typeClass=TYPECLASS_FLAT_TUPLE;//notify compiler that tuple is flat
       }
-      //check tuple elements  TODO? let requireTypes handle the type-number
+      //check tuple elements  XXX? let requireTypes handle the type-number
       if(op.dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op.dataType.typeDataAs.composite->typeCount){
         fprintf(stderr,"wrong number of return values: expected %zu got %i",state->typeCount,op.dataType.typeDataAs.composite->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3272,6 +3290,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(ensureOpCap(state,state->opCount+1))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
       state->compiledOperations[state->opCount++]=op;
+      //TODO? push procedure arguments onto type-stack
       return (Error){.errorCode=0,.pos=op.filePos};
   }
   printf("type checking %s is not implemented\n",opName(op.opType));
@@ -3283,8 +3302,9 @@ Error typeCheckProgram(Program* prog,CodeFile* src){
     .opStack=malloc(INIT_CAP*sizeof(Operation)),.opStackCap=INIT_CAP,.opStackCount=0,
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
+    .predeclaredTypes=malloc(prog->predeclaredTypes*sizeof(DataType)),.nPredeclaredTypes=prog->predeclaredTypes,
     .tmpCount=0,.index=0};
-  if(state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL){//memory allocation failed
+  if(state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
     freeContents(&state);
     return (Error){.errorCode=ERROR_MEMORY,.pos=src->currentPos};
   }
