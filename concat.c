@@ -695,7 +695,7 @@ typedef enum{
   BLOCK_PROCEDURE, 
   BLOCK_START,     // {
   BLOCK_IF,        // if( EXPR ){
-  BLOCK_ELIF,      // } else if(EXPR){
+  BLOCK_IF2,      // } else if(EXPR){
   BLOCK_ELSE,      // }else{
   BLOCK_WHILE,     // while( EXPR ){
   BLOCK_DO,        // do{
@@ -703,7 +703,7 @@ typedef enum{
   BLOCK_END,       // }
 }BlockType;
 const char* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_START]="start",[BLOCK_IF]="if",
-  [BLOCK_ELIF]="elif",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_WHILE_END]="while end",[BLOCK_END]="end"};
+  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_WHILE_END]="while end",[BLOCK_END]="end"};
 
 
 typedef struct{
@@ -976,7 +976,6 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
             fputs(")))",target);
             break;
           }
-          fprintf(stderr,"tuple pointer %"PRIi32"\n",op->dataAs.idInfo.id);
           //base value
           fputs("((",target);
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
@@ -1160,12 +1159,8 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
           fputs("{\n",target);
           break;
         case BLOCK_IF:
+        case BLOCK_IF2:
           fputs("if(",target);
-          COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          fputs("){\n",target);
-          break;
-        case BLOCK_ELIF:
-          fputs("}else if(",target);
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
           fputs("){\n",target);
           break;
@@ -2033,24 +2028,16 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"IF")){
-    if(currentScopeType()!=BLOCK_ELIF){//don't open scope for IF after EL
-      Scope* newScope=openScope(BLOCK_IF);
-      if(newScope==NULL)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
-      state->currentScope=newScope;
-      state->scopeLevel++;
-    }
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF}};
-    return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"EL")){
-    closeScope();
-    Scope* newScope=openScope(BLOCK_ELIF);
+    Scope* newScope=openScope(BLOCK_IF);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
     state->currentScope=newScope;
-    //scope count does not change
-    
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_ELIF}};
+    state->scopeLevel++;
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"_IF")){
+    //no scope change for _if
+    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF2}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"WHILE")){
     Scope* newScope=openScope(BLOCK_WHILE);
@@ -2449,7 +2436,7 @@ Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,bool isElse/*else-
   }
   if(ensureOpCap(state,state->opCount+2*state->typeCount+state->opStackCount))
     return (Error){.errorCode=ERROR_MEMORY,.pos=pos};
-  for(size_t i=0;i<state->typeCount;i++){
+  for(int64_t i=state->typeCount-1;i>=0;i--){
     if(!typeEquals(state->typeStack[i].type,requiredState->types[i].type)){//XXX allow type-promotion
       fputs("wrong type at end of if-branch expected ",stderr);
       printTypeName(requiredState->types[i].type,stderr);
@@ -2475,77 +2462,6 @@ Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,bool isElse/*else-
   return (Error){.errorCode=0,.pos=pos};
 }
 
-bool canAssign(DataType src,DataType target){
-  if(typeEquals(src,target))
-    return true;
-  if(src.typeClass!=TYPECLASS_PRIMITIVE||target.typeClass!=TYPECLASS_PRIMITIVE)//XXX? assigning pointer to const pointer
-    return false;
-  
-  return isInteger(src.typeDataAs.primitive)&&isInteger(target.typeDataAs.primitive)&&
-    numberRank(src.typeDataAs.primitive)<=numberRank(target.typeDataAs.primitive);//implicit casts only from small int to large int
-}
-//TODO canCast (only number->number)
-
-int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t nTypes,FilePosition pos){
-  //XXX? auto-unwrapping of flat-tuples
-  if(state->typeCount<nTypes){
-    fprintf(stderr,"not enough types of %s need %zu have %zu",opName,nTypes,state->typeCount);
-    return ERROR_TYPE;
-  }
-  bool directMatch=true;
-  int32_t nCasts=0;
-  //check types
-  for(size_t k=0;k<nTypes;k++){
-    if(typeEquals(types[k],state->typeStack[state->typeCount-nTypes+k].type))
-      continue;
-    directMatch=false;
-    if(canAssign(state->typeStack[state->typeCount-nTypes+k].type,types[k])){
-      nCasts++;
-      continue;
-    }
-    typeErrorMessage(opName,types[k],state->typeStack[state->typeCount-nTypes+k].type);
-    return ERROR_TYPE;
-  }
-  if(directMatch)
-    return 0;
-  //modify-types
-  if(ensureOpStackCap(state,state->opStackCount+nCasts))
-    return ERROR_MEMORY;
-  size_t offset=state->opStackCount,shiftCount=0;
-  state->opStackCount+=nCasts;//set opStackCount to new values
-  for(size_t k=1;k<=nTypes;k++){
-    offset-=state->typeStack[state->typeCount-k].opCount;
-    shiftCount+=state->typeStack[state->typeCount-k].opCount;
-    if(typeEquals(types[nTypes-k],state->typeStack[state->typeCount-k].type))
-      continue;
-    if(canAssign(state->typeStack[state->typeCount-k].type,types[nTypes-k])){
-      memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
-      shiftCount=0;
-      nCasts--;
-      state->opStack[offset+nCasts]=(Operation){.opType=OP_CAST,.filePos=pos,.dataType=types[nTypes-k],.dataAs={0}};
-      state->typeStack[state->typeCount-k].opCount++;
-      continue;
-    }
-  }
-  return 0;
-}
-
-Error pushValue(TypeCheckState* state,Operation op){
-  if(ensureOpStackCap(state,state->opStackCount+1)||ensureTypeStackCap(state,state->typeCount+1))
-    return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-  state->opStack[state->opStackCount++]=op;
-  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1};
-  return (Error){.errorCode=0,.pos=op.filePos};
-}
-
-Error insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
-  if(ensureOpStackCap(state,state->opStackCount+1))
-    return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
-  memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
-  state->opStack[state->opStackCount-totalOps]=op;
-  state->opStackCount++;
-  return (Error){.errorCode=0,.pos=op.filePos};;
-}
 
 Error compileCompositeOp(TypeCheckState* state,DataType* type,Operation* ops,size_t nOps,int32_t tmpId){
   if(nOps==0)
@@ -2557,7 +2473,6 @@ Error compileCompositeOp(TypeCheckState* state,DataType* type,Operation* ops,siz
   state->opCount+=nOps;
   return (Error){.errorCode=0,.pos=ops[0].filePos};
 }
-
 //ensures that none of the top type-count stack elements is a composite operation 
 Error extractCompositeOpsOffset(TypeCheckState* state,size_t nStackValues,size_t skipValues){
   Error r;
@@ -2596,6 +2511,82 @@ Error extractCompositeOps(TypeCheckState* state,size_t nStackValues){
   return extractCompositeOpsOffset(state,nStackValues,0);
 }
 
+
+bool canAssign(DataType src,DataType target){
+  if(typeEquals(src,target))
+    return true;
+  if(src.typeClass!=TYPECLASS_PRIMITIVE||target.typeClass!=TYPECLASS_PRIMITIVE)//XXX? assigning pointer to const pointer
+    return false;
+  
+  return isInteger(src.typeDataAs.primitive)&&isInteger(target.typeDataAs.primitive)&&
+    numberRank(src.typeDataAs.primitive)<=numberRank(target.typeDataAs.primitive);//implicit casts only from small int to large int
+}
+//TODO canCast (only number->number)
+
+int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t nTypes,FilePosition pos){
+  if(state->typeCount<nTypes){
+    fprintf(stderr,"not enough types of %s need %zu have %zu",opName,nTypes,state->typeCount);
+    return ERROR_TYPE;
+  }
+  bool directMatch=true;
+  int32_t nCasts=0;
+  //check types
+  for(size_t k=0;k<nTypes;k++){
+    if(typeEquals(types[k],state->typeStack[state->typeCount-nTypes+k].type))
+      continue;
+    directMatch=false;
+    if(canAssign(state->typeStack[state->typeCount-nTypes+k].type,types[k])){
+      nCasts++;
+      continue;
+    }
+    typeErrorMessage(opName,types[k],state->typeStack[state->typeCount-nTypes+k].type);
+    return ERROR_TYPE;
+  }
+  if(directMatch)
+    return 0;
+  //extract composites
+  Error r=extractCompositeOps(state,nTypes);
+  if(r.errorCode!=0)
+    return r.errorCode;
+  //modify-types
+  if(ensureOpStackCap(state,state->opStackCount+nCasts))
+    return ERROR_MEMORY;
+  size_t offset=state->opStackCount,shiftCount=0;
+  state->opStackCount+=nCasts;//set opStackCount to new values
+  for(size_t k=1;k<=nTypes;k++){
+    offset-=state->typeStack[state->typeCount-k].opCount;
+    shiftCount+=state->typeStack[state->typeCount-k].opCount;
+    if(typeEquals(types[nTypes-k],state->typeStack[state->typeCount-k].type))
+      continue;
+    if(canAssign(state->typeStack[state->typeCount-k].type,types[nTypes-k])){
+      memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
+      shiftCount=0;
+      nCasts--;
+      state->opStack[offset+nCasts]=(Operation){.opType=OP_CAST,.filePos=pos,.dataType=types[nTypes-k],.dataAs={0}};
+      state->typeStack[state->typeCount-k].type=types[nTypes-k];
+      state->typeStack[state->typeCount-k].opCount++;
+      continue;
+    }
+  }
+  return 0;
+}
+
+Error pushValue(TypeCheckState* state,Operation op){
+  if(ensureOpStackCap(state,state->opStackCount+1)||ensureTypeStackCap(state,state->typeCount+1))
+    return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+  state->opStack[state->opStackCount++]=op;
+  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1};
+  return (Error){.errorCode=0,.pos=op.filePos};
+}
+
+Error insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
+  if(ensureOpStackCap(state,state->opStackCount+1))
+    return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
+  memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
+  state->opStack[state->opStackCount-totalOps]=op;
+  state->opStackCount++;
+  return (Error){.errorCode=0,.pos=op.filePos};;
+}
 
 //append the first stackOps operations from the stack to the program, remove types elements from the type-stack
 //if appendOp is true op will be appended to the program (before any stack operations are appended)
@@ -2861,6 +2852,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       r=extractCompositeOps(state,2);
       if(r.errorCode!=0)
         return r;
+      //TODO cast arguments to correct types
       tmpId=state->tmpCount++;
       if(ensureOpCap(state,state->opCount+4))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
@@ -3190,22 +3182,21 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("unexpected IF statement, IF statements cannot be declared at global level\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          if(blockInfo.type==BLOCK_ELIF){
-            state->blockCount--;//update old block instead of creating new block
-            blockInfo.type=BLOCK_IF;
-          }else{
-            blockInfo=(BlockInfo){.type=BLOCK_IF,.blockStart=state->opCount,.blockDataAs={0}};
-            //store in-types
-            if(state->typeCount>1){
-              blockInfo.blockDataAs.ifBlock.inStack.typeCount=state->typeCount-1;
-              blockInfo.blockDataAs.ifBlock.inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
-              blockInfo.blockDataAs.ifBlock.inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
-              blockInfo.blockDataAs.ifBlock.inStack.ops=malloc((blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
-              if(blockInfo.blockDataAs.ifBlock.inStack.types==NULL||blockInfo.blockDataAs.ifBlock.inStack.ops==NULL)
-                return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-              memcpy(blockInfo.blockDataAs.ifBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
-              memcpy(blockInfo.blockDataAs.ifBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
-            }
+          blockInfo=(BlockInfo){.type=BLOCK_IF,.blockStart=state->opCount,.blockDataAs={0}};
+          blockInfo.blockDataAs.ifBlock.inStack.types=NULL;
+          blockInfo.blockDataAs.ifBlock.inStack.ops=NULL;
+          blockInfo.blockDataAs.ifBlock.outStack.types=NULL;
+          blockInfo.blockDataAs.ifBlock.outStack.ops=NULL;
+          //store in-types
+          if(state->typeCount>1){
+            blockInfo.blockDataAs.ifBlock.inStack.typeCount=state->typeCount-1;
+            blockInfo.blockDataAs.ifBlock.inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
+            blockInfo.blockDataAs.ifBlock.inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
+            blockInfo.blockDataAs.ifBlock.inStack.ops=malloc((blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
+            if(blockInfo.blockDataAs.ifBlock.inStack.types==NULL||blockInfo.blockDataAs.ifBlock.inStack.ops==NULL)
+              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+            memcpy(blockInfo.blockDataAs.ifBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
+            memcpy(blockInfo.blockDataAs.ifBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
           }
           if(pushBlock(state,blockInfo))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
@@ -3246,30 +3237,54 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
           state->compiledOperations[state->opCount++]=op;
           return (Error){.errorCode=0,.pos=op.filePos};
-        case BLOCK_ELIF: //FIXME change syntax of elif-clause  to  ELSE ... _IF   to allow if statements in elif clauses  
+        case BLOCK_IF2:
           blockInfo=popBlock(state);
-          if(blockInfo.type!=BLOCK_IF){//wrong position for EL ... IF
-            fputs("EL ... IF can only appear in IF blocks\n",stderr);
+          if(blockInfo.type!=BLOCK_ELSE){//wrong position for _IF
+            fputs("_IF can only appear in ELSE blocks\n",stderr);
             printf("%u\n",blockInfo.type);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),true,op.filePos);
-          if(r.errorCode!=0){
-            return r;
-          }
-          //reset stack to in-types 
-          if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack))){
-            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+          //update inTypes
+          if(state->typeCount>1){
+            if(blockInfo.blockDataAs.ifBlock.inStack.typeCount<state->typeCount-1){
+              //if allocation fails program will be terminated -> can directly assign result of realloc
+              blockInfo.blockDataAs.ifBlock.inStack.types=realloc(blockInfo.blockDataAs.ifBlock.inStack.types,
+                (state->typeCount-1)*sizeof(TypeInfo));
+            }
+            blockInfo.blockDataAs.ifBlock.inStack.typeCount=state->typeCount-1;
+            if(blockInfo.blockDataAs.ifBlock.inStack.opCount<state->opStackCount-state->typeStack[state->typeCount-1].opCount){
+              //if allocation fails program will be terminated -> can directly assign result of realloc
+              blockInfo.blockDataAs.ifBlock.inStack.types=realloc(blockInfo.blockDataAs.ifBlock.inStack.types,
+                (state->opStackCount-state->typeStack[state->typeCount-1].opCount)*sizeof(TypeInfo));
+            }
+            blockInfo.blockDataAs.ifBlock.inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
+            if(blockInfo.blockDataAs.ifBlock.inStack.types==NULL||blockInfo.blockDataAs.ifBlock.inStack.ops==NULL)
+              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+            memcpy(blockInfo.blockDataAs.ifBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
+            memcpy(blockInfo.blockDataAs.ifBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
+          }else{
+            blockInfo.blockDataAs.ifBlock.inStack.typeCount=0;
+            blockInfo.blockDataAs.ifBlock.inStack.opCount=0;
+            //the memory sections will be freed when an end-block is encountered
           }
           //push updated block
-          blockInfo.type=BLOCK_ELIF;
+          blockInfo.type=BLOCK_IF;
           blockInfo.blockDataAs.ifBlock.elifCount++;
           blockInfo.blockDataAs.ifBlock.elsePos=state->opCount;
           if(pushBlock(state,blockInfo))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
-          if(ensureOpCap(state,state->opCount+1))
-            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
-          state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.block=BLOCK_ELSE}};
+          op.dataType=primitiveType(PRIMITIVE_BOOL);
+          r=(Error){.errorCode=requireTypes("if-condition",state,&op.dataType,1,op.filePos),.pos=op.filePos};
+          if(r.errorCode!=0){
+            return r;
+          }
+          r=extractCompositeOps(state,1);
+          if(r.errorCode!=0)
+            return r;
+          offset=state->typeCount-1;
+          r=addCompiledOp(state,op,1); 
+          if(r.errorCode!=0)
+            return r;
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_WHILE:
           if(checkNonemptyStack(state,"unfinished local operation")){
@@ -3290,33 +3305,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           if(blockInfo.blockDataAs.whileBlock.hasDo){//wrong position for DO
             fputs("DO cannot appear more than once per WHILE block\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-          }
-          if(state->opCount==blockInfo.blockStart+1){//if do-body empty switch to WHILE ... END
-            blockInfo.type=BLOCK_WHILE;
-            if(pushBlock(state,blockInfo))
-              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
-            if(state->compiledOperations[blockInfo.blockStart].opType!=OP_CODE_BLOCK)
-              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;//memory got corrupted, op at block start is no longer start of block
-            //remove previous operation to be updated by addCompiledOp
-            op=state->compiledOperations[--state->opCount];
-            op.dataAs.block=BLOCK_WHILE;
-            //read while operation
-            op.dataType=primitiveType(PRIMITIVE_BOOL);
-            r=(Error){.errorCode=requireTypes("while-condition",state,&op.dataType,1,op.filePos),.pos=op.filePos};
-            if(r.errorCode!=0){
-              return r;
-            }
-            offset=state->typeCount-1;
-            r=extractCompositeOps(state,1);
-            if(r.errorCode!=0)
-              return r;
-            r=addCompiledOp(state,op,1); 
-            if(r.errorCode!=0)
-              return r;
-            if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
-              return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-            }
-            return (Error){.errorCode=0,.pos=op.filePos};
           }
           blockInfo.blockDataAs.whileBlock.hasDo=true;
           if(pushBlock(state,blockInfo))
@@ -3353,7 +3341,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_END:
           blockInfo=popBlock(state);
-          if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_ELIF||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
+          if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_IF2||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
             fputs("unexpected END statement\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
@@ -3397,6 +3385,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.outStack))){
               return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
             }
+            //free values on op-stack
+            free(blockInfo.blockDataAs.ifBlock.inStack.types);
+            free(blockInfo.blockDataAs.ifBlock.inStack.ops);
+            free(blockInfo.blockDataAs.ifBlock.outStack.types);
+            free(blockInfo.blockDataAs.ifBlock.outStack.ops);
           }else{
             //TODO check for procedures with missing return statements
             if(checkNonemptyStack(state,"unfinished local operation")){
@@ -3449,7 +3442,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(op.dataType.typeClass==TYPECLASS_TUPLE){
         op.dataType.typeClass=TYPECLASS_FLAT_TUPLE;//notify compiler that tuple is flat
       }
-      //check tuple elements  XXX? let requireTypes handle the type-number
       if(op.dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op.dataType.typeDataAs.composite->typeCount){
         fprintf(stderr,"wrong number of return values: expected %zu got %i\n",state->typeCount,op.dataType.typeDataAs.composite->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};

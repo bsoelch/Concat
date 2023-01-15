@@ -41,13 +41,13 @@ ENTRY_POINT
   "Hello" 1 [] PRINT
 
   1  
-    A 0 != IF 
+    A 0 == if 
       1 +
-    EL  B 0 != A 42 >=  & IF 
+    else 1 + B 0 !=  if A 42 >=  else false end _if 
       2 +
-    ELSE
+    else
       3 +
-    END 
+    end 
   PRINT
   
   A ADDR_OF  I32 PTR DECLARE aPtr
