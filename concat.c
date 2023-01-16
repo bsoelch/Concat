@@ -215,7 +215,7 @@ const char* opName(OpType type){
   }
   return "UNDEFINED";
 }
-const char* CHECK_BOUNDS_NAME="microLangInternal_checkArrayBounds";
+const char* CHECK_BOUNDS_NAME="concatInternal_checkArrayBounds";
 //types
 typedef enum{
   TYPECLASS_UNDEFINED,
@@ -224,9 +224,23 @@ typedef enum{
   TYPECLASS_CONST_POINTER,
   TYPECLASS_TUPLE,
   TYPECLASS_FLAT_TUPLE,//behaves like tuple but will not be directly used
-  TYPECLASS_UNION,
   TYPECLASS_PROCEDURE,
 }TypeClass;
+/* TODO enums, structs
+  enum{
+    a
+    b
+    i32 : c ## enum fields can optionally hold a value
+    i8  : d
+    e
+  }  =: anEnum
+  struct{
+    i32 : field1
+    i64 : field2
+    float : field3
+    aStruct ptr : next ## allow access to pre-declared types
+  } =: aStruct
+*/
 typedef enum{
   PRIMITIVE_VOID,
   PRIMITIVE_BOOL,
@@ -237,7 +251,6 @@ typedef enum{
 }PrimitiveType;
 typedef struct CompositeType CompositeType;
 typedef CompositeType TupleType;
-typedef CompositeType UnionType;
 typedef struct ProcedureType ProcedureType;
 typedef struct DataType{
   TypeClass typeClass;
@@ -246,7 +259,6 @@ typedef struct DataType{
     struct DataType* type;
     CompositeType* composite;
     TupleType* tuple;//name alias for composite
-    UnionType* unionType;//name alias for composite
     ProcedureType* procedure;
     int64_t predeclaredId;
   }typeDataAs;
@@ -254,8 +266,7 @@ typedef struct DataType{
   bool isWritable;
 }DataType;
 #define FLAG_IS_TUPLE 1
-#define FLAG_IS_UNION 2
-#define FLAG_IS_FLAT_TUPLE 4
+#define FLAG_IS_FLAT_TUPLE 2
 struct CompositeType{
   DataType* types;
   int32_t id;
@@ -282,7 +293,7 @@ CompositeType compositeTypes[MAX_COMPOSITE];
 size_t procTypeCount=0;
 ProcedureType procTypes[MAX_PROC_TYPES];
 //temporary buffer for construction of composite elements
-int64_t bufferedTypes=0;
+size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
 
 bool typeEquals(DataType a,DataType b){
@@ -294,7 +305,7 @@ bool typeEquals(DataType a,DataType b){
     return a.typeDataAs.primitive==b.typeDataAs.primitive;
   if(a.typeClass==TYPECLASS_POINTER||a.typeClass==TYPECLASS_CONST_POINTER)
     return typeEquals(*a.typeDataAs.type,*b.typeDataAs.type);
-  if(a.typeClass==TYPECLASS_TUPLE||a.typeClass==TYPECLASS_UNION)
+  if(a.typeClass==TYPECLASS_TUPLE||a.typeClass==TYPECLASS_FLAT_TUPLE)
     return a.typeDataAs.composite->id==b.typeDataAs.composite->id;
   if(a.typeClass==TYPECLASS_PROCEDURE)
     return typeEquals(*a.typeDataAs.procedure->inType,*b.typeDataAs.procedure->inType)&&
@@ -324,10 +335,10 @@ DataType constPointerType(DataType target){
 }
 DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
   if(eltCount==0)
-    return primitiveType(PRIMITIVE_VOID);//empty tuple/union -> void
-  if(eltCount==1)
-    return elements[0];//auto unwrap 1-element tuple/union
-  int16_t classFlag=typeClass==TYPECLASS_UNION?FLAG_IS_UNION:typeClass==TYPECLASS_FLAT_TUPLE?FLAG_IS_FLAT_TUPLE:FLAG_IS_TUPLE;
+    return typeClass==TYPECLASS_FLAT_TUPLE?primitiveType(PRIMITIVE_VOID):TYPE_UNDEFINED;//empty flat-tuple -> void other empty composites are undefined
+  if(eltCount==1&&typeClass==TYPECLASS_FLAT_TUPLE)
+    return elements[0];//auto unwrap 1-element flat-tuple
+  int16_t classFlag=typeClass==TYPECLASS_FLAT_TUPLE?FLAG_IS_FLAT_TUPLE:FLAG_IS_TUPLE;
   int64_t match=-1;
   for(int32_t i=0;i<compositeCount;i++){
     if(compositeTypes[i].typeCount==eltCount||(match==-1&&compositeTypes[i].typeCount>eltCount)){
@@ -484,8 +495,6 @@ const char* typeClassName(TypeClass cls){
       return "TUPLE";
     case TYPECLASS_FLAT_TUPLE:
       return "FLAT_TUPLE";
-    case TYPECLASS_UNION:
-      return "UNION";
     case TYPECLASS_PROCEDURE:
       return "PRODECURE";
   }
@@ -529,7 +538,6 @@ int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
       return j<0?j:(i+j);
     case TYPECLASS_FLAT_TUPLE:
     case TYPECLASS_TUPLE:
-    case TYPECLASS_UNION:
       i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type.typeClass),type.typeDataAs.composite->id);
       if(noRecurse||i<0)
         return i;
@@ -607,8 +615,6 @@ int printTypeNameC(DataType type,FILE* file){
     case TYPECLASS_FLAT_TUPLE:
     case TYPECLASS_TUPLE:
       return fprintf(file,"tuple%"PRIi32,type.typeDataAs.composite->id);
-    case TYPECLASS_UNION:
-      return fprintf(file,"union%"PRIi32,type.typeDataAs.composite->id);
     case TYPECLASS_PROCEDURE:
       return fprintf(file,"procPtr%"PRIi32,type.typeDataAs.procedure->id);
   }
@@ -674,7 +680,6 @@ typedef enum{
   ID_PROCEDURE,
   ID_TUPLE,//base element of a tuple-access chain
   ID_TUPLE_ELEMENT,//chain element in tuple-access chain
-  //TODO GET/SET for union values
   ID_POINTER,
   ID_POINTER_OFFSET,
   ID_INTERMEDIATE_RESULT,
@@ -1316,9 +1321,6 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
   for(int32_t i=0;i<compositeCount;i++){
     if(compositeTypes[i].flags&FLAG_IS_TUPLE){
       fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",i,i);
-    }//no else
-    if(compositeTypes[i].flags&FLAG_IS_UNION){
-      fprintf(target,"typedef struct union%"PRIi32"Impl union%"PRIi32";\n",i,i);
     }
   }
   //declare procedure pointers
@@ -1347,16 +1349,6 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("};\n",target);
-    }//no else
-    if(compositeTypes[i].flags&FLAG_IS_UNION){
-      fprintf(target,"struct union%"PRIi32"Impl{\n"
-                     "%s state;\n"
-                     "union{\n",i,primitiveNameC(PRIMITIVE_I32));
-      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        printTypeNameC(compositeTypes[i].types[e],target);
-        fprintf(target," e%"PRIi16";\n",e);
-      }
-      fputs("}value;\n};\n",target);
     }
   }
   //initialize strings
@@ -1742,7 +1734,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
 int readType(String name,CodeFile* codeFile);
 //reads a composite type of the given type-class, the result is stored in the type buffer
 //return 0 if a type was read, otherwise a nonzero error-code 
-int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endString){
+int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endString,bool checkEmpty){
   String word;
   int err;
   size_t initOffset=bufferedTypes;
@@ -1759,7 +1751,18 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
     }
     word=nextWord(codeFile,&err);
   }
+  if(checkEmpty&&bufferedTypes==initOffset){
+    fputs("empty composite type\n",stderr);
+    return ERROR_SYNTAX;
+  } 
   typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,bufferedTypes-initOffset);
+  if(checkEmpty&&bufferedTypes-initOffset==1){
+    fputs("WARNING:\n  single element composite type ",stderr);
+    printTypeName(typeBuffer[initOffset],stderr);
+    fputs(" at ",stderr);
+    printFilePosition(codeFile->wordStart,stderr);
+    fputs("\n",stderr);
+  }
   bufferedTypes=initOffset+1;
   return 0;
 }
@@ -1811,10 +1814,10 @@ int readType(String name,CodeFile* codeFile){
     return 0;
   }
   if(wordEquals(&name,"proc(")){
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,"=>");
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,"=>",false);
     if(r!=0)
       return r==ERROR_TYPE?ERROR_SYNTAX:r;
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,")");
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,")",false);
     if(r!=0)
       return r==ERROR_TYPE?ERROR_SYNTAX:r;
     typeBuffer[initOffset]=procedureType(typeBuffer[initOffset],typeBuffer[initOffset+1]);
@@ -1822,11 +1825,7 @@ int readType(String name,CodeFile* codeFile){
     return 0;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
-    r=readCompositeType(TYPECLASS_TUPLE,codeFile,")");
-    return r==ERROR_TYPE?ERROR_SYNTAX:r;
-  }
-  if(wordEquals(&name,"union(")){
-    r=readCompositeType(TYPECLASS_UNION,codeFile,")");
+    r=readCompositeType(TYPECLASS_TUPLE,codeFile,")",true);
     return r==ERROR_TYPE?ERROR_SYNTAX:r;
   }
   return ERROR_TYPE;
@@ -1877,7 +1876,17 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     }while(wordEquals(&word,"ptr"));
     DataType type=typeBuffer[--bufferedTypes];
     wordPos=codeFile->wordStart;//set operation position to start of op-name instead of type
-    if(wordEquals(&word,"=:")){
+    if(wordEquals(&word,":")){//pre-declare
+      if(typeEquals(type,TYPE_UNDEFINED))
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
+      String varName=nextWord(codeFile,&err);
+      if(err!=0)
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+      if(varName.length==0)
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+      //TODO implement predeclare
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+    }else if(wordEquals(&word,"=:")){//declare
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       String varName=nextWord(codeFile,&err);
@@ -1917,7 +1926,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       }
       printTypeName(type,stderr);
       fputs(" is currently not supported for operator new\n",stderr);
-      //TODO new union, ? new pointer
+      //TODO ? new pointer
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
     }else if(wordEquals(&word,"cast")){ 
       if(typeEquals(type,TYPE_UNDEFINED))
@@ -1929,8 +1938,8 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }
   if(err!=ERROR_TYPE)//unexpected error while reading type
     return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
-  if(wordEquals(&word,"=:")||wordEquals(&word,"new")||wordEquals(&word,"cast")){
-    fprintf(stderr,"missing type argument for operator: %.*s\n",(int)word.length,word.chars);
+  if(wordEquals(&word,":")||wordEquals(&word,"=:")||wordEquals(&word,"new")||wordEquals(&word,"cast")){
+    fprintf(stderr,"missing type argument for operator: '%.*s'\n",(int)word.length,word.chars);
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
   }
   if(wordEquals(&word,"true")){
@@ -2459,7 +2468,7 @@ Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,bool isElse/*else-
     varId=ifBlock->elsePos!=0?ifBlock->outStack.ops[i].dataAs.idInfo.id:state->tmpCount++;
     //save stack-elements to tmp-values
     state->compiledOperations[state->opCount++]=(Operation){.opType=OP_SET_VALUE,.dataType=requiredState->types[i].type,.filePos=pos,.dataAs={0}};
-    state->compiledOperations[state->opCount++]=opGetTmpVar(&(requiredState->types[i].type),varId,pos);//XXX change to tmp-value
+    state->compiledOperations[state->opCount++]=opGetTmpVar(&(requiredState->types[i].type),varId,pos);
     memcpy(state->compiledOperations+state->opCount,state->opStack+state->opStackCount-state->typeStack[i].opCount,state->typeStack[i].opCount*sizeof(Operation));
     state->opCount+=state->typeStack[i].opCount;
     state->opStackCount-=state->typeStack[i].opCount;

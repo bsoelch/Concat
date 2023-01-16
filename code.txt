@@ -5,7 +5,7 @@ end
 proc( => ) =: doNothing
     return
 end
-proc( union( i32 i32 ) => i64 i64 ) =: typeTest
+proc( tuple( i32 ) => i64 i64 ) =: typeTest
   =:: ignore
   12345678987654321 98765432123456789 return
 end

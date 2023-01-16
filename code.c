@@ -4,48 +4,44 @@
 #include <string.h>
 #include <stdbool.h>
 typedef struct tuple0Impl tuple0;
-typedef struct union0Impl union0;
 typedef struct tuple1Impl tuple1;
 typedef struct tuple2Impl tuple2;
 typedef struct tuple3Impl tuple3;
 typedef struct tuple4Impl tuple4;
+typedef struct tuple5Impl tuple5;
 typedef tuple0 (*procPtr0) (int32_t,int32_t);
 typedef void (*procPtr1) (void);
-typedef tuple1 (*procPtr2) (union0);
-typedef tuple3 (*procPtr3) (void);
+typedef tuple2 (*procPtr2) (tuple1);
+typedef tuple4 (*procPtr3) (void);
 struct tuple0Impl{
 int32_t e0;
 int32_t e1;
 };
-struct union0Impl{
-int32_t state;
-union{
-int32_t e0;
-int32_t e1;
-}value;
-};
 struct tuple1Impl{
+int32_t e0;
+};
+struct tuple2Impl{
 int64_t e0;
 int64_t e1;
 };
-struct tuple2Impl{
+struct tuple3Impl{
 int32_t e0;
 int32_t* e1;
 };
-struct tuple3Impl{
-tuple2* e0;
+struct tuple4Impl{
+tuple3* e0;
 int32_t e1;
 };
-struct tuple4Impl{
+struct tuple5Impl{
 const int8_t* e0;
 int64_t e1;
 };
 const int8_t stringChars0[] = {0x54,0x68,0x69,0x73,0x20,0x69,0x73,0x20,0x61,0x20,0x75,0x6e,0x69,0x63,0x6f,0x64,0x65,-0x1e,-0x7c,-0x5e,0x20,0x6d,0x75,0x6c,0x74,0x69,0x2d,0x6c,0x69,0x6e,0x65,0xa,0x20,0x73,0x74,0x72,0x69,0x6e,0x67};
-const tuple4 string2 = {.e0=stringChars0+0,.e1=39};
+const tuple5 string2 = {.e0=stringChars0+0,.e1=39};
 const int8_t stringChars1[] = {0x53,0x74,0x72,0x69,0x6e,0x67,0x73,0x20,0x61,0x72,0x65,0x20,0x22,0x69,0x67,0x6e,0x6f,0x72,0x65,0x64,0x22,0x20,0x20};
-const tuple4 string1 = {.e0=stringChars1+0,.e1=23};
+const tuple5 string1 = {.e0=stringChars1+0,.e1=23};
 const int8_t stringChars2[] = {0x48,0x65,0x6c,0x6c,0x6f};
-const tuple4 string0 = {.e0=stringChars2+0,.e1=5};
+const tuple5 string0 = {.e0=stringChars2+0,.e1=5};
 void microLangInternal_checkArrayBounds(int64_t index,int64_t length){
   if(index>=0 && index<length)
     return;
@@ -58,17 +54,17 @@ return (tuple0){.e0=arg0,.e1=arg1};
 void procedure2 (void){
 return ;
 }
-tuple1 procedure3 (union0 arg0){
-union0 local4 = arg0;
-return (tuple1){.e0=((int64_t)12345678987654321),.e1=((int64_t)98765432123456789)};
+tuple2 procedure3 (tuple1 arg0){
+tuple1 local4 = arg0;
+return (tuple2){.e0=((int64_t)12345678987654321),.e1=((int64_t)98765432123456789)};
 }
-tuple3 procedure4 (void){
+tuple4 procedure4 (void){
 int32_t local5 = ((int32_t)0);
 int32_t* const tmp0 = &(local5);
-tuple2 const tmp1 = (tuple2){.e0=((int32_t)0),.e1=tmp0};
-tuple2 local6 = tmp1;
-tuple2* const tmp2 = &(local6);
-tuple3 const tmp3 = (tuple3){.e0=tmp2,.e1=((int32_t)0)};
+tuple3 const tmp1 = (tuple3){.e0=((int32_t)0),.e1=tmp0};
+tuple3 local6 = tmp1;
+tuple3* const tmp2 = &(local6);
+tuple4 const tmp3 = (tuple4){.e0=tmp2,.e1=((int32_t)0)};
 return tmp3;
 }
 int main(void){
@@ -91,13 +87,13 @@ int32_t const tmp12 = (tmp11).e0;
 int32_t const tmp13 = (tmp11).e1;
 int64_t const tmp14 = ((int64_t)tmp12);
 int64_t const tmp15 = ((int64_t)tmp13);
-tuple1 const tmp16 = (tuple1){.e0=tmp14,.e1=tmp15};
-tuple1 local7 = tmp16;
+tuple2 const tmp16 = (tuple2){.e0=tmp14,.e1=tmp15};
+tuple2 local7 = tmp16;
 int32_t const tmp17 = (++local5);
 printf("%"PRIi32"\n",tmp17);
 procedure2();
-tuple3 const tmp18 = procedure4();
-tuple2* const tmp19 = (tmp18).e0;
+tuple4 const tmp18 = procedure4();
+tuple3* const tmp19 = (tmp18).e0;
 int32_t* const tmp20 = (tmp19)->e1;
 int32_t const tmp21 = (*((tmp20)+(((int32_t)0))));
 printf("%"PRIi32"\n",tmp21);
@@ -105,12 +101,12 @@ int64_t const tmp22 = (local7).e1;
 (local7).e0 = tmp22;
 int64_t* const tmp23 = &((local7).e0);
 printf("%p\n",(void*)tmp23);
-tuple1* const tmp24 = &(local7);
-tuple1* local8 = tmp24;
+tuple2* const tmp24 = &(local7);
+tuple2* local8 = tmp24;
 int64_t const tmp25 = ((local8)+(((int32_t)0)))->e0;
 printf("%"PRIi64"\n",tmp25);
 int32_t const tmp26 = ((int32_t)1);
-tuple4 const tmp27 = (string0);
+tuple5 const tmp27 = (string0);
 const int8_t* const tmp28 = (tmp27).e0;
 int64_t const tmp29 = (tmp27).e1;
 microLangInternal_checkArrayBounds(tmp26,tmp29);
@@ -158,6 +154,6 @@ local10 = tmp44;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }
-tuple4 global5 = (string1);
+tuple5 global5 = (string1);
 int8_t global6 = ((int8_t)65);
-tuple4 global7 = (string2);
+tuple5 global7 = (string2);
