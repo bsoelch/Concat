@@ -6,8 +6,6 @@ codeCTarget="./code.c"
 codeTarget="./code"
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
 
-echo "${cArgs[@]}"
-
 # clear console
 clear
 echo "recompile compiler"
