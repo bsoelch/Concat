@@ -1733,7 +1733,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
 
 int readType(String name,CodeFile* codeFile);
 //reads a composite type of the given type-class, the result is stored in the type buffer
-//return 0 if a type was read, otherwise a nonzero error-code 
+//return 0 if a type was read, otherwise a nonzero error-code if a type error occurs this method will return a syntax error
 int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endString,bool checkEmpty){
   String word;
   int err;
@@ -1742,11 +1742,19 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
   while(!wordEquals(&word,endString)){
     if(err!=0){
       bufferedTypes=initOffset;
-      return err>MAX_ERROR?ERROR_SYNTAX:err;//err >MAX_ERROR means word is a string or character
+      if(err>MAX_ERROR){//err >MAX_ERROR means word is a string or character
+        fputs("type names have to be identifers\n",stderr);
+        return ERROR_SYNTAX;
+      }
+      return err;
     }
     err=readType(word,codeFile);
     if(err!=0){
       bufferedTypes=initOffset;
+      if(err==ERROR_TYPE){
+        fprintf(stderr,"unknown type name %.*s \n",(int)word.length,word.chars);
+        return ERROR_SYNTAX;
+      }
       return err;
     }
     word=nextWord(codeFile,&err);
@@ -1757,7 +1765,7 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
   } 
   typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,bufferedTypes-initOffset);
   if(checkEmpty&&bufferedTypes-initOffset==1){
-    fputs("WARNING:\n  single element composite type ",stderr);
+    fputs("WARNING:\n  single element composite type: ",stderr);
     printTypeName(typeBuffer[initOffset],stderr);
     fputs(" at ",stderr);
     printFilePosition(codeFile->wordStart,stderr);
@@ -1769,7 +1777,6 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
 //reads a type starting with the identifier name, the result is stored in the type buffer
 //return 0 if a type was read, ERROR_TYPE if name was not a type and the corresponding error code if another error occurs
 int readType(String name,CodeFile* codeFile){
-  //TODO error messages for syntax errors (no message for type errors (they are expected by parser))
   if(name.length==0)
     return ERROR_TYPE;
   if(bufferedTypes>=TYPE_BUFFER_CAP){//buffer overflow
@@ -1808,25 +1815,26 @@ int readType(String name,CodeFile* codeFile){
   size_t initOffset=bufferedTypes;
   int r;
   if(wordEquals(&name,"ptr")){
-    if(bufferedTypes==0)
+    if(bufferedTypes==0){
+      fputs("pointer type is missing its argument",stderr);
       return ERROR_SYNTAX;
+    }
     typeBuffer[bufferedTypes-1]=pointerType(typeBuffer[bufferedTypes-1]);
     return 0;
   }
   if(wordEquals(&name,"proc(")){
     r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,"=>",false);
     if(r!=0)
-      return r==ERROR_TYPE?ERROR_SYNTAX:r;
+      return r;
     r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,")",false);
     if(r!=0)
-      return r==ERROR_TYPE?ERROR_SYNTAX:r;
+      return r;
     typeBuffer[initOffset]=procedureType(typeBuffer[initOffset],typeBuffer[initOffset+1]);
     bufferedTypes--;
     return 0;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
-    r=readCompositeType(TYPECLASS_TUPLE,codeFile,")",true);
-    return r==ERROR_TYPE?ERROR_SYNTAX:r;
+    return readCompositeType(TYPECLASS_TUPLE,codeFile,")",true);
   }
   return ERROR_TYPE;
 }
@@ -1884,8 +1892,17 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
         return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
       if(varName.length==0)
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
-      //TODO implement predeclare
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+      if(type.typeClass==TYPECLASS_PROCEDURE){
+        fputs("predeclaring procedures is not supported",stderr);
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+      }
+      IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+      ScopeNode* id;
+      int r=declareIdentifier(varName,type,idType,&id);
+      if(r!=0)
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
+      (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
     }else if(wordEquals(&word,"=:")){//declare
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
@@ -1933,7 +1950,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
     }
-    fprintf(stderr,"invalid operand of argument of type TYPE: %.*s\n",(int)word.length,word.chars);
+    fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
   }
   if(err!=ERROR_TYPE)//unexpected error while reading type
@@ -3112,11 +3129,40 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       return addCompiledStackOps(state,op,0,state->typeStack[state->typeCount-1].opCount,1,false);
     case OP_PRE_DECLARE:
+      switch(op.dataAs.idInfo.type){
+        case ID_LOCAL_VAR:
+        case ID_GLOBAL_VAR:
+          if(op.dataType.typeClass==TYPECLASS_UNDEFINED||(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID)){
+            fputs("invalid type for predeclared variable: ",stderr);
+            printTypeName(op.dataType,stderr);
+            fputs("\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          return addCompiledOp(state,op,0);
+        case ID_TUPLE:
+        case ID_TUPLE_ELEMENT:
+        case ID_POINTER:
+        case ID_POINTER_OFFSET:
+        case ID_PROCEDURE:
+        case ID_INTERMEDIATE_RESULT:
+        case ID_TMP_VAR:
+        case ID_ARGUMENT:
+            fputs("cannot (directly) declare ",stderr);
+            printIdInfo(op.dataAs.idInfo,stderr);
+            fputs("\n",stderr);
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+      }
       break;
     case OP_DECLARE:
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
         case ID_GLOBAL_VAR:
+          if(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID){
+            fputs("cannot declare variables of type: ",stderr);
+            printTypeName(op.dataType,stderr);
+            fputs("\n",stderr);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
           if(state->typeCount<1){
             fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};

@@ -19,6 +19,7 @@ end
 entryPoint:
   1 1 +  i32 =: A
   A 1 - 3 *  i32 =: B
+  i32 : C 
   
   A print
   B print
@@ -30,6 +31,8 @@ entryPoint:
   1 2 proc0  ( i64 i64 ) new =:: tmp
   
   A ++ print
+  
+  2 C =
   
   doNothing
   
@@ -55,11 +58,11 @@ entryPoint:
   A addrOf  i32 ptr =: aPtr
   2  aPtr ++ @ = 
 
-  10 i32 =: C 
+  10 i32 =: I 
 
-  while C 0 > do
-    C print
-    C 1 - C =
+  while I 0 > do
+    I print
+    I 1 - I =
   end
 
   true print
