@@ -522,10 +522,10 @@ int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
       return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
     case TYPECLASS_CONST_POINTER:
     case TYPECLASS_POINTER:
-      i=fprintf(file,"%s ",typeClassName(type.typeClass));
+      i=printTypeNameIntenal(*type.typeDataAs.type,file,noRecurse);
       if(i<0)
         return i;
-      j=printTypeNameIntenal(*type.typeDataAs.type,file,noRecurse);
+      j=fprintf(file," %s",typeClassName(type.typeClass));
       return j<0?j:(i+j);
     case TYPECLASS_FLAT_TUPLE:
     case TYPECLASS_TUPLE:
@@ -1543,12 +1543,13 @@ void skipWhitespaces(CodeFile* codeFile){
     updateFilePosition(codeFile);
   }
 }
-//!!! This method may segfault if word contains \0 characters !!! 
+
 bool wordEquals(const String* word,const char* string){
-  int c=strncasecmp(word->chars,string,word->length);
-  if(c!=0)
+  size_t l=strlen(string);
+  if(l!=word->length)
     return false;
-  return string[word->length]=='\0';//check if string has same length as word (length is >= because c was 0)
+  int c=memcmp(word->chars,string,word->length);
+  return c==0;
 }
 int toDigit(char c){
   if(c>='0'&&c<='9')
@@ -1569,7 +1570,7 @@ IntOrErrorCode parseInt(String number,int base){
   bool negate=false;
   if(number.length==0)
     return (IntOrErrorCode){.isError=true,.as={.error=ERROR_PARSE_INT}};
-  if(number.chars[0]=='-'){
+  if(number.length>1&&number.chars[0]=='-'){
     i++;
     negate=true;
   }
@@ -1765,66 +1766,67 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
 //reads a type starting with the identifier name, the result is stored in the type buffer
 //return 0 if a type was read, ERROR_TYPE if name was not a type and the corresponding error code if another error occurs
 int readType(String name,CodeFile* codeFile){
+  //TODO error messages for syntax errors (no message for type errors (they are expected by parser))
   if(name.length==0)
     return ERROR_TYPE;
   if(bufferedTypes>=TYPE_BUFFER_CAP){//buffer overflow
     return ERROR_MEMORY;
   }
   //primitive types
-  if(wordEquals(&name,"VOID")){
+  if(wordEquals(&name,"void")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_VOID);
     return 0;
   }
-  if(wordEquals(&name,"BOOL")){
+  if(wordEquals(&name,"bool")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_BOOL);
     return 0;
   }
-  if(wordEquals(&name,"I8")||wordEquals(&name,"CHAR")){
+  if(wordEquals(&name,"i8")||wordEquals(&name,"char")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_I8);
     return 0;
   }
-  if(wordEquals(&name,"I32")){
+  if(wordEquals(&name,"i32")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_I32);
     return 0;
   }
-  if(wordEquals(&name,"I64")){
+  if(wordEquals(&name,"i64")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_I64);
     return 0;
   }
-  if(wordEquals(&name,"FLOAT")){
+  if(wordEquals(&name,"float")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_FLOAT);
     return 0;
   }
-  if(wordEquals(&name,"STRING")){
+  if(wordEquals(&name,"string")){
     typeBuffer[bufferedTypes++]=progStringType();
     return 0;
   }
   //composite types
   size_t initOffset=bufferedTypes;
   int r;
-  if(wordEquals(&name,"PTR")){
+  if(wordEquals(&name,"ptr")){
     if(bufferedTypes==0)
       return ERROR_SYNTAX;
     typeBuffer[bufferedTypes-1]=pointerType(typeBuffer[bufferedTypes-1]);
     return 0;
   }
-  if(wordEquals(&name,"PROC")){
+  if(wordEquals(&name,"proc(")){
     r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,"=>");
     if(r!=0)
       return r==ERROR_TYPE?ERROR_SYNTAX:r;
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,"END");
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,")");
     if(r!=0)
       return r==ERROR_TYPE?ERROR_SYNTAX:r;
     typeBuffer[initOffset]=procedureType(typeBuffer[initOffset],typeBuffer[initOffset+1]);
     bufferedTypes--;
     return 0;
   }
-  if(wordEquals(&name,"TUPLE")){
-    r=readCompositeType(TYPECLASS_TUPLE,codeFile,"END");
+  if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
+    r=readCompositeType(TYPECLASS_TUPLE,codeFile,")");
     return r==ERROR_TYPE?ERROR_SYNTAX:r;
   }
-  if(wordEquals(&name,"UNION")){
-    r=readCompositeType(TYPECLASS_UNION,codeFile,"END");
+  if(wordEquals(&name,"union(")){
+    r=readCompositeType(TYPECLASS_UNION,codeFile,")");
     return r==ERROR_TYPE?ERROR_SYNTAX:r;
   }
   return ERROR_TYPE;
@@ -1869,13 +1871,13 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       if(err!=0){
         return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};//err >MAX_ERROR means word is a string or character
       }
-      if(wordEquals(&word,"PTR")){
+      if(wordEquals(&word,"ptr")){
         err=readType(word,codeFile);
       }
-    }while(wordEquals(&word,"PTR"));
+    }while(wordEquals(&word,"ptr"));
     DataType type=typeBuffer[--bufferedTypes];
     wordPos=codeFile->wordStart;//set operation position to start of op-name instead of type
-    if(wordEquals(&word,"DECLARE")||wordEquals(&word,":=")){
+    if(wordEquals(&word,"=:")){
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       String varName=nextWord(codeFile,&err);
@@ -1906,7 +1908,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
         (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
       }
       return (SizeOrError){.isError=false,.as={.size=1}};
-    }else if(wordEquals(&word,"NEW")){
+    }else if(wordEquals(&word,"new")){
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       if(type.typeClass==TYPECLASS_TUPLE){
@@ -1917,7 +1919,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       fputs(" is currently not supported for operator new\n",stderr);
       //TODO new union, ? new pointer
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-    }else if(wordEquals(&word,"CAST")){ 
+    }else if(wordEquals(&word,"cast")){ 
       if(typeEquals(type,TYPE_UNDEFINED))
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
       (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
@@ -1927,7 +1929,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }
   if(err!=ERROR_TYPE)//unexpected error while reading type
     return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
-  if(wordEquals(&word,"DECLARE")||wordEquals(&word,"=:")||wordEquals(&word,"NEW")||wordEquals(&word,"CAST")){
+  if(wordEquals(&word,"=:")||wordEquals(&word,"new")||wordEquals(&word,"cast")){
     fprintf(stderr,"missing type argument for operator: %.*s\n",(int)word.length,word.chars);
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
   }
@@ -1937,59 +1939,59 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"false")){
     (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_BOOL),.filePos=wordPos,.dataAs={.i64=false}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"ADD")||wordEquals(&word,"+")){
+  }else if(wordEquals(&word,"+")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=ADD}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"SUBTRACT")||wordEquals(&word,"-")){
+  }else if(wordEquals(&word,"-")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=SUBTRACT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"MULTIPLY")||wordEquals(&word,"*")){
+  }else if(wordEquals(&word,"*")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=MULTIPLY}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"DIVIDE")||wordEquals(&word,"/")){
+  }else if(wordEquals(&word,"/")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=DIVIDE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"MOD")||wordEquals(&word,"%")){
+  }else if(wordEquals(&word,"%")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=MOD}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"AND")||wordEquals(&word,"&")){
+  }else if(wordEquals(&word,"&")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=AND}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"OR")||wordEquals(&word,"|")){
+  }else if(wordEquals(&word,"|")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=OR}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"XOR")||wordEquals(&word,"^")){
+  }else if(wordEquals(&word,"^")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=XOR}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"AND2")||wordEquals(&word,"&&")){//TODO? implement short-circuit  and/or using code-blocks
+  }else if(wordEquals(&word,"&&")){//XXX implement short-circuit  and/or using code-blocks
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
-  }else if(wordEquals(&word,"OR2")||wordEquals(&word,"||")){
+  }else if(wordEquals(&word,"||")){
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
-  }else if(wordEquals(&word,"EQ")||wordEquals(&word,"==")){
+  }else if(wordEquals(&word,"==")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=EQ}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"NE")||wordEquals(&word,"NEQ")||wordEquals(&word,"!=")){
+  }else if(wordEquals(&word,"!=")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=NE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"GT")||wordEquals(&word,">")){
+  }else if(wordEquals(&word,">")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=GT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"GE")||wordEquals(&word,">=")){
+  }else if(wordEquals(&word,">=")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=GE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"LE")||wordEquals(&word,"<=")){
+  }else if(wordEquals(&word,"<=")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=LE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"LT")||wordEquals(&word,"<")){
+  }else if(wordEquals(&word,"<")){
     (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=LT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"NEG")||wordEquals(&word,"NEGATE")){
+  }else if(wordEquals(&word,"neg")||wordEquals(&word,"negate")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=NEGATE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"INC")||wordEquals(&word,"++")){
+  }else if(wordEquals(&word,"++")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=INCREMENT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"DEC")||wordEquals(&word,"--")){
+  }else if(wordEquals(&word,"--")){
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=DECREMENT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
@@ -2007,7 +2009,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"SET_VALUE")||wordEquals(&word,"=")){
+  }else if(wordEquals(&word,"=")){
     (*op)=(Operation){.opType=OP_SET_VALUE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(word.length>1&&word.chars[0]=='.'){
@@ -2018,16 +2020,16 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=index.as.error,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"@")||wordEquals(&word,"VALUE_AT")){
+  }else if(wordEquals(&word,"@")){
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"[]")){
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"ADDR_OF")){
+  }else if(wordEquals(&word,"addrOf")){
     (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"IF")){
+  }else if(wordEquals(&word,"if")){
     Scope* newScope=openScope(BLOCK_IF);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
@@ -2035,11 +2037,11 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     state->scopeLevel++;
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"_IF")){
+  }else if(wordEquals(&word,"_if")){
     //no scope change for _if
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF2}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"WHILE")){
+  }else if(wordEquals(&word,"while")){
     Scope* newScope=openScope(BLOCK_WHILE);
     if(newScope==NULL)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
@@ -2048,7 +2050,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_WHILE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"DO")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
+  }else if(wordEquals(&word,"do")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
     closeScope();
     Scope* newScope=openScope(BLOCK_WHILE);
     if(newScope==NULL)
@@ -2058,7 +2060,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
         
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_DO}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"ELSE")){
+  }else if(wordEquals(&word,"else")){
     closeScope();
     Scope* newScope=openScope(BLOCK_ELSE);
     if(newScope==NULL)
@@ -2068,7 +2070,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_ELSE}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"END")){
+  }else if(wordEquals(&word,"end")){
     closeScope();
     state->scopeLevel--;
     if(state->scopeLevel<state->procScope){//exited procedure
@@ -2078,13 +2080,13 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     
     (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_END}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"RETURN")){
+  }else if(wordEquals(&word,"return")){
     if(state->currentProcId<0){
       fputs("unexpected return statement\n",stderr);
     }
     (*op)=(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"ENTRY_POINT")){
+  }else if(wordEquals(&word,"entryPoint:")){
     if(state->hasEntryPoint){
       fputs("program can only have one entry point",stderr);
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
@@ -2098,7 +2100,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     state->hasEntryPoint=true;
     (*op)=(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
-  }else if(wordEquals(&word,"PRINT")){
+  }else if(wordEquals(&word,"print")){
     (*op)=(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};//printed type will be determined by type-checker
     return (SizeOrError){.isError=false,.as={.size=1}};
   } 
@@ -2119,7 +2121,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   //  if identifier matches global var def during type-check phase replace with global var
   
   
-  //old parser code TODO update when needed
+  //old parser code TODO OP_CALL_POINTER
   /*
   if(wordEquals(&word,"CALL")){
     String procName=nextWord(code,codeSize,NULL);
@@ -2179,53 +2181,62 @@ typedef struct{
   } as;
 }TypeOrError;
 
-DataType typeCheckPointerArithmetic(DataType a,DataType b,bool subtract){
-  if(!isPointerType(&a))
-    return TYPE_UNDEFINED;//a is no pointer
-  if(isIntType(&b))
-    return a;
-  if(subtract&&typeEquals(a,b)){
+DataType typeCheckPointerArithmetic(DataType* inTypes,bool subtract){
+  if(!isPointerType(&(inTypes[0])))
+    return TYPE_UNDEFINED;//inTypes[0] is no pointer
+  if(isIntType(&(inTypes[1])))
+    return inTypes[0];
+  if(subtract&&typeEquals(inTypes[0],inTypes[1])){//XXX? ptr - const ptr
     return primitiveType(PRIMITIVE_I64);
   }
   return TYPE_UNDEFINED;
 }
-DataType typeCheckArithmetic(DataType a,DataType b){
-  if(a.typeClass!=TYPECLASS_PRIMITIVE||b.typeClass!=TYPECLASS_PRIMITIVE)
+DataType typeCheckArithmetic(DataType* inTypes){
+  if(inTypes[0].typeClass!=TYPECLASS_PRIMITIVE||inTypes[1].typeClass!=TYPECLASS_PRIMITIVE)
     return TYPE_UNDEFINED;//arithmetic only on primitive types
-  int r1=numberRank(a.typeDataAs.primitive);
-  int r2=numberRank(b.typeDataAs.primitive);
-  if(isInteger(a.typeDataAs.primitive)!=isInteger(b.typeDataAs.primitive))
+  int r1=numberRank(inTypes[0].typeDataAs.primitive);
+  int r2=numberRank(inTypes[1].typeDataAs.primitive);
+  if(isInteger(inTypes[0].typeDataAs.primitive)!=isInteger(inTypes[1].typeDataAs.primitive))
     return TYPE_UNDEFINED;//implicit int to float conversion
   if(r1<=0||r2<=0)
     return TYPE_UNDEFINED;
   PrimitiveType res=numberByRank(r1>r2?r1:r2);
   if(res==PRIMITIVE_VOID)
     return TYPE_UNDEFINED;
-  return primitiveType(res);
+  inTypes[0]=primitiveType(res);
+  inTypes[1]=inTypes[0];
+  return inTypes[0];
 }
-DataType typeCheckCompare(DataType a,DataType b){
-  if(a.typeClass!=TYPECLASS_PRIMITIVE||b.typeClass!=TYPECLASS_PRIMITIVE)
+DataType typeCheckCompare(DataType* inTypes){
+  if(inTypes[0].typeClass!=TYPECLASS_PRIMITIVE||inTypes[1].typeClass!=TYPECLASS_PRIMITIVE)
     return TYPE_UNDEFINED;//comparison only on primitive types
-  int r1=numberRank(a.typeDataAs.primitive);
-  int r2=numberRank(b.typeDataAs.primitive);
-  if(isInteger(a.typeDataAs.primitive)!=isInteger(b.typeDataAs.primitive))
+  int r1=numberRank(inTypes[0].typeDataAs.primitive);
+  int r2=numberRank(inTypes[1].typeDataAs.primitive);
+  if(isInteger(inTypes[0].typeDataAs.primitive)!=isInteger(inTypes[1].typeDataAs.primitive))
     return TYPE_UNDEFINED;//implicit int to float conversion
   if(r1<=0||r2<=0)
     return TYPE_UNDEFINED;//comparison only between numbers
+  PrimitiveType res=numberByRank(r1>r2?r1:r2);
+  if(res==PRIMITIVE_VOID)
+    return TYPE_UNDEFINED;
+  inTypes[0]=primitiveType(res);
+  inTypes[1]=inTypes[0];
   return primitiveType(PRIMITIVE_BOOL);
 }
-DataType typeCheckIntLogic(DataType a,DataType b){
-  if(a.typeClass!=TYPECLASS_PRIMITIVE||b.typeClass!=TYPECLASS_PRIMITIVE)
+DataType typeCheckIntLogic(DataType* inTypes){
+  if(inTypes[0].typeClass!=TYPECLASS_PRIMITIVE||inTypes[1].typeClass!=TYPECLASS_PRIMITIVE)
     return TYPE_UNDEFINED;//comparison only on primitive types
-  if(!isInteger(a.typeDataAs.primitive)||!isInteger(b.typeDataAs.primitive))
+  if(!isInteger(inTypes[0].typeDataAs.primitive)||!isInteger(inTypes[1].typeDataAs.primitive))
     return TYPE_UNDEFINED;//both arguments have to be integers
-  int r1=numberRank(a.typeDataAs.primitive);
-  int r2=numberRank(b.typeDataAs.primitive);
+  int r1=numberRank(inTypes[0].typeDataAs.primitive);
+  int r2=numberRank(inTypes[1].typeDataAs.primitive);
   //r1 and r2 both are valid numbers
   PrimitiveType res=numberByRank(r1>r2?r1:r2);
   if(res==PRIMITIVE_VOID)
     return TYPE_UNDEFINED;
-  return primitiveType(res);
+  inTypes[0]=primitiveType(res);
+  inTypes[1]=inTypes[0];
+  return inTypes[0];
 }
 
 #define INIT_CAP 128
@@ -2785,10 +2796,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       offset=state->typeCount-2;
       bool typesMatch=false;
+      DataType inTypes[2]={state->typeStack[offset].type,state->typeStack[offset+1].type};
       switch(op.dataAs.binOp){
         case ADD:
         case SUBTRACT:
-          op.dataType=typeCheckPointerArithmetic(state->typeStack[offset].type,state->typeStack[offset+1].type,op.dataAs.binOp==SUBTRACT);
+          op.dataType=typeCheckPointerArithmetic(inTypes,op.dataAs.binOp==SUBTRACT);
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED){
             typesMatch=true;
             break;
@@ -2797,7 +2809,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case MULTIPLY:
         case DIVIDE:
         case MOD:
-          op.dataType=typeCheckArithmetic(state->typeStack[offset].type,state->typeStack[offset+1].type);
+          op.dataType=typeCheckArithmetic(inTypes);
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED){
             typesMatch=true;
             break;
@@ -2807,7 +2819,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case OR:
         case XOR:
           //integer bool ops
-          op.dataType=typeCheckIntLogic(state->typeStack[offset].type,state->typeStack[offset+1].type);
+          //TODO? bit shifts 
+          op.dataType=typeCheckIntLogic(inTypes);
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED){
             typesMatch=true;
             break;
@@ -2823,21 +2836,25 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case EQ:
         case NE:
           //pointer equality 
-          
+          if(isPointerType(&(inTypes[0]))&&isPointerType(&(inTypes[1]))&&
+              typeEquals(*(inTypes[0].typeDataAs.type),*(inTypes[1].typeDataAs.type))){
+            op.dataType=primitiveType(PRIMITIVE_BOOL);
+            typesMatch=true;
+            break;
+          }
           // fall through
         case GT:
         case GE:
         case LE:
         case LT:
           //number comparison
-          op.dataType=typeCheckCompare(state->typeStack[offset].type,state->typeStack[offset+1].type);
+          op.dataType=typeCheckCompare(inTypes);
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED){
             typesMatch=true;
             break;
           }
           break;
       }
-      //TODO implement remaining cases
       if(!typesMatch){
         fprintf(stderr,"No version of binary operator %s supports the types ",binOpName(op.dataAs.binOp));
         printTypeName(state->typeStack[offset].type,stderr);
@@ -2846,13 +2863,16 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         fputs("\n",stderr);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
-      //operator has matching types
       //update operation stack
+      //ensure operands have matching types
+      r=(Error){.errorCode=requireTypes("binary operator",state,inTypes,2,op.filePos),.pos=op.filePos};
+      if(r.errorCode!=0){
+        return r;
+      }
       //store result in temp variable
       r=extractCompositeOps(state,2);
       if(r.errorCode!=0)
         return r;
-      //TODO cast arguments to correct types
       tmpId=state->tmpCount++;
       if(ensureOpCap(state,state->opCount+4))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
@@ -3096,7 +3116,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           if(op.dataType.typeClass==TYPECLASS_UNDEFINED){
             if(op.dataType.typeDataAs.predeclaredId<=0||op.dataType.typeDataAs.predeclaredId>state->nPredeclaredTypes)
                 return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-            //XXX? unwrap flat-tuples 
             //TODO don't set constant variables to type writable
             state->predeclaredTypes[op.dataType.typeDataAs.predeclaredId-1]=asWritableType(state->typeStack[offset].type,true);//set predeceased type
             op.dataType=asWritableType(state->typeStack[offset].type,true);
