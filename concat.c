@@ -1784,8 +1784,8 @@ int readType(String name,CodeFile* codeFile){
   }
   //primitive types
   if(wordEquals(&name,"void")){
-    typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_VOID);
-    return 0;
+    fputs("using the void type directly is not supported\n",stderr);
+    return ERROR_SYNTAX;
   }
   if(wordEquals(&name,"bool")){
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_BOOL);
@@ -1839,9 +1839,21 @@ int readType(String name,CodeFile* codeFile){
   return ERROR_TYPE;
 }
 
+int requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes){
+  if(bufferedTypes!=nTypes){
+    fprintf(stderr,"wrong number of type arguments for operation '%.*s' expected %zu got %zu\n",(int)opName->length,opName->chars,nTypes,bufferedTypes);
+    return ERROR_SYNTAX;
+  }
+  *typeOut=typeBuffer[--bufferedTypes];//TODO read multiple types
+  if(typeEquals(*typeOut,TYPE_UNDEFINED))
+    return ERROR_TYPE;
+  return 0;
+}
+
 SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   int err=0;
   String word=nextWord(codeFile,&err);
+  DataType type;
   FilePosition wordPos=codeFile->wordStart;
   if(err==WORD_TYPE_STRING){
     IntOrErrorCode strId=addProgString(word);
@@ -1871,93 +1883,84 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
   err=readType(word,codeFile);//try to parse word as type
-  if(err==0){//is type
-    //read operation that takes type as argument
-    do{
-      word=nextWord(codeFile,&err);
-      if(err!=0){
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};//err >MAX_ERROR means word is a string or character
-      }
-      if(wordEquals(&word,"ptr")){
-        err=readType(word,codeFile);
-      }
-    }while(wordEquals(&word,"ptr"));
-    DataType type=typeBuffer[--bufferedTypes];
-    wordPos=codeFile->wordStart;//set operation position to start of op-name instead of type
-    if(wordEquals(&word,":")){//pre-declare
-      if(typeEquals(type,TYPE_UNDEFINED))
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-      String varName=nextWord(codeFile,&err);
-      if(err!=0)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
-      if(varName.length==0)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
-      if(type.typeClass==TYPECLASS_PROCEDURE){
-        fputs("predeclaring procedures is not supported",stderr);
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
-      }
-      IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-      ScopeNode* id;
-      int r=declareIdentifier(varName,type,idType,&id);
-      if(r!=0)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
-      (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
-      return (SizeOrError){.isError=false,.as={.size=1}};
-    }else if(wordEquals(&word,"=:")){//declare
-      if(typeEquals(type,TYPE_UNDEFINED))
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-      String varName=nextWord(codeFile,&err);
-      if(err!=0)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
-      if(varName.length==0)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
-      IdentiferType idType=type.typeClass==TYPECLASS_PROCEDURE?ID_PROCEDURE:state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-      ScopeNode* id;
-      int r=declareIdentifier(varName,type,idType,&id);
-      if(r!=0)
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
-      if(idType==ID_PROCEDURE){
-        if(state->scopeLevel>0){
-          fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.length,varName.chars);
-          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
-        }
-        Scope* newScope=openScope(BLOCK_PROCEDURE);
-        if(newScope==NULL)
-          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
-        state->currentScope=newScope;
-        state->scopeLevel++;
-        state->procScope=state->scopeLevel;
-        state->currentProcId=type.typeDataAs.procedure->id;
-              
-        (*op)=(Operation){.opType=OP_DECLARE_PROCEDURE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
-      }else{
-        (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
-      }
-      return (SizeOrError){.isError=false,.as={.size=1}};
-    }else if(wordEquals(&word,"new")){
-      if(typeEquals(type,TYPE_UNDEFINED))
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-      if(type.typeClass==TYPECLASS_TUPLE){
-        (*op)=(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
-        return (SizeOrError){.isError=false,.as={.size=1}};
-      }
-      printTypeName(type,stderr);
-      fputs(" is currently not supported for operator new\n",stderr);
-      //TODO ? new pointer
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-    }else if(wordEquals(&word,"cast")){ 
-      if(typeEquals(type,TYPE_UNDEFINED))
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-      (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
-    }
-    fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
-    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
-  }
+  if(err==0)//is type
+    return (SizeOrError){.isError=false,.as={.size=0}};
   if(err!=ERROR_TYPE)//unexpected error while reading type
     return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
-  if(wordEquals(&word,":")||wordEquals(&word,"=:")||wordEquals(&word,"new")||wordEquals(&word,"cast")){
-    fprintf(stderr,"missing type argument for operator: '%.*s'\n",(int)word.length,word.chars);
-    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+  //1. operations that take a Type as argument
+  if(wordEquals(&word,":")){//pre-declare
+    err=requireCompileTimeType(&word,&type,1);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
+    String varName=nextWord(codeFile,&err);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+    if(varName.length==0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+    if(type.typeClass==TYPECLASS_PROCEDURE){
+      fputs("predeclaring procedures is not supported",stderr);
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+    }
+    IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    ScopeNode* id;
+    int r=declareIdentifier(varName,type,idType,&id);
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
+    (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"=:")){//declare
+    err=requireCompileTimeType(&word,&type,1);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
+    String varName=nextWord(codeFile,&err);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+    if(varName.length==0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+    IdentiferType idType=type.typeClass==TYPECLASS_PROCEDURE?ID_PROCEDURE:state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    ScopeNode* id;
+    int r=declareIdentifier(varName,type,idType,&id);
+    if(r!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
+    if(idType==ID_PROCEDURE){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.length,varName.chars);
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+      }
+      Scope* newScope=openScope(BLOCK_PROCEDURE);
+      if(newScope==NULL)
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
+      state->currentScope=newScope;
+      state->scopeLevel++;
+      state->procScope=state->scopeLevel;
+      state->currentProcId=type.typeDataAs.procedure->id;
+            
+      (*op)=(Operation){.opType=OP_DECLARE_PROCEDURE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    }else{
+      (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    }
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"new")){
+    err=requireCompileTimeType(&word,&type,1);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
+    if(type.typeClass==TYPECLASS_TUPLE){
+      (*op)=(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+    }
+    printTypeName(type,stderr);
+    fputs(" is currently not supported for operator new\n",stderr);
+    //TODO ? new pointer
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
+  }else if(wordEquals(&word,"cast")){ 
+    err=requireCompileTimeType(&word,&type,1);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
+    (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
+  }
+  if(bufferedTypes>0){
+    fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
   }
   if(wordEquals(&word,"true")){
     (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_BOOL),.filePos=wordPos,.dataAs={.i64=true}};
