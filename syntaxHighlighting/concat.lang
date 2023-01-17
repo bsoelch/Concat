@@ -85,12 +85,12 @@
       <keyword>&gt;=</keyword>
       <keyword>==</keyword>
       <keyword>!=</keyword>
-      <keyword>@</keyword>
     </context>
     <context id="operator-punctuation" style-ref="operator">
       <match extended="true">
         \[\] | 
-        \.
+        \.   | 
+        @
       </match>
     </context>
     
