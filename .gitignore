@@ -3,6 +3,7 @@
 *.zip
 *.ll
 *.bc
+syntaxHighlighting/update.sh
 a.out
 concat
 code
