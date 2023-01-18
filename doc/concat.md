@@ -3,7 +3,46 @@
 Concat is a concatenative programming language 
 
 ## Syntax
+Concat is a concatenative programming language in postfix notation,
+meaning that the arguments of an operator/ an procedure come before the application of that procedure.
 
+
+Example:
+```
+1 1 ( i32 i32 ) new y =::   ## creates a new tuple of two 32-bit integers and saves it in the automatically typed variable y
+1 1 + 2 *                   ## results in (1+1)*2
+i32 =: x                    ## assigns the result of the previous calculation to a new integer named x
+x x * x =                   ## replaces x with its square
+y                           ## push the value y onto the stack
+x y .0 < if                 ## check if x is less than the first element of y
+  .1 print                  ## prints the second element of y (still on stack)
+else .1 x < _if             ## checks if the seconds element of y (still on stack) is less than x
+  x  print                  ## print the value of x 
+end                         ## end the if-statement
+```
+
+
+Code is read as a sequence of tokens separated by white-spaces, there are 4 types of tokens 
+
+### Strings
+  will push start and end with a `"` can contain escape sequences <!-- TODO link --> 
+### characters:
+  start and end with a `'` can contain escape sequences <!-- TODO link -->
+### numbers constants
+  Number literals (currently only integers) are a sequence of digits optionally prefixed with a `-`
+  After the `-` you can use he prefixes `0b` for binary and `0x` for hexadecimal numbers
+### comments 
+  Line comments start with `##` 
+  multi-line comments start with `#+` and end with `+#`
+### named constants
+  <!-- TODO --> 
+- `true` and `false`
+- type-names, see types-section<!-- TODO link -->
+### assignments
+<!-- TODO --> 
+### operators
+<!-- TODO --> 
+### identifiers
 <!-- TODO --> 
 
 ## Types
