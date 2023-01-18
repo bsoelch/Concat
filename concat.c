@@ -226,6 +226,8 @@ typedef enum{
   TYPECLASS_PROCEDURE,
   TYPECLASS_TYPE_OF,
   TYPECLASS_OPAQUE,
+  TYPECLASS_STRUCT,
+  TYPECLASS_ENUM,
 }TypeClass;
 
 typedef enum{
@@ -282,8 +284,8 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 //temporary buffer for construction of composite elements
 size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
-size_t bufferedFieldTypes=0;
-char* fieldNameBuffer[TYPE_BUFFER_CAP];
+size_t bufferedFieldNames=0;
+String fieldNameBuffer[TYPE_BUFFER_CAP];
 
 bool typeEquals(const DataType* a,const DataType* b){
   if(a->typeClass!=b->typeClass)
@@ -301,6 +303,7 @@ bool typeEquals(const DataType* a,const DataType* b){
             typeEquals(a->typeDataAs.procedure->outType,b->typeDataAs.procedure->outType);
   if(a->typeClass==TYPECLASS_OPAQUE)
     return a->typeDataAs.typeId==b->typeDataAs.typeId;
+  //TODO equals for struct and enum
   return false;
 }
 DataType primitiveType(PrimitiveType id){
@@ -482,21 +485,25 @@ const char* typeClassName(TypeClass cls){
     case TYPECLASS_UNDEFINED:
       return "UNDEFINED";
     case TYPECLASS_PRIMITIVE:
-      return "PRIMITIVE";
+      return "primitive";
     case TYPECLASS_POINTER:
-      return "POINTER";
+      return "pointer";
     case TYPECLASS_CONST_POINTER:
-      return "CONST_POINTER";
+      return "pointer const";
     case TYPECLASS_TUPLE:
-      return "TUPLE";
+      return "tuple";
     case TYPECLASS_FLAT_TUPLE:
-      return "FLAT_TUPLE";
+      return "flat tuple";
     case TYPECLASS_PROCEDURE:
-      return "PRODECURE";
+      return "procedure";
     case TYPECLASS_TYPE_OF:
-      return "TYPE_OF";
+      return "type";
     case TYPECLASS_OPAQUE:
-      return "TYPECLASS_OPAQUE";
+      return "opaque type";
+    case TYPECLASS_STRUCT:
+      return "structure";
+    case TYPECLASS_ENUM:
+      return "enum";
   }
   fprintf(stderr,"unexpected type-class %i",cls);
   return "";
@@ -584,6 +591,9 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         return j;
       j=fputs(" )",file);
       return j<0?j:(i+j);
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_ENUM:
+      break;//TODO print struct and enum
   }
   return fprintf(file,"unknown type-class %i\n",type->typeClass);
 }
@@ -635,6 +645,9 @@ int printTypeNameC(const DataType* type,FILE* file){
       return fprintf(file,"tuple%"PRIi32,type->typeDataAs.composite->id);
     case TYPECLASS_PROCEDURE:
       return fprintf(file,"procPtr%"PRIi32,type->typeDataAs.procedure->id);
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_ENUM:
+      break;//TODO print struct and enum
   }
   return fprintf(file,"unknown type-class %i\n",type->typeClass);
 }
@@ -1384,17 +1397,16 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
   //initialize strings
   for(size_t i=0;i<progStringCount;i++){
     if(programStrings[i].isBaseString){
-      fprintf(target,"const %s stringChars%"PRIi32"[] = {",primitiveNameC(PRIMITIVE_I8),programStrings[i].charsId/*,programStrings[i].value.length*/);
+      fprintf(target,"const %s stringChars%"PRIi32"[%"PRIi64"] = {",primitiveNameC(PRIMITIVE_I8),programStrings[i].charsId,programStrings[i].value.length+1);
       String str=programStrings[i].value;
       for(size_t j=0;j<str.length;j++){
-        if(j>0)
-          fputs(",",target);
         if(str.chars[j]<0)
           fprintf(target,"-0x%"PRIx8,-str.chars[j]);
         else
           fprintf(target,"0x%"PRIx8,str.chars[j]);
+        fputs(",",target);
       }
-      fputs("};\n",target);
+      fputs("0x00};\n",target);
     }
     fprintf(target,"const tuple%"PRIi32" string%"PRIi32" = {.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu};\n",
       stringType.typeDataAs.tuple->id,programStrings[i].stringId,programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
@@ -1766,37 +1778,77 @@ String nextWord(CodeFile* codeFile,WordTypeOrErrCode* wordType){
   return (String){.chars=wordChars,.length=wordLength};
 }
 
+#define LABLE_TYPE_NONE    0 // no labels
+#define LABLE_TYPE_STRUCT  1 // exactly one label per type
+#define LABLE_TYPE_ENUM    2 // labels without type are allowed
+ 
 int readType(String name,CodeFile* codeFile,CompilerState* state);
 //reads a composite type of the given type-class, the result is stored in the type buffer
 //return 0 if a type was read, otherwise a nonzero error-code if a type error occurs this method will return a syntax error
-int readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* state,const char* endString,bool checkEmpty){
+int readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* state,int labelType,const char* endString,bool checkEmpty){
   String word;
   WordTypeOrErrCode wordType;
   int err;
   size_t initOffset=bufferedTypes;
-  word=nextWord(codeFile,&wordType);
-  while(!wordEquals(&word,endString)){
+  size_t labelOffset=bufferedFieldNames;
+  size_t currentOffset=initOffset;
+  int typesSinceLabel=0;//if there has been a type since the last label
+  do{
+    word=nextWord(codeFile,&wordType);
+    if(wordEquals(&word,endString))
+      break;
     if(wordType.errCode!=0)
       return wordType.errCode;
     if(wordType.wordType!=WORD_TYPE_IDENTIFIER){
-      fputs("type names have to be identifers\n",stderr);
+      fputs("type names have to be identifiers\n",stderr);
       return ERROR_SYNTAX;
     }
-    err=readType(word,codeFile,state);
-    if(err!=0){
-      bufferedTypes=initOffset;
-      if(err==ERROR_TYPE){
-        fprintf(stderr,"unknown type name %.*s \n",(int)word.length,word.chars);
+    if(labelType!=LABLE_TYPE_NONE&&typesSinceLabel>0&&wordEquals(&word,":")){//start label
+      if(typesSinceLabel>1){
+        fprintf(stderr,"too many types for field declaration expected 1 got %i\n",typesSinceLabel);
         return ERROR_SYNTAX;
       }
-      return err;
+      typesSinceLabel=0;
+      String label=nextWord(codeFile,&wordType);
+      if(wordType.errCode!=0)
+        return wordType.errCode;
+      if(wordType.wordType!=WORD_TYPE_IDENTIFIER){
+        fputs("label names have to be identifiers\n",stderr);
+        return ERROR_SYNTAX;
+      }
+      fieldNameBuffer[bufferedFieldNames++]=label;
+      continue;
     }
-    word=nextWord(codeFile,&wordType);
+    err=readType(word,codeFile,state);
+    if(err==0){
+      typesSinceLabel+=(bufferedTypes-currentOffset);
+      currentOffset=bufferedTypes;
+      continue;
+    }
+    bufferedTypes=initOffset;
+    if(err!=ERROR_TYPE)
+      return err;
+    if(labelType!=LABLE_TYPE_ENUM||typesSinceLabel>0){
+      fprintf(stderr,"unknown type name '%.*s' \n",(int)word.length,word.chars);
+      return ERROR_SYNTAX;
+    }
+    //untyped enum label
+    typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_VOID);
+    fieldNameBuffer[bufferedFieldNames++]=word;
+  }while(1);
+  if(labelType!=LABLE_TYPE_NONE){
+    if(typesSinceLabel>0){
+      fprintf(stderr,"missing label in %s\n",typeClassName(typeClass));
+      return ERROR_SYNTAX;
+    }
+printf(" %zu labels %zu types\n",bufferedFieldNames-labelOffset,bufferedTypes-initOffset);
+    //TODO create struct/enum
+    return ERROR_UNIMPLEMENTED;
   }
   if(checkEmpty&&bufferedTypes==initOffset){
     fputs("empty composite type\n",stderr);
     return ERROR_SYNTAX;
-  } 
+  }
   typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,bufferedTypes-initOffset);
   if(checkEmpty&&bufferedTypes-initOffset==1){
     fputs("WARNING:\n  single element composite type: ",stderr);
@@ -1857,10 +1909,10 @@ int readType(String name,CodeFile* codeFile,CompilerState* state){
     return 0;
   }
   if(wordEquals(&name,"proc(")){
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,"=>",false);
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,LABLE_TYPE_NONE,"=>",false);
     if(r!=0)
       return r;
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,")",false);
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,LABLE_TYPE_NONE,")",false);
     if(r!=0)
       return r;
     typeBuffer[initOffset]=procedureType(&(typeBuffer[initOffset]),&(typeBuffer[initOffset+1]));
@@ -1868,7 +1920,13 @@ int readType(String name,CodeFile* codeFile,CompilerState* state){
     return 0;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
-    return readCompositeType(TYPECLASS_TUPLE,codeFile,state,")",true);
+    return readCompositeType(TYPECLASS_TUPLE,codeFile,state,LABLE_TYPE_NONE,")",true);
+  }
+  if(wordEquals(&name,"struct(")){
+    return readCompositeType(TYPECLASS_STRUCT,codeFile,state,LABLE_TYPE_STRUCT,")",true);
+  }
+  if(wordEquals(&name,"enum(")){
+    return readCompositeType(TYPECLASS_ENUM,codeFile,state,LABLE_TYPE_ENUM,")",true);
   }
   ScopeNode* asIdentifier;
   r=getIdentifier(name,&asIdentifier);
@@ -1942,7 +2000,8 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=true,.as={.error={.errorCode=asInt.as.error,.pos=wordPos}}};
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
-  err=readType(word,codeFile,state);//try to parse word as type TODO allow use of declared type names
+  err=readType(word,codeFile,state);//try to parse word as type
+  wordPos=codeFile->wordStart;
   if(err==0)//is type
     return (SizeOrError){.isError=false,.as={.size=0}};
   if(err!=ERROR_TYPE)//unexpected error while reading type
@@ -1953,6 +2012,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
     String varName=nextWord(codeFile,&wordType);
+    wordPos=codeFile->wordStart;
     if(wordType.errCode!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
     if(wordType.wordType!=WORD_TYPE_IDENTIFIER)
@@ -1987,6 +2047,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
     String varName=nextWord(codeFile,&wordType);
+    wordPos=codeFile->wordStart;
     if(wordType.errCode!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
     if(wordType.wordType!=WORD_TYPE_IDENTIFIER)
@@ -2138,6 +2199,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
     String varName=nextWord(codeFile,&wordType);
+    wordPos=codeFile->wordStart;
     if(wordType.errCode!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
     if(wordType.wordType!=WORD_TYPE_IDENTIFIER)
