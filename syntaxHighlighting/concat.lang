@@ -99,6 +99,7 @@
       <keyword>tuple</keyword>
       <keyword>proc</keyword>
       <keyword>ptr</keyword>
+      <keyword>type</keyword>
       
       <keyword>enum</keyword>
       <keyword>struct</keyword>
