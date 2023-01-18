@@ -19,7 +19,8 @@ end
 type : selfPtr
 ( i32 selfPtr ptr ) type =: selfPtr
 
-## struct( i8 ptr : data i64 : length ) type =: string
+struct( i8 ptr : data i64 : length ) type =: String
+enum( A B i32 : C  char : D ) type =: anEnum 
 
 entryPoint:
   1 1 +  i32 =: A
