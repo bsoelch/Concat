@@ -19,8 +19,7 @@
 #define ERROR_UNSUPPORTED_ESCAPE_SEQUENCE 6
 #define WARNING_CODEPOINT_OUT_OF_RANGE 7
 #define ERROR_EOF 8 //end of file
-//maximum integer value of any error constant
-#define MAX_ERROR 8
+
 
 //exit codes for errors in compiled program
 #define PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE 1
@@ -39,7 +38,7 @@ const char* errorName(int errorCode){
     return internalErrors[-errorCode];
   }
   if(errorCode>0){
-    return compilerErrors[errorCode>MAX_ERROR?ERROR_SYNTAX:errorCode];
+    return compilerErrors[errorCode];
   }
   return "no error";
 }
@@ -228,21 +227,7 @@ typedef enum{
   TYPECLASS_TYPE_OF,
   TYPECLASS_OPAQUE,
 }TypeClass;
-/* TODO enums, structs
-  enum{
-    a
-    b
-    i32 : c ## enum fields can optionally hold a value
-    i8  : d
-    e
-  }  =: anEnum
-  struct{
-    i32 : field1
-    i64 : field2
-    float : field3
-    aStruct ptr : next ## allow access to pre-declared types
-  } =: aStruct
-*/
+
 typedef enum{
   PRIMITIVE_VOID,
   PRIMITIVE_BOOL,
@@ -297,6 +282,8 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 //temporary buffer for construction of composite elements
 size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
+size_t bufferedFieldTypes=0;
+char* fieldNameBuffer[TYPE_BUFFER_CAP];
 
 bool typeEquals(const DataType* a,const DataType* b){
   if(a->typeClass!=b->typeClass)
@@ -1638,7 +1625,7 @@ IntOrErrorCode parseInt(String number,int base){
   }
   return (IntOrErrorCode){.isError=false,.as={.i64=negate?-value:value}};
 }
-String readStringLiteral(CodeFile* codeFile,char end,bool doEspaceSeqs,int* errorFlag){
+String readStringLiteral(CodeFile* codeFile,char end,bool doEspaceSeqs,int32_t* errorFlag){
   if(codeFile->codeSize<1){
     *errorFlag=ERROR_EOF;
     return (String){.chars=codeFile->code,.length=0};
@@ -1733,10 +1720,14 @@ String readStringLiteral(CodeFile* codeFile,char end,bool doEspaceSeqs,int* erro
 }
 //constants for the wordType flag of nextWord
 //allow to determine which type of word was read
-//positive values are used to indicate syntax errors
-#define WORD_TYPE_STRING (MAX_ERROR+1)
-#define WORD_TYPE_CHAR   (MAX_ERROR+2)
-String nextWord(CodeFile* codeFile,int* wordType){
+#define WORD_TYPE_IDENTIFIER 0
+#define WORD_TYPE_STRING    1
+#define WORD_TYPE_CHAR      2
+typedef struct{
+  int32_t errCode;
+  int32_t wordType;
+}WordTypeOrErrCode;
+String nextWord(CodeFile* codeFile,WordTypeOrErrCode* wordType){
   skipWhitespaces(codeFile);
   if(codeFile->codeSize<=0){//end of file
     //don't set wordType to ERROR_EOF, file is allowed to end at this point
@@ -1744,21 +1735,21 @@ String nextWord(CodeFile* codeFile,int* wordType){
   }
   codeFile->wordStart=codeFile->currentPos;
   if(wordType)
-    *wordType=0;
+    *wordType=(WordTypeOrErrCode){.errCode=0,.wordType=WORD_TYPE_IDENTIFIER};
   if(*(codeFile->code)=='"'){
     if(wordType)
-      *wordType=WORD_TYPE_STRING;
-    return readStringLiteral(codeFile,'"',true,wordType);
+      wordType->wordType=WORD_TYPE_STRING;
+    return readStringLiteral(codeFile,'"',true,&(wordType->errCode));
   }else if(*(codeFile->code)=='\''){
     if(wordType)
-      *wordType=WORD_TYPE_CHAR;
-    return readStringLiteral(codeFile,'\'',true,wordType);
+      wordType->wordType=WORD_TYPE_CHAR;
+    return readStringLiteral(codeFile,'\'',true,&(wordType->errCode));
   }else if(codeFile->codeSize>=2&&*(codeFile->code)=='#'){
     if(*(codeFile->code+1)=='#'){//line comment
-      readStringLiteral(codeFile,'\n',false,wordType);//ignore everything up to next new-line
+      readStringLiteral(codeFile,'\n',false,&(wordType->errCode));//ignore everything up to next new-line
       return (String){.chars=codeFile->code,.length=0};
     }else if(*(codeFile->code+1)=='+'){//inline comment
-      readStringLiteral(codeFile,'#',false,wordType);//TODO end with '+#' not #
+      readStringLiteral(codeFile,'#',false,&(wordType->errCode));//TODO end with '+#' not #
       return (String){.chars=codeFile->code,.length=0};
     }
   }
@@ -1780,17 +1771,16 @@ int readType(String name,CodeFile* codeFile,CompilerState* state);
 //return 0 if a type was read, otherwise a nonzero error-code if a type error occurs this method will return a syntax error
 int readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* state,const char* endString,bool checkEmpty){
   String word;
+  WordTypeOrErrCode wordType;
   int err;
   size_t initOffset=bufferedTypes;
-  word=nextWord(codeFile,&err);
+  word=nextWord(codeFile,&wordType);
   while(!wordEquals(&word,endString)){
-    if(err!=0){
-      bufferedTypes=initOffset;
-      if(err>MAX_ERROR){//err >MAX_ERROR means word is a string or character
-        fputs("type names have to be identifers\n",stderr);
-        return ERROR_SYNTAX;
-      }
-      return err;
+    if(wordType.errCode!=0)
+      return wordType.errCode;
+    if(wordType.wordType!=WORD_TYPE_IDENTIFIER){
+      fputs("type names have to be identifers\n",stderr);
+      return ERROR_SYNTAX;
     }
     err=readType(word,codeFile,state);
     if(err!=0){
@@ -1801,7 +1791,7 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* stat
       }
       return err;
     }
-    word=nextWord(codeFile,&err);
+    word=nextWord(codeFile,&wordType);
   }
   if(checkEmpty&&bufferedTypes==initOffset){
     fputs("empty composite type\n",stderr);
@@ -1891,14 +1881,13 @@ int readType(String name,CodeFile* codeFile,CompilerState* state){
     return ERROR_TYPE;
   typeBuffer[bufferedTypes++]=asIdentifier->type;
   if(asIdentifier->type.typeClass==TYPECLASS_OPAQUE){//ensure token after opaque type is ptr
-    int err=0;
-    String word=nextWord(codeFile,&err);
-    if(err!=0){
-      if(err>MAX_ERROR){//err >MAX_ERROR means word is a string or character
-        fputs("expected an identifier\n",stderr);
-        return ERROR_SYNTAX;
-      }
-      return err;
+    WordTypeOrErrCode wordType;
+    String word=nextWord(codeFile,&wordType);
+    if(wordType.errCode!=0)
+      return wordType.errCode;
+    if(wordType.wordType!=WORD_TYPE_IDENTIFIER){
+      fputs("expected an identifier\n",stderr);
+      return ERROR_SYNTAX;
     }
     if(!wordEquals(&word,"ptr")){
       fprintf(stderr,"unexpected word after opaque type '%.*s' expected 'ptr' got '%.*s'\n",(int)name.length,name.chars,(int)word.length,word.chars);
@@ -1922,17 +1911,20 @@ int requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes){
 
 SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   int err=0;
-  String word=nextWord(codeFile,&err);
+  WordTypeOrErrCode wordType;
+  String word=nextWord(codeFile,&wordType);
   DataType type;
   FilePosition wordPos=codeFile->wordStart;
-  if(err==WORD_TYPE_STRING){
+  if(wordType.errCode!=0)
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
+  if(wordType.wordType==WORD_TYPE_STRING){
     IntOrErrorCode strId=addProgString(word);
     if(strId.isError)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=strId.as.error,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_STRING_CONST,.dataType=progStringType(),.filePos=wordPos,.dataAs={.i64=strId.as.i64}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
-  if(err==WORD_TYPE_CHAR){
+  if(wordType.wordType==WORD_TYPE_CHAR){
     if(word.length!=1){//TODO? handle Unicode characters
       fprintf(stderr,"character literal '%.*s' contains more that one character\n",(int)word.length,word.chars);
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
@@ -1940,8 +1932,6 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_I8),.filePos=wordPos,.dataAs={.i64=word.chars[0]}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
-  if(err!=0)
-    return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
   IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
   if(!asInt.isError){
     bool isI32=asInt.as.i64<=INT32_MAX&&asInt.as.i64>=INT32_MIN;
@@ -1962,9 +1952,11 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     err=requireCompileTimeType(&word,&type,1);
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
-    String varName=nextWord(codeFile,&err);
-    if(err!=0)
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+    String varName=nextWord(codeFile,&wordType);
+    if(wordType.errCode!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
+    if(wordType.wordType!=WORD_TYPE_IDENTIFIER)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     if(type.typeClass==TYPECLASS_PROCEDURE){
@@ -1994,9 +1986,11 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     err=requireCompileTimeType(&word,&type,1);
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
-    String varName=nextWord(codeFile,&err);
-    if(err!=0)
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+    String varName=nextWord(codeFile,&wordType);
+    if(wordType.errCode!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
+    if(wordType.wordType!=WORD_TYPE_IDENTIFIER)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     IdentiferType idType;
@@ -2143,9 +2137,11 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=DECREMENT}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    String varName=nextWord(codeFile,&err);
-      if(err!=0)
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
+    String varName=nextWord(codeFile,&wordType);
+    if(wordType.errCode!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=wordType.errCode,.pos=wordPos}}};
+    if(wordType.wordType!=WORD_TYPE_IDENTIFIER)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
