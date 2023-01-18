@@ -12,6 +12,7 @@
     <style id="preprocessor" name="Preprocessor" map-to="def:preprocessor"/>
     <style id="comment"      name="Comment"      map-to="def:comment"/>
     <style id="variable"     name="Variable"                         />
+    <style id="field"        name="Field"                            />
     <style id="symbol"       name="Symbol"                           />
     <style id="keyword"      name="Keyword"      map-to="def:keyword"/>
     <style id="type-keyword" name="Type Keyword" map-to="c:keyword"/>
@@ -31,14 +32,14 @@
   <definitions>
   
     <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
-      <start>\#\#</start>
+      <start>(\A|(?&lt;=[[:space:]]))\#\#</start>
       <include>
         <context ref="def:in-comment"/>
       </include>
     </context>
 
     <context id="block-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
-      <start>\#\+</start>
+      <start>(\A|(?&lt;=[[:space:]]))\#\+</start>
       <end>\+\#</end>
       <include>
         <context ref="def:in-comment"/>
@@ -48,82 +49,100 @@
 
 
     <context id="postfix-keyword" style-ref="keyword">
-      <keyword>if</keyword>
-      <keyword>else</keyword>
-      <keyword>_if</keyword>
-      <keyword>end</keyword>
-      <keyword>while</keyword>
-      <keyword>do</keyword>
-      <keyword>return</keyword>
-      <keyword>addrOf</keyword>
-      <keyword>new</keyword>
-      <keyword>print</keyword>
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          if              |
+          else            |
+          _if             |
+          end             |
+          while           |
+          do              |
+          return          |
+          end             |
+          new             |
+          print          
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
     </context>
+    
     <context id="declaration" style-ref="keyword">
       <match extended="true">
-        =?: | 
-        =:: |
-        entryPoint:
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          =?:               | 
+          =::               |
+          entryPoint:
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
     <context id="operators" style-ref="operator">
-      <keyword>\+</keyword>
-      <keyword>-</keyword>
-      <keyword>\++</keyword>
-      <keyword>--</keyword>
-      <keyword>\*</keyword>
-      <keyword>/</keyword>
-      <keyword>%</keyword>
-      <keyword>\&amp;</keyword>
-      <keyword>\|</keyword>
-      <keyword>^</keyword>
-      <keyword>=</keyword>
-      <keyword>&lt;</keyword>
-      <keyword>&gt;</keyword>
-      <keyword>&lt;=</keyword>
-      <keyword>&gt;=</keyword>
-      <keyword>==</keyword>
-      <keyword>!=</keyword>
-    </context>
-    <context id="operator-punctuation" style-ref="operator">
       <match extended="true">
-        \[\] | 
-        \.   | 
-        @
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          \+                  | 
+          -                   |
+          \*                  |
+          /                   |
+          %                   |
+          \&amp;              |
+          \|                  |
+          \^                  |
+          =                   |
+          &lt;=?              |
+          &gt;=?              |
+          ==                  |
+          \!=                 |
+          \+\+                |
+          --                  |
+          \!                  |
+          ~                   |
+          neg|negate          |
+          \[\]                |
+          @                   |
+          addrOf
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
+    <context id="field-access" style-ref="field">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          \.([^[:space:]])+
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
     
     <context id="type-keywords" style-ref="type-keyword">
-      <keyword>tuple</keyword>
-      <keyword>proc</keyword>
-      <keyword>ptr</keyword>
-      <keyword>type</keyword>
-      
-      <keyword>enum</keyword>
-      <keyword>struct</keyword>
-    </context> 
-    <context id="type-punctuation" style-ref="type-keyword">
       <match extended="true">
-        \(|\) | 
-        =&gt;
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          \(|\)           | 
+          tuple\(         |
+          proc\(          |
+          =&gt;           |
+          enum\(          |
+          struct\(        |
+          ptr             |
+          type            
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
     <context id="typeName" style-ref="type">
-      <keyword>i64</keyword>
-      <keyword>i32</keyword>
-      <keyword>i8</keyword>
-      <keyword>char</keyword>
-      <keyword>float</keyword>
-      <keyword>string</keyword>
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          i8              |
+          char            |
+          i32             |
+          i64             |
+          float           |
+          string          
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
     </context>
 
 
     <define-regex id="escaped-character" extended="true">
-        \\(                   # leading backslash
-        [bfnrtv\\"\'] | # escaped character
+        \\(                     # leading backslash
+        [bfnrtv\\"\']   |       # escaped character
         u[0-9A-Fa-f]{4} |       # 'u' followed by 4 hex digits
         U[0-9A-Fa-f]{8} |       # 'U' followed by 8 hex digits
         x[0-9A-Fa-f]{2} |       # 'x' followed by 2 hex digits
@@ -131,7 +150,7 @@
     </define-regex>
 
     <context id="string" style-ref="string" end-at-line-end="false" class="string" class-disabled="no-spell-check">
-      <start>"</start>
+      <start>(\A|(?&lt;=[[:space:]]))"</start>
       <end>"</end>
       <include>
         <context ref="def:line-continue"/>
@@ -142,7 +161,7 @@
     </context>
 
     <context id="char" style-ref="character" end-at-line-end="false">
-      <start>'</start>
+      <start>(\A|(?&lt;=[[:space:]]))'</start>
       <end>'</end>
       <include>
         <context style-ref="char-escape" once-only="true">
@@ -167,57 +186,61 @@
     
     <context id="binary" style-ref="binary">
       <match extended="true">
-        (?&lt;![\w\.])
-        0[bB][01]+
-        (?![\w\.])
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          -?0[bB][01]+
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
 
     <context id="invalid-binary" style-ref="error">
       <match extended="true">
-        (?&lt;![\w\.])
-        0[bB][01]*[2-9a-zA-Z][01]*
-        (?![\w\.])
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          -?0[bB][01]*[2-9a-zA-Z][01]*
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
     <context id="hexadecimal" style-ref="hexadecimal">
       <match extended="true">
-        (?&lt;![\w\.])
-        0[xX][a-fA-F0-9]+[uUlL]*
-        (?![\w\.])
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          -?0[xX][a-fA-F0-9]+
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
 
     <context id="invalid-hexadecimal" style-ref="error">
       <match extended="true">
-        (?&lt;![\w\.])
-        0[xX][a-fA-F0-9]*[g-zG-Z][a-zA-Z0-9]*[uUlL]*
-        (?![\w\.])
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          -?0[xX][a-fA-F0-9]*[g-zG-Z][a-zA-Z0-9]*
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
     <context id="decimal" style-ref="decimal">
       <match extended="true">
-        (?&lt;![\w\.])
-        (0|[1-9][0-9]*)[uUlL]*
-        (?![\w\.])
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          -?([0-9]+)
+        )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
     <context id="boolean" style-ref="boolean">
-      <keyword>true</keyword>
-      <keyword>false</keyword>
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          true |
+          false
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
     </context>
 
-    <context id="body">
+
+    <context id="concat" class="no-spell-check">
       <include>
         <context ref="line-comment"/>
         <context ref="block-comment"/>
         <context ref="postfix-keyword"/>
         <context ref="declaration"/>
         <context ref="type-keywords"/>
-        <context ref="type-punctuation" />
         <context ref="typeName"/>
         <context ref="string"/>
         <context ref="char"/>
@@ -228,19 +251,8 @@
         <context ref="invalid-binary"/>
         <context ref="decimal"/>
         <context ref="operators"/>
-        
-      </include>
-    </context>
-
-    <context id="concat" class="no-spell-check">
-      <include>
-      <!--
-        <context ref="def:shebang"/>
-        <context ref="c:if0-comment"/>
-        <context ref="c:include"/>
-        <context ref="c:preprocessor"/>
-        -->
-        <context ref="body"/>
+        <context ref="field-access"/>
+        <context ref="boolean"/>
       </include>
     </context>
 
