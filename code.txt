@@ -16,10 +16,18 @@ proc( => ( ( i32 i32 ptr ) ptr i32 ) ) =: ptrTest
   y addrOf 0 ( ( i32  i32 ptr ) ptr i32 ) new return
 end
 
+type : selfPtr
+( i32 selfPtr ptr ) type =: selfPtr
+
 entryPoint:
   1 1 +  i32 =: A
   A 1 - 3 *  i32 =: B
   i32 : C 
+  
+  selfPtr : X
+  1 X addrOf selfPtr new X =
+  X .1 print
+  X .1 @ .1 print
   
   A print
   B print
@@ -65,7 +73,7 @@ entryPoint:
     I 1 - I =
   end
 
-  true print
+  true print 
 end
 
 "Strings are \"ignored\"  " string =: s0

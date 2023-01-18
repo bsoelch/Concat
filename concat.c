@@ -225,6 +225,8 @@ typedef enum{
   TYPECLASS_TUPLE,
   TYPECLASS_FLAT_TUPLE,//behaves like tuple but will not be directly used
   TYPECLASS_PROCEDURE,
+  TYPECLASS_TYPE_OF,
+  TYPECLASS_OPAQUE,
 }TypeClass;
 /* TODO enums, structs
   enum{
@@ -254,16 +256,16 @@ typedef CompositeType TupleType;
 typedef struct ProcedureType ProcedureType;
 typedef struct DataType{
   TypeClass typeClass;
+  bool isAddressable;
+  bool isWritable;
   union{
     PrimitiveType primitive;
     struct DataType* type;
     CompositeType* composite;
     TupleType* tuple;//name alias for composite
     ProcedureType* procedure;
-    int64_t predeclaredId;
+    int64_t typeId;
   }typeDataAs;
-  bool isAddressable;
-  bool isWritable;
 }DataType;
 #define FLAG_IS_TUPLE 1
 #define FLAG_IS_FLAT_TUPLE 2
@@ -286,8 +288,8 @@ const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0},.i
 #define TYPE_BUFFER_CAP 1024
 #define MAX_PROC_TYPES 1024
 
-size_t typeCount=0;
-DataType typeData[MAX_TYPES];
+size_t wrappedTypeCount=0;
+DataType wrappedTypes[MAX_TYPES];
 int32_t compositeCount=0;
 CompositeType compositeTypes[MAX_COMPOSITE];
 size_t procTypeCount=0;
@@ -296,42 +298,49 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
 
-bool typeEquals(DataType a,DataType b){
-  if(a.typeClass!=b.typeClass)
+bool typeEquals(const DataType* a,const DataType* b){
+  if(a->typeClass!=b->typeClass)
     return false;
-  if(a.typeClass==TYPECLASS_UNDEFINED)
+  if(a->typeClass==TYPECLASS_UNDEFINED)
     return true;//all undefined types are equal
-  if(a.typeClass==TYPECLASS_PRIMITIVE)
-    return a.typeDataAs.primitive==b.typeDataAs.primitive;
-  if(a.typeClass==TYPECLASS_POINTER||a.typeClass==TYPECLASS_CONST_POINTER)
-    return typeEquals(*a.typeDataAs.type,*b.typeDataAs.type);
-  if(a.typeClass==TYPECLASS_TUPLE||a.typeClass==TYPECLASS_FLAT_TUPLE)
-    return a.typeDataAs.composite->id==b.typeDataAs.composite->id;
-  if(a.typeClass==TYPECLASS_PROCEDURE)
-    return typeEquals(*a.typeDataAs.procedure->inType,*b.typeDataAs.procedure->inType)&&
-            typeEquals(*a.typeDataAs.procedure->outType,*b.typeDataAs.procedure->outType);
+  if(a->typeClass==TYPECLASS_PRIMITIVE)
+    return a->typeDataAs.primitive==b->typeDataAs.primitive;
+  if(a->typeClass==TYPECLASS_POINTER||a->typeClass==TYPECLASS_CONST_POINTER||a->typeClass==TYPECLASS_TYPE_OF)
+    return typeEquals(a->typeDataAs.type,b->typeDataAs.type);
+  if(a->typeClass==TYPECLASS_TUPLE||a->typeClass==TYPECLASS_FLAT_TUPLE)
+    return a->typeDataAs.composite->id==b->typeDataAs.composite->id;
+  if(a->typeClass==TYPECLASS_PROCEDURE)
+    return typeEquals(a->typeDataAs.procedure->inType,b->typeDataAs.procedure->inType)&&
+            typeEquals(a->typeDataAs.procedure->outType,b->typeDataAs.procedure->outType);
+  if(a->typeClass==TYPECLASS_OPAQUE)
+    return a->typeDataAs.typeId==b->typeDataAs.typeId;
   return false;
 }
 DataType primitiveType(PrimitiveType id){
   return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id},.isAddressable=false,.isWritable=false};
 }
-DataType pointerType(DataType target){
-  for(size_t i=0;i<typeCount;i++){
-    if(typeEquals(target,typeData[i]))
-      return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+i},.isAddressable=false,.isWritable=false};
+DataType opaqueType(int64_t typeId){
+  return (DataType){.typeClass=TYPECLASS_OPAQUE,.typeDataAs={.typeId=typeId},.isAddressable=false,.isWritable=false};
+}
+DataType wrapperType(TypeClass typeClass,const DataType* target){
+  for(size_t i=0;i<wrappedTypeCount;i++){
+    if(typeEquals(target,&(wrappedTypes[i])))
+      return (DataType){.typeClass=typeClass,.typeDataAs={.type=wrappedTypes+i},.isAddressable=false,.isWritable=false};
   }
-  if(typeCount+1>=MAX_TYPES){
+  if(wrappedTypeCount+1>=MAX_TYPES){
     return TYPE_UNDEFINED;
   }
-  typeData[typeCount]=target;
-  return (DataType){.typeClass=TYPECLASS_POINTER,.typeDataAs={.type=typeData+typeCount++},.isAddressable=false,.isWritable=false};
+  wrappedTypes[wrappedTypeCount]=*target;
+  return (DataType){.typeClass=typeClass,.typeDataAs={.type=wrappedTypes+wrappedTypeCount++},.isAddressable=false,.isWritable=false};
 }
-DataType constPointerType(DataType target){
-  DataType t=pointerType(target);
-  if(t.typeClass==TYPECLASS_UNDEFINED)
-    return t;
-  t.typeClass=TYPECLASS_CONST_POINTER;//otherwise identical to pointer
-  return t;
+DataType pointerType(const DataType* target){
+  return wrapperType(TYPECLASS_POINTER,target);
+}
+DataType constPointerType(const DataType* target){
+  return wrapperType(TYPECLASS_CONST_POINTER,target);
+}
+DataType typeOfType(const DataType* conent){
+  return wrapperType(TYPECLASS_TYPE_OF,conent);
 }
 DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
   if(eltCount==0)
@@ -344,7 +353,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
     if(compositeTypes[i].typeCount==eltCount||(match==-1&&compositeTypes[i].typeCount>eltCount)){
       bool isMatch=true;
       for(int32_t a=0;a<eltCount;a++){//XXX? allow matches of sub-lists
-        if(!typeEquals(compositeTypes[i].types[a],elements[a])){
+        if(!typeEquals(&(compositeTypes[i].types[a]),&(elements[a]))){
           isMatch=false;
           break;
         }
@@ -373,33 +382,33 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t eltCount){
   compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.flags=classFlag};
   return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)},.isAddressable=false,.isWritable=false};
 }
-DataType procedureType(DataType inType,DataType outType){
+DataType procedureType(const DataType* inType,const DataType* outType){
   for(size_t i=0;i<procTypeCount;i++){
-    if(typeEquals(*procTypes[i].inType,inType)&&typeEquals(*procTypes[i].outType,outType))
+    if(typeEquals(procTypes[i].inType,inType)&&typeEquals(procTypes[i].outType,outType))
       return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i},.isAddressable=false,.isWritable=false};
   }
   int32_t inId=-1,outId=-1;
-  for(size_t i=0;i<typeCount&&(inId==-1||outId==-1);i++){
-    if(inId==-1&&typeEquals(inType,typeData[i]))
+  for(size_t i=0;i<wrappedTypeCount&&(inId==-1||outId==-1);i++){
+    if(inId==-1&&typeEquals(inType,&(wrappedTypes[i])))
       inId=i;
-    if(outId==-1&&typeEquals(outType,typeData[i]))
+    if(outId==-1&&typeEquals(outType,&(wrappedTypes[i])))
       outId=i;
   }
   if(inId==-1){
-    if(typeCount+1>=MAX_TYPES){
+    if(wrappedTypeCount+1>=MAX_TYPES){
       return TYPE_UNDEFINED;
     }
-    inId=typeCount;
-    typeData[typeCount++]=inType;
+    inId=wrappedTypeCount;
+    wrappedTypes[wrappedTypeCount++]=*inType;
   }
   if(outId==-1){
-    if(typeCount+1>=MAX_TYPES){
+    if(wrappedTypeCount+1>=MAX_TYPES){
       return TYPE_UNDEFINED;
     }
-    outId=typeCount;
-    typeData[typeCount++]=outType;
+    outId=wrappedTypeCount;
+    wrappedTypes[wrappedTypeCount++]=*outType;
   }
-  procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=typeData+inId,.outType=typeData+outId};
+  procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=wrappedTypes+inId,.outType=wrappedTypes+outId};
   return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++},.isAddressable=false,.isWritable=false};
 }
 DataType asWritableType(DataType src,bool isAddressable){
@@ -497,6 +506,10 @@ const char* typeClassName(TypeClass cls){
       return "FLAT_TUPLE";
     case TYPECLASS_PROCEDURE:
       return "PRODECURE";
+    case TYPECLASS_TYPE_OF:
+      return "TYPE_OF";
+    case TYPECLASS_OPAQUE:
+      return "TYPECLASS_OPAQUE";
   }
   fprintf(stderr,"unexpected type-class %i",cls);
   return "";
@@ -519,59 +532,75 @@ const char* primitiveName(PrimitiveType t){
   fprintf(stderr,"unexpected primitive type %i",t);
   return "";
 }
-int printTypeNameIntenal(DataType type,FILE* file,bool noRecurse){
+int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
   int i,j;
-  switch(type.typeClass){
+  switch(type->typeClass){
     case TYPECLASS_UNDEFINED:
-      if(type.typeDataAs.predeclaredId>0){
-        return fprintf(file,"PREDECLARED %"PRIi64,type.typeDataAs.predeclaredId);
+      if(type->typeDataAs.typeId>0){
+        return fprintf(file,"PREDECLARED %"PRIi64,type->typeDataAs.typeId);
       }
       return fputs("UNDEFINED",file);
     case TYPECLASS_PRIMITIVE:
-      return fprintf(file,"%s",primitiveName(type.typeDataAs.primitive));
+      return fprintf(file,"%s",primitiveName(type->typeDataAs.primitive));
+    case TYPECLASS_OPAQUE:
+      return fprintf(file,"OPAQUE %"PRIi64,type->typeDataAs.typeId);
     case TYPECLASS_CONST_POINTER:
     case TYPECLASS_POINTER:
-      i=printTypeNameIntenal(*type.typeDataAs.type,file,noRecurse);
+    case TYPECLASS_TYPE_OF:
+      i=printTypeNameIntenal(type->typeDataAs.type,file,noRecurse);
       if(i<0)
         return i;
-      j=fprintf(file," %s",typeClassName(type.typeClass));
+      j=fprintf(file," %s",typeClassName(type->typeClass));
       return j<0?j:(i+j);
     case TYPECLASS_FLAT_TUPLE:
     case TYPECLASS_TUPLE:
-      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type.typeClass),type.typeDataAs.composite->id);
+      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
       if(noRecurse||i<0)
         return i;
-      for(int32_t e=0;e<type.typeDataAs.composite->typeCount;e++){
-        if(e>0){
-          j=fputs(" ",file);
-          if(j<0)
-            return j;
-          i+=j;
-        }
-        j=printTypeNameIntenal(type.typeDataAs.composite->types[e],file,true);//only one recursion level
+      j=fputs("(",file);
+      if(j<0)
+        return j;
+      i+=j;
+      for(int32_t e=0;e<type->typeDataAs.composite->typeCount;e++){
+        j=fputs(" ",file);
+        if(j<0)
+          return j;
+        i+=j;
+        j=printTypeNameIntenal(&(type->typeDataAs.composite->types[e]),file,true);//only one recursion level
         if(j<0)
           return j;
         i+=j;
       } 
+      j=fputs(" )",file);
+      if(j<0)
+        return j;
+      i+=j;
       return i;
     case TYPECLASS_PROCEDURE:
-      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type.typeClass),type.typeDataAs.procedure->id);
+      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.procedure->id);
       if(noRecurse||i<0)
         return i;
-      j=printTypeNameIntenal(*type.typeDataAs.procedure->inType,file,true);
+      j=fputs("( ",file);
       if(j<0)
         return j;
       i+=j;
-      j=fputs(" ",file);
+      j=printTypeNameIntenal(type->typeDataAs.procedure->inType,file,true);
       if(j<0)
         return j;
       i+=j;
-      j=printTypeNameIntenal(*type.typeDataAs.procedure->outType,file,true);
+      j=fputs(" => ",file);
+      if(j<0)
+        return j;
+      i+=j;
+      j=printTypeNameIntenal(type->typeDataAs.procedure->outType,file,true);
+      if(j<0)
+        return j;
+      j=fputs(" )",file);
       return j<0?j:(i+j);
   }
-  return fprintf(file,"unknown type-class %i\n",type.typeClass);
+  return fprintf(file,"unknown type-class %i\n",type->typeClass);
 }
-int printTypeName(DataType type,FILE* file){
+int printTypeName(const DataType* type,FILE* file){
   return printTypeNameIntenal(type,file,false);
 }
 
@@ -593,20 +622,22 @@ const char* primitiveNameC(PrimitiveType t){
   fprintf(stderr,"unexpected primitive type %i",t);
   return "";
 }
-int printTypeNameC(DataType type,FILE* file){
+int printTypeNameC(const DataType* type,FILE* file){
   int i,j;
-  switch(type.typeClass){
+  switch(type->typeClass){
+    case TYPECLASS_TYPE_OF://type of does not correspond to a C-type
+    case TYPECLASS_OPAQUE://pointer to opaque type -> void pointer
     case TYPECLASS_UNDEFINED:
       return fputs("void",file);
     case TYPECLASS_PRIMITIVE:
-      return fprintf(file,"%s",primitiveNameC(type.typeDataAs.primitive));
+      return fprintf(file,"%s",primitiveNameC(type->typeDataAs.primitive));
     case TYPECLASS_CONST_POINTER:
       i=fputs("const ",file); //only difference to TYPECLASS_POINTER
       if(i<0)
         return i;
       // fall through
     case TYPECLASS_POINTER:
-      j=printTypeNameC(*type.typeDataAs.type,file);
+      j=printTypeNameC(type->typeDataAs.type,file);
       if(j<0)
         return j;
       i+=j;
@@ -614,11 +645,11 @@ int printTypeNameC(DataType type,FILE* file){
       return j<0?j:(i+j);
     case TYPECLASS_FLAT_TUPLE:
     case TYPECLASS_TUPLE:
-      return fprintf(file,"tuple%"PRIi32,type.typeDataAs.composite->id);
+      return fprintf(file,"tuple%"PRIi32,type->typeDataAs.composite->id);
     case TYPECLASS_PROCEDURE:
-      return fprintf(file,"procPtr%"PRIi32,type.typeDataAs.procedure->id);
+      return fprintf(file,"procPtr%"PRIi32,type->typeDataAs.procedure->id);
   }
-  return fprintf(file,"unknown type-class %i\n",type.typeClass);
+  return fprintf(file,"unknown type-class %i\n",type->typeClass);
 }
 //operators
 typedef enum{
@@ -684,6 +715,7 @@ typedef enum{
   ID_POINTER_OFFSET,
   ID_INTERMEDIATE_RESULT,
   ID_TMP_VAR,
+  ID_TYPE,
 }IdentiferType;
 typedef struct{
   int32_t id;
@@ -691,7 +723,7 @@ typedef struct{
 }IdentiferInfo;
 const char* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
   [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
-  [ID_INTERMEDIATE_RESULT]="intermediate result",[ID_TMP_VAR]="temporary variable"};
+  [ID_INTERMEDIATE_RESULT]="intermediate result",[ID_TMP_VAR]="temporary variable",[ID_TYPE]="type"};
 void printIdInfo(IdentiferInfo info,FILE* out){
   fprintf(out,"%s (%"PRIi32")",idNames[info.type],info.id);
 }
@@ -727,7 +759,7 @@ typedef struct{
 void printOperation(Operation op,FILE* out){
   fprintf(out,"%s ",opName(op.opType));
   if(op.opType!=OP_CODE_BLOCK&&op.opType!=ENTRY_POINT)
-    printTypeName(op.dataType,out);
+    printTypeName(&op.dataType,out);
   switch(op.opType){
     case OP_CONSTANT:
       fprintf(out," %"PRIi64"",op.dataAs.i64);
@@ -773,7 +805,8 @@ size_t progStringCount=0;
 ProgramString programStrings[MAX_PROG_STRINGS];
 
 DataType progStringType(void){
-    DataType stringElts[2]={constPointerType(primitiveType(PRIMITIVE_I8)),primitiveType(PRIMITIVE_I64)};
+    DataType chr=primitiveType(PRIMITIVE_I8);//store in intermediate value to allow call by reference
+    DataType stringElts[2]={constPointerType(&chr),primitiveType(PRIMITIVE_I64)};
     return compositeType(TYPECLASS_TUPLE,stringElts,2);//ensure string-type exists
 }
 IntOrErrorCode addProgString(String s){
@@ -880,7 +913,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
           break;
         default:
           fputs("printing values of type ",stderr);
-          printTypeName(op->dataType,stderr);
+          printTypeName(&op->dataType,stderr);
           fputs(" is (currently) not supported\n",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=op->filePos}}};
       }
@@ -897,7 +930,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
     case OP_CONSTANT:
       if(op->dataType.typeClass!=TYPECLASS_PRIMITIVE){
           fputs("constants of non-primitive type ",stderr);
-          printTypeName(op->dataType,stderr);
+          printTypeName(&op->dataType,stderr);
           fputs(" are not supported\n",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=op->filePos}}};
       }
@@ -993,6 +1026,9 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
             return r;
           size+=r.as.size;
           break;
+        case ID_TYPE:
+          fputs("type information is not accessible at runtime",stderr);
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
       }
       break;
     case OP_SET_VALUE:
@@ -1002,7 +1038,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       fputs(";\n",target);
       break;
     case OP_PRE_DECLARE:
-      printTypeNameC(op->dataType,target);
+      printTypeNameC(&(op->dataType),target);
       switch(op->dataAs.idInfo.type){
         case ID_TMP_VAR:
           fprintf(target," tmp%" PRIi32 ";\n",op->dataAs.idInfo.id);
@@ -1020,12 +1056,13 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case ID_TUPLE_ELEMENT:
         case ID_POINTER:
         case ID_POINTER_OFFSET:
+        case ID_TYPE:
           fprintf(stderr,"cannot pre-declare %s\n",idNames[op->dataAs.idInfo.type]);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
       }
       break;
     case OP_DECLARE:
-      printTypeNameC(op->dataType,target);
+      printTypeNameC(&(op->dataType),target);
       switch(op->dataAs.idInfo.type){
         case ID_TMP_VAR:
           fprintf(target," tmp%" PRIi32 " = ",op->dataAs.idInfo.id);
@@ -1053,6 +1090,9 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case ID_POINTER_OFFSET:
           fputs("cannot declare pointers",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
+        case ID_TYPE:
+          fputs("cannot declare types",stderr);
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
       }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(";\n",target);
@@ -1060,7 +1100,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
     case OP_NEW:
       if(op->dataType.typeClass==TYPECLASS_TUPLE){
         fputs("(",target);
-        printTypeNameC(op->dataType,target);
+        printTypeNameC(&(op->dataType),target);
         fputs("){",target);
         for(int32_t e=0;e<op->dataType.typeDataAs.composite->typeCount;e++){
           if(e>0)
@@ -1073,7 +1113,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       break;
     case OP_CAST:
       fputs("((",target);
-      printTypeNameC(op->dataType,target);
+      printTypeNameC(&(op->dataType),target);
       fputs(")",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
@@ -1191,7 +1231,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
     case OP_DECLARE_PROCEDURE:{
       if(op->dataType.typeClass!=TYPECLASS_PROCEDURE)
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=op->filePos}}};
-      printTypeNameC(*op->dataType.typeDataAs.procedure->outType,target);
+      printTypeNameC(op->dataType.typeDataAs.procedure->outType,target);
       fprintf(target," procedure%" PRIi32" (",op->dataAs.idInfo.id);
       DataType* inType=op->dataType.typeDataAs.procedure->inType;
       if(inType->typeClass==TYPECLASS_FLAT_TUPLE){
@@ -1199,13 +1239,13 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         for(int32_t e=0;e<inTypes->typeCount;e++){
           if(e>0)
             fputs(", ",target);
-          printTypeNameC(inTypes->types[e],target);
+          printTypeNameC(&(inTypes->types[e]),target);
           fprintf(target," arg%"PRIi32,e);
         } 
       }else if(inType->typeClass==TYPECLASS_PRIMITIVE&&inType->typeDataAs.primitive==PRIMITIVE_VOID){
         fputs("void",target);
       }else{
-        printTypeNameC(*inType,target);
+        printTypeNameC(inType,target);
         fputs(" arg0",target);
       }         
       fputs("){\n",target);
@@ -1275,6 +1315,9 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
           fputs("))(",target);
           break;
+        case ID_TYPE:
+          fputs("cannot call types",stderr);
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
       }
       DataType* in=op->dataType.typeDataAs.procedure->inType;
       DataType* out=op->dataType.typeDataAs.procedure->outType;
@@ -1326,17 +1369,17 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
   //declare procedure pointers
   for(size_t i=0;i<procTypeCount;i++){
     fputs("typedef ",target);
-    printTypeNameC(*procTypes[i].outType,target);
+    printTypeNameC(procTypes[i].outType,target);
     fprintf(target," (*procPtr%zu) (",i);
     if(procTypes[i].inType->typeClass==TYPECLASS_FLAT_TUPLE){//auto-unwrap procedure arguments
       CompositeType* inTypes=procTypes[i].inType->typeDataAs.composite;
       for(int32_t j=0;j<inTypes->typeCount;j++){
         if(j>0)
           fputs(",",target);
-        printTypeNameC(inTypes->types[j],target);
+        printTypeNameC(&(inTypes->types[j]),target);
       }
     }else{
-      printTypeNameC(*procTypes[i].inType,target);
+      printTypeNameC(procTypes[i].inType,target);
     }
     fputs(");\n",target);
   }
@@ -1345,7 +1388,7 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
     if(compositeTypes[i].flags&FLAG_IS_TUPLE){
       fprintf(target,"struct tuple%"PRIi32"Impl{\n",i);
       for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        printTypeNameC(compositeTypes[i].types[e],target);
+        printTypeNameC(&(compositeTypes[i].types[e]),target);
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("};\n",target);
@@ -1510,12 +1553,13 @@ typedef struct{
 }Program;
 
 typedef struct{
+  Scope* currentScope;
   int32_t currentProcId;
   int32_t procScope;
-  Scope* currentScope;
   int32_t scopeLevel;
   
   int32_t predeclaredTypes;
+  int32_t opaqueTypeCount;
   bool hasEntryPoint;
 }CompilerState;
 
@@ -1731,10 +1775,10 @@ String nextWord(CodeFile* codeFile,int* wordType){
   return (String){.chars=wordChars,.length=wordLength};
 }
 
-int readType(String name,CodeFile* codeFile);
+int readType(String name,CodeFile* codeFile,CompilerState* state);
 //reads a composite type of the given type-class, the result is stored in the type buffer
 //return 0 if a type was read, otherwise a nonzero error-code if a type error occurs this method will return a syntax error
-int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endString,bool checkEmpty){
+int readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* state,const char* endString,bool checkEmpty){
   String word;
   int err;
   size_t initOffset=bufferedTypes;
@@ -1748,7 +1792,7 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
       }
       return err;
     }
-    err=readType(word,codeFile);
+    err=readType(word,codeFile,state);
     if(err!=0){
       bufferedTypes=initOffset;
       if(err==ERROR_TYPE){
@@ -1766,7 +1810,7 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
   typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,bufferedTypes-initOffset);
   if(checkEmpty&&bufferedTypes-initOffset==1){
     fputs("WARNING:\n  single element composite type: ",stderr);
-    printTypeName(typeBuffer[initOffset],stderr);
+    printTypeName(&(typeBuffer[initOffset]),stderr);
     fputs(" at ",stderr);
     printFilePosition(codeFile->wordStart,stderr);
     fputs("\n",stderr);
@@ -1776,7 +1820,7 @@ int readCompositeType(TypeClass typeClass,CodeFile* codeFile,const char* endStri
 }
 //reads a type starting with the identifier name, the result is stored in the type buffer
 //return 0 if a type was read, ERROR_TYPE if name was not a type and the corresponding error code if another error occurs
-int readType(String name,CodeFile* codeFile){
+int readType(String name,CodeFile* codeFile,CompilerState* state){
   if(name.length==0)
     return ERROR_TYPE;
   if(bufferedTypes>=TYPE_BUFFER_CAP){//buffer overflow
@@ -1819,24 +1863,50 @@ int readType(String name,CodeFile* codeFile){
       fputs("pointer type is missing its argument",stderr);
       return ERROR_SYNTAX;
     }
-    typeBuffer[bufferedTypes-1]=pointerType(typeBuffer[bufferedTypes-1]);
+    typeBuffer[bufferedTypes-1]=pointerType(&(typeBuffer[bufferedTypes-1]));
     return 0;
   }
   if(wordEquals(&name,"proc(")){
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,"=>",false);
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,"=>",false);
     if(r!=0)
       return r;
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,")",false);
+    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,")",false);
     if(r!=0)
       return r;
-    typeBuffer[initOffset]=procedureType(typeBuffer[initOffset],typeBuffer[initOffset+1]);
+    typeBuffer[initOffset]=procedureType(&(typeBuffer[initOffset]),&(typeBuffer[initOffset+1]));
     bufferedTypes--;
     return 0;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
-    return readCompositeType(TYPECLASS_TUPLE,codeFile,")",true);
+    return readCompositeType(TYPECLASS_TUPLE,codeFile,state,")",true);
   }
-  return ERROR_TYPE;
+  ScopeNode* asIdentifier;
+  r=getIdentifier(name,&asIdentifier);
+  if(r<0)//internal error while reading identifier
+    return r;
+  if(r>0||asIdentifier->idType!=ID_TYPE)//identifier does not exist / is not a type
+    return ERROR_TYPE;
+  //identifier
+  if(typeEquals(&(asIdentifier->type),&TYPE_UNDEFINED))
+    return ERROR_TYPE;
+  typeBuffer[bufferedTypes++]=asIdentifier->type;
+  if(asIdentifier->type.typeClass==TYPECLASS_OPAQUE){//ensure token after opaque type is ptr
+    int err=0;
+    String word=nextWord(codeFile,&err);
+    if(err!=0){
+      if(err>MAX_ERROR){//err >MAX_ERROR means word is a string or character
+        fputs("expected an identifier\n",stderr);
+        return ERROR_SYNTAX;
+      }
+      return err;
+    }
+    if(!wordEquals(&word,"ptr")){
+      fprintf(stderr,"unexpected word after opaque type '%.*s' expected 'ptr' got '%.*s'\n",(int)name.length,name.chars,(int)word.length,word.chars);
+      return ERROR_SYNTAX;
+    }
+    typeBuffer[bufferedTypes-1]=pointerType(&(typeBuffer[bufferedTypes-1]));
+  }
+  return 0;
 }
 
 int requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes){
@@ -1845,7 +1915,7 @@ int requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes){
     return ERROR_SYNTAX;
   }
   *typeOut=typeBuffer[--bufferedTypes];//TODO read multiple types
-  if(typeEquals(*typeOut,TYPE_UNDEFINED))
+  if(typeEquals(typeOut,&TYPE_UNDEFINED))
     return ERROR_TYPE;
   return 0;
 }
@@ -1882,7 +1952,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=true,.as={.error={.errorCode=asInt.as.error,.pos=wordPos}}};
   if(word.length==0)
     return (SizeOrError){.isError=false,.as={.size=0}};
-  err=readType(word,codeFile);//try to parse word as type
+  err=readType(word,codeFile,state);//try to parse word as type TODO allow use of declared type names
   if(err==0)//is type
     return (SizeOrError){.isError=false,.as={.size=0}};
   if(err!=ERROR_TYPE)//unexpected error while reading type
@@ -1902,10 +1972,22 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     }
     IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    if(type.typeClass==TYPECLASS_TYPE_OF){
+      if(!typeEquals(type.typeDataAs.type,&TYPE_UNDEFINED)){
+        fputs("cannot pre-declare values of type: ",stderr);
+        printTypeName(&type,stderr);
+        fputs("\n For pre-declaring a type use 'type' without any prefix",stderr);
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+      }
+      type=opaqueType(state->opaqueTypeCount++);
+      idType=ID_TYPE;
+    }
     ScopeNode* id;
     int r=declareIdentifier(varName,type,idType,&id);
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
+    if(idType==ID_TYPE)//declaring type does not produce any code
+      return (SizeOrError){.isError=false,.as={.size=0}};
     (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"=:")){//declare
@@ -1917,12 +1999,38 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err>MAX_ERROR?ERROR_SYNTAX:err,.pos=wordPos}}};
     if(varName.length==0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
-    IdentiferType idType=type.typeClass==TYPECLASS_PROCEDURE?ID_PROCEDURE:state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    IdentiferType idType;
     ScopeNode* id;
-    int r=declareIdentifier(varName,type,idType,&id);
+    int r;
+    switch(type.typeClass){
+      case TYPECLASS_PROCEDURE:
+        idType=ID_PROCEDURE;
+        break;
+      case TYPECLASS_TYPE_OF:
+        type=*type.typeDataAs.type;//unwrap typeOf
+        if(typeEquals(&type,&TYPE_UNDEFINED)){
+          fputs("missing type for type definition",stderr);
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+        }
+        idType=ID_TYPE;
+        r=getIdentifier(varName,&id);
+        if(r<0)
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
+        if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
+          break;//can only override opaque types
+        *pointerType(&id->type).typeDataAs.type=type;//override entry in wrapped type list XXX? better method
+        id->type=type;//override previous definition
+        return (SizeOrError){.isError=false,.as={.size=0}};
+      default:
+        idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;;
+    }
+    r=declareIdentifier(varName,type,idType,&id);
     if(r!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=r,.pos=wordPos}}};
-    if(idType==ID_PROCEDURE){
+    if(idType==ID_TYPE){
+      //declaring type does not produce any code
+      return (SizeOrError){.isError=false,.as={.size=0}};
+    }else if(idType==ID_PROCEDURE){
       if(state->scopeLevel>0){
         fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.length,varName.chars);
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
@@ -1948,7 +2056,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       (*op)=(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
       return (SizeOrError){.isError=false,.as={.size=1}};
     }
-    printTypeName(type,stderr);
+    printTypeName(&type,stderr);
     fputs(" is currently not supported for operator new\n",stderr);
     //TODO ? new pointer
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
@@ -1957,6 +2065,17 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
     (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"type")){
+    if(bufferedTypes==0){//type without arguments
+      typeBuffer[bufferedTypes++]=typeOfType(&TYPE_UNDEFINED);
+      return (SizeOrError){.isError=false,.as={.size=0}};//type does not generate any operations
+    }
+    err=requireCompileTimeType(&word,&type,1);
+    if(err!=0)
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
+    typeBuffer[bufferedTypes++]=typeOfType(&type);
+    return (SizeOrError){.isError=false,.as={.size=0}};//type does not generate any operations
   }
   if(bufferedTypes>0){
     fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
@@ -2031,7 +2150,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     IdentiferType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     DataType mType=TYPE_UNDEFINED;
-    mType.typeDataAs.predeclaredId=++state->predeclaredTypes;//store predeceased id in type
+    mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
     ScopeNode* id;
     int r=declareIdentifier(varName,mType,idType,&id);
     if(r!=0)
@@ -2197,9 +2316,9 @@ Program compileToOps(CodeFile* codeFile){
 
 void typeErrorMessage(const char* exprName,DataType expected,DataType got){
   fprintf(stderr,"wrong type for %s: expected ",exprName);
-  printTypeName(expected,stderr);
+  printTypeName(&expected,stderr);
   fputs(" got ",stderr);
-  printTypeName(got,stderr);
+  printTypeName(&got,stderr);
   fputs("\n",stderr);
 }
 typedef struct{
@@ -2215,7 +2334,7 @@ DataType typeCheckPointerArithmetic(DataType* inTypes,bool subtract){
     return TYPE_UNDEFINED;//inTypes[0] is no pointer
   if(isIntType(&(inTypes[1])))
     return inTypes[0];
-  if(subtract&&typeEquals(inTypes[0],inTypes[1])){//XXX? ptr - const ptr
+  if(subtract&&typeEquals(&(inTypes[0]),&(inTypes[1]))){//XXX? ptr - const ptr
     return primitiveType(PRIMITIVE_I64);
   }
   return TYPE_UNDEFINED;
@@ -2327,7 +2446,7 @@ typedef struct{
 void printTypeStack(TypeCheckState* state,FILE* out){
   size_t offset=0;
   for(size_t k=0;k<state->typeCount;k++){
-    printTypeName(state->typeStack[k].type,out);
+    printTypeName(&(state->typeStack[k].type),out);
     fprintf(out," %"PRIi32":\n",state->typeStack[k].opCount);
     for(int32_t i=0;i<state->typeStack[k].opCount;i++){
       fputs("    ",out);//indent operations
@@ -2477,11 +2596,11 @@ Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,bool isElse/*else-
   if(ensureOpCap(state,state->opCount+2*state->typeCount+state->opStackCount))
     return (Error){.errorCode=ERROR_MEMORY,.pos=pos};
   for(int64_t i=state->typeCount-1;i>=0;i--){
-    if(!typeEquals(state->typeStack[i].type,requiredState->types[i].type)){//XXX allow type-promotion
+    if(!typeEquals(&(state->typeStack[i].type),&(requiredState->types[i].type))){//XXX allow type-promotion
       fputs("wrong type at end of if-branch expected ",stderr);
-      printTypeName(requiredState->types[i].type,stderr);
+      printTypeName(&(requiredState->types[i].type),stderr);
       fputs(" got ",stderr);
-      printTypeName(state->typeStack[i].type,stderr);
+      printTypeName(&(state->typeStack[i].type),stderr);
       fputs("\n",stderr);
       return (Error){.errorCode=ERROR_TYPE,.pos=pos};
     }
@@ -2553,7 +2672,7 @@ Error extractCompositeOps(TypeCheckState* state,size_t nStackValues){
 
 
 bool canAssign(DataType src,DataType target){
-  if(typeEquals(src,target))
+  if(typeEquals(&src,&target))
     return true;
   if(src.typeClass!=TYPECLASS_PRIMITIVE||target.typeClass!=TYPECLASS_PRIMITIVE)//XXX? assigning pointer to const pointer
     return false;
@@ -2572,7 +2691,7 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
   int32_t nCasts=0;
   //check types
   for(size_t k=0;k<nTypes;k++){
-    if(typeEquals(types[k],state->typeStack[state->typeCount-nTypes+k].type))
+    if(typeEquals(&(types[k]),&(state->typeStack[state->typeCount-nTypes+k].type)))
       continue;
     directMatch=false;
     if(canAssign(state->typeStack[state->typeCount-nTypes+k].type,types[k])){
@@ -2596,7 +2715,7 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
   for(size_t k=1;k<=nTypes;k++){
     offset-=state->typeStack[state->typeCount-k].opCount;
     shiftCount+=state->typeStack[state->typeCount-k].opCount;
-    if(typeEquals(types[nTypes-k],state->typeStack[state->typeCount-k].type))
+    if(typeEquals(&(types[nTypes-k]),&(state->typeStack[state->typeCount-k].type)))
       continue;
     if(canAssign(state->typeStack[state->typeCount-k].type,types[nTypes-k])){
       memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
@@ -2655,7 +2774,7 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
     ((!isPointerType(&calledType))||
       calledType.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE)){//not procedure or pointer to procedure 
     fputs("cannot call objects of type ",stderr);
-    printTypeName(calledType,stderr);
+    printTypeName(&calledType,stderr);
     fputs("\n",stderr);
     return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
   }
@@ -2783,7 +2902,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           if(state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||numberRank(state->typeStack[offset].type.typeDataAs.primitive)<0){
             fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
             fputs(" got ",stderr);
-            printTypeName(state->typeStack[offset].type,stderr);
+            printTypeName(&(state->typeStack[offset].type),stderr);
             fputs("\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -2792,7 +2911,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           if(!isIntType(&(state->typeStack[offset].type))){
             fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
             fputs(" got ",stderr);
-            printTypeName(state->typeStack[offset].type,stderr);
+            printTypeName(&(state->typeStack[offset].type),stderr);
             fputs("\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -2866,7 +2985,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case NE:
           //pointer equality 
           if(isPointerType(&(inTypes[0]))&&isPointerType(&(inTypes[1]))&&
-              typeEquals(*(inTypes[0].typeDataAs.type),*(inTypes[1].typeDataAs.type))){
+              typeEquals(inTypes[0].typeDataAs.type,inTypes[1].typeDataAs.type)){
             op.dataType=primitiveType(PRIMITIVE_BOOL);
             typesMatch=true;
             break;
@@ -2886,9 +3005,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       if(!typesMatch){
         fprintf(stderr,"No version of binary operator %s supports the types ",binOpName(op.dataAs.binOp));
-        printTypeName(state->typeStack[offset].type,stderr);
+        printTypeName(&(state->typeStack[offset].type),stderr);
         fputs(" ",stderr);
-        printTypeName(state->typeStack[offset+1].type,stderr);
+        printTypeName(&(state->typeStack[offset+1].type),stderr);
         fputs("\n",stderr);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
@@ -2921,7 +3040,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(!isPointerType(&(state->typeStack[offset].type))&&
           (state->typeStack[offset].type.typeClass!=TYPECLASS_PRIMITIVE||state->typeStack[offset].type.typeDataAs.primitive==PRIMITIVE_VOID)){
         fputs("cannot print values of type ",stderr);
-        printTypeName(state->typeStack[offset].type,stderr);
+        printTypeName(&(state->typeStack[offset].type),stderr);
         fputs("\n",stderr);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
@@ -2941,9 +3060,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_PROCEDURE:
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
             return pushValue(state,op);
-          if(op.dataType.typeDataAs.predeclaredId<=0||op.dataType.typeDataAs.predeclaredId>state->nPredeclaredTypes)
+          if(op.dataType.typeDataAs.typeId<=0||op.dataType.typeDataAs.typeId>state->nPredeclaredTypes)
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-          op.dataType=state->predeclaredTypes[op.dataType.typeDataAs.predeclaredId-1];//get predeceased type
+          op.dataType=state->predeclaredTypes[op.dataType.typeDataAs.typeId-1];//get predeceased type
           if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
             return pushValue(state,op);
           return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -2954,7 +3073,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           }
           offset=state->typeCount-1;
           if(state->typeStack[offset].type.typeClass!=TYPECLASS_TUPLE){
-            printTypeName(state->typeStack[offset].type,stderr);
+            printTypeName(&(state->typeStack[offset].type),stderr);
             fputs(" is not a tuple\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -3000,7 +3119,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           offset=state->typeCount-1;
           if(!isPointerType(&(state->typeStack[offset].type))){
             fprintf(stderr,"invalid operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
-            printTypeName(state->typeStack[offset].type,stderr);
+            printTypeName(&(state->typeStack[offset].type),stderr);
             fputs(" is not a pointer\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -3027,7 +3146,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           offset=state->typeCount-2;
           if(!isIntType(&(state->typeStack[offset+1].type))){
             fprintf(stderr,"invalid second operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
-            printTypeName(state->typeStack[offset+1].type,stderr);
+            printTypeName(&(state->typeStack[offset+1].type),stderr);
             fputs(" expected an integer\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -3079,7 +3198,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           }
           if(!isPointerType(&(state->typeStack[offset].type))){
             fprintf(stderr,"invalid first operand for %s %s : ",opName(op.opType),idNames[op.dataAs.idInfo.type]);
-            printTypeName(state->typeStack[offset].type,stderr);
+            printTypeName(&(state->typeStack[offset].type),stderr);
             fputs(" is not a pointer\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -3103,6 +3222,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_TMP_VAR:
         case ID_TUPLE:
           break;
+        case ID_TYPE:
+          fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
+          return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       }
       break;
     case OP_SET_VALUE:
@@ -3137,7 +3259,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_GLOBAL_VAR:
           if(op.dataType.typeClass==TYPECLASS_UNDEFINED||(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID)){
             fputs("invalid type for predeclared variable: ",stderr);
-            printTypeName(op.dataType,stderr);
+            printTypeName(&(op.dataType),stderr);
             fputs("\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -3154,6 +3276,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+        case ID_TYPE:
+          fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
+          return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       }
       break;
     case OP_DECLARE:
@@ -3162,7 +3287,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_GLOBAL_VAR:
           if(op.dataType.typeClass==TYPECLASS_PRIMITIVE&&op.dataType.typeDataAs.primitive==PRIMITIVE_VOID){
             fputs("cannot declare variables of type: ",stderr);
-            printTypeName(op.dataType,stderr);
+            printTypeName(&(op.dataType),stderr);
             fputs("\n",stderr);
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
@@ -3172,10 +3297,10 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           }
           offset=state->typeCount-1;
           if(op.dataType.typeClass==TYPECLASS_UNDEFINED){
-            if(op.dataType.typeDataAs.predeclaredId<=0||op.dataType.typeDataAs.predeclaredId>state->nPredeclaredTypes)
+            if(op.dataType.typeDataAs.typeId<=0||op.dataType.typeDataAs.typeId>state->nPredeclaredTypes)
                 return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
             //TODO don't set constant variables to type writable
-            state->predeclaredTypes[op.dataType.typeDataAs.predeclaredId-1]=asWritableType(state->typeStack[offset].type,true);//set predeceased type
+            state->predeclaredTypes[op.dataType.typeDataAs.typeId-1]=asWritableType(state->typeStack[offset].type,true);//set predeceased type
             op.dataType=asWritableType(state->typeStack[offset].type,true);
           }else{
             r=(Error){.errorCode=requireTypes("variable declaration",state,&op.dataType,1,op.filePos),.pos=op.filePos};
@@ -3199,6 +3324,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+        case ID_TYPE:
+          fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
+          return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       }
       break;
     case OP_NEW:
@@ -3240,7 +3368,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           fprintf(stderr,"the operand of %s has to be an addressable type \n",opName(op.opType));
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
-      op.dataType=pointerType(state->typeStack[offset].type);
+      op.dataType=pointerType(&(state->typeStack[offset].type));
       //store result in temp variable
       if(ensureOpCap(state,state->opCount+state->typeStack[offset].opCount+1))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
