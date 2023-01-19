@@ -24,20 +24,20 @@ end                         ## end the if-statement
 
 Code is read as a sequence of tokens separated by white-spaces, there are 4 types of tokens 
 
-### Strings
-  will push start and end with a `"` can contain escape sequences <!-- TODO link --> 
-### characters:
+### string literals
+  start and end with a `"` can contain escape sequences <!-- TODO link --> 
+### characters literals
   start and end with a `'` can contain escape sequences <!-- TODO link -->
 ### numbers constants
   Number literals (currently only integers) are a sequence of digits optionally prefixed with a `-`
   After the `-` you can use he prefixes `0b` for binary and `0x` for hexadecimal numbers
-### comments 
-  Line comments start with `##` 
-  multi-line comments start with `#+` and end with `+#`
 ### named constants
   <!-- TODO --> 
 - `true` and `false`
 - type-names, see types-section<!-- TODO link -->
+### comments 
+  line comments start with `##` 
+  multi-line comments start with `#+` and end with `+#`
 ### assignments
 <!-- TODO --> 
 ### operators
@@ -71,13 +71,40 @@ const-pointers can currently not be used directly
 
 ### tuples
 `tuple(` `)` or `(` `)` can be used to define tuple-types
-the elements of a tuple are simple a list of types separated by spaces, a tuple has to contain at least one element
+the elements of a tuple are given as a list of types separated by spaces, a tuple has to contain at least one element
+
+Tuples can be created by using the `new` operator with the correct type after a list of the element values.
+The elements of a tuple can be accessed using `.0` to `.<N-1>` with `N` being the element count of that tuple
 
 Examples:
 ```
-( i64 i64 )          ## a pair of 64-bit integers
-tuple( i8 ptr  i64 ) ## a tuple containing a pointer to i8 and a 64-bit number
+( i64 i64 )                    ## a pair of 64-bit integers
+tuple( i8 ptr  i64 )           ## a tuple containing a pointer to i8 and a 64-bit number
+0 1 ( i64 i64 ) new =:: aPair  ## creates a new tuple of type ( i64 i64 ) with elements 0 and 1 and strores the result in 'aPair'
+aPair .0                       ## gets the first element of the tuple aPair
+aPair .1                       ## gets the second element of the tuple aPair
 ```
+
+### structure
+structures can be defined with `struct(` `)`
+the elements of a struct are a list of types followed by a `:` an the corresponding field name
+
+Structs can be created by using the `new` operator with the correct type after a list of the element values in the order they appeared in the original definition.
+The elements of a struct can be accessed using `.<elementName>`
+
+
+Examples:
+```
+struct( i8 ptr :chars i64 :length )           ## a tuple containing a pointer to i8 and a 64-bit number
+
+4 2 struct( i64 : x  i64 : y ) new =:: point  ## creates a pair of 64-bit integers and stores it in the variable 'point'
+point .x                                      ## gets the first component of the struct point
+point .y                                      ## gets the second component of the struct point
+```
+
+### enums
+
+<!-- TODO --> 
 
 ### procedure types
 
