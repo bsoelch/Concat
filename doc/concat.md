@@ -102,9 +102,33 @@ point .x                                      ## gets the first component of the
 point .y                                      ## gets the second component of the struct point
 ```
 
-### enums
+### enumerations/unions
+enumerations can be defined with `enum(` `)`
+the elements of an enum are a list of field names, optionally preceded by a type-name followed by an `:` 
+Typed enums can be used to emulate unions and optionals.
 
-<!-- TODO --> 
+Examples:
+```
+enum( A B C D ) type =: anEnum                             ## decalre a new enum called anEnum
+enum( empty i64 : asInt float : asFloat ) type =: number?  ## decalre an enum with 3 elements empty, asInt and asFloat asInt and asFloat can hold a value
+```
+
+The enum constants can be accessed using `.<elementName>`, 
+if the label does not hold a value storing these constants in a variable or returning them from a function automatically creates a matching instance of the corresponding enum. 
+To create enum instances with stored values use the `new` operator on the corresponding enum constant.
+The `==` and `!=` operators can be used to check if an enum instance stores a value of a given constant
+To access the value stored in the enum use `.<elementName>` on a matching instance, accessing the field on instances of other enum constants will lead to a run-time error.
+
+```
+anEnum .A  =:: e1              ## set e1 anEnum .A
+3 number? .asInt new =:: n     ## set n to an enum of type number? with value 3
+n number? .asFloat == if
+  n .asFloat print ## n is a float
+else n number? .asInt == if
+  n .asInt print   ## n is an int  
+end ## n is empty
+```
+
 
 ### procedure types
 
