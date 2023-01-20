@@ -9,7 +9,6 @@
 #define ERROR_MEMORY -1
 #define ERROR_IO -2
 #define ERROR_UNIMPLEMENTED -3
-#define MIN_ERROR -3
 //errors in compiled code -> positive values
 #define ERROR_TYPE 1
 #define ERROR_SYNTAX 2 
@@ -23,6 +22,7 @@
 
 //exit codes for errors in compiled program
 #define PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE 1
+#define PROG_EXIT_CODE_WRONG_ENUM_INDEX   2
 
 //negate indices (internal errors have negative error codes)
 const char* const internalErrors [] = {[-ERROR_MEMORY]="ERROR_MEMORY",[-ERROR_IO]="ERROR_IO",[-ERROR_UNIMPLEMENTED]="ERROR_UNIMPLEMENTED",};
@@ -31,9 +31,7 @@ const char* const compilerErrors [] = {
 [ERROR_REDECLARATION]="redeclaration",[ERROR_UNSUPPORTED_ESCAPE_SEQUENCE]="unsupported escape sequence",[WARNING_CODEPOINT_OUT_OF_RANGE]="code-point out of range",
 [ERROR_EOF]="unexpected end of file",};
 const char* errorName(int errorCode){
-  if(errorCode<MIN_ERROR){
-    return "unknown internal error";
-  }
+  //TODO check if errorCode in array range
   if(errorCode<0){
     return internalErrors[-errorCode];
   }
@@ -201,7 +199,9 @@ typedef enum{
   OP_BINARY_OPERATOR, 
   OP_UNARY_OPERATOR,  
   
-  OP_CHECK_ARRAY_BOUNDS,//special operation for checking array bounds   checkBounds id  length  compiles to  if(tmpId<0||tmpId>=LENGTH) exit(ARRAY_ACCESS);
+  OP_CHECK_ARRAY_BOUNDS,//special operation for checking array bounds             params: index length            exits the program if index < 0 or index >= length
+  OP_CHECK_ENUM_INDEX,//special operation for checking if enum index corresponds to current value  params: enum   exits the program if enum.lable != data.asI64 
+  
   OP_CODE_BLOCK,  
   
   OP_DECLARE_PROCEDURE, 
@@ -230,10 +230,12 @@ const char* opName(OpType type){
     case OP_CAST:return "OP_CAST";
     case OP_ADDR_OF:return "OP_ADDR_OF";
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
+    case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
   }
   return "UNDEFINED";
 }
 const char* CHECK_BOUNDS_NAME="concatInternal_checkArrayBounds";
+const char* CHECK_ENUM_INDEX_NAME="concatInternal_checkEnumIndex";
 //types
 typedef enum{
   TYPECLASS_UNDEFINED,
@@ -823,6 +825,8 @@ typedef enum{
   ID_PROCEDURE,
   ID_TUPLE,//base element of a tuple-access chain
   ID_TUPLE_ELEMENT,//chain element in tuple-access chain
+  ID_ENUM_LABEL,   //get label of enum
+  ID_ENUM_ELEMENT, //get element of enum
   ID_POINTER,
   ID_POINTER_OFFSET,
   ID_INTERMEDIATE_RESULT,
@@ -834,7 +838,7 @@ typedef struct{
   IdentifierType type;
 }IdentifierInfo;
 const char* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
-  [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
+  [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_ENUM_LABEL]="enum label",[ID_ENUM_ELEMENT]="enum element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
   [ID_INTERMEDIATE_RESULT]="intermediate result",[ID_TMP_VAR]="temporary variable",[ID_TYPE]="type"};
 void printIdInfo(IdentifierInfo info,FILE* out){
   fprintf(out,"%s (%"PRIi32")",idNames[info.type],info.id);
@@ -875,6 +879,7 @@ void printOperation(Operation op,FILE* out){
     printTypeName(&op.dataType,out);
   switch(op.opType){
     case OP_CONSTANT:
+    case OP_CHECK_ENUM_INDEX:
       fprintf(out," %"PRIi64"",op.dataAs.i64);
       break;
     case OP_STRING_CONST:
@@ -1047,6 +1052,12 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       fputs(");\n",target);
       break;
     case OP_CONSTANT:
+      if(op->dataType.typeClass==TYPECLASS_ENUM_LABEL){
+        fputs("((",target);
+        printTypeNameC(&op->dataType,target);
+        fprintf(target,")%" PRIi64 ")",op->dataAs.i64);
+        break;
+      }
       if(!isPrimitiveType(&(op->dataType))){
           fputs("constants of non-primitive type ",stderr);
           printTypeName(&op->dataType,stderr);
@@ -1074,6 +1085,11 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       fputs(",",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);//length
       fputs(");\n",target);
+      break;
+    case OP_CHECK_ENUM_INDEX:
+      fprintf(target,"%s(",CHECK_ENUM_INDEX_NAME);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);//index
+      fprintf(target,".label,%"PRIi64");\n",op->dataAs.i64);
       break;
     case OP_GET:
       switch(op->dataAs.idInfo.type){
@@ -1107,6 +1123,16 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case ID_TUPLE_ELEMENT:
           fputs("tuple access without base tuple\n",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
+        case ID_ENUM_LABEL:
+          fputs("(",target);
+          COMPILE_OP_RETURN_ERROR(target,op,opSize);
+          fputs(").label",target);
+          break;
+        case ID_ENUM_ELEMENT:
+          fputs("(",target);
+          COMPILE_OP_RETURN_ERROR(target,op,opSize);
+          fprintf(target,").data.e%"PRIi32,op->dataAs.idInfo.id);
+          break;
         case ID_POINTER:
           if(op->dataAs.idInfo.id==0){
             fputs("(*(",target);
@@ -1173,6 +1199,8 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case ID_ARGUMENT:
         case ID_TUPLE:
         case ID_TUPLE_ELEMENT:
+        case ID_ENUM_LABEL:
+        case ID_ENUM_ELEMENT:
         case ID_POINTER:
         case ID_POINTER_OFFSET:
         case ID_TYPE:
@@ -1205,6 +1233,10 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case ID_TUPLE_ELEMENT:
           fputs("cannot declare tuple elements",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
+        case ID_ENUM_LABEL:
+        case ID_ENUM_ELEMENT:
+          fputs("cannot declare enum elements",stderr);
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
         case ID_POINTER:
         case ID_POINTER_OFFSET:
           fputs("cannot declare pointers",stderr);
@@ -1233,7 +1265,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       if(op->dataType.typeClass==TYPECLASS_ENUM){
         fputs("(",target);
         printTypeNameC(&(op->dataType),target);
-        fprintf(target,"){.current=%"PRIi64,op->dataAs.i64);
+        fprintf(target,"){.label=%"PRIi64,op->dataAs.i64);
         if(isVoidType(op->dataType.typeDataAs.composite->types+op->dataAs.i64)){
           fputs(",.data={0}}",target);
           break;
@@ -1428,6 +1460,10 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case ID_TUPLE_ELEMENT:
           fputs("calling tuple elements directly is not supported\n",stderr);
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
+        case ID_ENUM_LABEL:
+        case ID_ENUM_ELEMENT:
+          fputs("calling enum elements directly is not supported\n",stderr);
+          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
         case ID_POINTER:
           if(op->dataAs.idInfo.id>0){
             fputs("calling tuple elements directly is not supported\n",stderr);
@@ -1479,7 +1515,7 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
   return (SizeOrError){.isError=false,.as={.size=size}};
 }
 
-Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint,bool hasCheckBounds){
+Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint,bool hasCheckBounds,bool hasCheckEnum){
   fputs("#include <stdlib.h>\n",target);
   fputs("#include <stdio.h>\n",target);
   fputs("#include <inttypes.h>\n",target);
@@ -1533,16 +1569,16 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
       fputs("};\n",target);
     }
     if(compositeTypes[i].flags&(FLAG_IS_ENUM)){
-      fprintf(target,"struct enum%"PRIi32"Impl{\n",i);
+      fprintf(target,"struct enum%"PRIi32"Impl{\n",i);//XXX declare enum with all void members as integer
       fputs("union{\n",target);
-      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){//XXX don't print union for enums with all void members
+      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
         if(isVoidType(&(compositeTypes[i].types[e])))
           continue;//skip void types
         printTypeNameC(&(compositeTypes[i].types[e]),target);
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("} data;\n",target);
-      fputs("int32_t current;\n",target);
+      fputs("int32_t label;\n",target);
       fputs("};\n",target);
     }
   }
@@ -1568,6 +1604,13 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
     fputs("  if(index>=0 && index<length)\n    return;\n",target);
     fputs("  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\"\\n\",index,length);\n",target);
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
+    fputs("}\n",target);
+  }
+  if(hasCheckEnum){
+    fprintf(target,"void %s(int64_t current,int64_t expected){\n",CHECK_ENUM_INDEX_NAME);
+    fputs("  if(current==expected)\n    return;\n",target);
+    fputs("  fprintf(stderr,\"enum index (%\"PRIi64\") does not match current value (%\"PRIi64\")\\n\",expected,current);\n",target);
+    fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_WRONG_ENUM_INDEX);
     fputs("}\n",target);
   }
   if(!hasEntryPoint)//auto-wrap programs without entry point into a main function
@@ -1701,6 +1744,7 @@ typedef struct{
   int32_t predeclaredTypes;
   bool hasEntryPoint;
   bool hasCheckBounds;
+  bool hasCheckEnum;
 }Program;
 
 typedef struct{
@@ -2118,7 +2162,10 @@ int readType(String name,CodeFile* codeFile,CompilerState* state){
 }
 
 int requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes){
-  if(bufferedTypes!=nTypes){
+  size_t enumLabelTypes=0;
+  for(;enumLabelTypes<bufferedTypes&&typeBuffer[enumLabelTypes].typeClass==TYPECLASS_ENUM_LABEL;)
+    enumLabelTypes++;
+  if(bufferedTypes<nTypes||bufferedTypes>nTypes+enumLabelTypes){//allow enum label types to remain on stack
     fprintf(stderr,"wrong number of type arguments for operation '%.*s' expected %zu got %zu\n",(int)opName->length,opName->chars,nTypes,bufferedTypes);
     return ERROR_SYNTAX;
   }
@@ -2287,7 +2334,8 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     }
     printTypeName(&type,stderr);
     fputs(" is currently not supported for operator new\n",stderr);
-    //XXX help message for enum type
+    if(type.typeClass==TYPECLASS_ENUM)
+      fputs(" to create an enum specify the label of the current value\n",stderr);
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
   }else if(wordEquals(&word,"cast")){ 
     err=requireCompileTimeType(&word,&type,1);
@@ -2690,6 +2738,7 @@ typedef struct{
   int32_t nPredeclaredTypes;
   DataType* predeclaredTypes;
   bool hasCheckBounds;
+  bool hasCheckEnum;
 }TypeCheckState;
 
 //prints the type stack (for debug purposes)
@@ -2924,9 +2973,10 @@ Error extractCompositeOps(TypeCheckState* state,size_t nStackValues){
 bool canAssign(const DataType* src,const DataType* target){
   if(typeEquals(src,target))
     return true;
+  if(src->typeClass==TYPECLASS_ENUM&&target->typeClass==TYPECLASS_ENUM_LABEL&&src->typeDataAs.composite->id==target->typeDataAs.composite->id)
+    return true;//allow auto-cast from enum to enum-label
   if(!isPrimitiveType(src)||!isPrimitiveType(target))//XXX? assigning pointer to const pointer
     return false;
-  
   return isInteger(src->typeDataAs.primitive)&&isInteger(target->typeDataAs.primitive)&&
     numberRank(src->typeDataAs.primitive)<=numberRank(target->typeDataAs.primitive);//implicit casts only from small int to large int
 }
@@ -2954,6 +3004,9 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
       nCasts++;
       continue;
     }
+    if(state->typeStack[state->typeCount-nTypes+k].type.typeClass==TYPECLASS_ENUM_LABEL&&types[k].typeClass==TYPECLASS_ENUM&&
+      state->typeStack[state->typeCount-nTypes+k].type.typeDataAs.composite->id==types[k].typeDataAs.composite->id)
+      continue;//enum-label -> enum  don't increase cast count
     typeErrorMessage(opName,types[k],state->typeStack[state->typeCount-nTypes+k].type);
     return ERROR_TYPE;
   }
@@ -2973,15 +3026,37 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
     shiftCount+=state->typeStack[state->typeCount-k].opCount;
     if(typeEquals(&(types[nTypes-k]),&(state->typeStack[state->typeCount-k].type)))
       continue;
-    if(canAssign(&(state->typeStack[state->typeCount-k].type),&(types[nTypes-k]))){
-      memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
-      shiftCount=0;
-      nCasts--;
+    if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM_LABEL&&types[nTypes-k].typeClass==TYPECLASS_ENUM){
+      if(state->typeStack[state->typeCount-k].opCount>1||state->opStack[offset].opType!=OP_CONSTANT)
+        return ERROR_MEMORY;//enum-label type should only exist on enum-label constants
+      state->typeStack[state->typeCount-k].type.typeClass=TYPECLASS_ENUM;
+      if(!isVoidType(&(state->typeStack[state->typeCount-k].type.typeDataAs.composite->types[state->opStack[offset].dataAs.i64]))){
+        String label=state->typeStack[state->typeCount-k].type.typeDataAs.composite->labels[state->opStack[offset].dataAs.i64];
+        fprintf(stderr,"missing data value for creating enum constant %.*s in ",(int)label.length,label.chars);
+        printTypeName(&(state->typeStack[state->typeCount-k].type),stderr);
+        fputs("\nto create enum values with data use the 'new' operator\n",stderr);
+        return ERROR_SYNTAX;
+      }
+      state->opStack[offset].opType=OP_NEW;
+      state->opStack[offset].dataType.typeClass=TYPECLASS_ENUM;
+      continue;
+    }
+    memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
+    shiftCount=0;
+    nCasts--;
+    if(canCast(&(state->typeStack[state->typeCount-k].type),&(types[nTypes-k]))){
       state->opStack[offset+nCasts]=(Operation){.opType=OP_CAST,.filePos=pos,.dataType=types[nTypes-k],.dataAs={0}};
       state->typeStack[state->typeCount-k].type=types[nTypes-k];
       state->typeStack[state->typeCount-k].opCount++;
       continue;
     }
+    if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM&&types[nTypes-k].typeClass==TYPECLASS_ENUM_LABEL){
+      state->opStack[offset+nCasts]=(Operation){.opType=OP_GET,.filePos=pos,.dataType=types[nTypes-k],.dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0}}};
+      state->typeStack[state->typeCount-k].type=types[nTypes-k];
+      state->typeStack[state->typeCount-k].opCount++;
+      continue;
+    }
+    return ERROR_UNIMPLEMENTED;
   }
   return 0;
 }
@@ -3282,7 +3357,21 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             typesMatch=true;
             break;
           }
-          // fall through
+          //enum-entry equality 
+          if((inTypes[0].typeClass==TYPECLASS_ENUM||inTypes[0].typeClass==TYPECLASS_ENUM_LABEL)&&inTypes[1].typeClass==TYPECLASS_ENUM_LABEL&&
+              inTypes[0].typeDataAs.composite->id==inTypes[1].typeDataAs.composite->id){
+            inTypes[0].typeClass=TYPECLASS_ENUM_LABEL;
+            op.dataType=primitiveType(PRIMITIVE_BOOL);
+            typesMatch=true;
+            break;
+          }
+          //number equality
+          op.dataType=typeCheckCompare(inTypes);
+          if(op.dataType.typeClass!=TYPECLASS_UNDEFINED){
+            typesMatch=true;
+            break;
+          }
+          break;
         case GT:
         case GE:
         case LE:
@@ -3342,6 +3431,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return r;
       return addCompiledOp(state,op,1);
     case OP_CHECK_ARRAY_BOUNDS:
+    case OP_CHECK_ENUM_INDEX:
       break;
     case OP_GET:
       switch(op.dataAs.idInfo.type){
@@ -3485,6 +3575,10 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_TMP_VAR:
         case ID_TUPLE:
           break;
+        case ID_ENUM_LABEL:
+        case ID_ENUM_ELEMENT:
+          fputs("direct access to enum elements should not exist at this stage of compilation\n",stderr);
+          return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
         case ID_TYPE:
           fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
           return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
@@ -3501,7 +3595,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         fputs(" is not a struct or enum\n",stderr);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
-      //TODO field detection in enums
       CompositeType* mStruct=state->typeStack[offset].type.typeDataAs.composite;
       int32_t labelIndex=indexOfStringArray(mStruct->labels,mStruct->typeCount,
         &op.dataAs.string,1);
@@ -3510,8 +3603,34 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         fprintf(stderr," does not have a field '%.*s'\n",(int)op.dataAs.string.length,op.dataAs.string.chars);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
-      op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex}}};
-      return compileGetTupleElement(state,mStruct,&op);
+      if(state->typeStack[offset].type.typeClass==TYPECLASS_STRUCT){
+        op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex}}};
+        return compileGetTupleElement(state,mStruct,&op);
+      }
+      if(isVoidType(&(mStruct->types[labelIndex]))){
+        fprintf(stderr,"'%.*s' in ",(int)op.dataAs.string.length,op.dataAs.string.chars);
+        printTypeName(&(state->typeStack[offset].type),stderr);
+        fputs(" does not hold a value\n",stderr);
+        return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+      }
+      r=extractCompositeOps(state,1);
+      if(r.errorCode!=0)
+        return r;
+      size_t enumIndex=state->tmpCount++;
+      tmpId=state->tmpCount++;
+      r=addCompiledOp(state,opDeclareIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos),1);
+      if(r.errorCode!=0)
+        return r;
+      if(ensureOpCap(state,state->opCount+5))
+        return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+      state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}};
+      state->compiledOperations[state->opCount++]=opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos);
+      state->hasCheckEnum=1;
+      state->compiledOperations[state->opCount++]=opDeclareIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos);
+      state->compiledOperations[state->opCount++]=(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,.dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex}}};
+      state->compiledOperations[state->opCount++]=opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos);
+      //XXX? store element value on stack, to allow write operation
+      return pushValue(state,opGetIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
     case OP_SET_VALUE:
       if(state->typeCount<2){
         fprintf(stderr,"not enough operands for operation %s : need 2 got %zu\n",opName(op.opType),state->typeCount);
@@ -3557,6 +3676,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_INTERMEDIATE_RESULT:
         case ID_TMP_VAR:
         case ID_ARGUMENT:
+        case ID_ENUM_LABEL:
+        case ID_ENUM_ELEMENT:
             fputs("cannot (directly) declare ",stderr);
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
@@ -3581,17 +3702,21 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
           }
           offset=state->typeCount-1;
+          //find types for auto-types
           if(op.dataType.typeClass==TYPECLASS_UNDEFINED){
             if(op.dataType.typeDataAs.typeId<=0||op.dataType.typeDataAs.typeId>state->nPredeclaredTypes)
                 return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-            //TODO don't set constant variables to type writable
-            state->predeclaredTypes[op.dataType.typeDataAs.typeId-1]=asWritableType(state->typeStack[offset].type,true);//set predeceased type
-            op.dataType=asWritableType(state->typeStack[offset].type,true);
-          }else{
-            r=(Error){.errorCode=requireTypes("variable declaration",state,&op.dataType,1,op.filePos),.pos=op.filePos};
-            if(r.errorCode!=0){
-              return r;
-            }
+            int64_t typeId=op.dataType.typeDataAs.typeId-1;
+            op.dataType=state->typeStack[offset].type;
+            if(op.dataType.typeClass==TYPECLASS_ENUM_LABEL)
+              op.dataType.typeClass=TYPECLASS_ENUM;
+            //XXX don't set constant variables to type writable
+            op.dataType=asWritableType(op.dataType,true);
+            state->predeclaredTypes[typeId]=op.dataType;
+          }
+          r=(Error){.errorCode=requireTypes("variable declaration",state,&op.dataType,1,op.filePos),.pos=op.filePos};
+          if(r.errorCode!=0){
+            return r;
           }
           r=extractCompositeOps(state,1);
           if(r.errorCode!=0)
@@ -3605,6 +3730,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_INTERMEDIATE_RESULT:
         case ID_TMP_VAR:
         case ID_ARGUMENT:
+        case ID_ENUM_LABEL:
+        case ID_ENUM_ELEMENT:
             fputs("cannot (directly) declare ",stderr);
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
@@ -4043,6 +4170,7 @@ Error typeCheckProgram(Program* prog,CodeFile* src){
   prog->ops=state.compiledOperations;
   prog->opCount=state.opCount;
   prog->hasCheckBounds=state.hasCheckBounds;
+  prog->hasCheckEnum=state.hasCheckEnum;
   state.compiledOperations=NULL;
   freeContents(&state);
   return (Error){.errorCode=0,.pos=src->currentPos};
@@ -4127,7 +4255,7 @@ int main(int argc,char** argv){
     puts("");
 		//3. compile operations to C
     FILE* out=fopen(targetFile,"w");
-    err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint,p.hasCheckBounds);
+    err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint,p.hasCheckBounds,p.hasCheckEnum);
     if(err.errorCode){
       printError(err,stderr);
       goto RETURN;

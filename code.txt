@@ -33,8 +33,10 @@ entryPoint:
   X .1 @ .1 print
   
   0 anEnum .C new =:: e
-  ## e anEnum .A == print
-  ## e anEnum .C == print
+  anEnum .A anEnum =: f
+  e anEnum .A == print
+  e anEnum .C == print
+  e .C print
   
   0 'A' aStruct new =:: struct 
   struct .i struct .c + print
