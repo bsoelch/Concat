@@ -1578,7 +1578,7 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("} data;\n",target);
-      fputs("int32_t label;\n",target);
+      fputs("int32_t const label;\n",target);
       fputs("};\n",target);
     }
   }

@@ -48,7 +48,7 @@ union{
 int32_t e2;
 int8_t e3;
 } data;
-int32_t label;
+int32_t const label;
 };
 struct tuple8Impl{
 const int8_t* e0;
