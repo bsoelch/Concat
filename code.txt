@@ -41,6 +41,7 @@ entryPoint:
   e .C print
   
   proc0 addrOf =:: fct
+  1 1 fct () print print
   
   0 'A' aStruct new =:: struct 
   struct .i struct .c + print

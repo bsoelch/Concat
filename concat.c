@@ -978,6 +978,7 @@ void initProgStringChars(void){
   }
 }
 
+SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize);
 
 SizeOrError tupleElementAccess(FILE* target,int32_t depth,const Operation* op,size_t opCount,bool isPtr){
   if(depth<0||opCount<(size_t)depth)
@@ -1006,6 +1007,26 @@ SizeOrError tupleElementAccess(FILE* target,int32_t depth,const Operation* op,si
                 if(r.isError)\
                   return r;\
                 size+=r.as.size;\
+
+SizeOrError compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,size_t size,size_t opSize){
+  SizeOrError r;
+  DataType* in=op->dataType.typeDataAs.procedure->inType;
+  DataType* out=op->dataType.typeDataAs.procedure->outType;
+  fputs("(",target);
+  if(in->typeClass==TYPECLASS_FLAT_TUPLE){
+    for(int32_t e=0;e<in->typeDataAs.composite->typeCount;e++){
+      if(e>0)
+        fputs(",",target);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);
+    }
+  }else if(!isVoidType(in)){
+    COMPILE_OP_RETURN_ERROR(target,op,opSize);
+  }
+  fputs(")",target);
+  if(isVoidType(out))//function without return value terminates statement
+    fputs(";\n",target);
+  return (SizeOrError){.isError=false,.as={.size=size}};
+} 
 
 SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize){
   if(opSize<1)
@@ -1473,73 +1494,24 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
       fputs("int main(void){\n",target);
       break;
     case OP_CALL_PTR:
-      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=op->filePos}}};
-    case OP_CALL:
-      switch(op->dataAs.idInfo.type){
-        case ID_TMP_VAR:
-        case ID_INTERMEDIATE_RESULT:
-          fprintf(target,"tmp%"PRIi32"(",op->dataAs.idInfo.id);
-          break;
-        case ID_LOCAL_VAR:
-          fprintf(target,"local%"PRIi32"(",op->dataAs.idInfo.id);
-          break;
-        case ID_GLOBAL_VAR:
-          fprintf(target,"global%"PRIi32"(",op->dataAs.idInfo.id);
-          break;
-        case ID_PROCEDURE:
-          fprintf(target,"procedure%"PRIi32"(",op->dataAs.idInfo.id);
-          break;
-        case ID_ARGUMENT:
-          fprintf(target,"arg%"PRIi32"(",op->dataAs.idInfo.id);
-          break;
-        case ID_TUPLE:
-        case ID_TUPLE_ELEMENT:
-          fputs("calling tuple elements directly is not supported\n",stderr);
-          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
-        case ID_ENUM_LABEL:
-        case ID_ENUM_ELEMENT:
-          fputs("calling enum elements directly is not supported\n",stderr);
-          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
-        case ID_POINTER:
-          if(op->dataAs.idInfo.id>0){
-            fputs("calling tuple elements directly is not supported\n",stderr);
-            return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
-          }
-          fputs("(*(",target);
-          COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          fputs("))(",target);
-          break;
-        case ID_POINTER_OFFSET:
-          if(op->dataAs.idInfo.id>0){
-            fputs("calling tuple elements directly is not supported\n",stderr);
-            return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
-          }
-          fputs("(*((",target);
-          COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          fputs(")+",target);
-          COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          fputs("))(",target);
-          break;
-        case ID_TYPE:
-          fputs("cannot call types",stderr);
-          return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
-      }
-      DataType* in=op->dataType.typeDataAs.procedure->inType;
-      DataType* out=op->dataType.typeDataAs.procedure->outType;
-      if(in->typeClass==TYPECLASS_FLAT_TUPLE){
-        for(int32_t e=0;e<in->typeDataAs.composite->typeCount;e++){
-          if(e>0)
-            fputs(",",target);
-          COMPILE_OP_RETURN_ERROR(target,op,opSize);
-        }
-      }else if(!isVoidType(in)){
-        COMPILE_OP_RETURN_ERROR(target,op,opSize);
-      }
-      if(isVoidType(out)){//function without return value terminates statement
-        fputs(");\n",target);
-        break;
-      }
+      fputs("(",target);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
+      r=compileProcArgs(target,compiledOps,op,size,opSize);
+      if(r.isError)
+        return r;
+      size=r.as.size;
+      break;
+    case OP_CALL:
+      if(op->dataAs.idInfo.type!=ID_PROCEDURE){
+        fprintf(stderr,"calling %s directly is not supported\n",idNames[op->dataAs.idInfo.type]);
+        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
+      }
+      fprintf(target,"procedure%"PRIi32,op->dataAs.idInfo.id);
+      r=compileProcArgs(target,compiledOps,op,size,opSize);
+      if(r.isError)
+        return r;
+      size=r.as.size;
       break;
     case OP_GET_LABEL:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op->opType));
@@ -3123,19 +3095,28 @@ Error addCompiledOp(TypeCheckState* state,Operation op,size_t types){
   return addCompiledStackOps(state,op,0,types,types,true);
 }
 
-Error typeCheckCall(Operation* op,TypeCheckState* state){
+Error typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
+  Error r;
   DataType calledType=op->dataType;
-  //TODO call of function pointer
+  if(isPtr){
+    if(state->typeCount<1||!isCallableType(&(state->typeStack[state->typeCount-1].type))){
+      fprintf(stderr,"the argument of %s has to be a callable Type\n",opName(op->opType));
+      return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
+    }
+    calledType=state->typeStack[state->typeCount-1].type;
+    if(isPointerType(&calledType))
+      calledType=*(calledType.typeDataAs.type);
+    op->dataType=calledType;
+  }
   //  need check for value of pointer
-  if(calledType.typeClass!=TYPECLASS_PROCEDURE&&
-    ((!isPointerType(&calledType))||
-      calledType.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE)){//not procedure or pointer to procedure 
+  if(!isCallableType(&calledType)){
     fputs("cannot call objects of type ",stderr);
     printTypeName(&calledType,stderr);
     fputs("\n",stderr);
     return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
   }
   ProcedureType* procType=calledType.typeDataAs.procedure;
+  DataType outType=*(procType->outType);
   size_t argCount=1;
   size_t totalOps=0;
   if(isVoidType(procType->inType)){//no arguments
@@ -3147,49 +3128,46 @@ Error typeCheckCall(Operation* op,TypeCheckState* state){
   if(procType->inType->typeClass==TYPECLASS_FLAT_TUPLE){
     argCount=procType->inType->typeDataAs.composite->typeCount;
   }
+  int32_t tmpId;
+  if(!isVoidType(&outType)){//store result in temp variable
+    if(ensureOpCap(state,state->opCount+1))
+      return (Error){.errorCode=ERROR_MEMORY,.pos=op->filePos};
+    tmpId=state->tmpCount++;
+    state->compiledOperations[state->opCount++]=opDeclareIntermediate(procType->outType,tmpId,op->filePos);
+  }
+  //compile operation
+  r=extractCompositeOps(state,argCount+(isPtr?1:0));
+  if(r.errorCode!=0)
+    return r;
+  r=addCompiledOp(state,*op,isPtr?1:0);
+  if(r.errorCode!=0)
+    return r;
   if(state->typeCount<argCount){
     fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
     return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
   }
   size_t offset=state->typeCount-argCount;
-  
   if(argCount==1){//function takes single argument, the single argument will not be a flat tuple (tuples have >= 2 elements)
-    int r=requireTypes("procedure argument",state,procType->inType,1,op->filePos);
-    if(r!=0){
-      return (Error){.errorCode=r,.pos=op->filePos};
+    int err=requireTypes("procedure argument",state,procType->inType,1,op->filePos);
+    if(err!=0){
+      return (Error){.errorCode=err,.pos=op->filePos};
     }
     totalOps=state->typeStack[offset].opCount;
   }
   if(argCount>1){//argument is flat tuple
     CompositeType* inTypes=procType->inType->typeDataAs.composite;
-    int r=requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
-    if(r!=0){
-      return (Error){.errorCode=r,.pos=op->filePos};
+    int err=requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
+    if(err!=0){
+      return (Error){.errorCode=err,.pos=op->filePos};
     }
     for(int32_t i=0;i<inTypes->typeCount;i++){
       totalOps+=state->typeStack[offset+i].opCount;
     }
   }
-  Error r;
-  DataType outType=*(procType->outType);
-  if(isVoidType(&outType)){//no return values
-    r=extractCompositeOps(state,argCount);
-    if(r.errorCode!=0)
-      return r;
-    return addCompiledOp(state,*op,argCount);
-  }
-  r=extractCompositeOps(state,argCount);
-  if(r.errorCode!=0)
-    return r;
-  //store result in temp variable
-  if(ensureOpCap(state,state->opCount+1))
-    return (Error){.errorCode=ERROR_MEMORY,.pos=op->filePos};
-  int32_t tmpId=state->tmpCount++;
-  state->compiledOperations[state->opCount++]=opDeclareIntermediate(procType->outType,tmpId,op->filePos);
   //update op-stack
-  r=addCompiledOp(state,*op,argCount);
-  if(r.errorCode!=0)
-    return r;
+  r=addCompiledStackOps(state,*op/*ignored*/,0,argCount,argCount,false);
+  if(r.errorCode!=0||isVoidType(&outType))
+    return r;//no need to update stack if called function returns void
   //add values of call
   if(outType.typeClass!=TYPECLASS_FLAT_TUPLE){//single return value
     return pushValue(state,opGetIntermediate(procType->outType,tmpId,op->filePos));
@@ -4105,9 +4083,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_CALL_PTR:
-      return (Error){.errorCode=ERROR_UNIMPLEMENTED,.pos=op.filePos};
+      return typeCheckCall(&op,state,true);
     case OP_CALL:
-      return typeCheckCall(&op,state);
+      return typeCheckCall(&op,state,false);
     case OP_RETURN:     
       if(isVoidType(&(op.dataType))){
           if(checkNonemptyStack(state,"unfinished operation at end of procedure"))

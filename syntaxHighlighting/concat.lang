@@ -98,6 +98,7 @@
           ~                   |
           neg|negate          |
           \[\]                |
+          \(\)                |
           @                   |
           addrOf
         )(\Z|(?=[[:space:]])) # end of file or white-space
