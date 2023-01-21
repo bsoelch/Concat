@@ -206,7 +206,8 @@ typedef enum{
   
   OP_DECLARE_PROCEDURE, 
   OP_RETURN,       
-  OP_CALL,         // procType procId
+  OP_CALL,         // procType procId  
+  OP_CALL_PTR,    
   ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END 
 }OpType;
 const char* opName(OpType type){
@@ -224,6 +225,7 @@ const char* opName(OpType type){
     case OP_DECLARE_PROCEDURE:return "OP_DECLARE_PROCEDURE"; 
     case OP_RETURN:return "OP_RETURN";      
     case OP_CALL:return "OP_CALL";
+    case OP_CALL_PTR:return "OP_CALL_PTR";
     case ENTRY_POINT:return "ENTRY_POINT";
     case OP_NEW:return "OP_NEW";
     case OP_CAST:return "OP_CAST";
@@ -561,13 +563,19 @@ bool isNumberType(const DataType* type){
 bool isPointerType(const DataType* type){
   return type->typeClass==TYPECLASS_POINTER||type->typeClass==TYPECLASS_CONST_POINTER;
 }
+bool isCallableType(const DataType* type){
+  if(isPointerType(type))
+    type=type->typeDataAs.type;
+  return type->typeClass==TYPECLASS_PROCEDURE;
+}
 //checks id type is an array-type  a tuple consisting of a pointer and an integer
 bool isArrayType(const DataType* type){
-  if(type->typeClass!=TYPECLASS_TUPLE)
+  if(type->typeClass!=TYPECLASS_STRUCT)
     return false;
   CompositeType* elts=type->typeDataAs.composite;
   if(elts->typeCount!=2)
     return false;
+  //TODO check label names
   if(!isPointerType(elts->types+0))
     return false;
   if(!isIntType(elts->types+1))
@@ -648,9 +656,11 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
-      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
-      if(noRecurse||i<0)
-        return i;
+      if(type->typeClass!=TYPECLASS_FLAT_TUPLE){
+        i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
+        if(noRecurse||i<0)
+          return i;
+      }
       j=fputs("(",file);
       if(j<0)
         return j;
@@ -747,6 +757,8 @@ int printTypeNameC(const DataType* type,FILE* file){
     case TYPECLASS_POINTER:
       j=printTypeNameC(type->typeDataAs.type,file);
       if(j<0)
+        return j;
+      if(isCallableType(type))
         return j;
       i+=j;
       j=fputs("*",file);
@@ -924,7 +936,8 @@ ProgramString programStrings[MAX_PROG_STRINGS];
 DataType progStringType(void){
     DataType chr=primitiveType(PRIMITIVE_I8);//store in intermediate value to allow call by reference
     DataType stringElts[2]={constPointerType(&chr),primitiveType(PRIMITIVE_I64)};
-    return compositeType(TYPECLASS_TUPLE,stringElts,NULL,2);//ensure string-type exists
+    String   labels[2]={{.chars="raw",.length=3},{.chars="length",.length=6}};
+    return compositeType(TYPECLASS_STRUCT,stringElts,labels,2);//ensure string-type exists
 }
 IntOrErrorCode addProgString(String s){
   if(progStringCount+1>=MAX_PROG_STRINGS)
@@ -937,7 +950,7 @@ IntOrErrorCode addProgString(String s){
   return (IntOrErrorCode){.isError=false,.as={.i64=progStringCount++}};
 }
 int progStringCmp(const void* a,const void* b){
-  return -stringCompare(((const ProgramString*)a)->value,((const ProgramString*)b)->value);
+  return ((const ProgramString*)b)->value.length-((const ProgramString*)a)->value.length;
 }
 void initProgStringChars(void){
   qsort(programStrings,progStringCount,sizeof(ProgramString),&progStringCmp);
@@ -989,16 +1002,17 @@ SizeOrError tupleElementAccess(FILE* target,int32_t depth,const Operation* op,si
 } 
 
 #define COMPILE_OP_RETURN_ERROR(target, op,opSize)\
-                r=compileOp(target,op+size,opSize-size);\
+                r=compileOp(target,compiledOps+size,op+size,opSize-size);\
                 if(r.isError)\
                   return r;\
                 size+=r.as.size;\
 
-SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
+SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize){
   if(opSize<1)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=op->filePos}}};
   SizeOrError r;
   size_t size=1;
+  bool needCast=compiledOps==0||(op-1)->opType!=OP_DECLARE;
   switch(op->opType){
     case OP_PRINT:
       fputs("printf(\"%",target);
@@ -1048,15 +1062,29 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       fputs(");\n",target);
       break;
     case OP_CONSTANT:
-      if(op->dataType.typeClass==TYPECLASS_ENUM_LABEL){
+      if(needCast){
         fputs("((",target);
-        printTypeNameC(&op->dataType,target);
-        fprintf(target,")%" PRIi64 ")",op->dataAs.i64);
+        printTypeNameC(&(op->dataType),target);
+        fputs(")",target);
+      }
+      if(op->dataType.typeClass==TYPECLASS_ENUM_LABEL){
+        fprintf(target,"%" PRIi64,op->dataAs.i64);
+        if(needCast)
+          fputs(")",target);
         break;
       }
       DataType strType=progStringType();
       if(typeEquals(&op->dataType,&strType)){
-        fprintf(target,"(string%" PRIi64")",op->dataAs.i64);
+        int64_t i=-1;
+        for(size_t j=0;j<progStringCount;j++){//find string in reordered string array
+          if(programStrings[j].stringId==op->dataAs.i64){
+            i=j;
+            break;
+          }
+        }   
+        fprintf(target,"{.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu}",programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
+        if(needCast)
+          fputs(")",target);
         break;
       }
       if(!isPrimitiveType(&(op->dataType))){
@@ -1070,7 +1098,9 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         case PRIMITIVE_I8:
         case PRIMITIVE_I32:
         case PRIMITIVE_I64:
-          fprintf(target,"((%s)%" PRIi64 ")",primitiveNameC(op->dataType.typeDataAs.primitive),op->dataAs.i64);
+          fprintf(target,"%" PRIi64,op->dataAs.i64);
+          if(needCast)
+            fputs(")",target);
           break;
         default:
           fprintf(stderr,"%s constants are (currently) not supported",primitiveName(op->dataType.typeDataAs.primitive));
@@ -1248,9 +1278,12 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
       break;
     case OP_NEW:
       if(op->dataType.typeClass==TYPECLASS_TUPLE||op->dataType.typeClass==TYPECLASS_STRUCT){
-        fputs("(",target);
-        printTypeNameC(&(op->dataType),target);
-        fputs("){",target);
+        if(needCast){
+          fputs("(",target);
+          printTypeNameC(&(op->dataType),target);
+          fputs(")",target);
+        }
+        fputs("{",target);
         for(int32_t e=0;e<op->dataType.typeDataAs.composite->typeCount;e++){
           if(e>0)
             fputs(",",target);
@@ -1261,9 +1294,12 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         break;
       }
       if(op->dataType.typeClass==TYPECLASS_ENUM){
-        fputs("(",target);
-        printTypeNameC(&(op->dataType),target);
-        fprintf(target,"){.label=%"PRIi64,op->dataAs.i64);
+        if(needCast){
+          fputs("(",target);
+          printTypeNameC(&(op->dataType),target);
+          fputs(")",target);
+        }
+        fprintf(target,"{.label=%"PRIi64,op->dataAs.i64);
         if(isVoidType(op->dataType.typeDataAs.composite->types+op->dataAs.i64)){
           fputs(",.data={0}}",target);
           break;
@@ -1436,6 +1472,8 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
     case ENTRY_POINT:
       fputs("int main(void){\n",target);
       break;
+    case OP_CALL_PTR:
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=op->filePos}}};
     case OP_CALL:
       switch(op->dataAs.idInfo.type){
         case ID_TMP_VAR:
@@ -1520,11 +1558,8 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
   fputs("#include <string.h>\n",target);
   fputs("#include <stdbool.h>\n",target);
   //initialize strings
-  DataType stringType=TYPE_UNDEFINED;
-  if(progStringCount>0){
-    stringType=progStringType();//ensure string-type exists
+  if(progStringCount>0)
     initProgStringChars();//initialize characters
-  }
   for(size_t i=0;i<procTypeCount;i++){
     if(procTypes[i].outType->typeClass==TYPECLASS_FLAT_TUPLE){//ensure flat-tuple return types are generated as tuples for code generation
       procTypes[i].outType->typeDataAs.composite->flags|=FLAG_IS_TUPLE;
@@ -1594,8 +1629,6 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
       }
       fputs("0x00};\n",target);
     }
-    fprintf(target,"const tuple%"PRIi32" string%"PRIi32" = {.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu};\n",
-      stringType.typeDataAs.tuple->id,programStrings[i].stringId,programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
   }
   if(hasCheckBounds){
     fprintf(target,"void %s(int64_t index,int64_t length){\n",CHECK_BOUNDS_NAME);
@@ -1615,7 +1648,7 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
     fputs("int main(void){\n",target);
   SizeOrError r;
   for(size_t p=0;p<opCount;){
-    r=compileOp(target,ops+p,opCount-p);
+    r=compileOp(target,p,ops+p,opCount-p);
     if(r.isError)
       return r.as.error;
     p+=r.as.size;
@@ -1747,6 +1780,7 @@ typedef struct{
 
 typedef struct{
   Scope* currentScope;
+  size_t compiledOps;
   int32_t currentProcId;
   int32_t procScope;
   int32_t scopeLevel;
@@ -1850,7 +1884,7 @@ IntOrErrorCode parseInt(String number,int base){
   uint64_t maxSaveValue=negate?(INT64_MAX/base):-(INT64_MIN/base);
   for(;i<number.length;i++){
     if(i>i0&&i<number.length-1&&(number.chars[i]=='_'||number.chars[i]=='\''))
-      continue;//ignore _ and 'if they are in the interior of the numbre
+      continue;//ignore _ and ' if they are in the interior of the number
     if(value>maxSaveValue){
       overflow=true;//check if remaining word is integer before returning overflow error
     }
@@ -2195,10 +2229,7 @@ int readType(String name,CodeFile* codeFile,CompilerState* state){
 }
 
 int requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes){
-  size_t enumLabelTypes=0;
-  for(;enumLabelTypes<bufferedTypes&&typeBuffer[enumLabelTypes].typeClass==TYPECLASS_ENUM_LABEL;)
-    enumLabelTypes++;
-  if(bufferedTypes<nTypes||bufferedTypes>nTypes+enumLabelTypes){//allow enum label types to remain on stack
+  if(bufferedTypes!=nTypes){
     fprintf(stderr,"wrong number of type arguments for operation '%.*s' expected %zu got %zu\n",(int)opName->length,opName->chars,nTypes,bufferedTypes);
     return ERROR_SYNTAX;
   }
@@ -2347,22 +2378,19 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     }
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"new")){
+    if(state->compiledOps>0&&(op-1)->opType==OP_CONSTANT&&(op-1)->dataType.typeClass==TYPECLASS_ENUM_LABEL){
+      //change enum label to enum declaration
+      (*(op-1)).opType=OP_NEW;
+      (*(op-1)).filePos=wordPos;
+      (*(op-1)).dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
+      return (SizeOrError){.isError=false,.as={.size=0}};
+    }
     err=requireCompileTimeType(&word,&type,1);
     if(err!=0)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=err,.pos=wordPos}}};
     if(type.typeClass==TYPECLASS_TUPLE||type.typeClass==TYPECLASS_STRUCT){
       (*op)=(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
       return (SizeOrError){.isError=false,.as={.size=1}};
-    }
-    if(type.typeClass==TYPECLASS_ENUM_LABEL){
-      if((op-1)->dataType.typeClass!=TYPECLASS_ENUM_LABEL)//check if previous instruction is enum-label
-        return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
-      //current type is enum label -> previous op pushes label constant
-      //update label operation
-      (*(op-1)).opType=OP_NEW;
-      (*(op-1)).filePos=wordPos;
-      (*(op-1)).dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
-      return (SizeOrError){.isError=false,.as={.size=0}};
     }
     printTypeName(&type,stderr);
     fputs(" is currently not supported for operator new\n",stderr);
@@ -2409,11 +2437,8 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     }
     (*op)=opConstant(type,index,wordPos);
     op->dataType.typeClass=TYPECLASS_ENUM_LABEL;//change type-class to enum-label
-    typeBuffer[bufferedTypes++]=op->dataType;
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
-  while(bufferedTypes>0&&typeBuffer[bufferedTypes-1].typeClass==TYPECLASS_ENUM_LABEL)
-    bufferedTypes--;//ignore enum labels in type-buffer
   if(bufferedTypes>0){
     fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
@@ -2507,7 +2532,15 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"addrOf")){
+    if(state->compiledOps>0&&(op-1)->opType==OP_CALL){// procName addrOf -> get Prod id
+      (op-1)->opType=OP_GET;
+      (op-1)->dataType=pointerType(&((op-1)->dataType));
+      return (SizeOrError){.isError=false,.as={.size=0}};
+    }
     (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
+    return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"()")){
+    (*op)=(Operation){.opType=OP_CALL_PTR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"if")){
     Scope* newScope=openScope(BLOCK_IF);
@@ -2600,50 +2633,27 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   //  remember global variable declarations
   //  if identifier matches global var def during type-check phase replace with global var
   
-  
-  //old parser code TODO OP_CALL_POINTER
-  /*
-  if(wordEquals(&word,"CALL")){
-    String procName=nextWord(code,codeSize,NULL);
-    if(procName.length==0)
-      return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
-    ScopeNode* id;
-    int r=getIdentifier(procName,&id);
-    if(r!=0)
-      return (SizeOrError){.isError=true,.as={.error=r}};
-    //type has to be procedure or pointer to procedure
-    if(id->type.typeClass!=TYPECLASS_PROCEDURE&&
-      ((id->type.typeClass!=TYPECLASS_POINTER&&id->type.typeClass!=TYPECLASS_CONST_POINTER)||id->type.typeDataAs.type->typeClass!=TYPECLASS_PROCEDURE))
-      return (SizeOrError){.isError=true,.as={.error=ERROR_TYPE}};
-    (*op)=(Operation){.opType=OP_CALL,.dataType=id->type,.dataAs={.idInfo={.type=id->idType,.id=id->id}}};
-    return (SizeOrError){.isError=false,.as={.size=1}};
-  }else{
-    fprintf(stderr,"unknown command: %.*s\n",(int)word.length,word.chars);
-    return (SizeOrError){.isError=true,.as={.error=ERROR_SYNTAX}};
-  }*/
-  
   fprintf(stderr,"unknown command: %.*s\n",(int)word.length,word.chars);
   return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
 }
 Program compileToOps(CodeFile* codeFile){
-  size_t opCount=0;
   size_t opsCap=256;
   SizeOrError r;
   Operation* compileOps=malloc(opsCap*sizeof(Operation));
   openScope(BLOCK_START);
-  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0};
+  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
   while(codeFile->codeSize>0){
-    r=readOperation(compileOps+opCount,codeFile,&state);
+    r=readOperation(compileOps+state.compiledOps,codeFile,&state);
     if(r.isError){
       printError(r.as.error,stderr);
       return (Program){.ops=NULL,.opCount=0};//TODO better error value
     }
-    opCount+=r.as.size;
-    if(opCount>=opsCap-5){
+    state.compiledOps+=r.as.size;
+    if(state.compiledOps>=opsCap-5){
       return (Program){.ops=NULL,.opCount=0};//TODO ensure there is enough capacity
     }
   }
-  return (Program){.ops=compileOps,.opCount=opCount,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
+  return (Program){.ops=compileOps,.opCount=state.compiledOps,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(const char* exprName,DataType expected,DataType got){
@@ -2662,11 +2672,11 @@ typedef struct{
 }TypeOrError;
 
 DataType typeCheckPointerArithmetic(DataType* inTypes,bool subtract){
-  if(!isPointerType(&(inTypes[0])))
+  if(!isPointerType(inTypes+0)||isCallableType(inTypes+0))
     return TYPE_UNDEFINED;//inTypes[0] is no pointer
   if(isIntType(&(inTypes[1])))
     return inTypes[0];
-  if(subtract&&typeEquals(&(inTypes[0]),&(inTypes[1]))){//XXX? ptr - const ptr
+  if(subtract&&typeEquals(inTypes+0,inTypes+1)){//XXX? ptr - const ptr
     return primitiveType(PRIMITIVE_I64);
   }
   return TYPE_UNDEFINED;
@@ -2958,7 +2968,8 @@ Error extractCompositeOpsOffset(TypeCheckState* state,size_t nStackValues,size_t
   }
   size_t newOffset=offset;
   for(size_t i=state->typeCount-nStackValues-skipValues;i<state->typeCount-skipValues;i++){
-    if(state->typeStack[i].opCount>1){
+    //extract multi-element operations and array constants to tmp variable
+    if(state->typeStack[i].opCount>1||(state->opStack[offset].opType==OP_CONSTANT&&isArrayType(&(state->opStack[offset].dataType)))){
       int32_t tmpId=state->tmpCount++;
       r=compileCompositeOp(state,&(state->typeStack[i].type),state->opStack+offset,state->typeStack[i].opCount,tmpId);
       if(r.errorCode!=0)
@@ -3431,8 +3442,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       offset=state->typeCount-1;
-      //can only print pointer or non-void primitive
-      if(!isPointerType(&(state->typeStack[offset].type))&&(!isPrimitiveType(&(state->typeStack[offset].type))||isVoidType(&(state->typeStack[offset].type)))){
+      //can only print pointer (excluding procedure pointer) or non-void primitive
+      if((!isPointerType(&(state->typeStack[offset].type))||isCallableType(&(state->typeStack[offset].type)))
+        &&(!isPrimitiveType(&(state->typeStack[offset].type))||isVoidType(&(state->typeStack[offset].type)))){
         fputs("cannot print values of type ",stderr);
         printTypeName(&(state->typeStack[offset].type),stderr);
         fputs("\n",stderr);
@@ -4092,6 +4104,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       }
       break;
+    case OP_CALL_PTR:
+      return (Error){.errorCode=ERROR_UNIMPLEMENTED,.pos=op.filePos};
     case OP_CALL:
       return typeCheckCall(&op,state);
     case OP_RETURN:     

@@ -28,7 +28,7 @@ entryPoint:
   i32 : C 
     
   11_00'10'01 print
-    
+      
   selfPtr : X
   1 X addrOf selfPtr new X =
   X .1 print
@@ -40,9 +40,11 @@ entryPoint:
   e anEnum .C == print
   e .C print
   
+  proc0 addrOf =:: fct
+  
   0 'A' aStruct new =:: struct 
   struct .i struct .c + print
-  
+      
   A print
   B print
   
@@ -65,7 +67,8 @@ entryPoint:
   tmp addrOf ( i64 i64 ) ptr =: strPtr
   strPtr 0 [] .0 print
   
-  "Hello" 1 [] print
+  "Hello World!" 1 [] print
+  "World" .length print
 
   1
     A 0 == if 
