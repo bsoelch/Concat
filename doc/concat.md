@@ -21,20 +21,47 @@ else .1 x < _if             ## checks if the seconds element of y (still on stac
 end                         ## end the if-statement
 ```
 
+Concat code is a sequence of 'words' separated by any number of white-spaces 
 
-Code is read as a sequence of tokens separated by white-spaces, there are 4 types of tokens 
+### string and characters literals
 
-### string literals
-  start and end with a `"` can contain escape sequences <!-- TODO link --> 
-### characters literals
-  start and end with a `'` can contain escape sequences <!-- TODO link -->
+string literals start and end with a `"` , character literals use a `'` 
+The type of a char literal is `char` ( which is an alias for `i8` ) while a string literals are represented by the composite type `string` 
+
+string and char literals are allowed to contain special characters including new-lines 
+additionally the following escape sequences are supported
+
+<!-- TODO escape sequences -->
+
+Examples:
+```
+"Hello World!" string =: hello   ## create a new string saying Hello World
+"Multi-line
+string \" "                   
+'A' char =: aChar 
+```
+
+  
 ### numbers constants
-  Number literals (currently only integers) are a sequence of digits optionally prefixed with a `-`
-  After the `-` you can use he prefixes `0b` for binary and `0x` for hexadecimal numbers
+
+Integer literals are a sequence of digits optionally prefixed with a `-`
+after the sign you can use he prefixes `0b` for binary and `0x` for hexadecimal numbers
+within an integer literal `_` and `'` can be used as digit separators.
+
+The type of an integer literal is `i32` if it first in a 32-bit integer otherwise `i64`.
+
+Examples:
+```
+123_456_789           ## decimal integer 123456789 
+0b11'00'10'01         ## binary 11001001 (decimal 201)
+-0b11                 ## binary negative 3
+0x1234_5678_9abc_def0 ## a large hexadecimal number, will be interpreted as 64-bit integer
+```
+  
 ### named constants
   <!-- TODO --> 
-- `true` and `false`
-- type-names, see types-section<!-- TODO link -->
+- `true` and `false` (type `bool`)
+- type-names, see types-section <!-- TODO link -->
 ### comments 
   line comments start with `##` 
   multi-line comments start with `#+` and end with `+#`
@@ -44,6 +71,7 @@ Code is read as a sequence of tokens separated by white-spaces, there are 4 type
 <!-- TODO --> 
 ### identifiers
 <!-- TODO --> 
+
 
 ## Types
 
