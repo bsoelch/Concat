@@ -281,6 +281,7 @@ typedef struct DataType{
 #define FLAG_IS_FLAT_TUPLE 2
 #define FLAG_IS_STRUCT     4
 #define FLAG_IS_ENUM       8
+#define FLAG_VOID_ONLY     16
 struct CompositeType{
   DataType* types;
   String*   labels;
@@ -331,6 +332,88 @@ bool typeEquals(const DataType* a,const DataType* b){
     return a->typeDataAs.typeId==b->typeDataAs.typeId;
   return false;
 }
+
+int numberRank(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+      return 8;
+    case PRIMITIVE_I32:
+      return 32;
+    case PRIMITIVE_I64:
+      return 64;
+    case PRIMITIVE_FLOAT:
+      return 65;
+    case PRIMITIVE_VOID:
+      return -1;
+    case PRIMITIVE_BOOL:
+      return -1;
+  }
+  return false;
+}
+PrimitiveType numberByRank(int t){
+  switch(t){
+    case 8:
+      return PRIMITIVE_I8;
+    case 32:
+      return PRIMITIVE_I32;
+    case 64:
+      return PRIMITIVE_I64;
+    case 65:
+      return PRIMITIVE_FLOAT;
+  }
+  return PRIMITIVE_VOID;
+}
+bool isInteger(PrimitiveType t){
+  switch(t){
+    case PRIMITIVE_I8:
+    case PRIMITIVE_I32:
+    case PRIMITIVE_I64:
+      return true;
+    case PRIMITIVE_VOID:
+    case PRIMITIVE_BOOL:
+    case PRIMITIVE_FLOAT:
+      return false;
+  }
+  return false;
+}
+bool isPrimitiveType(const DataType* type){
+  return type->typeClass==TYPECLASS_PRIMITIVE;
+}
+bool isVoidType(const DataType* type){
+  return isPrimitiveType(type)&&type->typeDataAs.primitive==PRIMITIVE_VOID;
+}
+bool isBoolType(const DataType* type){
+  return isPrimitiveType(type)&&type->typeDataAs.primitive==PRIMITIVE_BOOL;
+}
+bool isIntType(const DataType* type){
+  return isPrimitiveType(type)&&isInteger(type->typeDataAs.primitive);
+}
+bool isNumberType(const DataType* type){
+  return isPrimitiveType(type)&&numberRank(type->typeDataAs.primitive)>-1;
+}
+bool isPointerType(const DataType* type){
+  return type->typeClass==TYPECLASS_POINTER||type->typeClass==TYPECLASS_CONST_POINTER;
+}
+bool isCallableType(const DataType* type){
+  if(isPointerType(type))
+    type=type->typeDataAs.type;
+  return type->typeClass==TYPECLASS_PROCEDURE;
+}
+//checks id type is an array-type  a tuple consisting of a pointer and an integer
+bool isArrayType(const DataType* type){
+  if(type->typeClass!=TYPECLASS_STRUCT)
+    return false;
+  CompositeType* elts=type->typeDataAs.composite;
+  if(elts->typeCount!=2)
+    return false;
+  //TODO check label names
+  if(!isPointerType(elts->types+0))
+    return false;
+  if(!isIntType(elts->types+1))
+    return false;
+  return true;
+}
+
 DataType primitiveType(PrimitiveType id){
   return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id},.isAddressable=false,.isWritable=false};
 }
@@ -401,6 +484,15 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
     default:
       return TYPE_UNDEFINED;
   }
+  bool isVoid=true;
+  for(int32_t i=0;i<eltCount;i++){
+    if(!isVoidType(elements+i)){
+      isVoid=false;
+      break;
+    }
+  }
+  if(isVoid)
+    classFlag|=FLAG_VOID_ONLY;
   int64_t typeMatch=-1,typesIndex;
   int64_t labelMatch=-1,labelsIndex;
   for(int32_t i=0;i<compositeCount;i++){
@@ -502,86 +594,6 @@ DataType asConstType(DataType src){
   return src;
 }
 
-int numberRank(PrimitiveType t){
-  switch(t){
-    case PRIMITIVE_I8:
-      return 8;
-    case PRIMITIVE_I32:
-      return 32;
-    case PRIMITIVE_I64:
-      return 64;
-    case PRIMITIVE_FLOAT:
-      return 65;
-    case PRIMITIVE_VOID:
-      return -1;
-    case PRIMITIVE_BOOL:
-      return -1;
-  }
-  return false;
-}
-PrimitiveType numberByRank(int t){
-  switch(t){
-    case 8:
-      return PRIMITIVE_I8;
-    case 32:
-      return PRIMITIVE_I32;
-    case 64:
-      return PRIMITIVE_I64;
-    case 65:
-      return PRIMITIVE_FLOAT;
-  }
-  return PRIMITIVE_VOID;
-}
-bool isInteger(PrimitiveType t){
-  switch(t){
-    case PRIMITIVE_I8:
-    case PRIMITIVE_I32:
-    case PRIMITIVE_I64:
-      return true;
-    case PRIMITIVE_VOID:
-    case PRIMITIVE_BOOL:
-    case PRIMITIVE_FLOAT:
-      return false;
-  }
-  return false;
-}
-bool isPrimitiveType(const DataType* type){
-  return type->typeClass==TYPECLASS_PRIMITIVE;
-}
-bool isVoidType(const DataType* type){
-  return isPrimitiveType(type)&&type->typeDataAs.primitive==PRIMITIVE_VOID;
-}
-bool isBoolType(const DataType* type){
-  return isPrimitiveType(type)&&type->typeDataAs.primitive==PRIMITIVE_BOOL;
-}
-bool isIntType(const DataType* type){
-  return isPrimitiveType(type)&&isInteger(type->typeDataAs.primitive);
-}
-bool isNumberType(const DataType* type){
-  return isPrimitiveType(type)&&numberRank(type->typeDataAs.primitive)>-1;
-}
-bool isPointerType(const DataType* type){
-  return type->typeClass==TYPECLASS_POINTER||type->typeClass==TYPECLASS_CONST_POINTER;
-}
-bool isCallableType(const DataType* type){
-  if(isPointerType(type))
-    type=type->typeDataAs.type;
-  return type->typeClass==TYPECLASS_PROCEDURE;
-}
-//checks id type is an array-type  a tuple consisting of a pointer and an integer
-bool isArrayType(const DataType* type){
-  if(type->typeClass!=TYPECLASS_STRUCT)
-    return false;
-  CompositeType* elts=type->typeDataAs.composite;
-  if(elts->typeCount!=2)
-    return false;
-  //TODO check label names
-  if(!isPointerType(elts->types+0))
-    return false;
-  if(!isIntType(elts->types+1))
-    return false;
-  return true;
-}
 
 const char* typeClassName(TypeClass cls){
   switch(cls){
@@ -1573,16 +1585,18 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
       }
       fputs("};\n",target);
     }
-    if(compositeTypes[i].flags&(FLAG_IS_ENUM)){
+    if(compositeTypes[i].flags&FLAG_IS_ENUM){
       fprintf(target,"struct enum%"PRIi32"Impl{\n",i);//XXX declare enum with all void members as integer
-      fputs("union{\n",target);
-      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        if(isVoidType(&(compositeTypes[i].types[e])))
-          continue;//skip void types
-        printTypeNameC(&(compositeTypes[i].types[e]),target);
-        fprintf(target," e%"PRIi16";\n",e);
+      if((compositeTypes[i].flags&FLAG_VOID_ONLY)==0){//omit output of empty union
+        fputs("union{\n",target);
+        for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
+          if(isVoidType(&(compositeTypes[i].types[e])))
+            continue;//skip void types
+          printTypeNameC(&(compositeTypes[i].types[e]),target);
+          fprintf(target," e%"PRIi16";\n",e);
+        }
+        fputs("} data;\n",target);
       }
-      fputs("} data;\n",target);
       fputs("int32_t const label;\n",target);
       fputs("};\n",target);
     }

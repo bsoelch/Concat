@@ -21,6 +21,8 @@ type : selfPtr
 
 struct( i32 : i i8 : c ) type =: aStruct
 enum( A B i32 : C  char : D ) type =: anEnum 
+enum( A B C ) type =: labelEnum 
+enum( empty i64 ptr : data ) type =: optionalI64 
 
 entryPoint:
   1 1 +  i32 =: A
