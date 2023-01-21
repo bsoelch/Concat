@@ -31,7 +31,8 @@ const char* const compilerErrors [] = {
 [ERROR_REDECLARATION]="redeclaration",[ERROR_UNSUPPORTED_ESCAPE_SEQUENCE]="unsupported escape sequence",[WARNING_CODEPOINT_OUT_OF_RANGE]="code-point out of range",
 [ERROR_EOF]="unexpected end of file",};
 const char* errorName(int errorCode){
-  //TODO check if errorCode in array range
+  if(errorCode<-(int)(sizeof(internalErrors)/sizeof(char*))||errorCode>(int)(sizeof(compilerErrors)/sizeof(char*)))
+    return "unknown error";
   if(errorCode<0){
     return internalErrors[-errorCode];
   }
@@ -183,7 +184,6 @@ int writeUnicodeChar(int64_t codepoint,char* target){
 typedef enum{
   OP_PRINT,
   OP_CONSTANT,
-  OP_STRING_CONST,
   
   OP_PRE_DECLARE,
   OP_DECLARE,
@@ -213,7 +213,6 @@ const char* opName(OpType type){
   switch(type){
     case OP_PRINT:return "OP_PRINT";
     case OP_CONSTANT:return "OP_CONSTANT";
-    case OP_STRING_CONST:return "OP_STRING_CONST";
     case OP_DECLARE:return "OP_DECLARE";
     case OP_PRE_DECLARE:return "OP_PRE_DECLARE";
     case OP_GET:return "OP_GET";
@@ -880,9 +879,6 @@ void printOperation(Operation op,FILE* out){
   switch(op.opType){
     case OP_CONSTANT:
     case OP_CHECK_ENUM_INDEX:
-      fprintf(out," %"PRIi64"",op.dataAs.i64);
-      break;
-    case OP_STRING_CONST:
       fprintf(out," (%"PRIi64")",op.dataAs.i64);
       break;
     case OP_GET:
@@ -1058,6 +1054,11 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
         fprintf(target,")%" PRIi64 ")",op->dataAs.i64);
         break;
       }
+      DataType strType=progStringType();
+      if(typeEquals(&op->dataType,&strType)){
+        fprintf(target,"(string%" PRIi64")",op->dataAs.i64);
+        break;
+      }
       if(!isPrimitiveType(&(op->dataType))){
           fputs("constants of non-primitive type ",stderr);
           printTypeName(&op->dataType,stderr);
@@ -1075,9 +1076,6 @@ SizeOrError compileOp(FILE* target,const Operation* op,size_t opSize){
           fprintf(stderr,"%s constants are (currently) not supported",primitiveName(op->dataType.typeDataAs.primitive));
           return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=op->filePos}}};
       }
-      break;
-    case OP_STRING_CONST:
-      fprintf(target,"(string%" PRIi64")",op->dataAs.i64);
       break;
     case OP_CHECK_ARRAY_BOUNDS:
       fprintf(target,"%s(",CHECK_BOUNDS_NAME);
@@ -1759,6 +1757,38 @@ typedef struct{
 }CompilerState;
 
 
+
+Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
+}
+Operation opGetIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
+}
+Operation opPredeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+}
+Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+}
+Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+}
+
+Operation opBinaryOperator(BinaryOperator binOpType,FilePosition pos){
+  return (Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={.binOp=binOpType}};
+}
+Operation opUnaryOperator(UnaryOperator unOpType,FilePosition pos){
+  return (Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={.unOp=unOpType}};
+}
+Operation opCodeBlock(BlockType blockType,FilePosition pos){
+  return (Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={.block=blockType}};
+}
+Operation opConstant(DataType type,int64_t constData,FilePosition pos){
+  return (Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=pos,.dataAs={.i64=constData}};
+}
+
+//XXX more operation generator functions
+
 void updateFilePosition(CodeFile* codeFile){
   if(*(codeFile->code)=='\n'){
     codeFile->currentPos.line++;
@@ -2190,7 +2220,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     IntOrErrorCode strId=addProgString(word);
     if(strId.isError)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=strId.as.error,.pos=wordPos}}};
-    (*op)=(Operation){.opType=OP_STRING_CONST,.dataType=progStringType(),.filePos=wordPos,.dataAs={.i64=strId.as.i64}};
+    (*op)=opConstant(progStringType(),strId.as.i64,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
   if(wordType.wordType==WORD_TYPE_CHAR){
@@ -2198,13 +2228,12 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       fprintf(stderr,"character literal '%.*s' contains more that one character\n",(int)word.length,word.chars);
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     }
-    (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_I8),.filePos=wordPos,.dataAs={.i64=word.chars[0]}};
+    (*op)=opConstant(primitiveType(PRIMITIVE_I8),word.chars[0],wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
   IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
   if(!asInt.isError){
-    bool isI32=asInt.as.i64<=INT32_MAX&&asInt.as.i64>=INT32_MIN;
-    (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(isI32?PRIMITIVE_I32:PRIMITIVE_I64),.filePos=wordPos,.dataAs={.i64=asInt.as.i64}};
+    (*op)=opConstant(primitiveType((asInt.as.i64<=INT32_MAX&&asInt.as.i64>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),asInt.as.i64,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
   if(asInt.as.error!=ERROR_PARSE_INT)
@@ -2375,7 +2404,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       fprintf(stderr," does not have a field '%.*s'\n",(int)word.length,word.chars);
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
     }
-    (*op)=(Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=wordPos,.dataAs={.i64=index}};
+    (*op)=opConstant(type,index,wordPos);
     op->dataType.typeClass=TYPECLASS_ENUM_LABEL;//change type-class to enum-label
     typeBuffer[bufferedTypes++]=op->dataType;
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -2387,65 +2416,65 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=wordPos}}};
   }
   if(wordEquals(&word,"true")){
-    (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_BOOL),.filePos=wordPos,.dataAs={.i64=true}};
+    (*op)=opConstant(primitiveType(PRIMITIVE_BOOL),1,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"false")){
-    (*op)=(Operation){.opType=OP_CONSTANT,.dataType=primitiveType(PRIMITIVE_BOOL),.filePos=wordPos,.dataAs={.i64=false}};
+    (*op)=opConstant(primitiveType(PRIMITIVE_BOOL),0,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"+")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=ADD}};
+    (*op)=opBinaryOperator(ADD,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"-")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=SUBTRACT}};
+    (*op)=opBinaryOperator(SUBTRACT,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"*")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=MULTIPLY}};
+    (*op)=opBinaryOperator(MULTIPLY,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"/")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=DIVIDE}};
+    (*op)=opBinaryOperator(DIVIDE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"%")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=MOD}};
+    (*op)=opBinaryOperator(MOD,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"&")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=AND}};
+    (*op)=opBinaryOperator(AND,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"|")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=OR}};
+    (*op)=opBinaryOperator(OR,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"^")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=XOR}};
+    (*op)=opBinaryOperator(XOR,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"&&")){//XXX implement short-circuit  and/or using code-blocks
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
   }else if(wordEquals(&word,"||")){
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
   }else if(wordEquals(&word,"==")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=EQ}};
+    (*op)=opBinaryOperator(EQ,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"!=")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=NE}};
+    (*op)=opBinaryOperator(NE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,">")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=GT}};
+    (*op)=opBinaryOperator(GT,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,">=")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=GE}};
+    (*op)=opBinaryOperator(GE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"<=")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=LE}};
+    (*op)=opBinaryOperator(LE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"<")){
-    (*op)=(Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.binOp=LT}};
+    (*op)=opBinaryOperator(LT,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"neg")||wordEquals(&word,"negate")){
-    (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=NEGATE}};
+    (*op)=opUnaryOperator(NEGATE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"++")){
-    (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=INCREMENT}};
+    (*op)=opUnaryOperator(INCREMENT,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"--")){
-    (*op)=(Operation){.opType=OP_UNARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.unOp=DECREMENT}};
+    (*op)=opUnaryOperator(DECREMENT,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
     String varName=nextWord(codeFile,&wordType);
@@ -2483,11 +2512,11 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=wordPos}}};
     state->currentScope=newScope;
     state->scopeLevel++;
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF}};
+    (*op)=opCodeBlock(BLOCK_IF,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"_if")){
     //no scope change for _if
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_IF2}};
+    (*op)=opCodeBlock(BLOCK_IF2,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"while")){
     Scope* newScope=openScope(BLOCK_WHILE);
@@ -2496,7 +2525,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     state->currentScope=newScope;
     state->scopeLevel++;
     
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_WHILE}};
+    (*op)=opCodeBlock(BLOCK_WHILE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"do")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
     closeScope();
@@ -2506,7 +2535,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     state->currentScope=newScope;
     //scope count does not change
         
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_DO}};
+    (*op)=opCodeBlock(BLOCK_DO,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"else")){
     closeScope();
@@ -2516,7 +2545,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     state->currentScope=newScope;
     //scope count does not change
     
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_ELSE}};
+    (*op)=opCodeBlock(BLOCK_ELSE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"end")){
     closeScope();
@@ -2526,7 +2555,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
       state->procScope=-1;
     }
     
-    (*op)=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.block=BLOCK_END}};
+    (*op)=opCodeBlock(BLOCK_END,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"return")){
     if(state->currentProcId<0){
@@ -2820,23 +2849,6 @@ void freeContents(TypeCheckState* state){
   free(state->predeclaredTypes);
   state->predeclaredTypes=NULL;
 }
-
-Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
-}
-Operation opGetIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
-}
-Operation opPredeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
-}
-Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
-}
-Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
-}
-//TODO more operation generator functions
 
 bool checkNonemptyStack(TypeCheckState* state,const char* message){
   if(state->opStackCount>0){
@@ -3240,7 +3252,6 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
   BlockInfo blockInfo;
   switch(op.opType){
     case OP_CONSTANT:
-    case OP_STRING_CONST:
       return pushValue(state,op);
     case OP_UNARY_OPERATOR:
       if(state->typeCount<1){
@@ -3965,7 +3976,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
           if(ensureOpCap(state,state->opCount+1))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
-          state->compiledOperations[state->opCount++]=(Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.block=BLOCK_DO}};
+          state->compiledOperations[state->opCount++]=opCodeBlock(BLOCK_DO,op.filePos);
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_DO:
           blockInfo=popBlock(state);
