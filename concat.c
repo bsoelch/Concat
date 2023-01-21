@@ -1845,9 +1845,12 @@ IntOrErrorCode parseInt(String number,int base){
       i++;
     }
   }
+  size_t i0=i;
   bool overflow=false;
   uint64_t maxSaveValue=negate?(INT64_MAX/base):-(INT64_MIN/base);
   for(;i<number.length;i++){
+    if(i>i0&&i<number.length-1&&(number.chars[i]=='_'||number.chars[i]=='\''))
+      continue;//ignore _ and 'if they are in the interior of the numbre
     if(value>maxSaveValue){
       overflow=true;//check if remaining word is integer before returning overflow error
     }

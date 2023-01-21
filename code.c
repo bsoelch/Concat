@@ -98,6 +98,7 @@ int32_t const tmp5 = (local8-((int32_t)1));
 int32_t const tmp6 = (tmp5*((int32_t)3));
 int32_t local9 = tmp6;
 int32_t local10;
+printf("%"PRIi32"\n",((int32_t)11001001));
 tuple5 local11;
 tuple5* const tmp7 = &(local11);
 tuple5 const tmp8 = (tuple5){.e0=((int32_t)1),.e1=tmp7};
