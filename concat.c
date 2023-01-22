@@ -190,6 +190,9 @@ typedef enum{
   OP_GET,
   OP_GET_LABEL,
   
+  OP_IDENTIFIER,
+  OP_IDENTIFIER_ADDRESS,
+  
   OP_SET_VALUE, //  [T] [T.writable] SET 
   
   OP_NEW,
@@ -217,6 +220,8 @@ const char* opName(OpType type){
     case OP_PRE_DECLARE:return "OP_PRE_DECLARE";
     case OP_GET:return "OP_GET";
     case OP_GET_LABEL:return "OP_GET_LABEL";
+    case OP_IDENTIFIER:return "OP_IDENTIFIER";
+    case OP_IDENTIFIER_ADDRESS:return "OP_IDENTIFIER_ADDRESS";
     case OP_SET_VALUE:return "OP_SET_VALUE";
     case OP_BINARY_OPERATOR:return "OP_BINARY_OPERATOR";
     case OP_UNARY_OPERATOR:return "OP_UNARY_OPERATOR";  
@@ -921,6 +926,8 @@ void printOperation(Operation op,FILE* out){
       fprintf(out,"%s",blockNames[op.dataAs.block]);
       break;
     case OP_GET_LABEL:
+    case OP_IDENTIFIER:
+    case OP_IDENTIFIER_ADDRESS:
       fprintf(out,"%.*s",(int)op.dataAs.string.length,op.dataAs.string.chars);
       break;
     default:
@@ -987,7 +994,7 @@ bool closeScope(void){
 ScopeNode** findNode(Scope* scope,String name){
   if(scope==NULL)
     return NULL;
-  int32_t hash=stringHash(name);
+  uint32_t hash=stringHash(name);
   ScopeNode** node=scope->nodes+(hash%SCOPE_MAP_CAP);
   while(*node!=NULL){
     if(stringCompare((*node)->key,name)==0)
@@ -1299,7 +1306,7 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
           fprintf(target,"global%" PRIi32,op->dataAs.idInfo.id);
           return (SizeOrError){.isError=false,.as={.size=size}};
         case ID_PROCEDURE:
-          fprintf(target,"&(procedure%" PRIi32")",op->dataAs.idInfo.id);
+          fprintf(target,"procedure%" PRIi32,op->dataAs.idInfo.id);
           return (SizeOrError){.isError=false,.as={.size=size}};
         case ID_TUPLE:
           //1. get tuple
@@ -1645,6 +1652,8 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
         return r;
       return (SizeOrError){.isError=false,.as={.size=r.as.size}};
     case OP_GET_LABEL:
+    case OP_IDENTIFIER:
+    case OP_IDENTIFIER_ADDRESS:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op->opType));
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
     default:
@@ -2527,11 +2536,10 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"addrOf")){
-    if(state->compiledOps>0&&(op-1)->opType==OP_CALL){// procName addrOf -> get Prod id
+    if(state->compiledOps>0&&(op-1)->opType==OP_CALL)
       (op-1)->opType=OP_GET;
-      (op-1)->dataType=pointerType(&((op-1)->dataType));
-      return (SizeOrError){.isError=false,.as={.size=0}};
-    }
+    if(state->compiledOps>0&&(op-1)->opType==OP_IDENTIFIER)
+      (op-1)->opType=OP_IDENTIFIER_ADDRESS;
     (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"()")){
@@ -2620,16 +2628,15 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   if(r==0){//identifier
     if(asIdentifier->idType!=ID_PROCEDURE)
       asIdentifier->type=asWritableType(asIdentifier->type,true);
+    else 
+      asIdentifier->type=asAddressableType(asIdentifier->type);
     (*op)=(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
       .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
     return (SizeOrError){.isError=false,.as={.size=1}};
   }
-  //TODO save identifiers as OP_IDENTIFIER
-  //  remember global variable declarations
-  //  if identifier matches global var def during type-check phase replace with global var
-  
-  fprintf(stderr,"unknown command: %.*s\n",(int)word.length,word.chars);
-  return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
+  // could not find identifier, try again in type-check phase
+  (*op)=(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}};
+  return (SizeOrError){.isError=false,.as={.size=1}};
 }
 Program compileToOps(CodeFile* codeFile){
   size_t opsCap=256;
@@ -2772,6 +2779,8 @@ typedef struct{
   BlockInfo* openBlocks;
   size_t blockCap;
   size_t blockCount;
+  
+  Scope* globalScope;
   
   int32_t tmpCount;
   
@@ -3303,6 +3312,20 @@ bool checkLocal(TypeCheckState* state,Operation op){
 }
 
 Error typeCheckOperation(Operation op,TypeCheckState* state){
+  if(op.opType==OP_IDENTIFIER||op.opType==OP_IDENTIFIER_ADDRESS){
+    ScopeNode* asIdentifier;
+    int r=getIdentifier(op.dataAs.string,&asIdentifier);
+    if(r!=0){
+      fprintf(stderr," unknown identifer '%.*s'\n",(int)op.dataAs.string.length,op.dataAs.string.chars);
+      return (Error){.errorCode=r,.pos=op.filePos};
+    }
+    if(asIdentifier->idType!=ID_PROCEDURE)
+      asIdentifier->type=asWritableType(asIdentifier->type,true);
+    else 
+      asIdentifier->type=asAddressableType(asIdentifier->type);
+    op=(Operation){.opType=((asIdentifier->idType==ID_PROCEDURE)&&(op.opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
+      .dataType=asIdentifier->type,.filePos=op.filePos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
+  }
   size_t totalOps=0;
   int32_t offset,tmpId;
   Error r;
@@ -4222,7 +4245,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         op.dataType.typeClass=TYPECLASS_FLAT_TUPLE;//notify compiler that tuple is flat
       }
       if(op.dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op.dataType.typeDataAs.composite->typeCount){
-        fprintf(stderr,"wrong number of return values: expected %zu got %i\n",state->typeCount,op.dataType.typeDataAs.composite->typeCount);
+        fprintf(stderr,"wrong number of return values: expected %"PRIi32" got %zu\n",op.dataType.typeDataAs.composite->typeCount,state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
       }
       r=(Error){.errorCode=requireTypes("return statement",state,op.dataType.typeDataAs.composite->types,state->typeCount,op.filePos),.pos=op.filePos};
@@ -4241,6 +4264,10 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
       pushCompiledOperation(state,op);
       return (Error){.errorCode=0,.pos=op.filePos};
+    case OP_IDENTIFIER:
+    case OP_IDENTIFIER_ADDRESS:
+      fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op.opType));
+      return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
   }
   printf("type checking %s is not implemented\n",opName(op.opType));
   return (Error){.errorCode=ERROR_UNIMPLEMENTED,.pos=op.filePos};
@@ -4254,7 +4281,7 @@ Error typeCheckProgram(Program* prog,CodeFile* src){
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
     .predeclaredTypes=malloc(prog->predeclaredTypes*sizeof(DataType)),.nPredeclaredTypes=prog->predeclaredTypes,
-    .tmpCount=0,.index=0};
+    .globalScope=prog->globalScope,.tmpCount=0,.index=0};
   if(state.globalOperations==NULL||state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
     freeContents(&state);
     return (Error){.errorCode=ERROR_MEMORY,.pos=src->currentPos};

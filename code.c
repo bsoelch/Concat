@@ -106,6 +106,7 @@ tuple11 global16 = {.e0=1,.e1=1};
 tuple12 global17 = {.e0={.e0=1,.e1=1},.e1=2};
 //procedures code
 tuple0 procedure1 (int32_t arg0, int32_t arg1){
+procedure2();
 return (tuple0){.e0=arg0,.e1=arg1};
 }
 void procedure2 (void){
@@ -154,102 +155,103 @@ enum7 const tmp17 = local17;
 concatInternal_checkEnumIndex(tmp17.label,2);
 int32_t const tmp18 = (tmp17).data.e2;
 printf("%"PRIi32"\n",tmp18);
-procPtr0 local19 = &(procedure1);
-tuple0 const tmp19 = (local19)(((int32_t)1),((int32_t)1));
-int32_t const tmp20 = (tmp19).e1;
-printf("%"PRIi32"\n",tmp20);
-int32_t const tmp21 = (tmp19).e0;
+procPtr0 const tmp19 = &(procedure1);
+procPtr0 local19 = tmp19;
+tuple0 const tmp20 = (local19)(((int32_t)1),((int32_t)1));
+int32_t const tmp21 = (tmp20).e1;
 printf("%"PRIi32"\n",tmp21);
-tuple6 const tmp22 = {.e0=((int32_t)0),.e1=((int8_t)65)};
-tuple6 local20 = tmp22;
-int32_t const tmp23 = (local20).e0;
-int8_t const tmp24 = (local20).e1;
-int32_t const tmp25 = ((int32_t)tmp24);
-int32_t const tmp26 = (tmp23+tmp25);
-printf("%"PRIi32"\n",tmp26);
+int32_t const tmp22 = (tmp20).e0;
+printf("%"PRIi32"\n",tmp22);
+tuple6 const tmp23 = {.e0=((int32_t)0),.e1=((int8_t)65)};
+tuple6 local20 = tmp23;
+int32_t const tmp24 = (local20).e0;
+int8_t const tmp25 = (local20).e1;
+int32_t const tmp26 = ((int32_t)tmp25);
+int32_t const tmp27 = (tmp24+tmp26);
+printf("%"PRIi32"\n",tmp27);
 printf("%"PRIi32"\n",local13);
 printf("%"PRIi32"\n",local14);
-int8_t const tmp27 = ((int8_t)local13);
-int64_t const tmp28 = ((int64_t)tmp27);
-int64_t const tmp29 = (tmp28+((int64_t)1000000000000000000));
-printf("%"PRIi64"\n",tmp29);
-int32_t const tmp30 = (local13+((int32_t)1));
-int32_t const tmp31 = (local14-((int32_t)1));
-local13 = tmp31;
-local14 = tmp30;
-tuple0 const tmp32 = procedure1(((int32_t)1),((int32_t)2));
-int32_t const tmp33 = (tmp32).e0;
-int32_t const tmp34 = (tmp32).e1;
-int64_t const tmp35 = ((int64_t)tmp33);
+int8_t const tmp28 = ((int8_t)local13);
+int64_t const tmp29 = ((int64_t)tmp28);
+int64_t const tmp30 = (tmp29+((int64_t)1000000000000000000));
+printf("%"PRIi64"\n",tmp30);
+int32_t const tmp31 = (local13+((int32_t)1));
+int32_t const tmp32 = (local14-((int32_t)1));
+local13 = tmp32;
+local14 = tmp31;
+tuple0 const tmp33 = procedure1(((int32_t)1),((int32_t)2));
+int32_t const tmp34 = (tmp33).e0;
+int32_t const tmp35 = (tmp33).e1;
 int64_t const tmp36 = ((int64_t)tmp34);
-tuple2 const tmp37 = {.e0=tmp35,.e1=tmp36};
-tuple2 local21 = tmp37;
-int32_t const tmp38 = (++local13);
-printf("%"PRIi32"\n",tmp38);
+int64_t const tmp37 = ((int64_t)tmp35);
+tuple2 const tmp38 = {.e0=tmp36,.e1=tmp37};
+tuple2 local21 = tmp38;
+int32_t const tmp39 = (++local13);
+printf("%"PRIi32"\n",tmp39);
 local15 = ((int32_t)2);
 procedure2();
-tuple4 const tmp39 = procedure4();
-tuple3* const tmp40 = (tmp39).e0;
-int32_t* const tmp41 = (tmp40)->e1;
-int32_t const tmp42 = (*((tmp41)+(((int32_t)0))));
-printf("%"PRIi32"\n",tmp42);
-int64_t const tmp43 = (local21).e1;
-(local21).e0 = tmp43;
-int64_t* const tmp44 = &((local21).e0);
-printf("%p\n",(void*)tmp44);
-tuple2* const tmp45 = &(local21);
-tuple2* local22 = tmp45;
-int64_t const tmp46 = ((local22)+(((int32_t)0)))->e0;
-printf("%"PRIi64"\n",tmp46);
-int32_t const tmp47 = 1;
-tuple10 const tmp48 = {.e0=stringChars2+0,.e1=12};
-const int8_t* const tmp49 = (tmp48).e0;
-int64_t const tmp50 = (tmp48).e1;
-concatInternal_checkArrayBounds(tmp47,tmp50);
-int8_t const tmp51 = (*((tmp49)+(tmp47)));
-printf("%"PRIi8"\n",tmp51);
-tuple10 const tmp52 = {.e0=stringChars2+6,.e1=5};
-int64_t const tmp53 = (tmp52).e1;
-printf("%"PRIi64"\n",tmp53);
-bool const tmp54 = (local13==((int32_t)0));
-int32_t tmp56;
-if(tmp54){
-int32_t const tmp55 = (((int32_t)1)+((int32_t)1));
-tmp56 = tmp55;
+tuple4 const tmp40 = procedure4();
+tuple3* const tmp41 = (tmp40).e0;
+int32_t* const tmp42 = (tmp41)->e1;
+int32_t const tmp43 = (*((tmp42)+(((int32_t)0))));
+printf("%"PRIi32"\n",tmp43);
+int64_t const tmp44 = (local21).e1;
+(local21).e0 = tmp44;
+int64_t* const tmp45 = &((local21).e0);
+printf("%p\n",(void*)tmp45);
+tuple2* const tmp46 = &(local21);
+tuple2* local22 = tmp46;
+int64_t const tmp47 = ((local22)+(((int32_t)0)))->e0;
+printf("%"PRIi64"\n",tmp47);
+int32_t const tmp48 = 1;
+tuple10 const tmp49 = {.e0=stringChars2+0,.e1=12};
+const int8_t* const tmp50 = (tmp49).e0;
+int64_t const tmp51 = (tmp49).e1;
+concatInternal_checkArrayBounds(tmp48,tmp51);
+int8_t const tmp52 = (*((tmp50)+(tmp48)));
+printf("%"PRIi8"\n",tmp52);
+tuple10 const tmp53 = {.e0=stringChars2+6,.e1=5};
+int64_t const tmp54 = (tmp53).e1;
+printf("%"PRIi64"\n",tmp54);
+bool const tmp55 = (local13==((int32_t)0));
+int32_t tmp57;
+if(tmp55){
+int32_t const tmp56 = (((int32_t)1)+((int32_t)1));
+tmp57 = tmp56;
 }else{
-int32_t const tmp57 = (((int32_t)1)+((int32_t)1));
-bool const tmp58 = (local14!=((int32_t)0));
-int32_t tmp61;
-bool tmp60;
-if(tmp58){
-bool const tmp59 = (local13>=((int32_t)42));
-tmp60 = tmp59;
-tmp61 = tmp57;
+int32_t const tmp58 = (((int32_t)1)+((int32_t)1));
+bool const tmp59 = (local14!=((int32_t)0));
+int32_t tmp62;
+bool tmp61;
+if(tmp59){
+bool const tmp60 = (local13>=((int32_t)42));
+tmp61 = tmp60;
+tmp62 = tmp58;
 }else{
-tmp60 = ((bool)0);
-tmp61 = tmp57;
+tmp61 = ((bool)0);
+tmp62 = tmp58;
 }
-if(tmp60){
-int32_t const tmp62 = (tmp61+((int32_t)2));
-tmp56 = tmp62;
+if(tmp61){
+int32_t const tmp63 = (tmp62+((int32_t)2));
+tmp57 = tmp63;
 }else{
-int32_t const tmp63 = (tmp61+((int32_t)3));
-tmp56 = tmp63;
+int32_t const tmp64 = (tmp62+((int32_t)3));
+tmp57 = tmp64;
 }
 }
-printf("%"PRIi32"\n",tmp56);
-int32_t* const tmp64 = &(local13);
-int32_t* local23 = tmp64;
-int32_t* const tmp65 = (++local23);
-(*(tmp65)) = ((int32_t)2);
+printf("%"PRIi32"\n",tmp57);
+int32_t* const tmp65 = &(local13);
+int32_t* local23 = tmp65;
+int32_t* const tmp66 = (++local23);
+(*(tmp66)) = ((int32_t)2);
 int32_t local24 = 10;
 do{
-bool const tmp66 = (local24>((int32_t)0));
-if(!tmp66)
+bool const tmp67 = (local24>((int32_t)0));
+if(!tmp67)
   break;
 printf("%"PRIi32"\n",local24);
-int32_t const tmp67 = (local24-((int32_t)1));
-local24 = tmp67;
+int32_t const tmp68 = (local24-((int32_t)1));
+local24 = tmp68;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }
