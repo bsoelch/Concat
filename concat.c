@@ -726,7 +726,7 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
       j=fputs(" )",file);
       return j<0?j:(i+j);
   }
-  return fprintf(file,"unknown type-class %i\n",type->typeClass);
+  return fprintf(file,"unknown type-class %i",type->typeClass);
 }
 int printTypeName(const DataType* type,FILE* file){
   return printTypeNameIntenal(type,file,false);
@@ -896,7 +896,7 @@ typedef struct{
 
 void printOperation(Operation op,FILE* out){
   fprintf(out,"%s ",opName(op.opType));
-  if(op.opType!=OP_CODE_BLOCK&&op.opType!=ENTRY_POINT)
+  if(op.dataType.typeClass!=TYPECLASS_UNDEFINED)
     printTypeName(&op.dataType,out);
   switch(op.opType){
     case OP_CONSTANT:
@@ -929,6 +929,119 @@ void printOperation(Operation op,FILE* out){
   }
   fputs("\n",out);
 }
+
+
+#define SCOPE_NODE_CAP 8192
+#define SCOPE_CAP 256
+#define SCOPE_MAP_CAP 1024
+typedef struct ScopeNode ScopeNode;
+struct ScopeNode{
+  String key;
+  DataType type;
+  ScopeNode* next;
+  int32_t id;
+  IdentifierType idType;
+};
+typedef struct Scope{
+  ScopeNode** nodes;
+  
+  BlockType scopeType;
+  size_t nodeBufferOffset;
+  struct Scope* parent;
+}Scope;
+ScopeNode scopeNodeBuffer [SCOPE_NODE_CAP];
+size_t scopeNodeCount=0;
+Scope scopeBuffer [SCOPE_CAP];
+size_t scopeCount=0;
+ScopeNode* allocScopeNode(void){
+  if(scopeNodeCount+1>=SCOPE_NODE_CAP){
+    fprintf(stderr,"exceeded maximum allowed number of variables %i\n",SCOPE_NODE_CAP);
+    return NULL;
+  }
+  return scopeNodeBuffer+(scopeNodeCount++);
+}
+Scope* openScope(BlockType scopeType){
+  if(scopeCount+1>=SCOPE_CAP){
+    fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
+    return NULL;
+  }
+  scopeBuffer[scopeCount].nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
+  scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
+  scopeBuffer[scopeCount].scopeType=scopeType;
+  scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
+  return scopeBuffer+(scopeCount++);
+}
+BlockType currentScopeType(void){
+  if(scopeCount<=0)
+    return BLOCK_END;
+  return scopeBuffer[scopeCount-1].scopeType;
+}
+bool closeScope(void){
+  if(scopeCount<=0)
+    return false;
+  scopeCount--;
+  free(scopeBuffer[scopeCount].nodes);
+  scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
+  return true;
+}
+ScopeNode** findNode(Scope* scope,String name){
+  if(scope==NULL)
+    return NULL;
+  int32_t hash=stringHash(name);
+  ScopeNode** node=scope->nodes+(hash%SCOPE_MAP_CAP);
+  while(*node!=NULL){
+    if(stringCompare((*node)->key,name)==0)
+      return node;
+    node=&((*node)->next);
+  }
+  return node;
+}
+int declareIdentifier(String name,DataType type,IdentifierType idType,ScopeNode** out){
+  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),name);
+  if(node==NULL)
+    return ERROR_MEMORY;
+  if(*node!=NULL)
+    return ERROR_REDECLARATION;
+  //TODO check for shadowed variable
+  *node=allocScopeNode();
+  if(*node==NULL)
+    return ERROR_MEMORY;
+  (*node)->key=name;
+  (*node)->type=type;
+  (*node)->idType=idType;
+  (*node)->id=scopeNodeCount;
+  (*node)->next=NULL;
+  *out=*node;
+  return 0;
+}
+int getIdentifier(String name,ScopeNode** out){
+  int32_t level=scopeCount-1;
+  ScopeNode** node;
+  *out=NULL;
+  while(level>=0){
+    node=findNode(scopeBuffer+level,name);
+    if(node==NULL)
+      return ERROR_MEMORY;
+    if(*node!=NULL){
+      *out=*node;
+      return 0;
+    }
+    level--;
+  }
+  return ERROR_SYNTAX;
+}
+typedef struct{
+  Operation* ops;
+  size_t opCount;
+  Operation* globalOps;
+  size_t globalCount;
+  
+  Scope* globalScope;
+  int32_t predeclaredTypes;
+  bool hasEntryPoint;
+  bool hasCheckBounds;
+  bool hasCheckEnum;
+}Program;
 
 typedef struct{
   String  value;
@@ -987,7 +1100,7 @@ void initProgStringChars(void){
   }
 }
 
-SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize);
+SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize,bool isGlobal);
 
 SizeOrError tupleElementAccess(FILE* target,int32_t depth,const Operation* op,size_t opCount,bool isPtr){
   if(depth<0||opCount<(size_t)depth)
@@ -1033,12 +1146,12 @@ void printProcedureSignatureC(ProcedureType* procedure,int32_t procId,FILE* targ
 }
 
 #define COMPILE_OP_RETURN_ERROR(target, op,opSize)\
-                r=compileOp(target,compiledOps+size,op+size,opSize-size);\
+                r=compileOp(target,compiledOps+size,op+size,opSize-size,isGlobal);\
                 if(r.isError)\
                   return r;\
                 size+=r.as.size;\
 
-SizeOrError compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,size_t size,size_t opSize){
+SizeOrError compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,size_t size,size_t opSize,bool isGlobal){
   SizeOrError r;
   DataType* in=op->dataType.typeDataAs.procedure->inType;
   DataType* out=op->dataType.typeDataAs.procedure->outType;
@@ -1058,12 +1171,12 @@ SizeOrError compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,
   return (SizeOrError){.isError=false,.as={.size=size}};
 } 
 
-SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize){
+SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSize,bool isGlobal){
   if(opSize<1)
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_MEMORY,.pos=op->filePos}}};
   SizeOrError r;
   size_t size=1;
-  bool needCast=compiledOps==0||(op-1)->opType!=OP_DECLARE;
+  bool needCast=(!isGlobal)&&(compiledOps==0||(op-1)->opType!=OP_DECLARE);
   switch(op->opType){
     case OP_PRINT:
       fputs("printf(\"%",target);
@@ -1277,7 +1390,7 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
         case ID_PROCEDURE:
           if(!isCallableType(&(op->dataType))||isPointerType(&(op->dataType)))
             return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_TYPE,.pos=op->filePos}}};
-          printProcedureSignatureC(op->dataType.typeDataAs.procedure,op->dataAs.idInfo.id,target,true);
+          printProcedureSignatureC(op->dataType.typeDataAs.procedure,op->dataAs.idInfo.id,target,false);
           fputs(";\n",target);
           return (SizeOrError){.isError=false,.as={.size=size}};
         case ID_INTERMEDIATE_RESULT:
@@ -1517,7 +1630,7 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
       fputs("(",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
-      r=compileProcArgs(target,compiledOps,op,size,opSize);
+      r=compileProcArgs(target,compiledOps,op,size,opSize,isGlobal);
       if(r.isError)
         return r;
       return (SizeOrError){.isError=false,.as={.size=r.as.size}};
@@ -1527,7 +1640,7 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
         return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
       }
       fprintf(target,"procedure%"PRIi32,op->dataAs.idInfo.id);
-      r=compileProcArgs(target,compiledOps,op,size,opSize);
+      r=compileProcArgs(target,compiledOps,op,size,opSize,isGlobal);
       if(r.isError)
         return r;
       return (SizeOrError){.isError=false,.as={.size=r.as.size}};
@@ -1541,12 +1654,13 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
   return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=op->filePos}}};
 }
 
-Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryPoint,bool hasCheckBounds,bool hasCheckEnum){
+Error compileToC(FILE* target,const Program* p){
   fputs("#include <stdlib.h>\n",target);
   fputs("#include <stdio.h>\n",target);
   fputs("#include <inttypes.h>\n",target);
   fputs("#include <string.h>\n",target);
   fputs("#include <stdbool.h>\n",target);
+  fputs("//internal declarations\n",target);
   //initialize strings
   if(progStringCount>0)
     initProgStringChars();//initialize characters
@@ -1622,135 +1736,38 @@ Error compileToC(FILE* target,const Operation* ops,size_t opCount,bool hasEntryP
       fputs("0x00};\n",target);
     }
   }
-  if(hasCheckBounds){
+  if(p->hasCheckBounds){
     fprintf(target,"void %s(int64_t index,int64_t length){\n",CHECK_BOUNDS_NAME);
     fputs("  if(index>=0 && index<length)\n    return;\n",target);
     fputs("  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\"\\n\",index,length);\n",target);
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
     fputs("}\n",target);
   }
-  if(hasCheckEnum){
+  if(p->hasCheckEnum){
     fprintf(target,"void %s(int64_t current,int64_t expected){\n",CHECK_ENUM_INDEX_NAME);
     fputs("  if(current==expected)\n    return;\n",target);
     fputs("  fprintf(stderr,\"enum index (%\"PRIi64\") does not match current value (%\"PRIi64\")\\n\",expected,current);\n",target);
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_WRONG_ENUM_INDEX);
     fputs("}\n",target);
   }
-  if(!hasEntryPoint)//auto-wrap programs without entry point into a main function
-    fputs("int main(void){\n",target);
   SizeOrError r;
-  for(size_t p=0;p<opCount;){
-    r=compileOp(target,p,ops+p,opCount-p);
+  fputs("//global code\n",target);
+  for(size_t i=0;i<p->globalCount;){
+    r=compileOp(target,i,p->globalOps+i,p->globalCount-i,true);
     if(r.isError)
       return r.as.error;
-    p+=r.as.size;
+    i+=r.as.size;
   }
-  if(!hasEntryPoint){
-    fputs("return 0;\n",target);
-    fputs("}\n",target);
+  fputs("//procedures code\n",target);
+  for(size_t i=0;i<p->opCount;){
+    r=compileOp(target,i,p->ops+i,p->opCount-i,false);
+    if(r.isError)
+      return r.as.error;
+    i+=r.as.size;
   }
   return (Error){.errorCode=0,.pos={0}};
 }
 
-#define SCOPE_NODE_CAP 8192
-#define SCOPE_CAP 256
-#define SCOPE_MAP_CAP 1024
-typedef struct ScopeNode ScopeNode;
-struct ScopeNode{
-  String key;
-  DataType type;
-  ScopeNode* next;
-  int32_t id;
-  IdentifierType idType;
-};
-typedef struct Scope{
-  ScopeNode** nodes;
-  
-  BlockType scopeType;
-  size_t nodeBufferOffset;
-  struct Scope* parent;
-}Scope;
-ScopeNode scopeNodeBuffer [SCOPE_NODE_CAP];
-size_t scopeNodeCount=0;
-Scope scopeBuffer [SCOPE_CAP];
-size_t scopeCount=0;
-ScopeNode* allocScopeNode(void){
-  if(scopeNodeCount+1>=SCOPE_NODE_CAP){
-    fprintf(stderr,"exceeded maximum allowed number of variables %i\n",SCOPE_NODE_CAP);
-    return NULL;
-  }
-  return scopeNodeBuffer+(scopeNodeCount++);
-}
-Scope* openScope(BlockType scopeType){
-  if(scopeCount+1>=SCOPE_CAP){
-    fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
-    return NULL;
-  }
-  scopeBuffer[scopeCount].nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
-  scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
-  scopeBuffer[scopeCount].scopeType=scopeType;
-  scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
-  return scopeBuffer+(scopeCount++);
-}
-BlockType currentScopeType(void){
-  if(scopeCount<=0)
-    return BLOCK_END;
-  return scopeBuffer[scopeCount-1].scopeType;
-}
-bool closeScope(void){
-  if(scopeCount<=0)
-    return false;
-  scopeCount--;
-  free(scopeBuffer[scopeCount].nodes);
-  scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
-  return true;
-}
-ScopeNode** findNode(Scope* scope,String name){
-  if(scope==NULL)
-    return NULL;
-  int32_t hash=stringHash(name);
-  ScopeNode** node=scope->nodes+(hash%SCOPE_MAP_CAP);
-  while(*node!=NULL){
-    if(stringCompare((*node)->key,name)==0)
-      return node;
-    node=&((*node)->next);
-  }
-  return node;
-}
-int declareIdentifier(String name,DataType type,IdentifierType idType,ScopeNode** out){
-  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),name);
-  if(node==NULL)
-    return ERROR_MEMORY;
-  if(*node!=NULL)
-    return ERROR_REDECLARATION;
-  //TODO check for shadowed variable
-  *node=allocScopeNode();
-  if(*node==NULL)
-    return ERROR_MEMORY;
-  (*node)->key=name;
-  (*node)->type=type;
-  (*node)->idType=idType;
-  (*node)->id=scopeNodeCount;
-  (*node)->next=NULL;
-  *out=*node;
-  return 0;
-}
-int getIdentifier(String name,ScopeNode** out){
-  int32_t level=scopeCount-1;
-  ScopeNode** node;
-  *out=NULL;
-  while(level>=0){
-    node=findNode(scopeBuffer+level,name);
-    if(node==NULL)
-      return ERROR_MEMORY;
-    if(*node!=NULL){
-      *out=*node;
-      return 0;
-    }
-    level--;
-  }
-  return ERROR_SYNTAX;
-}
 
 typedef struct{
   char* code;
@@ -1758,17 +1775,6 @@ typedef struct{
   FilePosition currentPos;
   FilePosition wordStart;
 }CodeFile;
-
-typedef struct{
-  Operation* ops;
-  size_t opCount;
-  
-  Scope* globalScope;
-  int32_t predeclaredTypes;
-  bool hasEntryPoint;
-  bool hasCheckBounds;
-  bool hasCheckEnum;
-}Program;
 
 typedef struct{
   Scope* currentScope;
@@ -2635,14 +2641,14 @@ Program compileToOps(CodeFile* codeFile){
     r=readOperation(compileOps+state.compiledOps,codeFile,&state);
     if(r.isError){
       printError(r.as.error,stderr);
-      return (Program){.ops=NULL,.opCount=0};//TODO better error value
+      return (Program){.ops=NULL,.globalOps=NULL,.opCount=0};//TODO better error value
     }
     state.compiledOps+=r.as.size;
     if(state.compiledOps>=opsCap-5){
-      return (Program){.ops=NULL,.opCount=0};//TODO ensure there is enough capacity
+      return (Program){.ops=NULL,.globalOps=NULL,.opCount=0};//TODO ensure there is enough capacity
     }
   }
-  return (Program){.ops=compileOps,.opCount=state.compiledOps,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
+  return (Program){.ops=compileOps,.opCount=state.compiledOps,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(const char* exprName,DataType expected,DataType got){
@@ -2749,7 +2755,11 @@ typedef struct{
   }blockDataAs;
 }BlockInfo;
 typedef struct{
-  Operation* compiledOperations;
+  Operation* globalOperations;
+  size_t globalCap;
+  size_t globalCount;
+  
+  Operation* compiledOperations;//TODO rename
   size_t opCap;
   size_t opCount;
   Operation* opStack;
@@ -2802,8 +2812,14 @@ bool ensureCap(void** mList,size_t* cap,size_t eltSize,size_t newSize){
   *cap=newCap;
   return false;
 }
+bool ensureGlobalOpCap(TypeCheckState* state,size_t newSize){
+  void* mList=state->globalOperations;
+  bool res=ensureCap(&mList,&(state->globalCap),sizeof(Operation),newSize);
+  state->globalOperations=(Operation*)mList;
+  return res;
+}
 bool ensureOpCap(TypeCheckState* state,size_t newSize){
-  void* mList=state->compiledOperations;//void* and operation* may have different size
+  void* mList=state->compiledOperations;
   bool res=ensureCap(&mList,&(state->opCap),sizeof(Operation),newSize);
   state->compiledOperations=(Operation*)mList;
   return res;
@@ -2840,7 +2856,9 @@ BlockInfo popBlock(TypeCheckState* state){
   return (BlockInfo){.type=BLOCK_END,.blockStart=0,.blockDataAs={0}};
 }
 void freeContents(TypeCheckState* state){
-  free(state->compiledOperations);//freeing NULL has no check for null necessary
+  free(state->globalOperations);
+  state->globalOperations=NULL;
+  free(state->compiledOperations);
   state->compiledOperations=NULL;
   free(state->opStack);
   state->opStack=NULL;
@@ -2873,6 +2891,14 @@ bool resetStack(TypeCheckState* state,StackState* prevState){
 }
 
 void pushCompiledOperation(TypeCheckState* state,Operation op){
+  if(state->blockCount==0){
+    if(ensureGlobalOpCap(state,state->globalCount+1)){
+      fputs("exceeded global operation capacity",stderr);
+      exit(ERROR_MEMORY);
+    }
+    state->globalOperations[state->globalCount++]=op;
+    return;
+  }
   if(ensureOpCap(state,state->opCount+1)){
     fputs("exceeded operation capacity",stderr);
     exit(ERROR_MEMORY);
@@ -2880,6 +2906,15 @@ void pushCompiledOperation(TypeCheckState* state,Operation op){
   state->compiledOperations[state->opCount++]=op;
 }
 void pushCompiledOperations(TypeCheckState* state,Operation* ops,size_t count){
+  if(state->blockCount==0){
+    if(ensureGlobalOpCap(state,state->globalCount+count)){
+      fputs("exceeded global operation capacity",stderr);
+      exit(ERROR_MEMORY);
+    }
+    memcpy(state->globalOperations+state->globalCount,ops,count*sizeof(Operation));
+    state->globalCount+=count;
+    return;
+  }
   if(ensureOpCap(state,state->opCount+count)){
     fputs("exceeded operation capacity",stderr);
     exit(ERROR_MEMORY);
@@ -2913,6 +2948,8 @@ Error compileCompositeOp(TypeCheckState* state,DataType* type,Operation* ops,siz
 }
 //ensures that none of the top type-count stack elements is a composite operation 
 Error extractCompositeOpsOffset(TypeCheckState* state,size_t nStackValues,size_t skipValues){
+  if(state->blockCount==0)//don't extract composites at global level
+    return (Error){.errorCode=0,.pos={0}};
   Error r;
   size_t offset=state->opStackCount,skipedOps=0;
   for(size_t i=1;i<=nStackValues+skipValues;i++){
@@ -3027,43 +3064,28 @@ bool canCast(const DataType* src,const DataType* target){
 
 int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t nTypes,FilePosition pos){
   if(state->typeCount<nTypes){
-    fprintf(stderr,"not enough types of %s need %zu have %zu",opName,nTypes,state->typeCount);
+    fprintf(stderr,"not enough types for %s need %zu have %zu\n",opName,nTypes,state->typeCount);
     return ERROR_TYPE;
   }
-  bool directMatch=true;
   int32_t nCasts=0;
+  size_t offset=state->opStackCount;
   //check types
-  for(size_t k=0;k<nTypes;k++){
-    if(typeEquals(&(types[k]),&(state->typeStack[state->typeCount-nTypes+k].type)))
+  for(size_t k=1;k<=nTypes;k++){
+    offset-=state->typeStack[state->typeCount-k].opCount;
+    if(typeEquals(&(types[nTypes-k]),&(state->typeStack[state->typeCount-k].type)))
       continue;
-    directMatch=false;
-    if(canAssign(&(state->typeStack[state->typeCount-nTypes+k].type),&(types[k]))){
+    if(canAssign(&(state->typeStack[state->typeCount-k].type),&(types[nTypes-k]))){
+      if(state->typeStack[state->typeCount-k].opCount==1&&state->opStack[offset].opType==OP_CONSTANT){//change type of constant instead of cast
+        state->typeStack[state->typeCount-k].type=types[nTypes-k];
+        state->opStack[offset].dataType=types[nTypes-k];
+        continue;
+      }
       nCasts++;
       continue;
     }
-    if(state->typeStack[state->typeCount-nTypes+k].type.typeClass==TYPECLASS_ENUM_LABEL&&types[k].typeClass==TYPECLASS_ENUM&&
-      state->typeStack[state->typeCount-nTypes+k].type.typeDataAs.composite->id==types[k].typeDataAs.composite->id)
-      continue;//enum-label -> enum  don't increase cast count
-    typeErrorMessage(opName,types[k],state->typeStack[state->typeCount-nTypes+k].type);
-    return ERROR_TYPE;
-  }
-  if(directMatch)
-    return 0;
-  //extract composites
-  Error r=extractCompositeOps(state,nTypes);
-  if(r.errorCode!=0)
-    return r.errorCode;
-  //modify-types
-  if(ensureOpStackCap(state,state->opStackCount+nCasts))
-    return ERROR_MEMORY;
-  size_t offset=state->opStackCount,shiftCount=0;
-  state->opStackCount+=nCasts;//set opStackCount to new values
-  for(size_t k=1;k<=nTypes;k++){
-    offset-=state->typeStack[state->typeCount-k].opCount;
-    shiftCount+=state->typeStack[state->typeCount-k].opCount;
-    if(typeEquals(&(types[nTypes-k]),&(state->typeStack[state->typeCount-k].type)))
-      continue;
-    if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM_LABEL&&types[nTypes-k].typeClass==TYPECLASS_ENUM){
+    //convert enum labels to enum constants
+    if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM_LABEL&&types[nTypes-k].typeClass==TYPECLASS_ENUM&&
+      state->typeStack[state->typeCount-k].type.typeDataAs.composite->id==types[nTypes-k].typeDataAs.composite->id){
       if(state->typeStack[state->typeCount-k].opCount>1||state->opStack[offset].opType!=OP_CONSTANT)
         return ERROR_MEMORY;//enum-label type should only exist on enum-label constants
       state->typeStack[state->typeCount-k].type.typeClass=TYPECLASS_ENUM;
@@ -3076,8 +3098,29 @@ int requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t
       }
       state->opStack[offset].opType=OP_NEW;
       state->opStack[offset].dataType.typeClass=TYPECLASS_ENUM;
+      state->typeStack[state->typeCount-k].type=state->opStack[offset].dataType;
       continue;
     }
+    typeErrorMessage(opName,types[nTypes-k],state->typeStack[state->typeCount-k].type);
+    return ERROR_TYPE;
+  }
+  if(nCasts==0)
+    return 0;
+  //extract composites
+  Error r=extractCompositeOps(state,nTypes);
+  if(r.errorCode!=0)
+    return r.errorCode;
+  //modify-types
+  if(ensureOpStackCap(state,state->opStackCount+nCasts))
+    return ERROR_MEMORY;
+  offset=state->opStackCount;
+  size_t shiftCount=0;
+  state->opStackCount+=nCasts;//set opStackCount to new values
+  for(size_t k=1;k<=nTypes;k++){
+    offset-=state->typeStack[state->typeCount-k].opCount;
+    shiftCount+=state->typeStack[state->typeCount-k].opCount;
+    if(typeEquals(&(types[nTypes-k]),&(state->typeStack[state->typeCount-k].type)))
+      continue;
     memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
     shiftCount=0;
     nCasts--;
@@ -3108,7 +3151,7 @@ Error pushValue(TypeCheckState* state,Operation op){
 
 Error insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
   if(ensureOpStackCap(state,state->opStackCount+1))
-    return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};;
+    return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
   memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
   state->opStack[state->opStackCount-totalOps]=op;
   state->opStackCount++;
@@ -3251,8 +3294,14 @@ Error compileGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operatio
   return (Error){.errorCode=0,.pos=op->filePos};
 }
 
-//TODO only allow compile time code at global level (only constants and addresses)
-//     run all global code before procedure implementations
+bool checkLocal(TypeCheckState* state,Operation op){
+  if(state->blockCount!=0)
+    return false;
+  fputs("unexpected operation at global level: ",stderr);
+  printOperation(op,stderr);
+  return true;
+}
+
 Error typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
   int32_t offset,tmpId;
@@ -3262,6 +3311,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_CONSTANT:
       return pushValue(state,op);
     case OP_UNARY_OPERATOR:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
         fprintf(stderr,"not enough operands for unary operator %s: need 1 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3318,6 +3369,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_BINARY_OPERATOR:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<2){
         fprintf(stderr,"not enough operands for binary operator %s: need 2 got %zu\n",binOpName(op.dataAs.binOp),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3427,6 +3480,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_PRINT:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
             fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3450,6 +3505,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_CHECK_ENUM_INDEX:
       break;
     case OP_GET:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
         case ID_GLOBAL_VAR:
@@ -3599,6 +3656,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_GET_LABEL:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
         fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3644,6 +3703,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //XXX? store element value on stack, to allow write operation
       return pushValue(state,opGetIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
     case OP_SET_VALUE:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<2){
         fprintf(stderr,"not enough operands for operation %s : need 2 got %zu\n",opName(op.opType),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3737,6 +3798,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           if(r.errorCode!=0){
             return r;
           }
+          if(state->blockCount==0)//don't extract operations at global level
+            return addCompiledStackOps(state,op,state->typeStack[offset].opCount,1,true);
           r=extractCompositeOps(state,1);
           if(r.errorCode!=0)
             return r;
@@ -3744,6 +3807,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_PROCEDURE:
           if(checkNonemptyStack(state,"unfinished global operation")){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          }
+          if(state->blockCount==0){//predeclare procedure in global section
+            op.opType=OP_PRE_DECLARE;
+            pushCompiledOperation(state,op);
+            op.opType=OP_DECLARE;
           }
           if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={0}}))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
@@ -3779,6 +3847,14 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         for(int32_t e=0;e<op.dataType.typeDataAs.composite->typeCount;e++){
           totalOps+=state->typeStack[offset+e].opCount;
         }
+        if(state->blockCount==0){//create tuple in-place when in global level
+          r=insertStackOperation(state,op,totalOps);
+          if(r.errorCode!=0)
+            return r;
+          state->typeCount-=op.dataType.typeDataAs.composite->typeCount;
+          state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1};
+          return (Error){.errorCode=0,.pos=op.filePos};
+        }
         //store result in temp variable
         r=extractCompositeOps(state,op.dataType.typeDataAs.composite->typeCount);
         if(r.errorCode!=0)
@@ -3794,6 +3870,13 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(op.dataType.typeClass==TYPECLASS_ENUM){
         DataType* entryData=op.dataType.typeDataAs.composite->types+op.dataAs.i64;
         if(isVoidType(entryData)){
+          if(state->blockCount==0){//create enum in-place when in global level
+            r=insertStackOperation(state,op,0);
+            if(r.errorCode!=0)
+              return r;
+            state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1};
+            return (Error){.errorCode=0,.pos=op.filePos};
+          }
           tmpId=state->tmpCount++;
           pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
           r=addCompiledOp(state,op,0);
@@ -3805,6 +3888,14 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         r=(Error){.errorCode=requireTypes("enum creation",state,entryData,1,op.filePos),.pos=op.filePos};
         if(r.errorCode!=0)
           return r;
+        if(state->blockCount==0){//create enum in-place when in global level
+          totalOps=state->typeStack[state->typeCount-1].opCount;
+          r=insertStackOperation(state,op,totalOps);
+          if(r.errorCode!=0)
+            return r;
+          state->typeStack[state->typeCount-1]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1};
+          return (Error){.errorCode=0,.pos=op.filePos};
+        }
         r=extractCompositeOps(state,1);
         if(r.errorCode!=0)
           return r;
@@ -3818,6 +3909,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_CAST:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
         fprintf(stderr,"not enough operands for operation %s : need 1 got %zu\n",opName(op.opType),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -3862,6 +3955,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_CODE_BLOCK://TODO? allow operations to cross while-block boundaries
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.block){
         case BLOCK_IF:
           blockInfo=peekBlock(state);
@@ -4021,7 +4116,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           pushCompiledOperation(state,op);
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_END:
-          blockInfo=popBlock(state);
+          blockInfo=peekBlock(state);//keep block on block stack until writing operations has finished
           if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_IF2||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
             fputs("unexpected END statement\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
@@ -4078,6 +4173,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           while(endCount-->0){
             pushCompiledOperation(state,op);
           }
+          popBlock(state);//pop block after writing operations
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_PROCEDURE:
           fputs("blocks of type BLOCK_PROCEDURE are not supported, procedure blocks start with the DECLARE_PROCEDURE operation",stderr);
@@ -4085,10 +4181,16 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_CALL_PTR:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       return typeCheckCall(&op,state,true);
     case OP_CALL:
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       return typeCheckCall(&op,state,false);
-    case OP_RETURN:     
+    case OP_RETURN:   
+      if(checkLocal(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};  
       if(isVoidType(&(op.dataType))){
           if(checkNonemptyStack(state,"unfinished operation at end of procedure"))
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
@@ -4145,13 +4247,15 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
 }
 Error typeCheckProgram(Program* prog,CodeFile* src){
   size_t opCap=prog->opCount>INIT_CAP?prog->opCount:INIT_CAP;
-  TypeCheckState state=(TypeCheckState){.compiledOperations=malloc(opCap*sizeof(Operation)),.opCap=opCap,.opCount=0,
+  TypeCheckState state=(TypeCheckState){
+    .globalOperations=malloc(opCap*sizeof(Operation)),.globalCap=opCap,.globalCount=0,
+    .compiledOperations=malloc(opCap*sizeof(Operation)),.opCap=opCap,.opCount=0,
     .opStack=malloc(INIT_CAP*sizeof(Operation)),.opStackCap=INIT_CAP,.opStackCount=0,
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
     .predeclaredTypes=malloc(prog->predeclaredTypes*sizeof(DataType)),.nPredeclaredTypes=prog->predeclaredTypes,
     .tmpCount=0,.index=0};
-  if(state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
+  if(state.globalOperations==NULL||state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
     freeContents(&state);
     return (Error){.errorCode=ERROR_MEMORY,.pos=src->currentPos};
   }
@@ -4168,11 +4272,14 @@ Error typeCheckProgram(Program* prog,CodeFile* src){
     return (Error){.errorCode=ERROR_SYNTAX,.pos=src->currentPos};
   }
   free(prog->ops);
+  prog->globalOps=state.globalOperations;
+  state.globalOperations=NULL;
+  prog->globalCount=state.globalCount;
   prog->ops=state.compiledOperations;
+  state.compiledOperations=NULL;
   prog->opCount=state.opCount;
   prog->hasCheckBounds=state.hasCheckBounds;
   prog->hasCheckEnum=state.hasCheckEnum;
-  state.compiledOperations=NULL;
   freeContents(&state);
   return (Error){.errorCode=0,.pos=src->currentPos};
 }
@@ -4249,14 +4356,17 @@ int main(int argc,char** argv){
       printError(err,stderr);
       return err.errorCode;
     }
-    printf("compiled to %zu operations\n",p.opCount);
+    printf("compiled to %zu operations\n",p.globalCount+p.opCount);
+    for(size_t i=0;i<p.globalCount;i++){
+      printOperation(p.globalOps[i],stdout);
+    }
     for(size_t i=0;i<p.opCount;i++){
       printOperation(p.ops[i],stdout);
     }
     puts("");
 		//3. compile operations to C
     FILE* out=fopen(targetFile,"w");
-    err=compileToC(out,p.ops,p.opCount,p.hasEntryPoint,p.hasCheckBounds,p.hasCheckEnum);
+    err=compileToC(out,&p);
     if(err.errorCode){
       printError(err,stderr);
       goto RETURN;
