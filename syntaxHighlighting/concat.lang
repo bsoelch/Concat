@@ -136,6 +136,7 @@
     <context id="typeName" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          bool            |
           i8              |
           char            |
           i32             |
