@@ -73,6 +73,72 @@ Examples:
 <!-- TODO --> 
 
 
+## code blocks
+### if-block
+
+general syntax:
+```
+<condition> if
+  <if-body>
+else <condition> _if
+  <elif-body>
+else
+  <else-body>
+end
+```
+
+if statements start with a condition followed by `if` an optional `else` and end at the corresponding `end` 
+
+if the condition is true the code-block after `if` is executed, otherwise the program jumps to the matching `else` or `end`
+
+`_if` can be used within `else` blocks, to create `if`-statements that use the same `end` as that `else` block
+this makes it easier to chain multiple if-statement
+
+
+Examples:
+
+```
+## minimal if-statement
+false if
+ ## this code is unreachable
+end
+
+## values on stack before if-statement will be present in all if branches
+b a if 
+  ## a true
+  if
+    ## a and b both true
+  end
+else _if
+ ## a false and b true
+end
+
+## the return values of all branches have to match up
+a if 
+ 1 
+else b _if
+ 2
+else
+ 3
+end 
+## after the if-statement the type-stack will contain the types at the end of any of the if-blocks (they all have to end with the same types)
+print
+```
+
+### while-blocks
+
+general syntax:
+```
+while <condition> do
+  <while-body>
+end
+```
+
+<!-- TODO -->
+
+
+
+
 ## Types
 
 <!-- TODO -->
