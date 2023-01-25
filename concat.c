@@ -2586,6 +2586,16 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     
     (*op)=opCodeBlock(BLOCK_ELSE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(wordEquals(&word,"break")){
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+  }else if(wordEquals(&word,"continue")){
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+  }else if(wordEquals(&word,"switch")){
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+  }else if(wordEquals(&word,"case")){
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+  }else if(wordEquals(&word,"default")){
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
   }else if(wordEquals(&word,"end")){
     closeScope();
     state->scopeLevel--;

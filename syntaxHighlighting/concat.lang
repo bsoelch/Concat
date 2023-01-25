@@ -57,6 +57,11 @@
           end             |
           while           |
           do              |
+          break           |
+          continue        |
+          switch          |
+          case            |
+          default         |
           return          |
           end             |
           new             |
