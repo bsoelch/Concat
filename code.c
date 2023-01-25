@@ -289,7 +289,6 @@ int32_t* const tmp73 = &(local16);
 int32_t* local26 = tmp73;
 int32_t* const tmp74 = (++local26);
 (*(tmp74)) = ((int32_t)2);
-int32_t local27 = 10;
 tuple10 const tmp75 = {.e0=stringChars2+0,.e1=5};
 tuple11 const tmp76 = procedure13(tmp75);
 tuple10 tmp82;
@@ -310,5 +309,15 @@ tmp77 = tmp81;
 tmp78 = tmp82;
 }while(1);
 procedure15(tmp82,tmp81,tmp80);
+int32_t local27 = 5;
+bool tmp84 = 1;
+do{
+if(!tmp84)
+  break;
+printf("%"PRIi32"\n",local27);
+int32_t const tmp85 = (--local27);
+bool const tmp86 = (tmp85>((int32_t)0));
+tmp84 = tmp86;
+}while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }

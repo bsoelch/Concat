@@ -111,11 +111,16 @@ entryPoint:
   A addrOf  i32 ptr =: aPtr
   2  aPtr ++ @ = 
 
-  10 i32 =: I 
-
   "Hello" startItr while nextChar do
     #+char+# print
   end endItr
+  
+  5 i32 =: I 
+  true while do
+    I print 
+    I -- 
+    0 > 
+  end
 
   true print 
 end

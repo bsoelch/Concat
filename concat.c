@@ -4180,6 +4180,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("DO cannot appear more than once per WHILE block\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
+          //XXX convert while-blocks with empty condition to do-blocks
           blockInfo.blockDataAs.whileBlock.hasDo=true;
           //store types at loop condition
           r=initWhileOutTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
