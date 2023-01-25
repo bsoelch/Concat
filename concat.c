@@ -2648,21 +2648,52 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   (*op)=(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}};
   return (SizeOrError){.isError=false,.as={.size=1}};
 }
+
+//returns true when allocation fails
+bool ensureCap(void** mList,size_t* cap,size_t eltSize,size_t newSize){
+  if(*cap>newSize)
+    return false;
+  size_t newCap=newSize;
+  newCap+=((*cap)>>4)+16;//add some space depending on previous capacity
+  //round up to next multiple of 64
+  newCap&=~0x3f;
+  if((newSize&0x3f)!=0)
+    newCap+=0x40;
+  void* newList=realloc(*mList,newCap*eltSize);
+  if(newList==NULL)
+    return true;
+  *mList=newList;
+  *cap=newCap;
+  return false;
+}
+bool ensureOpCap(Operation** mList,size_t* cap,size_t newSize){
+  void* ops=*mList;
+  if(ensureCap(&ops,cap,sizeof(Operation),newSize))
+    return true;
+  *mList=ops;
+  return false;
+}
+
 Program compileToOps(CodeFile* codeFile){
   size_t opsCap=256;
   SizeOrError r;
   Operation* compileOps=malloc(opsCap*sizeof(Operation));
+  if(compileOps==NULL){
+    printError((Error){.errorCode=ERROR_MEMORY,.pos=codeFile->currentPos},stderr);
+    exit(ERROR_MEMORY);
+  }
   openScope(BLOCK_START);
   CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
   while(codeFile->codeSize>0){
     r=readOperation(compileOps+state.compiledOps,codeFile,&state);
     if(r.isError){
       printError(r.as.error,stderr);
-      return (Program){.ops=NULL,.globalOps=NULL,.opCount=0};//TODO better error value
+      exit(r.as.error.errorCode);
     }
     state.compiledOps+=r.as.size;
-    if(state.compiledOps>=opsCap-5){
-      return (Program){.ops=NULL,.globalOps=NULL,.opCount=0};//TODO ensure there is enough capacity
+    if(ensureOpCap(&compileOps,&opsCap,state.compiledOps+16)){
+      printError((Error){.errorCode=ERROR_MEMORY,.pos=codeFile->currentPos},stderr);
+      exit(ERROR_MEMORY);
     }
   }
   return (Program){.ops=compileOps,.opCount=state.compiledOps,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
@@ -2761,6 +2792,9 @@ typedef struct{
 }IfBlockInfo;
 typedef struct{
   bool hasDo;
+  
+  StackState inStack;
+  StackState outStack;
 }WhileBlockInfo;
 typedef struct{
   BlockType type;
@@ -2776,7 +2810,7 @@ typedef struct{
   size_t globalCap;
   size_t globalCount;
   
-  Operation* compiledOperations;//TODO rename
+  Operation* compiledOperations;
   size_t opCap;
   size_t opCount;
   Operation* opStack;
@@ -2814,40 +2848,14 @@ void printTypeStack(TypeCheckState* state,FILE* out){
   }
 }
 
-//returns true when allocation fails
-bool ensureCap(void** mList,size_t* cap,size_t eltSize,size_t newSize){
-  if(*cap>newSize)
-    return false;
-  size_t newCap=newSize;
-  newCap+=((*cap)>>4)+16;//add some space depending on previous capacity
-  //round up to next multiple of 64
-  newCap&=~0x3f;
-  if((newSize&0x3f)!=0)
-    newCap+=0x40;
-  void* newList=realloc(*mList,newCap*eltSize);
-  if(newList==NULL)
-    return true;
-  *mList=newList;
-  *cap=newCap;
-  return false;
-}
 bool ensureGlobalOpCap(TypeCheckState* state,size_t newSize){
-  void* mList=state->globalOperations;
-  bool res=ensureCap(&mList,&(state->globalCap),sizeof(Operation),newSize);
-  state->globalOperations=(Operation*)mList;
-  return res;
+  return ensureOpCap(&(state->globalOperations),&(state->globalCap),newSize);
 }
-bool ensureOpCap(TypeCheckState* state,size_t newSize){
-  void* mList=state->compiledOperations;
-  bool res=ensureCap(&mList,&(state->opCap),sizeof(Operation),newSize);
-  state->compiledOperations=(Operation*)mList;
-  return res;
+bool ensureCompiledOpCap(TypeCheckState* state,size_t newSize){
+  return ensureOpCap(&(state->compiledOperations),&(state->opCap),newSize);
 }
 bool ensureOpStackCap(TypeCheckState* state,size_t newSize){
-  void* mList=state->opStack;
-  bool res=ensureCap(&mList,&(state->opStackCap),sizeof(Operation),newSize);
-  state->opStack=(Operation*)mList;
-  return res;
+  return ensureOpCap(&(state->opStack),&(state->opStackCap),newSize);
 }
 bool ensureTypeStackCap(TypeCheckState* state,size_t newSize){
   void* mList=state->typeStack;
@@ -2918,7 +2926,7 @@ void pushCompiledOperation(TypeCheckState* state,Operation op){
     state->globalOperations[state->globalCount++]=op;
     return;
   }
-  if(ensureOpCap(state,state->opCount+1)){
+  if(ensureCompiledOpCap(state,state->opCount+1)){
     fputs("exceeded operation capacity",stderr);
     exit(ERROR_MEMORY);
   }
@@ -2934,7 +2942,7 @@ void pushCompiledOperations(TypeCheckState* state,Operation* ops,size_t count){
     state->globalCount+=count;
     return;
   }
-  if(ensureOpCap(state,state->opCount+count)){
+  if(ensureCompiledOpCap(state,state->opCount+count)){
     fputs("exceeded operation capacity",stderr);
     exit(ERROR_MEMORY);
   }
@@ -3007,59 +3015,107 @@ Error extractCompositeOps(TypeCheckState* state,size_t nStackValues){
 }
 
 
-Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,bool isElse/*else-branch or end of if-statement*/,FilePosition pos){
-  if(ifBlock->elsePos==0&&state->typeCount>0){//first branch
-    ifBlock->outStack.typeCount=state->typeCount;
-    ifBlock->outStack.opCount=state->typeCount;
-    ifBlock->outStack.types=malloc((state->typeCount)*sizeof(TypeInfo));
-    ifBlock->outStack.ops=malloc((state->typeCount)*sizeof(Operation));
-    if(ifBlock->outStack.types==NULL||ifBlock->outStack.ops==NULL)
+bool predeclareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* blockStack){
+  if(ensureCompiledOpCap(state,state->opCount+blockStack->typeCount))
+    return true;
+  memmove(state->compiledOperations+blockStart+blockStack->typeCount,state->compiledOperations+blockStart,(state->opCount-blockStart)*sizeof(Operation));
+  for(size_t i=0;i<blockStack->typeCount;i++){
+    state->compiledOperations[blockStart+i]=blockStack->ops[i];
+    state->compiledOperations[blockStart+i].opType=OP_PRE_DECLARE;
+  }
+  state->opCount+=blockStack->typeCount;
+  return false;
+}
+bool declareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* typeSource,StackState* valueSource){
+  size_t count=typeSource->typeCount+valueSource->opCount;
+  if(ensureCompiledOpCap(state,state->opCount+count))
+     return true;
+  memmove(state->compiledOperations+blockStart+count,state->compiledOperations+blockStart,(state->opCount-blockStart)*sizeof(Operation));
+  size_t opOffset=blockStart,inTypesOffset=0;
+  for(size_t i=0;i<typeSource->typeCount;i++){
+    state->compiledOperations[opOffset]=typeSource->ops[i];
+    state->compiledOperations[opOffset].opType=OP_DECLARE;
+    opOffset++;
+    memcpy(state->compiledOperations+opOffset,valueSource->ops+inTypesOffset,(valueSource->types[i].opCount)*sizeof(Operation));
+    inTypesOffset+=valueSource->types[i].opCount;
+  }
+  state->opCount+=count;
+  return false;
+}
+/*
+function for stack update at start/end of loop section
+stores all variables currently on the stack in temporary variables and clears the stack
+parameters:
+state           TypeCheckState
+stackState      state in which the current data will be stored
+expectedState   state with which the current data will be compared
+errorMessage    statement name that will be displayed on type error returned message is "... at end of ... "
+initStackState  if true the stack state will be initialized, otherwise it is only used to read the variable-ids
+declare         if true temporary variables will be declared instead of set, use this only to declare variables before entering the respective code-block
+ignoreFirst     if true the top element on the type-stack will be ignored and the type-stack will be kept intact
+pos             current file position (for error reporting) 
+*/
+Error storeStackValues(TypeCheckState* state,StackState* stackState,StackState* expectedState,const char* errorMessage,bool initStackState,bool declare,bool ignoreFirst,FilePosition pos){
+  size_t typeCount=state->typeCount-(ignoreFirst?1:0);
+  if(initStackState){
+    stackState->typeCount=typeCount;
+    stackState->opCount=typeCount;
+    stackState->types=typeCount==0?NULL:malloc((typeCount)*sizeof(TypeInfo));
+    stackState->ops=typeCount==0?NULL:malloc((typeCount)*sizeof(Operation));
+  }
+  if(typeCount>0&&(stackState->types==NULL||stackState->ops==NULL))
       return (Error){.errorCode=ERROR_MEMORY,.pos=pos};
+  if(!initStackState){
+    if(typeCount!=expectedState->typeCount){
+      fprintf(stderr,"wrong number of types at end of %s expected %zu got %zu\n",errorMessage,expectedState->typeCount,typeCount);
+      return (Error){.errorCode=ERROR_TYPE,.pos=pos};
+    }
   }
   int32_t varId;
-  if(isElse&&ifBlock->elsePos==0&&state->typeCount>0){//first branch
-    for(int64_t i=state->typeCount-1;i>=0;i--){
-      varId=state->tmpCount++;
-      //save stack-elements to tmp-values
-      pushCompiledOperation(state,(Operation){.opType=OP_SET_VALUE,.dataType=state->typeStack[i].type,.filePos=pos,.dataAs={0}});
-      pushCompiledOperation(state,opGetTmpVar(&(state->typeStack[i].type),varId,pos));
-      pushCompiledOperations(state,state->opStack+state->opStackCount-state->typeStack[i].opCount,state->typeStack[i].opCount);
-      state->opStackCount-=state->typeStack[i].opCount;
-      state->typeCount--;
-      
-      ifBlock->outStack.types[i]=(TypeInfo){.opCount=1,.type=asConstType(state->typeStack[i].type)};
-      ifBlock->outStack.ops[i]=opGetTmpVar(&(ifBlock->outStack.types[i].type),varId,pos);
-    }
-    return (Error){.errorCode=0,.pos=pos};
-  }
-  StackState* requiredState=(ifBlock->elsePos!=0)? &(ifBlock->outStack) : &(ifBlock->inStack);
-  if(state->typeCount!=requiredState->typeCount){
-    fprintf(stderr,"wrong number of types at end of if-branch expected %zu got %zu\n",requiredState->typeCount,state->typeCount);
-    return (Error){.errorCode=ERROR_TYPE,.pos=pos};
-  }
-  for(int64_t i=state->typeCount-1;i>=0;i--){
-    if(!typeEquals(&(state->typeStack[i].type),&(requiredState->types[i].type))){
-      fputs("wrong type at end of if-branch expected ",stderr);
-      printTypeName(&(requiredState->types[i].type),stderr);
+  size_t offset=state->opStackCount;
+  if(ignoreFirst)
+    offset-=state->typeStack[typeCount].opCount;
+  for(int64_t i=typeCount-1;i>=0;i--){
+    if(!initStackState&&!typeEquals(&(state->typeStack[i].type),&(expectedState->types[i].type))){
+      fprintf(stderr,"wrong type at end of %s expected ",errorMessage);
+      printTypeName(&(expectedState->types[i].type),stderr);
       fputs(" got ",stderr);
       printTypeName(&(state->typeStack[i].type),stderr);
       fputs("\n",stderr);
       return (Error){.errorCode=ERROR_TYPE,.pos=pos};
     }
-    varId=ifBlock->elsePos!=0?ifBlock->outStack.ops[i].dataAs.idInfo.id:state->tmpCount++;
+    varId=initStackState?state->tmpCount++:stackState->ops[i].dataAs.idInfo.id;
     //save stack-elements to tmp-values
-    pushCompiledOperation(state,(Operation){.opType=OP_SET_VALUE,.dataType=requiredState->types[i].type,.filePos=pos,.dataAs={0}});
-    pushCompiledOperation(state,opGetTmpVar(&(requiredState->types[i].type),varId,pos));
-    pushCompiledOperations(state,state->opStack+state->opStackCount-state->typeStack[i].opCount,state->typeStack[i].opCount);
-    state->opStackCount-=state->typeStack[i].opCount;
-    state->typeCount--;
-    
-    if(ifBlock->elsePos==0){
-      ifBlock->outStack.types[i]=(TypeInfo){.opCount=1,.type=asConstType(state->typeStack[i].type)};
-      ifBlock->outStack.ops[i]=opGetTmpVar(&(ifBlock->outStack.types[i].type),varId,pos);
+    if(declare){
+      pushCompiledOperation(state,opDeclareTmpVar(&(state->typeStack[i].type),varId,pos));
+    }else{
+      pushCompiledOperation(state,(Operation){.opType=OP_SET_VALUE,.dataType=state->typeStack[i].type,.filePos=pos,.dataAs={0}});
+      pushCompiledOperation(state,opGetTmpVar(&(state->typeStack[i].type),varId,pos));
+    }
+    pushCompiledOperations(state,state->opStack+offset-state->typeStack[i].opCount,state->typeStack[i].opCount);
+    offset-=state->typeStack[i].opCount;
+    if(!ignoreFirst){//remove element from stack if ignoreFirst false
+      state->opStackCount-=state->typeStack[i].opCount;
+      state->typeCount--;
+    }
+    if(initStackState){
+      stackState->types[i]=(TypeInfo){.opCount=1,.type=asConstType(state->typeStack[i].type)};
+      stackState->ops[i]=opGetTmpVar(&(state->typeStack[i].type),varId,pos);
     }
   }
   return (Error){.errorCode=0,.pos=pos};
+}
+Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,FilePosition pos){
+  return storeStackValues(state,&(ifBlock->outStack),(ifBlock->elsePos!=0)? &(ifBlock->outStack) : &(ifBlock->inStack),"if-branch",ifBlock->elsePos==0,false,false,pos);
+}
+Error initWhileTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
+  return storeStackValues(state,&(whileBlock->inStack),NULL,"while-loop",true,true,false,pos);
+}
+Error initWhileOutTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
+  return storeStackValues(state,&(whileBlock->outStack),NULL,"while-loop",true,false,true,pos);
+}
+Error checkWhileTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
+  return storeStackValues(state,&(whileBlock->inStack),&(whileBlock->inStack),"while-loop",false,false,false,pos);
 }
 
 
@@ -3208,22 +3264,22 @@ Error typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   if(procType->inType->typeClass==TYPECLASS_FLAT_TUPLE){
     argCount=procType->inType->typeDataAs.composite->typeCount;
   }
+  if(state->typeCount<argCount){
+    fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
+    return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
+  }
+  //extract operations
+  r=extractCompositeOps(state,argCount+(isPtr?1:0));
+  if(r.errorCode!=0)
+    return r;
   int32_t tmpId;
   if(!isVoidType(&outType)){//store result in temp variable
     tmpId=state->tmpCount++;
     pushCompiledOperation(state,opDeclareIntermediate(procType->outType,tmpId,op->filePos));
   }
-  //compile operation
-  r=extractCompositeOps(state,argCount+(isPtr?1:0));
-  if(r.errorCode!=0)
-    return r;
   r=addCompiledOp(state,*op,isPtr?1:0);
   if(r.errorCode!=0)
     return r;
-  if(state->typeCount<argCount){
-    fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
-    return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
-  }
   size_t offset=state->typeCount-argCount;
   if(argCount==1){//function takes single argument, the single argument will not be a flat tuple (tuples have >= 2 elements)
     int err=requireTypes("procedure argument",state,procType->inType,1,op->filePos);
@@ -3987,7 +4043,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return r;
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
-    case OP_CODE_BLOCK://TODO? allow operations to cross while-block boundaries
+    case OP_CODE_BLOCK:
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.block){
@@ -4035,14 +4091,13 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("ELSE can only appear in IF blocks\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),true,op.filePos);
+          r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),op.filePos);
           if(r.errorCode!=0){
             return r;
           }
           //reset stack to in-types 
-          if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack))){
+          if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack)))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-          }
           //push updated block
           blockInfo.type=BLOCK_ELSE;
           blockInfo.blockDataAs.ifBlock.elsePos=state->opCount;
@@ -4100,10 +4155,18 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return r;
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_WHILE:
-          if(checkNonemptyStack(state,"unfinished local operation")){
-            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-          }
-          if(pushBlock(state,(BlockInfo){.type=BLOCK_WHILE,.blockStart=state->opCount,.blockDataAs={0}}))
+          blockInfo=(BlockInfo){.type=BLOCK_WHILE,.blockStart=state->opCount,.blockDataAs={0}};
+          blockInfo.blockDataAs.whileBlock.inStack.types=NULL;
+          blockInfo.blockDataAs.whileBlock.inStack.ops=NULL;
+          blockInfo.blockDataAs.whileBlock.outStack.types=NULL;
+          blockInfo.blockDataAs.whileBlock.outStack.ops=NULL;
+          //store types at loop start
+          r=initWhileTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
+          if(r.errorCode!=0)
+            return r;
+          if(resetStack(state,&(blockInfo.blockDataAs.whileBlock.inStack)))
+            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+          if(pushBlock(state,blockInfo))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           pushCompiledOperation(state,opCodeBlock(BLOCK_DO,op.filePos));
           return (Error){.errorCode=0,.pos=op.filePos};
@@ -4118,11 +4181,15 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
           blockInfo.blockDataAs.whileBlock.hasDo=true;
+          //store types at loop condition
+          r=initWhileOutTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
+          if(r.errorCode!=0)
+            return r;
           if(pushBlock(state,blockInfo))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           op.dataType=primitiveType(PRIMITIVE_BOOL);
           op.dataAs.block=BLOCK_WHILE;
-          r=(Error){.errorCode=requireTypes("if-condition",state,&op.dataType,1,op.filePos),.pos=op.filePos};
+          r=(Error){.errorCode=requireTypes("while-condition",state,&op.dataType,1,op.filePos),.pos=op.filePos};
           if(r.errorCode!=0){
             return r;
           }
@@ -4133,9 +4200,9 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           r=addCompiledOp(state,op,1); 
           if(r.errorCode!=0)
             return r;
-          if(checkNonemptyStack(state,"unfinished local operation")){//stack crossing block boundaries not implemented
-            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-          }
+          //reset stack after compiling condition
+          if(resetStack(state,&(blockInfo.blockDataAs.whileBlock.outStack)))
+            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_WHILE_END:
           fputs("WHILE_END blocks are not supported use WHILE ... DO END to build a do-while statement",stderr);
@@ -4150,44 +4217,23 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_END:
           blockInfo=peekBlock(state);//keep block on block stack until writing operations has finished
-          if(blockInfo.type==BLOCK_END||blockInfo.type==BLOCK_IF2||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
+          if(blockInfo.type==BLOCK_END||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
             fputs("unexpected END statement\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-          }
-          if(blockInfo.type==BLOCK_WHILE){
-            op.dataAs.block=BLOCK_WHILE_END;
           }
           int32_t endCount=1;
           if(blockInfo.type==BLOCK_IF||blockInfo.type==BLOCK_ELSE){
             endCount+=blockInfo.blockDataAs.ifBlock.elifCount;
-            r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),true,op.filePos);
+            r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),op.filePos);
             if(r.errorCode!=0){
               return r;
             }
-            if(blockInfo.type==BLOCK_ELSE){//block ends if else-branch
-              memmove(state->compiledOperations+blockInfo.blockStart+blockInfo.blockDataAs.ifBlock.outStack.typeCount,state->compiledOperations+blockInfo.blockStart,
-                (state->opCount-blockInfo.blockStart)*sizeof(Operation));
-              for(size_t i=0;i<blockInfo.blockDataAs.ifBlock.outStack.typeCount;i++){
-                state->compiledOperations[blockInfo.blockStart+i]=blockInfo.blockDataAs.ifBlock.outStack.ops[i];
-                state->compiledOperations[blockInfo.blockStart+i].opType=OP_PRE_DECLARE;
-              }
-              state->opCount+=blockInfo.blockDataAs.ifBlock.outStack.typeCount;
-            }else{
-              size_t count=blockInfo.blockDataAs.ifBlock.outStack.typeCount+blockInfo.blockDataAs.ifBlock.inStack.opCount;
-              if(ensureOpCap(state,state->opCount+count))
+            if(blockInfo.type==BLOCK_ELSE){//if ends with else branch
+              if(predeclareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.ifBlock.outStack)))
                  return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-              memmove(state->compiledOperations+blockInfo.blockStart+count,state->compiledOperations+blockInfo.blockStart,
-                (state->opCount-blockInfo.blockStart)*sizeof(Operation));
-              size_t opOffset=blockInfo.blockStart,inTypesOffset=0;
-              for(size_t i=0;i<blockInfo.blockDataAs.ifBlock.outStack.typeCount;i++){
-                state->compiledOperations[opOffset]=blockInfo.blockDataAs.ifBlock.outStack.ops[i];
-                state->compiledOperations[opOffset].opType=OP_DECLARE;
-                opOffset++;
-                memcpy(state->compiledOperations+opOffset,blockInfo.blockDataAs.ifBlock.inStack.ops+inTypesOffset,
-                  (blockInfo.blockDataAs.ifBlock.inStack.types[i].opCount)*sizeof(Operation));
-                inTypesOffset+=blockInfo.blockDataAs.ifBlock.inStack.types[i].opCount;
-              }
-              state->opCount+=count;
+            }else{
+              if(declareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.ifBlock.outStack),&(blockInfo.blockDataAs.ifBlock.inStack)))
+                 return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
             }
             if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.outStack))){
               return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
@@ -4197,6 +4243,15 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             free(blockInfo.blockDataAs.ifBlock.inStack.ops);
             free(blockInfo.blockDataAs.ifBlock.outStack.types);
             free(blockInfo.blockDataAs.ifBlock.outStack.ops);
+          }else if(blockInfo.type==BLOCK_WHILE){
+            op.dataAs.block=BLOCK_WHILE_END;
+            r=checkWhileTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
+            if(r.errorCode!=0)
+              return r;
+            if(predeclareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.whileBlock.outStack)))
+               return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+            if(resetStack(state,&(blockInfo.blockDataAs.whileBlock.outStack)))
+              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           }else{
             //TODO check for procedures with missing return statements
             if(checkNonemptyStack(state,"unfinished local operation")){
