@@ -30,22 +30,20 @@ anEnum .B new =:: e2
 2 anEnum .C new =:: e3
 
 proc( string => string i64 ) =: startItr
-  0 return
+  0
 end
   
 proc( string i64 => string i64 char bool ) =: nextChar
   =:: i
   =:: s
-  i s .length >= if
-    s i  '\x00'  false return 
-  end
-  s  i 1 +  s i [] true return 
+  s
+    i s .length >= if
+      i '\x00'  false return 
+    end
+    i 1 +  s i [] true return 
 end
 proc( string i64 i8 => ) =: endItr
-  =:: _1
-  =:: _2
-  =:: _3
-  return
+  #drop #drop #drop
 end
 
 entryPoint:
@@ -114,12 +112,14 @@ entryPoint:
     #+char+# print
   end endItr
   
-  5 true while do
-    #dup print 
-    
-    1 -  
-    #dup 0 > 
-  end #drop
+  5 
+    true while do
+      #dup print 
+      
+      1 -  
+      #dup 0 > 
+    end 
+  #drop
   
   true print 
 end

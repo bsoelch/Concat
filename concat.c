@@ -2484,7 +2484,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     }else if(wordEquals(&word,"swap")){//XXX rot:N:K -> stack rotation
       (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP}}};
       return (SizeOrError){.isError=false,.as={.size=1}};
-    }
+    }//XXX over -> copy lower stack element
     //compiler commands
     if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
       (*op)=(Operation){.opType=OP_TYPE_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.typeInfo={.infoType=TYPEINFO_TYPES,.maxCount=-1}}};
@@ -2663,6 +2663,7 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(wordEquals(&word,"return")){
     if(state->currentProcId<0){
       fputs("unexpected return statement\n",stderr);
+      return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
     }
     (*op)=(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}};
     return (SizeOrError){.isError=false,.as={.size=1}};
@@ -2838,18 +2839,22 @@ typedef struct{
 
 }StackState;
 typedef struct{
+  StackState inStack;
+  StackState outStack;
+  
   size_t elsePos;
   int32_t elifCount;
-  
-  StackState inStack;
-  StackState outStack;
+  bool endReachable;
 }IfBlockInfo;
 typedef struct{
-  bool hasDo;
-  
   StackState inStack;
   StackState outStack;
+  bool hasDo;
+  
 }WhileBlockInfo;
+typedef struct{
+  DataType returnType;
+}ProcedureBlockInfo;
 typedef struct{
   BlockType type;
   size_t blockStart;
@@ -2857,6 +2862,7 @@ typedef struct{
     int64_t i64;
     IfBlockInfo ifBlock;
     WhileBlockInfo whileBlock;
+    ProcedureBlockInfo procBlock;
   }blockDataAs;
 }BlockInfo;
 typedef struct{
@@ -2885,6 +2891,7 @@ typedef struct{
   size_t index;
   int32_t nPredeclaredTypes;
   DataType* predeclaredTypes;
+  bool reachable;//is current code position reachable
   bool hasCheckBounds;
   bool hasCheckEnum;
 }TypeCheckState;
@@ -3164,7 +3171,8 @@ Error storeStackValues(TypeCheckState* state,StackState* stackState,StackState* 
   return (Error){.errorCode=0,.pos=pos};
 }
 Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,FilePosition pos){
-  return storeStackValues(state,&(ifBlock->outStack),(ifBlock->elsePos!=0)? &(ifBlock->outStack) : &(ifBlock->inStack),"if-branch",ifBlock->elsePos==0,false,false,pos);
+  bool needInit=!(ifBlock->endReachable);
+  return storeStackValues(state,&(ifBlock->outStack),(needInit)? &(ifBlock->inStack) : &(ifBlock->outStack),"if-branch",needInit,false,false,pos);
 }
 Error initWhileTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
   return storeStackValues(state,&(whileBlock->inStack),NULL,"while-loop",true,true,false,pos);
@@ -3427,6 +3435,52 @@ Error compileGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operatio
   return (Error){.errorCode=0,.pos=op->filePos};
 }
 
+Error typeCheckReturn(TypeCheckState* state,Operation* op){
+  Error r;
+  if(isVoidType(&(op->dataType))){
+      if(checkNonemptyStack(state,"unfinished operation at end of procedure"))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op->filePos};
+    pushCompiledOperation(state,*op);
+    return (Error){.errorCode=0,.pos=op->filePos};
+  }
+  if(state->opStackCount==0){
+    fputs("missing return value",stderr);
+    return (Error){.errorCode=ERROR_SYNTAX,.pos=op->filePos};
+  }
+  if(state->typeCount==1){
+    if(op->dataType.typeClass==TYPECLASS_FLAT_TUPLE){
+      op->dataType.typeClass=TYPECLASS_TUPLE;//notify compiler that tuple is non-flat
+    }
+    r=(Error){.errorCode=requireTypes("return statement",state,&(op->dataType),1,op->filePos),.pos=op->filePos};
+    if(r.errorCode!=0){
+      return r;
+    }
+    r=extractCompositeOps(state,1);
+    if(r.errorCode!=0)
+      return r;
+    return addCompiledOp(state,*op,1);
+  }
+  if(op->dataType.typeClass!=TYPECLASS_TUPLE&&op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
+    checkNonemptyStack(state,"unfinished operation at end of procedure");//this should always return true
+    return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
+  }
+  if(op->dataType.typeClass==TYPECLASS_TUPLE){
+    op->dataType.typeClass=TYPECLASS_FLAT_TUPLE;//notify compiler that tuple is flat
+  }
+  if(op->dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op->dataType.typeDataAs.composite->typeCount){
+    fprintf(stderr,"wrong number of return values: expected %"PRIi32" got %zu\n",op->dataType.typeDataAs.composite->typeCount,state->typeCount);
+    return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
+  }
+  r=(Error){.errorCode=requireTypes("return statement",state,op->dataType.typeDataAs.composite->types,state->typeCount,op->filePos),.pos=op->filePos};
+  if(r.errorCode!=0){
+    return r;
+  }
+  r=extractCompositeOps(state,state->typeCount);
+  if(r.errorCode!=0)
+    return r;
+  return addCompiledOp(state,*op,state->typeCount);
+}
+
 bool checkLocal(TypeCheckState* state,Operation op){
   if(state->blockCount!=0)
     return false;
@@ -3434,7 +3488,13 @@ bool checkLocal(TypeCheckState* state,Operation op){
   printOperation(op,stderr);
   return true;
 }
-
+bool checkReachable(TypeCheckState* state,Operation op){
+  if(state->reachable)
+    return false;
+  fputs("unreachable statement ",stderr);
+  printOperation(op,stderr);
+  return true;
+}
 Error typeCheckOperation(Operation op,TypeCheckState* state){
   if(op.opType==OP_IDENTIFIER||op.opType==OP_IDENTIFIER_ADDRESS){
     ScopeNode* asIdentifier;
@@ -3456,8 +3516,12 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
   BlockInfo blockInfo;
   switch(op.opType){
     case OP_CONSTANT:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       return pushValue(state,op);
     case OP_UNARY_OPERATOR:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
@@ -3516,6 +3580,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_BINARY_OPERATOR:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<2){
@@ -3627,6 +3693,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_PRINT:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
@@ -3652,6 +3720,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_CHECK_ENUM_INDEX:
       break;
     case OP_GET:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.idInfo.type){
@@ -3803,6 +3873,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_GET_LABEL:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
@@ -3878,6 +3950,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       return addCompiledStackOps(state,op,state->typeStack[state->typeCount-1].opCount,1,false);
     case OP_PRE_DECLARE:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
         case ID_GLOBAL_VAR:
@@ -3915,6 +3989,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_DECLARE:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.idInfo.type){
         case ID_LOCAL_VAR:
         case ID_GLOBAL_VAR:
@@ -3960,7 +4036,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             pushCompiledOperation(state,op);
             op.opType=OP_DECLARE;
           }
-          if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={0}}))
+          if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={.procBlock={.returnType=*op.dataType.typeDataAs.procedure->outType}}}))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           pushCompiledOperation(state,op);
           return pushProcArgs(state,&op.dataType,op.filePos);
@@ -3983,6 +4059,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_NEW:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(op.dataType.typeClass==TYPECLASS_TUPLE||op.dataType.typeClass==TYPECLASS_STRUCT){
         offset=state->typeCount-op.dataType.typeDataAs.composite->typeCount;
         r=(Error){.errorCode=requireTypes("tuple creation",state,op.dataType.typeDataAs.composite->types,
@@ -4056,6 +4134,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_CAST:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
@@ -4083,6 +4163,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       //update stack
       return pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
     case OP_ADDR_OF:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(state->typeCount<1){
         fprintf(stderr,"not enough operands for operation %s : need 1 got %zu\n",opName(op.opType),state->typeCount);
         return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
@@ -4106,6 +4188,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.block){
         case BLOCK_IF:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           blockInfo=peekBlock(state);
           if(blockInfo.type==BLOCK_END){//block stack underflow
             fputs("unexpected IF statement, IF statements cannot be declared at global level\n",stderr);
@@ -4149,10 +4233,14 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("ELSE can only appear in IF blocks\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),op.filePos);
-          if(r.errorCode!=0){
-            return r;
+          if(state->reachable){
+            r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),op.filePos);
+            if(r.errorCode!=0){
+              return r;
+            }
+            blockInfo.blockDataAs.ifBlock.endReachable=true;
           }
+          state->reachable=true;
           //reset stack to in-types 
           if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack)))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
@@ -4164,6 +4252,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           pushCompiledOperation(state,op);
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_IF2:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           blockInfo=popBlock(state);
           if(blockInfo.type!=BLOCK_ELSE){//wrong position for _IF
             fputs("_IF can only appear in ELSE blocks\n",stderr);
@@ -4213,6 +4303,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return r;
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_WHILE:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           blockInfo=(BlockInfo){.type=BLOCK_WHILE,.blockStart=state->opCount,.blockDataAs={0}};
           blockInfo.blockDataAs.whileBlock.inStack.types=NULL;
           blockInfo.blockDataAs.whileBlock.inStack.ops=NULL;
@@ -4229,6 +4321,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           pushCompiledOperation(state,opCodeBlock(BLOCK_DO,op.filePos));
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_DO:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           blockInfo=popBlock(state);
           if(blockInfo.type!=BLOCK_WHILE){//wrong position for DO
             fputs("DO can only appear in WHILE-DO blocks\n",stderr);
@@ -4267,6 +4361,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           fputs("WHILE_END blocks are not supported use WHILE ... DO END to build a do-while statement",stderr);
           return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
         case BLOCK_START:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           if(checkNonemptyStack(state,"unfinished local operation")){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
@@ -4281,41 +4377,74 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
           int32_t endCount=1;
-          if(blockInfo.type==BLOCK_IF||blockInfo.type==BLOCK_ELSE){
-            endCount+=blockInfo.blockDataAs.ifBlock.elifCount;
-            r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),op.filePos);
-            if(r.errorCode!=0){
-              return r;
-            }
-            if(blockInfo.type==BLOCK_ELSE){//if ends with else branch
-              if(predeclareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.ifBlock.outStack)))
+          switch(blockInfo.type){
+            case BLOCK_IF:
+            case BLOCK_ELSE:
+              endCount+=blockInfo.blockDataAs.ifBlock.elifCount;
+              if(state->reachable){
+                r=checkIfTypes(state,&(blockInfo.blockDataAs.ifBlock),op.filePos);
+                if(r.errorCode!=0){
+                  return r;
+                }
+                blockInfo.blockDataAs.ifBlock.endReachable=true;
+              }
+              bool endReachable=blockInfo.blockDataAs.ifBlock.endReachable;
+              if(endReachable){
+                if(blockInfo.type==BLOCK_ELSE){//if ends with else branch
+                  if(predeclareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.ifBlock.outStack)))
+                     return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+                }else{
+                  if(declareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.ifBlock.outStack),&(blockInfo.blockDataAs.ifBlock.inStack)))
+                     return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+                }
+                if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.outStack))){
+                  return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+                }
+              }else if(blockInfo.type==BLOCK_IF){//reset stack to state before if-block
+                if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.inStack))){
+                  return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+                }
+              }else{//clear stack if end of if-block unreachable
+                state->typeCount=0;
+                state->opStackCount=0;
+              }
+              //free values on op-stack
+              free(blockInfo.blockDataAs.ifBlock.inStack.types);
+              free(blockInfo.blockDataAs.ifBlock.inStack.ops);
+              free(blockInfo.blockDataAs.ifBlock.outStack.types);
+              free(blockInfo.blockDataAs.ifBlock.outStack.ops);
+              //next statement reachable if on if-branch terminates or if does not have an else branch
+              state->reachable=endReachable||(blockInfo.type==BLOCK_IF);
+              break;
+            case BLOCK_WHILE:
+              if(!state->reachable){
+                fputs("end of while block cannot be reached\n",stderr);//XXX better error message
+                return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+              }
+              op.dataAs.block=BLOCK_WHILE_END;
+              r=checkWhileTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
+              if(r.errorCode!=0)
+                return r;
+              if(predeclareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.whileBlock.outStack)))
                  return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-            }else{
-              if(declareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.ifBlock.outStack),&(blockInfo.blockDataAs.ifBlock.inStack)))
-                 return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-            }
-            if(resetStack(state,&(blockInfo.blockDataAs.ifBlock.outStack))){
-              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-            }
-            //free values on op-stack
-            free(blockInfo.blockDataAs.ifBlock.inStack.types);
-            free(blockInfo.blockDataAs.ifBlock.inStack.ops);
-            free(blockInfo.blockDataAs.ifBlock.outStack.types);
-            free(blockInfo.blockDataAs.ifBlock.outStack.ops);
-          }else if(blockInfo.type==BLOCK_WHILE){
-            op.dataAs.block=BLOCK_WHILE_END;
-            r=checkWhileTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
-            if(r.errorCode!=0)
-              return r;
-            if(predeclareBlockVariables(state,blockInfo.blockStart,&(blockInfo.blockDataAs.whileBlock.outStack)))
-               return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-            if(resetStack(state,&(blockInfo.blockDataAs.whileBlock.outStack)))
-              return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
-          }else{
-            //TODO check for procedures with missing return statements
-            if(checkNonemptyStack(state,"unfinished local operation")){
-              return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-            }
+              if(resetStack(state,&(blockInfo.blockDataAs.whileBlock.outStack)))
+                return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+              state->reachable=true;
+              break;
+            case BLOCK_PROCEDURE:
+              if(state->reachable&&!isVoidType(&(blockInfo.blockDataAs.procBlock.returnType))){//automatically add return statement at end of non-void procedures
+                Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfo.blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
+                r=typeCheckReturn(state,&ret);
+                if(r.errorCode!=0)
+                  return r;
+              }
+              state->reachable=true;
+              break;
+            default:
+              if(checkNonemptyStack(state,"unfinished local operation")){
+                return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+              }
+              state->reachable=true;
           }
           while(endCount-->0){
             pushCompiledOperation(state,op);
@@ -4328,63 +4457,31 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_CALL_PTR:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       return typeCheckCall(&op,state,true);
     case OP_CALL:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       return typeCheckCall(&op,state,false);
-    case OP_RETURN:   
+    case OP_RETURN:  
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos}; 
+      state->reachable=false;
       if(checkLocal(state,op))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};  
-      if(isVoidType(&(op.dataType))){
-          if(checkNonemptyStack(state,"unfinished operation at end of procedure"))
-            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-        pushCompiledOperation(state,op);
-        return (Error){.errorCode=0,.pos=op.filePos};
-      }
-      if(state->opStackCount==0){
-        fputs("missing return value",stderr);
-        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
-      }
-      if(state->typeCount==1){
-        if(op.dataType.typeClass==TYPECLASS_FLAT_TUPLE){
-          op.dataType.typeClass=TYPECLASS_TUPLE;//notify compiler that tuple is non-flat
-        }
-        r=(Error){.errorCode=requireTypes("return statement",state,&op.dataType,1,op.filePos),.pos=op.filePos};
-        if(r.errorCode!=0){
-          return r;
-        }
-        r=extractCompositeOps(state,1);
-        if(r.errorCode!=0)
-          return r;
-        return addCompiledOp(state,op,1);
-      }
-      if(op.dataType.typeClass!=TYPECLASS_TUPLE&&op.dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
-        checkNonemptyStack(state,"unfinished operation at end of procedure");//this should always return true
-        return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-      }
-      if(op.dataType.typeClass==TYPECLASS_TUPLE){
-        op.dataType.typeClass=TYPECLASS_FLAT_TUPLE;//notify compiler that tuple is flat
-      }
-      if(op.dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op.dataType.typeDataAs.composite->typeCount){
-        fprintf(stderr,"wrong number of return values: expected %"PRIi32" got %zu\n",op.dataType.typeDataAs.composite->typeCount,state->typeCount);
-        return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
-      }
-      r=(Error){.errorCode=requireTypes("return statement",state,op.dataType.typeDataAs.composite->types,state->typeCount,op.filePos),.pos=op.filePos};
-      if(r.errorCode!=0){
-        return r;
-      }
-      r=extractCompositeOps(state,state->typeCount);
-      if(r.errorCode!=0)
-        return r;
-      return addCompiledOp(state,op,state->typeCount);
+      return typeCheckReturn(state,&op);
     case ENTRY_POINT://start of procedure
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       if(checkNonemptyStack(state,"unfinished global operation")){
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       }
-      if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={0}}))
+      if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={.procBlock={.returnType=primitiveType(PRIMITIVE_VOID)}}}))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
       pushCompiledOperation(state,op);
       return (Error){.errorCode=0,.pos=op.filePos};
@@ -4394,6 +4491,8 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
     //compile time ops
     case OP_MODIFY_STACK:
+      if(checkReachable(state,op))
+        return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       switch(op.dataAs.stackMod.op){
         case STACK_OP_DUP://duplicate top value on stack
           if(state->typeCount<1){
@@ -4448,7 +4547,8 @@ Error typeCheckProgram(Program* prog,CodeFile* src){
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
     .predeclaredTypes=malloc(prog->predeclaredTypes*sizeof(DataType)),.nPredeclaredTypes=prog->predeclaredTypes,
-    .globalScope=prog->globalScope,.tmpCount=0,.index=0};
+    .globalScope=prog->globalScope,.tmpCount=0,.index=0,
+    .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,};
   if(state.globalOperations==NULL||state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
     freeContents(&state);
     return (Error){.errorCode=ERROR_MEMORY,.pos=src->currentPos};

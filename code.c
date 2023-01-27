@@ -164,10 +164,6 @@ int8_t const tmp11 = (*((tmp9)+(tmp7)));
 return (tuple12){.e0=local16,.e1=tmp6,.e2=tmp11,.e3=((bool)1)};
 }
 void procedure15 (tuple10 arg0, int64_t arg1, int8_t arg2){
-int8_t local16 = arg2;
-int64_t local17 = arg1;
-tuple10 local18 = arg0;
-return ;
 }
 int main(void){
 int32_t const tmp12 = (((int32_t)1)+((int32_t)1));
