@@ -32,7 +32,7 @@ anEnum .B new =:: e2
 proc( string => string i64 ) =: startItr
   0 return
 end
-
+  
 proc( string i64 => string i64 char bool ) =: nextChar
   =:: i
   =:: s
@@ -103,7 +103,7 @@ entryPoint:
     else 1 + B 0 !=  if A 42 >=  else false end _if 
       2 +
     else
-      3 +
+      3 + 
     end 
   print
   
@@ -114,13 +114,13 @@ entryPoint:
     #+char+# print
   end endItr
   
-  5 i32 =: I 
-  true while do
-    I print 
-    I -- 
-    0 > 
-  end
-
+  5 true while do
+    #dup print 
+    
+    1 -  
+    #dup 0 > 
+  end #drop
+  
   true print 
 end
 

@@ -308,15 +308,18 @@ tmp77 = tmp81;
 tmp78 = tmp82;
 }while(1);
 procedure15(tmp82,tmp81,tmp80);
-int32_t local27 = 5;
+int32_t tmp86;
 bool tmp84 = 1;
+int32_t tmp85 = 5;
 do{
+tmp86 = tmp85;
 if(!tmp84)
   break;
-printf("%"PRIi32"\n",local27);
-int32_t const tmp85 = (--local27);
-bool const tmp86 = (tmp85>((int32_t)0));
-tmp84 = tmp86;
+printf("%"PRIi32"\n",tmp86);
+int32_t const tmp87 = (tmp86-((int32_t)1));
+bool const tmp88 = (tmp87>((int32_t)0));
+tmp84 = tmp88;
+tmp85 = tmp87;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
 }

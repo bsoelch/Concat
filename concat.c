@@ -211,6 +211,10 @@ typedef enum{
   OP_CALL,         // procType procId  
   OP_CALL_PTR,    
   ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END 
+  
+  //compile-time operations
+  OP_MODIFY_STACK,  
+  OP_TYPE_INFO,
 }OpType;
 const char* opName(OpType type){
   switch(type){
@@ -235,6 +239,8 @@ const char* opName(OpType type){
     case OP_ADDR_OF:return "OP_ADDR_OF";
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
     case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
+    case OP_MODIFY_STACK:return "OP_MODIFY_STACK";
+    case OP_TYPE_INFO:return "OP_TYPE_INFO";
   }
   return "UNDEFINED";
 }
@@ -885,6 +891,25 @@ const char* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_START]="st
   [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_WHILE_END]="while end",[BLOCK_END]="end"};
 
 
+typedef enum{
+  STACK_OP_DUP,
+  STACK_OP_DROP,
+  STACK_OP_SWAP,
+  //XXX? over, rotate
+}StackOperation;
+typedef struct{
+  //XXX multi-drop/dup
+  StackOperation op;
+}StackModification;
+typedef enum{
+  TYPEINFO_TYPES,
+  TYPEINFO_STACK,
+}TypeInfoType;
+typedef struct{
+  int32_t maxCount;
+  TypeInfoType infoType;
+}TypeStackInfo;
+
 typedef struct{
   OpType opType;
   DataType dataType;
@@ -896,6 +921,8 @@ typedef struct{
     IdentifierInfo idInfo;
     BlockType block;
     String string;
+    StackModification stackMod;
+    TypeStackInfo typeInfo;
   }dataAs;
 }Operation;
 
@@ -1654,6 +1681,8 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
     case OP_GET_LABEL:
     case OP_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
+    case OP_MODIFY_STACK:
+    case OP_TYPE_INFO:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op->opType));
       return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=op->filePos}}};
     default:
@@ -2445,8 +2474,27 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
   }else if(word.length>1&&word.chars[0]=='#'){//compiler command
     word.chars++;//remove first character
     word.length--;
+    //stack manipulation
+    if(wordEquals(&word,"dup")){//XXX dup:N drop:N -> dup/drop multiple values at once
+      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DUP}}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+    }else if(wordEquals(&word,"drop")){
+      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DROP}}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+    }else if(wordEquals(&word,"swap")){//XXX rot:N:K -> stack rotation
+      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP}}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+    }
+    //compiler commands
+    if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
+      (*op)=(Operation){.opType=OP_TYPE_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.typeInfo={.infoType=TYPEINFO_TYPES,.maxCount=-1}}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+    }else if(wordEquals(&word,"stack")){
+      (*op)=(Operation){.opType=OP_TYPE_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.typeInfo={.infoType=TYPEINFO_STACK,.maxCount=-1}}};
+      return (SizeOrError){.isError=false,.as={.size=1}};
+    }
+    //XXX more compile time operations
     fprintf(stderr,"unknown compile time operation '%.*s'\n",(int)word.length,word.chars);
-    //TODO compile time operations
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
   }
   if(bufferedTypes>0){
@@ -2842,10 +2890,14 @@ typedef struct{
 }TypeCheckState;
 
 //prints the type stack (for debug purposes)
-void printTypeStack(TypeCheckState* state,FILE* out){
+void printTypeStack(TypeCheckState* state,bool printOps,FILE* out){
   size_t offset=0;
-  for(size_t k=0;k<state->typeCount;k++){
+  for(int64_t k=state->typeCount-1;k>=0;k--){
     printTypeName(&(state->typeStack[k].type),out);
+    if(!printOps){
+      fputs("\n",out);
+      continue;
+    }
     fprintf(out," %"PRIi32":\n",state->typeStack[k].opCount);
     for(int32_t i=0;i<state->typeStack[k].opCount;i++){
       fputs("    ",out);//indent operations
@@ -4340,6 +4392,49 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_IDENTIFIER_ADDRESS:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op.opType));
       return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+    //compile time ops
+    case OP_MODIFY_STACK:
+      switch(op.dataAs.stackMod.op){
+        case STACK_OP_DUP://duplicate top value on stack
+          if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          totalOps=state->typeStack[state->typeCount-1].opCount;
+          if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
+            return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+          memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
+          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-1,sizeof(TypeInfo));
+          state->opStackCount+=totalOps;
+          state->typeCount++;
+          return (Error){.errorCode=0,.pos=op.filePos};
+        case STACK_OP_DROP://remove top value from stack
+          if(state->typeCount<1){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            return (Error){.errorCode=ERROR_TYPE,.pos=op.filePos};
+          }
+          state->typeCount--;
+          state->opStackCount-=state->typeStack[state->typeCount].opCount;
+          return (Error){.errorCode=0,.pos=op.filePos};
+        case STACK_OP_SWAP:
+          break;
+      }
+      break;
+    case OP_TYPE_INFO:
+      switch(op.dataAs.typeInfo.infoType){
+        case TYPEINFO_TYPES:
+          //TODO allow to limit op-count
+          puts("types:\n-----------------");
+          printTypeStack(state,false,stdout);
+          puts("-----------------");
+          return (Error){.errorCode=0,.pos=op.filePos};
+        case TYPEINFO_STACK:
+          puts("stack:\n-----------------");
+          printTypeStack(state,true,stdout);
+          puts("-----------------");
+          return (Error){.errorCode=0,.pos=op.filePos};
+      }
+      break;
   }
   printf("type checking %s is not implemented\n",opName(op.opType));
   return (Error){.errorCode=ERROR_UNIMPLEMENTED,.pos=op.filePos};
