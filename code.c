@@ -153,7 +153,7 @@ int64_t const tmp4 = (local16).e1;
 bool const tmp5 = (local15>=tmp4);
 if(tmp5){
 return (tuple12){.e0=local16,.e1=local15,.e2=((int8_t)0),.e3=((bool)0)};
-}else{
+}
 int64_t const tmp6 = (local15+((int64_t)1));
 int64_t const tmp7 = local15;
 tuple10 const tmp8 = local16;
@@ -162,7 +162,6 @@ int64_t const tmp10 = (tmp8).e1;
 concatInternal_checkArrayBounds(tmp7,tmp10);
 int8_t const tmp11 = (*((tmp9)+(tmp7)));
 return (tuple12){.e0=local16,.e1=tmp6,.e2=tmp11,.e3=((bool)1)};
-}
 }
 void procedure15 (tuple10 arg0, int64_t arg1, int8_t arg2){
 int8_t local16 = arg2;

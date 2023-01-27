@@ -5,7 +5,7 @@ proc( i32 i32 => i32 i32 ) =: proc0
 end
 proc( => ) =: doNothing
     return
-end
+end 
 proc( tuple( i32 ) => i64 i64 ) =: typeTest
   =:: ignore
   12345678987654321 98765432123456789 return
@@ -38,9 +38,8 @@ proc( string i64 => string i64 char bool ) =: nextChar
   =:: s
   i s .length >= if
     s i  '\x00'  false return 
-  else
-    s  i 1 +  s i [] true return 
   end
+  s  i 1 +  s i [] true return 
 end
 proc( string i64 i8 => ) =: endItr
   =:: _1

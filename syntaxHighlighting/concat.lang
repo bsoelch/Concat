@@ -9,7 +9,7 @@
   </metadata>
 
   <styles>
-    <style id="preprocessor" name="Preprocessor" map-to="def:preprocessor"/>
+    <style id="compile-time" name="compile time operation" map-to="def:preprocessor"/>
     <style id="comment"      name="Comment"      map-to="def:comment"/>
     <style id="variable"     name="Variable"                         />
     <style id="field"        name="Field"                            />
@@ -106,6 +106,14 @@
           \(\)                |
           @                   |
           addrOf
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+    
+    <context id="compile-time" style-ref="compile-time">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          \#([^[:space:]])+
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -260,6 +268,7 @@
         <context ref="decimal"/>
         <context ref="operators"/>
         <context ref="field-access"/>
+        <context ref="compile-time"/>
         <context ref="boolean"/>
       </include>
     </context>

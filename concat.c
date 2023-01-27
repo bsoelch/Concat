@@ -2442,6 +2442,12 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=opConstant(type,index,wordPos);
     op->dataType.typeClass=TYPECLASS_ENUM_LABEL;//change type-class to enum-label
     return (SizeOrError){.isError=false,.as={.size=1}};
+  }else if(word.length>1&&word.chars[0]=='#'){//compiler command
+    word.chars++;//remove first character
+    word.length--;
+    fprintf(stderr,"unknown compile time operation '%.*s'\n",(int)word.length,word.chars);
+    //TODO compile time operations
+    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_SYNTAX,.pos=wordPos}}};
   }
   if(bufferedTypes>0){
     fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
