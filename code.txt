@@ -1,7 +1,9 @@
 
-proc( i32 i32 => i32 i32 ) =: proc0
+proc( i32 : a i32 : b => i32 i32 ) =: proc0
   doNothing
-  return
+  b a return
+end
+proc( i32 : x i32 : y => ) =: argTest
 end
 proc( => ) =: doNothing
   return
@@ -97,12 +99,18 @@ entryPoint:
   X .1 print
   X .1 @ .1 print
   
+  
   0 anEnum .C new =:: e
   anEnum .A anEnum =: f
   e anEnum .A == print
   e anEnum .C == print
   e .C print
   
+  labelEnum .A =:: l1
+  l1 labelEnum .B == if
+    labelEnum .C new l1 =
+  end
+
   anInt print
   
   proc0 addrOf =:: fct

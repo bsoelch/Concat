@@ -41,6 +41,7 @@ const char* errorName(int errorCode){
   return "no error";
 }
 
+bool allowWarnings=false;
 typedef struct{
   const char* fileName;
   size_t line;
@@ -59,6 +60,18 @@ __attribute__((noreturn)) void handleError(const char* message,int errCode,FileP
   printFilePosition(pos,stderr);
   fputs("\n",stderr);
   exit(EXIT_FAILURE);
+}
+void handleWarning(const char* message,int errCode,FilePosition pos){
+  fputs("Warning:\n  ",stderr);
+  if(message!=NULL){
+    fputs(message,stderr);
+    fputs("\n  ",stderr);
+  }
+  fprintf(stderr,"%s at ",errorName(errCode));
+  printFilePosition(pos,stderr);
+  fputs("\n",stderr);
+  if(!allowWarnings)
+    exit(EXIT_FAILURE);
 }
 typedef struct{
   bool isError;
@@ -554,8 +567,8 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
   String*  labels=NULL;
   if(labelNames!=NULL){
     for(int32_t i=0;i<compositeCount;i++){//find matching labels
-      if(compositeTypes[i].typeCount>=eltCount){
-        labelsIndex=indexOfTypeArray(compositeTypes[i].types,compositeTypes[i].typeCount,elements,eltCount);
+      if(compositeTypes[i].labels!=NULL&&compositeTypes[i].typeCount>=eltCount){
+        labelsIndex=indexOfStringArray(compositeTypes[i].labels,compositeTypes[i].typeCount,labelNames,eltCount);
         if(labelsIndex==-1)
           continue;
         labelMatch=i;
@@ -563,7 +576,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
       }
     }
     if(labelMatch!=-1){
-      labels=compositeTypes[typeMatch].labels+labelsIndex;
+      labels=compositeTypes[labelMatch].labels+labelsIndex;
     }else{
       labels=malloc(eltCount*sizeof(String));//will persist until program exits
       if(labels==NULL)
@@ -730,7 +743,7 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         if(j<0)
           return j;
         i+=j;
-        if(type->typeDataAs.composite->labels==NULL)
+        if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labels==NULL)
           continue;
         j=fprintf(file," : %.*s",(int)type->typeDataAs.composite->labels[e].length,type->typeDataAs.composite->labels[e].chars);
         if(j<0)
@@ -828,7 +841,7 @@ int printTypeNameC(const DataType* type,FILE* file){
     case TYPECLASS_ENUM:
       return fprintf(file,"enum%"PRIi32,type->typeDataAs.composite->id);
     case TYPECLASS_ENUM_LABEL:
-      return fputs("int32_t",file);//XXX choose different int-type
+      return fputs("int32_t",file);
   }
   return fprintf(file,"unknown type-class %i\n",type->typeClass);
 }
@@ -1102,7 +1115,7 @@ ScopeNode* declareIdentifier(String name,DataType type,IdentifierType idType,Fil
     fprintf(stderr,"shadows previous declaration: %s '%.*s' at ",idNames[shaddow->idType],(int)shaddow->key.length,shaddow->key.chars);
     printFilePosition(shaddow->declaredAt,stderr);
     fputs("\n",stderr);
-    handleError(NULL,ERROR_SYNTAX,declaredAt);//XXX? only a warning
+    handleWarning(NULL,ERROR_SYNTAX,declaredAt);
   }
   *node=allocScopeNode();
   if(*node==NULL)
@@ -1399,6 +1412,11 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
           handleError("tuple access without base tuple",ERROR_SYNTAX,op->filePos);
           break;
         case ID_ENUM_LABEL:
+          if(op->dataType.typeDataAs.composite->flags&FLAG_VOID_ONLY){
+            fputs("/*label*/",target);
+            COMPILE_OP_RETURN_ERROR(target,op,opSize);
+            return size;
+          }
           fputs("(",target);
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
           fputs(").label",target);
@@ -1551,6 +1569,10 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
           printTypeNameC(&(op->dataType),target);
           fputs(")",target);
         }
+        if(op->dataType.typeDataAs.composite->flags&FLAG_VOID_ONLY){
+          fprintf(target,"/*enum*/%"PRIi64,op->dataAs.i64);
+          return size;
+        }
         fprintf(target,"{.label=%"PRIi64,op->dataAs.i64);
         if(isVoidType(op->dataType.typeDataAs.composite->types+op->dataAs.i64)){
           fputs(",.data={0}}",target);
@@ -1600,7 +1622,7 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
     case OP_BINARY_OPERATOR:
       fputs("(",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
-      switch(op->dataAs.binOp){//XXX? use array/map instead
+      switch(op->dataAs.binOp){
         case ADD:
           fputs("+",target);
           break;
@@ -1672,7 +1694,7 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
         case BLOCK_ELSE:
           fputs("}else{\n",target);
           return size;
-        case BLOCK_BREAK://XXX? better code for break and continue
+        case BLOCK_BREAK:
           fputs("break;\n",target);
           return size;
         case BLOCK_CONTINUE:
@@ -1760,7 +1782,11 @@ void compileToC(FILE* target,const Program* p){
       fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",i,i);
     }
     if(compositeTypes[i].flags&(FLAG_IS_ENUM)){
-      fprintf(target,"typedef struct enum%"PRIi32"Impl enum%"PRIi32";\n",i,i);
+      if(compositeTypes[i].flags&FLAG_VOID_ONLY){
+        fprintf(target,"typedef int32_t enum%"PRIi32";\n",i);
+      }else{
+        fprintf(target,"typedef struct enum%"PRIi32"Impl enum%"PRIi32";\n",i,i);
+      }
     }
   }
   //declare procedure pointers
@@ -1781,18 +1807,16 @@ void compileToC(FILE* target,const Program* p){
       }
       fputs("};\n",target);
     }
-    if(compositeTypes[i].flags&FLAG_IS_ENUM){
-      fprintf(target,"struct enum%"PRIi32"Impl{\n",i);//XXX declare enum with all void members as integer
-      if((compositeTypes[i].flags&FLAG_VOID_ONLY)==0){//omit output of empty union
-        fputs("union{\n",target);
-        for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-          if(isVoidType(&(compositeTypes[i].types[e])))
-            continue;//skip void types
-          printTypeNameC(&(compositeTypes[i].types[e]),target);
-          fprintf(target," e%"PRIi16";\n",e);
-        }
-        fputs("} data;\n",target);
+    if(((compositeTypes[i].flags&FLAG_IS_ENUM)!=0)&&((compositeTypes[i].flags&FLAG_VOID_ONLY)==0)){
+      fprintf(target,"struct enum%"PRIi32"Impl{\n",i);
+      fputs("union{\n",target);
+      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
+        if(isVoidType(&(compositeTypes[i].types[e])))
+          continue;//skip void types
+        printTypeNameC(&(compositeTypes[i].types[e]),target);
+        fprintf(target," e%"PRIi16";\n",e);
       }
+      fputs("} data;\n",target);
       fputs("int32_t const label;\n",target);
       fputs("};\n",target);
     }
@@ -2114,6 +2138,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
 #define LABEL_TYPE_NONE    0 // no labels
 #define LABEL_TYPE_STRUCT  1 // exactly one label per type
 #define LABEL_TYPE_ENUM    2 // labels without type are allowed
+#define LABEL_TYPE_PROC_IN 3 // types are allowed to have labels, if one type has labels than all types have to have an label
  
 bool readType(String name,CodeFile* codeFile,CompilerState* state);
 //reads a composite type of the given type-class, the result is stored in the type buffer
@@ -2168,15 +2193,15 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
     handleError("empty composite type",ERROR_SYNTAX,codeFile->wordStart);
     return;
   }
-  if(labelType!=LABEL_TYPE_NONE){
+  if(labelType==LABEL_TYPE_NONE||(labelType==LABEL_TYPE_PROC_IN&&labelOffset==bufferedFieldNames)){
+    typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,NULL,bufferedTypes-initOffset);
+  }else{//TODO distinguish between labels and unlabeled proc-in types
     if(typesSinceLabel>0){
       fprintf(stderr,"missing label in %s\n",typeClassName(typeClass));
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return;
     }
     typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,fieldNameBuffer+labelOffset,bufferedTypes-initOffset);
-  }else{
-    typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,NULL,bufferedTypes-initOffset);
   }
   if(typeEquals(&(typeBuffer[initOffset]),&TYPE_UNDEFINED)){
     handleError("unknown error while creating composite type",ERROR_SYNTAX,codeFile->wordStart);
@@ -2243,7 +2268,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
     return true;
   }
   if(wordEquals(&name,"proc(")){
-    readCompositeType(TYPECLASS_PROC_IN,codeFile,state,LABEL_TYPE_NONE,"=>",false);
+    readCompositeType(TYPECLASS_PROC_IN,codeFile,state,LABEL_TYPE_PROC_IN,"=>",false);
     readCompositeType(TYPECLASS_PROC_OUT,codeFile,state,LABEL_TYPE_NONE,")",false);
     typeBuffer[initOffset]=procedureType(&(typeBuffer[initOffset]),&(typeBuffer[initOffset+1]));
     bufferedTypes=initOffset+1;
