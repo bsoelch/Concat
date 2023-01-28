@@ -4354,7 +4354,17 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("DO cannot appear more than once per WHILE block\n",stderr);
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
-          //XXX convert while-blocks with empty condition to do-blocks
+          /*XXX simplify code for while-blocks with empty condition/body:
+            while do #+body+# end -> 
+            tmp =init
+            while(tmp){
+              // body
+            }
+            while #+body+# #+condition+# do end -> 
+            do{
+              //body
+            }while(condition);
+          */
           //store types at loop condition
           r=checkWhileOutTypes(state,&(blockInfo.blockDataAs.whileBlock),true,op.filePos);
           if(r.errorCode!=0)

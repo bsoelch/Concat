@@ -134,8 +134,58 @@ while <condition> do
 end
 ```
 
-<!-- TODO -->
+when a while block starts the condition part be executed, when reaching `do` the top stack value is checked, 
+if it is `true` the while-body will be executed and the program jumps back to `while`,
+if the top stack value when reaching `do` is `false` the program will jump to `end` statement
+ 
+`break` and `continue` can be used withing while loops to jump to `end` and `while` respectively.
+at least one execution path in a while block has to reach the end statement.
 
+Examples:
+
+```
+## anonymous for-loop
+0 ## it is possible to use stack values inside the loop
+  while 1 + #dup 5 < do ## increment top stack value and check if it is <5 without consuming that value
+    #dup print ## will print 1 2 3 4
+  end
+#drop ## cleanup stack
+
+## do-while loop
+0 =:: I
+while 
+  I print ## prints 0 1 2 3 4
+## condition
+I ++ 5 <
+do end
+
+## double loop with break
+0 =:: X
+0 =:: Y
+false =:: doBreak 
+while X ++ 5 < do
+  while Y ++ 5 < do
+    X Y check if
+      true doBreak =
+      break
+    end
+  end
+  doBreak if 
+    break
+  end
+end
+
+"Hello World!" =:: s
+-1 I =
+while I ++ s .length < do
+  s i [] 
+    #dup ' ' == if ## ignore spaces
+      continue
+    end
+  print
+end
+
+```
 
 
 
