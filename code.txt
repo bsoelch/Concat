@@ -4,11 +4,11 @@ proc( i32 i32 => i32 i32 ) =: proc0
   return
 end
 proc( => ) =: doNothing
-    return
+  return
 end 
-proc( tuple( i32 ) => i64 i64 ) =: typeTest
-  =:: ignore
-  12345678987654321 98765432123456789 return
+
+proc( => i64 ) =: anInt
+  12345678987654321 return
 end
 
 proc( => ( ( i32 i32 ptr ) ptr i32 ) ) =: ptrTest
@@ -102,6 +102,8 @@ entryPoint:
   e anEnum .A == print
   e anEnum .C == print
   e .C print
+  
+  anInt print
   
   proc0 addrOf =:: fct
   1 1 fct () print print

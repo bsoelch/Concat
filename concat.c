@@ -253,7 +253,8 @@ typedef enum{
   TYPECLASS_POINTER,
   TYPECLASS_CONST_POINTER,
   TYPECLASS_TUPLE,
-  TYPECLASS_FLAT_TUPLE,//behaves like tuple but will not be directly used
+  TYPECLASS_PROC_IN,
+  TYPECLASS_PROC_OUT,//behaves like tuple but will not be directly used
   TYPECLASS_PROCEDURE,
   TYPECLASS_TYPE_OF,
   TYPECLASS_OPAQUE,
@@ -287,10 +288,11 @@ typedef struct DataType{
   bool isWritable;
 }DataType;
 #define FLAG_IS_TUPLE      1
-#define FLAG_IS_FLAT_TUPLE 2
-#define FLAG_IS_STRUCT     4
-#define FLAG_IS_ENUM       8
-#define FLAG_VOID_ONLY     16
+#define FLAG_IS_PROC_IN    2
+#define FLAG_IS_PROC_OUT   4
+#define FLAG_IS_STRUCT     8
+#define FLAG_IS_ENUM       16
+#define FLAG_VOID_ONLY     32
 struct CompositeType{
   DataType* types;
   String*   labels;
@@ -326,13 +328,14 @@ String fieldNameBuffer[TYPE_BUFFER_CAP];
 bool typeEquals(const DataType* a,const DataType* b){
   if(a->typeClass!=b->typeClass)
     return false;
+    //TODO use switch on typeclass
   if(a->typeClass==TYPECLASS_UNDEFINED)
     return true;//all undefined types are equal
   if(a->typeClass==TYPECLASS_PRIMITIVE)
     return a->typeDataAs.primitive==b->typeDataAs.primitive;
   if(a->typeClass==TYPECLASS_POINTER||a->typeClass==TYPECLASS_CONST_POINTER||a->typeClass==TYPECLASS_TYPE_OF)
     return typeEquals(a->typeDataAs.type,b->typeDataAs.type);
-  if(a->typeClass==TYPECLASS_TUPLE||a->typeClass==TYPECLASS_FLAT_TUPLE||a->typeClass==TYPECLASS_STRUCT||a->typeClass==TYPECLASS_ENUM||a->typeClass==TYPECLASS_ENUM_LABEL)
+  if(a->typeClass==TYPECLASS_TUPLE||a->typeClass==TYPECLASS_PROC_IN||a->typeClass==TYPECLASS_PROC_OUT||a->typeClass==TYPECLASS_STRUCT||a->typeClass==TYPECLASS_ENUM||a->typeClass==TYPECLASS_ENUM_LABEL)
     return a->typeDataAs.composite->id==b->typeDataAs.composite->id;
   if(a->typeClass==TYPECLASS_PROCEDURE)
     return typeEquals(a->typeDataAs.procedure->inType,b->typeDataAs.procedure->inType)&&
@@ -467,14 +470,16 @@ int64_t indexOfTypeArray(const DataType* base,size_t baseLen,const DataType* chi
   return -1;
 }
 DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames,int32_t eltCount){
-  if(eltCount==0)
-    return typeClass==TYPECLASS_FLAT_TUPLE?primitiveType(PRIMITIVE_VOID):TYPE_UNDEFINED;//empty flat-tuple -> void other empty composites are undefined
-  if(eltCount==1&&typeClass==TYPECLASS_FLAT_TUPLE)
-    return elements[0];//auto unwrap 1-element flat-tuple
+  if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
+    return TYPE_UNDEFINED;//only procedure in/out can be empty composites
+  }
   int16_t classFlag;
   switch(typeClass){
-    case TYPECLASS_FLAT_TUPLE:
-      classFlag=FLAG_IS_FLAT_TUPLE;
+    case TYPECLASS_PROC_IN:
+      classFlag=FLAG_IS_PROC_IN;
+      break;
+    case TYPECLASS_PROC_OUT:
+      classFlag=FLAG_IS_PROC_OUT;
       break;
     case TYPECLASS_TUPLE:
       classFlag=FLAG_IS_TUPLE;
@@ -502,6 +507,23 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
   }
   if(isVoid)
     classFlag|=FLAG_VOID_ONLY;
+  if(eltCount==0){//empty composite
+    int32_t match=-1;
+    for(int32_t i=0;i<compositeCount;i++){
+      if(compositeTypes[i].typeCount==0){
+        match=i;
+        break;
+      }
+    }
+    if(match==-1){
+      if(compositeCount+1>=MAX_COMPOSITE)
+        return TYPE_UNDEFINED;
+      match=compositeCount;
+      compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=0,.types=NULL,.labels=NULL,.flags=classFlag};
+      compositeCount++;
+    }
+    return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+match,.isAddressable=false,.isWritable=false};
+  }
   int64_t typeMatch=-1,typesIndex;
   int64_t labelMatch=-1,labelsIndex;
   for(int32_t i=0;i<compositeCount;i++){
@@ -616,8 +638,10 @@ const char* typeClassName(TypeClass cls){
       return "pointer const";
     case TYPECLASS_TUPLE:
       return "tuple";
-    case TYPECLASS_FLAT_TUPLE:
-      return "flat tuple";
+    case TYPECLASS_PROC_IN:
+      return "procedure arguments";
+    case TYPECLASS_PROC_OUT:
+      return "return types";
     case TYPECLASS_PROCEDURE:
       return "procedure";
     case TYPECLASS_TYPE_OF:
@@ -672,20 +696,21 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         return i;
       j=fprintf(file," %s",typeClassName(type->typeClass));
       return j<0?j:(i+j);
-    case TYPECLASS_FLAT_TUPLE:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_PROC_OUT:
     case TYPECLASS_TUPLE:
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
-      if(type->typeClass!=TYPECLASS_FLAT_TUPLE){
+      if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
         i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
         if(noRecurse||i<0)
           return i;
+        j=fputs("(",file);
+        if(j<0)
+          return j;
+        i+=j;
       }
-      j=fputs("(",file);
-      if(j<0)
-        return j;
-      i+=j;
       for(int32_t e=0;e<type->typeDataAs.composite->typeCount;e++){
         if((type->typeClass==TYPECLASS_ENUM||type->typeClass==TYPECLASS_ENUM_LABEL)&&isVoidType(&(type->typeDataAs.composite->types[e]))){
           //void-type in enum -> only print label
@@ -703,17 +728,19 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         if(j<0)
           return j;
         i+=j;
-        if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_FLAT_TUPLE)
+        if(type->typeDataAs.composite->labels==NULL)
           continue;
         j=fprintf(file," : %.*s",(int)type->typeDataAs.composite->labels[e].length,type->typeDataAs.composite->labels[e].chars);
         if(j<0)
           return j;
         i+=j;
       }
-      j=fputs(" )",file);
-      if(j<0)
-        return j;
-      i+=j;
+      if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
+        j=fputs(" )",file);
+        if(j<0)
+          return j;
+        i+=j;
+      }
       return i;
     case TYPECLASS_PROCEDURE:
       i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.procedure->id);
@@ -784,7 +811,13 @@ int printTypeNameC(const DataType* type,FILE* file){
       i+=j;
       j=fputs("*",file);
       return j<0?j:(i+j);
-    case TYPECLASS_FLAT_TUPLE:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_PROC_OUT:
+      if(type->typeDataAs.composite->typeCount==0)
+        return fputs("void",file);
+      if(type->typeDataAs.composite->typeCount==1)
+        return printTypeNameC(type->typeDataAs.composite->types+0,file);
+      return fprintf(file,"tuple%"PRIi32,type->typeDataAs.composite->id);
     case TYPECLASS_TUPLE:
     case TYPECLASS_STRUCT:
       return fprintf(file,"tuple%"PRIi32,type->typeDataAs.composite->id);
@@ -1159,25 +1192,27 @@ SizeOrError tupleElementAccess(FILE* target,int32_t depth,const Operation* op,si
   }
   return (SizeOrError){.isError=false,.as={.size=size}};
 } 
+void printProcArgumentTypesC(DataType* inType,FILE* target,bool printArgNames){
+  if(inType->typeClass!=TYPECLASS_PROC_IN){
+    fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(inType->typeClass));
+    exit(1);
+  }
+  CompositeType* inTypes=inType->typeDataAs.composite;
+  if(inTypes->typeCount==0)
+    fputs("void",target);
+  for(int32_t e=0;e<inTypes->typeCount;e++){
+    if(e>0)
+      fputs(", ",target);
+    printTypeNameC(&(inTypes->types[e]),target);
+    if(printArgNames)
+      fprintf(target," arg%"PRIi32,e);
+  }
+}
 void printProcedureSignatureC(ProcedureType* procedure,int32_t procId,FILE* target,bool printArgNames){
   printTypeNameC(procedure->outType,target);
   fprintf(target," procedure%" PRIi32" (",procId);
   DataType* inType=procedure->inType;
-  if(inType->typeClass==TYPECLASS_FLAT_TUPLE){
-    CompositeType* inTypes=inType->typeDataAs.composite;
-    for(int32_t e=0;e<inTypes->typeCount;e++){
-      if(e>0)
-        fputs(", ",target);
-      printTypeNameC(&(inTypes->types[e]),target);
-      if(printArgNames)
-        fprintf(target," arg%"PRIi32,e);
-    } 
-  }else if(isVoidType(inType)){
-    fputs("void",target);
-  }else{
-    printTypeNameC(inType,target);
-    fputs(" arg0",target);
-  }         
+  printProcArgumentTypesC(inType,target,printArgNames);
   fputs(")",target);
 }
 
@@ -1191,18 +1226,22 @@ SizeOrError compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,
   SizeOrError r;
   DataType* in=op->dataType.typeDataAs.procedure->inType;
   DataType* out=op->dataType.typeDataAs.procedure->outType;
+  if(in->typeClass!=TYPECLASS_PROC_IN){
+    fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(in->typeClass));
+    exit(1);
+  }
+  if(out->typeClass!=TYPECLASS_PROC_OUT){
+    fprintf(stderr,"unexpected procedure return type-class: %s\n",typeClassName(out->typeClass));
+    exit(1);
+  }
   fputs("(",target);
-  if(in->typeClass==TYPECLASS_FLAT_TUPLE){
-    for(int32_t e=0;e<in->typeDataAs.composite->typeCount;e++){
-      if(e>0)
-        fputs(",",target);
-      COMPILE_OP_RETURN_ERROR(target,op,opSize);
-    }
-  }else if(!isVoidType(in)){
+  for(int32_t e=0;e<in->typeDataAs.composite->typeCount;e++){
+    if(e>0)
+      fputs(",",target);
     COMPILE_OP_RETURN_ERROR(target,op,opSize);
   }
   fputs(")",target);
-  if(isVoidType(out))//function without return value terminates statement
+  if(out->typeDataAs.composite->typeCount==0)//function without return value terminates statement
     fputs(";\n",target);
   return (SizeOrError){.isError=false,.as={.size=size}};
 } 
@@ -1647,11 +1686,11 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
       break;
     case OP_RETURN:
       fputs("return ",target);
-      if(op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
-        if(isVoidType(&(op->dataType))){
-          fputs(";\n",target);
-          return (SizeOrError){.isError=false,.as={.size=size}};
-        }
+      if(op->dataType.typeDataAs.composite->typeCount==0){
+        fputs(";\n",target);
+        return (SizeOrError){.isError=false,.as={.size=size}};
+      }
+      if(op->dataType.typeDataAs.composite->typeCount==1){
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         fputs(";\n",target);
         return (SizeOrError){.isError=false,.as={.size=size}};
@@ -1711,7 +1750,7 @@ Error compileToC(FILE* target,const Program* p){
   if(progStringCount>0)
     initProgStringChars();//initialize characters
   for(size_t i=0;i<procTypeCount;i++){
-    if(procTypes[i].outType->typeClass==TYPECLASS_FLAT_TUPLE){//ensure flat-tuple return types are generated as tuples for code generation
+    if(procTypes[i].outType->typeClass==TYPECLASS_PROC_OUT&&procTypes[i].outType->typeDataAs.composite->typeCount>1){//ensure that composite return types are generated as tuples for code generation
       procTypes[i].outType->typeDataAs.composite->flags|=FLAG_IS_TUPLE;
     }
   }
@@ -1729,16 +1768,7 @@ Error compileToC(FILE* target,const Program* p){
     fputs("typedef ",target);
     printTypeNameC(procTypes[i].outType,target);
     fprintf(target," (*procPtr%zu) (",i);
-    if(procTypes[i].inType->typeClass==TYPECLASS_FLAT_TUPLE){//auto-unwrap procedure arguments
-      CompositeType* inTypes=procTypes[i].inType->typeDataAs.composite;
-      for(int32_t j=0;j<inTypes->typeCount;j++){
-        if(j>0)
-          fputs(",",target);
-        printTypeNameC(&(inTypes->types[j]),target);
-      }
-    }else{
-      printTypeNameC(procTypes[i].inType,target);
-    }
+    printProcArgumentTypesC(procTypes[i].inType,target,false);
     fputs(");\n",target);
   }
   //initialize composite types
@@ -2225,14 +2255,14 @@ int readType(String name,CodeFile* codeFile,CompilerState* state){
     return 0;
   }
   if(wordEquals(&name,"proc(")){
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,LABEL_TYPE_NONE,"=>",false);
+    r=readCompositeType(TYPECLASS_PROC_IN,codeFile,state,LABEL_TYPE_NONE,"=>",false);
     if(r!=0)
       return r;
-    r=readCompositeType(TYPECLASS_FLAT_TUPLE,codeFile,state,LABEL_TYPE_NONE,")",false);
+    r=readCompositeType(TYPECLASS_PROC_OUT,codeFile,state,LABEL_TYPE_NONE,")",false);
     if(r!=0)
       return r;
     typeBuffer[initOffset]=procedureType(&(typeBuffer[initOffset]),&(typeBuffer[initOffset+1]));
-    bufferedTypes--;
+    bufferedTypes=initOffset+1;
     return 0;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
@@ -3341,16 +3371,10 @@ Error typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
   }
   ProcedureType* procType=calledType.typeDataAs.procedure;
-  DataType outType=*(procType->outType);
-  size_t argCount=1;
+  CompositeType* outTypes=procType->outType->typeDataAs.composite;
+  CompositeType* inTypes=procType->inType->typeDataAs.composite;
+  size_t argCount=inTypes->typeCount;
   size_t totalOps=0;
-  if(isVoidType(procType->inType)){//no arguments
-    argCount=0;
-    //don't return, output still has to be handled
-  }
-  if(procType->inType->typeClass==TYPECLASS_FLAT_TUPLE){
-    argCount=procType->inType->typeDataAs.composite->typeCount;
-  }
   if(state->typeCount<argCount){
     fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
     return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
@@ -3360,64 +3384,53 @@ Error typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   if(r.errorCode!=0)
     return r;
   int32_t tmpId;
-  if(!isVoidType(&outType)){//store result in temp variable
+  if(outTypes->typeCount!=0){//store non-void return in temp variable
     tmpId=state->tmpCount++;
-    pushCompiledOperation(state,opDeclareIntermediate(procType->outType,tmpId,op->filePos));
+    pushCompiledOperation(state,opDeclareIntermediate(outTypes->typeCount==1?(outTypes->types+0):procType->outType,tmpId,op->filePos));
   }
   r=addCompiledOp(state,*op,isPtr?1:0);
   if(r.errorCode!=0)
     return r;
   size_t offset=state->typeCount-argCount;
-  if(argCount==1){//function takes single argument, the single argument will not be a flat tuple (tuples have >= 2 elements)
-    int err=requireTypes("procedure argument",state,procType->inType,1,op->filePos);
-    if(err!=0){
-      return (Error){.errorCode=err,.pos=op->filePos};
-    }
-    totalOps=state->typeStack[offset].opCount;
+  int err=requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
+  if(err!=0){
+    return (Error){.errorCode=err,.pos=op->filePos};
   }
-  if(argCount>1){//argument is flat tuple
-    CompositeType* inTypes=procType->inType->typeDataAs.composite;
-    int err=requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
-    if(err!=0){
-      return (Error){.errorCode=err,.pos=op->filePos};
-    }
-    for(int32_t i=0;i<inTypes->typeCount;i++){
-      totalOps+=state->typeStack[offset+i].opCount;
-    }
+  for(int32_t i=0;i<inTypes->typeCount;i++){
+    totalOps+=state->typeStack[offset+i].opCount;
   }
   //update op-stack
   r=addCompiledStackOps(state,*op/*ignored*/,argCount,argCount,false);
-  if(r.errorCode!=0||isVoidType(&outType))
+  if(r.errorCode!=0||outTypes->typeCount==0)
     return r;//no need to update stack if called function returns void
   //add values of call
-  if(outType.typeClass!=TYPECLASS_FLAT_TUPLE){//single return value
-    return pushValue(state,opGetIntermediate(procType->outType,tmpId,op->filePos));
+  if(outTypes->typeCount==1){//single return value
+    return pushValue(state,opGetIntermediate(outTypes->types+0,tmpId,op->filePos));
   }
-  //auto-unwrap multi-return values using flat-tuple return values
-  outType.typeClass=TYPECLASS_TUPLE;//convert flat tuple to tuple for correct variable type
-  if(ensureTypeStackCap(state,state->typeCount+outType.typeDataAs.composite->typeCount)||
-  ensureOpStackCap(state,state->opStackCount+3*outType.typeDataAs.composite->typeCount)){
+  //auto-unwrap multi-return values
+  if(ensureTypeStackCap(state,state->typeCount+outTypes->typeCount)||
+  ensureOpStackCap(state,state->opStackCount+3*outTypes->typeCount)){
     return (Error){.errorCode=ERROR_MEMORY,.pos=op->filePos};
   }
-  for(int32_t e=0;e<outType.typeDataAs.composite->typeCount;e++){
-    state->typeStack[state->typeCount++]=(TypeInfo){.type=outType.typeDataAs.composite->types[e],.opCount=3};
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outType.typeDataAs.composite->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE,.id=1}}};
-    state->opStack[state->opStackCount++]=opGetIntermediate(&outType.typeDataAs.composite->types[e],tmpId,op->filePos);
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outType.typeDataAs.composite->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e}}};
+  for(int32_t e=0;e<outTypes->typeCount;e++){
+    state->typeStack[state->typeCount++]=(TypeInfo){.type=outTypes->types[e],.opCount=3};
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE,.id=1}}};
+    state->opStack[state->opStackCount++]=opGetIntermediate(&outTypes->types[e],tmpId,op->filePos);
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e}}};
   }
   return (Error){.errorCode=0,.pos=op->filePos};
 }
 Error pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
   if(!isCallableType(procType)||isPointerType(procType))
      return (Error){.errorCode=ERROR_TYPE,.pos=pos};
-  DataType* inType=procType->typeDataAs.procedure->inType;
-  if(isVoidType(inType))
+  CompositeType* inTypes=procType->typeDataAs.procedure->inType->typeDataAs.composite;
+  if(inTypes->typeCount==0)
     return (Error){.errorCode=0,.pos=pos};//no input arguments
-  if(inType->typeClass!=TYPECLASS_FLAT_TUPLE)
-    return pushValue(state,(Operation){.opType=OP_GET,.dataType=*inType,.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=0}}});
+  if(inTypes->typeCount==1)
+    return pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=0}}});
   Error r;
-  for(int32_t i=0;i<inType->typeDataAs.composite->typeCount;i++){
-    r=pushValue(state,(Operation){.opType=OP_GET,.dataType=inType->typeDataAs.composite->types[i],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=i}}});
+  for(int32_t i=0;i<inTypes->typeCount;i++){
+    r=pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=i}}});
     if(r.errorCode!=0)
       return r;
   }
@@ -3458,7 +3471,12 @@ Error compileGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operatio
 
 Error typeCheckReturn(TypeCheckState* state,Operation* op){
   Error r;
-  if(isVoidType(&(op->dataType))){
+  if(op->dataType.typeClass!=TYPECLASS_PROC_OUT){
+    fprintf(stderr,"unexpected procedure return type-class: %s\n",typeClassName(op->dataType.typeClass));
+    exit(1);
+  }
+  CompositeType* outTypes=op->dataType.typeDataAs.composite;
+  if(outTypes->typeCount==0){
       if(checkNonemptyStack(state,"unfinished operation at end of procedure"))
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op->filePos};
     pushCompiledOperation(state,*op);
@@ -3468,31 +3486,11 @@ Error typeCheckReturn(TypeCheckState* state,Operation* op){
     fputs("missing return value",stderr);
     return (Error){.errorCode=ERROR_SYNTAX,.pos=op->filePos};
   }
-  if(state->typeCount==1){
-    if(op->dataType.typeClass==TYPECLASS_FLAT_TUPLE){
-      op->dataType.typeClass=TYPECLASS_TUPLE;//notify compiler that tuple is non-flat
-    }
-    r=(Error){.errorCode=requireTypes("return statement",state,&(op->dataType),1,op->filePos),.pos=op->filePos};
-    if(r.errorCode!=0){
-      return r;
-    }
-    r=extractCompositeOps(state,1);
-    if(r.errorCode!=0)
-      return r;
-    return addCompiledOp(state,*op,1);
-  }
-  if(op->dataType.typeClass!=TYPECLASS_TUPLE&&op->dataType.typeClass!=TYPECLASS_FLAT_TUPLE){
-    checkNonemptyStack(state,"unfinished operation at end of procedure");//this should always return true
+  if(outTypes->typeCount<0||state->typeCount!=(size_t)outTypes->typeCount){
+    fprintf(stderr,"wrong number of return values: expected %"PRIi32" got %zu\n",outTypes->typeCount,state->typeCount);
     return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
   }
-  if(op->dataType.typeClass==TYPECLASS_TUPLE){
-    op->dataType.typeClass=TYPECLASS_FLAT_TUPLE;//notify compiler that tuple is flat
-  }
-  if(op->dataType.typeDataAs.composite->typeCount<0||state->typeCount!=(size_t)op->dataType.typeDataAs.composite->typeCount){
-    fprintf(stderr,"wrong number of return values: expected %"PRIi32" got %zu\n",op->dataType.typeDataAs.composite->typeCount,state->typeCount);
-    return (Error){.errorCode=ERROR_TYPE,.pos=op->filePos};
-  }
-  r=(Error){.errorCode=requireTypes("return statement",state,op->dataType.typeDataAs.composite->types,state->typeCount,op->filePos),.pos=op->filePos};
+  r=(Error){.errorCode=requireTypes("return statement",state,outTypes->types,state->typeCount,op->filePos),.pos=op->filePos};
   if(r.errorCode!=0){
     return r;
   }
@@ -4493,7 +4491,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
               state->reachable=true;
               break;
             case BLOCK_PROCEDURE:
-              if(state->reachable&&!isVoidType(&(blockInfo.blockDataAs.procBlock.returnType))){//automatically add return statement at end of non-void procedures
+              if(state->reachable&&blockInfo.blockDataAs.procBlock.returnType.typeDataAs.composite->typeCount>0){//automatically add return statement at end of non-void procedures
                 Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfo.blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
                 r=typeCheckReturn(state,&ret);
                 if(r.errorCode!=0)
@@ -4542,7 +4540,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
       if(checkNonemptyStack(state,"unfinished global operation")){
         return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
       }
-      if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={.procBlock={.returnType=primitiveType(PRIMITIVE_VOID)}}}))
+      if(pushBlock(state,(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockDataAs={.procBlock={.returnType=compositeType(TYPECLASS_PROC_OUT,NULL,NULL,0)}}}))
         return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
       pushCompiledOperation(state,op);
       return (Error){.errorCode=0,.pos=op.filePos};
