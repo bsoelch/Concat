@@ -32,6 +32,45 @@ anEnum .B new =:: e2
 proc( string => string i64 ) =: startItr
   0
 end
+
+proc( => ) =: breakTest 
+  0
+    while true do
+      1 + 
+      #dup 5 > if
+        break
+      end
+    end
+  print
+  0
+    while
+      #dup 5 > if
+        break
+      end
+      true 
+    do
+      1 + 
+    end
+  print
+  0
+    true while do
+      1 + 
+      #dup 5 < if
+        true continue
+      end
+      false
+    end
+  print
+  0
+    while 
+      1 + 
+      #dup 5 < if
+        continue
+      end
+      false
+    do end
+  print
+end
   
 proc( string i64 => string i64 char bool ) =: nextChar
   =:: i

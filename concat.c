@@ -884,11 +884,13 @@ typedef enum{
   BLOCK_ELSE,      // }else{
   BLOCK_WHILE,     // while( EXPR ){
   BLOCK_DO,        // do{
+  BLOCK_BREAK,     // break;
+  BLOCK_CONTINUE,  // continue;
   BLOCK_WHILE_END, // }while( EXPR );
   BLOCK_END,       // }
 }BlockType;
 const char* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_START]="start",[BLOCK_IF]="if",
-  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_WHILE_END]="while end",[BLOCK_END]="end"};
+  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",[BLOCK_WHILE_END]="end-while",[BLOCK_END]="end"};
 
 
 typedef enum{
@@ -1628,6 +1630,12 @@ SizeOrError compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t
           return (SizeOrError){.isError=false,.as={.size=size}};
         case BLOCK_ELSE:
           fputs("}else{\n",target);
+          return (SizeOrError){.isError=false,.as={.size=size}};
+        case BLOCK_BREAK://XXX? better code for break and continue
+          fputs("break;\n",target);
+          return (SizeOrError){.isError=false,.as={.size=size}};
+        case BLOCK_CONTINUE:
+          fputs("continue;\n",target);
           return (SizeOrError){.isError=false,.as={.size=size}};
         case BLOCK_WHILE_END:
           fputs("}while(1);\n",target);
@@ -2641,9 +2649,13 @@ SizeOrError readOperation(Operation* op,CodeFile* codeFile,CompilerState* state)
     (*op)=opCodeBlock(BLOCK_ELSE,wordPos);
     return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"break")){
-    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+    //current code-block does not change
+    (*op)=opCodeBlock(BLOCK_BREAK,wordPos);
+    return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"continue")){
-    return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
+    //current code-block does not change
+    (*op)=opCodeBlock(BLOCK_CONTINUE,wordPos);
+    return (SizeOrError){.isError=false,.as={.size=1}};
   }else if(wordEquals(&word,"switch")){
     return (SizeOrError){.isError=true,.as={.error={.errorCode=ERROR_UNIMPLEMENTED,.pos=wordPos}}};
   }else if(wordEquals(&word,"case")){
@@ -2849,8 +2861,9 @@ typedef struct{
 typedef struct{
   StackState inStack;
   StackState outStack;
-  bool hasDo;
   
+  bool hasDo;
+  bool hasBreak;
 }WhileBlockInfo;
 typedef struct{
   DataType returnType;
@@ -2946,6 +2959,13 @@ BlockInfo popBlock(TypeCheckState* state){
   if(state->blockCount>0)
     return state->openBlocks[--state->blockCount];
   return (BlockInfo){.type=BLOCK_END,.blockStart=0,.blockDataAs={0}};
+}
+BlockInfo* findBreakableBlock(TypeCheckState* state){
+  for(int64_t i=state->blockCount-1;i>=0;i--){
+    if(state->openBlocks[i].type==BLOCK_WHILE||state->openBlocks[i].type==BLOCK_DO)
+      return state->openBlocks+i;
+  }
+  return NULL;
 }
 void freeContents(TypeCheckState* state){
   free(state->globalOperations);
@@ -3177,8 +3197,9 @@ Error checkIfTypes(TypeCheckState* state,IfBlockInfo* ifBlock,FilePosition pos){
 Error initWhileTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
   return storeStackValues(state,&(whileBlock->inStack),NULL,"while-loop",true,true,false,pos);
 }
-Error initWhileOutTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
-  return storeStackValues(state,&(whileBlock->outStack),NULL,"while-loop",true,false,true,pos);
+Error checkWhileOutTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,bool isDo,FilePosition pos){
+  bool needInit=!(whileBlock->hasDo||whileBlock->hasBreak);
+  return storeStackValues(state,&(whileBlock->outStack),&(whileBlock->outStack),"while-loop",needInit,false,isDo,pos);
 }
 Error checkWhileTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
   return storeStackValues(state,&(whileBlock->inStack),&(whileBlock->inStack),"while-loop",false,false,false,pos);
@@ -3514,6 +3535,7 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
   int32_t offset,tmpId;
   Error r;
   BlockInfo blockInfo;
+  BlockInfo* blockInfoPtr;
   switch(op.opType){
     case OP_CONSTANT:
       if(checkReachable(state,op))
@@ -4333,11 +4355,11 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
             return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
           }
           //XXX convert while-blocks with empty condition to do-blocks
-          blockInfo.blockDataAs.whileBlock.hasDo=true;
           //store types at loop condition
-          r=initWhileOutTypes(state,&(blockInfo.blockDataAs.whileBlock),op.filePos);
+          r=checkWhileOutTypes(state,&(blockInfo.blockDataAs.whileBlock),true,op.filePos);
           if(r.errorCode!=0)
             return r;
+          blockInfo.blockDataAs.whileBlock.hasDo=true;
           if(pushBlock(state,blockInfo))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
           op.dataType=primitiveType(PRIMITIVE_BOOL);
@@ -4356,6 +4378,35 @@ Error typeCheckOperation(Operation op,TypeCheckState* state){
           //reset stack after compiling condition
           if(resetStack(state,&(blockInfo.blockDataAs.whileBlock.outStack)))
             return (Error){.errorCode=ERROR_MEMORY,.pos=op.filePos};
+          return (Error){.errorCode=0,.pos=op.filePos};
+        case BLOCK_BREAK:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          blockInfoPtr=findBreakableBlock(state);
+          if(blockInfoPtr==NULL||blockInfoPtr->type!=BLOCK_WHILE){
+            fputs("break can only appear in while blocks\n",stderr);
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          }
+          r=checkWhileOutTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),false,op.filePos);
+          if(r.errorCode!=0)
+            return r;
+          blockInfoPtr->blockDataAs.whileBlock.hasBreak=true;
+          pushCompiledOperation(state,op);
+          state->reachable=false;
+          return (Error){.errorCode=0,.pos=op.filePos};
+        case BLOCK_CONTINUE:
+          if(checkReachable(state,op))
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          blockInfoPtr=findBreakableBlock(state);
+          if(blockInfoPtr==NULL||blockInfoPtr->type!=BLOCK_WHILE){
+            fputs("break can only appear in while blocks\n",stderr);
+            return (Error){.errorCode=ERROR_SYNTAX,.pos=op.filePos};
+          }
+          r=checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
+          if(r.errorCode!=0)
+            return r;
+          pushCompiledOperation(state,op);
+          state->reachable=false;
           return (Error){.errorCode=0,.pos=op.filePos};
         case BLOCK_WHILE_END:
           fputs("WHILE_END blocks are not supported use WHILE ... DO END to build a do-while statement",stderr);
