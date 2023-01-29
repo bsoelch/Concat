@@ -261,6 +261,7 @@ typedef enum{
   TYPECLASS_CONST_POINTER,
   TYPECLASS_TUPLE,
   TYPECLASS_PROC_IN,
+  TYPECLASS_LABELED_PROC_IN,
   TYPECLASS_PROC_OUT,//behaves like tuple but will not be directly used
   TYPECLASS_PROCEDURE,
   TYPECLASS_TYPE_OF,
@@ -346,6 +347,7 @@ bool typeEquals(const DataType* a,const DataType* b){
       return typeEquals(a->typeDataAs.type,b->typeDataAs.type);
     case TYPECLASS_TUPLE:
     case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
@@ -485,12 +487,17 @@ int64_t indexOfTypeArray(const DataType* base,size_t baseLen,const DataType* chi
   return -1;
 }
 DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames,int32_t eltCount){
-  if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
+  if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
   }
   int16_t classFlag;
   switch(typeClass){
     case TYPECLASS_PROC_IN:
+      classFlag=FLAG_IS_PROC_IN;
+      break;
+    case TYPECLASS_LABELED_PROC_IN:
+      if(labelNames==NULL)
+        return TYPE_UNDEFINED;
       classFlag=FLAG_IS_PROC_IN;
       break;
     case TYPECLASS_PROC_OUT:
@@ -655,6 +662,8 @@ const char* typeClassName(TypeClass cls){
       return "tuple";
     case TYPECLASS_PROC_IN:
       return "procedure arguments";
+    case TYPECLASS_LABELED_PROC_IN:
+      return "labeled procedure arguments";
     case TYPECLASS_PROC_OUT:
       return "return types";
     case TYPECLASS_PROCEDURE:
@@ -712,12 +721,13 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
       j=fprintf(file," %s",typeClassName(type->typeClass));
       return j<0?j:(i+j);
     case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
     case TYPECLASS_TUPLE:
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
-      if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
+      if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_LABELED_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
         i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
         if(noRecurse||i<0)
           return i;
@@ -743,14 +753,14 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         if(j<0)
           return j;
         i+=j;
-        if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labels==NULL)
+        if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_IN||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labels==NULL)
           continue;
         j=fprintf(file," : %.*s",(int)type->typeDataAs.composite->labels[e].length,type->typeDataAs.composite->labels[e].chars);
         if(j<0)
           return j;
         i+=j;
       }
-      if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
+      if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_LABELED_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
         j=fputs(" )",file);
         if(j<0)
           return j;
@@ -827,6 +837,7 @@ int printTypeNameC(const DataType* type,FILE* file){
       j=fputs("*",file);
       return j<0?j:(i+j);
     case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
       if(type->typeDataAs.composite->typeCount==0)
         return fputs("void",file);
@@ -1097,7 +1108,7 @@ int getIdentifier(String name,ScopeNode** out){
   }
   return ERROR_SYNTAX;
 }
-ScopeNode* declareIdentifier(String name,DataType type,IdentifierType idType,FilePosition declaredAt){
+ScopeNode* declareIdentifier(String name,DataType type,IdentifierType idType,int32_t id,FilePosition declaredAt){
   ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),name);
   if(node==NULL)
     handleError("unable to access scope node",ERROR_MEMORY,declaredAt);
@@ -1123,7 +1134,7 @@ ScopeNode* declareIdentifier(String name,DataType type,IdentifierType idType,Fil
   (*node)->key=name;
   (*node)->type=type;
   (*node)->idType=idType;
-  (*node)->id=scopeNodeCount;
+  (*node)->id=id;
   (*node)->declaredAt=declaredAt;
   (*node)->next=NULL;
   return *node;
@@ -1223,7 +1234,7 @@ size_t tupleElementAccess(FILE* target,int32_t depth,const Operation* op,size_t 
   return size;
 } 
 void printProcArgumentTypesC(DataType* inType,FILE* target,bool printArgNames){
-  if(inType->typeClass!=TYPECLASS_PROC_IN){
+  if(inType->typeClass!=TYPECLASS_PROC_IN&&inType->typeClass!=TYPECLASS_LABELED_PROC_IN){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(inType->typeClass));
     exit(1);
   }
@@ -1252,7 +1263,7 @@ void printProcedureSignatureC(ProcedureType* procedure,int32_t procId,FILE* targ
 size_t compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,size_t size,size_t opSize,bool isGlobal){
   DataType* in=op->dataType.typeDataAs.procedure->inType;
   DataType* out=op->dataType.typeDataAs.procedure->outType;
-  if(in->typeClass!=TYPECLASS_PROC_IN){
+  if(in->typeClass!=TYPECLASS_PROC_IN&&in->typeClass!=TYPECLASS_LABELED_PROC_IN){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(in->typeClass));
     handleError(NULL,ERROR_MEMORY,op->filePos);
   }
@@ -1871,6 +1882,8 @@ typedef struct{
 typedef struct{
   Scope* currentScope;
   size_t compiledOps;
+  int32_t globalVars;
+  int32_t localVars;
   int32_t currentProcId;
   int32_t procScope;
   int32_t scopeLevel;
@@ -1879,7 +1892,30 @@ typedef struct{
   int32_t opaqueTypeCount;
   bool hasEntryPoint;
 }CompilerState;
-
+//compute the next id for a variable of the given id-type relative to the given compiler state
+int32_t nextId(IdentifierType idType,CompilerState* state){
+  switch(idType){
+    //global 
+    case ID_GLOBAL_VAR:
+    case ID_TYPE:
+    case ID_PROCEDURE:
+      return state->globalVars++;
+    //local
+    case ID_LOCAL_VAR:
+    case ID_ARGUMENT:
+    case ID_INTERMEDIATE_RESULT:
+    case ID_TMP_VAR:
+    //inline 
+    case ID_TUPLE:
+    case ID_TUPLE_ELEMENT:
+    case ID_ENUM_LABEL:
+    case ID_ENUM_ELEMENT:
+    case ID_POINTER:
+    case ID_POINTER_OFFSET:
+      return state->localVars++;//local 
+  }
+  return scopeNodeCount;
+}
 
 
 Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
@@ -2195,12 +2231,14 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
   }
   if(labelType==LABEL_TYPE_NONE||(labelType==LABEL_TYPE_PROC_IN&&labelOffset==bufferedFieldNames)){
     typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,NULL,bufferedTypes-initOffset);
-  }else{//TODO distinguish between labels and unlabeled proc-in types
+  }else{
     if(typesSinceLabel>0){
       fprintf(stderr,"missing label in %s\n",typeClassName(typeClass));
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return;
     }
+    if(typeClass==TYPECLASS_PROC_IN)
+      typeClass=TYPECLASS_LABELED_PROC_IN;
     typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,fieldNameBuffer+labelOffset,bufferedTypes-initOffset);
   }
   if(typeEquals(&(typeBuffer[initOffset]),&TYPE_UNDEFINED)){
@@ -2382,7 +2420,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       type=opaqueType(state->opaqueTypeCount++);
       idType=ID_TYPE;
     }
-    ScopeNode* id=declareIdentifier(varName,type,idType,wordPos);
+    ScopeNode* id=declareIdentifier(varName,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return 0;
     (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
@@ -2419,7 +2457,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       default:
         idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    id=declareIdentifier(varName,type,idType,wordPos);
+    id=declareIdentifier(varName,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE){
       //declaring type does not produce any code
       return 0;
@@ -2435,6 +2473,13 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       state->scopeLevel++;
       state->procScope=state->scopeLevel;
       state->currentProcId=type.typeDataAs.procedure->id;
+      state->localVars=0;
+      if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
+         CompositeType* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
+         for(int32_t i=0;i<inTypes->typeCount;i++){
+            declareIdentifier(inTypes->labels[i],inTypes->types[i],ID_ARGUMENT,i,wordPos);
+         }
+      }
     }
     (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     return 1;
@@ -2592,7 +2637,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     DataType mType=TYPE_UNDEFINED;
     mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
-    ScopeNode* id=declareIdentifier(varName,mType,idType,wordPos);
+    ScopeNode* id=declareIdentifier(varName,mType,idType,nextId(idType,state),wordPos);
     (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
     return 1;
   }else if(wordEquals(&word,"=")){
@@ -2754,7 +2799,7 @@ Program compileToOps(CodeFile* codeFile){
     exit(ERROR_MEMORY);
   }
   openScope(BLOCK_START);
-  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
+  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
   while(codeFile->codeSize>0){
     state.compiledOps+=readOperation(compileOps+state.compiledOps,codeFile,&state);
     if(ensureOpCap(&compileOps,&opsCap,state.compiledOps+16)){
@@ -3376,6 +3421,8 @@ void pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
   if(!isCallableType(procType)||isPointerType(procType)){
     handleError("procedure type has to be callable",ERROR_TYPE,pos); 
   }
+  if(procType->typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN)
+    return;//do not push values with input is labeled 
   CompositeType* inTypes=procType->typeDataAs.procedure->inType->typeDataAs.composite;
   if(inTypes->typeCount==0)
     return;//no input arguments
