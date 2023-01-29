@@ -946,10 +946,15 @@ typedef enum{
   BLOCK_BREAK,     // break;
   BLOCK_CONTINUE,  // continue;
   BLOCK_WHILE_END, // }while( EXPR );
+  BLOCK_SWITCH,    // switch( EXPR ){
+  BLOCK_CASE,      // case e1 : ... case eN :
+  BLOCK_DEFAULT,   // default: 
   BLOCK_END,       // }
 }BlockType;
 const char* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_START]="start",[BLOCK_IF]="if",
-  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",[BLOCK_WHILE_END]="end-while",[BLOCK_END]="end"};
+  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",[BLOCK_WHILE_END]="end-while",
+  [BLOCK_SWITCH]="switch",[BLOCK_CASE]="case",[BLOCK_DEFAULT]="default",
+  [BLOCK_END]="end"};
 
 
 typedef enum{
@@ -1714,6 +1719,11 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
         case BLOCK_WHILE_END:
           fputs("}while(1);\n",target);
           return size;
+        case BLOCK_SWITCH:
+        case BLOCK_CASE:
+        case BLOCK_DEFAULT:
+          handleError("compiling switch-case is not implemented",ERROR_UNIMPLEMENTED,op->filePos);
+          break;
         case BLOCK_END:
           fputs("}\n",target);
           return size;
@@ -2709,11 +2719,33 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_CONTINUE,wordPos);
     return 1;
   }else if(wordEquals(&word,"switch")){
-    handleError("switch-case statements are currently unimplemented",ERROR_SYNTAX,wordPos);
+    Scope* newScope=openScope(BLOCK_SWITCH);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    (*op)=opCodeBlock(BLOCK_SWITCH,wordPos);
+    return 1;
   }else if(wordEquals(&word,"case")){
-    handleError("switch-case statements are currently unimplemented",ERROR_SYNTAX,wordPos);
+    closeScope();
+    Scope* newScope=openScope(BLOCK_CASE);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    //scope count does not change
+        
+    (*op)=opCodeBlock(BLOCK_CASE,wordPos);
+    return 1;
   }else if(wordEquals(&word,"default")){
-    handleError("switch-case statements are currently unimplemented",ERROR_SYNTAX,wordPos);
+    closeScope();
+    Scope* newScope=openScope(BLOCK_CASE);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    //scope count does not change
+        
+    (*op)=opCodeBlock(BLOCK_DEFAULT,wordPos);
+    return 1;
   }else if(wordEquals(&word,"end")){
     closeScope();
     state->scopeLevel--;
@@ -2910,6 +2942,28 @@ typedef struct{
   bool hasBreak;
 }WhileBlockInfo;
 typedef struct{
+  size_t offset;
+  size_t count;
+}CaseInfo;
+typedef struct{
+  StackState inStack;
+  StackState outStack;
+  
+  DataType switchType;
+  
+  //indices of cases
+  CaseInfo* cases;
+  size_t caseCount;
+  size_t caseCap;
+  //case labels
+  int64_t* labelData;
+  size_t labelCount;
+  size_t labelCap;
+  
+  bool endReachable;
+  bool hasDefault;
+}SwitchBlockInfo;
+typedef struct{
   DataType returnType;
 }ProcedureBlockInfo;
 typedef struct{
@@ -2919,6 +2973,7 @@ typedef struct{
     int64_t i64;
     IfBlockInfo ifBlock;
     WhileBlockInfo whileBlock;
+    SwitchBlockInfo switchBlock;
     ProcedureBlockInfo procBlock;
   }blockDataAs;
 }BlockInfo;
@@ -3004,9 +3059,11 @@ BlockInfo popBlock(TypeCheckState* state){
     return state->openBlocks[--state->blockCount];
   return (BlockInfo){.type=BLOCK_END,.blockStart=0,.blockDataAs={0}};
 }
-BlockInfo* findBreakableBlock(TypeCheckState* state){
+BlockInfo* findBreakableBlock(TypeCheckState* state,bool breakLoop,bool breakSwitch){
   for(int64_t i=state->blockCount-1;i>=0;i--){
-    if(state->openBlocks[i].type==BLOCK_WHILE||state->openBlocks[i].type==BLOCK_DO)
+    if(breakLoop&&(state->openBlocks[i].type==BLOCK_WHILE||state->openBlocks[i].type==BLOCK_DO))
+      return state->openBlocks+i;
+    if(breakSwitch&&(state->openBlocks[i].type==BLOCK_CASE||state->openBlocks[i].type==BLOCK_DEFAULT))
       return state->openBlocks+i;
   }
   return NULL;
@@ -3240,6 +3297,10 @@ void checkWhileOutTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,bool is
 }
 void checkWhileTypes(TypeCheckState* state,WhileBlockInfo* whileBlock,FilePosition pos){
   storeStackValues(state,&(whileBlock->inStack),&(whileBlock->inStack),"while-loop",false,false,false,pos);
+}
+void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePosition pos){
+  bool needInit=!switchBlock->endReachable;
+  storeStackValues(state,&(switchBlock->outStack),&(switchBlock->outStack),"switch-branch",needInit,false,false,pos);
 }
 
 
@@ -3522,10 +3583,32 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   int32_t offset,tmpId;
   BlockInfo blockInfo;
   BlockInfo* blockInfoPtr;
+  SwitchBlockInfo* switchBlock;
   switch(op.opType){
     case OP_CONSTANT:
+      if(state->reachable){
+        pushValue(state,op);
+        return;
+      }
+      blockInfo=peekBlock(state);
+      if(blockInfo.type==BLOCK_SWITCH||blockInfo.type==BLOCK_CASE){//switch label
+        switchBlock=&blockInfo.blockDataAs.switchBlock;
+        if(!canAssign(&op.dataType,&switchBlock->switchType)){
+          fputs("wrong type from switch label, expected ",stderr);
+          printTypeName(&switchBlock->switchType,stderr);
+          fputs(" got ",stderr);
+          printTypeName(&op.dataType,stderr);
+          fputs("\n",stderr);
+          handleError(NULL,ERROR_TYPE,op.filePos);
+        }
+        if(switchBlock->labelCount>=switchBlock->labelCap)
+          handleError("exceeded maximum number of allowed switch labels",ERROR_MEMORY,op.filePos);
+        switchBlock->labelData[switchBlock->labelCount++]=op.dataAs.i64;
+        switchBlock->cases[switchBlock->caseCount].count++;
+        return;
+      }
+      //other unreachable constants
       checkReachable(state,op);
-      pushValue(state,op);
       return;
     case OP_UNARY_OPERATOR:
       checkReachable(state,op);
@@ -4148,12 +4231,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             blockInfo.blockDataAs.ifBlock.inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
             blockInfo.blockDataAs.ifBlock.inStack.ops=malloc((blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
             if(blockInfo.blockDataAs.ifBlock.inStack.types==NULL||blockInfo.blockDataAs.ifBlock.inStack.ops==NULL)
-              handleError(NULL,ERROR_TYPE,op.filePos);
+              handleError(NULL,ERROR_MEMORY,op.filePos);
             memcpy(blockInfo.blockDataAs.ifBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
             memcpy(blockInfo.blockDataAs.ifBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
           }
           if(pushBlock(state,blockInfo))
-            handleError(NULL,ERROR_TYPE,op.filePos);
+            handleError(NULL,ERROR_MEMORY,op.filePos);
           
           op.dataType=primitiveType(PRIMITIVE_BOOL);
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
@@ -4205,7 +4288,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             }
             blockInfo.blockDataAs.ifBlock.inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
             if(blockInfo.blockDataAs.ifBlock.inStack.types==NULL||blockInfo.blockDataAs.ifBlock.inStack.ops==NULL)
-              handleError(NULL,ERROR_TYPE,op.filePos);
+              handleError(NULL,ERROR_MEMORY,op.filePos);
             memcpy(blockInfo.blockDataAs.ifBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
             memcpy(blockInfo.blockDataAs.ifBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.ifBlock.inStack.opCount)*sizeof(Operation));
           }else{
@@ -4266,7 +4349,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           checkWhileOutTypes(state,&(blockInfo.blockDataAs.whileBlock),true,op.filePos);
           blockInfo.blockDataAs.whileBlock.hasDo=true;
           if(pushBlock(state,blockInfo))
-            handleError(NULL,ERROR_TYPE,op.filePos);
+            handleError(NULL,ERROR_MEMORY,op.filePos);
           op.dataType=primitiveType(PRIMITIVE_BOOL);
           op.dataAs.block=BLOCK_WHILE;
           requireTypes("while-condition",state,&op.dataType,1,op.filePos);
@@ -4278,20 +4361,26 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError(NULL,ERROR_TYPE,op.filePos);
           return;
         case BLOCK_BREAK:
+          //TODO allow break at the end of implicitly terminated switch-cases
           checkReachable(state,op);
-          blockInfoPtr=findBreakableBlock(state);
-          if(blockInfoPtr==NULL||blockInfoPtr->type!=BLOCK_WHILE){
-            fputs("break can only appear in while blocks\n",stderr);
-            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          blockInfoPtr=findBreakableBlock(state,true,true);
+          if(blockInfoPtr==NULL){
+            handleError("break can only appear in loops and switch-statements",ERROR_SYNTAX,op.filePos);
           }
-          checkWhileOutTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),false,op.filePos);
-          blockInfoPtr->blockDataAs.whileBlock.hasBreak=true;
+          if(blockInfoPtr->type==BLOCK_WHILE||blockInfoPtr->type==BLOCK_DO){
+            checkWhileOutTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),false,op.filePos);
+            blockInfoPtr->blockDataAs.whileBlock.hasBreak=true;
+          }
+          if(blockInfoPtr->type==BLOCK_CASE){
+            checkSwitchTypes(state,&(blockInfoPtr->blockDataAs.switchBlock),op.filePos);
+            blockInfoPtr->blockDataAs.switchBlock.endReachable=true;
+          }
           pushCompiledOperation(state,op);
           state->reachable=false;
           return;
         case BLOCK_CONTINUE:
           checkReachable(state,op);
-          blockInfoPtr=findBreakableBlock(state);
+          blockInfoPtr=findBreakableBlock(state,true,false);
           if(blockInfoPtr==NULL||blockInfoPtr->type!=BLOCK_WHILE){
             fputs("break can only appear in while blocks\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
@@ -4309,12 +4398,115 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
           if(pushBlock(state,(BlockInfo){.type=BLOCK_START,.blockStart=state->opCount,.blockDataAs={0}}))
+            handleError(NULL,ERROR_MEMORY,op.filePos);
+          pushCompiledOperation(state,op);
+          return;
+        case BLOCK_SWITCH:
+          checkReachable(state,op);
+          blockInfo=peekBlock(state);
+          if(blockInfo.type==BLOCK_END){//block stack underflow
+            fputs("unexpected switch statement, switch statements cannot be declared at global level\n",stderr);
+            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          }
+          blockInfo=(BlockInfo){.type=BLOCK_SWITCH,.blockStart=state->opCount,.blockDataAs={0}};
+          blockInfo.blockDataAs.switchBlock.inStack.types=NULL;
+          blockInfo.blockDataAs.switchBlock.inStack.ops=NULL;
+          blockInfo.blockDataAs.switchBlock.outStack.types=NULL;
+          blockInfo.blockDataAs.switchBlock.outStack.ops=NULL;
+          blockInfo.blockDataAs.switchBlock.caseCap=128;
+          blockInfo.blockDataAs.switchBlock.cases=calloc(128,sizeof(CaseInfo));
+          blockInfo.blockDataAs.switchBlock.labelCap=256;
+          blockInfo.blockDataAs.switchBlock.labelData=calloc(256,sizeof(int64_t));
+          if(blockInfo.blockDataAs.switchBlock.cases==NULL||blockInfo.blockDataAs.switchBlock.labelData==NULL)
+            handleError("memory allocation failure",ERROR_MEMORY,op.filePos);
+          //store in-types
+          if(state->typeCount>1){
+            blockInfo.blockDataAs.switchBlock.inStack.typeCount=state->typeCount-1;
+            blockInfo.blockDataAs.switchBlock.inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
+            blockInfo.blockDataAs.switchBlock.inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
+            blockInfo.blockDataAs.switchBlock.inStack.ops=malloc((blockInfo.blockDataAs.switchBlock.inStack.opCount)*sizeof(Operation));
+            if(blockInfo.blockDataAs.switchBlock.inStack.types==NULL||blockInfo.blockDataAs.switchBlock.inStack.ops==NULL)
+              handleError(NULL,ERROR_MEMORY,op.filePos);
+            memcpy(blockInfo.blockDataAs.switchBlock.inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
+            memcpy(blockInfo.blockDataAs.switchBlock.inStack.ops,state->opStack,(blockInfo.blockDataAs.switchBlock.inStack.opCount)*sizeof(Operation));
+          }
+          //determine switch type
+          offset=state->typeCount-1;
+          if(isIntType(&(state->typeStack[offset].type))){
+            op.dataType=state->typeStack[offset].type;
+          }else if(state->typeStack[offset].type.typeClass==TYPECLASS_ENUM||state->typeStack[offset].type.typeClass==TYPECLASS_ENUM_LABEL){
+            op.dataType=state->typeStack[offset].type;
+            op.dataType.typeClass=TYPECLASS_ENUM;
+          }else{
+            fputs("cannot switch values of type ",stderr);
+            printTypeName(&(state->typeStack[offset].type),stderr);
+            fputs("\n",stderr);
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          }
+          blockInfo.blockDataAs.switchBlock.switchType=op.dataType;
+          if(pushBlock(state,blockInfo))
+            handleError(NULL,ERROR_MEMORY,op.filePos);
+          requireTypes("switch-condition",state,&op.dataType,1,op.filePos);
+          extractCompositeOps(state,1);
+          addCompiledOp(state,op,1); //TODO link operation with switch data (? global/program-specific list of all switches + id  in that list)
+          state->reachable=false;//section after switch is not reachable
+          return;
+        case BLOCK_CASE:
+          blockInfo=popBlock(state);
+          if((blockInfo.type!=BLOCK_SWITCH&&blockInfo.type!=BLOCK_CASE)){
+            fputs("unexpected case statement, case statements are only allowed in switch-case blocks\n",stderr);
+            if(blockInfo.type==BLOCK_DEFAULT)
+              fputs("default has to be the last label in switch statement\n",stderr);
+            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          }
+          switchBlock=&blockInfo.blockDataAs.switchBlock;
+          if(state->reachable)//case reachable ->  previous case not terminated
+            handleError("unexpected case statement, case fall-through is not supported",ERROR_SYNTAX,op.filePos);
+          if(switchBlock->cases[switchBlock->caseCount].count==0)
+            handleError("case has be preceded by at least one label",ERROR_SYNTAX,op.filePos);
+          if(switchBlock->caseCount++>=switchBlock->caseCap-1)
+            handleError("exceeded maximum case-count in switch",ERROR_MEMORY,op.filePos);
+          state->reachable=true;
+          //reset stack to in-types 
+          if(resetStack(state,&(switchBlock->inStack)))
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          //push updated block
+          blockInfo.type=BLOCK_CASE;
+          if(pushBlock(state,blockInfo))
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          pushCompiledOperation(state,op);//TODO store case data in operation (? switch-id + case-id)
+          return;
+        case BLOCK_DEFAULT:
+          blockInfo=popBlock(state);
+          if(blockInfo.type!=BLOCK_CASE){
+            fputs("unexpected default statement, default statements are only allowed in switch-case blocks\n",stderr);
+            if(blockInfo.type==BLOCK_SWITCH)
+              fputs("switch statements have to contain at least one case\n",stderr);
+            if(blockInfo.type==BLOCK_DEFAULT)
+              fputs("switch statements can only contain one default block\n",stderr);
+            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          }
+          switchBlock=&blockInfo.blockDataAs.switchBlock;
+          if(state->reachable)//case reachable ->  previous case not terminated
+            handleError("unexpected default statement, case fall-through is not supported",ERROR_SYNTAX,op.filePos);
+          if(switchBlock->cases[switchBlock->caseCount].count>0)
+            handleError("default cannot be preceded by labels",ERROR_SYNTAX,op.filePos);
+          if(switchBlock->caseCount++>=switchBlock->caseCap-1)
+            handleError("exceeded maximum case-count in switch",ERROR_MEMORY,op.filePos);
+          state->reachable=true;
+          switchBlock->hasDefault=true;
+          //reset stack to in-types 
+          if(resetStack(state,&(switchBlock->inStack)))
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          //push updated block
+          blockInfo.type=BLOCK_DEFAULT;
+          if(pushBlock(state,blockInfo))
             handleError(NULL,ERROR_TYPE,op.filePos);
           pushCompiledOperation(state,op);
           return;
         case BLOCK_END:
           blockInfo=peekBlock(state);//keep block on block stack until writing operations has finished
-          if(blockInfo.type==BLOCK_END||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)){
+          if(blockInfo.type==BLOCK_END||(blockInfo.type==BLOCK_WHILE&&!blockInfo.blockDataAs.whileBlock.hasDo)||blockInfo.type==BLOCK_SWITCH){
             fputs("unexpected END statement\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
@@ -4374,6 +4566,14 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
                 typeCheckReturn(state,&ret);
               }
               state->reachable=true;
+              break;
+            case BLOCK_CASE:
+              //TODO end of switch statement
+              handleError("type-checking switch-case is not implemented",ERROR_UNIMPLEMENTED,op.filePos);
+              break;
+            case BLOCK_DEFAULT:
+              //TODO end of switch statement
+              handleError("type-checking switch-default is not implemented",ERROR_UNIMPLEMENTED,op.filePos);
               break;
             default:
               if(checkNonemptyStack(state,"unfinished local operation")){

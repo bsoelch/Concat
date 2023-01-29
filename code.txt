@@ -73,6 +73,41 @@ proc( => ) =: breakTest
     do end
   print
 end
+
+proc( i32 : i anEnum : e string : s => ) =: switchTest
+  i switch
+    1 2 case
+      return
+    3 case
+      break
+    0 case
+      false if return else break end
+    -1 case
+      false if break else break end
+      ## break XXX enable once allowed
+    default
+  end
+  #+
+  e switch 
+    A B case
+      break
+    C case
+      e .C print
+      break
+    D case
+      e .D print
+      break
+  end
+  s switch
+    "Hello" "World" case
+       1 break
+    "string" "switch" "is" "allowed" case
+       2 break
+     default
+       3
+  end
+  +#
+end
   
 proc( string i64 => string i64 char bool ) =: nextChar
   =:: i
