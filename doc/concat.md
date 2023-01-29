@@ -73,6 +73,40 @@ Examples:
 <!-- TODO --> 
 
 
+## procedures
+
+a procedure declaration starts with a procedure type followed type `=:` and the name of the procedure
+the procedure body starts after the declaration and ends at the corresponding `end` statement
+
+Examples:
+```
+proc( i32 i32 => i32 ) =: add
+  ## procedure arguments are implicitly pushed onto the type stack
+  + 
+  ## value is implicitly returned
+end
+
+## procedure arguments are allowed to have lables 
+## but it is not possible to only label some of the arguments
+proc( i32 : x i32 : y => i32 ) =: max 
+## if the arguments are labeled they are not pushed onto the stack
+## labeld arguments are implicitly declared as local variables
+  x y > if
+    x return ## return statement are allowed anywhere in the procedure body
+  end
+  y return 
+end
+
+entryPoint: ## the program entry point is marked with entry point, internally entryPoint declares a procedure with return type void
+  ## using a procedure name implicitly calls that procedure
+  1 2 add ## prints 3
+  max addrOf =:: f ## addrOf can be used to obtain a procedure pointer
+  1 2 f () ## () can be used to call procedure pointers
+  #drop print ## return values are pushed onto the type stack and have to be used or discarded before the end of the procedure
+## return statements are not allowed in the main code section
+end ## main code section ends with end
+```
+
 ## code blocks
 ### if-block
 

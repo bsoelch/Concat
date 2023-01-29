@@ -2651,7 +2651,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     return 1;
   }else if(wordEquals(&word,"addrOf")){
     if(state->compiledOps>0&&(op-1)->opType==OP_CALL)
-      (op-1)->opType=OP_GET;
+      (op-1)->opType=OP_GET;//TODO ensure proc-pointers are unlabeled
     if(state->compiledOps>0&&(op-1)->opType==OP_IDENTIFIER)
       (op-1)->opType=OP_IDENTIFIER_ADDRESS;
     (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
