@@ -82,12 +82,12 @@ proc( i32 : i anEnum : e string : s => ) =: switchTest
       break
     0 case
       false if return else break end
+      ## break is not needed if all branches terminate
     -1 case
       false if break else break end
-      ## break XXX enable once allowed
+      break ## break is allowed if all branches terminate
     default
   end
-  #+
   e switch 
     A B case
       break
@@ -98,6 +98,7 @@ proc( i32 : i anEnum : e string : s => ) =: switchTest
       e .D print
       break
   end
+  #+
   s switch
     "Hello" "World" case
        1 break
