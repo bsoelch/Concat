@@ -221,7 +221,68 @@ end
 
 ```
 
+### switch-case
 
+general syntax:
+```
+<value> switch
+<label1> case 
+  ## case 1
+  break
+<label2> <label3> case
+  ## case 2
+  return
+default
+  ## default case
+end
+```
+
+if `<value>` is equal to one of the labels then the case containing that label is executed,
+otherwise the `default` case is executed (if existent)
+
+currently switch-case is supported for integer and enum types
+
+switch case blocks start at their `case` label an end when all execution paths have run into a `return` `break` or `continue` statement,
+the `default` block always has to be the last block in the if-statement
+
+ 
+Examples:
+
+```
+i switch ## switch integer
+-1 case 
+  ## i is -1
+  -1 return
+0 1 2 case
+  ## i is 0, 1 or 2
+  break
+default
+  ## i is not in {-1, 0, 1, 2}
+  -2 return
+end
+
+## switch-blocks can return values
+c switch ## switch character
+  ' ' '\n' '\t' '\v' '\f' '\r' case
+    true
+    break
+  default
+    false
+end =:: isSpace
+
+## when switching over enums, the enum constants can be used without preifx in labels
+e switch 
+A B case 
+  ## A or B 
+  break
+C case
+  e .C print
+  break
+D case 
+  e .D print
+  break
+end 
+```
 
 ## Types
 

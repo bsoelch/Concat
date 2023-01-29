@@ -4667,7 +4667,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
               }
               state->reachable=true;
               break;
-            case BLOCK_CASE:
+            case BLOCK_CASE://TODO check if all enum labels of are covered
               if(state->reachable)
                 handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
               switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
@@ -4684,16 +4684,17 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
               break;
             case BLOCK_DEFAULT:
               switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
+              if(state->reachable){//end default section
+                checkSwitchTypes(state,&(blockInfoPtr->blockDataAs.switchBlock),op.filePos);
+                Operation tmp=opCodeBlock(BLOCK_BREAK,op.filePos);
+                tmp.dataAs.block.id=blockInfoPtr->blockId;
+                pushCompiledOperation(state,tmp);
+              }
               if(switchBlock->endReachable){
                 if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack)))
                    handleError(NULL,ERROR_TYPE,op.filePos);
                 if(resetStack(state,&(switchBlock->outStack)))
                   handleError(NULL,ERROR_TYPE,op.filePos);
-              }
-              if(state->reachable){//end default section
-                Operation tmp=opCodeBlock(BLOCK_BREAK,op.filePos);
-                tmp.dataAs.block.id=blockInfoPtr->blockId;
-                pushCompiledOperation(state,tmp);
               }
               state->reachable=switchBlock->endReachable;
               free(switchBlock->inStack.types);

@@ -74,7 +74,7 @@ proc( => ) =: breakTest
   print
 end
 
-proc( i32 : i anEnum : e string : s => ) =: switchTest
+proc( i32 : i anEnum : e char : c string : s => ) =: switchTest
   i switch
     1 2 case
       return
@@ -98,6 +98,13 @@ proc( i32 : i anEnum : e string : s => ) =: switchTest
       e .D print
       break
   end
+  c switch ## switch character
+  ' ' '\n' '\t' '\v' '\f' '\r' case
+    true
+    break
+  default
+    false
+  end =:: isSpace
   #+
   s switch
     "Hello" "World" case
