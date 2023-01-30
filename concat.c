@@ -213,6 +213,7 @@ typedef enum{
   OP_CHECK_ENUM_INDEX,//special operation for checking if enum index corresponds to current value  params: enum   exits the program if enum.lable != data.asI64 
   
   OP_CODE_BLOCK,  
+  OP_END_BLOCK,  
   
   OP_RETURN,       
   OP_CALL,         // procType procId  
@@ -237,6 +238,7 @@ const char* opName(OpType type){
     case OP_BINARY_OPERATOR:return "OP_BINARY_OPERATOR";
     case OP_UNARY_OPERATOR:return "OP_UNARY_OPERATOR";  
     case OP_CODE_BLOCK:return "OP_CODE_BLOCK";
+    case OP_END_BLOCK:return "OP_END_BLOCK";
     case OP_RETURN:return "OP_RETURN";      
     case OP_CALL:return "OP_CALL";
     case OP_CALL_PTR:return "OP_CALL_PTR";
@@ -605,7 +607,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
 DataType procedureType(const DataType* inType,const DataType* outType){
   for(size_t i=0;i<procTypeCount;i++){
     if(typeEquals(procTypes[i].inType,inType)&&typeEquals(procTypes[i].outType,outType))
-      return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i},.isAddressable=false,.isWritable=false};
+      return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i},.isAddressable=true,.isWritable=false};
   }
   int32_t inId=-1,outId=-1;
   for(size_t i=0;i<wrappedTypeCount&&(inId==-1||outId==-1);i++){
@@ -629,7 +631,21 @@ DataType procedureType(const DataType* inType,const DataType* outType){
     wrappedTypes[wrappedTypeCount++]=*outType;
   }
   procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=wrappedTypes+inId,.outType=wrappedTypes+outId};
-  return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++},.isAddressable=false,.isWritable=false};
+  return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++},.isAddressable=true,.isWritable=false};
+}
+void ensureUnlabeledProc(DataType* procType,FilePosition pos){
+  if(!isCallableType(procType))
+    handleError("expected a callable type",ERROR_TYPE,pos);
+  if(isPointerType(procType))
+    procType=procType->typeDataAs.type;
+  ProcedureType* proc=procType->typeDataAs.procedure;
+  if(proc->inType->typeClass==TYPECLASS_PROC_IN)
+    return;
+  //replaces labeled types with their canonical unlabeled version 
+  DataType in=compositeType(TYPECLASS_PROC_IN,proc->inType->typeDataAs.composite->types,NULL,proc->inType->typeDataAs.composite->typeCount);
+  if(in.typeClass==TYPECLASS_UNDEFINED)
+    handleError("unexpected error while allocating type",ERROR_MEMORY,pos);
+  *procType=procedureType(&in,proc->outType);
 }
 DataType asWritableType(DataType src,bool isAddressable){
   src.isAddressable=isAddressable;
@@ -937,7 +953,6 @@ void printIdInfo(IdentifierInfo info,FILE* out){
 
 typedef enum{
   BLOCK_PROCEDURE, 
-  BLOCK_START,     // {
   BLOCK_IF,        // if( EXPR ){
   BLOCK_IF2,       // if(EXPR){ ... } (auto-closes at end of current if -statement)
   BLOCK_ELSE,      // }else{
@@ -945,16 +960,15 @@ typedef enum{
   BLOCK_DO,        // do{
   BLOCK_BREAK,     // break;
   BLOCK_CONTINUE,  // continue;
-  BLOCK_WHILE_END, // }while( EXPR );
   BLOCK_SWITCH,    // switch( EXPR ){
   BLOCK_CASE,      // case e1 : ... case eN :
   BLOCK_DEFAULT,   // default: 
-  BLOCK_END,       // }
+  BLOCK_UNKNOWN,   // end of unknown block
 }BlockType;
-const char* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_START]="start",[BLOCK_IF]="if",
-  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",[BLOCK_WHILE_END]="end-while",
+const char* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_IF]="if",
+  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",
   [BLOCK_SWITCH]="switch",[BLOCK_CASE]="case",[BLOCK_DEFAULT]="default",
-  [BLOCK_END]="end"};
+  [BLOCK_UNKNOWN]="unknown"};
 
 typedef struct{
   int32_t id;
@@ -1052,6 +1066,7 @@ void printOperation(Operation op,FILE* out){
       fprintf(out,"%s",unOpName(op.dataAs.unOp));
       break;
     case OP_CODE_BLOCK:
+    case OP_END_BLOCK:
       fprintf(out,"%s (%"PRIi32":%"PRIi16")",blockNames[op.dataAs.block.type],op.dataAs.block.id,op.dataAs.block.subId);
       break;
     case OP_GET_LABEL:
@@ -1107,11 +1122,6 @@ Scope* openScope(BlockType scopeType){
   scopeBuffer[scopeCount].scopeType=scopeType;
   scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
   return scopeBuffer+(scopeCount++);
-}
-BlockType currentScopeType(void){
-  if(scopeCount<=0)
-    return BLOCK_END;
-  return scopeBuffer[scopeCount-1].scopeType;
 }
 bool closeScope(void){
   if(scopeCount<=0)
@@ -1726,9 +1736,6 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
         case BLOCK_PROCEDURE:
           handleError("block procedure should be eliminated at compile time",ERROR_SYNTAX,op->filePos);
           break;
-        case BLOCK_START:
-          fputs("{\n",target);
-          return size;
         case BLOCK_IF:
         case BLOCK_IF2:
           fputs("if(",target);
@@ -1751,9 +1758,6 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
           return size;
         case BLOCK_CONTINUE:
           fputs("continue;\n",target);
-          return size;
-        case BLOCK_WHILE_END:
-          fputs("}while(1);\n",target);
           return size;
         case BLOCK_SWITCH:
           if(!isIntType(&op->dataType)&&op->dataType.typeClass!=TYPECLASS_ENUM_LABEL){
@@ -1796,11 +1800,18 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
           }
           fputs("default:\n",target);
           return size;
-        case BLOCK_END:
-          fputs("}\n",target);
-          return size;
+        case BLOCK_UNKNOWN:
+          fprintf(stderr,"code block %s should not exist at this stage of compilation\n",blockNames[op->dataAs.block.type]);
+          handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
       break;
+    case OP_END_BLOCK:
+      if(op->dataAs.block.type==BLOCK_WHILE){
+          fputs("}while(1);\n",target);
+          return size;
+      }
+      fputs("}\n",target);
+      return size;
     case OP_RETURN:
       fputs("return ",target);
       if(op->dataType.typeDataAs.composite->typeCount==0){
@@ -1845,11 +1856,15 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
       handleError(NULL,ERROR_SYNTAX,op->filePos);
       break;
     default:
-      fprintf(stderr,"operation %s is not implemented\n",opName(op->opType));
+      fputs("operation ",stderr);
+      printOperation(*op,stderr);
+      fputs(" is not implemented\n",stderr);
       handleError(NULL,ERROR_UNIMPLEMENTED,op->filePos);
       break;
   }
-  fprintf(stderr,"implementation for operation %s is incomplete\n",opName(op->opType));
+  fputs("implementation for compiling operation ",stderr);
+  printOperation(*op,stderr);
+  fputs(" is incomplete\n",stderr);
   handleError(NULL,ERROR_UNIMPLEMENTED,op->filePos);
   return 0;
 }
@@ -2025,6 +2040,10 @@ Operation opUnaryOperator(UnaryOperator unOpType,FilePosition pos){
 Operation opCodeBlock(BlockType blockType,FilePosition pos){
   // id/sub-id will be initialized in type check phase
   return (Operation){.opType=OP_CODE_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={.block={.type=blockType,.id=-1,.subId=-1}}};
+}
+Operation opEndCodeBlock(BlockType blockType,FilePosition pos){
+  // id/sub-id will be initialized in type check phase
+  return (Operation){.opType=OP_END_BLOCK,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={.block={.type=blockType,.id=-1,.subId=-1}}};
 }
 Operation opConstant(DataType type,int64_t constData,FilePosition pos){
   return (Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=pos,.dataAs={.i64=constData}};
@@ -2269,7 +2288,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
   size_t labelOffset=bufferedFieldNames;
   size_t currentOffset=initOffset;
   int typesSinceLabel=0;//if there has been a type since the last label
-  do{
+  do{//TODO remember label positions for enums
     word=nextWord(codeFile,&wordType);
     if(wordType!=WORD_TYPE_IDENTIFIER){
       handleError("type names have to be identifiers",ERROR_SYNTAX,codeFile->wordStart);
@@ -2733,8 +2752,10 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
     return 1;
   }else if(wordEquals(&word,"addrOf")){
-    if(state->compiledOps>0&&(op-1)->opType==OP_CALL)
-      (op-1)->opType=OP_GET;//TODO ensure proc-pointers are unlabeled
+    if(state->compiledOps>0&&(op-1)->opType==OP_CALL){
+      ensureUnlabeledProc(&((op-1)->dataType),wordPos);
+      (op-1)->opType=OP_GET;
+    }
     if(state->compiledOps>0&&(op-1)->opType==OP_IDENTIFIER)
       (op-1)->opType=OP_IDENTIFIER_ADDRESS;
     (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
@@ -2827,7 +2848,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       state->procScope=-1;
     }
     
-    (*op)=opCodeBlock(BLOCK_END,wordPos);
+    (*op)=opEndCodeBlock(BLOCK_UNKNOWN,wordPos);
     return 1;
   }else if(wordEquals(&word,"return")){
     if(state->currentProcId<0){
@@ -2860,8 +2881,6 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   if(r==0){//identifier
     if(asIdentifier->idType!=ID_PROCEDURE)
       asIdentifier->type=asWritableType(asIdentifier->type,true);
-    else 
-      asIdentifier->type=asAddressableType(asIdentifier->type);
     (*op)=(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
       .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
     return 1;
@@ -2903,7 +2922,7 @@ Program compileToOps(CodeFile* codeFile){
     handleError(NULL,ERROR_MEMORY,codeFile->currentPos);
     exit(ERROR_MEMORY);
   }
-  openScope(BLOCK_START);
+  openScope(BLOCK_UNKNOWN);
   CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
   while(codeFile->codeSize>0){
     state.compiledOps+=readOperation(compileOps+state.compiledOps,codeFile,&state);
@@ -3122,7 +3141,7 @@ BlockInfo* peekBlock(TypeCheckState* state){
 BlockInfo popBlock(TypeCheckState* state){
   if(state->blockCount>0)
     return state->openBlocks[--state->blockCount];
-  return (BlockInfo){.type=BLOCK_END,.blockId=-1,.blockStart=0,.blockDataAs={0}};
+  return (BlockInfo){.type=BLOCK_UNKNOWN,.blockId=-1,.blockStart=0,.blockDataAs={0}};
 }
 BlockInfo* findBreakableBlock(TypeCheckState* state,bool breakLoop,bool breakSwitch){
   for(int64_t i=state->blockCount-1;i>=0;i--){
@@ -3609,7 +3628,7 @@ void typeCheckReturn(TypeCheckState* state,Operation* op){
   }
   if(outTypes->typeCount<0||state->typeCount!=(size_t)outTypes->typeCount){
     fprintf(stderr,"wrong number of return values: expected %"PRIi32" got %zu\n",outTypes->typeCount,state->typeCount);
-    handleError("missing return value",ERROR_TYPE,op->filePos);
+    handleError(NULL,ERROR_TYPE,op->filePos);
   }
   requireTypes("return statement",state,outTypes->types,state->typeCount,op->filePos);
   extractCompositeOps(state,state->typeCount);
@@ -3651,8 +3670,6 @@ void resolveIdentifers(TypeCheckState* state,Operation* op){
   }
   if(asIdentifier->idType!=ID_PROCEDURE)
     asIdentifier->type=asWritableType(asIdentifier->type,true);
-  else 
-    asIdentifier->type=asAddressableType(asIdentifier->type);
   *op=(Operation){.opType=((asIdentifier->idType==ID_PROCEDURE)&&(op->opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
     .dataType=asIdentifier->type,.filePos=op->filePos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
 }
@@ -3684,7 +3701,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         }
         if(switchBlock->switchData->labelCount>=switchBlock->switchData->labelCap)
           handleError("exceeded maximum number of allowed switch labels",ERROR_MEMORY,op.filePos);
-        switchBlock->switchData->labelData[switchBlock->switchData->labelCount++]=op.dataAs.i64;
+        switchBlock->switchData->labelData[switchBlock->switchData->labelCount++]=op.dataAs.i64;//TODO check for duplicate labels
         switchBlock->switchData->cases[switchBlock->switchData->caseCount].count++;
         return;
       }
@@ -4298,7 +4315,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case BLOCK_IF:
           checkReachable(state,op);
           blockInfoPtr=peekBlock(state);
-          if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_END){//block stack underflow
+          if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_UNKNOWN){//block stack underflow
             fputs("unexpected IF statement, IF statements cannot be declared at global level\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
@@ -4483,24 +4500,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           pushCompiledOperation(state,op);
           state->reachable=false;
           return;
-        case BLOCK_WHILE_END:
-          fputs("WHILE_END blocks are not supported use WHILE ... DO END to build a do-while statement",stderr);
-          handleError(NULL,ERROR_SYNTAX,op.filePos);
-        case BLOCK_START:
-          checkReachable(state,op);
-          if(checkNonemptyStack(state,"unfinished local operation")){
-            handleError(NULL,ERROR_SYNTAX,op.filePos);
-          }
-          //TODO blockId
-          blockInfo=(BlockInfo){.type=BLOCK_START,.blockId=-1,.blockStart=state->opCount,.blockDataAs={0}};
-          if(pushBlock(state,blockInfo))
-            handleError(NULL,ERROR_MEMORY,op.filePos);
-          pushCompiledOperation(state,op);
-          return;
         case BLOCK_SWITCH:
           checkReachable(state,op);
           blockInfoPtr=peekBlock(state);
-          if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_END){//block stack underflow
+          if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_UNKNOWN){//block stack underflow
             fputs("unexpected switch statement, switch statements cannot be declared at global level\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
@@ -4602,122 +4605,127 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           op.dataAs.block.id=blockInfoPtr->blockId;
           pushCompiledOperation(state,op);
           return;
-        case BLOCK_END://TODO remember type of block end belongs to
-          blockInfoPtr=peekBlock(state);//keep block on block stack until writing operations has finished
-          if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_END||(blockInfoPtr->type==BLOCK_WHILE&&!blockInfoPtr->blockDataAs.whileBlock.hasDo)||blockInfoPtr->type==BLOCK_SWITCH){
-            fputs("unexpected END statement\n",stderr);
-            handleError(NULL,ERROR_SYNTAX,op.filePos);
-          }
-          op.dataAs.block.id=blockInfoPtr->blockId;
-          int32_t endCount=1;
-          switch(blockInfoPtr->type){
-            case BLOCK_IF:
-            case BLOCK_ELSE:
-              ifBlock=&(blockInfoPtr->blockDataAs.ifBlock);
-              endCount+=ifBlock->elifCount;
-              if(state->reachable){
-                checkIfTypes(state,ifBlock,op.filePos);
-                ifBlock->endReachable=true;
-              }
-              bool endReachable=ifBlock->endReachable;
-              if(endReachable){
-                if(blockInfoPtr->type==BLOCK_ELSE){//if ends with else branch
-                  if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack)))
-                     handleError(NULL,ERROR_TYPE,op.filePos);
-                }else{
-                  if(declareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack),&(ifBlock->inStack)))
-                     handleError(NULL,ERROR_TYPE,op.filePos);
-                }
-                if(resetStack(state,&(ifBlock->outStack))){
-                  handleError(NULL,ERROR_TYPE,op.filePos);
-                }
-              }else if(blockInfoPtr->type==BLOCK_IF){//reset stack to state before if-block
-                if(resetStack(state,&(ifBlock->inStack))){
-                  handleError(NULL,ERROR_TYPE,op.filePos);
-                }
-              }else{//clear stack if end of if-block unreachable
-                state->typeCount=0;
-                state->opStackCount=0;
-              }
-              //free values on op-stack
-              free(ifBlock->inStack.types);
-              free(ifBlock->inStack.ops);
-              free(ifBlock->outStack.types);
-              free(ifBlock->outStack.ops);
-              //next statement reachable if on if-branch terminates or if does not have an else branch
-              state->reachable=endReachable||(blockInfoPtr->type==BLOCK_IF);
-              break;
-            case BLOCK_WHILE:
-              if(!state->reachable){
-                fputs("end of while block cannot be reached\n",stderr);//XXX better error message
-                handleError(NULL,ERROR_SYNTAX,op.filePos);
-              }
-              op.dataAs.block.type=BLOCK_WHILE_END;
-              checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
-              if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
-                 handleError(NULL,ERROR_TYPE,op.filePos);
-              if(resetStack(state,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
-                handleError(NULL,ERROR_TYPE,op.filePos);
-              state->reachable=true;
-              break;
-            case BLOCK_PROCEDURE:
-              if(state->reachable&&blockInfoPtr->blockDataAs.procBlock.returnType.typeDataAs.composite->typeCount>0){//automatically add return statement at end of non-void procedures
-                Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfoPtr->blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
-                typeCheckReturn(state,&ret);
-              }
-              state->reachable=true;
-              break;
-            case BLOCK_CASE://TODO check if all enum labels of are covered
-              if(state->reachable)
-                handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
-              switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
-              switchBlock->switchData->caseCount++;//close last case
-              if(declareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack),&(switchBlock->inStack)))
-                 handleError(NULL,ERROR_TYPE,op.filePos);
-              if(resetStack(state,&(switchBlock->outStack)))
-                handleError(NULL,ERROR_TYPE,op.filePos);
-              state->reachable=true;
-              free(switchBlock->inStack.types);
-              free(switchBlock->inStack.ops);
-              free(switchBlock->outStack.types);
-              free(switchBlock->outStack.ops);
-              break;
-            case BLOCK_DEFAULT:
-              switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
-              if(state->reachable){//end default section
-                checkSwitchTypes(state,&(blockInfoPtr->blockDataAs.switchBlock),op.filePos);
-                Operation tmp=opCodeBlock(BLOCK_BREAK,op.filePos);
-                tmp.dataAs.block.id=blockInfoPtr->blockId;
-                pushCompiledOperation(state,tmp);
-              }
-              if(switchBlock->endReachable){
-                if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack)))
-                   handleError(NULL,ERROR_TYPE,op.filePos);
-                if(resetStack(state,&(switchBlock->outStack)))
-                  handleError(NULL,ERROR_TYPE,op.filePos);
-              }
-              state->reachable=switchBlock->endReachable;
-              free(switchBlock->inStack.types);
-              free(switchBlock->inStack.ops);
-              free(switchBlock->outStack.types);
-              free(switchBlock->outStack.ops);
-              break;
-            default:
-              if(checkNonemptyStack(state,"unfinished local operation")){
-                handleError(NULL,ERROR_SYNTAX,op.filePos);
-              }
-              state->reachable=true;
-          }
-          while(endCount-->0){
-            pushCompiledOperation(state,op);
-          }
-          popBlock(state);//pop block after writing operations
-          return;
+        case BLOCK_UNKNOWN:
         case BLOCK_PROCEDURE:
-          fputs("blocks of type BLOCK_PROCEDURE are not supported, procedure blocks start with the DECLARE_PROCEDURE operation",stderr);
+          fprintf(stderr,"blocks of type %s are not supported",blockNames[op.dataAs.block.type]);
           handleError(NULL,ERROR_SYNTAX,op.filePos);
+          break;
       }
       break;
+    case OP_END_BLOCK:
+      blockInfoPtr=peekBlock(state);//keep block on block stack until writing operations has finished
+      if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_UNKNOWN||(blockInfoPtr->type==BLOCK_WHILE&&!blockInfoPtr->blockDataAs.whileBlock.hasDo)||blockInfoPtr->type==BLOCK_SWITCH){
+        fputs("unexpected END statement\n",stderr);
+        handleError(NULL,ERROR_SYNTAX,op.filePos);
+      }
+      if(op.dataAs.block.type!=BLOCK_UNKNOWN){
+        handleError("type-checking end for specified block-types is currently not implemented",ERROR_UNIMPLEMENTED,op.filePos);
+      }
+      op.dataAs.block.type=blockInfoPtr->type;
+      op.dataAs.block.id=blockInfoPtr->blockId;
+      int32_t endCount=1;
+      switch(blockInfoPtr->type){
+        case BLOCK_IF:
+        case BLOCK_ELSE:
+          ifBlock=&(blockInfoPtr->blockDataAs.ifBlock);
+          endCount+=ifBlock->elifCount;
+          if(state->reachable){
+            checkIfTypes(state,ifBlock,op.filePos);
+            ifBlock->endReachable=true;
+          }
+          bool endReachable=ifBlock->endReachable;
+          if(endReachable){
+            if(blockInfoPtr->type==BLOCK_ELSE){//if ends with else branch
+              if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack)))
+                 handleError(NULL,ERROR_TYPE,op.filePos);
+            }else{
+              if(declareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack),&(ifBlock->inStack)))
+                 handleError(NULL,ERROR_TYPE,op.filePos);
+            }
+            if(resetStack(state,&(ifBlock->outStack))){
+              handleError(NULL,ERROR_TYPE,op.filePos);
+            }
+          }else if(blockInfoPtr->type==BLOCK_IF){//reset stack to state before if-block
+            if(resetStack(state,&(ifBlock->inStack))){
+              handleError(NULL,ERROR_TYPE,op.filePos);
+            }
+          }else{//clear stack if end of if-block unreachable
+            state->typeCount=0;
+            state->opStackCount=0;
+          }
+          //free values on op-stack
+          free(ifBlock->inStack.types);
+          free(ifBlock->inStack.ops);
+          free(ifBlock->outStack.types);
+          free(ifBlock->outStack.ops);
+          //next statement reachable if on if-branch terminates or if does not have an else branch
+          state->reachable=endReachable||(blockInfoPtr->type==BLOCK_IF);
+          break;
+        case BLOCK_WHILE:
+          if(!state->reachable){
+            fputs("end of while block cannot be reached\n",stderr);//XXX better error message
+            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          }
+          checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
+          if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
+             handleError(NULL,ERROR_TYPE,op.filePos);
+          if(resetStack(state,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          state->reachable=true;
+          break;
+        case BLOCK_PROCEDURE:
+          if(state->reachable&&blockInfoPtr->blockDataAs.procBlock.returnType.typeDataAs.composite->typeCount>0){//automatically add return statement at end of non-void procedures
+            Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfoPtr->blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
+            typeCheckReturn(state,&ret);
+          }
+          state->reachable=true;
+          break;
+        case BLOCK_CASE://TODO check if all enum labels of are covered
+          if(state->reachable)
+            handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
+          switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
+          switchBlock->switchData->caseCount++;//close last case
+          if(declareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack),&(switchBlock->inStack)))
+             handleError(NULL,ERROR_TYPE,op.filePos);
+          if(resetStack(state,&(switchBlock->outStack)))
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          state->reachable=true;
+          free(switchBlock->inStack.types);
+          free(switchBlock->inStack.ops);
+          free(switchBlock->outStack.types);
+          free(switchBlock->outStack.ops);
+          break;
+        case BLOCK_DEFAULT:
+          switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
+          if(state->reachable){//end default section
+            checkSwitchTypes(state,&(blockInfoPtr->blockDataAs.switchBlock),op.filePos);
+            Operation tmp=opCodeBlock(BLOCK_BREAK,op.filePos);
+            tmp.dataAs.block.id=blockInfoPtr->blockId;
+            pushCompiledOperation(state,tmp);
+          }
+          if(switchBlock->endReachable){
+            if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack)))
+               handleError(NULL,ERROR_TYPE,op.filePos);
+            if(resetStack(state,&(switchBlock->outStack)))
+              handleError(NULL,ERROR_TYPE,op.filePos);
+          }
+          state->reachable=switchBlock->endReachable;
+          free(switchBlock->inStack.types);
+          free(switchBlock->inStack.ops);
+          free(switchBlock->outStack.types);
+          free(switchBlock->outStack.ops);
+          break;
+        default:
+          if(checkNonemptyStack(state,"unfinished local operation")){
+            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          }
+          state->reachable=true;
+      }
+      while(endCount-->0){
+        pushCompiledOperation(state,op);
+      }
+      popBlock(state);//pop block after writing operations
+      return;
     case OP_CALL_PTR:
       checkReachable(state,op);
       checkLocal(state,op);
@@ -4794,7 +4802,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
   }
-  printf("type checking %s is not implemented\n",opName(op.opType));
+  fputs("implementation for type checking of operation ",stderr);
+  printOperation(op,stderr);
+  fputs(" is incomplete\n",stderr);
   handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
 }
 void typeCheckProgram(Program* prog,CodeFile* src){

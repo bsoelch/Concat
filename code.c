@@ -27,6 +27,7 @@ typedef tuple14 (*procPtr5) (tuple12);
 typedef void (*procPtr6) (int32_t, enum9, int8_t, tuple12);
 typedef tuple16 (*procPtr7) (tuple12, int64_t);
 typedef void (*procPtr8) (tuple12, int64_t, int8_t);
+typedef tuple0 (*procPtr9) (int32_t, int32_t);
 struct tuple0Impl{
 int32_t e0;
 int32_t e1;
@@ -318,8 +319,8 @@ local6 = tmp52;
 }
 int64_t const tmp53 = procedure3();
 printf("%"PRIi64"\n",tmp53);
-procPtr0 const tmp54 = &(procedure0);
-procPtr0 local7 = tmp54;
+procPtr9 const tmp54 = &(procedure0);
+procPtr9 local7 = tmp54;
 tuple0 const tmp55 = (local7)(((int32_t)1),((int32_t)1));
 int32_t const tmp56 = (tmp55).e1;
 printf("%"PRIi32"\n",tmp56);
