@@ -25,7 +25,7 @@ type : selfPtr
 struct( i32 : i i8 : c ) type =: aStruct
 enum( A B i32 : C  char : D ) type =: anEnum 
 enum( A B C ) type =: labelEnum 
-enum( empty i64 ptr : data ) type =: optionalI64 
+enum( empty i64 ptr : data ) type =: optionalI64
 
 anEnum .A =:: e1
 anEnum .B new =:: e2
@@ -197,7 +197,7 @@ entryPoint:
     end 
   print
   
-  A addrOf  i32 ptr =: aPtr
+  A addrOf  i32 ptr mut =: aPtr
   2  aPtr ++ @ = 
 
   "Hello" startItr while nextChar do
