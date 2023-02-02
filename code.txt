@@ -183,7 +183,6 @@ entryPoint:
   tmp .0 addrOf print
   tmp addrOf ( i64 i64 ) ptr =: strPtr
   strPtr 0 [] .0 print
-  
   "Hello World!" 1 [] print
   "World" .length print
 
@@ -203,7 +202,9 @@ entryPoint:
   "Hello" startItr while nextChar do
     #+char+# print
   end endItr
-  
+  #find aPtr
+  #find tmp
+  #find selfPtr
   5 
     true while do
       #dup print 

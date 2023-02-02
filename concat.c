@@ -222,7 +222,7 @@ typedef enum{
   
   //compile-time operations
   OP_MODIFY_STACK,  
-  OP_TYPE_INFO,
+  OP_COMPILER_INFO,
 }OpType;
 const char* opName(OpType type){
   switch(type){
@@ -249,7 +249,7 @@ const char* opName(OpType type){
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
     case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
     case OP_MODIFY_STACK:return "OP_MODIFY_STACK";
-    case OP_TYPE_INFO:return "OP_TYPE_INFO";
+    case OP_COMPILER_INFO:return "OP_COMPILER_INFO";
   }
   return "UNDEFINED";
 }
@@ -718,13 +718,13 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
   switch(type->typeClass){
     case TYPECLASS_UNDEFINED:
       if(type->typeDataAs.typeId>0){
-        return fprintf(file,"PREDECLARED %"PRIi64,type->typeDataAs.typeId);
+        return fprintf(file,"auto (%"PRIi64")",type->typeDataAs.typeId);
       }
       return fputs("UNDEFINED",file);
     case TYPECLASS_PRIMITIVE:
       return fprintf(file,"%s",primitiveName(type->typeDataAs.primitive));
     case TYPECLASS_OPAQUE:
-      return fprintf(file,"OPAQUE %"PRIi64,type->typeDataAs.typeId);
+      return fprintf(file,"opaque (%"PRIi64")",type->typeDataAs.typeId);
     case TYPECLASS_CONST_POINTER:
     case TYPECLASS_MUTABLE_POINTER:
     case TYPECLASS_TYPE_OF:
@@ -1020,13 +1020,13 @@ typedef struct{
   StackOperation op;
 }StackModification;
 typedef enum{
-  TYPEINFO_TYPES,
-  TYPEINFO_STACK,
-}TypeInfoType;
+  COMPILERINFO_TYPES,
+  COMPILERINFO_STACK,
+}CompilerInfoType;
 typedef struct{
   int32_t maxCount;
-  TypeInfoType infoType;
-}TypeStackInfo;
+  CompilerInfoType infoType;
+}CompilerInfo;
 
 typedef struct{
   OpType opType;
@@ -1040,7 +1040,7 @@ typedef struct{
     BlockData block;
     String string;
     StackModification stackMod;
-    TypeStackInfo typeInfo;
+    CompilerInfo compilerInfo;
   }dataAs;
 }Operation;
 
@@ -1867,7 +1867,7 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
     case OP_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
     case OP_MODIFY_STACK:
-    case OP_TYPE_INFO:
+    case OP_COMPILER_INFO:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op->opType));
       handleError(NULL,ERROR_SYNTAX,op->filePos);
       break;
@@ -2162,6 +2162,9 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
     }else{
       endChars=0;
     }
+    if(delta>0){//copy chars to position in unescaped string
+      wordChars[wordLength]=*(codeFile->code);
+    }
     if(doEspaceSeqs&&*(codeFile->code)=='\\'){//escaped characters
       if(codeFile->codeSize<=1){
         handleError("unexpected end of file",ERROR_EOF,codeFile->currentPos);
@@ -2171,27 +2174,28 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
       updateFilePosition(codeFile);//ignore the \ character
       switch(*(codeFile->code)){//decode escape sequence
         case 'b':
-          *(codeFile->code)='\b';
+          wordChars[wordLength]='\b';
           break;
         case 'n':
-          *(codeFile->code)='\n';
+          wordChars[wordLength]='\n';
           break;
         case 't':
-          *(codeFile->code)='\t';
+          wordChars[wordLength]='\t';
           break;
         case 'r':
-          *(codeFile->code)='\r';
+          wordChars[wordLength]='\r';
           break;
         case 'f':
-          *(codeFile->code)='\f';
+          wordChars[wordLength]='\f';
           break;
         case 'v':
-          *(codeFile->code)='\v';
+          wordChars[wordLength]='\v';
           break;
         case '\'':
         case '\\':
         case '"':
-          break; //keep the original character
+          wordChars[wordLength]=*(codeFile->code);//copy character
+          break; 
         case 'x':
         case 'u':
         case 'U':
@@ -2227,9 +2231,6 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
           handleError(NULL,ERROR_SYNTAX,codeFile->currentPos);
           break; 
       }
-    }
-    if(delta>0){//copy chars to position in unescaped string
-      wordChars[wordLength]=*(codeFile->code);
     }
     wordLength++;
     updateFilePosition(codeFile);
@@ -2697,11 +2698,34 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     }//XXX over -> copy lower stack element
     //compiler commands
     if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
-      (*op)=(Operation){.opType=OP_TYPE_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.typeInfo={.infoType=TYPEINFO_TYPES,.maxCount=-1}}};
+      (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=-1}}};
       return 1;
     }else if(wordEquals(&word,"stack")){
-      (*op)=(Operation){.opType=OP_TYPE_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.typeInfo={.infoType=TYPEINFO_STACK,.maxCount=-1}}};
+      (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=-1}}};
       return 1;
+    }else if(wordEquals(&word,"find")){
+      Label varName=readLabel(codeFile,"variable names");
+      ScopeNode* asIdentifier;
+      int r=getIdentifier(varName.label,&asIdentifier);//try to parse variable as identifier
+      if(r<0)//internal error while reading identifier
+        handleError("error while resolving identifier",r,wordPos);
+      if(r==0){//found identifier TODO print shadowed matches
+        puts("-----------------");
+        printf("identifier '%.*s':\n",(int)varName.label.length,varName.label.chars);
+        fputs("  ",stdout);
+        if(asIdentifier->isMutable)
+          fputs("mutable ",stdout);
+        printf("%s: ",idNames[asIdentifier->idType]);
+        printTypeName(&asIdentifier->type,stdout);
+        fputs("\n    at ",stdout);
+        printFilePosition(asIdentifier->declaredAt,stdout);
+        puts("");
+        puts("-----------------");
+        return 0;
+      }
+      fprintf(stderr,"could not find identifier '%.*s'\n",(int)varName.label.length,varName.label.chars);
+      //TODO resolve global identifiers with later declarations pre-declared types identifiers
+      return 0;
     }
     //XXX more compile time operations
     fprintf(stderr,"unknown compile time operation '%.*s'\n",(int)word.length,word.chars);
@@ -4134,7 +4158,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fprintf(stderr,"not enough operands for operation %s : need 2 got %zu\n",opName(op.opType),state->typeCount);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      if(!state->typeStack[state->typeCount-1].type.isWritable){
+      if(!state->typeStack[state->typeCount-1].type.isWritable){ // TODO improve error reporting (report declaration position for current argument)
         fprintf(stderr,"the second operand of %s has to be a writable type \n",opName(op.opType));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
@@ -4833,15 +4857,15 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           break;
       }
       break;
-    case OP_TYPE_INFO:
-      switch(op.dataAs.typeInfo.infoType){
-        case TYPEINFO_TYPES:
+    case OP_COMPILER_INFO:
+      switch(op.dataAs.compilerInfo.infoType){
+        case COMPILERINFO_TYPES:
           //TODO allow to limit op-count
           puts("types:\n-----------------");
           printTypeStack(state,false,stdout);
           puts("-----------------");
           return;
-        case TYPEINFO_STACK:
+        case COMPILERINFO_STACK:
           puts("stack:\n-----------------");
           printTypeStack(state,true,stdout);
           puts("-----------------");
