@@ -838,11 +838,11 @@ void printTypeNameC(const DataType* type,FILE* file){
       return;
     case TYPECLASS_CONST_POINTER:
     case TYPECLASS_MUTABLE_POINTER:
-      if(!isCallableType(type)&&type->typeClass==TYPECLASS_CONST_POINTER)
-        fputs("const ",file);
       printTypeNameC(type->typeDataAs.type,file);
       if(isCallableType(type))
         return;
+      if(type->typeClass==TYPECLASS_CONST_POINTER)
+        fputs(" const",file);
       fputs("*",file);
       return;
     case TYPECLASS_PROC_IN:
@@ -945,6 +945,7 @@ typedef enum{
 typedef struct{
   int32_t id;
   IdentifierType type;//TODO remember identifier names (replace in switch-labels, better error messages)
+  bool isMutable;
 }IdentifierInfo;
 const char* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
   [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_ENUM_LABEL]="enum label",[ID_ENUM_ELEMENT]="enum element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
@@ -1087,6 +1088,11 @@ void printOperation(Operation op,FILE* out){
 #define SCOPE_NODE_CAP 8192
 #define SCOPE_CAP 256
 #define SCOPE_MAP_CAP 1024
+typedef struct{
+  String label;
+  FilePosition declaredAt;
+  bool isMutable;
+}Label;
 typedef struct ScopeNode ScopeNode;
 struct ScopeNode{
   String key;
@@ -1095,6 +1101,7 @@ struct ScopeNode{
   ScopeNode* next;
   int32_t id;
   IdentifierType idType;
+  bool isMutable;
 };
 typedef struct Scope{
   ScopeNode** nodes;
@@ -1161,34 +1168,41 @@ int getIdentifier(String name,ScopeNode** out){
   }
   return ERROR_SYNTAX;
 }
-ScopeNode* declareIdentifier(String name,DataType type,IdentifierType idType,int32_t id,FilePosition declaredAt){
-  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),name);
+ScopeNode* declareIdentifier(Label label,DataType type,IdentifierType idType,int32_t id){
+  if(label.isMutable){
+    if(idType==ID_TYPE)
+      handleError("type definitions cannot be mutable",ERROR_SYNTAX,label.declaredAt);
+    if(idType==ID_PROCEDURE)
+      handleError("procedures cannot be mutable",ERROR_SYNTAX,label.declaredAt);
+  }
+  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),label.label);
   if(node==NULL)
-    handleError("unable to access scope node",ERROR_MEMORY,declaredAt);
+    handleError("unable to access scope node",ERROR_MEMORY,label.declaredAt);
   if(*node!=NULL){
-    fprintf(stderr,"re-declaration of %s '%.*s'\n",idNames[idType],(int)name.length,name.chars);
+    fprintf(stderr,"re-declaration of %s '%.*s'\n",idNames[idType],(int)label.label.length,label.label.chars);
     fprintf(stderr,"previous declaration: %s '%.*s' at ",idNames[(*node)->idType],(int)(*node)->key.length,(*node)->key.chars);
     printFilePosition((*node)->declaredAt,stderr);
     fputs("\n",stderr);
-    handleError(NULL,ERROR_SYNTAX,declaredAt);
+    handleError(NULL,ERROR_SYNTAX,label.declaredAt);
   }
   ScopeNode* shaddow;
-  getIdentifier(name,&shaddow);
+  getIdentifier(label.label,&shaddow);
   if(shaddow!=NULL){
-    fprintf(stderr,"Warning:\n  declaration of %s '%.*s'\n",idNames[idType],(int)name.length,name.chars);
+    fprintf(stderr,"Warning:\n  declaration of %s '%.*s'\n",idNames[idType],(int)label.label.length,label.label.chars);
     fprintf(stderr,"  shadows previous declaration: %s '%.*s' at ",idNames[shaddow->idType],(int)shaddow->key.length,shaddow->key.chars);
     printFilePosition(shaddow->declaredAt,stderr);
     fputs("\n",stderr);
-    handleWarning(NULL,ERROR_SYNTAX,declaredAt);
+    handleWarning(NULL,ERROR_SYNTAX,label.declaredAt);
   }
   *node=allocScopeNode();
   if(*node==NULL)
-    handleError("unable to allocate scope node",ERROR_MEMORY,declaredAt);
-  (*node)->key=name;
+    handleError("unable to allocate scope node",ERROR_MEMORY,label.declaredAt);
+  (*node)->key=label.label;
+  (*node)->isMutable=label.isMutable;
   (*node)->type=type;
   (*node)->idType=idType;
   (*node)->id=id;
-  (*node)->declaredAt=declaredAt;
+  (*node)->declaredAt=label.declaredAt;
   (*node)->next=NULL;
   return *node;
 }
@@ -2018,19 +2032,19 @@ int32_t nextId(IdentifierType idType,CompilerState* state){
 
 
 Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.isMutable=false}}};
 }
 Operation opGetIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId}}};
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.isMutable=false}}};
 }
 Operation opPredeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+  return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
 }
 Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
 }
 Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId}}};
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
 }
 
 Operation opBinaryOperator(BinaryOperator binOpType,FilePosition pos){
@@ -2275,6 +2289,34 @@ String nextWord(CodeFile* codeFile,int* wordType){
   return (String){.chars=wordChars,.length=wordLength};
 }
 
+
+Label readLabel(CodeFile* codeFile,const char* labelType){
+  int wordType=0;
+  bool isMutable=false,isModifer;
+  String label;
+  do{
+    label=nextWord(codeFile,&wordType);
+    isModifer=false;
+    if(wordType!=WORD_TYPE_IDENTIFIER){
+      fprintf(stderr,"%s have to be identifiers\n",labelType);
+      handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
+    }
+    if(label.length==0){
+      fprintf(stderr,"%s have to be non-empty\n",labelType);
+      handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
+    }
+    if(wordEquals(&label,"mut")){
+      if(isMutable){
+        fprintf(stderr,"%s is already mutable\n",labelType);
+        handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
+      }
+      isMutable=true;
+      isModifer=true;
+    }
+  }while(isModifer);
+  return (Label){.label=label,.declaredAt=codeFile->wordStart,.isMutable=isMutable};
+}
+
 #define LABEL_TYPE_NONE    0 // no labels
 #define LABEL_TYPE_STRUCT  1 // exactly one label per type
 #define LABEL_TYPE_ENUM    2 // labels without type are allowed
@@ -2305,12 +2347,8 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
         return;
       }
       typesSinceLabel=0;
-      String label=nextWord(codeFile,&wordType);
-      if(wordType!=WORD_TYPE_IDENTIFIER){
-        handleError("label names have to be identifiers",ERROR_SYNTAX,codeFile->wordStart);
-        return;
-      }
-      fieldNameBuffer[bufferedFieldNames++]=label;
+      Label label=readLabel(codeFile,"labels");
+      fieldNameBuffer[bufferedFieldNames++]=label.label;
       continue;
     }
     if(readType(word,codeFile,state)){
@@ -2409,7 +2447,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
     typeBuffer[bufferedTypes-1]=pointerType(&(typeBuffer[bufferedTypes-1]),false);
     return true;
   }
-  if(wordEquals(&name,"mut")){
+  if(wordEquals(&name,"mut")){//XXX mutable tuples/structs/enums
     if(bufferedTypes==0)
       return false;//mut without argument -> identifier modifier
     if(!isPointerType(&typeBuffer[bufferedTypes-1]))
@@ -2514,12 +2552,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   //1. operations that take a Type as argument
   if(wordEquals(&word,":")){//pre-declare
     requireCompileTimeType(&word,&type,1,wordPos);
-    String varName=nextWord(codeFile,&wordType);
+    Label varName=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
-    if(wordType!=WORD_TYPE_IDENTIFIER)
-      handleError("variable names have to be identifiers",ERROR_SYNTAX,wordPos);
-    if(varName.length==0)
-      handleError("variable names have to be non-empty",ERROR_SYNTAX,wordPos);
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     if(isCallableType(&type)&&!isPointerType(&type)){
       handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
@@ -2534,19 +2568,15 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       type=opaqueType(state->opaqueTypeCount++);
       idType=ID_TYPE;
     }
-    ScopeNode* id=declareIdentifier(varName,type,idType,nextId(idType,state),wordPos);
+    ScopeNode* id=declareIdentifier(varName,type,idType,nextId(idType,state));
     if(idType==ID_TYPE)//declaring type does not produce any code
       return 0;
-    (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"=:")){//declare
     requireCompileTimeType(&word,&type,1,wordPos);
-    String varName=nextWord(codeFile,&wordType);
+    Label varName=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
-    if(wordType!=WORD_TYPE_IDENTIFIER)
-      handleError("variable names have to be identifiers",ERROR_SYNTAX,wordPos);
-    if(varName.length==0)
-      handleError("variable names have to be non-empty",ERROR_SYNTAX,wordPos);
     IdentifierType idType;
     ScopeNode* id;
     int r;
@@ -2560,7 +2590,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
           handleError("missing type for type definition",ERROR_SYNTAX,wordPos);
         }
         idType=ID_TYPE;
-        r=getIdentifier(varName,&id);
+        r=getIdentifier(varName.label,&id);
         if(r<0)
           handleError("error while resolving identifier",r,wordPos);
         if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
@@ -2571,13 +2601,13 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       default:
         idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    id=declareIdentifier(varName,type,idType,nextId(idType,state),wordPos);
+    id=declareIdentifier(varName,type,idType,nextId(idType,state));
     if(idType==ID_TYPE){
       //declaring type does not produce any code
       return 0;
     }else if(idType==ID_PROCEDURE){
       if(state->scopeLevel>0){
-        fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.length,varName.chars);
+        fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.label.length,varName.label.chars);
           handleError(NULL,ERROR_SYNTAX,wordPos);
       }
       Scope* newScope=openScope(BLOCK_PROCEDURE);
@@ -2590,12 +2620,13 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       state->localVars=0;
       if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
          CompositeType* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
-         for(int32_t i=0;i<inTypes->typeCount;i++){
-            declareIdentifier(inTypes->labels[i],inTypes->types[i],ID_ARGUMENT,i,wordPos);
+         for(int32_t i=0;i<inTypes->typeCount;i++){//TODO use position of procedure label
+            Label label={.label=inTypes->labels[i],.declaredAt=wordPos,.isMutable=false};
+            declareIdentifier(label,inTypes->types[i],ID_ARGUMENT,i);
          }
       }
     }
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"new")){
     if(state->compiledOps>0&&(op-1)->opType==OP_CONSTANT&&(op-1)->dataType.typeClass==TYPECLASS_ENUM_LABEL){
@@ -2633,7 +2664,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     if(bufferedTypes==0){
       IntOrErrorCode index=parseInt(word,10);
       if(!index.isError){
-        (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64}}};
+        (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64,.isMutable=false}}};
         return 1;
       }
       (*op)=(Operation){.opType=OP_GET_LABEL,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}};
@@ -2742,26 +2773,22 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opUnaryOperator(DECREMENT,wordPos);
     return 1;
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    String varName=nextWord(codeFile,&wordType);
+    Label varName=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
-    if(wordType!=WORD_TYPE_IDENTIFIER)
-      handleError("variable names have to be identifiers",ERROR_SYNTAX,wordPos);
-    if(varName.length==0)
-      handleError("variable names have to be non-empty",ERROR_SYNTAX,wordPos);
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     DataType mType=TYPE_UNDEFINED;
     mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
-    ScopeNode* id=declareIdentifier(varName,mType,idType,nextId(idType,state),wordPos);
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=wordPos,.dataAs={.idInfo={.type=idType,.id=id->id}}};
+    ScopeNode* id=declareIdentifier(varName,mType,idType,nextId(idType,state));
+    (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"=")){
     (*op)=(Operation){.opType=OP_SET_VALUE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return 1;
   }else if(wordEquals(&word,"@")){
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER,.id=0}}};
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER,.id=0,.isMutable=false}}};
     return 1;
   }else if(wordEquals(&word,"[]")){
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0}}};
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0,.isMutable=false}}};
     return 1;
   }else if(wordEquals(&word,"addrOf")){
     if(state->compiledOps>0&&(op-1)->opType==OP_CALL){
@@ -2885,8 +2912,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};//printed type will be determined by type-checker
     return 1;
   }else if(wordEquals(&word,"mut")){
-    handleError("mut without types is not implemented",ERROR_UNIMPLEMENTED,wordPos);
-    return 0;//type does not generate any operations
+    handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
+    return 0;
   } 
   
   ScopeNode* asIdentifier;
@@ -2894,10 +2921,11 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   if(r<0)//internal error while reading identifier
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
-    if(asIdentifier->idType!=ID_PROCEDURE)
+    asIdentifier->type=asAddressableType(asIdentifier->type);
+    if(asIdentifier->isMutable)
       asIdentifier->type=asWritableType(asIdentifier->type,true);
     (*op)=(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
-      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
+      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.isMutable=asIdentifier->isMutable}}};
     return 1;
   }
   // could not find identifier, try again in type-check phase
@@ -3495,7 +3523,7 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
       continue;
     }
     if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM&&types[nTypes-k].typeClass==TYPECLASS_ENUM_LABEL){
-      state->opStack[offset+nCasts]=(Operation){.opType=OP_GET,.filePos=pos,.dataType=types[nTypes-k],.dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0}}};
+      state->opStack[offset+nCasts]=(Operation){.opType=OP_GET,.filePos=pos,.dataType=types[nTypes-k],.dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0,.isMutable=false}}};
       state->typeStack[state->typeCount-k].type=types[nTypes-k];
       state->typeStack[state->typeCount-k].opCount++;
       continue;
@@ -3577,9 +3605,9 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
   for(int32_t e=0;e<outTypes->typeCount;e++){
     state->typeStack[state->typeCount++]=(TypeInfo){.type=outTypes->types[e],.opCount=3};
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE,.id=1}}};
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}};
     state->opStack[state->opStackCount++]=opGetIntermediate(&outTypes->types[e],tmpId,op->filePos);
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e}}};
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e,.isMutable=false}}};
   }
 }
 void pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
@@ -3592,11 +3620,11 @@ void pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
   if(inTypes->typeCount==0)
     return;//no input arguments
   if(inTypes->typeCount==1){
-    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=0}}});
+    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=0,.isMutable=false}}});
     return;
   }
   for(int32_t i=0;i<inTypes->typeCount;i++){
-    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=i}}});
+    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=i,.isMutable=false}}});
   }
 }
 void compileGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operation* op){
@@ -3622,7 +3650,7 @@ void compileGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operation
   if(ensureOpStackCap(state,state->opStackCount+totalOps+2)){
     handleError("exceeded op-stack capacity",ERROR_MEMORY,op->filePos);
   }
-  insertStackOperation(state,(Operation){.opType=OP_GET,.dataType=op->dataType,.dataAs={.idInfo={.type=ID_TUPLE,.id=1}}},totalOps);
+  insertStackOperation(state,(Operation){.opType=OP_GET,.dataType=op->dataType,.dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}},totalOps);
   state->opStack[state->opStackCount++]=*op;
   //update type-stack
   state->typeStack[offset].type=op->dataType;
@@ -3690,7 +3718,7 @@ void resolveIdentifers(TypeCheckState* state,Operation* op){
   if(asIdentifier->idType!=ID_PROCEDURE)
     asIdentifier->type=asWritableType(asIdentifier->type,true);
   *op=(Operation){.opType=((asIdentifier->idType==ID_PROCEDURE)&&(op->opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
-    .dataType=asIdentifier->type,.filePos=op->filePos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id}}};
+    .dataType=asIdentifier->type,.filePos=op->filePos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.isMutable=asIdentifier->isMutable}}};
 }
 void typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
@@ -3995,16 +4023,16 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             size_t ptrIndex=state->tmpCount++,lenIndex=state->tmpCount++;
             pushCompiledOperation(state,opDeclareIntermediate(&(arrayType.typeDataAs.composite->types[0]),ptrIndex,op.filePos));
             pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
-              .dataAs={.idInfo={.type=ID_TUPLE,.id=1}}});
+              .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}});
             pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op.filePos));//pointer
             pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op.filePos,
-              .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=0}}});
+              .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=0,.isMutable=false}}});
             pushCompiledOperation(state,opDeclareIntermediate(&(arrayType.typeDataAs.composite->types[1]),lenIndex,op.filePos));
             pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[1],.filePos=op.filePos,
-              .dataAs={.idInfo={.type=ID_TUPLE,.id=1}}});
+              .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}});
             pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op.filePos));//length
             pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[1],.filePos=op.filePos,
-              .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1}}});
+              .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1,.isMutable=false}}});
             //2. check array-bounds
             state->hasCheckBounds=1;
             pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={0}});
@@ -4077,7 +4105,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(state->typeStack[offset].type.typeClass==TYPECLASS_STRUCT){
-        op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex}}};
+        op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.isMutable=false}}};
         compileGetTupleElement(state,mStruct,&op);
         return;
       }
@@ -4095,7 +4123,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       pushCompiledOperation(state,opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos));
       state->hasCheckEnum=1;
       pushCompiledOperation(state,opDeclareIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
-      pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,.dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex}}});
+      pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,.dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.isMutable=false}}});
       pushCompiledOperation(state,opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos));
       //XXX? store element value on stack, to allow write operation
       pushValue(state,opGetIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
