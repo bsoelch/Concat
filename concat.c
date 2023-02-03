@@ -256,6 +256,41 @@ const char* opName(OpType type){
 }
 const char* CHECK_BOUNDS_NAME="concatInternal_checkArrayBounds";
 const char* CHECK_ENUM_INDEX_NAME="concatInternal_checkEnumIndex";
+//labels
+#define LABEL_CAP 4096
+typedef int32_t LabelId;
+const LabelId LABEL_ID_UNKNOWN=-1;
+typedef struct{
+  String label;
+  FilePosition declaredAt;
+  bool isMutable;
+}Label;
+Label labelBuffer[LABEL_CAP];
+int32_t labelBufferCount=0;
+String getLabelName(LabelId labelId){
+  if(labelId<0||labelId>=labelBufferCount)
+    return (String){.chars="",.length=0};
+  return labelBuffer[labelId].label;
+}
+Label label(LabelId labelId,FilePosition pos){
+  if(labelId<0||labelId>=labelBufferCount)
+    handleError("label id out of range",ERROR_MEMORY,pos);
+  return labelBuffer[labelId];
+}
+LabelId newLabel(String label,bool isMutable,FilePosition declaredAt){
+  if(labelBufferCount>=LABEL_CAP)
+    handleError("exceeded label capacity",ERROR_MEMORY,declaredAt);
+  labelBuffer[labelBufferCount]=(Label){.label=label,.isMutable=isMutable,.declaredAt=declaredAt};
+  return labelBufferCount++;
+}
+int32_t findLabel(LabelId labelOffset,int32_t labelCount,const String* labelName){
+  for(int32_t i=0;i<labelCount;i++){
+    if(stringCompare(getLabelName(labelOffset+i),*labelName)==0)
+      return i;
+  }
+  return -1;
+}
+
 //types
 typedef enum{
   TYPECLASS_UNDEFINED,
@@ -306,7 +341,7 @@ typedef struct DataType{
 #define FLAG_VOID_ONLY     32
 struct CompositeType{
   DataType* types;
-  String*   labels;
+  int32_t labelOffset;//offset in labelBuffer
   int32_t id;
   int16_t typeCount;
   int16_t flags;
@@ -333,8 +368,6 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 //temporary buffer for construction of composite elements
 size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
-size_t bufferedFieldNames=0;
-String fieldNameBuffer[TYPE_BUFFER_CAP];
 
 bool typeEquals(const DataType* a,const DataType* b){
   if(a->typeClass!=b->typeClass)
@@ -486,7 +519,7 @@ int64_t indexOfTypeArray(const DataType* base,size_t baseLen,const DataType* chi
   }
   return -1;
 }
-DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames,int32_t eltCount){
+DataType compositeType(TypeClass typeClass,DataType* elements,int32_t labelOffset,int32_t eltCount){
   if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
   }
@@ -496,7 +529,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
       classFlag=FLAG_IS_PROC_IN;
       break;
     case TYPECLASS_LABELED_PROC_IN:
-      if(labelNames==NULL)
+      if(labelOffset==-1)
         return TYPE_UNDEFINED;
       classFlag=FLAG_IS_PROC_IN;
       break;
@@ -507,13 +540,13 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
       classFlag=FLAG_IS_TUPLE;
       break;
     case TYPECLASS_STRUCT:
-      if(labelNames==NULL)
+      if(labelOffset==-1)
         return TYPE_UNDEFINED;
       classFlag=FLAG_IS_STRUCT;
       break;
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
-      if(labelNames==NULL)
+      if(labelOffset==-1)
         return TYPE_UNDEFINED;
       classFlag=FLAG_IS_ENUM;
       break;
@@ -541,27 +574,23 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
       if(compositeCount+1>=MAX_COMPOSITE)
         return TYPE_UNDEFINED;
       match=compositeCount;
-      compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=0,.types=NULL,.labels=NULL,.flags=classFlag};
+      compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=0,.types=NULL,.labelOffset=labelOffset,.flags=classFlag};
       compositeCount++;
     }
     return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+match,.isAddressable=false,.isWritable=false};
   }
   int64_t typeMatch=-1,typesIndex;
-  int64_t labelMatch=-1,labelsIndex;
   for(int32_t i=0;i<compositeCount;i++){
     if(compositeTypes[i].typeCount==eltCount||(typeMatch==-1&&compositeTypes[i].typeCount>eltCount)){
       typesIndex=indexOfTypeArray(compositeTypes[i].types,compositeTypes[i].typeCount,elements,eltCount);
       if(typesIndex==-1)
         continue;
       typeMatch=i;
-      if(labelNames!=NULL&&compositeTypes[i].labels!=NULL&&indexOfStringArray(compositeTypes[i].labels,compositeTypes[i].typeCount,labelNames,eltCount)!=0)
+      if(labelOffset!=-1&&compositeTypes[i].labelOffset!=-1&&labelOffset!=compositeTypes[i].labelOffset)
         continue;//labels do not match -> cannot reuse composite
       if(compositeTypes[i].typeCount==eltCount){
-        if(labelNames!=NULL&&compositeTypes[i].labels==NULL){
-          compositeTypes[i].labels=malloc(eltCount*sizeof(String));//will persist until program exits
-          if(compositeTypes[i].labels==NULL)
-            return TYPE_UNDEFINED;
-          memcpy(compositeTypes[i].labels,labelNames,eltCount*sizeof(String));
+        if(labelOffset!=-1&&compositeTypes[i].labelOffset==-1){
+          compositeTypes[i].labelOffset=labelOffset;
         }
         compositeTypes[i].flags|=classFlag;
         return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+i,.isAddressable=false,.isWritable=false};
@@ -571,26 +600,6 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
   if(compositeCount+1>=MAX_COMPOSITE)
     return TYPE_UNDEFINED;
   DataType* types;
-  String*  labels=NULL;
-  if(labelNames!=NULL){
-    for(int32_t i=0;i<compositeCount;i++){//find matching labels
-      if(compositeTypes[i].labels!=NULL&&compositeTypes[i].typeCount>=eltCount){
-        labelsIndex=indexOfStringArray(compositeTypes[i].labels,compositeTypes[i].typeCount,labelNames,eltCount);
-        if(labelsIndex==-1)
-          continue;
-        labelMatch=i;
-        break;
-      }
-    }
-    if(labelMatch!=-1){
-      labels=compositeTypes[labelMatch].labels+labelsIndex;
-    }else{
-      labels=malloc(eltCount*sizeof(String));//will persist until program exits
-      if(labels==NULL)
-        return TYPE_UNDEFINED;
-      memcpy(labels,labelNames,eltCount*sizeof(String));
-    }
-  }
   if(typeMatch!=-1){
     types=compositeTypes[typeMatch].types+typesIndex;
   }else{
@@ -599,7 +608,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,String* labelNames
       return TYPE_UNDEFINED;
     memcpy(types,elements,eltCount*sizeof(DataType));
   }
-  compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.labels=labels,.flags=classFlag};
+  compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.labelOffset=labelOffset,.flags=classFlag};
   return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)},.isAddressable=false,.isWritable=false};
 }
 DataType procedureType(const DataType* inType,const DataType* outType){
@@ -640,7 +649,7 @@ void ensureUnlabeledProc(DataType* procType,FilePosition pos){
   if(proc->inType->typeClass==TYPECLASS_PROC_IN)
     return;
   //replaces labeled types with their canonical unlabeled version 
-  DataType in=compositeType(TYPECLASS_PROC_IN,proc->inType->typeDataAs.composite->types,NULL,proc->inType->typeDataAs.composite->typeCount);
+  DataType in=compositeType(TYPECLASS_PROC_IN,proc->inType->typeDataAs.composite->types,LABEL_ID_UNKNOWN,proc->inType->typeDataAs.composite->typeCount);
   if(in.typeClass==TYPECLASS_UNDEFINED)
     handleError("unexpected error while allocating type",ERROR_MEMORY,pos);
   *procType=procedureType(&in,proc->outType);
@@ -716,6 +725,7 @@ const char* primitiveName(PrimitiveType t){
 }
 int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
   int i,j;
+  String labelName;
   switch(type->typeClass){
     case TYPECLASS_UNDEFINED:
       if(type->typeDataAs.typeId>0){
@@ -752,8 +762,9 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
       }
       for(int32_t e=0;e<type->typeDataAs.composite->typeCount;e++){
         if((type->typeClass==TYPECLASS_ENUM||type->typeClass==TYPECLASS_ENUM_LABEL)&&isVoidType(&(type->typeDataAs.composite->types[e]))){
+          labelName=getLabelName(type->typeDataAs.composite->labelOffset+e);
           //void-type in enum -> only print label
-          j=fprintf(file," %.*s",(int)type->typeDataAs.composite->labels[e].length,type->typeDataAs.composite->labels[e].chars);
+          j=fprintf(file," %.*s",(int)labelName.length,labelName.chars);
           if(j<0)
             return j;
           i+=j;
@@ -767,9 +778,10 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         if(j<0)
           return j;
         i+=j;
-        if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_IN||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labels==NULL)
+        if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_IN||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labelOffset==-1)
           continue;
-        j=fprintf(file," : %.*s",(int)type->typeDataAs.composite->labels[e].length,type->typeDataAs.composite->labels[e].chars);
+        labelName=getLabelName(type->typeDataAs.composite->labelOffset+e);
+        j=fprintf(file," : %.*s",(int)labelName.length,labelName.chars);
         if(j<0)
           return j;
         i+=j;
@@ -945,14 +957,22 @@ typedef enum{
 }IdentifierType;
 typedef struct{
   int32_t id;
-  IdentifierType type;//TODO remember identifier names (replace in switch-labels, better error messages)
+  int32_t labelId;
+  IdentifierType type;
   bool isMutable;
 }IdentifierInfo;
 const char* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
   [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_ENUM_LABEL]="enum label",[ID_ENUM_ELEMENT]="enum element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
   [ID_INTERMEDIATE_RESULT]="intermediate result",[ID_TMP_VAR]="temporary variable",[ID_TYPE]="type"};
 void printIdInfo(IdentifierInfo info,FILE* out){
-  fprintf(out,"%s (%"PRIi32")",idNames[info.type],info.id);
+  if(info.isMutable)
+    fputs("mutable ",out);
+  if(info.labelId==LABEL_ID_UNKNOWN){
+    fprintf(out,"%s (%"PRIi32")",idNames[info.type],info.id);
+    return;
+  }
+  String labelName=getLabelName(info.labelId);
+  fprintf(out,"%s '%.*s' (%"PRIi32")",idNames[info.type],(int)labelName.length,labelName.chars,info.id);
 }
 
 typedef enum{
@@ -1091,20 +1111,14 @@ void printOperation(Operation op,FILE* out){
 #define SCOPE_NODE_CAP 8192
 #define SCOPE_CAP 256
 #define SCOPE_MAP_CAP 1024
-typedef struct{
-  String label;
-  FilePosition declaredAt;
-  bool isMutable;
-}Label;
 typedef struct ScopeNode ScopeNode;
 struct ScopeNode{
   String key;
   DataType type;
-  FilePosition declaredAt;
   ScopeNode* next;
+  int32_t labelId;
   int32_t id;
   IdentifierType idType;
-  bool isMutable;
 };
 typedef struct Scope{
   ScopeNode** nodes;
@@ -1171,41 +1185,41 @@ int getIdentifier(String name,ScopeNode** out){
   }
   return ERROR_SYNTAX;
 }
-ScopeNode* declareIdentifier(Label label,DataType type,IdentifierType idType,int32_t id){
-  if(label.isMutable){
+ScopeNode* declareIdentifier(LabelId labelId,DataType type,IdentifierType idType,int32_t id,FilePosition pos){
+  Label mLabel=label(labelId,pos);
+  if(mLabel.isMutable){
     if(idType==ID_TYPE)
-      handleError("type definitions cannot be mutable",ERROR_SYNTAX,label.declaredAt);
+      handleError("type definitions cannot be mutable",ERROR_SYNTAX,mLabel.declaredAt);
     if(idType==ID_PROCEDURE)
-      handleError("procedures cannot be mutable",ERROR_SYNTAX,label.declaredAt);
+      handleError("procedures cannot be mutable",ERROR_SYNTAX,mLabel.declaredAt);
   }
-  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),label.label);
+  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),mLabel.label);
   if(node==NULL)
-    handleError("unable to access scope node",ERROR_MEMORY,label.declaredAt);
+    handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
   if(*node!=NULL){
-    fprintf(stderr,"re-declaration of %s '%.*s'\n",idNames[idType],(int)label.label.length,label.label.chars);
+    fprintf(stderr,"re-declaration of %s '%.*s'\n",idNames[idType],(int)mLabel.label.length,mLabel.label.chars);
     fprintf(stderr,"previous declaration: %s '%.*s' at ",idNames[(*node)->idType],(int)(*node)->key.length,(*node)->key.chars);
-    printFilePosition((*node)->declaredAt,stderr);
+    printFilePosition(label((*node)->labelId,pos).declaredAt,stderr);
     fputs("\n",stderr);
-    handleError(NULL,ERROR_SYNTAX,label.declaredAt);
+    handleError(NULL,ERROR_SYNTAX,mLabel.declaredAt);
   }
   ScopeNode* shaddow;
-  getIdentifier(label.label,&shaddow);
+  getIdentifier(mLabel.label,&shaddow);
   if(shaddow!=NULL){
-    fprintf(stderr,"Warning:\n  declaration of %s '%.*s'\n",idNames[idType],(int)label.label.length,label.label.chars);
+    fprintf(stderr,"Warning:\n  declaration of %s '%.*s'\n",idNames[idType],(int)mLabel.label.length,mLabel.label.chars);
     fprintf(stderr,"  shadows previous declaration: %s '%.*s' at ",idNames[shaddow->idType],(int)shaddow->key.length,shaddow->key.chars);
-    printFilePosition(shaddow->declaredAt,stderr);
+    printFilePosition(label(shaddow->labelId,pos).declaredAt,stderr);
     fputs("\n",stderr);
-    handleWarning(NULL,ERROR_SYNTAX,label.declaredAt);
+    handleWarning(NULL,ERROR_SYNTAX,mLabel.declaredAt);
   }
   *node=allocScopeNode();
   if(*node==NULL)
-    handleError("unable to allocate scope node",ERROR_MEMORY,label.declaredAt);
-  (*node)->key=label.label;
-  (*node)->isMutable=label.isMutable;
+    handleError("unable to allocate scope node",ERROR_MEMORY,mLabel.declaredAt);
+  (*node)->key=mLabel.label;
   (*node)->type=type;
   (*node)->idType=idType;
   (*node)->id=id;
-  (*node)->declaredAt=label.declaredAt;
+  (*node)->labelId=labelId;
   (*node)->next=NULL;
   return *node;
 }
@@ -1234,12 +1248,19 @@ typedef struct{
 #define MAX_PROG_STRINGS 1024
 size_t progStringCount=0;
 ProgramString programStrings[MAX_PROG_STRINGS];
+int32_t stringLabelOffset;
+
+void initStringLabels(void){
+  stringLabelOffset=labelBufferCount;
+  FilePosition dummyPos=(FilePosition){.fileName="compiler.string",.line=0,.posInLine=0};
+  newLabel((String){.chars="raw",.length=3},false,dummyPos);
+  newLabel((String){.chars="length",.length=6},false,dummyPos);
+}
 
 DataType progStringType(void){
     DataType chr=primitiveType(PRIMITIVE_I8);//store in intermediate value to allow call by reference
     DataType stringElts[2]={pointerType(&chr,false),primitiveType(PRIMITIVE_I64)};
-    String   labels[2]={{.chars="raw",.length=3},{.chars="length",.length=6}};
-    return compositeType(TYPECLASS_STRUCT,stringElts,labels,2);//ensure string-type exists
+    return compositeType(TYPECLASS_STRUCT,stringElts,stringLabelOffset,2);//ensure string-type exists
 }
 int64_t addProgString(String s,FilePosition pos){
   if(progStringCount+1>=MAX_PROG_STRINGS)
@@ -2041,22 +2062,28 @@ int32_t nextId(IdentifierType idType,CompilerState* state){
 
 
 Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.isMutable=false}}};
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
 }
 Operation opGetIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.isMutable=false}}};
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
 }
 Operation opPredeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
+  return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
 Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
+  return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
 Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
+  return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
 Operation opSetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
-  return (Operation){.opType=OP_SET,.dataType=*type,.filePos=pos,.dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.isMutable=true}}};
+  return (Operation){.opType=OP_SET,.dataType=*type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
 
 Operation opBinaryOperator(BinaryOperator binOpType,FilePosition pos){
@@ -2303,7 +2330,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
 }
 
 
-Label readLabel(CodeFile* codeFile,const char* labelType){
+LabelId readLabel(CodeFile* codeFile,const char* labelType){
   int wordType=0;
   bool isMutable=false,isModifer;
   String label;
@@ -2327,7 +2354,7 @@ Label readLabel(CodeFile* codeFile,const char* labelType){
       isModifer=true;
     }
   }while(isModifer);
-  return (Label){.label=label,.declaredAt=codeFile->wordStart,.isMutable=isMutable};
+  return newLabel(label,isMutable,codeFile->wordStart);
 }
 
 #define LABEL_TYPE_NONE    0 // no labels
@@ -2342,10 +2369,10 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
   String word;
   int wordType;
   size_t initOffset=bufferedTypes;
-  size_t labelOffset=bufferedFieldNames;
+  int32_t labelOffset=labelBufferCount;
   size_t currentOffset=initOffset;
   int typesSinceLabel=0;//if there has been a type since the last label
-  do{//TODO remember label positions for enums
+  do{
     word=nextWord(codeFile,&wordType);
     if(wordType!=WORD_TYPE_IDENTIFIER){
       handleError("type names have to be identifiers",ERROR_SYNTAX,codeFile->wordStart);
@@ -2360,8 +2387,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
         return;
       }
       typesSinceLabel=0;
-      Label label=readLabel(codeFile,"labels");
-      fieldNameBuffer[bufferedFieldNames++]=label.label;
+      readLabel(codeFile,"labels");//label is stored in label buffer
       continue;
     }
     if(readType(word,codeFile,state)){
@@ -2375,7 +2401,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
       return;
     }
     //untyped enum label
-    fieldNameBuffer[bufferedFieldNames++]=word;
+    newLabel(word,false,codeFile->wordStart);//label is stored in label buffer
     typeBuffer[bufferedTypes++]=primitiveType(PRIMITIVE_VOID);
     currentOffset=bufferedTypes;
     typesSinceLabel=0;
@@ -2384,8 +2410,8 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
     handleError("empty composite type",ERROR_SYNTAX,codeFile->wordStart);
     return;
   }
-  if(labelType==LABEL_TYPE_NONE||(labelType==LABEL_TYPE_PROC_IN&&labelOffset==bufferedFieldNames)){
-    typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,NULL,bufferedTypes-initOffset);
+  if(labelType==LABEL_TYPE_NONE||(labelType==LABEL_TYPE_PROC_IN&&labelOffset==labelBufferCount)){
+    typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,LABEL_ID_UNKNOWN,bufferedTypes-initOffset);
   }else{
     if(typesSinceLabel>0){
       fprintf(stderr,"missing label in %s\n",typeClassName(typeClass));
@@ -2394,7 +2420,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
     }
     if(typeClass==TYPECLASS_PROC_IN)
       typeClass=TYPECLASS_LABELED_PROC_IN;
-    typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,fieldNameBuffer+labelOffset,bufferedTypes-initOffset);
+    typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,labelOffset,bufferedTypes-initOffset);
   }
   if(typeEquals(&(typeBuffer[initOffset]),&TYPE_UNDEFINED)){
     handleError("unknown error while creating composite type",ERROR_SYNTAX,codeFile->wordStart);
@@ -2565,8 +2591,9 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   //1. operations that take a Type as argument
   if(wordEquals(&word,":")){//pre-declare
     requireCompileTimeType(&word,&type,1,wordPos);
-    Label varName=readLabel(codeFile,"variable names");
+    LabelId labelId=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
+    Label varName=label(labelId,wordPos);
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     if(isCallableType(&type)&&!isPointerType(&type)){
       handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
@@ -2581,15 +2608,16 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       type=opaqueType(state->opaqueTypeCount++);
       idType=ID_TYPE;
     }
-    ScopeNode* id=declareIdentifier(varName,type,idType,nextId(idType,state));
+    ScopeNode* id=declareIdentifier(labelId,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return 0;
-    (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.isMutable=varName.isMutable}}};
+    (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"=:")){//declare
     requireCompileTimeType(&word,&type,1,wordPos);
-    Label varName=readLabel(codeFile,"variable names");
+    LabelId labelId=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
+    Label varName=label(labelId,wordPos);
     IdentifierType idType;
     ScopeNode* id;
     int r;
@@ -2614,7 +2642,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       default:
         idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    id=declareIdentifier(varName,type,idType,nextId(idType,state));
+    id=declareIdentifier(labelId,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE){
       //declaring type does not produce any code
       return 0;
@@ -2633,13 +2661,12 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       state->localVars=0;
       if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
          CompositeType* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
-         for(int32_t i=0;i<inTypes->typeCount;i++){//TODO use position of procedure label
-            Label label={.label=inTypes->labels[i],.declaredAt=wordPos,.isMutable=false};
-            declareIdentifier(label,inTypes->types[i],ID_ARGUMENT,i);
+         for(int32_t i=0;i<inTypes->typeCount;i++){
+            declareIdentifier(inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
          }
       }
     }
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.isMutable=varName.isMutable}}};
+    (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"new")){
     if(state->compiledOps>0&&(op-1)->opType==OP_CONSTANT&&(op-1)->dataType.typeClass==TYPECLASS_ENUM_LABEL){
@@ -2677,7 +2704,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     if(bufferedTypes==0){
       IntOrErrorCode index=parseInt(word,10);
       if(!index.isError){
-        (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=index.as.i64,.isMutable=false}}};
+        (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=LABEL_ID_UNKNOWN,.id=index.as.i64,.isMutable=false}}};
         return 1;
       }
       (*op)=(Operation){.opType=OP_GET_LABEL,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}};
@@ -2685,7 +2713,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     }
     requireCompileTimeType(&word,&type,1,wordPos);//try to get type field of enum
     int64_t index;
-    if(type.typeClass!=TYPECLASS_ENUM||(index=indexOfStringArray(type.typeDataAs.composite->labels,type.typeDataAs.composite->typeCount,&word,1))==-1){
+    if(type.typeClass!=TYPECLASS_ENUM||((index=findLabel(type.typeDataAs.composite->labelOffset,type.typeDataAs.composite->typeCount,&word))==-1)){
       fputs("type ",stderr);
       printTypeName(&type,stderr);
       fprintf(stderr," does not have a field '%.*s'\n",(int)word.length,word.chars);
@@ -2716,7 +2744,9 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=-1}}};
       return 1;
     }else if(wordEquals(&word,"find")){
-      Label varName=readLabel(codeFile,"variable names");
+      LabelId labelId=readLabel(codeFile,"variable names");
+      wordPos=codeFile->wordStart;
+      Label varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
       int r=getIdentifier(varName.label,&asIdentifier);//try to parse variable as identifier
       if(r<0)//internal error while reading identifier
@@ -2725,12 +2755,13 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
         puts("-----------------");
         printf("identifier '%.*s':\n",(int)varName.label.length,varName.label.chars);
         fputs("  ",stdout);
-        if(asIdentifier->isMutable)
+        Label mLabel=label(asIdentifier->labelId,wordPos);
+        if(mLabel.isMutable)
           fputs("mutable ",stdout);
         printf("%s: ",idNames[asIdentifier->idType]);
         printTypeName(&asIdentifier->type,stdout);
         fputs("\n    at ",stdout);
-        printFilePosition(asIdentifier->declaredAt,stdout);
+        printFilePosition(mLabel.declaredAt,stdout);
         puts("");
         puts("-----------------");
         return 0;
@@ -2809,13 +2840,15 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opUnaryOperator(DECREMENT,wordPos);
     return 1;
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    Label varName=readLabel(codeFile,"variable names");
+    LabelId labelId=readLabel(codeFile,"variable names");
+    wordPos=codeFile->wordStart;
+    Label varName=label(labelId,wordPos);
     wordPos=codeFile->wordStart;
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     DataType mType=TYPE_UNDEFINED;
     mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
-    ScopeNode* id=declareIdentifier(varName,mType,idType,nextId(idType,state));
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.isMutable=varName.isMutable}}};
+    ScopeNode* id=declareIdentifier(labelId,mType,idType,nextId(idType,state),wordPos);
+    (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"=")){
     if(state->compiledOps>0){
@@ -2833,10 +2866,12 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     }
     handleError("unexpected = operation",ERROR_SYNTAX,wordPos);
   }else if(wordEquals(&word,"@")){
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER,.id=0,.isMutable=false}}};
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+      .dataAs={.idInfo={.type=ID_POINTER,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
     return 1;
   }else if(wordEquals(&word,"[]")){
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0,.isMutable=false}}};
+    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+      .dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
     return 1;
   }else if(wordEquals(&word,"addrOf")){
     if(state->compiledOps>0&&(op-1)->opType==OP_CALL){
@@ -2970,10 +3005,11 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
     asIdentifier->type=asAddressableType(asIdentifier->type);
-    if(asIdentifier->isMutable)
+    Label mLabel=label(asIdentifier->labelId,wordPos);
+    if(mLabel.isMutable)
       asIdentifier->type=asWritableType(asIdentifier->type,true);
     (*op)=(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
-      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.isMutable=asIdentifier->isMutable}}};
+      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=mLabel.isMutable}}};
     return 1;
   }
   // could not find identifier, try again in type-check phase
@@ -3530,7 +3566,7 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
       }
       state->typeStack[state->typeCount-k].type.typeClass=TYPECLASS_ENUM;
       if(!isVoidType(&(state->typeStack[state->typeCount-k].type.typeDataAs.composite->types[state->opStack[offset].dataAs.i64]))){
-        String label=state->typeStack[state->typeCount-k].type.typeDataAs.composite->labels[state->opStack[offset].dataAs.i64];
+        String label=getLabelName(state->typeStack[state->typeCount-k].type.typeDataAs.composite->labelOffset+state->opStack[offset].dataAs.i64);
         fprintf(stderr,"missing data value for creating enum constant %.*s in ",(int)label.length,label.chars);
         printTypeName(&(state->typeStack[state->typeCount-k].type),stderr);
         fputs("\nto create enum values with data use the 'new' operator\n",stderr);
@@ -3570,7 +3606,8 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
       continue;
     }
     if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM&&types[nTypes-k].typeClass==TYPECLASS_ENUM_LABEL){
-      state->opStack[offset+nCasts]=(Operation){.opType=OP_GET,.filePos=pos,.dataType=types[nTypes-k],.dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0,.isMutable=false}}};
+      state->opStack[offset+nCasts]=(Operation){.opType=OP_GET,.filePos=pos,.dataType=types[nTypes-k],
+        .dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
       state->typeStack[state->typeCount-k].type=types[nTypes-k];
       state->typeStack[state->typeCount-k].opCount++;
       continue;
@@ -3668,9 +3705,11 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
   for(int32_t e=0;e<outTypes->typeCount;e++){
     state->typeStack[state->typeCount++]=(TypeInfo){.type=outTypes->types[e],.opCount=3};
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}};
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,
+      .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
     state->opStack[state->opStackCount++]=opGetIntermediate(&outTypes->types[e],tmpId,op->filePos);
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=e,.isMutable=false}}};
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,
+      .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=LABEL_ID_UNKNOWN,.id=e,.isMutable=false}}};
   }
 }
 void pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
@@ -3683,17 +3722,28 @@ void pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
   if(inTypes->typeCount==0)
     return;//no input arguments
   if(inTypes->typeCount==1){
-    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=0,.isMutable=false}}});
+    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,
+      .dataAs={.idInfo={.type=ID_ARGUMENT,.id=0,.labelId=inTypes->labelOffset,.isMutable=false}}});
     return;
   }
   for(int32_t i=0;i<inTypes->typeCount;i++){
-    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,.dataAs={.idInfo={.type=ID_ARGUMENT,.id=i,.isMutable=false}}});
+    LabelId labelId=inTypes->labelOffset==LABEL_ID_UNKNOWN?LABEL_ID_UNKNOWN:inTypes->labelOffset+i;
+    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,
+      .dataAs={.idInfo={.type=ID_ARGUMENT,.id=i,.labelId=labelId,.isMutable=false}}});
   }
 }
 
 void typeCheckSetVariable(TypeCheckState* state,Operation* op){
   if(!op->dataAs.idInfo.isMutable){
-    fprintf(stderr,"variable  is not mutable\n");//TODO print var-name, declaration position
+    LabelId labelId=op->dataAs.idInfo.labelId;
+    if(labelId==-1){
+      handleError("variable is not mutable",ERROR_TYPE,op->filePos);
+    } 
+    Label mLabel=label(labelId,op->filePos);
+    fprintf(stderr,"variable %.*s is not mutable\n",(int) mLabel.label.length,mLabel.label.chars);
+    fprintf(stderr,"  %.*s was declared at",(int) mLabel.label.length,mLabel.label.chars);
+    printFilePosition(mLabel.declaredAt,stderr);
+    fputs("\n",stderr);
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
   requireTypes("variable assignment",state,&op->dataType,1,op->filePos);
@@ -3734,7 +3784,8 @@ void typeCheckGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operati
   if(ensureOpStackCap(state,state->opStackCount+totalOps+2)){
     handleError("exceeded op-stack capacity",ERROR_MEMORY,op->filePos);
   }
-  insertStackOperation(state,(Operation){.opType=op->opType/*OP_GET or OP_SET*/,.dataType=op->dataType,.dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}},totalOps);
+  insertStackOperation(state,(Operation){.opType=op->opType/*OP_GET or OP_SET*/,.dataType=op->dataType,
+    .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}},totalOps);
   state->opStack[state->opStackCount++]=*op;
   //update type-stack
   state->typeStack[offset].type=op->dataType;
@@ -3832,36 +3883,37 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         //1. store array and index in temporary variables
         size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
         DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
+        CompositeType* arrayTypeData=arrayType.typeDataAs.composite;
         addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op->filePos),state->typeStack[offset+1].opCount,1,true);
         //XXX don't store constant values in intermediate
         addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),state->typeStack[offset].opCount,1,true);
         size_t ptrIndex=state->tmpCount++,lenIndex=state->tmpCount++;
-        pushCompiledOperation(state,opDeclareIntermediate(&(arrayType.typeDataAs.composite->types[0]),ptrIndex,op->filePos));
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}});
+        pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));
+        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[0],.filePos=op->filePos,
+          .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
         pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op->filePos));//pointer
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[0],.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=0,.isMutable=false}}});
-        pushCompiledOperation(state,opDeclareIntermediate(&(arrayType.typeDataAs.composite->types[1]),lenIndex,op->filePos));
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[1],.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.isMutable=false}}});
+        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[0],.filePos=op->filePos,
+          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=arrayTypeData->labelOffset,.id=0,.isMutable=false}}});
+        pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[1]),lenIndex,op->filePos));
+        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[1],.filePos=op->filePos,
+          .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
         pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op->filePos));//length
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType.typeDataAs.composite->types[1],.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1,.isMutable=false}}});
+        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[1],.filePos=op->filePos,
+          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1,.labelId=arrayTypeData->labelOffset+1,.isMutable=false}}});
         //2. check array-bounds
         state->hasCheckBounds=1;
         pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
         pushCompiledOperation(state,opGetIntermediate(&indexType,indexId,op->filePos));//index
-        pushCompiledOperation(state,opGetIntermediate(&(arrayType.typeDataAs.composite->types[1]),lenIndex,op->filePos));//length
+        pushCompiledOperation(state,opGetIntermediate(&(arrayTypeData->types[1]),lenIndex,op->filePos));//length
         
         //3. array access XXX? keep array access on stack to allow chaining with tuple access
-        op->dataType=*(arrayType.typeDataAs.composite->types[0].typeDataAs.type);//target-type of pointer in first element of tuple
-        if(arrayType.typeDataAs.composite->types[0].typeClass!=TYPECLASS_CONST_POINTER)
+        op->dataType=*(arrayTypeData->types[0].typeDataAs.type);//target-type of pointer in first element of tuple
+        if(arrayTypeData->types[0].typeClass!=TYPECLASS_CONST_POINTER)
           op->dataType=asWritableType(op->dataType,false);
         tmpId=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(&op->dataType,tmpId,op->filePos));
         pushCompiledOperation(state,*op);//get pointer offset 
-        pushCompiledOperation(state,opGetIntermediate(&(arrayType.typeDataAs.composite->types[0]),ptrIndex,op->filePos));//pointer
+        pushCompiledOperation(state,opGetIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));//pointer
         pushCompiledOperation(state,opGetIntermediate(&indexType,indexId,op->filePos));
         //update stack
         pushValue(state,opGetIntermediate(&op->dataType,tmpId,op->filePos));
@@ -3928,14 +3980,14 @@ void typeCheckReturn(TypeCheckState* state,Operation* op){
   addCompiledOp(state,*op,state->typeCount);
 }
 
-void resolveIdentifers(TypeCheckState* state,Operation* op){//TODO support op-set
+void resolveIdentifiers(TypeCheckState* state,Operation* op){//TODO support op-set
   if(op->opType!=OP_IDENTIFIER&&op->opType!=OP_IDENTIFIER_ADDRESS)
     return; 
   BlockInfo* blockInfo=peekBlock(state);
   if(!state->reachable&&blockInfo!=NULL&&(blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&blockInfo->blockDataAs.switchBlock.switchType.typeClass==TYPECLASS_ENUM_LABEL){
     CompositeType* enumType=blockInfo->blockDataAs.switchBlock.switchType.typeDataAs.composite;
     for(int32_t i=0;i<enumType->typeCount;i++){
-      if(stringCompare(op->dataAs.string,enumType->labels[i])==0){//identifier is label of current switch
+      if(stringCompare(op->dataAs.string,getLabelName(enumType->labelOffset+i))==0){//identifier is label of current switch
         *op=opConstant(blockInfo->blockDataAs.switchBlock.switchType,i,op->filePos);
         return;
       }
@@ -3944,13 +3996,14 @@ void resolveIdentifers(TypeCheckState* state,Operation* op){//TODO support op-se
   ScopeNode* asIdentifier;
   int r=getIdentifier(op->dataAs.string,&asIdentifier);
   if(r!=0){
-    fprintf(stderr," unknown identifer '%.*s'\n",(int)op->dataAs.string.length,op->dataAs.string.chars);
+    fprintf(stderr," unknown identifier '%.*s'\n",(int)op->dataAs.string.length,op->dataAs.string.chars);
     handleError(NULL,r,op->filePos);
   }
   if(asIdentifier->idType!=ID_PROCEDURE)
     asIdentifier->type=asWritableType(asIdentifier->type,true);
   *op=(Operation){.opType=((asIdentifier->idType==ID_PROCEDURE)&&(op->opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
-    .dataType=asIdentifier->type,.filePos=op->filePos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.isMutable=asIdentifier->isMutable}}};
+    .dataType=asIdentifier->type,.filePos=op->filePos,
+      .dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=label(asIdentifier->labelId,op->filePos).isMutable}}};
 }
 void typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
@@ -3960,7 +4013,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   IfBlockInfo* ifBlock;
   SwitchBlockInfo* switchBlock;
   
-  resolveIdentifers(state,&op);
+  resolveIdentifiers(state,&op);
   switch(op.opType){
     case OP_CONSTANT:
       if(state->reachable){
@@ -4189,15 +4242,15 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       CompositeType* mStruct=state->typeStack[offset].type.typeDataAs.composite;
-      int32_t labelIndex=indexOfStringArray(mStruct->labels,mStruct->typeCount,
-        &op.dataAs.string,1);
+      int32_t labelIndex=findLabel(mStruct->labelOffset,mStruct->typeCount,&op.dataAs.string);
       if(labelIndex==-1){
         printTypeName(&(state->typeStack[offset].type),stderr);
         fprintf(stderr," does not have a field '%.*s'\n",(int)op.dataAs.string.length,op.dataAs.string.chars);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(state->typeStack[offset].type.typeClass==TYPECLASS_STRUCT){
-        op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.isMutable=false}}};
+        op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
+          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
         typeCheckGetTupleElement(state,mStruct,&op);
         return;
       }
@@ -4215,7 +4268,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       pushCompiledOperation(state,opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos));
       state->hasCheckEnum=1;
       pushCompiledOperation(state,opDeclareIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
-      pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,.dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.isMutable=false}}});
+      pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
+        .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}});
       pushCompiledOperation(state,opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos));
       //XXX? store element value on stack, to allow write operation
       pushValue(state,opGetIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
@@ -4869,7 +4923,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_SYNTAX,op.filePos);
       }
       //block id will be ignored
-      blockInfo=(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockId=-1,.blockDataAs={.procBlock={.returnType=compositeType(TYPECLASS_PROC_OUT,NULL,NULL,0)}}};
+      blockInfo=(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockId=-1,.blockDataAs={.procBlock={.returnType=compositeType(TYPECLASS_PROC_OUT,NULL,LABEL_ID_UNKNOWN,0)}}};
       if(pushBlock(state,blockInfo))
         handleError(NULL,ERROR_TYPE,op.filePos);
       pushCompiledOperation(state,op);
@@ -4993,6 +5047,9 @@ int main(int argc,char** argv){
     printf("or     %s inputFile outputFile\n",path);
     return 0;
   }
+  //initialization of uninitialized global variables 
+  initStringLabels();
+  //read main source file
   srcFile=*(argv++);
   FILE *file = fopen(srcFile, "r");
   if(*argv==NULL){
