@@ -84,6 +84,13 @@ typedef struct{
   char* chars;
   size_t length;
 }String;
+bool wordEquals(const String* word,const char* string){
+  size_t l=strlen(string);
+  if(l!=word->length)
+    return false;
+  int c=memcmp(word->chars,string,word->length);
+  return c==0;
+}
 int stringCompare(const String a,const String b){
   int c=memcmp(a.chars,b.chars,a.length<b.length?a.length:b.length);
   if(c==0&&a.length!=b.length)
@@ -373,8 +380,8 @@ bool typeEquals(const DataType* a,const DataType* b){
   if(a->typeClass!=b->typeClass)
     return false;
   switch(a->typeClass){
-    case TYPECLASS_UNDEFINED://all undefined types are equal XXX? distinguish pre-declared types
-      return true;
+    case TYPECLASS_UNDEFINED://distinguish different pre-declared types
+      return a->typeDataAs.typeId==b->typeDataAs.typeId;
     case TYPECLASS_PRIMITIVE:
       return a->typeDataAs.primitive==b->typeDataAs.primitive;
     case TYPECLASS_MUTABLE_POINTER:
@@ -471,10 +478,12 @@ bool isArrayType(const DataType* type){
   CompositeType* elts=type->typeDataAs.composite;
   if(elts->typeCount!=2)
     return false;
-  //TODO check label names
   if(!isPointerType(elts->types+0))
     return false;
   if(!isIntType(elts->types+1))
+    return false;
+  String lenLabel=getLabelName(elts->labelOffset+1);
+  if(!(wordEquals(&lenLabel,"length")||wordEquals(&lenLabel,"len")||wordEquals(&lenLabel,"size")))//length parameter has to be called length, len or size
     return false;
   return true;
 }
@@ -1005,12 +1014,17 @@ typedef struct{
   size_t count;
 }CaseInfo;
 typedef struct{
+  int64_t value;
+  FilePosition pos;
+}LabelData;
+
+typedef struct{
   //indices of cases
   CaseInfo* cases;
   size_t caseCount;
   size_t caseCap;
   //case labels
-  int64_t* labelData;
+  LabelData* labelData;
   size_t labelCount;
   size_t labelCap;
   bool hasDefault;
@@ -1024,7 +1038,7 @@ SwitchData* newSwitchData(FilePosition pos){
   switchStatements[switchCount].caseCap=128;
   switchStatements[switchCount].cases=calloc(128,sizeof(CaseInfo));
   switchStatements[switchCount].labelCap=256;
-  switchStatements[switchCount].labelData=calloc(256,sizeof(int64_t));
+  switchStatements[switchCount].labelData=calloc(256,sizeof(LabelData));
   if(switchStatements[switchCount].cases==NULL||switchStatements[switchCount].labelData==NULL)
     handleError("unable to allocate switch data",ERROR_MEMORY,pos);
   return &switchStatements[switchCount++];
@@ -1831,7 +1845,7 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
             size_t off=switchData.cases[op->dataAs.block.subId].offset;
             size_t count=switchData.cases[op->dataAs.block.subId].count;
             for(size_t i=0;i<count;i++){
-              fprintf(target,"case %"PRIi64":",switchData.labelData[off+i]);
+              fprintf(target,"case %"PRIi64":",switchData.labelData[off+i].value);
             }
             fputs(";\n",target);//prevent error on initialization after case
           }
@@ -2122,13 +2136,6 @@ void skipWhitespaces(CodeFile* codeFile){
   }
 }
 
-bool wordEquals(const String* word,const char* string){
-  size_t l=strlen(string);
-  if(l!=word->length)
-    return false;
-  int c=memcmp(word->chars,string,word->length);
-  return c==0;
-}
 int toDigit(char c){
   if(c>='0'&&c<='9')
     return c-'0';
@@ -3771,8 +3778,8 @@ void typeCheckGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operati
     state->opStack[state->opStackCount++]=*op;
     state->typeStack[offset].type=op->dataType;
     state->typeStack[offset].opCount++;
-    if(op->opType==OP_SET){
-      blockStart->opType=OP_SET;//TODO check if children are mutable
+    if(op->opType==OP_SET){//TODO ensure all previous elements were mutable
+      blockStart->opType=OP_SET;
       typeCheckSetStackValue(state,op);
     }
     return;
@@ -3790,8 +3797,9 @@ void typeCheckGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operati
   //update type-stack
   state->typeStack[offset].type=op->dataType;
   state->typeStack[offset].opCount+=2;
-  if(op->opType==OP_SET)
+  if(op->opType==OP_SET){
     typeCheckSetStackValue(state,op);
+  }
 }
 void typeCheckGet(TypeCheckState* state,Operation* op){ 
   checkReachable(state,*op);
@@ -4033,7 +4041,22 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         }
         if(switchBlock->switchData->labelCount>=switchBlock->switchData->labelCap)
           handleError("exceeded maximum number of allowed switch labels",ERROR_MEMORY,op.filePos);
-        switchBlock->switchData->labelData[switchBlock->switchData->labelCount++]=op.dataAs.i64;//TODO check for duplicate labels
+        for(size_t i=0;i<switchBlock->switchData->labelCount;i++){//check for duplicate labels
+          if(switchBlock->switchData->labelData[i].value==op.dataAs.i64){
+            if(switchBlock->switchType.typeClass==TYPECLASS_ENUM_LABEL){
+              String label=getLabelName(switchBlock->switchType.typeDataAs.composite->labelOffset+op.dataAs.i64);
+              fprintf(stderr,"duplicate label %.*s in switch-case\n",(int)label.length,label.chars);
+            }else{
+              fprintf(stderr,"duplicate label %"PRIi64" in switch-case\n",op.dataAs.i64);
+            }
+            fputs("  previous label at ",stderr);
+            printFilePosition(switchBlock->switchData->labelData[i].pos,stderr);
+            fputs("\n",stderr);
+            handleError(NULL,ERROR_SYNTAX,op.filePos);
+          }
+        }
+        switchBlock->switchData->labelData[switchBlock->switchData->labelCount].value=op.dataAs.i64;
+        switchBlock->switchData->labelData[switchBlock->switchData->labelCount++].pos=op.filePos;
         switchBlock->switchData->cases[switchBlock->switchData->caseCount].count++;
         return;
       }
@@ -4340,8 +4363,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             op.dataType=state->typeStack[offset].type;
             if(op.dataType.typeClass==TYPECLASS_ENUM_LABEL)
               op.dataType.typeClass=TYPECLASS_ENUM;
-            //XXX don't set constant variables to type writable
-            op.dataType=asWritableType(op.dataType,true);
+            op.dataType=asAddressableType(op.dataType);
+            if(op.dataAs.idInfo.isMutable)
+              op.dataType=asWritableType(op.dataType,true);
             state->predeclaredTypes[typeId]=op.dataType;
           }
           requireTypes("variable declaration",state,&op.dataType,1,op.filePos);
