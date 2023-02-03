@@ -149,7 +149,7 @@ entryPoint:
   e anEnum .C == print
   e .C print
   
-  labelEnum .A =:: l1
+  labelEnum .A =:: mut l1
   l1 labelEnum .B == if
     labelEnum .C new l1 =
   end
