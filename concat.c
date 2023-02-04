@@ -337,7 +337,7 @@ typedef struct DataType{
     ProcedureType* procedure;
     int64_t typeId;
   }typeDataAs;
-  bool isAddressable;
+  bool isAddressable;//TODO store writable/addressable separately, they are information about the type-container not the type
   bool isWritable;
 }DataType;
 #define FLAG_IS_TUPLE      1
@@ -471,6 +471,27 @@ bool isCallableType(const DataType* type){
     type=type->typeDataAs.type;
   return type->typeClass==TYPECLASS_PROCEDURE;
 }
+bool isTupleType(const DataType* type){
+  switch(type->typeClass){
+    case TYPECLASS_TUPLE:
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
+    case TYPECLASS_PROC_OUT:
+      return true;
+    case TYPECLASS_UNDEFINED:
+    case TYPECLASS_PRIMITIVE:
+    case TYPECLASS_MUTABLE_POINTER:
+    case TYPECLASS_CONST_POINTER:
+    case TYPECLASS_PROCEDURE:
+    case TYPECLASS_TYPE_OF:
+    case TYPECLASS_OPAQUE:
+    case TYPECLASS_ENUM:
+    case TYPECLASS_ENUM_LABEL:
+      return false;
+  }
+  return false;
+}
 //checks id type is an array-type  a tuple consisting of a pointer and an integer
 bool isArrayType(const DataType* type){
   if(type->typeClass!=TYPECLASS_STRUCT)
@@ -588,13 +609,14 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t labelOffse
     }
     return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+match,.isAddressable=false,.isWritable=false};
   }
-  int64_t typeMatch=-1,typesIndex;
+  int64_t typeMatch=-1,matchIndex,typesIndex;
   for(int32_t i=0;i<compositeCount;i++){
     if(compositeTypes[i].typeCount==eltCount||(typeMatch==-1&&compositeTypes[i].typeCount>eltCount)){
       typesIndex=indexOfTypeArray(compositeTypes[i].types,compositeTypes[i].typeCount,elements,eltCount);
       if(typesIndex==-1)
         continue;
       typeMatch=i;
+      matchIndex=typesIndex;
       if(labelOffset!=-1&&compositeTypes[i].labelOffset!=-1&&labelOffset!=compositeTypes[i].labelOffset)
         continue;//labels do not match -> cannot reuse composite
       if(compositeTypes[i].typeCount==eltCount){
@@ -610,7 +632,7 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t labelOffse
     return TYPE_UNDEFINED;
   DataType* types;
   if(typeMatch!=-1){
-    types=compositeTypes[typeMatch].types+typesIndex;
+    types=compositeTypes[typeMatch].types+matchIndex;
   }else{
     types=malloc(eltCount*sizeof(DataType));//will persist until program exits
     if(types==NULL)
@@ -3715,9 +3737,9 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
   for(int32_t e=0;e<outTypes->typeCount;e++){
     state->typeStack[state->typeCount++]=(TypeInfo){.type=outTypes->types[e],.opCount=3};
-    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,
+    state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=*procType->outType,.filePos=op->filePos,
       .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
-    state->opStack[state->opStackCount++]=opGetIntermediate(&outTypes->types[e],tmpId,op->filePos);
+    state->opStack[state->opStackCount++]=opGetIntermediate(procType->outType,tmpId,op->filePos);
     state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=outTypes->types[e],.filePos=op->filePos,
       .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=LABEL_ID_UNKNOWN,.id=e,.isMutable=false}}};
   }
@@ -3768,7 +3790,44 @@ void typeCheckSetStackValue(TypeCheckState* state,Operation* op){
   requireTypes("value assignment",state,&op->dataType,1,op->filePos);
   addCompiledStackOps(state,*op,state->typeStack[state->typeCount-1].opCount,1,false);
 }
-void typeCheckGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operation* op){
+bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition pos){
+  if(!isTupleType(tupleType)){
+    fputs("unexpected type for tuple access: ",stderr);
+    printTypeName(tupleType,stderr);
+    fputs("\n",stderr);
+    handleError(NULL,ERROR_MEMORY,pos);
+  }
+  CompositeType* tuple=tupleType->typeDataAs.composite;
+  if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
+    return label(tuple->labelOffset+index,pos).isMutable;
+  //TODO check if tuple is mutable
+  return true;
+}
+void checkTupleElementMutable(const DataType* baseType,Operation* elementAccess,int32_t depth){
+  DataType const* currentTuple=baseType;
+  for(int32_t i=0;i<depth;i++){
+    if((elementAccess->opType!=OP_GET&&elementAccess->opType!=OP_SET)||elementAccess->dataAs.idInfo.type!=ID_TUPLE_ELEMENT){
+      printOperation(*elementAccess,stderr);
+      handleError("unexpected operation for tuple access",ERROR_MEMORY,elementAccess->filePos);
+    }
+    if(!canWriteTupleElement(currentTuple,elementAccess->dataAs.idInfo.id,elementAccess->filePos)){
+      fputs("element ",stderr);
+      if(currentTuple->typeDataAs.composite->labelOffset!=LABEL_ID_UNKNOWN){
+        String label=getLabelName(currentTuple->typeDataAs.composite->labelOffset+elementAccess->dataAs.idInfo.id);
+        fprintf(stderr,"%.*s ",(int)label.length,label.chars);
+      }
+      fprintf(stderr,"(%"PRIi32")",elementAccess->dataAs.idInfo.id);
+      fputs(" in ",stderr);
+      printTypeName(currentTuple,stderr);
+      fputs(" is not mutable\n",stderr);
+      handleError(NULL,ERROR_SYNTAX,elementAccess->filePos);
+    }
+    currentTuple=&elementAccess->dataType;
+    elementAccess++;
+  }
+}
+void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,Operation* op){
+  CompositeType* tuple=tupleType->typeDataAs.composite;
   size_t offset=state->typeCount-1;
   op->dataType=asWritableType(tuple->types[op->dataAs.idInfo.id],true);
   Operation* blockStart=&(state->opStack[state->opStackCount-state->typeStack[offset].opCount]);
@@ -3781,8 +3840,9 @@ void typeCheckGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operati
     state->opStack[state->opStackCount++]=*op;
     state->typeStack[offset].type=op->dataType;
     state->typeStack[offset].opCount++;
-    if(op->opType==OP_SET){//TODO ensure all previous elements were mutable
+    if(op->opType==OP_SET){
       blockStart->opType=OP_SET;
+      checkTupleElementMutable(&blockStart->dataType,&state->opStack[state->opStackCount-blockStart->dataAs.idInfo.id],blockStart->dataAs.idInfo.id);
       typeCheckSetStackValue(state,op);
     }
     return;
@@ -3794,13 +3854,14 @@ void typeCheckGetTupleElement(TypeCheckState* state,CompositeType* tuple,Operati
   if(ensureOpStackCap(state,state->opStackCount+totalOps+2)){
     handleError("exceeded op-stack capacity",ERROR_MEMORY,op->filePos);
   }
-  insertStackOperation(state,(Operation){.opType=op->opType/*OP_GET or OP_SET*/,.dataType=op->dataType,
+  insertStackOperation(state,(Operation){.opType=op->opType/*OP_GET or OP_SET*/,.dataType=*tupleType,
     .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}},totalOps);
   state->opStack[state->opStackCount++]=*op;
   //update type-stack
   state->typeStack[offset].type=op->dataType;
   state->typeStack[offset].opCount+=2;
   if(op->opType==OP_SET){
+    checkTupleElementMutable(tupleType,&state->opStack[state->opStackCount-1],1);
     typeCheckSetStackValue(state,op);
   }
 }
@@ -3846,12 +3907,13 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fputs(" is not a tuple\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      CompositeType* tuple=state->typeStack[offset].type.typeDataAs.composite;
+      DataType tupleType=state->typeStack[offset].type;
+      CompositeType* tuple=tupleType.typeDataAs.composite;
       if(tuple->typeCount<op->dataAs.idInfo.id){
         fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      typeCheckGetTupleElement(state,tuple,op);
+      typeCheckGetTupleElement(state,&tupleType,op);
       return;
     case ID_POINTER:
       if(state->typeCount<1){
@@ -3899,13 +3961,13 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),state->typeStack[offset].opCount,1,true);
         size_t ptrIndex=state->tmpCount++,lenIndex=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[0],.filePos=op->filePos,
+        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
           .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
         pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op->filePos));//pointer
         pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[0],.filePos=op->filePos,
           .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=arrayTypeData->labelOffset,.id=0,.isMutable=false}}});
         pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[1]),lenIndex,op->filePos));
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[1],.filePos=op->filePos,
+        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
           .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
         pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op->filePos));//length
         pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[1],.filePos=op->filePos,
@@ -4261,42 +4323,42 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       offset=state->typeCount-1;
-      if(state->typeStack[offset].type.typeClass!=TYPECLASS_STRUCT&&state->typeStack[offset].type.typeClass!=TYPECLASS_ENUM){
-        printTypeName(&(state->typeStack[offset].type),stderr);
+      DataType structType=(state->typeStack[offset].type);
+      if(structType.typeClass!=TYPECLASS_STRUCT&&structType.typeClass!=TYPECLASS_ENUM){
+        printTypeName(&structType,stderr);
         fputs(" is not a struct or enum\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      CompositeType* mStruct=state->typeStack[offset].type.typeDataAs.composite;
+      CompositeType* mStruct=structType.typeDataAs.composite;
       int32_t labelIndex=findLabel(mStruct->labelOffset,mStruct->typeCount,&op.dataAs.string);
       if(labelIndex==-1){
-        printTypeName(&(state->typeStack[offset].type),stderr);
+        printTypeName(&structType,stderr);
         fprintf(stderr," does not have a field '%.*s'\n",(int)op.dataAs.string.length,op.dataAs.string.chars);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      if(state->typeStack[offset].type.typeClass==TYPECLASS_STRUCT){
+      if(structType.typeClass==TYPECLASS_STRUCT){
         op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
           .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
-        typeCheckGetTupleElement(state,mStruct,&op);
+        typeCheckGetTupleElement(state,&structType,&op);
         return;
       }
       if(isVoidType(&(mStruct->types[labelIndex]))){
         fprintf(stderr,"'%.*s' in ",(int)op.dataAs.string.length,op.dataAs.string.chars);
-        printTypeName(&(state->typeStack[offset].type),stderr);
+        printTypeName(&structType,stderr);
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       extractCompositeOps(state,1);
       size_t enumIndex=state->tmpCount++;
       tmpId=state->tmpCount++;
-      addCompiledOp(state,opDeclareIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos),1);
+      addCompiledOp(state,opDeclareIntermediate(&structType,enumIndex,op.filePos),1);
       pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}});
-      pushCompiledOperation(state,opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos));
+      pushCompiledOperation(state,opGetIntermediate(&structType,enumIndex,op.filePos));
       state->hasCheckEnum=1;
       pushCompiledOperation(state,opDeclareIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
       pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
         .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}});
-      pushCompiledOperation(state,opGetIntermediate(&(state->typeStack[offset].type),enumIndex,op.filePos));
-      //XXX? store element value on stack, to allow write operation
+      pushCompiledOperation(state,opGetIntermediate(&structType,enumIndex,op.filePos));
       pushValue(state,opGetIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
       return;
     case OP_SET_LABEL:
