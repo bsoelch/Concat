@@ -2310,15 +2310,18 @@ String nextWord(CodeFile* codeFile,int* wordType){
     if(wordType)
       *wordType=WORD_TYPE_STRING;
     return readStringLiteral(codeFile,"\"",1,true);
-  }else if(*(codeFile->code)=='\''){
+  }
+  if(*(codeFile->code)=='\''){
     if(wordType)
       *wordType=WORD_TYPE_CHAR;
     return readStringLiteral(codeFile,"'",1,true);
-  }else if(codeFile->codeSize>=2&&*(codeFile->code)=='#'){
+  }
+  if(codeFile->codeSize>=2&&*(codeFile->code)=='#'){
     if(*(codeFile->code+1)=='#'){//line comment
       readStringLiteral(codeFile,"\n",1,false);//ignore everything up to next new-line
       return (String){.chars=codeFile->code,.length=0};
-    }else if(*(codeFile->code+1)=='+'){//inline comment
+    }
+    if(*(codeFile->code+1)=='+'){//inline comment
       readStringLiteral(codeFile,"+#",2,false);
       return (String){.chars=codeFile->code,.length=0};
     }
@@ -3893,7 +3896,6 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
         CompositeType* arrayTypeData=arrayType.typeDataAs.composite;
         addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op->filePos),state->typeStack[offset+1].opCount,1,true);
-        //XXX don't store constant values in intermediate
         addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),state->typeStack[offset].opCount,1,true);
         size_t ptrIndex=state->tmpCount++,lenIndex=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));
@@ -5081,52 +5083,61 @@ int main(int argc,char** argv){
   }else{
     targetFile=*(argv++);
   }
-	if(file!=NULL){
-		long int size=fsize(file);
-		if(size<0){//TODO?? recover form undetected fileSize (if seek worked)
-			fputs("IO Error while detecting file-size\n",stderr);
-			return EXIT_FAILURE;
-		}else{
-			code = malloc((size+1)*sizeof(char));//will be freed when the program exits
-			if(code==NULL){
-				printf("Memory Error\n");
-				return ERROR_MEMORY;
-			}
-			codeSize=fread(code,sizeof(char),size,file);//TODO perform multiple reads if necessary
-			if(codeSize<0){
-				printf("IO Error while reading file\n");
-				free(code);
-				return EXIT_FAILURE;
-			}
-			fclose(file);//file no longer needed
-			memset(code+codeSize,0,(size+1-codeSize)*sizeof(char));//fill remaining path of file with 0
-		}
-		//1. compile file to operations
-		CodeFile codeFile=(CodeFile){.code=code,.codeSize=codeSize,
-		  .currentPos={.fileName=srcFile,.line=1,.posInLine=1},
-		  .wordStart={.fileName=srcFile,.line=1,.posInLine=1}};
-		Program p=compileToOps(&codeFile);
-		if(p.ops==NULL)
-		  return ERROR_SYNTAX;
-	  printf("found %zu operations\n",p.opCount);
-		//2. type-check operations
-	  typeCheckProgram(&p,&codeFile);
-    printf("compiled to %zu operations\n",p.globalCount+p.opCount);
-    for(size_t i=0;i<p.globalCount;i++){
-      printOperation(p.globalOps[i],stdout);
-    }
-    for(size_t i=0;i<p.opCount;i++){
-      printOperation(p.ops[i],stdout);
-    }
-    puts("");
-		//3. compile operations to C
-    FILE* out=fopen(targetFile,"w");
-    compileToC(out,&p);
-	  puts("compiled program");
-    fclose(out);
-    return EXIT_SUCCESS;
-	}else{
-		fprintf(stderr,"IO Error while opening File: %s\n",srcFile);
+	if(file==NULL){
+	  fprintf(stderr,"IO Error while opening File: %s\n",srcFile);
 		return EXIT_FAILURE;
 	}
+	long int size=fsize(file);
+	if(size<0){//TODO?? recover form undetected fileSize (if seek worked)
+		fputs("IO Error while detecting file-size\n",stderr);
+		return EXIT_FAILURE;
+	}
+	code = malloc((size+1)*sizeof(char));//will be freed when the program exits
+	if(code==NULL){
+		printf("Memory Error\n");
+		return ERROR_MEMORY;
+	}
+	codeSize=fread(code,sizeof(char),size,file);//TODO perform multiple reads if necessary
+	if(codeSize<0){
+		printf("IO Error while reading file\n");
+		free(code);
+		return EXIT_FAILURE;
+	}
+	fclose(file);//file no longer needed
+	memset(code+codeSize,0,(size+1-codeSize)*sizeof(char));//fill remaining path of file with 0
+	//1. compile file to operations
+	CodeFile codeFile=(CodeFile){.code=code,.codeSize=codeSize,
+	  .currentPos={.fileName=srcFile,.line=1,.posInLine=1},
+	  .wordStart={.fileName=srcFile,.line=1,.posInLine=1}};
+	Program p=compileToOps(&codeFile);
+	if(p.ops==NULL)
+	  return ERROR_SYNTAX;
+  printf("found %zu operations\n",p.opCount);
+	//2. type-check operations
+  typeCheckProgram(&p,&codeFile);
+  printf("compiled to %zu operations\n",p.globalCount+p.opCount);
+  //3. save intermediate representation
+  const char* opsFile="./ops.out";
+  FILE* intermediate=fopen(opsFile,"w");
+	if(intermediate==NULL){
+	  fprintf(stderr,"IO Error while opening File: %s\n",opsFile);
+		return EXIT_FAILURE;
+	}
+  for(size_t i=0;i<p.globalCount;i++){
+    printOperation(p.globalOps[i],intermediate);
+  }
+  for(size_t i=0;i<p.opCount;i++){
+    printOperation(p.ops[i],intermediate);
+  }
+  fclose(intermediate);
+	//4. compile operations to C
+  FILE* out=fopen(targetFile,"w");
+	if(out==NULL){
+	  fprintf(stderr,"IO Error while opening File: %s\n",targetFile);
+		return EXIT_FAILURE;
+	}
+  compileToC(out,&p);
+  puts("compiled program");
+  fclose(out);
+  return EXIT_SUCCESS;
 }
