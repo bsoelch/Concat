@@ -3234,7 +3234,7 @@ typedef struct{
 
 //prints the type stack
 void printTypeStack(TypeCheckState* state,bool printOps,FILE* out){
-  size_t offset=0;
+  size_t offset=state->opStackCount;
   for(int64_t k=state->typeCount-1;k>=0;k--){
     if(state->typeStack[k].isAddressable)
       fputs("addressable ",out);
@@ -3246,9 +3246,10 @@ void printTypeStack(TypeCheckState* state,bool printOps,FILE* out){
       continue;
     }
     fprintf(out," %"PRIi32":\n",state->typeStack[k].opCount);
+    offset-=state->typeStack[k].opCount;
     for(int32_t i=0;i<state->typeStack[k].opCount;i++){
       fputs("    ",out);//indent operations
-      printOperation(state->opStack[offset++],out);
+      printOperation(state->opStack[offset+i],out);
     }
   }
 }
@@ -3311,8 +3312,8 @@ void freeContents(TypeCheckState* state){
   state->predeclaredTypes=NULL;
 }
 
-TypeInfo peekTypeStack(TypeCheckState* state){
-  return state->typeStack[state->typeCount-1];
+TypeInfo* peekTypeStack(TypeCheckState* state){
+  return &state->typeStack[state->typeCount-1];
 }
 void setTypeStackTypeOffset(TypeCheckState* state,size_t offset,DataType newType){
   state->typeStack[state->typeCount-offset].type=newType;
@@ -3649,12 +3650,18 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
   }
 }
 
+void pushType(TypeCheckState* state,DataType dataType,FilePosition pos){
+  if(ensureTypeStackCap(state,state->typeCount+1)){
+    handleError("exceeded type stack capacity",ERROR_MEMORY,pos);
+  }
+  state->typeStack[state->typeCount++]=(TypeInfo){.type=dataType,.opCount=1,.isWritable=false,.isAddressable=false};
+}
 void pushValue(TypeCheckState* state,Operation op){
-  if(ensureOpStackCap(state,state->opStackCount+1)||ensureTypeStackCap(state,state->typeCount+1)){
+  if(ensureOpStackCap(state,state->opStackCount+1)){
     handleError("exceeded operation stack capacity",ERROR_MEMORY,op.filePos);
   }
   state->opStack[state->opStackCount++]=op;
-  state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=1,.isWritable=false,.isAddressable=false};
+  pushType(state,op.dataType,op.filePos);
 }
 
 void insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
@@ -3819,6 +3826,11 @@ void checkTupleElementMutable(const DataType* baseType,Operation* elementAccess,
       fputs(" in ",stderr);
       printTypeName(currentTuple,stderr);
       fputs(" is not mutable\n",stderr);
+      if(currentTuple->typeDataAs.composite->labelOffset!=LABEL_ID_UNKNOWN){
+        fputs("  declared at ",stderr);
+        printFilePosition(label(currentTuple->typeDataAs.composite->labelOffset+elementAccess->dataAs.idInfo.id,elementAccess->filePos).declaredAt,stderr);
+        fputs("\n",stderr);
+      }
       handleError(NULL,ERROR_SYNTAX,elementAccess->filePos);
     }
     currentTuple=&elementAccess->dataType;
@@ -3838,7 +3850,7 @@ void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,Op
     }
     blockStart->dataAs.idInfo.id++;
     state->opStack[state->opStackCount++]=*op;
-    mutable&=peekTypeStack(state).isWritable;
+    mutable&=peekTypeStack(state)->isWritable;
     setTypeStackType(state,op->dataType);
     setTypeStackFlags(state,true,mutable);
     state->typeStack[offset].opCount++;
@@ -3913,7 +3925,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fputs(" is not a tuple\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      DataType tupleType=state->typeStack[offset].type;
+      DataType tupleType=state->typeStack[offset].type;//TODO ensure tuple variable is writeable when using op-set
       CompositeType* tuple=tupleType.typeDataAs.composite;
       if(tuple->typeCount<op->dataAs.idInfo.id){
         fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
@@ -4329,6 +4341,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       typeCheckGet(state,&op);
       return;
     case OP_GET_LABEL:
+    case OP_SET_LABEL:
       checkReachable(state,op);
       checkLocal(state,op);
       if(state->typeCount<1){
@@ -4350,7 +4363,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(structType.typeClass==TYPECLASS_STRUCT){
-        op=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
+        op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
           .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
         typeCheckGetTupleElement(state,&structType,&op);
         return;
@@ -4361,22 +4374,31 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      extractCompositeOps(state,1);
-      size_t enumIndex=state->tmpCount++;
+      totalOps=state->typeStack[offset].opCount;
       tmpId=state->tmpCount++;
-      addCompiledOp(state,opDeclareIntermediate(&structType,enumIndex,op.filePos),1);
       pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}});
-      pushCompiledOperation(state,opGetIntermediate(&structType,enumIndex,op.filePos));
+      pushCompiledOperations(state,state->opStack+state->opStackCount-totalOps,totalOps);//compile enum ops, but keep on stack
       state->hasCheckEnum=1;
-      pushCompiledOperation(state,opDeclareIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
-      pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
-        .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}});
-      pushCompiledOperation(state,opGetIntermediate(&structType,enumIndex,op.filePos));
-      pushValue(state,opGetIntermediate(&(mStruct->types[labelIndex]),tmpId,op.filePos));
-      setTypeStackFlags(state,true,false);//XXX? set writeable if enum element marked as mut
+      Label mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
+      op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
+        .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=mLabel.isMutable}}};
+      insertStackOperation(state,op,totalOps);
+      peekTypeStack(state)->opCount+=totalOps;
+      setTypeStackType(state,mStruct->types[labelIndex]);
+      setTypeStackFlags(state,true,mLabel.isMutable);//TODO check if stack value mutable
+      if(op.opType==OP_SET){
+        if(!mLabel.isMutable){
+          fprintf(stderr,"element %.*s (%"PRIi32") in ",(int)mLabel.label.length,mLabel.label.chars,labelIndex);
+          printTypeName(&structType,stderr);
+          fputs(" is not mutable\n",stderr);
+          fputs("  declared at ",stderr);
+          printFilePosition(mLabel.declaredAt,stderr);
+          fputs("\n",stderr);
+          handleError(NULL,ERROR_SYNTAX,op.filePos);
+        }
+        typeCheckSetStackValue(state,&op);
+      }
       return;
-    case OP_SET_LABEL:
-      break;//TODO merge with get-label
     case OP_PRE_DECLARE:
       checkReachable(state,op);
       switch(op.dataAs.idInfo.type){
@@ -4886,7 +4908,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           break;
       }
       break;
-    case OP_END_BLOCK://FIXME no compiler error for unfinished stack op at end of entry_point procedure
+    case OP_END_BLOCK:
       blockInfoPtr=peekBlock(state);//keep block on block stack until writing operations has finished
       if(blockInfoPtr==NULL||blockInfoPtr->type==BLOCK_UNKNOWN||(blockInfoPtr->type==BLOCK_WHILE&&!blockInfoPtr->blockDataAs.whileBlock.hasDo)||blockInfoPtr->type==BLOCK_SWITCH){
         fputs("unexpected END statement\n",stderr);
@@ -4951,10 +4973,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(state->reachable&&blockInfoPtr->blockDataAs.procBlock.returnType.typeDataAs.composite->typeCount>0){//automatically add return statement at end of non-void procedures
             Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfoPtr->blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
             typeCheckReturn(state,&ret);
-          }else if(state->reachable){
-            if(checkNonemptyStack(state,"unfinished local operation")){
+          }else if(state->reachable&&checkNonemptyStack(state,"unfinished local operation")){
               handleError(NULL,ERROR_SYNTAX,op.filePos);
-            }
           }
           state->reachable=true;
           break;

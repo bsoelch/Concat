@@ -23,7 +23,7 @@ type : selfPtr
 ( i32 selfPtr ptr ) type =: selfPtr
 
 struct( i32 : i i8 : c ) type =: aStruct
-enum( A B i32 : C  char : D ) type =: anEnum 
+enum( A B i32 : mut C  char : D ) type =: anEnum
 enum( A B C ) type =: labelEnum 
 enum( empty i64 ptr : data ) type =: optionalI64
 
@@ -147,6 +147,8 @@ entryPoint:
   anEnum .A anEnum =: f
   e anEnum .A == print
   e anEnum .C == print
+  e .C print
+  2 e .C =
   e .C print
   
   labelEnum .A =:: mut l1
