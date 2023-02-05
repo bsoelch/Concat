@@ -113,19 +113,19 @@ void procedure1 (int32_t, int32_t);
 void procedure2 (void);
 int64_t procedure3 (void);
 tuple6 procedure4 (void);
-enum11 global10 = {.label=0,.data={0}};
-enum11 global11 = {.label=1,.data={0}};
-enum11 global12 = {.label=2,.data={.e2=2}};
+enum11 const global10 = {.label=0,.data={0}};
+enum11 const global11 = {.label=1,.data={0}};
+enum11 const global12 = {.label=2,.data={.e2=2}};
 tuple16 procedure13 (tuple14);
 void procedure14 (void);
 void procedure15 (int32_t, enum11, int8_t, tuple14);
 tuple18 procedure16 (tuple14, int64_t);
 void procedure17 (tuple14, int64_t, int8_t);
-tuple14 global18 = {.e0=stringChars1+0,.e1=23};
+tuple14 const global18 = {.e0=stringChars1+0,.e1=23};
 int8_t global19 = 65;
-tuple14 global20 = {.e0=stringChars0+0,.e1=39};
-tuple21 global21 = {.e0=1,.e1=1};
-tuple22 global22 = {.e0={.e0=1,.e1=1},.e1=2};
+tuple14 const global20 = {.e0=stringChars0+0,.e1=39};
+tuple21 const global21 = {.e0=1,.e1=1};
+tuple22 const global22 = {.e0={.e0=1,.e1=1},.e1=2};
 //procedures code
 tuple1 procedure0 (int32_t arg0, int32_t arg1){
 procedure2();
@@ -140,10 +140,10 @@ int64_t procedure3 (void){
 return ((int64_t)12345678987654321);
 }
 tuple6 procedure4 (void){
-int32_t local0 = 0;
+int32_t const local0 = 0;
 int32_t const* const tmp0 = &(local0);
 tuple5 const tmp1 = {.e0=((int32_t)0),.e1=tmp0};
-tuple5 local1 = tmp1;
+tuple5 const local1 = tmp1;
 tuple5 const* const tmp2 = &(local1);
 tuple6 const tmp3 = {.e0=tmp2,.e1=((int32_t)0)};
 return tmp3;
@@ -263,11 +263,11 @@ default:
 tmp27 = ((bool)0);
 break;
 }
-bool local0 = tmp27;
+bool const local0 = tmp27;
 }
 tuple18 procedure16 (tuple14 arg0, int64_t arg1){
-int64_t local0 = arg1;
-tuple14 local1 = arg0;
+int64_t const local0 = arg1;
+tuple14 const local1 = arg0;
 int64_t const tmp28 = (local1).e1;
 bool const tmp29 = (local0>=tmp28);
 if(tmp29){
@@ -304,7 +304,7 @@ tuple8 const* const tmp44 = ((*(tmp43)))->e1;
 printf("%p\n",(const void*)tmp44);
 enum11 const tmp45 = {.label=2,.data={.e2=((int32_t)0)}};
 enum11 local4 = tmp45;
-enum11 local5 = {.label=0,.data={0}};
+enum11 const local5 = {.label=0,.data={0}};
 int32_t const tmp46 = (local4).label;
 bool const tmp47 = (tmp46==((int32_t)0));
 printf("%s\n",tmp47?"true":"false");
@@ -334,14 +334,14 @@ local6 = tmp61;
 int64_t const tmp62 = procedure3();
 printf("%"PRIi64"\n",tmp62);
 procPtr9 const tmp63 = &(procedure0);
-procPtr9 local7 = tmp63;
+procPtr9 const local7 = tmp63;
 tuple1 const tmp64 = (local7)(((int32_t)1),((int32_t)1));
 int32_t const tmp65 = (tmp64).e1;
 printf("%"PRIi32"\n",tmp65);
 int32_t const tmp66 = (tmp64).e0;
 printf("%"PRIi32"\n",tmp66);
 tuple9 const tmp67 = {.e0=((int32_t)0),.e1=((int8_t)65)};
-tuple9 local8 = tmp67;
+tuple9 const local8 = tmp67;
 int32_t const tmp68 = (local8).e0;
 int32_t const tmp69 = ((int32_t)(local8).e1);
 int32_t const tmp70 = (tmp68+tmp69);
@@ -375,7 +375,7 @@ int64_t* const tmp85 = &((local9).e0);
 printf("%p\n",(const void*)tmp85);
 tuple20* const tmp86 = &(local9);
 tuple20 const* const tmp87 = ((tuple20 const*)tmp86);
-tuple20 const* local10 = tmp87;
+tuple20 const* const local10 = tmp87;
 int64_t const tmp88 = ((local10)+(((int32_t)0)))->e0;
 printf("%"PRIi64"\n",tmp88);
 int32_t const tmp89 = 1;
@@ -453,4 +453,5 @@ tmp117 = tmp121;
 tmp118 = tmp120;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
+global19 = ((int8_t)66);
 }

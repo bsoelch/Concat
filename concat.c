@@ -207,6 +207,7 @@ typedef enum{
   OP_SET_LABEL,
   
   OP_IDENTIFIER,
+  OP_SET_IDENTIFIER,
   OP_IDENTIFIER_ADDRESS,
 
   OP_NEW,
@@ -242,6 +243,7 @@ const char* opName(OpType type){
     case OP_SET:return "OP_SET";
     case OP_SET_LABEL:return "OP_SET_LABEL";
     case OP_IDENTIFIER:return "OP_IDENTIFIER";
+    case OP_SET_IDENTIFIER:return "OP_SET_IDENTIFIER";
     case OP_IDENTIFIER_ADDRESS:return "OP_IDENTIFIER_ADDRESS";
     case OP_BINARY_OPERATOR:return "OP_BINARY_OPERATOR";
     case OP_UNARY_OPERATOR:return "OP_UNARY_OPERATOR";  
@@ -1112,6 +1114,7 @@ void printOperation(Operation op,FILE* out){
     case OP_GET_LABEL:
     case OP_SET_LABEL:
     case OP_IDENTIFIER:
+    case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
       fprintf(out,"%.*s",(int)op.dataAs.string.length,op.dataAs.string.chars);
       break;
@@ -1627,15 +1630,19 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
         printTypeNameC(&(op->dataType),target);
       switch(op->dataAs.idInfo.type){
         case ID_TMP_VAR:
+        case ID_INTERMEDIATE_RESULT:
+          if(!op->dataAs.idInfo.isMutable)
+            fputs(" const",target);
           fprintf(target," tmp%" PRIi32 " = ",op->dataAs.idInfo.id);
           break;
-        case ID_INTERMEDIATE_RESULT:
-          fprintf(target," const tmp%" PRIi32 " = ",op->dataAs.idInfo.id);//intermediate results are constant
-          break;
         case ID_LOCAL_VAR:
+          if(!op->dataAs.idInfo.isMutable)
+            fputs(" const",target);
           fprintf(target," local%" PRIi32 " = ",op->dataAs.idInfo.id);
           break;
         case ID_GLOBAL_VAR:
+          if(!op->dataAs.idInfo.isMutable)
+            fputs(" const",target);
           fprintf(target," global%" PRIi32 " = ",op->dataAs.idInfo.id);
           break;
         case ID_PROCEDURE:
@@ -1910,6 +1917,7 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
     case OP_GET_LABEL:
     case OP_SET_LABEL:
     case OP_IDENTIFIER:
+    case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
     case OP_MODIFY_STACK:
     case OP_COMPILER_INFO:
@@ -2869,6 +2877,9 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
           return 0;
         case OP_GET_LABEL:
           (op-1)->opType=OP_SET_LABEL;
+          return 0;
+        case OP_IDENTIFIER:
+          (op-1)->opType=OP_SET_IDENTIFIER;
           return 0;
         default:
           printf("cannot set operations of type %s\n",opName((op-1)->opType));
@@ -4080,11 +4091,12 @@ void typeCheckReturn(TypeCheckState* state,Operation* op){
   addCompiledOps(state,*op,state->typeCount);
 }
 
-void resolveIdentifiers(TypeCheckState* state,Operation* op){//TODO support op-set
-  if(op->opType!=OP_IDENTIFIER&&op->opType!=OP_IDENTIFIER_ADDRESS)
+void resolveIdentifiers(TypeCheckState* state,Operation* op){
+  if(op->opType!=OP_IDENTIFIER&&op->opType!=OP_SET_IDENTIFIER&&op->opType!=OP_IDENTIFIER_ADDRESS)
     return; 
   BlockInfo* blockInfo=peekBlock(state);
-  if(!state->reachable&&blockInfo!=NULL&&(blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&blockInfo->blockDataAs.switchBlock.switchType.typeClass==TYPECLASS_ENUM_LABEL){
+  if(!state->reachable&&op->opType==OP_IDENTIFIER&&blockInfo!=NULL&&
+    (blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&blockInfo->blockDataAs.switchBlock.switchType.typeClass==TYPECLASS_ENUM_LABEL){
     CompositeType* enumType=blockInfo->blockDataAs.switchBlock.switchType.typeDataAs.composite;
     for(int32_t i=0;i<enumType->typeCount;i++){
       if(stringCompare(op->dataAs.string,getLabelName(enumType->labelOffset+i))==0){//identifier is label of current switch
@@ -4099,7 +4111,9 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){//TODO support op-s
     fprintf(stderr," unknown identifier '%.*s'\n",(int)op->dataAs.string.length,op->dataAs.string.chars);
     handleError(NULL,r,op->filePos);
   }
-  *op=(Operation){.opType=((asIdentifier->idType==ID_PROCEDURE)&&(op->opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
+  if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
+    handleError("cannot set value of procedure",ERROR_SYNTAX,op->filePos);
+  *op=(Operation){.opType=op->opType==OP_SET_IDENTIFIER?OP_SET:((asIdentifier->idType==ID_PROCEDURE)&&(op->opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
     .dataType=asIdentifier->type,.filePos=op->filePos,
       .dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=label(asIdentifier->labelId,op->filePos).isMutable}}};
 }
@@ -5057,6 +5071,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       pushCompiledOperation(state,op);
       return;
     case OP_IDENTIFIER:
+    case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op.opType));
       handleError(NULL,ERROR_SYNTAX,op.filePos);
