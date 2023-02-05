@@ -615,12 +615,9 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t labelOffse
         continue;
       typeMatch=i;
       matchIndex=typesIndex;
-      if(labelOffset!=-1&&compositeTypes[i].labelOffset!=-1&&labelOffset!=compositeTypes[i].labelOffset)
+      if(labelOffset!=compositeTypes[i].labelOffset)
         continue;//labels do not match -> cannot reuse composite
       if(compositeTypes[i].typeCount==eltCount){
-        if(labelOffset!=-1&&compositeTypes[i].labelOffset==-1){
-          compositeTypes[i].labelOffset=labelOffset;
-        }
         compositeTypes[i].flags|=classFlag;
         return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+i};
       }
@@ -3382,7 +3379,10 @@ void pushCompiledOperations(TypeCheckState* state,Operation* ops,size_t count){
 //append the first stackOps operations from the stack to the program, remove types elements from the type-stack
 //if appendOp is true op will be appended to the program (before any stack operations are appended)
 //already allocate space for skippedStackOps 
-void addCompiledStackOps(TypeCheckState* state,Operation op,size_t stackOps,size_t types,bool appendOp){
+void addCompiledStackOps(TypeCheckState* state,Operation op,size_t types,bool appendOp){
+  size_t stackOps=0;
+  for(size_t i=0;i<types;i++)
+    stackOps+=state->typeStack[state->typeCount-1-i].opCount;
   state->opStackCount-=stackOps;
   state->typeCount-=types;
   if(appendOp)
@@ -3390,36 +3390,49 @@ void addCompiledStackOps(TypeCheckState* state,Operation op,size_t stackOps,size
   pushCompiledOperations(state,state->opStack+state->opStackCount,stackOps);
 }
 //append op and the first types operations from the stack to the program
-void addCompiledOp(TypeCheckState* state,Operation op,size_t types){
-  addCompiledStackOps(state,op,types,types,true);
+void addCompiledOps(TypeCheckState* state,Operation op,size_t types){
+  addCompiledStackOps(state,op,types,true);
 }
 
-void compileCompositeOp(TypeCheckState* state,DataType* type,Operation* ops,size_t nOps,int32_t tmpId){
-  if(nOps==0)
-    return;
-  pushCompiledOperation(state,opDeclareIntermediate(type,tmpId,ops[0].filePos));
-  pushCompiledOperations(state,ops,nOps);
-}
 //ensures that none of the top type-count stack elements is a composite operation 
-void extractCompositeOpsOffset(TypeCheckState* state,size_t nStackValues,size_t skipValues){
+void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWritable){
   if(state->blockCount==0)//don't extract composites at global level
     return;
-  size_t offset=state->opStackCount,skipedOps=0;
-  for(size_t i=1;i<=nStackValues+skipValues;i++){
+  size_t offset=state->opStackCount;
+  for(size_t i=1;i<=nStackValues;i++){
     offset-=state->typeStack[state->typeCount-i].opCount;
   }
-  for(size_t i=1;i<=skipValues;i++){
-    skipedOps+=state->typeStack[state->typeCount-i].opCount;
-  }
   size_t newOffset=offset;
-  for(size_t i=state->typeCount-nStackValues-skipValues;i<state->typeCount-skipValues;i++){
+  bool reference;
+  for(size_t i=state->typeCount-nStackValues;i<state->typeCount;i++){
     //extract multi-element operations and array constants to tmp variable
     if(state->typeStack[i].opCount>1||(state->opStack[offset].opType==OP_CONSTANT&&isArrayType(&(state->opStack[offset].dataType)))){
+      reference=false;
+      if(keepWritable&&state->typeStack[i].isWritable){
+        if(!state->typeStack[i].isAddressable){
+          memmove(state->opStack+newOffset,state->opStack+offset,state->typeStack[i].opCount);
+          newOffset+=state->typeStack[i].opCount;
+          continue;
+        }
+        reference=true;
+      }
       int32_t tmpId=state->tmpCount++;
-      compileCompositeOp(state,&(state->typeStack[i].type),state->opStack+offset,state->typeStack[i].opCount,tmpId);
-      state->opStack[newOffset++]=opGetIntermediate(&(state->typeStack[i].type),tmpId,state->opStack[offset].filePos);
+      DataType type=state->typeStack[i].type;
+      if(reference)
+        type=pointerType(&type,true);
+      pushCompiledOperation(state,opDeclareIntermediate(&type,tmpId,state->opStack[offset].filePos));
+      if(reference)
+        pushCompiledOperation(state,(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=state->opStack[offset].filePos,.dataAs={0}});
+      pushCompiledOperations(state,state->opStack+offset,state->typeStack[i].opCount);
+      if(reference)
+        state->opStack[newOffset++]=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=state->opStack[offset].filePos,
+            .dataAs={.idInfo={.type=ID_POINTER,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
+      state->opStack[newOffset++]=opGetIntermediate(&type,tmpId,state->opStack[offset].filePos);
       offset+=state->typeStack[i].opCount;
-      state->typeStack[i].opCount=1;
+      state->typeStack[i].opCount=reference?2:1;
+      state->typeStack[i].isAddressable=false;
+      if(!keepWritable)
+        state->typeStack[i].isWritable=false;
       continue;
     }
     if(newOffset!=offset)
@@ -3427,15 +3440,7 @@ void extractCompositeOpsOffset(TypeCheckState* state,size_t nStackValues,size_t 
     offset++;
     newOffset++;
   }
-  if(skipValues>0){
-    memmove(state->opStack+newOffset,state->opStack+offset,skipedOps*sizeof(Operation));
-    newOffset+=skipedOps;
-  }
   state->opStackCount=newOffset;
-  return;
-}
-void extractCompositeOps(TypeCheckState* state,size_t nStackValues){
-  extractCompositeOpsOffset(state,nStackValues,0);
 }
 
 
@@ -3616,8 +3621,6 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
   }
   if(nCasts==0)
     return;
-  //extract composites
-  extractCompositeOps(state,nTypes);
   //modify-types
   if(ensureOpStackCap(state,state->opStackCount+nCasts)){
     handleError("exceeded op-stack capacity",ERROR_MEMORY,pos); 
@@ -3701,7 +3704,6 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
       calledType=*(calledType.typeDataAs.type);
     op->dataType=calledType;
   }
-  //  need check for value of pointer
   if(!isCallableType(&calledType)){
     fputs("cannot call objects of type ",stderr);
     printTypeName(&calledType,stderr);
@@ -3718,20 +3720,20 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
   //extract operations
-  extractCompositeOps(state,argCount+(isPtr?1:0));
+  extractCompositeOps(state,argCount+(isPtr?1:0),false);
   int32_t tmpId;
   if(outTypes->typeCount!=0){//store non-void return in temp variable
     tmpId=state->tmpCount++;
     pushCompiledOperation(state,opDeclareIntermediate(outTypes->typeCount==1?(outTypes->types+0):procType->outType,tmpId,op->filePos));
   }
-  addCompiledOp(state,*op,isPtr?1:0);
+  addCompiledOps(state,*op,isPtr?1:0);
   size_t offset=state->typeCount-argCount;
   requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
   for(int32_t i=0;i<inTypes->typeCount;i++){
     totalOps+=state->typeStack[offset+i].opCount;
   }
   //update op-stack
-  addCompiledStackOps(state,*op/*ignored*/,argCount,argCount,false);
+  addCompiledStackOps(state,*op/*ignored*/,argCount,false);
   if(outTypes->typeCount==0)
     return;//no need to update stack if called function returns void
   //add values of call
@@ -3789,12 +3791,12 @@ void typeCheckSetVariable(TypeCheckState* state,Operation* op){
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
   requireTypes("variable assignment",state,&op->dataType,1,op->filePos);
-  addCompiledStackOps(state,*op,state->typeStack[state->typeCount-1].opCount,1,true);
+  addCompiledStackOps(state,*op,1,true);
 }
 void typeCheckSetStackValue(TypeCheckState* state,Operation* op){
-  addCompiledStackOps(state,*op,state->typeStack[state->typeCount-1].opCount,1,false);
+  addCompiledStackOps(state,*op,1,false);
   requireTypes("value assignment",state,&op->dataType,1,op->filePos);
-  addCompiledStackOps(state,*op,state->typeStack[state->typeCount-1].opCount,1,false);
+  addCompiledStackOps(state,*op,1,false);
 }
 bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition pos){
   if(!isTupleType(tupleType)){
@@ -3806,7 +3808,7 @@ bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition p
   CompositeType* tuple=tupleType->typeDataAs.composite;
   if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
     return label(tuple->labelOffset+index,pos).isMutable;
-  //TODO check if tuple is mutable
+  //TODO check if tuple-type is mutable
   return true;
 }
 void checkTupleElementMutable(const DataType* baseType,Operation* elementAccess,int32_t depth){
@@ -3837,7 +3839,7 @@ void checkTupleElementMutable(const DataType* baseType,Operation* elementAccess,
     elementAccess++;
   }
 }
-void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,Operation* op){
+void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,bool tupleWritable,Operation* op){
   CompositeType* tuple=tupleType->typeDataAs.composite;
   size_t offset=state->typeCount-1;
   op->dataType=tuple->types[op->dataAs.idInfo.id];
@@ -3850,9 +3852,8 @@ void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,Op
     }
     blockStart->dataAs.idInfo.id++;
     state->opStack[state->opStackCount++]=*op;
-    mutable&=peekTypeStack(state)->isWritable;
     setTypeStackType(state,op->dataType);
-    setTypeStackFlags(state,true,mutable);
+    setTypeStackFlags(state,true,mutable&tupleWritable);
     state->typeStack[offset].opCount++;
     if(op->opType==OP_SET){
       blockStart->opType=OP_SET;
@@ -3862,7 +3863,7 @@ void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,Op
     return;
   }
   //wrap composite operations
-  extractCompositeOps(state,1);
+  extractCompositeOps(state,1,true);
   //update operation stack
   size_t totalOps=state->typeStack[offset].opCount;
   if(ensureOpStackCap(state,state->opStackCount+totalOps+2)){
@@ -3873,9 +3874,11 @@ void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,Op
   state->opStack[state->opStackCount++]=*op;
   //update type-stack
   setTypeStackType(state,op->dataType);
-  setTypeStackFlags(state,true,mutable);
+  setTypeStackFlags(state,true,mutable&tupleWritable);
   state->typeStack[offset].opCount+=2;
   if(op->opType==OP_SET){
+    if(!tupleWritable)
+      handleError("cannot write to field of constant tuple",ERROR_SYNTAX,op->filePos);
     checkTupleElementMutable(tupleType,&state->opStack[state->opStackCount-1],1);
     typeCheckSetStackValue(state,op);
   }
@@ -3884,8 +3887,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
   checkReachable(state,*op);
   checkLocal(state,*op);
   size_t offset;
-  int32_t tmpId;
-  bool writeable;
+  bool writable;
   switch(op->dataAs.idInfo.type){
     case ID_LOCAL_VAR:
     case ID_GLOBAL_VAR:
@@ -3920,18 +3922,19 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
       offset=state->typeCount-1;
-      if(state->typeStack[offset].type.typeClass!=TYPECLASS_TUPLE){
-        printTypeName(&(state->typeStack[offset].type),stderr);
+      DataType tupleType=state->typeStack[offset].type;
+      writable=state->typeStack[offset].isWritable;
+      if(tupleType.typeClass!=TYPECLASS_TUPLE){
+        printTypeName(&tupleType,stderr);
         fputs(" is not a tuple\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      DataType tupleType=state->typeStack[offset].type;//TODO ensure tuple variable is writeable when using op-set
       CompositeType* tuple=tupleType.typeDataAs.composite;
       if(tuple->typeCount<op->dataAs.idInfo.id){
         fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      typeCheckGetTupleElement(state,&tupleType,op);
+      typeCheckGetTupleElement(state,&tupleType,writable,op);
       return;
     case ID_POINTER:
       if(state->typeCount<1){
@@ -3948,15 +3951,15 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       op->dataType=*state->typeStack[offset].type.typeDataAs.type;
       //update operation stack
       //wrap composite operations
-      extractCompositeOps(state,1);
+      extractCompositeOps(state,1,true);
       insertStackOperation(state,*op,1);
       //update type-stack
-      writeable=state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER;
+      writable=state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER;
       setTypeStackType(state,op->dataType);
-      setTypeStackFlags(state,false,writeable);//dereferenced pointer are writable but not addressable
+      setTypeStackFlags(state,false,writable);//dereferenced pointer are writable but not addressable
       state->typeStack[offset].opCount++;
       if(op->opType==OP_SET){
-        if(!writeable)
+        if(!writable)
           handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
         typeCheckSetStackValue(state,op);
       }
@@ -3978,9 +3981,9 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
         DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
         CompositeType* arrayTypeData=arrayType.typeDataAs.composite;
-        writeable=label(arrayTypeData->labelOffset+1,op->filePos).isMutable;
-        addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op->filePos),state->typeStack[offset+1].opCount,1,true);
-        addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),state->typeStack[offset].opCount,1,true);
+        writable=label(arrayTypeData->labelOffset+1,op->filePos).isMutable;
+        addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op->filePos),1,true);
+        addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),1,true);
         size_t ptrIndex=state->tmpCount++,lenIndex=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));
         pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
@@ -3999,19 +4002,17 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
         pushCompiledOperation(state,opGetIntermediate(&indexType,indexId,op->filePos));//index
         pushCompiledOperation(state,opGetIntermediate(&(arrayTypeData->types[1]),lenIndex,op->filePos));//length
-        
-        //3. array access XXX? keep array access on stack to allow chaining with tuple access
+        //3. array access
         op->dataType=*(arrayTypeData->types[0].typeDataAs.type);//target-type of pointer in first element of tuple
-        tmpId=state->tmpCount++;
-        pushCompiledOperation(state,opDeclareIntermediate(&op->dataType,tmpId,op->filePos));
-        pushCompiledOperation(state,*op);//get pointer offset 
-        pushCompiledOperation(state,opGetIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));//pointer
-        pushCompiledOperation(state,opGetIntermediate(&indexType,indexId,op->filePos));
+        insertStackOperation(state,*op,0);//get pointer offset 
+        insertStackOperation(state,opGetIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos),0);//pointer
+        insertStackOperation(state,opGetIntermediate(&indexType,indexId,op->filePos),0);
         //update stack
-        pushValue(state,opGetIntermediate(&op->dataType,tmpId,op->filePos));
-        setTypeStackFlags(state,false,writeable);
+        pushType(state,op->dataType,op->filePos);
+        peekTypeStack(state)->opCount=3;
+        setTypeStackFlags(state,false,writable);
         if(op->opType==OP_SET){
-          if(!writeable)
+          if(!writable)
             handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
           typeCheckSetStackValue(state,op);
         }
@@ -4025,17 +4026,17 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       }
       op->dataType=*state->typeStack[offset].type.typeDataAs.type;
       //wrap composite operations
-      extractCompositeOps(state,2);
+      extractCompositeOps(state,2,true);
       //update operation stack
       insertStackOperation(state,*op,2);
       //update type-stack
       state->typeCount--;
-      writeable=state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER;
+      writable=state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER;
       setTypeStackType(state,op->dataType);
-      setTypeStackFlags(state,false,writeable);//dereferenced pointer are writable but not addressable
+      setTypeStackFlags(state,false,writable);//dereferenced pointer are writable but not addressable
       state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
       if(op->opType==OP_SET){
-        if(!writeable)
+        if(!writable)
           handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
         typeCheckSetStackValue(state,op);
       }
@@ -4075,8 +4076,8 @@ void typeCheckReturn(TypeCheckState* state,Operation* op){
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
   requireTypes("return statement",state,outTypes->types,state->typeCount,op->filePos);
-  extractCompositeOps(state,state->typeCount);
-  addCompiledOp(state,*op,state->typeCount);
+  extractCompositeOps(state,state->typeCount,false);
+  addCompiledOps(state,*op,state->typeCount);
 }
 
 void resolveIdentifiers(TypeCheckState* state,Operation* op){//TODO support op-set
@@ -4200,10 +4201,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       //update op-stack
       //store result in temp variable
-      extractCompositeOps(state,1);
+      extractCompositeOps(state,1,false);
       tmpId=state->tmpCount++;
       pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-      addCompiledOp(state,op,1);
+      addCompiledOps(state,op,1);
       //update stack
       pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
       return;
@@ -4305,10 +4306,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       //ensure operands have matching types
       requireTypes("binary operator",state,inTypes,2,op.filePos);
       //store result in temp variable
-      extractCompositeOps(state,2);
+      extractCompositeOps(state,2,false);
       tmpId=state->tmpCount++;
       pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-      addCompiledOp(state,op,2);
+      addCompiledOps(state,op,2);
       //update stack
       pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
       return;
@@ -4330,8 +4331,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       op.dataType=state->typeStack[offset].type;
       //update operations
-      extractCompositeOps(state,1);
-      addCompiledOp(state,op,1);
+      extractCompositeOps(state,1,false);
+      addCompiledOps(state,op,1);
       return;
     case OP_CHECK_ARRAY_BOUNDS:
     case OP_CHECK_ENUM_INDEX:
@@ -4349,7 +4350,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       offset=state->typeCount-1;
-      DataType structType=(state->typeStack[offset].type);
+      DataType structType=peekTypeStack(state)->type;
       if(structType.typeClass!=TYPECLASS_STRUCT&&structType.typeClass!=TYPECLASS_ENUM){
         printTypeName(&structType,stderr);
         fputs(" is not a struct or enum\n",stderr);
@@ -4365,7 +4366,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       if(structType.typeClass==TYPECLASS_STRUCT){
         op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
           .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
-        typeCheckGetTupleElement(state,&structType,&op);
+        typeCheckGetTupleElement(state,&structType,peekTypeStack(state)->isWritable,&op);
         return;
       }
       if(isVoidType(&(mStruct->types[labelIndex]))){
@@ -4374,8 +4375,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      totalOps=state->typeStack[offset].opCount;
+      bool writable=peekTypeStack(state)->isWritable;
+      totalOps=peekTypeStack(state)->opCount;
       tmpId=state->tmpCount++;
+      //XXX if enum type writable and op == OP_SET overwrite enum value without checking
       pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}});
       pushCompiledOperations(state,state->opStack+state->opStackCount-totalOps,totalOps);//compile enum ops, but keep on stack
       state->hasCheckEnum=1;
@@ -4385,8 +4388,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       insertStackOperation(state,op,totalOps);
       peekTypeStack(state)->opCount+=totalOps;
       setTypeStackType(state,mStruct->types[labelIndex]);
-      setTypeStackFlags(state,true,mLabel.isMutable);//TODO check if stack value mutable
+      setTypeStackFlags(state,true,mLabel.isMutable&writable);
       if(op.opType==OP_SET){
+        if(!writable)
+          handleError("cannot write to field of constant enum",ERROR_SYNTAX,op.filePos);
         if(!mLabel.isMutable){
           fprintf(stderr,"element %.*s (%"PRIi32") in ",(int)mLabel.label.length,mLabel.label.chars,labelIndex);
           printTypeName(&structType,stderr);
@@ -4410,7 +4415,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("\n",stderr);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
-          addCompiledOp(state,op,0);
+          addCompiledOps(state,op,0);
           return;
         case ID_PROCEDURE:
           if(isCallableType(&(op.dataType))||isPointerType(&(op.dataType))){
@@ -4419,7 +4424,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("\n",stderr);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
-          addCompiledOp(state,op,0);
+          addCompiledOps(state,op,0);
           return;
         case ID_TUPLE:
         case ID_TUPLE_ELEMENT:
@@ -4467,11 +4472,11 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           requireTypes("variable declaration",state,&op.dataType,1,op.filePos);
           if(state->blockCount==0){//don't extract operations at global level
-            addCompiledStackOps(state,op,state->typeStack[offset].opCount,1,true);
+            addCompiledStackOps(state,op,1,true);
             return;
           }
-          extractCompositeOps(state,1);
-          addCompiledOp(state,op,1);
+          extractCompositeOps(state,1,false);
+          addCompiledOps(state,op,1);
           return;
         case ID_PROCEDURE:
           if(checkNonemptyStack(state,"unfinished global operation")){
@@ -4523,10 +4528,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           return;
         }
         //store result in temp variable
-        extractCompositeOps(state,op.dataType.typeDataAs.composite->typeCount);
+        extractCompositeOps(state,op.dataType.typeDataAs.composite->typeCount,false);
         tmpId=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-        addCompiledOp(state,op,op.dataType.typeDataAs.composite->typeCount);
+        addCompiledOps(state,op,op.dataType.typeDataAs.composite->typeCount);
         //update stack
         pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
         return;
@@ -4541,7 +4546,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           tmpId=state->tmpCount++;
           pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-          addCompiledOp(state,op,0);
+          addCompiledOps(state,op,0);
           //update stack
           pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
           return;
@@ -4553,10 +4558,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           state->typeStack[state->typeCount-1]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1,.isWritable=false,.isAddressable=false};
           return;
         }
-        extractCompositeOps(state,1);
+        extractCompositeOps(state,1,false);
         tmpId=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-        addCompiledOp(state,op,1);
+        addCompiledOps(state,op,1);
         //update stack
         pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
         return;
@@ -4579,10 +4584,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       //store previous result in temp value
-      extractCompositeOps(state,1);
+      extractCompositeOps(state,1,false);
       tmpId=state->tmpCount++;
       pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-      addCompiledOp(state,op,1);
+      addCompiledOps(state,op,1);
       //update stack
       pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
       return;
@@ -4601,7 +4606,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       //store result in temp variable
       tmpId=state->tmpCount++;
       pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));
-      addCompiledStackOps(state,op,state->typeStack[offset].opCount,1,true);
+      addCompiledStackOps(state,op,1,true);
       //update stack
       pushValue(state,opGetIntermediate(&op.dataType,tmpId,op.filePos));
       return;
@@ -4638,10 +4643,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           
           op.dataType=primitiveType(PRIMITIVE_BOOL);
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
-          extractCompositeOps(state,1);
+          extractCompositeOps(state,1,false);
           offset=state->typeCount-1;
           op.dataAs.block.id=blockInfo.blockId;
-          addCompiledOp(state,op,1); 
+          addCompiledOps(state,op,1); 
           return;
         case BLOCK_ELSE:
           blockInfoPtr=peekBlock(state);
@@ -4700,11 +4705,11 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           ifBlock->elsePos=state->opCount;
           op.dataType=primitiveType(PRIMITIVE_BOOL);
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
-          extractCompositeOps(state,1);
+          extractCompositeOps(state,1,false);
           offset=state->typeCount-1;
           op.dataAs.block.id=blockInfoPtr->blockId;
           op.dataAs.block.subId=ifBlock->elifCount++;
-          addCompiledOp(state,op,1); 
+          addCompiledOps(state,op,1); 
           return;
         case BLOCK_WHILE:
           checkReachable(state,op);
@@ -4754,9 +4759,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           op.dataAs.block.type=BLOCK_WHILE;
           requireTypes("while-condition",state,&op.dataType,1,op.filePos);
           offset=state->typeCount-1;
-          extractCompositeOps(state,1);
+          extractCompositeOps(state,1,false);
           op.dataAs.block.id=blockInfoPtr->blockId;
-          addCompiledOp(state,op,1); 
+          addCompiledOps(state,op,1); 
           //reset stack after compiling condition
           if(resetStack(state,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
             handleError(NULL,ERROR_TYPE,op.filePos);
@@ -4839,9 +4844,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(pushBlock(state,blockInfo))
             handleError(NULL,ERROR_MEMORY,op.filePos);
           requireTypes("switch-condition",state,&op.dataType,1,op.filePos);
-          extractCompositeOps(state,1);
+          extractCompositeOps(state,1,false);
           op.dataAs.block.id=blockInfo.blockId;
-          addCompiledOp(state,op,1);
+          addCompiledOps(state,op,1);
           state->reachable=false;//section after switch is not reachable
           return;
         case BLOCK_CASE:
