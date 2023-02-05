@@ -304,8 +304,7 @@ int32_t findLabel(LabelId labelOffset,int32_t labelCount,const String* labelName
 typedef enum{
   TYPECLASS_UNDEFINED,
   TYPECLASS_PRIMITIVE,
-  TYPECLASS_MUTABLE_POINTER,
-  TYPECLASS_CONST_POINTER,
+  TYPECLASS_POINTER,
   TYPECLASS_TUPLE,
   TYPECLASS_PROC_IN,
   TYPECLASS_LABELED_PROC_IN,
@@ -330,7 +329,6 @@ typedef struct CompositeType CompositeType;
 typedef CompositeType TupleType;
 typedef struct ProcedureType ProcedureType;
 typedef struct DataType{
-  TypeClass typeClass;
   union{
     PrimitiveType primitive;
     struct DataType* type;
@@ -339,6 +337,8 @@ typedef struct DataType{
     ProcedureType* procedure;
     int64_t typeId;
   }typeDataAs;
+  TypeClass typeClass;
+  bool isMutable;
 }DataType;
 #define FLAG_IS_TUPLE      1
 #define FLAG_IS_PROC_IN    2
@@ -376,16 +376,20 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
 
+bool isMutableType(const DataType* type){
+  return type->isMutable;
+}
 bool typeEquals(const DataType* a,const DataType* b){
   if(a->typeClass!=b->typeClass)
+    return false;
+  if(isMutableType(a)!=isMutableType(b))
     return false;
   switch(a->typeClass){
     case TYPECLASS_UNDEFINED://distinguish different pre-declared types
       return a->typeDataAs.typeId==b->typeDataAs.typeId;
     case TYPECLASS_PRIMITIVE:
       return a->typeDataAs.primitive==b->typeDataAs.primitive;
-    case TYPECLASS_MUTABLE_POINTER:
-    case TYPECLASS_CONST_POINTER:
+    case TYPECLASS_POINTER:
     case TYPECLASS_TYPE_OF:
       return typeEquals(a->typeDataAs.type,b->typeDataAs.type);
     case TYPECLASS_TUPLE:
@@ -448,6 +452,7 @@ bool isInteger(PrimitiveType t){
   }
   return false;
 }
+
 bool isPrimitiveType(const DataType* type){
   return type->typeClass==TYPECLASS_PRIMITIVE;
 }
@@ -464,7 +469,7 @@ bool isNumberType(const DataType* type){
   return isPrimitiveType(type)&&numberRank(type->typeDataAs.primitive)>-1;
 }
 bool isPointerType(const DataType* type){
-  return type->typeClass==TYPECLASS_MUTABLE_POINTER||type->typeClass==TYPECLASS_CONST_POINTER;
+  return type->typeClass==TYPECLASS_POINTER;
 }
 bool isCallableType(const DataType* type){
   if(isPointerType(type))
@@ -481,8 +486,7 @@ bool isTupleType(const DataType* type){
       return true;
     case TYPECLASS_UNDEFINED:
     case TYPECLASS_PRIMITIVE:
-    case TYPECLASS_MUTABLE_POINTER:
-    case TYPECLASS_CONST_POINTER:
+    case TYPECLASS_POINTER:
     case TYPECLASS_PROCEDURE:
     case TYPECLASS_TYPE_OF:
     case TYPECLASS_OPAQUE:
@@ -509,6 +513,27 @@ bool isArrayType(const DataType* type){
   return true;
 }
 
+bool makeMutable(DataType* t){
+  switch(t->typeClass){
+    case TYPECLASS_POINTER:
+    case TYPECLASS_TUPLE:
+      t->isMutable=true;
+      return true;
+    case TYPECLASS_UNDEFINED:
+    case TYPECLASS_PRIMITIVE:
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_ENUM:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
+    case TYPECLASS_PROC_OUT:
+    case TYPECLASS_PROCEDURE:
+    case TYPECLASS_TYPE_OF:
+    case TYPECLASS_OPAQUE:
+    case TYPECLASS_ENUM_LABEL:
+      return false;
+  }
+  return false;
+}
 DataType primitiveType(PrimitiveType id){
   return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id}};
 }
@@ -527,7 +552,10 @@ DataType wrapperType(TypeClass typeClass,const DataType* target){
   return (DataType){.typeClass=typeClass,.typeDataAs={.type=wrappedTypes+wrappedTypeCount++}};
 }
 DataType pointerType(const DataType* target,bool mutable){
-  return wrapperType(mutable?TYPECLASS_MUTABLE_POINTER:TYPECLASS_CONST_POINTER,target);
+  DataType ptr=wrapperType(TYPECLASS_POINTER,target);
+  if(mutable)
+    makeMutable(&ptr);
+  return ptr;
 }
 DataType typeOfType(const DataType* conent){
   return wrapperType(TYPECLASS_TYPE_OF,conent);
@@ -689,9 +717,7 @@ const char* typeClassName(TypeClass cls){
       return "UNDEFINED";
     case TYPECLASS_PRIMITIVE:
       return "primitive";
-    case TYPECLASS_MUTABLE_POINTER:
-      return "pointer mut";
-    case TYPECLASS_CONST_POINTER:
+    case TYPECLASS_POINTER:
       return "pointer";
     case TYPECLASS_TUPLE:
       return "tuple";
@@ -735,27 +761,36 @@ const char* primitiveName(PrimitiveType t){
   fprintf(stderr,"unexpected primitive type %i",t);
   return "";
 }
-int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
-  int i,j;
+void printTypeFlags(const DataType* type,FILE* file){
+  if(isMutableType(type))
+    fputs(" mut",file);
+}
+void printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
   String labelName;
   switch(type->typeClass){
     case TYPECLASS_UNDEFINED:
       if(type->typeDataAs.typeId>0){
-        return fprintf(file,"auto (%"PRIi64")",type->typeDataAs.typeId);
+        fprintf(file,"auto (%"PRIi64")",type->typeDataAs.typeId);
+        printTypeFlags(type,file);
+        return;
       }
-      return fputs("UNDEFINED",file);
+      fputs("UNDEFINED",file);
+      printTypeFlags(type,file);
+      return;
     case TYPECLASS_PRIMITIVE:
-      return fprintf(file,"%s",primitiveName(type->typeDataAs.primitive));
+      fprintf(file,"%s",primitiveName(type->typeDataAs.primitive));
+      printTypeFlags(type,file);
+      return;
     case TYPECLASS_OPAQUE:
-      return fprintf(file,"opaque (%"PRIi64")",type->typeDataAs.typeId);
-    case TYPECLASS_CONST_POINTER:
-    case TYPECLASS_MUTABLE_POINTER:
+      fprintf(file,"opaque (%"PRIi64")",type->typeDataAs.typeId);
+      printTypeFlags(type,file);
+      return;
+    case TYPECLASS_POINTER:
     case TYPECLASS_TYPE_OF:
-      i=printTypeNameIntenal(type->typeDataAs.type,file,noRecurse);
-      if(i<0)
-        return i;
-      j=fprintf(file," %s",typeClassName(type->typeClass));
-      return j<0?j:(i+j);
+      printTypeNameIntenal(type->typeDataAs.type,file,noRecurse);
+      fprintf(file," %s",typeClassName(type->typeClass));
+      printTypeFlags(type,file);
+      return;
     case TYPECLASS_PROC_IN:
     case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
@@ -764,73 +799,50 @@ int printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
       if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_LABELED_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
-        i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
-        if(noRecurse||i<0)
-          return i;
-        j=fputs("(",file);
-        if(j<0)
-          return j;
-        i+=j;
+        fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.composite->id);
+        if(noRecurse){
+          printTypeFlags(type,file);
+          return;
+        }
+        fputs("(",file);
       }
       for(int32_t e=0;e<type->typeDataAs.composite->typeCount;e++){
         if((type->typeClass==TYPECLASS_ENUM||type->typeClass==TYPECLASS_ENUM_LABEL)&&isVoidType(&(type->typeDataAs.composite->types[e]))){
           labelName=getLabelName(type->typeDataAs.composite->labelOffset+e);
           //void-type in enum -> only print label
-          j=fprintf(file," %.*s",(int)labelName.length,labelName.chars);
-          if(j<0)
-            return j;
-          i+=j;
+          fprintf(file," %.*s",(int)labelName.length,labelName.chars);
           continue;
         }
-        j=fputs(" ",file);
-        if(j<0)
-          return j;
-        i+=j;
-        j=printTypeNameIntenal(&(type->typeDataAs.composite->types[e]),file,true);//only one recursion level
-        if(j<0)
-          return j;
-        i+=j;
+        fputs(" ",file);
+        printTypeNameIntenal(&(type->typeDataAs.composite->types[e]),file,true);//only one recursion level
         if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_IN||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labelOffset==-1)
           continue;
         labelName=getLabelName(type->typeDataAs.composite->labelOffset+e);
-        j=fprintf(file," : %.*s",(int)labelName.length,labelName.chars);
-        if(j<0)
-          return j;
-        i+=j;
+        fprintf(file," : %.*s",(int)labelName.length,labelName.chars);
       }
       if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_LABELED_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
-        j=fputs(" )",file);
-        if(j<0)
-          return j;
-        i+=j;
+        fputs(" )",file);
       }
-      return i;
+      printTypeFlags(type,file);
+      return;
     case TYPECLASS_PROCEDURE:
-      i=fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.procedure->id);
-      if(noRecurse||i<0)
-        return i;
-      j=fputs("( ",file);
-      if(j<0)
-        return j;
-      i+=j;
-      j=printTypeNameIntenal(type->typeDataAs.procedure->inType,file,true);
-      if(j<0)
-        return j;
-      i+=j;
-      j=fputs(" => ",file);
-      if(j<0)
-        return j;
-      i+=j;
-      j=printTypeNameIntenal(type->typeDataAs.procedure->outType,file,true);
-      if(j<0)
-        return j;
-      j=fputs(" )",file);
-      return j<0?j:(i+j);
+      fprintf(file,"%s (%"PRIi32") ",typeClassName(type->typeClass),type->typeDataAs.procedure->id);
+      if(noRecurse){
+        printTypeFlags(type,file);
+        return;
+      }
+      fputs("( ",file);
+      printTypeNameIntenal(type->typeDataAs.procedure->inType,file,true);
+      fputs(" => ",file);
+      printTypeNameIntenal(type->typeDataAs.procedure->outType,file,true);
+      fputs(" )",file);
+      printTypeFlags(type,file);
+      return;
   }
-  return fprintf(file,"unknown type-class %i",type->typeClass);
+  fprintf(file,"unknown type-class %i",type->typeClass);
 }
-int printTypeName(const DataType* type,FILE* file){
-  return printTypeNameIntenal(type,file,false);
+void printTypeName(const DataType* type,FILE* file){
+  printTypeNameIntenal(type,file,false);
 }
 
 const char* primitiveNameC(PrimitiveType t){
@@ -861,12 +873,11 @@ void printTypeNameC(const DataType* type,FILE* file){
     case TYPECLASS_PRIMITIVE:
       fprintf(file,"%s",primitiveNameC(type->typeDataAs.primitive));
       return;
-    case TYPECLASS_CONST_POINTER:
-    case TYPECLASS_MUTABLE_POINTER:
+    case TYPECLASS_POINTER:
       printTypeNameC(type->typeDataAs.type,file);
       if(isCallableType(type))
         return;
-      if(type->typeClass==TYPECLASS_CONST_POINTER)
+      if(!isMutableType(type))
         fputs(" const",file);
       fputs("*",file);
       return;
@@ -1049,9 +1060,10 @@ SwitchData* newSwitchData(FilePosition pos){
 
 typedef enum{
   STACK_OP_DUP,
+  STACK_OP_OVER,
   STACK_OP_DROP,
   STACK_OP_SWAP,
-  //XXX? over, rotate
+  //XXX?  rotate
 }StackOperation;
 typedef struct{
   //XXX multi-drop/dup
@@ -1506,8 +1518,7 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
               handleError(NULL,ERROR_TYPE,op->filePos);
           }
           break;
-        case TYPECLASS_MUTABLE_POINTER:
-        case TYPECLASS_CONST_POINTER:
+        case TYPECLASS_POINTER:
           fputs("p",target);
           break;
         default:
@@ -2505,14 +2516,15 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
     typeBuffer[bufferedTypes-1]=pointerType(&(typeBuffer[bufferedTypes-1]),false);
     return true;
   }
-  if(wordEquals(&name,"mut")){//XXX mutable tuples/structs/enums
+  if(wordEquals(&name,"mut")){
     if(bufferedTypes==0)
       return false;//mut without argument -> identifier modifier
-    if(!isPointerType(&typeBuffer[bufferedTypes-1]))
-      handleError("mut can only be used on pointer types",ERROR_TYPE,codeFile->wordStart);
-    if(typeBuffer[bufferedTypes-1].typeClass==TYPECLASS_MUTABLE_POINTER)
+    if(isMutableType(&typeBuffer[bufferedTypes-1]))
       handleError("type is already mutable",ERROR_TYPE,codeFile->wordStart);
-    typeBuffer[bufferedTypes-1].typeClass=TYPECLASS_MUTABLE_POINTER;
+    if(!makeMutable(&typeBuffer[bufferedTypes-1])){
+      fprintf(stderr,"%s types cannot be mutable\n",typeClassName(typeBuffer[bufferedTypes-1].typeClass));
+      handleError(NULL,ERROR_TYPE,codeFile->wordStart);
+    }
     return true;
   }
   if(wordEquals(&name,"proc(")){
@@ -2754,7 +2766,10 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     }else if(wordEquals(&word,"swap")){//XXX rot:N:K -> stack rotation
       (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP}}};
       return 1;
-    }//XXX over -> copy lower stack element
+    }else if(wordEquals(&word,"over")){
+      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER}}};
+      return 1;
+    }
     //compiler commands
     if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
       (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=-1}}};
@@ -3433,10 +3448,10 @@ void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWrit
         type=pointerType(&type,true);
       pushCompiledOperation(state,opDeclareIntermediate(&type,tmpId,state->opStack[offset].filePos));
       if(reference)
-        pushCompiledOperation(state,(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=state->opStack[offset].filePos,.dataAs={0}});
+        pushCompiledOperation(state,(Operation){.opType=OP_ADDR_OF,.dataType=type,.filePos=state->opStack[offset].filePos,.dataAs={0}});
       pushCompiledOperations(state,state->opStack+offset,state->typeStack[i].opCount);
       if(reference)
-        state->opStack[newOffset++]=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=state->opStack[offset].filePos,
+        state->opStack[newOffset++]=(Operation){.opType=OP_GET,.dataType=state->typeStack[i].type,.filePos=state->opStack[offset].filePos,
             .dataAs={.idInfo={.type=ID_POINTER,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
       state->opStack[newOffset++]=opGetIntermediate(&type,tmpId,state->opStack[offset].filePos);
       offset+=state->typeStack[i].opCount;
@@ -3570,7 +3585,7 @@ bool canAssign(const DataType* src,const DataType* target){
     return true;
   if(src->typeClass==TYPECLASS_ENUM&&target->typeClass==TYPECLASS_ENUM_LABEL&&src->typeDataAs.composite->id==target->typeDataAs.composite->id)
     return true;//allow auto-cast from enum to enum-label
-  if(isPointerType(src)&&target->typeClass==TYPECLASS_CONST_POINTER&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
+  if(isPointerType(src)&&!isMutableType(target)&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
     return true;//assigning pointer to const pointer
   if(!isPrimitiveType(src)||!isPrimitiveType(target))
     return false;
@@ -3580,7 +3595,7 @@ bool canAssign(const DataType* src,const DataType* target){
 bool canCast(const DataType* src,const DataType* target){//XXX decouple cast from C-cast
   if(typeEquals(src,target))
     return true;
-  if(isPointerType(src)&&target->typeClass==TYPECLASS_CONST_POINTER&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
+  if(isPointerType(src)&&!isMutableType(target)&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
     return true;//casting pointer to const pointer
   if(!isPrimitiveType(src)||!isPrimitiveType(target))
     return false;
@@ -3819,10 +3834,9 @@ bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition p
   CompositeType* tuple=tupleType->typeDataAs.composite;
   if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
     return label(tuple->labelOffset+index,pos).isMutable;
-  //TODO check if tuple-type is mutable
-  return true;
+  return isMutableType(tupleType);
 }
-void checkTupleElementMutable(const DataType* baseType,Operation* elementAccess,int32_t depth){
+void checkTupleElementMutable(DataType const* baseType,Operation const* elementAccess,int32_t depth){
   DataType const* currentTuple=baseType;
   for(int32_t i=0;i<depth;i++){
     if((elementAccess->opType!=OP_GET&&elementAccess->opType!=OP_SET)||elementAccess->dataAs.idInfo.type!=ID_TUPLE_ELEMENT){
@@ -3965,7 +3979,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       extractCompositeOps(state,1,true);
       insertStackOperation(state,*op,1);
       //update type-stack
-      writable=state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER;
+      writable=isMutableType(&state->typeStack[offset].type);
       setTypeStackType(state,op->dataType);
       setTypeStackFlags(state,false,writable);//dereferenced pointer are writable but not addressable
       state->typeStack[offset].opCount++;
@@ -4042,7 +4056,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       insertStackOperation(state,*op,2);
       //update type-stack
       state->typeCount--;
-      writable=state->typeStack[offset].type.typeClass!=TYPECLASS_CONST_POINTER;
+      writable=isMutableType(&state->typeStack[offset].type);
       setTypeStackType(state,op->dataType);
       setTypeStackFlags(state,false,writable);//dereferenced pointer are writable but not addressable
       state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
@@ -4392,7 +4406,6 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       bool writable=peekTypeStack(state)->isWritable;
       totalOps=peekTypeStack(state)->opCount;
       tmpId=state->tmpCount++;
-      //XXX if enum type writable and op == OP_SET overwrite enum value without checking
       pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}});
       pushCompiledOperations(state,state->opStack+state->opStackCount-totalOps,totalOps);//compile enum ops, but keep on stack
       state->hasCheckEnum=1;
@@ -5084,6 +5097,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
+          extractCompositeOps(state,1,true);
           totalOps=state->typeStack[state->typeCount-1].opCount;
           if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
             handleError(NULL,ERROR_TYPE,op.filePos);
@@ -5099,6 +5113,21 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           state->typeCount--;
           state->opStackCount-=state->typeStack[state->typeCount].opCount;
+          return;
+        case STACK_OP_OVER:
+          if(state->typeCount<2){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          }
+          extractCompositeOps(state,2,true);
+          offset=state->typeStack[state->typeCount-1].opCount+state->typeStack[state->typeCount-2].opCount;
+          totalOps=state->typeStack[state->typeCount-2].opCount;
+          if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-offset,totalOps*sizeof(Operation));
+          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-2,sizeof(TypeInfo));
+          state->opStackCount+=totalOps;
+          state->typeCount++;
           return;
         case STACK_OP_SWAP:
           break;
