@@ -540,16 +540,23 @@ DataType primitiveType(PrimitiveType id){
 DataType opaqueType(int64_t typeId){
   return (DataType){.typeClass=TYPECLASS_OPAQUE,.typeDataAs={.typeId=typeId}};
 }
-DataType wrapperType(TypeClass typeClass,const DataType* target){
+DataType* bufferedType(const DataType* target){
   for(size_t i=0;i<wrappedTypeCount;i++){
     if(typeEquals(target,&(wrappedTypes[i])))
-      return (DataType){.typeClass=typeClass,.typeDataAs={.type=wrappedTypes+i}};
+      return wrappedTypes+i;
   }
   if(wrappedTypeCount+1>=MAX_TYPES){
-    return TYPE_UNDEFINED;
+    fputs("type buffer overflow",stderr);
+    return NULL;
   }
   wrappedTypes[wrappedTypeCount]=*target;
-  return (DataType){.typeClass=typeClass,.typeDataAs={.type=wrappedTypes+wrappedTypeCount++}};
+  return wrappedTypes+wrappedTypeCount++;
+}
+DataType wrapperType(TypeClass typeClass,const DataType* target){
+  DataType* buffered=bufferedType(target);
+  if(buffered==NULL)
+    return TYPE_UNDEFINED;
+  return (DataType){.typeClass=typeClass,.typeDataAs={.type=buffered}};
 }
 DataType pointerType(const DataType* target,bool mutable){
   DataType ptr=wrapperType(TYPECLASS_POINTER,target);
@@ -1091,6 +1098,7 @@ typedef struct{
     String string;
     StackModification stackMod;
     CompilerInfo compilerInfo;
+    DataType const* sourceType;
   }dataAs;
 }Operation;
 
@@ -1129,6 +1137,11 @@ void printOperation(Operation op,FILE* out){
     case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
       fprintf(out,"%.*s",(int)op.dataAs.string.length,op.dataAs.string.chars);
+      break;
+    case OP_CAST:
+      fputs("[ ",out);
+      printTypeName(op.dataAs.sourceType,out);
+      fputs(" ]",out);
       break;
     default:
       //ignore remaining types
@@ -1726,6 +1739,12 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
       handleError("unexpected type for OP_NEW",ERROR_UNIMPLEMENTED,op->filePos);
       break;
     case OP_CAST:
+      if(op->dataAs.sourceType->typeClass==TYPECLASS_ENUM&&((op->dataAs.sourceType->typeDataAs.composite->flags&FLAG_VOID_ONLY)==0)){
+        fputs("(",target);
+        COMPILE_OP_RETURN_ERROR(target,op,opSize);
+        fputs(").label",target);
+        return size;
+      }
       fputs("((",target);
       printTypeNameC(&(op->dataType),target);
       fputs(")",target);
@@ -2667,7 +2686,10 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
           handleError("error while resolving identifier",r,wordPos);
         if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
           break;//can only override opaque types
-        *pointerType(&id->type,false).typeDataAs.type=type;//override entry in wrapped type list XXX? better method
+        DataType* overwrite=bufferedType(&id->type);
+        if(overwrite==NULL)
+          handleError("error while resolving type defintion",r,wordPos);
+        *overwrite=type;//override entry in wrapped type list
         id->type=type;//override previous definition
         return 0;
       default:
@@ -2719,7 +2741,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     handleError(NULL,ERROR_TYPE,wordPos);
   }else if(wordEquals(&word,"cast")){ 
     requireCompileTimeType(&word,&type,1,wordPos);
-    (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
+    (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=&TYPE_UNDEFINED}};
       return 1;
   }else if(wordEquals(&word,"type")){
     if(bufferedTypes==0){//type without arguments
@@ -3580,7 +3602,7 @@ void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePos
 }
 
 
-bool canAssign(const DataType* src,const DataType* target){//TODO allow assigning  T mut ptr -> T ptr
+bool canAutoCast(const DataType* src,const DataType* target){//TODO allow assigning  T mut ptr -> T ptr
   if(typeEquals(src,target))
     return true;
   if(src->typeClass==TYPECLASS_ENUM&&target->typeClass==TYPECLASS_ENUM_LABEL&&src->typeDataAs.composite->id==target->typeDataAs.composite->id)
@@ -3592,13 +3614,9 @@ bool canAssign(const DataType* src,const DataType* target){//TODO allow assignin
   return isInteger(src->typeDataAs.primitive)&&isInteger(target->typeDataAs.primitive)&&
     numberRank(src->typeDataAs.primitive)<=numberRank(target->typeDataAs.primitive);//implicit casts only from small int to large int
 }
-bool canCast(const DataType* src,const DataType* target){//XXX decouple cast from C-cast
-  if(typeEquals(src,target))
+bool canCast(const DataType* src,const DataType* target){
+  if(canAutoCast(src,target))
     return true;
-  if(isPointerType(src)&&!isMutableType(target)&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
-    return true;//casting pointer to const pointer
-  if(!isPrimitiveType(src)||!isPrimitiveType(target))
-    return false;
   return numberRank(src->typeDataAs.primitive)>-1&&numberRank(target->typeDataAs.primitive)>-1;//casts only between numbers
 }
 
@@ -3614,7 +3632,7 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
     offset-=state->typeStack[state->typeCount-k].opCount;
     if(typeEquals(&(types[nTypes-k]),&(state->typeStack[state->typeCount-k].type)))
       continue;
-    if(canAssign(&(state->typeStack[state->typeCount-k].type),&(types[nTypes-k]))){
+    if(canAutoCast(&(state->typeStack[state->typeCount-k].type),&(types[nTypes-k]))){
       if(state->typeStack[state->typeCount-k].opCount==1&&state->opStack[offset].opType==OP_CONSTANT){//change constant to correct type
         setTypeStackTypeOffset(state,k,types[nTypes-k]);
         state->opStack[offset].dataType=types[nTypes-k];
@@ -3663,14 +3681,10 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
     shiftCount=0;
     nCasts--;
     if(canCast(&(state->typeStack[state->typeCount-k].type),&(types[nTypes-k]))){
-      state->opStack[offset+nCasts]=(Operation){.opType=OP_CAST,.filePos=pos,.dataType=types[nTypes-k],.dataAs={0}};
-      setTypeStackTypeOffset(state,k,types[nTypes-k]);
-      state->typeStack[state->typeCount-k].opCount++;
-      continue;
-    }
-    if(state->typeStack[state->typeCount-k].type.typeClass==TYPECLASS_ENUM&&types[nTypes-k].typeClass==TYPECLASS_ENUM_LABEL){
-      state->opStack[offset+nCasts]=(Operation){.opType=OP_GET,.filePos=pos,.dataType=types[nTypes-k],
-        .dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
+      DataType* src=bufferedType(&state->typeStack[state->typeCount-k].type);
+      if(src==NULL)
+        handleError("could not allocate source type",ERROR_MEMORY,pos);
+      state->opStack[offset+nCasts]=(Operation){.opType=OP_CAST,.filePos=pos,.dataType=types[nTypes-k],.dataAs={.sourceType=src}};
       setTypeStackTypeOffset(state,k,types[nTypes-k]);
       state->typeStack[state->typeCount-k].opCount++;
       continue;
@@ -4149,7 +4163,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       blockInfoPtr=peekBlock(state);
       if(blockInfoPtr!=NULL&&(blockInfoPtr->type==BLOCK_SWITCH||blockInfoPtr->type==BLOCK_CASE)){//switch label
         switchBlock=&blockInfoPtr->blockDataAs.switchBlock;
-        if(!canAssign(&op.dataType,&switchBlock->switchType)){
+        if(!canAutoCast(&op.dataType,&switchBlock->switchType)){
           fputs("wrong type from switch label, expected ",stderr);
           printTypeName(&switchBlock->switchType,stderr);
           fputs(" got ",stderr);
@@ -4621,6 +4635,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs("\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
+      op.dataAs.sourceType=bufferedType(&state->typeStack[offset].type);
+      if(op.dataAs.sourceType==NULL)
+        handleError("could not allocate source type",ERROR_MEMORY,op.filePos);
       //store previous result in temp value
       extractCompositeOps(state,1,false);
       tmpId=state->tmpCount++;

@@ -323,7 +323,7 @@ tuple10* const tmp50 = &((local4).data.e3);
 int8_t const tmp51 = (tmp50)->e1;
 printf("%"PRIi8"\n",tmp51);
 enum12 local6 = /*enum*/0;
-int32_t const tmp52 = /*label*/local6;
+int32_t const tmp52 = ((int32_t)local6);
 bool const tmp53 = (tmp52==((int32_t)1));
 if(tmp53){
 enum12 const tmp54 = /*enum*/2;
