@@ -2444,7 +2444,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
       currentOffset=bufferedTypes;
       continue;
     }
-    if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0){
+    if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
       fprintf(stderr,"unknown type name '%.*s' \n",(int)word.length,word.chars);
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return;
@@ -2458,6 +2458,20 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
   if(checkEmpty&&bufferedTypes==initOffset){
     handleError("empty composite type",ERROR_SYNTAX,codeFile->wordStart);
     return;
+  }
+  //search duplicate labels
+  if(labelOffset!=labelBufferCount){
+    for(LabelId i=labelOffset+1;i<labelBufferCount;i++){
+      for(LabelId j=labelOffset;j<i;j++){
+        if(stringCompare(getLabelName(i),getLabelName(j))==0){
+          fprintf(stderr,"duplicate label '%.*s' in %s \n",(int)getLabelName(i).length,getLabelName(i).chars,typeClassName(typeClass));
+          fputs("  previous declaration at ",stderr);
+          printFilePosition(label(j,codeFile->wordStart).declaredAt,stderr);
+          fputs("\n",stderr);
+          handleError(NULL,ERROR_SYNTAX,label(i,codeFile->wordStart).declaredAt);
+        }
+      }
+    }
   }
   if(labelType==LABEL_TYPE_NONE||(labelType==LABEL_TYPE_PROC_IN&&labelOffset==labelBufferCount)){
     typeBuffer[initOffset]=compositeType(typeClass,typeBuffer+initOffset,LABEL_ID_UNKNOWN,bufferedTypes-initOffset);
@@ -2528,7 +2542,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
   size_t initOffset=bufferedTypes;
   int r;
   if(wordEquals(&name,"ptr")){
-    if(bufferedTypes==0){
+    if(bufferedTypes==0||isVoidType(&typeBuffer[bufferedTypes-1])){
       handleError("pointer type is missing its argument",ERROR_SYNTAX,codeFile->wordStart);
       return false;
     }
@@ -2536,7 +2550,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
     return true;
   }
   if(wordEquals(&name,"mut")){
-    if(bufferedTypes==0)
+    if(bufferedTypes==0||isVoidType(&typeBuffer[bufferedTypes-1]))
       return false;//mut without argument -> identifier modifier
     if(isMutableType(&typeBuffer[bufferedTypes-1]))
       handleError("type is already mutable",ERROR_TYPE,codeFile->wordStart);
