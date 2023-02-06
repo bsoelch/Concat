@@ -23,7 +23,7 @@ type : selfPtr
 ( i32 selfPtr ptr ) type =: selfPtr
 
 struct( i32 : i i8 : c ) type =: aStruct
-enum( A B i32 : C  ( i32 char ) mut : mut D ) type =: anEnum
+enum( A B i32 : C  ( i32 char ) : mut D ) type =: anEnum
 enum( A B C ) type =: labelEnum 
 enum( empty i64 ptr : data ) type =: optionalI64
 
@@ -148,8 +148,8 @@ entryPoint:
   e anEnum .A == print
   e anEnum .C == print
   e .C print
-  2 'A' ( i32 char ) mut new anEnum .D new =:: mut tupleEnum
-  tupleEnum .D 2 #over .0 =
+  2 'A' ( i32 char ) new e .D =
+  e .D 2 #over .0 =
   .1 print
   
   labelEnum .A =:: mut l1
@@ -172,7 +172,7 @@ entryPoint:
   
   A 1 + B 1 - A = B =
   
-  1 2 proc0  ( i64 i64 ) mut new =:: mut tmp
+  1 2 proc0  ( i64 i64 ) new =:: mut tmp
   
   A ++ print
   
@@ -184,7 +184,7 @@ entryPoint:
   
   tmp .1  tmp .0 =
   tmp .0 addrOf print
-  tmp addrOf ( i64 i64 ) mut ptr =: strPtr
+  tmp addrOf ( i64 i64 ) ptr =: strPtr
   strPtr 0 [] .0 print
   "Hello World!" 1 [] print
   "World" .length print

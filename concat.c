@@ -516,11 +516,11 @@ bool isArrayType(const DataType* type){
 bool makeMutable(DataType* t){
   switch(t->typeClass){
     case TYPECLASS_POINTER:
-    case TYPECLASS_TUPLE:
       t->isMutable=true;
       return true;
     case TYPECLASS_UNDEFINED:
     case TYPECLASS_PRIMITIVE:
+    case TYPECLASS_TUPLE://mutability of composite types controlled by their container 
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_PROC_IN:
@@ -2005,7 +2005,7 @@ void compileToC(FILE* target,const Program* p){
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("} data;\n",target);
-      fputs("int32_t const label;\n",target);
+      fputs("int32_t label;\n",target);
       fputs("};\n",target);
     }
   }
@@ -3580,7 +3580,7 @@ void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePos
 }
 
 
-bool canAssign(const DataType* src,const DataType* target){
+bool canAssign(const DataType* src,const DataType* target){//TODO allow assigning  T mut ptr -> T ptr
   if(typeEquals(src,target))
     return true;
   if(src->typeClass==TYPECLASS_ENUM&&target->typeClass==TYPECLASS_ENUM_LABEL&&src->typeDataAs.composite->id==target->typeDataAs.composite->id)
@@ -3602,7 +3602,7 @@ bool canCast(const DataType* src,const DataType* target){//XXX decouple cast fro
   return numberRank(src->typeDataAs.primitive)>-1&&numberRank(target->typeDataAs.primitive)>-1;//casts only between numbers
 }
 
-void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t nTypes,FilePosition pos){
+void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t nTypes,FilePosition pos){//XXX? auto-create tuples
   if(state->typeCount<nTypes){
     fprintf(stderr,"not enough types for %s need %zu have %zu\n",opName,nTypes,state->typeCount);
     handleError(NULL,ERROR_TYPE,pos);
@@ -3834,7 +3834,7 @@ bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition p
   CompositeType* tuple=tupleType->typeDataAs.composite;
   if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
     return label(tuple->labelOffset+index,pos).isMutable;
-  return isMutableType(tupleType);
+  return true;
 }
 void checkTupleElementMutable(DataType const* baseType,Operation const* elementAccess,int32_t depth){
   DataType const* currentTuple=baseType;
@@ -4405,9 +4405,20 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       bool writable=peekTypeStack(state)->isWritable;
       totalOps=peekTypeStack(state)->opCount;
-      tmpId=state->tmpCount++;
-      pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}});
+      if(writable&&op.opType==OP_SET_LABEL){//XXX? overwrite only for mutable enum
+        DataType lableType=structType;
+        lableType.typeClass=TYPECLASS_ENUM_LABEL;
+        pushCompiledOperation(state,(Operation){.opType=OP_SET,.filePos=op.filePos,.dataType=lableType,
+          .dataAs={.idInfo={.type=ID_ENUM_LABEL,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
+      }else{
+        pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ENUM_INDEX,.dataType=(mStruct->types[labelIndex]),.filePos=op.filePos,.dataAs={.i64=labelIndex}});
+      }
       pushCompiledOperations(state,state->opStack+state->opStackCount-totalOps,totalOps);//compile enum ops, but keep on stack
+      if(writable&&op.opType==OP_SET_LABEL){
+        DataType lableType=structType;
+        lableType.typeClass=TYPECLASS_ENUM_LABEL;
+        pushCompiledOperation(state,opConstant(lableType,labelIndex,op.filePos));
+      }
       state->hasCheckEnum=1;
       Label mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
       op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
