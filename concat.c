@@ -3151,7 +3151,7 @@ DataType typeCheckPointerArithmetic(DataType* inTypes,bool subtract){
     return TYPE_UNDEFINED;//inTypes[0] is no pointer
   if(isIntType(&(inTypes[1])))
     return inTypes[0];
-  if(subtract&&typeEquals(inTypes+0,inTypes+1)){//XXX? ptr - const ptr
+  if(subtract&&typeEquals(inTypes+0,inTypes+1)){//XXX? ptr - ptr mut
     return primitiveType(PRIMITIVE_I64);
   }
   return TYPE_UNDEFINED;
@@ -3616,7 +3616,7 @@ void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePos
 }
 
 
-bool canAutoCast(const DataType* src,const DataType* target){//TODO allow assigning  T mut ptr -> T ptr
+bool canAutoCast(const DataType* src,const DataType* target){//? allow cast T ptr mut ptr -> T ptr ptr (allow allow casting mut away if out pointers are const)
   if(typeEquals(src,target))
     return true;
   if(src->typeClass==TYPECLASS_ENUM&&target->typeClass==TYPECLASS_ENUM_LABEL&&src->typeDataAs.composite->id==target->typeDataAs.composite->id)
@@ -5033,7 +5033,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           break;
         case BLOCK_WHILE:
           if(!state->reachable){
-            fputs("end of while block cannot be reached\n",stderr);//XXX better error message
+            fputs("end of while block cannot be reached\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
           checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
