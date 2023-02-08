@@ -1,5 +1,5 @@
 #!/bin/sh
-compilerSrc="./concat.c"
+compilerSrc=( "./src/concat.c" "./src/strings.c" )
 compilerTarget="./concat"
 codeSrc="./code.txt"
 codeCTarget="./code.c"
@@ -10,7 +10,7 @@ cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual"
 clear
 echo "recompile compiler"
 echo "-----------------------------------------"
-gcc ${cArgs[@]} $compilerSrc -o $compilerTarget && {
+gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
   echo "compile program"
   echo "-----------------------------------------"
   $compilerTarget $codeSrc $codeCTarget

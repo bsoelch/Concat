@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include "strings.h"
 
 //errors in C code -> negative values
 #define ERROR_MEMORY -1
@@ -83,80 +84,8 @@ typedef struct{
     int    error;
   }as;
 }IntOrErrorCode;
-typedef struct{
-  char* chars;
-  size_t length;
-}String;
-bool wordEquals(const String* word,const char* string){
-  size_t l=strlen(string);
-  if(l!=word->length)
-    return false;
-  int c=memcmp(word->chars,string,word->length);
-  return c==0;
-}
-int stringCompare(const String a,const String b){
-  int c=memcmp(a.chars,b.chars,a.length<b.length?a.length:b.length);
-  if(c==0&&a.length!=b.length)
-    return a.length<b.length?-1:1;
-  return c;
-}
-int32_t stringHash(const String s){
-  int32_t hash=0;
-  for(size_t i=0;i<s.length;i++){
-    hash=31*hash+s.chars[i];
-  }
-  return hash;
-}
-typedef struct{
-  String head;
-  String tail;
-}SlicedString;
-SlicedString sliceString(String base,char chr){
-  String head=base;
-  head.length=0;
-  String tail=base;
-  for(;head.length<base.length;head.length++,tail.chars++,tail.length--)
-    if(base.chars[head.length]==chr){
-      tail.chars++;
-      tail.length--;
-      break;
-    }
-  return (SlicedString){.head=head,.tail=tail};
-}
-int64_t indexOfString(const String base,const String child){
-  if(child.length>base.length)
-    return -1;
-  bool isMatch;
-  for(size_t off=0;off<=base.length-child.length;off++){
-    isMatch=true;
-    for(size_t i=0;i<child.length;i++){
-      if(base.chars[i+off]!=child.chars[i]){
-        isMatch=false;
-        break;
-      }
-    }
-    if(isMatch)
-      return off;
-  }
-  return -1;
-}
-int64_t indexOfStringArray(const String* base,size_t baseLen,const String* child,size_t childLen){
-  if(childLen>baseLen)
-    return -1;
-  bool isMatch;
-  for(size_t off=0;off<=baseLen-childLen;off++){
-    isMatch=true;
-    for(size_t i=0;i<childLen;i++){
-      if(stringCompare(base[i+off],child[i])!=0){
-        isMatch=false;
-        break;
-      }
-    }
-    if(isMatch)
-      return off;
-  }
-  return -1;
-}
+
+
 #define MAX_CODEPOINT 0x10FFFF
 //writes an Unicode code-point to target
 int writeUnicodeChar(int64_t codepoint,char* target){
