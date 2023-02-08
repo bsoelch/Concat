@@ -226,7 +226,7 @@ Label labelBuffer[LABEL_CAP];
 int32_t labelBufferCount=0;
 String getLabelName(LabelId labelId){
   if(labelId<0||labelId>=labelBufferCount)
-    return (String){.chars="",.length=0};
+    return EMPTY_STRING;
   return labelBuffer[labelId].label;
 }
 Label label(LabelId labelId,FilePosition pos){
@@ -765,7 +765,7 @@ void printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         if((type->typeClass==TYPECLASS_ENUM||type->typeClass==TYPECLASS_ENUM_LABEL)&&isVoidType(&(type->typeDataAs.composite->types[e]))){
           labelName=getLabelName(type->typeDataAs.composite->labelOffset+e);
           //void-type in enum -> only print label
-          fprintf(file," %.*s",(int)labelName.length,labelName.chars);
+          fprintf(file," %"PRI_STR,PRI_STR_ARGS(labelName));
           continue;
         }
         fputs(" ",file);
@@ -773,7 +773,7 @@ void printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
         if(type->typeClass==TYPECLASS_TUPLE||type->typeClass==TYPECLASS_PROC_IN||type->typeClass==TYPECLASS_PROC_OUT||type->typeDataAs.composite->labelOffset==-1)
           continue;
         labelName=getLabelName(type->typeDataAs.composite->labelOffset+e);
-        fprintf(file," : %.*s",(int)labelName.length,labelName.chars);
+        fprintf(file," : %"PRI_STR,PRI_STR_ARGS(labelName));
       }
       if(type->typeClass!=TYPECLASS_PROC_IN&&type->typeClass!=TYPECLASS_LABELED_PROC_IN&&type->typeClass!=TYPECLASS_PROC_OUT){
         fputs(" )",file);
@@ -950,7 +950,7 @@ void printIdInfo(IdentifierInfo info,FILE* out){
     return;
   }
   String labelName=getLabelName(info.labelId);
-  fprintf(out,"%s '%.*s' (%"PRIi32")",idNames[info.type],(int)labelName.length,labelName.chars,info.id);
+  fprintf(out,"%s '%"PRI_STR"' (%"PRIi32")",idNames[info.type],PRI_STR_ARGS(labelName),info.id);
 }
 
 typedef enum{
@@ -1084,7 +1084,7 @@ void printOperation(Operation op,FILE* out){
     case OP_IDENTIFIER:
     case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
-      fprintf(out,"%.*s",(int)op.dataAs.string.length,op.dataAs.string.chars);
+      fprintf(out,"%"PRI_STR"",PRI_STR_ARGS(op.dataAs.string));
       break;
     case OP_CAST:
       fputs("[ ",out);
@@ -1177,7 +1177,7 @@ void importNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
     handleError("exceeded maximum number of used namespaces",ERROR_MEMORY,pos);
   Namespace* uSpace=findNamespace(label);
   if(uSpace==NULL){
-    fprintf(stderr,"namespace '%.*s' does not exist\n",(int)label.length,label.chars);
+    fprintf(stderr,"namespace '%"PRI_STR"' does not exist\n",PRI_STR_ARGS(label));
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   namespace->using[namespace->usingCount++]=uSpace;
@@ -1282,8 +1282,8 @@ ScopeNode* declareIdentifier(LabelId labelId,DataType type,IdentifierType idType
   if(node==NULL)
     handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
   if(*node!=NULL){
-    fprintf(stderr,"re-declaration of %s '%.*s'\n",idNames[idType],(int)mLabel.label.length,mLabel.label.chars);
-    fprintf(stderr,"previous declaration: %s '%.*s' at ",idNames[(*node)->idType],(int)(*node)->key.length,(*node)->key.chars);
+    fprintf(stderr,"re-declaration of %s '%"PRI_STR"'\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
+    fprintf(stderr,"previous declaration: %s '%"PRI_STR"' at ",idNames[(*node)->idType],PRI_STR_ARGS((*node)->key));
     printFilePosition(label((*node)->labelId,pos).declaredAt,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,mLabel.declaredAt);
@@ -1291,8 +1291,8 @@ ScopeNode* declareIdentifier(LabelId labelId,DataType type,IdentifierType idType
   ScopeNode* shaddow;
   getIdentifier(mLabel.label,&shaddow);
   if(shaddow!=NULL){
-    fprintf(stderr,"Warning:\n  declaration of %s '%.*s'\n",idNames[idType],(int)mLabel.label.length,mLabel.label.chars);
-    fprintf(stderr,"  shadows previous declaration: %s '%.*s' at ",idNames[shaddow->idType],(int)shaddow->key.length,shaddow->key.chars);
+    fprintf(stderr,"Warning:\n  declaration of %s '%"PRI_STR"'\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
+    fprintf(stderr,"  shadows previous declaration: %s '%"PRI_STR"' at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
     printFilePosition(label(shaddow->labelId,pos).declaredAt,stderr);
     fputs("\n",stderr);
     handleWarning(NULL,ERROR_SYNTAX,mLabel.declaredAt);
@@ -1338,8 +1338,8 @@ int32_t stringLabelOffset;
 void initStringLabels(void){
   stringLabelOffset=labelBufferCount;
   FilePosition dummyPos=(FilePosition){.fileName="compiler.string",.line=0,.posInLine=0};
-  newLabel((String){.chars="raw",.length=3},false,dummyPos);
-  newLabel((String){.chars="length",.length=6},false,dummyPos);
+  newLabel(cstrToStr("raw"),false,dummyPos);
+  newLabel(cstrToStr("length"),false,dummyPos);
 }
 
 DataType progStringType(void){
@@ -2076,10 +2076,10 @@ void compileToC(FILE* target,const Program* p){
       fprintf(target,"const %s stringChars%"PRIi32"[%"PRIi64"] = {",primitiveNameC(PRIMITIVE_I8),programStrings[i].charsId,programStrings[i].value.length+1);
       String str=programStrings[i].value;
       for(size_t j=0;j<str.length;j++){
-        if(str.chars[j]<0)
-          fprintf(target,"-0x%"PRIx8,-str.chars[j]);
+        if(charAt(str,j)<0)
+          fprintf(target,"-0x%"PRIx8,-charAt(str,j));
         else
-          fprintf(target,"0x%"PRIx8,str.chars[j]);
+          fprintf(target,"0x%"PRIx8,charAt(str,j));
         fputs(",",target);
       }
       fputs("0x00};\n",target);
@@ -2237,16 +2237,16 @@ IntOrErrorCode parseInt(String number,int base){
   bool negate=false;
   if(number.length==0)
     return (IntOrErrorCode){.isError=true,.as={.error=ERROR_PARSE_INT}};
-  if(number.length>1&&number.chars[0]=='-'){
+  if(number.length>1&&charAt(number,0)=='-'){
     i++;
     negate=true;
   }
-  if(detectBase&&number.length>i+1&&number.chars[i]=='0'){
+  if(detectBase&&number.length>i+1&&charAt(number,i)=='0'){
     i++;
-    if(number.chars[i]=='x'||number.chars[i]=='X'){
+    if(charAt(number,i)=='x'||charAt(number,i)=='X'){
       base=16;
       i++;
-    }else if(number.chars[i]=='b'||number.chars[i]=='B'){
+    }else if(charAt(number,i)=='b'||charAt(number,i)=='B'){
       base=2;
       i++;
     }
@@ -2255,19 +2255,19 @@ IntOrErrorCode parseInt(String number,int base){
   bool overflow=false;
   uint64_t maxSaveValue=negate?(INT64_MAX/base):-(INT64_MIN/base);
   for(;i<number.length;i++){
-    if(i>i0&&i<number.length-1&&(number.chars[i]=='_'||number.chars[i]=='\''))
+    if(i>i0&&i<number.length-1&&(charAt(number,i)=='_'||charAt(number,i)=='\''))
       continue;//ignore _ and ' if they are in the interior of the number
     if(value>maxSaveValue){
       overflow=true;//check if remaining word is integer before returning overflow error
     }
     value*=base;
-    digit=toDigit(number.chars[i]);
+    digit=toDigit(charAt(number,i));
     if(digit<0||digit>=base)
       return (IntOrErrorCode){.isError=true,.as={.error=ERROR_PARSE_INT}};
     value+=digit;
   }
   if(overflow){
-    fprintf(stderr,"value %.*s does not fit in a 64-bit integer\n",(int)number.length,number.chars);
+    fprintf(stderr,"value %"PRI_STR" does not fit in a 64-bit integer\n",PRI_STR_ARGS(number));
     return (IntOrErrorCode){.isError=true,.as={.error=ERROR_INT_OVERFLOW}};
   }
   return (IntOrErrorCode){.isError=false,.as={.i64=negate?-value:value}};
@@ -2275,7 +2275,7 @@ IntOrErrorCode parseInt(String number,int base){
 String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEspaceSeqs){
   if(codeFile->codeSize<1){
     handleError("unexpected end of file",ERROR_EOF,codeFile->currentPos);
-    return (String){.chars=codeFile->code,.length=0};
+    return EMPTY_STRING;
   }
   //skip first char
   updateFilePosition(codeFile);
@@ -2296,7 +2296,7 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
     if(doEspaceSeqs&&*(codeFile->code)=='\\'){//escaped characters
       if(codeFile->codeSize<=1){
         handleError("unexpected end of file",ERROR_EOF,codeFile->currentPos);
-        return (String){.chars=codeFile->code,.length=0};
+        return EMPTY_STRING;
       }
       delta++;
       updateFilePosition(codeFile);//ignore the \ character
@@ -2330,12 +2330,12 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
           sequenceLength=*(codeFile->code)=='U'?9:*(codeFile->code)=='u'?5:3;
           if(codeFile->codeSize<sequenceLength){
             handleError("unexpected end of file",ERROR_EOF,codeFile->currentPos);
-            return (String){.chars=codeFile->code,.length=0};
+            return EMPTY_STRING;
           }
-          IntOrErrorCode val=parseInt((String){.chars=(codeFile->code)+1,.length=(sequenceLength-1)},16);
+          IntOrErrorCode val=parseInt(newString((codeFile->code)+1,sequenceLength-1),16);
           if(val.isError){
             handleError("unexpected end of file",val.as.error,codeFile->currentPos);
-            return (String){.chars=codeFile->code,.length=0};
+            return EMPTY_STRING;
           }
           int l;
           if(*(codeFile->code)=='x'){
@@ -2364,14 +2364,14 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
     updateFilePosition(codeFile);
   }
   if(codeFile->codeSize==0){
-    fprintf(stderr,"unfinished comment or string literal %.*s \n",(int)wordLength,codeFile->code);
+    fprintf(stderr,"unfinished comment or string literal %"PRI_STR" \n",(int)wordLength,codeFile->code);
     handleError(NULL,ERROR_EOF,codeFile->currentPos);
-    return (String){.chars=codeFile->code,.length=0};
+    return EMPTY_STRING;
   }
   //move code-pointer to position after word
   updateFilePosition(codeFile);
   wordChars[wordLength]=0;//zero terminate string
-  return (String){.chars=wordChars,.length=wordLength};
+  return newString(wordChars,wordLength);
 }
 //constants for the wordType flag of nextWord
 //allow to determine which type of word was read
@@ -2383,7 +2383,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
   skipWhitespaces(codeFile);
   if(codeFile->codeSize<=0){//end of file
     //don't set wordType to ERROR_EOF, file is allowed to end at this point
-    return (String){.chars=codeFile->code,.length=0};
+    return EMPTY_STRING;
   }
   codeFile->wordStart=codeFile->currentPos;
   if(wordType)
@@ -2401,11 +2401,11 @@ String nextWord(CodeFile* codeFile,int* wordType){
   if(codeFile->codeSize>=2&&*(codeFile->code)=='#'){
     if(*(codeFile->code+1)=='#'){//line comment
       readStringLiteral(codeFile,"\n",1,false);//ignore everything up to next new-line
-      return (String){.chars=codeFile->code,.length=0};
+      return EMPTY_STRING;
     }
     if(*(codeFile->code+1)=='+'){//inline comment
       readStringLiteral(codeFile,"+#",2,false);
-      return (String){.chars=codeFile->code,.length=0};
+      return EMPTY_STRING;
     }
   }
   char* wordChars=codeFile->code;
@@ -2418,7 +2418,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
     updateFilePosition(codeFile);//skip first white-space
     *(codeFile->code-1)=0;//replace white-space with \0 to allow printing word as C-string
   }
-  return (String){.chars=wordChars,.length=wordLength};
+  return newString(wordChars,wordLength);
 }
 
 
@@ -2488,7 +2488,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
       continue;
     }
     if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
-      fprintf(stderr,"unknown type name '%.*s' \n",(int)word.length,word.chars);
+      fprintf(stderr,"unknown type name '%"PRI_STR"' \n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return;
     }
@@ -2507,7 +2507,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
     for(LabelId i=labelOffset+1;i<labelBufferCount;i++){
       for(LabelId j=labelOffset;j<i;j++){
         if(stringCompare(getLabelName(i),getLabelName(j))==0){
-          fprintf(stderr,"duplicate label '%.*s' in %s \n",(int)getLabelName(i).length,getLabelName(i).chars,typeClassName(typeClass));
+          fprintf(stderr,"duplicate label '%"PRI_STR"' in %s \n",PRI_STR_ARGS(getLabelName(i)),typeClassName(typeClass));
           fputs("  previous declaration at ",stderr);
           printFilePosition(label(j,codeFile->wordStart).declaredAt,stderr);
           fputs("\n",stderr);
@@ -2642,7 +2642,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
       return false;
     }
     if(!wordEquals(&word,"ptr")){
-      fprintf(stderr,"unexpected word after opaque type '%.*s' expected 'ptr' got '%.*s'\n",(int)name.length,name.chars,(int)word.length,word.chars);
+      fprintf(stderr,"unexpected word after opaque type '%"PRI_STR"' expected 'ptr' got '%"PRI_STR"'\n",PRI_STR_ARGS(name),PRI_STR_ARGS(word));
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return false;
     }
@@ -2653,7 +2653,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
 
 void requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes,FilePosition pos){
   if(bufferedTypes!=nTypes){
-    fprintf(stderr,"wrong number of type arguments for operation '%.*s' expected %zu got %zu\n",(int)opName->length,opName->chars,nTypes,bufferedTypes);
+    fprintf(stderr,"wrong number of type arguments for operation '%"PRI_STR"' expected %zu got %zu\n",PRI_STR_ARGS(*opName),nTypes,bufferedTypes);
     handleError(NULL,ERROR_SYNTAX,pos);
     return;
   }
@@ -2677,10 +2677,10 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   }
   if(wordType==WORD_TYPE_CHAR){
     if(word.length!=1){//TODO? handle Unicode characters
-      fprintf(stderr,"character literal '%.*s' contains more that one character\n",(int)word.length,word.chars);
+      fprintf(stderr,"character literal '%"PRI_STR"' contains more that one character\n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_SYNTAX,wordPos);
     }
-    (*op)=opConstant(primitiveType(PRIMITIVE_I8),word.chars[0],wordPos);
+    (*op)=opConstant(primitiveType(PRIMITIVE_I8),charAt(word,0),wordPos);
     return 1;
   }
   IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
@@ -2758,7 +2758,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       return 0;
     }else if(idType==ID_PROCEDURE){
       if(state->scopeLevel>0){
-        fprintf(stderr,"invalid position for procedure %.*s procedures can only be declared at top level\n",(int)varName.label.length,varName.label.chars);
+        fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
           handleError(NULL,ERROR_SYNTAX,wordPos);
       }
       Scope* newScope=openScope(BLOCK_PROCEDURE);
@@ -2808,7 +2808,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     requireCompileTimeType(&word,&type,1,wordPos);
     typeBuffer[bufferedTypes++]=typeOfType(&type);
     return 0;//type does not generate any operations
-  }else if(word.length>1&&word.chars[0]=='.'){
+  }else if(word.length>1&&charAt(word,0)=='.'){
     word.chars++;//remove first character
     word.length--;
     if(bufferedTypes==0){
@@ -2826,13 +2826,13 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     if(type.typeClass!=TYPECLASS_ENUM||((index=findLabel(type.typeDataAs.composite->labelOffset,type.typeDataAs.composite->typeCount,&word))==-1)){
       fputs("type ",stderr);
       printTypeName(&type,stderr);
-      fprintf(stderr," does not have a field '%.*s'\n",(int)word.length,word.chars);
+      fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_TYPE,wordPos);
     }
     (*op)=opConstant(type,index,wordPos);
     op->dataType.typeClass=TYPECLASS_ENUM_LABEL;//change type-class to enum-label
     return 1;
-  }else if(word.length>1&&word.chars[0]=='#'){//compiler command
+  }else if(word.length>1&&charAt(word,0)=='#'){//compiler command
     word.chars++;//remove first character
     word.length--;
     //stack manipulation
@@ -2855,26 +2855,26 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       wordPos=codeFile->wordStart;
       if(wordType!=WORD_TYPE_IDENTIFIER)
         handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      if(word.length==0||word.chars[0]=='#'||word.chars[0]=='.'){//don't allow . anywhere in namespace name
-        fprintf(stderr,"'%.*s' is not a valid namespace name",(int)word.length,word.chars);
+      if(word.length==0||charAt(word,0)=='#'||charAt(word,0)=='.'){//don't allow . anywhere in namespace name
+        fprintf(stderr,"'%"PRI_STR"' is not a valid namespace name",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
       startNamespace(state->namespaceInfo,word,wordPos);
-      printf("opened namespace %.*s\n",(int)word.length,word.chars);//DEBUG
+      printf("opened namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
       return 0;
     }else if(wordEquals(&word,"using")){
       word=nextWord(codeFile,&wordType);
       wordPos=codeFile->wordStart;
       if(wordType!=WORD_TYPE_IDENTIFIER)
         handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      printf("using namespace %.*s\n",(int)word.length,word.chars);//DEBUG
+      printf("using namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
       importNamespace(state->namespaceInfo,word,wordPos);
       return 0;
     }else if(wordEquals(&word,"end")){
       endCompileTimeBlock(state->namespaceInfo,wordPos);
       //DEBUG START
       word=state->namespaceInfo->current[state->namespaceInfo->currentCount];
-      printf("closed namespace %.*s\n",(int)word.length,word.chars);//DEBUG
+      printf("closed namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
       return 0;
     }
     //compiler commands
@@ -2894,7 +2894,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
         handleError("error while resolving identifier",r,wordPos);
       if(r==0){//found identifier TODO print shadowed matches
         puts("-----------------");
-        printf("identifier '%.*s':\n",(int)varName.label.length,varName.label.chars);
+        printf("identifier '%"PRI_STR"':\n",PRI_STR_ARGS(varName.label));
         fputs("  ",stdout);
         Label mLabel=label(asIdentifier->labelId,wordPos);
         if(mLabel.isMutable)
@@ -2907,16 +2907,16 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
         puts("-----------------");
         return 0;
       }
-      fprintf(stderr,"could not find identifier '%.*s'\n",(int)varName.label.length,varName.label.chars);
+      fprintf(stderr,"could not find identifier '%"PRI_STR"'\n",PRI_STR_ARGS(varName.label));
       //TODO resolve global identifiers with later declarations pre-declared types identifiers
       return 0;
     }
     //XXX more compile time operations
-    fprintf(stderr,"unknown compile time operation '%.*s'\n",(int)word.length,word.chars);
+    fprintf(stderr,"unknown compile time operation '%"PRI_STR"'\n",PRI_STR_ARGS(word));
     handleError(NULL,ERROR_SYNTAX,wordPos);
   }
   if(bufferedTypes>0){
-    fprintf(stderr,"%.*s does not take a type as argument\n",(int)word.length,word.chars);
+    fprintf(stderr,"%"PRI_STR" does not take a type as argument\n",PRI_STR_ARGS(word));
     handleError(NULL,ERROR_TYPE,wordPos);
   }
   if(wordEquals(&word,"true")){
@@ -3738,7 +3738,7 @@ void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_
       state->typeStack[state->typeCount-k].type.typeClass=TYPECLASS_ENUM;
       if(!isVoidType(&(state->typeStack[state->typeCount-k].type.typeDataAs.composite->types[state->opStack[offset].dataAs.i64]))){
         String label=getLabelName(state->typeStack[state->typeCount-k].type.typeDataAs.composite->labelOffset+state->opStack[offset].dataAs.i64);
-        fprintf(stderr,"missing data value for creating enum constant %.*s in ",(int)label.length,label.chars);
+        fprintf(stderr,"missing data value for creating enum constant %"PRI_STR" in ",PRI_STR_ARGS(label));
         printTypeName(&(state->typeStack[state->typeCount-k].type),stderr);
         fputs("\nto create enum values with data use the 'new' operator\n",stderr);
         handleError(NULL,ERROR_SYNTAX,pos);
@@ -3912,8 +3912,8 @@ void typeCheckSetVariable(TypeCheckState* state,Operation* op){
       handleError("variable is not mutable",ERROR_TYPE,op->filePos);
     } 
     Label mLabel=label(labelId,op->filePos);
-    fprintf(stderr,"variable %.*s is not mutable\n",(int) mLabel.label.length,mLabel.label.chars);
-    fprintf(stderr,"  %.*s was declared at",(int) mLabel.label.length,mLabel.label.chars);
+    fprintf(stderr,"variable %"PRI_STR" is not mutable\n",PRI_STR_ARGS( mLabel.label));
+    fprintf(stderr,"  %"PRI_STR" was declared at",PRI_STR_ARGS( mLabel.label));
     printFilePosition(mLabel.declaredAt,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_TYPE,op->filePos);
@@ -3949,7 +3949,7 @@ void checkTupleElementMutable(DataType const* baseType,Operation const* elementA
       fputs("element ",stderr);
       if(currentTuple->typeDataAs.composite->labelOffset!=LABEL_ID_UNKNOWN){
         String label=getLabelName(currentTuple->typeDataAs.composite->labelOffset+elementAccess->dataAs.idInfo.id);
-        fprintf(stderr,"%.*s ",(int)label.length,label.chars);
+        fprintf(stderr,"%"PRI_STR" ",PRI_STR_ARGS(label));
       }
       fprintf(stderr,"(%"PRIi32")",elementAccess->dataAs.idInfo.id);
       fputs(" in ",stderr);
@@ -4224,7 +4224,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
   ScopeNode* asIdentifier;
   int r=getIdentifier(op->dataAs.string,&asIdentifier);
   if(r!=0){
-    fprintf(stderr," unknown identifier '%.*s'\n",(int)op->dataAs.string.length,op->dataAs.string.chars);
+    fprintf(stderr," unknown identifier '%"PRI_STR"'\n",PRI_STR_ARGS(op->dataAs.string));
     handleError(NULL,r,op->filePos);
   }
   if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
@@ -4265,7 +4265,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(switchBlock->switchData->labelData[i].value==op.dataAs.i64){
             if(switchBlock->switchType.typeClass==TYPECLASS_ENUM_LABEL){
               String label=getLabelName(switchBlock->switchType.typeDataAs.composite->labelOffset+op.dataAs.i64);
-              fprintf(stderr,"duplicate label %.*s in switch-case\n",(int)label.length,label.chars);
+              fprintf(stderr,"duplicate label %"PRI_STR" in switch-case\n",PRI_STR_ARGS(label));
             }else{
               fprintf(stderr,"duplicate label %"PRIi64" in switch-case\n",op.dataAs.i64);
             }
@@ -4490,7 +4490,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       int32_t labelIndex=findLabel(mStruct->labelOffset,mStruct->typeCount,&op.dataAs.string);
       if(labelIndex==-1){
         printTypeName(&structType,stderr);
-        fprintf(stderr," does not have a field '%.*s'\n",(int)op.dataAs.string.length,op.dataAs.string.chars);
+        fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(structType.typeClass==TYPECLASS_STRUCT){
@@ -4500,7 +4500,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         return;
       }
       if(isVoidType(&(mStruct->types[labelIndex]))){
-        fprintf(stderr,"'%.*s' in ",(int)op.dataAs.string.length,op.dataAs.string.chars);
+        fprintf(stderr,"'%"PRI_STR"' in ",PRI_STR_ARGS(op.dataAs.string));
         printTypeName(&structType,stderr);
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
@@ -4533,7 +4533,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         if(!writable)
           handleError("cannot write to field of constant enum",ERROR_SYNTAX,op.filePos);
         if(!mLabel.isMutable){
-          fprintf(stderr,"element %.*s (%"PRIi32") in ",(int)mLabel.label.length,mLabel.label.chars,labelIndex);
+          fprintf(stderr,"element %"PRI_STR" (%"PRIi32") in ",PRI_STR_ARGS(mLabel.label),labelIndex);
           printTypeName(&structType,stderr);
           fputs(" is not mutable\n",stderr);
           fputs("  declared at ",stderr);
