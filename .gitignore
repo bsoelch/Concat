@@ -3,6 +3,7 @@
 *.zip
 *.ll
 *.bc
+tmp/*
 syntaxHighlighting/update.sh
 a.out
 ops.out

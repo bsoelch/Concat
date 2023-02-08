@@ -23,6 +23,9 @@
 #define PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE 1
 #define PROG_EXIT_CODE_WRONG_ENUM_INDEX   2
 
+// default initial capacity for arrays
+#define INIT_CAP 128 
+
 //negate indices (internal errors have negative error codes)
 const char* const internalErrors [] = {[-ERROR_MEMORY]="ERROR_MEMORY",[-ERROR_IO]="ERROR_IO",[-ERROR_UNIMPLEMENTED]="ERROR_UNIMPLEMENTED",};
 const char* const compilerErrors [] = {
@@ -103,6 +106,22 @@ int32_t stringHash(const String s){
     hash=31*hash+s.chars[i];
   }
   return hash;
+}
+typedef struct{
+  String head;
+  String tail;
+}SlicedString;
+SlicedString sliceString(String base,char chr){
+  String head=base;
+  head.length=0;
+  String tail=base;
+  for(;head.length<base.length;head.length++,tail.chars++,tail.length--)
+    if(base.chars[head.length]==chr){
+      tail.chars++;
+      tail.length--;
+      break;
+    }
+  return (SlicedString){.head=head,.tail=tail};
 }
 int64_t indexOfString(const String base,const String child){
   if(child.length>base.length)
@@ -1150,6 +1169,100 @@ void printOperation(Operation op,FILE* out){
   fputs("\n",out);
 }
 
+#define MAX_NAMESPACE_PATH 16
+#define MAX_NAMESPACES 1024
+typedef struct{
+  String* path;
+  size_t pathLength;
+}Namespace;
+Namespace namespaces[MAX_NAMESPACES];//XXX trie like structure may be better
+size_t namespaceCount=0;
+//returns true if the namespace capacity was exceeded
+bool addNamespace(String* path,size_t pathLength){
+  if(pathLength==0)
+    return false;
+  for(size_t i=0;i<namespaceCount;i++){
+    //XXX? reuse paths
+    if(pathLength==namespaces[i].pathLength&&indexOfStringArray(path,pathLength,namespaces[i].path,pathLength)==0)
+      return false;//namespace already exist
+  }
+  if(namespaceCount>=MAX_NAMESPACES){
+    fputs("exceeded namespace capacity",stderr);
+    return true;//unable to add namespace
+  }
+  String* nPath=malloc(pathLength*sizeof(String));//ensure path is stored in independent memory
+  if(nPath==NULL)
+    return true;//allocation failed
+  memcpy(nPath,path,pathLength*sizeof(String));
+  namespaces[namespaceCount++]=(Namespace){.path=nPath,.pathLength=pathLength};
+  return false;
+}
+Namespace* findNamespace(String name){
+  String path[MAX_NAMESPACE_PATH]={{0}};
+  size_t count=0;
+  SlicedString slice=sliceString(name,'.');
+  path[count++]=slice.head;
+  do{
+    slice=sliceString(slice.tail,'.');
+    if(count>=MAX_NAMESPACE_PATH)
+      return NULL;//path length overflow
+    path[count++]=slice.head;
+  }while(slice.tail.length>0);
+  //find by path
+  for(size_t i=0;i<namespaceCount;i++){
+    if(count==namespaces[i].pathLength&&indexOfStringArray(path,count,namespaces[i].path,count)==0)
+      return &namespaces[i];
+  }
+  return NULL;
+}
+
+typedef struct{
+String current[MAX_NAMESPACE_PATH];
+size_t currentCount;
+
+Namespace** using;
+size_t usingCount;
+size_t usingCap;
+}NamespaceInfo;
+
+typedef struct{
+  size_t usingOffset;
+}NamespaceBlock;
+
+#define MAX_COMPILER_BLOCKS 128
+NamespaceBlock compilerBlocks [MAX_COMPILER_BLOCKS];
+size_t compilerBlockCount=0;
+
+void startNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
+  if(compilerBlockCount>=MAX_COMPILER_BLOCKS)
+    handleError("compiler block overflow",ERROR_MEMORY,pos);
+  if(namespace->currentCount>=MAX_NAMESPACE_PATH)
+    handleError("exceeded maximum namespace depth",ERROR_SYNTAX,pos);
+  compilerBlocks[compilerBlockCount++]=(NamespaceBlock){.usingOffset=namespace->usingCount};
+  namespace->current[namespace->currentCount++]=label;
+  if(addNamespace(namespace->current,namespace->currentCount))
+    handleError("storing namespace failed",ERROR_MEMORY,pos);
+}
+void importNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
+  if(namespace->usingCount>=namespace->usingCap)
+    handleError("exceeded maximum number of used namespaces",ERROR_MEMORY,pos);
+  Namespace* uSpace=findNamespace(label);
+  if(uSpace==NULL){
+    fprintf(stderr,"namespace '%.*s' does not exist\n",(int)label.length,label.chars);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
+  namespace->using[namespace->usingCount++]=uSpace;
+}
+void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
+  if(compilerBlockCount==0)
+    handleError("no open compiler blocks",ERROR_SYNTAX,pos);
+  compilerBlockCount--;
+  //if block is namespace
+  if(namespace->currentCount==0||compilerBlocks[compilerBlockCount].usingOffset>namespace->usingCount)
+    handleError("compiler-blocks and namespaces out of sync",ERROR_MEMORY,pos);
+  namespace->currentCount--;
+  namespace->usingCount=compilerBlocks[compilerBlockCount].usingOffset;
+}
 
 #define SCOPE_NODE_CAP 8192
 #define SCOPE_CAP 256
@@ -2076,6 +2189,7 @@ typedef struct{
 }CodeFile;
 
 typedef struct{
+  NamespaceInfo* namespaceInfo;
   Scope* currentScope;
   size_t compiledOps;
   int32_t globalVars;
@@ -2806,6 +2920,34 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER}}};
       return 1;
     }
+    //compile-time code
+    if(wordEquals(&word,"namespace")){
+      word=nextWord(codeFile,&wordType);
+      wordPos=codeFile->wordStart;
+      if(wordType!=WORD_TYPE_IDENTIFIER)
+        handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
+      if(word.length==0||word.chars[0]=='#'||word.chars[0]=='.'){//don't allow . anywhere in namespace name
+        fprintf(stderr,"'%.*s' is not a valid namespace name",(int)word.length,word.chars);
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      startNamespace(state->namespaceInfo,word,wordPos);
+      printf("opened namespace %.*s\n",(int)word.length,word.chars);//DEBUG
+      return 0;
+    }else if(wordEquals(&word,"using")){
+      word=nextWord(codeFile,&wordType);
+      wordPos=codeFile->wordStart;
+      if(wordType!=WORD_TYPE_IDENTIFIER)
+        handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
+      printf("using namespace %.*s\n",(int)word.length,word.chars);//DEBUG
+      importNamespace(state->namespaceInfo,word,wordPos);
+      return 0;
+    }else if(wordEquals(&word,"end")){
+      endCompileTimeBlock(state->namespaceInfo,wordPos);
+      //DEBUG START
+      word=state->namespaceInfo->current[state->namespaceInfo->currentCount];
+      printf("closed namespace %.*s\n",(int)word.length,word.chars);//DEBUG
+      return 0;
+    }
     //compiler commands
     if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
       (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=-1}}};
@@ -3120,7 +3262,11 @@ Program compileToOps(CodeFile* codeFile){
     exit(ERROR_MEMORY);
   }
   openScope(BLOCK_UNKNOWN);
-  CompilerState state=(CompilerState){.currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.currentScope=scopeBuffer,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
+  NamespaceInfo namespaceInfo=(NamespaceInfo){.current={{0}},.currentCount=0,.using=malloc(INIT_CAP*sizeof(((NamespaceInfo*)NULL)->using)),.usingCount=0,.usingCap=INIT_CAP};
+  if(namespaceInfo.using==NULL)
+    handleError("failed to allocate namespaceInfo.using",ERROR_MEMORY,codeFile->currentPos);
+  CompilerState state=(CompilerState){.namespaceInfo=&namespaceInfo,.currentScope=scopeBuffer,
+    .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
   while(codeFile->codeSize>0){
     state.compiledOps+=readOperation(compileOps+state.compiledOps,codeFile,&state);
     if(ensureOpCap(&compileOps,&opsCap,state.compiledOps+16)){
@@ -3202,7 +3348,6 @@ DataType typeCheckIntLogic(DataType* inTypes){
   return inTypes[0];
 }
 
-#define INIT_CAP 128
 typedef struct{
   DataType type;
   int32_t opCount;

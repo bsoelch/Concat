@@ -35,6 +35,14 @@ proc( string => string i64 ) =: startItr
   0
 end
 
+#namespace mut
+  #namespace subspace
+  #end
+#end
+#namespace i32
+  #using mut.subspace
+#end
+
 proc( => ) =: breakTest 
   0
     while true do
