@@ -1106,15 +1106,19 @@ typedef struct{
 }Namespace;
 Namespace namespaces[MAX_NAMESPACES];//XXX trie like structure may be better
 size_t namespaceCount=0;
+int64_t namespaceId(String* path,size_t pathLength){
+  if(pathLength==0)
+    return -1;
+  for(size_t i=0;i<namespaceCount;i++){
+    if(pathLength==namespaces[i].pathLength&&indexOfStringArray(path,pathLength,namespaces[i].path,pathLength)==0)
+      return i;//namespace already exist
+  }
+  return -1;
+}
 //returns true if the namespace capacity was exceeded
 bool addNamespace(String* path,size_t pathLength){
-  if(pathLength==0)
+  if(namespaceId(path,pathLength)!=-1)
     return false;
-  for(size_t i=0;i<namespaceCount;i++){
-    //XXX? reuse paths
-    if(pathLength==namespaces[i].pathLength&&indexOfStringArray(path,pathLength,namespaces[i].path,pathLength)==0)
-      return false;//namespace already exist
-  }
   if(namespaceCount>=MAX_NAMESPACES){
     fputs("exceeded namespace capacity",stderr);
     return true;//unable to add namespace
@@ -1126,30 +1130,26 @@ bool addNamespace(String* path,size_t pathLength){
   namespaces[namespaceCount++]=(Namespace){.path=nPath,.pathLength=pathLength};
   return false;
 }
-Namespace* findNamespace(String name){
+int64_t findNamespace(String name){
   String path[MAX_NAMESPACE_PATH]={{0}};
   size_t count=0;
   SlicedString slice=sliceAtChar(name,'.');
   path[count++]=slice.head;
-  do{
+  while(slice.tail.length>0){
     slice=sliceAtChar(slice.tail,'.');
     if(count>=MAX_NAMESPACE_PATH)
-      return NULL;//path length overflow
+      return -1;//path length overflow
     path[count++]=slice.head;
-  }while(slice.tail.length>0);
-  //find by path
-  for(size_t i=0;i<namespaceCount;i++){
-    if(count==namespaces[i].pathLength&&indexOfStringArray(path,count,namespaces[i].path,count)==0)
-      return &namespaces[i];
   }
-  return NULL;
+  //find by path
+  return namespaceId(path,count);
 }
 
 typedef struct{
 String current[MAX_NAMESPACE_PATH];
 size_t currentCount;
 
-Namespace** using;
+int64_t* using;
 size_t usingCount;
 size_t usingCap;
 }NamespaceInfo;
@@ -1175,12 +1175,12 @@ void startNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
 void importNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
   if(namespace->usingCount>=namespace->usingCap)
     handleError("exceeded maximum number of used namespaces",ERROR_MEMORY,pos);
-  Namespace* uSpace=findNamespace(label);
-  if(uSpace==NULL){
+  int64_t uSpaceId=findNamespace(label);
+  if(uSpaceId==-1){
     fprintf(stderr,"namespace '%"PRI_STR"' does not exist\n",PRI_STR_ARGS(label));
     handleError(NULL,ERROR_SYNTAX,pos);
   }
-  namespace->using[namespace->usingCount++]=uSpace;
+  namespace->using[namespace->usingCount++]=uSpaceId;
 }
 void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
   if(compilerBlockCount==0)
@@ -1201,6 +1201,7 @@ struct ScopeNode{
   String key;
   DataType type;
   ScopeNode* next;
+  int64_t namespaceId;
   int32_t labelId;
   int32_t id;
   IdentifierType idType;
@@ -1242,24 +1243,32 @@ bool closeScope(void){
   scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
   return true;
 }
-ScopeNode** findNode(Scope* scope,String name){
+ScopeNode** findNode(Scope* scope,String name,int64_t namespaceId){
   if(scope==NULL)
     return NULL;
   uint32_t hash=stringHash(name);
   ScopeNode** node=scope->nodes+(hash%SCOPE_MAP_CAP);
   while(*node!=NULL){
-    if(stringCompare((*node)->key,name)==0)
+    if(stringCompare((*node)->key,name)==0&&(*node)->namespaceId==namespaceId)
       return node;
     node=&((*node)->next);
   }
   return node;
 }
 int getIdentifier(String name,ScopeNode** out){
+  int64_t dotIndex=lastIndexOfChar(name,'.');
+  int64_t mNamespaceId=-1;
+  if(dotIndex>0){
+    mNamespaceId=findNamespace(sliceEnd(name,dotIndex));
+    if(mNamespaceId==-1)
+      return ERROR_SYNTAX;//variable in non-existent namespace does not exist
+    name=sliceStart(name,dotIndex+1);
+  }
   int32_t level=scopeCount-1;
   ScopeNode** node;
   *out=NULL;
   while(level>=0){
-    node=findNode(scopeBuffer+level,name);
+    node=findNode(scopeBuffer+level,name,mNamespaceId);//TODO check different namespaces (1. relative to current space, then all parent spaces, then imports)
     if(node==NULL)
       return ERROR_MEMORY;
     if(*node!=NULL){
@@ -1270,7 +1279,7 @@ int getIdentifier(String name,ScopeNode** out){
   }
   return ERROR_SYNTAX;
 }
-ScopeNode* declareIdentifier(LabelId labelId,DataType type,IdentifierType idType,int32_t id,FilePosition pos){
+ScopeNode* declareIdentifier(NamespaceInfo* namespace,LabelId labelId,DataType type,IdentifierType idType,int32_t id,FilePosition pos){
   Label mLabel=label(labelId,pos);
   if(mLabel.isMutable){
     if(idType==ID_TYPE)
@@ -1278,7 +1287,10 @@ ScopeNode* declareIdentifier(LabelId labelId,DataType type,IdentifierType idType
     if(idType==ID_PROCEDURE)
       handleError("procedures cannot be mutable",ERROR_SYNTAX,mLabel.declaredAt);
   }
-  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),mLabel.label);
+  if(containsChar(mLabel.label,'.'))
+    handleError("'.' is not allowed in declared identifiers",ERROR_SYNTAX,pos);
+  int64_t mNamespaceId=namespaceId(namespace->current,namespace->currentCount);
+  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),mLabel.label,mNamespaceId);
   if(node==NULL)
     handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
   if(*node!=NULL){
@@ -1301,6 +1313,7 @@ ScopeNode* declareIdentifier(LabelId labelId,DataType type,IdentifierType idType
   if(*node==NULL)
     handleError("unable to allocate scope node",ERROR_MEMORY,mLabel.declaredAt);
   (*node)->key=mLabel.label;
+  (*node)->namespaceId=mNamespaceId;
   (*node)->type=type;
   (*node)->idType=idType;
   (*node)->id=id;
@@ -2715,7 +2728,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       type=opaqueType(state->opaqueTypeCount++);
       idType=ID_TYPE;
     }
-    ScopeNode* id=declareIdentifier(labelId,type,idType,nextId(idType,state),wordPos);
+    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return 0;
     (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
@@ -2752,7 +2765,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       default:
         idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    id=declareIdentifier(labelId,type,idType,nextId(idType,state),wordPos);
+    id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE){
       //declaring type does not produce any code
       return 0;
@@ -2772,7 +2785,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
          CompositeType* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
          for(int32_t i=0;i<inTypes->typeCount;i++){
-            declareIdentifier(inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
+            declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
          }
       }
     }
@@ -2854,7 +2867,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       wordPos=codeFile->wordStart;
       if(wordType!=WORD_TYPE_IDENTIFIER)
         handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      if(word.length==0||charAt(word,0)=='#'||charAt(word,0)=='.'){//don't allow . anywhere in namespace name
+      if(word.length==0||charAt(word,0)=='#'||containsChar(word,'.')){
         fprintf(stderr,"'%"PRI_STR"' is not a valid namespace name",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
@@ -2987,7 +3000,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     DataType mType=TYPE_UNDEFINED;
     mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
-    ScopeNode* id=declareIdentifier(labelId,mType,idType,nextId(idType,state),wordPos);
+    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos);
     (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
     return 1;
   }else if(wordEquals(&word,"=")){

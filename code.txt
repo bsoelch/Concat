@@ -36,12 +36,18 @@ proc( string => string i64 ) =: startItr
 end
 
 #namespace mut
+  0 i32 =: spaceVar
   #namespace subspace
+   1 i32 =: spaceVar
   #end
 #end
 #namespace i32
   #using mut.subspace
 #end
+proc( => ) =: spaceTest
+  mut.spaceVar print
+  mut.subspace.spaceVar print
+end
 
 proc( => ) =: breakTest 
   0

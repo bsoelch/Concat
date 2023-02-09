@@ -31,6 +31,9 @@ int32_t stringHash(const String s){
   }
   return hash;
 }
+
+
+
 char charAt(const String str,int64_t index){
   if(index<0||index>(int64_t)str.length)
     return (char)0;
@@ -43,7 +46,16 @@ int64_t indexOfChar(const String str,char c){
   }
   return -1;
 }
-
+int64_t lastIndexOfChar(const String str,char c){
+  for(int64_t i=str.length-1;i>=0;i--){
+    if(str.chars[i]==c)
+      return i;
+  }
+  return -1;
+}
+bool containsChar(const String str,char c){
+   return indexOfChar(str,c)!=-1;
+}
 int64_t indexOfString(const String base,const String child){
   if(child.length>base.length)
     return -1;
@@ -60,6 +72,9 @@ int64_t indexOfString(const String base,const String child){
       return off;
   }
   return -1;
+}
+bool containsString(const String base,const String child){
+   return indexOfString(base,child)!=-1;
 }
 int64_t indexOfStringArray(const String* base,size_t baseLen,const String* child,size_t childLen){
   if(childLen>baseLen)
@@ -83,6 +98,11 @@ String sliceStart(String str,size_t k){
   if(str.length<k)
     return EMPTY_STRING;
   return (String){.chars=str.chars+k,.length=str.length-k};
+}
+String sliceEnd(String str,size_t k){
+  if(str.length<=k)
+    return str;
+  return (String){.chars=str.chars,.length=k};
 }
 SlicedString sliceAtChar(String base,char chr){
   int64_t i=indexOfChar(base,chr);
