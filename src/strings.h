@@ -29,4 +29,5 @@ int64_t indexOfChar(const String str,char c);
 int64_t indexOfString(const String base,const String child);
 int64_t indexOfStringArray(const String* base,size_t baseLen,const String* child,size_t childLen);
 
-SlicedString sliceString(String base,char chr);
+String sliceStart(String str,size_t k);
+SlicedString sliceAtChar(String base,char chr);

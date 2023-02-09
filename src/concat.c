@@ -1129,10 +1129,10 @@ bool addNamespace(String* path,size_t pathLength){
 Namespace* findNamespace(String name){
   String path[MAX_NAMESPACE_PATH]={{0}};
   size_t count=0;
-  SlicedString slice=sliceString(name,'.');
+  SlicedString slice=sliceAtChar(name,'.');
   path[count++]=slice.head;
   do{
-    slice=sliceString(slice.tail,'.');
+    slice=sliceAtChar(slice.tail,'.');
     if(count>=MAX_NAMESPACE_PATH)
       return NULL;//path length overflow
     path[count++]=slice.head;
@@ -2809,8 +2809,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     typeBuffer[bufferedTypes++]=typeOfType(&type);
     return 0;//type does not generate any operations
   }else if(word.length>1&&charAt(word,0)=='.'){
-    word.chars++;//remove first character
-    word.length--;
+    word=sliceStart(word,1);//remove first character
     if(bufferedTypes==0){
       IntOrErrorCode index=parseInt(word,10);
       if(!index.isError){

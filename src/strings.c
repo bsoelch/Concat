@@ -1,6 +1,5 @@
 #include <string.h>
 #include "strings.h"
-//TODO make string implementation hidden
 
 //printf modifer
 String EMPTY_STRING={.chars="",.length=0};
@@ -80,7 +79,12 @@ int64_t indexOfStringArray(const String* base,size_t baseLen,const String* child
   return -1;
 }
 
-SlicedString sliceString(String base,char chr){
+String sliceStart(String str,size_t k){
+  if(str.length<k)
+    return EMPTY_STRING;
+  return (String){.chars=str.chars+k,.length=str.length-k};
+}
+SlicedString sliceAtChar(String base,char chr){
   int64_t i=indexOfChar(base,chr);
   if(i==-1)//chr not in string
     return (SlicedString){.head=base,.tail=EMPTY_STRING};
