@@ -1286,6 +1286,7 @@ typedef struct Scope{
   ScopeNode** nodes;
   
   BlockType scopeType;
+  NamespaceImportId prevImports;
   size_t nodeBufferOffset;
   struct Scope* parent;
 }Scope;
@@ -1300,7 +1301,7 @@ ScopeNode* allocScopeNode(void){
   }
   return scopeNodeBuffer+(scopeNodeCount++);
 }
-Scope* openScope(BlockType scopeType){
+Scope* openScope(BlockType scopeType,NamespaceInfo namespace){
   if(scopeCount+1>=SCOPE_CAP){
     fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
     return NULL;
@@ -1308,14 +1309,16 @@ Scope* openScope(BlockType scopeType){
   scopeBuffer[scopeCount].nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
   scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
   scopeBuffer[scopeCount].scopeType=scopeType;
+  scopeBuffer[scopeCount].prevImports=namespace.namespaceImports;
   scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
   return scopeBuffer+(scopeCount++);
 }
-bool closeScope(void){
+bool closeScope(NamespaceInfo* namespace){
   if(scopeCount<=0)
     return false;
   scopeCount--;
   free(scopeBuffer[scopeCount].nodes);
+  namespace->namespaceImports=scopeBuffer[scopeCount].prevImports;
   scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
   return true;
 }
@@ -2882,7 +2885,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
         fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
           handleError(NULL,ERROR_SYNTAX,wordPos);
       }
-      Scope* newScope=openScope(BLOCK_PROCEDURE);
+      Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
       if(newScope==NULL)
         handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
       state->currentScope=newScope;
@@ -3156,7 +3159,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=(Operation){.opType=OP_CALL_PTR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
     return 1;
   }else if(wordEquals(&word,"if")){
-    Scope* newScope=openScope(BLOCK_IF);
+    Scope* newScope=openScope(BLOCK_IF,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3168,7 +3171,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_IF2,wordPos);
     return 1;
   }else if(wordEquals(&word,"while")){
-    Scope* newScope=openScope(BLOCK_WHILE);
+    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3177,8 +3180,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_WHILE,wordPos);
     return 1;
   }else if(wordEquals(&word,"do")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
-    closeScope();
-    Scope* newScope=openScope(BLOCK_WHILE);
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3187,8 +3190,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_DO,wordPos);
     return 1;
   }else if(wordEquals(&word,"else")){
-    closeScope();
-    Scope* newScope=openScope(BLOCK_ELSE);
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_ELSE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3205,7 +3208,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_CONTINUE,wordPos);
     return 1;
   }else if(wordEquals(&word,"switch")){
-    Scope* newScope=openScope(BLOCK_SWITCH);
+    Scope* newScope=openScope(BLOCK_SWITCH,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3213,8 +3216,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_SWITCH,wordPos);
     return 1;
   }else if(wordEquals(&word,"case")){
-    closeScope();
-    Scope* newScope=openScope(BLOCK_CASE);
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3223,8 +3226,8 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_CASE,wordPos);
     return 1;
   }else if(wordEquals(&word,"default")){
-    closeScope();
-    Scope* newScope=openScope(BLOCK_CASE);
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3233,7 +3236,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     (*op)=opCodeBlock(BLOCK_DEFAULT,wordPos);
     return 1;
   }else if(wordEquals(&word,"end")){
-    closeScope();
+    closeScope(&state->namespaceInfo);
     state->scopeLevel--;
     if(state->scopeLevel<state->procScope){//exited procedure
       state->currentProcId=-1;
@@ -3252,7 +3255,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     if(state->hasEntryPoint){//TODO print position of previous entry point
       handleError("program can only have one entry point",ERROR_SYNTAX,wordPos);
     }
-    Scope* newScope=openScope(BLOCK_PROCEDURE);
+    Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
@@ -3316,8 +3319,9 @@ Program compileToOps(CodeFile* codeFile){
     handleError(NULL,ERROR_MEMORY,codeFile->currentPos);
     exit(ERROR_MEMORY);
   }
-  openScope(BLOCK_UNKNOWN);
-  CompilerState state=(CompilerState){.namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE},.currentScope=scopeBuffer,
+  NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
+  openScope(BLOCK_UNKNOWN,namespaceInfo);
+  CompilerState state=(CompilerState){.namespaceInfo=namespaceInfo,.currentScope=scopeBuffer,
     .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
   while(codeFile->codeSize>0){
     state.compiledOps+=readOperation(compileOps+state.compiledOps,codeFile,&state);
