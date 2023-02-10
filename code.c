@@ -120,15 +120,16 @@ tuple16 procedure13 (tuple14);
 int32_t const global14 = 1;
 int32_t const global15 = 0;
 void procedure16 (void);
-void procedure17 (void);
-void procedure18 (int32_t, enum11, int8_t, tuple14);
-tuple18 procedure19 (tuple14, int64_t);
-void procedure20 (tuple14, int64_t, int8_t);
-tuple14 const global21 = {.e0=stringChars1+0,.e1=23};
-int8_t global22 = 65;
-tuple14 const global23 = {.e0=stringChars0+0,.e1=39};
-tuple21 const global24 = {.e0=1,.e1=1};
-tuple22 const global25 = {.e0={.e0=1,.e1=1},.e1=2};
+int64_t const global17 = 2;
+void procedure18 (void);
+void procedure19 (int32_t, enum11, int8_t, tuple14);
+tuple18 procedure20 (tuple14, int64_t);
+void procedure21 (tuple14, int64_t, int8_t);
+tuple14 const global22 = {.e0=stringChars1+0,.e1=23};
+int8_t global23 = 65;
+tuple14 const global24 = {.e0=stringChars0+0,.e1=39};
+tuple21 const global25 = {.e0=1,.e1=1};
+tuple22 const global26 = {.e0={.e0=1,.e1=1},.e1=2};
 //procedures code
 tuple1 procedure0 (int32_t arg0, int32_t arg1){
 procedure2();
@@ -157,8 +158,9 @@ return (tuple16){.e0=arg0,.e1=((int64_t)0)};
 void procedure16 (void){
 printf("%"PRIi32"\n",global15);
 printf("%"PRIi32"\n",global14);
+printf("%"PRIi64"\n",global17);
 }
-void procedure17 (void){
+void procedure18 (void){
 int32_t tmp5;
 int32_t tmp4 = 0;
 do{
@@ -223,7 +225,7 @@ tmp17 = tmp20;
 }while(1);
 printf("%"PRIi32"\n",tmp20);
 }
-void procedure18 (int32_t arg0, enum11 arg1, int8_t arg2, tuple14 arg3){
+void procedure19 (int32_t arg0, enum11 arg1, int8_t arg2, tuple14 arg3){
 switch(arg0){
 case 1:case 2:;
 return ;
@@ -272,7 +274,7 @@ break;
 }
 bool const local0 = tmp25;
 }
-tuple18 procedure19 (tuple14 arg0, int64_t arg1){
+tuple18 procedure20 (tuple14 arg0, int64_t arg1){
 int64_t const local0 = arg1;
 tuple14 const local1 = arg0;
 int64_t const tmp26 = (local1).e1;
@@ -289,7 +291,7 @@ concatInternal_checkArrayBounds(tmp29,tmp32);
 int8_t const tmp33 = (*((tmp31)+(tmp29)));
 return (tuple18){.e0=local1,.e1=tmp28,.e2=tmp33,.e3=((bool)1)};
 }
-void procedure20 (tuple14 arg0, int64_t arg1, int8_t arg2){
+void procedure21 (tuple14 arg0, int64_t arg1, int8_t arg2){
 }
 int main(void){
 int32_t const tmp34 = (((int32_t)1)+((int32_t)1));
@@ -432,7 +434,7 @@ int8_t tmp106;
 int64_t tmp103 = (tmp102).e1;
 tuple14 tmp104 = (tmp102).e0;
 do{
-tuple18 const tmp105 = procedure19(tmp104,tmp103);
+tuple18 const tmp105 = procedure20(tmp104,tmp103);
 tmp106 = (tmp105).e2;
 tmp107 = (tmp105).e1;
 tmp108 = (tmp105).e0;
@@ -443,7 +445,7 @@ printf("%"PRIi8"\n",tmp106);
 tmp103 = tmp107;
 tmp104 = tmp108;
 }while(1);
-procedure20(tmp108,tmp107,tmp106);
+procedure21(tmp108,tmp107,tmp106);
 int32_t tmp112;
 bool tmp110 = 1;
 int32_t tmp111 = 5;
@@ -458,5 +460,5 @@ tmp110 = tmp114;
 tmp111 = tmp113;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
-global22 = ((int8_t)66);
+global23 = ((int8_t)66);
 }

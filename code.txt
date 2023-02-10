@@ -42,12 +42,22 @@ end
   0 i32 =: spaceVar
 #end
 #namespace i32
+  #using mut
   #using mut.subspace
 #end
 proc( => ) =: spaceTest
-  mut.spaceVar print
-  mut.subspace.spaceVar print
+  #using mut
+  spaceVar print
+  #using mut.subspace
+  spaceVar print
+  subspace.subspaceVar print
 end
+#namespace mut
+  #namespace subspace
+    2 i64 =: subspaceVar
+  #end
+#end
+
 
 proc( => ) =: breakTest 
   0
