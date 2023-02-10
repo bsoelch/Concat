@@ -1098,58 +1098,88 @@ void printOperation(Operation op,FILE* out){
   fputs("\n",out);
 }
 
-#define MAX_NAMESPACE_PATH 16
 #define MAX_NAMESPACES 1024
+typedef int32_t NamespaceId;
+const NamespaceId NAMESPACE_ID_NONE=-1;
 typedef struct{
-  String* path;
-  size_t pathLength;
+  NamespaceId parent;
+  String name;
+  
+  NamespaceId* children;
+  size_t childCount;
+  size_t childCap;
 }Namespace;
-Namespace namespaces[MAX_NAMESPACES];//XXX trie like structure may be better
-size_t namespaceCount=0;
-int64_t namespaceId(String* path,size_t pathLength){
-  if(pathLength==0)
-    return -1;
-  for(size_t i=0;i<namespaceCount;i++){
-    if(pathLength==namespaces[i].pathLength&&indexOfStringArray(path,pathLength,namespaces[i].path,pathLength)==0)
-      return i;//namespace already exist
-  }
-  return -1;
+Namespace namespaceBuffer[MAX_NAMESPACES];
+size_t buffredNamespaces=0;
+NamespaceId allocNamespace(NamespaceId parent,String name){
+  if(buffredNamespaces>=MAX_NAMESPACES)
+    return NAMESPACE_ID_NONE;
+  namespaceBuffer[buffredNamespaces].parent=parent;
+  namespaceBuffer[buffredNamespaces].name=name;
+  size_t initCap=16;
+  namespaceBuffer[buffredNamespaces].children=malloc(initCap);
+  namespaceBuffer[buffredNamespaces].childCap=initCap;
+  namespaceBuffer[buffredNamespaces].childCount=0;
+  if(namespaceBuffer[buffredNamespaces].children==NULL)
+    return NAMESPACE_ID_NONE;
+  return buffredNamespaces++;
 }
-//returns true if the namespace capacity was exceeded
-bool addNamespace(String* path,size_t pathLength){
-  if(namespaceId(path,pathLength)!=-1)
+bool namespaceTrieInit(void){
+  if(buffredNamespaces>0)
     return false;
-  if(namespaceCount>=MAX_NAMESPACES){
-    fputs("exceeded namespace capacity",stderr);
-    return true;//unable to add namespace
-  }
-  String* nPath=malloc(pathLength*sizeof(String));//ensure path is stored in independent memory
-  if(nPath==NULL)
-    return true;//allocation failed
-  memcpy(nPath,path,pathLength*sizeof(String));
-  namespaces[namespaceCount++]=(Namespace){.path=nPath,.pathLength=pathLength};
-  return false;
+  return allocNamespace(NAMESPACE_ID_NONE,EMPTY_STRING)==-1;
 }
-int64_t findNamespace(String name){
-  String path[MAX_NAMESPACE_PATH]={{0}};
-  size_t count=0;
+
+NamespaceId childId(NamespaceId base,String childName,bool create){
+  if(base==NAMESPACE_ID_NONE||childName.length==0)
+    return NAMESPACE_ID_NONE;
+  for(size_t i=0;i<namespaceBuffer[base].childCount;i++){
+    NamespaceId childId=namespaceBuffer[base].children[i];
+    if(stringCompare(namespaceBuffer[childId].name,childName)==0)
+      return childId;
+  }
+  if(create&&namespaceBuffer[base].childCount<namespaceBuffer[base].childCap){
+    NamespaceId newChild=allocNamespace(base,childName);
+    if(newChild!=NAMESPACE_ID_NONE)
+      namespaceBuffer[base].children[namespaceBuffer[base].childCount++]=newChild;
+    return newChild;
+  }
+  return NAMESPACE_ID_NONE;
+}
+NamespaceId namespaceIdRelative(NamespaceId root,String* path,size_t pathLength,bool create){
+  if(root==NAMESPACE_ID_NONE||pathLength==0)
+    return NAMESPACE_ID_NONE;
+  NamespaceId id=root;
+  for(size_t i=0;i<pathLength;i++){
+    id=childId(id,path[i],create);
+    if(id==NAMESPACE_ID_NONE)
+      return NAMESPACE_ID_NONE;
+  }
+  return id;
+}
+NamespaceId namespaceId(String* path,size_t pathLength,bool create){
+  return namespaceIdRelative(0,path,pathLength,create);
+}
+//returns true if adding namespace failed
+NamespaceId addNamespace(String* path,size_t pathLength){
+  return namespaceId(path,pathLength,true);
+}
+NamespaceId findNamespace(NamespaceId base,String name){
   SlicedString slice=sliceAtChar(name,'.');
-  path[count++]=slice.head;
+  NamespaceId id=childId(base,slice.head,false);
   while(slice.tail.length>0){
     slice=sliceAtChar(slice.tail,'.');
-    if(count>=MAX_NAMESPACE_PATH)
-      return -1;//path length overflow
-    path[count++]=slice.head;
+    id=childId(id,slice.head,false);
+    if(id==NAMESPACE_ID_NONE)
+      return NAMESPACE_ID_NONE;
   }
-  //find by path
-  return namespaceId(path,count);
+  return id;
 }
 
 typedef struct{
-String current[MAX_NAMESPACE_PATH];
-size_t currentCount;
+NamespaceId current;
 
-int64_t* using;
+NamespaceId* using;
 size_t usingCount;
 size_t usingCap;
 }NamespaceInfo;
@@ -1165,17 +1195,15 @@ size_t compilerBlockCount=0;
 void startNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
   if(compilerBlockCount>=MAX_COMPILER_BLOCKS)
     handleError("compiler block overflow",ERROR_MEMORY,pos);
-  if(namespace->currentCount>=MAX_NAMESPACE_PATH)
-    handleError("exceeded maximum namespace depth",ERROR_SYNTAX,pos);
   compilerBlocks[compilerBlockCount++]=(NamespaceBlock){.usingOffset=namespace->usingCount};
-  namespace->current[namespace->currentCount++]=label;
-  if(addNamespace(namespace->current,namespace->currentCount))
+  namespace->current=childId(namespace->current,label,true);
+  if(namespace->current==NAMESPACE_ID_NONE)
     handleError("storing namespace failed",ERROR_MEMORY,pos);
 }
 void importNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
   if(namespace->usingCount>=namespace->usingCap)
     handleError("exceeded maximum number of used namespaces",ERROR_MEMORY,pos);
-  int64_t uSpaceId=findNamespace(label);
+  int64_t uSpaceId=findNamespace(0,label);
   if(uSpaceId==-1){
     fprintf(stderr,"namespace '%"PRI_STR"' does not exist\n",PRI_STR_ARGS(label));
     handleError(NULL,ERROR_SYNTAX,pos);
@@ -1187,9 +1215,13 @@ void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
     handleError("no open compiler blocks",ERROR_SYNTAX,pos);
   compilerBlockCount--;
   //if block is namespace
-  if(namespace->currentCount==0||compilerBlocks[compilerBlockCount].usingOffset>namespace->usingCount)
+  if(namespace->current==NAMESPACE_ID_NONE)
+    handleError("invalid value for current namespace",ERROR_MEMORY,pos);
+  namespace->current=namespaceBuffer[namespace->current].parent;
+  if(namespace->current==NAMESPACE_ID_NONE)
+    handleError("no open namespaces",ERROR_SYNTAX,pos);
+  if(compilerBlocks[compilerBlockCount].usingOffset>namespace->usingCount)
     handleError("compiler-blocks and namespaces out of sync",ERROR_MEMORY,pos);
-  namespace->currentCount--;
   namespace->usingCount=compilerBlocks[compilerBlockCount].usingOffset;
 }
 
@@ -1201,7 +1233,7 @@ struct ScopeNode{
   String key;
   DataType type;
   ScopeNode* next;
-  int64_t namespaceId;
+  NamespaceId namespaceId;
   int32_t labelId;
   int32_t id;
   IdentifierType idType;
@@ -1243,7 +1275,7 @@ bool closeScope(void){
   scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
   return true;
 }
-ScopeNode** findNode(Scope* scope,String name,int64_t namespaceId){
+ScopeNode** findNode(Scope* scope,String name,NamespaceId namespaceId){
   if(scope==NULL)
     return NULL;
   uint32_t hash=stringHash(name);
@@ -1255,20 +1287,22 @@ ScopeNode** findNode(Scope* scope,String name,int64_t namespaceId){
   }
   return node;
 }
-int getIdentifier(String name,ScopeNode** out){
+int getIdentifier(NamespaceInfo* namespace,String name,ScopeNode** out){
   int64_t dotIndex=lastIndexOfChar(name,'.');
-  int64_t mNamespaceId=-1;
+  NamespaceId mNamespaceId=0;
+  if(namespace!=NULL)
+    mNamespaceId=namespace->current;
   if(dotIndex>0){
-    mNamespaceId=findNamespace(sliceEnd(name,dotIndex));
-    if(mNamespaceId==-1)
-      return ERROR_SYNTAX;//variable in non-existent namespace does not exist
+    mNamespaceId=findNamespace(mNamespaceId,sliceEnd(name,dotIndex));
     name=sliceStart(name,dotIndex+1);
   }
+  if(mNamespaceId==NAMESPACE_ID_NONE)
+    return ERROR_SYNTAX;//variable in non-existent namespace does not exist
   int32_t level=scopeCount-1;
   ScopeNode** node;
   *out=NULL;
-  while(level>=0){
-    node=findNode(scopeBuffer+level,name,mNamespaceId);//TODO check different namespaces (1. relative to current space, then all parent spaces, then imports)
+  while(level>0){//check local variables
+    node=findNode(scopeBuffer+level,name,mNamespaceId);
     if(node==NULL)
       return ERROR_MEMORY;
     if(*node!=NULL){
@@ -1277,6 +1311,18 @@ int getIdentifier(String name,ScopeNode** out){
     }
     level--;
   }
+  while(mNamespaceId!=NAMESPACE_ID_NONE){//check global variables in current and all parent namespaces
+    node=findNode(scopeBuffer+level,name,mNamespaceId);
+    if(node==NULL)
+      return ERROR_MEMORY;
+    if(*node!=NULL){
+      *out=*node;
+      return 0;
+    }
+    mNamespaceId=namespaceBuffer[mNamespaceId].parent;
+  }
+  //TODO check imports
+  //all non-global variables are in the same namespace
   return ERROR_SYNTAX;
 }
 ScopeNode* declareIdentifier(NamespaceInfo* namespace,LabelId labelId,DataType type,IdentifierType idType,int32_t id,FilePosition pos){
@@ -1289,8 +1335,7 @@ ScopeNode* declareIdentifier(NamespaceInfo* namespace,LabelId labelId,DataType t
   }
   if(containsChar(mLabel.label,'.'))
     handleError("'.' is not allowed in declared identifiers",ERROR_SYNTAX,pos);
-  int64_t mNamespaceId=namespaceId(namespace->current,namespace->currentCount);
-  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),mLabel.label,mNamespaceId);
+  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),mLabel.label,namespace->current);
   if(node==NULL)
     handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
   if(*node!=NULL){
@@ -1301,7 +1346,7 @@ ScopeNode* declareIdentifier(NamespaceInfo* namespace,LabelId labelId,DataType t
     handleError(NULL,ERROR_SYNTAX,mLabel.declaredAt);
   }
   ScopeNode* shaddow;
-  getIdentifier(mLabel.label,&shaddow);
+  getIdentifier(namespace,mLabel.label,&shaddow);
   if(shaddow!=NULL){
     fprintf(stderr,"Warning:\n  declaration of %s '%"PRI_STR"'\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
     fprintf(stderr,"  shadows previous declaration: %s '%"PRI_STR"' at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
@@ -1313,7 +1358,7 @@ ScopeNode* declareIdentifier(NamespaceInfo* namespace,LabelId labelId,DataType t
   if(*node==NULL)
     handleError("unable to allocate scope node",ERROR_MEMORY,mLabel.declaredAt);
   (*node)->key=mLabel.label;
-  (*node)->namespaceId=mNamespaceId;
+  (*node)->namespaceId=namespace->current;
   (*node)->type=type;
   (*node)->idType=idType;
   (*node)->id=id;
@@ -2636,7 +2681,7 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
     return true;
   }
   ScopeNode* asIdentifier;
-  r=getIdentifier(name,&asIdentifier);
+  r=getIdentifier(state->namespaceInfo,name,&asIdentifier);
   if(r<0){//internal error while reading identifier
     handleError("error while reading identifier",r,codeFile->wordStart);
     return false;
@@ -2751,7 +2796,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
           handleError("missing type for type definition",ERROR_SYNTAX,wordPos);
         }
         idType=ID_TYPE;
-        r=getIdentifier(varName.label,&id);
+        r=getIdentifier(state->namespaceInfo,varName.label,&id);
         if(r<0)
           handleError("error while resolving identifier",r,wordPos);
         if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
@@ -2884,9 +2929,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       return 0;
     }else if(wordEquals(&word,"end")){
       endCompileTimeBlock(state->namespaceInfo,wordPos);
-      //DEBUG START
-      word=state->namespaceInfo->current[state->namespaceInfo->currentCount];
-      printf("closed namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
+      printf("closed namespace\n");//DEBUG
       return 0;
     }
     //compiler commands
@@ -2901,7 +2944,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       wordPos=codeFile->wordStart;
       Label varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
-      int r=getIdentifier(varName.label,&asIdentifier);//try to parse variable as identifier
+      int r=getIdentifier(state->namespaceInfo,varName.label,&asIdentifier);//try to parse variable as identifier
       if(r<0)//internal error while reading identifier
         handleError("error while resolving identifier",r,wordPos);
       if(r==0){//found identifier TODO print shadowed matches
@@ -3156,7 +3199,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
   } 
   
   ScopeNode* asIdentifier;
-  int r=getIdentifier(word,&asIdentifier);//try to parse variable as identifier
+  int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);//try to parse variable as identifier
   if(r<0)//internal error while reading identifier
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
@@ -3203,7 +3246,7 @@ Program compileToOps(CodeFile* codeFile){
     exit(ERROR_MEMORY);
   }
   openScope(BLOCK_UNKNOWN);
-  NamespaceInfo namespaceInfo=(NamespaceInfo){.current={{0}},.currentCount=0,.using=malloc(INIT_CAP*sizeof(((NamespaceInfo*)NULL)->using)),.usingCount=0,.usingCap=INIT_CAP};
+  NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.using=malloc(INIT_CAP*sizeof(((NamespaceInfo*)NULL)->using)),.usingCount=0,.usingCap=INIT_CAP};
   if(namespaceInfo.using==NULL)
     handleError("failed to allocate namespaceInfo.using",ERROR_MEMORY,codeFile->currentPos);
   CompilerState state=(CompilerState){.namespaceInfo=&namespaceInfo,.currentScope=scopeBuffer,
@@ -4233,8 +4276,8 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
       }
     }
   }
-  ScopeNode* asIdentifier;
-  int r=getIdentifier(op->dataAs.string,&asIdentifier);
+  ScopeNode* asIdentifier;//FIXME remember namespace info for identifers
+  int r=getIdentifier(NULL,op->dataAs.string,&asIdentifier);
   if(r!=0){
     fprintf(stderr," unknown identifier '%"PRI_STR"'\n",PRI_STR_ARGS(op->dataAs.string));
     handleError(NULL,r,op->filePos);
@@ -5349,6 +5392,10 @@ int main(int argc,char** argv){
   }
   //initialization of uninitialized global variables 
   initStringLabels();
+  if(namespaceTrieInit()){
+    fputs("failed to initialize namespace storage",stderr);
+    exit(EXIT_FAILURE);
+  }
   //read main source file
   srcFile=*(argv++);
   FILE *file = fopen(srcFile, "r");

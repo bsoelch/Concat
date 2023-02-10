@@ -117,8 +117,8 @@ enum11 const global10 = {.label=0,.data={0}};
 enum11 const global11 = {.label=1,.data={0}};
 enum11 const global12 = {.label=2,.data={.e2=2}};
 tuple16 procedure13 (tuple14);
-int32_t const global14 = 0;
-int32_t const global15 = 1;
+int32_t const global14 = 1;
+int32_t const global15 = 0;
 void procedure16 (void);
 void procedure17 (void);
 void procedure18 (int32_t, enum11, int8_t, tuple14);
@@ -155,8 +155,8 @@ tuple16 procedure13 (tuple14 arg0){
 return (tuple16){.e0=arg0,.e1=((int64_t)0)};
 }
 void procedure16 (void){
-printf("%"PRIi32"\n",global14);
 printf("%"PRIi32"\n",global15);
+printf("%"PRIi32"\n",global14);
 }
 void procedure17 (void){
 int32_t tmp5;
