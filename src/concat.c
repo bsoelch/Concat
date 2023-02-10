@@ -2908,6 +2908,10 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     }
     //compile-time code
     if(wordEquals(&word,"namespace")){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
       word=nextWord(codeFile,&wordType);
       wordPos=codeFile->wordStart;
       if(wordType!=WORD_TYPE_IDENTIFIER)
@@ -2928,6 +2932,10 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       importNamespace(state->namespaceInfo,word,wordPos);
       return 0;
     }else if(wordEquals(&word,"end")){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
       endCompileTimeBlock(state->namespaceInfo,wordPos);
       printf("closed namespace\n");//DEBUG
       return 0;
