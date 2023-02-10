@@ -402,3 +402,38 @@ type : selfPtr                         ## create the opaque type selfPtr
 ## Code Blocks
 
 <!-- TODO --> 
+
+## Namespaces
+
+namespaces allow to use the same identifier in different contexts. <!-- TODO formulation ---> 
+namespaces can be declared with the `#namespace` compiler keyword followed by the name of the namespace, 
+the namespace will be closed by the matching `#end` statement
+
+namespace names are not allowed to start with `#` or contain `.` 
+`.` is used to access variables in other namespaces
+
+The `#using` keyword allows to import a namespace
+
+When resolving variables the compiler checks first the current namespace, then all parent namespace and then the currently active imports.
+imports are valid until the end of the namespace (including in subnamespaces) or the end of the current codeblock
+
+```
+0 i32 := anInt
+#namespace base
+  1 i32 := anInt ## variabes that already exist at global level can also be declared in namespaces (depending on the rules for shaddowed variables)
+  #namespace child ## namespaces can again contain namespaces
+   2 i32 := anInt 
+  #end
+#end
+anInt print ## prints global variable anInt
+base.anInt print ## print base.anInt
+#using base ## imports namespace base
+anInt print ## still prints anInt in current namespace 
+subspace.anInt print ## addreses with . are resolved relative to the current namespace
+#namespace base
+ #using base.subspace ## namespace imports allways have to include the full name
+#end
+```
+
+
+
