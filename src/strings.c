@@ -4,14 +4,14 @@
 //printf modifer
 String EMPTY_STRING={.chars="",.length=0};
 
-String cstrToStr(const char* chars){
+String cstrToStr(char const* chars){
   return (String){.chars=chars,.length=strlen(chars)};
 }
-String newString(const char* chars,size_t len){
+String newString(char const* chars,size_t len){
   return (String){.chars=chars,.length=len};
 }
 
-bool wordEquals(const String* word,const char* string){
+bool wordEquals(String const* word,char const* string){
   size_t l=strlen(string);
   if(l!=word->length)
     return false;
@@ -76,7 +76,7 @@ int64_t indexOfString(const String base,const String child){
 bool containsString(const String base,const String child){
    return indexOfString(base,child)!=-1;
 }
-int64_t indexOfStringArray(const String* base,size_t baseLen,const String* child,size_t childLen){
+int64_t indexOfStringArray(String const* base,size_t baseLen,String const* child,size_t childLen){
   if(childLen>baseLen)
     return -1;
   bool isMatch;
