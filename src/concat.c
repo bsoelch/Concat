@@ -305,14 +305,15 @@ struct CompositeType{
   int16_t flags;
 };
 struct ProcedureType{
-  int32_t id;
   struct DataType const* inType;
   struct DataType const* outType;
+  int32_t id;
 };
 struct ArrayType{
   DataType const* base;
-  int64_t dims;
   int64_t const* sizes;
+  int32_t dims;
+  int32_t id;
 };
 
 const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
@@ -327,9 +328,9 @@ size_t wrappedTypeCount=0;
 DataType wrappedTypes[MAX_TYPES];
 int32_t compositeCount=0;
 CompositeType compositeTypes[MAX_COMPOSITE];
-size_t procTypeCount=0;
+int32_t procTypeCount=0;
 ProcedureType procTypes[MAX_PROC_TYPES];
-size_t arrayTypeCount=0;
+int32_t arrayTypeCount=0;
 ArrayType arrayTypes[MAX_ARRAY_TYPES];
 //temporary buffer for construction of composite elements
 size_t bufferedTypes=0;
@@ -639,7 +640,7 @@ DataType compositeType(TypeClass typeClass,DataType const* elements,int32_t labe
   return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)}};
 }
 DataType procedureType(DataType const* inType,DataType const* outType){
-  for(size_t i=0;i<procTypeCount;i++){
+  for(int32_t i=0;i<procTypeCount;i++){
     if(typeEquals(procTypes[i].inType,inType)&&typeEquals(procTypes[i].outType,outType))
       return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i}};
   }
@@ -669,19 +670,19 @@ DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
   DataType newProc=procedureType(&in,proc->outType);
   return isPtr?pointerType(&newProc,false):newProc;
 }
-DataType arrayType(DataType const* base, int64_t dims,int64_t const* sizes){
+DataType arrayType(DataType const* base, int32_t dims,int64_t const* sizes){
   if(dims<=0)
     return TYPE_UNDEFINED;
   base=bufferedType(base);
   if(base==NULL||(isCallableType(base)&&!isPointerType(base)))
     return TYPE_UNDEFINED;
-  for(size_t i=0;i<arrayTypeCount;i++){
+  for(int32_t i=0;i<arrayTypeCount;i++){
     if(!typeEquals(arrayTypes[i].base,base)||arrayTypes[i].dims!=dims)
       continue;
     if(arrayTypes[i].sizes==sizes)//same array or both NULL
       return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
     bool match=true;
-    for(int64_t j=0;j<dims;j++){
+    for(int32_t j=0;j<dims;j++){
       if(arrayTypes[i].sizes[j]!=sizes[j]){
         match=false;
         break;
@@ -694,7 +695,7 @@ DataType arrayType(DataType const* base, int64_t dims,int64_t const* sizes){
   if(mSizes==NULL)
     return TYPE_UNDEFINED;
   memcpy(mSizes,sizes,dims*sizeof(*mSizes));
-  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes};
+  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount};
   return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+arrayTypeCount++}};
 }
 
@@ -829,7 +830,7 @@ void printTypeNameIntenal(DataType const* type,FILE* file,bool noRecurse){
       return;
     case TYPECLASS_ARRAY:
       printTypeNameIntenal(type->typeDataAs.array->base,file,noRecurse);
-      for(int64_t i=0;i<type->typeDataAs.array->dims;i++){
+      for(int32_t i=0;i<type->typeDataAs.array->dims;i++){
         if(type->typeDataAs.array->sizes!=NULL){
           fprintf(file," %"PRIi64,type->typeDataAs.array->sizes[i]);
           continue;
@@ -884,13 +885,8 @@ void printTypeNameC(DataType const* type,FILE* file){
       fputs("*",file);
       return;
     case TYPECLASS_ARRAY:
-      if(type->typeDataAs.array->sizes!=NULL){
-        printTypeNameC(type->typeDataAs.array->base,file);
-        if(!isMutableType(type))
-          fputs(" const",file);
-        fputs("*",file);//XXX use C-type that allows returning arrays
-      }
-      break;//TODO print variable length array type
+      fprintf(file,"array%"PRIi32,type->typeDataAs.array->id);
+      return;
     case TYPECLASS_PROC_IN:
     case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
@@ -2217,11 +2213,14 @@ void compileToC(FILE* target,Program const* p){
       }
     }
   }
+  for(int32_t i=0;i<arrayTypeCount;i++){
+      fprintf(target,"typedef struct array%"PRIi32"Impl array%"PRIi32";\n",i,i);
+  }
   //declare procedure pointers
-  for(size_t i=0;i<procTypeCount;i++){//XXX only declare used procedure-pointers
+  for(int32_t i=0;i<procTypeCount;i++){//XXX only declare used procedure-pointers
     fputs("typedef ",target);
     printTypeNameC(procTypes[i].outType,target);
-    fprintf(target," (*procPtr%zu) (",i);
+    fprintf(target," (*procPtr%"PRIi32") (",i);
     printProcArgumentTypesC(procTypes[i].inType,target,false);
     fputs(");\n",target);
   }
@@ -2248,6 +2247,22 @@ void compileToC(FILE* target,Program const* p){
       fputs("int32_t label;\n",target);
       fputs("};\n",target);
     }
+  }
+  //initialize array types
+  for(int32_t i=0;i<arrayTypeCount;i++){
+    fprintf(target,"struct array%"PRIi32"Impl{\n",i);
+    printTypeNameC(arrayTypes[i].base,target);
+    if(arrayTypes[i].sizes!=NULL){
+      fputs(" data",target);
+      for(int32_t d=0;d<arrayTypes[i].dims;d++){
+        fprintf(target,"[%"PRIi64"]",arrayTypes[i].sizes[d]);
+      }    
+    }else{
+      fputs("* data;",target);
+    }
+    if(arrayTypes[i].sizes==NULL)
+      fprintf(target,"int64_t const sizes[%"PRIi32"];\n",arrayTypes[i].dims);
+    fputs("};\n",target);
   }
   //initialize strings
   for(size_t i=0;i<progStringCount;i++){
