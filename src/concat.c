@@ -45,7 +45,7 @@ const char* errorName(int errorCode){
   return "no error";
 }
 
-bool allowWarnings=false;
+bool allowWarnings=true;
 typedef struct{
   const char* fileName;
   size_t line;
@@ -263,6 +263,7 @@ typedef enum{
   TYPECLASS_STRUCT,
   TYPECLASS_ENUM,
   TYPECLASS_ENUM_LABEL,
+  TYPECLASS_ARRAY,
 }TypeClass;
 
 typedef enum{
@@ -276,13 +277,15 @@ typedef enum{
 typedef struct CompositeType CompositeType;
 typedef CompositeType TupleType;
 typedef struct ProcedureType ProcedureType;
+typedef struct ArrayType ArrayType;
 typedef struct DataType{
   union{
     PrimitiveType primitive;
-    struct DataType* type;
-    CompositeType* composite;
-    TupleType* tuple;//name alias for composite
-    ProcedureType* procedure;
+    struct DataType const* type;
+    CompositeType const* composite;
+    TupleType const* tuple;//name alias for composite
+    ProcedureType const* procedure;
+    ArrayType const* array;
     int64_t typeId;
   }typeDataAs;
   TypeClass typeClass;
@@ -295,7 +298,7 @@ typedef struct DataType{
 #define FLAG_IS_ENUM       16
 #define FLAG_VOID_ONLY     32
 struct CompositeType{
-  DataType* types;
+  DataType const* types;
   int32_t labelOffset;//offset in labelBuffer
   int32_t id;
   int16_t typeCount;
@@ -303,8 +306,13 @@ struct CompositeType{
 };
 struct ProcedureType{
   int32_t id;
-  struct DataType* inType;
-  struct DataType* outType;
+  struct DataType const* inType;
+  struct DataType const* outType;
+};
+struct ArrayType{
+  DataType const* base;
+  size_t dims;
+  int64_t const* sizes;
 };
 
 const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
@@ -312,6 +320,7 @@ const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
 #define MAX_TYPES       4096
 #define MAX_COMPOSITE   1024
 #define TYPE_BUFFER_CAP 1024
+#define MAX_ARRAY_TYPES 1024
 #define MAX_PROC_TYPES  1024
 
 size_t wrappedTypeCount=0;
@@ -320,6 +329,8 @@ int32_t compositeCount=0;
 CompositeType compositeTypes[MAX_COMPOSITE];
 size_t procTypeCount=0;
 ProcedureType procTypes[MAX_PROC_TYPES];
+size_t arrayTypeCount=0;
+ArrayType arrayTypes[MAX_ARRAY_TYPES];
 //temporary buffer for construction of composite elements
 size_t bufferedTypes=0;
 DataType typeBuffer[TYPE_BUFFER_CAP];
@@ -353,6 +364,8 @@ bool typeEquals(const DataType* a,const DataType* b){
               typeEquals(a->typeDataAs.procedure->outType,b->typeDataAs.procedure->outType);
     case TYPECLASS_OPAQUE:
       return a->typeDataAs.typeId==b->typeDataAs.typeId;
+    case TYPECLASS_ARRAY:
+      return a->typeDataAs.array==b->typeDataAs.array;//TODO? equals for arrays
   }
   return false;
 }
@@ -440,15 +453,16 @@ bool isTupleType(const DataType* type){
     case TYPECLASS_OPAQUE:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
+    case TYPECLASS_ARRAY:
       return false;
   }
   return false;
 }
 //checks id type is an array-type  a tuple consisting of a pointer and an integer
-bool isArrayType(const DataType* type){
+bool isArrayType(const DataType* type){//TODO replace implicit array types with internal array types
   if(type->typeClass!=TYPECLASS_STRUCT)
     return false;
-  CompositeType* elts=type->typeDataAs.composite;
+  CompositeType const* elts=type->typeDataAs.composite;
   if(elts->typeCount!=2)
     return false;
   if(!isPointerType(elts->types+0))
@@ -464,6 +478,7 @@ bool isArrayType(const DataType* type){
 bool makeMutable(DataType* t){
   switch(t->typeClass){
     case TYPECLASS_POINTER:
+    case TYPECLASS_ARRAY:
       t->isMutable=true;
       return true;
     case TYPECLASS_UNDEFINED:
@@ -532,7 +547,7 @@ int64_t indexOfTypeArray(const DataType* base,size_t baseLen,const DataType* chi
   }
   return -1;
 }
-DataType compositeType(TypeClass typeClass,DataType* elements,int32_t labelOffset,int32_t eltCount){
+DataType compositeType(TypeClass typeClass,DataType const* elements,int32_t labelOffset,int32_t eltCount){
   if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
   }
@@ -610,14 +625,15 @@ DataType compositeType(TypeClass typeClass,DataType* elements,int32_t labelOffse
   }
   if(compositeCount+1>=MAX_COMPOSITE)
     return TYPE_UNDEFINED;
-  DataType* types;
+  DataType const* types;
   if(typeMatch!=-1){
     types=compositeTypes[typeMatch].types+matchIndex;
   }else{
-    types=malloc(eltCount*sizeof(DataType));//will persist until program exits
-    if(types==NULL)
+    DataType* newTypes=malloc(eltCount*sizeof(DataType));//will persist until program exits
+    if(newTypes==NULL)
       return TYPE_UNDEFINED;
-    memcpy(types,elements,eltCount*sizeof(DataType));
+    memcpy(newTypes,elements,eltCount*sizeof(DataType));
+    types=newTypes;
   }
   compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.labelOffset=labelOffset,.flags=classFlag};
   return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)}};
@@ -651,20 +667,32 @@ DataType procedureType(const DataType* inType,const DataType* outType){
   procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=wrappedTypes+inId,.outType=wrappedTypes+outId};
   return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++}};
 }
-void ensureUnlabeledProc(DataType* procType,FilePosition pos){
+DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
   if(!isCallableType(procType))
     handleError("expected a callable type",ERROR_TYPE,pos);
-  if(isPointerType(procType))
+  DataType const* baseType=procType;
+  bool isPtr=false;
+  if(isPointerType(procType)){
     procType=procType->typeDataAs.type;
-  ProcedureType* proc=procType->typeDataAs.procedure;
+    isPtr=true;
+  }
+  ProcedureType const* proc=procType->typeDataAs.procedure;
   if(proc->inType->typeClass==TYPECLASS_PROC_IN)
-    return;
+    return *baseType;
   //replaces labeled types with their canonical unlabeled version 
   DataType in=compositeType(TYPECLASS_PROC_IN,proc->inType->typeDataAs.composite->types,LABEL_ID_UNKNOWN,proc->inType->typeDataAs.composite->typeCount);
   if(in.typeClass==TYPECLASS_UNDEFINED)
     handleError("unexpected error while allocating type",ERROR_MEMORY,pos);
-  *procType=procedureType(&in,proc->outType);
+  DataType newProc=procedureType(&in,proc->outType);
+  return isPtr?pointerType(&newProc,false):newProc;
 }
+DataType arrayType(DataType const* base, size_t dims,int64_t const* sizes){
+  (void)base;
+  (void)dims;
+  (void)sizes;
+  return TYPE_UNDEFINED;
+}
+//TODO arrayType( type base, size_t dims, int64_t* sizes)
 
 const char* typeClassName(TypeClass cls){
   switch(cls){
@@ -694,6 +722,8 @@ const char* typeClassName(TypeClass cls){
       return "enum";
     case TYPECLASS_ENUM_LABEL:
       return "enum label";
+    case TYPECLASS_ARRAY:
+      return "pointer";
   }
   fprintf(stderr,"unexpected type-class %i",cls);
   return "";
@@ -793,6 +823,8 @@ void printTypeNameIntenal(const DataType* type,FILE* file,bool noRecurse){
       fputs(" )",file);
       printTypeFlags(type,file);
       return;
+    case TYPECLASS_ARRAY:
+      break;//TODO print array type
   }
   fprintf(file,"unknown type-class %i",type->typeClass);
 }
@@ -836,6 +868,8 @@ void printTypeNameC(const DataType* type,FILE* file){
         fputs(" const",file);
       fputs("*",file);
       return;
+    case TYPECLASS_ARRAY:
+      break;//TODO print array type
     case TYPECLASS_PROC_IN:
     case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
@@ -1533,12 +1567,12 @@ size_t tupleElementAccess(FILE* target,int32_t depth,const Operation* op,size_t 
   }
   return size;
 } 
-void printProcArgumentTypesC(DataType* inType,FILE* target,bool printArgNames){
+void printProcArgumentTypesC(DataType const* inType,FILE* target,bool printArgNames){
   if(inType->typeClass!=TYPECLASS_PROC_IN&&inType->typeClass!=TYPECLASS_LABELED_PROC_IN){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(inType->typeClass));
     exit(1);
   }
-  CompositeType* inTypes=inType->typeDataAs.composite;
+  CompositeType const* inTypes=inType->typeDataAs.composite;
   if(inTypes->typeCount==0)
     fputs("void",target);
   for(int32_t e=0;e<inTypes->typeCount;e++){
@@ -1549,10 +1583,10 @@ void printProcArgumentTypesC(DataType* inType,FILE* target,bool printArgNames){
       fprintf(target," arg%"PRIi32,e);
   }
 }
-void printProcedureSignatureC(ProcedureType* procedure,int32_t procId,FILE* target,bool printArgNames){
+void printProcedureSignatureC(ProcedureType const* procedure,int32_t procId,FILE* target,bool printArgNames){
   printTypeNameC(procedure->outType,target);
   fprintf(target," procedure%" PRIi32" (",procId);
-  DataType* inType=procedure->inType;
+  DataType const* inType=procedure->inType;
   printProcArgumentTypesC(inType,target,printArgNames);
   fputs(")",target);
 }
@@ -1642,8 +1676,8 @@ size_t compileGetValue(FILE* target,size_t compiledOps,const Operation* op,size_
   return size;
 }
 size_t compileProcArgs(FILE* target,size_t compiledOps,const Operation* op,size_t size,size_t opSize,bool isGlobal){
-  DataType* in=op->dataType.typeDataAs.procedure->inType;
-  DataType* out=op->dataType.typeDataAs.procedure->outType;
+  DataType const* in=op->dataType.typeDataAs.procedure->inType;
+  DataType const* out=op->dataType.typeDataAs.procedure->outType;
   if(in->typeClass!=TYPECLASS_PROC_IN&&in->typeClass!=TYPECLASS_LABELED_PROC_IN){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(in->typeClass));
     handleError(NULL,ERROR_MEMORY,op->filePos);
@@ -2134,6 +2168,11 @@ size_t compileOp(FILE* target,size_t compiledOps,const Operation* op,size_t opSi
   return 0;
 }
 
+bool isUsedTuple(CompositeType const* composite){
+  if((composite->flags&(FLAG_IS_TUPLE|FLAG_IS_STRUCT))!=0) 
+    return true;
+  return (composite->flags&(FLAG_IS_PROC_OUT))!=0&&composite->typeCount>1;
+}
 void compileToC(FILE* target,const Program* p){
   fputs("#include <stdlib.h>\n",target);
   fputs("#include <stdio.h>\n",target);
@@ -2144,14 +2183,9 @@ void compileToC(FILE* target,const Program* p){
   //initialize strings
   if(progStringCount>0)
     initProgStringChars();//initialize characters
-  for(size_t i=0;i<procTypeCount;i++){
-    if(procTypes[i].outType->typeClass==TYPECLASS_PROC_OUT&&procTypes[i].outType->typeDataAs.composite->typeCount>1){//ensure that composite return types are generated as tuples for code generation
-      procTypes[i].outType->typeDataAs.composite->flags|=FLAG_IS_TUPLE;
-    }
-  }
   //declare composite types
   for(int32_t i=0;i<compositeCount;i++){
-    if(compositeTypes[i].flags&(FLAG_IS_TUPLE|FLAG_IS_STRUCT)){
+    if(isUsedTuple(&compositeTypes[i])){
       fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",i,i);
     }
     if(compositeTypes[i].flags&(FLAG_IS_ENUM)){
@@ -2172,7 +2206,7 @@ void compileToC(FILE* target,const Program* p){
   }
   //initialize composite types
   for(int32_t i=0;i<compositeCount;i++){
-    if(compositeTypes[i].flags&(FLAG_IS_TUPLE|FLAG_IS_STRUCT)){
+    if(isUsedTuple(&compositeTypes[i])){
       fprintf(target,"struct tuple%"PRIi32"Impl{\n",i);
       for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
         printTypeNameC(&(compositeTypes[i].types[e]),target);
@@ -2281,27 +2315,27 @@ int32_t nextId(IdentifierType idType,CompilerState* state){
 }
 
 
-Operation opDeclareIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
+Operation opDeclareIntermediate(DataType const* type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
 }
-Operation opGetIntermediate(DataType* type,int32_t tmpId,FilePosition pos){
+Operation opGetIntermediate(DataType const* type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
 }
-Operation opPredeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+Operation opPredeclareTmpVar(DataType const* type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_PRE_DECLARE,.dataType=*type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
-Operation opDeclareTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+Operation opDeclareTmpVar(DataType const* type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_DECLARE,.dataType=*type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
-Operation opGetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+Operation opGetTmpVar(DataType const* type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_GET,.dataType=*type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
-Operation opSetTmpVar(DataType* type,int32_t tmpId,FilePosition pos){
+Operation opSetTmpVar(DataType const* type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_SET,.dataType=*type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
@@ -2894,7 +2928,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
       state->currentProcId=type.typeDataAs.procedure->id;
       state->localVars=0;
       if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
-         CompositeType* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
+         CompositeType const* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
          for(int32_t i=0;i<inTypes->typeCount;i++){
             declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
          }
@@ -3148,7 +3182,7 @@ size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
     return 1;
   }else if(wordEquals(&word,"addrOf")){
     if(state->compiledOps>0&&(op-1)->opType==OP_CALL){
-      ensureUnlabeledProc(&((op-1)->dataType),wordPos);
+      (op-1)->dataType=asUnlabeledProc(&((op-1)->dataType),wordPos);
       (op-1)->opType=OP_GET;
     }
     if(state->compiledOps>0&&(op-1)->opType==OP_IDENTIFIER)
@@ -3835,7 +3869,7 @@ bool canCast(const DataType* src,const DataType* target){
   return numberRank(src->typeDataAs.primitive)>-1&&numberRank(target->typeDataAs.primitive)>-1;//casts only between numbers
 }
 
-void requireTypes(const char* opName,TypeCheckState* state,DataType* types,size_t nTypes,FilePosition pos){//XXX? auto-create tuples
+void requireTypes(const char* opName,TypeCheckState* state,DataType const* types,size_t nTypes,FilePosition pos){//XXX? auto-create tuples
   if(state->typeCount<nTypes){
     fprintf(stderr,"not enough types for %s need %zu have %zu\n",opName,nTypes,state->typeCount);
     handleError(NULL,ERROR_TYPE,pos);
@@ -3965,9 +3999,9 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     fputs("\n",stderr);
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
-  ProcedureType* procType=calledType.typeDataAs.procedure;
-  CompositeType* outTypes=procType->outType->typeDataAs.composite;
-  CompositeType* inTypes=procType->inType->typeDataAs.composite;
+  ProcedureType const* procType=calledType.typeDataAs.procedure;
+  CompositeType const* outTypes=procType->outType->typeDataAs.composite;
+  CompositeType const* inTypes=procType->inType->typeDataAs.composite;
   size_t argCount=inTypes->typeCount;
   size_t totalOps=0;
   if(state->typeCount<argCount){
@@ -4015,7 +4049,7 @@ void pushProcArgs(TypeCheckState* state,DataType* procType,FilePosition pos){
   }
   if(procType->typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN)
     return;//do not push values with input is labeled 
-  CompositeType* inTypes=procType->typeDataAs.procedure->inType->typeDataAs.composite;
+  CompositeType const* inTypes=procType->typeDataAs.procedure->inType->typeDataAs.composite;
   if(inTypes->typeCount==0)
     return;//no input arguments
   if(inTypes->typeCount==1){
@@ -4060,7 +4094,7 @@ bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition p
     fputs("\n",stderr);
     handleError(NULL,ERROR_MEMORY,pos);
   }
-  CompositeType* tuple=tupleType->typeDataAs.composite;
+  CompositeType const* tuple=tupleType->typeDataAs.composite;
   if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
     return label(tuple->labelOffset+index,pos).isMutable;
   return true;
@@ -4094,7 +4128,7 @@ void checkTupleElementMutable(DataType const* baseType,Operation const* elementA
   }
 }
 void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,bool tupleWritable,Operation* op){
-  CompositeType* tuple=tupleType->typeDataAs.composite;
+  CompositeType const* tuple=tupleType->typeDataAs.composite;
   size_t offset=state->typeCount-1;
   op->dataType=tuple->types[op->dataAs.idInfo.id];
   Operation* blockStart=&(state->opStack[state->opStackCount-state->typeStack[offset].opCount]);
@@ -4183,7 +4217,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fputs(" is not a tuple\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      CompositeType* tuple=tupleType.typeDataAs.composite;
+      CompositeType const* tuple=tupleType.typeDataAs.composite;
       if(tuple->typeCount<op->dataAs.idInfo.id){
         fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
         handleError(NULL,ERROR_TYPE,op->filePos);
@@ -4234,7 +4268,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         //1. store array and index in temporary variables
         size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
         DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
-        CompositeType* arrayTypeData=arrayType.typeDataAs.composite;
+        CompositeType const* arrayTypeData=arrayType.typeDataAs.composite;
         writable=label(arrayTypeData->labelOffset+1,op->filePos).isMutable;
         addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op->filePos),1,true);
         addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),1,true);
@@ -4314,7 +4348,7 @@ void typeCheckReturn(TypeCheckState* state,Operation* op){
     fprintf(stderr,"unexpected procedure return type-class: %s\n",typeClassName(op->dataType.typeClass));
     handleError(NULL,ERROR_SYNTAX,op->filePos);
   }
-  CompositeType* outTypes=op->dataType.typeDataAs.composite;
+  CompositeType const* outTypes=op->dataType.typeDataAs.composite;
   if(outTypes->typeCount==0){
       if(checkNonemptyStack(state,"unfinished operation at end of procedure")){
         handleError(NULL,ERROR_SYNTAX,op->filePos);
@@ -4341,7 +4375,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
   String mLabel=label(op->dataAs.localLabel.label,op->filePos).label;
   if(!state->reachable&&op->opType==OP_IDENTIFIER&&blockInfo!=NULL&&
     (blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&blockInfo->blockDataAs.switchBlock.switchType.typeClass==TYPECLASS_ENUM_LABEL){
-    CompositeType* enumType=blockInfo->blockDataAs.switchBlock.switchType.typeDataAs.composite;
+    CompositeType const* enumType=blockInfo->blockDataAs.switchBlock.switchType.typeDataAs.composite;
     for(int32_t i=0;i<enumType->typeCount;i++){
       if(stringCompare(mLabel,getLabelName(enumType->labelOffset+i))==0){//identifier is label of current switch
         *op=opConstant(blockInfo->blockDataAs.switchBlock.switchType,i,op->filePos);
@@ -4614,7 +4648,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs(" is not a struct or enum\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      CompositeType* mStruct=structType.typeDataAs.composite;
+      CompositeType const* mStruct=structType.typeDataAs.composite;
       int32_t labelIndex=findLabel(mStruct->labelOffset,mStruct->typeCount,&op.dataAs.string);
       if(labelIndex==-1){
         printTypeName(&structType,stderr);
@@ -4805,7 +4839,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         return;
       }
       if(op.dataType.typeClass==TYPECLASS_ENUM){
-        DataType* entryData=op.dataType.typeDataAs.composite->types+op.dataAs.i64;
+        DataType const* entryData=op.dataType.typeDataAs.composite->types+op.dataAs.i64;
         if(isVoidType(entryData)){
           if(state->blockCount==0){//create enum in-place when in global level
             insertStackOperation(state,op,0);
