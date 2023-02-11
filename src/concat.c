@@ -311,7 +311,7 @@ struct ProcedureType{
 };
 struct ArrayType{
   DataType const* base;
-  size_t dims;
+  int64_t dims;
   int64_t const* sizes;
 };
 
@@ -643,28 +643,11 @@ DataType procedureType(DataType const* inType,DataType const* outType){
     if(typeEquals(procTypes[i].inType,inType)&&typeEquals(procTypes[i].outType,outType))
       return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+i}};
   }
-  int32_t inId=-1,outId=-1;
-  for(size_t i=0;i<wrappedTypeCount&&(inId==-1||outId==-1);i++){
-    if(inId==-1&&typeEquals(inType,&(wrappedTypes[i])))
-      inId=i;
-    if(outId==-1&&typeEquals(outType,&(wrappedTypes[i])))
-      outId=i;
-  }
-  if(inId==-1){
-    if(wrappedTypeCount+1>=MAX_TYPES){
-      return TYPE_UNDEFINED;
-    }
-    inId=wrappedTypeCount;
-    wrappedTypes[wrappedTypeCount++]=*inType;
-  }
-  if(outId==-1){
-    if(wrappedTypeCount+1>=MAX_TYPES){
-      return TYPE_UNDEFINED;
-    }
-    outId=wrappedTypeCount;
-    wrappedTypes[wrappedTypeCount++]=*outType;
-  }
-  procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=wrappedTypes+inId,.outType=wrappedTypes+outId};
+  inType=bufferedType(inType);
+  outType=bufferedType(outType);
+  if(inType==NULL||outType==NULL)
+    return TYPE_UNDEFINED;
+  procTypes[procTypeCount]=(ProcedureType){.id=procTypeCount,.inType=inType,.outType=outType};
   return (DataType){.typeClass=TYPECLASS_PROCEDURE,.typeDataAs={.procedure=procTypes+procTypeCount++}};
 }
 DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
@@ -686,13 +669,34 @@ DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
   DataType newProc=procedureType(&in,proc->outType);
   return isPtr?pointerType(&newProc,false):newProc;
 }
-DataType arrayType(DataType const* base, size_t dims,int64_t const* sizes){
-  (void)base;
-  (void)dims;
-  (void)sizes;
-  return TYPE_UNDEFINED;
+DataType arrayType(DataType const* base, int64_t dims,int64_t const* sizes){
+  if(dims<=0)
+    return TYPE_UNDEFINED;
+  base=bufferedType(base);
+  if(base==NULL||(isCallableType(base)&&!isPointerType(base)))
+    return TYPE_UNDEFINED;
+  for(size_t i=0;i<arrayTypeCount;i++){
+    if(!typeEquals(arrayTypes[i].base,base)||arrayTypes[i].dims!=dims)
+      continue;
+    if(arrayTypes[i].sizes==sizes)//same array or both NULL
+      return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
+    bool match=true;
+    for(int64_t j=0;j<dims;j++){
+      if(arrayTypes[i].sizes[j]!=sizes[j]){
+        match=false;
+        break;
+      }
+    }
+    if(match)
+      return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
+  }
+  int64_t* mSizes=malloc(dims*sizeof(*mSizes));//XXX reuse array of previous types
+  if(mSizes==NULL)
+    return TYPE_UNDEFINED;
+  memcpy(mSizes,sizes,dims*sizeof(*mSizes));
+  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes};
+  return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+arrayTypeCount++}};
 }
-//TODO arrayType( type base, size_t dims, int64_t* sizes)
 
 char const* typeClassName(TypeClass cls){
   switch(cls){
@@ -824,7 +828,18 @@ void printTypeNameIntenal(DataType const* type,FILE* file,bool noRecurse){
       printTypeFlags(type,file);
       return;
     case TYPECLASS_ARRAY:
-      break;//TODO print array type
+      printTypeNameIntenal(type->typeDataAs.array->base,file,noRecurse);
+      for(int64_t i=0;i<type->typeDataAs.array->dims;i++){
+        if(type->typeDataAs.array->sizes!=NULL){
+          fprintf(file," %"PRIi64,type->typeDataAs.array->sizes[i]);
+          continue;
+        }
+        if(type->typeDataAs.array->dims>1)
+          fputs(" _",file);
+      }
+      fprintf(file," %s",typeClassName(type->typeClass));
+      printTypeFlags(type,file);
+      return;
   }
   fprintf(file,"unknown type-class %i",type->typeClass);
 }
@@ -869,7 +884,13 @@ void printTypeNameC(DataType const* type,FILE* file){
       fputs("*",file);
       return;
     case TYPECLASS_ARRAY:
-      break;//TODO print array type
+      if(type->typeDataAs.array->sizes!=NULL){
+        printTypeNameC(type->typeDataAs.array->base,file);
+        if(!isMutableType(type))
+          fputs(" const",file);
+        fputs("*",file);//XXX use C-type that allows returning arrays
+      }
+      break;//TODO print variable length array type
     case TYPECLASS_PROC_IN:
     case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
