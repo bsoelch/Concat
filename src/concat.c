@@ -2316,7 +2316,9 @@ typedef struct{
 typedef struct{
   NamespaceInfo namespaceInfo;
   Scope* currentScope;
-  size_t compiledOps;
+  Operation* parsedOps;
+  size_t parsedOpCount;
+  size_t parsedOpCap;
   int32_t globalVars;
   int32_t localVars;
   int32_t currentProcId;
@@ -2326,9 +2328,9 @@ typedef struct{
   int32_t predeclaredTypes;
   int32_t opaqueTypeCount;
   bool hasEntryPoint;
-}CompilerState;
+}ParserState;
 //compute the next id for a variable of the given id-type relative to the given compiler state
-int32_t nextId(IdentifierType idType,CompilerState* state){
+int32_t nextId(IdentifierType idType,ParserState* state){
   switch(idType){
     //global 
     case ID_GLOBAL_VAR:
@@ -2670,15 +2672,21 @@ typedef struct{
     int64_t charId;
     int64_t i64;
   }valueAs;
+  FilePosition pos;
   ConstantType type;
 }ConstantValue;
 size_t bufferedConstants=0;
 ConstantValue constBuffer[CONST_BUFFER_CAP];
 DataType compositeTypeBuffer[CONST_BUFFER_CAP];
+void pushConstant(ConstantType constType,int64_t constId,FilePosition pos){
+  if(bufferedConstants>=CONST_BUFFER_CAP)
+    handleError("constant buffer overflow",ERROR_MEMORY,pos);
+  constBuffer[bufferedConstants++]=(ConstantValue){.type=constType,.valueAs.i64=constId,.pos=pos};
+}
 void pushTypeConstant(DataType type,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(ConstantValue){.type=CONSTANT_TYPE,.valueAs.type=type};
+  constBuffer[bufferedConstants++]=(ConstantValue){.type=CONSTANT_TYPE,.valueAs.type=type,.pos=pos};
 }
 DataType popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid){
   if(bufferedConstants==0){
@@ -2688,6 +2696,7 @@ DataType popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoi
   bufferedConstants--;
   if(constBuffer[bufferedConstants].type!=CONSTANT_TYPE){
     fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].type));
+    //XXX print position of constant
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   if(!allowVoid&&isVoidType(&constBuffer[bufferedConstants].valueAs.type)){
@@ -2708,10 +2717,37 @@ DataType* popTypeConstants(size_t count,FilePosition pos,char const* argumentNam
 #define LABEL_TYPE_ENUM    2 // labels without type are allowed
 #define LABEL_TYPE_PROC_IN 3 // types are allowed to have labels, if one type has labels than all types have to have an label
  
-bool readType(String name,CodeFile* codeFile,CompilerState* state);
+bool readType(String name,CodeFile* codeFile,ParserState* state);
+
+bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* state){
+  FilePosition wordPos=codeFile->wordStart;
+  if(wordType==WORD_TYPE_STRING){
+    int64_t strId=addProgString(word,wordPos);//TODO? store string in constant
+    pushConstant(CONSTANT_STRING,strId,wordPos);
+    return true;
+  }
+  if(wordType==WORD_TYPE_CHAR){
+    if(word.length!=1){//TODO? handle Unicode characters
+      fprintf(stderr,"character literal '%"PRI_STR"' contains more that one character\n",PRI_STR_ARGS(word));
+      handleError(NULL,ERROR_SYNTAX,wordPos);
+    }
+    pushConstant(CONSTANT_CHAR,charAt(word,0),wordPos);
+    return true;
+  }
+  IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
+  if(!asInt.isError){
+    pushConstant(CONSTANT_INT,asInt.as.i64,wordPos);
+    return true;
+  }
+  if(asInt.as.error!=ERROR_PARSE_INT)
+    handleError(NULL,asInt.as.error,wordPos);
+  if(word.length==0)
+    return true;
+  return readType(word,codeFile,state);
+}
 //reads a composite type of the given type-class, the result is stored in the type buffer
 //return 0 if a type was read, otherwise a nonzero error-code if a type error occurs this method will return a syntax error
-void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* state,int labelType,char const* endString,bool checkEmpty){
+void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state,int labelType,char const* endString,bool checkEmpty){
   String word;
   int wordType;
   size_t initOffset=bufferedConstants;
@@ -2720,9 +2756,10 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
   int typesSinceLabel=0;//if there has been a type since the last label
   do{
     word=nextWord(codeFile,&wordType);
-    if(wordType!=WORD_TYPE_IDENTIFIER){
-      handleError("type names have to be identifiers",ERROR_SYNTAX,codeFile->wordStart);
-      return;
+    if(readConstants(word,wordType,codeFile,state)){
+      typesSinceLabel+=(bufferedConstants-currentOffset);
+      currentOffset=bufferedConstants;
+      continue;
     }
     if(wordEquals(&word,endString))
       break;
@@ -2734,11 +2771,6 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
       }
       typesSinceLabel=0;
       readLabel(codeFile,"labels");//label is stored in label buffer
-      continue;
-    }
-    if(readType(word,codeFile,state)){
-      typesSinceLabel+=(bufferedConstants-currentOffset);
-      currentOffset=bufferedConstants;
       continue;
     }
     if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
@@ -2798,7 +2830,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,CompilerState* sta
 }
 //reads a type starting with the identifier name, the result is stored in the type buffer
 //return true if a type was read, false otherwise
-bool readType(String name,CodeFile* codeFile,CompilerState* state){
+bool readType(String name,CodeFile* codeFile,ParserState* state){
   if(name.length==0){
     handleError("empty type name",ERROR_MEMORY,codeFile->wordStart);
     return false;
@@ -2909,9 +2941,10 @@ bool readType(String name,CodeFile* codeFile,CompilerState* state){
   return true;
 }
 
-void requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes,FilePosition pos){
-  if(bufferedConstants!=nTypes){
-    fprintf(stderr,"wrong number of type arguments for operation '%"PRI_STR"' expected %zu got %zu\n",PRI_STR_ARGS(*opName),nTypes,bufferedConstants);
+void pushOperation(ParserState* state,Operation op);
+void requireCompileTimeTypes(ParserState* state,String* opName,DataType* typeOut,size_t nTypes,FilePosition pos){
+  if(bufferedConstants<nTypes){
+    fprintf(stderr,"not enough type arguments for operation '%"PRI_STR"' need %zu got %zu\n",PRI_STR_ARGS(*opName),nTypes,bufferedConstants);
     handleError(NULL,ERROR_SYNTAX,pos);
     return;
   }
@@ -2921,504 +2954,26 @@ void requireCompileTimeType(String* opName,DataType* typeOut,size_t nTypes,FileP
       handleError("invalid type in type buffer",ERROR_TYPE,pos);
     typeOut++;
   }
-}
-
-size_t readOperation(Operation* op,CodeFile* codeFile,CompilerState* state){
-  int wordType;
-  String word=nextWord(codeFile,&wordType);
-  DataType type;
-  FilePosition wordPos=codeFile->wordStart;
-  if(wordType==WORD_TYPE_STRING){//TODO handle constants in same method as type
-    int64_t strId=addProgString(word,wordPos);
-    (*op)=opConstant(progStringType(),strId,wordPos);
-    return 1;
-  }
-  if(wordType==WORD_TYPE_CHAR){
-    if(word.length!=1){//TODO? handle Unicode characters
-      fprintf(stderr,"character literal '%"PRI_STR"' contains more that one character\n",PRI_STR_ARGS(word));
-      handleError(NULL,ERROR_SYNTAX,wordPos);
-    }
-    (*op)=opConstant(primitiveType(PRIMITIVE_I8),charAt(word,0),wordPos);
-    return 1;
-  }
-  IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
-  if(!asInt.isError){
-    (*op)=opConstant(primitiveType((asInt.as.i64<=INT32_MAX&&asInt.as.i64>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),asInt.as.i64,wordPos);
-    return 1;
-  }
-  if(asInt.as.error!=ERROR_PARSE_INT)
-    handleError(NULL,asInt.as.error,wordPos);
-  if(word.length==0)
-    return 0;
-  if(readType(word,codeFile,state))//is type
-    return 0;
-  wordPos=codeFile->wordStart;
-  //1. operations that take a Type as argument
-  if(wordEquals(&word,":")){//pre-declare
-    requireCompileTimeType(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,"variable names");
-    wordPos=codeFile->wordStart;
-    Label varName=label(labelId,wordPos);
-    IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-    if(isCallableType(&type)&&!isPointerType(&type)){
-      handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
-    }
-    if(type.typeClass==TYPECLASS_TYPE_OF){
-      if(!typeEquals(type.typeDataAs.type,&TYPE_UNDEFINED)){
-        fputs("cannot pre-declare values of type: ",stderr);
-        printTypeName(&type,stderr);
-        fputs("\n For pre-declaring a type use 'type' without any prefix",stderr);
-        handleError(NULL,ERROR_UNIMPLEMENTED,wordPos);
-      }
-      type=opaqueType(state->opaqueTypeCount++);
-      idType=ID_TYPE;
-    }
-    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
-    if(idType==ID_TYPE)//declaring type does not produce any code
-      return 0;
-    (*op)=(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
-    return 1;
-  }else if(wordEquals(&word,"=:")){//declare
-    requireCompileTimeType(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,"variable names");
-    wordPos=codeFile->wordStart;
-    Label varName=label(labelId,wordPos);
-    IdentifierType idType;
-    ScopeNode* id;
-    int r;
-    switch(type.typeClass){
-      case TYPECLASS_PROCEDURE:
-        idType=ID_PROCEDURE;
+  int64_t intVal;
+  size_t constCount=bufferedConstants;
+  bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
+  for(size_t i=0;i<constCount;i++){
+    switch(constBuffer[i].type){
+      case CONSTANT_STRING://XXX? store value as string
+        pushOperation(state,opConstant(progStringType(),constBuffer[i].valueAs.i64,constBuffer[i].pos));
         break;
-      case TYPECLASS_TYPE_OF:
-        type=*type.typeDataAs.type;//unwrap typeOf
-        if(typeEquals(&type,&TYPE_UNDEFINED)){
-          handleError("missing type for type definition",ERROR_SYNTAX,wordPos);
-        }
-        idType=ID_TYPE;
-        r=getIdentifier(state->namespaceInfo,varName.label,&id);
-        if(r<0)
-          handleError("error while resolving identifier",r,wordPos);
-        if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
-          break;//can only override opaque types
-        DataType* overwrite=bufferedType(&id->type);
-        if(overwrite==NULL)
-          handleError("error while resolving type defintion",r,wordPos);
-        *overwrite=type;//override entry in wrapped type list
-        id->type=type;//override previous definition
-        return 0;
-      default:
-        idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+      case CONSTANT_CHAR:
+        pushOperation(state,opConstant(primitiveType(PRIMITIVE_I8),constBuffer[i].valueAs.charId,constBuffer[i].pos));
+        break;
+      case CONSTANT_INT:
+        intVal=constBuffer[i].valueAs.i64;
+        pushOperation(state,opConstant(primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),intVal,constBuffer[i].pos));
+        break;
+      case CONSTANT_TYPE:
+        handleError("unused type constant",ERROR_TYPE,constBuffer[i].pos);
+        break;
     }
-    id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
-    if(idType==ID_TYPE){
-      //declaring type does not produce any code
-      return 0;
-    }else if(idType==ID_PROCEDURE){
-      if(state->scopeLevel>0){
-        fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
-          handleError(NULL,ERROR_SYNTAX,wordPos);
-      }
-      Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
-      if(newScope==NULL)
-        handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-      state->currentScope=newScope;
-      state->scopeLevel++;
-      state->procScope=state->scopeLevel;
-      state->currentProcId=type.typeDataAs.procedure->id;
-      state->localVars=0;
-      if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
-         CompositeType const* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
-         for(int32_t i=0;i<inTypes->typeCount;i++){
-            declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
-         }
-      }
-    }
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
-    return 1;
-  }else if(wordEquals(&word,"new")){
-    if(state->compiledOps>0&&(op-1)->opType==OP_CONSTANT&&(op-1)->dataType.typeClass==TYPECLASS_ENUM_LABEL){
-      //change enum label to enum declaration
-      (*(op-1)).opType=OP_NEW;
-      (*(op-1)).filePos=wordPos;
-      (*(op-1)).dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
-      return 0;
-    }
-    requireCompileTimeType(&word,&type,1,wordPos);
-    if(type.typeClass==TYPECLASS_TUPLE||type.typeClass==TYPECLASS_STRUCT){
-      (*op)=(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}};
-      return 1;
-    }
-    printTypeName(&type,stderr);
-    fputs(" is currently not supported for operator new\n",stderr);
-    if(type.typeClass==TYPECLASS_ENUM)
-      fputs(" to create an enum specify the label of the current value\n",stderr);
-    handleError(NULL,ERROR_TYPE,wordPos);
-  }else if(wordEquals(&word,"cast")){ 
-    requireCompileTimeType(&word,&type,1,wordPos);
-    (*op)=(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=&TYPE_UNDEFINED}};
-      return 1;
-  }else if(wordEquals(&word,"type")){
-    if(bufferedConstants==0){//type without arguments
-      pushTypeConstant(typeOfType(&TYPE_UNDEFINED),wordPos);
-      return 0;//type does not generate any operations
-    }
-    requireCompileTimeType(&word,&type,1,wordPos);
-    pushTypeConstant(typeOfType(&type),wordPos);
-    return 0;//type does not generate any operations
-  }else if(word.length>1&&charAt(word,0)=='.'){
-    word=sliceStart(word,1);//remove first character
-    if(bufferedConstants==0){
-      IntOrErrorCode index=parseInt(word,10);
-      if(!index.isError){
-        (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=LABEL_ID_UNKNOWN,.id=index.as.i64,.isMutable=false}}};
-        return 1;
-      }
-      (*op)=(Operation){.opType=OP_GET_LABEL,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}};
-      return 1;
-    }
-    requireCompileTimeType(&word,&type,1,wordPos);//try to get type field of enum
-    int64_t index;
-    if(type.typeClass!=TYPECLASS_ENUM||((index=findLabel(type.typeDataAs.composite->labelOffset,type.typeDataAs.composite->typeCount,&word))==-1)){
-      fputs("type ",stderr);
-      printTypeName(&type,stderr);
-      fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(word));
-      handleError(NULL,ERROR_TYPE,wordPos);
-    }
-    (*op)=opConstant(type,index,wordPos);
-    op->dataType.typeClass=TYPECLASS_ENUM_LABEL;//change type-class to enum-label
-    return 1;
-  }else if(word.length>1&&charAt(word,0)=='#'){//compiler command
-    word.chars++;//remove first character
-    word.length--;
-    //stack manipulation
-    if(wordEquals(&word,"dup")){//XXX dup:N drop:N -> dup/drop multiple values at once
-      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DUP}}};
-      return 1;
-    }else if(wordEquals(&word,"drop")){
-      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DROP}}};
-      return 1;
-    }else if(wordEquals(&word,"swap")){//XXX rot:N:K -> stack rotation
-      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP}}};
-      return 1;
-    }else if(wordEquals(&word,"over")){
-      (*op)=(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER}}};
-      return 1;
-    }
-    //compile-time code
-    if(wordEquals(&word,"namespace")){
-      if(state->scopeLevel>0){
-        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
-        handleError(NULL,ERROR_SYNTAX,wordPos);
-      }
-      word=nextWord(codeFile,&wordType);
-      wordPos=codeFile->wordStart;
-      if(wordType!=WORD_TYPE_IDENTIFIER)
-        handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      if(word.length==0||charAt(word,0)=='#'||containsChar(word,'.')){
-        fprintf(stderr,"'%"PRI_STR"' is not a valid namespace name",PRI_STR_ARGS(word));
-        handleError(NULL,ERROR_SYNTAX,wordPos);
-      }
-      startNamespace(&state->namespaceInfo,word,wordPos);
-      printf("opened namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
-      return 0;
-    }else if(wordEquals(&word,"using")){
-      word=nextWord(codeFile,&wordType);
-      wordPos=codeFile->wordStart;
-      if(wordType!=WORD_TYPE_IDENTIFIER)
-        handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      printf("using namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
-      importNamespace(&state->namespaceInfo,word,wordPos);
-      return 0;
-    }else if(wordEquals(&word,"end")){
-      if(state->scopeLevel>0){
-        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
-        handleError(NULL,ERROR_SYNTAX,wordPos);
-      }
-      endCompileTimeBlock(&state->namespaceInfo,wordPos);
-      printf("closed namespace\n");//DEBUG
-      return 0;
-    }
-    //compiler commands
-    if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
-      (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=-1}}};
-      return 1;
-    }else if(wordEquals(&word,"stack")){
-      (*op)=(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=-1}}};
-      return 1;
-    }else if(wordEquals(&word,"find")){
-      LabelId labelId=readLabel(codeFile,"variable names");
-      wordPos=codeFile->wordStart;
-      Label varName=label(labelId,wordPos);
-      ScopeNode* asIdentifier;
-      int r=getIdentifier(state->namespaceInfo,varName.label,&asIdentifier);//try to parse variable as identifier
-      if(r<0)//internal error while reading identifier
-        handleError("error while resolving identifier",r,wordPos);
-      if(r==0){//found identifier TODO print shadowed matches
-        puts("-----------------");
-        printf("identifier '%"PRI_STR"':\n",PRI_STR_ARGS(varName.label));
-        fputs("  ",stdout);
-        Label mLabel=label(asIdentifier->labelId,wordPos);
-        if(mLabel.isMutable)
-          fputs("mutable ",stdout);
-        printf("%s: ",idNames[asIdentifier->idType]);
-        printTypeName(&asIdentifier->type,stdout);
-        fputs("\n    at ",stdout);
-        printFilePosition(mLabel.declaredAt,stdout);
-        puts("");
-        puts("-----------------");
-        return 0;
-      }
-      fprintf(stderr,"could not find identifier '%"PRI_STR"'\n",PRI_STR_ARGS(varName.label));
-      //TODO resolve global identifiers with later declarations pre-declared types identifiers
-      return 0;
-    }
-    //XXX more compile time operations
-    fprintf(stderr,"unknown compile time operation '%"PRI_STR"'\n",PRI_STR_ARGS(word));
-    handleError(NULL,ERROR_SYNTAX,wordPos);
   }
-  if(bufferedConstants>0){
-    fprintf(stderr,"%"PRI_STR" does not take a type as argument\n",PRI_STR_ARGS(word));
-    handleError(NULL,ERROR_TYPE,wordPos);
-  }
-  if(wordEquals(&word,"true")){
-    (*op)=opConstant(primitiveType(PRIMITIVE_BOOL),1,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"false")){
-    (*op)=opConstant(primitiveType(PRIMITIVE_BOOL),0,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"+")){
-    (*op)=opBinaryOperator(ADD,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"-")){
-    (*op)=opBinaryOperator(SUBTRACT,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"*")){
-    (*op)=opBinaryOperator(MULTIPLY,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"/")){
-    (*op)=opBinaryOperator(DIVIDE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"%")){
-    (*op)=opBinaryOperator(MOD,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"&")){
-    (*op)=opBinaryOperator(AND,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"|")){
-    (*op)=opBinaryOperator(OR,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"^")){
-    (*op)=opBinaryOperator(XOR,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"&&")){//XXX implement short-circuit  and/or using code-blocks
-    handleError("short circuit operations are currently not supported",ERROR_UNIMPLEMENTED,wordPos);
-  }else if(wordEquals(&word,"||")){
-    handleError("short circuit operations are currently not supported",ERROR_UNIMPLEMENTED,wordPos);
-  }else if(wordEquals(&word,"==")){
-    (*op)=opBinaryOperator(EQ,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"!=")){
-    (*op)=opBinaryOperator(NE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,">")){
-    (*op)=opBinaryOperator(GT,wordPos);
-    return 1;
-  }else if(wordEquals(&word,">=")){
-    (*op)=opBinaryOperator(GE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"<=")){
-    (*op)=opBinaryOperator(LE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"<")){
-    (*op)=opBinaryOperator(LT,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"neg")||wordEquals(&word,"negate")){
-    (*op)=opUnaryOperator(NEGATE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"++")){
-    (*op)=opUnaryOperator(INCREMENT,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"--")){
-    (*op)=opUnaryOperator(DECREMENT,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    LabelId labelId=readLabel(codeFile,"variable names");
-    wordPos=codeFile->wordStart;
-    Label varName=label(labelId,wordPos);
-    wordPos=codeFile->wordStart;
-    IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-    DataType mType=TYPE_UNDEFINED;
-    mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
-    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos);
-    (*op)=(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}};
-    return 1;
-  }else if(wordEquals(&word,"=")){
-    if(state->compiledOps>0){
-      switch((op-1)->opType){
-        case OP_GET:
-          (op-1)->opType=OP_SET;
-          return 0;
-        case OP_GET_LABEL:
-          (op-1)->opType=OP_SET_LABEL;
-          return 0;
-        case OP_IDENTIFIER:
-          (op-1)->opType=OP_SET_IDENTIFIER;
-          return 0;
-        default:
-          printf("cannot set operations of type %s\n",opName((op-1)->opType));
-          break;
-      }
-    }
-    handleError("unexpected = operation",ERROR_SYNTAX,wordPos);
-  }else if(wordEquals(&word,"@")){
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-      .dataAs={.idInfo={.type=ID_POINTER,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
-    return 1;
-  }else if(wordEquals(&word,"[]")){
-    (*op)=(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-      .dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
-    return 1;
-  }else if(wordEquals(&word,"addrOf")){
-    if(state->compiledOps>0&&(op-1)->opType==OP_CALL){
-      (op-1)->dataType=asUnlabeledProc(&((op-1)->dataType),wordPos);
-      (op-1)->opType=OP_GET;
-    }
-    if(state->compiledOps>0&&(op-1)->opType==OP_IDENTIFIER)
-      (op-1)->opType=OP_IDENTIFIER_ADDRESS;
-    (*op)=(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
-    return 1;
-  }else if(wordEquals(&word,"()")){
-    (*op)=(Operation){.opType=OP_CALL_PTR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
-    return 1;
-  }else if(wordEquals(&word,"if")){
-    Scope* newScope=openScope(BLOCK_IF,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
-    (*op)=opCodeBlock(BLOCK_IF,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"_if")){
-    //no scope change for _if
-    (*op)=opCodeBlock(BLOCK_IF2,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"while")){
-    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
-    
-    (*op)=opCodeBlock(BLOCK_WHILE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"do")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    //scope count does not change
-        
-    (*op)=opCodeBlock(BLOCK_DO,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"else")){
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_ELSE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    //scope count does not change
-    
-    (*op)=opCodeBlock(BLOCK_ELSE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"break")){
-    //current code-block does not change
-    (*op)=opCodeBlock(BLOCK_BREAK,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"continue")){
-    //current code-block does not change
-    (*op)=opCodeBlock(BLOCK_CONTINUE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"switch")){
-    Scope* newScope=openScope(BLOCK_SWITCH,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
-    (*op)=opCodeBlock(BLOCK_SWITCH,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"case")){
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    //scope count does not change
-        
-    (*op)=opCodeBlock(BLOCK_CASE,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"default")){
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    //scope count does not change
-        
-    (*op)=opCodeBlock(BLOCK_DEFAULT,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"end")){
-    closeScope(&state->namespaceInfo);
-    state->scopeLevel--;
-    if(state->scopeLevel<state->procScope){//exited procedure
-      state->currentProcId=-1;
-      state->procScope=-1;
-    }
-    
-    (*op)=opEndCodeBlock(BLOCK_UNKNOWN,wordPos);
-    return 1;
-  }else if(wordEquals(&word,"return")){
-    if(state->currentProcId<0){
-      handleError("unexpected return statement",ERROR_SYNTAX,wordPos);
-    }
-    (*op)=(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}};
-    return 1;
-  }else if(wordEquals(&word,"entryPoint:")){
-    if(state->hasEntryPoint){//TODO print position of previous entry point
-      handleError("program can only have one entry point",ERROR_SYNTAX,wordPos);
-    }
-    Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
-    
-    state->hasEntryPoint=true;
-    (*op)=(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};
-    return 1;
-  }else if(wordEquals(&word,"print")){
-    (*op)=(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}};//printed type will be determined by type-checker
-    return 1;
-  }else if(wordEquals(&word,"mut")){
-    handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
-    return 0;
-  } 
-  
-  ScopeNode* asIdentifier;
-  int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);//try to parse variable as identifier
-  if(r<0)//internal error while reading identifier
-    handleError("error while resolving identifier",r,wordPos);
-  if(r==0){//identifier
-    Label mLabel=label(asIdentifier->labelId,wordPos);
-    (*op)=(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
-      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=mLabel.isMutable}}};
-    return 1;
-  }
-  // could not find identifier, try again in type-check phase
-  (*op)=(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.localLabel={.label=newLabel(word,false,codeFile->wordStart),.namespaceInfo=state->namespaceInfo}}};
-  return 1;
 }
 
 //returns true when allocation fails
@@ -3446,25 +3001,505 @@ bool ensureOpCap(Operation** mList,size_t* cap,size_t newSize){
   return false;
 }
 
+void pushOperation(ParserState* state,Operation op){
+  if(ensureOpCap(&state->parsedOps,&state->parsedOpCap,state->parsedOpCount+bufferedConstants+16)){
+    handleError(NULL,ERROR_MEMORY,op.filePos);
+  }
+  if(bufferedConstants>0){
+    requireCompileTimeTypes(state,&EMPTY_STRING,NULL,0,op.filePos);
+  }
+  state->parsedOps[state->parsedOpCount++]=op;
+}
+void readOperation(ParserState* state,CodeFile* codeFile){
+  int wordType;
+  String word=nextWord(codeFile,&wordType);
+  DataType type;
+  FilePosition wordPos=codeFile->wordStart;
+  if(readConstants(word,wordType,codeFile,state))//is type
+    return;
+  wordPos=codeFile->wordStart;
+  //1. operations that take a Type as argument
+  if(wordEquals(&word,":")){//pre-declare
+    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    LabelId labelId=readLabel(codeFile,"variable names");
+    wordPos=codeFile->wordStart;
+    Label varName=label(labelId,wordPos);
+    IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    if(isCallableType(&type)&&!isPointerType(&type)){
+      handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
+    }
+    if(type.typeClass==TYPECLASS_TYPE_OF){
+      if(!typeEquals(type.typeDataAs.type,&TYPE_UNDEFINED)){
+        fputs("cannot pre-declare values of type: ",stderr);
+        printTypeName(&type,stderr);
+        fputs("\n For pre-declaring a type use 'type' without any prefix",stderr);
+        handleError(NULL,ERROR_UNIMPLEMENTED,wordPos);
+      }
+      type=opaqueType(state->opaqueTypeCount++);
+      idType=ID_TYPE;
+    }
+    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
+    if(idType==ID_TYPE)//declaring type does not produce any code
+      return;
+    pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
+    return;
+  }else if(wordEquals(&word,"=:")){//declare
+    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    LabelId labelId=readLabel(codeFile,"variable names");
+    wordPos=codeFile->wordStart;
+    Label varName=label(labelId,wordPos);
+    IdentifierType idType;
+    ScopeNode* id;
+    int r;
+    switch(type.typeClass){
+      case TYPECLASS_PROCEDURE:
+        idType=ID_PROCEDURE;
+        break;
+      case TYPECLASS_TYPE_OF:
+        type=*type.typeDataAs.type;//unwrap typeOf
+        if(typeEquals(&type,&TYPE_UNDEFINED)){
+          handleError("missing type for type definition",ERROR_SYNTAX,wordPos);
+        }
+        idType=ID_TYPE;
+        r=getIdentifier(state->namespaceInfo,varName.label,&id);
+        if(r<0)
+          handleError("error while resolving identifier",r,wordPos);
+        if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
+          break;//can only override opaque types
+        DataType* overwrite=bufferedType(&id->type);
+        if(overwrite==NULL)
+          handleError("error while resolving type defintion",r,wordPos);
+        *overwrite=type;//override entry in wrapped type list
+        id->type=type;//override previous definition
+        return;
+      default:
+        idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    }
+    id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
+    if(idType==ID_TYPE){
+      //declaring type does not produce any code
+      return;
+    }else if(idType==ID_PROCEDURE){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
+      if(newScope==NULL)
+        handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+      state->currentScope=newScope;
+      state->scopeLevel++;
+      state->procScope=state->scopeLevel;
+      state->currentProcId=type.typeDataAs.procedure->id;
+      state->localVars=0;
+      if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
+         CompositeType const* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
+         for(int32_t i=0;i<inTypes->typeCount;i++){
+            declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
+         }
+      }
+    }
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
+    return;
+  }else if(wordEquals(&word,"new")){
+    if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_CONSTANT&&state->parsedOps[state->parsedOpCount-1].dataType.typeClass==TYPECLASS_ENUM_LABEL){
+      //change enum label to enum declaration
+      state->parsedOps[state->parsedOpCount-1].opType=OP_NEW;//TODO use peek op
+      state->parsedOps[state->parsedOpCount-1].filePos=wordPos;
+      state->parsedOps[state->parsedOpCount-1].dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
+      return;
+    }
+    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    if(type.typeClass==TYPECLASS_TUPLE||type.typeClass==TYPECLASS_STRUCT){
+      pushOperation(state,(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}});
+      return;
+    }
+    printTypeName(&type,stderr);
+    fputs(" is currently not supported for operator new\n",stderr);
+    if(type.typeClass==TYPECLASS_ENUM)
+      fputs(" to create an enum specify the label of the current value\n",stderr);
+    handleError(NULL,ERROR_TYPE,wordPos);
+  }else if(wordEquals(&word,"cast")){ 
+    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    pushOperation(state,(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=&TYPE_UNDEFINED}});
+      return;
+  }else if(wordEquals(&word,"type")){
+    if(bufferedConstants==0){//type without arguments
+      pushTypeConstant(typeOfType(&TYPE_UNDEFINED),wordPos);//XXX? allow type to detect type of constants  (0 type -> i32 )
+      return;//type does not generate any operations
+    }
+    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    pushTypeConstant(typeOfType(&type),wordPos);
+    return;//type does not generate any operations
+  }else if(word.length>1&&charAt(word,0)=='.'){
+    word=sliceStart(word,1);//remove first character
+    if(bufferedConstants==0||constBuffer[bufferedConstants-1].type!=CONSTANT_TYPE){
+      IntOrErrorCode index=parseInt(word,10);
+      if(!index.isError){
+        pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=LABEL_ID_UNKNOWN,.id=index.as.i64,.isMutable=false}}});
+        return;
+      }
+      pushOperation(state,(Operation){.opType=OP_GET_LABEL,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}});
+      return;
+    }
+    requireCompileTimeTypes(state,&word,&type,1,wordPos);//try to get type field of enum
+    int64_t index;
+    if(type.typeClass!=TYPECLASS_ENUM||((index=findLabel(type.typeDataAs.composite->labelOffset,type.typeDataAs.composite->typeCount,&word))==-1)){
+      fputs("type ",stderr);
+      printTypeName(&type,stderr);
+      fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(word));
+      handleError(NULL,ERROR_TYPE,wordPos);
+    }
+    type.typeClass=TYPECLASS_ENUM_LABEL;//change type-class to enum-label
+    pushOperation(state,opConstant(type,index,wordPos));
+    return;
+  }else if(word.length>1&&charAt(word,0)=='#'){//compiler command
+    word.chars++;//remove first character
+    word.length--;
+    //stack manipulation
+    if(wordEquals(&word,"dup")){//XXX dup:N drop:N -> dup/drop multiple values at once
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DUP}}});
+      return;
+    }else if(wordEquals(&word,"drop")){
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DROP}}});
+      return;
+    }else if(wordEquals(&word,"swap")){//XXX rot:N:K -> stack rotation
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP}}});
+      return;
+    }else if(wordEquals(&word,"over")){
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER}}});
+      return;
+    }
+    //compile-time code
+    if(wordEquals(&word,"namespace")){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      word=nextWord(codeFile,&wordType);
+      wordPos=codeFile->wordStart;
+      if(wordType!=WORD_TYPE_IDENTIFIER)
+        handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
+      if(word.length==0||charAt(word,0)=='#'||containsChar(word,'.')){
+        fprintf(stderr,"'%"PRI_STR"' is not a valid namespace name",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      startNamespace(&state->namespaceInfo,word,wordPos);
+      printf("opened namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
+      return;
+    }else if(wordEquals(&word,"using")){
+      word=nextWord(codeFile,&wordType);
+      wordPos=codeFile->wordStart;
+      if(wordType!=WORD_TYPE_IDENTIFIER)
+        handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
+      printf("using namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
+      importNamespace(&state->namespaceInfo,word,wordPos);
+      return;
+    }else if(wordEquals(&word,"end")){
+      if(state->scopeLevel>0){
+        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      endCompileTimeBlock(&state->namespaceInfo,wordPos);
+      printf("closed namespace\n");//DEBUG
+      return;
+    }
+    //compiler commands
+    if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
+      pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=-1}}});
+      return;
+    }else if(wordEquals(&word,"stack")){
+      pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=-1}}});
+      return;
+    }else if(wordEquals(&word,"find")){
+      LabelId labelId=readLabel(codeFile,"variable names");
+      wordPos=codeFile->wordStart;
+      Label varName=label(labelId,wordPos);
+      ScopeNode* asIdentifier;
+      int r=getIdentifier(state->namespaceInfo,varName.label,&asIdentifier);//try to parse variable as identifier
+      if(r<0)//internal error while reading identifier
+        handleError("error while resolving identifier",r,wordPos);
+      if(r==0){//found identifier TODO print shadowed matches
+        puts("-----------------");
+        printf("identifier '%"PRI_STR"':\n",PRI_STR_ARGS(varName.label));
+        fputs("  ",stdout);
+        Label mLabel=label(asIdentifier->labelId,wordPos);
+        if(mLabel.isMutable)
+          fputs("mutable ",stdout);
+        printf("%s: ",idNames[asIdentifier->idType]);
+        printTypeName(&asIdentifier->type,stdout);
+        fputs("\n    at ",stdout);
+        printFilePosition(mLabel.declaredAt,stdout);
+        puts("");
+        puts("-----------------");
+        return;
+      }
+      fprintf(stderr,"could not find identifier '%"PRI_STR"'\n",PRI_STR_ARGS(varName.label));
+      //TODO resolve global identifiers with later declarations pre-declared types identifiers
+      return;
+    }
+    //XXX more compile time operations
+    fprintf(stderr,"unknown compile time operation '%"PRI_STR"'\n",PRI_STR_ARGS(word));
+    handleError(NULL,ERROR_SYNTAX,wordPos);
+  }
+  if(wordEquals(&word,"true")){
+    pushOperation(state,opConstant(primitiveType(PRIMITIVE_BOOL),1,wordPos));
+    return;
+  }else if(wordEquals(&word,"false")){
+    pushOperation(state,opConstant(primitiveType(PRIMITIVE_BOOL),0,wordPos));
+    return;
+  }else if(wordEquals(&word,"+")){
+    pushOperation(state,opBinaryOperator(ADD,wordPos));
+    return;
+  }else if(wordEquals(&word,"-")){
+    pushOperation(state,opBinaryOperator(SUBTRACT,wordPos));
+    return;
+  }else if(wordEquals(&word,"*")){
+    pushOperation(state,opBinaryOperator(MULTIPLY,wordPos));
+    return;
+  }else if(wordEquals(&word,"/")){
+    pushOperation(state,opBinaryOperator(DIVIDE,wordPos));
+    return;
+  }else if(wordEquals(&word,"%")){
+    pushOperation(state,opBinaryOperator(MOD,wordPos));
+    return;
+  }else if(wordEquals(&word,"&")){
+    pushOperation(state,opBinaryOperator(AND,wordPos));
+    return;
+  }else if(wordEquals(&word,"|")){
+    pushOperation(state,opBinaryOperator(OR,wordPos));
+    return;
+  }else if(wordEquals(&word,"^")){
+    pushOperation(state,opBinaryOperator(XOR,wordPos));
+    return;
+  }else if(wordEquals(&word,"&&")){//XXX implement short-circuit  and/or using code-blocks
+    handleError("short circuit operations are currently not supported",ERROR_UNIMPLEMENTED,wordPos);
+  }else if(wordEquals(&word,"||")){
+    handleError("short circuit operations are currently not supported",ERROR_UNIMPLEMENTED,wordPos);
+  }else if(wordEquals(&word,"==")){
+    pushOperation(state,opBinaryOperator(EQ,wordPos));
+    return;
+  }else if(wordEquals(&word,"!=")){
+    pushOperation(state,opBinaryOperator(NE,wordPos));
+    return;
+  }else if(wordEquals(&word,">")){
+    pushOperation(state,opBinaryOperator(GT,wordPos));
+    return;
+  }else if(wordEquals(&word,">=")){
+    pushOperation(state,opBinaryOperator(GE,wordPos));
+    return;
+  }else if(wordEquals(&word,"<=")){
+    pushOperation(state,opBinaryOperator(LE,wordPos));
+    return;
+  }else if(wordEquals(&word,"<")){
+    pushOperation(state,opBinaryOperator(LT,wordPos));
+    return;
+  }else if(wordEquals(&word,"neg")||wordEquals(&word,"negate")){
+    pushOperation(state,opUnaryOperator(NEGATE,wordPos));
+    return;
+  }else if(wordEquals(&word,"++")){
+    pushOperation(state,opUnaryOperator(INCREMENT,wordPos));
+    return;
+  }else if(wordEquals(&word,"--")){
+    pushOperation(state,opUnaryOperator(DECREMENT,wordPos));
+    return;
+  }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
+    LabelId labelId=readLabel(codeFile,"variable names");
+    wordPos=codeFile->wordStart;
+    Label varName=label(labelId,wordPos);
+    wordPos=codeFile->wordStart;
+    IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    DataType mType=TYPE_UNDEFINED;
+    mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
+    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos);
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
+    return;
+  }else if(wordEquals(&word,"=")){
+    if(state->parsedOpCount>0){
+      switch(state->parsedOps[state->parsedOpCount-1].opType){
+        case OP_GET:
+          state->parsedOps[state->parsedOpCount-1].opType=OP_SET;
+          return;
+        case OP_GET_LABEL:
+          state->parsedOps[state->parsedOpCount-1].opType=OP_SET_LABEL;
+          return;
+        case OP_IDENTIFIER:
+          state->parsedOps[state->parsedOpCount-1].opType=OP_SET_IDENTIFIER;
+          return;
+        default:
+          printf("cannot set operations of type %s\n",opName(state->parsedOps[state->parsedOpCount-1].opType));
+          break;
+      }
+    }
+    handleError("unexpected = operation",ERROR_SYNTAX,wordPos);
+  }else if(wordEquals(&word,"@")){
+    pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+      .dataAs={.idInfo={.type=ID_POINTER,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
+    return;
+  }else if(wordEquals(&word,"[]")){
+    pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+      .dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
+    return;
+  }else if(wordEquals(&word,"addrOf")){
+    if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_CALL){
+      state->parsedOps[state->parsedOpCount-1].dataType=asUnlabeledProc(&state->parsedOps[state->parsedOpCount-1].dataType,wordPos);
+      state->parsedOps[state->parsedOpCount-1].opType=OP_GET;
+    }
+    if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_IDENTIFIER)
+      state->parsedOps[state->parsedOpCount-1].opType=OP_IDENTIFIER_ADDRESS;
+    pushOperation(state,(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"()")){
+    pushOperation(state,(Operation){.opType=OP_CALL_PTR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"if")){
+    Scope* newScope=openScope(BLOCK_IF,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    pushOperation(state,opCodeBlock(BLOCK_IF,wordPos));
+    return;
+  }else if(wordEquals(&word,"_if")){
+    //no scope change for _if
+    pushOperation(state,opCodeBlock(BLOCK_IF2,wordPos));
+    return;
+  }else if(wordEquals(&word,"while")){
+    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    
+    pushOperation(state,opCodeBlock(BLOCK_WHILE,wordPos));
+    return;
+  }else if(wordEquals(&word,"do")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    //scope count does not change
+        
+    pushOperation(state,opCodeBlock(BLOCK_DO,wordPos));
+    return;
+  }else if(wordEquals(&word,"else")){
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_ELSE,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    //scope count does not change
+    
+    pushOperation(state,opCodeBlock(BLOCK_ELSE,wordPos));
+    return;
+  }else if(wordEquals(&word,"break")){
+    //current code-block does not change
+    pushOperation(state,opCodeBlock(BLOCK_BREAK,wordPos));
+    return;
+  }else if(wordEquals(&word,"continue")){
+    //current code-block does not change
+    pushOperation(state,opCodeBlock(BLOCK_CONTINUE,wordPos));
+    return;
+  }else if(wordEquals(&word,"switch")){
+    Scope* newScope=openScope(BLOCK_SWITCH,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    pushOperation(state,opCodeBlock(BLOCK_SWITCH,wordPos));
+    return;
+  }else if(wordEquals(&word,"case")){
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    //scope count does not change
+        
+    pushOperation(state,opCodeBlock(BLOCK_CASE,wordPos));
+    return;
+  }else if(wordEquals(&word,"default")){
+    closeScope(&state->namespaceInfo);
+    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    //scope count does not change
+        
+    pushOperation(state,opCodeBlock(BLOCK_DEFAULT,wordPos));
+    return;
+  }else if(wordEquals(&word,"end")){
+    closeScope(&state->namespaceInfo);
+    state->scopeLevel--;
+    if(state->scopeLevel<state->procScope){//exited procedure
+      state->currentProcId=-1;
+      state->procScope=-1;
+    }
+    
+    pushOperation(state,opEndCodeBlock(BLOCK_UNKNOWN,wordPos));
+    return;
+  }else if(wordEquals(&word,"return")){
+    if(state->currentProcId<0){
+      handleError("unexpected return statement",ERROR_SYNTAX,wordPos);
+    }
+    pushOperation(state,(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"entryPoint:")){
+    if(state->hasEntryPoint){//TODO print position of previous entry point
+      handleError("program can only have one entry point",ERROR_SYNTAX,wordPos);
+    }
+    Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
+    if(newScope==NULL)
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    state->currentScope=newScope;
+    state->scopeLevel++;
+    
+    state->hasEntryPoint=true;
+    pushOperation(state,(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"print")){
+    pushOperation(state,(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});//printed type will be determined by type-checker
+    return;
+  }else if(wordEquals(&word,"mut")){
+    handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
+    return;
+  } 
+  
+  ScopeNode* asIdentifier;
+  int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);//try to parse variable as identifier
+  if(r<0)//internal error while reading identifier
+    handleError("error while resolving identifier",r,wordPos);
+  if(r==0){//identifier
+    Label mLabel=label(asIdentifier->labelId,wordPos);
+    pushOperation(state,(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
+      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=mLabel.isMutable}}});
+    return;
+  }
+  // could not find identifier, try again in type-check phase
+  pushOperation(state,(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
+    .dataAs={.localLabel={.label=newLabel(word,false,codeFile->wordStart),.namespaceInfo=state->namespaceInfo}}});
+}
+
+
 Program compileToOps(CodeFile* codeFile){
   size_t opsCap=256;
-  Operation* compileOps=malloc(opsCap*sizeof(Operation));
-  if(compileOps==NULL){
+  Operation* parsedOps=malloc(opsCap*sizeof(Operation));
+  if(parsedOps==NULL){
     handleError(NULL,ERROR_MEMORY,codeFile->currentPos);
     exit(ERROR_MEMORY);
   }
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   openScope(BLOCK_UNKNOWN,namespaceInfo);
-  CompilerState state=(CompilerState){.namespaceInfo=namespaceInfo,.currentScope=scopeBuffer,
-    .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0,.compiledOps=0};
+  ParserState state=(ParserState){.namespaceInfo=namespaceInfo,.currentScope=scopeBuffer,
+    .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0
+    ,.parsedOps=parsedOps,.parsedOpCap=opsCap,.parsedOpCount=0};
+  parsedOps=NULL;//null out parsed ops to prevent access after reallocation during compilation
   while(codeFile->codeSize>0){
-    state.compiledOps+=readOperation(compileOps+state.compiledOps,codeFile,&state);
-    if(ensureOpCap(&compileOps,&opsCap,state.compiledOps+16)){
-      handleError(NULL,ERROR_MEMORY,codeFile->currentPos);
-      exit(ERROR_MEMORY);
-    }
+    readOperation(&state,codeFile);
   }
-  return (Program){.ops=compileOps,.opCount=state.compiledOps,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
+  return (Program){.ops=state.parsedOps,.opCount=state.parsedOpCount,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(char const* exprName,DataType expected,DataType got){
@@ -5641,10 +5676,7 @@ int main(int argc,char** argv){
 	if(p.ops==NULL)
 	  return ERROR_SYNTAX;
   printf("found %zu operations\n",p.opCount);
-	//2. type-check operations
-  typeCheckProgram(&p,&codeFile);
-  printf("compiled to %zu operations\n",p.globalCount+p.opCount);
-  //3. save intermediate representation
+  //2. save intermediate representation
   char const* opsFile="./ops.out";
   FILE* intermediate=fopen(opsFile,"w");
 	if(intermediate==NULL){
@@ -5658,7 +5690,23 @@ int main(int argc,char** argv){
     printOperation(p.ops[i],intermediate);
   }
   fclose(intermediate);
-	//4. compile operations to C
+	//3. type-check operations
+  typeCheckProgram(&p,&codeFile);
+  printf("compiled to %zu operations\n",p.globalCount+p.opCount);
+  //4. save intermediate representation
+  intermediate=fopen(opsFile,"w");
+	if(intermediate==NULL){
+	  fprintf(stderr,"IO Error while opening File: %s\n",opsFile);
+		return EXIT_FAILURE;
+	}
+  for(size_t i=0;i<p.globalCount;i++){
+    printOperation(p.globalOps[i],intermediate);
+  }
+  for(size_t i=0;i<p.opCount;i++){
+    printOperation(p.ops[i],intermediate);
+  }
+  fclose(intermediate);
+	//5. compile operations to C
   FILE* out=fopen(targetFile,"w");
 	if(out==NULL){
 	  fprintf(stderr,"IO Error while opening File: %s\n",targetFile);
