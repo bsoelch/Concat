@@ -135,6 +135,7 @@
           =&gt;           |
           enum\(          |
           struct\(        |
+          array           |
           ptr             |
           mut             |
           type            
