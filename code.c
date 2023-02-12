@@ -19,6 +19,11 @@ typedef struct tuple18Impl tuple18;
 typedef struct tuple20Impl tuple20;
 typedef struct tuple21Impl tuple21;
 typedef struct tuple22Impl tuple22;
+typedef struct array0Impl array0;
+typedef struct array1Impl array1;
+typedef struct array2Impl array2;
+typedef struct array3Impl array3;
+typedef struct array4Impl array4;
 typedef tuple1 (*procPtr0) (int32_t, int32_t);
 typedef void (*procPtr1) (int32_t, int32_t);
 typedef void (*procPtr2) (void);
@@ -92,6 +97,23 @@ struct tuple22Impl{
 tuple1 e0;
 int32_t e1;
 };
+struct array0Impl{
+int32_t data[3];
+};
+struct array1Impl{
+int64_t data[10][8][6][4][2];
+};
+struct array2Impl{
+int32_t const* data[2];
+};
+struct array3Impl{
+int32_t* data;
+int64_t const sizes[1];
+};
+struct array4Impl{
+array3* data;
+int64_t const sizes[1];
+};
 const int8_t stringChars0[40] = {0x54,0x68,0x69,0x73,0x20,0x69,0x73,0x20,0x61,0x20,0x75,0x6e,0x69,0x63,0x6f,0x64,0x65,-0x1e,-0x7c,-0x5e,0x20,0x6d,0x75,0x6c,0x74,0x69,0x2d,0x6c,0x69,0x6e,0x65,0xa,0x20,0x73,0x74,0x72,0x69,0x6e,0x67,0x00};
 const int8_t stringChars1[24] = {0x53,0x74,0x72,0x69,0x6e,0x67,0x73,0x20,0x61,0x72,0x65,0x20,0x22,0x69,0x67,0x6e,0x6f,0x72,0x65,0x64,0x22,0x20,0x20,0x00};
 const int8_t stringChars2[13] = {0x48,0x65,0x6c,0x6c,0x6f,0x20,0x57,0x6f,0x72,0x6c,0x64,0x21,0x00};
@@ -122,14 +144,15 @@ int32_t const global15 = 0;
 void procedure16 (void);
 int64_t const global17 = 2;
 void procedure18 (void);
-void procedure19 (int32_t, enum11, int8_t, tuple14);
-tuple18 procedure20 (tuple14, int64_t);
-void procedure21 (tuple14, int64_t, int8_t);
-tuple14 const global22 = {.e0=stringChars1+0,.e1=23};
-int8_t global23 = 65;
-tuple14 const global24 = {.e0=stringChars0+0,.e1=39};
-tuple21 const global25 = {.e0=1,.e1=1};
-tuple22 const global26 = {.e0={.e0=1,.e1=1},.e1=2};
+void procedure19 (void);
+void procedure20 (int32_t, enum11, int8_t, tuple14);
+tuple18 procedure21 (tuple14, int64_t);
+void procedure22 (tuple14, int64_t, int8_t);
+tuple14 const global23 = {.e0=stringChars1+0,.e1=23};
+int8_t global24 = 65;
+tuple14 const global25 = {.e0=stringChars0+0,.e1=39};
+tuple21 const global26 = {.e0=1,.e1=1};
+tuple22 const global27 = {.e0={.e0=1,.e1=1},.e1=2};
 //procedures code
 tuple1 procedure0 (int32_t arg0, int32_t arg1){
 procedure2();
@@ -161,6 +184,12 @@ printf("%"PRIi32"\n",global14);
 printf("%"PRIi64"\n",global17);
 }
 void procedure18 (void){
+int32_t const* local0;
+array1 local1;
+int32_t const** local2;
+array4 local3;
+}
+void procedure19 (void){
 int32_t tmp5;
 int32_t tmp4 = 0;
 do{
@@ -225,7 +254,7 @@ tmp17 = tmp20;
 }while(1);
 printf("%"PRIi32"\n",tmp20);
 }
-void procedure19 (int32_t arg0, enum11 arg1, int8_t arg2, tuple14 arg3){
+void procedure20 (int32_t arg0, enum11 arg1, int8_t arg2, tuple14 arg3){
 switch(arg0){
 case 1:case 2:;
 return ;
@@ -274,7 +303,7 @@ break;
 }
 bool const local0 = tmp25;
 }
-tuple18 procedure20 (tuple14 arg0, int64_t arg1){
+tuple18 procedure21 (tuple14 arg0, int64_t arg1){
 int64_t const local0 = arg1;
 tuple14 const local1 = arg0;
 int64_t const tmp26 = (local1).e1;
@@ -291,7 +320,7 @@ concatInternal_checkArrayBounds(tmp29,tmp32);
 int8_t const tmp33 = (*((tmp31)+(tmp29)));
 return (tuple18){.e0=local1,.e1=tmp28,.e2=tmp33,.e3=((bool)1)};
 }
-void procedure21 (tuple14 arg0, int64_t arg1, int8_t arg2){
+void procedure22 (tuple14 arg0, int64_t arg1, int8_t arg2){
 }
 int main(void){
 int32_t const tmp34 = (((int32_t)1)+((int32_t)1));
@@ -434,7 +463,7 @@ int8_t tmp106;
 int64_t tmp103 = (tmp102).e1;
 tuple14 tmp104 = (tmp102).e0;
 do{
-tuple18 const tmp105 = procedure20(tmp104,tmp103);
+tuple18 const tmp105 = procedure21(tmp104,tmp103);
 tmp106 = (tmp105).e2;
 tmp107 = (tmp105).e1;
 tmp108 = (tmp105).e0;
@@ -445,7 +474,7 @@ printf("%"PRIi8"\n",tmp106);
 tmp103 = tmp107;
 tmp104 = tmp108;
 }while(1);
-procedure21(tmp108,tmp107,tmp106);
+procedure22(tmp108,tmp107,tmp106);
 int32_t tmp112;
 bool tmp110 = 1;
 int32_t tmp111 = 5;
@@ -460,5 +489,5 @@ tmp110 = tmp114;
 tmp111 = tmp113;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
-global23 = ((int8_t)66);
+global24 = ((int8_t)66);
 }

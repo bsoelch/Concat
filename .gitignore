@@ -4,9 +4,8 @@
 *.ll
 *.bc
 tmp/*
+*.out
 syntaxHighlighting/update.sh
-a.out
-ops.out
 concat
 code
 featureMap.txt

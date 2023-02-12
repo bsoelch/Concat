@@ -58,6 +58,12 @@ end
   #end
 #end
 
+proc( => ) =: arrayTest
+  i32 3 ptr : a
+  i64 2 4 6 8 10 array mut : b
+  i32 ptr 2 ptr mut : c 
+  i32 array mut array : d
+end
 
 proc( => ) =: breakTest 
   0

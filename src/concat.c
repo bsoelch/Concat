@@ -264,6 +264,7 @@ typedef enum{
   TYPECLASS_ENUM,
   TYPECLASS_ENUM_LABEL,
   TYPECLASS_ARRAY,
+  TYPECLASS_ARRAY_VIEW,
 }TypeClass;
 
 typedef enum{
@@ -362,7 +363,8 @@ bool typeEquals(DataType const* a,DataType const* b){
     case TYPECLASS_OPAQUE:
       return a->typeDataAs.typeId==b->typeDataAs.typeId;
     case TYPECLASS_ARRAY:
-      return a->typeDataAs.array==b->typeDataAs.array;//TODO? equals for arrays
+    case TYPECLASS_ARRAY_VIEW:
+      return a->typeDataAs.array==b->typeDataAs.array;
   }
   return false;
 }
@@ -451,6 +453,7 @@ bool isTupleType(DataType const* type){
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
     case TYPECLASS_ARRAY:
+    case TYPECLASS_ARRAY_VIEW:
       return false;
   }
   return false;
@@ -476,6 +479,7 @@ bool makeMutable(DataType* t){
   switch(t->typeClass){
     case TYPECLASS_POINTER:
     case TYPECLASS_ARRAY:
+    case TYPECLASS_ARRAY_VIEW:
       t->isMutable=true;
       return true;
     case TYPECLASS_UNDEFINED:
@@ -667,7 +671,7 @@ DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
   DataType newProc=procedureType(&in,proc->outType);
   return isPtr?pointerType(&newProc,false):newProc;
 }
-DataType arrayType(DataType const* base, int32_t dims,int64_t const* sizes){
+DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const* sizes){//XXX remember if array type only appears as view (view-only static sized arrays do not need structs)
   if(dims<=0)
     return TYPE_UNDEFINED;
   base=bufferedType(base);
@@ -677,8 +681,8 @@ DataType arrayType(DataType const* base, int32_t dims,int64_t const* sizes){
     if(!typeEquals(arrayTypes[i].base,base)||arrayTypes[i].dims!=dims)
       continue;
     if(arrayTypes[i].sizes==sizes)//same array or both NULL
-      return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
-    if(sizes==NULL)
+      return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
+    if(sizes==NULL||arrayTypes[i].sizes==NULL)
       continue;
     bool match=true;
     for(int32_t j=0;j<dims;j++){
@@ -688,7 +692,7 @@ DataType arrayType(DataType const* base, int32_t dims,int64_t const* sizes){
       }
     }
     if(match)
-      return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
+      return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
   }
   int64_t* mSizes=NULL;
   if(sizes!=NULL){
@@ -698,7 +702,7 @@ DataType arrayType(DataType const* base, int32_t dims,int64_t const* sizes){
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
   }
   arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount};
-  return (DataType){.typeClass=TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+arrayTypeCount++}};
+  return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+arrayTypeCount++}};
 }
 
 char const* typeClassName(TypeClass cls){
@@ -730,7 +734,9 @@ char const* typeClassName(TypeClass cls){
     case TYPECLASS_ENUM_LABEL:
       return "enum label";
     case TYPECLASS_ARRAY:
-      return "pointer";
+      return "array";
+    case TYPECLASS_ARRAY_VIEW:
+      return "array view";
   }
   fprintf(stderr,"unexpected type-class %i",cls);
   return "";
@@ -831,6 +837,7 @@ void printTypeNameIntenal(DataType const* type,FILE* file,bool noRecurse){
       printTypeFlags(type,file);
       return;
     case TYPECLASS_ARRAY:
+    case TYPECLASS_ARRAY_VIEW:
       printTypeNameIntenal(type->typeDataAs.array->base,file,noRecurse);
       for(int32_t i=0;i<type->typeDataAs.array->dims;i++){
         if(type->typeDataAs.array->sizes!=NULL){
@@ -888,6 +895,16 @@ void printTypeNameC(DataType const* type,FILE* file){
       return;
     case TYPECLASS_ARRAY:
       fprintf(file,"array%"PRIi32,type->typeDataAs.array->id);
+      return;
+    case TYPECLASS_ARRAY_VIEW:
+      if(type->typeDataAs.array->sizes==NULL){//array with unknown size XXX better detection for unknown size
+        fprintf(file,"array%"PRIi32,type->typeDataAs.array->id); 
+        return; 
+      }
+      printTypeNameC(type->typeDataAs.array->base,file);
+      if(!isMutableType(type))
+        fputs(" const",file);
+      fputs("*",file);
       return;
     case TYPECLASS_PROC_IN:
     case TYPECLASS_LABELED_PROC_IN:
@@ -1003,7 +1020,7 @@ void printIdInfo(IdentifierInfo info,FILE* out){
     return;
   }
   String labelName=getLabelName(info.labelId);
-  fprintf(out,"%s '%"PRI_STR"' (%"PRIi32")",idNames[info.type],PRI_STR_ARGS(labelName),info.id);
+  fprintf(out,"%s \"%"PRI_STR"\" (%"PRIi32")",idNames[info.type],PRI_STR_ARGS(labelName),info.id);
 }
 
 typedef enum{
@@ -1123,7 +1140,7 @@ void printOperation(Operation op,FILE* out){
   fprintf(out,"%s ",opName(op.opType));
   if(op.dataType.typeClass!=TYPECLASS_UNDEFINED){
     printTypeName(&op.dataType,out);
-    fputs(" ",out);
+    fputs("  ",out);
   }
   switch(op.opType){
     case OP_CONSTANT:
@@ -2256,7 +2273,7 @@ void compileToC(FILE* target,Program const* p){
     printTypeNameC(arrayTypes[i].base,target);
     if(arrayTypes[i].sizes!=NULL){
       fputs(" data",target);
-      for(int32_t d=0;d<arrayTypes[i].dims;d++){
+      for(int32_t d=arrayTypes[i].dims-1;d>=0;d--){//C orders sizes the other way around 
         fprintf(target,"[%"PRIi64"]",arrayTypes[i].sizes[d]);
       }    
     }else{
@@ -2649,7 +2666,9 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType){
 
 
 //temporary buffer for storing constants
-#define CONST_BUFFER_CAP 256
+#define CONST_BUFFER_CAP       512
+#define MAX_COMPOSITE_ELEMENTS 128
+#define MAX_ARRAY_DIMS         64
 typedef enum{
   CONSTANT_INT,
   CONSTANT_CHAR,
@@ -2677,7 +2696,9 @@ typedef struct{
 }ConstantValue;
 size_t bufferedConstants=0;
 ConstantValue constBuffer[CONST_BUFFER_CAP];
-DataType compositeTypeBuffer[CONST_BUFFER_CAP];
+DataType compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
+int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
+int64_t arrayDimsCount=0;
 void pushConstant(ConstantType constType,int64_t constId,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
@@ -2705,7 +2726,30 @@ DataType popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoi
   }
   return constBuffer[bufferedConstants].valueAs.type;
 }
+int64_t* popArraySize(FilePosition pos){
+  arrayDimsCount=0;
+  while(constBuffer[bufferedConstants-1].type!=CONSTANT_TYPE){
+    bufferedConstants--;
+    arrayDimsCount++;
+  }
+  for(int64_t i=0;i<arrayDimsCount;i++){
+    if(constBuffer[bufferedConstants+i].type!=CONSTANT_INT){//XXX use _ to signal unknown dimension sizes
+      fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].type));
+      handleError(NULL,ERROR_SYNTAX,pos);
+    }
+    if(constBuffer[bufferedConstants+i].valueAs.i64<=0){
+      fprintf(stderr,"invalid array size: %"PRIi64" array sizes have to be greater than 0\n",constBuffer[bufferedConstants+i].valueAs.i64);
+      handleError(NULL,ERROR_SYNTAX,pos);
+    }
+    arrayDimsBuffer[i]=constBuffer[bufferedConstants+i].valueAs.i64;
+  }
+  return arrayDimsBuffer;
+}
 DataType* popTypeConstants(size_t count,FilePosition pos,char const* argumentName,bool allowVoid){
+  if(count>MAX_COMPOSITE_ELEMENTS){
+    fprintf(stderr,"composite type exceeds maximum element count (%i)\n",MAX_COMPOSITE_ELEMENTS);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
   for(int64_t i=count-1;i>=0;i--){
     compositeTypeBuffer[i]=popTypeConstant(pos,argumentName,allowVoid);
   }
@@ -2870,8 +2914,13 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   }
   //composite types
   int r;
-  if(wordEquals(&name,"ptr")){//XXX allow integer arguments
+  if(wordEquals(&name,"ptr")){
+    int64_t* dims=popArraySize(codeFile->wordStart);
     DataType target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
+    if(arrayDimsCount>0){//XXX pointer to array -> array view
+      pushTypeConstant(arrayType(true,&target,arrayDimsCount,dims),codeFile->wordStart);
+      return true;
+    }
     pushTypeConstant(pointerType(&target,false),codeFile->wordStart);
     return true;
   }
@@ -2886,9 +2935,14 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     pushTypeConstant(target,codeFile->wordStart);
     return true;
   }
-  if(wordEquals(&name,"array")){//XXX allow integer arguments
+  if(wordEquals(&name,"array")){
+    int64_t* dims=popArraySize(codeFile->wordStart);
     DataType target=popTypeConstant(codeFile->wordStart,"array argument",false);
-    pushTypeConstant(arrayType(&target,1,NULL),codeFile->wordStart);
+    if(arrayDimsCount==0){//array without size arguments
+      pushTypeConstant(arrayType(false,&target,1,NULL),codeFile->wordStart);
+      return true;
+    }
+    pushTypeConstant(arrayType(false,&target,arrayDimsCount,dims),codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"proc(")){
@@ -2949,7 +3003,7 @@ void requireCompileTimeTypes(ParserState* state,String* opName,DataType* typeOut
     return;
   }
   for(size_t i=0;i<nTypes;i++){
-    *(typeOut)=popTypeConstant(pos,"",false);//TODO argname
+    *(typeOut)=popTypeConstant(pos,"operation argument",false);
     if(typeEquals(typeOut,&TYPE_UNDEFINED))
       handleError("invalid type in type buffer",ERROR_TYPE,pos);
     typeOut++;
@@ -4399,6 +4453,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fputs(" expected an integer\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
+      //TODO array
       if(isArrayType(&(state->typeStack[offset].type))){//handle wrapped array types
         //1. store array and index in temporary variables
         size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
@@ -5677,7 +5732,7 @@ int main(int argc,char** argv){
 	  return ERROR_SYNTAX;
   printf("found %zu operations\n",p.opCount);
   //2. save intermediate representation
-  char const* opsFile="./ops.out";
+  char const* opsFile="./parser.out";
   FILE* intermediate=fopen(opsFile,"w");
 	if(intermediate==NULL){
 	  fprintf(stderr,"IO Error while opening File: %s\n",opsFile);
@@ -5694,6 +5749,7 @@ int main(int argc,char** argv){
   typeCheckProgram(&p,&codeFile);
   printf("compiled to %zu operations\n",p.globalCount+p.opCount);
   //4. save intermediate representation
+  opsFile="./typeCheck.out";
   intermediate=fopen(opsFile,"w");
 	if(intermediate==NULL){
 	  fprintf(stderr,"IO Error while opening File: %s\n",opsFile);
