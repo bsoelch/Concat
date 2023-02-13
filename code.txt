@@ -58,11 +58,15 @@ end
   #end
 #end
 
-proc( => ) =: arrayTest
+proc( i32 3 ptr : in ( i32 i64 ) 2 array mut : tupleArray i64 2 3 array : multi => ) =: arrayTest
   i32 3 ptr : a
   i64 2 4 6 8 10 array mut : b
   i32 ptr 2 ptr mut : c 
   i32 array mut array : d
+  in .length print
+  multi .size 0 [] print
+  in in 0 [] [] print 
+  1 tupleArray 0 [] .0 =
 end
 
 proc( => ) =: breakTest 

@@ -999,6 +999,8 @@ typedef enum{
   ID_ENUM_ELEMENT, //get element of enum
   ID_POINTER,
   ID_POINTER_OFFSET,
+  ID_ARRAY_ELEMENT,
+  ID_ARRAY_SIZE,
   ID_INTERMEDIATE_RESULT,
   ID_TMP_VAR,
   ID_TYPE,
@@ -1010,8 +1012,9 @@ typedef struct{
   bool isMutable;
 }IdentifierInfo;
 char const* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
-  [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_ENUM_LABEL]="enum label",[ID_ENUM_ELEMENT]="enum element",[ID_POINTER]="pointer value",[ID_POINTER_OFFSET]="array element",
-  [ID_INTERMEDIATE_RESULT]="intermediate result",[ID_TMP_VAR]="temporary variable",[ID_TYPE]="type"};
+  [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_ENUM_LABEL]="enum label",[ID_ENUM_ELEMENT]="enum element",[ID_POINTER]="pointer value",
+  [ID_POINTER_OFFSET]="pointer offset",[ID_ARRAY_ELEMENT]="array element",[ID_ARRAY_SIZE]="array size",[ID_INTERMEDIATE_RESULT]="intermediate result",
+  [ID_TMP_VAR]="temporary variable",[ID_TYPE]="type"};
 void printIdInfo(IdentifierInfo info,FILE* out){
   if(info.isMutable)
     fputs("mutable ",out);
@@ -1152,7 +1155,6 @@ void printOperation(Operation op,FILE* out){
     case OP_DECLARE:
     case OP_PRE_DECLARE:
     case OP_CALL:
-    case OP_CHECK_ARRAY_BOUNDS:
       printIdInfo(op.dataAs.idInfo,out);
       break;
     case OP_BINARY_OPERATOR:
@@ -1703,6 +1705,41 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       fputs("))",target);
       //tuple element access
       return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,true);
+    case ID_ARRAY_ELEMENT:
+      fputs("((",target);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);
+      fputs(")",target);
+      if(op->dataType.typeClass!=TYPECLASS_ARRAY_VIEW||op->dataType.typeDataAs.array->sizes==NULL)
+        fputs(".data",target);
+      fputs("[",target);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);
+      fputs("])",target);
+      return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,false);
+    case ID_ARRAY_SIZE:;
+      if(op->dataAs.idInfo.id==0){//is length
+        if(op->dataType.typeDataAs.array->sizes!=NULL){
+          fprintf(target,"/*length*/((int64_t)%"PRIi64")",op->dataType.typeDataAs.array->sizes[0]);
+          return size;
+        }
+        fputs("((",target);
+        COMPILE_OP_RETURN_ERROR(target,op,opSize);
+        fprintf(target,").sizes[%"PRIi32"])",op->dataType.typeDataAs.array->dims-1);
+        return size;
+      }
+      if(op->dataType.typeDataAs.array->sizes==NULL){
+        fputs("((",target);
+        COMPILE_OP_RETURN_ERROR(target,op,opSize);
+        fprintf(target,").sizes)");
+        return size;
+      }
+      fputs("(/*size*/(int64_t[]){",target);//TODO store array globally, only push pointer
+      for(int32_t i=0;i<op->dataType.typeDataAs.array->dims;i++){
+        if(i>0)
+          fputs(",",target);
+        fprintf(target,"%"PRIi64,op->dataType.typeDataAs.array->sizes[i]);
+      }
+      fputs("})",target);
+      return size;
     case ID_TYPE:
       handleError("type information is not accessible at runtime",ERROR_SYNTAX,op->filePos);
       break;
@@ -1879,6 +1916,8 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case ID_ENUM_ELEMENT:
         case ID_POINTER:
         case ID_POINTER_OFFSET:
+        case ID_ARRAY_ELEMENT:
+        case ID_ARRAY_SIZE:
         case ID_TYPE:
           fprintf(stderr,"cannot pre-declare %s\n",idNames[op->dataAs.idInfo.type]);
           handleError(NULL,ERROR_SYNTAX,op->filePos);
@@ -1925,6 +1964,10 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case ID_POINTER:
         case ID_POINTER_OFFSET:
           handleError("cannot declare pointers",ERROR_SYNTAX,op->filePos);
+          break;
+        case ID_ARRAY_ELEMENT:
+        case ID_ARRAY_SIZE:
+          handleError("cannot declare arrays",ERROR_SYNTAX,op->filePos);
           break;
         case ID_TYPE:
           handleError("cannot declare types",ERROR_SYNTAX,op->filePos);
@@ -2366,6 +2409,8 @@ int32_t nextId(IdentifierType idType,ParserState* state){
     case ID_ENUM_ELEMENT:
     case ID_POINTER:
     case ID_POINTER_OFFSET:
+    case ID_ARRAY_ELEMENT:
+    case ID_ARRAY_SIZE:
       return state->localVars++;//local 
   }
   return scopeNodeCount;
@@ -3393,7 +3438,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"[]")){
     pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-      .dataAs={.idInfo={.type=ID_POINTER_OFFSET,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
+      .dataAs={.idInfo={.type=ID_ARRAY_ELEMENT,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
     return;
   }else if(wordEquals(&word,"addrOf")){
     if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_CALL){
@@ -4271,9 +4316,9 @@ void typeCheckSetVariable(TypeCheckState* state,Operation* op){
   requireTypes("variable assignment",state,&op->dataType,1,op->filePos);
   addCompiledStackOps(state,*op,1,true);
 }
-void typeCheckSetStackValue(TypeCheckState* state,Operation* op){
+void typeCheckSetStackValue(TypeCheckState* state,Operation const* op,DataType const* valType){
   addCompiledStackOps(state,*op,1,false);
-  requireTypes("value assignment",state,&op->dataType,1,op->filePos);
+  requireTypes("value assignment",state,valType,1,op->filePos);
   addCompiledStackOps(state,*op,1,false);
 }
 bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition pos){
@@ -4288,13 +4333,14 @@ bool canWriteTupleElement(DataType const* tupleType,int32_t index,FilePosition p
     return label(tuple->labelOffset+index,pos).isMutable;
   return true;
 }
-void checkTupleElementMutable(DataType const* baseType,Operation const* elementAccess,int32_t depth){
-  DataType const* currentTuple=baseType;
+void checkTupleElementMutable(Operation const* elementAccess,int32_t depth){
+  DataType const* currentTuple;
   for(int32_t i=0;i<depth;i++){
     if((elementAccess->opType!=OP_GET&&elementAccess->opType!=OP_SET)||elementAccess->dataAs.idInfo.type!=ID_TUPLE_ELEMENT){
       printOperation(*elementAccess,stderr);
       handleError("unexpected operation for tuple access",ERROR_MEMORY,elementAccess->filePos);
     }
+    currentTuple=&elementAccess->dataType;
     if(!canWriteTupleElement(currentTuple,elementAccess->dataAs.idInfo.id,elementAccess->filePos)){
       fputs("element ",stderr);
       if(currentTuple->typeDataAs.composite->labelOffset!=LABEL_ID_UNKNOWN){
@@ -4312,30 +4358,29 @@ void checkTupleElementMutable(DataType const* baseType,Operation const* elementA
       }
       handleError(NULL,ERROR_SYNTAX,elementAccess->filePos);
     }
-    currentTuple=&elementAccess->dataType;
     elementAccess++;
   }
 }
 void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,bool tupleWritable,Operation* op){
   CompositeType const* tuple=tupleType->typeDataAs.composite;
   size_t offset=state->typeCount-1;
-  op->dataType=tuple->types[op->dataAs.idInfo.id];
+  DataType const* eltType=&tuple->types[op->dataAs.idInfo.id];
   Operation* blockStart=&(state->opStack[state->opStackCount-state->typeStack[offset].opCount]);
   bool mutable=canWriteTupleElement(tupleType,op->dataAs.idInfo.id,op->filePos);
   if((blockStart->opType==OP_GET||blockStart->opType==OP_SET)&&(
-      blockStart->dataAs.idInfo.type==ID_POINTER||blockStart->dataAs.idInfo.type==ID_POINTER_OFFSET||blockStart->dataAs.idInfo.type==ID_TUPLE)){
+      blockStart->dataAs.idInfo.type==ID_POINTER||blockStart->dataAs.idInfo.type==ID_POINTER_OFFSET||blockStart->dataAs.idInfo.type==ID_ARRAY_ELEMENT||blockStart->dataAs.idInfo.type==ID_TUPLE)){
     if(ensureOpStackCap(state,state->opStackCount+1)){
       handleError("exceeded op-stack capacity",ERROR_MEMORY,op->filePos);
     }
     blockStart->dataAs.idInfo.id++;
     state->opStack[state->opStackCount++]=*op;
-    setTypeStackType(state,op->dataType);
+    setTypeStackType(state,*eltType);
     setTypeStackFlags(state,true,mutable&tupleWritable);
     state->typeStack[offset].opCount++;
     if(op->opType==OP_SET){
       blockStart->opType=OP_SET;
-      checkTupleElementMutable(&blockStart->dataType,&state->opStack[state->opStackCount-blockStart->dataAs.idInfo.id],blockStart->dataAs.idInfo.id);
-      typeCheckSetStackValue(state,op);
+      checkTupleElementMutable(&state->opStack[state->opStackCount-blockStart->dataAs.idInfo.id],blockStart->dataAs.idInfo.id);
+      typeCheckSetStackValue(state,op,eltType);
     }
     return;
   }
@@ -4350,15 +4395,55 @@ void typeCheckGetTupleElement(TypeCheckState* state,DataType const* tupleType,bo
     .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}},totalOps);
   state->opStack[state->opStackCount++]=*op;
   //update type-stack
-  setTypeStackType(state,op->dataType);
+  setTypeStackType(state,*eltType);
   setTypeStackFlags(state,true,mutable&tupleWritable);
   state->typeStack[offset].opCount+=2;
   if(op->opType==OP_SET){
     if(!tupleWritable)
       handleError("cannot write to field of constant tuple",ERROR_SYNTAX,op->filePos);
-    checkTupleElementMutable(tupleType,&state->opStack[state->opStackCount-1],1);
-    typeCheckSetStackValue(state,op);
+    checkTupleElementMutable(&state->opStack[state->opStackCount-1],1);
+    typeCheckSetStackValue(state,op,eltType);
   }
+}
+void typeCheckArrayElementAccess(TypeCheckState* state,DataType const* arrayType,Operation* op){
+  size_t typeOffset=state->typeCount-2;
+  size_t offset=state->opStackCount-(state->typeStack[typeOffset].opCount+state->typeStack[typeOffset+1].opCount);
+  ArrayType const* arrayData=arrayType->typeDataAs.array;
+  //wrap composite operations
+  extractCompositeOps(state,2,true);//TODO only keep array writeable (restrict keep writable parameter to top n elements)
+  //check array bounds
+  state->hasCheckBounds=1;
+  pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
+  pushCompiledOperations(state,state->opStack+offset+state->typeStack[typeOffset].opCount,state->typeStack[offset+1].opCount);//index
+  if(arrayType->typeDataAs.array->sizes!=NULL){//plain array
+    pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[arrayData->dims-1],op->filePos));
+  }else{
+    //TODO size check for var-size array
+    handleError("var-size array length",ERROR_UNIMPLEMENTED,op->filePos);
+  }
+  // ... array index []
+  if(arrayData->dims==1){
+    op->dataAs.idInfo.type=ID_ARRAY_ELEMENT;
+    op->dataType=*arrayType;
+    //wrap composite operations
+    extractCompositeOps(state,2,true);
+    //update operation stack
+    insertStackOperation(state,*op,2);
+    //update type-stack
+    state->typeCount--;
+    bool writable=isMutableType(&state->typeStack[offset].type);
+    setTypeStackType(state,*arrayData->base);
+    setTypeStackFlags(state,false,writable);
+    state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
+    if(op->opType==OP_SET){
+      if(!writable)
+        handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
+      typeCheckSetStackValue(state,op,arrayData->base);
+    }
+    return;
+  }
+  //TODO OP_GET_SUBARRAY/OP_SET_SUBARRAY
+  handleError("multiarray access",ERROR_UNIMPLEMENTED,op->filePos);
 }
 void typeCheckGet(TypeCheckState* state,Operation* op){ 
   checkReachable(state,*op);
@@ -4399,19 +4484,19 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
       offset=state->typeCount-1;
-      DataType tupleType=state->typeStack[offset].type;
+      op->dataType=state->typeStack[offset].type;
       writable=state->typeStack[offset].isWritable;
-      if(tupleType.typeClass!=TYPECLASS_TUPLE){
-        printTypeName(&tupleType,stderr);
+      if(op->dataType.typeClass!=TYPECLASS_TUPLE){
+        printTypeName(&op->dataType,stderr);
         fputs(" is not a tuple\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      CompositeType const* tuple=tupleType.typeDataAs.composite;
+      CompositeType const* tuple=op->dataType.typeDataAs.composite;
       if(tuple->typeCount<op->dataAs.idInfo.id){
         fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      typeCheckGetTupleElement(state,&tupleType,writable,op);
+      typeCheckGetTupleElement(state,&op->dataType,writable,op);
       return;
     case ID_POINTER:
       if(state->typeCount<1){
@@ -4433,14 +4518,15 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       //update type-stack
       writable=isMutableType(&state->typeStack[offset].type);
       setTypeStackType(state,op->dataType);
-      setTypeStackFlags(state,false,writable);//dereferenced pointer are writable but not addressable
+      setTypeStackFlags(state,false,writable);//dereferenced pointers are writable but not addressable
       state->typeStack[offset].opCount++;
       if(op->opType==OP_SET){
         if(!writable)
           handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
-        typeCheckSetStackValue(state,op);
+        typeCheckSetStackValue(state,op,&op->dataType);
       }
       return;
+    case ID_ARRAY_ELEMENT:
     case ID_POINTER_OFFSET:
       if(state->typeCount<2){
         fprintf(stderr,"not enough operands for operation %s %s: need 2 got %zu\n",opName(op->opType),idNames[op->dataAs.idInfo.type],state->typeCount);
@@ -4453,8 +4539,12 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fputs(" expected an integer\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      //TODO array
-      if(isArrayType(&(state->typeStack[offset].type))){//handle wrapped array types
+      if(state->typeStack[offset].type.typeClass==TYPECLASS_ARRAY||state->typeStack[offset].type.typeClass==TYPECLASS_ARRAY_VIEW){
+        typeCheckArrayElementAccess(state,&state->typeStack[offset].type,op);
+        return;
+      }
+      op->dataAs.idInfo.type=ID_POINTER_OFFSET;
+      if(isArrayType(&(state->typeStack[offset].type))){//handle wrapped array types XXX remove once array implementation is stable
         //1. store array and index in temporary variables
         size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
         DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
@@ -4492,14 +4582,14 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         if(op->opType==OP_SET){
           if(!writable)
             handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
-          typeCheckSetStackValue(state,op);
+          typeCheckSetStackValue(state,op,&op->dataType);
         }
         return;
       }
       if(!isPointerType(&(state->typeStack[offset].type))){
         fprintf(stderr,"invalid first operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
         printTypeName(&(state->typeStack[offset].type),stderr);
-        fputs(" is not a pointer\n",stderr);
+        fputs(" is not a pointer or an array\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
       op->dataType=*state->typeStack[offset].type.typeDataAs.type;
@@ -4511,12 +4601,12 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       state->typeCount--;
       writable=isMutableType(&state->typeStack[offset].type);
       setTypeStackType(state,op->dataType);
-      setTypeStackFlags(state,false,writable);//dereferenced pointer are writable but not addressable
+      setTypeStackFlags(state,false,writable);//dereferenced pointers are writable but not addressable
       state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
       if(op->opType==OP_SET){
         if(!writable)
           handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
-        typeCheckSetStackValue(state,op);
+        typeCheckSetStackValue(state,op,&op->dataType);
       }
       return;
     case ID_INTERMEDIATE_RESULT:
@@ -4525,7 +4615,8 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       break;
     case ID_ENUM_LABEL:
     case ID_ENUM_ELEMENT:
-      fputs("direct access to enum elements should not exist at this stage of compilation\n",stderr);
+    case ID_ARRAY_SIZE:
+      fprintf(stderr,"direct access to %s should not exist at this stage of compilation\n",idNames[op->dataAs.idInfo.type]);
       handleError(NULL,ERROR_SYNTAX,op->filePos);
     case ID_TYPE:
       fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
@@ -4833,6 +4924,48 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       offset=state->typeCount-1;
       DataType structType=peekTypeStack(state)->type;
+      bool writable=peekTypeStack(state)->isWritable;
+      totalOps=peekTypeStack(state)->opCount;
+      if(structType.typeClass==TYPECLASS_ARRAY||structType.typeClass==TYPECLASS_ARRAY_VIEW){
+        if(op.opType==OP_SET_LABEL){
+        
+        }
+        if(wordEquals(&op.dataAs.string,"length")){
+          op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
+            .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}};
+          if(structType.typeDataAs.array->sizes!=NULL){
+            state->opStackCount-=peekTypeStack(state)->opCount;
+            insertStackOperation(state,op,0);
+            peekTypeStack(state)->opCount=1;//ignore array (length only depends on type)
+          }else{
+            insertStackOperation(state,op,totalOps);
+            peekTypeStack(state)->opCount++;
+          }
+          setTypeStackType(state,primitiveType(PRIMITIVE_I64));
+          setTypeStackFlags(state,true,false);
+          return;
+        }
+        if(wordEquals(&op.dataAs.string,"size")){
+          op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
+            .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=1,.labelId=-1,.isMutable=false}}};
+          if(structType.typeDataAs.array->sizes!=NULL){
+            state->opStackCount-=peekTypeStack(state)->opCount;
+            insertStackOperation(state,op,0);
+            peekTypeStack(state)->opCount=1;//ignore array (size only depends on type)
+          }else{
+            insertStackOperation(state,op,totalOps);
+            peekTypeStack(state)->opCount++;
+          }
+          DataType tmp=primitiveType(PRIMITIVE_I64);
+          int64_t dims=structType.typeDataAs.array->dims;
+          setTypeStackType(state,arrayType(true,&tmp,1,&dims));
+          setTypeStackFlags(state,true,false);
+          return;
+        }
+        printTypeName(&structType,stderr);
+        fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
+        handleError(NULL,ERROR_TYPE,op.filePos);
+      }
       if(structType.typeClass!=TYPECLASS_STRUCT&&structType.typeClass!=TYPECLASS_ENUM){
         printTypeName(&structType,stderr);
         fputs(" is not a struct or enum\n",stderr);
@@ -4846,9 +4979,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(structType.typeClass==TYPECLASS_STRUCT){
-        op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,
+        op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=structType,.filePos=op.filePos,
           .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
-        typeCheckGetTupleElement(state,&structType,peekTypeStack(state)->isWritable,&op);
+        typeCheckGetTupleElement(state,&structType,writable,&op);
         return;
       }
       if(isVoidType(&(mStruct->types[labelIndex]))){
@@ -4857,8 +4990,6 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      bool writable=peekTypeStack(state)->isWritable;
-      totalOps=peekTypeStack(state)->opCount;
       if(writable&&op.opType==OP_SET_LABEL){//XXX? overwrite only for mutable enum
         DataType lableType=structType;
         lableType.typeClass=TYPECLASS_ENUM_LABEL;
@@ -4893,7 +5024,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           fputs("\n",stderr);
           handleError(NULL,ERROR_SYNTAX,op.filePos);
         }
-        typeCheckSetStackValue(state,&op);
+        typeCheckSetStackValue(state,&op,&op.dataType);
       }
       return;
     case OP_PRE_DECLARE:
@@ -4922,11 +5053,13 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_TUPLE_ELEMENT:
         case ID_POINTER:
         case ID_POINTER_OFFSET:
+        case ID_ARRAY_ELEMENT:
         case ID_INTERMEDIATE_RESULT:
         case ID_TMP_VAR:
         case ID_ARGUMENT:
         case ID_ENUM_LABEL:
         case ID_ENUM_ELEMENT:
+        case ID_ARRAY_SIZE:
             fputs("cannot (directly) declare ",stderr);
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
@@ -4990,11 +5123,13 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_TUPLE_ELEMENT:
         case ID_POINTER:
         case ID_POINTER_OFFSET:
+        case ID_ARRAY_ELEMENT:
         case ID_INTERMEDIATE_RESULT:
         case ID_TMP_VAR:
         case ID_ARGUMENT:
         case ID_ENUM_LABEL:
         case ID_ENUM_ELEMENT:
+        case ID_ARRAY_SIZE:
             fputs("cannot (directly) declare ",stderr);
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
