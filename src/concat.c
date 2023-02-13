@@ -2411,7 +2411,7 @@ typedef struct{
   
   int32_t predeclaredTypes;
   int32_t opaqueTypeCount;
-  bool hasEntryPoint;
+  int64_t entryPointIndex;
 }ParserState;
 //compute the next id for a variable of the given id-type relative to the given compiler state
 int32_t nextId(IdentifierType idType,ParserState* state){
@@ -2768,10 +2768,15 @@ ConstantValue constBuffer[CONST_BUFFER_CAP];
 DataType compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
 int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
 int64_t arrayDimsCount=0;
-void pushConstant(ConstantType constType,int64_t constId,FilePosition pos){
+void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
   constBuffer[bufferedConstants++]=(ConstantValue){.type=constType,.valueAs.i64=constId,.pos=pos};
+}
+void pushStringConstant(String value,FilePosition pos){
+  if(bufferedConstants>=CONST_BUFFER_CAP)
+    handleError("constant buffer overflow",ERROR_MEMORY,pos);
+  constBuffer[bufferedConstants++]=(ConstantValue){.type=CONSTANT_STRING,.valueAs.string=value,.pos=pos};
 }
 void pushTypeConstant(DataType type,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
@@ -2835,8 +2840,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state);
 bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* state){
   FilePosition wordPos=codeFile->wordStart;
   if(wordType==WORD_TYPE_STRING){
-    int64_t strId=addProgString(word,wordPos);//TODO? store string in constant
-    pushConstant(CONSTANT_STRING,strId,wordPos);
+    pushStringConstant(word,wordPos);
     return true;
   }
   if(wordType==WORD_TYPE_CHAR){
@@ -2844,12 +2848,12 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
       fprintf(stderr,"character literal '%"PRI_STR"' contains more that one character\n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_SYNTAX,wordPos);
     }
-    pushConstant(CONSTANT_CHAR,charAt(word,0),wordPos);
+    pushIntConstant(CONSTANT_CHAR,charAt(word,0),wordPos);
     return true;
   }
   IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
   if(!asInt.isError){
-    pushConstant(CONSTANT_INT,asInt.as.i64,wordPos);
+    pushIntConstant(CONSTANT_INT,asInt.as.i64,wordPos);
     return true;
   }
   if(asInt.as.error!=ERROR_PARSE_INT)
@@ -3082,8 +3086,9 @@ void requireCompileTimeTypes(ParserState* state,String* opName,DataType* typeOut
   bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
   for(size_t i=0;i<constCount;i++){
     switch(constBuffer[i].type){
-      case CONSTANT_STRING://XXX? store value as string
-        pushOperation(state,opConstant(progStringType(),constBuffer[i].valueAs.i64,constBuffer[i].pos));
+      case CONSTANT_STRING:
+        intVal=addProgString(constBuffer[i].valueAs.string,constBuffer[i].pos);
+        pushOperation(state,opConstant(progStringType(),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_CHAR:
         pushOperation(state,opConstant(primitiveType(PRIMITIVE_I8),constBuffer[i].valueAs.charId,constBuffer[i].pos));
@@ -3132,6 +3137,12 @@ void pushOperation(ParserState* state,Operation op){
     requireCompileTimeTypes(state,&EMPTY_STRING,NULL,0,op.filePos);
   }
   state->parsedOps[state->parsedOpCount++]=op;
+}
+Operation* peekOperation(ParserState* state,FilePosition pos){
+  if(state->parsedOpCount==0){
+    handleError("operation underflow",ERROR_MEMORY,pos);
+  }
+  return &state->parsedOps[state->parsedOpCount-1];
 }
 void readOperation(ParserState* state,CodeFile* codeFile){
   int wordType;
@@ -3225,11 +3236,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
   }else if(wordEquals(&word,"new")){
-    if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_CONSTANT&&state->parsedOps[state->parsedOpCount-1].dataType.typeClass==TYPECLASS_ENUM_LABEL){
+    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&peekOperation(state,wordPos)->dataType.typeClass==TYPECLASS_ENUM_LABEL){
       //change enum label to enum declaration
-      state->parsedOps[state->parsedOpCount-1].opType=OP_NEW;//TODO use peek op
-      state->parsedOps[state->parsedOpCount-1].filePos=wordPos;
-      state->parsedOps[state->parsedOpCount-1].dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
+      peekOperation(state,wordPos)->opType=OP_NEW;
+      peekOperation(state,wordPos)->filePos=wordPos;
+      peekOperation(state,wordPos)->dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
       return;
     }
     requireCompileTimeTypes(state,&word,&type,1,wordPos);
@@ -3440,18 +3451,18 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"=")){
     if(state->parsedOpCount>0){
-      switch(state->parsedOps[state->parsedOpCount-1].opType){
+      switch(peekOperation(state,wordPos)->opType){
         case OP_GET:
-          state->parsedOps[state->parsedOpCount-1].opType=OP_SET;
+          peekOperation(state,wordPos)->opType=OP_SET;
           return;
         case OP_GET_LABEL:
-          state->parsedOps[state->parsedOpCount-1].opType=OP_SET_LABEL;
+          peekOperation(state,wordPos)->opType=OP_SET_LABEL;
           return;
         case OP_IDENTIFIER:
-          state->parsedOps[state->parsedOpCount-1].opType=OP_SET_IDENTIFIER;
+          peekOperation(state,wordPos)->opType=OP_SET_IDENTIFIER;
           return;
         default:
-          printf("cannot set operations of type %s\n",opName(state->parsedOps[state->parsedOpCount-1].opType));
+          printf("cannot set operations of type %s\n",opName(peekOperation(state,wordPos)->opType));
           break;
       }
     }
@@ -3465,12 +3476,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       .dataAs={.idInfo={.type=ID_ARRAY_ELEMENT,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
     return;
   }else if(wordEquals(&word,"addrOf")){
-    if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_CALL){
-      state->parsedOps[state->parsedOpCount-1].dataType=asUnlabeledProc(&state->parsedOps[state->parsedOpCount-1].dataType,wordPos);
-      state->parsedOps[state->parsedOpCount-1].opType=OP_GET;
+    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CALL){
+      peekOperation(state,wordPos)->dataType=asUnlabeledProc(&peekOperation(state,wordPos)->dataType,wordPos);
+      peekOperation(state,wordPos)->opType=OP_GET;
     }
-    if(state->parsedOpCount>0&&state->parsedOps[state->parsedOpCount-1].opType==OP_IDENTIFIER)
-      state->parsedOps[state->parsedOpCount-1].opType=OP_IDENTIFIER_ADDRESS;
+    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_IDENTIFIER)
+      peekOperation(state,wordPos)->opType=OP_IDENTIFIER_ADDRESS;
     pushOperation(state,(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
     return;
   }else if(wordEquals(&word,"()")){
@@ -3570,17 +3581,19 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_RETURN,.dataType=*procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}});
     return;
   }else if(wordEquals(&word,"entryPoint:")){
-    if(state->hasEntryPoint){//TODO print position of previous entry point
-      handleError("program can only have one entry point",ERROR_SYNTAX,wordPos);
+    if(state->entryPointIndex!=-1){
+      fputs("program already has an entry point\n  at ",stderr);
+      printFilePosition(state->parsedOps[state->entryPointIndex].filePos,stderr);
+      fputs("\n",stderr);
+      handleError(NULL,ERROR_SYNTAX,wordPos);
     }
     Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
     if(newScope==NULL)
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     state->currentScope=newScope;
     state->scopeLevel++;
-    
-    state->hasEntryPoint=true;
     pushOperation(state,(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    state->entryPointIndex=state->parsedOpCount;
     return;
   }else if(wordEquals(&word,"print")){
     pushOperation(state,(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});//printed type will be determined by type-checker
@@ -3616,13 +3629,13 @@ Program compileToOps(CodeFile* codeFile){
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   openScope(BLOCK_UNKNOWN,namespaceInfo);
   ParserState state=(ParserState){.namespaceInfo=namespaceInfo,.currentScope=scopeBuffer,
-    .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.hasEntryPoint=false,.predeclaredTypes=0
+    .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.entryPointIndex=-1,.predeclaredTypes=0
     ,.parsedOps=parsedOps,.parsedOpCap=opsCap,.parsedOpCount=0};
   parsedOps=NULL;//null out parsed ops to prevent access after reallocation during compilation
   while(codeFile->codeSize>0){
     readOperation(&state,codeFile);
   }
-  return (Program){.ops=state.parsedOps,.opCount=state.parsedOpCount,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.hasEntryPoint,.predeclaredTypes=state.predeclaredTypes};
+  return (Program){.ops=state.parsedOps,.opCount=state.parsedOpCount,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.entryPointIndex!=-1,.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(char const* exprName,DataType expected,DataType got){
