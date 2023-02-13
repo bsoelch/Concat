@@ -26,7 +26,7 @@ Concat code is a sequence of 'words' separated by any number of white-spaces
 ### string and characters literals
 
 string literals start and end with a `"` , character literals use a `'` 
-The type of a char literal is `char` ( which is an alias for `i8` ) while a string literals are represented by the composite type `string` 
+The type of a char literal is `char` ( which is an alias for `i8` ) while a string literals are represented by the array type `string` 
 
 string and char literals are allowed to contain special characters including new-lines 
 additionally the following escape sequences are supported
@@ -299,14 +299,28 @@ Concat supports the following primitive types:
 - `i64` 64-bit integer
 - `float` floating point type (currently unimplemented)
 
-<!-- TODO string (name alias for a special tuple) --> 
+<!-- TODO string (name alias for a special array) --> 
 
-### pointers
+### pointers & arrays
 
 appending `ptr` on a type name generates a pointer type to that type
+optionally a list of integers can be inserted between the type and `ptr` to signal the dimensions of the stored data
 
-internally Concat also supports const-pointers (pointers with unmodifiable content) 
-const-pointers can currently not be used directly
+By default the pointer target cannot be modified, if the pointer should allow modification this can be signaled by appending `mut`
+
+<!-- TODO pointer to var-size array --> 
+<!-- TODO array types --> 
+
+Examples:
+```
+0 =:: mut x              ## declare a mutable integer x 
+x addrOf =:: xAddr       ## the address of x  (will have type  i32 1 ptr mut)
+x addrOf i32 ptr =: xPtr ## get the address of x as (immutable) i32 pointer
+"Hello" i8 _ ptr =: str  ## string is a short-hand for  i8 _ ptr
+```
+
+
+
 
 ### tuples
 `tuple(` `)` or `(` `)` can be used to define tuple-types
