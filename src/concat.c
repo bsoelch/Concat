@@ -315,6 +315,9 @@ struct ArrayType{
   int64_t const* sizes;
   int32_t dims;
   int32_t id;
+  bool sizeKnown;
+  bool sizeUsed;
+  bool isMutable;
 };
 
 const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
@@ -333,7 +336,26 @@ ProcedureType procTypes[MAX_PROC_TYPES];
 int32_t arrayTypeCount=0;
 ArrayType arrayTypes[MAX_ARRAY_TYPES];
 
+typedef struct{
+  int32_t id;
+  bool isArray;//array or composite
+}MultiTypeDeclaration;
+int32_t declaredMultiTypeCount=0;
+MultiTypeDeclaration declaredMultiTypes[MAX_TYPES];
+void declareMultiType(int32_t id,bool isArray){
+  if(declaredMultiTypeCount>=MAX_TYPES){
+    fputs("exceeded maximum number of allowed multi-types",stderr);
+    exit(1);
+  }
+  declaredMultiTypes[declaredMultiTypeCount++]=(MultiTypeDeclaration){.id=id,.isArray=isArray};
+}
+
+bool isArrayType(DataType const* type){
+  return type->typeClass==TYPECLASS_ARRAY||type->typeClass==TYPECLASS_ARRAY_VIEW;
+}
 bool isMutableType(DataType const* type){
+  if(isArrayType(type))
+    return type->typeDataAs.array->isMutable;
   return type->isMutable;
 }
 bool typeEquals(DataType const* a,DataType const* b){
@@ -458,28 +480,16 @@ bool isTupleType(DataType const* type){
   }
   return false;
 }
-//checks id type is an array-type  a tuple consisting of a pointer and an integer
-bool isArrayType(DataType const* type){//TODO replace implicit array types with internal array types
-  if(type->typeClass!=TYPECLASS_STRUCT)
-    return false;
-  CompositeType const* elts=type->typeDataAs.composite;
-  if(elts->typeCount!=2)
-    return false;
-  if(!isPointerType(elts->types+0))
-    return false;
-  if(!isIntType(elts->types+1))
-    return false;
-  String lenLabel=getLabelName(elts->labelOffset+1);
-  if(!(wordEquals(&lenLabel,"length")||wordEquals(&lenLabel,"len")||wordEquals(&lenLabel,"size")))//length parameter has to be called length, len or size
-    return false;
-  return true;
-}
 
+DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const* sizes,bool isMutable);
 bool makeMutable(DataType* t){
   switch(t->typeClass){
     case TYPECLASS_POINTER:
+      t->isMutable=true;
+      return true;
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
+      *t=arrayType(t->typeClass==TYPECLASS_ARRAY_VIEW,t->typeDataAs.array->base,t->typeDataAs.array->dims,t->typeDataAs.array->sizes,true);
       t->isMutable=true;
       return true;
     case TYPECLASS_UNDEFINED:
@@ -605,6 +615,7 @@ DataType compositeType(TypeClass typeClass,DataType const* elements,int32_t labe
         return TYPE_UNDEFINED;
       match=compositeCount;
       compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=0,.types=NULL,.labelOffset=labelOffset,.flags=classFlag};
+      declareMultiType(compositeCount,false);
       compositeCount++;
     }
     return (DataType){.typeClass=typeClass,.typeDataAs.composite=compositeTypes+match};
@@ -638,6 +649,7 @@ DataType compositeType(TypeClass typeClass,DataType const* elements,int32_t labe
     types=newTypes;
   }
   compositeTypes[compositeCount]=(CompositeType){.id=compositeCount,.typeCount=eltCount,.types=types,.labelOffset=labelOffset,.flags=classFlag};
+  declareMultiType(compositeCount,false);
   return (DataType){.typeClass=typeClass,.typeDataAs={.composite=compositeTypes+(compositeCount++)}};
 }
 DataType procedureType(DataType const* inType,DataType const* outType){
@@ -671,14 +683,15 @@ DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
   DataType newProc=procedureType(&in,proc->outType);
   return isPtr?pointerType(&newProc,false):newProc;
 }
-DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const* sizes){//XXX remember if array type only appears as view (view-only static sized arrays do not need structs)
+DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const* sizes,bool isMutable){
+  //XXX remember if array type only appears as view (view-only static sized arrays do not need structs)
   if(dims<=0)
     return TYPE_UNDEFINED;
   base=bufferedType(base);
   if(base==NULL||(isCallableType(base)&&!isPointerType(base)))
     return TYPE_UNDEFINED;
   for(int32_t i=0;i<arrayTypeCount;i++){
-    if(!typeEquals(arrayTypes[i].base,base)||arrayTypes[i].dims!=dims)
+    if(!typeEquals(arrayTypes[i].base,base)||arrayTypes[i].dims!=dims||arrayTypes[i].isMutable!=isMutable)
       continue;
     if(arrayTypes[i].sizes==sizes)//same array or both NULL
       return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
@@ -701,7 +714,8 @@ DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const*
       return TYPE_UNDEFINED;
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
   }
-  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount};
+  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,.sizeKnown=sizes!=NULL,.isMutable=isMutable};
+  declareMultiType(arrayTypeCount,true);
   return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+arrayTypeCount++}};
 }
 
@@ -840,7 +854,7 @@ void printTypeNameIntenal(DataType const* type,FILE* file,bool noRecurse){
     case TYPECLASS_ARRAY_VIEW:
       printTypeNameIntenal(type->typeDataAs.array->base,file,noRecurse);
       for(int32_t i=0;i<type->typeDataAs.array->dims;i++){
-        if(type->typeDataAs.array->sizes!=NULL){
+        if(type->typeDataAs.array->sizeKnown){
           fprintf(file," %"PRIi64,type->typeDataAs.array->sizes[i]);
           continue;
         }
@@ -897,7 +911,7 @@ void printTypeNameC(DataType const* type,FILE* file){
       fprintf(file,"array%"PRIi32,type->typeDataAs.array->id);
       return;
     case TYPECLASS_ARRAY_VIEW:
-      if(type->typeDataAs.array->sizes==NULL){//array with unknown size XXX better detection for unknown size
+      if(!type->typeDataAs.array->sizeKnown){//array with unknown size
         fprintf(file,"array%"PRIi32,type->typeDataAs.array->id); 
         return; 
       }
@@ -1539,9 +1553,8 @@ void initStringLabels(void){
 }
 
 DataType progStringType(void){
-    DataType chr=primitiveType(PRIMITIVE_I8);//store in intermediate value to allow call by reference
-    DataType stringElts[2]={pointerType(&chr,false),primitiveType(PRIMITIVE_I64)};
-    return compositeType(TYPECLASS_STRUCT,stringElts,stringLabelOffset,2);//ensure string-type exists
+  DataType chr=primitiveType(PRIMITIVE_I8);//store in intermediate value to allow call by reference
+  return arrayType(true,&chr,1,NULL,false);//create string type
 }
 int64_t addProgString(String s,FilePosition pos){
   if(progStringCount+1>=MAX_PROG_STRINGS)
@@ -1709,7 +1722,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       fputs("((",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
-      if(op->dataType.typeClass!=TYPECLASS_ARRAY_VIEW||op->dataType.typeDataAs.array->sizes==NULL)
+      if(op->dataType.typeClass!=TYPECLASS_ARRAY_VIEW||!op->dataType.typeDataAs.array->sizeKnown)
         fputs(".data",target);
       fputs("[",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
@@ -1717,7 +1730,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,false);
     case ID_ARRAY_SIZE:;
       if(op->dataAs.idInfo.id==0){//is length
-        if(op->dataType.typeDataAs.array->sizes!=NULL){
+        if(op->dataType.typeDataAs.array->sizeKnown){
           fprintf(target,"/*length*/((int64_t)%"PRIi64")",op->dataType.typeDataAs.array->sizes[0]);
           return size;
         }
@@ -1726,19 +1739,13 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
         fprintf(target,").sizes[%"PRIi32"])",op->dataType.typeDataAs.array->dims-1);
         return size;
       }
-      if(op->dataType.typeDataAs.array->sizes==NULL){
-        fputs("((",target);
-        COMPILE_OP_RETURN_ERROR(target,op,opSize);
-        fprintf(target,").sizes)");
+      if(op->dataType.typeDataAs.array->sizeKnown){
+        fprintf(target,"arraySizes%"PRIi32,op->dataType.typeDataAs.array->id);
         return size;
       }
-      fputs("(/*size*/(int64_t[]){",target);//TODO store array globally, only push pointer
-      for(int32_t i=0;i<op->dataType.typeDataAs.array->dims;i++){
-        if(i>0)
-          fputs(",",target);
-        fprintf(target,"%"PRIi64,op->dataType.typeDataAs.array->sizes[i]);
-      }
-      fputs("})",target);
+      fputs("((",target);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);
+      fprintf(target,").sizes)");
       return size;
     case ID_TYPE:
       handleError("type information is not accessible at runtime",ERROR_SYNTAX,op->filePos);
@@ -1805,6 +1812,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           }
           break;
         case TYPECLASS_POINTER:
+        case TYPECLASS_ARRAY_VIEW:
           fputs("p",target);
           break;
         default:
@@ -1814,10 +1822,13 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           handleError(NULL,ERROR_TYPE,op->filePos);
       }
       fputs("\\n\",",target);
-      if(isPointerType(&op->dataType)){
+      if(isPointerType(&op->dataType)||isArrayType(&op->dataType)){
         fputs("(void const*)",target);
       }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
+      if(isArrayType(&op->dataType)&&!op->dataType.typeDataAs.array->sizeKnown){
+        fputs(".data",target);
+      }
       if(boolMode){
         fputs("?\"true\":\"false\"",target);
       }
@@ -1844,7 +1855,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
             break;
           }
         }   
-        fprintf(target,"{.e0=stringChars%"PRIi32"+%"PRIi32",.e1=%zu}",programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
+        fprintf(target,"{.data=stringChars%"PRIi32"+%"PRIi32",.sizes={%zu}}",programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
         if(needCast)
           fputs(")",target);
         return size;
@@ -2286,46 +2297,59 @@ void compileToC(FILE* target,Program const* p){
     printProcArgumentTypesC(procTypes[i].inType,target,false);
     fputs(");\n",target);
   }
-  //initialize composite types
-  for(int32_t i=0;i<compositeCount;i++){
-    if(isUsedTuple(&compositeTypes[i])){
-      fprintf(target,"struct tuple%"PRIi32"Impl{\n",i);
-      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        printTypeNameC(&(compositeTypes[i].types[e]),target);
+  for(int32_t i=0;i<declaredMultiTypeCount;i++){//got through multi-types in order of declaration
+    int32_t id=declaredMultiTypes[i].id;
+    if(declaredMultiTypes[i].isArray){
+      //initialize array types
+      fprintf(target,"struct array%"PRIi32"Impl{\n",id);
+      printTypeNameC(arrayTypes[id].base,target);
+      if(arrayTypes[id].sizeKnown){
+        fputs(" data",target);
+        for(int32_t d=arrayTypes[id].dims-1;d>=0;d--){//C orders sizes the other way around 
+          fprintf(target,"[%"PRIi64"]",arrayTypes[id].sizes[d]);
+        }    
+      }else{
+        if(!arrayTypes[id].isMutable)
+          fputs(" const",target);
+        fputs("* data",target);
+      }
+      fputs(";\n",target);
+      if(!arrayTypes[id].sizeKnown)
+        fprintf(target,"int64_t sizes[%"PRIi32"];\n",arrayTypes[id].dims);//don't declare as const to allow overwriting structure
+      fputs("};\n",target);
+      if((!arrayTypes[id].sizeKnown)||(!arrayTypes[id].sizeUsed))
+        continue;
+      fprintf(target,"int64_t const arraySizes%"PRIi32"[%"PRIi32"]={",arrayTypes[id].id,arrayTypes[id].dims);
+      for(int32_t d=0;d<arrayTypes[id].dims;d++){
+        if(d>0)
+          fputs(",",target);
+        fprintf(target,"%"PRIi64,arrayTypes[id].sizes[d]);
+      }
+      fputs("};\n",target);
+      continue;
+    }
+    //initialize composite types
+    if(isUsedTuple(&compositeTypes[id])){
+      fprintf(target,"struct tuple%"PRIi32"Impl{\n",id);
+      for(int16_t e=0;e<compositeTypes[id].typeCount;e++){
+        printTypeNameC(&(compositeTypes[id].types[e]),target);
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("};\n",target);
     }
-    if(((compositeTypes[i].flags&FLAG_IS_ENUM)!=0)&&((compositeTypes[i].flags&FLAG_VOID_ONLY)==0)){
-      fprintf(target,"struct enum%"PRIi32"Impl{\n",i);
+    if(((compositeTypes[id].flags&FLAG_IS_ENUM)!=0)&&((compositeTypes[id].flags&FLAG_VOID_ONLY)==0)){
+      fprintf(target,"struct enum%"PRIi32"Impl{\n",id);
       fputs("union{\n",target);
-      for(int16_t e=0;e<compositeTypes[i].typeCount;e++){
-        if(isVoidType(&(compositeTypes[i].types[e])))
+      for(int16_t e=0;e<compositeTypes[id].typeCount;e++){
+        if(isVoidType(&(compositeTypes[id].types[e])))
           continue;//skip void types
-        printTypeNameC(&(compositeTypes[i].types[e]),target);
+        printTypeNameC(&(compositeTypes[id].types[e]),target);
         fprintf(target," e%"PRIi16";\n",e);
       }
       fputs("} data;\n",target);
       fputs("int32_t label;\n",target);
       fputs("};\n",target);
     }
-  }
-  //initialize array types
-  for(int32_t i=0;i<arrayTypeCount;i++){
-    fprintf(target,"struct array%"PRIi32"Impl{\n",i);
-    printTypeNameC(arrayTypes[i].base,target);
-    if(arrayTypes[i].sizes!=NULL){
-      fputs(" data",target);
-      for(int32_t d=arrayTypes[i].dims-1;d>=0;d--){//C orders sizes the other way around 
-        fprintf(target,"[%"PRIi64"]",arrayTypes[i].sizes[d]);
-      }    
-    }else{
-      fputs("* data",target);
-    }
-    fputs(";\n",target);
-    if(arrayTypes[i].sizes==NULL)
-      fprintf(target,"int64_t const sizes[%"PRIi32"];\n",arrayTypes[i].dims);
-    fputs("};\n",target);
   }
   //initialize strings
   for(size_t i=0;i<progStringCount;i++){
@@ -2963,7 +2987,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     int64_t* dims=popArraySize(codeFile->wordStart);
     DataType target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
     if(arrayDimsCount>0){//XXX pointer to array -> array view
-      pushTypeConstant(arrayType(true,&target,arrayDimsCount,dims),codeFile->wordStart);
+      pushTypeConstant(arrayType(true,&target,arrayDimsCount,dims,false),codeFile->wordStart);
       return true;
     }
     pushTypeConstant(pointerType(&target,false),codeFile->wordStart);
@@ -2984,10 +3008,10 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     int64_t* dims=popArraySize(codeFile->wordStart);
     DataType target=popTypeConstant(codeFile->wordStart,"array argument",false);
     if(arrayDimsCount==0){//array without size arguments
-      pushTypeConstant(arrayType(false,&target,1,NULL),codeFile->wordStart);
+      pushTypeConstant(arrayType(false,&target,1,NULL,false),codeFile->wordStart);
       return true;
     }
-    pushTypeConstant(arrayType(false,&target,arrayDimsCount,dims),codeFile->wordStart);
+    pushTypeConstant(arrayType(false,&target,arrayDimsCount,dims,false),codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"proc(")){
@@ -4092,6 +4116,9 @@ bool canAutoCast(DataType const* src,DataType const* target){//? allow cast T pt
     return true;//allow auto-cast from enum to enum-label
   if(isPointerType(src)&&!isMutableType(target)&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
     return true;//assigning pointer to const pointer
+  if(src->typeClass==TYPECLASS_ARRAY_VIEW&&src->typeDataAs.array->sizeKnown&&isPointerType(target)&&
+    (isMutableType(src)||!isMutableType(target))&&typeEquals(src->typeDataAs.array->base,target->typeDataAs.type))
+    return true;//assigning fixed-size array-view to pointer
   if(!isPrimitiveType(src)||!isPrimitiveType(target))
     return false;
   return isInteger(src->typeDataAs.primitive)&&isInteger(target->typeDataAs.primitive)&&
@@ -4410,16 +4437,17 @@ void typeCheckArrayElementAccess(TypeCheckState* state,DataType const* arrayType
   size_t offset=state->opStackCount-(state->typeStack[typeOffset].opCount+state->typeStack[typeOffset+1].opCount);
   ArrayType const* arrayData=arrayType->typeDataAs.array;
   //wrap composite operations
-  extractCompositeOps(state,2,true);//TODO only keep array writeable (restrict keep writable parameter to top n elements)
+  extractCompositeOps(state,2,true);//XXX only keep array writeable (restrict keep writable parameter to top n elements)
   //check array bounds
   state->hasCheckBounds=1;
   pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
   pushCompiledOperations(state,state->opStack+offset+state->typeStack[typeOffset].opCount,state->typeStack[offset+1].opCount);//index
-  if(arrayType->typeDataAs.array->sizes!=NULL){//plain array
+  if(arrayType->typeDataAs.array->sizeKnown){//fixed-size array
     pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[arrayData->dims-1],op->filePos));
   }else{
-    //TODO size check for var-size array
-    handleError("var-size array length",ERROR_UNIMPLEMENTED,op->filePos);
+    pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=*arrayType,.filePos=op->filePos,
+            .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}});//length
+    pushCompiledOperations(state,state->opStack+offset,state->typeStack[offset].opCount);
   }
   // ... array index []
   if(arrayData->dims==1){
@@ -4539,53 +4567,11 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fputs(" expected an integer\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      if(state->typeStack[offset].type.typeClass==TYPECLASS_ARRAY||state->typeStack[offset].type.typeClass==TYPECLASS_ARRAY_VIEW){
+      if(isArrayType(&(state->typeStack[offset].type))){
         typeCheckArrayElementAccess(state,&state->typeStack[offset].type,op);
         return;
       }
       op->dataAs.idInfo.type=ID_POINTER_OFFSET;
-      if(isArrayType(&(state->typeStack[offset].type))){//handle wrapped array types XXX remove once array implementation is stable
-        //1. store array and index in temporary variables
-        size_t indexId=state->tmpCount++,arrayId=state->tmpCount++;
-        DataType indexType=state->typeStack[offset+1].type,arrayType=state->typeStack[offset].type;
-        CompositeType const* arrayTypeData=arrayType.typeDataAs.composite;
-        writable=label(arrayTypeData->labelOffset+1,op->filePos).isMutable;
-        addCompiledStackOps(state,opDeclareIntermediate(&indexType,indexId,op->filePos),1,true);
-        addCompiledStackOps(state,opDeclareIntermediate(&arrayType,arrayId,op->filePos),1,true);
-        size_t ptrIndex=state->tmpCount++,lenIndex=state->tmpCount++;
-        pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos));
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
-        pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op->filePos));//pointer
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[0],.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.labelId=arrayTypeData->labelOffset,.id=0,.isMutable=false}}});
-        pushCompiledOperation(state,opDeclareIntermediate(&(arrayTypeData->types[1]),lenIndex,op->filePos));
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
-        pushCompiledOperation(state,opGetIntermediate(&arrayType,arrayId,op->filePos));//length
-        pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayTypeData->types[1],.filePos=op->filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=1,.labelId=arrayTypeData->labelOffset+1,.isMutable=false}}});
-        //2. check array-bounds
-        state->hasCheckBounds=1;
-        pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
-        pushCompiledOperation(state,opGetIntermediate(&indexType,indexId,op->filePos));//index
-        pushCompiledOperation(state,opGetIntermediate(&(arrayTypeData->types[1]),lenIndex,op->filePos));//length
-        //3. array access
-        op->dataType=*(arrayTypeData->types[0].typeDataAs.type);//target-type of pointer in first element of tuple
-        insertStackOperation(state,*op,0);//get pointer offset 
-        insertStackOperation(state,opGetIntermediate(&(arrayTypeData->types[0]),ptrIndex,op->filePos),0);//pointer
-        insertStackOperation(state,opGetIntermediate(&indexType,indexId,op->filePos),0);
-        //update stack
-        pushType(state,op->dataType,op->filePos);
-        peekTypeStack(state)->opCount=3;
-        setTypeStackFlags(state,false,writable);
-        if(op->opType==OP_SET){
-          if(!writable)
-            handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
-          typeCheckSetStackValue(state,op,&op->dataType);
-        }
-        return;
-      }
       if(!isPointerType(&(state->typeStack[offset].type))){
         fprintf(stderr,"invalid first operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
         printTypeName(&(state->typeStack[offset].type),stderr);
@@ -4894,19 +4880,20 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       offset=state->typeCount-1;
-      //can only print pointer (excluding procedure pointer) or non-void primitive
-      if((!isPointerType(&(state->typeStack[offset].type))||isCallableType(&(state->typeStack[offset].type)))
-        &&(!isPrimitiveType(&(state->typeStack[offset].type))||isVoidType(&(state->typeStack[offset].type)))){
-        fputs("cannot print values of type ",stderr);
-        printTypeName(&(state->typeStack[offset].type),stderr);
-        fputs("\n",stderr);
-        handleError(NULL,ERROR_TYPE,op.filePos);
+      if((isPrimitiveType(&(state->typeStack[offset].type))&&!isVoidType(&(state->typeStack[offset].type)))||
+          (isPointerType(&(state->typeStack[offset].type))&&!isCallableType(&(state->typeStack[offset].type)))||
+          state->typeStack[offset].type.typeClass==TYPECLASS_ARRAY_VIEW){
+        op.dataType=state->typeStack[offset].type;
+        //update operations
+        extractCompositeOps(state,1,false);
+        addCompiledOps(state,op,1);
+        return;
       }
-      op.dataType=state->typeStack[offset].type;
-      //update operations
-      extractCompositeOps(state,1,false);
-      addCompiledOps(state,op,1);
-      return;
+      fputs("cannot print values of type ",stderr);
+      printTypeName(&(state->typeStack[offset].type),stderr);
+      fputs("\n",stderr);
+      handleError(NULL,ERROR_TYPE,op.filePos);
+      break;
     case OP_CHECK_ARRAY_BOUNDS:
     case OP_CHECK_ENUM_INDEX:
       break;
@@ -4926,14 +4913,16 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       DataType structType=peekTypeStack(state)->type;
       bool writable=peekTypeStack(state)->isWritable;
       totalOps=peekTypeStack(state)->opCount;
-      if(structType.typeClass==TYPECLASS_ARRAY||structType.typeClass==TYPECLASS_ARRAY_VIEW){
+      if(isArrayType(&structType)){
         if(op.opType==OP_SET_LABEL){
-        
+          printTypeName(&structType,stderr);
+          fprintf(stderr," does not have a writable field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
+          handleError(NULL,ERROR_SYNTAX,op.filePos);
         }
         if(wordEquals(&op.dataAs.string,"length")){
           op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
             .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}};
-          if(structType.typeDataAs.array->sizes!=NULL){
+          if(structType.typeDataAs.array->sizeKnown){
             state->opStackCount-=peekTypeStack(state)->opCount;
             insertStackOperation(state,op,0);
             peekTypeStack(state)->opCount=1;//ignore array (length only depends on type)
@@ -4946,9 +4935,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           return;
         }
         if(wordEquals(&op.dataAs.string,"size")){
+          arrayTypes[structType.typeDataAs.array->id].sizeUsed=true;
           op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
             .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=1,.labelId=-1,.isMutable=false}}};
-          if(structType.typeDataAs.array->sizes!=NULL){
+          if(structType.typeDataAs.array->sizeKnown){
             state->opStackCount-=peekTypeStack(state)->opCount;
             insertStackOperation(state,op,0);
             peekTypeStack(state)->opCount=1;//ignore array (size only depends on type)
@@ -4958,7 +4948,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           DataType tmp=primitiveType(PRIMITIVE_I64);
           int64_t dims=structType.typeDataAs.array->dims;
-          setTypeStackType(state,arrayType(true,&tmp,1,&dims));
+          setTypeStackType(state,arrayType(true,&tmp,1,&dims,false));
           setTypeStackFlags(state,true,false);
           return;
         }
@@ -5232,7 +5222,11 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           fprintf(stderr,"the operand of %s has to be an addressable type \n",opName(op.opType));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      op.dataType=pointerType(&(state->typeStack[offset].type),state->typeStack[offset].isWritable);
+      if(isCallableType(&state->typeStack[offset].type)&&!isPointerType(&state->typeStack[offset].type)){//don't use array for function pointers
+        op.dataType=pointerType(&(state->typeStack[offset].type),state->typeStack[offset].isWritable);
+      }else{
+        op.dataType=arrayType(true,&(state->typeStack[offset].type),1,(int64_t[]){1},state->typeStack[offset].isWritable);
+      }
       //store result in temp variable
       tmpId=state->tmpCount++;
       pushCompiledOperation(state,opDeclareIntermediate(&op.dataType,tmpId,op.filePos));

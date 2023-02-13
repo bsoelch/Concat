@@ -220,6 +220,7 @@ entryPoint:
   tmp .0 addrOf print
   tmp addrOf ( i64 i64 ) ptr =: strPtr
   strPtr 0 [] .0 print
+  "Hello World" print
   "Hello World!" 1 [] print
   "World" .length print
 
