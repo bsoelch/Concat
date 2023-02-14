@@ -509,7 +509,13 @@ bool makeMutable(DataType* t){
   }
   return false;
 }
+const DataType TYPE_BOOL={.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=PRIMITIVE_BOOL}};
+const DataType TYPE_CHAR={.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=PRIMITIVE_I8}};
 DataType primitiveType(PrimitiveType id){
+  if(id==PRIMITIVE_BOOL)
+    return TYPE_BOOL;
+  if(id==PRIMITIVE_I8)
+    return TYPE_CHAR;
   return (DataType){.typeClass=TYPECLASS_PRIMITIVE,.typeDataAs={.primitive=id}};
 }
 DataType opaqueType(int64_t typeId){
@@ -1556,10 +1562,6 @@ void initStringLabels(void){
   newLabel(cstrToStr("length"),false,dummyPos);
 }
 
-DataType progStringType(void){
-  DataType chr=primitiveType(PRIMITIVE_I8);//store in intermediate value to allow call by reference
-  return arrayType(true,&chr,1,NULL,false);//create string type
-}
 int64_t addProgString(String s,FilePosition pos){
   if(progStringCount+1>=MAX_PROG_STRINGS)
     handleError("exceeded string capacity",ERROR_MEMORY,pos);
@@ -1850,16 +1852,21 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs(")",target);
         return size;
       }
-      DataType strType=progStringType();
-      if(typeEquals(&op->dataType,&strType)){
+      if(isArrayType(&op->dataType)){
+        if(op->dataType.typeClass!=TYPECLASS_ARRAY_VIEW)
+          handleError("creating array constants is not supported",ERROR_UNIMPLEMENTED,op->filePos);
         int64_t i=-1;
         for(size_t j=0;j<progStringCount;j++){//find string in reordered string array
           if(programStrings[j].stringId==op->dataAs.i64){
             i=j;
             break;
           }
-        }   
-        fprintf(target,"{.data=stringChars%"PRIi32"+%"PRIi32",.sizes={%zu}}",programStrings[i].charsId,programStrings[i].charsOffset,programStrings[i].value.length);
+        }
+        if(!op->dataType.typeDataAs.array->sizeKnown)
+          fputs("{.data=",target);
+        fprintf(target,"(arrayData%"PRIi32"+%"PRIi32")",programStrings[i].charsId,programStrings[i].charsOffset);
+        if(!op->dataType.typeDataAs.array->sizeKnown)
+          fprintf(target,",.sizes={%zu}}",programStrings[i].value.length);
         if(needCast)
           fputs(")",target);
         return size;
@@ -2033,6 +2040,56 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       handleError("unexpected type for OP_NEW",ERROR_UNIMPLEMENTED,op->filePos);
       break;
     case OP_CAST:
+      if(isArrayType(op->dataAs.sourceType)){
+        bool isView=op->dataAs.sourceType->typeClass==TYPECLASS_ARRAY_VIEW;
+        ArrayType const* srcArray=op->dataAs.sourceType->typeDataAs.array;
+        if(isPointerType(&op->dataType)){
+          fputs("((",target);
+          printTypeNameC(&(op->dataType),target);
+          fputs(")",target);
+          COMPILE_OP_RETURN_ERROR(target,op,opSize);
+          if(isView&&srcArray->sizeKnown){
+            fputs(")",target);
+            return size;//value is already pointer
+          }
+          fputs(".data)",target);
+          return size;
+        }
+        if(op->dataType.typeClass==TYPECLASS_ARRAY_VIEW){
+          ArrayType const* targetArray=op->dataType.typeDataAs.array;
+          fputs("((",target);
+          printTypeNameC(&(op->dataType),target);
+          fputs(")",target);
+          if(!targetArray->sizeKnown){
+            fputs("{.data=",target);
+          }
+          COMPILE_OP_RETURN_ERROR(target,op,opSize);
+          if(!isView||!srcArray->sizeKnown){
+            fputs(".data",target);
+          }
+          if(!targetArray->sizeKnown){
+            if(!srcArray->sizeKnown)
+              break;//XXX cast between arrays of unknown size
+            fputs(",.sizes={",target);
+            if(targetArray->dims==1){
+              int64_t l=1;
+              for(int32_t d=0;d<srcArray->dims;d++)
+                l*=srcArray->sizes[d];
+              fprintf(target,"%"PRIi64,l);
+            }else{
+              if(targetArray->dims!=srcArray->dims){
+                handleError("casting between arrays of different dimensions is not supported",ERROR_SYNTAX,op->filePos);
+              }
+              for(int32_t d=0;d<srcArray->dims;d++)
+                fprintf(target,"%"PRIi64",",srcArray->sizes[d]);
+            }
+            fputs("}}",target);
+          }
+          fputs(")",target);
+          return size;
+        }
+        break;//unknown cast
+      }
       if(op->dataAs.sourceType->typeClass==TYPECLASS_ENUM&&((op->dataAs.sourceType->typeDataAs.composite->flags&FLAG_VOID_ONLY)==0)){
         fputs("(",target);
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
@@ -2291,6 +2348,8 @@ void compileToC(FILE* target,Program const* p){
     }
   }
   for(int32_t i=0;i<arrayTypeCount;i++){
+      if(arrayTypes[i].viewOnly&&arrayTypes[i].sizeKnown)
+        continue;//skip view-only arrays with known size
       fprintf(target,"typedef struct array%"PRIi32"Impl array%"PRIi32";\n",i,i);
   }
   //declare procedure pointers
@@ -2360,7 +2419,7 @@ void compileToC(FILE* target,Program const* p){
   //initialize strings
   for(size_t i=0;i<progStringCount;i++){
     if(programStrings[i].isBaseString){
-      fprintf(target,"const %s stringChars%"PRIi32"[%"PRIi64"] = {",primitiveNameC(PRIMITIVE_I8),programStrings[i].charsId,programStrings[i].value.length+1);
+      fprintf(target,"const %s arrayData%"PRIi32"[%"PRIi64"] = {",primitiveNameC(PRIMITIVE_I8),programStrings[i].charsId,programStrings[i].value.length+1);
       String str=programStrings[i].value;
       for(size_t j=0;j<str.length;j++){
         if(charAt(str,j)<0)
@@ -2970,11 +3029,11 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return false;
   }
   if(wordEquals(&name,"bool")){
-    pushTypeConstant(primitiveType(PRIMITIVE_BOOL),codeFile->wordStart);
+    pushTypeConstant(TYPE_BOOL,codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"i8")||wordEquals(&name,"char")){
-    pushTypeConstant(primitiveType(PRIMITIVE_I8),codeFile->wordStart);
+    pushTypeConstant(TYPE_CHAR,codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"i32")){
@@ -2990,7 +3049,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true;
   }
   if(wordEquals(&name,"string")){
-    pushTypeConstant(progStringType(),codeFile->wordStart);
+    pushTypeConstant(arrayType(true,&TYPE_CHAR,1,NULL,false),codeFile->wordStart);
     return true ;
   }
   //composite types
@@ -3101,10 +3160,10 @@ void requireCompileTimeTypes(ParserState* state,String* opName,DataType* typeOut
     switch(constBuffer[i].type){
       case CONSTANT_STRING:
         intVal=addProgString(constBuffer[i].valueAs.string,constBuffer[i].pos);
-        pushOperation(state,opConstant(progStringType(),intVal,constBuffer[i].pos));
+        pushOperation(state,opConstant(arrayType(true,&TYPE_CHAR,1,(int64_t[]){constBuffer[i].valueAs.string.length},false),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_CHAR:
-        pushOperation(state,opConstant(primitiveType(PRIMITIVE_I8),constBuffer[i].valueAs.charId,constBuffer[i].pos));
+        pushOperation(state,opConstant(TYPE_CHAR,constBuffer[i].valueAs.charId,constBuffer[i].pos));
         break;
       case CONSTANT_INT:
         intVal=constBuffer[i].valueAs.i64;
@@ -3411,10 +3470,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     handleError(NULL,ERROR_SYNTAX,wordPos);
   }
   if(wordEquals(&word,"true")){
-    pushOperation(state,opConstant(primitiveType(PRIMITIVE_BOOL),1,wordPos));
+    pushOperation(state,opConstant(TYPE_BOOL,1,wordPos));
     return;
   }else if(wordEquals(&word,"false")){
-    pushOperation(state,opConstant(primitiveType(PRIMITIVE_BOOL),0,wordPos));
+    pushOperation(state,opConstant(TYPE_BOOL,0,wordPos));
     return;
   }else if(wordEquals(&word,"+")){
     pushOperation(state,opBinaryOperator(ADD,wordPos));
@@ -3726,7 +3785,7 @@ DataType typeCheckCompare(DataType* inTypes){
     return TYPE_UNDEFINED;
   inTypes[0]=primitiveType(res);
   inTypes[1]=inTypes[0];
-  return primitiveType(PRIMITIVE_BOOL);
+  return TYPE_BOOL;
 }
 DataType typeCheckIntLogic(DataType* inTypes){
   if(!isIntType(&(inTypes[0]))||!isIntType(&(inTypes[1])))
@@ -4180,9 +4239,13 @@ bool canAutoCast(DataType const* src,DataType const* target){//? allow cast T pt
     return true;//allow auto-cast from enum to enum-label
   if(isPointerType(src)&&!isMutableType(target)&&typeEquals(src->typeDataAs.type,target->typeDataAs.type))
     return true;//assigning pointer to const pointer
-  if(src->typeClass==TYPECLASS_ARRAY_VIEW&&src->typeDataAs.array->sizeKnown&&isPointerType(target)&&
+  if(src->typeClass==TYPECLASS_ARRAY_VIEW&&isPointerType(target)&&
     (isMutableType(src)||!isMutableType(target))&&typeEquals(src->typeDataAs.array->base,target->typeDataAs.type))
-    return true;//assigning fixed-size array-view to pointer
+    return true;//assigning array-view to pointer
+  if(isArrayType(src)&&target->typeClass==TYPECLASS_ARRAY_VIEW&&
+    (isMutableType(src)||!isMutableType(target))&&src->typeDataAs.array->dims==target->typeDataAs.array->dims&&!target->typeDataAs.array->sizeKnown&&
+      typeEquals(src->typeDataAs.array->base,target->typeDataAs.array->base))
+    return true;//assigning fixed-size array(-view) to var-size array-view
   if(!isPrimitiveType(src)||!isPrimitiveType(target))
     return false;
   return isInteger(src->typeDataAs.primitive)&&isInteger(target->typeDataAs.primitive)&&
@@ -4191,6 +4254,7 @@ bool canAutoCast(DataType const* src,DataType const* target){//? allow cast T pt
 bool canCast(DataType const* src,DataType const* target){
   if(canAutoCast(src,target))
     return true;
+  //XXX cast between arrays of different dimmensions
   return numberRank(src->typeDataAs.primitive)>-1&&numberRank(target->typeDataAs.primitive)>-1;//casts only between numbers
 }
 
@@ -4817,7 +4881,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           break;
         case NOT:
           if(!isBoolType(&(state->typeStack[offset].type))){
-            typeErrorMessage("unary operator NOT",primitiveType(PRIMITIVE_BOOL),state->typeStack[offset].type);
+            typeErrorMessage("unary operator NOT",TYPE_BOOL,state->typeStack[offset].type);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
           break;
@@ -4876,7 +4940,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           //bool ops
           if(isBoolType(&(state->typeStack[offset].type))&&isBoolType(&(state->typeStack[offset+1].type))){
-            op.dataType=primitiveType(PRIMITIVE_BOOL);
+            op.dataType=TYPE_BOOL;
             typesMatch=true;
             break;
           }
@@ -4886,7 +4950,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           //pointer equality 
           if(isPointerType(&(inTypes[0]))&&isPointerType(&(inTypes[1]))&&
               typeEquals(inTypes[0].typeDataAs.type,inTypes[1].typeDataAs.type)){
-            op.dataType=primitiveType(PRIMITIVE_BOOL);
+            op.dataType=TYPE_BOOL;
             typesMatch=true;
             break;
           }
@@ -4894,7 +4958,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if((inTypes[0].typeClass==TYPECLASS_ENUM||inTypes[0].typeClass==TYPECLASS_ENUM_LABEL)&&inTypes[1].typeClass==TYPECLASS_ENUM_LABEL&&
               inTypes[0].typeDataAs.composite->id==inTypes[1].typeDataAs.composite->id){
             inTypes[0].typeClass=TYPECLASS_ENUM_LABEL;
-            op.dataType=primitiveType(PRIMITIVE_BOOL);
+            op.dataType=TYPE_BOOL;
             typesMatch=true;
             break;
           }
@@ -5329,7 +5393,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(pushBlock(state,blockInfo))
             handleError(NULL,ERROR_MEMORY,op.filePos);
           
-          op.dataType=primitiveType(PRIMITIVE_BOOL);
+          op.dataType=TYPE_BOOL;
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
           extractCompositeOps(state,1,false);
           offset=state->typeCount-1;
@@ -5391,7 +5455,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           //update block
           blockInfoPtr->type=BLOCK_IF;
           ifBlock->elsePos=state->opCount;
-          op.dataType=primitiveType(PRIMITIVE_BOOL);
+          op.dataType=TYPE_BOOL;
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
           extractCompositeOps(state,1,false);
           offset=state->typeCount-1;
@@ -5443,7 +5507,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           checkWhileOutTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),true,op.filePos);
           //update block
           blockInfoPtr->blockDataAs.whileBlock.hasDo=true;
-          op.dataType=primitiveType(PRIMITIVE_BOOL);
+          op.dataType=TYPE_BOOL;
           op.dataAs.block.type=BLOCK_WHILE;
           requireTypes("while-condition",state,&op.dataType,1,op.filePos);
           offset=state->typeCount-1;
