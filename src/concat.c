@@ -317,6 +317,7 @@ struct ArrayType{
   int32_t id;
   bool sizeKnown;
   bool sizeUsed;
+  bool viewOnly;
   bool isMutable;
 };
 
@@ -684,7 +685,6 @@ DataType asUnlabeledProc(DataType const* procType,FilePosition pos){
   return isPtr?pointerType(&newProc,false):newProc;
 }
 DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const* sizes,bool isMutable){
-  //XXX remember if array type only appears as view (view-only static sized arrays do not need structs)
   if(dims<=0)
     return TYPE_UNDEFINED;
   base=bufferedType(base);
@@ -693,8 +693,10 @@ DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const*
   for(int32_t i=0;i<arrayTypeCount;i++){
     if(!typeEquals(arrayTypes[i].base,base)||arrayTypes[i].dims!=dims||arrayTypes[i].isMutable!=isMutable)
       continue;
-    if(arrayTypes[i].sizes==sizes)//same array or both NULL
+    if(arrayTypes[i].sizes==sizes){//same array or both NULL
+      arrayTypes[i].viewOnly&=isView;
       return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
+    }
     if(sizes==NULL||arrayTypes[i].sizes==NULL)
       continue;
     bool match=true;
@@ -704,8 +706,10 @@ DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const*
         break;
       }
     }
-    if(match)
+    if(match){
+      arrayTypes[i].viewOnly&=isView;
       return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+i}};
+    }
   }
   int64_t* mSizes=NULL;
   if(sizes!=NULL){
@@ -714,7 +718,7 @@ DataType arrayType(bool isView,DataType const* base, int32_t dims,int64_t const*
       return TYPE_UNDEFINED;
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
   }
-  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,.sizeKnown=sizes!=NULL,.isMutable=isMutable};
+  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,.sizeKnown=sizes!=NULL,.isMutable=isMutable,.viewOnly=isView};
   declareMultiType(arrayTypeCount,true);
   return (DataType){.typeClass=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.typeDataAs={.array=arrayTypes+arrayTypeCount++}};
 }
@@ -1208,7 +1212,7 @@ typedef struct{
   NamespaceId parent;
   String name;
   
-  NamespaceId* children;//XXX use flat children list similar as namespace imports
+  NamespaceId* children;
   size_t childCount;
   size_t childCap;
 }Namespace;
@@ -2300,6 +2304,8 @@ void compileToC(FILE* target,Program const* p){
   for(int32_t i=0;i<declaredMultiTypeCount;i++){//got through multi-types in order of declaration
     int32_t id=declaredMultiTypes[i].id;
     if(declaredMultiTypes[i].isArray){
+      if(arrayTypes[id].viewOnly&&arrayTypes[id].sizeKnown)
+        continue;//skip view-only arrays with known size
       //initialize array types
       fprintf(target,"struct array%"PRIi32"Impl{\n",id);
       printTypeNameC(arrayTypes[id].base,target);
@@ -2791,7 +2797,9 @@ DataType popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoi
   bufferedConstants--;
   if(constBuffer[bufferedConstants].type!=CONSTANT_TYPE){
     fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].type));
-    //XXX print position of constant
+    fputs(" declared at ",stderr);
+    printFilePosition(constBuffer[bufferedConstants].pos,stderr);
+    fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   if(!allowVoid&&isVoidType(&constBuffer[bufferedConstants].valueAs.type)){
@@ -2990,8 +2998,13 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   if(wordEquals(&name,"ptr")){
     int64_t* dims=popArraySize(codeFile->wordStart);
     DataType target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
-    if(arrayDimsCount>0){//XXX pointer to array -> array view
+    if(arrayDimsCount>0){
       pushTypeConstant(arrayType(true,&target,arrayDimsCount,dims,false),codeFile->wordStart);
+      return true;
+    }
+    if(target.typeClass==TYPECLASS_ARRAY){
+      target.typeClass=TYPECLASS_ARRAY_VIEW;//pointer to array -> array view
+      pushTypeConstant(target,codeFile->wordStart);
       return true;
     }
     pushTypeConstant(pointerType(&target,false),codeFile->wordStart);
@@ -3259,7 +3272,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
   }else if(wordEquals(&word,"type")){
     if(bufferedConstants==0){//type without arguments
-      pushTypeConstant(typeOfType(&TYPE_UNDEFINED),wordPos);//XXX? allow type to detect type of constants  (0 type -> i32 )
+      pushTypeConstant(typeOfType(&TYPE_UNDEFINED),wordPos);
       return;//type does not generate any operations
     }
     requireCompileTimeTypes(state,&word,&type,1,wordPos);
@@ -3291,6 +3304,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(word.length>1&&charAt(word,0)=='#'){//compiler command
     word.chars++;//remove first character
     word.length--;
+    SlicedString args=sliceAtChar(word,':');
+    word=args.head;
     //stack manipulation
     if(wordEquals(&word,"dup")){//XXX dup:N drop:N -> dup/drop multiple values at once
       pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DUP}}});
@@ -3340,11 +3355,29 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
     }
     //compiler commands
-    if(wordEquals(&word,"types")){//XXX types:N -> limit number of printed types
-      pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=-1}}});
+    if(wordEquals(&word,"types")){
+      int64_t count=-1;
+      if(args.tail.length>0){
+        IntOrErrorCode p=parseInt(args.tail,10);
+        if(p.isError||p.as.i64<=0){
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
+        count=p.as.i64;
+      }
+      pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_TYPES,.maxCount=count}}});
       return;
     }else if(wordEquals(&word,"stack")){
-      pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=-1}}});
+      int64_t count=-1;
+      if(args.tail.length>0){
+        IntOrErrorCode p=parseInt(args.tail,10);
+        if(p.isError||p.as.i64<=0){
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
+        count=p.as.i64;
+      }
+      pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=count}}});
       return;
     }else if(wordEquals(&word,"find")){
       LabelId labelId=readLabel(codeFile,"variable names");
@@ -3797,10 +3830,12 @@ typedef struct{
   bool hasCheckEnum;
 }TypeCheckState;
 
-//prints the type stack
-void printTypeStack(TypeCheckState* state,bool printOps,FILE* out){
+//prints the type stack, if maxTypes>=0 only maxTypes many elements are printed
+void printTypeStack(TypeCheckState* state,bool printOps,int64_t maxTypes,FILE* out){
   size_t offset=state->opStackCount;
   for(int64_t k=state->typeCount-1;k>=0;k--){
+    if(maxTypes--==0)
+      return;//reached limit
     if(state->typeStack[k].isAddressable)
       fputs("addressable ",out);
     if(state->typeStack[k].isWritable)
@@ -3817,6 +3852,11 @@ void printTypeStack(TypeCheckState* state,bool printOps,FILE* out){
       printOperation(state->opStack[offset+i],out);
     }
   }
+}
+void printTypesDebug(TypeCheckState* state,char const* label){
+  printf("--------------\n%s:\n",label);
+  printTypeStack(state,true,-1,stdout);
+  puts("--------------");
 }
 
 bool ensureGlobalOpCap(TypeCheckState* state,size_t newSize){
@@ -4023,14 +4063,26 @@ bool predeclareBlockVariables(TypeCheckState* state,size_t blockStart,StackState
   state->opCount+=blockStack->typeCount;
   return false;
 }
-bool declareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* typeSource,StackState* valueSource){
+void declareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* typeSource,StackState* valueSource,char const* blockName,FilePosition pos){
+  if(typeSource->typeCount!=valueSource->typeCount){
+    fprintf(stderr,"different branches of %s statement do not match up\n",blockName);//XXX print branches
+    handleError(NULL,ERROR_TYPE,pos);
+  }
   size_t count=typeSource->typeCount+valueSource->opCount;
   if(ensureCompiledOpCap(state,state->opCount+count))
-     return true;
+    handleError("error while reallocating operations",ERROR_MEMORY,pos);
   memmove(state->compiledOperations+blockStart+count,state->compiledOperations+blockStart,(state->opCount-blockStart)*sizeof(Operation));
   size_t opOffset=blockStart,inTypesOffset=0;
-  //FIXME ensure that in stack and out-stack match up
   for(size_t i=0;i<typeSource->typeCount;i++){
+    if(!typeEquals(&typeSource->types[i].type,&valueSource->types[i].type)){
+      fprintf(stderr,"different branches of %s statement do not match up\n",blockName);
+      fputs("expected ",stderr);
+      printTypeName(&valueSource->types[i].type,stderr);
+      fputs(" got ",stderr);
+      printTypeName(&typeSource->types[i].type,stderr);
+      fputs("\n",stderr);
+      handleError(NULL,ERROR_TYPE,pos);
+    }
     state->compiledOperations[opOffset]=typeSource->ops[i];
     state->compiledOperations[opOffset].opType=OP_DECLARE;
     opOffset++;
@@ -4038,7 +4090,6 @@ bool declareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* t
     inTypesOffset+=valueSource->types[i].opCount;
   }
   state->opCount+=count;
-  return false;
 }
 /*
 function for stack update at start/end of loop section
@@ -4450,7 +4501,7 @@ void typeCheckArrayElementAccess(TypeCheckState* state,DataType const* arrayType
   size_t offset=state->opStackCount-(state->typeStack[typeOffset].opCount+state->typeStack[typeOffset+1].opCount);
   ArrayType const* arrayData=arrayType->typeDataAs.array;
   //wrap composite operations
-  extractCompositeOps(state,2,true);//XXX only keep array writeable (restrict keep writable parameter to top n elements)
+  extractCompositeOps(state,2,true);//XXX only keep array writeable
   //check array bounds
   state->hasCheckBounds=1;
   pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
@@ -5577,8 +5628,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
               if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack)))
                  handleError(NULL,ERROR_TYPE,op.filePos);
             }else{
-              if(declareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack),&(ifBlock->inStack)))
-                 handleError(NULL,ERROR_TYPE,op.filePos);
+              declareBlockVariables(state,blockInfoPtr->blockStart,&(ifBlock->outStack),&(ifBlock->inStack),"if",op.filePos);
             }
             if(resetStack(state,&(ifBlock->outStack))){
               handleError(NULL,ERROR_TYPE,op.filePos);
@@ -5625,8 +5675,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
           switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
           switchBlock->switchData->caseCount++;//close last case
-          if(declareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack),&(switchBlock->inStack)))
-             handleError(NULL,ERROR_TYPE,op.filePos);
+          declareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack),&(switchBlock->inStack),"switch",op.filePos);
           if(resetStack(state,&(switchBlock->outStack)))
             handleError(NULL,ERROR_TYPE,op.filePos);
           state->reachable=true;
@@ -5746,14 +5795,13 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_COMPILER_INFO:
       switch(op.dataAs.compilerInfo.infoType){
         case COMPILERINFO_TYPES:
-          //TODO allow to limit op-count
           puts("types:\n-----------------");
-          printTypeStack(state,false,stdout);
+          printTypeStack(state,false,op.dataAs.compilerInfo.maxCount,stdout);
           puts("-----------------");
           return;
         case COMPILERINFO_STACK:
           puts("stack:\n-----------------");
-          printTypeStack(state,true,stdout);
+          printTypeStack(state,true,op.dataAs.compilerInfo.maxCount,stdout);
           puts("-----------------");
           return;
       }
