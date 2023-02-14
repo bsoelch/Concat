@@ -1115,16 +1115,31 @@ typedef enum{
   STACK_OP_OVER,
   STACK_OP_DROP,
   STACK_OP_SWAP,
-  //XXX?  rotate
 }StackOperation;
+char const* stackOpName(StackOperation op){
+  switch(op){
+    case STACK_OP_DUP:return "dup";
+    case STACK_OP_OVER:return "over";
+    case STACK_OP_DROP:return "drop";
+    case STACK_OP_SWAP:return "swap";
+  }
+  return "unknown";
+}
 typedef struct{
-  //XXX multi-drop/dup
+  int32_t count;
   StackOperation op;
 }StackModification;
 typedef enum{
   COMPILERINFO_TYPES,
   COMPILERINFO_STACK,
 }CompilerInfoType;
+char const* compilerInfoName(CompilerInfoType op){
+  switch(op){
+    case COMPILERINFO_TYPES:return "types";
+    case COMPILERINFO_STACK:return "stack";
+  }
+  return "unknown";
+}
 typedef struct{
   int32_t maxCount;
   CompilerInfoType infoType;
@@ -1204,6 +1219,12 @@ void printOperation(Operation op,FILE* out){
       fputs("[ ",out);
       printTypeName(op.dataAs.sourceType,out);
       fputs(" ]",out);
+      break;
+    case OP_MODIFY_STACK:
+      fprintf(out,"%s %"PRIi32,stackOpName(op.dataAs.stackMod.op),op.dataAs.stackMod.count);
+      break;
+    case OP_COMPILER_INFO:
+      fprintf(out,"%s %"PRIi32,compilerInfoName(op.dataAs.compilerInfo.infoType),op.dataAs.compilerInfo.maxCount);
       break;
     default:
       //ignore remaining types
@@ -3140,8 +3161,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   return true;
 }
 
-void pushOperation(ParserState* state,Operation op);
-void requireCompileTimeTypes(ParserState* state,String* opName,DataType* typeOut,size_t nTypes,FilePosition pos){
+void requireCompileTimeTypes(String* opName,DataType* typeOut,size_t nTypes,FilePosition pos){
   if(bufferedConstants<nTypes){
     fprintf(stderr,"not enough type arguments for operation '%"PRI_STR"' need %zu got %zu\n",PRI_STR_ARGS(*opName),nTypes,bufferedConstants);
     handleError(NULL,ERROR_SYNTAX,pos);
@@ -3152,27 +3172,6 @@ void requireCompileTimeTypes(ParserState* state,String* opName,DataType* typeOut
     if(typeEquals(typeOut,&TYPE_UNDEFINED))
       handleError("invalid type in type buffer",ERROR_TYPE,pos);
     typeOut++;
-  }
-  int64_t intVal;
-  size_t constCount=bufferedConstants;
-  bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
-  for(size_t i=0;i<constCount;i++){
-    switch(constBuffer[i].type){
-      case CONSTANT_STRING:
-        intVal=addProgString(constBuffer[i].valueAs.string,constBuffer[i].pos);
-        pushOperation(state,opConstant(arrayType(true,&TYPE_CHAR,1,(int64_t[]){constBuffer[i].valueAs.string.length},false),intVal,constBuffer[i].pos));
-        break;
-      case CONSTANT_CHAR:
-        pushOperation(state,opConstant(TYPE_CHAR,constBuffer[i].valueAs.charId,constBuffer[i].pos));
-        break;
-      case CONSTANT_INT:
-        intVal=constBuffer[i].valueAs.i64;
-        pushOperation(state,opConstant(primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),intVal,constBuffer[i].pos));
-        break;
-      case CONSTANT_TYPE:
-        handleError("unused type constant",ERROR_TYPE,constBuffer[i].pos);
-        break;
-    }
   }
 }
 
@@ -3201,12 +3200,36 @@ bool ensureOpCap(Operation** mList,size_t* cap,size_t newSize){
   return false;
 }
 
+void pushOperation(ParserState* state,Operation op);
+void storeConstants(ParserState* state){
+  int64_t intVal;
+  size_t constCount=bufferedConstants;
+  bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
+  for(size_t i=0;i<constCount;i++){
+    switch(constBuffer[i].type){
+      case CONSTANT_STRING:
+        intVal=addProgString(constBuffer[i].valueAs.string,constBuffer[i].pos);
+        pushOperation(state,opConstant(arrayType(true,&TYPE_CHAR,1,(int64_t[]){constBuffer[i].valueAs.string.length},false),intVal,constBuffer[i].pos));
+        break;
+      case CONSTANT_CHAR:
+        pushOperation(state,opConstant(TYPE_CHAR,constBuffer[i].valueAs.charId,constBuffer[i].pos));
+        break;
+      case CONSTANT_INT:
+        intVal=constBuffer[i].valueAs.i64;
+        pushOperation(state,opConstant(primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),intVal,constBuffer[i].pos));
+        break;
+      case CONSTANT_TYPE:
+        pushOperation(state,opConstant(typeOfType(&constBuffer[i].valueAs.type),0,constBuffer[i].pos));
+        break;
+    }
+  }
+}
 void pushOperation(ParserState* state,Operation op){
   if(ensureOpCap(&state->parsedOps,&state->parsedOpCap,state->parsedOpCount+bufferedConstants+16)){
     handleError(NULL,ERROR_MEMORY,op.filePos);
   }
   if(bufferedConstants>0){
-    requireCompileTimeTypes(state,&EMPTY_STRING,NULL,0,op.filePos);
+    storeConstants(state);
   }
   state->parsedOps[state->parsedOpCount++]=op;
 }
@@ -3226,7 +3249,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   wordPos=codeFile->wordStart;
   //1. operations that take a Type as argument
   if(wordEquals(&word,":")){//pre-declare
-    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    requireCompileTimeTypes(&word,&type,1,wordPos);
     LabelId labelId=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
@@ -3250,7 +3273,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
   }else if(wordEquals(&word,"=:")){//declare
-    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    requireCompileTimeTypes(&word,&type,1,wordPos);
     LabelId labelId=readLabel(codeFile,"variable names");
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
@@ -3281,6 +3304,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       default:
         idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
+    //TODO if constant value known, store constant with identifier  
     id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
     if(idType==ID_TYPE){
       //declaring type does not produce any code
@@ -3315,7 +3339,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       peekOperation(state,wordPos)->dataType.typeClass=TYPECLASS_ENUM;//change type-class back to enum
       return;
     }
-    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    requireCompileTimeTypes(&word,&type,1,wordPos);
     if(type.typeClass==TYPECLASS_TUPLE||type.typeClass==TYPECLASS_STRUCT){
       pushOperation(state,(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}});
       return;
@@ -3326,15 +3350,15 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       fputs(" to create an enum specify the label of the current value\n",stderr);
     handleError(NULL,ERROR_TYPE,wordPos);
   }else if(wordEquals(&word,"cast")){ 
-    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    requireCompileTimeTypes(&word,&type,1,wordPos);
     pushOperation(state,(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=&TYPE_UNDEFINED}});
       return;
-  }else if(wordEquals(&word,"type")){
+  }else if(wordEquals(&word,"type")){//TODO make 'type' a type
     if(bufferedConstants==0){//type without arguments
       pushTypeConstant(typeOfType(&TYPE_UNDEFINED),wordPos);
       return;//type does not generate any operations
     }
-    requireCompileTimeTypes(state,&word,&type,1,wordPos);
+    requireCompileTimeTypes(&word,&type,1,wordPos);
     pushTypeConstant(typeOfType(&type),wordPos);
     return;//type does not generate any operations
   }else if(word.length>1&&charAt(word,0)=='.'){
@@ -3349,7 +3373,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       pushOperation(state,(Operation){.opType=OP_GET_LABEL,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.string=word}});
       return;
     }
-    requireCompileTimeTypes(state,&word,&type,1,wordPos);//try to get type field of enum
+    requireCompileTimeTypes(&word,&type,1,wordPos);//try to get type field of enum
     int64_t index;
     if(type.typeClass!=TYPECLASS_ENUM||((index=findLabel(type.typeDataAs.composite->labelOffset,type.typeDataAs.composite->typeCount,&word))==-1)){
       fputs("type ",stderr);
@@ -3366,17 +3390,35 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     SlicedString args=sliceAtChar(word,':');
     word=args.head;
     //stack manipulation
-    if(wordEquals(&word,"dup")){//XXX dup:N drop:N -> dup/drop multiple values at once
-      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DUP}}});
+    if(wordEquals(&word,"dup")){
+      int64_t count=1;
+      if(args.tail.length>0){
+        IntOrErrorCode p=parseInt(args.tail,10);
+        if(p.isError||p.as.i64<=0){
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
+        count=p.as.i64;
+      }
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DUP,.count=count}}});
       return;
     }else if(wordEquals(&word,"drop")){
-      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DROP}}});
+      int64_t count=1;
+      if(args.tail.length>0){
+        IntOrErrorCode p=parseInt(args.tail,10);
+        if(p.isError||p.as.i64<=0){
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
+        count=p.as.i64;
+      }
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_DROP,.count=count}}});
       return;
     }else if(wordEquals(&word,"swap")){//XXX rot:N:K -> stack rotation
-      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP}}});
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP,.count=1}}});
       return;
     }else if(wordEquals(&word,"over")){
-      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER}}});
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER,.count=1}}});
       return;
     }
     //compile-time code
@@ -3438,6 +3480,23 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
       pushOperation(state,(Operation){.opType=OP_COMPILER_INFO,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.compilerInfo={.infoType=COMPILERINFO_STACK,.maxCount=count}}});
       return;
+    }else if(wordEquals(&word,"ops")){
+      int64_t count=-1;
+      if(args.tail.length>0){
+        IntOrErrorCode p=parseInt(args.tail,10);
+        if(p.isError||p.as.i64<=0){
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
+        count=p.as.i64;
+      }
+      puts("-----------------");
+      size_t i0=(count<0||((size_t)count)>state->parsedOpCount)?0:state->parsedOpCount-count;
+      for(size_t i=i0;i<state->parsedOpCount;i++){
+        printOperation(state->parsedOps[i],stdout);
+      }
+      puts("-----------------");
+      return;
     }else if(wordEquals(&word,"find")){
       LabelId labelId=readLabel(codeFile,"variable names");
       wordPos=codeFile->wordStart;
@@ -3465,7 +3524,6 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       //TODO resolve global identifiers with later declarations pre-declared types identifiers
       return;
     }
-    //XXX more compile time operations
     fprintf(stderr,"unknown compile time operation '%"PRI_STR"'\n",PRI_STR_ARGS(word));
     handleError(NULL,ERROR_SYNTAX,wordPos);
   }
@@ -4254,7 +4312,7 @@ bool canAutoCast(DataType const* src,DataType const* target){//? allow cast T pt
 bool canCast(DataType const* src,DataType const* target){
   if(canAutoCast(src,target))
     return true;
-  //XXX cast between arrays of different dimmensions
+  //XXX cast between arrays of different dimensions
   return numberRank(src->typeDataAs.primitive)>-1&&numberRank(target->typeDataAs.primitive)>-1;//casts only between numbers
 }
 
@@ -5814,28 +5872,36 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
     //compile time ops
     case OP_MODIFY_STACK:
       checkReachable(state,op);
+      int32_t count=op.dataAs.stackMod.count;
+      if(count<0)
+        handleError("unexpected value for count, expected non-negative integer",ERROR_MEMORY,op.filePos);
       switch(op.dataAs.stackMod.op){
         case STACK_OP_DUP://duplicate top value on stack
-          if(state->typeCount<1){
-            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+          if(state->typeCount<(uint64_t)count){
+            fprintf(stderr,"not enough operands for operation %s: need %"PRIi32" got %zu\n",opName(op.opType),count,state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
-          extractCompositeOps(state,1,true);
-          totalOps=state->typeStack[state->typeCount-1].opCount;
+          extractCompositeOps(state,count,true);
+          totalOps=0;
+          for(int64_t i=1;i<=count;i++){
+            totalOps+=state->typeStack[state->typeCount-i].opCount;
+          }
           if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
             handleError(NULL,ERROR_TYPE,op.filePos);
           memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
-          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-1,sizeof(TypeInfo));
+          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-count,count*sizeof(TypeInfo));
           state->opStackCount+=totalOps;
-          state->typeCount++;
+          state->typeCount+=count;
           return;
         case STACK_OP_DROP://remove top value from stack
-          if(state->typeCount<1){
-            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+          if(state->typeCount<(uint64_t)count){
+            fprintf(stderr,"not enough operands for operation %s: need %"PRIi32" got %zu\n",opName(op.opType),count,state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
-          state->typeCount--;
-          state->opStackCount-=state->typeStack[state->typeCount].opCount;
+          for(int64_t i=0;i<count;i++){
+            state->typeCount--;
+            state->opStackCount-=state->typeStack[state->typeCount].opCount;
+          }
           return;
         case STACK_OP_OVER:
           if(state->typeCount<2){
