@@ -316,10 +316,11 @@ Examples:
 0 =:: mut x              ## declare a mutable integer x 
 x addrOf =:: xAddr       ## the address of x  (will have type  i32 1 ptr mut)
 x addrOf i32 ptr =: xPtr ## get the address of x as (immutable) i32 pointer
-"Hello" i8 _ ptr =: str  ## string is a short-hand for  i8 _ ptr
+"Hello" i8 5 ptr =: str  ## strings are i8 pointers with the length as argument
+str string cast  =: str2 ## the internal string type is a dynamic length i8 pointer
+str2 .length             ## the length in the most significant dimension of array & sized pointer types can be read through the '.length' field
+
 ```
-
-
 
 
 ### tuples
