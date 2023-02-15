@@ -258,7 +258,7 @@ typedef enum{
   TYPECLASS_LABELED_PROC_IN,
   TYPECLASS_PROC_OUT,//behaves like tuple but will not be directly used
   TYPECLASS_PROCEDURE,
-  TYPECLASS_TYPE_OF,
+  TYPECLASS_TYPE,
   TYPECLASS_OPAQUE,
   TYPECLASS_STRUCT,
   TYPECLASS_ENUM,
@@ -322,6 +322,7 @@ struct ArrayType{
 };
 
 const DataType TYPE_UNDEFINED={.typeClass=TYPECLASS_UNDEFINED,.typeDataAs={0}};
+const DataType TYPE_TYPE={.typeClass=TYPECLASS_TYPE,.typeDataAs={0}};
 
 #define MAX_TYPES       4096
 #define MAX_COMPOSITE   1024
@@ -367,10 +368,11 @@ bool typeEquals(DataType const* a,DataType const* b){
   switch(a->typeClass){
     case TYPECLASS_UNDEFINED://distinguish different pre-declared types
       return a->typeDataAs.typeId==b->typeDataAs.typeId;
+    case TYPECLASS_TYPE:
+      return true;//type-class type only has one type
     case TYPECLASS_PRIMITIVE:
       return a->typeDataAs.primitive==b->typeDataAs.primitive;
     case TYPECLASS_POINTER:
-    case TYPECLASS_TYPE_OF:
       return typeEquals(a->typeDataAs.type,b->typeDataAs.type);
     case TYPECLASS_TUPLE:
     case TYPECLASS_PROC_IN:
@@ -471,7 +473,7 @@ bool isTupleType(DataType const* type){
     case TYPECLASS_PRIMITIVE:
     case TYPECLASS_POINTER:
     case TYPECLASS_PROCEDURE:
-    case TYPECLASS_TYPE_OF:
+    case TYPECLASS_TYPE:
     case TYPECLASS_OPAQUE:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
@@ -502,7 +504,7 @@ bool makeMutable(DataType* t){
     case TYPECLASS_LABELED_PROC_IN:
     case TYPECLASS_PROC_OUT:
     case TYPECLASS_PROCEDURE:
-    case TYPECLASS_TYPE_OF:
+    case TYPECLASS_TYPE:
     case TYPECLASS_OPAQUE:
     case TYPECLASS_ENUM_LABEL:
       return false;
@@ -544,9 +546,6 @@ DataType pointerType(DataType const* target,bool mutable){
   if(mutable)
     makeMutable(&ptr);
   return ptr;
-}
-DataType typeOfType(DataType const* conent){
-  return wrapperType(TYPECLASS_TYPE_OF,conent);
 }
 int64_t indexOfTypeArray(DataType const* base,size_t baseLen,DataType const* child,size_t childLen){
   if(childLen>baseLen)
@@ -747,7 +746,7 @@ char const* typeClassName(TypeClass cls){
       return "return types";
     case TYPECLASS_PROCEDURE:
       return "procedure";
-    case TYPECLASS_TYPE_OF:
+    case TYPECLASS_TYPE:
       return "type";
     case TYPECLASS_OPAQUE:
       return "opaque type";
@@ -807,8 +806,11 @@ void printTypeNameIntenal(DataType const* type,FILE* file,bool noRecurse){
       fprintf(file,"opaque (%"PRIi64")",type->typeDataAs.typeId);
       printTypeFlags(type,file);
       return;
+    case TYPECLASS_TYPE:
+      fprintf(file,"%s",typeClassName(type->typeClass));
+      printTypeFlags(type,file);
+      return;
     case TYPECLASS_POINTER:
-    case TYPECLASS_TYPE_OF:
       printTypeNameIntenal(type->typeDataAs.type,file,noRecurse);
       fprintf(file," %s",typeClassName(type->typeClass));
       printTypeFlags(type,file);
@@ -901,9 +903,11 @@ char const* primitiveNameC(PrimitiveType t){
 }
 void printTypeNameC(DataType const* type,FILE* file){
   switch(type->typeClass){
-    case TYPECLASS_TYPE_OF://type of does not correspond to a C-type
+    case TYPECLASS_TYPE://remember size of type
+      fputs("size_t",file);
+      return;
     case TYPECLASS_OPAQUE://pointer to opaque type -> void pointer
-    case TYPECLASS_UNDEFINED:
+    case TYPECLASS_UNDEFINED://type of does not correspond to a C-type
       fputs("void",file);
       return;
     case TYPECLASS_PRIMITIVE:
@@ -1386,6 +1390,33 @@ void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
   namespace->namespaceImports=compilerBlocks[compilerBlockCount].prevImports;
 }
 
+typedef enum{
+  CONSTANT_NONE=0,
+  CONSTANT_INT,
+  CONSTANT_CHAR,
+  CONSTANT_STRING,
+  CONSTANT_TYPE,
+}ConstantType;
+char const* constTypeName(ConstantType type){
+  switch(type){
+    case CONSTANT_NONE:return "none";
+    case CONSTANT_INT:return "int";
+    case CONSTANT_CHAR:return "char";
+    case CONSTANT_STRING:return "string";
+    case CONSTANT_TYPE:return "type";
+  }
+  return "unknown type";
+}
+typedef struct{
+  union{
+    String  string;
+    DataType const* type;
+    int64_t charId;
+    int64_t i64;
+  }as;
+  ConstantType type;
+}ConstantValue;
+
 #define SCOPE_NODE_CAP 8192
 #define SCOPE_CAP 256
 #define SCOPE_MAP_CAP 1024
@@ -1394,6 +1425,7 @@ struct ScopeNode{
   String key;
   DataType type;
   ScopeNode* next;
+  ConstantValue constValue;
   NamespaceId namespaceId;
   int32_t labelId;
   int32_t id;
@@ -1508,7 +1540,7 @@ int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
   }
   return ERROR_SYNTAX;
 }
-ScopeNode* declareIdentifier(NamespaceInfo namespace,LabelId labelId,DataType type,IdentifierType idType,int32_t id,FilePosition pos){
+ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,DataType type,IdentifierType idType,int32_t id,FilePosition pos,ConstantValue const* constValue){
   Label mLabel=label(labelId,pos);
   if(mLabel.isMutable){
     if(idType==ID_TYPE)
@@ -1546,6 +1578,11 @@ ScopeNode* declareIdentifier(NamespaceInfo namespace,LabelId labelId,DataType ty
   (*node)->idType=idType;
   (*node)->id=id;
   (*node)->labelId=labelId;
+  if(constValue!=NULL&&!label(labelId,pos).isMutable){
+    (*node)->constValue=*constValue;
+  }else{
+    (*node)->constValue=(ConstantValue){.type=CONSTANT_NONE,.as.i64=0};
+  }
   (*node)->next=NULL;
   return *node;
 }
@@ -2824,86 +2861,70 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType){
 #define CONST_BUFFER_CAP       512
 #define MAX_COMPOSITE_ELEMENTS 128
 #define MAX_ARRAY_DIMS         64
-typedef enum{
-  CONSTANT_INT,
-  CONSTANT_CHAR,
-  CONSTANT_STRING,
-  CONSTANT_TYPE,
-}ConstantType;
-char const* constTypeName(ConstantType type){
-  switch(type){
-    case CONSTANT_INT:return "int";
-    case CONSTANT_CHAR:return "char";
-    case CONSTANT_STRING:return "string";
-    case CONSTANT_TYPE:return "type";
-  }
-  return "unknown type";
-}
 typedef struct{
-  union{
-    DataType type;
-    String  string;
-    int64_t charId;
-    int64_t i64;
-  }valueAs;
   FilePosition pos;
-  ConstantType type;
-}ConstantValue;
+  ConstantValue value;
+}Constant;
 size_t bufferedConstants=0;
-ConstantValue constBuffer[CONST_BUFFER_CAP];
+Constant constBuffer[CONST_BUFFER_CAP];
 DataType compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
 int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
 int64_t arrayDimsCount=0;
 void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(ConstantValue){.type=constType,.valueAs.i64=constId,.pos=pos};
+  constBuffer[bufferedConstants++]=(Constant){.value={.type=constType,.as.i64=constId},.pos=pos};
 }
 void pushStringConstant(String value,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(ConstantValue){.type=CONSTANT_STRING,.valueAs.string=value,.pos=pos};
+  constBuffer[bufferedConstants++]=(Constant){.value={.type=CONSTANT_STRING,.as.string=value},.pos=pos};
 }
 void pushTypeConstant(DataType type,FilePosition pos){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(ConstantValue){.type=CONSTANT_TYPE,.valueAs.type=type,.pos=pos};
+  constBuffer[bufferedConstants++]=(Constant){.value={.type=CONSTANT_TYPE,.as.type=bufferedType(&type)},.pos=pos};
 }
-DataType popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid){
+ConstantValue const* peekConstant(void){
+  if(bufferedConstants==0)
+    return NULL;
+  return &constBuffer[bufferedConstants-1].value;
+}
+DataType const* popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid){
   if(bufferedConstants==0){
     fprintf(stderr,"missing %s\n",argumentName);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   bufferedConstants--;
-  if(constBuffer[bufferedConstants].type!=CONSTANT_TYPE){
-    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].type));
+  if(constBuffer[bufferedConstants].value.type!=CONSTANT_TYPE){
+    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].value.type));
     fputs(" declared at ",stderr);
     printFilePosition(constBuffer[bufferedConstants].pos,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
-  if(!allowVoid&&isVoidType(&constBuffer[bufferedConstants].valueAs.type)){
+  if(!allowVoid&&isVoidType(constBuffer[bufferedConstants].value.as.type)){
     fprintf(stderr,"missing %s\n",argumentName);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
-  return constBuffer[bufferedConstants].valueAs.type;
+  return constBuffer[bufferedConstants].value.as.type;
 }
 int64_t* popArraySize(FilePosition pos){
   arrayDimsCount=0;
-  while(constBuffer[bufferedConstants-1].type!=CONSTANT_TYPE){
+  while(constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
     bufferedConstants--;
     arrayDimsCount++;
   }
   for(int64_t i=0;i<arrayDimsCount;i++){
-    if(constBuffer[bufferedConstants+i].type!=CONSTANT_INT){//XXX use _ to signal unknown dimension sizes
-      fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].type));
+    if(constBuffer[bufferedConstants+i].value.type!=CONSTANT_INT){//XXX use _ to signal unknown dimension sizes
+      fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].value.type));
       handleError(NULL,ERROR_SYNTAX,pos);
     }
-    if(constBuffer[bufferedConstants+i].valueAs.i64<=0){
-      fprintf(stderr,"invalid array size: %"PRIi64" array sizes have to be greater than 0\n",constBuffer[bufferedConstants+i].valueAs.i64);
+    if(constBuffer[bufferedConstants+i].value.as.i64<=0){
+      fprintf(stderr,"invalid array size: %"PRIi64" array sizes have to be greater than 0\n",constBuffer[bufferedConstants+i].value.as.i64);
       handleError(NULL,ERROR_SYNTAX,pos);
     }
-    arrayDimsBuffer[i]=constBuffer[bufferedConstants+i].valueAs.i64;
+    arrayDimsBuffer[i]=constBuffer[bufferedConstants+i].value.as.i64;
   }
   return arrayDimsBuffer;
 }
@@ -2913,7 +2934,7 @@ DataType* popTypeConstants(size_t count,FilePosition pos,char const* argumentNam
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   for(int64_t i=count-1;i>=0;i--){
-    compositeTypeBuffer[i]=popTypeConstant(pos,argumentName,allowVoid);
+    compositeTypeBuffer[i]=*popTypeConstant(pos,argumentName,allowVoid);
   }
   return compositeTypeBuffer;
 }
@@ -3021,13 +3042,13 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       typeClass=TYPECLASS_LABELED_PROC_IN;
     pushTypeConstant(compositeType(typeClass,elements,labelOffset,maxOffset-initOffset),codeFile->wordStart);
   }
-  if(typeEquals(&(constBuffer[initOffset].valueAs.type),&TYPE_UNDEFINED)){//XXX? peek type
+  if(typeEquals(constBuffer[initOffset].value.as.type,&TYPE_UNDEFINED)){//XXX? peek type
     handleError("unknown error while creating composite type",ERROR_SYNTAX,codeFile->wordStart);
     return;
   }
   if(checkEmpty&&maxOffset-initOffset==1){
     fputs("WARNING:\n  single element composite type: ",stderr);
-    printTypeName(&(constBuffer[initOffset].valueAs.type),stderr);
+    printTypeName(constBuffer[initOffset].value.as.type,stderr);
     fputs(" at ",stderr);
     printFilePosition(codeFile->wordStart,stderr);
     fputs("\n",stderr);
@@ -3048,6 +3069,10 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   if(wordEquals(&name,"void")){
     handleError("using the void type directly is not supported",ERROR_SYNTAX,codeFile->wordStart);
     return false;
+  }
+  if(wordEquals(&name,"type")){
+    pushTypeConstant(TYPE_TYPE,codeFile->wordStart);
+    return true ;
   }
   if(wordEquals(&name,"bool")){
     pushTypeConstant(TYPE_BOOL,codeFile->wordStart);
@@ -3077,7 +3102,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   int r;
   if(wordEquals(&name,"ptr")){
     int64_t* dims=popArraySize(codeFile->wordStart);
-    DataType target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
+    DataType target=*popTypeConstant(codeFile->wordStart,"pointer argument",false);
     if(arrayDimsCount>0){
       pushTypeConstant(arrayType(true,&target,arrayDimsCount,dims,false),codeFile->wordStart);
       return true;
@@ -3091,7 +3116,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true;
   }
   if(wordEquals(&name,"mut")){
-    DataType target=popTypeConstant(codeFile->wordStart,"mutability argument",false);
+    DataType target=*popTypeConstant(codeFile->wordStart,"mutability argument",false);
     if(isMutableType(&target))
       handleError("type is already mutable",ERROR_TYPE,codeFile->wordStart);
     if(!makeMutable(&target)){
@@ -3103,20 +3128,20 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   }
   if(wordEquals(&name,"array")){
     int64_t* dims=popArraySize(codeFile->wordStart);
-    DataType target=popTypeConstant(codeFile->wordStart,"array argument",false);
+    DataType const* target=popTypeConstant(codeFile->wordStart,"array argument",false);
     if(arrayDimsCount==0){//array without size arguments
-      pushTypeConstant(arrayType(false,&target,1,NULL,false),codeFile->wordStart);
+      pushTypeConstant(arrayType(false,target,1,NULL,false),codeFile->wordStart);
       return true;
     }
-    pushTypeConstant(arrayType(false,&target,arrayDimsCount,dims,false),codeFile->wordStart);
+    pushTypeConstant(arrayType(false,target,arrayDimsCount,dims,false),codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"proc(")){
     readCompositeType(TYPECLASS_PROC_IN,codeFile,state,LABEL_TYPE_PROC_IN,"=>",false);
     readCompositeType(TYPECLASS_PROC_OUT,codeFile,state,LABEL_TYPE_NONE,")",false);
-    DataType out=popTypeConstant(codeFile->wordStart,"procedure input",false);
-    DataType in=popTypeConstant(codeFile->wordStart,"procedure output",false);
-    pushTypeConstant(procedureType(&in,&out),codeFile->wordStart);
+    DataType const* out=popTypeConstant(codeFile->wordStart,"procedure input",false);
+    DataType const* in=popTypeConstant(codeFile->wordStart,"procedure output",false);
+    pushTypeConstant(procedureType(in,out),codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
@@ -3140,10 +3165,10 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   if(r>0||asIdentifier->idType!=ID_TYPE)//identifier does not exist / is not a type
     return false;
   //identifier
-  if(typeEquals(&(asIdentifier->type),&TYPE_UNDEFINED))
+  if(asIdentifier->constValue.type!=CONSTANT_TYPE||asIdentifier->constValue.as.type==NULL)
     return false;
-  pushTypeConstant(asIdentifier->type,codeFile->wordStart);
-  if(asIdentifier->type.typeClass==TYPECLASS_OPAQUE){//ensure token after opaque type is ptr
+  pushTypeConstant(*asIdentifier->constValue.as.type,codeFile->wordStart);
+  if(asIdentifier->constValue.as.type->typeClass==TYPECLASS_OPAQUE){//ensure token after opaque type is ptr
     int wordType;
     String word=nextWord(codeFile,&wordType);
     if(wordType!=WORD_TYPE_IDENTIFIER){
@@ -3155,8 +3180,8 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return false;
     }
-    DataType target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
-    pushTypeConstant(pointerType(&target,false),codeFile->wordStart);
+    DataType const* target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
+    pushTypeConstant(pointerType(target,false),codeFile->wordStart);
   }
   return true;
 }
@@ -3168,7 +3193,7 @@ void requireCompileTimeTypes(String* opName,DataType* typeOut,size_t nTypes,File
     return;
   }
   for(size_t i=0;i<nTypes;i++){
-    *(typeOut)=popTypeConstant(pos,"operation argument",false);
+    *(typeOut)=*popTypeConstant(pos,"operation argument",false);
     if(typeEquals(typeOut,&TYPE_UNDEFINED))
       handleError("invalid type in type buffer",ERROR_TYPE,pos);
     typeOut++;
@@ -3206,20 +3231,24 @@ void storeConstants(ParserState* state){
   size_t constCount=bufferedConstants;
   bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
   for(size_t i=0;i<constCount;i++){
-    switch(constBuffer[i].type){
+    switch(constBuffer[i].value.type){
       case CONSTANT_STRING:
-        intVal=addProgString(constBuffer[i].valueAs.string,constBuffer[i].pos);
-        pushOperation(state,opConstant(arrayType(true,&TYPE_CHAR,1,(int64_t[]){constBuffer[i].valueAs.string.length},false),intVal,constBuffer[i].pos));
+        intVal=addProgString(constBuffer[i].value.as.string,constBuffer[i].pos);
+        pushOperation(state,opConstant(arrayType(true,&TYPE_CHAR,1,(int64_t[]){constBuffer[i].value.as.string.length},false),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_CHAR:
-        pushOperation(state,opConstant(TYPE_CHAR,constBuffer[i].valueAs.charId,constBuffer[i].pos));
+        pushOperation(state,opConstant(TYPE_CHAR,constBuffer[i].value.as.charId,constBuffer[i].pos));
         break;
       case CONSTANT_INT:
-        intVal=constBuffer[i].valueAs.i64;
+        intVal=constBuffer[i].value.as.i64;
         pushOperation(state,opConstant(primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_TYPE:
-        pushOperation(state,opConstant(typeOfType(&constBuffer[i].valueAs.type),0,constBuffer[i].pos));
+        //TODO store type constants by id
+        //pushOperation(state,opConstant(TYPE_TYPE,typeId(constBuffer[i].value.as.type),constBuffer[i].pos));
+        handleError("type constants",ERROR_UNIMPLEMENTED,constBuffer[i].pos);
+        break;
+      case CONSTANT_NONE:
         break;
     }
   }
@@ -3257,17 +3286,14 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(isCallableType(&type)&&!isPointerType(&type)){
       handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
     }
-    if(type.typeClass==TYPECLASS_TYPE_OF){
-      if(!typeEquals(type.typeDataAs.type,&TYPE_UNDEFINED)){
-        fputs("cannot pre-declare values of type: ",stderr);
-        printTypeName(&type,stderr);
-        fputs("\n For pre-declaring a type use 'type' without any prefix",stderr);
-        handleError(NULL,ERROR_UNIMPLEMENTED,wordPos);
-      }
-      type=opaqueType(state->opaqueTypeCount++);
+    ConstantValue val={.type=CONSTANT_NONE};
+    if(type.typeClass==TYPECLASS_TYPE){
+      val.type=CONSTANT_TYPE;
+      DataType tmp=opaqueType(state->opaqueTypeCount++);
+      val.as.type=bufferedType(&tmp);
       idType=ID_TYPE;
     }
-    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
+    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,&val);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return;
     pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
@@ -3278,35 +3304,31 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType;
-    ScopeNode* id;
+    ScopeNode* prevId;
     int r;
     switch(type.typeClass){
       case TYPECLASS_PROCEDURE:
         idType=ID_PROCEDURE;
         break;
-      case TYPECLASS_TYPE_OF:
-        type=*type.typeDataAs.type;//unwrap typeOf
-        if(typeEquals(&type,&TYPE_UNDEFINED)){
-          handleError("missing type for type definition",ERROR_SYNTAX,wordPos);
-        }
+      case TYPECLASS_TYPE:
         idType=ID_TYPE;
-        r=getIdentifier(state->namespaceInfo,varName.label,&id);
+        r=getIdentifier(state->namespaceInfo,varName.label,&prevId);
         if(r<0)
           handleError("error while resolving identifier",r,wordPos);
-        if(r!=0||id->idType!=ID_TYPE||id->type.typeClass!=TYPECLASS_OPAQUE)
+        if(r!=0||prevId->idType!=ID_TYPE||prevId->constValue.type!=CONSTANT_TYPE||prevId->constValue.as.type->typeClass!=TYPECLASS_OPAQUE)
           break;//can only override opaque types
-        DataType* overwrite=bufferedType(&id->type);
+        DataType* overwrite=bufferedType(prevId->constValue.as.type);
         if(overwrite==NULL)
-          handleError("error while resolving type defintion",r,wordPos);
-        *overwrite=type;//override entry in wrapped type list
-        id->type=type;//override previous definition
+          handleError("error while resolving type definition",r,wordPos);
+        prevId->constValue.as.type=popTypeConstant(wordPos,"type constant",false);//override previous definition
+        *overwrite=*prevId->constValue.as.type;//override entry in wrapped type list
         return;
       default:
         idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    //TODO if constant value known, store constant with identifier  
-    id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos);
+    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,peekConstant());
     if(idType==ID_TYPE){
+      popTypeConstant(wordPos,"type value",false);//pop value as type
       //declaring type does not produce any code
       return;
     }else if(idType==ID_PROCEDURE){
@@ -3325,7 +3347,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(type.typeDataAs.procedure->inType->typeClass==TYPECLASS_LABELED_PROC_IN){
          CompositeType const* inTypes=type.typeDataAs.procedure->inType->typeDataAs.composite;
          for(int32_t i=0;i<inTypes->typeCount;i++){
-            declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos);
+            declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos,NULL);
          }
       }
     }
@@ -3353,17 +3375,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     requireCompileTimeTypes(&word,&type,1,wordPos);
     pushOperation(state,(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=&TYPE_UNDEFINED}});
       return;
-  }else if(wordEquals(&word,"type")){//TODO make 'type' a type
-    if(bufferedConstants==0){//type without arguments
-      pushTypeConstant(typeOfType(&TYPE_UNDEFINED),wordPos);
-      return;//type does not generate any operations
-    }
-    requireCompileTimeTypes(&word,&type,1,wordPos);
-    pushTypeConstant(typeOfType(&type),wordPos);
-    return;//type does not generate any operations
   }else if(word.length>1&&charAt(word,0)=='.'){
     word=sliceStart(word,1);//remove first character
-    if(bufferedConstants==0||constBuffer[bufferedConstants-1].type!=CONSTANT_TYPE){
+    if(bufferedConstants==0||constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
       IntOrErrorCode index=parseInt(word,10);
       if(!index.isError){
         pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
@@ -3514,7 +3528,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
           fputs("mutable ",stdout);
         printf("%s: ",idNames[asIdentifier->idType]);
         printTypeName(&asIdentifier->type,stdout);
-        fputs("\n    at ",stdout);
+        fputs("\n    at ",stdout); //TODO print constant value
         printFilePosition(mLabel.declaredAt,stdout);
         puts("");
         puts("-----------------");
@@ -3596,7 +3610,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     DataType mType=TYPE_UNDEFINED;
     mType.typeDataAs.typeId=++state->predeclaredTypes;//store predeceased id in type
-    ScopeNode* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos);
+    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstant());
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
   }else if(wordEquals(&word,"=")){
