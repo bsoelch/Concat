@@ -145,43 +145,43 @@ void concatInternal_checkEnumIndex(int64_t current,int64_t expected){
   exit(2);
 }
 //global code
-tuple1 procedure0 (int32_t, int32_t);
-void procedure1 (int32_t, int32_t);
-void procedure2 (void);
-int64_t procedure3 (void);
-tuple6 procedure4 (void);
-enum11 const global10 = {.label=0,.data={0}};
-enum11 const global11 = {.label=1,.data={0}};
-enum11 const global12 = {.label=2,.data={.e2=2}};
-tuple15 procedure13 (array0);
-int32_t const global14 = 1;
-int32_t const global15 = 0;
-void procedure16 (void);
-int64_t const global17 = 2;
-void procedure18 (int32_t const*, array3, array4);
-void procedure19 (void);
-void procedure20 (int32_t, enum11, int8_t, array0);
-tuple19 procedure21 (array0, int64_t);
-void procedure22 (array0, int64_t, int8_t);
-array0 const global23 = {.data=(arrayData1+0),.sizes={23}};
-int8_t global24 = 65;
-array0 const global25 = {.data=(arrayData0+0),.sizes={39}};
-tuple16 const global26 = {.e0=1,.e1=1};
-tuple22 const global27 = {.e0={.e0=1,.e1=1},.e1=2};
+tuple1 concat_proc0 (int32_t, int32_t);
+void concat_argTest (int32_t, int32_t);
+void concat_doNothing (void);
+int64_t concat_anInt (void);
+tuple6 concat_ptrTest (void);
+enum11 const concat_e1 = {.label=0,.data={0}};
+enum11 const concat_e2 = {.label=1,.data={0}};
+enum11 const concat_e3 = {.label=2,.data={.e2=2}};
+tuple15 concat_startItr (array0);
+int32_t const concat_subspace_dmut_dspaceVar = 1;
+int32_t const concat_mut_dspaceVar = 0;
+void concat_spaceTest (void);
+int64_t const concat_subspace_dmut_dsubspaceVar = 2;
+void concat_arrayTest (int32_t const*, array3, array4);
+void concat_breakTest (void);
+void concat_switchTest (int32_t, enum11, int8_t, array0);
+tuple19 concat_nextChar (array0, int64_t);
+void concat_endItr (array0, int64_t, int8_t);
+array0 const concat_s0 = {.data=(arrayData1+0),.sizes={23}};
+int8_t concat_c0 = 65;
+array0 const concat_s1 = {.data=(arrayData0+0),.sizes={39}};
+tuple16 const concat_x = {.e0=1,.e1=1};
+tuple22 const concat_y = {.e0={.e0=1,.e1=1},.e1=2};
 //procedures code
-tuple1 procedure0 (int32_t arg0, int32_t arg1){
-procedure2();
+tuple1 concat_proc0 (int32_t arg0, int32_t arg1){
+concat_doNothing();
 return (tuple1){.e0=arg1,.e1=arg0};
 }
-void procedure1 (int32_t arg0, int32_t arg1){
+void concat_argTest (int32_t arg0, int32_t arg1){
 }
-void procedure2 (void){
+void concat_doNothing (void){
 return ;
 }
-int64_t procedure3 (void){
+int64_t concat_anInt (void){
 return ((int64_t)12345678987654321);
 }
-tuple6 procedure4 (void){
+tuple6 concat_ptrTest (void){
 int32_t const local0 = 0;
 int32_t const* const tmp0 = &(local0);
 int32_t const* const tmp1 = ((int32_t const*)tmp0);
@@ -192,15 +192,15 @@ tuple5 const* const tmp4 = ((tuple5 const*)tmp3);
 tuple6 const tmp5 = {.e0=tmp4,.e1=((int32_t)0)};
 return tmp5;
 }
-tuple15 procedure13 (array0 arg0){
+tuple15 concat_startItr (array0 arg0){
 return (tuple15){.e0=arg0,.e1=((int64_t)0)};
 }
-void procedure16 (void){
-printf("%"PRIi32"\n",global15);
-printf("%"PRIi32"\n",global14);
-printf("%"PRIi64"\n",global17);
+void concat_spaceTest (void){
+printf("%"PRIi32"\n",concat_mut_dspaceVar);
+printf("%"PRIi32"\n",concat_subspace_dmut_dspaceVar);
+printf("%"PRIi64"\n",concat_subspace_dmut_dsubspaceVar);
 }
-void procedure18 (int32_t const* arg0, array3 arg1, array4 arg2){
+void concat_arrayTest (int32_t const* arg0, array3 arg1, array4 arg2){
 int32_t const* local0;
 array6 local1;
 int32_t const** local2;
@@ -217,7 +217,7 @@ printf("%"PRIi32"\n",tmp8);
 concatInternal_checkArrayBounds(((int32_t)0),((int64_t)2));
 ((arg1).data[((int32_t)0)]).e0 = ((int32_t)1);
 }
-void procedure19 (void){
+void concat_breakTest (void){
 int32_t tmp10;
 int32_t tmp9 = 0;
 do{
@@ -282,7 +282,7 @@ tmp22 = tmp25;
 }while(1);
 printf("%"PRIi32"\n",tmp25);
 }
-void procedure20 (int32_t arg0, enum11 arg1, int8_t arg2, array0 arg3){
+void concat_switchTest (int32_t arg0, enum11 arg1, int8_t arg2, array0 arg3){
 switch(arg0){
 case 1:case 2:;
 return ;
@@ -331,7 +331,7 @@ break;
 }
 bool const local0 = tmp30;
 }
-tuple19 procedure21 (array0 arg0, int64_t arg1){
+tuple19 concat_nextChar (array0 arg0, int64_t arg1){
 int64_t const local0 = arg1;
 array0 const local1 = arg0;
 int64_t const tmp31 = ((local1).sizes[0]);
@@ -344,7 +344,7 @@ concatInternal_checkArrayBounds(local0,((local1).sizes[0]));
 int8_t const tmp34 = ((local1).data[local0]);
 return (tuple19){.e0=local1,.e1=tmp33,.e2=tmp34,.e3=((bool)1)};
 }
-void procedure22 (array0 arg0, int64_t arg1, int8_t arg2){
+void concat_endItr (array0 arg0, int64_t arg1, int8_t arg2){
 }
 int main(void){
 int32_t const tmp35 = (((int32_t)1)+((int32_t)1));
@@ -391,9 +391,9 @@ if(tmp54){
 enum12 const tmp55 = /*enum*/2;
 local6 = tmp55;
 }
-int64_t const tmp56 = procedure3();
+int64_t const tmp56 = concat_anInt();
 printf("%"PRIi64"\n",tmp56);
-procPtr10 const tmp57 = &(procedure0);
+procPtr10 const tmp57 = &(concat_proc0);
 procPtr10 const local7 = tmp57;
 tuple1 const tmp58 = (local7)(((int32_t)1),((int32_t)1));
 int32_t const tmp59 = (tmp58).e1;
@@ -416,7 +416,7 @@ int32_t const tmp68 = (local0+((int32_t)1));
 int32_t const tmp69 = (local1-((int32_t)1));
 local0 = tmp69;
 local1 = tmp68;
-tuple1 const tmp70 = procedure0(((int32_t)1),((int32_t)2));
+tuple1 const tmp70 = concat_proc0(((int32_t)1),((int32_t)2));
 int64_t const tmp71 = ((int64_t)(tmp70).e0);
 int64_t const tmp72 = ((int64_t)(tmp70).e1);
 tuple21 const tmp73 = {.e0=tmp71,.e1=tmp72};
@@ -424,8 +424,8 @@ tuple21 local9 = tmp73;
 int32_t const tmp74 = (++local0);
 printf("%"PRIi32"\n",tmp74);
 local2 = ((int32_t)2);
-procedure2();
-tuple6 const tmp75 = procedure4();
+concat_doNothing();
+tuple6 const tmp75 = concat_ptrTest();
 tuple5 const* const tmp76 = (tmp75).e0;
 int32_t const* const tmp77 = (tmp76)->e1;
 int32_t const tmp78 = (*((tmp77)+(((int32_t)0))));
@@ -478,14 +478,14 @@ int32_t* local11 = tmp97;
 int32_t* const tmp98 = (++local11);
 (*(tmp98)) = ((int32_t)2);
 int8_t const* const tmp99 = (arrayData2+0);
-tuple15 const tmp100 = procedure13(((array0){.data=tmp99,.sizes={5}}));
+tuple15 const tmp100 = concat_startItr(((array0){.data=tmp99,.sizes={5}}));
 array0 tmp106;
 int64_t tmp105;
 int8_t tmp104;
 int64_t tmp101 = (tmp100).e1;
 array0 tmp102 = (tmp100).e0;
 do{
-tuple19 const tmp103 = procedure21(tmp102,tmp101);
+tuple19 const tmp103 = concat_nextChar(tmp102,tmp101);
 tmp104 = (tmp103).e2;
 tmp105 = (tmp103).e1;
 tmp106 = (tmp103).e0;
@@ -496,7 +496,7 @@ printf("%"PRIi8"\n",tmp104);
 tmp101 = tmp105;
 tmp102 = tmp106;
 }while(1);
-procedure22(tmp106,tmp105,tmp104);
+concat_endItr(tmp106,tmp105,tmp104);
 int32_t tmp110;
 bool tmp108 = 1;
 int32_t tmp109 = 5;
@@ -511,5 +511,5 @@ tmp108 = tmp112;
 tmp109 = tmp111;
 }while(1);
 printf("%s\n",((bool)1)?"true":"false");
-global24 = ((int8_t)66);
+concat_c0 = ((int8_t)66);
 }

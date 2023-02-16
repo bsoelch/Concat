@@ -214,12 +214,22 @@ char const* opName(OpType type){
 char const* CHECK_BOUNDS_NAME="concatInternal_checkArrayBounds";
 char const* CHECK_ENUM_INDEX_NAME="concatInternal_checkEnumIndex";
 //labels
+typedef int32_t NamespaceId;
+const NamespaceId NAMESPACE_ID_NONE=-1;
+typedef int32_t NamespaceImportId;
+const NamespaceImportId NAMESPACE_IMPORT_NONE=-1;
+typedef struct {
+  NamespaceId current;
+  NamespaceImportId namespaceImports;
+}NamespaceInfo;
+
 #define LABEL_CAP 4096
 typedef int32_t LabelId;
 const LabelId LABEL_ID_UNKNOWN=-1;
 typedef struct{
   String label;
   FilePosition declaredAt;
+  NamespaceId namespace;
   bool isMutable;
 }Label;
 Label labelBuffer[LABEL_CAP];
@@ -234,10 +244,10 @@ Label label(LabelId labelId,FilePosition pos){
     handleError("label id out of range",ERROR_MEMORY,pos);
   return labelBuffer[labelId];
 }
-LabelId newLabel(String label,bool isMutable,FilePosition declaredAt){
+LabelId newLabel(String label,bool isMutable,NamespaceId namespace,FilePosition declaredAt){
   if(labelBufferCount>=LABEL_CAP)
     handleError("exceeded label capacity",ERROR_MEMORY,declaredAt);
-  labelBuffer[labelBufferCount]=(Label){.label=label,.isMutable=isMutable,.declaredAt=declaredAt};
+  labelBuffer[labelBufferCount]=(Label){.label=label,.isMutable=isMutable,.namespace=namespace,.declaredAt=declaredAt};
   return labelBufferCount++;
 }
 int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName){
@@ -246,6 +256,25 @@ int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName
       return i;
   }
   return -1;
+}
+void printAsciifiedString(String name,FILE* out){
+  for(size_t i=0;i<name.length;i++){
+    if((name.chars[i]>='0'&&name.chars[i]<='9')||
+       (name.chars[i]>='A'&&name.chars[i]<='Z')||
+       (name.chars[i]>='a'&&name.chars[i]<='z')){//keep 0-9a-zA-Z
+      fputc(name.chars[i],out);
+      continue;
+    }
+    if(name.chars[i]=='_'){
+      fputs("__",out);
+      continue;
+    }
+    if(name.chars[i]=='.'){
+      fputs("_d",out);
+      continue;
+    }
+    fprintf(out,"_X%02x",name.chars[i]&0xff);
+  }
 }
 
 //types
@@ -1149,21 +1178,10 @@ typedef struct{
   CompilerInfoType infoType;
 }CompilerInfo;
 
-
-typedef int32_t NamespaceId;
-const NamespaceId NAMESPACE_ID_NONE=-1;
-typedef int32_t NamespaceImportId;
-const NamespaceImportId NAMESPACE_IMPORT_NONE=-1;
-typedef struct {
-  NamespaceId current;
-  NamespaceImportId namespaceImports;
-}NamespaceInfo;
-
 typedef struct{
   LabelId label;
-  NamespaceInfo namespaceInfo;
+  NamespaceInfo spaceInfo;
 }LocalLabel;
-
 typedef struct{
   OpType opType;
   DataType dataType;
@@ -1313,6 +1331,16 @@ NamespaceId findNamespace(NamespaceId base,String name){
       return NAMESPACE_ID_NONE;
   }
   return id;
+}
+String namespaceName(NamespaceId id){
+  if(id==NAMESPACE_ID_NONE)
+    return EMPTY_STRING;
+  return namespaceBuffer[id].name;
+}
+NamespaceId parentNamespace(NamespaceId id){
+  if(id==NAMESPACE_ID_NONE)
+    return NAMESPACE_ID_NONE;
+  return namespaceBuffer[id].parent;
 }
 
 typedef struct{
@@ -1611,14 +1639,6 @@ typedef struct{
 #define MAX_PROG_STRINGS 1024
 size_t progStringCount=0;
 ProgramString programStrings[MAX_PROG_STRINGS];
-int32_t stringLabelOffset;
-
-void initStringLabels(void){
-  stringLabelOffset=labelBufferCount;
-  FilePosition dummyPos=(FilePosition){.fileName="compiler.string",.line=0,.posInLine=0};
-  newLabel(cstrToStr("raw"),false,dummyPos);
-  newLabel(cstrToStr("length"),false,dummyPos);
-}
 
 int64_t addProgString(String s,FilePosition pos){
   if(progStringCount+1>=MAX_PROG_STRINGS)
@@ -1682,6 +1702,19 @@ size_t tupleElementAccess(FILE* target,int32_t depth,Operation const* op,size_t 
   }
   return size;
 } 
+
+void printGlobalIdentifer(IdentifierInfo id,FilePosition pos,FILE* target){
+  fputs("concat_",target);
+  Label mName=label(id.labelId,pos);
+  NamespaceId space=mName.namespace;
+  char separator='.';
+  while(space!=NAMESPACE_ID_NONE&&space>0){
+    printAsciifiedString(namespaceName(space),target);
+    printAsciifiedString(newString(&separator,1),target);
+    space=parentNamespace(space);
+  }
+  printAsciifiedString(mName.label,target);
+}
 void printProcArgumentTypesC(DataType const* inType,FILE* target,bool printArgNames){
   if(inType->typeClass!=TYPECLASS_PROC_IN&&inType->typeClass!=TYPECLASS_LABELED_PROC_IN){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(inType->typeClass));
@@ -1698,9 +1731,11 @@ void printProcArgumentTypesC(DataType const* inType,FILE* target,bool printArgNa
       fprintf(target," arg%"PRIi32,e);
   }
 }
-void printProcedureSignatureC(ProcedureType const* procedure,int32_t procId,FILE* target,bool printArgNames){
+void printProcedureSignatureC(ProcedureType const* procedure,IdentifierInfo procId,FILE* target,bool printArgNames,FilePosition pos){
   printTypeNameC(procedure->outType,target);
-  fprintf(target," procedure%" PRIi32" (",procId);
+  fputs(" ",target);
+  printGlobalIdentifer(procId,pos,target);
+  fputs(" (",target);
   DataType const* inType=procedure->inType;
   printProcArgumentTypesC(inType,target,printArgNames);
   fputs(")",target);
@@ -1722,10 +1757,8 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       fprintf(target,"arg%" PRIi32,op->dataAs.idInfo.id);
       return size;
     case ID_GLOBAL_VAR:
-      fprintf(target,"global%" PRIi32,op->dataAs.idInfo.id);
-      return size;
     case ID_PROCEDURE:
-      fprintf(target,"procedure%" PRIi32,op->dataAs.idInfo.id);
+      printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
       return size;
     case ID_TUPLE:
       //1. get tuple
@@ -1980,12 +2013,14 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fprintf(target," local%" PRIi32 ";\n",op->dataAs.idInfo.id);
           return size;
         case ID_GLOBAL_VAR:
-          fprintf(target," global%" PRIi32 ";\n",op->dataAs.idInfo.id);
+          fputs(" ",target);
+          printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
+          fputs(";\n",target);
           return size;
         case ID_PROCEDURE:
           if(!isCallableType(&(op->dataType))||isPointerType(&(op->dataType)))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(op->dataType.typeDataAs.procedure,op->dataAs.idInfo.id,target,false);
+          printProcedureSignatureC(op->dataType.typeDataAs.procedure,op->dataAs.idInfo,target,false,op->filePos);
           fputs(";\n",target);
           return size;
         case ID_INTERMEDIATE_RESULT:
@@ -2020,14 +2055,16 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fprintf(target," local%" PRIi32 " = ",op->dataAs.idInfo.id);
           break;
         case ID_GLOBAL_VAR:
+          fputs(" ",target);
           if(!op->dataAs.idInfo.isMutable)
-            fputs(" const",target);
-          fprintf(target," global%" PRIi32 " = ",op->dataAs.idInfo.id);
+            fputs("const ",target);
+          printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
+          fputs(" = ",target);
           break;
         case ID_PROCEDURE:
           if(!isCallableType(&(op->dataType))||isPointerType(&(op->dataType)))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(op->dataType.typeDataAs.procedure,op->dataAs.idInfo.id,target,true);
+          printProcedureSignatureC(op->dataType.typeDataAs.procedure,op->dataAs.idInfo,target,true,op->filePos);
           fputs("{\n",target);
           return size;
         case ID_ARGUMENT:
@@ -2351,7 +2388,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fprintf(stderr,"calling %s directly is not supported\n",idNames[op->dataAs.idInfo.type]);
         handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
-      fprintf(target,"procedure%"PRIi32,op->dataAs.idInfo.id);
+      printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
       return compileProcArgs(target,compiledOps,op,size,opSize,isGlobal);
     case OP_GET_LABEL:
     case OP_SET_LABEL:
@@ -2829,7 +2866,7 @@ String nextWord(CodeFile* codeFile,int* wordType){
 }
 
 
-LabelId readLabel(CodeFile* codeFile,char const* labelType){
+LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace){
   int wordType=0;
   bool isMutable=false,isModifer;
   String label;
@@ -2853,7 +2890,7 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType){
       isModifer=true;
     }
   }while(isModifer);
-  return newLabel(label,isMutable,codeFile->wordStart);
+  return newLabel(label,isMutable,namespace,codeFile->wordStart);
 }
 
 
@@ -2996,7 +3033,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
         return;
       }
       typesSinceLabel=0;
-      readLabel(codeFile,"labels");//label is stored in label buffer
+      readLabel(codeFile,"labels",state->namespaceInfo.current);//label is stored in label buffer
       continue;
     }
     if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
@@ -3005,7 +3042,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       return;
     }
     //untyped enum label
-    newLabel(word,false,codeFile->wordStart);//label is stored in label buffer
+    newLabel(word,false,state->namespaceInfo.current,codeFile->wordStart);//label is stored in label buffer
     pushTypeConstant(primitiveType(PRIMITIVE_VOID),codeFile->wordStart);
     currentOffset=bufferedConstants;
     typesSinceLabel=0;
@@ -3279,7 +3316,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   //1. operations that take a Type as argument
   if(wordEquals(&word,":")){//pre-declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,"variable names");
+    LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
@@ -3300,7 +3337,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"=:")){//declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,"variable names");
+    LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType;
@@ -3512,7 +3549,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       puts("-----------------");
       return;
     }else if(wordEquals(&word,"find")){
-      LabelId labelId=readLabel(codeFile,"variable names");
+      LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
       wordPos=codeFile->wordStart;
       Label varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
@@ -3603,7 +3640,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opUnaryOperator(DECREMENT,wordPos));
     return;
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    LabelId labelId=readLabel(codeFile,"variable names");
+    LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     wordPos=codeFile->wordStart;
@@ -3779,7 +3816,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }
   // could not find identifier, try again in type-check phase
   pushOperation(state,(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-    .dataAs={.localLabel={.label=newLabel(word,false,codeFile->wordStart),.namespaceInfo=state->namespaceInfo}}});
+    .dataAs={.localLabel=(LocalLabel){.label=newLabel(word,false,state->namespaceInfo.current,codeFile->wordStart),.spaceInfo=state->namespaceInfo}}});
 }
 
 
@@ -4851,7 +4888,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(op->dataAs.localLabel.namespaceInfo,mLabel,&asIdentifier);
+  int r=getIdentifier(op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier);
   if(r!=0){
     fprintf(stderr," unknown identifier '%"PRI_STR"'\n",PRI_STR_ARGS(mLabel));
     handleError(NULL,r,op->filePos);
@@ -6022,7 +6059,6 @@ int main(int argc,char** argv){
     return 0;
   }
   //initialization of uninitialized global variables 
-  initStringLabels();
   if(namespaceTrieInit()){
     fputs("failed to initialize namespace storage",stderr);
     exit(EXIT_FAILURE);
