@@ -436,61 +436,85 @@ bool isInteger(PrimitiveType t){
   return false;
 }
 
-bool isPrimitiveType(TypeId type){
-  return type.class==TYPECLASS_PRIMITIVE;
-}
-bool isBoolType(TypeId type){
-  return isPrimitiveType(type)&&type.dataAs.primitive==PRIMITIVE_BOOL;
-}
-bool isIntType(TypeId type){
-  return isPrimitiveType(type)&&isInteger(type.dataAs.primitive);
-}
-bool isNumberType(TypeId type){
-  return isPrimitiveType(type)&&numberRank(type.dataAs.primitive)>-1;
-}
-bool isPointerType(TypeId type){
-  return type.class==TYPECLASS_POINTER;
-}
-bool isArrayType(TypeId type){
-  return type.class==TYPECLASS_ARRAY||type.class==TYPECLASS_ARRAY_VIEW;
-}
 bool isNamedType(TypeId type){
   return type.class==TYPECLASS_NAMED_TYPE;
 }
+TypeId unwrapNamedType(TypeId type){
+  if(isNamedType(type))
+    return namedTypes[type.dataAs.id].type;
+  return type;
+}
+bool isPrimitiveType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_PRIMITIVE;
+}
+PrimitiveType primitiveTypeData(TypeId type){
+  if(isPrimitiveType(type))
+    return type.dataAs.primitive;
+  return PRIMITIVE_UNDEFINED;
+}
+bool isBoolType(TypeId type){
+  type=unwrapNamedType(type);
+  return isPrimitiveType(type)&&type.dataAs.primitive==PRIMITIVE_BOOL;
+}
+bool isIntType(TypeId type){
+  type=unwrapNamedType(type);
+  return isPrimitiveType(type)&&isInteger(type.dataAs.primitive);
+}
+bool isNumberType(TypeId type){
+  type=unwrapNamedType(type);
+  return isPrimitiveType(type)&&numberRank(type.dataAs.primitive)>-1;
+}
+bool isPointerType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_POINTER;
+}
+bool isArrayType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_ARRAY||type.class==TYPECLASS_ARRAY_VIEW;
+}
+bool isArrayViewType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_ARRAY_VIEW;
+}
+bool isTupleType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_TUPLE||type.class==TYPECLASS_STRUCT;
+}
+bool isProcInType(TypeId type){
+  return type.class==TYPECLASS_PROC_IN||type.class==TYPECLASS_LABELED_PROC_IN;
+}
+bool isProcOutType(TypeId type){
+  return type.class==TYPECLASS_PROC_OUT;
+}
+bool isEnumType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_ENUM;
+}
+bool isEnumLabelType(TypeId type){
+  type=unwrapNamedType(type);
+  return type.class==TYPECLASS_ENUM_LABEL;
+}
 bool isMutableType(TypeId type){
+  type=unwrapNamedType(type);
   if(isArrayType(type))
     return arrayTypes[type.dataAs.id].isMutable;
   if(isPointerType(type))
     return pointerTypes[type.dataAs.id].isMutable;
   return false;
 }
-bool isCallableType(TypeId type){
-  if(isPointerType(type))
-    type=pointerTypes[type.dataAs.id].target;
+bool isProcedureType(TypeId type){
+  type=unwrapNamedType(type);
   return type.class==TYPECLASS_PROCEDURE;
 }
-bool isTupleType(TypeId type){
-  switch(type.class){
-    case TYPECLASS_TUPLE:
-    case TYPECLASS_STRUCT:
-    case TYPECLASS_PROC_IN:
-    case TYPECLASS_LABELED_PROC_IN:
-    case TYPECLASS_PROC_OUT:
-      return true;
-    case TYPECLASS_PRIMITIVE:
-    case TYPECLASS_POINTER:
-    case TYPECLASS_PROCEDURE:
-    case TYPECLASS_NAMED_TYPE:
-    case TYPECLASS_AUTO_TYPE:
-    case TYPECLASS_ENUM:
-    case TYPECLASS_ENUM_LABEL:
-    case TYPECLASS_ARRAY:
-    case TYPECLASS_ARRAY_VIEW:
-      return false;
-  }
-  return false;
+bool isCallableType(TypeId type){
+  type=unwrapNamedType(type);
+  if(isPointerType(type))
+    type=pointerTypes[type.dataAs.id].target;
+  return isProcedureType(type);
 }
 bool isComposite(TypeId type){
+  type=unwrapNamedType(type);
   switch(type.class){
     case TYPECLASS_TUPLE:
     case TYPECLASS_STRUCT:
@@ -511,29 +535,79 @@ bool isComposite(TypeId type){
   }
   return false;
 }
+bool typeElementsLabeled(TypeId type){
+  type=unwrapNamedType(type);
+  if(type.class==TYPECLASS_TUPLE||type.class==TYPECLASS_PROC_IN||type.class==TYPECLASS_PROC_OUT)
+    return false;
+  return isComposite(type)&&compositeTypes[type.dataAs.id].labelOffset!=LABEL_ID_UNKNOWN;
+}
+
 TypeId getBaseType(TypeId pointer){
+  pointer=unwrapNamedType(pointer);
   if(isPointerType(pointer))
     return pointerTypes[pointer.dataAs.id].target;
   if(isArrayType(pointer))
     return arrayTypes[pointer.dataAs.id].base;
-  if(isNamedType(pointer))
-    return namedTypes[pointer.dataAs.id].type;
   return TYPE_UNDEFINED;
 }
+
+ProcedureType const* procTypeData(TypeId type){
+  type=unwrapNamedType(type);
+  if(isProcedureType(type))
+    return &procTypes[type.dataAs.id];
+  return NULL;
+}
+ArrayType const* arrayTypeData(TypeId type){
+  type=unwrapNamedType(type);
+  if(isArrayType(type))
+    return &arrayTypes[type.dataAs.id];
+  return NULL;
+}
+CompositeType const* compositeTypeData(TypeId type){
+  type=unwrapNamedType(type);
+  if(isComposite(type))
+    return &compositeTypes[type.dataAs.id];
+  return NULL;
+}
+bool isEnumLabel(TypeId enumType,TypeId labelType){
+  enumType=unwrapNamedType(enumType);
+  labelType=unwrapNamedType(labelType);
+  return isEnumType(enumType)&&isEnumLabelType(labelType)&&
+    compositeTypes[enumType.dataAs.id].id==compositeTypes[labelType.dataAs.id].id;
+}
 TypeId const* getTypeElements(TypeId type){
+  type=unwrapNamedType(type);
   if(isComposite(type))
     return compositeTypes[type.dataAs.id].types;
   return NULL;
 }
+LabelId getTypeElementLabel(TypeId type,int32_t labelId){
+  type=unwrapNamedType(type);
+  if(!typeElementsLabeled(type))
+    return LABEL_ID_UNKNOWN;
+  return compositeTypes[type.dataAs.id].labelOffset+labelId;
+}
 int64_t getTypeElementCount(TypeId type){
+  type=unwrapNamedType(type);
   if(isComposite(type))
     return compositeTypes[type.dataAs.id].typeCount;
   return 0;
 }
+void printTypeName(TypeId id,FILE* file);
+bool setNamedType(TypeId type,LabelId newName,TypeId newValue){
+  newValue=unwrapNamedType(newValue);
+  if(!isNamedType(type))
+    return false;
+  if(!typeEquals(namedTypes[type.dataAs.id].type,TYPE_UNDEFINED))
+    return false;
+  namedTypes[type.dataAs.id].name=newName;
+  namedTypes[type.dataAs.id].type=newValue;
+  return true;
+}
 
 TypeId pointerType(TypeId target,bool mutable);
 TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool isMutable);
-bool makeMutable(TypeId* t){//FIXME update to give mutable version a different id
+bool makeMutable(TypeId* t){
   if(isMutableType(*t))
     return true;
   switch(t->class){
@@ -559,21 +633,20 @@ bool makeMutable(TypeId* t){//FIXME update to give mutable version a different i
   }
   return false;
 }
-TypeId unlabeledType(TypeId type){
-  if(type.class==TYPECLASS_NAMED_TYPE)
-    return namedTypes[type.dataAs.id].type;
-  return type;
-}
 bool asArrayView(TypeId* anArray){
-  if(!isArrayType(*anArray))
+  if(isNamedType(*anArray)||!isArrayType(*anArray))
     return true;
   anArray->class=TYPECLASS_ARRAY_VIEW;
   return false;
 }
 bool changeEnumType(TypeId* anEnum,bool isLabel){
-  if(anEnum->class!=TYPECLASS_ENUM&&anEnum->class!=TYPECLASS_ENUM_LABEL)
+  TypeId enumType=unwrapNamedType(*anEnum);
+  if(enumType.class!=TYPECLASS_ENUM&&enumType.class!=TYPECLASS_ENUM_LABEL)
     return true;
-  anEnum->class=isLabel?TYPECLASS_ENUM_LABEL:TYPECLASS_ENUM;
+  if((enumType.class==TYPECLASS_ENUM_LABEL)!=isLabel){
+    enumType.class=isLabel?TYPECLASS_ENUM_LABEL:TYPECLASS_ENUM;
+    *anEnum=enumType;
+  }
   return false;
 }
 
@@ -586,8 +659,13 @@ TypeId newNamedType(LabelId label,TypeId content){
   namedTypes[namedTypeCount]=(NamedType){.name=label,.type=content};
   return (TypeId){.class=TYPECLASS_NAMED_TYPE,.dataAs.id=namedTypeCount++};
 }
-TypeId newAutoType(int64_t id){
+TypeId newAutoType(int32_t id){
   return (TypeId){.class=TYPECLASS_AUTO_TYPE,.dataAs.id=id};
+}
+int32_t autoTypeId(TypeId autoType){
+  if(autoType.class!=TYPECLASS_AUTO_TYPE)
+    return -1;
+  return autoType.dataAs.id;
 }
 TypeId pointerType(TypeId target,bool mutable){
   for(int32_t t=0;t<pointerTypeCount;t++){
@@ -626,7 +704,7 @@ TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOff
       classFlag=FLAG_IS_PROC_IN;
       break;
     case TYPECLASS_LABELED_PROC_IN:
-      if(labelOffset==-1)
+      if(labelOffset==LABEL_ID_UNKNOWN)
         return TYPE_UNDEFINED;
       classFlag=FLAG_IS_PROC_IN;
       break;
@@ -637,13 +715,13 @@ TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOff
       classFlag=FLAG_IS_TUPLE;
       break;
     case TYPECLASS_STRUCT:
-      if(labelOffset==-1)
+      if(labelOffset==LABEL_ID_UNKNOWN)
         return TYPE_UNDEFINED;
       classFlag=FLAG_IS_STRUCT;
       break;
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
-      if(labelOffset==-1)
+      if(labelOffset==LABEL_ID_UNKNOWN)
         return TYPE_UNDEFINED;
       classFlag=FLAG_IS_ENUM;
       break;
@@ -728,8 +806,8 @@ TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
     procType=pointerTypes[procType.dataAs.id].target;
     isPtr=true;
   }
-  ProcedureType const* proc=&procTypes[procType.dataAs.id];
-  if(proc->inType.class==TYPECLASS_PROC_IN)
+  ProcedureType const* proc=procTypeData(procType);
+  if(!typeElementsLabeled(proc->inType))
     return baseType;
   //replaces labeled types with their canonical unlabeled version 
   TypeId in=compositeType(TYPECLASS_PROC_IN,getTypeElements(proc->inType),LABEL_ID_UNKNOWN,getTypeElementCount(proc->inType));
@@ -741,7 +819,7 @@ TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
 TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool isMutable){
   if(dims<=0)
     return TYPE_UNDEFINED;
-  if(typeEquals(base,TYPE_UNDEFINED)||(isCallableType(base)&&!isPointerType(base)))
+  if(typeEquals(base,TYPE_UNDEFINED)||isProcedureType(base))
     return TYPE_UNDEFINED;
   for(int32_t i=0;i<arrayTypeCount;i++){
     if((!typeEquals(arrayTypes[i].base,base))||arrayTypes[i].dims!=dims||arrayTypes[i].isMutable!=isMutable)
@@ -846,7 +924,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       fprintf(file,"namedType \"%"PRI_STR"\"",PRI_STR_ARGS(getLabelName(namedTypes[type.dataAs.id].name)));
       if(!noRecurse){
         fputs(" [ ",file);
-        printTypeNameIntenal(getBaseType(type),file,true);
+        printTypeNameIntenal(unwrapNamedType(type),file,true);
         fputs("]",file);
       }
       printTypeFlags(type,file);
@@ -867,7 +945,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
-      if(type.class!=TYPECLASS_PROC_IN&&type.class!=TYPECLASS_LABELED_PROC_IN&&type.class!=TYPECLASS_PROC_OUT){
+      if(!isProcInType(type)&&!isProcOutType(type)){
         fprintf(file,"%s (%"PRIi32") ",typeClassName(type.class),type.dataAs.id);
         if(noRecurse){
           printTypeFlags(type,file);
@@ -876,20 +954,20 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
         fputs("(",file);
       }
       for(int32_t e=0;e<getTypeElementCount(type);e++){
-        if((type.class==TYPECLASS_ENUM||type.class==TYPECLASS_ENUM_LABEL)&&typeEquals(getTypeElements(type)[e],TYPE_UNDEFINED)){
-          labelName=getLabelName(compositeTypes[type.dataAs.id].labelOffset+e);
+        if((isEnumType(type)||isEnumLabelType(type))&&typeEquals(getTypeElements(type)[e],TYPE_UNDEFINED)){
+          labelName=getLabelName(getTypeElementLabel(type,e));
           //void-type in enum -> only print label
           fprintf(file," %"PRI_STR,PRI_STR_ARGS(labelName));
           continue;
         }
         fputs(" ",file);
         printTypeNameIntenal(getTypeElements(type)[e],file,true);//only one recursion level
-        if(type.class==TYPECLASS_TUPLE||type.class==TYPECLASS_PROC_IN||type.class==TYPECLASS_PROC_OUT||compositeTypes[type.dataAs.id].labelOffset==-1)
+        if(!typeElementsLabeled(type))
           continue;
-        labelName=getLabelName(compositeTypes[type.dataAs.id].labelOffset+e);
+        labelName=getLabelName(getTypeElementLabel(type,e));
         fprintf(file," : %"PRI_STR,PRI_STR_ARGS(labelName));
       }
-      if(type.class!=TYPECLASS_PROC_IN&&type.class!=TYPECLASS_LABELED_PROC_IN&&type.class!=TYPECLASS_PROC_OUT){
+      if(!isProcInType(type)&&!isProcOutType(type)){
         fputs(" )",file);
       }
       printTypeFlags(type,file);
@@ -901,21 +979,21 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
         return;
       }
       fputs("( ",file);
-      printTypeNameIntenal(procTypes[type.dataAs.id].inType,file,true);
+      printTypeNameIntenal(procTypeData(type)->inType,file,true);
       fputs(" => ",file);
-      printTypeNameIntenal(procTypes[type.dataAs.id].outType,file,true);
+      printTypeNameIntenal(procTypeData(type)->outType,file,true);
       fputs(" )",file);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
       printTypeNameIntenal(getBaseType(type),file,noRecurse);
-      for(int32_t i=0;i<arrayTypes[type.dataAs.id].dims;i++){
-        if(arrayTypes[type.dataAs.id].sizeKnown){
-          fprintf(file," %"PRIi64,arrayTypes[type.dataAs.id].sizes[i]);
+      for(int32_t i=0;i<arrayTypeData(type)->dims;i++){
+        if(arrayTypeData(type)->sizeKnown){
+          fprintf(file," %"PRIi64,arrayTypeData(type)->sizes[i]);
           continue;
         }
-        if(arrayTypes[type.dataAs.id].dims>1)
+        if(arrayTypeData(type)->dims>1)
           fputs(" _",file);
       }
       fprintf(file," %s",typeClassName(type.class));
@@ -951,7 +1029,7 @@ char const* primitiveNameC(PrimitiveType t){
 void printTypeNameC(TypeId type,FILE* file){
   switch(type.class){
     case TYPECLASS_NAMED_TYPE://pointer to opaque type -> void pointer
-      printTypeNameC(getBaseType(type),file);
+      printTypeNameC(unwrapNamedType(type),file);
       return;
     case TYPECLASS_AUTO_TYPE:
       fputs("void",file);
@@ -972,7 +1050,7 @@ void printTypeNameC(TypeId type,FILE* file){
       fprintf(file,"array%"PRIi32,type.dataAs.id);
       return;
     case TYPECLASS_ARRAY_VIEW:
-      if(!arrayTypes[type.dataAs.id].sizeKnown){//array with unknown size
+      if(!arrayTypeData(type)->sizeKnown){//array with unknown size
         fprintf(file,"array%"PRIi32,type.dataAs.id); 
         return; 
       }
@@ -1734,11 +1812,11 @@ void printGlobalIdentifer(IdentifierInfo id,FilePosition pos,FILE* target){
   printAsciifiedString(mName.label,target);
 }
 void printProcArgumentTypesC(TypeId inType,FILE* target,bool printArgNames){
-  if(inType.class!=TYPECLASS_PROC_IN&&inType.class!=TYPECLASS_LABELED_PROC_IN){
+  if(!isProcInType(inType)){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(inType.class));
     exit(1);
   }
-  CompositeType const* inTypes=&compositeTypes[inType.dataAs.id];
+  CompositeType const* inTypes=compositeTypeData(inType);
   if(inTypes->typeCount==0)
     fputs("void",target);
   for(int32_t e=0;e<inTypes->typeCount;e++){
@@ -1789,7 +1867,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       handleError("tuple access without base tuple",ERROR_SYNTAX,op->filePos);
       break;
     case ID_ENUM_LABEL:
-      if(compositeTypes[op->dataType.dataAs.id].flags&FLAG_VOID_ONLY){
+      if(compositeTypeData(op->dataType)->flags&FLAG_VOID_ONLY){
         fputs("/*label*/",target);
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         return size;
@@ -1837,7 +1915,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       fputs("((",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
-      if(op->dataType.class!=TYPECLASS_ARRAY_VIEW||!arrayTypes[op->dataType.dataAs.id].sizeKnown)
+      if(!isArrayViewType(op->dataType)||!arrayTypeData(op->dataType)->sizeKnown)
         fputs(".data",target);
       fputs("[",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
@@ -1845,17 +1923,17 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,false);
     case ID_ARRAY_SIZE:;
       if(op->dataAs.idInfo.id==0){//is length
-        if(arrayTypes[op->dataType.dataAs.id].sizeKnown){
-          fprintf(target,"/*length*/((int64_t)%"PRIi64")",arrayTypes[op->dataType.dataAs.id].sizes[0]);
+        if(arrayTypeData(op->dataType)->sizeKnown){
+          fprintf(target,"/*length*/((int64_t)%"PRIi64")",arrayTypeData(op->dataType)->sizes[0]);
           return size;
         }
         fputs("((",target);
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
-        fprintf(target,").sizes[%"PRIi32"])",arrayTypes[op->dataType.dataAs.id].dims-1);
+        fprintf(target,").sizes[%"PRIi32"])",arrayTypeData(op->dataType)->dims-1);
         return size;
       }
-      if(arrayTypes[op->dataType.dataAs.id].sizeKnown){
-        fprintf(target,"arraySizes%"PRIi32,arrayTypes[op->dataType.dataAs.id].id);
+      if(arrayTypeData(op->dataType)->sizeKnown){
+        fprintf(target,"arraySizes%"PRIi32,arrayTypeData(op->dataType)->id);
         return size;
       }
       fputs("((",target);
@@ -1871,24 +1949,24 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
   return size;
 }
 size_t compileProcArgs(FILE* target,size_t compiledOps,Operation const* op,size_t size,size_t opSize,bool isGlobal){
-  TypeId in=procTypes[op->dataType.dataAs.id].inType;
-  TypeId out=procTypes[op->dataType.dataAs.id].outType;
-  if(in.class!=TYPECLASS_PROC_IN&&in.class!=TYPECLASS_LABELED_PROC_IN){
+  TypeId in=procTypeData(op->dataType)->inType;
+  TypeId out=procTypeData(op->dataType)->outType;
+  if(!isProcInType(in)){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(in.class));
     handleError(NULL,ERROR_MEMORY,op->filePos);
   }
-  if(out.class!=TYPECLASS_PROC_OUT){
+  if(!isProcOutType(out)){
     fprintf(stderr,"unexpected procedure return type-class: %s\n",typeClassName(out.class));
     handleError(NULL,ERROR_MEMORY,op->filePos);
   }
   fputs("(",target);
-  for(int32_t e=0;e<compositeTypes[in.dataAs.id].typeCount;e++){
+  for(int32_t e=0;e<getTypeElementCount(in);e++){
     if(e>0)
       fputs(",",target);
     COMPILE_OP_RETURN_ERROR(target,op,opSize);
   }
   fputs(")",target);
-  if(compositeTypes[out.dataAs.id].typeCount==0)//function without return value terminates statement
+  if(getTypeElementCount(out)==0)//function without return value terminates statement
     fputs(";\n",target);
   return size;
 } 
@@ -1941,7 +2019,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fputs("(void const*)",target);
       }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
-      if(isArrayType(op->dataType)&&!arrayTypes[op->dataType.dataAs.id].sizeKnown){
+      if(isArrayType(op->dataType)&&!arrayTypeData(op->dataType)->sizeKnown){
         fputs(".data",target);
       }
       if(boolMode){
@@ -1955,14 +2033,14 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         printTypeNameC(op->dataType,target);
         fputs(")",target);
       }
-      if(op->dataType.class==TYPECLASS_ENUM_LABEL){
+      if(isEnumLabelType(op->dataType)){
         fprintf(target,"%" PRIi64,op->dataAs.i64);
         if(needCast)
           fputs(")",target);
         return size;
       }
       if(isArrayType(op->dataType)){
-        if(op->dataType.class!=TYPECLASS_ARRAY_VIEW)
+        if(!isArrayViewType(op->dataType))
           handleError("creating array constants is not supported",ERROR_UNIMPLEMENTED,op->filePos);
         int64_t i=-1;
         for(size_t j=0;j<progStringCount;j++){//find string in reordered string array
@@ -1971,10 +2049,10 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
             break;
           }
         }
-        if(!arrayTypes[op->dataType.dataAs.id].sizeKnown)
+        if(!arrayTypeData(op->dataType)->sizeKnown)
           fputs("{.data=",target);
         fprintf(target,"(arrayData%"PRIi32"+%"PRIi32")",programStrings[i].charsId,programStrings[i].charsOffset);
-        if(!arrayTypes[op->dataType.dataAs.id].sizeKnown)
+        if(!arrayTypeData(op->dataType)->sizeKnown)
           fprintf(target,",.sizes={%zu}}",programStrings[i].value.length);
         if(needCast)
           fputs(")",target);
@@ -1986,7 +2064,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs(" are not supported\n",stderr);
           handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      switch(op->dataType.dataAs.primitive){
+      switch(primitiveTypeData(op->dataType)){
         case PRIMITIVE_BOOL:
         case PRIMITIVE_I8:
         case PRIMITIVE_I32:
@@ -1996,7 +2074,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
             fputs(")",target);
           return size;
         default:
-          fprintf(stderr,"%s constants are (currently) not supported",primitiveName(op->dataType.dataAs.primitive));
+          fprintf(stderr,"%s constants are (currently) not supported",primitiveName(primitiveTypeData(op->dataType)));
           handleError(NULL,ERROR_TYPE,op->filePos);
       }
       break;
@@ -2036,9 +2114,9 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs(";\n",target);
           return size;
         case ID_PROCEDURE:
-          if(!isCallableType(op->dataType)||isPointerType(op->dataType))
+          if(!isProcedureType(op->dataType))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(&procTypes[op->dataType.dataAs.id],op->dataAs.idInfo,target,false,op->filePos);
+          printProcedureSignatureC(procTypeData(op->dataType),op->dataAs.idInfo,target,false,op->filePos);
           fputs(";\n",target);
           return size;
         case ID_INTERMEDIATE_RESULT:
@@ -2080,9 +2158,9 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs(" = ",target);
           break;
         case ID_PROCEDURE:
-          if(!isCallableType(op->dataType)||isPointerType(op->dataType))
+          if(!isProcedureType(op->dataType))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(&procTypes[op->dataType.dataAs.id],op->dataAs.idInfo,target,true,op->filePos);
+          printProcedureSignatureC(procTypeData(op->dataType),op->dataAs.idInfo,target,true,op->filePos);
           fputs("{\n",target);
           return size;
         case ID_ARGUMENT:
@@ -2114,14 +2192,14 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       }
       return size;
     case OP_NEW:
-      if(op->dataType.class==TYPECLASS_TUPLE||op->dataType.class==TYPECLASS_STRUCT){
+      if(isTupleType(op->dataType)){
         if(needCast){
           fputs("(",target);
           printTypeNameC(op->dataType,target);
           fputs(")",target);
         }
         fputs("{",target);
-        for(int32_t e=0;e<compositeTypes[op->dataType.dataAs.id].typeCount;e++){
+        for(int32_t e=0;e<getTypeElementCount(op->dataType);e++){
           if(e>0)
             fputs(",",target);
           fprintf(target,".e%"PRIi32"=",e);
@@ -2130,18 +2208,18 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fputs("}",target);
         return size;
       }
-      if(op->dataType.class==TYPECLASS_ENUM){
+      if(isEnumType(op->dataType)){
         if(needCast){
           fputs("(",target);
           printTypeNameC(op->dataType,target);
           fputs(")",target);
         }
-        if(compositeTypes[op->dataType.dataAs.id].flags&FLAG_VOID_ONLY){
+        if(compositeTypeData(op->dataType)->flags&FLAG_VOID_ONLY){
           fprintf(target,"/*enum*/%"PRIi64,op->dataAs.i64);
           return size;
         }
         fprintf(target,"{.label=%"PRIi64,op->dataAs.i64);
-        if(typeEquals(compositeTypes[op->dataType.dataAs.id].types[op->dataAs.i64],TYPE_UNDEFINED)){
+        if(typeEquals(getTypeElements(op->dataType)[op->dataAs.i64],TYPE_UNDEFINED)){
           fputs(",.data={0}}",target);
           return size;
         }
@@ -2153,27 +2231,27 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       handleError("unexpected type for OP_NEW",ERROR_UNIMPLEMENTED,op->filePos);
       break;
     case OP_CAST:
-      if(typeEquals(unlabeledType(op->dataAs.sourceType),unlabeledType(op->dataType))){//no cast neccessary
+      if(typeEquals(unwrapNamedType(op->dataAs.sourceType),unwrapNamedType(op->dataType))){//no cast neccessary
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         return size;
       }
       if(isArrayType(op->dataAs.sourceType)){
-        bool isView=op->dataAs.sourceType.class==TYPECLASS_ARRAY_VIEW;
-        ArrayType const* srcArray=&arrayTypes[op->dataAs.sourceType.dataAs.id];
+        bool isSrcView=isArrayViewType(op->dataAs.sourceType);
+        ArrayType const* srcArray=arrayTypeData(op->dataAs.sourceType);
         if(isPointerType(op->dataType)){
           fputs("((",target);
           printTypeNameC(op->dataType,target);
           fputs(")",target);
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          if(isView&&srcArray->sizeKnown){
+          if(isSrcView&&srcArray->sizeKnown){
             fputs(")",target);
             return size;//value is already pointer
           }
           fputs(".data)",target);
           return size;
         }
-        if(op->dataType.class==TYPECLASS_ARRAY_VIEW){
-          ArrayType const* targetArray=&arrayTypes[op->dataType.dataAs.id];
+        if(isArrayViewType(op->dataType)){
+          ArrayType const* targetArray=arrayTypeData(op->dataType);
           fputs("((",target);
           printTypeNameC(op->dataType,target);
           fputs(")",target);
@@ -2181,7 +2259,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
             fputs("{.data=",target);
           }
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          if(!isView||!srcArray->sizeKnown){
+          if(!isSrcView||!srcArray->sizeKnown){
             fputs(".data",target);
           }
           if(!targetArray->sizeKnown){
@@ -2207,7 +2285,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         }
         break;//unknown cast
       }
-      if(op->dataAs.sourceType.class==TYPECLASS_ENUM&&((compositeTypes[op->dataAs.sourceType.dataAs.id].flags&FLAG_VOID_ONLY)==0)){
+      if(isEnumType(op->dataAs.sourceType)&&((compositeTypeData(op->dataAs.sourceType)->flags&FLAG_VOID_ONLY)==0)){
         fputs("(",target);
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         fputs(").label",target);
@@ -2325,7 +2403,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("continue;\n",target);
           return size;
         case BLOCK_SWITCH:
-          if(!isIntType(op->dataType)&&op->dataType.class!=TYPECLASS_ENUM_LABEL){
+          if(!isIntType(op->dataType)&&!isEnumLabelType(op->dataType)){//XXX isSwitchableType
             fputs("compiling switch-case of type ",stderr);
             printTypeName(op->dataType,stderr);
             fputs(" is not implemented\n",stderr);
@@ -2336,7 +2414,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("){\n",target);
           return size;
         case BLOCK_CASE:
-          if(!isIntType(op->dataType)&&op->dataType.class!=TYPECLASS_ENUM_LABEL){
+          if(!isIntType(op->dataType)&&!isEnumLabelType(op->dataType)){
             fputs("compiling switch-case of type ",stderr);
             printTypeName(op->dataType,stderr);
             fputs(" is not implemented\n",stderr);
@@ -2357,7 +2435,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           }
           return size;
         case BLOCK_DEFAULT:
-          if(!isIntType(op->dataType)&&op->dataType.class!=TYPECLASS_ENUM_LABEL){
+          if(!isIntType(op->dataType)&&!isEnumLabelType(op->dataType)){
             fputs("compiling switch-case of type ",stderr);
             printTypeName(op->dataType,stderr);
             fputs(" is not implemented\n",stderr);
@@ -2379,17 +2457,19 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       return size;
     case OP_RETURN:
       fputs("return ",target);
-      if(compositeTypes[op->dataType.dataAs.id].typeCount==0){
+      if(getTypeElementCount(op->dataType)==0){
         fputs(";\n",target);
         return size;
       }
-      if(compositeTypes[op->dataType.dataAs.id].typeCount==1){
+      if(getTypeElementCount(op->dataType)==1){
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         fputs(";\n",target);
         return size;
       }
-      fprintf(target,"(tuple%"PRIi32"){",compositeTypes[op->dataType.dataAs.id].id);
-      for(int32_t e=0;e<compositeTypes[op->dataType.dataAs.id].typeCount;e++){
+      fputs("(",target);
+      printTypeNameC(op->dataType,target);
+      fputs("){",target);
+      for(int32_t e=0;e<getTypeElementCount(op->dataType);e++){
         if(e>0)
           fputs(",",target);
         fprintf(target,".e%"PRIi32"=",e);
@@ -3165,7 +3245,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
       pushTypeConstant(arrayType(true,target,arrayDimsCount,dims,false),codeFile->wordStart);
       return true;
     }
-    if(target.class==TYPECLASS_ARRAY){
+    if(isArrayType(target)&&!isArrayViewType(target)){
       if(asArrayView(&target))//pointer to array -> array view
         handleError("failed to create array-view",ERROR_MEMORY,codeFile->wordStart);
       pushTypeConstant(target,codeFile->wordStart);
@@ -3327,7 +3407,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-    if(isCallableType(type)&&!isPointerType(type)){
+    if(isProcedureType(type)){
       handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
     }
     ConstantValue val={.type=CONSTANT_NONE};
@@ -3347,22 +3427,23 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType;
-    ScopeNode* prevId;
+    ScopeNode * prevId;
     int r;
     if(typeEquals(type,TYPE_TYPE)){
       idType=ID_TYPE;
       r=getIdentifier(state->namespaceInfo,varName.label,&prevId);
       if(r<0)
         handleError("error while resolving identifier",r,wordPos);
-      if(r==0&&prevId->idType==ID_TYPE&&prevId->constValue.type==CONSTANT_TYPE&&prevId->constValue.as.type.class==TYPECLASS_NAMED_TYPE){//can only override named types
-        namedTypes[prevId->constValue.as.type.dataAs.id].type=popTypeConstant(wordPos,"type constant",false);//override previous definition
+      TypeId constType=popTypeConstant(wordPos,"type constant",false);
+      if(r==0&&prevId->idType==ID_TYPE&&prevId->constValue.type==CONSTANT_TYPE&&setNamedType(prevId->constValue.as.type,labelId,constType)){//can only override named types
+        prevId->labelId=labelId;//update declaration position 
         return;
       }
-      type=newNamedType(labelId,popTypeConstant(wordPos,"type value",false));
+      type=newNamedType(labelId,constType);
       ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
       declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,&constValue);
       return;
-    }else if(type.class==TYPECLASS_PROCEDURE){
+    }else if(isProcedureType(type)){
       idType=ID_PROCEDURE;
     }else{
       idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
@@ -3379,10 +3460,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       state->currentScope=newScope;
       state->scopeLevel++;
       state->procScope=state->scopeLevel;
-      state->currentProcId=procTypes[type.dataAs.id].procId;
+      state->currentProcId=procTypeData(type)->procId;
       state->localVars=0;
-      if(procTypes[type.dataAs.id].inType.class==TYPECLASS_LABELED_PROC_IN){
-         CompositeType const* inTypes=&compositeTypes[procTypes[type.dataAs.id].inType.dataAs.id];
+      if(typeElementsLabeled(procTypeData(type)->inType)){
+         CompositeType const* inTypes=compositeTypeData(procTypeData(type)->inType);
          for(int32_t i=0;i<inTypes->typeCount;i++){
             declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos,NULL);
          }
@@ -3391,7 +3472,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
   }else if(wordEquals(&word,"new")){
-    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&peekOperation(state,wordPos)->dataType.class==TYPECLASS_ENUM_LABEL){
+    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
       //change enum label to enum declaration
       peekOperation(state,wordPos)->opType=OP_NEW;
       peekOperation(state,wordPos)->filePos=wordPos;
@@ -3400,14 +3481,13 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
     }
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    type=unlabeledType(type);//TODO named types
-    if(type.class==TYPECLASS_TUPLE||type.class==TYPECLASS_STRUCT){
+    if(isTupleType(type)){
       pushOperation(state,(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}});
       return;
     }
     printTypeName(type,stderr);
     fputs(" is currently not supported for operator new\n",stderr);
-    if(type.class==TYPECLASS_ENUM)
+    if(isEnumType(type))
       fputs(" to create an enum specify the label of the current value\n",stderr);
     handleError(NULL,ERROR_TYPE,wordPos);
   }else if(wordEquals(&word,"cast")){ 
@@ -3427,9 +3507,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
     }
     requireCompileTimeTypes(&word,&type,1,wordPos);//try to get type field of enum
-    type=unlabeledType(type);//TODO named types
     int64_t index;
-    if(type.class!=TYPECLASS_ENUM||((index=findLabel(compositeTypes[type.dataAs.id].labelOffset,compositeTypes[type.dataAs.id].typeCount,&word))==-1)){
+    if(!isEnumType(type)||((index=findLabel(getTypeElementLabel(type,0)/*type labels are array starting at 1st label*/,getTypeElementCount(type),&word))==-1)){
       fputs("type ",stderr);
       printTypeName(type,stderr);
       fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(word));
@@ -3649,7 +3728,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     Label varName=label(labelId,wordPos);
     wordPos=codeFile->wordStart;
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-    TypeId mType=newAutoType(++state->predeclaredTypes);
+    TypeId mType=newAutoType(state->predeclaredTypes++);
     ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstant());
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
@@ -3863,9 +3942,9 @@ TypeId typeCheckPointerArithmetic(TypeId* inTypes,bool subtract){
 TypeId typeCheckArithmetic(TypeId* inTypes){
   if(!isPrimitiveType(inTypes[0])||!isPrimitiveType(inTypes[1]))
     return TYPE_UNDEFINED;//arithmetic only on primitive types
-  int r1=numberRank(inTypes[0].dataAs.primitive);
-  int r2=numberRank(inTypes[1].dataAs.primitive);
-  if(isInteger(inTypes[0].dataAs.primitive)!=isInteger(inTypes[1].dataAs.primitive))
+  int r1=numberRank(primitiveTypeData(inTypes[0]));
+  int r2=numberRank(primitiveTypeData(inTypes[1]));
+  if(isInteger(primitiveTypeData(inTypes[0]))!=isInteger(primitiveTypeData(inTypes[1])))
     return TYPE_UNDEFINED;//implicit int to float conversion
   if(r1<=0||r2<=0)
     return TYPE_UNDEFINED;
@@ -3879,9 +3958,9 @@ TypeId typeCheckArithmetic(TypeId* inTypes){
 TypeId typeCheckCompare(TypeId* inTypes){
   if(!isPrimitiveType(inTypes[0])||!isPrimitiveType(inTypes[1]))
     return TYPE_UNDEFINED;//comparison only on primitive types
-  int r1=numberRank(inTypes[0].dataAs.primitive);
-  int r2=numberRank(inTypes[1].dataAs.primitive);
-  if(isInteger(inTypes[0].dataAs.primitive)!=isInteger(inTypes[1].dataAs.primitive))
+  int r1=numberRank(primitiveTypeData(inTypes[0]));
+  int r2=numberRank(primitiveTypeData(inTypes[1]));
+  if(isInteger(primitiveTypeData(inTypes[0]))!=isInteger(primitiveTypeData(inTypes[1])))
     return TYPE_UNDEFINED;//implicit int to float conversion
   if(r1<=0||r2<=0)
     return TYPE_UNDEFINED;//comparison only between numbers
@@ -3895,8 +3974,8 @@ TypeId typeCheckCompare(TypeId* inTypes){
 TypeId typeCheckIntLogic(TypeId* inTypes){
   if(!isIntType(inTypes[0])||!isIntType(inTypes[1]))
     return TYPE_UNDEFINED;//both arguments have to be integers
-  int r1=numberRank(inTypes[0].dataAs.primitive);
-  int r2=numberRank(inTypes[1].dataAs.primitive);
+  int r1=numberRank(primitiveTypeData(inTypes[0]));
+  int r2=numberRank(primitiveTypeData(inTypes[1]));
   //r1 and r2 both are valid numbers
   PrimitiveType res=numberByRank(r1>r2?r1:r2);
   if(res==PRIMITIVE_UNDEFINED)
@@ -4338,31 +4417,29 @@ void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePos
 
 
 bool canAutoCast(TypeId src,TypeId target){//? allow cast T ptr mut ptr -> T ptr ptr (allow allow casting mut away if out pointers are const)
-  src=unlabeledType(src);//TODO named types
-  target=unlabeledType(target);
   if(typeEquals(src,target))
     return true;
-  if(src.class==TYPECLASS_ENUM&&target.class==TYPECLASS_ENUM_LABEL&&compositeTypes[src.dataAs.id].id==compositeTypes[target.dataAs.id].id)
+  if(isEnumLabel(src,target))
     return true;//allow auto-cast from enum to enum-label
-  if(isPointerType(src)&&!isMutableType(target)&&typeEquals(getBaseType(src),getBaseType(target)))
+  if(isPointerType(src)&&isPointerType(target)&&!isMutableType(target)&&typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning pointer to const pointer
-  if(src.class==TYPECLASS_ARRAY_VIEW&&isPointerType(target)&&
+  if(isArrayViewType(src)&&isPointerType(target)&&
     (isMutableType(src)||!isMutableType(target))&&typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning array-view to pointer
-  if(isArrayType(src)&&target.class==TYPECLASS_ARRAY_VIEW&&
-    (isMutableType(src)||!isMutableType(target))&&arrayTypes[src.dataAs.id].dims==arrayTypes[target.dataAs.id].dims&&!arrayTypes[target.dataAs.id].sizeKnown&&
+  if(isArrayType(src)&&isArrayViewType(target)&&
+    (isMutableType(src)||!isMutableType(target))&&arrayTypeData(src)->dims==arrayTypeData(target)->dims&&!arrayTypeData(target)->sizeKnown&&
       typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning fixed-size array(-view) to var-size array-view
   if(!isPrimitiveType(src)||!isPrimitiveType(target))
     return false;
-  return isInteger(src.dataAs.primitive)&&isInteger(target.dataAs.primitive)&&
-    numberRank(src.dataAs.primitive)<=numberRank(target.dataAs.primitive);//implicit casts only from small int to large int
+  return isInteger(primitiveTypeData(src))&&isInteger(primitiveTypeData(target))&&
+    numberRank(primitiveTypeData(src))<=numberRank(primitiveTypeData(target));//implicit casts only from small int to large int
 }
 bool canCast(TypeId src,TypeId target){
   if(canAutoCast(src,target))
     return true;
   //XXX cast between arrays of different dimensions
-  return numberRank(src.dataAs.primitive)>-1&&numberRank(target.dataAs.primitive)>-1;//casts only between numbers
+  return numberRank(primitiveTypeData(src))>-1&&numberRank(primitiveTypeData(target))>-1;//casts only between numbers
 }
 
 void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,size_t nTypes,FilePosition pos){//XXX? auto-create tuples
@@ -4387,16 +4464,14 @@ void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,s
       continue;
     }
     //convert enum labels to enum constants
-    if(unlabeledType(state->typeStack[state->typeCount-k].type).class==TYPECLASS_ENUM_LABEL&&unlabeledType(types[nTypes-k]).class==TYPECLASS_ENUM&&
-      compositeTypes[unlabeledType(state->typeStack[state->typeCount-k].type).dataAs.id].id==compositeTypes[unlabeledType(types[nTypes-k]).dataAs.id].id){
+    if(isEnumLabel(types[nTypes-k],state->typeStack[state->typeCount-k].type)){
       if(state->typeStack[state->typeCount-k].opCount>1||state->opStack[offset].opType!=OP_CONSTANT){
         handleError("unexpected operation with type ENUM_LABEL",ERROR_SYNTAX,pos);//enum-label type should only exist on enum-label constants
       }
-      state->typeStack[state->typeCount-k].type=unlabeledType(state->typeStack[state->typeCount-k].type);
       if(changeEnumType(&state->typeStack[state->typeCount-k].type,false))
         handleError("could not update enum type",ERROR_MEMORY,pos);
-      if(!typeEquals(compositeTypes[state->typeStack[state->typeCount-k].type.dataAs.id].types[state->opStack[offset].dataAs.i64],TYPE_UNDEFINED)){
-        String label=getLabelName(compositeTypes[state->typeStack[state->typeCount-k].type.dataAs.id].labelOffset+state->opStack[offset].dataAs.i64);
+      if(!typeEquals(getTypeElements(state->typeStack[state->typeCount-k].type)[state->opStack[offset].dataAs.i64],TYPE_UNDEFINED)){
+        String label=getLabelName(getTypeElementLabel(state->typeStack[state->typeCount-k].type,state->opStack[offset].dataAs.i64));
         fprintf(stderr,"missing data value for creating enum constant %"PRI_STR" in ",PRI_STR_ARGS(label));
         printTypeName(state->typeStack[state->typeCount-k].type,stderr);
         fputs("\nto create enum values with data use the 'new' operator\n",stderr);
@@ -4495,9 +4570,9 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     fputs("\n",stderr);
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
-  ProcedureType const* procType=&procTypes[calledType.dataAs.id];
-  CompositeType const* outTypes=&compositeTypes[procType->outType.dataAs.id];
-  CompositeType const* inTypes=&compositeTypes[procType->inType.dataAs.id];
+  ProcedureType const* procType=procTypeData(calledType);
+  CompositeType const* outTypes=compositeTypeData(procType->outType);
+  CompositeType const* inTypes=compositeTypeData(procType->inType);
   size_t argCount=inTypes->typeCount;
   size_t totalOps=0;
   if(state->typeCount<argCount){
@@ -4540,12 +4615,12 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
 }
 void pushProcArgs(TypeCheckState* state,TypeId procType,FilePosition pos){
-  if(!isCallableType(procType)||isPointerType(procType)){
+  if(!isProcedureType(procType)){
     handleError("procedure type has to be callable",ERROR_TYPE,pos); 
   }
-  if(procTypes[procType.dataAs.id].inType.class==TYPECLASS_LABELED_PROC_IN)
+  if(typeElementsLabeled(procTypeData(procType)->inType))
     return;//do not push values with input is labeled 
-  CompositeType const* inTypes=&compositeTypes[procTypes[procType.dataAs.id].inType.dataAs.id];
+  CompositeType const* inTypes=compositeTypeData(procTypeData(procType)->inType);
   if(inTypes->typeCount==0)
     return;//no input arguments
   if(inTypes->typeCount==1){
@@ -4590,7 +4665,7 @@ bool canWriteTupleElement(TypeId tupleType,int32_t index,FilePosition pos){
     fputs("\n",stderr);
     handleError(NULL,ERROR_MEMORY,pos);
   }
-  CompositeType const* tuple=&compositeTypes[tupleType.dataAs.id];
+  CompositeType const* tuple=compositeTypeData(tupleType);
   if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
     return label(tuple->labelOffset+index,pos).isMutable;
   return true;
@@ -4605,17 +4680,17 @@ void checkTupleElementMutable(Operation const* elementAccess,int32_t depth){
     currentTuple=elementAccess->dataType;
     if(!canWriteTupleElement(currentTuple,elementAccess->dataAs.idInfo.id,elementAccess->filePos)){
       fputs("element ",stderr);
-      if(compositeTypes[currentTuple.dataAs.id].labelOffset!=LABEL_ID_UNKNOWN){
-        String label=getLabelName(compositeTypes[currentTuple.dataAs.id].labelOffset+elementAccess->dataAs.idInfo.id);
+      if(typeElementsLabeled(currentTuple)){
+        String label=getLabelName(getTypeElementLabel(currentTuple,elementAccess->dataAs.idInfo.id));
         fprintf(stderr,"%"PRI_STR" ",PRI_STR_ARGS(label));
       }
       fprintf(stderr,"(%"PRIi32")",elementAccess->dataAs.idInfo.id);
       fputs(" in ",stderr);
       printTypeName(currentTuple,stderr);
       fputs(" is not mutable\n",stderr);
-      if(compositeTypes[currentTuple.dataAs.id].labelOffset!=LABEL_ID_UNKNOWN){
+      if(typeElementsLabeled(currentTuple)){
         fputs("  declared at ",stderr);
-        printFilePosition(label(compositeTypes[currentTuple.dataAs.id].labelOffset+elementAccess->dataAs.idInfo.id,elementAccess->filePos).declaredAt,stderr);
+        printFilePosition(label(getTypeElementLabel(currentTuple,elementAccess->dataAs.idInfo.id),elementAccess->filePos).declaredAt,stderr);
         fputs("\n",stderr);
       }
       handleError(NULL,ERROR_SYNTAX,elementAccess->filePos);
@@ -4624,7 +4699,7 @@ void checkTupleElementMutable(Operation const* elementAccess,int32_t depth){
   }
 }
 void typeCheckGetTupleElement(TypeCheckState* state,TypeId tupleType,bool tupleWritable,Operation* op){
-  CompositeType const* tuple=&compositeTypes[tupleType.dataAs.id];
+  CompositeType const* tuple=compositeTypeData(tupleType);
   size_t offset=state->typeCount-1;
   TypeId eltType=tuple->types[op->dataAs.idInfo.id];
   Operation* blockStart=&(state->opStack[state->opStackCount-state->typeStack[offset].opCount]);
@@ -4670,14 +4745,14 @@ void typeCheckGetTupleElement(TypeCheckState* state,TypeId tupleType,bool tupleW
 void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,Operation* op){
   size_t typeOffset=state->typeCount-2;
   size_t offset=state->opStackCount-(state->typeStack[typeOffset].opCount+state->typeStack[typeOffset+1].opCount);
-  ArrayType const* arrayData=&arrayTypes[arrayType.dataAs.id];
+  ArrayType const* arrayData=arrayTypeData(arrayType);
   //wrap composite operations
   extractCompositeOps(state,2,true);//XXX only keep array writeable
   //check array bounds
   state->hasCheckBounds=1;
   pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
   pushCompiledOperations(state,state->opStack+offset+state->typeStack[typeOffset].opCount,state->typeStack[offset+1].opCount);//index
-  if(arrayTypes[arrayType.dataAs.id].sizeKnown){//fixed-size array
+  if(arrayTypeData(arrayType)->sizeKnown){//fixed-size array
     pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[arrayData->dims-1],op->filePos));
   }else{
     pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
@@ -4720,11 +4795,11 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
     case ID_PROCEDURE:
       if(typeEquals(op->dataType,TYPE_UNDEFINED))
         handleError("missing type declaration",ERROR_TYPE,op->filePos);
-      if(op->dataType.class==TYPECLASS_AUTO_TYPE){
-        if(op->dataType.dataAs.id<=0||op->dataType.dataAs.id>state->nPredeclaredTypes){
+      if(op->dataType.class==TYPECLASS_AUTO_TYPE){//TODO isAutoType
+        if(autoTypeId(op->dataType)<0||autoTypeId(op->dataType)>=state->nPredeclaredTypes){
           handleError("predeclared id out of expected range",ERROR_TYPE,op->filePos);
         }
-        op->dataType=state->predeclaredTypes[op->dataType.dataAs.id-1];//get predeceased type
+        op->dataType=state->predeclaredTypes[autoTypeId(op->dataType)];//get predeceased type
       }
       if(op->opType==OP_SET){
         typeCheckSetVariable(state,op);
@@ -4739,14 +4814,14 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
       offset=state->typeCount-1;
-      op->dataType=unlabeledType(state->typeStack[offset].type);//TODO named types
+      op->dataType=state->typeStack[offset].type;
       writable=state->typeStack[offset].isWritable;
-      if(op->dataType.class!=TYPECLASS_TUPLE){
+      if(!isTupleType(op->dataType)){
         printTypeName(op->dataType,stderr);
         fputs(" is not a tuple\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      CompositeType const* tuple=&compositeTypes[op->dataType.dataAs.id];
+      CompositeType const* tuple=compositeTypeData(op->dataType);
       if(tuple->typeCount<op->dataAs.idInfo.id){
         fprintf(stderr,"index %"PRIi32" exceeds element count of tuple %"PRIi32"\n",op->dataAs.idInfo.id,tuple->typeCount);
         handleError(NULL,ERROR_TYPE,op->filePos);
@@ -4838,11 +4913,11 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
 }
 
 void typeCheckReturn(TypeCheckState* state,Operation* op){
-  if(op->dataType.class!=TYPECLASS_PROC_OUT){
+  if(!isProcOutType(op->dataType)){
     fprintf(stderr,"unexpected procedure return type-class: %s\n",typeClassName(op->dataType.class));
     handleError(NULL,ERROR_SYNTAX,op->filePos);
   }
-  CompositeType const* outTypes=&compositeTypes[op->dataType.dataAs.id];
+  CompositeType const* outTypes=compositeTypeData(op->dataType);
   if(outTypes->typeCount==0){
       if(checkNonemptyStack(state,"unfinished operation at end of procedure")){
         handleError(NULL,ERROR_SYNTAX,op->filePos);
@@ -4868,8 +4943,8 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
   BlockInfo* blockInfo=peekBlock(state);
   String mLabel=label(op->dataAs.localLabel.label,op->filePos).label;
   if(!state->reachable&&op->opType==OP_IDENTIFIER&&blockInfo!=NULL&&
-    (blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&blockInfo->blockDataAs.switchBlock.switchType.class==TYPECLASS_ENUM_LABEL){
-    CompositeType const* enumType=&compositeTypes[blockInfo->blockDataAs.switchBlock.switchType.dataAs.id];
+    (blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&isEnumLabelType(blockInfo->blockDataAs.switchBlock.switchType)){
+    CompositeType const* enumType=compositeTypeData(blockInfo->blockDataAs.switchBlock.switchType);
     for(int32_t i=0;i<enumType->typeCount;i++){
       if(stringCompare(mLabel,getLabelName(enumType->labelOffset+i))==0){//identifier is label of current switch
         *op=opConstant(blockInfo->blockDataAs.switchBlock.switchType,i,op->filePos);
@@ -4919,8 +4994,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           handleError("exceeded maximum number of allowed switch labels",ERROR_MEMORY,op.filePos);
         for(size_t i=0;i<switchBlock->switchData->labelCount;i++){//check for duplicate labels
           if(switchBlock->switchData->labelData[i].value==op.dataAs.i64){
-            if(switchBlock->switchType.class==TYPECLASS_ENUM_LABEL){
-              String label=getLabelName(compositeTypes[switchBlock->switchType.dataAs.id].labelOffset+op.dataAs.i64);
+            if(isEnumLabelType(switchBlock->switchType)){
+              String label=getLabelName(getTypeElementLabel(switchBlock->switchType,op.dataAs.i64));
               fprintf(stderr,"duplicate label %"PRI_STR" in switch-case\n",PRI_STR_ARGS(label));
             }else{
               fprintf(stderr,"duplicate label %"PRIi64" in switch-case\n",op.dataAs.i64);
@@ -5054,8 +5129,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             break;
           }
           //enum-entry equality 
-          if((inTypes[0].class==TYPECLASS_ENUM||inTypes[0].class==TYPECLASS_ENUM_LABEL)&&inTypes[1].class==TYPECLASS_ENUM_LABEL&&
-              compositeTypes[inTypes[0].dataAs.id].id==compositeTypes[inTypes[1].dataAs.id].id){
+          if(isEnumLabel(inTypes[0],inTypes[1])||(isEnumType(inTypes[0])&&typeEquals(inTypes[0],inTypes[1]))){
             if(changeEnumType(&inTypes[0],true))
               handleError("could not update enum type",ERROR_MEMORY,op.filePos);
             op.dataType=TYPE_BOOL;
@@ -5110,7 +5184,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       offset=state->typeCount-1;
       if((isPrimitiveType(state->typeStack[offset].type)&&!typeEquals(state->typeStack[offset].type,TYPE_UNDEFINED))||
           (isPointerType(state->typeStack[offset].type)&&!isCallableType(state->typeStack[offset].type))||
-          state->typeStack[offset].type.class==TYPECLASS_ARRAY_VIEW){
+          isArrayViewType(state->typeStack[offset].type)){
         op.dataType=state->typeStack[offset].type;
         //update operations
         extractCompositeOps(state,1,false);
@@ -5138,7 +5212,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       offset=state->typeCount-1;
-      TypeId structType=unlabeledType(peekTypeStack(state)->type);//TODO named types
+      TypeId structType=peekTypeStack(state)->type;
       bool writable=peekTypeStack(state)->isWritable;
       totalOps=peekTypeStack(state)->opCount;
       if(isArrayType(structType)){
@@ -5150,7 +5224,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         if(wordEquals(&op.dataAs.string,"length")){
           op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
             .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}};
-          if(arrayTypes[structType.dataAs.id].sizeKnown){
+          if(arrayTypeData(structType)->sizeKnown){
             state->opStackCount-=peekTypeStack(state)->opCount;
             insertStackOperation(state,op,0);
             peekTypeStack(state)->opCount=1;//ignore array (length only depends on type)
@@ -5163,10 +5237,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           return;
         }
         if(wordEquals(&op.dataAs.string,"size")){
-          arrayTypes[arrayTypes[structType.dataAs.id].id].sizeUsed=true;
+          arrayTypes[arrayTypeData(structType)->id].sizeUsed=true;
           op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
             .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=1,.labelId=-1,.isMutable=false}}};
-          if(arrayTypes[structType.dataAs.id].sizeKnown){
+          if(arrayTypeData(structType)->sizeKnown){
             state->opStackCount-=peekTypeStack(state)->opCount;
             insertStackOperation(state,op,0);
             peekTypeStack(state)->opCount=1;//ignore array (size only depends on type)
@@ -5174,7 +5248,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             insertStackOperation(state,op,totalOps);
             peekTypeStack(state)->opCount++;
           }
-          int64_t dims=arrayTypes[structType.dataAs.id].dims;
+          int64_t dims=arrayTypeData(structType)->dims;
           setTypeStackType(state,arrayType(true,primitiveType(PRIMITIVE_I64),1,&dims,false));
           setTypeStackFlags(state,true,false);
           return;
@@ -5183,19 +5257,19 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      if(structType.class!=TYPECLASS_STRUCT&&structType.class!=TYPECLASS_ENUM){
+      if(!typeElementsLabeled(structType)){
         printTypeName(structType,stderr);
-        fputs(" is not a struct or enum\n",stderr);
+        fputs(" does not have any labeled type elements\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      CompositeType const* mStruct=&compositeTypes[structType.dataAs.id];
+      CompositeType const* mStruct=compositeTypeData(structType);
       LabelId labelIndex=findLabel(mStruct->labelOffset,mStruct->typeCount,&op.dataAs.string);
       if(labelIndex==-1){
         printTypeName(structType,stderr);
         fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      if(structType.class==TYPECLASS_STRUCT){
+      if(isTupleType(structType)){
         op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=structType,.filePos=op.filePos,
           .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
         typeCheckGetTupleElement(state,structType,writable,&op);
@@ -5260,7 +5334,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           addCompiledOps(state,op,0);
           return;
         case ID_PROCEDURE:
-          if(isCallableType(op.dataType)||isPointerType(op.dataType)){
+          if(!isProcedureType(op.dataType)){
             fputs("invalid type for predeclared procedure: ",stderr);
             printTypeName(op.dataType,stderr);
             fputs("\n",stderr);
@@ -5306,11 +5380,11 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           offset=state->typeCount-1;
           //find types for auto-types
           if(op.dataType.class==TYPECLASS_AUTO_TYPE){
-            if(op.dataType.dataAs.id<=0||op.dataType.dataAs.id>state->nPredeclaredTypes)
+            if(autoTypeId(op.dataType)<0||autoTypeId(op.dataType)>=state->nPredeclaredTypes)
               handleError("predeclared id outside expected range",ERROR_TYPE,op.filePos);
-            int64_t typeId=op.dataType.dataAs.id-1;
+            int64_t typeId=autoTypeId(op.dataType);
             op.dataType=state->typeStack[offset].type;
-            if(op.dataType.class==TYPECLASS_ENUM_LABEL){
+            if(isEnumLabelType(op.dataType)){
               if(changeEnumType(&op.dataType,false))
                 handleError("could not update enum type",ERROR_MEMORY,op.filePos);
             }
@@ -5334,7 +5408,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             op.opType=OP_DECLARE;
           }
           //block id will be ignored
-          blockInfo=(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockId=-1,.blockDataAs={.procBlock={.returnType=procTypes[op.dataType.dataAs.id].outType}}};
+          blockInfo=(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockId=-1,.blockDataAs={.procBlock={.returnType=procTypeData(op.dataType)->outType}}};
           if(pushBlock(state,blockInfo))
             handleError(NULL,ERROR_MEMORY,op.filePos);
           pushCompiledOperation(state,op);
@@ -5362,30 +5436,30 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       break;
     case OP_NEW:
       checkReachable(state,op);
-      if(op.dataType.class==TYPECLASS_TUPLE||op.dataType.class==TYPECLASS_STRUCT){
-        offset=state->typeCount-compositeTypes[op.dataType.dataAs.id].typeCount;
-        requireTypes("tuple creation",state,compositeTypes[op.dataType.dataAs.id].types,compositeTypes[op.dataType.dataAs.id].typeCount,op.filePos);
+      if(isTupleType(op.dataType)){
+        offset=state->typeCount-getTypeElementCount(op.dataType);
+        requireTypes("tuple creation",state,getTypeElements(op.dataType),getTypeElementCount(op.dataType),op.filePos);
         totalOps=0;
-        for(int32_t e=0;e<compositeTypes[op.dataType.dataAs.id].typeCount;e++){
+        for(int32_t e=0;e<getTypeElementCount(op.dataType);e++){
           totalOps+=state->typeStack[offset+e].opCount;
         }
         if(state->blockCount==0){//create tuple in-place when in global level
           insertStackOperation(state,op,totalOps);
-          state->typeCount-=compositeTypes[op.dataType.dataAs.id].typeCount;
+          state->typeCount-=getTypeElementCount(op.dataType);
           state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1,.isWritable=false,.isAddressable=false};
           return;
         }
         //store result in temp variable
-        extractCompositeOps(state,compositeTypes[op.dataType.dataAs.id].typeCount,false);
+        extractCompositeOps(state,getTypeElementCount(op.dataType),false);
         tmpId=state->tmpCount++;
         pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
-        addCompiledOps(state,op,compositeTypes[op.dataType.dataAs.id].typeCount);
+        addCompiledOps(state,op,getTypeElementCount(op.dataType));
         //update stack
         pushValue(state,opGetIntermediate(op.dataType,tmpId,op.filePos));
         return;
       }
-      if(op.dataType.class==TYPECLASS_ENUM){
-        TypeId entryData=compositeTypes[op.dataType.dataAs.id].types[op.dataAs.i64];
+      if(isEnumType(op.dataType)){
+        TypeId entryData=getTypeElements(op.dataType)[op.dataAs.i64];
         if(typeEquals(entryData,TYPE_UNDEFINED)){
           if(state->blockCount==0){//create enum in-place when in global level
             insertStackOperation(state,op,0);
@@ -5453,7 +5527,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           fprintf(stderr,"the operand of %s has to be an addressable type \n",opName(op.opType));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      if(isCallableType(state->typeStack[offset].type)&&!isPointerType(state->typeStack[offset].type)){//don't use array for function pointers
+      if(isProcedureType(state->typeStack[offset].type)){//don't use array for function pointers
         op.dataType=pointerType(state->typeStack[offset].type,state->typeStack[offset].isWritable);
       }else{
         op.dataType=arrayType(true,state->typeStack[offset].type,1,(int64_t[]){1},state->typeStack[offset].isWritable);
@@ -5684,10 +5758,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           //determine switch type
           offset=state->typeCount-1;
-          state->typeStack[offset].type=unlabeledType(state->typeStack[offset].type);//TODO named types
           if(isIntType(state->typeStack[offset].type)){
             op.dataType=state->typeStack[offset].type;
-          }else if(state->typeStack[offset].type.class==TYPECLASS_ENUM||state->typeStack[offset].type.class==TYPECLASS_ENUM_LABEL){
+          }else if(isEnumType(state->typeStack[offset].type)||isEnumLabelType(state->typeStack[offset].type)){
             op.dataType=state->typeStack[offset].type;
             if(changeEnumType(&op.dataType,true))
               handleError("could not update enum type",ERROR_MEMORY,op.filePos);
@@ -5831,7 +5904,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           state->reachable=true;
           break;
         case BLOCK_PROCEDURE:
-          if(state->reachable&&compositeTypes[blockInfoPtr->blockDataAs.procBlock.returnType.dataAs.id].typeCount>0){//automatically add return statement at end of non-void procedures
+          if(state->reachable&&getTypeElementCount(blockInfoPtr->blockDataAs.procBlock.returnType)>0){//automatically add return statement at end of non-void procedures
             Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfoPtr->blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
             typeCheckReturn(state,&ret);
           }else if(state->reachable&&checkNonemptyStack(state,"unfinished local operation")){
