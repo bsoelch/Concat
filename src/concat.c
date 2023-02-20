@@ -503,6 +503,9 @@ bool isMutableType(TypeId type){
     return pointerTypes[type.dataAs.id].isMutable;
   return false;
 }
+bool isAutoType(TypeId type){
+  return type.class==TYPECLASS_AUTO_TYPE;
+}
 bool isProcedureType(TypeId type){
   type=unwrapNamedType(type);
   return type.class==TYPECLASS_PROCEDURE;
@@ -1540,6 +1543,24 @@ typedef struct{
   }as;
   ConstantType type;
 }ConstantValue;
+void printConstValue(ConstantValue constant,FILE* file){
+  switch(constant.type){
+    case CONSTANT_NONE:
+      return;
+    case CONSTANT_INT:
+      fprintf(file,"%"PRIi64,constant.as.i64);
+      return;
+    case CONSTANT_CHAR:
+      fprintf(file,"'%c' (0x%"PRIx64")",(char)constant.as.charId&0xff,constant.as.charId);
+      return;
+    case CONSTANT_STRING:
+      fprintf(file,"\"%"PRI_STR"\"",PRI_STR_ARGS(constant.as.string));
+      return;
+    case CONSTANT_TYPE:
+      printTypeName(constant.as.type,file);
+      return;
+  }
+}
 
 #define SCOPE_NODE_CAP 8192
 #define SCOPE_CAP 256
@@ -2226,6 +2247,17 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fprintf(target,",.data={.e%"PRIi64"=",op->dataAs.i64);
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         fputs("}}",target);
+        return size;
+      }
+      if(isArrayType(op->dataType)&&!isArrayViewType(op->dataType)){
+        if(!arrayTypeData(op->dataType)->sizeKnown)
+          handleError("new is not implemented for var-size arrays",ERROR_UNIMPLEMENTED,op->filePos);
+        if(needCast){
+          fputs("(",target);
+          printTypeNameC(op->dataType,target);
+          fputs(")",target);
+        }
+        fputs("{0}",target);
         return size;
       }
       handleError("unexpected type for OP_NEW",ERROR_UNIMPLEMENTED,op->filePos);
@@ -3355,6 +3387,8 @@ bool ensureOpCap(Operation** mList,size_t* cap,size_t newSize){
 
 void pushOperation(ParserState* state,Operation op);
 TypeId constantType(ConstantValue const* constant){
+  if(constant==NULL)
+    return TYPE_UNDEFINED;
   int64_t intVal;
   switch(constant->type){
     case CONSTANT_STRING:
@@ -3502,7 +3536,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
     }
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    if(isTupleType(type)){
+    if(isTupleType(type)||(isArrayType(type)&&!isArrayViewType(type))){
       pushOperation(state,(Operation){.opType=OP_NEW,.dataType=type,.filePos=wordPos,.dataAs={.i64=0}});
       return;
     }
@@ -3669,7 +3703,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
           fputs("mutable ",stdout);
         printf("%s: ",idNames[asIdentifier->idType]);
         printTypeName(asIdentifier->type,stdout);
-        fputs("\n    at ",stdout); //TODO print constant value
+        if(asIdentifier->constValue.type!=CONSTANT_NONE){
+          fputs(" ",stdout);
+          printConstValue(asIdentifier->constValue,stdout);
+        }
+        fputs("\n    at ",stdout);
         printFilePosition(mLabel.declaredAt,stdout);
         puts("");
         puts("-----------------");
@@ -3750,6 +3788,18 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     wordPos=codeFile->wordStart;
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     TypeId mType=newAutoType(state->predeclaredTypes++);
+    if(bufferedConstants>0){
+      TypeId constType=constantType(peekConstValue());
+      if(!typeEquals(constType,TYPE_UNDEFINED))
+        mType=constType;
+      if(typeEquals(mType,TYPE_TYPE)){//XXX? overwrite opaque types
+        constType=popTypeConstant(wordPos,"type constant",false);
+        type=newNamedType(labelId,constType);
+        ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
+        declareIdentifier(state->namespaceInfo,labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
+        return;
+      }
+    }
     ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
@@ -4824,7 +4874,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
     case ID_PROCEDURE:
       if(typeEquals(op->dataType,TYPE_UNDEFINED))
         handleError("missing type declaration",ERROR_TYPE,op->filePos);
-      if(op->dataType.class==TYPECLASS_AUTO_TYPE){//TODO isAutoType
+      if(isAutoType(op->dataType)){
         if(autoTypeId(op->dataType)<0||autoTypeId(op->dataType)>=state->nPredeclaredTypes){
           handleError("predeclared id out of expected range",ERROR_TYPE,op->filePos);
         }
@@ -5408,7 +5458,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           offset=state->typeCount-1;
           //find types for auto-types
-          if(op.dataType.class==TYPECLASS_AUTO_TYPE){
+          if(isAutoType(op.dataType)){
             if(autoTypeId(op.dataType)<0||autoTypeId(op.dataType)>=state->nPredeclaredTypes)
               handleError("predeclared id outside expected range",ERROR_TYPE,op.filePos);
             int64_t typeId=autoTypeId(op.dataType);
@@ -5515,6 +5565,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         addCompiledOps(state,op,1);
         //update stack
         pushValue(state,opGetIntermediate(op.dataType,tmpId,op.filePos));
+        return;
+      }
+      if(isArrayType(op.dataType)&&!isArrayViewType(op.dataType)){
+        if(!arrayTypeData(op.dataType)->sizeKnown)
+          handleError("new is not implemented for var-size arrays",ERROR_UNIMPLEMENTED,op.filePos);
+        pushValue(state,op);
         return;
       }
       break;
