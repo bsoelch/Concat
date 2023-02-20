@@ -196,8 +196,8 @@ tuple15 concat_startItr (array0 arg0){
 return (tuple15){.e0=arg0,.e1=((int64_t)0)};
 }
 void concat_spaceTest (void){
-printf("%"PRIi32"\n",concat_mut_dspaceVar);
-printf("%"PRIi32"\n",concat_subspace_dmut_dspaceVar);
+printf("%"PRIi32"\n",((int32_t)0));
+printf("%"PRIi32"\n",((int32_t)1));
 printf("%"PRIi64"\n",concat_subspace_dmut_dsubspaceVar);
 }
 void concat_arrayTest (int32_t const* arg0, array3 arg1, array4 arg2){

@@ -3002,31 +3002,38 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace
 typedef struct{
   FilePosition pos;
   ConstantValue value;
+  IdentifierInfo idInfo;
+  bool hasId;
 }Constant;
 size_t bufferedConstants=0;
 Constant constBuffer[CONST_BUFFER_CAP];
 TypeId compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
 int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
 int64_t arrayDimsCount=0;
-void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
+void pushConstant(ConstantValue constValue,FilePosition pos,bool hasId,IdentifierInfo idInfo){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(Constant){.value={.type=constType,.as.i64=constId},.pos=pos};
+  constBuffer[bufferedConstants++]=(Constant){.value=constValue,.pos=pos,.hasId=hasId,.idInfo=idInfo};
+}
+void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
+  pushConstant((ConstantValue){.type=constType,.as.i64=constId},pos,false,(IdentifierInfo){0});
 }
 void pushStringConstant(String value,FilePosition pos){
-  if(bufferedConstants>=CONST_BUFFER_CAP)
-    handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(Constant){.value={.type=CONSTANT_STRING,.as.string=value},.pos=pos};
+  pushConstant((ConstantValue){.type=CONSTANT_STRING,.as.string=value},pos,false,(IdentifierInfo){0});
 }
 void pushTypeConstant(TypeId type,FilePosition pos){
-  if(bufferedConstants>=CONST_BUFFER_CAP)
-    handleError("constant buffer overflow",ERROR_MEMORY,pos);
-  constBuffer[bufferedConstants++]=(Constant){.value={.type=CONSTANT_TYPE,.as.type=type},.pos=pos};
+  pushConstant((ConstantValue){.type=CONSTANT_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
 }
-ConstantValue const* peekConstant(void){
+Constant const* peekConstant(void){
   if(bufferedConstants==0)
     return NULL;
-  return &constBuffer[bufferedConstants-1].value;
+  return &constBuffer[bufferedConstants-1];
+}
+ConstantValue const* peekConstValue(void){
+  Constant const* constant=peekConstant();
+  if(constant==NULL)
+    return NULL;
+  return &constant->value;
 }
 TypeId popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid){
   if(bufferedConstants==0){
@@ -3107,7 +3114,17 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     handleError(NULL,asInt.as.error,wordPos);
   if(word.length==0)
     return true;
-  return readType(word,codeFile,state);
+  ScopeNode* asIdentifier;
+  int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);
+  if(r<0){//internal error while reading identifier
+    handleError("error while reading identifier",r,codeFile->wordStart);
+    return false;
+  }
+  if(r>0||asIdentifier->constValue.type==CONSTANT_NONE)//identifier does not exist
+    return readType(word,codeFile,state);
+  pushConstant(asIdentifier->constValue,codeFile->wordStart,true,(IdentifierInfo){.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
+    .isMutable=label(asIdentifier->labelId,codeFile->wordStart).isMutable});
+  return true;
 }
 //reads a composite type of the given type-class, the result is stored in the type buffer
 //return 0 if a type was read, otherwise a nonzero error-code if a type error occurs this method will return a syntax error
@@ -3237,7 +3254,6 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true ;
   }
   //composite types
-  int r;
   if(wordEquals(&name,"ptr")){
     int64_t* dims=popArraySize(codeFile->wordStart);
     TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
@@ -3295,19 +3311,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     readCompositeType(TYPECLASS_ENUM,codeFile,state,LABEL_TYPE_ENUM,")",true);
     return true;
   }
-  ScopeNode* asIdentifier;
-  r=getIdentifier(state->namespaceInfo,name,&asIdentifier);
-  if(r<0){//internal error while reading identifier
-    handleError("error while reading identifier",r,codeFile->wordStart);
-    return false;
-  }
-  if(r>0||asIdentifier->idType!=ID_TYPE)//identifier does not exist / is not a type
-    return false;
-  //identifier
-  if(asIdentifier->constValue.type!=CONSTANT_TYPE||typeEquals(asIdentifier->constValue.as.type,TYPE_UNDEFINED))
-    return false;
-  pushTypeConstant(asIdentifier->constValue.as.type,codeFile->wordStart);
-  return true;
+  return false;
 }
 
 void requireCompileTimeTypes(String* opName,TypeId* typeOut,size_t nTypes,FilePosition pos){
@@ -3350,6 +3354,23 @@ bool ensureOpCap(Operation** mList,size_t* cap,size_t newSize){
 }
 
 void pushOperation(ParserState* state,Operation op);
+TypeId constantType(ConstantValue const* constant){
+  int64_t intVal;
+  switch(constant->type){
+    case CONSTANT_STRING:
+      return arrayType(true,TYPE_CHAR,1,(int64_t[]){constant->as.string.length},false);
+    case CONSTANT_CHAR:
+      return TYPE_CHAR;
+    case CONSTANT_INT:
+      intVal=constant->as.i64;
+      return primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64);
+    case CONSTANT_TYPE:
+      return TYPE_TYPE;
+    case CONSTANT_NONE:
+      return TYPE_UNDEFINED;
+  }
+  return TYPE_UNDEFINED;
+}
 void storeConstants(ParserState* state){
   int64_t intVal;
   size_t constCount=bufferedConstants;
@@ -3358,18 +3379,18 @@ void storeConstants(ParserState* state){
     switch(constBuffer[i].value.type){
       case CONSTANT_STRING:
         intVal=addProgString(constBuffer[i].value.as.string,constBuffer[i].pos);
-        pushOperation(state,opConstant(arrayType(true,TYPE_CHAR,1,(int64_t[]){constBuffer[i].value.as.string.length},false),intVal,constBuffer[i].pos));
+        pushOperation(state,opConstant(constantType(&constBuffer[i].value),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_CHAR:
-        pushOperation(state,opConstant(TYPE_CHAR,constBuffer[i].value.as.charId,constBuffer[i].pos));
+        pushOperation(state,opConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.charId,constBuffer[i].pos));
         break;
       case CONSTANT_INT:
         intVal=constBuffer[i].value.as.i64;
-        pushOperation(state,opConstant(primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64),intVal,constBuffer[i].pos));
+        pushOperation(state,opConstant(constantType(&constBuffer[i].value),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_TYPE:
         //TODO store type constants by id
-        //pushOperation(state,opConstant(TYPE_TYPE,typeId(constBuffer[i].value.as.type),constBuffer[i].pos));
+        //pushOperation(state,opConstant(constantType(&constBuffer[i].value),typeId(constBuffer[i].value.as.type),constBuffer[i].pos));
         handleError("type constants",ERROR_UNIMPLEMENTED,constBuffer[i].pos);
         break;
       case CONSTANT_NONE:
@@ -3448,7 +3469,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     }else{
       idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,peekConstant());
+    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,peekConstValue());
     if(idType==ID_PROCEDURE){
       if(state->scopeLevel>0){
         fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
@@ -3729,7 +3750,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     wordPos=codeFile->wordStart;
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     TypeId mType=newAutoType(state->predeclaredTypes++);
-    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstant());
+    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
   }else if(wordEquals(&word,"=")){
@@ -3759,6 +3780,14 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       .dataAs={.idInfo={.type=ID_ARRAY_ELEMENT,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
     return;
   }else if(wordEquals(&word,"addrOf")){
+    if(bufferedConstants>0){//try getting address of constant
+      if(!peekConstant()->hasId)
+        handleError("cannot get the address of a constant",ERROR_SYNTAX,wordPos);
+      Constant const* constant=peekConstant();
+      bufferedConstants--;//remove constant before pushing operation
+      pushOperation(state,(Operation){.opType=OP_GET,.dataType=constantType(&constant->value),
+        .filePos=constant->pos,.dataAs={.idInfo=constant->idInfo}});
+    }
     if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CALL){
       peekOperation(state,wordPos)->dataType=asUnlabeledProc(peekOperation(state,wordPos)->dataType,wordPos);
       peekOperation(state,wordPos)->opType=OP_GET;
@@ -5281,7 +5310,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
-      if(writable&&op.opType==OP_SET_LABEL){//XXX? overwrite only for mutable enum
+      if(writable&&op.opType==OP_SET_LABEL){
         TypeId lableType=structType;
         if(changeEnumType(&lableType,true))
           handleError("could not update enum type",ERROR_MEMORY,op.filePos);
