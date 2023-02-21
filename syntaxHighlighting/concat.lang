@@ -74,8 +74,8 @@
     <context id="declaration" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          =?:               | 
-          =::               |
+          =?: ([[:space:]]+mut)? | 
+          =:: ([[:space:]]+mut)? |
           entryPoint:
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
@@ -129,15 +129,14 @@
     <context id="type-keywords" style-ref="type-keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          \(|\)           | 
-          tuple\(         |
-          proc\(          |
-          =&gt;           |
-          enum\(          |
-          struct\(        |
-          array           |
-          ptr             |
-          mut             |
+          \(|\)                  | 
+          tuple\(                |
+          proc\(                 |
+          =&gt;                  |
+          enum\(                 |
+          struct\(               |
+          array                  |
+          ptr ([[:space:]]+mut)? |
           type            
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
