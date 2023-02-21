@@ -304,21 +304,18 @@ Concat supports the following primitive types:
 ### pointers & arrays
 
 appending `ptr` on a type name generates a pointer type to that type
-optionally a list of integers can be inserted between the type and `ptr` to signal the dimensions of the stored data
-
 By default the pointer target cannot be modified, if the pointer should allow modification this can be signaled by appending `mut`
 
-<!-- TODO pointer to var-size array --> 
 <!-- TODO array types --> 
 
 Examples:
 ```
-0 =:: mut x              ## declare a mutable integer x 
-x addrOf =:: xAddr       ## the address of x  (will have type  i32 1 ptr mut)
-x addrOf i32 ptr =: xPtr ## get the address of x as (immutable) i32 pointer
-"Hello" i8 5 ptr =: str  ## strings are i8 pointers with the length as argument
-str string cast  =: str2 ## the internal string type is a dynamic length i8 pointer
-str2 .length             ## the length in the most significant dimension of array & sized pointer types can be read through the '.length' field
+0 =:: mut x                    ## declare a mutable integer x 
+x addrOf =:: xAddr             ## the address of x  (will have type  i32 1 ptr mut)
+x addrOf i32 ptr =: xPtr       ## get the address of x as (immutable) i32 pointer
+"Hello" i8 5 array ptr =: str  ## strings are i8 array-pointers with the length as argument
+str string cast  =: str2       ## the internal string type is a dynamic length i8 array-pointer
+str2 .length                   ## the length in the most significant dimension of array&array-pointer types can be read through the '.length' field
 
 ```
 
@@ -395,15 +392,16 @@ end ## n is empty
 - `type =: typeName` declares a type-alias:
   type aliases can be used like primitive type names 
 - `type : opaqueName` declares an opaque type:
-  opaque types can only be used as pointer arguments,
-  unlike constants opaque-type definitions can be overwritten by the declaration of a type alias 
+  opaque types can only be used as pointer arguments
+- `<type> opaqueName =` adds a definition for the opaque type `opaqueName`, once a opaque type has been defined it can no longer be changed
+  
 
 Examples:
 ```
 i32 type =: int                        ## define int as an alias for i32
 int type =: Int                        ## define Int as an alias for int which is an alias for i32 
 type : selfPtr                         ## create the opaque type selfPtr
-( int selfPtr ptr ) type =: selfPtr    ## define selfPtr to be a tuple containing itself
+( int selfPtr ptr ) selfPtr =          ## replace definition of selfPtr with a tuple containing itself
 ```
 
 ### internal Types
