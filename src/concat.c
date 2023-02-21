@@ -617,12 +617,12 @@ bool makeMutable(TypeId* t){
     case TYPECLASS_POINTER:
       *t=pointerType(getBaseType(*t),true);
       return true;
-    case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
       *t=arrayType(t->class==TYPECLASS_ARRAY_VIEW,getBaseType(*t),arrayTypes[t->dataAs.id].dims,arrayTypes[t->dataAs.id].sizes,true);
       return true;
     case TYPECLASS_PRIMITIVE:
-    case TYPECLASS_TUPLE://mutability of composite types controlled by their container 
+    case TYPECLASS_ARRAY://mutability of composite types controlled by their container 
+    case TYPECLASS_TUPLE:
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_PROC_IN:
@@ -1938,9 +1938,12 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       fputs(")",target);
       if(!isArrayViewType(op->dataType)||!arrayTypeData(op->dataType)->sizeKnown)
         fputs(".data",target);
-      fputs("[",target);
-      COMPILE_OP_RETURN_ERROR(target,op,opSize);
-      fputs("])",target);
+      for(int32_t i=0;i<arrayTypeData(op->dataType)->dims;i++){
+        fputs("[",target);
+        COMPILE_OP_RETURN_ERROR(target,op,opSize);
+        fputs("]",target);
+      }
+      fputs(")",target);
       return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,false);
     case ID_ARRAY_SIZE:;
       if(op->dataAs.idInfo.id==0){//is length
@@ -3287,12 +3290,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
   }
   //composite types
   if(wordEquals(&name,"ptr")){
-    int64_t* dims=popArraySize(codeFile->wordStart);
     TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
-    if(arrayDimsCount>0){
-      pushTypeConstant(arrayType(true,target,arrayDimsCount,dims,false),codeFile->wordStart);
-      return true;
-    }
     if(isArrayType(target)&&!isArrayViewType(target)){
       if(asArrayView(&target))//pointer to array -> array view
         handleError("failed to create array-view",ERROR_MEMORY,codeFile->wordStart);
@@ -4502,7 +4500,7 @@ bool canAutoCast(TypeId src,TypeId target){//? allow cast T ptr mut ptr -> T ptr
     return true;//allow auto-cast from enum to enum-label
   if(isPointerType(src)&&isPointerType(target)&&!isMutableType(target)&&typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning pointer to const pointer
-  if(isArrayViewType(src)&&isPointerType(target)&&
+  if(isArrayType(src)&&isPointerType(target)&&
     (isMutableType(src)||!isMutableType(target))&&typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning array-view to pointer
   if(isArrayType(src)&&isArrayViewType(target)&&
@@ -4821,46 +4819,56 @@ void typeCheckGetTupleElement(TypeCheckState* state,TypeId tupleType,bool tupleW
     typeCheckSetStackValue(state,op,eltType);
   }
 }
-void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,Operation* op){
-  size_t typeOffset=state->typeCount-2;
-  size_t offset=state->opStackCount-(state->typeStack[typeOffset].opCount+state->typeStack[typeOffset+1].opCount);
-  ArrayType const* arrayData=arrayTypeData(arrayType);
+void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t indexCount,Operation* op){
+  if(indexCount>arrayTypeData(arrayType)->dims){
+    fprintf(stderr,"too much indices for %"PRIi32" dimensional array access: %"PRIi32"\n",arrayTypeData(arrayType)->dims,indexCount);
+    handleError(NULL,ERROR_SYNTAX,op->filePos);
+  }
+  size_t typeOffset=state->typeCount-(indexCount+1);
   //wrap composite operations
-  extractCompositeOps(state,2,true);//XXX only keep array writeable
+  extractCompositeOps(state,indexCount,false);//extract all indices as const-variables
+  extractCompositeOps(state,indexCount+1,true);//keep array writeable
+  ArrayType const* arrayData=arrayTypeData(arrayType);
   //check array bounds
   state->hasCheckBounds=1;
-  pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
-  pushCompiledOperations(state,state->opStack+offset+state->typeStack[typeOffset].opCount,state->typeStack[offset+1].opCount);//index
-  if(arrayTypeData(arrayType)->sizeKnown){//fixed-size array
-    pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[arrayData->dims-1],op->filePos));
-  }else{
-    pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
-            .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}});//length
-    pushCompiledOperations(state,state->opStack+offset,state->typeStack[offset].opCount);
+  size_t arrayOffset=state->opStackCount,indexOffset=state->opStackCount;
+  for(int32_t i=0;i<=indexCount;i++){
+    arrayOffset-=state->typeStack[typeOffset+i].opCount;
   }
-  // ... array index []
-  if(arrayData->dims==1){
-    op->dataAs.idInfo.type=ID_ARRAY_ELEMENT;
-    op->dataType=arrayType;
-    //wrap composite operations
-    extractCompositeOps(state,2,true);
-    //update operation stack
-    insertStackOperation(state,*op,2);
-    //update type-stack
-    state->typeCount--;
-    bool writable=isMutableType(state->typeStack[offset].type);
-    setTypeStackType(state,arrayData->base);
-    setTypeStackFlags(state,false,writable);
-    state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
-    if(op->opType==OP_SET){
-      if(!writable)
-        handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
-      typeCheckSetStackValue(state,op,arrayData->base);
+  for(int32_t i=1;i<=indexCount;i++){
+    indexOffset-=state->typeStack[state->typeCount-i].opCount;
+    pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
+    pushCompiledOperations(state,state->opStack+indexOffset,state->typeStack[state->typeCount-i].opCount);//index
+    if(arrayTypeData(arrayType)->sizeKnown){//fixed-size array 
+      pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[i-1],op->filePos));
+    }else{
+      pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
+              .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}});//length
+      //TODO support multi-dim arrays
+      pushCompiledOperations(state,state->opStack+arrayOffset,state->typeStack[typeOffset].opCount);
     }
-    return;
   }
-  //TODO OP_GET_SUBARRAY/OP_SET_SUBARRAY
-  handleError("multiarray access",ERROR_UNIMPLEMENTED,op->filePos);
+  // ... array indices []
+  if(indexCount<arrayData->dims)
+    handleError("partial array access",ERROR_UNIMPLEMENTED,op->filePos);
+    //TODO OP_GET_SUBARRAY/OP_SET_SUBARRAY
+  op->dataAs.idInfo.type=ID_ARRAY_ELEMENT;
+  op->dataType=arrayType;
+  //update operation stack
+  insertStackOperation(state,*op,indexCount+1);
+  //update type-stack
+  state->typeCount-=indexCount;
+  bool writable=state->typeStack[typeOffset].isWritable;
+  if(isArrayViewType(arrayType))
+    writable&=isMutableType(arrayType);
+  setTypeStackType(state,arrayData->base);
+  setTypeStackFlags(state,false,writable);
+  state->typeStack[typeOffset].opCount=(state->opStackCount-indexOffset)+1;
+  if(op->opType==OP_SET){
+    if(!writable)
+      handleError("cannot write to immutable array",ERROR_SYNTAX,op->filePos);
+    typeCheckSetStackValue(state,op,arrayData->base);
+  }
 }
 void typeCheckGet(TypeCheckState* state,Operation* op){ 
   checkReachable(state,*op);
@@ -4941,16 +4949,25 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fprintf(stderr,"not enough operands for operation %s %s: need 2 got %zu\n",opName(op->opType),idNames[op->dataAs.idInfo.type],state->typeCount);
         handleError(NULL,ERROR_TYPE,op->filePos);
       }
-      offset=state->typeCount-2;
-      if(!isIntType(state->typeStack[offset+1].type)){
-        fprintf(stderr,"invalid second operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
-        printTypeName(state->typeStack[offset+1].type,stderr);
+      offset=state->typeCount-1;
+      int32_t indexCount=0;
+      while(offset>0&&isIntType(state->typeStack[offset].type)){
+        offset--;
+        indexCount++;
+      }
+      if(indexCount==0){
+        fprintf(stderr,"invalid index for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
+        printTypeName(state->typeStack[offset].type,stderr);
         fputs(" expected an integer\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
-      }
+      }  
       if(isArrayType(state->typeStack[offset].type)){
-        typeCheckArrayElementAccess(state,state->typeStack[offset].type,op);
+        typeCheckArrayElementAccess(state,state->typeStack[offset].type,indexCount,op);
         return;
+      }
+      if(indexCount>1){
+        fprintf(stderr,"too much indices for pointer access: %"PRIi32" expected 1\n",indexCount);
+        handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
       op->dataAs.idInfo.type=ID_POINTER_OFFSET;
       if(!isPointerType(state->typeStack[offset].type)){
