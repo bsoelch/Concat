@@ -111,14 +111,14 @@ struct array8Impl{
 array7 const* data;
 int64_t sizes[1];
 };
-struct array9Impl{
-int32_t data[3][2];
-};
 struct tuple19Impl{
 array0 e0;
 int64_t e1;
 int8_t e2;
 bool e3;
+};
+struct array9Impl{
+int32_t data[3][2];
 };
 struct tuple21Impl{
 int64_t e0;
@@ -215,78 +215,71 @@ int32_t const tmp8 = ((arg0)[tmp7]);
 printf("%"PRIi32"\n",tmp8);
 concatInternal_checkArrayBounds(((int32_t)0),((int64_t)2));
 ((arg1).data[((int32_t)0)]).e0 = ((int32_t)1);
-array9 local4 = {0};
-concatInternal_checkArrayBounds(((int32_t)1),((int64_t)2));
-concatInternal_checkArrayBounds(((int32_t)2),((int64_t)3));
-((local4).data[((int32_t)2)][((int32_t)1)]) = ((int32_t)-14121);
-int32_t const* const tmp9 = ((int32_t const*)local4.data);
-int32_t const tmp10 = (*((tmp9)+(((int32_t)5))));
-printf("%"PRIi32"\n",tmp10);
 }
 void concat_breakTest (void){
-int32_t tmp12;
-int32_t tmp11 = 0;
+int32_t tmp10;
+int32_t tmp9 = 0;
 do{
-tmp12 = tmp11;
+tmp10 = tmp9;
 if(!((bool)1))
   break;
-int32_t const tmp13 = (tmp12+((int32_t)1));
+int32_t const tmp11 = (tmp10+((int32_t)1));
+bool const tmp12 = (tmp11>((int32_t)5));
+if(tmp12){
+tmp10 = tmp11;
+break;
+}
+tmp9 = tmp11;
+}while(1);
+printf("%"PRIi32"\n",tmp10);
+int32_t tmp15;
+int32_t tmp13 = 0;
+do{
 bool const tmp14 = (tmp13>((int32_t)5));
 if(tmp14){
-tmp12 = tmp13;
+tmp15 = tmp13;
 break;
 }
-tmp11 = tmp13;
-}while(1);
-printf("%"PRIi32"\n",tmp12);
-int32_t tmp17;
-int32_t tmp15 = 0;
-do{
-bool const tmp16 = (tmp15>((int32_t)5));
-if(tmp16){
-tmp17 = tmp15;
-break;
-}
-tmp17 = tmp15;
+tmp15 = tmp13;
 if(!((bool)1))
   break;
-int32_t const tmp18 = (tmp17+((int32_t)1));
-tmp15 = tmp18;
+int32_t const tmp16 = (tmp15+((int32_t)1));
+tmp13 = tmp16;
 }while(1);
-printf("%"PRIi32"\n",tmp17);
-int32_t tmp21;
-bool tmp19 = 1;
-int32_t tmp20 = 0;
+printf("%"PRIi32"\n",tmp15);
+int32_t tmp19;
+bool tmp17 = 1;
+int32_t tmp18 = 0;
 do{
-tmp21 = tmp20;
-if(!tmp19)
+tmp19 = tmp18;
+if(!tmp17)
   break;
-int32_t const tmp22 = (tmp21+((int32_t)1));
-bool const tmp23 = (tmp22<((int32_t)5));
-if(tmp23){
-tmp19 = ((bool)1);
-tmp20 = tmp22;
+int32_t const tmp20 = (tmp19+((int32_t)1));
+bool const tmp21 = (tmp20<((int32_t)5));
+if(tmp21){
+tmp17 = ((bool)1);
+tmp18 = tmp20;
 continue;
 }
-tmp19 = ((bool)0);
-tmp20 = tmp22;
+tmp17 = ((bool)0);
+tmp18 = tmp20;
 }while(1);
-printf("%"PRIi32"\n",tmp21);
-int32_t tmp27;
-int32_t tmp24 = 0;
+printf("%"PRIi32"\n",tmp19);
+int32_t tmp25;
+int32_t tmp22 = 0;
 do{
-int32_t const tmp25 = (tmp24+((int32_t)1));
-bool const tmp26 = (tmp25<((int32_t)5));
-if(tmp26){
-tmp24 = tmp25;
+int32_t const tmp23 = (tmp22+((int32_t)1));
+bool const tmp24 = (tmp23<((int32_t)5));
+if(tmp24){
+tmp22 = tmp23;
 continue;
 }
-tmp27 = tmp25;
+tmp25 = tmp23;
 if(!((bool)0))
   break;
-tmp24 = tmp27;
+tmp22 = tmp25;
 }while(1);
-printf("%"PRIi32"\n",tmp27);
+printf("%"PRIi32"\n",tmp25);
 }
 void concat_switchTest (int32_t arg0, enum11 arg1, int8_t arg2, array0 arg3){
 switch(arg0){
@@ -310,106 +303,113 @@ break;
 default:
 break;
 }
-int32_t const tmp28 = (arg1).label;
-switch(tmp28){
+int32_t const tmp26 = (arg1).label;
+switch(tmp26){
 case 0:case 1:;
 break;
 case 2:;
 concatInternal_checkEnumIndex(arg1.label,2);
-int32_t const tmp29 = (arg1).data.e2;
-printf("%"PRIi32"\n",tmp29);
+int32_t const tmp27 = (arg1).data.e2;
+printf("%"PRIi32"\n",tmp27);
 break;
 case 3:;
 concatInternal_checkEnumIndex(arg1.label,3);
-tuple10 const tmp30 = (arg1).data.e3;
-int8_t const tmp31 = (tmp30).e1;
-printf("%"PRIi8"\n",tmp31);
+tuple10 const tmp28 = (arg1).data.e3;
+int8_t const tmp29 = (tmp28).e1;
+printf("%"PRIi8"\n",tmp29);
 break;
 }
-bool tmp32;
+bool tmp30;
 switch(arg2){
 case 32:case 10:case 9:case 11:case 12:case 13:;
-tmp32 = ((bool)1);
+tmp30 = ((bool)1);
 break;
 default:
-tmp32 = ((bool)0);
+tmp30 = ((bool)0);
 break;
 }
-bool const local0 = tmp32;
+bool const local0 = tmp30;
 }
 tuple19 concat_nextChar (array0 arg0, int64_t arg1){
 int64_t const local0 = arg1;
 array0 const local1 = arg0;
-int64_t const tmp33 = ((local1).sizes[0]);
-bool const tmp34 = (local0>=tmp33);
-if(tmp34){
+int64_t const tmp31 = ((local1).sizes[0]);
+bool const tmp32 = (local0>=tmp31);
+if(tmp32){
 return (tuple19){.e0=local1,.e1=local0,.e2=((int8_t)0),.e3=((bool)0)};
 }
-int64_t const tmp35 = (local0+((int64_t)1));
+int64_t const tmp33 = (local0+((int64_t)1));
 concatInternal_checkArrayBounds(local0,((local1).sizes[0]));
-int8_t const tmp36 = ((local1).data[local0]);
-return (tuple19){.e0=local1,.e1=tmp35,.e2=tmp36,.e3=((bool)1)};
+int8_t const tmp34 = ((local1).data[local0]);
+return (tuple19){.e0=local1,.e1=tmp33,.e2=tmp34,.e3=((bool)1)};
 }
 void concat_endItr (array0 arg0, int64_t arg1, int8_t arg2){
 }
 int main(void){
-int32_t const tmp37 = (((int32_t)1)+((int32_t)1));
-int32_t local0 = tmp37;
-int32_t const tmp38 = (local0-((int32_t)1));
-int32_t const tmp39 = (tmp38*((int32_t)3));
-int32_t local1 = tmp39;
+int32_t const tmp35 = (((int32_t)1)+((int32_t)1));
+int32_t local0 = tmp35;
+int32_t const tmp36 = (local0-((int32_t)1));
+int32_t const tmp37 = (tmp36*((int32_t)3));
+int32_t local1 = tmp37;
 int32_t local2;
 printf("%"PRIi32"\n",((int32_t)11001001));
 tuple8 local3;
-tuple8* const tmp40 = &(local3);
-tuple8 const* const tmp41 = ((tuple8 const*)tmp40);
-tuple8 const tmp42 = {.e0=((int32_t)1),.e1=tmp41};
-local3 = tmp42;
-tuple8 const* const tmp43 = (local3).e1;
+tuple8* const tmp38 = &(local3);
+tuple8 const* const tmp39 = ((tuple8 const*)tmp38);
+tuple8 const tmp40 = {.e0=((int32_t)1),.e1=tmp39};
+local3 = tmp40;
+tuple8 const* const tmp41 = (local3).e1;
+printf("%p\n",(void const*)tmp41);
+tuple8 const** const tmp42 = &((local3).e1);
+tuple8 const* const tmp43 = ((*(tmp42)))->e1;
 printf("%p\n",(void const*)tmp43);
-tuple8 const** const tmp44 = &((local3).e1);
-tuple8 const* const tmp45 = ((*(tmp44)))->e1;
-printf("%p\n",(void const*)tmp45);
+array9 local4 = {0};
+concatInternal_checkArrayBounds(((int32_t)1),((int64_t)2));
+concatInternal_checkArrayBounds(((int32_t)2),((int64_t)3));
+((local4).data[((int32_t)2)][((int32_t)1)]) = ((int32_t)-14121);
+int32_t const* const tmp44 = ((int32_t const*)local4.data);
+int32_t const tmp45 = (*((tmp44)+(((int32_t)5))));
+printf("%"PRIi32"\n",tmp45);
 enum11 const tmp46 = {.label=2,.data={.e2=((int32_t)0)}};
-enum11 local4 = tmp46;
-enum11 const local5 = {.label=0,.data={0}};
-int32_t const tmp47 = (local4).label;
+enum11 local5 = tmp46;
+enum11 const local6 = {.label=0,.data={0}};
+int32_t const tmp47 = (local5).label;
 bool const tmp48 = (tmp47==((int32_t)0));
 printf("%s\n",tmp48?"true":"false");
-int32_t const tmp49 = (local4).label;
+int32_t const tmp49 = (local5).label;
 bool const tmp50 = (tmp49==((int32_t)2));
 printf("%s\n",tmp50?"true":"false");
-concatInternal_checkEnumIndex(local4.label,2);
-int32_t const tmp51 = (local4).data.e2;
+concatInternal_checkEnumIndex(local5.label,2);
+int32_t const tmp51 = (local5).data.e2;
 printf("%"PRIi32"\n",tmp51);
 tuple10 const tmp52 = {.e0=((int32_t)2),.e1=((int8_t)65)};
-(local4).label = ((int32_t)3);
-(local4).data.e3 = tmp52;
-concatInternal_checkEnumIndex(local4.label,3);
-tuple10* const tmp53 = &((local4).data.e3);
+(local5).label = ((int32_t)3);
+(local5).data.e3 = tmp52;
+concatInternal_checkEnumIndex(local5.label,3);
+tuple10* const tmp53 = &((local5).data.e3);
 (tmp53)->e0 = ((int32_t)2);
 int8_t const tmp54 = (tmp53)->e1;
 printf("%"PRIi8"\n",tmp54);
-enum12 local6 = /*enum*/0;
-int32_t const tmp55 = ((int32_t)local6);
+enum12 local7 = /*enum*/0;
+int32_t const tmp55 = ((int32_t)local7);
 bool const tmp56 = (tmp55==((int32_t)1));
 if(tmp56){
 enum12 const tmp57 = /*enum*/2;
-local6 = tmp57;
+local7 = tmp57;
 }
 int64_t const tmp58 = concat_anInt();
 printf("%"PRIi64"\n",tmp58);
 procPtr10 const tmp59 = &(concat_proc0);
-procPtr10 const local7 = tmp59;
-tuple1 const tmp60 = (local7)(((int32_t)1),((int32_t)1));
+procPtr10 const local8 = tmp59;
+tuple1 const tmp60 = (local8)(((int32_t)1),((int32_t)1));
 int32_t const tmp61 = (tmp60).e1;
 printf("%"PRIi32"\n",tmp61);
 int32_t const tmp62 = (tmp60).e0;
 printf("%"PRIi32"\n",tmp62);
 tuple9 const tmp63 = {.e0=((int32_t)0),.e1=((int8_t)65)};
-tuple9 const local8 = tmp63;
-int32_t const tmp64 = (local8).e0;
-int32_t const tmp65 = ((int32_t)(local8).e1);
+tuple9 const local9 = tmp63;
+int32_t const tmp64 = (local9).e0;
+int32_t const tmp65 = ((int32_t)(local9).e1);
 int32_t const tmp66 = (tmp64+tmp65);
 printf("%"PRIi32"\n",tmp66);
 printf("%"PRIi32"\n",local0);
@@ -426,7 +426,7 @@ tuple1 const tmp72 = concat_proc0(((int32_t)1),((int32_t)2));
 int64_t const tmp73 = ((int64_t)(tmp72).e0);
 int64_t const tmp74 = ((int64_t)(tmp72).e1);
 tuple21 const tmp75 = {.e0=tmp73,.e1=tmp74};
-tuple21 local9 = tmp75;
+tuple21 local10 = tmp75;
 int32_t const tmp76 = (++local0);
 printf("%"PRIi32"\n",tmp76);
 local2 = ((int32_t)2);
@@ -436,13 +436,13 @@ tuple5 const* const tmp78 = (tmp77).e0;
 int32_t const* const tmp79 = (tmp78)->e1;
 int32_t const tmp80 = (*((tmp79)+(((int32_t)0))));
 printf("%"PRIi32"\n",tmp80);
-(local9).e0 = (local9).e1;
-int64_t* const tmp81 = &((local9).e0);
+(local10).e0 = (local10).e1;
+int64_t* const tmp81 = &((local10).e0);
 printf("%p\n",(void const*)tmp81);
-tuple21* const tmp82 = &(local9);
+tuple21* const tmp82 = &(local10);
 tuple21 const* const tmp83 = ((tuple21 const*)tmp82);
-tuple21 const* const local10 = tmp83;
-int64_t const tmp84 = ((local10)+(((int32_t)0)))->e0;
+tuple21 const* const local11 = tmp83;
+int64_t const tmp84 = ((local11)+(((int32_t)0)))->e0;
 printf("%"PRIi64"\n",tmp84);
 int8_t const* const tmp85 = (arrayData2+0);
 printf("%p\n",(void const*)tmp85);
@@ -480,8 +480,8 @@ tmp90 = tmp97;
 printf("%"PRIi32"\n",tmp90);
 int32_t* const tmp98 = &(local0);
 int32_t* const tmp99 = ((int32_t*)tmp98);
-int32_t* local11 = tmp99;
-int32_t* const tmp100 = (++local11);
+int32_t* local12 = tmp99;
+int32_t* const tmp100 = (++local12);
 (*(tmp100)) = ((int32_t)2);
 int8_t const* const tmp101 = (arrayData2+0);
 tuple15 const tmp102 = concat_startItr(((array0){.data=tmp101,.sizes={5}}));

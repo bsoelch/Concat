@@ -20,7 +20,7 @@ proc( => ( ( i32 i32 ptr ) ptr i32 ) ) =: ptrTest
 end
 
 type : selfPtr 
-( i32 selfPtr ptr ) type =: selfPtr
+( i32 selfPtr ptr ) selfPtr =
 
 struct( i32 : i i8 : c ) type =: aStruct
 enum( A B i32 : C  ( i32 char ) : mut D ) type =: anEnum

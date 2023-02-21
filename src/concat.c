@@ -597,13 +597,12 @@ int64_t getTypeElementCount(TypeId type){
   return 0;
 }
 void printTypeName(TypeId id,FILE* file);
-bool setNamedType(TypeId type,LabelId newName,TypeId newValue){
+bool setNamedType(TypeId type,TypeId newValue){
   newValue=unwrapNamedType(newValue);
   if(!isNamedType(type))
     return false;
   if(!typeEquals(namedTypes[type.dataAs.id].type,TYPE_UNDEFINED))
     return false;
-  namedTypes[type.dataAs.id].name=newName;
   namedTypes[type.dataAs.id].type=newValue;
   return true;
 }
@@ -2779,6 +2778,9 @@ Operation opEndCodeBlock(BlockType blockType,FilePosition pos){
 Operation opConstant(TypeId type,int64_t constData,FilePosition pos){
   return (Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=pos,.dataAs={.i64=constData}};
 }
+Operation opTypeConstant(TypeId type,TypeId constData,FilePosition pos){
+  return (Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=pos,.dataAs={.sourceType=constData}};
+}
 
 //XXX more operation generator functions
 
@@ -3421,9 +3423,7 @@ void storeConstants(ParserState* state){
         pushOperation(state,opConstant(constantType(&constBuffer[i].value),intVal,constBuffer[i].pos));
         break;
       case CONSTANT_TYPE:
-        //TODO store type constants by id
-        //pushOperation(state,opConstant(constantType(&constBuffer[i].value),typeId(constBuffer[i].value.as.type),constBuffer[i].pos));
-        handleError("type constants",ERROR_UNIMPLEMENTED,constBuffer[i].pos);
+        pushOperation(state,opTypeConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.type,constBuffer[i].pos));
         break;
       case CONSTANT_NONE:
         break;
@@ -3480,18 +3480,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType;
-    ScopeNode * prevId;
-    int r;
     if(typeEquals(type,TYPE_TYPE)){
       idType=ID_TYPE;
-      r=getIdentifier(state->namespaceInfo,varName.label,&prevId);
-      if(r<0)
-        handleError("error while resolving identifier",r,wordPos);
       TypeId constType=popTypeConstant(wordPos,"type constant",false);
-      if(r==0&&prevId->idType==ID_TYPE&&prevId->constValue.type==CONSTANT_TYPE&&setNamedType(prevId->constValue.as.type,labelId,constType)){//can only override named types
-        prevId->labelId=labelId;//update declaration position 
-        return;
-      }
       type=newNamedType(labelId,constType);
       ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
       declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,&constValue);
@@ -3790,7 +3781,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       TypeId constType=constantType(peekConstValue());
       if(!typeEquals(constType,TYPE_UNDEFINED))
         mType=constType;
-      if(typeEquals(mType,TYPE_TYPE)){//XXX? overwrite opaque types
+      if(typeEquals(mType,TYPE_TYPE)){
         constType=popTypeConstant(wordPos,"type constant",false);
         type=newNamedType(labelId,constType);
         ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
@@ -3802,6 +3793,24 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
     return;
   }else if(wordEquals(&word,"=")){
+    if(bufferedConstants>0){
+      if(!peekConstant()->hasId||peekConstValue()->type!=CONSTANT_TYPE)
+        handleError("cannot assign values to constant",ERROR_SYNTAX,wordPos);
+      ScopeNode * prevId;
+      int r=getIdentifier(state->namespaceInfo/*name-space is still the same*/,getLabelName(peekConstant()->idInfo.labelId),&prevId);
+      if(r!=0)
+        handleError("error while resolving identifier",r,wordPos);
+      //get previous value of type constant
+      TypeId opaque=popTypeConstant(wordPos,"opaqueType",false);
+      if(!isNamedType(opaque)||!typeEquals(unwrapNamedType(opaque),TYPE_UNDEFINED))
+        handleError("can only replace opaque named types",ERROR_SYNTAX,wordPos);
+      //get new value of constant
+      TypeId constType=popTypeConstant(wordPos,"type constant",false);
+      if(prevId->idType!=ID_TYPE||prevId->constValue.type!=CONSTANT_TYPE||!setNamedType(prevId->constValue.as.type,constType)){//can only override named types
+        handleError("error while changing Type information",ERROR_MEMORY,wordPos);
+      }
+      return;
+    }
     if(state->parsedOpCount>0){
       switch(peekOperation(state,wordPos)->opType){
         case OP_GET:
@@ -4955,12 +4964,12 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         offset--;
         indexCount++;
       }
-      if(indexCount==0){
+      if(indexCount==0){//XXX index-count==0 -> dereference pointer
         fprintf(stderr,"invalid index for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
         printTypeName(state->typeStack[offset].type,stderr);
         fputs(" expected an integer\n",stderr);
         handleError(NULL,ERROR_TYPE,op->filePos);
-      }  
+      }
       if(isArrayType(state->typeStack[offset].type)){
         typeCheckArrayElementAccess(state,state->typeStack[offset].type,indexCount,op);
         return;
@@ -5631,7 +5640,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       if(isProcedureType(state->typeStack[offset].type)){//don't use array for function pointers
         op.dataType=pointerType(state->typeStack[offset].type,state->typeStack[offset].isWritable);
-      }else{
+      }else{//XXX get address of fixed-sized array type as array-view
         op.dataType=arrayType(true,state->typeStack[offset].type,1,(int64_t[]){1},state->typeStack[offset].isWritable);
       }
       //store result in temp variable
