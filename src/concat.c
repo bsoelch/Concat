@@ -3833,10 +3833,6 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
     }
     handleError("unexpected = operation",ERROR_SYNTAX,wordPos);
-  }else if(wordEquals(&word,"@")){
-    pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-      .dataAs={.idInfo={.type=ID_POINTER,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
-    return;
   }else if(wordEquals(&word,"[]")){
     pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
       .dataAs={.idInfo={.type=ID_ARRAY_ELEMENT,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
@@ -4930,52 +4926,17 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       typeCheckGetTupleElement(state,op->dataType,writable,op);
       return;
     case ID_POINTER:
-      if(state->typeCount<1){
-        fprintf(stderr,"not enough operands for operation %s %s: need 1 got %zu\n",opName(op->opType),idNames[op->dataAs.idInfo.type],state->typeCount);
-        handleError(NULL,ERROR_TYPE,op->filePos);
-      }
-      offset=state->typeCount-1;
-      if(!isPointerType(state->typeStack[offset].type)){
-        fprintf(stderr,"invalid operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
-        printTypeName(state->typeStack[offset].type,stderr);
-        fputs(" is not a pointer\n",stderr);
-        handleError(NULL,ERROR_TYPE,op->filePos);
-      }
-      op->dataType=getBaseType(state->typeStack[offset].type);
-      //update operation stack
-      //wrap composite operations
-      extractCompositeOps(state,1,true);
-      insertStackOperation(state,*op,1);
-      //update type-stack
-      writable=isMutableType(state->typeStack[offset].type);
-      setTypeStackType(state,op->dataType);
-      setTypeStackFlags(state,false,writable);//dereferenced pointers are writable but not addressable
-      state->typeStack[offset].opCount++;
-      if(op->opType==OP_SET){
-        if(!writable)
-          handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);
-        typeCheckSetStackValue(state,op,op->dataType);
-      }
-      return;
     case ID_ARRAY_ELEMENT:
     case ID_POINTER_OFFSET:
-      if(state->typeCount<2){
-        fprintf(stderr,"not enough operands for operation %s %s: need 2 got %zu\n",opName(op->opType),idNames[op->dataAs.idInfo.type],state->typeCount);
-        handleError(NULL,ERROR_TYPE,op->filePos);
-      }
       offset=state->typeCount-1;
       int32_t indexCount=0;
       while(offset>0&&isIntType(state->typeStack[offset].type)){
         offset--;
         indexCount++;
       }
-      if(indexCount==0){//XXX index-count==0 -> dereference pointer
-        fprintf(stderr,"invalid index for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
-        printTypeName(state->typeStack[offset].type,stderr);
-        fputs(" expected an integer\n",stderr);
-        handleError(NULL,ERROR_TYPE,op->filePos);
-      }
       if(isArrayType(state->typeStack[offset].type)){
+        if(indexCount==0)
+          handleError("need at least one index for array access",ERROR_SYNTAX,op->filePos);
         typeCheckArrayElementAccess(state,state->typeStack[offset].type,indexCount,op);
         return;
       }
@@ -4983,7 +4944,7 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         fprintf(stderr,"too much indices for pointer access: %"PRIi32" expected 1\n",indexCount);
         handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
-      op->dataAs.idInfo.type=ID_POINTER_OFFSET;
+      op->dataAs.idInfo.type=indexCount==0?ID_POINTER:ID_POINTER_OFFSET;
       if(!isPointerType(state->typeStack[offset].type)){
         fprintf(stderr,"invalid first operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
         printTypeName(state->typeStack[offset].type,stderr);
@@ -4992,15 +4953,17 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       }
       op->dataType=getBaseType(state->typeStack[offset].type);
       //wrap composite operations
-      extractCompositeOps(state,2,true);
+      extractCompositeOps(state,indexCount+1,true);
       //update operation stack
-      insertStackOperation(state,*op,2);
+      insertStackOperation(state,*op,indexCount+1);
       //update type-stack
-      state->typeCount--;
+      state->typeCount-=indexCount;
       writable=isMutableType(state->typeStack[offset].type);
       setTypeStackType(state,op->dataType);
       setTypeStackFlags(state,false,writable);//dereferenced pointers are writable but not addressable
-      state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount+1;
+      state->typeStack[offset].opCount++;
+      if(indexCount>0)//index count will be 1
+        state->typeStack[offset].opCount+=state->typeStack[offset+1].opCount;
       if(op->opType==OP_SET){
         if(!writable)
           handleError("cannot write to immutable pointer",ERROR_SYNTAX,op->filePos);

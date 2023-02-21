@@ -174,7 +174,7 @@ entryPoint:
   selfPtr : mut X
   1 X addrOf selfPtr new X =
   X .1 print
-  X .1 @ .1 print
+  X .1 [] .1 print
 
   i32 2 3 array new =:: mut matrix
   -14121 matrix 2 1 [] = ##  0 1  2 3  4 5
@@ -217,7 +217,7 @@ entryPoint:
   
   doNothing
   
-  ptrTest .0 @ .1 0 [] print
+  ptrTest .0 [] .1 0 [] print
   
   tmp .1  tmp .0 =
   tmp .0 addrOf print
@@ -238,7 +238,7 @@ entryPoint:
   print
   
   A addrOf  i32 ptr mut =: mut aPtr
-  2  aPtr ++ @ = 
+  2  aPtr ++ [] = 
 
   "Hello" startItr while nextChar do
     #+char+# print
