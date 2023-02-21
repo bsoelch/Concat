@@ -341,6 +341,7 @@ typedef struct{
   TypeId inType;
   TypeId outType;
   int32_t procId;
+  bool pointerUsed;
 }ProcedureType;
 typedef struct{
   TypeId base;
@@ -674,6 +675,8 @@ TypeId pointerType(TypeId target,bool mutable){
     if(pointerTypes[t].isMutable==mutable&&typeEquals(pointerTypes[t].target,target))
       return (TypeId){.class=TYPECLASS_POINTER,.dataAs.id=t};
   }
+  if(isProcedureType(target))//mark procedure types that use pointer
+    procTypes[target.dataAs.id].pointerUsed=true;
   //TODO ensure cap
   pointerTypes[pointerTypeCount]=(PointerType){.target=target,.isMutable=mutable};
   return (TypeId){.class=TYPECLASS_POINTER,.dataAs.id=pointerTypeCount++};
@@ -2584,12 +2587,14 @@ void compileToC(FILE* target,Program const* p){
       fprintf(target,"typedef struct array%"PRIi32"Impl array%"PRIi32";\n",i,i);
   }
   //declare procedure pointers
-  for(int32_t i=0;i<procTypeCount;i++){//XXX only declare used procedure-pointers
-    fputs("typedef ",target);
-    printTypeNameC(procTypes[i].outType,target);
-    fprintf(target," (*procPtr%"PRIi32") (",i);
-    printProcArgumentTypesC(procTypes[i].inType,target,false);
-    fputs(");\n",target);
+  for(int32_t i=0;i<procTypeCount;i++){
+    if(procTypes[i].pointerUsed){
+      fputs("typedef ",target);
+      printTypeNameC(procTypes[i].outType,target);
+      fprintf(target," (*procPtr%"PRIi32") (",i);
+      printProcArgumentTypesC(procTypes[i].inType,target,false);
+      fputs(");\n",target);
+    }
   }
   for(int32_t i=0;i<declaredMultiTypeCount;i++){//got through multi-types in order of declaration
     int32_t id=declaredMultiTypes[i].dataAs.id;

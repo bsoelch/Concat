@@ -27,16 +27,6 @@ typedef struct array5Impl array5;
 typedef struct array7Impl array7;
 typedef struct array8Impl array8;
 typedef struct array9Impl array9;
-typedef tuple1 (*procPtr0) (int32_t, int32_t);
-typedef void (*procPtr1) (int32_t, int32_t);
-typedef void (*procPtr2) (void);
-typedef int64_t (*procPtr3) (void);
-typedef tuple6 (*procPtr4) (void);
-typedef tuple15 (*procPtr5) (array0);
-typedef void (*procPtr6) (int32_t const*, array2, array3);
-typedef void (*procPtr7) (int32_t, enum11, int8_t, array0);
-typedef tuple19 (*procPtr8) (array0, int64_t);
-typedef void (*procPtr9) (array0, int64_t, int8_t);
 typedef tuple1 (*procPtr10) (int32_t, int32_t);
 struct tuple1Impl{
 int32_t e0;
