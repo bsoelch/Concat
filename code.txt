@@ -35,6 +35,8 @@ proc( string => string i64 ) =: startItr
   0
 end
 
+proc( i64 : k => i32 ptr mut ) : extern allocI32
+
 #namespace mut
   #namespace subspace
    1 i32 =: spaceVar
@@ -257,6 +259,11 @@ entryPoint:
   
   true print 
   'B' c0 =
+
+  1024 1024 * 16 * allocI32 =:: dynamicArray
+  dynamicArray print
+  dynamicArray 0 [] print
+  dynamicArray 1000000 [] print
 end
 
 #+ comment 

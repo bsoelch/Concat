@@ -17,7 +17,7 @@ gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"
-  gcc ${cArgs[@]} -Wno-unused $codeCTarget -o $codeTarget
+  gcc ${cArgs[@]} -Wno-unused $codeCTarget "./extern.c" -o $codeTarget
 } && {
   echo "run compiled code"
   echo "-----------------------------------------"

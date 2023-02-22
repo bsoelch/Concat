@@ -226,11 +226,17 @@ typedef struct {
 #define LABEL_CAP 4096
 typedef int32_t LabelId;
 const LabelId LABEL_ID_UNKNOWN=-1;
+typedef int16_t LabelFlags;
+#define LABEL_FLAG_MUTABLE  0x01
+#define LABEL_FLAG_STATIC   0x02
+#define LABEL_FLAG_EXTERN   0x04
+#define LABEL_FLAG_PRIVATE  0x08
+#define LABEL_FLAG_PUBLIC   0x10
 typedef struct{
   String label;
   FilePosition declaredAt;
   NamespaceId namespace;
-  bool isMutable;
+  LabelFlags flags;
 }Label;
 Label labelBuffer[LABEL_CAP];
 int32_t labelBufferCount=0;
@@ -244,10 +250,10 @@ Label label(LabelId labelId,FilePosition pos){
     handleError("label id out of range",ERROR_MEMORY,pos);
   return labelBuffer[labelId];
 }
-LabelId newLabel(String label,bool isMutable,NamespaceId namespace,FilePosition declaredAt){
+LabelId newLabel(String label,LabelFlags flags,NamespaceId namespace,FilePosition declaredAt){
   if(labelBufferCount>=LABEL_CAP)
     handleError("exceeded label capacity",ERROR_MEMORY,declaredAt);
-  labelBuffer[labelBufferCount]=(Label){.label=label,.isMutable=isMutable,.namespace=namespace,.declaredAt=declaredAt};
+  labelBuffer[labelBufferCount]=(Label){.label=label,.flags=flags,.namespace=namespace,.declaredAt=declaredAt};
   return labelBufferCount++;
 }
 int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName){
@@ -256,6 +262,17 @@ int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName
       return i;
   }
   return -1;
+}
+bool isMutableLabel(Label label){
+  return (label.flags&LABEL_FLAG_MUTABLE)!=0;
+}
+bool isStaticLabel(Label label){
+  return (label.flags&LABEL_FLAG_STATIC)!=0;
+}
+bool isMutableLabelId(LabelId labelId){
+  if(labelId<0||labelId>=labelBufferCount)
+    return false;
+  return isMutableLabel(labelBuffer[labelId]);
 }
 void printAsciifiedString(String name,FILE* out){
   for(size_t i=0;i<name.length;i++){
@@ -1689,7 +1706,7 @@ int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
 }
 ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeId type,IdentifierType idType,int32_t id,FilePosition pos,ConstantValue const* constValue){
   Label mLabel=label(labelId,pos);
-  if(mLabel.isMutable){
+  if(isMutableLabel(mLabel)){
     if(idType==ID_TYPE)
       handleError("type definitions cannot be mutable",ERROR_SYNTAX,mLabel.declaredAt);
     if(idType==ID_PROCEDURE)
@@ -1725,7 +1742,7 @@ ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeI
   (*node)->idType=idType;
   (*node)->id=id;
   (*node)->labelId=labelId;
-  if(constValue!=NULL&&!label(labelId,pos).isMutable){
+  if(constValue!=NULL&&!isMutableLabelId(labelId)){
     (*node)->constValue=*constValue;
   }else{
     (*node)->constValue=(ConstantValue){.type=CONSTANT_NONE,.as.i64=0};
@@ -2099,8 +2116,15 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           if(needCast)
             fputs(")",target);
           return size;
+        case PRIMITIVE_TYPE://type-constants compile to the size of the given type
+            fputs("sizeof(",target);
+            printTypeNameC(op->dataAs.sourceType,target);
+            fputs(")",target);
+          if(needCast)
+            fputs(")",target);
+          return size;
         default:
-          fprintf(stderr,"%s constants are (currently) not supported",primitiveName(primitiveTypeData(op->dataType)));
+          fprintf(stderr,"%s constants are (currently) not supported\n",primitiveName(primitiveTypeData(op->dataType)));
           handleError(NULL,ERROR_TYPE,op->filePos);
       }
       break;
@@ -3008,10 +3032,28 @@ String nextWord(CodeFile* codeFile,int* wordType){
   return newString(wordChars,wordLength);
 }
 
-
-LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace){
+bool checkLabelFlag(String const* name,char const* labelType,char const* flagName,LabelFlags labelFlag,LabelFlags* flags,FilePosition pos){
+  if(!wordEquals(name,flagName))
+    return false;
+  if(((*flags)&labelFlag)!=0){
+    fprintf(stderr,"%s is already marked as %s\n",labelType,flagName);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
+  (*flags)|=labelFlag;
+  return true;
+}
+void checkFlagCombinations(LabelFlags flags,FilePosition pos){
+  if((flags&(LABEL_FLAG_PUBLIC|LABEL_FLAG_PRIVATE))==(LABEL_FLAG_PUBLIC|LABEL_FLAG_PRIVATE))
+    handleError("identifiers cannot be both 'public' and 'private'",ERROR_SYNTAX,pos);
+  if((flags&(LABEL_FLAG_MUTABLE|LABEL_FLAG_STATIC))==(LABEL_FLAG_MUTABLE|LABEL_FLAG_STATIC))
+    handleError("identifiers cannot be both 'mutable' and 'static'",ERROR_SYNTAX,pos);
+  if((flags&(LABEL_FLAG_EXTERN|LABEL_FLAG_STATIC))==(LABEL_FLAG_EXTERN|LABEL_FLAG_STATIC))
+    handleError("identifiers cannot be both 'extern' and 'static'",ERROR_SYNTAX,pos);
+}
+LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace,LabelFlags allowedFlags){
   int wordType=0;
-  bool isMutable=false,isModifer;
+  bool isModifer;
+  LabelFlags labelFalgs=0;
   String label;
   do{
     label=nextWord(codeFile,&wordType);
@@ -3024,16 +3066,23 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace
       fprintf(stderr,"%s have to be non-empty\n",labelType);
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
     }
-    if(wordEquals(&label,"mut")){
-      if(isMutable){
-        fprintf(stderr,"%s is already mutable\n",labelType);
-        handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
-      }
-      isMutable=true;
+    if(checkLabelFlag(&label,labelType,"mut",LABEL_FLAG_MUTABLE,&labelFalgs,codeFile->wordStart))
       isModifer=true;
+    if(checkLabelFlag(&label,labelType,"static",LABEL_FLAG_STATIC,&labelFalgs,codeFile->wordStart))
+      isModifer=true;
+    if(checkLabelFlag(&label,labelType,"extern",LABEL_FLAG_EXTERN,&labelFalgs,codeFile->wordStart))
+      isModifer=true;
+    if(checkLabelFlag(&label,labelType,"private",LABEL_FLAG_PRIVATE,&labelFalgs,codeFile->wordStart))
+      isModifer=true;
+    if(checkLabelFlag(&label,labelType,"public",LABEL_FLAG_PUBLIC,&labelFalgs,codeFile->wordStart))
+      isModifer=true;
+    if(isModifer&&((labelFalgs|allowedFlags)!=allowedFlags)){
+      fprintf(stderr,"flag \"%"PRI_STR"\" is not allowed on %s\n",PRI_STR_ARGS(label),labelType);
+      handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
     }
+    checkFlagCombinations(labelFalgs,codeFile->wordStart);
   }while(isModifer);
-  return newLabel(label,isMutable,namespace,codeFile->wordStart);
+  return newLabel(label,labelFalgs,namespace,codeFile->wordStart);
 }
 
 
@@ -3165,7 +3214,7 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
   if(r>0||asIdentifier->constValue.type==CONSTANT_NONE)//identifier does not exist
     return readType(word,codeFile,state);
   pushConstant(asIdentifier->constValue,codeFile->wordStart,true,(IdentifierInfo){.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
-    .isMutable=label(asIdentifier->labelId,codeFile->wordStart).isMutable});
+    .isMutable=isMutableLabelId(asIdentifier->labelId)});
   return true;
 }
 //reads a composite type of the given type-class, the result is stored in the type buffer
@@ -3177,6 +3226,9 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
   int32_t labelOffset=labelBufferCount;
   size_t currentOffset=initOffset;
   int typesSinceLabel=0;//if there has been a type since the last label
+  LabelFlags allowedFlags=LABEL_FLAG_MUTABLE|LABEL_FLAG_PRIVATE|LABEL_FLAG_PUBLIC;
+  if(typeClass==TYPECLASS_PROC_IN||typeClass==TYPECLASS_LABELED_PROC_IN)
+    allowedFlags|=LABEL_FLAG_STATIC;
   do{
     word=nextWord(codeFile,&wordType);
     if(readConstants(word,wordType,codeFile,state)){
@@ -3186,14 +3238,27 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
     }
     if(wordEquals(&word,endString))
       break;
-    if(labelType!=LABEL_TYPE_NONE&&typesSinceLabel>0&&wordEquals(&word,":")){//start label
+    if(wordEquals(&word,":")){//start label
+      if(labelType==LABEL_TYPE_NONE)
+        handleError("expected type got ':' ",ERROR_SYNTAX,codeFile->wordStart);
       if(typesSinceLabel>1){
         fprintf(stderr,"too many types for field declaration expected 1 got %i\n",typesSinceLabel);
         handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
         return;
       }
+      if(typesSinceLabel==0){
+        if(labelType!=LABEL_TYPE_ENUM)
+          handleError("expected type got ':' ",ERROR_SYNTAX,codeFile->wordStart);
+        pushTypeConstant(TYPE_UNDEFINED,codeFile->wordStart);
+      }
       typesSinceLabel=0;
-      readLabel(codeFile,"labels",state->namespaceInfo.current);//label is stored in label buffer
+      LabelId labelId=readLabel(codeFile,"composite type labels",state->namespaceInfo.current,allowedFlags);//label is stored in label buffer
+      Label mLabel=label(labelId,codeFile->wordStart);
+      if(isStaticLabel(mLabel)){
+        handleError("static procedure arguments are not yet supported",ERROR_SYNTAX,codeFile->wordStart);
+        //TODO remember static procedure arguments allow as type-names/array-sizes
+        // static type argument -> "generic-type" can be used as type in return value (generic pointers compile down to void*)
+      }
       continue;
     }
     if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
@@ -3201,7 +3266,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return;
     }
-    //untyped enum label
+    //untyped enum label XXX prevent use of modifiers as labels
     newLabel(word,false,state->namespaceInfo.current,codeFile->wordStart);//label is stored in label buffer
     pushTypeConstant(TYPE_UNDEFINED,codeFile->wordStart);
     currentOffset=bufferedConstants;
@@ -3458,15 +3523,20 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   if(readConstants(word,wordType,codeFile,state))//is type
     return;
   wordPos=codeFile->wordStart;
+  LabelFlags identiferFlags=LABEL_FLAG_MUTABLE;
+  if(state->scopeLevel==0)
+    identiferFlags|=LABEL_FLAG_PRIVATE|LABEL_FLAG_PUBLIC;
   //1. operations that take a Type as argument
   if(wordEquals(&word,":")){//pre-declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
+    LabelId labelId=readLabel(codeFile,state->scopeLevel>0?"local variables":"global variables",state->namespaceInfo.current,identiferFlags|LABEL_FLAG_EXTERN);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     if(isProcedureType(type)){
-      handleError("directly predeclaring procedures is not supported",ERROR_SYNTAX,wordPos);
+      if(((varName.flags&LABEL_FLAG_EXTERN)==0))
+        handleError("directly pre-declaration is only supporte for extern procedures",ERROR_SYNTAX,wordPos);
+      idType=ID_PROCEDURE;
     }
     ConstantValue val={.type=CONSTANT_NONE};
     if(typeEquals(type,TYPE_TYPE)){
@@ -3477,11 +3547,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,&val);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return;
-    pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
+    pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"=:")){//declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
+    LabelId labelId=readLabel(codeFile,state->scopeLevel>0?"local variables":"global variables",state->namespaceInfo.current,identiferFlags);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType;
@@ -3518,7 +3588,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
          }
       }
     }
-    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"new")){
     if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
@@ -3681,7 +3751,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       puts("-----------------");
       return;
     }else if(wordEquals(&word,"find")){
-      LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
+      LabelId labelId=readLabel(codeFile,"identifier names",state->namespaceInfo.current,0);
       wordPos=codeFile->wordStart;
       Label varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
@@ -3693,7 +3763,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         printf("identifier '%"PRI_STR"':\n",PRI_STR_ARGS(varName.label));
         fputs("  ",stdout);
         Label mLabel=label(asIdentifier->labelId,wordPos);
-        if(mLabel.isMutable)
+        if(isMutableLabel(mLabel))
           fputs("mutable ",stdout);
         printf("%s: ",idNames[asIdentifier->idType]);
         printTypeName(asIdentifier->type,stdout);
@@ -3776,7 +3846,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opUnaryOperator(DECREMENT,wordPos));
     return;
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    LabelId labelId=readLabel(codeFile,"variable names",state->namespaceInfo.current);
+    LabelId labelId=readLabel(codeFile,state->scopeLevel>0?"local variables":"global variables",state->namespaceInfo.current,identiferFlags);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     wordPos=codeFile->wordStart;
@@ -3795,7 +3865,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
     }
     ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
-    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=varName.isMutable}}});
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"=")){
     if(bufferedConstants>0){
@@ -3978,14 +4048,14 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   if(r<0)//internal error while reading identifier
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
-    Label mLabel=label(asIdentifier->labelId,wordPos);
     pushOperation(state,(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
-      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=mLabel.isMutable}}});
+      .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
+      .isMutable=isMutableLabelId(asIdentifier->labelId)}}});
     return;
   }
   // could not find identifier, try again in type-check phase
   pushOperation(state,(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-    .dataAs={.localLabel=(LocalLabel){.label=newLabel(word,false,state->namespaceInfo.current,codeFile->wordStart),.spaceInfo=state->namespaceInfo}}});
+    .dataAs={.localLabel=(LocalLabel){.label=newLabel(word,0,state->namespaceInfo.current,codeFile->wordStart),.spaceInfo=state->namespaceInfo}}});
 }
 
 
@@ -4754,7 +4824,7 @@ bool canWriteTupleElement(TypeId tupleType,int32_t index,FilePosition pos){
   }
   CompositeType const* tuple=compositeTypeData(tupleType);
   if(tuple->labelOffset!=LABEL_ID_UNKNOWN)
-    return label(tuple->labelOffset+index,pos).isMutable;
+    return isMutableLabelId(tuple->labelOffset+index);
   return true;
 }
 void checkTupleElementMutable(Operation const* elementAccess,int32_t depth){
@@ -5035,7 +5105,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     handleError("cannot set value of procedure",ERROR_SYNTAX,op->filePos);
   *op=(Operation){.opType=op->opType==OP_SET_IDENTIFIER?OP_SET:((asIdentifier->idType==ID_PROCEDURE)&&(op->opType!=OP_IDENTIFIER_ADDRESS))?OP_CALL:OP_GET,
     .dataType=asIdentifier->type,.filePos=op->filePos,
-      .dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=label(asIdentifier->labelId,op->filePos).isMutable}}};
+      .dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=isMutableLabelId(asIdentifier->labelId)}}};
 }
 void typeCheckOperation(Operation op,TypeCheckState* state){
   size_t totalOps=0;
@@ -5373,15 +5443,15 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       state->hasCheckEnum=1;
       Label mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
       op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
-        .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=mLabel.isMutable}}};
+        .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=isMutableLabel(mLabel)}}};
       insertStackOperation(state,op,totalOps);
       peekTypeStack(state)->opCount+=totalOps;
       setTypeStackType(state,mStruct->types[labelIndex]);
-      setTypeStackFlags(state,true,mLabel.isMutable&writable);
+      setTypeStackFlags(state,true,isMutableLabel(mLabel)&writable);
       if(op.opType==OP_SET){
         if(!writable)
           handleError("cannot write to field of constant enum",ERROR_SYNTAX,op.filePos);
-        if(!mLabel.isMutable){
+        if(!isMutableLabel(mLabel)){
           fprintf(stderr,"element %"PRI_STR" (%"PRIi32") in ",PRI_STR_ARGS(mLabel.label),labelIndex);
           printTypeName(structType,stderr);
           fputs(" is not mutable\n",stderr);
