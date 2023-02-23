@@ -269,6 +269,9 @@ bool isMutableLabel(Label label){
 bool isStaticLabel(Label label){
   return (label.flags&LABEL_FLAG_STATIC)!=0;
 }
+bool isExternLabel(Label label){
+  return (label.flags&LABEL_FLAG_EXTERN)!=0;
+}
 bool isMutableLabelId(LabelId labelId){
   if(labelId<0||labelId>=labelBufferCount)
     return false;
@@ -3047,6 +3050,8 @@ void checkFlagCombinations(LabelFlags flags,FilePosition pos){
     handleError("identifiers cannot be both 'public' and 'private'",ERROR_SYNTAX,pos);
   if((flags&(LABEL_FLAG_MUTABLE|LABEL_FLAG_STATIC))==(LABEL_FLAG_MUTABLE|LABEL_FLAG_STATIC))
     handleError("identifiers cannot be both 'mutable' and 'static'",ERROR_SYNTAX,pos);
+  if((flags&(LABEL_FLAG_EXTERN|LABEL_FLAG_MUTABLE))==(LABEL_FLAG_EXTERN|LABEL_FLAG_MUTABLE))
+    handleError("identifiers cannot be both 'extern' and 'mutable'",ERROR_SYNTAX,pos);
   if((flags&(LABEL_FLAG_EXTERN|LABEL_FLAG_STATIC))==(LABEL_FLAG_EXTERN|LABEL_FLAG_STATIC))
     handleError("identifiers cannot be both 'extern' and 'static'",ERROR_SYNTAX,pos);
 }
@@ -3871,8 +3876,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(bufferedConstants>0){
       if(!peekConstant()->hasId||peekConstValue()->type!=CONSTANT_TYPE)
         handleError("cannot assign values to constant",ERROR_SYNTAX,wordPos);
+      Label mLabel=label(peekConstant()->idInfo.labelId,wordPos);
+      if(isExternLabel(mLabel))
+        handleError("cannot assign values to extern types",ERROR_SYNTAX,wordPos);
       ScopeNode * prevId;
-      int r=getIdentifier(state->namespaceInfo/*name-space is still the same*/,getLabelName(peekConstant()->idInfo.labelId),&prevId);
+      int r=getIdentifier(state->namespaceInfo/*name-space is still the same*/,mLabel.label,&prevId);
       if(r!=0)
         handleError("error while resolving identifier",r,wordPos);
       //get previous value of type constant

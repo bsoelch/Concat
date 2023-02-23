@@ -158,6 +158,11 @@ int8_t concat_c0 = 65;
 array0 const concat_s1 = {.data=(arrayData0+0),.sizes={39}};
 tuple18 const concat_x = {.e0=1,.e1=1};
 tuple24 const concat_y = {.e0={.e0=1,.e1=1},.e1=2};
+void* concat_stdOut (void);
+void* concat_fopen (array0);
+void concat_fputs (void*, array0);
+void concat_puts (array0);
+void concat_fclose (void*);
 //procedures code
 tuple1 concat_proc0 (int32_t arg0, int32_t arg1){
 concat_doNothing();
@@ -518,4 +523,12 @@ int32_t const tmp118 = (*((local13)+(((int32_t)0))));
 printf("%"PRIi32"\n",tmp118);
 int32_t const tmp119 = (*((local13)+(((int32_t)1000000))));
 printf("%"PRIi32"\n",tmp119);
+int8_t const* const tmp120 = (arrayData2+0);
+concat_puts(((array0){.data=tmp120,.sizes={12}}));
+}
+void concat_puts (array0 arg0){
+void* const tmp121 = concat_stdOut();
+concat_fputs(tmp121,arg0);
+int8_t const* const tmp122 = (arrayData0+31);
+concat_fputs(tmp121,((array0){.data=tmp122,.sizes={1}}));
 }

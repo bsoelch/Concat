@@ -264,6 +264,8 @@ entryPoint:
   dynamicArray print
   dynamicArray 0 [] print
   dynamicArray 1000000 [] print
+
+  "Hello World!" puts
 end
 
 #+ comment 
@@ -278,4 +280,16 @@ A
  string" string =: s1
 1 1 ( i32 i64 ) new =:: x
 1 1 ( i32 i32 ) new 2 ( ( i32 i32 ) i32 ) new =:: y
+
+type : extern _FILE
+_FILE ptr mut =:: FILE
+proc( => FILE ) : extern stdOut
+proc( string => FILE ) : extern fopen
+proc( FILE string => ) : extern fputs
+proc( string : str => ) =: puts
+  stdOut
+    #dup str fputs
+  "\n" fputs
+end
+proc( FILE => ) : extern fclose
  
