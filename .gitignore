@@ -8,4 +8,4 @@ tmp/*
 syntaxHighlighting/update.sh
 concat
 code
-featureMap.txt
+featureMap.concat

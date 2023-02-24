@@ -3,9 +3,9 @@
 <language id="concat" name="Concat" version="2.0" _section="Source">
   <metadata>
     <property name="mimetypes">text/*</property>
-    <property name="globs">*.txt</property>
+    <property name="globs">*.concat</property>
     <property name="line-comment-start">--</property>
-    <property name="suggested-suffix">.txt</property>
+    <property name="suggested-suffix">.concat</property>
   </metadata>
 
   <styles>
