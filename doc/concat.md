@@ -9,7 +9,7 @@ meaning that the arguments of an operator/ an procedure come before the applicat
 
 Example:
 ```
-1 1 ( i32 i32 ) new y =::   ## creates a new tuple of two 32-bit integers and saves it in the automatically typed variable y
+1 1 ( i32 i32 ) new =:: y   ## creates a new tuple of two 32-bit integers and saves it in the automatically typed variable y
 1 1 + 2 *                   ## results in (1+1)*2
 i32 =: x                    ## assigns the result of the previous calculation to a new integer named x
 x x * x =                   ## replaces x with its square
@@ -21,7 +21,7 @@ else .1 x < _if             ## checks if the seconds element of y (still on stac
 end                         ## end the if-statement
 ```
 
-Concat code is a sequence of 'words' separated by any number of white-spaces 
+Concat code is a sequence of 'words' separated by white-spaces
 
 ### string and characters literals
 
