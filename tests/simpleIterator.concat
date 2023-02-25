@@ -1,0 +1,22 @@
+
+proc( string => string i64 ) =: startItr
+  0
+end
+proc( string i64 => string i64 char bool ) =: nextChar
+  =:: i
+  =:: s
+  s
+    i s .length >= if
+      i '\x00'  false return
+    end
+    i 1 +  s i [] true return 
+end
+proc( string i64 i8 => ) =: endItr
+  #drop #drop #drop
+end
+
+entryPoint:
+  "Hello" startItr while nextChar do
+    #+char+# print
+  end endItr
+end

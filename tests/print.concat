@@ -1,0 +1,9 @@
+entryPoint:
+  1 print
+  'A' print
+  0x123456789abcdef print
+  true print
+  "Hello" print
+  0 =:: i
+  i addrOf print
+end

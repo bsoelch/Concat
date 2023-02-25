@@ -1,0 +1,38 @@
+entryPoint:
+  0
+    while true do
+      1 + 
+      #dup 5 > if
+        break
+      end
+    end
+  print
+  0
+    while
+      #dup 5 > if
+        break
+      end
+      true 
+    do
+      1 + 
+    end
+  print
+  0
+    true while do
+      1 + 
+      #dup 5 < if
+        true continue
+      end
+      false
+    end
+  print
+  0
+    while 
+      1 + 
+      #dup 5 < if
+        continue
+      end
+      false
+    do end
+  print
+end

@@ -1,0 +1,6 @@
+struct( i32 : i i8 : c ) type =: aStruct
+
+entryPoint:
+  0 'A' aStruct new =:: struct 
+  struct .i struct .c + print
+end

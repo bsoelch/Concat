@@ -1,0 +1,23 @@
+
+proc( i32 3 array ptr : in  i64 2 3 array : multi => ) =: arrayTest
+  i32 3 array ptr : a
+  i64 2 4 6 8 10 array : b
+  i32 ptr 2 array ptr mut : c
+  i32 array array : d
+  in .length print
+  multi .size 0 [] print
+  in in 0 [] [] print 
+end
+  
+entryPoint:
+  i32 3 array new =:: anArray
+  anArray addrOf  i64 2 3 array new arrayTest
+  
+  ( i32 i64 ) 2 array new =:: mut tupleArray
+  1 tupleArray 0 [] .0 =
+  
+  i32 2 3 array new =:: mut matrix
+  -14121 matrix 2 1 [] = ##  0 1  2 3  4 5
+  matrix i32 ptr cast 5 [] print
+
+end

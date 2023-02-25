@@ -161,6 +161,7 @@ typedef enum{
   OP_NEW,
   OP_CAST,
   OP_ADDR_OF,// (pointer to given value)
+  OP_ADDR_OF_ARRAY,
   
   OP_BINARY_OPERATOR, 
   OP_UNARY_OPERATOR,  
@@ -204,6 +205,7 @@ char const* opName(OpType type){
     case OP_NEW:return "OP_NEW";
     case OP_CAST:return "OP_CAST";
     case OP_ADDR_OF:return "OP_ADDR_OF";
+    case OP_ADDR_OF_ARRAY:return "OP_ADDR_OF_ARRAY";
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
     case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
     case OP_MODIFY_STACK:return "OP_MODIFY_STACK";
@@ -315,6 +317,7 @@ typedef enum{
   TYPECLASS_STRUCT,
   TYPECLASS_ENUM,
   TYPECLASS_ENUM_LABEL,
+  TYPECLASS_NAMED_ENUM_LABEL,//named-type containing enum that should be interpreted as enum-label
   TYPECLASS_ARRAY,
   TYPECLASS_ARRAY_VIEW,
 }TypeClass;
@@ -425,7 +428,7 @@ int32_t declaredMultiTypeCount=0;
 void declareMultiType(TypeId id){
   if(declaredMultiTypeCount>=MAX_TYPES){
     fputs("exceeded maximum number of allowed multi-types",stderr);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   declaredMultiTypes[declaredMultiTypeCount++]=id;
 }
@@ -477,9 +480,18 @@ bool isInteger(PrimitiveType t){
 }
 
 bool isNamedType(TypeId type){
-  return type.class==TYPECLASS_NAMED_TYPE;
+  return type.class==TYPECLASS_NAMED_TYPE||type.class==TYPECLASS_NAMED_ENUM_LABEL;
 }
 TypeId unwrapNamedType(TypeId type){
+  if(type.class==TYPECLASS_NAMED_ENUM_LABEL){
+    TypeId enumID=namedTypes[type.dataAs.id].type;
+    if(enumID.class!=TYPECLASS_ENUM){
+      fputs("type in named-label has to be enum",stderr);
+      exit(EXIT_FAILURE);
+    }
+    enumID.class=TYPECLASS_ENUM_LABEL;
+    return enumID;
+  }
   if(isNamedType(type))
     return namedTypes[type.dataAs.id].type;
   return type;
@@ -571,6 +583,7 @@ bool isComposite(TypeId type){
     case TYPECLASS_POINTER:
     case TYPECLASS_PROCEDURE:
     case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL:
     case TYPECLASS_AUTO_TYPE:
     case TYPECLASS_GENERIC_TYPE:
     case TYPECLASS_ARRAY:
@@ -670,6 +683,7 @@ bool makeMutable(TypeId* t){
     case TYPECLASS_PROC_OUT:
     case TYPECLASS_PROCEDURE:
     case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL:
     case TYPECLASS_AUTO_TYPE:
     case TYPECLASS_GENERIC_TYPE:
     case TYPECLASS_ENUM_LABEL:
@@ -683,25 +697,34 @@ bool asArrayView(TypeId* anArray){
   anArray->class=TYPECLASS_ARRAY_VIEW;
   return false;
 }
+void printTypeName(TypeId,FILE*);
 bool changeEnumType(TypeId* anEnum,bool isLabel){
   TypeId enumType=unwrapNamedType(*anEnum);
   if(enumType.class!=TYPECLASS_ENUM&&enumType.class!=TYPECLASS_ENUM_LABEL)
     return true;
-  if((enumType.class==TYPECLASS_ENUM_LABEL)!=isLabel){
-    enumType.class=isLabel?TYPECLASS_ENUM_LABEL:TYPECLASS_ENUM;
-    *anEnum=enumType;
+  if((enumType.class==TYPECLASS_ENUM_LABEL)==isLabel)
+    return false;//nothing to change
+  if(isNamedType(*anEnum)){
+    anEnum->class=isLabel?TYPECLASS_NAMED_ENUM_LABEL:TYPECLASS_NAMED_TYPE;
+    return false;
   }
+  enumType.class=isLabel?TYPECLASS_ENUM_LABEL:TYPECLASS_ENUM;
+  *anEnum=enumType;
   return false;
 }
-
 
 TypeId primitiveType(PrimitiveType id){
   return (TypeId){.class=TYPECLASS_PRIMITIVE,.dataAs.primitive=id};
 }
 TypeId newNamedType(LabelId label,TypeId content){
+  TypeClass mClass=TYPECLASS_NAMED_TYPE;
+  if(content.class==TYPECLASS_ENUM_LABEL){
+    mClass=TYPECLASS_NAMED_ENUM_LABEL;
+    content.class=TYPECLASS_ENUM;
+  }
   //TODO ensure cap
   namedTypes[namedTypeCount]=(NamedType){.name=label,.type=content};
-  return (TypeId){.class=TYPECLASS_NAMED_TYPE,.dataAs.id=namedTypeCount++};
+  return (TypeId){.class=mClass,.dataAs.id=namedTypeCount++};
 }
 TypeId newAutoType(int32_t id){
   return (TypeId){.class=TYPECLASS_AUTO_TYPE,.dataAs.id=id};
@@ -973,6 +996,7 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
       return arrayType(true,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
         arrayTypes[type.dataAs.id].dims,arrayTypes[type.dataAs.id].sizes,arrayTypes[type.dataAs.id].isMutable);
     case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL://TODO don't create new named type
       return newNamedType(namedTypes[type.dataAs.id].name,replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count));
     case TYPECLASS_TUPLE:
     case TYPECLASS_PROC_IN:
@@ -1016,6 +1040,8 @@ char const* typeClassName(TypeClass cls){
       return "procedure";
     case TYPECLASS_NAMED_TYPE:
       return "named type";
+    case TYPECLASS_NAMED_ENUM_LABEL:
+      return "named enum label";
     case TYPECLASS_AUTO_TYPE:
       return "auto";
     case TYPECLASS_GENERIC_TYPE:
@@ -1066,6 +1092,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       printTypeFlags(type,file);
       return;
     case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL:
       fprintf(file,"namedType \"%"PRI_STR"\"",PRI_STR_ARGS(getLabelName(namedTypes[type.dataAs.id].name)));
       if(!noRecurse){
         fputs(" [ ",file);
@@ -1175,7 +1202,8 @@ char const* primitiveNameC(PrimitiveType t){
 }
 void printTypeNameC(TypeId type,FILE* file){
   switch(type.class){
-    case TYPECLASS_NAMED_TYPE://pointer to opaque type -> void pointer
+    case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL:
       printTypeNameC(unwrapNamedType(type),file);
       return;
     case TYPECLASS_AUTO_TYPE:
@@ -1643,7 +1671,7 @@ void startNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
 void importNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
   NamespaceId uSpaceId=findNamespace(0,label);
   if(uSpaceId==NAMESPACE_ID_NONE){
-    fprintf(stderr,"namespace '%"PRI_STR"' does not exist\n",PRI_STR_ARGS(label));
+    fprintf(stderr,"namespace \"%"PRI_STR"\" does not exist\n",PRI_STR_ARGS(label));
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   NamespaceImportId importId=namespaceImportId(namespace->namespaceImports,uSpaceId);
@@ -1802,8 +1830,8 @@ ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeI
   if(node==NULL)
     handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
   if(*node!=NULL){
-    fprintf(stderr,"re-declaration of %s '%"PRI_STR"'\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
-    fprintf(stderr,"previous declaration: %s '%"PRI_STR"' at ",idNames[(*node)->idType],PRI_STR_ARGS((*node)->key));
+    fprintf(stderr,"re-declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
+    fprintf(stderr,"previous declaration: %s \"%"PRI_STR"\" at ",idNames[(*node)->idType],PRI_STR_ARGS((*node)->key));
     printFilePosition(label((*node)->labelId,pos).declaredAt,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,mLabel.declaredAt);
@@ -1811,8 +1839,8 @@ ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeI
   ScopeNode* shaddow;
   getIdentifier(namespace,mLabel.label,&shaddow);
   if(shaddow!=NULL){
-    fprintf(stderr,"Warning:\n  declaration of %s '%"PRI_STR"'\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
-    fprintf(stderr,"  shadows previous declaration: %s '%"PRI_STR"' at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
+    fprintf(stderr,"Warning:\n  declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
+    fprintf(stderr,"  shadows previous declaration: %s \"%"PRI_STR"\" at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
     printFilePosition(label(shaddow->labelId,pos).declaredAt,stderr);
     fputs("\n",stderr);
     handleWarning(NULL,ERROR_SYNTAX,mLabel.declaredAt);
@@ -1903,7 +1931,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
 
 size_t tupleElementAccess(FILE* target,int32_t depth,Operation const* op,size_t opCount,bool isPtr){
   if(depth<0||opCount<(size_t)depth)
-    handleError(NULL,ERROR_MEMORY,op->filePos);
+    handleError("invalid depth for tuple element access",ERROR_MEMORY,op->filePos);
   size_t size=0;
   for(int32_t i=0;i<depth;i++){
     if(((op+size)->opType!=OP_GET&&(op+size)->opType!=OP_SET)||(op+size)->dataAs.idInfo.type!=ID_TUPLE_ELEMENT){
@@ -1947,7 +1975,7 @@ TypeId staticArgType(StaticArgType argType){
 void printProcArgumentTypesC(ProcedureType const* proc,FILE* target,bool printArgNames){
   if(!isProcInType(proc->inType)){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(proc->inType.class));
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   bool hasArgs=false;
   for(int32_t i=0;i<proc->staticArgsCount;i++){
@@ -2469,6 +2497,10 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       fputs(")",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
+      return size;
+    case OP_ADDR_OF_ARRAY:
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);
+      fputs(".data",target);
       return size;
     case OP_ADDR_OF:
       fputs("&(",target);
@@ -3333,7 +3365,7 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
   }
   if(wordType==WORD_TYPE_CHAR){
     if(word.length!=1){//TODO? handle Unicode characters
-      fprintf(stderr,"character literal '%"PRI_STR"' contains more that one character\n",PRI_STR_ARGS(word));
+      fprintf(stderr,"character literal \"%"PRI_STR"\" contains more that one character\n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_SYNTAX,wordPos);
     }
     pushIntConstant(CONSTANT_CHAR,charAt(word,0),wordPos);
@@ -3411,7 +3443,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       continue;
     }
     if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
-      fprintf(stderr,"unknown type name '%"PRI_STR"' \n",PRI_STR_ARGS(word));
+      fprintf(stderr,"unknown type name \"%"PRI_STR"\" \n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
       return;
     }
@@ -3430,7 +3462,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
     for(LabelId i=labelOffset+1;i<labelBufferCount;i++){
       for(LabelId j=labelOffset;j<i;j++){
         if(stringCompare(getLabelName(i),getLabelName(j))==0){
-          fprintf(stderr,"duplicate label '%"PRI_STR"' in %s \n",PRI_STR_ARGS(getLabelName(i)),typeClassName(typeClass));
+          fprintf(stderr,"duplicate label \"%"PRI_STR"\" in %s \n",PRI_STR_ARGS(getLabelName(i)),typeClassName(typeClass));
           fputs("  previous declaration at ",stderr);
           printFilePosition(label(j,codeFile->wordStart).declaredAt,stderr);
           fputs("\n",stderr);
@@ -3568,7 +3600,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
 
 void requireCompileTimeTypes(String* opName,TypeId* typeOut,size_t nTypes,FilePosition pos){
   if(bufferedConstants<nTypes){
-    fprintf(stderr,"not enough type arguments for operation '%"PRI_STR"' need %zu got %zu\n",PRI_STR_ARGS(*opName),nTypes,bufferedConstants);
+    fprintf(stderr,"not enough type arguments for operation \"%"PRI_STR"\" need %zu got %zu\n",PRI_STR_ARGS(*opName),nTypes,bufferedConstants);
     handleError(NULL,ERROR_SYNTAX,pos);
     return;
   }
@@ -3652,7 +3684,7 @@ void storeConstants(ParserState* state){
 }
 void pushOperation(ParserState* state,Operation op){
   if(ensureOpCap(&state->parsedOps,&state->parsedOpCap,state->parsedOpCount+bufferedConstants+16)){
-    handleError(NULL,ERROR_MEMORY,op.filePos);
+    handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
   }
   if(bufferedConstants>0){
     storeConstants(state);
@@ -3780,7 +3812,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(!isEnumType(type)||((index=findLabel(getTypeElementLabel(type,0)/*type labels are array starting at 1st label*/,getTypeElementCount(type),&word))==-1)){
       fputs("type ",stderr);
       printTypeName(type,stderr);
-      fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(word));
+      fprintf(stderr," does not have a field \"%"PRI_STR"\"\n",PRI_STR_ARGS(word));
       handleError(NULL,ERROR_TYPE,wordPos);
     }
     if(changeEnumType(&type,true))//change type-class to enum-label
@@ -3798,7 +3830,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(args.tail.length>0){
         IntOrErrorCode p=parseInt(args.tail,10);
         if(p.isError||p.as.i64<=0){
-          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got \"%"PRI_STR"\"\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
           handleError(NULL,ERROR_SYNTAX,wordPos);
         }
         count=p.as.i64;
@@ -3810,7 +3842,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(args.tail.length>0){
         IntOrErrorCode p=parseInt(args.tail,10);
         if(p.isError||p.as.i64<=0){
-          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got \"%"PRI_STR"\"\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
           handleError(NULL,ERROR_SYNTAX,wordPos);
         }
         count=p.as.i64;
@@ -3835,7 +3867,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(wordType!=WORD_TYPE_IDENTIFIER)
         handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
       if(word.length==0||charAt(word,0)=='#'||containsChar(word,'.')){
-        fprintf(stderr,"'%"PRI_STR"' is not a valid namespace name",PRI_STR_ARGS(word));
+        fprintf(stderr,"\"%"PRI_STR"\" is not a valid namespace name",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
       startNamespace(&state->namespaceInfo,word,wordPos);
@@ -3861,7 +3893,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(args.tail.length>0){
         IntOrErrorCode p=parseInt(args.tail,10);
         if(p.isError||p.as.i64<=0){
-          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got \"%"PRI_STR"\"\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
           handleError(NULL,ERROR_SYNTAX,wordPos);
         }
         count=p.as.i64;
@@ -3873,7 +3905,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(args.tail.length>0){
         IntOrErrorCode p=parseInt(args.tail,10);
         if(p.isError||p.as.i64<=0){
-          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got \"%"PRI_STR"\"\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
           handleError(NULL,ERROR_SYNTAX,wordPos);
         }
         count=p.as.i64;
@@ -3885,7 +3917,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(args.tail.length>0){
         IntOrErrorCode p=parseInt(args.tail,10);
         if(p.isError||p.as.i64<=0){
-          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got '%"PRI_STR"'\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got \"%"PRI_STR"\"\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
           handleError(NULL,ERROR_SYNTAX,wordPos);
         }
         count=p.as.i64;
@@ -3907,7 +3939,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError("error while resolving identifier",r,wordPos);
       if(r==0){//found identifier TODO print shadowed matches
         puts("-----------------");
-        printf("identifier '%"PRI_STR"':\n",PRI_STR_ARGS(varName.label));
+        printf("identifier \"%"PRI_STR"\":\n",PRI_STR_ARGS(varName.label));
         fputs("  ",stdout);
         Label mLabel=label(asIdentifier->labelId,wordPos);
         if(isMutableLabel(mLabel))
@@ -3924,11 +3956,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         puts("-----------------");
         return;
       }
-      fprintf(stderr,"could not find identifier '%"PRI_STR"'\n",PRI_STR_ARGS(varName.label));
+      fprintf(stderr,"could not find identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(varName.label));
       //TODO resolve global identifiers with later declarations pre-declared types identifiers
       return;
     }
-    fprintf(stderr,"unknown compile time operation '%"PRI_STR"'\n",PRI_STR_ARGS(word));
+    fprintf(stderr,"unknown compile time operation \"%"PRI_STR"\"\n",PRI_STR_ARGS(word));
     handleError(NULL,ERROR_SYNTAX,wordPos);
   }
   if(wordEquals(&word,"true")){
@@ -4012,7 +4044,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
     }
     ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
-    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,
+      .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"=")){
     if(bufferedConstants>0){
@@ -4213,8 +4246,8 @@ Program compileToOps(CodeFile* codeFile){
   size_t opsCap=256;
   Operation* parsedOps=malloc(opsCap*sizeof(Operation));
   if(parsedOps==NULL){
-    handleError(NULL,ERROR_MEMORY,codeFile->currentPos);
-    exit(ERROR_MEMORY);
+    handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
+    exit(EXIT_FAILURE);
   }
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   openScope(BLOCK_UNKNOWN,namespaceInfo);
@@ -4664,7 +4697,7 @@ void storeStackValues(TypeCheckState* state,StackState* stackState,StackState* e
     stackState->ops=typeCount==0?NULL:malloc((typeCount)*sizeof(Operation));
   }
   if(typeCount>0&&(stackState->types==NULL||stackState->ops==NULL)){
-      handleError(NULL,ERROR_MEMORY,pos);
+      handleError("allocation of stack-state failed",ERROR_MEMORY,pos);
   }
   if(!initStackState){
     if(typeCount!=expectedState->typeCount){
@@ -5270,7 +5303,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
   ScopeNode* asIdentifier;
   int r=getIdentifier(op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier);
   if(r!=0){
-    fprintf(stderr," unknown identifier '%"PRI_STR"'\n",PRI_STR_ARGS(mLabel));
+    fprintf(stderr," unknown identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(mLabel));
     handleError(NULL,r,op->filePos);
   }
   if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
@@ -5533,7 +5566,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       if(isArrayType(structType)){
         if(op.opType==OP_SET_LABEL){
           printTypeName(structType,stderr);
-          fprintf(stderr," does not have a writable field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
+          fprintf(stderr," does not have a writable field \"%"PRI_STR"\"\n",PRI_STR_ARGS(op.dataAs.string));
           handleError(NULL,ERROR_SYNTAX,op.filePos);
         }
         if(wordEquals(&op.dataAs.string,"length")){
@@ -5569,7 +5602,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           return;
         }
         printTypeName(structType,stderr);
-        fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
+        fprintf(stderr," does not have a field \"%"PRI_STR"\"\n",PRI_STR_ARGS(op.dataAs.string));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(!typeElementsLabeled(structType)){
@@ -5581,7 +5614,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       LabelId labelIndex=findLabel(mStruct->labelOffset,mStruct->typeCount,&op.dataAs.string);
       if(labelIndex==-1){
         printTypeName(structType,stderr);
-        fprintf(stderr," does not have a field '%"PRI_STR"'\n",PRI_STR_ARGS(op.dataAs.string));
+        fprintf(stderr," does not have a field \"%"PRI_STR"\"\n",PRI_STR_ARGS(op.dataAs.string));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       if(isTupleType(structType)){
@@ -5591,7 +5624,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         return;
       }
       if(typeEquals(mStruct->types[labelIndex],TYPE_UNDEFINED)){
-        fprintf(stderr,"'%"PRI_STR"' in ",PRI_STR_ARGS(op.dataAs.string));
+        fprintf(stderr,"\"%"PRI_STR"\" in ",PRI_STR_ARGS(op.dataAs.string));
         printTypeName(structType,stderr);
         fputs(" does not hold a value\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
@@ -5725,7 +5758,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           //block id will be ignored
           blockInfo=(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockId=-1,.blockDataAs={.procBlock={.returnType=procTypeData(op.dataType)->outType}}};
           if(pushBlock(state,blockInfo))
-            handleError(NULL,ERROR_MEMORY,op.filePos);
+            handleError("could not push procedure block",ERROR_MEMORY,op.filePos);
           pushCompiledOperation(state,op);
           pushProcArgs(state,op.dataType,op.filePos);
           return;
@@ -5850,7 +5883,11 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       if(isProcedureType(state->typeStack[offset].type)){//don't use array for function pointers
         op.dataType=pointerType(state->typeStack[offset].type,state->typeStack[offset].isWritable);
-      }else{//XXX get address of fixed-sized array type as array-view
+      }else if(isArrayType(state->typeStack[offset].type)&&!isArrayViewType(state->typeStack[offset].type)){//get address of fixed-sized array type as array-view
+        ArrayType const* arrayData=arrayTypeData(state->typeStack[offset].type);
+        op.dataType=arrayType(true,getBaseType(state->typeStack[offset].type),arrayData->dims,arrayData->sizes,state->typeStack[offset].isWritable);
+        op.opType=OP_ADDR_OF_ARRAY;
+      }else{
         op.dataType=arrayType(true,state->typeStack[offset].type,1,(int64_t[]){1},state->typeStack[offset].isWritable);
       }
       //store result in temp variable
@@ -5884,12 +5921,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             ifBlock->inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
             ifBlock->inStack.ops=malloc((ifBlock->inStack.opCount)*sizeof(Operation));
             if(ifBlock->inStack.types==NULL||ifBlock->inStack.ops==NULL)
-              handleError(NULL,ERROR_MEMORY,op.filePos);
+              handleError("ifBlock->inStack allocation failed",ERROR_MEMORY,op.filePos);
             memcpy(ifBlock->inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
             memcpy(ifBlock->inStack.ops,state->opStack,(ifBlock->inStack.opCount)*sizeof(Operation));
           }
           if(pushBlock(state,blockInfo))
-            handleError(NULL,ERROR_MEMORY,op.filePos);
+            handleError("could not push if-block",ERROR_MEMORY,op.filePos);
           
           op.dataType=TYPE_BOOL;
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
@@ -5938,11 +5975,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             ifBlock->inStack.typeCount=state->typeCount-1;
             if(ifBlock->inStack.opCount<state->opStackCount-state->typeStack[state->typeCount-1].opCount){
               //if allocation fails program will be terminated -> can directly assign result of realloc
-              ifBlock->inStack.types=realloc(ifBlock->inStack.types,(state->opStackCount-state->typeStack[state->typeCount-1].opCount)*sizeof(TypeInfo));
+              ifBlock->inStack.ops=realloc(ifBlock->inStack.ops,(state->opStackCount-state->typeStack[state->typeCount-1].opCount)*sizeof(Operation));
             }
             ifBlock->inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
-            if(ifBlock->inStack.types==NULL||ifBlock->inStack.ops==NULL)
-              handleError(NULL,ERROR_MEMORY,op.filePos);
+            if(ifBlock->inStack.types==NULL||ifBlock->inStack.ops==NULL){
+              handleError("ifBlock->inStack allocation failed",ERROR_MEMORY,op.filePos);
+            }
             memcpy(ifBlock->inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
             memcpy(ifBlock->inStack.ops,state->opStack,(ifBlock->inStack.opCount)*sizeof(Operation));
           }else{
@@ -6073,7 +6111,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             switchBlock->inStack.types=malloc((state->typeCount-1)*sizeof(TypeInfo));
             switchBlock->inStack.ops=malloc((switchBlock->inStack.opCount)*sizeof(Operation));
             if(switchBlock->inStack.types==NULL||switchBlock->inStack.ops==NULL)
-              handleError(NULL,ERROR_MEMORY,op.filePos);
+              handleError("switchBlock->inStack allocation failed",ERROR_MEMORY,op.filePos);
             memcpy(switchBlock->inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
             memcpy(switchBlock->inStack.ops,state->opStack,(switchBlock->inStack.opCount)*sizeof(Operation));
           }
@@ -6093,7 +6131,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           switchBlock->switchType=op.dataType;
           if(pushBlock(state,blockInfo))
-            handleError(NULL,ERROR_MEMORY,op.filePos);
+            handleError("could not push switch-block",ERROR_MEMORY,op.filePos);
           requireTypes("switch-condition",state,&op.dataType,1,op.filePos);
           extractCompositeOps(state,1,false);
           op.dataAs.block.id=blockInfo.blockId;
@@ -6308,6 +6346,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_IDENTIFIER:
     case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
+    case OP_ADDR_OF_ARRAY:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op.opType));
       handleError(NULL,ERROR_SYNTAX,op.filePos);
     //compile time ops
@@ -6396,7 +6435,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,};
   if(state.globalOperations==NULL||state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
     freeContents(&state);
-    handleError(NULL,ERROR_MEMORY,src->currentPos);
+    handleError("allocation of type-check state failed",ERROR_MEMORY,src->currentPos);
   }
   while(state.index<prog->opCount){
     typeCheckOperation(prog->ops[state.index++],&state);
@@ -6550,7 +6589,7 @@ int main(int argc,char** argv){
 	code = malloc((size+1)*sizeof(char));//will be freed when the program exits
 	if(code==NULL){
 		printf("Memory Error\n");
-		return ERROR_MEMORY;
+		return EXIT_FAILURE;
 	}
 	codeSize=fread(code,sizeof(char),size,file);//TODO perform multiple reads if necessary
 	if(codeSize<0){
@@ -6566,7 +6605,7 @@ int main(int argc,char** argv){
 	  .wordStart={.fileName=srcFile,.line=1,.posInLine=1}};
 	Program p=compileToOps(&codeFile);
 	if(p.ops==NULL)
-	  return ERROR_SYNTAX;
+	  return EXIT_FAILURE;
 	if(!quietMode)
     printf("found %zu operations\n",p.opCount);
   //2. save intermediate representation

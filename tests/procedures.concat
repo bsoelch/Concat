@@ -1,0 +1,19 @@
+proc( i32 : a i32 : b => i32 i32 ) =: proc0
+  doNothing
+  b a return
+end
+proc( i32 : x i32 : y => ) =: argTest
+end
+proc( => ) =: doNothing
+  return
+end 
+
+entryPoint:
+  proc0 addrOf =:: fct
+  1 2 fct () print print
+  1 2 proc0  ( i64 i64 ) new =:: mut tmp
+  tmp .1  tmp .0 =
+  doNothing
+  tmp .1 print
+
+end

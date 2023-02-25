@@ -1,0 +1,26 @@
+#namespace mut
+  #namespace subspace
+   1 i32 =: spaceVar
+  #end
+  0 i32 =: spaceVar
+#end
+#namespace i32
+  #using mut
+  #using mut.subspace
+#end
+proc( => ) =: spaceTest
+  #using mut
+  spaceVar print
+  #using mut.subspace
+  spaceVar print
+  subspace.subspaceVar print
+end
+#namespace mut
+  #namespace subspace
+    2 i64 =: subspaceVar
+  #end
+#end
+
+entryPoint:
+  spaceTest
+end
