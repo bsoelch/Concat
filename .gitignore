@@ -9,3 +9,7 @@ syntaxHighlighting/update.sh
 concat
 code
 featureMap.concat
+tests/*.c
+tests/*.in
+tests/*.out
+tests/*.err

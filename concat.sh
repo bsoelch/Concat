@@ -13,7 +13,7 @@ echo "-----------------------------------------"
 gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
   echo "compile program"
   echo "-----------------------------------------"
-  $compilerTarget $codeSrc $codeCTarget
+  $compilerTarget "$codeSrc" -o "$codeCTarget" -W -p "./parser.out" -t "./typeCheck.out"
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"

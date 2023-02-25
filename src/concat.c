@@ -2090,7 +2090,8 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       handleError("type information is not accessible at runtime",ERROR_SYNTAX,op->filePos);
       break;
   }
-  fprintf(stderr,"unexpected operation for %s %s \n",opName(op->opType),idNames[op->dataAs.idInfo.type]);
+  fputs("unexpected operation for get value:\n",stderr);
+  printOperation(*op,stderr);
   handleError(NULL,ERROR_UNIMPLEMENTED,op->filePos);
   return size;
 }
@@ -3838,14 +3839,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
       startNamespace(&state->namespaceInfo,word,wordPos);
-      printf("opened namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
       return;
     }else if(wordEquals(&word,"using")){
       word=nextWord(codeFile,&wordType);
       wordPos=codeFile->wordStart;
       if(wordType!=WORD_TYPE_IDENTIFIER)
         handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      printf("using namespace %"PRI_STR"\n",PRI_STR_ARGS(word));//DEBUG
       importNamespace(&state->namespaceInfo,word,wordPos);
       return;
     }else if(wordEquals(&word,"end")){
@@ -3854,7 +3853,6 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
       endCompileTimeBlock(&state->namespaceInfo,wordPos);
-      printf("closed namespace\n");//DEBUG
       return;
     }
     //compiler commands
@@ -4227,7 +4225,8 @@ Program compileToOps(CodeFile* codeFile){
   while(codeFile->codeSize>0){
     readOperation(&state,codeFile);
   }
-  return (Program){.ops=state.parsedOps,.opCount=state.parsedOpCount,.globalOps=NULL,.globalScope=scopeBuffer,.hasEntryPoint=state.entryPointIndex!=-1,.predeclaredTypes=state.predeclaredTypes};
+  return (Program){.ops=state.parsedOps,.opCount=state.parsedOpCount,.globalOps=NULL,.globalScope=scopeBuffer,
+    .hasEntryPoint=state.entryPointIndex!=-1,.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(char const* exprName,TypeId expected,TypeId got){
@@ -4906,7 +4905,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     inTypes=compositeTypeData(replaceGenericTypes(procType->inType,procType->staticArgs,argValues,procType->staticArgsCount));
     outTypes=compositeTypeData(replaceGenericTypes(procType->outType,procType->staticArgs,argValues,procType->staticArgsCount));
   }
-  int32_t tmpId;
+  int32_t tmpId=-1;
   if(outTypes->typeCount!=0){//store non-void return in temp variable
     tmpId=state->tmpCount++;
     pushCompiledOperation(state,opDeclareIntermediate(outTypes->typeCount==1?(outTypes->types[0]):procType->outType,tmpId,op->filePos));
@@ -6437,37 +6436,114 @@ long int fsize(FILE *fp){
 }
 
 char const* path;
-char const* srcFile;
-char const* targetFile;
+char const* srcFile=NULL;
+char const* outFile=NULL;
+char const* parserTokensFile=NULL;
+char const* compilerTokensFile=NULL;
+bool quietMode=false;
+//returns true if program should terminate
+#define ARGUMENT_NONE 0
+#define ARGUMENT_IN 1
+#define ARGUMENT_OUT 2
+#define ARGUMENT_DUMP_TOKENS_PARSER 3
+#define ARGUMENT_DUMP_TOKENS_COMPILER 4
+bool parseArgs(char** argv){
+  path=*(argv++);//set path to first element of argv
+  if(*argv==NULL){
+    printf("usage: %s \"inputFile\" [-o \"outputFile\"] \n",path);
+    return true;
+  }
+  int state=ARGUMENT_IN;
+  for(;(*argv!=NULL);argv++){
+    if((*argv)[0]=='-'){
+      if(state==ARGUMENT_OUT||state==ARGUMENT_DUMP_TOKENS_PARSER||state==ARGUMENT_DUMP_TOKENS_COMPILER){
+        printf("expected filename got \"%s\"\n",*argv);
+        return true;
+      }
+      switch((*argv)[1]){
+        case '\0':
+          puts("invalid argument '-'");
+          return true;
+        case 'h':
+          printf("usage: %s \"inputFile\" [-o \"outputFile\"]\n",path);
+          puts("options:");
+          puts("  -h: print help text");
+          puts("  -o \"fileName\": set output file  (default: \"./out.c\")");
+          puts("  -p \"fileName\": dump the parsed tokens to the given file");
+          puts("  -t \"fileName\": dump the compiled tokens to the given file");
+          puts("  -W: treat warnings as errors");
+          puts("  -q: do not print compiler progress");
+          return true;
+        case 'o':
+          state=ARGUMENT_OUT;
+          break;
+        case 'p':
+          state=ARGUMENT_DUMP_TOKENS_PARSER;
+          break;
+        case 't':
+          state=ARGUMENT_DUMP_TOKENS_COMPILER;
+          break;
+        case 'W':
+          allowWarnings=false;
+          break;
+        case 'q':
+          quietMode=true;
+          break;
+        default:
+          printf("unknown compiler option '-%c'\n",(*argv)[1]);
+          return true;
+      }
+      continue;
+    }
+    if(state==ARGUMENT_NONE){
+      printf("expected compiler option got \"%s\"\n",*argv);
+      return true;
+    }
+    if(state==ARGUMENT_IN){
+      srcFile=*argv;
+      state=ARGUMENT_NONE;
+      continue;
+    }
+    if(state==ARGUMENT_OUT){
+      outFile=*argv;
+      state=srcFile==NULL?ARGUMENT_IN:ARGUMENT_NONE;
+      continue;
+    }
+    if(state==ARGUMENT_DUMP_TOKENS_PARSER){
+      parserTokensFile=*argv;
+      state=srcFile==NULL?ARGUMENT_IN:ARGUMENT_NONE;
+      continue;
+    }
+    if(state==ARGUMENT_DUMP_TOKENS_COMPILER){
+      compilerTokensFile=*argv;
+      state=srcFile==NULL?ARGUMENT_IN:ARGUMENT_NONE;
+      continue;
+    }
+  }
+  if(outFile==NULL){//XXX choose output file depending on input file
+    outFile="./out.c"; 
+  }
+  return false;
+}
 int main(int argc,char** argv){
   (void)argc;
+  if(parseArgs(argv))
+    return EXIT_FAILURE;
   char* code;
   int64_t codeSize;
-  path=*(argv++);
-  if(*argv==NULL){
-    printf("usage: %s inputFile\n",path);
-    printf("or     %s inputFile outputFile\n",path);
-    return 0;
-  }
   //initialization of uninitialized global variables 
   if(namespaceTrieInit()){
     fputs("failed to initialize namespace storage",stderr);
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
   //read main source file
-  srcFile=*(argv++);
   FILE *file = fopen(srcFile, "r");
-  if(*argv==NULL){
-    targetFile="./out.c";
-  }else{
-    targetFile=*(argv++);
-  }
 	if(file==NULL){
 	  fprintf(stderr,"IO Error while opening File: %s\n",srcFile);
 		return EXIT_FAILURE;
 	}
 	long int size=fsize(file);
-	if(size<0){//TODO?? recover form undetected fileSize (if seek worked)
+	if(size<0){//XXX? recover form undetected fileSize (if seek worked)
 		fputs("IO Error while detecting file-size\n",stderr);
 		return EXIT_FAILURE;
 	}
@@ -6491,46 +6567,52 @@ int main(int argc,char** argv){
 	Program p=compileToOps(&codeFile);
 	if(p.ops==NULL)
 	  return ERROR_SYNTAX;
-  printf("found %zu operations\n",p.opCount);
+	if(!quietMode)
+    printf("found %zu operations\n",p.opCount);
   //2. save intermediate representation
-  char const* opsFile="./parser.out";
-  FILE* intermediate=fopen(opsFile,"w");
-	if(intermediate==NULL){
-	  fprintf(stderr,"IO Error while opening File: %s\n",opsFile);
-		return EXIT_FAILURE;
-	}
-  for(size_t i=0;i<p.globalCount;i++){
-    printOperation(p.globalOps[i],intermediate);
+  FILE* intermediate;
+  if(parserTokensFile!=NULL){
+    intermediate=fopen(parserTokensFile,"w");
+	  if(intermediate==NULL){
+	    fprintf(stderr,"IO Error while opening File: %s\n",parserTokensFile);
+		  return EXIT_FAILURE;
+	  }
+    for(size_t i=0;i<p.globalCount;i++){
+      printOperation(p.globalOps[i],intermediate);
+    }
+    for(size_t i=0;i<p.opCount;i++){
+      printOperation(p.ops[i],intermediate);
+    }
+    fclose(intermediate);
   }
-  for(size_t i=0;i<p.opCount;i++){
-    printOperation(p.ops[i],intermediate);
-  }
-  fclose(intermediate);
 	//3. type-check operations
   typeCheckProgram(&p,&codeFile);
-  printf("compiled to %zu operations\n",p.globalCount+p.opCount);
+	if(!quietMode)
+    printf("compiled to %zu operations\n",p.globalCount+p.opCount);
   //4. save intermediate representation
-  opsFile="./typeCheck.out";
-  intermediate=fopen(opsFile,"w");
-	if(intermediate==NULL){
-	  fprintf(stderr,"IO Error while opening File: %s\n",opsFile);
-		return EXIT_FAILURE;
-	}
-  for(size_t i=0;i<p.globalCount;i++){
-    printOperation(p.globalOps[i],intermediate);
+  if(compilerTokensFile!=NULL){
+    intermediate=fopen(compilerTokensFile,"w");
+	  if(intermediate==NULL){
+	    fprintf(stderr,"IO Error while opening File: %s\n",compilerTokensFile);
+		  return EXIT_FAILURE;
+	  }
+    for(size_t i=0;i<p.globalCount;i++){
+      printOperation(p.globalOps[i],intermediate);
+    }
+    for(size_t i=0;i<p.opCount;i++){
+      printOperation(p.ops[i],intermediate);
+    }
+    fclose(intermediate);
   }
-  for(size_t i=0;i<p.opCount;i++){
-    printOperation(p.ops[i],intermediate);
-  }
-  fclose(intermediate);
 	//5. compile operations to C
-  FILE* out=fopen(targetFile,"w");
+  FILE* out=fopen(outFile,"w");
 	if(out==NULL){
-	  fprintf(stderr,"IO Error while opening File: %s\n",targetFile);
+	  fprintf(stderr,"IO Error while opening File: %s\n",outFile);
 		return EXIT_FAILURE;
 	}
   compileToC(out,&p);
-  puts("compiled program");
+	if(!quietMode)
+    puts("compiled program");
   fclose(out);
   return EXIT_SUCCESS;
 }

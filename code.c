@@ -14,10 +14,10 @@ typedef struct enum11Impl enum11;
 typedef int32_t enum12;
 typedef struct enum13Impl enum13;
 typedef struct tuple15Impl tuple15;
-typedef struct tuple18Impl tuple18;
+typedef struct tuple16Impl tuple16;
+typedef struct tuple19Impl tuple19;
 typedef struct tuple21Impl tuple21;
-typedef struct tuple23Impl tuple23;
-typedef struct tuple24Impl tuple24;
+typedef struct tuple22Impl tuple22;
 typedef struct array0Impl array0;
 typedef struct array1Impl array1;
 typedef struct array2Impl array2;
@@ -27,7 +27,7 @@ typedef struct array5Impl array5;
 typedef struct array7Impl array7;
 typedef struct array8Impl array8;
 typedef struct array9Impl array9;
-typedef tuple1 (*procPtr11) (int32_t, int32_t);
+typedef tuple1 (*procPtr10) (int32_t, int32_t);
 struct tuple1Impl{
 int32_t e0;
 int32_t e1;
@@ -76,12 +76,12 @@ int64_t e1;
 struct array1Impl{
 int32_t data[3];
 };
-struct tuple18Impl{
+struct tuple16Impl{
 int32_t e0;
 int64_t e1;
 };
 struct array2Impl{
-tuple18 data[2];
+tuple16 data[2];
 };
 struct array3Impl{
 int64_t data[3][2];
@@ -101,7 +101,7 @@ struct array8Impl{
 array7 const* data;
 int64_t sizes[1];
 };
-struct tuple21Impl{
+struct tuple19Impl{
 array0 e0;
 int64_t e1;
 int8_t e2;
@@ -110,11 +110,11 @@ bool e3;
 struct array9Impl{
 int32_t data[3][2];
 };
-struct tuple23Impl{
+struct tuple21Impl{
 int64_t e0;
 int64_t e1;
 };
-struct tuple24Impl{
+struct tuple22Impl{
 tuple1 e0;
 int32_t e1;
 };
@@ -143,7 +143,6 @@ enum11 const concat_e1 = {.label=0,.data={0}};
 enum11 const concat_e2 = {.label=1,.data={0}};
 enum11 const concat_e3 = {.label=2,.data={.e2=2}};
 tuple15 concat_startItr (array0);
-int32_t* concat_allocI32 (int64_t);
 int32_t const concat_subspace_dmut_dspaceVar = 1;
 int32_t const concat_mut_dspaceVar = 0;
 void concat_spaceTest (void);
@@ -151,13 +150,13 @@ int64_t const concat_subspace_dmut_dsubspaceVar = 2;
 void concat_arrayTest (int32_t const*, array2, array3);
 void concat_breakTest (void);
 void concat_switchTest (int32_t, enum11, int8_t, array0);
-tuple21 concat_nextChar (array0, int64_t);
+tuple19 concat_nextChar (array0, int64_t);
 void concat_endItr (array0, int64_t, int8_t);
 array0 const concat_s0 = {.data=(arrayData1+0),.sizes={23}};
 int8_t concat_c0 = 65;
 array0 const concat_s1 = {.data=(arrayData0+0),.sizes={39}};
-tuple18 const concat_x = {.e0=1,.e1=1};
-tuple24 const concat_y = {.e0={.e0=1,.e1=1},.e1=2};
+tuple16 const concat_x = {.e0=1,.e1=1};
+tuple22 const concat_y = {.e0={.e0=1,.e1=1},.e1=2};
 void* concat_alloc (size_t, int64_t);
 void* concat_stdOut (void);
 void* concat_fopen (array0);
@@ -327,18 +326,18 @@ break;
 }
 bool const local0 = tmp30;
 }
-tuple21 concat_nextChar (array0 arg0, int64_t arg1){
+tuple19 concat_nextChar (array0 arg0, int64_t arg1){
 int64_t const local0 = arg1;
 array0 const local1 = arg0;
 int64_t const tmp31 = ((local1).sizes[0]);
 bool const tmp32 = (local0>=tmp31);
 if(tmp32){
-return (tuple21){.e0=local1,.e1=local0,.e2=((int8_t)0),.e3=((bool)0)};
+return (tuple19){.e0=local1,.e1=local0,.e2=((int8_t)0),.e3=((bool)0)};
 }
 int64_t const tmp33 = (local0+((int64_t)1));
 concatInternal_checkArrayBounds(local0,((local1).sizes[0]));
 int8_t const tmp34 = ((local1).data[local0]);
-return (tuple21){.e0=local1,.e1=tmp33,.e2=tmp34,.e3=((bool)1)};
+return (tuple19){.e0=local1,.e1=tmp33,.e2=tmp34,.e3=((bool)1)};
 }
 void concat_endItr (array0 arg0, int64_t arg1, int8_t arg2){
 }
@@ -396,8 +395,8 @@ local7 = tmp57;
 }
 int64_t const tmp58 = concat_anInt();
 printf("%"PRIi64"\n",tmp58);
-procPtr11 const tmp59 = &(concat_proc0);
-procPtr11 const local8 = tmp59;
+procPtr10 const tmp59 = &(concat_proc0);
+procPtr10 const local8 = tmp59;
 tuple1 const tmp60 = (local8)(((int32_t)1),((int32_t)1));
 int32_t const tmp61 = (tmp60).e1;
 printf("%"PRIi32"\n",tmp61);
@@ -422,8 +421,8 @@ local1 = tmp70;
 tuple1 const tmp72 = concat_proc0(((int32_t)1),((int32_t)2));
 int64_t const tmp73 = ((int64_t)(tmp72).e0);
 int64_t const tmp74 = ((int64_t)(tmp72).e1);
-tuple23 const tmp75 = {.e0=tmp73,.e1=tmp74};
-tuple23 local10 = tmp75;
+tuple21 const tmp75 = {.e0=tmp73,.e1=tmp74};
+tuple21 local10 = tmp75;
 int32_t const tmp76 = (++local0);
 printf("%"PRIi32"\n",tmp76);
 local2 = ((int32_t)2);
@@ -436,9 +435,9 @@ printf("%"PRIi32"\n",tmp80);
 (local10).e0 = (local10).e1;
 int64_t* const tmp81 = &((local10).e0);
 printf("%p\n",(void const*)tmp81);
-tuple23* const tmp82 = &(local10);
-tuple23 const* const tmp83 = ((tuple23 const*)tmp82);
-tuple23 const* const local11 = tmp83;
+tuple21* const tmp82 = &(local10);
+tuple21 const* const tmp83 = ((tuple21 const*)tmp82);
+tuple21 const* const local11 = tmp83;
 int64_t const tmp84 = ((local11)+(((int32_t)0)))->e0;
 printf("%"PRIi64"\n",tmp84);
 int8_t const* const tmp85 = (arrayData2+0);
@@ -488,7 +487,7 @@ int8_t tmp106;
 int64_t tmp103 = (tmp102).e1;
 array0 tmp104 = (tmp102).e0;
 do{
-tuple21 const tmp105 = concat_nextChar(tmp104,tmp103);
+tuple19 const tmp105 = concat_nextChar(tmp104,tmp103);
 tmp106 = (tmp105).e2;
 tmp107 = (tmp105).e1;
 tmp108 = (tmp105).e0;
