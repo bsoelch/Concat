@@ -266,9 +266,6 @@ int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName
 bool isMutableLabel(Label label){
   return (label.flags&LABEL_FLAG_MUTABLE)!=0;
 }
-bool isStaticLabel(Label label){
-  return (label.flags&LABEL_FLAG_STATIC)!=0;
-}
 bool isExternLabel(Label label){
   return (label.flags&LABEL_FLAG_EXTERN)!=0;
 }
@@ -276,6 +273,11 @@ bool isMutableLabelId(LabelId labelId){
   if(labelId<0||labelId>=labelBufferCount)
     return false;
   return isMutableLabel(labelBuffer[labelId]);
+}
+bool isStaticLabelId(LabelId labelId){
+  if(labelId<0||labelId>=labelBufferCount)
+    return false;
+  return (labelBuffer[labelId].flags&LABEL_FLAG_STATIC)!=0;
 }
 void printAsciifiedString(String name,FILE* out){
   for(size_t i=0;i<name.length;i++){
@@ -297,6 +299,7 @@ void printAsciifiedString(String name,FILE* out){
   }
 }
 
+
 //types
 typedef enum{
   TYPECLASS_PRIMITIVE=0,
@@ -308,6 +311,7 @@ typedef enum{
   TYPECLASS_PROCEDURE,
   TYPECLASS_NAMED_TYPE,
   TYPECLASS_AUTO_TYPE,
+  TYPECLASS_GENERIC_TYPE,
   TYPECLASS_STRUCT,
   TYPECLASS_ENUM,
   TYPECLASS_ENUM_LABEL,
@@ -340,6 +344,19 @@ bool typeEquals(TypeId a,TypeId b){
    return a.dataAs.id==b.dataAs.id;
 }
 
+typedef enum{
+  STATIC_ARG_NONE,
+  STATIC_ARG_TYPE,
+}StaticArgType;
+typedef struct{
+  LabelId label;
+  union{
+    TypeId type;
+    //XXX? generic ints
+  }as;
+  StaticArgType type;
+}StaticArgument;
+
 typedef struct{
   TypeId target;
   bool isMutable;
@@ -360,6 +377,8 @@ typedef struct{
 typedef struct{
   TypeId inType;
   TypeId outType;
+  StaticArgument* staticArgs;
+  int32_t staticArgsCount;
   int32_t procId;
   bool pointerUsed;
 }ProcedureType;
@@ -553,6 +572,7 @@ bool isComposite(TypeId type){
     case TYPECLASS_PROCEDURE:
     case TYPECLASS_NAMED_TYPE:
     case TYPECLASS_AUTO_TYPE:
+    case TYPECLASS_GENERIC_TYPE:
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
       return false;
@@ -651,6 +671,7 @@ bool makeMutable(TypeId* t){
     case TYPECLASS_PROCEDURE:
     case TYPECLASS_NAMED_TYPE:
     case TYPECLASS_AUTO_TYPE:
+    case TYPECLASS_GENERIC_TYPE:
     case TYPECLASS_ENUM_LABEL:
       return false;
   }
@@ -685,8 +706,11 @@ TypeId newNamedType(LabelId label,TypeId content){
 TypeId newAutoType(int32_t id){
   return (TypeId){.class=TYPECLASS_AUTO_TYPE,.dataAs.id=id};
 }
+TypeId newGenericType(int32_t id){
+  return (TypeId){.class=TYPECLASS_GENERIC_TYPE,.dataAs.id=id};
+}
 int32_t autoTypeId(TypeId autoType){
-  if(autoType.class!=TYPECLASS_AUTO_TYPE)
+  if(autoType.class!=TYPECLASS_AUTO_TYPE&&autoType.class!=TYPECLASS_GENERIC_TYPE)
     return -1;
   return autoType.dataAs.id;
 }
@@ -718,7 +742,7 @@ int64_t indexOfTypeArray(TypeId const* base,size_t baseLen,TypeId const* child,s
   }
   return -1;
 }
-
+//TODO prevent use of incomplete types (generics/opauqe-types/var-size array) as fields
 TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOffset,int32_t eltCount){
   if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
@@ -812,14 +836,19 @@ TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOff
   declareMultiType((TypeId){.class=typeClass,.dataAs.id=compositeTypeCount});
   return (TypeId){.class=typeClass,.dataAs.id=(compositeTypeCount++)};
 }
-TypeId procedureType(TypeId inType,TypeId outType){
+TypeId procedureType(TypeId inType,TypeId outType,StaticArgument* staticArgs,int32_t staticArgsCount){
   if(typeEquals(inType,TYPE_UNDEFINED)||typeEquals(outType,TYPE_UNDEFINED))
     return TYPE_UNDEFINED;
   for(int32_t i=0;i<procTypeCount;i++){
     if(typeEquals(procTypes[i].inType,inType)&&typeEquals(procTypes[i].outType,outType))
       return (TypeId){.class=TYPECLASS_PROCEDURE,.dataAs.id=i};
   }
-  procTypes[procTypeCount]=(ProcedureType){.procId=procTypeCount,.inType=inType,.outType=outType};
+  if(staticArgs!=NULL){
+    StaticArgument* mArgs=malloc(staticArgsCount*sizeof(StaticArgument));
+    memcpy(mArgs,staticArgs,staticArgsCount*sizeof(StaticArgument));
+    staticArgs=mArgs;
+  }
+  procTypes[procTypeCount]=(ProcedureType){.procId=procTypeCount,.inType=inType,.outType=outType,.staticArgsCount=staticArgsCount,.staticArgs=staticArgs};
   return (TypeId){.class=TYPECLASS_PROCEDURE,.dataAs.id=procTypeCount++};
 }
 TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
@@ -838,7 +867,7 @@ TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
   TypeId in=compositeType(TYPECLASS_PROC_IN,getTypeElements(proc->inType),LABEL_ID_UNKNOWN,getTypeElementCount(proc->inType));
   if(typeEquals(in,TYPE_UNDEFINED))
     handleError("unexpected error while allocating type",ERROR_MEMORY,pos);
-  TypeId newProc=procedureType(in,proc->outType);
+  TypeId newProc=procedureType(in,proc->outType,proc->staticArgs,proc->staticArgsCount);
   return isPtr?pointerType(newProc,false):newProc;
 }
 TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool isMutable){
@@ -880,6 +909,95 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool
   return newArray;
 }
 
+void printTypeName(TypeId,FILE*);
+typedef enum{
+  CONSTANT_NONE=0,
+  CONSTANT_INT,
+  CONSTANT_CHAR,
+  CONSTANT_STRING,
+  CONSTANT_TYPE,
+}ConstantType;
+char const* constTypeName(ConstantType type){
+  switch(type){
+    case CONSTANT_NONE:return "none";
+    case CONSTANT_INT:return "int";
+    case CONSTANT_CHAR:return "char";
+    case CONSTANT_STRING:return "string";
+    case CONSTANT_TYPE:return "type";
+  }
+  return "unknown type";
+}
+typedef struct{
+  union{
+    String  string;
+    TypeId type;
+    int64_t charId;
+    int64_t i64;
+  }as;
+  ConstantType type;
+}ConstantValue;
+void printConstValue(ConstantValue constant,FILE* file){
+  switch(constant.type){
+    case CONSTANT_NONE:
+      return;
+    case CONSTANT_INT:
+      fprintf(file,"%"PRIi64,constant.as.i64);
+      return;
+    case CONSTANT_CHAR:
+      fprintf(file,"'%c' (0x%"PRIx64")",(char)constant.as.charId&0xff,constant.as.charId);
+      return;
+    case CONSTANT_STRING:
+      fprintf(file,"\"%"PRI_STR"\"",PRI_STR_ARGS(constant.as.string));
+      return;
+    case CONSTANT_TYPE:
+      printTypeName(constant.as.type,file);
+      return;
+  }
+}
+
+TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* values,int32_t count){//XXX prevent unnecessary recreation of types
+  switch(type.class){
+    case TYPECLASS_PRIMITIVE:
+    case TYPECLASS_AUTO_TYPE:
+      return type;
+    case TYPECLASS_POINTER:
+      return pointerType(replaceGenericTypes(pointerTypes[type.dataAs.id].target,args,values,count),pointerTypes[type.dataAs.id].isMutable);
+    case TYPECLASS_PROCEDURE:
+      return procedureType(replaceGenericTypes(procTypes[type.dataAs.id].inType,args,values,count),
+              replaceGenericTypes(procTypes[type.dataAs.id].outType,args,values,count),
+              procTypes[type.dataAs.id].staticArgs,procTypes[type.dataAs.id].staticArgsCount);
+    case TYPECLASS_ARRAY:
+      return arrayType(false,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
+        arrayTypes[type.dataAs.id].dims,arrayTypes[type.dataAs.id].sizes,arrayTypes[type.dataAs.id].isMutable);
+    case TYPECLASS_ARRAY_VIEW:
+      return arrayType(true,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
+        arrayTypes[type.dataAs.id].dims,arrayTypes[type.dataAs.id].sizes,arrayTypes[type.dataAs.id].isMutable);
+    case TYPECLASS_NAMED_TYPE:
+      return newNamedType(namedTypes[type.dataAs.id].name,replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count));
+    case TYPECLASS_TUPLE:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
+    case TYPECLASS_PROC_OUT:
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_ENUM:
+    case TYPECLASS_ENUM_LABEL:;
+      TypeId* newTypes=malloc(compositeTypes[type.dataAs.id].typeCount*sizeof(TypeId));
+      for(int32_t i=0;i<compositeTypes[type.dataAs.id].typeCount;i++){
+        newTypes[i]=replaceGenericTypes(compositeTypes[type.dataAs.id].types[i],args,values,count);
+      }
+      TypeId res=compositeType(type.class,newTypes,compositeTypes[type.dataAs.id].labelOffset,compositeTypes[type.dataAs.id].typeCount);
+      free(newTypes);//compositeType(...) does not store the given type-array
+      return res;
+    case TYPECLASS_GENERIC_TYPE:
+      for(int32_t i=0;i<count;i++){
+        if(args[i].type==STATIC_ARG_TYPE&&typeEquals(args[i].as.type,type))
+          return values[i].as.type;
+      }
+      return type;
+  }
+  return type;
+}
+
 char const* typeClassName(TypeClass cls){
   switch(cls){
     case TYPECLASS_PRIMITIVE:
@@ -900,6 +1018,8 @@ char const* typeClassName(TypeClass cls){
       return "named type";
     case TYPECLASS_AUTO_TYPE:
       return "auto";
+    case TYPECLASS_GENERIC_TYPE:
+      return "generic";
     case TYPECLASS_STRUCT:
       return "structure";
     case TYPECLASS_ENUM:
@@ -955,7 +1075,8 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       printTypeFlags(type,file);
       return;
     case TYPECLASS_AUTO_TYPE:
-      fprintf(file,"auto (%"PRIi32")",type.dataAs.id);
+    case TYPECLASS_GENERIC_TYPE:
+      fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_POINTER:
@@ -1005,6 +1126,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       }
       fputs("( ",file);
       printTypeNameIntenal(procTypeData(type)->inType,file,true);
+      //TODO static arguments
       fputs(" => ",file);
       printTypeNameIntenal(procTypeData(type)->outType,file,true);
       fputs(" )",file);
@@ -1058,7 +1180,10 @@ void printTypeNameC(TypeId type,FILE* file){
       return;
     case TYPECLASS_AUTO_TYPE:
       fputs("void",file);
-      fputs("auto-types are not supported at compile type",stderr);
+      fputs("auto-types are not supported at compile type\n",stderr);
+      return;
+    case TYPECLASS_GENERIC_TYPE://generic pointer -> void*
+      fputs("void",file);
       return;
     case TYPECLASS_PRIMITIVE:
       fprintf(file,"%s",primitiveNameC(type.dataAs.primitive));
@@ -1539,50 +1664,6 @@ void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
   namespace->namespaceImports=compilerBlocks[compilerBlockCount].prevImports;
 }
 
-typedef enum{
-  CONSTANT_NONE=0,
-  CONSTANT_INT,
-  CONSTANT_CHAR,
-  CONSTANT_STRING,
-  CONSTANT_TYPE,
-}ConstantType;
-char const* constTypeName(ConstantType type){
-  switch(type){
-    case CONSTANT_NONE:return "none";
-    case CONSTANT_INT:return "int";
-    case CONSTANT_CHAR:return "char";
-    case CONSTANT_STRING:return "string";
-    case CONSTANT_TYPE:return "type";
-  }
-  return "unknown type";
-}
-typedef struct{
-  union{
-    String  string;
-    TypeId type;
-    int64_t charId;
-    int64_t i64;
-  }as;
-  ConstantType type;
-}ConstantValue;
-void printConstValue(ConstantValue constant,FILE* file){
-  switch(constant.type){
-    case CONSTANT_NONE:
-      return;
-    case CONSTANT_INT:
-      fprintf(file,"%"PRIi64,constant.as.i64);
-      return;
-    case CONSTANT_CHAR:
-      fprintf(file,"'%c' (0x%"PRIx64")",(char)constant.as.charId&0xff,constant.as.charId);
-      return;
-    case CONSTANT_STRING:
-      fprintf(file,"\"%"PRI_STR"\"",PRI_STR_ARGS(constant.as.string));
-      return;
-    case CONSTANT_TYPE:
-      printTypeName(constant.as.type,file);
-      return;
-  }
-}
 
 #define SCOPE_NODE_CAP 8192
 #define SCOPE_CAP 256
@@ -1854,17 +1935,37 @@ void printGlobalIdentifer(IdentifierInfo id,FilePosition pos,FILE* target){
   }
   printAsciifiedString(mName.label,target);
 }
-void printProcArgumentTypesC(TypeId inType,FILE* target,bool printArgNames){
-  if(!isProcInType(inType)){
-    fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(inType.class));
+TypeId staticArgType(StaticArgType argType){
+  switch(argType){
+    case STATIC_ARG_NONE:
+      return TYPE_UNDEFINED;
+    case STATIC_ARG_TYPE:
+      return TYPE_TYPE;
+  }
+  return TYPE_UNDEFINED;
+}
+void printProcArgumentTypesC(ProcedureType const* proc,FILE* target,bool printArgNames){
+  if(!isProcInType(proc->inType)){
+    fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(proc->inType.class));
     exit(1);
   }
-  CompositeType const* inTypes=compositeTypeData(inType);
-  if(inTypes->typeCount==0)
+  bool hasArgs=false;
+  for(int32_t i=0;i<proc->staticArgsCount;i++){
+    if(hasArgs)
+      fputs(", ",target);
+    hasArgs=true;
+    printTypeNameC(staticArgType(proc->staticArgs[i].type),target);
+    if(printArgNames)
+      fprintf(target," staticArg%"PRIi32,i);
+    
+  }
+  CompositeType const* inTypes=compositeTypeData(proc->inType);
+  if(proc->staticArgsCount+inTypes->typeCount==0)
     fputs("void",target);
   for(int32_t e=0;e<inTypes->typeCount;e++){
-    if(e>0)
+    if(hasArgs)
       fputs(", ",target);
+    hasArgs=true;
     printTypeNameC(inTypes->types[e],target);
     if(printArgNames)
       fprintf(target," arg%"PRIi32,e);
@@ -1875,8 +1976,7 @@ void printProcedureSignatureC(ProcedureType const* procedure,IdentifierInfo proc
   fputs(" ",target);
   printGlobalIdentifer(procId,pos,target);
   fputs(" (",target);
-  TypeId inType=procedure->inType;
-  printProcArgumentTypesC(inType,target,printArgNames);
+  printProcArgumentTypesC(procedure,target,printArgNames);
   fputs(")",target);
 }
 
@@ -2006,9 +2106,17 @@ size_t compileProcArgs(FILE* target,size_t compiledOps,Operation const* op,size_
     handleError(NULL,ERROR_MEMORY,op->filePos);
   }
   fputs("(",target);
-  for(int32_t e=0;e<getTypeElementCount(in);e++){
-    if(e>0)
+  bool hasArgs=false;
+  for(int32_t e=0;e<procTypeData(op->dataType)->staticArgsCount;e++){
+    if(hasArgs)
       fputs(",",target);
+    hasArgs=true;
+    COMPILE_OP_RETURN_ERROR(target,op,opSize);
+  }
+  for(int32_t e=0;e<getTypeElementCount(in);e++){
+    if(hasArgs)
+      fputs(",",target);
+    hasArgs=true;
     COMPILE_OP_RETURN_ERROR(target,op,opSize);
   }
   fputs(")",target);
@@ -2619,7 +2727,7 @@ void compileToC(FILE* target,Program const* p){
       fputs("typedef ",target);
       printTypeNameC(procTypes[i].outType,target);
       fprintf(target," (*procPtr%"PRIi32") (",i);
-      printProcArgumentTypesC(procTypes[i].inType,target,false);
+      printProcArgumentTypesC(&procTypes[i],target,false);
       fputs(");\n",target);
     }
   }
@@ -3067,9 +3175,9 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace
       fprintf(stderr,"%s have to be identifiers\n",labelType);
       handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
     }
-    if(label.length==0){
-      fprintf(stderr,"%s have to be non-empty\n",labelType);
-      handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
+    if(label.length==0){//empty name -> go to next word
+      isModifer=true;//reset is modifier to continue loop
+      continue;
     }
     if(checkLabelFlag(&label,labelType,"mut",LABEL_FLAG_MUTABLE,&labelFalgs,codeFile->wordStart))
       isModifer=true;
@@ -3095,6 +3203,7 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace
 #define CONST_BUFFER_CAP       512
 #define MAX_COMPOSITE_ELEMENTS 128
 #define MAX_ARRAY_DIMS         64
+#define MAX_STATIC_ARGS        128
 typedef struct{
   FilePosition pos;
   ConstantValue value;
@@ -3103,9 +3212,13 @@ typedef struct{
 }Constant;
 size_t bufferedConstants=0;
 Constant constBuffer[CONST_BUFFER_CAP];
+
 TypeId compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
 int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
 int64_t arrayDimsCount=0;
+StaticArgument staticArgsBuffer[MAX_STATIC_ARGS];
+int64_t staticArgsCount=0;
+
 void pushConstant(ConstantValue constValue,FilePosition pos,bool hasId,IdentifierInfo idInfo){
   if(bufferedConstants>=CONST_BUFFER_CAP)
     handleError("constant buffer overflow",ERROR_MEMORY,pos);
@@ -3119,6 +3232,16 @@ void pushStringConstant(String value,FilePosition pos){
 }
 void pushTypeConstant(TypeId type,FilePosition pos){
   pushConstant((ConstantValue){.type=CONSTANT_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
+}
+void addStaticArgs(LabelId label,TypeId type,FilePosition pos){
+  StaticArgument arg;
+  if(!typeEquals(type,TYPE_TYPE)){
+    handleError("static arguments have to be types",ERROR_SYNTAX,pos);
+  }
+  arg=(StaticArgument){.label=label,.type=STATIC_ARG_TYPE,.as.type=newGenericType(staticArgsCount)};
+  //TODO ensure cap
+  staticArgsBuffer[staticArgsCount]=arg;
+  staticArgsCount++;
 }
 Constant const* peekConstant(void){
   if(bufferedConstants==0)
@@ -3149,6 +3272,20 @@ TypeId popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid)
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   return constBuffer[bufferedConstants].value.as.type;
+}
+TypeId peekTypeConstant(FilePosition pos){
+  if(bufferedConstants==0){
+    fputs("missing type\n",stderr);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
+  if(constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
+    fprintf(stderr,"wrong constant type expected type got %s\n",constTypeName(constBuffer[bufferedConstants-1].value.type));
+    fputs(" declared at ",stderr);
+    printFilePosition(constBuffer[bufferedConstants-1].pos,stderr);
+    fputs("\n",stderr);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
+  return constBuffer[bufferedConstants-1].value.as.type;
 }
 int64_t* popArraySize(FilePosition pos){
   arrayDimsCount=0;
@@ -3210,6 +3347,15 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     handleError(NULL,asInt.as.error,wordPos);
   if(word.length==0)
     return true;
+  for(int i=0;i<staticArgsCount;i++){
+    if(stringCompare(getLabelName(staticArgsBuffer[i].label),word)==0){
+      if(staticArgsBuffer[i].type==STATIC_ARG_TYPE){
+        pushTypeConstant(staticArgsBuffer[i].as.type,wordPos);
+        return true;
+      }
+      handleError("unexpected static argument",ERROR_UNIMPLEMENTED,wordPos);
+    }
+  }
   ScopeNode* asIdentifier;
   int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);
   if(r<0){//internal error while reading identifier
@@ -3258,11 +3404,8 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       }
       typesSinceLabel=0;
       LabelId labelId=readLabel(codeFile,"composite type labels",state->namespaceInfo.current,allowedFlags);//label is stored in label buffer
-      Label mLabel=label(labelId,codeFile->wordStart);
-      if(isStaticLabel(mLabel)){
-        handleError("static procedure arguments are not yet supported",ERROR_SYNTAX,codeFile->wordStart);
-        //TODO remember static procedure arguments allow as type-names/array-sizes
-        // static type argument -> "generic-type" can be used as type in return value (generic pointers compile down to void*)
+      if(isStaticLabelId(labelId)){
+        addStaticArgs(labelId,popTypeConstant(codeFile->wordStart,"static argument",false),codeFile->wordStart);//remember static types
       }
       continue;
     }
@@ -3403,7 +3546,8 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     readCompositeType(TYPECLASS_PROC_OUT,codeFile,state,LABEL_TYPE_NONE,")",false);
     TypeId out=popTypeConstant(codeFile->wordStart,"procedure input",false);
     TypeId in=popTypeConstant(codeFile->wordStart,"procedure output",false);
-    pushTypeConstant(procedureType(in,out),codeFile->wordStart);
+    pushTypeConstant(procedureType(in,out,staticArgsBuffer,staticArgsCount),codeFile->wordStart);
+    staticArgsCount=0;
     return true;
   }
   if(wordEquals(&name,"tuple(")||wordEquals(&name,"(")){
@@ -4746,19 +4890,40 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
   //extract operations
   extractCompositeOps(state,argCount+(isPtr?1:0),false);
+  if(procType->staticArgsCount>0){//compile static args
+    ConstantValue* argValues=malloc(procType->staticArgsCount*sizeof(ConstantValue));
+    size_t opOffset=state->opStackCount-(isPtr?state->typeStack[state->typeCount-1].opCount:0);
+    for(int32_t i=procType->staticArgsCount-1;i>=0;i--){
+      opOffset-=state->typeStack[state->typeCount-(i+(isPtr?2:1))].opCount;
+      if(state->opStack[opOffset].opType!=OP_CONSTANT)
+        handleError("static arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
+      if(typeEquals(state->opStack[opOffset].dataType,TYPE_TYPE)){
+        argValues[i]=(ConstantValue){.type=CONSTANT_TYPE,.as.type=state->opStack[opOffset].dataAs.sourceType};
+        continue;
+      }
+      handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
+    }
+    inTypes=compositeTypeData(replaceGenericTypes(procType->inType,procType->staticArgs,argValues,procType->staticArgsCount));
+    outTypes=compositeTypeData(replaceGenericTypes(procType->outType,procType->staticArgs,argValues,procType->staticArgsCount));
+  }
   int32_t tmpId;
   if(outTypes->typeCount!=0){//store non-void return in temp variable
     tmpId=state->tmpCount++;
     pushCompiledOperation(state,opDeclareIntermediate(outTypes->typeCount==1?(outTypes->types[0]):procType->outType,tmpId,op->filePos));
   }
   addCompiledOps(state,*op,isPtr?1:0);
-  size_t offset=state->typeCount-argCount;
+  if(procType->staticArgsCount>0){//compile static args
+    for(int32_t i=procType->staticArgsCount-1;i>=0;i--){
+      addCompiledStackOps(state,*op/*ignored*/,1,false);
+    }
+  }
   requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
+  size_t offset=state->typeCount-inTypes->typeCount;
   for(int32_t i=0;i<inTypes->typeCount;i++){
     totalOps+=state->typeStack[offset+i].opCount;
   }
   //update op-stack
-  addCompiledStackOps(state,*op/*ignored*/,argCount,false);
+  addCompiledStackOps(state,*op/*ignored*/,inTypes->typeCount,false);
   if(outTypes->typeCount==0)
     return;//no need to update stack if called function returns void
   //add values of call

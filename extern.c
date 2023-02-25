@@ -4,9 +4,8 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
-
-int32_t* concat_allocI32 (int64_t count){
-  void* res=malloc(count*sizeof(int32_t));
+void* concat_alloc (size_t size,int64_t count){
+  void* res=malloc(count*size);
   if(res==NULL){
     fputs("malloc failed\n",stderr);
     exit(EXIT_FAILURE);

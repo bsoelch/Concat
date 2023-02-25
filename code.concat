@@ -35,8 +35,6 @@ proc( string => string i64 ) =: startItr
   0
 end
 
-proc( i64 : k => i32 ptr mut ) : extern allocI32
-
 #namespace mut
   #namespace subspace
    1 i32 =: spaceVar
@@ -260,7 +258,7 @@ entryPoint:
   true print 
   'B' c0 =
 
-  1024 1024 * 16 * allocI32 =:: dynamicArray
+  1024 1024 * 16 * i32 alloc i32 ptr mut =: dynamicArray
   dynamicArray print
   dynamicArray 0 [] print
   dynamicArray 1000000 [] print
@@ -281,7 +279,7 @@ A
 1 1 ( i32 i64 ) new =:: x
 1 1 ( i32 i32 ) new 2 ( ( i32 i32 ) i32 ) new =:: y
 
-## proc( type : static T i64 : static k => T k ptr ) =: alloc
+proc( i64 : k  type : static T => T ptr mut ) : extern alloc
 type : extern _FILE
 _FILE ptr mut =:: FILE
 proc( => FILE ) : extern stdOut

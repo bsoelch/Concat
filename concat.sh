@@ -1,7 +1,7 @@
 #!/bin/sh
 compilerSrc=( "./src/concat.c" "./src/strings.c" )
 compilerTarget="./concat"
-codeSrc="./code.txt"
+codeSrc="./code.concat"
 codeCTarget="./code.c"
 codeTarget="./code"
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
