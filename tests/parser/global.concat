@@ -1,0 +1,13 @@
+entryPoint:
+  s1 .length print
+  s1 12 [] print
+  c0 print
+  'B' c0 =  
+  c0 print
+  #find y
+end
+
+'A' char =: mut c0
+"This is a string" string =: s1
+1 1 ( i32 i64 ) new =:: x
+1 1 ( i32 i32 ) new 2 ( ( i32 i32 ) i32 ) new =:: y

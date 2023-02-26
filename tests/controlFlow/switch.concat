@@ -1,4 +1,4 @@
-enum( A B i32 : C i32 ptr : D ) =:: anEnum
+enum( A B i32 : C i8 : D ) =:: anEnum
 
 proc( i32 : i anEnum : e char : c => ) =: switchTest
   i switch
@@ -36,7 +36,6 @@ end
 
 entryPoint:
  0 anEnum .A 'A' switchTest
- 1  0 anEnum .C new  ' ' switchTest
- 0 =:: localInt
- 0xabcdef  localInt addrOf anEnum .D new  '\n' switchTest
+ 1 'A' anEnum .D new  '\n' switchTest
+ 0xabcdef  0x12345678 anEnum .C new  ' ' switchTest
 end

@@ -1,0 +1,24 @@
+"A" =:: s1
+"A string" =:: s2
+
+entryPoint:
+  #find s1
+  s1 s2 == print
+  s3 .length print
+  specialString .length print
+  0 while #dup specialString .length < do
+    specialString #over [] print
+  end #drop
+  multiLine .length print
+  0 while #dup multiLine .length < do
+    multiLine #over [] print
+  end #drop
+end
+
+"string" string =: s3
+"strings can contain other strings as substring" =:: s4
+"\"'\\\u2203\U0001F4BB\t² \x00##" =:: specialString
+"Multi
+ line
+ String" =:: multiLine
+

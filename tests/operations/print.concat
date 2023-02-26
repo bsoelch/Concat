@@ -3,7 +3,7 @@ entryPoint:
   'A' print
   0x123456789abcdef print
   true print
-  "Hello" print
+  "Hello" print ## TODO find a constant address to get reproducable results
   0 =:: i
   i addrOf print
 end

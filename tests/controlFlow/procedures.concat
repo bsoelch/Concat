@@ -11,9 +11,5 @@ end
 entryPoint:
   proc0 addrOf =:: fct
   1 2 fct () print print
-  1 2 proc0  ( i64 i64 ) new =:: mut tmp
-  tmp .1  tmp .0 =
-  doNothing
-  tmp .1 print
-
+  1 2 proc0 doNothing proc0 print print
 end
