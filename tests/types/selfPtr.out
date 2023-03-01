@@ -1,0 +1,6 @@
+-----------------
+identifier "selfPtr":
+  type: type namedType "selfPtr" [ tuple (0) ]
+    at selfPtr.concat:1:8
+-----------------
+true

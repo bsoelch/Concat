@@ -9,5 +9,4 @@ syntaxHighlighting/update.sh
 concat
 code
 featureMap.concat
-tests/*/*
-!tests/*/*.concat
+!tests/*/*.out

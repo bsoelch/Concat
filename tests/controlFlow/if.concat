@@ -15,7 +15,7 @@ entryPoint:
   1 1 + 2 == if 
     1 print
   else 2 2 * 4 == _if
-    1 print
+    0 print
   else
     0 print
   end
@@ -38,7 +38,7 @@ entryPoint:
   1 1 + 2 == if 
     1 print
   else 2 2 * 4 == _if
-    1 print
+    0 print
   else
     0 print
   end
@@ -61,7 +61,7 @@ entryPoint:
   1 1 + 2 == if 
     1 print 6
   else 2 2 * 4 == _if
-    1 print 7
+    0 print 7
   else
     0 print 8
   end print
@@ -77,7 +77,7 @@ entryPoint:
   2 1 1 + 2 == if 
     1 print print
   else 2 2 * 4 == _if
-    1 print print
+    0 print print
   else
     0 print print
   end

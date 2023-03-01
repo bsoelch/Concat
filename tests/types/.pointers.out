@@ -1,0 +1,5 @@
+-----------------
+identifier "aPtr":
+  mutable local variable: i32 pointer mut
+    at pointers.concat:21:32
+-----------------

@@ -8,7 +8,7 @@ anEnum .B new =:: e2
 2 anEnum .C new =:: e3
 
 entryPoint:
-  0 anEnum .C new =:: mut e
+  -32141 anEnum .C new =:: mut e
   anEnum .A anEnum =: f
   e anEnum .A == print
   e anEnum .C == print
@@ -21,7 +21,7 @@ entryPoint:
   
   2 'A' ( i32 char ) new e .D =
   e .D 
-    2 #over .0 =
+    241 #over .0 =
     #dup .1 print
  .0 print
 end
