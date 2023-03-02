@@ -2252,7 +2252,11 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case PRIMITIVE_I8:
         case PRIMITIVE_I32:
         case PRIMITIVE_I64:
-          fprintf(target,"%" PRIi64,op->dataAs.i64);
+          if(op->dataAs.i64==INT64_MIN){//int64 min constant may need special handling
+            fprintf(target,"%" PRIi64" -1",op->dataAs.i64+1);
+          }else{
+            fprintf(target,"%" PRIi64,op->dataAs.i64);
+          }
           if(needCast)
             fputs(")",target);
           return size;
@@ -3008,7 +3012,7 @@ IntOrErrorCode parseInt(String number,int base){
   }
   size_t i0=i;
   bool overflow=false;
-  uint64_t maxSaveValue=negate?(INT64_MAX/base):-(INT64_MIN/base);
+  uint64_t maxSaveValue=negate?-(INT64_MIN/base):(INT64_MAX/base);
   for(;i<number.length;i++){
     if(i>i0&&i<number.length-1&&(charAt(number,i)=='_'||charAt(number,i)=='\''))
       continue;//ignore _ and ' if they are in the interior of the number

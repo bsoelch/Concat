@@ -1,0 +1,9 @@
+entryPoint:
+  0b11'00'10'01 print
+  0x123_4567_89ab_cdef print
+  -0xff print
+  0x7fff_ffff_ffff_ffff print
+  -0x8000_0000_0000_0000 print
+  1_000_000_000 print
+  -412974129741247194 print
+end
