@@ -301,23 +301,40 @@ Concat supports the following primitive types:
 
 <!-- TODO string (name alias for a special array) --> 
 
-### pointers & arrays
+### pointers
 
-appending `ptr` on a type name generates a pointer type to that type
+
+Pointer types can be created by appending `ptr`, optionally preceded with an array size <!-- TODO  like to array section -->
+ after the name of the target type.
+
+Pointer types point to a fixed number of elements (the given array size or 1 if no size is given), trying to access elements outside the allowed area will trigger a run-time error.
+If the 
+
+
+The "raw" pointer type `rawptr` can be used for unknown size pointer (e.g. pointers returned for C-functions)
+unlike the default pointer operations on raw pointers are unchecked.
+C-style pointer arithmetic can be used on raw pointers.
+
 By default the pointer target cannot be modified, if the pointer should allow modification this can be signaled by appending `mut`
 
-<!-- TODO array types --> 
+pointers can be assigned to values pointers types of the same type, with a lower or equals dimension, if the sizes in the common dimensions are identical
+static sized pointers can be assigned to dynamic sized pointers of the same dimension.
+All pointers can be assigned to a raw-pointers of the matching base type.
+
 
 Examples:
 ```
 0 =:: mut x                    ## declare a mutable integer x 
-x addrOf =:: xAddr             ## the address of x  (will have type  i32 1 ptr mut)
-x addrOf i32 ptr =: xPtr       ## get the address of x as (immutable) i32 pointer
-"Hello" i8 5 array ptr =: str  ## strings are i8 array-pointers with the length as argument
-str string cast  =: str2       ## the internal string type is a dynamic length i8 array-pointer
-str2 .length                   ## the length in the most significant dimension of array&array-pointer types can be read through the '.length' field
-
+x addrOf =:: xAddr             ## the address of x  (will have type  i32 ptr mut)
+x addrOf i32 rawptr =: xPtr    ## get the address of x as (immutable) raw i32 pointer
+"Hello" i8 5 ptr =: str        ## strings are i8 array-pointers with the length as argument
+str i8 _ ptr cast  =: str2     ## fixed size arrays can be assigned to dynamic size arrays
+str2 .length                   ## the length in the most significant dimension of array&pointer types can be read through the '.length' field
 ```
+
+### arrays
+
+<!-- TODO array types --> 
 
 
 ### tuples
