@@ -691,12 +691,6 @@ bool makeMutable(TypeId* t){
   }
   return false;
 }
-bool asArrayView(TypeId* anArray){
-  if(isNamedType(*anArray)||!isArrayType(*anArray))
-    return true;
-  anArray->class=TYPECLASS_ARRAY_VIEW;
-  return false;
-}
 void printTypeName(TypeId,FILE*);
 bool changeEnumType(TypeId* anEnum,bool isLabel){
   TypeId enumType=unwrapNamedType(*anEnum);
@@ -894,14 +888,14 @@ TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
   return isPtr?pointerType(newProc,false):newProc;
 }
 TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool isMutable){
-  if(dims<=0)
+  if(dims<0||((dims==0)&&!isView))
     return TYPE_UNDEFINED;
   if(typeEquals(base,TYPE_UNDEFINED)||isProcedureType(base))
     return TYPE_UNDEFINED;
   for(int32_t i=0;i<arrayTypeCount;i++){
     if((!typeEquals(arrayTypes[i].base,base))||arrayTypes[i].dims!=dims||arrayTypes[i].isMutable!=isMutable)
       continue;
-    if(arrayTypes[i].sizes==sizes){//same array or both NULL
+    if(dims==0||arrayTypes[i].sizes==sizes){//same array or both NULL
       arrayTypes[i].viewOnly&=isView;
       return (TypeId){.class=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.dataAs.id=i};
     }
@@ -920,13 +914,13 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool
     }
   }
   int64_t* mSizes=NULL;
-  if(sizes!=NULL){
+  if(dims>0&&sizes!=NULL){
     mSizes=malloc(dims*sizeof(*mSizes));//XXX reuse array of previous types
     if(mSizes==NULL)
       return TYPE_UNDEFINED;
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
   }
-  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,.sizeKnown=sizes!=NULL,.isMutable=isMutable,.viewOnly=isView};
+  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,.sizeKnown=(dims==0)||(sizes!=NULL),.isMutable=isMutable,.viewOnly=isView};
   TypeId newArray=(TypeId){.class=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.dataAs.id=arrayTypeCount++};
   declareMultiType(newArray);
   return newArray;
@@ -935,33 +929,41 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool
 void printTypeName(TypeId,FILE*);
 typedef enum{
   CONSTANT_NONE=0,
+  CONSTANT_BOOL,
   CONSTANT_INT,
   CONSTANT_CHAR,
   CONSTANT_STRING,
   CONSTANT_TYPE,
+  CONSTANT_WILDCARD,
 }ConstantType;
 char const* constTypeName(ConstantType type){
   switch(type){
     case CONSTANT_NONE:return "none";
+    case CONSTANT_BOOL:return "bool";
     case CONSTANT_INT:return "int";
     case CONSTANT_CHAR:return "char";
     case CONSTANT_STRING:return "string";
     case CONSTANT_TYPE:return "type";
+    case CONSTANT_WILDCARD:return "_";
   }
   return "unknown type";
 }
 typedef struct{
   union{
     String  string;
-    TypeId type;
+    TypeId  type;
     int64_t charId;
     int64_t i64;
+    bool    boolean;
   }as;
   ConstantType type;
 }ConstantValue;
 void printConstValue(ConstantValue constant,FILE* file){
   switch(constant.type){
     case CONSTANT_NONE:
+      return;
+    case CONSTANT_BOOL:
+      fputs(constant.as.i64?"true":"false",file);
       return;
     case CONSTANT_INT:
       fprintf(file,"%"PRIi64,constant.as.i64);
@@ -974,6 +976,9 @@ void printConstValue(ConstantValue constant,FILE* file){
       return;
     case CONSTANT_TYPE:
       printTypeName(constant.as.type,file);
+      return;
+    case CONSTANT_WILDCARD:
+      fputs("_",file);
       return;
   }
 }
@@ -1027,7 +1032,7 @@ char const* typeClassName(TypeClass cls){
     case TYPECLASS_PRIMITIVE:
       return "primitive";
     case TYPECLASS_POINTER:
-      return "pointer";
+      return "raw pointer";
     case TYPECLASS_TUPLE:
       return "tuple";
     case TYPECLASS_PROC_IN:
@@ -1055,7 +1060,7 @@ char const* typeClassName(TypeClass cls){
     case TYPECLASS_ARRAY:
       return "array";
     case TYPECLASS_ARRAY_VIEW:
-      return "array view";
+      return "pointer";
   }
   fprintf(stderr,"unexpected type-class %i",cls);
   return "";
@@ -2083,6 +2088,12 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       //tuple element access
       return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,true);
     case ID_ARRAY_ELEMENT:
+      if(arrayTypeData(op->dataType)->dims==0){//0D array access
+        fputs("(*(",target);
+        COMPILE_OP_RETURN_ERROR(target,op,opSize);
+        fputs("))",target);
+        return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,false);
+      }
       fputs("((",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
@@ -3253,6 +3264,7 @@ Constant constBuffer[CONST_BUFFER_CAP];
 TypeId compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
 int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
 int64_t arrayDimsCount=0;
+int64_t arrayWildcardDimsCount=0;
 StaticArgument staticArgsBuffer[MAX_STATIC_ARGS];
 int64_t staticArgsCount=0;
 
@@ -3264,11 +3276,17 @@ void pushConstant(ConstantValue constValue,FilePosition pos,bool hasId,Identifie
 void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
   pushConstant((ConstantValue){.type=constType,.as.i64=constId},pos,false,(IdentifierInfo){0});
 }
+void pushBoolConstant(bool value,FilePosition pos){
+  pushConstant((ConstantValue){.type=CONSTANT_BOOL,.as.boolean=value},pos,false,(IdentifierInfo){0});
+}
 void pushStringConstant(String value,FilePosition pos){
   pushConstant((ConstantValue){.type=CONSTANT_STRING,.as.string=value},pos,false,(IdentifierInfo){0});
 }
 void pushTypeConstant(TypeId type,FilePosition pos){
   pushConstant((ConstantValue){.type=CONSTANT_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
+}
+void pushWildcardConstant(FilePosition pos){
+  pushConstant((ConstantValue){.type=CONSTANT_WILDCARD,.as.i64=-1},pos,false,(IdentifierInfo){0});
 }
 void addStaticArgs(LabelId label,TypeId type,FilePosition pos){
   StaticArgument arg;
@@ -3326,11 +3344,17 @@ TypeId peekTypeConstant(FilePosition pos){
 }
 int64_t* popArraySize(FilePosition pos){
   arrayDimsCount=0;
-  while(constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
+  arrayWildcardDimsCount=0;
+  while(bufferedConstants>1&&constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
     bufferedConstants--;
     arrayDimsCount++;
   }
   for(int64_t i=0;i<arrayDimsCount;i++){
+    if(constBuffer[bufferedConstants+i].value.type==CONSTANT_WILDCARD){
+      arrayWildcardDimsCount++;
+      arrayDimsBuffer[i]=-1;
+      continue;
+    }
     if(constBuffer[bufferedConstants+i].value.type!=CONSTANT_INT){//XXX use _ to signal unknown dimension sizes
       fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].value.type));
       handleError(NULL,ERROR_SYNTAX,pos);
@@ -3341,6 +3365,8 @@ int64_t* popArraySize(FilePosition pos){
     }
     arrayDimsBuffer[i]=constBuffer[bufferedConstants+i].value.as.i64;
   }
+  if(arrayWildcardDimsCount>0&&arrayWildcardDimsCount!=arrayDimsCount)
+      handleError("mixing wildcard dimensions and fixed dimensions is not allowed",ERROR_SYNTAX,pos);//XXX allow wildcards after fixed arguments  i32 2 _ ptr ( a 2 x ? array )
   return arrayDimsBuffer;
 }
 TypeId const* popTypeConstants(size_t count,FilePosition pos,char const* argumentName,bool allowVoid){
@@ -3375,6 +3401,19 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     pushIntConstant(CONSTANT_CHAR,charAt(word,0),wordPos);
     return true;
   }
+  if(wordEquals(&word,"true")){
+    pushBoolConstant(true,wordPos);
+    return true;
+  }
+  if(wordEquals(&word,"false")){
+    pushBoolConstant(false,wordPos);
+    return true;
+  }
+  if(wordEquals(&word,"_")){
+    pushWildcardConstant(wordPos);
+    return true;
+  }
+
   IntOrErrorCode asInt=parseInt(word,0);//try to parse word as int
   if(!asInt.isError){
     pushIntConstant(CONSTANT_INT,asInt.as.i64,wordPos);
@@ -3546,15 +3585,21 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true ;
   }
   //composite types
-  if(wordEquals(&name,"ptr")){
+  if(wordEquals(&name,"rawptr")){//TODO better name for C-style pointers / ? merge with array-view
     TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
-    if(isArrayType(target)&&!isArrayViewType(target)){
-      if(asArrayView(&target))//pointer to array -> array view
-        handleError("failed to create array-view",ERROR_MEMORY,codeFile->wordStart);
-      pushTypeConstant(target,codeFile->wordStart);
+    pushTypeConstant(pointerType(target,false),codeFile->wordStart);
+    return true;
+  }
+  if(wordEquals(&name,"ptr")){
+    int64_t* dims=popArraySize(codeFile->wordStart);
+    TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
+    if(isProcedureType(target)){//TODO own type for procedure pointers
+      if(arrayDimsCount>0)
+        handleError("procedure pointers cannot be multidimensional",ERROR_SYNTAX,codeFile->wordStart);
+      pushTypeConstant(pointerType(target,false),codeFile->wordStart);
       return true;
     }
-    pushTypeConstant(pointerType(target,false),codeFile->wordStart);
+    pushTypeConstant(arrayType(true,target,arrayDimsCount,arrayWildcardDimsCount?NULL:dims,false),codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"mut")){
@@ -3572,10 +3617,10 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     int64_t* dims=popArraySize(codeFile->wordStart);
     TypeId target=popTypeConstant(codeFile->wordStart,"array argument",false);
     if(arrayDimsCount==0){//array without size arguments
-      pushTypeConstant(arrayType(false,target,1,NULL,false),codeFile->wordStart);
+      handleError("zero-dimensional arrays are not supported",ERROR_SYNTAX,codeFile->wordStart);
       return true;
     }
-    pushTypeConstant(arrayType(false,target,arrayDimsCount,dims,false),codeFile->wordStart);
+    pushTypeConstant(arrayType(false,target,arrayDimsCount,arrayWildcardDimsCount?NULL:dims,false),codeFile->wordStart);
     return true;
   }
   if(wordEquals(&name,"proc(")){
@@ -3649,6 +3694,8 @@ TypeId constantType(ConstantValue const* constant){
   switch(constant->type){
     case CONSTANT_STRING:
       return arrayType(true,TYPE_CHAR,1,(int64_t[]){constant->as.string.length},false);
+    case CONSTANT_BOOL:
+      return TYPE_BOOL;
     case CONSTANT_CHAR:
       return TYPE_CHAR;
     case CONSTANT_INT:
@@ -3656,6 +3703,7 @@ TypeId constantType(ConstantValue const* constant){
       return primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64);
     case CONSTANT_TYPE:
       return TYPE_TYPE;
+    case CONSTANT_WILDCARD:
     case CONSTANT_NONE:
       return TYPE_UNDEFINED;
   }
@@ -3671,6 +3719,9 @@ void storeConstants(ParserState* state){
         intVal=addProgString(constBuffer[i].value.as.string,constBuffer[i].pos);
         pushOperation(state,opConstant(constantType(&constBuffer[i].value),intVal,constBuffer[i].pos));
         break;
+    case CONSTANT_BOOL:
+        pushOperation(state,opConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.boolean,constBuffer[i].pos));
+        break;
       case CONSTANT_CHAR:
         pushOperation(state,opConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.charId,constBuffer[i].pos));
         break;
@@ -3681,6 +3732,8 @@ void storeConstants(ParserState* state){
       case CONSTANT_TYPE:
         pushOperation(state,opTypeConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.type,constBuffer[i].pos));
         break;
+      case CONSTANT_WILDCARD:
+        //TODO compiler error
       case CONSTANT_NONE:
         break;
     }
@@ -3967,13 +4020,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     fprintf(stderr,"unknown compile time operation \"%"PRI_STR"\"\n",PRI_STR_ARGS(word));
     handleError(NULL,ERROR_SYNTAX,wordPos);
   }
-  if(wordEquals(&word,"true")){
-    pushOperation(state,opConstant(TYPE_BOOL,1,wordPos));
-    return;
-  }else if(wordEquals(&word,"false")){
-    pushOperation(state,opConstant(TYPE_BOOL,0,wordPos));
-    return;
-  }else if(wordEquals(&word,"+")){
+  if(wordEquals(&word,"+")){
     pushOperation(state,opBinaryOperator(ADD,wordPos));
     return;
   }else if(wordEquals(&word,"-")){
@@ -4760,7 +4807,19 @@ void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePos
   storeStackValues(state,&(switchBlock->outStack),&(switchBlock->outStack),"switch-branch",needInit,false,false,pos);
 }
 
-
+bool sizesCompatible(ArrayType const* src,ArrayType const* target){
+  if(src->dims<target->dims)
+    return false;
+  if(!target->sizeKnown)
+    return true;
+  if(!src->sizeKnown)
+    return false;
+  for(int32_t i=0;i<target->dims;i++){
+    if(src->sizes[i]!=target->sizes[i])
+      return false;
+  }
+  return true;
+}
 bool canAutoCast(TypeId src,TypeId target){//? allow cast T ptr mut ptr -> T ptr ptr (allow allow casting mut away if out pointers are const)
   if(typeEquals(src,target))
     return true;
@@ -4771,9 +4830,8 @@ bool canAutoCast(TypeId src,TypeId target){//? allow cast T ptr mut ptr -> T ptr
   if(isArrayType(src)&&isPointerType(target)&&
     (isMutableType(src)||!isMutableType(target))&&typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning array-view to pointer
-  if(isArrayType(src)&&isArrayViewType(target)&&
-    (isMutableType(src)||!isMutableType(target))&&arrayTypeData(src)->dims==arrayTypeData(target)->dims&&!arrayTypeData(target)->sizeKnown&&
-      typeEquals(getBaseType(src),getBaseType(target)))
+  if(isArrayType(src)&&isArrayViewType(target)&&(isMutableType(src)||!isMutableType(target))&&
+    sizesCompatible(arrayTypeData(src),arrayTypeData(target))&&typeEquals(getBaseType(src),getBaseType(target)))
     return true;//assigning fixed-size array(-view) to var-size array-view
   if(!isPrimitiveType(src)||!isPrimitiveType(target))
     return false;
@@ -5144,7 +5202,7 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
   op->dataAs.idInfo.type=ID_ARRAY_ELEMENT;
   op->dataType=arrayType;
   //update operation stack
-  insertStackOperation(state,*op,indexCount+1);
+  insertStackOperation(state,*op,indexCount+state->typeStack[typeOffset].opCount);
   //update type-stack
   state->typeCount-=indexCount;
   bool writable=state->typeStack[typeOffset].isWritable;
@@ -5152,7 +5210,7 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     writable&=isMutableType(arrayType);
   setTypeStackType(state,arrayData->base);
   setTypeStackFlags(state,false,writable);
-  state->typeStack[typeOffset].opCount=(state->opStackCount-indexOffset)+1;
+  state->typeStack[typeOffset].opCount+=(state->opStackCount-indexOffset);
   if(op->opType==OP_SET){
     if(!writable)
       handleError("cannot write to immutable array",ERROR_SYNTAX,op->filePos);
@@ -5214,8 +5272,6 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         indexCount++;
       }
       if(isArrayType(state->typeStack[offset].type)){
-        if(indexCount==0)
-          handleError("need at least one index for array access",ERROR_SYNTAX,op->filePos);
         typeCheckArrayElementAccess(state,state->typeStack[offset].type,indexCount,op);
         return;
       }
@@ -5335,12 +5391,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       if(blockInfoPtr!=NULL&&(blockInfoPtr->type==BLOCK_SWITCH||blockInfoPtr->type==BLOCK_CASE)){//switch label
         switchBlock=&blockInfoPtr->blockDataAs.switchBlock;
         if(!canAutoCast(op.dataType,switchBlock->switchType)){
-          fputs("wrong type from switch label, expected ",stderr);
-          printTypeName(switchBlock->switchType,stderr);
-          fputs(" got ",stderr);
-          printTypeName(op.dataType,stderr);
-          fputs("\n",stderr);
-          handleError(NULL,ERROR_TYPE,op.filePos);
+          typeErrorMessage("switch label",switchBlock->switchType,op.dataType);
         }
         if(switchBlock->switchData->labelCount>=switchBlock->switchData->labelCap)
           handleError("exceeded maximum number of allowed switch labels",ERROR_MEMORY,op.filePos);
@@ -5475,6 +5526,14 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case NE:
           //pointer equality 
           if(isPointerType(inTypes[0])&&isPointerType(inTypes[1])&&
+              typeEquals(getBaseType(inTypes[0]),getBaseType(inTypes[1]))){
+            op.dataType=TYPE_BOOL;
+            typesMatch=true;
+            break;
+          }
+          //array-pointer equality 
+          if(isArrayViewType(inTypes[0])&&isArrayViewType(inTypes[1])&&
+              arrayTypeData(inTypes[0])->sizeKnown&&arrayTypeData(inTypes[1])->sizeKnown&&
               typeEquals(getBaseType(inTypes[0]),getBaseType(inTypes[1]))){
             op.dataType=TYPE_BOOL;
             typesMatch=true;
@@ -5892,7 +5951,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         op.dataType=arrayType(true,getBaseType(state->typeStack[offset].type),arrayData->dims,arrayData->sizes,state->typeStack[offset].isWritable);
         op.opType=OP_ADDR_OF_ARRAY;
       }else{
-        op.dataType=arrayType(true,state->typeStack[offset].type,1,(int64_t[]){1},state->typeStack[offset].isWritable);
+        op.dataType=arrayType(true,state->typeStack[offset].type,0,NULL,state->typeStack[offset].isWritable);
       }
       //store result in temp variable
       tmpId=state->tmpCount++;

@@ -1,6 +1,6 @@
 
 entryPoint:
-  1024 1024 * 16 * i32 alloc i32 ptr mut =: dynamicArray
+  1024 1024 * 16 * i32 alloc i32 rawptr mut =: dynamicArray
   dynamicArray print
   dynamicArray 0 [] print
   dynamicArray 1000000 [] print
@@ -8,7 +8,7 @@ entryPoint:
   "Hello World!" puts
 end
 
-proc( i64 : k  type : static T => T ptr mut ) : extern alloc
+proc( i64 : k  type : static T => T rawptr mut ) : extern alloc
 type : extern _FILE
 _FILE ptr mut =:: FILE
 proc( => FILE ) : extern stdOut

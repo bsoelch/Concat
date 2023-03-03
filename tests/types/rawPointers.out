@@ -1,0 +1,12 @@
+-----------------
+identifier "aPtr":
+  mutable local variable: i32 raw pointer mut
+    at rawPointers.concat:21:35
+-----------------
+0
+1
+2
+101
+5
+-312512
+-312512

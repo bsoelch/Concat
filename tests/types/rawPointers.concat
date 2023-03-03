@@ -1,25 +1,26 @@
-
-proc( => ( ( i32 i32 ptr ) ptr i32 ) ) =: ptrTest
-  0 i32 =: x
-  0  x addrOf  ( i32  i32 ptr ) new =:: y
-  y addrOf 0 ( ( i32  i32 ptr ) ptr i32 ) new return
+0 i32 =: x
+  
+proc( => ( ( i32 i32 rawptr ) rawptr i32 ) ) =: ptrTest
+  0  x addrOf  ( i32  i32 rawptr ) new =:: y
+  y addrOf 0 ( ( i32  i32 rawptr ) rawptr i32 ) new return
 end
 
 entryPoint:
-  ptrTest .0 [] .1 0 [] print
+  ptrTest .0 [] .1 [] print
   
   1 2 ( i64 i64 ) new =:: mut tmp
   
   tmp .0 addrOf [] print
-  tmp addrOf ( i64 i64 ) ptr =: tmpPtr
-  tmpPtr 0 [] .0 print
+  tmp addrOf ( i64 i64 ) rawptr =: tmpPtr
+  tmpPtr [] .1 print
   
   "Hello World!" 1 [] print
   "World" .length print
   
   0 =:: mut A
-  A addrOf  i32 ptr mut =: mut aPtr
-  2  aPtr ++ -1 [] = 
+  A addrOf  i32 rawptr mut =: mut aPtr
+  -312512  aPtr ++ -1 [] = 
   #find aPtr
   aPtr -- [] print
+  A print
 end

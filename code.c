@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdbool.h>
 //internal declarations
-typedef struct array1Impl array1;
-struct array1Impl{
+typedef struct array3Impl array3;
+struct array3Impl{
 int8_t const* data;
 int64_t sizes[1];
 };
@@ -14,9 +14,9 @@ const int8_t arrayData1[2] = {0xa,0x00};
 //global code
 void* concat_alloc (size_t, int64_t);
 void* concat_stdOut (void);
-void* concat_fopen (array1);
-void concat_fputs (void*, array1);
-void concat_puts (array1);
+void* concat_fopen (array3);
+void concat_fputs (void*, array3);
+void concat_puts (array3);
 void concat_fclose (void*);
 //procedures code
 int main(void){
@@ -30,11 +30,11 @@ printf("%"PRIi32"\n",tmp3);
 int32_t const tmp4 = (*((local0)+(((int32_t)1000000))));
 printf("%"PRIi32"\n",tmp4);
 int8_t const* const tmp5 = (arrayData0+0);
-concat_puts(((array1){.data=tmp5,.sizes={12}}));
+concat_puts(((array3){.data=tmp5,.sizes={12}}));
 }
-void concat_puts (array1 arg0){
+void concat_puts (array3 arg0){
 void* const tmp6 = concat_stdOut();
 concat_fputs(tmp6,arg0);
 int8_t const* const tmp7 = (arrayData1+0);
-concat_fputs(tmp6,((array1){.data=tmp7,.sizes={1}}));
+concat_fputs(tmp6,((array3){.data=tmp7,.sizes={1}}));
 }
