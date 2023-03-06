@@ -1712,18 +1712,72 @@ struct ScopeNode{
   int32_t id;
   IdentifierType idType;
 };
-typedef struct Scope{
+typedef struct{
   ScopeNode** nodes;
   
   BlockType scopeType;
   NamespaceImportId prevImports;
   size_t nodeBufferOffset;
-  struct Scope* parent;
 }Scope;
 ScopeNode scopeNodeBuffer [SCOPE_NODE_CAP];
 size_t scopeNodeCount=0;
 Scope scopeBuffer [SCOPE_CAP];
-size_t scopeCount=0;
+size_t localScopeCount=0;
+
+typedef int32_t FileId;
+const FileId FILE_ID_NONE=-1;
+typedef struct{
+  Scope globalScope;
+  NamespaceInfo namespaceInfo;
+  
+  Operation* globalOps;
+  size_t globalOpCount;
+  size_t globalOpCap;
+  Operation* localOps;
+  size_t localOpCount;
+  size_t localOpCap;
+  //FileId* imports;
+    
+  int64_t entryPointIndex;
+  
+  String fileName;
+  FileId id;
+}ProgramFile;
+typedef struct{
+  ProgramFile* files;
+  size_t filesCap;
+  FileId fileCount;
+  FileId currentFile;
+    
+  int32_t globalVars;
+  int32_t localVars;
+  
+  int32_t currentProcId;
+  
+  FileId entryFile;
+  int32_t predeclaredTypes;
+}ParserState;
+NamespaceInfo* parserNamespace(ParserState const* state){
+  return &state->files[state->currentFile].namespaceInfo;
+}
+Scope* getGlobalScopeParser(ParserState const* state){
+  return &state->files[state->currentFile].globalScope;
+}
+bool hasEntryPointParser(ParserState const* state){
+  return state->entryFile!=FILE_ID_NONE&&state->files[state->entryFile].entryPointIndex!=-1;
+}
+FilePosition getEntryPointPosParser(ParserState const* state){
+  if(!hasEntryPointParser(state))
+    return (FilePosition){0};
+  ProgramFile* entryFile=&state->files[state->entryFile];
+  return entryFile->localOps[entryFile->entryPointIndex].filePos;
+}
+void initEntryPointParser(ParserState const* state){
+  ProgramFile* entryFile=&state->files[state->entryFile];
+  entryFile->entryPointIndex=entryFile->localOpCount;
+}
+
+
 ScopeNode* allocScopeNode(void){
   if(scopeNodeCount+1>=SCOPE_NODE_CAP){
     fprintf(stderr,"exceeded maximum allowed number of variables %i\n",SCOPE_NODE_CAP);
@@ -1731,28 +1785,36 @@ ScopeNode* allocScopeNode(void){
   }
   return scopeNodeBuffer+(scopeNodeCount++);
 }
-Scope* openScope(BlockType scopeType,NamespaceInfo namespace){
-  if(scopeCount+1>=SCOPE_CAP){
+void initScope(Scope* scope,BlockType scopeType,ParserState const* state){
+  scope->nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
+  scope->nodeBufferOffset=scopeNodeCount;
+  scope->scopeType=scopeType;
+  scope->prevImports=parserNamespace(state)->namespaceImports;
+}
+bool openScope(BlockType scopeType,ParserState const* state){
+  if(localScopeCount>=SCOPE_CAP){
     fprintf(stderr,"exceeded maximum allowed number of nested scopes %i\n",SCOPE_CAP);
-    return NULL;
+    return true;
   }
-  scopeBuffer[scopeCount].nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
-  scopeBuffer[scopeCount].nodeBufferOffset=scopeNodeCount;
-  scopeBuffer[scopeCount].scopeType=scopeType;
-  scopeBuffer[scopeCount].prevImports=namespace.namespaceImports;
-  scopeBuffer[scopeCount].parent=scopeCount>0?scopeBuffer+(scopeCount-1):NULL;
-  return scopeBuffer+(scopeCount++);
+  initScope(&scopeBuffer[localScopeCount],scopeType,state);
+  localScopeCount++;
+  return false;
 }
-bool closeScope(NamespaceInfo* namespace){
-  if(scopeCount<=0)
-    return false;
-  scopeCount--;
-  free(scopeBuffer[scopeCount].nodes);
-  namespace->namespaceImports=scopeBuffer[scopeCount].prevImports;
-  scopeNodeCount=scopeBuffer[scopeCount].nodeBufferOffset;
-  return true;
+BlockType currentScope(void){
+  if(localScopeCount<1)
+    return BLOCK_UNKNOWN;
+  return scopeBuffer[localScopeCount-1].scopeType;
 }
-ScopeNode** findNode(Scope* scope,String name,NamespaceId namespaceId){
+bool closeScope(ParserState const* state){
+  if(localScopeCount<1)
+    return true;
+  localScopeCount--;
+  free(scopeBuffer[localScopeCount].nodes);
+  parserNamespace(state)->namespaceImports=scopeBuffer[localScopeCount].prevImports;
+  scopeNodeCount=scopeBuffer[localScopeCount].nodeBufferOffset;
+  return false;
+}
+ScopeNode** findNode(Scope const* scope,String name,NamespaceId namespaceId){
   if(scope==NULL)
     return NULL;
   uint32_t hash=stringHash(name);
@@ -1764,7 +1826,7 @@ ScopeNode** findNode(Scope* scope,String name,NamespaceId namespaceId){
   }
   return node;
 }
-int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
+int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out){
   int64_t dotIndex=lastIndexOfChar(name,'.');
   NamespaceId mNamespaceId=namespace.current;
   NamespaceId relativeSpace;
@@ -1776,10 +1838,10 @@ int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
   if(dotIndex>0){
     name=sliceStart(name,dotIndex+1);
   }
-  int32_t level=scopeCount-1;
+  int32_t level=localScopeCount-1;
   ScopeNode** node;
   *out=NULL;
-  while(level>0){//check local variables
+  while(level>=0){//check local variables
     relativeSpace=findNamespace(mNamespaceId,path);
     if(relativeSpace!=NAMESPACE_ID_NONE){
       node=findNode(scopeBuffer+level,name,relativeSpace);//all non-global variables are in the same namespace
@@ -1795,7 +1857,7 @@ int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
   while(mNamespaceId!=NAMESPACE_ID_NONE){//check global variables in current namespace and all parent namespaces
     relativeSpace=findNamespace(mNamespaceId,path);
     if(relativeSpace!=NAMESPACE_ID_NONE){
-      node=findNode(scopeBuffer+level,name,relativeSpace);
+      node=findNode(globalScope,name,relativeSpace);
       if(node==NULL)
         return ERROR_MEMORY;
       if(*node!=NULL){
@@ -1809,7 +1871,7 @@ int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
   while(import!=NAMESPACE_IMPORT_NONE){//check all imports in reverse order
     relativeSpace=findNamespace(namespaceImportBuffer[import].imported,path);
     if(relativeSpace!=NAMESPACE_ID_NONE){
-      node=findNode(scopeBuffer+level,name,relativeSpace);
+      node=findNode(globalScope,name,relativeSpace);
       if(node==NULL)
         return ERROR_MEMORY;
       if(*node!=NULL){
@@ -1821,7 +1883,7 @@ int getIdentifier(NamespaceInfo namespace,String name,ScopeNode** out){
   }
   return ERROR_SYNTAX;
 }
-ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeId type,IdentifierType idType,int32_t id,FilePosition pos,ConstantValue const* constValue){
+ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,LabelId labelId,TypeId type,IdentifierType idType,int32_t id,FilePosition pos,ConstantValue const* constValue){
   Label mLabel=label(labelId,pos);
   if(isMutableLabel(mLabel)){
     if(idType==ID_TYPE)
@@ -1831,7 +1893,11 @@ ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeI
   }
   if(containsChar(mLabel.label,'.'))
     handleError("'.' is not allowed in declared identifiers",ERROR_SYNTAX,pos);
-  ScopeNode** node=findNode(scopeBuffer+(scopeCount-1),mLabel.label,namespace.current);
+  Scope* currentScope=globalScope;
+  if(localScopeCount>0){
+    currentScope=scopeBuffer+(localScopeCount-1);
+  }
+  ScopeNode** node=findNode(currentScope,mLabel.label,namespace.current);
   if(node==NULL)
     handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
   if(*node!=NULL){
@@ -1842,7 +1908,7 @@ ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeI
     handleError(NULL,ERROR_SYNTAX,mLabel.declaredAt);
   }
   ScopeNode* shaddow;
-  getIdentifier(namespace,mLabel.label,&shaddow);
+  getIdentifier(globalScope,namespace,mLabel.label,&shaddow);
   if(shaddow!=NULL){
     fprintf(stderr,"Warning:\n  declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
     fprintf(stderr,"  shadows previous declaration: %s \"%"PRI_STR"\" at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
@@ -1869,12 +1935,9 @@ ScopeNode const* declareIdentifier(NamespaceInfo namespace,LabelId labelId,TypeI
 }
 
 typedef struct{
-  Operation* ops;
-  size_t opCount;
-  Operation* globalOps;
-  size_t globalCount;
+  ProgramFile* files;
+  FileId fileCount;
   
-  Scope* globalScope;
   int32_t predeclaredTypes;
   bool hasEntryPoint;
   bool hasCheckBounds;
@@ -2865,12 +2928,18 @@ void compileToC(FILE* target,Program const* p){
     fputs("}\n",target);
   }
   fputs("//global code\n",target);
-  for(size_t i=0;i<p->globalCount;){
-    i+=compileOp(target,i,p->globalOps+i,p->globalCount-i,true);
+  for(FileId f=0;f<p->fileCount;f++){
+    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
+    for(size_t i=0;i<p->files[f].globalOpCount;){
+      i+=compileOp(target,i,p->files[f].globalOps+i,p->files[f].globalOpCount-i,true);
+    }
   }
   fputs("//procedures code\n",target);
-  for(size_t i=0;i<p->opCount;){
-    i+=compileOp(target,i,p->ops+i,p->opCount-i,false);
+  for(FileId f=0;f<p->fileCount;f++){
+    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
+    for(size_t i=0;i<p->files[f].localOpCount;){
+      i+=compileOp(target,i,p->files[f].localOps+i,p->files[f].localOpCount-i,false);
+    }
   }
 }
 
@@ -2881,21 +2950,7 @@ typedef struct{
   FilePosition wordStart;
 }CodeFile;
 
-typedef struct{
-  NamespaceInfo namespaceInfo;
-  Scope* currentScope;
-  Operation* parsedOps;
-  size_t parsedOpCount;
-  size_t parsedOpCap;
-  int32_t globalVars;
-  int32_t localVars;
-  int32_t currentProcId;
-  int32_t procScope;
-  int32_t scopeLevel;
-  
-  int32_t predeclaredTypes;
-  int64_t entryPointIndex;
-}ParserState;
+
 //compute the next id for a variable of the given id-type relative to the given compiler state
 int32_t nextId(IdentifierType idType,ParserState* state){
   switch(idType){
@@ -3433,7 +3488,7 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);
+  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier);
   if(r<0){//internal error while reading identifier
     handleError("error while reading identifier",r,codeFile->wordStart);
     return false;
@@ -3479,7 +3534,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
         pushTypeConstant(TYPE_UNDEFINED,codeFile->wordStart);
       }
       typesSinceLabel=0;
-      LabelId labelId=readLabel(codeFile,"composite type labels",state->namespaceInfo.current,allowedFlags);//label is stored in label buffer
+      LabelId labelId=readLabel(codeFile,"composite type labels",parserNamespace(state)->current,allowedFlags);//label is stored in label buffer
       if(isStaticLabelId(labelId)){
         addStaticArgs(labelId,popTypeConstant(codeFile->wordStart,"static argument",false),codeFile->wordStart);//remember static types
       }
@@ -3491,7 +3546,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       return;
     }
     //untyped enum label XXX prevent use of modifiers as labels
-    newLabel(word,false,state->namespaceInfo.current,codeFile->wordStart);//label is stored in label buffer
+    newLabel(word,false,parserNamespace(state)->current,codeFile->wordStart);//label is stored in label buffer
     pushTypeConstant(TYPE_UNDEFINED,codeFile->wordStart);
     currentOffset=bufferedConstants;
     typesSinceLabel=0;
@@ -3740,19 +3795,41 @@ void storeConstants(ParserState* state){
   }
 }
 void pushOperation(ParserState* state,Operation op){
-  if(ensureOpCap(&state->parsedOps,&state->parsedOpCap,state->parsedOpCount+bufferedConstants+16)){
-    handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
-  }
   if(bufferedConstants>0){
     storeConstants(state);
   }
-  state->parsedOps[state->parsedOpCount++]=op;
+  ProgramFile* currentFile=&state->files[state->currentFile];
+  if(localScopeCount>0){//local
+    if(ensureOpCap(&currentFile->localOps,&currentFile->localOpCap,currentFile->localOpCount+bufferedConstants+16)){
+      handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
+    }
+    currentFile->localOps[currentFile->localOpCount++]=op;
+    return;
+  }
+  if(ensureOpCap(&currentFile->globalOps,&currentFile->globalOpCap,currentFile->globalOpCount+bufferedConstants+16)){
+    handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
+  }
+  currentFile->globalOps[currentFile->globalOpCount++]=op;
+}
+bool canPeekOperationParser(ParserState* state){
+  ProgramFile* currentFile=&state->files[state->currentFile];
+  if(localScopeCount>0){//local
+    return currentFile->localOpCount>0;
+  }
+  return currentFile->globalOpCount>0;
 }
 Operation* peekOperation(ParserState* state,FilePosition pos){
-  if(state->parsedOpCount==0){
+  ProgramFile* currentFile=&state->files[state->currentFile];
+  if(localScopeCount>0){//local
+    if(currentFile->localOpCount==0){
+      handleError("operation underflow",ERROR_MEMORY,pos);
+    }
+    return &currentFile->localOps[currentFile->localOpCount-1];
+  }
+  if(currentFile->globalOpCount==0){
     handleError("operation underflow",ERROR_MEMORY,pos);
   }
-  return &state->parsedOps[state->parsedOpCount-1];
+  return &currentFile->globalOps[currentFile->globalOpCount-1];
 }
 void readOperation(ParserState* state,CodeFile* codeFile){
   int wordType;
@@ -3763,15 +3840,15 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   wordPos=codeFile->wordStart;
   LabelFlags identiferFlags=LABEL_FLAG_MUTABLE;
-  if(state->scopeLevel==0)
+  if(localScopeCount==0)
     identiferFlags|=LABEL_FLAG_PRIVATE|LABEL_FLAG_PUBLIC;
   //1. operations that take a Type as argument
   if(wordEquals(&word,":")){//pre-declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,state->scopeLevel>0?"local variables":"global variables",state->namespaceInfo.current,identiferFlags|LABEL_FLAG_EXTERN);
+    LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags|LABEL_FLAG_EXTERN);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
-    IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    IdentifierType idType=localScopeCount>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     if(isProcedureType(type)){
       if(((varName.flags&LABEL_FLAG_EXTERN)==0))
         handleError("directly pre-declaration is only supporte for extern procedures",ERROR_SYNTAX,wordPos);
@@ -3783,14 +3860,14 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       val.as.type=newNamedType(labelId,TYPE_UNDEFINED);
       idType=ID_TYPE;
     }
-    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,&val);
+    ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&val);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return;
     pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"=:")){//declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
-    LabelId labelId=readLabel(codeFile,state->scopeLevel>0?"local variables":"global variables",state->namespaceInfo.current,identiferFlags);
+    LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     IdentifierType idType;
@@ -3799,38 +3876,36 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       TypeId constType=popTypeConstant(wordPos,"type constant",false);
       type=newNamedType(labelId,constType);
       ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
-      declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,&constValue);
+      declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&constValue);
       return;
     }else if(isProcedureType(type)){
       idType=ID_PROCEDURE;
     }else{
-      idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+      idType=localScopeCount>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     }
-    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,type,idType,nextId(idType,state),wordPos,peekConstValue());
+    ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,peekConstValue());
     if(idType==ID_PROCEDURE){
-      if(state->scopeLevel>0){
+      if(localScopeCount>0){
         fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
           handleError(NULL,ERROR_SYNTAX,wordPos);
       }
-      Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
-      if(newScope==NULL)
+      pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,
+        .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});//add procedure to global operations
+      if(openScope(BLOCK_PROCEDURE,state))
         handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-      state->currentScope=newScope;
-      state->scopeLevel++;
-      state->procScope=state->scopeLevel;
       state->currentProcId=procTypeData(type)->procId;
       state->localVars=0;
       if(typeElementsLabeled(procTypeData(type)->inType)){
          CompositeType const* inTypes=compositeTypeData(procTypeData(type)->inType);
          for(int32_t i=0;i<inTypes->typeCount;i++){
-            declareIdentifier(state->namespaceInfo,inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos,NULL);
+            declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos,NULL);
          }
       }
     }
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"new")){
-    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
+    if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
       //change enum label to enum declaration
       peekOperation(state,wordPos)->opType=OP_NEW;
       peekOperation(state,wordPos)->filePos=wordPos;
@@ -3915,7 +3990,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     }
     //compile-time code
     if(wordEquals(&word,"namespace")){
-      if(state->scopeLevel>0){
+      if(localScopeCount>0){
         fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
@@ -3927,21 +4002,21 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         fprintf(stderr,"\"%"PRI_STR"\" is not a valid namespace name",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
-      startNamespace(&state->namespaceInfo,word,wordPos);
+      startNamespace(parserNamespace(state),word,wordPos);
       return;
     }else if(wordEquals(&word,"using")){
       word=nextWord(codeFile,&wordType);
       wordPos=codeFile->wordStart;
       if(wordType!=WORD_TYPE_IDENTIFIER)
         handleError("namespace names have to be identifiers",ERROR_SYNTAX,wordPos);
-      importNamespace(&state->namespaceInfo,word,wordPos);
+      importNamespace(parserNamespace(state),word,wordPos);
       return;
     }else if(wordEquals(&word,"end")){
-      if(state->scopeLevel>0){
+      if(localScopeCount>0){
         fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
-      endCompileTimeBlock(&state->namespaceInfo,wordPos);
+      endCompileTimeBlock(parserNamespace(state),wordPos);
       return;
     }
     //compiler commands
@@ -3980,18 +4055,20 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         count=p.as.i64;
       }
       puts("-----------------");
-      size_t i0=(count<0||((size_t)count)>state->parsedOpCount)?0:state->parsedOpCount-count;
-      for(size_t i=i0;i<state->parsedOpCount;i++){
-        printOperation(state->parsedOps[i],stdout);
+      ProgramFile const* f=&state->files[state->currentFile];
+      size_t opCount=localScopeCount>0?f->localOpCount:f->globalOpCount;
+      size_t i0=(count<0||((size_t)count)>opCount)?0:opCount-count;
+      for(size_t i=i0;i<opCount;i++){
+        printOperation((localScopeCount>0?f->localOps:f->globalOps)[i],stdout);
       }
       puts("-----------------");
       return;
     }else if(wordEquals(&word,"find")){
-      LabelId labelId=readLabel(codeFile,"identifier names",state->namespaceInfo.current,0);
+      LabelId labelId=readLabel(codeFile,"identifier names",parserNamespace(state)->current,0);
       wordPos=codeFile->wordStart;
       Label varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
-      int r=getIdentifier(state->namespaceInfo,varName.label,&asIdentifier);//try to parse variable as identifier
+      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),varName.label,&asIdentifier);//try to parse variable as identifier
       if(r<0)//internal error while reading identifier
         handleError("error while resolving identifier",r,wordPos);
       if(r==0){//found identifier TODO print shadowed matches
@@ -4076,11 +4153,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opUnaryOperator(DECREMENT,wordPos));
     return;
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
-    LabelId labelId=readLabel(codeFile,state->scopeLevel>0?"local variables":"global variables",state->namespaceInfo.current,identiferFlags);
+    LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags);
     wordPos=codeFile->wordStart;
     Label varName=label(labelId,wordPos);
     wordPos=codeFile->wordStart;
-    IdentifierType idType=state->scopeLevel>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
+    IdentifierType idType=localScopeCount>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     TypeId mType=newAutoType(state->predeclaredTypes++);
     if(bufferedConstants>0){
       TypeId constType=constantType(peekConstValue());
@@ -4090,11 +4167,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         constType=popTypeConstant(wordPos,"type constant",false);
         type=newNamedType(labelId,constType);
         ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
-        declareIdentifier(state->namespaceInfo,labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
+        declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
         return;
       }
     }
-    ScopeNode const* id=declareIdentifier(state->namespaceInfo,labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
+    ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,
       .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
@@ -4106,7 +4183,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(isExternLabel(mLabel))
         handleError("cannot assign values to extern types",ERROR_SYNTAX,wordPos);
       ScopeNode * prevId;
-      int r=getIdentifier(state->namespaceInfo/*name-space is still the same*/,mLabel.label,&prevId);
+      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel.label,&prevId);
       if(r!=0)
         handleError("error while resolving identifier",r,wordPos);
       //get previous value of type constant
@@ -4120,7 +4197,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
       return;
     }
-    if(state->parsedOpCount>0){
+    if(canPeekOperationParser(state)){
       switch(peekOperation(state,wordPos)->opType){
         case OP_GET:
           peekOperation(state,wordPos)->opType=OP_SET;
@@ -4150,11 +4227,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       pushOperation(state,(Operation){.opType=OP_GET,.dataType=constantType(&constant->value),
         .filePos=constant->pos,.dataAs={.idInfo=constant->idInfo}});
     }
-    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_CALL){
+    if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CALL){
       peekOperation(state,wordPos)->dataType=asUnlabeledProc(peekOperation(state,wordPos)->dataType,wordPos);
       peekOperation(state,wordPos)->opType=OP_GET;
     }
-    if(state->parsedOpCount>0&&peekOperation(state,wordPos)->opType==OP_IDENTIFIER)
+    if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_IDENTIFIER)
       peekOperation(state,wordPos)->opType=OP_IDENTIFIER_ADDRESS;
     pushOperation(state,(Operation){.opType=OP_ADDR_OF,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
     return;
@@ -4162,11 +4239,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_CALL_PTR,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
     return;
   }else if(wordEquals(&word,"if")){
-    Scope* newScope=openScope(BLOCK_IF,state->namespaceInfo);
-    if(newScope==NULL)
+    if(openScope(BLOCK_IF,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
     pushOperation(state,opCodeBlock(BLOCK_IF,wordPos));
     return;
   }else if(wordEquals(&word,"_if")){
@@ -4174,30 +4248,22 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opCodeBlock(BLOCK_IF2,wordPos));
     return;
   }else if(wordEquals(&word,"while")){
-    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
-    if(newScope==NULL)
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
-    
+    if(openScope(BLOCK_WHILE,state))
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);    
     pushOperation(state,opCodeBlock(BLOCK_WHILE,wordPos));
     return;
-  }else if(wordEquals(&word,"do")){//!!while syntax is different fro C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_WHILE,state->namespaceInfo);
-    if(newScope==NULL)
+  }else if(wordEquals(&word,"do")){//!!while syntax is different from C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
+    closeScope(state);
+    if(openScope(BLOCK_WHILE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
     //scope count does not change
         
     pushOperation(state,opCodeBlock(BLOCK_DO,wordPos));
     return;
   }else if(wordEquals(&word,"else")){
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_ELSE,state->namespaceInfo);
-    if(newScope==NULL)
+    closeScope(state);
+    if(openScope(BLOCK_ELSE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
     //scope count does not change
     
     pushOperation(state,opCodeBlock(BLOCK_ELSE,wordPos));
@@ -4211,42 +4277,34 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opCodeBlock(BLOCK_CONTINUE,wordPos));
     return;
   }else if(wordEquals(&word,"switch")){
-    Scope* newScope=openScope(BLOCK_SWITCH,state->namespaceInfo);
-    if(newScope==NULL)
+    if(openScope(BLOCK_SWITCH,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
     pushOperation(state,opCodeBlock(BLOCK_SWITCH,wordPos));
     return;
   }else if(wordEquals(&word,"case")){
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
-    if(newScope==NULL)
+    closeScope(state);
+    if(openScope(BLOCK_CASE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
     //scope count does not change
         
     pushOperation(state,opCodeBlock(BLOCK_CASE,wordPos));
     return;
   }else if(wordEquals(&word,"default")){
-    closeScope(&state->namespaceInfo);
-    Scope* newScope=openScope(BLOCK_CASE,state->namespaceInfo);
-    if(newScope==NULL)
+    closeScope(state);
+    if(openScope(BLOCK_CASE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
     //scope count does not change
         
     pushOperation(state,opCodeBlock(BLOCK_DEFAULT,wordPos));
     return;
   }else if(wordEquals(&word,"end")){
-    closeScope(&state->namespaceInfo);
-    state->scopeLevel--;
-    if(state->scopeLevel<state->procScope){//exited procedure
+    //end operation block before closing scope
+    BlockType closed=currentScope();
+    pushOperation(state,opEndCodeBlock(closed,wordPos));
+    if(closed==BLOCK_PROCEDURE){//exited procedure
       state->currentProcId=-1;
-      state->procScope=-1;
     }
-    
-    pushOperation(state,opEndCodeBlock(BLOCK_UNKNOWN,wordPos));
+    closeScope(state);
     return;
   }else if(wordEquals(&word,"return")){
     if(state->currentProcId<0){
@@ -4255,19 +4313,16 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_RETURN,.dataType=procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}});
     return;
   }else if(wordEquals(&word,"entryPoint:")){
-    if(state->entryPointIndex!=-1){
+    if(hasEntryPointParser(state)){
       fputs("program already has an entry point\n  at ",stderr);
-      printFilePosition(state->parsedOps[state->entryPointIndex].filePos,stderr);
+      printFilePosition(getEntryPointPosParser(state),stderr);
       fputs("\n",stderr);
       handleError(NULL,ERROR_SYNTAX,wordPos);
     }
-    Scope* newScope=openScope(BLOCK_PROCEDURE,state->namespaceInfo);
-    if(newScope==NULL)
+    if(openScope(BLOCK_PROCEDURE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
-    state->currentScope=newScope;
-    state->scopeLevel++;
     pushOperation(state,(Operation){.opType=ENTRY_POINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
-    state->entryPointIndex=state->parsedOpCount;
+    initEntryPointParser(state);
     return;
   }else if(wordEquals(&word,"print")){
     pushOperation(state,(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});//printed type will be determined by type-checker
@@ -4278,7 +4333,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   } 
   
   ScopeNode* asIdentifier;
-  int r=getIdentifier(state->namespaceInfo,word,&asIdentifier);//try to parse variable as identifier
+  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier);//try to parse variable as identifier
   if(r<0)//internal error while reading identifier
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
@@ -4289,28 +4344,55 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }
   // could not find identifier, try again in type-check phase
   pushOperation(state,(Operation){.opType=OP_IDENTIFIER,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
-    .dataAs={.localLabel=(LocalLabel){.label=newLabel(word,0,state->namespaceInfo.current,codeFile->wordStart),.spaceInfo=state->namespaceInfo}}});
+    .dataAs={.localLabel=(LocalLabel){.label=newLabel(word,0,parserNamespace(state)->current,codeFile->wordStart),.spaceInfo=*parserNamespace(state)}}});
 }
 
 
-Program compileToOps(CodeFile* codeFile){
-  size_t opsCap=256;
-  Operation* parsedOps=malloc(opsCap*sizeof(Operation));
-  if(parsedOps==NULL){
+void parseFile(ParserState* state,CodeFile* codeFile){
+  if(state==NULL){
+    handleError("parser state has to be non-null",ERROR_MEMORY,codeFile->currentPos);
+    exit(EXIT_FAILURE);
+  }
+  size_t opsCap=128;
+  Operation*  globalOps=malloc(opsCap*sizeof(Operation));
+  if(globalOps==NULL){
+    handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
+    exit(EXIT_FAILURE);
+  }
+  Operation*  localOps=malloc(opsCap*sizeof(Operation));
+  if(localOps==NULL){
     handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
     exit(EXIT_FAILURE);
   }
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
-  openScope(BLOCK_UNKNOWN,namespaceInfo);
-  ParserState state=(ParserState){.namespaceInfo=namespaceInfo,.currentScope=scopeBuffer,
-    .currentProcId=-1,.procScope=0,.localVars=0,.globalVars=0,.scopeLevel=0,.entryPointIndex=-1,.predeclaredTypes=0
-    ,.parsedOps=parsedOps,.parsedOpCap=opsCap,.parsedOpCount=0};
-  parsedOps=NULL;//null out parsed ops to prevent access after reallocation during compilation
+  FileId prevFile=state->currentFile;
+  //TODO ensure parser state cap
+  state->files[state->fileCount]=(ProgramFile){
+    .globalScope={0}/*initialized by initScope*/,.namespaceInfo=namespaceInfo,
+    .globalOps=globalOps,.globalOpCount=0,.globalOpCap=opsCap,
+    .localOps=localOps,.localOpCount=0,.localOpCap=opsCap,
+    .entryPointIndex=-1,.fileName=cstrToStr(codeFile->currentPos.fileName),.id=state->fileCount,
+    };
+  initScope(&state->files[state->fileCount].globalScope,BLOCK_UNKNOWN,state);
+  state->currentFile=state->fileCount;
+  state->fileCount++;
   while(codeFile->codeSize>0){
-    readOperation(&state,codeFile);
+    readOperation(state,codeFile);
   }
-  return (Program){.ops=state.parsedOps,.opCount=state.parsedOpCount,.globalOps=NULL,.globalScope=scopeBuffer,
-    .hasEntryPoint=state.entryPointIndex!=-1,.predeclaredTypes=state.predeclaredTypes};
+  state->currentFile=prevFile;
+}
+Program compileToOps(CodeFile* rootFile){
+  size_t filesCap=16;
+  ProgramFile* progFiles=malloc(filesCap*sizeof(Operation));
+  if(progFiles==NULL){
+    handleError("could not allocate file-data array",ERROR_MEMORY,rootFile->currentPos);
+    exit(EXIT_FAILURE);
+  }
+  ParserState state=(ParserState){.files=progFiles,.filesCap=filesCap,.fileCount=0,.currentFile=FILE_ID_NONE,
+    .localVars=0,.globalVars=0,.currentProcId=-1,.entryFile=FILE_ID_NONE,.predeclaredTypes=0};
+  parseFile(&state,rootFile);
+  return (Program){.files=state.files,.fileCount=state.fileCount,
+    .hasEntryPoint=hasEntryPointParser(&state),.predeclaredTypes=state.predeclaredTypes};
 }
 
 void typeErrorMessage(char const* exprName,TypeId expected,TypeId got){
@@ -4433,10 +4515,6 @@ typedef struct{
   }blockDataAs;
 }BlockInfo;
 typedef struct{
-  Operation* globalOperations;
-  size_t globalCap;
-  size_t globalCount;
-  
   Operation* compiledOperations;
   size_t opCap;
   size_t opCount;
@@ -4494,9 +4572,6 @@ void printTypesDebug(TypeCheckState* state,char const* label){
   puts("--------------");
 }
 
-bool ensureGlobalOpCap(TypeCheckState* state,size_t newSize){
-  return ensureOpCap(&(state->globalOperations),&(state->globalCap),newSize);
-}
 bool ensureCompiledOpCap(TypeCheckState* state,size_t newSize){
   return ensureOpCap(&(state->compiledOperations),&(state->opCap),newSize);
 }
@@ -4538,8 +4613,6 @@ BlockInfo* findBreakableBlock(TypeCheckState* state,bool breakLoop,bool breakSwi
   return NULL;
 }
 void freeContents(TypeCheckState* state){
-  free(state->globalOperations);
-  state->globalOperations=NULL;
   free(state->compiledOperations);
   state->compiledOperations=NULL;
   free(state->opStack);
@@ -4589,13 +4662,6 @@ bool resetStack(TypeCheckState* state,StackState* prevState){
 }
 
 void pushCompiledOperation(TypeCheckState* state,Operation op){
-  if(state->blockCount==0){
-    if(ensureGlobalOpCap(state,state->globalCount+1)){
-      handleError("exceeded global operation capacity",ERROR_MEMORY,op.filePos);
-    }
-    state->globalOperations[state->globalCount++]=op;
-    return;
-  }
   if(ensureCompiledOpCap(state,state->opCount+1)){
     handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
   }
@@ -4604,14 +4670,6 @@ void pushCompiledOperation(TypeCheckState* state,Operation op){
 void pushCompiledOperations(TypeCheckState* state,Operation* ops,size_t count){
   if(count==0)
     return;//nothing to do
-  if(state->blockCount==0){
-    if(ensureGlobalOpCap(state,state->globalCount+count)){
-      handleError("exceeded global operation capacity",ERROR_MEMORY,ops->filePos);
-    }
-    memcpy(state->globalOperations+state->globalCount,ops,count*sizeof(Operation));
-    state->globalCount+=count;
-    return;
-  }
   if(ensureCompiledOpCap(state,state->opCount+count)){
     handleError("exceeded operation capacity",ERROR_MEMORY,ops->filePos);
   }
@@ -5361,7 +5419,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier);
+  int r=getIdentifier(state->globalScope,op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier);
   if(r!=0){
     fprintf(stderr," unknown identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(mLabel));
     handleError(NULL,r,op->filePos);
@@ -5813,11 +5871,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(checkNonemptyStack(state,"unfinished global operation")){
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
-          if(state->blockCount==0){//predeclare procedure in global section
-            op.opType=OP_PRE_DECLARE;
-            pushCompiledOperation(state,op);
-            op.opType=OP_DECLARE;
-          }
+          if(state->blockCount!=0)//predeclare procedure in global section
+            handleError("unexpected procedure declaration",ERROR_SYNTAX,op.filePos);
           //block id will be ignored
           blockInfo=(BlockInfo){.type=BLOCK_PROCEDURE,.blockStart=state->opCount,.blockId=-1,.blockDataAs={.procBlock={.returnType=procTypeData(op.dataType)->outType}}};
           if(pushBlock(state,blockInfo))
@@ -6271,15 +6326,16 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fputs("unexpected END statement\n",stderr);
         handleError(NULL,ERROR_SYNTAX,op.filePos);
       }
-      if(op.dataAs.block.type!=BLOCK_UNKNOWN){
-        handleError("type-checking end for specified block-types is currently not implemented",ERROR_UNIMPLEMENTED,op.filePos);
-      }
       op.dataAs.block.type=blockInfoPtr->type;
       op.dataAs.block.id=blockInfoPtr->blockId;
       int32_t endCount=1;
       switch(blockInfoPtr->type){
         case BLOCK_IF:
         case BLOCK_ELSE:
+          if(op.dataAs.block.type!=BLOCK_IF&&op.dataAs.block.type!=BLOCK_ELSE&&op.dataAs.block.type!=BLOCK_UNKNOWN){
+            fprintf(stderr,"unexpected end for %s-block expected end-if\n",blockNames[op.dataAs.block.type]);
+            handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
+          }
           ifBlock=&(blockInfoPtr->blockDataAs.ifBlock);
           endCount+=ifBlock->elifCount;
           if(state->reachable){
@@ -6314,6 +6370,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           state->reachable=endReachable||(blockInfoPtr->type==BLOCK_IF);
           break;
         case BLOCK_WHILE:
+          if(op.dataAs.block.type!=BLOCK_WHILE&&op.dataAs.block.type!=BLOCK_UNKNOWN){
+            fprintf(stderr,"unexpected end for %s-block expected end-while\n",blockNames[op.dataAs.block.type]);
+            handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
+          }
           if(!state->reachable){
             fputs("end of while block cannot be reached\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
@@ -6326,6 +6386,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           state->reachable=true;
           break;
         case BLOCK_PROCEDURE:
+          if(op.dataAs.block.type!=BLOCK_PROCEDURE&&op.dataAs.block.type!=BLOCK_UNKNOWN){
+            fprintf(stderr,"unexpected end for %s-block expected end-procedure\n",blockNames[op.dataAs.block.type]);
+            handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
+          }
           if(state->reachable&&getTypeElementCount(blockInfoPtr->blockDataAs.procBlock.returnType)>0){//automatically add return statement at end of non-void procedures
             Operation ret=(Operation){.opType=OP_RETURN,.dataType=blockInfoPtr->blockDataAs.procBlock.returnType,.filePos=op.filePos,.dataAs={0}};
             typeCheckReturn(state,&ret);
@@ -6335,6 +6399,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           state->reachable=true;
           break;
         case BLOCK_CASE://TODO check if all enum labels of are covered
+          if(op.dataAs.block.type!=BLOCK_CASE&&op.dataAs.block.type!=BLOCK_UNKNOWN){
+            fprintf(stderr,"unexpected end for %s-block expected end-case\n",blockNames[op.dataAs.block.type]);
+            handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
+          }
           if(state->reachable)
             handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
           switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
@@ -6349,6 +6417,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           free(switchBlock->outStack.ops);
           break;
         case BLOCK_DEFAULT:
+          if(op.dataAs.block.type!=BLOCK_DEFAULT&&op.dataAs.block.type!=BLOCK_UNKNOWN){
+            fprintf(stderr,"unexpected end for %s-block expected end-default\n",blockNames[op.dataAs.block.type]);
+            handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
+          }
           switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
           if(state->reachable){//end default section
             checkSwitchTypes(state,&(blockInfoPtr->blockDataAs.switchBlock),op.filePos);
@@ -6369,6 +6441,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           free(switchBlock->outStack.ops);
           break;
         default:
+          puts("unexpected block type");
           if(checkNonemptyStack(state,"unfinished local operation")){
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
@@ -6486,34 +6559,61 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
 }
 void typeCheckProgram(Program* prog,CodeFile* src){
-  size_t opCap=prog->opCount>INIT_CAP?prog->opCount:INIT_CAP;
   TypeCheckState state=(TypeCheckState){
-    .globalOperations=malloc(opCap*sizeof(Operation)),.globalCap=opCap,.globalCount=0,
-    .compiledOperations=malloc(opCap*sizeof(Operation)),.opCap=opCap,.opCount=0,
+    .compiledOperations=NULL,.opCap=0,.opCount=0,
     .opStack=malloc(INIT_CAP*sizeof(Operation)),.opStackCap=INIT_CAP,.opStackCount=0,
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
     .predeclaredTypes=malloc(prog->predeclaredTypes*sizeof(TypeId)),.nPredeclaredTypes=prog->predeclaredTypes,
-    .globalScope=prog->globalScope,.tmpCount=0,.ifCount=0,.whileCount=0,.index=0,
+    .globalScope=NULL,.tmpCount=0,.ifCount=0,.whileCount=0,.index=0,
     .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,};
-  if(state.globalOperations==NULL||state.compiledOperations==NULL||state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
+  if(state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
     freeContents(&state);
     handleError("allocation of type-check state failed",ERROR_MEMORY,src->currentPos);
   }
-  while(state.index<prog->opCount){
-    typeCheckOperation(prog->ops[state.index++],&state);
+  for(FileId fId=0;fId<prog->fileCount;fId++){
+    ProgramFile* f=&prog->files[fId];
+    state.globalScope=&f->globalScope;
+    //type check global operations
+    state.index=0;
+    state.opCap=f->globalOpCount;
+    state.opCount=0;
+    state.compiledOperations=malloc(state.opCap*sizeof(Operation));
+    if(state.compiledOperations==NULL){
+      freeContents(&state);
+      handleError("allocation of global operations for type-check state failed",ERROR_MEMORY,(FilePosition){.fileName=f->fileName.chars/*null terminated*/,.line=0,.posInLine=0});
+    }
+    while(state.index<f->globalOpCount){
+      typeCheckOperation(f->globalOps[state.index++],&state);
+    }
+    if(state.blockCount>0){
+      freeContents(&state);
+      handleError("unfinished code-block",ERROR_SYNTAX,src->currentPos);
+    }
+    free(f->globalOps);
+    f->globalOps=state.compiledOperations;
+    f->globalOpCount=state.opCount;
+    //type-check local operations
+    state.index=0;
+    state.opCap=f->localOpCount;
+    state.opCount=0;
+    state.compiledOperations=malloc(state.opCap*sizeof(Operation));
+    if(state.compiledOperations==NULL){
+      freeContents(&state);
+      handleError("allocation of local operations for type-check state failed",ERROR_MEMORY,(FilePosition){.fileName=f->fileName.chars/*null terminated*/,.line=0,.posInLine=0});
+    }
+    while(state.index<f->localOpCount){
+      typeCheckOperation(f->localOps[state.index++],&state);
+    }
+    if(state.blockCount>0){
+      freeContents(&state);
+      handleError("unfinished code-block",ERROR_SYNTAX,src->currentPos);
+    }
+    free(f->localOps);
+    f->localOps=state.compiledOperations;
+    f->localOpCount=state.opCount;
+    state.compiledOperations=NULL;
   }
-  if(state.blockCount>0){
-    freeContents(&state);
-    handleError("unfinished code-block",ERROR_SYNTAX,src->currentPos);
-  }
-  free(prog->ops);
-  prog->globalOps=state.globalOperations;
-  state.globalOperations=NULL;
-  prog->globalCount=state.globalCount;
-  prog->ops=state.compiledOperations;
-  state.compiledOperations=NULL;
-  prog->opCount=state.opCount;
   prog->hasCheckBounds=state.hasCheckBounds;
   prog->hasCheckEnum=state.hasCheckEnum;
   freeContents(&state);
@@ -6667,10 +6767,9 @@ int main(int argc,char** argv){
 	  .currentPos={.fileName=srcFile,.line=1,.posInLine=1},
 	  .wordStart={.fileName=srcFile,.line=1,.posInLine=1}};
 	Program p=compileToOps(&codeFile);
-	if(p.ops==NULL)
-	  return EXIT_FAILURE;
 	if(!quietMode)
-    printf("found %zu operations\n",p.opCount);
+    printf("parsed %"PRIi32" files\n",p.fileCount);
+    //XXX print operation count
   //2. save intermediate representation
   FILE* intermediate;
   if(parserTokensFile!=NULL){
@@ -6679,18 +6778,25 @@ int main(int argc,char** argv){
 	    fprintf(stderr,"IO Error while opening File: %s\n",parserTokensFile);
 		  return EXIT_FAILURE;
 	  }
-    for(size_t i=0;i<p.globalCount;i++){
-      printOperation(p.globalOps[i],intermediate);
-    }
-    for(size_t i=0;i<p.opCount;i++){
-      printOperation(p.ops[i],intermediate);
+	  for(FileId fId=0;fId<p.fileCount;fId++){
+	    ProgramFile* f=&p.files[fId];
+	    fprintf(intermediate," ## %"PRI_STR"\n",PRI_STR_ARGS(f->fileName));
+	    fputs("## global\n",intermediate);
+      for(size_t i=0;i<f->globalOpCount;i++){
+        printOperation(f->globalOps[i],intermediate);
+      }
+	    fputs("## local\n",intermediate);
+      for(size_t i=0;i<f->localOpCount;i++){
+        printOperation(f->localOps[i],intermediate);
+      }
     }
     fclose(intermediate);
   }
 	//3. type-check operations
   typeCheckProgram(&p,&codeFile);
 	if(!quietMode)
-    printf("compiled to %zu operations\n",p.globalCount+p.opCount);
+    printf("parsed %"PRIi32" files\n",p.fileCount);
+    //XXX print operation count
   //4. save intermediate representation
   if(compilerTokensFile!=NULL){
     intermediate=fopen(compilerTokensFile,"w");
@@ -6698,11 +6804,17 @@ int main(int argc,char** argv){
 	    fprintf(stderr,"IO Error while opening File: %s\n",compilerTokensFile);
 		  return EXIT_FAILURE;
 	  }
-    for(size_t i=0;i<p.globalCount;i++){
-      printOperation(p.globalOps[i],intermediate);
-    }
-    for(size_t i=0;i<p.opCount;i++){
-      printOperation(p.ops[i],intermediate);
+	  for(FileId fId=0;fId<p.fileCount;fId++){
+	    ProgramFile* f=&p.files[fId];
+	    fprintf(intermediate," ## %"PRI_STR"\n",PRI_STR_ARGS(f->fileName));
+	    fputs("## global\n",intermediate);
+      for(size_t i=0;i<f->globalOpCount;i++){
+        printOperation(f->globalOps[i],intermediate);
+      }
+	    fputs("## local\n",intermediate);
+      for(size_t i=0;i<f->localOpCount;i++){
+        printOperation(f->localOps[i],intermediate);
+      }
     }
     fclose(intermediate);
   }
