@@ -727,7 +727,10 @@ TypeId newNamedType(LabelId label,TypeId content){
     mClass=TYPECLASS_NAMED_ENUM_LABEL;
     content.class=TYPECLASS_ENUM;
   }
-  //TODO ensure cap
+  if(namedTypeCount>=MAX_NAMED_TYPES){
+    fputs("exceeded named type capacity\n",stderr);
+    return TYPE_UNDEFINED;
+  }
   namedTypes[namedTypeCount]=(NamedType){.name=label,.type=content};
   return (TypeId){.class=mClass,.dataAs.id=namedTypeCount++};
 }
@@ -749,7 +752,10 @@ TypeId pointerType(TypeId target,bool mutable){
   }
   if(isProcedureType(target))//mark procedure types that use pointer
     procTypes[target.dataAs.id].pointerUsed=true;
-  //TODO ensure cap
+  if(pointerTypeCount>=MAX_POINTERS){
+    fputs("exceeded pointer type capacity\n",stderr);
+    return TYPE_UNDEFINED;
+  }
   pointerTypes[pointerTypeCount]=(PointerType){.target=target,.isMutable=mutable};
   return (TypeId){.class=TYPECLASS_POINTER,.dataAs.id=pointerTypeCount++};
 }
@@ -995,6 +1001,7 @@ void printConstValue(ConstantValue constant,FILE* file){
 }
 
 TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* values,int32_t count){//XXX prevent unnecessary recreation of types
+  TypeId tmp;
   switch(type.class){
     case TYPECLASS_PRIMITIVE:
     case TYPECLASS_AUTO_TYPE:
@@ -1012,8 +1019,11 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
       return arrayType(true,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
         arrayTypes[type.dataAs.id].dims,arrayTypes[type.dataAs.id].sizes,arrayTypes[type.dataAs.id].isMutable);
     case TYPECLASS_NAMED_TYPE:
-    case TYPECLASS_NAMED_ENUM_LABEL://TODO don't create new named type
-      return newNamedType(namedTypes[type.dataAs.id].name,replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count));
+    case TYPECLASS_NAMED_ENUM_LABEL:
+      tmp=replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count);
+      if(typeEquals(tmp,unwrapNamedType(type)))
+        return type;
+      return newNamedType(namedTypes[type.dataAs.id].name,tmp);
     case TYPECLASS_TUPLE:
     case TYPECLASS_PROC_IN:
     case TYPECLASS_LABELED_PROC_IN:
@@ -3538,7 +3548,8 @@ void addStaticArgs(LabelId label,TypeId type,FilePosition pos){
     handleError("static arguments have to be types",ERROR_SYNTAX,pos);
   }
   arg=(StaticArgument){.label=label,.type=STATIC_ARG_TYPE,.as.type=newGenericType(staticArgsCount)};
-  //TODO ensure cap
+  if(staticArgsCount>=MAX_STATIC_ARGS)
+    handleError("static-argument buffer overflow",ERROR_MEMORY,pos);
   staticArgsBuffer[staticArgsCount]=arg;
   staticArgsCount++;
 }
@@ -3929,6 +3940,20 @@ bool ensureOpCap(Operation** mList,size_t* cap,size_t newSize){
   *mList=ops;
   return false;
 }
+bool ensureInlcudesCap(IncludedFile** mList,size_t* cap,size_t newSize){
+  void* ops=*mList;
+  if(ensureCap(&ops,cap,sizeof(IncludedFile),newSize))
+    return true;
+  *mList=ops;
+  return false;
+}
+bool ensureFilesCap(ProgramFile** mList,size_t* cap,size_t newSize){
+  void* ops=*mList;
+  if(ensureCap(&ops,cap,sizeof(ProgramFile),newSize))
+    return true;
+  *mList=ops;
+  return false;
+}
 
 void pushOperation(ParserState* state,Operation op);
 TypeId constantType(ConstantValue const* constant){
@@ -4240,8 +4265,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
           handleError(NULL,ERROR_SYNTAX,wordPos);
         }
         //add include file to includes list
-        //TODO ensure cap
-        state->files[state->currentFile].includes[state->files[state->currentFile].includeCount++]=(IncludedFile){.id=included,.includePos=wordPos};
+        ProgramFile* f=&state->files[state->currentFile];
+        if(ensureInlcudesCap(&f->includes,&f->includeCap,f->includeCount+1))
+          handleError("exceeded include capacity",ERROR_MEMORY,wordPos);
+        f->includes[f->includeCount++]=(IncludedFile){.id=included,.includePos=wordPos};
         return;
       }
       if(wordType==WORD_TYPE_IDENTIFIER){//library include
@@ -4604,7 +4631,10 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   FileId prevFile=state->currentFile;
   FileId included=state->fileCount++;
-  //TODO ensure files cap
+  if(ensureFilesCap(&state->files,&state->filesCap,state->fileCount+1)){
+    handleError("could not allocate files array",ERROR_MEMORY,codeFile->currentPos);
+    return FILE_ID_NONE;
+  }
   state->files[included]=(ProgramFile){
     .globalScope={0}/*initialized by initScope*/,.namespaceInfo=namespaceInfo,
     .includes=includes,.includeCount=0,.includeCap=includeCap,
