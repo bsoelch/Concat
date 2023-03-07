@@ -12,7 +12,7 @@
 #define ERROR_UNIMPLEMENTED -3
 //errors in compiled code -> positive values
 #define ERROR_TYPE 1
-#define ERROR_SYNTAX 2 
+#define ERROR_SYNTAX 2
 #define ERROR_PARSE_INT 3
 #define ERROR_INT_OVERFLOW 4
 #define ERROR_REDECLARATION 5
@@ -25,7 +25,7 @@
 #define PROG_EXIT_CODE_WRONG_ENUM_INDEX   2
 
 // default initial capacity for arrays
-#define INIT_CAP 128 
+#define INIT_CAP 128
 
 //negate indices (internal errors have negative error codes)
 char const* const internalErrors [] = {[-ERROR_MEMORY]="ERROR_MEMORY",[-ERROR_IO]="ERROR_IO",[-ERROR_UNIMPLEMENTED]="ERROR_UNIMPLEMENTED",};
@@ -114,7 +114,7 @@ int writeUnicodeChar(int64_t codepoint,char* target){
     *(target+3)=0x80|(codepoint&0x3f);
     return 4;
   }
-  //not valid Unicode code-points but still valid sequences following the UTF-8 encoding scheme 
+  //not valid Unicode code-points but still valid sequences following the UTF-8 encoding scheme
   if(codepoint<(1<<26)){//111110 ** 10 ****** 10 ****** 10 ****** 10 ******
     *target=0xf8|(codepoint>>24);
     *(target+1)=0x80|((codepoint>>18)&0x3f);
@@ -149,14 +149,14 @@ int writeUnicodeChar(int64_t codepoint,char* target){
 typedef enum{
   OP_PRINT,
   OP_CONSTANT,
-  
+
   OP_PRE_DECLARE,
   OP_DECLARE,
   OP_GET,
   OP_SET,
   OP_GET_LABEL,
   OP_SET_LABEL,
-  
+
   OP_IDENTIFIER,
   OP_SET_IDENTIFIER,
   OP_IDENTIFIER_ADDRESS,
@@ -165,23 +165,23 @@ typedef enum{
   OP_CAST,
   OP_ADDR_OF,// (pointer to given value)
   OP_ADDR_OF_ARRAY,
-  
-  OP_BINARY_OPERATOR, 
-  OP_UNARY_OPERATOR,  
-  
+
+  OP_BINARY_OPERATOR,
+  OP_UNARY_OPERATOR,
+
   OP_CHECK_ARRAY_BOUNDS,//special operation for checking array bounds             params: index length            exits the program if index < 0 or index >= length
-  OP_CHECK_ENUM_INDEX,//special operation for checking if enum index corresponds to current value  params: enum   exits the program if enum.lable != data.asI64 
-  
-  OP_CODE_BLOCK,  
-  OP_END_BLOCK,  
-  
-  OP_RETURN,       
-  OP_CALL,         // procType procId  
-  OP_CALL_PTR,    
-  ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END 
-  
+  OP_CHECK_ENUM_INDEX,//special operation for checking if enum index corresponds to current value  params: enum   exits the program if enum.lable != data.asI64
+
+  OP_CODE_BLOCK,
+  OP_END_BLOCK,
+
+  OP_RETURN,
+  OP_CALL,         // procType procId
+  OP_CALL_PTR,
+  ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END
+
   //compile-time operations
-  OP_MODIFY_STACK,  
+  OP_MODIFY_STACK,
   OP_COMPILER_INFO,
 }OpType;
 char const* opName(OpType type){
@@ -198,10 +198,10 @@ char const* opName(OpType type){
     case OP_SET_IDENTIFIER:return "OP_SET_IDENTIFIER";
     case OP_IDENTIFIER_ADDRESS:return "OP_IDENTIFIER_ADDRESS";
     case OP_BINARY_OPERATOR:return "OP_BINARY_OPERATOR";
-    case OP_UNARY_OPERATOR:return "OP_UNARY_OPERATOR";  
+    case OP_UNARY_OPERATOR:return "OP_UNARY_OPERATOR";
     case OP_CODE_BLOCK:return "OP_CODE_BLOCK";
     case OP_END_BLOCK:return "OP_END_BLOCK";
-    case OP_RETURN:return "OP_RETURN";      
+    case OP_RETURN:return "OP_RETURN";
     case OP_CALL:return "OP_CALL";
     case OP_CALL_PTR:return "OP_CALL_PTR";
     case ENTRY_POINT:return "ENTRY_POINT";
@@ -295,9 +295,9 @@ void printAsciifiedString(String name,FILE* out){
       fputc(name.chars[i],out);
       continue;
     }
-    //additional escape sequences: 
+    //additional escape sequences:
     // _F -> start local filename
-    // _T -> start of type 
+    // _T -> start of type
     // _N -> start of (type)name
     // _E -> end block-section
     if(name.chars[i]=='_'){
@@ -685,7 +685,7 @@ bool makeMutable(TypeId* t){
       *t=arrayType(t->class==TYPECLASS_ARRAY_VIEW,getBaseType(*t),arrayTypes[t->dataAs.id].dims,arrayTypes[t->dataAs.id].sizes,true);
       return true;
     case TYPECLASS_PRIMITIVE:
-    case TYPECLASS_ARRAY://mutability of composite types controlled by their container 
+    case TYPECLASS_ARRAY://mutability of composite types controlled by their container
     case TYPECLASS_TUPLE:
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
@@ -891,7 +891,7 @@ TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
   ProcedureType const* proc=procTypeData(procType);
   if(!typeElementsLabeled(proc->inType))
     return baseType;
-  //replaces labeled types with their canonical unlabeled version 
+  //replaces labeled types with their canonical unlabeled version
   TypeId in=compositeType(TYPECLASS_PROC_IN,getTypeElements(proc->inType),LABEL_ID_UNKNOWN,getTypeElementCount(proc->inType));
   if(typeEquals(in,TYPE_UNDEFINED))
     handleError("unexpected error while allocating type",ERROR_MEMORY,pos);
@@ -1245,8 +1245,8 @@ void printTypeNameC(TypeId type,FILE* file){
       return;
     case TYPECLASS_ARRAY_VIEW:
       if(!arrayTypeData(type)->sizeKnown){//array with unknown size
-        fprintf(file,"array%"PRIi32,type.dataAs.id); 
-        return; 
+        fprintf(file,"array%"PRIi32,type.dataAs.id);
+        return;
       }
       printTypeNameC(getBaseType(type),file);
       if(!isMutableType(type))
@@ -1374,7 +1374,7 @@ void printIdInfo(IdentifierInfo info,FILE* out){
 }
 
 typedef enum{
-  BLOCK_PROCEDURE, 
+  BLOCK_PROCEDURE,
   BLOCK_IF,        // if( EXPR ){
   BLOCK_IF2,       // if(EXPR){ ... } (auto-closes at end of current if -statement)
   BLOCK_ELSE,      // }else{
@@ -1384,7 +1384,7 @@ typedef enum{
   BLOCK_CONTINUE,  // continue;
   BLOCK_SWITCH,    // switch( EXPR ){
   BLOCK_CASE,      // case e1 : ... case eN :
-  BLOCK_DEFAULT,   // default: 
+  BLOCK_DEFAULT,   // default:
   BLOCK_UNKNOWN,   // end of unknown block
 }BlockType;
 char const* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_IF]="if",
@@ -1552,7 +1552,7 @@ String basePath={0};
 typedef struct{
   NamespaceId parent;
   String name;
-  
+
   NamespaceId* children;
   size_t childCount;
   size_t childCap;
@@ -1727,7 +1727,7 @@ struct ScopeNode{
 };
 typedef struct{
   ScopeNode** nodes;
-  
+
   BlockType scopeType;
   NamespaceImportId prevImports;
   size_t nodeBufferOffset;
@@ -1746,7 +1746,7 @@ typedef struct{
 typedef struct{
   Scope globalScope;
   NamespaceInfo namespaceInfo;
-  
+
   Operation* globalOps;
   size_t globalOpCount;
   size_t globalOpCap;
@@ -1767,12 +1767,12 @@ typedef struct{
   size_t filesCap;
   FileId fileCount;
   FileId currentFile;
-    
+
   int32_t globalVars;
   int32_t localVars;
-  
+
   int32_t currentProcId;
-  
+
   FileId entryFile;
   int32_t autoTypes;
 }ParserState;
@@ -2018,7 +2018,7 @@ bool includeGlobals(Scope* globalScope,Scope* src,FilePosition pos){
 typedef struct{
   ProgramFile* files;
   FileId fileCount;
-  
+
   int32_t nAutoTypes;
   TypeId*  autoTypes;
   bool hasEntryPoint;
@@ -2099,7 +2099,7 @@ size_t tupleElementAccess(FILE* target,int32_t depth,Operation const* op,size_t 
     size++;
   }
   return size;
-} 
+}
 
 void printGlobalIdentifer(Label const* mName,FILE* target){
   fputs("concat_",target);
@@ -2139,7 +2139,7 @@ void printProcArgumentTypesC(ProcedureType const* proc,FILE* target,bool printAr
     printTypeNameC(staticArgType(proc->staticArgs[i].type),target);
     if(printArgNames)
       fprintf(target," staticArg%"PRIi32,i);
-    
+
   }
   CompositeType const* inTypes=compositeTypeData(proc->inType);
   if(proc->staticArgsCount+inTypes->typeCount==0)
@@ -2312,7 +2312,7 @@ size_t compileProcArgs(FILE* target,size_t compiledOps,Operation const* op,size_
   if(getTypeElementCount(out)==0)//function without return value terminates statement
     fputs(";\n",target);
   return size;
-} 
+}
 
 size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSize,bool isGlobal){
   if(opSize<1)
@@ -2892,7 +2892,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
 }
 
 bool isUsedTuple(CompositeType const* composite){
-  if((composite->flags&(FLAG_IS_TUPLE|FLAG_IS_STRUCT))!=0) 
+  if((composite->flags&(FLAG_IS_TUPLE|FLAG_IS_STRUCT))!=0)
     return true;
   return (composite->flags&(FLAG_IS_PROC_OUT))!=0&&composite->typeCount>1;
 }
@@ -2944,9 +2944,9 @@ void compileToC(FILE* target,Program const* p){
       printTypeNameC(arrayTypes[id].base,target);
       if(arrayTypes[id].sizeKnown){
         fputs(" data",target);
-        for(int32_t d=arrayTypes[id].dims-1;d>=0;d--){//C orders sizes the other way around 
+        for(int32_t d=arrayTypes[id].dims-1;d>=0;d--){//C orders sizes the other way around
           fprintf(target,"[%"PRIi64"]",arrayTypes[id].sizes[d]);
-        }    
+        }
       }else{
         if(!arrayTypes[id].isMutable)
           fputs(" const",target);
@@ -3077,7 +3077,7 @@ typedef struct{
 }CodeFile;
 
 /* Copied from StackOverflow
- * finds the size of the FILE at fp in byts 
+ * finds the size of the FILE at fp in byts
  * returns a negative value if finding the size fails
  * fp is assumed to be non null
  * */
@@ -3137,7 +3137,7 @@ FileId parseFile(ParserState*,CodeFile*);
 //compute the next id for a variable of the given id-type relative to the given compiler state
 int32_t nextId(IdentifierType idType,ParserState* state){
   switch(idType){
-    //global 
+    //global
     case ID_GLOBAL_VAR:
     case ID_TYPE:
     case ID_PROCEDURE:
@@ -3147,7 +3147,7 @@ int32_t nextId(IdentifierType idType,ParserState* state){
     case ID_ARGUMENT:
     case ID_INTERMEDIATE_RESULT:
     case ID_TMP_VAR:
-    //inline 
+    //inline
     case ID_TUPLE:
     case ID_TUPLE_ELEMENT:
     case ID_ENUM_LABEL:
@@ -3156,7 +3156,7 @@ int32_t nextId(IdentifierType idType,ParserState* state){
     case ID_POINTER_OFFSET:
     case ID_ARRAY_ELEMENT:
     case ID_ARRAY_SIZE:
-      return state->localVars++;//local 
+      return state->localVars++;//local
   }
   return scopeNodeCount;
 }
@@ -3290,7 +3290,7 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
   char* wordChars=codeFile->code;
   size_t wordLength=0,delta=0;
   size_t sequenceLength;//length of escape sequence for multi-char sequences
-  size_t endChars=0;//number of chars of end sequence already encountered 
+  size_t endChars=0;//number of chars of end sequence already encountered
   while(codeFile->codeSize>0){
     if(*(codeFile->code)==end[endChars]){
       if(++endChars>=endLength)
@@ -3331,7 +3331,7 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
         case '\\':
         case '"':
           wordChars[wordLength]=*(codeFile->code);//copy character
-          break; 
+          break;
         case 'x':
         case 'u':
         case 'U':
@@ -3365,7 +3365,7 @@ String readStringLiteral(CodeFile* codeFile,char* end,size_t endLength,bool doEs
         default:
           fprintf(stderr,"unsupported escape sequence '\\%c'\n",*(codeFile->code));
           handleError(NULL,ERROR_SYNTAX,codeFile->currentPos);
-          break; 
+          break;
       }
     }
     wordLength++;
@@ -3622,7 +3622,7 @@ TypeId const* popTypeConstants(size_t count,FilePosition pos,char const* argumen
 #define LABEL_TYPE_STRUCT  1 // exactly one label per type
 #define LABEL_TYPE_ENUM    2 // labels without type are allowed
 #define LABEL_TYPE_PROC_IN 3 // types are allowed to have labels, if one type has labels than all types have to have an label
- 
+
 bool readType(String name,CodeFile* codeFile,ParserState* state);
 
 bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* state){
@@ -4106,7 +4106,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(isEnumType(type))
       fputs(" to create an enum specify the label of the current value\n",stderr);
     handleError(NULL,ERROR_TYPE,wordPos);
-  }else if(wordEquals(&word,"cast")){ 
+  }else if(wordEquals(&word,"cast")){
     requireCompileTimeTypes(&word,&type,1,wordPos);
     pushOperation(state,(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=TYPE_UNDEFINED}});
       return;
@@ -4464,7 +4464,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"while")){
     if(openScope(BLOCK_WHILE,state))
-      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);    
+      handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     pushOperation(state,opCodeBlock(BLOCK_WHILE,wordPos));
     return;
   }else if(wordEquals(&word,"do")){//!!while syntax is different from C:  WHILE cond DO exrp END   do-While: WHILE exrp cond DO END
@@ -4472,7 +4472,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(openScope(BLOCK_WHILE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     //scope count does not change
-        
+
     pushOperation(state,opCodeBlock(BLOCK_DO,wordPos));
     return;
   }else if(wordEquals(&word,"else")){
@@ -4480,7 +4480,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(openScope(BLOCK_ELSE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     //scope count does not change
-    
+
     pushOperation(state,opCodeBlock(BLOCK_ELSE,wordPos));
     return;
   }else if(wordEquals(&word,"break")){
@@ -4501,7 +4501,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(openScope(BLOCK_CASE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     //scope count does not change
-        
+
     pushOperation(state,opCodeBlock(BLOCK_CASE,wordPos));
     return;
   }else if(wordEquals(&word,"default")){
@@ -4509,7 +4509,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(openScope(BLOCK_CASE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     //scope count does not change
-        
+
     pushOperation(state,opCodeBlock(BLOCK_DEFAULT,wordPos));
     return;
   }else if(wordEquals(&word,"end")){
@@ -4545,8 +4545,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"mut")){
     handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
     return;
-  } 
-  
+  }
+
   ScopeNode* asIdentifier;
   int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier);//try to parse variable as identifier
   if(r<0)//internal error while reading identifier
@@ -4699,7 +4699,7 @@ typedef struct{
 typedef struct{
   StackState inStack;
   StackState outStack;
-  
+
   size_t elsePos;
   int32_t elifCount;
   bool endReachable;
@@ -4707,18 +4707,18 @@ typedef struct{
 typedef struct{
   StackState inStack;
   StackState outStack;
-  
+
   bool hasDo;
   bool hasBreak;
 }WhileBlockInfo;
 typedef struct{
   StackState inStack;
   StackState outStack;
-  
+
   TypeId switchType;
-  
+
   SwitchData* switchData;
-  
+
   bool endReachable;
   bool explicitBreak;
 }SwitchBlockInfo;
@@ -4746,18 +4746,18 @@ typedef struct{
   size_t opStackCount;
   TypeInfo* typeStack;
   size_t typeStackCap;
-  size_t typeCount;  
-  
+  size_t typeCount;
+
   BlockInfo* openBlocks;
   size_t blockCap;
   size_t blockCount;
-  
+
   Scope* globalScope;
-  
+
   int32_t tmpCount;   // number of temp vars that have been created
   int32_t ifCount;    // number of created if-statements
   int32_t whileCount; // number of created while statements
-  
+
   size_t index;
   int32_t nAutoTypes;
   TypeId* autoTypes;
@@ -4902,7 +4902,7 @@ void pushCompiledOperations(TypeCheckState* state,Operation* ops,size_t count){
 
 //append the first stackOps operations from the stack to the program, remove types elements from the type-stack
 //if appendOp is true op will be appended to the program (before any stack operations are appended)
-//already allocate space for skippedStackOps 
+//already allocate space for skippedStackOps
 void addCompiledStackOps(TypeCheckState* state,Operation op,size_t types,bool appendOp){
   size_t stackOps=0;
   for(size_t i=0;i<types;i++)
@@ -4918,7 +4918,7 @@ void addCompiledOps(TypeCheckState* state,Operation op,size_t types){
   addCompiledStackOps(state,op,types,true);
 }
 
-//ensures that none of the top type-count stack elements is a composite operation 
+//ensures that none of the top type-count stack elements is a composite operation
 void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWritable){
   if(state->blockCount==0)//don't extract composites at global level
     return;
@@ -5018,7 +5018,7 @@ errorMessage    statement name that will be displayed on type error returned mes
 initStackState  if true the stack state will be initialized, otherwise it is only used to read the variable-ids
 declare         if true temporary variables will be declared instead of set, use this only to declare variables before entering the respective code-block
 ignoreFirst     if true the top element on the type-stack will be ignored and the type-stack will be kept intact
-pos             current file position (for error reporting) 
+pos             current file position (for error reporting)
 */
 void storeStackValues(TypeCheckState* state,StackState* stackState,StackState* expectedState,char const* errorMessage,bool initStackState,bool declare,bool ignoreFirst,FilePosition pos){
   size_t typeCount=state->typeCount-(ignoreFirst?1:0);
@@ -5174,7 +5174,7 @@ void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,s
     return;
   //modify-types
   if(ensureOpStackCap(state,state->opStackCount+nCasts)){
-    handleError("exceeded op-stack capacity",ERROR_MEMORY,pos); 
+    handleError("exceeded op-stack capacity",ERROR_MEMORY,pos);
   }
   offset=state->opStackCount;
   size_t shiftCount=0;
@@ -5193,7 +5193,7 @@ void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,s
       state->typeStack[state->typeCount-k].opCount++;
       continue;
     }
-    handleError("unexpected type-conversion",ERROR_UNIMPLEMENTED,pos); 
+    handleError("unexpected type-conversion",ERROR_UNIMPLEMENTED,pos);
   }
 }
 
@@ -5321,10 +5321,10 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
 }
 void pushProcArgs(TypeCheckState* state,TypeId procType,FilePosition pos){
   if(!isProcedureType(procType)){
-    handleError("procedure type has to be callable",ERROR_TYPE,pos); 
+    handleError("procedure type has to be callable",ERROR_TYPE,pos);
   }
   if(typeElementsLabeled(procTypeData(procType)->inType))
-    return;//do not push values with input is labeled 
+    return;//do not push values with input is labeled
   CompositeType const* inTypes=compositeTypeData(procTypeData(procType)->inType);
   if(inTypes->typeCount==0)
     return;//no input arguments
@@ -5347,7 +5347,7 @@ void typeCheckSetVariable(TypeCheckState* state,Operation* op){
     LabelId labelId=op->dataAs.idInfo.labelId;
     if(labelId==-1){
       handleError("variable is not mutable",ERROR_TYPE,op->filePos);
-    } 
+    }
     Label const* mLabel=label(labelId,op->filePos);
     fprintf(stderr,"variable %"PRI_STR" is not mutable\n",PRI_STR_ARGS(mLabel->label));
     fprintf(stderr,"  %"PRI_STR" was declared at",PRI_STR_ARGS(mLabel->label));
@@ -5467,7 +5467,7 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     indexOffset-=state->typeStack[state->typeCount-i].opCount;
     pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
     pushCompiledOperations(state,state->opStack+indexOffset,state->typeStack[state->typeCount-i].opCount);//index
-    if(arrayTypeData(arrayType)->sizeKnown){//fixed-size array 
+    if(arrayTypeData(arrayType)->sizeKnown){//fixed-size array
       pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[i-1],op->filePos));
     }else{
       pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
@@ -5498,7 +5498,7 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     typeCheckSetStackValue(state,op,arrayData->base);
   }
 }
-void typeCheckGet(TypeCheckState* state,Operation* op){ 
+void typeCheckGet(TypeCheckState* state,Operation* op){
   checkReachable(state,*op);
   checkLocal(state,*op);
   size_t offset;
@@ -5628,7 +5628,7 @@ void typeCheckReturn(TypeCheckState* state,Operation* op){
 
 void resolveIdentifiers(TypeCheckState* state,Operation* op){
   if(op->opType!=OP_IDENTIFIER&&op->opType!=OP_SET_IDENTIFIER&&op->opType!=OP_IDENTIFIER_ADDRESS)
-    return; 
+    return;
   BlockInfo* blockInfo=peekBlock(state);
   String mLabel=label(op->dataAs.localLabel.label,op->filePos)->label;
   if(!state->reachable&&op->opType==OP_IDENTIFIER&&blockInfo!=NULL&&
@@ -5660,7 +5660,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   BlockInfo* blockInfoPtr;
   IfBlockInfo* ifBlock;
   SwitchBlockInfo* switchBlock;
-  
+
   resolveIdentifiers(state,&op);
   switch(op.opType){
     case OP_CONSTANT:
@@ -5711,7 +5711,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       switch(op.dataAs.unOp){
         case INCREMENT:
         case DECREMENT:
-          if(!state->typeStack[offset].isWritable){//value has to be 
+          if(!state->typeStack[offset].isWritable){//value has to be
             fprintf(stderr,"operand of unary operator %s has to be writable \n",unOpName(op.dataAs.unOp));
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
@@ -5790,7 +5790,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case OR:
         case XOR:
           //integer bool ops
-          //TODO? bit shifts 
+          //TODO? bit shifts
           op.dataType=typeCheckIntLogic(inTypes);
           if(!typeEquals(op.dataType,TYPE_UNDEFINED)){
             typesMatch=true;
@@ -5805,14 +5805,14 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           break;
         case EQ:
         case NE:
-          //pointer equality 
+          //pointer equality
           if(isPointerType(inTypes[0])&&isPointerType(inTypes[1])&&
               typeEquals(getBaseType(inTypes[0]),getBaseType(inTypes[1]))){
             op.dataType=TYPE_BOOL;
             typesMatch=true;
             break;
           }
-          //array-pointer equality 
+          //array-pointer equality
           if(isArrayViewType(inTypes[0])&&isArrayViewType(inTypes[1])&&
               arrayTypeData(inTypes[0])->sizeKnown&&arrayTypeData(inTypes[1])->sizeKnown&&
               typeEquals(getBaseType(inTypes[0]),getBaseType(inTypes[1]))){
@@ -5820,7 +5820,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             typesMatch=true;
             break;
           }
-          //enum-entry equality 
+          //enum-entry equality
           if(isEnumLabel(inTypes[0],inTypes[1])||(isEnumType(inTypes[0])&&typeEquals(inTypes[0],inTypes[1]))){
             if(changeEnumType(&inTypes[0],true))
               handleError("could not update enum type",ERROR_MEMORY,op.filePos);
@@ -6195,7 +6195,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       if(!canCast(state->typeStack[offset].type,op.dataType)){
         fputs("cannot cast ",stderr);
         printTypeName(state->typeStack[offset].type,stderr);
-        fputs(" to ",stderr); 
+        fputs(" to ",stderr);
         printTypeName(op.dataType,stderr);
         fputs("\n",stderr);
         handleError(NULL,ERROR_TYPE,op.filePos);
@@ -6268,13 +6268,13 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           if(pushBlock(state,blockInfo))
             handleError("could not push if-block",ERROR_MEMORY,op.filePos);
-          
+
           op.dataType=TYPE_BOOL;
           requireTypes("if-condition",state,&op.dataType,1,op.filePos);
           extractCompositeOps(state,1,false);
           offset=state->typeCount-1;
           op.dataAs.block.id=blockInfo.blockId;
-          addCompiledOps(state,op,1); 
+          addCompiledOps(state,op,1);
           return;
         case BLOCK_ELSE:
           blockInfoPtr=peekBlock(state);
@@ -6288,7 +6288,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             ifBlock->endReachable=true;
           }
           state->reachable=true;
-          //reset stack to in-types 
+          //reset stack to in-types
           if(resetStack(state,&(ifBlock->inStack)))
             handleError(NULL,ERROR_TYPE,op.filePos);
           //update block
@@ -6338,7 +6338,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           offset=state->typeCount-1;
           op.dataAs.block.id=blockInfoPtr->blockId;
           op.dataAs.block.subId=ifBlock->elifCount++;
-          addCompiledOps(state,op,1); 
+          addCompiledOps(state,op,1);
           return;
         case BLOCK_WHILE:
           checkReachable(state,op);
@@ -6370,12 +6370,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
           /*XXX simplify code for while-blocks with empty condition/body:
-            while do #+body+# end -> 
+            while do #+body+# end ->
             tmp =init
             while(tmp){
               // body
             }
-            while #+body+# #+condition+# do end -> 
+            while #+body+# #+condition+# do end ->
             do{
               //body
             }while(condition);
@@ -6390,7 +6390,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           offset=state->typeCount-1;
           extractCompositeOps(state,1,false);
           op.dataAs.block.id=blockInfoPtr->blockId;
-          addCompiledOps(state,op,1); 
+          addCompiledOps(state,op,1);
           //reset stack after compiling condition
           if(resetStack(state,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
             handleError(NULL,ERROR_TYPE,op.filePos);
@@ -6496,7 +6496,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError("exceeded maximum case-count in switch",ERROR_MEMORY,op.filePos);
           switchBlock->switchData->cases[switchBlock->switchData->caseCount+1].offset=switchBlock->switchData->labelCount;
           state->reachable=true;
-          //reset stack to in-types 
+          //reset stack to in-types
           if(resetStack(state,&(switchBlock->inStack)))
             handleError(NULL,ERROR_TYPE,op.filePos);
           //update block
@@ -6526,7 +6526,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError("exceeded maximum case-count in switch",ERROR_MEMORY,op.filePos);
           state->reachable=true;
           switchBlock->switchData->hasDefault=true;
-          //reset stack to in-types 
+          //reset stack to in-types
           if(resetStack(state,&(switchBlock->inStack)))
             handleError(NULL,ERROR_TYPE,op.filePos);
           //update block
@@ -6685,7 +6685,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       checkLocal(state,op);
       typeCheckCall(&op,state,false);
       return;
-    case OP_RETURN:  
+    case OP_RETURN:
       checkReachable(state,op);
       state->reachable=false;
       checkLocal(state,op);
@@ -6963,8 +6963,8 @@ int main(int argc,char** argv){
   (void)argc;
   if(parseArgs(argv))
     return EXIT_FAILURE;
-  
-  //initialization of uninitialized global variables 
+
+  //initialization of uninitialized global variables
   if(namespaceTrieInit()){
     fputs("failed to initialize namespace storage",stderr);
     return EXIT_FAILURE;
