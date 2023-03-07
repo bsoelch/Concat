@@ -1975,21 +1975,27 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
 
 bool includeIfGlobal(ScopeNode* aNode,bool onlyConst,Scope* globalScope,FilePosition pos){
   Label const* mLabel=label(aNode->labelId,pos);
+  ScopeNode** mNode;
   if(onlyConst&&aNode->constValue.type==CONSTANT_NONE)
     return false;
-  if(!isPublicLabel(mLabel))//TODO ensure that extern variables are not overwritten
-    return false;
-  ScopeNode** mNode=findNode(globalScope,mLabel->label,aNode->namespaceId);
+  if(!isPublicLabel(mLabel)&&!isExternLabel(mLabel))
+      return false;
+  mNode=findNode(globalScope,mLabel->label,aNode->namespaceId);
   if(mNode==NULL){
     fputs("unable to access scope node\n",stderr);
     return true;
   }
   if(*mNode!=NULL){
+    if(!isPublicLabel(mLabel)&&!(isPublicLabel(label((*mNode)->labelId,pos))||isExternLabel(label((*mNode)->labelId,pos))))//XXX? allow extern declarations with identical signature
+      return false;//extern variable shadowed by local variable
     if(filePosEquals(label((*mNode)->labelId,pos)->declaredAt,label(aNode->labelId,pos)->declaredAt))
       return false;//identical node
-    fprintf(stderr,"included %s re-declares identifier \"%"PRI_STR"\"\n",idNames[aNode->idType],PRI_STR_ARGS(mLabel->label));
-    fprintf(stderr,"previous declaration: %s \"%"PRI_STR"\" at ",idNames[(*mNode)->idType],PRI_STR_ARGS((*mNode)->key));
+    fprintf(stderr,"conflicting definitions for identifier \"%"PRI_STR"\":\n",PRI_STR_ARGS(mLabel->label));
+    fprintf(stderr,"  %s \"%"PRI_STR"\" at ",idNames[(*mNode)->idType],PRI_STR_ARGS((*mNode)->key));
     printFilePosition(label((*mNode)->labelId,pos)->declaredAt,stderr);
+    fputs("\n",stderr);
+    fprintf(stderr,"  %s \"%"PRI_STR"\" at ",idNames[aNode->idType],PRI_STR_ARGS(mLabel->label));
+    printFilePosition(mLabel->declaredAt,stderr);
     fputs("\n",stderr);
     return true;
   }
@@ -4214,15 +4220,25 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         memcpy(includePath,basePath.chars,basePath.length*sizeof(char));
         memcpy(includePath+basePath.length,word.chars,word.length*sizeof(char));
         includePath[len-1]='\0';
-        //TODO check if file is already included
-        CodeFile includeFile;
-        if(readCodeFile(includePath,&includeFile)){
-          handleError("could not include file",ERROR_SYNTAX,wordPos);
-          return;
+        FileId included=FILE_ID_NONE;
+        for(FileId fId=0;fId<state->fileCount;fId++){
+          if(wordEquals(&state->files[fId].fileName,includePath)){
+            included=fId;
+            break;
+          }
         }
-        FileId included=parseFile(state,&includeFile);
+        if(included==FILE_ID_NONE){
+          CodeFile includeFile;
+          if(readCodeFile(includePath,&includeFile)){
+            handleError("could not include file",ERROR_SYNTAX,wordPos);
+            return;
+          }
+          included=parseFile(state,&includeFile);
+        }
         printf("included: %s id: %"PRIi32"\n",includePath,included);
-        includeConstants(&state->files[state->currentFile].globalScope,&state->files[included].globalScope,wordPos);
+        if(includeConstants(&state->files[state->currentFile].globalScope,&state->files[included].globalScope,wordPos)){
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
         //add include file to includes list
         //TODO ensure cap
         state->files[state->currentFile].includes[state->files[state->currentFile].includeCount++]=(IncludedFile){.id=included,.includePos=wordPos};
@@ -6798,7 +6814,10 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     ProgramFile* f=&prog->files[fId];
     for(size_t incId=0;incId<f->includeCount;incId++){
       IncludedFile inc=f->includes[incId];
-      includeGlobals(&f->globalScope,&prog->files[inc.id].globalScope,inc.includePos);
+      if(includeGlobals(&f->globalScope,&prog->files[inc.id].globalScope,inc.includePos)){
+        freeContents(&state);
+        handleError(NULL,ERROR_SYNTAX,inc.includePos);
+      }
     }
     state.globalScope=&f->globalScope;
     //type check global operations
