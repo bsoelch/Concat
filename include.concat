@@ -1,0 +1,17 @@
+#include "tests/parser/empty.concat"
+
+proc( i64 : k  type : static T => T rawptr mut ) : extern public alloc
+type : extern _FILE
+_FILE ptr mut =:: public FILE
+proc( => FILE ) : extern public stdOut
+proc( string => FILE ) : extern public fopen
+proc( FILE string => ) : extern public fputs
+proc( string : str => ) =: public puts
+  stdOut
+    #dup str fputs
+  "\n" fputs
+end
+proc( FILE => ) : extern public fclose
+
+proc( => ) : extern test
+

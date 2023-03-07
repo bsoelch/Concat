@@ -1,3 +1,4 @@
+#include "include.concat"
 
 entryPoint:
   1024 1024 * 16 * i32 alloc i32 rawptr mut =: dynamicArray
@@ -8,16 +9,8 @@ entryPoint:
   "Hello World!" puts
 end
 
-proc( i64 : k  type : static T => T rawptr mut ) : extern alloc
-type : extern _FILE
-_FILE ptr mut =:: FILE
-proc( => FILE ) : extern stdOut
-proc( string => FILE ) : extern fopen
-proc( FILE string => ) : extern fputs
-proc( string : str => ) =: puts
-  stdOut
-    #dup str fputs
-  "\n" fputs
+proc( => i32 ) =: test
+ 9
 end
-proc( FILE => ) : extern fclose
- 
+
+0 =:: public constant

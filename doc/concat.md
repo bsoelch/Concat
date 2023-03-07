@@ -465,5 +465,72 @@ subspace.anInt print ## addreses with . are resolved relative to the current nam
 #end
 ```
 
+## Includes
+
+Source code can be split between multiple file, files can be includes using `#include` 
+there are two kinds of includes, local includes and library includes.
+
+Local includes include files relative to the "base-directory" (directory the file passed to the compiler is located) of the current program,
+the file path has to supplied as a string
+
+Library includes includes files from the standard library, the file path has to be supplied as an identifier name
+!!! currently library includes are not supported !!!
+
+<!-- TODO lib includes --> 
+
+The files are included in the order they are declared in the source code, included within included files are treated in depth first order.
+If a included file is already in the process of being included it is skipped.
+
+public global variables from included files can be used independent of the position of the include statement.
+
+All constants declared in included files can be used as constants, 
+if the included file is skipped due to an include loop then constants declared after the include loop cannot be used in constant expressions.
+
+Example:
+
+`src/main.concat`:
+
+```
+entryPoint:
+  42 f ## calls f in 'anotherFile'
+end
+#include "anotherFile.concat"  ## includes 'anotherFile.concat' located in the same directory as the current file
+1 =:: mainConstant
+proc( i32 => bool ) =: isConst 
+  switch
+    mainConstant subIncludeConstant case 
+      return true
+  end
+  return false
+end
+```
+
+`src/anotherFile.concat`:
+
+```
+#include "subDir/subInclude.concat"
+proc( i32 => ) =: public f  ## the procedure f in the included file is not visible
+  print
+end
+
+proc( i32 i32 => i32 ) =: externProc ## it is allowed to shaddow extern procedures with local procedures 
+  +
+end
+```
+
+`src/subDir/subInclude.concat`:
+
+```
+
+#include "../main.concat" ## files in subdirectorys have to used .. to reference files in superdirectories
+0 i32 =: subIncludeConstant
+proc( => ) =: f ## private procedure f
+  mainConstant print ## main constant is accessible but not constant
+end
+proc( => i32 ) : extern externProc ## local extern procedure
+```
+
+
+ 
 
 

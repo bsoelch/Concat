@@ -51,6 +51,9 @@ typedef struct{
   size_t line;
   size_t posInLine;
 }FilePosition;
+bool filePosEquals(FilePosition p1,FilePosition p2){
+  return p1.line==p2.line&&p1.posInLine==p2.posInLine&&strcmp(p1.fileName,p2.fileName)==0;
+}
 void printFilePosition(FilePosition pos,FILE* out){
   fprintf(out,"%s:%zu:%zu",pos.fileName,pos.line,pos.posInLine);
 }
@@ -247,10 +250,10 @@ String getLabelName(LabelId labelId){
     return EMPTY_STRING;
   return labelBuffer[labelId].label;
 }
-Label label(LabelId labelId,FilePosition pos){
+Label const* label(LabelId labelId,FilePosition pos){
   if(labelId<0||labelId>=labelBufferCount)
     handleError("label id out of range",ERROR_MEMORY,pos);
-  return labelBuffer[labelId];
+  return &labelBuffer[labelId];
 }
 LabelId newLabel(String label,LabelFlags flags,NamespaceId namespace,FilePosition declaredAt){
   if(labelBufferCount>=LABEL_CAP)
@@ -265,16 +268,19 @@ int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName
   }
   return -1;
 }
-bool isMutableLabel(Label label){
-  return (label.flags&LABEL_FLAG_MUTABLE)!=0;
+bool isMutableLabel(Label const* label){
+  return (label->flags&LABEL_FLAG_MUTABLE)!=0;
 }
-bool isExternLabel(Label label){
-  return (label.flags&LABEL_FLAG_EXTERN)!=0;
+bool isExternLabel(Label const* label){
+  return (label->flags&LABEL_FLAG_EXTERN)!=0;
+}
+bool isPublicLabel(Label const* label){
+  return (label->flags&LABEL_FLAG_PUBLIC)!=0;
 }
 bool isMutableLabelId(LabelId labelId){
   if(labelId<0||labelId>=labelBufferCount)
     return false;
-  return isMutableLabel(labelBuffer[labelId]);
+  return isMutableLabel(&labelBuffer[labelId]);
 }
 bool isStaticLabelId(LabelId labelId){
   if(labelId<0||labelId>=labelBufferCount)
@@ -289,6 +295,11 @@ void printAsciifiedString(String name,FILE* out){
       fputc(name.chars[i],out);
       continue;
     }
+    //additional escape sequences: 
+    // _F -> start local filename
+    // _T -> start of type 
+    // _N -> start of (type)name
+    // _E -> end block-section
     if(name.chars[i]=='_'){
       fputs("__",out);
       continue;
@@ -1534,8 +1545,10 @@ void printOperation(Operation op,FILE* out){
   fputs("\n",out);
 }
 
-#define MAX_NAMESPACES 1024
+//path of the main source file, mill be initialized in main()
+String basePath={0};
 
+#define MAX_NAMESPACES 1024
 typedef struct{
   NamespaceId parent;
   String name;
@@ -1727,6 +1740,10 @@ size_t localScopeCount=0;
 typedef int32_t FileId;
 const FileId FILE_ID_NONE=-1;
 typedef struct{
+  FilePosition includePos;
+  FileId id;
+}IncludedFile;
+typedef struct{
   Scope globalScope;
   NamespaceInfo namespaceInfo;
   
@@ -1736,10 +1753,12 @@ typedef struct{
   Operation* localOps;
   size_t localOpCount;
   size_t localOpCap;
-  //FileId* imports;
-    
+  IncludedFile* includes;
+  size_t includeCount;
+  size_t includeCap;
+
   int64_t entryPointIndex;
-  
+
   String fileName;
   FileId id;
 }ProgramFile;
@@ -1755,7 +1774,7 @@ typedef struct{
   int32_t currentProcId;
   
   FileId entryFile;
-  int32_t predeclaredTypes;
+  int32_t autoTypes;
 }ParserState;
 NamespaceInfo* parserNamespace(ParserState const* state){
   return &state->files[state->currentFile].namespaceInfo;
@@ -1826,6 +1845,26 @@ ScopeNode** findNode(Scope const* scope,String name,NamespaceId namespaceId){
   }
   return node;
 }
+typedef struct{
+  Scope const* scope;
+  size_t index;
+  ScopeNode* n;
+}ScopeIterator;
+ScopeIterator getScopeIterator(Scope const* scope){//XXX allow to iterate only over variables with given name
+  return (ScopeIterator){.scope=scope,.index=0,.n=NULL};
+}
+ScopeNode* scopeItrNext(ScopeIterator* itr){
+  if(itr==NULL)
+    return NULL;
+  while(itr->n==NULL){
+    if(itr->index>=SCOPE_MAP_CAP)
+      return NULL;
+    itr->n=itr->scope->nodes[itr->index++];
+  }
+  ScopeNode* n=itr->n;
+  itr->n=itr->n->next;
+  return n;
+}
 int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out){
   int64_t dotIndex=lastIndexOfChar(name,'.');
   NamespaceId mNamespaceId=namespace.current;
@@ -1884,42 +1923,42 @@ int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,S
   return ERROR_SYNTAX;
 }
 ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,LabelId labelId,TypeId type,IdentifierType idType,int32_t id,FilePosition pos,ConstantValue const* constValue){
-  Label mLabel=label(labelId,pos);
+  Label const* mLabel=label(labelId,pos);
   if(isMutableLabel(mLabel)){
     if(idType==ID_TYPE)
-      handleError("type definitions cannot be mutable",ERROR_SYNTAX,mLabel.declaredAt);
+      handleError("type definitions cannot be mutable",ERROR_SYNTAX,mLabel->declaredAt);
     if(idType==ID_PROCEDURE)
-      handleError("procedures cannot be mutable",ERROR_SYNTAX,mLabel.declaredAt);
+      handleError("procedures cannot be mutable",ERROR_SYNTAX,mLabel->declaredAt);
   }
-  if(containsChar(mLabel.label,'.'))
+  if(containsChar(mLabel->label,'.'))
     handleError("'.' is not allowed in declared identifiers",ERROR_SYNTAX,pos);
   Scope* currentScope=globalScope;
   if(localScopeCount>0){
     currentScope=scopeBuffer+(localScopeCount-1);
   }
-  ScopeNode** node=findNode(currentScope,mLabel.label,namespace.current);
+  ScopeNode** node=findNode(currentScope,mLabel->label,namespace.current);
   if(node==NULL)
-    handleError("unable to access scope node",ERROR_MEMORY,mLabel.declaredAt);
+    handleError("unable to access scope node",ERROR_MEMORY,mLabel->declaredAt);
   if(*node!=NULL){
-    fprintf(stderr,"re-declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
+    fprintf(stderr,"re-declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel->label));
     fprintf(stderr,"previous declaration: %s \"%"PRI_STR"\" at ",idNames[(*node)->idType],PRI_STR_ARGS((*node)->key));
-    printFilePosition(label((*node)->labelId,pos).declaredAt,stderr);
+    printFilePosition(label((*node)->labelId,pos)->declaredAt,stderr);
     fputs("\n",stderr);
-    handleError(NULL,ERROR_SYNTAX,mLabel.declaredAt);
+    handleError(NULL,ERROR_SYNTAX,mLabel->declaredAt);
   }
   ScopeNode* shaddow;
-  getIdentifier(globalScope,namespace,mLabel.label,&shaddow);
+  getIdentifier(globalScope,namespace,mLabel->label,&shaddow);
   if(shaddow!=NULL){
-    fprintf(stderr,"Warning:\n  declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel.label));
+    fprintf(stderr,"Warning:\n  declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel->label));
     fprintf(stderr,"  shadows previous declaration: %s \"%"PRI_STR"\" at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
-    printFilePosition(label(shaddow->labelId,pos).declaredAt,stderr);
+    printFilePosition(label(shaddow->labelId,pos)->declaredAt,stderr);
     fputs("\n",stderr);
-    handleWarning(NULL,ERROR_SYNTAX,mLabel.declaredAt);
+    handleWarning(NULL,ERROR_SYNTAX,mLabel->declaredAt);
   }
   *node=allocScopeNode();
   if(*node==NULL)
-    handleError("unable to allocate scope node",ERROR_MEMORY,mLabel.declaredAt);
-  (*node)->key=mLabel.label;
+    handleError("unable to allocate scope node",ERROR_MEMORY,mLabel->declaredAt);
+  (*node)->key=mLabel->label;
   (*node)->namespaceId=namespace.current;
   (*node)->type=type;
   (*node)->idType=idType;
@@ -1934,11 +1973,54 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
   return *node;
 }
 
+bool includeIfGlobal(ScopeNode* aNode,bool onlyConst,Scope* globalScope,FilePosition pos){
+  Label const* mLabel=label(aNode->labelId,pos);
+  if(onlyConst&&aNode->constValue.type==CONSTANT_NONE)
+    return false;
+  if(!isPublicLabel(mLabel))//TODO ensure that extern variables are not overwritten
+    return false;
+  ScopeNode** mNode=findNode(globalScope,mLabel->label,aNode->namespaceId);
+  if(mNode==NULL){
+    fputs("unable to access scope node\n",stderr);
+    return true;
+  }
+  if(*mNode!=NULL){
+    if(filePosEquals(label((*mNode)->labelId,pos)->declaredAt,label(aNode->labelId,pos)->declaredAt))
+      return false;//identical node
+    fprintf(stderr,"included %s re-declares identifier \"%"PRI_STR"\"\n",idNames[aNode->idType],PRI_STR_ARGS(mLabel->label));
+    fprintf(stderr,"previous declaration: %s \"%"PRI_STR"\" at ",idNames[(*mNode)->idType],PRI_STR_ARGS((*mNode)->key));
+    printFilePosition(label((*mNode)->labelId,pos)->declaredAt,stderr);
+    fputs("\n",stderr);
+    return true;
+  }
+  *mNode=aNode;
+  return false;
+}
+bool includeConstants(Scope* globalScope,Scope* src,FilePosition pos){
+  ScopeIterator itr=getScopeIterator(src);
+  ScopeNode* n;
+  while((n=scopeItrNext(&itr))!=NULL){
+    if(includeIfGlobal(n,true,globalScope,pos))
+      return true;
+  }
+  return false;
+}
+bool includeGlobals(Scope* globalScope,Scope* src,FilePosition pos){
+  ScopeIterator itr=getScopeIterator(src);
+  ScopeNode* n;
+  while((n=scopeItrNext(&itr))!=NULL){
+    if(includeIfGlobal(n,false,globalScope,pos))
+      return true;
+  }
+  return false;
+}
+
 typedef struct{
   ProgramFile* files;
   FileId fileCount;
   
-  int32_t predeclaredTypes;
+  int32_t nAutoTypes;
+  TypeId*  autoTypes;
   bool hasEntryPoint;
   bool hasCheckBounds;
   bool hasCheckEnum;
@@ -2019,17 +2101,21 @@ size_t tupleElementAccess(FILE* target,int32_t depth,Operation const* op,size_t 
   return size;
 } 
 
-void printGlobalIdentifer(IdentifierInfo id,FilePosition pos,FILE* target){
+void printGlobalIdentifer(Label const* mName,FILE* target){
   fputs("concat_",target);
-  Label mName=label(id.labelId,pos);
-  NamespaceId space=mName.namespace;
+  if(!(isPublicLabel(mName)||isExternLabel(mName))){
+    fputs("_F",target);
+    printAsciifiedString(cstrToStr(mName->declaredAt.fileName+basePath.length),target);
+    fputs("_E",target);
+  }
+  NamespaceId space=mName->namespace;
   char separator='.';
   while(space!=NAMESPACE_ID_NONE&&space>0){
     printAsciifiedString(namespaceName(space),target);
     printAsciifiedString(newString(&separator,1),target);
     space=parentNamespace(space);
   }
-  printAsciifiedString(mName.label,target);
+  printAsciifiedString(mName->label,target);
 }
 TypeId staticArgType(StaticArgType argType){
   switch(argType){
@@ -2067,10 +2153,10 @@ void printProcArgumentTypesC(ProcedureType const* proc,FILE* target,bool printAr
       fprintf(target," arg%"PRIi32,e);
   }
 }
-void printProcedureSignatureC(ProcedureType const* procedure,IdentifierInfo procId,FILE* target,bool printArgNames,FilePosition pos){
+void printProcedureSignatureC(ProcedureType const* procedure,Label const* procLabel,FILE* target,bool printArgNames){
   printTypeNameC(procedure->outType,target);
   fputs(" ",target);
-  printGlobalIdentifer(procId,pos,target);
+  printGlobalIdentifer(procLabel,target);
   fputs(" (",target);
   printProcArgumentTypesC(procedure,target,printArgNames);
   fputs(")",target);
@@ -2093,7 +2179,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       return size;
     case ID_GLOBAL_VAR:
     case ID_PROCEDURE:
-      printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
+      printGlobalIdentifer(label(op->dataAs.idInfo.labelId,op->filePos),target);
       return size;
     case ID_TUPLE:
       //1. get tuple
@@ -2371,20 +2457,26 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         printTypeNameC(op->dataType,target);
       switch(op->dataAs.idInfo.type){
         case ID_TMP_VAR:
+          if(!op->dataAs.idInfo.isMutable)
+            fputs(" const",target);
           fprintf(target," tmp%" PRIi32 ";\n",op->dataAs.idInfo.id);
           return size;
         case ID_LOCAL_VAR:
+          if(!op->dataAs.idInfo.isMutable)
+            fputs(" const",target);
           fprintf(target," local%" PRIi32 ";\n",op->dataAs.idInfo.id);
           return size;
         case ID_GLOBAL_VAR:
+          if(!op->dataAs.idInfo.isMutable)
+            fputs(" const",target);
           fputs(" ",target);
-          printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
+          printGlobalIdentifer(label(op->dataAs.idInfo.labelId,op->filePos),target);
           fputs(";\n",target);
           return size;
         case ID_PROCEDURE:
           if(!isProcedureType(op->dataType))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(procTypeData(op->dataType),op->dataAs.idInfo,target,false,op->filePos);
+          printProcedureSignatureC(procTypeData(op->dataType),label(op->dataAs.idInfo.labelId,op->filePos),target,false);
           fputs(";\n",target);
           return size;
         case ID_INTERMEDIATE_RESULT:
@@ -2422,13 +2514,13 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs(" ",target);
           if(!op->dataAs.idInfo.isMutable)
             fputs("const ",target);
-          printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
+          printGlobalIdentifer(label(op->dataAs.idInfo.labelId,op->filePos),target);
           fputs(" = ",target);
           break;
         case ID_PROCEDURE:
           if(!isProcedureType(op->dataType))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(procTypeData(op->dataType),op->dataAs.idInfo,target,true,op->filePos);
+          printProcedureSignatureC(procTypeData(op->dataType),label(op->dataAs.idInfo.labelId,op->filePos),target,true);
           fputs("{\n",target);
           return size;
         case ID_ARGUMENT:
@@ -2773,7 +2865,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fprintf(stderr,"calling %s directly is not supported\n",idNames[op->dataAs.idInfo.type]);
         handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
-      printGlobalIdentifer(op->dataAs.idInfo,op->filePos,target);
+      printGlobalIdentifer(label(op->dataAs.idInfo.labelId,op->filePos),target);
       return compileProcArgs(target,compiledOps,op,size,opSize,isGlobal);
     case OP_GET_LABEL:
     case OP_SET_LABEL:
@@ -2927,16 +3019,50 @@ void compileToC(FILE* target,Program const* p){
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_WRONG_ENUM_INDEX);
     fputs("}\n",target);
   }
+  fputs("//global declarations\n",target);
+  for(FileId f=0;f<p->fileCount;f++){
+    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));//XXX only print if there are global declarations
+    ScopeIterator itr=getScopeIterator(&p->files[f].globalScope);
+    ScopeNode* n;
+    while((n=scopeItrNext(&itr))!=NULL){
+      if(typeEquals(n->type,TYPE_TYPE))
+        continue;//ignore types
+      Label const* mLabel=label(n->labelId,(FilePosition){0});
+      if(!wordEquals(&p->files[f].fileName,mLabel->declaredAt.fileName))
+        continue;//declared in different file
+      if(isExternLabel(mLabel))
+        fputs("extern ",target);
+      if(isProcedureType(n->type)){
+        printProcedureSignatureC(procTypeData(n->type),mLabel,target,false);
+        fputs(";\n",target);
+        continue;
+      }
+      if(isAutoType(n->type)){
+        if(p->autoTypes==NULL||autoTypeId(n->type)<0||autoTypeId(n->type)>=p->nAutoTypes){
+          handleError("predeclared id out of expected range",ERROR_TYPE,mLabel->declaredAt);
+        }
+        n->type=p->autoTypes[autoTypeId(n->type)];//get predeceased type
+      }
+      printTypeNameC(n->type,target);
+      fputs(" ",target);
+      if(!isMutableLabel(mLabel))
+        fputs("const ",target);
+      printGlobalIdentifer(mLabel,target);
+      fputs(";\n",target);
+    }
+  }
   fputs("//global code\n",target);
   for(FileId f=0;f<p->fileCount;f++){
-    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
+    if(p->files[f].globalOpCount>0)
+      fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
     for(size_t i=0;i<p->files[f].globalOpCount;){
       i+=compileOp(target,i,p->files[f].globalOps+i,p->files[f].globalOpCount-i,true);
     }
   }
   fputs("//procedures code\n",target);
   for(FileId f=0;f<p->fileCount;f++){
-    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
+    if(p->files[f].localOpCount>0)
+      fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
     for(size_t i=0;i<p->files[f].localOpCount;){
       i+=compileOp(target,i,p->files[f].localOps+i,p->files[f].localOpCount-i,false);
     }
@@ -2949,6 +3075,63 @@ typedef struct{
   FilePosition currentPos;
   FilePosition wordStart;
 }CodeFile;
+
+/* Copied from StackOverflow
+ * finds the size of the FILE at fp in byts 
+ * returns a negative value if finding the size fails
+ * fp is assumed to be non null
+ * */
+long int fsize(FILE *fp){
+    long int prev=ftell(fp);
+    if(fseek(fp, 0L, SEEK_END)!=0){
+		  return -1;
+    }
+    long int sz=ftell(fp);
+    //go back to where we were
+    if(fseek(fp,prev,SEEK_SET)!=0){
+		  return -1;
+    }
+    return sz;
+}
+bool readCodeFile(char const* fileName,CodeFile* res){
+  bool isError=false;
+  char* code=NULL;
+  FILE *file=NULL;
+    int64_t codeSize;
+    file = fopen(fileName, "r");
+	  if(file==NULL){
+	    fprintf(stderr,"Could not open file: \"%s\"\n",fileName);
+	    isError=true;
+		  goto cleanup;
+	  }
+	  long int size=fsize(file);
+	  if(size<16){
+		  size=16;
+	  }
+	  code = malloc((size+1)*sizeof(char));//will be freed when the program exits
+	  if(code==NULL){
+	    fprintf(stderr,"Memory error while reading file: \"%s\"\n",fileName);
+	    isError=true;
+		  goto cleanup;
+	  }
+	  // while(!feof(file))
+	  codeSize=fread(code,sizeof(char),size,file);//TODO perform multiple reads if necessary
+	  if(ferror(file)){
+	    fprintf(stderr,"IO Error while reading file: \"%s\"\n",fileName);
+	    isError=true;
+		  goto cleanup;
+	  }
+	  *res=(CodeFile){.code=code,.codeSize=codeSize,
+	    .currentPos={.fileName=fileName,.line=1,.posInLine=1},
+	    .wordStart={.fileName=fileName,.line=1,.posInLine=1}};
+    code=NULL;//code not stored in CodeFile
+cleanup:
+  free(code);
+  if(file)
+    fclose(file);
+  return isError;
+}
+FileId parseFile(ParserState*,CodeFile*);
 
 
 //compute the next id for a variable of the given id-type relative to the given compiler state
@@ -3410,7 +3593,7 @@ int64_t* popArraySize(FilePosition pos){
       arrayDimsBuffer[i]=-1;
       continue;
     }
-    if(constBuffer[bufferedConstants+i].value.type!=CONSTANT_INT){//XXX use _ to signal unknown dimension sizes
+    if(constBuffer[bufferedConstants+i].value.type!=CONSTANT_INT){
       fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].value.type));
       handleError(NULL,ERROR_SYNTAX,pos);
     }
@@ -3562,9 +3745,9 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
         if(stringCompare(getLabelName(i),getLabelName(j))==0){
           fprintf(stderr,"duplicate label \"%"PRI_STR"\" in %s \n",PRI_STR_ARGS(getLabelName(i)),typeClassName(typeClass));
           fputs("  previous declaration at ",stderr);
-          printFilePosition(label(j,codeFile->wordStart).declaredAt,stderr);
+          printFilePosition(label(j,codeFile->wordStart)->declaredAt,stderr);
           fputs("\n",stderr);
-          handleError(NULL,ERROR_SYNTAX,label(i,codeFile->wordStart).declaredAt);
+          handleError(NULL,ERROR_SYNTAX,label(i,codeFile->wordStart)->declaredAt);
         }
       }
     }
@@ -3847,10 +4030,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     requireCompileTimeTypes(&word,&type,1,wordPos);
     LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags|LABEL_FLAG_EXTERN);
     wordPos=codeFile->wordStart;
-    Label varName=label(labelId,wordPos);
+    Label const* varName=label(labelId,wordPos);
     IdentifierType idType=localScopeCount>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     if(isProcedureType(type)){
-      if(((varName.flags&LABEL_FLAG_EXTERN)==0))
+      if(!isExternLabel(varName))
         handleError("directly pre-declaration is only supporte for extern procedures",ERROR_SYNTAX,wordPos);
       idType=ID_PROCEDURE;
     }
@@ -3863,13 +4046,15 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&val);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return;
-    pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
+    if(localScopeCount>0)//global identifiers are predeclared implicitly)
+      pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName->declaredAt,
+        .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"=:")){//declare
     requireCompileTimeTypes(&word,&type,1,wordPos);
     LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags);
     wordPos=codeFile->wordStart;
-    Label varName=label(labelId,wordPos);
+    Label const* varName=label(labelId,wordPos);
     IdentifierType idType;
     if(typeEquals(type,TYPE_TYPE)){
       idType=ID_TYPE;
@@ -3886,11 +4071,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,peekConstValue());
     if(idType==ID_PROCEDURE){
       if(localScopeCount>0){
-        fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName.label));
+        fprintf(stderr,"invalid position for procedure %"PRI_STR" procedures can only be declared at top level\n",PRI_STR_ARGS(varName->label));
           handleError(NULL,ERROR_SYNTAX,wordPos);
       }
-      pushOperation(state,(Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=varName.declaredAt,
-        .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});//add procedure to global operations
       if(openScope(BLOCK_PROCEDURE,state))
         handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
       state->currentProcId=procTypeData(type)->procId;
@@ -3902,7 +4085,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
          }
       }
     }
-    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName.declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName->declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"new")){
     if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
@@ -4018,6 +4201,38 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
       endCompileTimeBlock(parserNamespace(state),wordPos);
       return;
+    }else if(wordEquals(&word,"include")){
+      if(localScopeCount>0){
+        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      word=nextWord(codeFile,&wordType);
+      wordPos=codeFile->wordStart;
+      if(wordType==WORD_TYPE_STRING){//local include
+        int64_t len=basePath.length+word.length+1;
+        char* includePath=malloc(len*sizeof(char));
+        memcpy(includePath,basePath.chars,basePath.length*sizeof(char));
+        memcpy(includePath+basePath.length,word.chars,word.length*sizeof(char));
+        includePath[len-1]='\0';
+        //TODO check if file is already included
+        CodeFile includeFile;
+        if(readCodeFile(includePath,&includeFile)){
+          handleError("could not include file",ERROR_SYNTAX,wordPos);
+          return;
+        }
+        FileId included=parseFile(state,&includeFile);
+        printf("included: %s id: %"PRIi32"\n",includePath,included);
+        includeConstants(&state->files[state->currentFile].globalScope,&state->files[included].globalScope,wordPos);
+        //add include file to includes list
+        //TODO ensure cap
+        state->files[state->currentFile].includes[state->files[state->currentFile].includeCount++]=(IncludedFile){.id=included,.includePos=wordPos};
+        return;
+      }
+      if(wordType==WORD_TYPE_IDENTIFIER){//library include
+        handleError("library includes are not implemented",ERROR_UNIMPLEMENTED,wordPos);
+        return;
+      }
+      handleError("included names have to be identifiers or strings",ERROR_SYNTAX,wordPos);
     }
     //compiler commands
     if(wordEquals(&word,"types")){
@@ -4066,16 +4281,16 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     }else if(wordEquals(&word,"find")){
       LabelId labelId=readLabel(codeFile,"identifier names",parserNamespace(state)->current,0);
       wordPos=codeFile->wordStart;
-      Label varName=label(labelId,wordPos);
+      Label const* varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
-      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),varName.label,&asIdentifier);//try to parse variable as identifier
+      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),varName->label,&asIdentifier);//try to parse variable as identifier
       if(r<0)//internal error while reading identifier
         handleError("error while resolving identifier",r,wordPos);
       if(r==0){//found identifier TODO print shadowed matches
         puts("-----------------");
-        printf("identifier \"%"PRI_STR"\":\n",PRI_STR_ARGS(varName.label));
+        printf("identifier \"%"PRI_STR"\":\n",PRI_STR_ARGS(varName->label));
         fputs("  ",stdout);
-        Label mLabel=label(asIdentifier->labelId,wordPos);
+        Label const* mLabel=label(asIdentifier->labelId,wordPos);
         if(isMutableLabel(mLabel))
           fputs("mutable ",stdout);
         printf("%s: ",idNames[asIdentifier->idType]);
@@ -4085,12 +4300,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
           printConstValue(asIdentifier->constValue,stdout);
         }
         fputs("\n    at ",stdout);
-        printFilePosition(mLabel.declaredAt,stdout);
+        printFilePosition(mLabel->declaredAt,stdout);
         puts("");
         puts("-----------------");
         return;
       }
-      fprintf(stderr,"could not find identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(varName.label));
+      fprintf(stderr,"could not find identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(varName->label));
       //TODO resolve global identifiers with later declarations pre-declared types identifiers
       return;
     }
@@ -4155,10 +4370,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
     LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags);
     wordPos=codeFile->wordStart;
-    Label varName=label(labelId,wordPos);
+    Label const* varName=label(labelId,wordPos);
     wordPos=codeFile->wordStart;
     IdentifierType idType=localScopeCount>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
-    TypeId mType=newAutoType(state->predeclaredTypes++);
+    TypeId mType=newAutoType(state->autoTypes++);
     if(bufferedConstants>0){
       TypeId constType=constantType(peekConstValue());
       if(!typeEquals(constType,TYPE_UNDEFINED))
@@ -4172,18 +4387,18 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
     }
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
-    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName.declaredAt,
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName->declaredAt,
       .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"=")){
     if(bufferedConstants>0){
       if(!peekConstant()->hasId||peekConstValue()->type!=CONSTANT_TYPE)
         handleError("cannot assign values to constant",ERROR_SYNTAX,wordPos);
-      Label mLabel=label(peekConstant()->idInfo.labelId,wordPos);
+      Label const* mLabel=label(peekConstant()->idInfo.labelId,wordPos);
       if(isExternLabel(mLabel))
         handleError("cannot assign values to extern types",ERROR_SYNTAX,wordPos);
       ScopeNode * prevId;
-      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel.label,&prevId);
+      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId);
       if(r!=0)
         handleError("error while resolving identifier",r,wordPos);
       //get previous value of type constant
@@ -4348,38 +4563,46 @@ void readOperation(ParserState* state,CodeFile* codeFile){
 }
 
 
-void parseFile(ParserState* state,CodeFile* codeFile){
+FileId parseFile(ParserState* state,CodeFile* codeFile){
   if(state==NULL){
     handleError("parser state has to be non-null",ERROR_MEMORY,codeFile->currentPos);
-    exit(EXIT_FAILURE);
+    return FILE_ID_NONE;
   }
   size_t opsCap=128;
   Operation*  globalOps=malloc(opsCap*sizeof(Operation));
   if(globalOps==NULL){
     handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
-    exit(EXIT_FAILURE);
+    return FILE_ID_NONE;
   }
   Operation*  localOps=malloc(opsCap*sizeof(Operation));
   if(localOps==NULL){
     handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
-    exit(EXIT_FAILURE);
+    return FILE_ID_NONE;
+  }
+  size_t includeCap=16;
+  IncludedFile* includes=malloc(includeCap*sizeof(IncludedFile));
+  if(includes==NULL){
+    handleError("could not allocate includes array",ERROR_MEMORY,codeFile->currentPos);
+    return FILE_ID_NONE;
   }
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   FileId prevFile=state->currentFile;
-  //TODO ensure parser state cap
-  state->files[state->fileCount]=(ProgramFile){
+  FileId included=state->fileCount++;
+  //TODO ensure files cap
+  state->files[included]=(ProgramFile){
     .globalScope={0}/*initialized by initScope*/,.namespaceInfo=namespaceInfo,
+    .includes=includes,.includeCount=0,.includeCap=includeCap,
     .globalOps=globalOps,.globalOpCount=0,.globalOpCap=opsCap,
     .localOps=localOps,.localOpCount=0,.localOpCap=opsCap,
-    .entryPointIndex=-1,.fileName=cstrToStr(codeFile->currentPos.fileName),.id=state->fileCount,
+    .entryPointIndex=-1,.fileName=cstrToStr(codeFile->currentPos.fileName),.id=included,
     };
-  initScope(&state->files[state->fileCount].globalScope,BLOCK_UNKNOWN,state);
-  state->currentFile=state->fileCount;
-  state->fileCount++;
+  initScope(&state->files[included].globalScope,BLOCK_UNKNOWN,state);
+  state->currentFile=included;
   while(codeFile->codeSize>0){
     readOperation(state,codeFile);
   }
   state->currentFile=prevFile;
+  return included;
 }
 Program compileToOps(CodeFile* rootFile){
   size_t filesCap=16;
@@ -4389,10 +4612,10 @@ Program compileToOps(CodeFile* rootFile){
     exit(EXIT_FAILURE);
   }
   ParserState state=(ParserState){.files=progFiles,.filesCap=filesCap,.fileCount=0,.currentFile=FILE_ID_NONE,
-    .localVars=0,.globalVars=0,.currentProcId=-1,.entryFile=FILE_ID_NONE,.predeclaredTypes=0};
+    .localVars=0,.globalVars=0,.currentProcId=-1,.entryFile=FILE_ID_NONE,.autoTypes=0};
   parseFile(&state,rootFile);
   return (Program){.files=state.files,.fileCount=state.fileCount,
-    .hasEntryPoint=hasEntryPointParser(&state),.predeclaredTypes=state.predeclaredTypes};
+    .hasEntryPoint=hasEntryPointParser(&state),.nAutoTypes=state.autoTypes,.autoTypes=NULL};
 }
 
 void typeErrorMessage(char const* exprName,TypeId expected,TypeId got){
@@ -4536,8 +4759,8 @@ typedef struct{
   int32_t whileCount; // number of created while statements
   
   size_t index;
-  int32_t nPredeclaredTypes;
-  TypeId* predeclaredTypes;
+  int32_t nAutoTypes;
+  TypeId* autoTypes;
   bool reachable;//is current code position reachable
   bool hasCheckBounds;
   bool hasCheckEnum;
@@ -4621,8 +4844,8 @@ void freeContents(TypeCheckState* state){
   state->typeStack=NULL;
   free(state->openBlocks);
   state->openBlocks=NULL;
-  free(state->predeclaredTypes);
-  state->predeclaredTypes=NULL;
+  free(state->autoTypes);
+  state->autoTypes=NULL;
 }
 
 TypeInfo* peekTypeStack(TypeCheckState* state){
@@ -4903,7 +5126,7 @@ bool canCast(TypeId src,TypeId target){
   return numberRank(primitiveTypeData(src))>-1&&numberRank(primitiveTypeData(target))>-1;//casts only between numbers
 }
 
-void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,size_t nTypes,FilePosition pos){//XXX? auto-create tuples
+void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,size_t nTypes,FilePosition pos){
   if(state->typeCount<nTypes){
     fprintf(stderr,"not enough types for %s need %zu have %zu\n",opName,nTypes,state->typeCount);
     handleError(NULL,ERROR_TYPE,pos);
@@ -5125,10 +5348,10 @@ void typeCheckSetVariable(TypeCheckState* state,Operation* op){
     if(labelId==-1){
       handleError("variable is not mutable",ERROR_TYPE,op->filePos);
     } 
-    Label mLabel=label(labelId,op->filePos);
-    fprintf(stderr,"variable %"PRI_STR" is not mutable\n",PRI_STR_ARGS( mLabel.label));
-    fprintf(stderr,"  %"PRI_STR" was declared at",PRI_STR_ARGS( mLabel.label));
-    printFilePosition(mLabel.declaredAt,stderr);
+    Label const* mLabel=label(labelId,op->filePos);
+    fprintf(stderr,"variable %"PRI_STR" is not mutable\n",PRI_STR_ARGS(mLabel->label));
+    fprintf(stderr,"  %"PRI_STR" was declared at",PRI_STR_ARGS(mLabel->label));
+    printFilePosition(mLabel->declaredAt,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
@@ -5172,7 +5395,7 @@ void checkTupleElementMutable(Operation const* elementAccess,int32_t depth){
       fputs(" is not mutable\n",stderr);
       if(typeElementsLabeled(currentTuple)){
         fputs("  declared at ",stderr);
-        printFilePosition(label(getTypeElementLabel(currentTuple,elementAccess->dataAs.idInfo.id),elementAccess->filePos).declaredAt,stderr);
+        printFilePosition(label(getTypeElementLabel(currentTuple,elementAccess->dataAs.idInfo.id),elementAccess->filePos)->declaredAt,stderr);
         fputs("\n",stderr);
       }
       handleError(NULL,ERROR_SYNTAX,elementAccess->filePos);
@@ -5288,10 +5511,10 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       if(typeEquals(op->dataType,TYPE_UNDEFINED))
         handleError("missing type declaration",ERROR_TYPE,op->filePos);
       if(isAutoType(op->dataType)){
-        if(autoTypeId(op->dataType)<0||autoTypeId(op->dataType)>=state->nPredeclaredTypes){
+        if(autoTypeId(op->dataType)<0||autoTypeId(op->dataType)>=state->nAutoTypes){
           handleError("predeclared id out of expected range",ERROR_TYPE,op->filePos);
         }
-        op->dataType=state->predeclaredTypes[autoTypeId(op->dataType)];//get predeceased type
+        op->dataType=state->autoTypes[autoTypeId(op->dataType)];//get predeceased type
       }
       if(op->opType==OP_SET){
         typeCheckSetVariable(state,op);
@@ -5407,7 +5630,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
   if(op->opType!=OP_IDENTIFIER&&op->opType!=OP_SET_IDENTIFIER&&op->opType!=OP_IDENTIFIER_ADDRESS)
     return; 
   BlockInfo* blockInfo=peekBlock(state);
-  String mLabel=label(op->dataAs.localLabel.label,op->filePos).label;
+  String mLabel=label(op->dataAs.localLabel.label,op->filePos)->label;
   if(!state->reachable&&op->opType==OP_IDENTIFIER&&blockInfo!=NULL&&
     (blockInfo->type==BLOCK_SWITCH||blockInfo->type==BLOCK_CASE)&&isEnumLabelType(blockInfo->blockDataAs.switchBlock.switchType)){
     CompositeType const* enumType=compositeTypeData(blockInfo->blockDataAs.switchBlock.switchType);
@@ -5767,7 +5990,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         pushCompiledOperation(state,opConstant(lableType,labelIndex,op.filePos));
       }
       state->hasCheckEnum=1;
-      Label mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
+      Label const* mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
       op=(Operation){.opType=(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
         .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=isMutableLabel(mLabel)}}};
       insertStackOperation(state,op,totalOps);
@@ -5778,11 +6001,11 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         if(!writable)
           handleError("cannot write to field of constant enum",ERROR_SYNTAX,op.filePos);
         if(!isMutableLabel(mLabel)){
-          fprintf(stderr,"element %"PRI_STR" (%"PRIi32") in ",PRI_STR_ARGS(mLabel.label),labelIndex);
+          fprintf(stderr,"element %"PRI_STR" (%"PRIi32") in ",PRI_STR_ARGS(mLabel->label),labelIndex);
           printTypeName(structType,stderr);
           fputs(" is not mutable\n",stderr);
           fputs("  declared at ",stderr);
-          printFilePosition(mLabel.declaredAt,stderr);
+          printFilePosition(mLabel->declaredAt,stderr);
           fputs("\n",stderr);
           handleError(NULL,ERROR_SYNTAX,op.filePos);
         }
@@ -5849,7 +6072,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           offset=state->typeCount-1;
           //find types for auto-types
           if(isAutoType(op.dataType)){
-            if(autoTypeId(op.dataType)<0||autoTypeId(op.dataType)>=state->nPredeclaredTypes)
+            if(autoTypeId(op.dataType)<0||autoTypeId(op.dataType)>=state->nAutoTypes)
               handleError("predeclared id outside expected range",ERROR_TYPE,op.filePos);
             int64_t typeId=autoTypeId(op.dataType);
             op.dataType=state->typeStack[offset].type;
@@ -5857,7 +6080,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
               if(changeEnumType(&op.dataType,false))
                 handleError("could not update enum type",ERROR_MEMORY,op.filePos);
             }
-            state->predeclaredTypes[typeId]=op.dataType;
+            state->autoTypes[typeId]=op.dataType;
           }
           requireTypes("variable declaration",state,&op.dataType,1,op.filePos);
           if(state->blockCount==0){//don't extract operations at global level
@@ -6564,15 +6787,19 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     .opStack=malloc(INIT_CAP*sizeof(Operation)),.opStackCap=INIT_CAP,.opStackCount=0,
     .typeStack=malloc(INIT_CAP*sizeof(TypeInfo)),.typeStackCap=INIT_CAP,.typeCount=0,
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
-    .predeclaredTypes=malloc(prog->predeclaredTypes*sizeof(TypeId)),.nPredeclaredTypes=prog->predeclaredTypes,
+    .autoTypes=malloc(prog->nAutoTypes*sizeof(TypeId)),.nAutoTypes=prog->nAutoTypes,
     .globalScope=NULL,.tmpCount=0,.ifCount=0,.whileCount=0,.index=0,
     .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,};
-  if(state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.predeclaredTypes==NULL){//memory allocation failed
+  if(state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.autoTypes==NULL){//memory allocation failed
     freeContents(&state);
     handleError("allocation of type-check state failed",ERROR_MEMORY,src->currentPos);
   }
   for(FileId fId=0;fId<prog->fileCount;fId++){
     ProgramFile* f=&prog->files[fId];
+    for(size_t incId=0;incId<f->includeCount;incId++){
+      IncludedFile inc=f->includes[incId];
+      includeGlobals(&f->globalScope,&prog->files[inc.id].globalScope,inc.includePos);
+    }
     state.globalScope=&f->globalScope;
     //type check global operations
     state.index=0;
@@ -6616,26 +6843,11 @@ void typeCheckProgram(Program* prog,CodeFile* src){
   }
   prog->hasCheckBounds=state.hasCheckBounds;
   prog->hasCheckEnum=state.hasCheckEnum;
+  prog->autoTypes=state.autoTypes;
+  state.autoTypes=NULL;
   freeContents(&state);
 }
 
-/* Copied from StackOverflow
- * finds the size of the FILE at fp in byts 
- * returns a negative value if finding the size fails
- * fp is assumed to be non null
- * */
-long int fsize(FILE *fp){
-    long int prev=ftell(fp);
-    if(fseek(fp, 0L, SEEK_END)!=0){
-		  return -1;
-    }
-    long int sz=ftell(fp);
-    //go back to where we were
-    if(fseek(fp,prev,SEEK_SET)!=0){
-		  return -1;
-    }
-    return sz;
-}
 
 char const* path;
 char const* srcFile=NULL;
@@ -6722,50 +6934,46 @@ bool parseArgs(char** argv){
       continue;
     }
   }
-  if(outFile==NULL){//XXX choose output file depending on input file
-    outFile="./out.c"; 
+  if(srcFile==NULL){
+    puts("missing input file");
+    return true;
   }
+  String srcStr=cstrToStr(srcFile);
+  int64_t iDot=lastIndexOfChar(srcStr,'.');
+  int64_t iSlash=lastIndexOfChar(srcStr,'/');//XXX Windows compatibility
+  if(iDot<iSlash)
+    iDot=-1;
+  if(outFile==NULL){
+    int64_t common=(iDot>=0?(size_t)iDot:srcStr.length);
+    char* outPath=malloc((common+3)*sizeof(char));
+    memcpy(outPath,srcFile,common*sizeof(char));
+    outPath[common++]='.';
+    outPath[common++]='c';
+    outPath[common++]='\0';
+    outFile=outPath;
+  }
+  if(iSlash<0){//XXX? explicitly prefix srcPath with ./
+    basePath=EMPTY_STRING;
+    return false;
+  }
+  basePath=newString(srcFile,iSlash+1);
   return false;
 }
 int main(int argc,char** argv){
   (void)argc;
   if(parseArgs(argv))
     return EXIT_FAILURE;
-  char* code;
-  int64_t codeSize;
+  
   //initialization of uninitialized global variables 
   if(namespaceTrieInit()){
     fputs("failed to initialize namespace storage",stderr);
     return EXIT_FAILURE;
   }
   //read main source file
-  FILE *file = fopen(srcFile, "r");
-	if(file==NULL){
-	  fprintf(stderr,"IO Error while opening File: %s\n",srcFile);
-		return EXIT_FAILURE;
-	}
-	long int size=fsize(file);
-	if(size<0){//XXX? recover form undetected fileSize (if seek worked)
-		fputs("IO Error while detecting file-size\n",stderr);
-		return EXIT_FAILURE;
-	}
-	code = malloc((size+1)*sizeof(char));//will be freed when the program exits
-	if(code==NULL){
-		printf("Memory Error\n");
-		return EXIT_FAILURE;
-	}
-	codeSize=fread(code,sizeof(char),size,file);//TODO perform multiple reads if necessary
-	if(codeSize<0){
-		printf("IO Error while reading file\n");
-		free(code);
-		return EXIT_FAILURE;
-	}
-	fclose(file);//file no longer needed
-	memset(code+codeSize,0,(size+1-codeSize)*sizeof(char));//fill remaining path of file with 0
+	CodeFile codeFile;
+	if(readCodeFile(srcFile,&codeFile))
+	  return EXIT_FAILURE;
 	//1. compile file to operations
-	CodeFile codeFile=(CodeFile){.code=code,.codeSize=codeSize,
-	  .currentPos={.fileName=srcFile,.line=1,.posInLine=1},
-	  .wordStart={.fileName=srcFile,.line=1,.posInLine=1}};
 	Program p=compileToOps(&codeFile);
 	if(!quietMode)
     printf("parsed %"PRIi32" files\n",p.fileCount);
@@ -6795,7 +7003,7 @@ int main(int argc,char** argv){
 	//3. type-check operations
   typeCheckProgram(&p,&codeFile);
 	if(!quietMode)
-    printf("parsed %"PRIi32" files\n",p.fileCount);
+    printf("typeChecked %"PRIi32" files\n",p.fileCount);
     //XXX print operation count
   //4. save intermediate representation
   if(compilerTokensFile!=NULL){
