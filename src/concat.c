@@ -4888,6 +4888,10 @@ typedef struct{
   bool hasCheckEnum;
 }TypeCheckState;
 
+int32_t newTmpId(TypeCheckState* state){
+  return state->tmpCount++;
+}
+
 //prints the type stack, if maxTypes>=0 only maxTypes many elements are printed
 void printTypeStack(TypeCheckState* state,bool printOps,int64_t maxTypes,FILE* out){
   size_t offset=state->opStackCount;
@@ -5063,7 +5067,7 @@ void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWrit
         }
         reference=true;
       }
-      int32_t tmpId=state->tmpCount++;
+      int32_t tmpId=newTmpId(state);
       TypeId type=state->typeStack[i].type;
       if(reference)
         type=pointerType(type,true);
@@ -5174,7 +5178,7 @@ void storeStackValues(TypeCheckState* state,StackState* stackState,StackState* e
       fputs("\n",stderr);
       handleError(NULL,ERROR_TYPE,pos);
     }
-    varId=initStackState?state->tmpCount++:stackState->ops[i].dataAs.idInfo.id;
+    varId=initStackState?newTmpId(state):stackState->ops[i].dataAs.idInfo.id;
     //save stack-elements to tmp-values
     if(declare){
       pushCompiledOperation(state,opDeclareTmpVar(state->typeStack[i].type,varId,pos));
@@ -5409,7 +5413,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
   int32_t tmpId=-1;
   if(outTypes->typeCount!=0){//store non-void return in temp variable
-    tmpId=state->tmpCount++;
+    tmpId=newTmpId(state);
     pushCompiledOperation(state,opDeclareIntermediate(outTypes->typeCount==1?(outTypes->types[0]):procType->outType,tmpId,op->filePos));
   }
   addCompiledOps(state,*op,isPtr?1:0);
@@ -5886,7 +5890,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       //update op-stack
       //store result in temp variable
       extractCompositeOps(state,1,keepMutable);
-      tmpId=state->tmpCount++;
+      tmpId=newTmpId(state);
       pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
       addCompiledOps(state,op,1);
       //update stack
@@ -6009,7 +6013,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       requireTypes("binary operator",state,inTypes,2,op.filePos);
       //store result in temp variable
       extractCompositeOps(state,2,false);
-      tmpId=state->tmpCount++;
+      tmpId=newTmpId(state);
       pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
       addCompiledOps(state,op,2);
       //update stack
@@ -6251,6 +6255,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError("could not push procedure block",ERROR_MEMORY,op.filePos);
           pushCompiledOperation(state,op);
           pushProcArgs(state,op.dataType,op.filePos);
+          state->tmpCount=0;
           return;
         case ID_TUPLE:
         case ID_TUPLE_ELEMENT:
@@ -6289,7 +6294,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         }
         //store result in temp variable
         extractCompositeOps(state,getTypeElementCount(op.dataType),false);
-        tmpId=state->tmpCount++;
+        tmpId=newTmpId(state);
         pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
         addCompiledOps(state,op,getTypeElementCount(op.dataType));
         //update stack
@@ -6304,7 +6309,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             state->typeStack[state->typeCount++]=(TypeInfo){.type=op.dataType,.opCount=totalOps+1,.isWritable=false,.isAddressable=false};
             return;
           }
-          tmpId=state->tmpCount++;
+          tmpId=newTmpId(state);
           pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
           addCompiledOps(state,op,0);
           //update stack
@@ -6319,7 +6324,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           return;
         }
         extractCompositeOps(state,1,false);
-        tmpId=state->tmpCount++;
+        tmpId=newTmpId(state);
         pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
         addCompiledOps(state,op,1);
         //update stack
@@ -6354,7 +6359,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError("could not find source type",ERROR_MEMORY,op.filePos);
       //store previous result in temp value
       extractCompositeOps(state,1,false);
-      tmpId=state->tmpCount++;
+      tmpId=newTmpId(state);
       pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
       addCompiledOps(state,op,1);
       //update stack
@@ -6381,7 +6386,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         op.dataType=arrayType(true,state->typeStack[offset].type,0,NULL,state->typeStack[offset].isWritable);
       }
       //store result in temp variable
-      tmpId=state->tmpCount++;
+      tmpId=newTmpId(state);
       pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
       addCompiledStackOps(state,op,1,true);
       //update stack
@@ -6954,6 +6959,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     .autoTypes=malloc(prog->nAutoTypes*sizeof(TypeId)),.nAutoTypes=prog->nAutoTypes,
     .globalScope=NULL,.tmpCount=0,.ifCount=0,.whileCount=0,.index=0,
     .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,};
+  int32_t globalTmpCount=0;
   if(state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.autoTypes==NULL){//memory allocation failed
     freeContents(&state);
     handleError("allocation of type-check state failed",ERROR_MEMORY,src->currentPos);
@@ -6970,6 +6976,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     state.globalScope=&f->globalScope;
     //type check global operations
     state.index=0;
+    state.tmpCount=globalTmpCount;
     state.opCap=f->globalOpCount;
     state.opCount=0;
     state.compiledOperations=malloc(state.opCap*sizeof(Operation));
@@ -6987,8 +6994,10 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     free(f->globalOps);
     f->globalOps=state.compiledOperations;
     f->globalOpCount=state.opCount;
+    globalTmpCount=state.tmpCount;
     //type-check local operations
     state.index=0;
+    state.tmpCount=0;
     state.opCap=f->localOpCount;
     state.opCount=0;
     state.compiledOperations=malloc(state.opCap*sizeof(Operation));

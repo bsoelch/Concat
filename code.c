@@ -140,35 +140,35 @@ return ((int32_t)9);
 }
 // ./lib/io.concat
 int32_t concat_io_dfputc (void* arg0, int8_t arg1){
-int8_t const* const tmp37 = &(arg1);
-tuple5 const tmp38 = concat_io_dfwrite(arg0,((int8_t const*)tmp37),((int64_t)0),((int64_t)1));
-int64_t const tmp39 = (tmp38).e0;
-int32_t const tmp40 = (tmp38).e1;
-return tmp40;
+int8_t const* const tmp0 = &(arg1);
+tuple5 const tmp1 = concat_io_dfwrite(arg0,((int8_t const*)tmp0),((int64_t)0),((int64_t)1));
+int64_t const tmp2 = (tmp1).e0;
+int32_t const tmp3 = (tmp1).e1;
+return tmp3;
 }
 int32_t concat_io_dfputs (void* arg0, array2 arg1){
 int64_t local0 = 0;
-int64_t const tmp41 = ((arg1).sizes[0]);
-int64_t local1 = tmp41;
-int8_t const* const tmp42 = ((int8_t const*)arg1.data);
-int8_t const* const local2 = tmp42;
+int64_t const tmp0 = ((arg1).sizes[0]);
+int64_t local1 = tmp0;
+int8_t const* const tmp1 = ((int8_t const*)arg1.data);
+int8_t const* const local2 = tmp1;
 do{
-bool const tmp43 = (local1>((int64_t)0));
-if(!tmp43)
+bool const tmp2 = (local1>((int64_t)0));
+if(!tmp2)
   break;
-tuple5 const tmp44 = concat_io_dfwrite(arg0,local2,local0,local1);
-int32_t const tmp45 = (tmp44).e1;
-int32_t const tmp46 = tmp45;
-bool const tmp47 = (tmp46!=((int32_t)0));
-if(tmp47){
-int64_t const tmp48 = (tmp44).e0;
-return tmp45;
+tuple5 const tmp3 = concat_io_dfwrite(arg0,local2,local0,local1);
+int32_t const tmp4 = (tmp3).e1;
+int32_t const tmp5 = tmp4;
+bool const tmp6 = (tmp5!=((int32_t)0));
+if(tmp6){
+int64_t const tmp7 = (tmp3).e0;
+return tmp4;
 }
-int64_t const tmp49 = (tmp44).e0;
-int64_t const tmp50 = (local1-tmp49);
-local1 = tmp50;
-int64_t const tmp51 = (local0+tmp49);
-local0 = tmp51;
+int64_t const tmp8 = (tmp3).e0;
+int64_t const tmp9 = (local1-tmp8);
+local1 = tmp9;
+int64_t const tmp10 = (local0+tmp8);
+local0 = tmp10;
 }while(1);
 return ((int32_t)0);
 }
@@ -176,164 +176,164 @@ tuple3 concat_io_dfstart (void* arg0){
 return (tuple3){.e0=arg0,.e1=((int32_t)0)};
 }
 tuple3 concat_io_dfappendStr (void* arg0, int32_t arg1, array2 arg2){
-int32_t const tmp52 = arg1;
-bool const tmp53 = (tmp52!=((int32_t)0));
-if(tmp53){
+int32_t const tmp0 = arg1;
+bool const tmp1 = (tmp0!=((int32_t)0));
+if(tmp1){
 return (tuple3){.e0=arg0,.e1=arg1};
 }
-int32_t const tmp54 = concat_io_dfputs(arg0,arg2);
-return (tuple3){.e0=arg0,.e1=tmp54};
+int32_t const tmp2 = concat_io_dfputs(arg0,arg2);
+return (tuple3){.e0=arg0,.e1=tmp2};
 }
 tuple3 concat_io_dfappendC (void* arg0, int32_t arg1, int8_t arg2){
-int32_t const tmp55 = arg1;
-bool const tmp56 = (tmp55!=((int32_t)0));
-if(tmp56){
+int32_t const tmp0 = arg1;
+bool const tmp1 = (tmp0!=((int32_t)0));
+if(tmp1){
 return (tuple3){.e0=arg0,.e1=arg1};
 }
-int32_t const tmp57 = concat_io_dfputc(arg0,arg2);
-return (tuple3){.e0=arg0,.e1=tmp57};
+int32_t const tmp2 = concat_io_dfputc(arg0,arg2);
+return (tuple3){.e0=arg0,.e1=tmp2};
 }
 int32_t concat_io_dputs (array2 arg0){
-void* const tmp58 = concat_io_dstdOut();
-tuple3 const tmp59 = concat_io_dfstart(tmp58);
-void* const tmp60 = (tmp59).e0;
-int32_t const tmp61 = (tmp59).e1;
-tuple3 const tmp62 = concat_io_dfappendStr(tmp60,tmp61,arg0);
-void* const tmp63 = (tmp62).e0;
-int32_t const tmp64 = (tmp62).e1;
-tuple3 const tmp65 = concat_io_dfappendStr(tmp63,tmp64,((array2){.data=(arrayData4+0),.sizes={1}}));
-void* const tmp66 = (tmp65).e0;
-int32_t const tmp67 = (tmp65).e1;
-return tmp67;
+void* const tmp0 = concat_io_dstdOut();
+tuple3 const tmp1 = concat_io_dfstart(tmp0);
+void* const tmp2 = (tmp1).e0;
+int32_t const tmp3 = (tmp1).e1;
+tuple3 const tmp4 = concat_io_dfappendStr(tmp2,tmp3,arg0);
+void* const tmp5 = (tmp4).e0;
+int32_t const tmp6 = (tmp4).e1;
+tuple3 const tmp7 = concat_io_dfappendStr(tmp5,tmp6,((array2){.data=(arrayData4+0),.sizes={1}}));
+void* const tmp8 = (tmp7).e0;
+int32_t const tmp9 = (tmp7).e1;
+return tmp9;
 }
 // ./lib/string.concat
 tuple22 concat_std_dnewStringBuffer (int64_t arg0){
-int8_t* const tmp68 = concat_mem_dalloc(((size_t)sizeof(int8_t)),arg0);
-tuple22 const tmp69 = {.e0=tmp68,.e1=arg0,.e2=((int64_t)0)};
-return tmp69;
+int8_t* const tmp0 = concat_mem_dalloc(((size_t)sizeof(int8_t)),arg0);
+tuple22 const tmp1 = {.e0=tmp0,.e1=arg0,.e2=((int64_t)0)};
+return tmp1;
 }
 tuple22 concat_std_dstringBufferEnsureCap (tuple22 arg0, int64_t arg1){
 tuple22 local0 = arg0;
-int64_t const tmp70 = (local0).e1;
-bool const tmp71 = (tmp70>arg1);
-if(tmp71){
+int64_t const tmp0 = (local0).e1;
+bool const tmp1 = (tmp0>arg1);
+if(tmp1){
 return local0;
 }
-int64_t const tmp72 = (arg1/((int64_t)8));
-int64_t const tmp73 = (arg1+tmp72);
-int64_t const tmp74 = (tmp73+((int64_t)8));
-int8_t** const tmp75 = &((local0).e0);
-int8_t* const tmp76 = concat_mem_drealloc(((size_t)sizeof(int8_t)),(*(tmp75)),tmp74);
-(local0).e0 = tmp76;
-(local0).e1 = tmp74;
+int64_t const tmp2 = (arg1/((int64_t)8));
+int64_t const tmp3 = (arg1+tmp2);
+int64_t const tmp4 = (tmp3+((int64_t)8));
+int8_t** const tmp5 = &((local0).e0);
+int8_t* const tmp6 = concat_mem_drealloc(((size_t)sizeof(int8_t)),(*(tmp5)),tmp4);
+(local0).e0 = tmp6;
+(local0).e1 = tmp4;
 return local0;
 }
 tuple22 concat_std_dsb__appendC (tuple22 arg0, int8_t arg1){
 tuple22 local0 = arg0;
-int64_t const tmp77 = (local0).e2;
-int64_t const tmp78 = (tmp77+((int64_t)1));
-tuple22 const tmp79 = concat_std_dstringBufferEnsureCap(local0,tmp78);
-local0 = tmp79;
-int64_t* const tmp80 = &((local0).e2);
-int64_t const tmp81 = ((*(tmp80))++);
-int8_t** const tmp82 = &((local0).e0);
-(*(((*(tmp82)))+(tmp81))) = arg1;
+int64_t const tmp0 = (local0).e2;
+int64_t const tmp1 = (tmp0+((int64_t)1));
+tuple22 const tmp2 = concat_std_dstringBufferEnsureCap(local0,tmp1);
+local0 = tmp2;
+int64_t* const tmp3 = &((local0).e2);
+int64_t const tmp4 = ((*(tmp3))++);
+int8_t** const tmp5 = &((local0).e0);
+(*(((*(tmp5)))+(tmp4))) = arg1;
 return local0;
 }
 tuple22 concat_std_dsb__appendStr (tuple22 arg0, array2 arg1){
 tuple22 local0 = arg0;
-int64_t const tmp83 = (local0).e2;
-int64_t const tmp84 = ((arg1).sizes[0]);
-int64_t const tmp85 = (tmp83+tmp84);
-tuple22 const tmp86 = concat_std_dstringBufferEnsureCap(local0,tmp85);
-local0 = tmp86;
-int8_t* const tmp87 = (local0).e0;
-int64_t const tmp88 = (local0).e2;
-int8_t* const tmp89 = (tmp87+tmp88);
-int8_t const* const tmp90 = ((int8_t const*)arg1.data);
-int64_t const tmp91 = ((arg1).sizes[0]);
-int8_t* const tmp92 = concat_mem_dcopy(((size_t)sizeof(int8_t)),tmp89,tmp90,tmp91);
-int64_t const tmp93 = (local0).e2;
-int64_t const tmp94 = ((arg1).sizes[0]);
-int64_t const tmp95 = (tmp93+tmp94);
-(local0).e2 = tmp95;
+int64_t const tmp0 = (local0).e2;
+int64_t const tmp1 = ((arg1).sizes[0]);
+int64_t const tmp2 = (tmp0+tmp1);
+tuple22 const tmp3 = concat_std_dstringBufferEnsureCap(local0,tmp2);
+local0 = tmp3;
+int8_t* const tmp4 = (local0).e0;
+int64_t const tmp5 = (local0).e2;
+int8_t* const tmp6 = (tmp4+tmp5);
+int8_t const* const tmp7 = ((int8_t const*)arg1.data);
+int64_t const tmp8 = ((arg1).sizes[0]);
+int8_t* const tmp9 = concat_mem_dcopy(((size_t)sizeof(int8_t)),tmp6,tmp7,tmp8);
+int64_t const tmp10 = (local0).e2;
+int64_t const tmp11 = ((arg1).sizes[0]);
+int64_t const tmp12 = (tmp10+tmp11);
+(local0).e2 = tmp12;
 return local0;
 }
 tuple22 concat_std_dsb__appendInt_X3f (tuple22 arg0, int64_t arg1, int32_t arg2){
-bool const tmp96 = (arg2<((int32_t)2));
-if(tmp96){
+bool const tmp0 = (arg2<((int32_t)2));
+if(tmp0){
 return arg0;
 }
 array5 local0 = {0};
-bool const tmp97 = (arg1<((int64_t)0));
-tuple22 tmp101 = arg0;
-int64_t tmp100 = arg1;
-if(tmp97){
-tuple22 const tmp98 = concat_std_dsb__appendC(arg0,((int8_t)45));
-int64_t const tmp99 = (-arg1);
-tmp100 = tmp99;
-tmp101 = tmp98;
+bool const tmp1 = (arg1<((int64_t)0));
+tuple22 tmp5 = arg0;
+int64_t tmp4 = arg1;
+if(tmp1){
+tuple22 const tmp2 = concat_std_dsb__appendC(arg0,((int8_t)45));
+int64_t const tmp3 = (-arg1);
+tmp4 = tmp3;
+tmp5 = tmp2;
 }else{
-bool const tmp102 = (arg1==((int64_t)0));
-if(tmp102){
-tuple22 const tmp103 = concat_std_dsb__appendC(arg0,((int8_t)48));
-return tmp103;
+bool const tmp6 = (arg1==((int64_t)0));
+if(tmp6){
+tuple22 const tmp7 = concat_std_dsb__appendC(arg0,((int8_t)48));
+return tmp7;
 }
 }
-tuple22 tmp110;
-int32_t tmp109;
-int64_t tmp108;
-int64_t tmp104 = tmp100;
-int32_t tmp105 = 63;
-tuple22 tmp106 = tmp101;
+tuple22 tmp14;
+int32_t tmp13;
+int64_t tmp12;
+int64_t tmp8 = tmp4;
+int32_t tmp9 = 63;
+tuple22 tmp10 = tmp5;
 do{
-bool const tmp107 = (tmp104!=((int64_t)0));
-tmp108 = tmp104;
-tmp109 = tmp105;
-tmp110 = tmp106;
-if(!tmp107)
+bool const tmp11 = (tmp8!=((int64_t)0));
+tmp12 = tmp8;
+tmp13 = tmp9;
+tmp14 = tmp10;
+if(!tmp11)
   break;
-int64_t const tmp111 = ((int64_t)arg2);
-int64_t const tmp112 = ((int64_t)(((uint64_t)tmp108)%((uint64_t)tmp111)));
-concatInternal_checkArrayBounds(tmp112,((int64_t)61));
-int8_t const tmp113 = ((((int8_t const*)(arrayData0+0)))[tmp112]);
-concatInternal_checkArrayBounds(tmp109,((int64_t)64));
-((local0).data[tmp109]) = tmp113;
-int32_t const tmp114 = (tmp109-((int32_t)1));
-int64_t const tmp115 = ((int64_t)arg2);
-int64_t const tmp116 = ((int64_t)(((uint64_t)tmp108)/((uint64_t)tmp115)));
-tmp104 = tmp116;
-tmp105 = tmp114;
-tmp106 = tmp110;
+int64_t const tmp15 = ((int64_t)arg2);
+int64_t const tmp16 = ((int64_t)(((uint64_t)tmp12)%((uint64_t)tmp15)));
+concatInternal_checkArrayBounds(tmp16,((int64_t)61));
+int8_t const tmp17 = ((((int8_t const*)(arrayData0+0)))[tmp16]);
+concatInternal_checkArrayBounds(tmp13,((int64_t)64));
+((local0).data[tmp13]) = tmp17;
+int32_t const tmp18 = (tmp13-((int32_t)1));
+int64_t const tmp19 = ((int64_t)arg2);
+int64_t const tmp20 = ((int64_t)(((uint64_t)tmp12)/((uint64_t)tmp19)));
+tmp8 = tmp20;
+tmp9 = tmp18;
+tmp10 = tmp14;
 }while(1);
-tuple22 tmp122;
-int32_t tmp121;
-int32_t tmp117 = tmp109;
-tuple22 tmp118 = tmp110;
+tuple22 tmp26;
+int32_t tmp25;
+int32_t tmp21 = tmp13;
+tuple22 tmp22 = tmp14;
 do{
-int32_t const tmp119 = (tmp117+((int32_t)1));
-bool const tmp120 = (tmp119<((int32_t)64));
-tmp121 = tmp119;
-tmp122 = tmp118;
-if(!tmp120)
+int32_t const tmp23 = (tmp21+((int32_t)1));
+bool const tmp24 = (tmp23<((int32_t)64));
+tmp25 = tmp23;
+tmp26 = tmp22;
+if(!tmp24)
   break;
-concatInternal_checkArrayBounds(tmp121,((int64_t)64));
-int8_t const tmp123 = ((local0).data[tmp121]);
-tuple22 const tmp124 = concat_std_dsb__appendC(tmp122,tmp123);
-tmp117 = tmp121;
-tmp118 = tmp124;
+concatInternal_checkArrayBounds(tmp25,((int64_t)64));
+int8_t const tmp27 = ((local0).data[tmp25]);
+tuple22 const tmp28 = concat_std_dsb__appendC(tmp26,tmp27);
+tmp21 = tmp25;
+tmp22 = tmp28;
 }while(1);
-return tmp122;
+return tmp26;
 }
 tuple22 concat_std_dsb__appendBin (tuple22 arg0, int64_t arg1){
-tuple22 const tmp125 = concat_std_dsb__appendInt_X3f(arg0,arg1,((int32_t)2));
-return tmp125;
+tuple22 const tmp0 = concat_std_dsb__appendInt_X3f(arg0,arg1,((int32_t)2));
+return tmp0;
 }
 tuple22 concat_std_dsb__appendI (tuple22 arg0, int64_t arg1){
-tuple22 const tmp126 = concat_std_dsb__appendInt_X3f(arg0,arg1,((int32_t)10));
-return tmp126;
+tuple22 const tmp0 = concat_std_dsb__appendInt_X3f(arg0,arg1,((int32_t)10));
+return tmp0;
 }
 tuple22 concat_std_dsb__appendHex (tuple22 arg0, int64_t arg1){
-tuple22 const tmp127 = concat_std_dsb__appendInt_X3f(arg0,arg1,((int32_t)16));
-return tmp127;
+tuple22 const tmp0 = concat_std_dsb__appendInt_X3f(arg0,arg1,((int32_t)16));
+return tmp0;
 }
