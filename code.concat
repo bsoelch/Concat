@@ -23,12 +23,10 @@ entryPoint:
     0x1234567    sb_appendHex '\n' sb_appendC
     "0b"         sb_appendStr
     0b11001001   sb_appendBin '\n' sb_appendC
-    0x7fff_ffff_ffff_ffff sb_appendBin '\n' sb_appendC
-    0x7fff_ffff_ffff_ffff sb_appendHex '\n' sb_appendC
-    0x7fff_ffff_ffff_ffff sb_appendI   '\n' sb_appendC
-   -0x8000_0000_0000_0000 sb_appendBin '\n' sb_appendC
-   -0x8000_0000_0000_0000 sb_appendHex '\n' sb_appendC
-   -0x8000_0000_0000_0000 sb_appendI   '\n' sb_appendC
+    0x7fff_ffff_ffff_ffff sb_appendHex  '\n' sb_appendC
+   -0x8000_0000_0000_0000 sb_appendI    '\n' sb_appendC
+   -1                     sb_appendU    '\n' sb_appendC
+   -1                     sb_appendUBin '\n' sb_appendC
   =:: buff
   io.stdOut buff .data 0 buff .count io.fwrite print print
 end

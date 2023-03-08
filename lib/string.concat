@@ -32,7 +32,7 @@
   
   "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
   
-  proc( stringBuffer : buffer i64 : i i32 : base => stringBuffer ) =: public sb_appendInt?
+  proc( stringBuffer : buffer i64 : i i32 : base bool : signed => stringBuffer ) =: public sb_appendInt??
     base 2 < if 
       ## TODO error handling
       buffer return
@@ -40,7 +40,7 @@
     i8 64 array new =:: mut chrBuff
     buffer
       i
-      #dup 0 < if  
+      #dup 0 < signed & if  
         #swap '-' sb_appendC #swap
         neg 
       else #dup 0 == _if
@@ -63,14 +63,26 @@
       #drop
     return
   end
-  proc( stringBuffer i64 => stringBuffer ) =: public sb_appendBin
+  proc( stringBuffer i64 #+value+# i32 #+base+# => stringBuffer ) =: public sb_appendInt?
+    true sb_appendInt??
+  end
+  proc( stringBuffer i64 #+value+# => stringBuffer ) =: public sb_appendBin
     2 sb_appendInt?
   end
-  proc( stringBuffer i64 => stringBuffer ) =: public sb_appendI
+  proc( stringBuffer i64 #+value+# => stringBuffer ) =: public sb_appendI
     10 sb_appendInt?
   end
-  proc( stringBuffer i64 => stringBuffer ) =: public sb_appendHex
+  proc( stringBuffer i64 #+value+# => stringBuffer ) =: public sb_appendHex
     16 sb_appendInt?
+  end
+  proc( stringBuffer i64 #+value+# => stringBuffer ) =: public sb_appendUBin
+    2 false sb_appendInt??
+  end
+  proc( stringBuffer i64 #+value+# => stringBuffer ) =: public sb_appendU
+    10 false sb_appendInt??
+  end
+  proc( stringBuffer i64 #+value+# => stringBuffer ) =: public sb_appendUHex
+    16 false sb_appendInt??
   end
 #end
 
