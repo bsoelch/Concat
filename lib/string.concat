@@ -12,7 +12,7 @@
       nBuffer return
     end
     minCap minCap 8 / + 8 +
-    nBuffer .data #over i8 mem.realloc nBuffer .data =
+      nBuffer .data #over i8 mem.realloc nBuffer .data =
     nBuffer .cap =
     nBuffer return
   end

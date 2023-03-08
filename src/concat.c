@@ -1328,6 +1328,9 @@ typedef enum{
   NE,
   LE,
   LT,
+  LSHIFT,
+  RSHIFT,
+  URSHIFT,
 }BinaryOperator;
 char const* binOpName(BinaryOperator op){
   switch(op){
@@ -1347,6 +1350,9 @@ char const* binOpName(BinaryOperator op){
     case NE:return "NE";
     case LE:return "LE";
     case LT:return "LT";
+    case LSHIFT:return "LSHIFT";
+    case RSHIFT:return "RSHIFT";
+    case URSHIFT:return "URSHIFT";
   }
   return "UNDEFINED";
 }
@@ -2741,7 +2747,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       return size;
     case OP_BINARY_OPERATOR:
       fputs("(",target);
-      if(op->dataAs.binOp==UDIVIDE||op->dataAs.binOp==MOD){
+      if(op->dataAs.binOp==UDIVIDE||op->dataAs.binOp==UMOD||op->dataAs.binOp==URSHIFT){
         fputs("(",target);
         printTypeNameC(op->dataType,target);
         fputs(")(((",target);
@@ -2802,9 +2808,20 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case LT:
           fputs("<",target);
           break;
+        case LSHIFT:
+          fputs("<<",target);
+          break;
+        case RSHIFT:
+          fputs(">>",target);
+          break;
+        case URSHIFT:
+          fputs(")>>((",target);
+          printUnsignedTypeNameC(op->dataType,target);
+          fputs(")",target);
+          break;
       }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
-      if(op->dataAs.binOp==UDIVIDE||op->dataAs.binOp==MOD)
+      if(op->dataAs.binOp==UDIVIDE||op->dataAs.binOp==UMOD||op->dataAs.binOp==URSHIFT)
         fputs("))",target);
       fputs(")",target);
       return size;
@@ -4451,6 +4468,15 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"<")){
     pushOperation(state,opBinaryOperator(LT,wordPos));
     return;
+  }else if(wordEquals(&word,"<<")){
+    pushOperation(state,opBinaryOperator(LSHIFT,wordPos));
+    return;
+  }else if(wordEquals(&word,">>")){
+    pushOperation(state,opBinaryOperator(RSHIFT,wordPos));
+    return;
+  }else if(wordEquals(&word,">>u")){
+    pushOperation(state,opBinaryOperator(URSHIFT,wordPos));
+    return;
   }else if(wordEquals(&word,"neg")||wordEquals(&word,"negate")){
     pushOperation(state,opUnaryOperator(NEGATE,wordPos));
     return;
@@ -4764,7 +4790,7 @@ TypeId typeCheckCompare(TypeId* inTypes){
   inTypes[1]=inTypes[0];
   return TYPE_BOOL;
 }
-TypeId typeCheckIntLogic(TypeId* inTypes){
+TypeId typeCheckIntArithmetic(TypeId* inTypes){
   if(!isIntType(inTypes[0])||!isIntType(inTypes[1]))
     return TYPE_UNDEFINED;//both arguments have to be integers
   int r1=numberRank(primitiveTypeData(inTypes[0]));
@@ -5890,14 +5916,6 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             break;
           }
           break;
-        case UDIVIDE:
-        case UMOD:
-          op.dataType=typeCheckArithmetic(inTypes);
-          if(isIntType(op.dataType)){
-            typesMatch=true;
-            break;
-          }
-          break;
         case MULTIPLY:
         case DIVIDE:
         case MOD:
@@ -5907,12 +5925,22 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             break;
           }
           break;
+        case UDIVIDE:
+        case UMOD:
+        case LSHIFT:
+        case RSHIFT:
+        case URSHIFT:
+          op.dataType=typeCheckIntArithmetic(inTypes);
+          if(!typeEquals(op.dataType,TYPE_UNDEFINED)){
+            typesMatch=true;
+            break;
+          }
+          break;
         case AND:
         case OR:
         case XOR:
           //integer bool ops
-          //TODO? bit shifts
-          op.dataType=typeCheckIntLogic(inTypes);
+          op.dataType=typeCheckIntArithmetic(inTypes);
           if(!typeEquals(op.dataType,TYPE_UNDEFINED)){
             typesMatch=true;
             break;
@@ -6884,11 +6912,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
           extractCompositeOps(state,2,true);
-          // ... offset>|types-2|types-1|types-2|
           offset=state->typeStack[state->typeCount-1].opCount+state->typeStack[state->typeCount-2].opCount;
           totalOps=state->typeStack[state->typeCount-2].opCount;
           if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
-            handleError(NULL,ERROR_TYPE,op.filePos);//TODO check
+            handleError(NULL,ERROR_TYPE,op.filePos);
           //1. copy lower operations above top operation
           memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-offset,totalOps*sizeof(Operation));
           memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-2,sizeof(TypeInfo));
