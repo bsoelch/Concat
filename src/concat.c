@@ -603,6 +603,10 @@ bool isComposite(TypeId type){
   }
   return false;
 }
+bool isSwitchableType(TypeId type){
+  return isIntType(type)||isEnumLabelType(type);
+}
+
 bool typeElementsLabeled(TypeId type){
   type=unwrapNamedType(type);
   if(type.class==TYPECLASS_TUPLE||type.class==TYPECLASS_PROC_IN||type.class==TYPECLASS_PROC_OUT)
@@ -932,7 +936,7 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool
   }
   int64_t* mSizes=NULL;
   if(dims>0&&sizes!=NULL){
-    mSizes=malloc(dims*sizeof(*mSizes));//XXX reuse array of previous types
+    mSizes=malloc(dims*sizeof(*mSizes));
     if(mSizes==NULL)
       return TYPE_UNDEFINED;
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
@@ -1585,6 +1589,8 @@ void printOperation(Operation op,FILE* out){
 
 //path of the main source file, mill be initialized in main()
 String basePath={0};
+String libPath={0};
+bool quietMode=false;
 
 #define MAX_NAMESPACES 1024
 typedef struct{
@@ -1903,13 +1909,27 @@ ScopeNode* scopeItrNext(ScopeIterator* itr){
   itr->n=itr->n->next;
   return n;
 }
-int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out){
+void printIdentiferMatch(ScopeNode* asIdentifier,FilePosition pos){
+  fputs("  - ",stdout);
+  Label const* mLabel=label(asIdentifier->labelId,pos);
+  if(isMutableLabel(mLabel))
+    fputs("mutable ",stdout);
+  printf("%s: ",idNames[asIdentifier->idType]);
+  printTypeName(asIdentifier->type,stdout);
+  if(asIdentifier->constValue.type!=CONSTANT_NONE){
+    fputs(" ",stdout);
+    printConstValue(asIdentifier->constValue,stdout);
+  }
+  fputs("\n      at ",stdout);
+  printFilePosition(mLabel->declaredAt,stdout);
+  puts("");
+}
+int searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out,FilePosition pos,bool printMatches){
   int64_t dotIndex=lastIndexOfChar(name,'.');
   NamespaceId mNamespaceId=namespace.current;
   NamespaceId relativeSpace;
   if(mNamespaceId==NAMESPACE_ID_NONE){
-    fputs("invalid value for namespace.current",stderr);
-    return ERROR_MEMORY;
+    handleError("invalid value for namespace.current",ERROR_MEMORY,pos) ;
   }
   String path=dotIndex>0?sliceEnd(name,dotIndex):EMPTY_STRING;
   if(dotIndex>0){
@@ -1923,10 +1943,12 @@ int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,S
     if(relativeSpace!=NAMESPACE_ID_NONE){
       node=findNode(scopeBuffer+level,name,relativeSpace);//all non-global variables are in the same namespace
       if(node==NULL)
-        return ERROR_MEMORY;
+        handleError("could not find node",ERROR_MEMORY,pos) ;
       if(*node!=NULL){
         *out=*node;
-        return 0;
+        if(!printMatches)
+          return 0;
+        printIdentiferMatch(*out,pos);
       }
     }
     level--;
@@ -1936,30 +1958,57 @@ int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,S
     if(relativeSpace!=NAMESPACE_ID_NONE){
       node=findNode(globalScope,name,relativeSpace);
       if(node==NULL)
-        return ERROR_MEMORY;
+        handleError("could not find node",ERROR_MEMORY,pos) ;
       if(*node!=NULL){
         *out=*node;
-        return 0;
+        if(!printMatches)
+          return 0;
+        printIdentiferMatch(*out,pos);
       }
     }
     mNamespaceId=namespaceBuffer[mNamespaceId].parent;
   }
-  NamespaceImportId import=namespace.namespaceImports;//XXX warn if multiple imports match
+  NamespaceImportId import=namespace.namespaceImports;
+  NamespaceId match=NAMESPACE_ID_NONE;
+  bool firstDuplicate=true;
   while(import!=NAMESPACE_IMPORT_NONE){//check all imports in reverse order
     relativeSpace=findNamespace(namespaceImportBuffer[import].imported,path);
     if(relativeSpace!=NAMESPACE_ID_NONE){
       node=findNode(globalScope,name,relativeSpace);
       if(node==NULL)
-        return ERROR_MEMORY;
+        handleError("could not find node",ERROR_MEMORY,pos) ;
       if(*node!=NULL){
-        *out=*node;
-        return 0;
+        if(printMatches)
+          printIdentiferMatch(*node,pos);
+        if(match==NAMESPACE_ID_NONE){
+          *out=*node;
+          match=namespaceImportBuffer[import].imported;
+        }else if(!printMatches){
+          if(firstDuplicate){
+            fprintf(stderr,"Warning:\nmultiple matches for identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(name));
+            fprintf(stderr,"  - %s \"%"PRI_STR"\" at ",idNames[(*out)->idType],PRI_STR_ARGS((*out)->key));
+            printFilePosition(label((*out)->labelId,pos)->declaredAt,stderr);
+            fputs("\n",stderr);
+            firstDuplicate=false;
+          }
+          fprintf(stderr,"  - %s \"%"PRI_STR"\" at ",idNames[(*node)->idType],PRI_STR_ARGS((*node)->key));
+          printFilePosition(label((*node)->labelId,pos)->declaredAt,stderr);
+          fputs("\n",stderr);
+        }
       }
     }
     import=namespaceImportBuffer[import].parent;
   }
+  if(!firstDuplicate)
+    handleWarning(NULL,ERROR_SYNTAX,pos);
+  if(match!=NAMESPACE_ID_NONE)
+    return 0;//found matching namespace
   return ERROR_SYNTAX;
 }
+int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out,FilePosition pos){
+  return searchIdentifier(globalScope,namespace,name,out,pos,false);
+}
+
 ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,LabelId labelId,TypeId type,IdentifierType idType,int32_t id,FilePosition pos,ConstantValue const* constValue){
   Label const* mLabel=label(labelId,pos);
   if(isMutableLabel(mLabel)){
@@ -1985,7 +2034,7 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
     handleError(NULL,ERROR_SYNTAX,mLabel->declaredAt);
   }
   ScopeNode* shaddow;
-  getIdentifier(globalScope,namespace,mLabel->label,&shaddow);
+  getIdentifier(globalScope,namespace,mLabel->label,&shaddow,pos);
   if(shaddow!=NULL){
     fprintf(stderr,"Warning:\n  declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel->label));
     fprintf(stderr,"  shadows previous declaration: %s \"%"PRI_STR"\" at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
@@ -2024,7 +2073,7 @@ bool includeIfGlobal(ScopeNode* aNode,bool onlyConst,Scope* globalScope,FilePosi
     return true;
   }
   if(*mNode!=NULL){
-    if(!isPublicLabel(mLabel)&&!(isPublicLabel(label((*mNode)->labelId,pos))||isExternLabel(label((*mNode)->labelId,pos))))//XXX? allow extern declarations with identical signature
+    if(!isPublicLabel(mLabel)&&!(isPublicLabel(label((*mNode)->labelId,pos))||isExternLabel(label((*mNode)->labelId,pos))))
       return false;//extern variable shadowed by local variable
     if(filePosEquals(label((*mNode)->labelId,pos)->declaredAt,label(aNode->labelId,pos)->declaredAt))
       return false;//identical node
@@ -2679,7 +2728,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           }
           if(!targetArray->sizeKnown){
             if(!srcArray->sizeKnown)
-              break;//XXX cast between arrays of unknown size
+              break;
             fputs(",.sizes={",target);
             if(targetArray->dims==1){
               int64_t l=1;
@@ -2854,7 +2903,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("continue;\n",target);
           return size;
         case BLOCK_SWITCH:
-          if(!isIntType(op->dataType)&&!isEnumLabelType(op->dataType)){//XXX isSwitchableType
+          if(!isSwitchableType(op->dataType)){
             fputs("compiling switch-case of type ",stderr);
             printTypeName(op->dataType,stderr);
             fputs(" is not implemented\n",stderr);
@@ -2865,7 +2914,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("){\n",target);
           return size;
         case BLOCK_CASE:
-          if(!isIntType(op->dataType)&&!isEnumLabelType(op->dataType)){
+          if(!isSwitchableType(op->dataType)){
             fputs("compiling switch-case of type ",stderr);
             printTypeName(op->dataType,stderr);
             fputs(" is not implemented\n",stderr);
@@ -2886,7 +2935,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           }
           return size;
         case BLOCK_DEFAULT:
-          if(!isIntType(op->dataType)&&!isEnumLabelType(op->dataType)){
+          if(!isSwitchableType(op->dataType)){
             fputs("compiling switch-case of type ",stderr);
             printTypeName(op->dataType,stderr);
             fputs(" is not implemented\n",stderr);
@@ -3748,7 +3797,7 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier);
+  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier,wordPos);
   if(r<0){//internal error while reading identifier
     handleError("error while reading identifier",r,codeFile->wordStart);
     return false;
@@ -3976,7 +4025,6 @@ void requireCompileTimeTypes(String* opName,TypeId* typeOut,size_t nTypes,FilePo
     typeOut++;
   }
 }
-
 //returns true when allocation fails
 bool ensureCap(void** mList,size_t* cap,size_t eltSize,size_t newSize){
   if(*cap>newSize)
@@ -4014,6 +4062,33 @@ bool ensureFilesCap(ProgramFile** mList,size_t* cap,size_t newSize){
     return true;
   *mList=ops;
   return false;
+}
+void includeFile(ParserState * state,char const* includePath,FilePosition includePos){
+  FileId included=FILE_ID_NONE;
+  for(FileId fId=0;fId<state->fileCount;fId++){
+    if(wordEquals(&state->files[fId].fileName,includePath)){
+      included=fId;
+      break;
+    }
+  }
+  if(included==FILE_ID_NONE){
+    CodeFile includedFile;
+    if(readCodeFile(includePath,&includedFile)){
+      handleError("could not include file",ERROR_SYNTAX,includePos);
+      return;
+    }
+    included=parseFile(state,&includedFile);
+  }
+  if(!quietMode)
+    printf("included: %s id: %"PRIi32"\n",includePath,included);
+  if(includeConstants(&state->files[state->currentFile].globalScope,&state->files[included].globalScope,includePos)){
+    handleError(NULL,ERROR_SYNTAX,includePos);
+  }
+  //add include file to includes list
+  ProgramFile* f=&state->files[state->currentFile];
+  if(ensureInlcudesCap(&f->includes,&f->includeCap,f->includeCount+1))
+    handleError("exceeded include capacity",ERROR_MEMORY,includePos);
+  f->includes[f->includeCount++]=(IncludedFile){.id=included,.includePos=includePos};
 }
 
 void pushOperation(ParserState* state,Operation op);
@@ -4306,34 +4381,18 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         memcpy(includePath,basePath.chars,basePath.length*sizeof(char));
         memcpy(includePath+basePath.length,word.chars,word.length*sizeof(char));
         includePath[len-1]='\0';
-        FileId included=FILE_ID_NONE;
-        for(FileId fId=0;fId<state->fileCount;fId++){
-          if(wordEquals(&state->files[fId].fileName,includePath)){
-            included=fId;
-            break;
-          }
-        }
-        if(included==FILE_ID_NONE){
-          CodeFile includeFile;
-          if(readCodeFile(includePath,&includeFile)){
-            handleError("could not include file",ERROR_SYNTAX,wordPos);
-            return;
-          }
-          included=parseFile(state,&includeFile);
-        }
-        printf("included: %s id: %"PRIi32"\n",includePath,included);
-        if(includeConstants(&state->files[state->currentFile].globalScope,&state->files[included].globalScope,wordPos)){
-          handleError(NULL,ERROR_SYNTAX,wordPos);
-        }
-        //add include file to includes list
-        ProgramFile* f=&state->files[state->currentFile];
-        if(ensureInlcudesCap(&f->includes,&f->includeCap,f->includeCount+1))
-          handleError("exceeded include capacity",ERROR_MEMORY,wordPos);
-        f->includes[f->includeCount++]=(IncludedFile){.id=included,.includePos=wordPos};
+        includeFile(state,includePath,wordPos);
         return;
       }
       if(wordType==WORD_TYPE_IDENTIFIER){//library include
-        handleError("library includes are not implemented",ERROR_UNIMPLEMENTED,wordPos);
+        //TODO check if libPath exists
+        int64_t len=libPath.length+word.length+strlen(".concat")+1;
+        char* includePath=malloc(len*sizeof(char));
+        memcpy(includePath,libPath.chars,libPath.length*sizeof(char));
+        memcpy(includePath+libPath.length,word.chars,word.length*sizeof(char));
+        memcpy(includePath+libPath.length+word.length,".concat",strlen(".concat")*sizeof(char));
+        includePath[len-1]='\0'; 
+        includeFile(state,includePath,wordPos);
         return;
       }
       handleError("included names have to be identifiers or strings",ERROR_SYNTAX,wordPos);
@@ -4387,29 +4446,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       wordPos=codeFile->wordStart;
       Label const* varName=label(labelId,wordPos);
       ScopeNode* asIdentifier;
-      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),varName->label,&asIdentifier);//try to parse variable as identifier
-      if(r<0)//internal error while reading identifier
-        handleError("error while resolving identifier",r,wordPos);
-      if(r==0){//found identifier TODO print shadowed matches
-        puts("-----------------");
-        printf("identifier \"%"PRI_STR"\":\n",PRI_STR_ARGS(varName->label));
-        fputs("  ",stdout);
-        Label const* mLabel=label(asIdentifier->labelId,wordPos);
-        if(isMutableLabel(mLabel))
-          fputs("mutable ",stdout);
-        printf("%s: ",idNames[asIdentifier->idType]);
-        printTypeName(asIdentifier->type,stdout);
-        if(asIdentifier->constValue.type!=CONSTANT_NONE){
-          fputs(" ",stdout);
-          printConstValue(asIdentifier->constValue,stdout);
-        }
-        fputs("\n    at ",stdout);
-        printFilePosition(mLabel->declaredAt,stdout);
-        puts("");
-        puts("-----------------");
-        return;
-      }
-      fprintf(stderr,"could not find identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(varName->label));
+      puts("-----------------");
+      printf("identifier \"%"PRI_STR"\":\n",PRI_STR_ARGS(varName->label));
+      searchIdentifier(getGlobalScopeParser(state),*parserNamespace(state),varName->label,&asIdentifier,wordPos,true);//try to parse variable as identifier
+      puts("-----------------");
       //TODO resolve global identifiers with later declarations pre-declared types identifiers
       return;
     }
@@ -4517,7 +4557,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(isExternLabel(mLabel))
         handleError("cannot assign values to extern types",ERROR_SYNTAX,wordPos);
       ScopeNode * prevId;
-      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId);
+      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId,wordPos);
       if(r!=0)
         handleError("error while resolving identifier",r,wordPos);
       //get previous value of type constant
@@ -4667,7 +4707,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }
 
   ScopeNode* asIdentifier;
-  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier);//try to parse variable as identifier
+  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier,wordPos);//try to parse variable as identifier
   if(r<0)//internal error while reading identifier
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
@@ -5365,7 +5405,6 @@ void checkReachable(TypeCheckState* state,Operation op){
   handleError(NULL,ERROR_SYNTAX,op.filePos);
 }
 
-
 void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   TypeId calledType=op->dataType;
   if(isPtr){
@@ -5776,7 +5815,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(state->globalScope,op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier);
+  int r=getIdentifier(state->globalScope,op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier,op->filePos);
   if(r!=0){
     fprintf(stderr," unknown identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(mLabel));
     handleError(NULL,r,op->filePos);
@@ -6625,6 +6664,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
           switchBlock->switchType=op.dataType;
+          if(!isSwitchableType(switchBlock->switchType)){
+            fputs("switch statements of type ",stderr);
+            printTypeName(switchBlock->switchType,stderr);
+            fputs("are not supported\n",stderr);
+            handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
+          }
           if(pushBlock(state,blockInfo))
             handleError("could not push switch-block",ERROR_MEMORY,op.filePos);
           requireTypes("switch-condition",state,&op.dataType,1,op.filePos);
@@ -7030,7 +7075,6 @@ char const* srcFile=NULL;
 char const* outFile=NULL;
 char const* parserTokensFile=NULL;
 char const* compilerTokensFile=NULL;
-bool quietMode=false;
 //returns true if program should terminate
 #define ARGUMENT_NONE 0
 #define ARGUMENT_IN 1
@@ -7133,6 +7177,7 @@ bool parseArgs(char** argv){
     return false;
   }
   basePath=newString(srcFile,iSlash+1);
+  libPath=cstrToStr("./lib/");
   return false;
 }
 int main(int argc,char** argv){

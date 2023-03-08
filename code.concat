@@ -1,7 +1,7 @@
 #include "include.concat"
-#include "lib/io.concat"
-#include "lib/mem.concat"
-#include "lib/string.concat"
+#include io
+#include mem
+#include string
 
 #using std
 
@@ -18,11 +18,11 @@ entryPoint:
     ' '     sb_appendC
     "World" sb_appendStr
     '\n'    sb_appendC
-    -12345678    sb_appendI   '\n' sb_appendC
-    "0x"         sb_appendStr
-    0x1234567    sb_appendHex '\n' sb_appendC
-    "0b"         sb_appendStr
-    0b11001001   sb_appendBin '\n' sb_appendC
+    -12345678             sb_appendI   '\n' sb_appendC
+    "0x"                  sb_appendStr
+    0x1234567             sb_appendHex '\n' sb_appendC
+    "0b"                  sb_appendStr
+    0b11001001            sb_appendBin '\n' sb_appendC
     0x7fff_ffff_ffff_ffff sb_appendHex  '\n' sb_appendC
    -0x8000_0000_0000_0000 sb_appendI    '\n' sb_appendC
    -1                     sb_appendU    '\n' sb_appendC
