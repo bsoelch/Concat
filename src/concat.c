@@ -1123,7 +1123,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       if(!noRecurse){
         fputs(" [ ",file);
         printTypeNameIntenal(unwrapNamedType(type),file,true);
-        fputs("]",file);
+        fputs(" ]",file);
       }
       printTypeFlags(type,file);
       return;
@@ -1145,12 +1145,12 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
       if(!isProcInType(type)&&!isProcOutType(type)){
-        fprintf(file,"%s (%"PRIi32") ",typeClassName(type.class),type.dataAs.id);
+        fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
         if(noRecurse){
           printTypeFlags(type,file);
           return;
         }
-        fputs("(",file);
+        fputs(" (",file);
       }
       for(int32_t e=0;e<getTypeElementCount(type);e++){
         if((isEnumType(type)||isEnumLabelType(type))&&typeEquals(getTypeElements(type)[e],TYPE_UNDEFINED)){
@@ -1172,12 +1172,12 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       printTypeFlags(type,file);
       return;
     case TYPECLASS_PROCEDURE:
-      fprintf(file,"%s (%"PRIi32") ",typeClassName(type.class),type.dataAs.id);
+      fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
       if(noRecurse){
         printTypeFlags(type,file);
         return;
       }
-      fputs("( ",file);
+      fputs(" ( ",file);
       printTypeNameIntenal(procTypeData(type)->inType,file,true);
       //TODO static arguments
       fputs(" => ",file);
@@ -2700,11 +2700,13 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("-",target);
           break;
         case INCREMENT:
-          fputs("++",target);
-          break;
+          COMPILE_OP_RETURN_ERROR(target,op,opSize);
+          fputs("++)",target);
+          return size;
         case DECREMENT:
-          fputs("--",target);
-          break;
+          COMPILE_OP_RETURN_ERROR(target,op,opSize);
+          fputs("--)",target);
+          return size;
         case NOT:
           fputs("!",target);
           break;
@@ -3738,6 +3740,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       if(isStaticLabelId(labelId)){
         addStaticArgs(labelId,popTypeConstant(codeFile->wordStart,"static argument",false),codeFile->wordStart);//remember static types
       }
+      currentOffset=bufferedConstants;
       continue;
     }
     if(labelType!=LABEL_TYPE_ENUM||typesSinceLabel>0||wordEquals(&word,"mut")){
@@ -5150,6 +5153,8 @@ bool sizesCompatible(ArrayType const* src,ArrayType const* target){
 bool canAutoCast(TypeId src,TypeId target){//? allow cast T ptr mut ptr -> T ptr ptr (allow allow casting mut away if out pointers are const)
   if(typeEquals(src,target))
     return true;
+  if(isNamedType(target)&&!isNamedType(src))
+    target=unwrapNamedType(target);
   if(isEnumLabel(src,target))
     return true;//allow auto-cast from enum to enum-label
   if(isPointerType(src)&&isPointerType(target)&&!isMutableType(target)&&typeEquals(getBaseType(src),getBaseType(target)))
@@ -5615,9 +5620,13 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
       }
       op->dataType=getBaseType(state->typeStack[offset].type);
       //wrap composite operations
-      extractCompositeOps(state,indexCount+1,true);
+      extractCompositeOps(state,indexCount+1+(op->opType==OP_SET),true);
+      size_t totalOps=0;
+      for(int32_t i=0;i<indexCount+1;i++){
+        totalOps+=state->typeStack[offset+i].opCount;
+      }
       //update operation stack
-      insertStackOperation(state,*op,indexCount+1);
+      insertStackOperation(state,*op,totalOps);
       //update type-stack
       state->typeCount-=indexCount;
       writable=isMutableType(state->typeStack[offset].type);
@@ -5754,6 +5763,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       offset=state->typeCount-1;
       //result of operation is neither addressable nor writable
       op.dataType=state->typeStack[offset].type;//unary operator returns value of same type
+      bool keepMutable=false;
       switch(op.dataAs.unOp){
         case INCREMENT:
         case DECREMENT:
@@ -5761,10 +5771,18 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"operand of unary operator %s has to be writable \n",unOpName(op.dataAs.unOp));
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
+          keepMutable=true;
           if(isPointerType(state->typeStack[offset].type)){
             break;//pointer is an allowed type for increment
           }
-          //fall through
+          if(!isNumberType(state->typeStack[offset].type)){
+            fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
+            fputs(" got ",stderr);
+            printTypeName(state->typeStack[offset].type,stderr);
+            fputs("\n",stderr);
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          }
+          break;
         case NEGATE:
           if(!isNumberType(state->typeStack[offset].type)){
             fprintf(stderr,"wrong operand type for unary operator %s expected integer ",unOpName(op.dataAs.unOp));
@@ -5792,7 +5810,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       //update op-stack
       //store result in temp variable
-      extractCompositeOps(state,1,false);
+      extractCompositeOps(state,1,keepMutable);
       tmpId=state->tmpCount++;
       pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
       addCompiledOps(state,op,1);
@@ -5923,7 +5941,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       if((isPrimitiveType(state->typeStack[offset].type)&&!typeEquals(state->typeStack[offset].type,TYPE_UNDEFINED))||
           (isPointerType(state->typeStack[offset].type)&&!isCallableType(state->typeStack[offset].type))||
           isArrayViewType(state->typeStack[offset].type)){
-        op.dataType=state->typeStack[offset].type;
+        op.dataType=unwrapNamedType(state->typeStack[offset].type);
         //update operations
         extractCompositeOps(state,1,false);
         addCompiledOps(state,op,1);
@@ -6804,7 +6822,22 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           state->typeCount++;
           return;
         case STACK_OP_SWAP:
-          break;
+          if(state->typeCount<2){
+            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            handleError(NULL,ERROR_TYPE,op.filePos);
+          }
+          extractCompositeOps(state,2,true);
+          offset=state->typeStack[state->typeCount-1].opCount+state->typeStack[state->typeCount-2].opCount;
+          totalOps=state->typeStack[state->typeCount-2].opCount;
+          if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
+            handleError(NULL,ERROR_TYPE,op.filePos);//TODO check
+          //1. copy lower operations above top operation
+          memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-offset,totalOps*sizeof(Operation));
+          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-2,sizeof(TypeInfo));
+          //2. move stack back down
+          memmove(state->opStack+state->opStackCount-offset,state->opStack+state->opStackCount-(offset-totalOps),offset*sizeof(Operation));
+          memmove(state->typeStack+state->typeCount-2,state->typeStack+state->typeCount-1,2*sizeof(TypeInfo));
+          return;
       }
       break;
     case OP_COMPILER_INFO:

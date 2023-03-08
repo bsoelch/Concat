@@ -1,16 +1,54 @@
 #include "include.concat"
+#include "lib/io.concat"
+#include "lib/mem.concat"
 
 entryPoint:
-  1024 1024 * 16 * i32 alloc i32 rawptr mut =: dynamicArray
+  1024 1024 * 16 * i32 mem.alloc i32 rawptr mut =: dynamicArray
   dynamicArray print
   dynamicArray 0 [] print
   dynamicArray 1000000 [] print
 
-  "Hello World!" puts
+  "Hello World!" io.puts print
+
+  16 newStringBuffer
+    "Hello" sb<<s
+    ' '     sb<<c
+    "World" sb<<s
+    '\n'    sb<<c
+  =:: buff
+  io.stdOut buff .data 0 buff .count io.fwrite print print
 end
 
 proc( => i32 ) =: test
  9
 end
 
-0 =:: public constant
+struct( i8 rawptr mut : mut data i64 : mut cap i64 : mut count ) =:: stringBuffer
+
+proc( i64 : cap => stringBuffer ) =: newStringBuffer
+  cap i8 mem.alloc cap 0 stringBuffer new return
+end
+proc( stringBuffer : buffer i64 : minCap => stringBuffer ) =: stringBufferEnsureCap
+  buffer =:: mut nBuffer
+  nBuffer .cap minCap > if
+    nBuffer return
+  end
+  minCap minCap 8 / + 8 +
+  nBuffer .data #over i8 mem.realloc nBuffer .data =
+  nBuffer .cap =
+  nBuffer return
+end
+proc( stringBuffer : buffer i8 : chr => stringBuffer ) =: sb<<c
+  buffer =:: mut nBuffer
+  nBuffer #dup .count 1 + stringBufferEnsureCap nBuffer =
+  chr nBuffer .data nBuffer .count ++ [] =
+  nBuffer return
+end
+proc( stringBuffer : buffer string : str => stringBuffer ) =: sb<<s
+  buffer =:: mut nBuffer
+  nBuffer #dup .count str .length + stringBufferEnsureCap nBuffer =
+  nBuffer .data nBuffer .count + str i8 rawptr cast str .length i8 mem.copy #drop
+  nBuffer .count str .length + nBuffer .count =
+  nBuffer return
+end
+

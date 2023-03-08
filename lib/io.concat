@@ -1,0 +1,62 @@
+#namespace io
+  type : extern _FILE
+  _FILE ptr mut =:: public FILE
+  
+  i32 type =: public IOError
+  
+  0 IOError =: public ERROR_NONE
+  
+  proc( => FILE ) : extern public stdIn
+  proc( => FILE ) : extern public stdOut
+  proc( => FILE ) : extern public stdErr
+  
+  ## TODO open options
+  proc( string : fileName => FILE IOError ) : extern public fopen
+  ## file buffer off count -> nRead errCode
+  proc( FILE : file i8 rawptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread
+  ## file buffer off count -> nWritten errCode
+  proc( FILE : file i8 rawptr     : buffer i64 : off i64 : count => i64 IOError ) : extern public fwrite
+  proc( FILE => IOError ) : extern public fflush
+  proc( FILE => IOError ) : extern public fclose
+  
+  proc( FILE : file char : chr => IOError ) =: public fputc
+    file chr addrOf 0 1 fwrite #swap #drop return
+  end
+  proc( FILE : file string : str => IOError ) =: public fputs
+    0 i64 =: mut off
+    str .length i64 =: mut count
+    str i8 rawptr cast =:: data
+    while count 0 > do
+      file data off count fwrite 
+        #dup ERROR_NONE != if ## error
+            #swap #drop return
+          end
+        #drop
+        count #over - count =
+      off #swap + off =
+    end
+    ERROR_NONE return
+  end
+  proc( FILE : file => FILE IOError ) =: public fstart
+    file ERROR_NONE return
+  end
+  proc( FILE : file IOError : err string : str => FILE  IOError ) =: public fappendStr
+    err ERROR_NONE != if
+      file err return
+    end
+    file #dup str fputs return
+  end
+  proc( FILE : file IOError : err char : c => FILE  IOError ) =: public fappendC
+    err ERROR_NONE != if
+      file err return
+    end
+    file #dup c fputc return
+  end
+  
+  proc( string : str => IOError ) =: public puts
+    stdOut fstart 
+      str  fappendStr 
+      "\n" fappendStr
+    #swap #drop return
+  end
+#end

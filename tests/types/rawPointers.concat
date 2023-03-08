@@ -19,8 +19,8 @@ entryPoint:
   
   0 =:: mut A
   A addrOf  i32 rawptr mut =: mut aPtr
-  -312512  aPtr ++ -1 [] = 
+  -312512  aPtr ++ [] = 
   #find aPtr
-  aPtr -- [] print
+  aPtr -- -1 [] print
   A print
 end

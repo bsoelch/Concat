@@ -1,0 +1,13 @@
+#namespace mem
+ proc( i64 : k  type : static T => T rawptr mut ) : extern public alloc
+ proc( i64 : k  type : static T => T rawptr mut ) : extern public calloc
+ ## XXX mem.callocPtr
+ proc( type : static T   T rawptr mut : prev i64 : k => T rawptr mut ) : extern public realloc
+ ## set memory to zero
+ proc( type : static T   T rawptr mut : src  i64 : k => T rawptr mut ) : extern public clear
+ ## XXX mem.clearPtr
+ proc( type : static T   T rawptr mut : target T rawptr : src i64 : k => T rawptr mut ) : extern public copy
+ proc( type : static T   T rawptr mut : target T rawptr : src i64 : k => T rawptr mut ) : extern public move
+ proc( type : static T   T rawptr mut : data => ) : extern public free
+ ## XXX mem.fill (once there are templates)
+#end
