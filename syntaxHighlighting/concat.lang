@@ -106,6 +106,9 @@
           \[\]                |
           \(\)                |
           @                   |
+          &lt;&lt;            |
+          &gt;&gt;            |
+          &gt;&gt;u           |
           addrOf
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
