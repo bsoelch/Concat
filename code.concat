@@ -1,6 +1,9 @@
 #include "include.concat"
 #include "lib/io.concat"
 #include "lib/mem.concat"
+#include "lib/string.concat"
+
+#using std
 
 entryPoint:
   1024 1024 * 16 * i32 mem.alloc i32 rawptr mut =: dynamicArray
@@ -10,11 +13,22 @@ entryPoint:
 
   "Hello World!" io.puts print
 
-  16 newStringBuffer
-    "Hello" sb<<s
-    ' '     sb<<c
-    "World" sb<<s
-    '\n'    sb<<c
+  16 std.newStringBuffer
+    "Hello" sb_appendStr
+    ' '     sb_appendC
+    "World" sb_appendStr
+    '\n'    sb_appendC
+    -12345678    sb_appendI   '\n' sb_appendC
+    "0x"         sb_appendStr
+    0x1234567    sb_appendHex '\n' sb_appendC
+    "0b"         sb_appendStr
+    0b11001001   sb_appendBin '\n' sb_appendC
+    0x7fff_ffff_ffff_ffff sb_appendBin '\n' sb_appendC
+    0x7fff_ffff_ffff_ffff sb_appendHex '\n' sb_appendC
+    0x7fff_ffff_ffff_ffff sb_appendI   '\n' sb_appendC
+   -0x8000_0000_0000_0000 sb_appendBin '\n' sb_appendC
+   -0x8000_0000_0000_0000 sb_appendHex '\n' sb_appendC
+   -0x8000_0000_0000_0000 sb_appendI   '\n' sb_appendC
   =:: buff
   io.stdOut buff .data 0 buff .count io.fwrite print print
 end
@@ -22,33 +36,3 @@ end
 proc( => i32 ) =: test
  9
 end
-
-struct( i8 rawptr mut : mut data i64 : mut cap i64 : mut count ) =:: stringBuffer
-
-proc( i64 : cap => stringBuffer ) =: newStringBuffer
-  cap i8 mem.alloc cap 0 stringBuffer new return
-end
-proc( stringBuffer : buffer i64 : minCap => stringBuffer ) =: stringBufferEnsureCap
-  buffer =:: mut nBuffer
-  nBuffer .cap minCap > if
-    nBuffer return
-  end
-  minCap minCap 8 / + 8 +
-  nBuffer .data #over i8 mem.realloc nBuffer .data =
-  nBuffer .cap =
-  nBuffer return
-end
-proc( stringBuffer : buffer i8 : chr => stringBuffer ) =: sb<<c
-  buffer =:: mut nBuffer
-  nBuffer #dup .count 1 + stringBufferEnsureCap nBuffer =
-  chr nBuffer .data nBuffer .count ++ [] =
-  nBuffer return
-end
-proc( stringBuffer : buffer string : str => stringBuffer ) =: sb<<s
-  buffer =:: mut nBuffer
-  nBuffer #dup .count str .length + stringBufferEnsureCap nBuffer =
-  nBuffer .data nBuffer .count + str i8 rawptr cast str .length i8 mem.copy #drop
-  nBuffer .count str .length + nBuffer .count =
-  nBuffer return
-end
-

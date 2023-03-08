@@ -1292,13 +1292,33 @@ void printTypeNameC(TypeId type,FILE* file){
   }
   fprintf(file,"unknown type-class %i\n",type.class);
 }
+void printUnsignedTypeNameC(TypeId type,FILE* file){
+  if(!isIntType(type))
+    printTypeNameC(type,file);
+  switch(primitiveTypeData(type)){
+    case PRIMITIVE_I8:
+      fputs("uint8_t",file);
+      return;
+    case PRIMITIVE_I32:
+      fputs("uint32_t",file);
+      return;
+    case PRIMITIVE_I64:
+      fputs("uint64_t",file);
+      return;
+    default:
+      break;
+  }
+  fprintf(file,"unknown type-class %i\n",type.class);
+}
 //operators
 typedef enum{
   ADD,
   SUBTRACT,
   MULTIPLY,
   DIVIDE,
+  UDIVIDE,
   MOD,
+  UMOD,
   AND,
   OR,
   XOR,
@@ -1316,6 +1336,8 @@ char const* binOpName(BinaryOperator op){
     case MULTIPLY:return "MULTIPLY";
     case DIVIDE:return "DIVIDE";
     case MOD:return "MOD";
+    case UDIVIDE:return "UDIVIDE";
+    case UMOD:return "UMOD";
     case AND:return "AND";
     case OR:return "OR";
     case XOR:return "XOR";
@@ -2719,6 +2741,13 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       return size;
     case OP_BINARY_OPERATOR:
       fputs("(",target);
+      if(op->dataAs.binOp==UDIVIDE||op->dataAs.binOp==MOD){
+        fputs("(",target);
+        printTypeNameC(op->dataType,target);
+        fputs(")(((",target);
+        printUnsignedTypeNameC(op->dataType,target);
+        fputs(")",target);
+      }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       switch(op->dataAs.binOp){
         case ADD:
@@ -2735,6 +2764,16 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           break;
         case MOD:
           fputs("%",target);
+          break;
+        case UDIVIDE:
+          fputs(")/((",target);
+          printUnsignedTypeNameC(op->dataType,target);
+          fputs(")",target);
+          break;
+        case UMOD:
+          fputs(")%((",target);
+          printUnsignedTypeNameC(op->dataType,target);
+          fputs(")",target);
           break;
         case AND:
           fputs("&",target);
@@ -2765,6 +2804,8 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           break;
       }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
+      if(op->dataAs.binOp==UDIVIDE||op->dataAs.binOp==MOD)
+        fputs("))",target);
       fputs(")",target);
       return size;
     case OP_CODE_BLOCK:
@@ -4370,8 +4411,14 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"/")){
     pushOperation(state,opBinaryOperator(DIVIDE,wordPos));
     return;
+  }else if(wordEquals(&word,"/u")){
+    pushOperation(state,opBinaryOperator(UDIVIDE,wordPos));
+    return;
   }else if(wordEquals(&word,"%")){
     pushOperation(state,opBinaryOperator(MOD,wordPos));
+    return;
+  }else if(wordEquals(&word,"%u")){
+    pushOperation(state,opBinaryOperator(UMOD,wordPos));
     return;
   }else if(wordEquals(&word,"&")){
     pushOperation(state,opBinaryOperator(AND,wordPos));
@@ -4979,11 +5026,12 @@ void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWrit
   bool reference;
   for(size_t i=state->typeCount-nStackValues;i<state->typeCount;i++){
     //extract multi-element operations and array constants to tmp variable
-    if(state->typeStack[i].opCount>1||(state->opStack[offset].opType==OP_CONSTANT&&isArrayType(state->opStack[offset].dataType))){
+    if(state->typeStack[i].opCount>1){
       reference=false;
       if(keepWritable&&state->typeStack[i].isWritable){
         if(!state->typeStack[i].isAddressable){
           memmove(state->opStack+newOffset,state->opStack+offset,state->typeStack[i].opCount);
+          offset+=state->typeStack[i].opCount;
           newOffset+=state->typeStack[i].opCount;
           continue;
         }
@@ -5053,6 +5101,7 @@ void declareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* t
     opOffset++;
     memcpy(state->compiledOperations+opOffset,valueSource->ops+inTypesOffset,(valueSource->types[i].opCount)*sizeof(Operation));
     inTypesOffset+=valueSource->types[i].opCount;
+    opOffset+=valueSource->types[i].opCount;
   }
   state->opCount+=count;
 }
@@ -5837,6 +5886,14 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           op.dataType=typeCheckArithmetic(inTypes);
           if(!typeEquals(op.dataType,TYPE_UNDEFINED)){
+            typesMatch=true;
+            break;
+          }
+          break;
+        case UDIVIDE:
+        case UMOD:
+          op.dataType=typeCheckArithmetic(inTypes);
+          if(isIntType(op.dataType)){
             typesMatch=true;
             break;
           }
@@ -6827,6 +6884,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
           extractCompositeOps(state,2,true);
+          // ... offset>|types-2|types-1|types-2|
           offset=state->typeStack[state->typeCount-1].opCount+state->typeStack[state->typeCount-2].opCount;
           totalOps=state->typeStack[state->typeCount-2].opCount;
           if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))

@@ -1,0 +1,76 @@
+#include "lib/mem.concat"
+
+#namespace std 
+  struct( i8 rawptr mut : mut data i64 : mut cap i64 : mut count ) =:: public stringBuffer
+
+  proc( i64 : cap => stringBuffer ) =: public newStringBuffer
+    cap i8 mem.alloc cap 0 stringBuffer new return
+  end
+  proc( stringBuffer : buffer i64 : minCap => stringBuffer ) =: public stringBufferEnsureCap
+    buffer =:: mut nBuffer
+    nBuffer .cap minCap > if
+      nBuffer return
+    end
+    minCap minCap 8 / + 8 +
+    nBuffer .data #over i8 mem.realloc nBuffer .data =
+    nBuffer .cap =
+    nBuffer return
+  end
+  proc( stringBuffer : buffer i8 : chr => stringBuffer ) =: public sb_appendC
+    buffer =:: mut nBuffer
+    nBuffer #dup .count 1 + stringBufferEnsureCap nBuffer =
+    chr nBuffer .data nBuffer .count ++ [] =
+    nBuffer return
+  end
+  proc( stringBuffer : buffer string : str => stringBuffer ) =: public sb_appendStr
+    buffer =:: mut nBuffer
+    nBuffer #dup .count str .length + stringBufferEnsureCap nBuffer =
+    nBuffer .data nBuffer .count + str i8 rawptr cast str .length i8 mem.copy #drop
+    nBuffer .count str .length + nBuffer .count =
+    nBuffer return
+  end
+  
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
+  
+  proc( stringBuffer : buffer i64 : i i32 : base => stringBuffer ) =: public sb_appendInt?
+    base 2 < if 
+      ## TODO error handling
+      buffer return
+    end
+    i8 64 array new =:: mut chrBuff
+    buffer
+      i
+      #dup 0 < if  
+        #swap '-' sb_appendC #swap
+        neg 
+      else #dup 0 == _if
+        #drop '0' sb_appendC return
+      end   
+      63 #swap ## index in chrBuff
+        while #dup 0 != do
+          #swap ## <buffer> <i> <chrIndex>
+            #over base %u stringChars #swap []
+            #over chrBuff #swap [] =
+            1 -
+          #swap
+          base /u
+        end #drop
+        while 1 + #dup 64 < do
+          #swap ## <chrIndex> <buffer>
+            #over chrBuff #swap [] sb_appendC
+          #swap
+        end
+      #drop
+    return
+  end
+  proc( stringBuffer i64 => stringBuffer ) =: public sb_appendBin
+    2 sb_appendInt?
+  end
+  proc( stringBuffer i64 => stringBuffer ) =: public sb_appendI
+    10 sb_appendInt?
+  end
+  proc( stringBuffer i64 => stringBuffer ) =: public sb_appendHex
+    16 sb_appendInt?
+  end
+#end
+
