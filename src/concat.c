@@ -289,10 +289,10 @@ bool isStaticLabelId(LabelId labelId){
 }
 void printAsciifiedString(String name,FILE* out){
   for(size_t i=0;i<name.length;i++){
-    if((name.chars[i]>='0'&&name.chars[i]<='9')||
-       (name.chars[i]>='A'&&name.chars[i]<='Z')||
-       (name.chars[i]>='a'&&name.chars[i]<='z')){//keep 0-9a-zA-Z
-      fputc(name.chars[i],out);
+    if((charAt(name,i)>='0'&&charAt(name,i)<='9')||
+       (charAt(name,i)>='A'&&charAt(name,i)<='Z')||
+       (charAt(name,i)>='a'&&charAt(name,i)<='z')){//keep 0-9a-zA-Z
+      fputc(charAt(name,i),out);
       continue;
     }
     //additional escape sequences:
@@ -300,15 +300,15 @@ void printAsciifiedString(String name,FILE* out){
     // _T -> start of type
     // _N -> start of (type)name
     // _E -> end block-section
-    if(name.chars[i]=='_'){
+    if(charAt(name,i)=='_'){
       fputs("__",out);
       continue;
     }
-    if(name.chars[i]=='.'){
+    if(charAt(name,i)=='.'){
       fputs("_d",out);
       continue;
     }
-    fprintf(out,"_X%02x",name.chars[i]&0xff);
+    fprintf(out,"_X%02x",charAt(name,i)&0xff);
   }
 }
 
@@ -2017,6 +2017,8 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
     if(idType==ID_PROCEDURE)
       handleError("procedures cannot be mutable",ERROR_SYNTAX,mLabel->declaredAt);
   }
+  if(charAt(mLabel->label,0)=='#')
+    handleError("identifiers cannot start with '#'",ERROR_SYNTAX,pos);
   if(containsChar(mLabel->label,'.'))
     handleError("'.' is not allowed in declared identifiers",ERROR_SYNTAX,pos);
   Scope* currentScope=globalScope;
