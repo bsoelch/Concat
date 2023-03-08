@@ -24,3 +24,21 @@ end
 entryPoint:
   spaceTest
 end
+
+#namespace A
+  1 =:: i
+#end
+#namespace B
+  2 =:: i
+#end
+#namespace C
+  3 =:: i
+#end
+0 =:: i
+#namespace D
+  #using A 
+  #using B
+  #using C
+  4 =:: i
+  #find i
+#end
