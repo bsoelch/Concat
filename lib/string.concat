@@ -1,0 +1,48 @@
+#include mem
+struct( i8 rawptr : data i64 : length ) =:: public string2 
+
+#namespace string
+  proc( i8 rawptr  i64 => string2 ) =: public create
+    string2 new return
+  end
+  proc( string2 : s1 string2 : s2 => i32 ) =: public compare
+    s1 .length s2 .length < if s1 .length else s2 .length end =:: l
+    s1 .data s2 .data l i8 mem.compare
+    #dup 0 != if
+      return
+    else #drop end
+    s1 .length s2 .length - 
+    #dup 0 > if #drop 
+       1 return
+    else 0 < _if 
+      -1 return
+    else 
+       0 return
+    end
+  end
+  proc( string2 : s1 string2 : s2 => bool ) =: public eq 
+    compare 0 == return 
+  end 
+  proc( string2 : str => i32 ) =: hash
+    0 ## hash
+      0 ## index
+      while #dup str .length < do
+        #swap
+          31 *
+          #over str .data #swap [] +
+        #swap
+      end
+      #drop
+    return
+  end
+  
+  ## XXX charAt
+  ## XXX indexOf
+  ## XXX indexOfStr
+  ## XXX lastIndexOf
+  ## XXX lastIndexOfStr
+  ## XXX contains
+  ## XXX isSubstring
+  
+  ## XXX head,tail,slice,...
+#end

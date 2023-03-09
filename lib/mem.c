@@ -49,3 +49,7 @@ void concat_mem_dfree(size_t size,void* ptr){
   (void)size;//size only exits as type-info for concat
   free(ptr);
 }
+
+int32_t concat_mem_dcompare(size_t size,void const* a,void const* b,int64_t count){
+  return memcmp(a,b,count*size);
+}

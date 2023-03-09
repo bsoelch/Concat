@@ -2088,7 +2088,8 @@ bool includeIfGlobal(ScopeNode* aNode,bool onlyConst,Scope* globalScope,FilePosi
     fputs("\n",stderr);
     return true;
   }
-  *mNode=aNode;
+  *mNode=allocScopeNode();
+  memcpy(*mNode,aNode,sizeof(ScopeNode));
   return false;
 }
 bool includeConstants(Scope* globalScope,Scope* src,FilePosition pos){
@@ -2492,6 +2493,19 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fprintf(target,"(arrayData%"PRIi32"+%"PRIi32")",programStrings[i].charsId,programStrings[i].charsOffset);
         if(!arrayTypeData(op->dataType)->sizeKnown)
           fprintf(target,",.sizes={%zu}}",programStrings[i].value.length);
+        if(needCast)
+          fputs(")",target);
+        return size;
+      }
+      if(isPointerType(op->dataType)){
+        int64_t i=-1;
+        for(size_t j=0;j<progStringCount;j++){//find string in reordered string array
+          if(programStrings[j].stringId==op->dataAs.i64){
+            i=j;
+            break;
+          }
+        }
+        fprintf(target,"(arrayData%"PRIi32"+%"PRIi32")",programStrings[i].charsId,programStrings[i].charsOffset);
         if(needCast)
           fputs(")",target);
         return size;
@@ -4771,7 +4785,7 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
 }
 Program compileToOps(CodeFile* rootFile){
   size_t filesCap=16;
-  ProgramFile* progFiles=malloc(filesCap*sizeof(Operation));
+  ProgramFile* progFiles=malloc(filesCap*sizeof(ProgramFile));
   if(progFiles==NULL){
     handleError("could not allocate file-data array",ERROR_MEMORY,rootFile->currentPos);
     exit(EXIT_FAILURE);
