@@ -71,7 +71,6 @@ fileAndErr concat_io_dfopen(i8xarray fileName){
   char const* path=(char const*)fileName.data;
   if(fileName.data[fileName.sizes[0]-1]!='\0'){
     if(fileName.sizes[0]>MAX_PATH){
-      fputs("path overflow\n",stderr);
       return (fileAndErr){.e0=NULL,.e1=FILE_ERR_PATH_OVERFLOW};
     }
     memcpy(fopenBuffer,fileName.data,fileName.sizes[0]*sizeof(int8_t));
@@ -81,7 +80,6 @@ fileAndErr concat_io_dfopen(i8xarray fileName){
   errno=0;//reset errno
   FILE* file=fopen(path,"w+");
   if(file==NULL){
-    fputs("fopen failed\n",stderr);
     return (fileAndErr){.e0=NULL,.e1=getErrorId(errno)};
   }
   return (fileAndErr){.e0=file,.e1=FILE_ERR_NONE};

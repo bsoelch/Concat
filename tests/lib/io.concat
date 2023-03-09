@@ -1,0 +1,25 @@
+#include io
+#using io
+entryPoint:
+  i8 64 array new =:: mut buff
+  stdIn buff addrOf  0 16 fread print print
+  stdIn buff addrOf 16 32 fread print print
+  
+  stdOut "Hello World!" 0 5 fwrite print print
+  stdOut "Hello World!" 6 5 fwrite print print
+  "!" puts print
+  stdOut buff addrOf 0 45 fwrite print print
+  stdOut '\n' fputc print
+  "../lib" fopen print =:: empty
+  empty print
+  empty fclose print
+  "./.io.out" fopen print =:: file
+  file "Written directly to file!\n" fputs print
+  file fflush print
+  file fclose print
+  stdErr fstart
+    "printing to stderr" fappendStr
+    '\n' fappendC
+    "non ASCII string: ä×√φ\U0001F4BB□\n" fappendStr
+  print #drop
+end

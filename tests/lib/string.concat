@@ -1,0 +1,27 @@
+#include string
+#include io
+
+entryPoint:
+  "Hello World!" io.puts print
+
+  
+  "Hello World!" #dup .length string.create "World" #dup .length string.create  string.indexOfStr print
+  "Hello World!" #dup .length string.create "substring" #dup .length string.create string.indexOfStr print
+  "Hello World!" #dup .length string.create 'o' string.contains print
+  "This sentence will be split into Worlds!" #dup .length string.create ' ' printSplit
+end
+
+proc( string2 : str i8 : chr => ) =: printSplit
+  0 =:: mut i
+  str 
+  while
+    chr string.split printStr
+    #dup .length 0 >
+  do end #drop
+end
+
+proc( string2 : str => ) =: printStr
+  io.stdOut str .data 0 str .length io.fwrite #drop:2
+  io.stdOut  '\n' io.fputc #drop
+end
+
