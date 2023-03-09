@@ -71,13 +71,13 @@ extern void concat_mem_dfree (size_t, void*);
 extern void* concat_mem_dalloc (size_t, int64_t);
 extern void* concat_mem_dcopy (size_t, void*, void const*, int64_t);
 extern void* concat_mem_dmove (size_t, void*, void const*, int64_t);
-// ./lib/string.concat
+// ./lib/stringBuffer.concat
 tuple22 concat_std_dsb__appendInt_X3f (tuple22, int64_t, int32_t);
 tuple22 concat_std_dsb__appendUHex (tuple22, int64_t);
 tuple22 concat_std_dnewStringBuffer (int64_t);
 tuple22 concat_std_dsb__appendBin (tuple22, int64_t);
 tuple22 concat_std_dstringBufferEnsureCap (tuple22, int64_t);
-int8_t const* const concat__Flib_X2fstring_dconcat_Estd_dstringChars;
+int8_t const* const concat__Flib_X2fstringBuffer_dconcat_Estd_dstringChars;
 tuple22 concat_std_dsb__appendC (tuple22, int8_t);
 tuple22 concat_std_dsb__appendUBin (tuple22, int64_t);
 tuple22 concat_std_dsb__appendI (tuple22, int64_t);
@@ -88,8 +88,8 @@ tuple22 concat_std_dsb__appendHex (tuple22, int64_t);
 //global code
 // ./lib/io.concat
 int32_t const concat_io_dERROR__NONE = 0;
-// ./lib/string.concat
-int8_t const* const concat__Flib_X2fstring_dconcat_Estd_dstringChars = (arrayData0+0);
+// ./lib/stringBuffer.concat
+int8_t const* const concat__Flib_X2fstringBuffer_dconcat_Estd_dstringChars = (arrayData0+0);
 //procedures code
 // ./code.concat
 int main(void){
@@ -206,7 +206,7 @@ void* const tmp8 = (tmp7).e0;
 int32_t const tmp9 = (tmp7).e1;
 return tmp9;
 }
-// ./lib/string.concat
+// ./lib/stringBuffer.concat
 tuple22 concat_std_dnewStringBuffer (int64_t arg0){
 int8_t* const tmp0 = concat_mem_dalloc(((size_t)sizeof(int8_t)),arg0);
 tuple22 const tmp1 = {.e0=tmp0,.e1=arg0,.e2=((int64_t)0)};
