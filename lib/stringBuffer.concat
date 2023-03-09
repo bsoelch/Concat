@@ -1,4 +1,4 @@
-#include "lib/mem.concat"
+#include mem
 
 #namespace std 
   struct( i8 rawptr mut : mut data i64 : mut cap i64 : mut count ) =:: public stringBuffer
