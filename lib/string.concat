@@ -1,7 +1,9 @@
 #include mem
-struct( i8 rawptr : data i64 : length ) =:: public string2 
+struct( i8 rawptr : data i64 : length ) =:: public string2
 
 #namespace string
+  "" 0 string2 new =:: EMPTY
+
   proc( i8 rawptr  i64 => string2 ) =: public create
     string2 new return
   end
@@ -11,18 +13,18 @@ struct( i8 rawptr : data i64 : length ) =:: public string2
     #dup 0 != if
       return
     else #drop end
-    s1 .length s2 .length - 
-    #dup 0 > if #drop 
+    s1 .length s2 .length -
+    #dup 0 > if #drop
        1 return
-    else 0 < _if 
+    else 0 < _if
       -1 return
-    else 
+    else
        0 return
     end
   end
-  proc( string2 : s1 string2 : s2 => bool ) =: public eq 
-    compare 0 == return 
-  end 
+  proc( string2 string2 => bool ) =: public eq
+    compare 0 == return
+  end
   proc( string2 : str => i32 ) =: hash
     0 ## hash
       0 ## index
@@ -31,18 +33,117 @@ struct( i8 rawptr : data i64 : length ) =:: public string2
           31 *
           #over str .data #swap [] +
         #swap
+        1 +
       end
       #drop
     return
   end
-  
-  ## XXX charAt
-  ## XXX indexOf
-  ## XXX indexOfStr
-  ## XXX lastIndexOf
-  ## XXX lastIndexOfStr
-  ## XXX contains
-  ## XXX isSubstring
-  
-  ## XXX head,tail,slice,...
+
+  proc( string2 : str i64 : index => i8 ) =: charAt
+    index 0 < index str .length >= | if
+      '\x00' return ## TODO error handling
+    end
+    str .data index [] return
+  end
+  proc( string2 : str i8 : chr => i64 ) =: public indexOf
+    0 ## index
+    while #dup str .length < do
+      str .data #over [] chr == if
+        return
+      end
+      1 +
+    end
+    #drop
+    -1 return
+  end
+  proc( string2 : str i8 : chr => i64 ) =: public lastIndexOf
+    str .length 1 - ## index
+    while #dup 0 >= do
+      str .data #over [] chr == if
+        return
+      end
+      1 -
+    end
+    return
+  end
+  proc( string2 : base string2 : subStr => i64 ) =: public indexOfStr
+    subStr .length base .length > if
+      -1 return
+    end
+    base .length subStr .length - =:: maxOffset
+    0 ## offset
+    while #dup maxOffset <= do
+      base .data #over + subStr .length create  subStr compare 0 == if
+        return
+      end
+      1 +
+    end
+    #drop
+    -1 return
+  end
+  proc( string2 : base string2 : subStr => i64 ) =: public lastIndexOfStr
+    subStr .length base .length > if
+      -1 return
+    end
+    base .length subStr .length -
+      while #dup 0 >= do
+        base .data #over + subStr .length create  subStr compare 0 == if
+          return
+        end
+        1 -
+      end
+    return
+  end
+  proc( string2 : str i8 : chr => bool ) =: public contains
+    str chr indexOf -1 != return
+  end
+  proc( string2 : base string2 : subStr => bool ) =: public isSubstring
+    base subStr indexOfStr -1 != return
+  end
+
+  ## first n characters
+  proc( string2 : str i64 : n => string2 ) =: public head
+    n 0 <= if
+      EMPTY return
+    end
+    n str .length >= if
+      str return
+    end
+    str .data  n create return
+  end
+  ## everything excluding the first n characters
+  proc( string2 : str i64 : n => string2 ) =: public tail
+    n 0 <= if
+      str return
+    end
+    n str .length >= if
+      EMPTY return
+    end
+    str .data n +  str .length n -  create return
+  end
+  ## equivalent to:  <from> tail <len> head
+  proc( string2 : str i64 : from i64 : len => string2 ) =: public slice
+    len 0 <= if
+      EMPTY return
+    end
+    from str .length >= if
+      EMPTY return
+    end
+    from 0 <= if
+      str .data  len create return
+    end
+    from len + str .length >= if
+      str .data from +  str .length from -  create return
+    end
+    str .data from +  len  create return
+  end
+  proc( string2 : str i8 : chr => string2 string2 ) =: public split
+    str chr indexOf =:: i
+    i -1 == if
+      EMPTY str return
+    end
+    str i 1 + tail
+    str i head
+    return
+  end
 #end
