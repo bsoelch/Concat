@@ -1894,7 +1894,7 @@ typedef struct{
   size_t index;
   ScopeNode* n;
 }ScopeIterator;
-ScopeIterator getScopeIterator(Scope const* scope){//XXX allow to iterate only over variables with given name
+ScopeIterator getScopeIterator(Scope const* scope){
   return (ScopeIterator){.scope=scope,.index=0,.n=NULL};
 }
 ScopeNode* scopeItrNext(ScopeIterator* itr){
@@ -3148,7 +3148,7 @@ void compileToC(FILE* target,Program const* p){
   }
   fputs("//global declarations\n",target);
   for(FileId f=0;f<p->fileCount;f++){
-    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));//XXX only print if there are global declarations
+    fprintf(target,"// %"PRI_STR"\n",PRI_STR_ARGS(p->files[f].fileName));
     ScopeIterator itr=getScopeIterator(&p->files[f].globalScope);
     ScopeNode* n;
     while((n=scopeItrNext(&itr))!=NULL){
@@ -3731,8 +3731,8 @@ int64_t* popArraySize(FilePosition pos){
     }
     arrayDimsBuffer[i]=constBuffer[bufferedConstants+i].value.as.i64;
   }
-  if(arrayWildcardDimsCount>0&&arrayWildcardDimsCount!=arrayDimsCount)
-      handleError("mixing wildcard dimensions and fixed dimensions is not allowed",ERROR_SYNTAX,pos);//XXX allow wildcards after fixed arguments  i32 2 _ ptr ( a 2 x ? array )
+  if(arrayWildcardDimsCount>0&&arrayDimsCount>1)
+      handleError("wildcards are only allowed for one dimensional arrays",ERROR_SYNTAX,pos);
   return arrayDimsBuffer;
 }
 TypeId const* popTypeConstants(size_t count,FilePosition pos,char const* argumentName,bool allowVoid){
@@ -3895,13 +3895,13 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       typeClass=TYPECLASS_LABELED_PROC_IN;
     pushTypeConstant(compositeType(typeClass,elements,labelOffset,maxOffset-initOffset),codeFile->wordStart);
   }
-  if(typeEquals(constBuffer[initOffset].value.as.type,TYPE_UNDEFINED)){//XXX? peek type
+  if(typeEquals(peekTypeConstant(codeFile->wordStart),TYPE_UNDEFINED)){
     handleError("unknown error while creating composite type",ERROR_SYNTAX,codeFile->wordStart);
     return;
   }
   if(checkEmpty&&maxOffset-initOffset==1){
     fputs("WARNING:\n  single element composite type: ",stderr);
-    printTypeName(constBuffer[initOffset].value.as.type,stderr);
+    printTypeName(peekTypeConstant(codeFile->wordStart),stderr);
     fputs(" at ",stderr);
     printFilePosition(codeFile->wordStart,stderr);
     fputs("\n",stderr);
@@ -3952,7 +3952,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true ;
   }
   //composite types
-  if(wordEquals(&name,"rawptr")){//TODO better name for C-style pointers / ? merge with array-view
+  if(wordEquals(&name,"rawptr")){//XXX move dynamic size arrays to standard library , rawptr -> _ ptr
     TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
     pushTypeConstant(pointerType(target,false),codeFile->wordStart);
     return true;
@@ -4073,6 +4073,9 @@ void includeFile(ParserState * state,char const* includePath,FilePosition includ
       break;
     }
   }
+  if(!quietMode){
+    printf("  include: %s\n",includePath);
+  }
   if(included==FILE_ID_NONE){
     CodeFile includedFile;
     if(readCodeFile(includePath,&includedFile)){
@@ -4081,8 +4084,6 @@ void includeFile(ParserState * state,char const* includePath,FilePosition includ
     }
     included=parseFile(state,&includedFile);
   }
-  if(!quietMode)
-    printf("included: %s id: %"PRIi32"\n",includePath,included);
   if(includeConstants(&state->files[state->currentFile].globalScope,&state->files[included].globalScope,includePos)){
     handleError(NULL,ERROR_SYNTAX,includePos);
   }
@@ -4116,7 +4117,7 @@ TypeId constantType(ConstantValue const* constant){
   }
   return TYPE_UNDEFINED;
 }
-void storeConstants(ParserState* state){
+void storeConstants(ParserState* state,FilePosition pos){
   int64_t intVal;
   size_t constCount=bufferedConstants;
   bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
@@ -4140,7 +4141,9 @@ void storeConstants(ParserState* state){
         pushOperation(state,opTypeConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.type,constBuffer[i].pos));
         break;
       case CONSTANT_WILDCARD:
-        //TODO compiler error
+        fprintf(stderr,"cannot store constants of type %s\n",constTypeName(CONSTANT_WILDCARD));
+        handleError(NULL,ERROR_SYNTAX,pos);
+        break;
       case CONSTANT_NONE:
         break;
     }
@@ -4148,7 +4151,7 @@ void storeConstants(ParserState* state){
 }
 void pushOperation(ParserState* state,Operation op){
   if(bufferedConstants>0){
-    storeConstants(state);
+    storeConstants(state,op.filePos);
   }
   ProgramFile* currentFile=&state->files[state->currentFile];
   if(localScopeCount>0){//local
@@ -4387,13 +4390,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         return;
       }
       if(wordType==WORD_TYPE_IDENTIFIER){//library include
-        //TODO check if libPath exists
         int64_t len=libPath.length+word.length+strlen(".concat")+1;
         char* includePath=malloc(len*sizeof(char));
         memcpy(includePath,libPath.chars,libPath.length*sizeof(char));
         memcpy(includePath+libPath.length,word.chars,word.length*sizeof(char));
         memcpy(includePath+libPath.length+word.length,".concat",strlen(".concat")*sizeof(char));
-        includePath[len-1]='\0'; 
+        includePath[len-1]='\0';
         includeFile(state,includePath,wordPos);
         return;
       }
@@ -4488,10 +4490,6 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"^")){
     pushOperation(state,opBinaryOperator(XOR,wordPos));
     return;
-  }else if(wordEquals(&word,"&&")){//XXX implement short-circuit  and/or using code-blocks
-    handleError("short circuit operations are currently not supported",ERROR_UNIMPLEMENTED,wordPos);
-  }else if(wordEquals(&word,"||")){
-    handleError("short circuit operations are currently not supported",ERROR_UNIMPLEMENTED,wordPos);
   }else if(wordEquals(&word,"==")){
     pushOperation(state,opBinaryOperator(EQ,wordPos));
     return;
@@ -4766,6 +4764,9 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
     readOperation(state,codeFile);
   }
   state->currentFile=prevFile;
+  if(!quietMode)
+    printf("  parsed file %"PRI_STR" : %zu global and %zu local operations\n",PRI_STR_ARGS(state->files[included].fileName),
+      state->files[included].globalOpCount,state->files[included].localOpCount);
   return included;
 }
 Program compileToOps(CodeFile* rootFile){
@@ -5643,7 +5644,6 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     }else{
       pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
               .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}});//length
-      //TODO support multi-dim arrays
       pushCompiledOperations(state,state->opStack+arrayOffset,state->typeStack[typeOffset].opCount);
     }
   }
@@ -7063,6 +7063,8 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     f->localOps=state.compiledOperations;
     f->localOpCount=state.opCount;
     state.compiledOperations=NULL;
+    if(!quietMode)
+      printf("  typeChecked file %"PRI_STR" : %zu global and %zu local operations\n",PRI_STR_ARGS(f->fileName),f->globalOpCount,f->localOpCount);
   }
   prog->hasCheckBounds=state.hasCheckBounds;
   prog->hasCheckEnum=state.hasCheckEnum;
@@ -7179,6 +7181,7 @@ bool parseArgs(char** argv){
     return false;
   }
   basePath=newString(srcFile,iSlash+1);
+  //TODO check if libPath exists / make lib-path customizable
   libPath=cstrToStr("./lib/");
   return false;
 }
@@ -7200,7 +7203,6 @@ int main(int argc,char** argv){
 	Program p=compileToOps(&codeFile);
 	if(!quietMode)
     printf("parsed %"PRIi32" files\n",p.fileCount);
-    //XXX print operation count
   //2. save intermediate representation
   FILE* intermediate;
   if(parserTokensFile!=NULL){
@@ -7227,7 +7229,6 @@ int main(int argc,char** argv){
   typeCheckProgram(&p,&codeFile);
 	if(!quietMode)
     printf("typeChecked %"PRIi32" files\n",p.fileCount);
-    //XXX print operation count
   //4. save intermediate representation
   if(compilerTokensFile!=NULL){
     intermediate=fopen(compilerTokensFile,"w");
