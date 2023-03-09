@@ -7099,12 +7099,14 @@ char const* compilerTokensFile=NULL;
 #define ARGUMENT_OUT 2
 #define ARGUMENT_DUMP_TOKENS_PARSER 3
 #define ARGUMENT_DUMP_TOKENS_COMPILER 4
+#define ARGUMENT_LIB_PATH 5
 bool parseArgs(char** argv){
   path=*(argv++);//set path to first element of argv
   if(*argv==NULL){
     printf("usage: %s \"inputFile\" [-o \"outputFile\"] \n",path);
     return true;
   }
+  bool hasLib=false;
   int state=ARGUMENT_IN;
   for(;(*argv!=NULL);argv++){
     if((*argv)[0]=='-'){
@@ -7123,6 +7125,7 @@ bool parseArgs(char** argv){
           puts("  -o \"fileName\": set output file  (default: \"./out.c\")");
           puts("  -p \"fileName\": dump the parsed tokens to the given file");
           puts("  -t \"fileName\": dump the compiled tokens to the given file");
+          puts("  -l \"fileName\": set path to standard library (default: \"./lib/\"");
           puts("  -W: treat warnings as errors");
           puts("  -q: do not print compiler progress");
           return true;
@@ -7134,6 +7137,9 @@ bool parseArgs(char** argv){
           break;
         case 't':
           state=ARGUMENT_DUMP_TOKENS_COMPILER;
+          break;
+        case 'l':
+          state=ARGUMENT_LIB_PATH;
           break;
         case 'W':
           allowWarnings=false;
@@ -7171,6 +7177,12 @@ bool parseArgs(char** argv){
       state=srcFile==NULL?ARGUMENT_IN:ARGUMENT_NONE;
       continue;
     }
+    if(state==ARGUMENT_LIB_PATH){
+      libPath=cstrToStr(*argv);
+      state=srcFile==NULL?ARGUMENT_IN:ARGUMENT_NONE;
+      hasLib=true;
+      continue;
+    }
   }
   if(srcFile==NULL){
     puts("missing input file");
@@ -7195,8 +7207,12 @@ bool parseArgs(char** argv){
     return false;
   }
   basePath=newString(srcFile,iSlash+1);
-  //TODO check if libPath exists / make lib-path customizable
-  libPath=cstrToStr("./lib/");
+  if(hasLib&&charAt(libPath,libPath.length-1)!='/'){
+    puts("library path has to end with /");
+    return true;
+  }else{
+    libPath=cstrToStr("./lib/");
+  }//XXX check if libPath exists
   return false;
 }
 int main(int argc,char** argv){
