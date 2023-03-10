@@ -4536,6 +4536,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"--")){
     pushOperation(state,opUnaryOperator(DECREMENT,wordPos));
     return;
+  }else if(wordEquals(&word,"!")){
+    pushOperation(state,opUnaryOperator(NOT,wordPos));
+    return;
   }else if(wordEquals(&word,"=::")){//automatically choose type of declared variable
     LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags);
     wordPos=codeFile->wordStart;
@@ -6311,8 +6314,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(pushBlock(state,blockInfo))
             handleError("could not push procedure block",ERROR_MEMORY,op.filePos);
           pushCompiledOperation(state,op);
-          pushProcArgs(state,op.dataType,op.filePos);
           state->tmpCount=0;
+          pushProcArgs(state,op.dataType,op.filePos);
           return;
         case ID_TUPLE:
         case ID_TUPLE_ELEMENT:
