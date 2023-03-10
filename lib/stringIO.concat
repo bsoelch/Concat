@@ -1,0 +1,61 @@
+#include stringBuilder
+#include io
+
+#namespace io
+  proc( FILE : file string2 : str => IOError ) =: public fputs2
+    0 i64 =: mut off
+    str .length i64 =: mut count
+    str .data =:: data
+    while count 0 > do
+      file data off count fwrite 
+        #dup FILE_ERROR_NONE != if ## error
+            #swap #drop return
+          end
+        #drop
+        count #over - count =
+      off #swap + off =
+    end
+    FILE_ERROR_NONE return
+  end
+  proc( FILE : file sb.stringBuilder : str => IOError ) =: public fputSb
+    file  str sb.toStr fputs2 return
+  end
+  proc( FILE : file IOError : err string2 : str => FILE  IOError ) =: public fappendStr2
+    err FILE_ERROR_NONE != if
+      file err return
+    end
+    file #dup str fputs2 return
+  end
+  proc( FILE : file IOError : err sb.stringBuilder : str => FILE  IOError ) =: public fappendSb
+    err FILE_ERROR_NONE != if
+      file err return
+    end
+    file #dup str sb.toStr fputs2 return
+  end
+#end
+#namespace sb
+  #using io
+  proc( stringBuilder : sb FILE : file => stringBuilder IOError ) =: public appendFile
+    16 =:: mut delta
+    FILE_ERROR_NONE IOError =: mut err
+    sb
+      while err FILE_ERROR_NONE == do
+        #dup .length delta + ensureCap
+        file #over .data #over:2 .length delta fread err =
+        #swap 
+          =:: mut sbTmp ## XXX make tuples on stack writable
+          sbTmp .length #over + sbTmp .length =
+          sbTmp 
+        #swap
+        delta ==  delta 8192 <= & if 
+          delta 2 * delta =
+        end
+      end
+      err FILE_ERR_END_OF_FILE == if 
+        FILE_ERROR_NONE IOError cast ## XXX remember correct type of constant
+      else 
+        err
+      end
+    return
+  end
+#end

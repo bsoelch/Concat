@@ -10,10 +10,10 @@ entryPoint:
   "!" puts print
   stdOut buff addrOf 0 45 fwrite print print
   stdOut '\n' fputc print
-  "../lib" fopen print =:: empty
+  "../lib" OPEN_READ fopen print =:: empty
   empty print
   empty fclose print
-  "./.io.out" fopen print =:: file
+  "./.io.out" OPEN_READ OPEN_WRITE | fopen print =:: file
   file "Written directly to file!\n" fputs print
   file fflush print
   file fclose print

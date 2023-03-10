@@ -1,0 +1,107 @@
+#include mem
+#include string
+
+#namespace sb
+  struct( i8 rawptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
+
+  proc( i64 : cap => stringBuilder ) =: public create
+    cap i8 mem.alloc cap 0 stringBuilder new return
+  end
+  proc( stringBuilder : buffer i64 : minCap => stringBuilder ) =: public ensureCap
+    buffer =:: mut nBuffer
+    nBuffer .cap minCap > if
+      nBuffer return
+    end
+    minCap minCap 8 / + 8 +
+      nBuffer .data #over i8 mem.realloc nBuffer .data =
+    nBuffer .cap =
+    nBuffer return
+  end
+  proc( stringBuilder : buffer i8 : chr => stringBuilder ) =: public appendC
+    buffer =:: mut nBuffer
+    nBuffer #dup .length 1 + sb.ensureCap nBuffer =
+    chr nBuffer .data nBuffer .length ++ [] =
+    nBuffer return
+  end
+  proc( stringBuilder : buffer string : str => stringBuilder ) =: public appendStr
+    buffer =:: mut nBuffer
+    nBuffer #dup .length str .length + sb.ensureCap nBuffer =
+    nBuffer .data nBuffer .length + str i8 rawptr cast str .length i8 mem.copy #drop
+    nBuffer .length str .length + nBuffer .length =
+    nBuffer return
+  end
+  proc( stringBuilder : buffer string2 : str => stringBuilder ) =: public appendStr2
+    buffer =:: mut nBuffer
+    nBuffer #dup .length str .length + sb.ensureCap nBuffer =
+    nBuffer .data nBuffer .length + str .data str .length i8 mem.copy #drop
+    nBuffer .length str .length + nBuffer .length =
+    nBuffer return
+  end
+  proc( stringBuilder : buffer stringBuilder : str => stringBuilder ) =: public appendSb
+    buffer =:: mut nBuffer
+    nBuffer #dup .length str .length + sb.ensureCap nBuffer =
+    nBuffer .data nBuffer .length + str .data str .length i8 mem.copy #drop
+    nBuffer .length str .length + nBuffer .length =
+    nBuffer return
+  end
+  proc( stringBuilder => string2 ) =: public toStr
+    #dup .data #swap .length string.create return
+  end
+  
+  
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
+  
+  proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
+    base 2 < if 
+      ## TODO error handling
+      buffer return
+    end
+    i8 64 array new =:: mut chrBuff
+    buffer
+      i
+      #dup 0 < signed & if  
+        #swap '-' appendC #swap
+        neg 
+      else #dup 0 == _if
+        #drop '0' appendC return
+      end   
+      63 #swap ## index in chrBuff
+        while #dup 0 != do
+          #swap ## <buffer> <i> <chrIndex>
+            #over base %u stringChars #swap []
+            #over chrBuff #swap [] =
+            1 -
+          #swap
+          base /u
+        end #drop
+        while 1 + #dup 64 < do
+          #swap ## <chrIndex> <buffer>
+            #over chrBuff #swap [] appendC
+          #swap
+        end
+      #drop
+    return
+  end
+  proc( stringBuilder i64 #+value+# i32 #+base+# => stringBuilder ) =: public appendInt?
+    true appendInt??
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendBin
+    2  appendInt?
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendI
+    10 appendInt?
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendHex
+    16 appendInt?
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUBin
+    2 false appendInt??
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendU
+    10 false appendInt??
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUHex
+    16 false appendInt??
+  end
+#end
+

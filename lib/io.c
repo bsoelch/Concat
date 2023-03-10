@@ -12,6 +12,7 @@ typedef struct{
 
 typedef void concat_File;
 typedef int32_t IOError;
+typedef int32_t OpenMode;
 
 static const IOError FILE_ERR_NONE=0;
 static const IOError FILE_ERR_END_OF_FILE=-1;
@@ -20,9 +21,13 @@ static const IOError FILE_ERR_PATH_OVERFLOW=2;
 static const IOError FILE_ERR_OPEN_MODE=3;
 static const IOError FILE_ERR_FILE_NOT_FOUND=4;
 static const IOError FILE_ERR_FILE_IS_DIR=5;
-static const IOError FILE_ERR_FILE_ALREADY_EXISTS=4;
-static const IOError FILE_ERR_ACCESS_DENIED=4;
-static const IOError FILE_ERR_INVALID_FILE=5;
+static const IOError FILE_ERR_FILE_ALREADY_EXISTS=6;
+static const IOError FILE_ERR_ACCESS_DENIED=7;
+static const IOError FILE_ERR_INVALID_FILE=8;
+
+static const OpenMode OPEN_READ=1;
+static const OpenMode OPEN_WRITE=2;
+static const OpenMode OPEN_APPEND=3;
 
 typedef struct{
   concat_File* e0;
@@ -67,7 +72,7 @@ static IOError getErrorId(int errnoVal){
 #define MAX_PATH 4096
 #endif
 static char fopenBuffer[MAX_PATH+1];//XXX make buffer thread safe
-fileAndErr concat_io_dfopen(i8xarray fileName){
+fileAndErr concat_io_dfopen(i8xarray fileName,OpenMode mode){
   char const* path=(char const*)fileName.data;
   if(fileName.data[fileName.sizes[0]-1]!='\0'){
     if(fileName.sizes[0]>MAX_PATH){
@@ -77,8 +82,22 @@ fileAndErr concat_io_dfopen(i8xarray fileName){
     fopenBuffer[fileName.sizes[0]]='\0';
     path=fopenBuffer;
   }
+  char const* openMode="r+b";
+  if((mode&OPEN_READ)!=0){
+    if((mode&OPEN_APPEND)!=0){
+      openMode="a+b";
+    }else if((mode&OPEN_WRITE)==0){
+      openMode="rb";
+    }
+  }else if(mode!=0){
+    if((mode&OPEN_APPEND)!=0){
+      openMode="ab";
+    }else{
+      openMode="wb";
+    }
+  }
   errno=0;//reset errno
-  FILE* file=fopen(path,"w+");
+  FILE* file=fopen(path,openMode);
   if(file==NULL){
     return (fileAndErr){.e0=NULL,.e1=getErrorId(errno)};
   }

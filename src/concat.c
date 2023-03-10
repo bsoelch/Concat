@@ -512,6 +512,7 @@ bool isPrimitiveType(TypeId type){
   return type.class==TYPECLASS_PRIMITIVE;
 }
 PrimitiveType primitiveTypeData(TypeId type){
+  type=unwrapNamedType(type);
   if(isPrimitiveType(type))
     return type.dataAs.primitive;
   return PRIMITIVE_UNDEFINED;
@@ -977,7 +978,7 @@ typedef struct{
     int64_t i64;
     bool    boolean;
   }as;
-  ConstantType type;
+  ConstantType type;//TODO remember correct type of constant
 }ConstantValue;
 void printConstValue(ConstantValue constant,FILE* file){
   switch(constant.type){
@@ -4354,7 +4355,16 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_SWAP,.count=1}}});
       return;
     }else if(wordEquals(&word,"over")){
-      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER,.count=1}}});
+      int64_t count=1;
+      if(args.tail.length>0){
+        IntOrErrorCode p=parseInt(args.tail,10);
+        if(p.isError||p.as.i64<=0){
+          fprintf(stderr,"unexpected argument for %"PRI_STR" expected positive integer got \"%"PRI_STR"\"\n",PRI_STR_ARGS(word),PRI_STR_ARGS(args.tail));
+          handleError(NULL,ERROR_SYNTAX,wordPos);
+        }
+        count=p.as.i64;
+      }
+      pushOperation(state,(Operation){.opType=OP_MODIFY_STACK,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={.stackMod={.op=STACK_OP_OVER,.count=count}}});
       return;
     }
     //compile-time code
@@ -6958,17 +6968,20 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           return;
         case STACK_OP_OVER:
-          if(state->typeCount<2){
-            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+          if(state->typeCount<(uint64_t)count+1){
+            fprintf(stderr,"not enough operands for operation %s: need %"PRIi32" got %zu\n",opName(op.opType),count+1,state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
-          extractCompositeOps(state,2,true);
-          offset=state->typeStack[state->typeCount-1].opCount+state->typeStack[state->typeCount-2].opCount;
-          totalOps=state->typeStack[state->typeCount-2].opCount;
+          extractCompositeOps(state,count+1,true);
+          offset=0;
+          for(int64_t i=1;i<=(count+1);i++){
+            offset+=state->typeStack[state->typeCount-i].opCount;
+          }
+          totalOps=state->typeStack[state->typeCount-(count+1)].opCount;
           if(ensureOpStackCap(state,state->opStackCount+totalOps)||ensureTypeStackCap(state,state->typeCount+1))
             handleError(NULL,ERROR_TYPE,op.filePos);
           memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-offset,totalOps*sizeof(Operation));
-          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-2,sizeof(TypeInfo));
+          memmove(state->typeStack+state->typeCount,state->typeStack+state->typeCount-(count+1),sizeof(TypeInfo));
           state->opStackCount+=totalOps;
           state->typeCount++;
           return;
