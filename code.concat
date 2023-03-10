@@ -2,6 +2,7 @@
 #include stringIO
 #include io
 #include stringBuilder
+#include string
 
 entryPoint:
   "./code.concat" io.OPEN_READ io.fopen #drop =:: f
@@ -9,5 +10,65 @@ entryPoint:
     '\n' sb.appendC
     f sb.appendFile #drop
     '\n' sb.appendC
-  io.stdOut #swap io.fputSb #drop
+  sb.toStr printTokens
+end
+
+proc( string2 => ) =: printTokens
+  while 
+    io.stdOut '\"' io.fputc #drop
+    nextToken io.stdOut #swap io.fputs2 #drop #dup .length 0 >
+    "\"" io.puts #drop
+  do end #drop
+end
+proc( char => bool ) =: isWhitespace
+  switch
+    ' ' '\n' '\t' '\v' '\f' '\r' case
+      true return
+    default
+      false return
+  end
+end
+proc( string2 : code => string2 ) =: skipSpaces
+  0 while #dup code .length < code #over:2 string.charAt isWhitespace & do
+    1 +
+  end
+  code #swap string.tail return
+end
+proc( string2 : code => string2 string2 ) =: nextToken
+  code .length 0 <= if
+    "" 0 string.create code return
+  end
+  code skipSpaces ## cut of leading white-spaces
+    #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
+      #dup '\n' string.indexOf  
+      string.tail skipSpaces
+    end
+    #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
+      #dup  "+#" #dup .length string.create  string.indexOfStr 
+      string.tail skipSpaces
+    end
+    #dup 0 string.charAt '"' == if ## string
+      1 string.tail
+      0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '"' != & do
+        #over #over string.charAt '\\' == if ##escape characters
+          1 +
+        end
+        1 +
+      end
+      string.splitIndex return
+    end
+    #dup 0 string.charAt '\'' == if ## char
+      1 string.tail
+      0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\'' != & do
+        #over #over string.charAt '\\' == if ##escape characters
+          1 +
+        end
+        1 +
+      end
+      string.splitIndex return
+    end
+    1 while #dup #over:2 .length < #over:2 #over:2 string.charAt isWhitespace ! & do
+      1 +
+    end
+  string.splitIndex return
 end

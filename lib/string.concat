@@ -39,7 +39,7 @@ struct( i8 rawptr : data i64 : length ) =:: public string2
     return
   end
 
-  proc( string2 : str i64 : index => i8 ) =: charAt
+  proc( string2 : str i64 : index => i8 ) =: public charAt
     index 0 < index str .length >= | if
       '\x00' return ## TODO error handling
     end
@@ -137,13 +137,16 @@ struct( i8 rawptr : data i64 : length ) =:: public string2
     end
     str .data from +  len  create return
   end
-  proc( string2 : str i8 : chr => string2 string2 ) =: public split
-    str chr indexOf =:: i
-    i -1 == if
+  proc( string2 : str i64 : index => string2 string2 ) =: public splitIndex
+    index 0 < if
       EMPTY str return
     end
-    str i 1 + tail
-    str i head
+    str index 1 + tail
+    str index head
+    return
+  end
+  proc( string2 : str i8 : chr => string2 string2 ) =: public split
+    str  str chr indexOf  splitIndex
     return
   end
 #end
