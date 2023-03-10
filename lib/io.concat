@@ -25,7 +25,6 @@
   proc( => FILE ) : extern public stdOut
   proc( => FILE ) : extern public stdErr
   
-  ## TODO open options
   proc( string : fileName OpenMode : mode => FILE IOError ) : extern public fopen
   ## file buffer off count -> nRead errCode
   proc( FILE : file i8 rawptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread

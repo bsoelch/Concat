@@ -559,6 +559,9 @@ bool isEnumLabelType(TypeId type){
   type=unwrapNamedType(type);
   return type.class==TYPECLASS_ENUM_LABEL;
 }
+bool isCompositeType(TypeId type){
+  return isTupleType(type)||isEnumType(type)||(isArrayType(type)&&!isArrayViewType(type));
+}
 bool isMutableType(TypeId type){
   type=unwrapNamedType(type);
   if(isArrayType(type))
@@ -978,7 +981,8 @@ typedef struct{
     int64_t i64;
     bool    boolean;
   }as;
-  ConstantType type;//TODO remember correct type of constant
+  TypeId valueType;
+  ConstantType type;
 }ConstantValue;
 void printConstValue(ConstantValue constant,FILE* file){
   switch(constant.type){
@@ -2056,8 +2060,9 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
   (*node)->labelId=labelId;
   if(constValue!=NULL&&!isMutableLabelId(labelId)){
     (*node)->constValue=*constValue;
+    (*node)->constValue.valueType=type;
   }else{
-    (*node)->constValue=(ConstantValue){.type=CONSTANT_NONE,.as.i64=0};
+    (*node)->constValue=(ConstantValue){.type=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
   }
   (*node)->next=NULL;
   return *node;
@@ -3306,11 +3311,11 @@ int32_t nextId(IdentifierType idType,ParserState* state){
 
 Operation opDeclareIntermediate(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_DECLARE,.dataType=type,.filePos=pos,
-    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
+    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=isCompositeType(type)}}};
 }
 Operation opGetIntermediate(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_GET,.dataType=type,.filePos=pos,
-    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
+    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=isCompositeType(type)}}};
 }
 Operation opPredeclareTmpVar(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=pos,
@@ -3654,19 +3659,21 @@ void pushConstant(ConstantValue constValue,FilePosition pos,bool hasId,Identifie
   constBuffer[bufferedConstants++]=(Constant){.value=constValue,.pos=pos,.hasId=hasId,.idInfo=idInfo};
 }
 void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
-  pushConstant((ConstantValue){.type=constType,.as.i64=constId},pos,false,(IdentifierInfo){0});
+  TypeId type=(constType==CONSTANT_CHAR)?TYPE_CHAR:primitiveType(((constId<=INT32_MAX&&constId>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64));
+  pushConstant((ConstantValue){.type=constType,.valueType=type,.as.i64=constId},pos,false,(IdentifierInfo){0});
 }
 void pushBoolConstant(bool value,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_BOOL,.as.boolean=value},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.type=CONSTANT_BOOL,.valueType=TYPE_BOOL,.as.boolean=value},pos,false,(IdentifierInfo){0});
 }
 void pushStringConstant(String value,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_STRING,.as.string=value},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.type=CONSTANT_STRING,.valueType=arrayType(true,TYPE_CHAR,1,(int64_t[]){value.length},false),.as.string=value}
+    ,pos,false,(IdentifierInfo){0});
 }
 void pushTypeConstant(TypeId type,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
 }
 void pushWildcardConstant(FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_WILDCARD,.as.i64=-1},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.type=CONSTANT_WILDCARD,.valueType=TYPE_UNDEFINED,.as.i64=-1},pos,false,(IdentifierInfo){0});
 }
 void addStaticArgs(LabelId label,TypeId type,FilePosition pos){
   StaticArgument arg;
@@ -4110,28 +4117,7 @@ void includeFile(ParserState * state,char const* includePath,FilePosition includ
 }
 
 void pushOperation(ParserState* state,Operation op);
-TypeId constantType(ConstantValue const* constant){
-  if(constant==NULL)
-    return TYPE_UNDEFINED;
-  int64_t intVal;
-  switch(constant->type){
-    case CONSTANT_STRING:
-      return arrayType(true,TYPE_CHAR,1,(int64_t[]){constant->as.string.length},false);
-    case CONSTANT_BOOL:
-      return TYPE_BOOL;
-    case CONSTANT_CHAR:
-      return TYPE_CHAR;
-    case CONSTANT_INT:
-      intVal=constant->as.i64;
-      return primitiveType((intVal<=INT32_MAX&&intVal>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64);
-    case CONSTANT_TYPE:
-      return TYPE_TYPE;
-    case CONSTANT_WILDCARD:
-    case CONSTANT_NONE:
-      return TYPE_UNDEFINED;
-  }
-  return TYPE_UNDEFINED;
-}
+
 void storeConstants(ParserState* state,FilePosition pos){
   int64_t intVal;
   size_t constCount=bufferedConstants;
@@ -4140,20 +4126,20 @@ void storeConstants(ParserState* state,FilePosition pos){
     switch(constBuffer[i].value.type){
       case CONSTANT_STRING:
         intVal=addProgString(constBuffer[i].value.as.string,constBuffer[i].pos);
-        pushOperation(state,opConstant(constantType(&constBuffer[i].value),intVal,constBuffer[i].pos));
+        pushOperation(state,opConstant(constBuffer[i].value.valueType,intVal,constBuffer[i].pos));
         break;
     case CONSTANT_BOOL:
-        pushOperation(state,opConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.boolean,constBuffer[i].pos));
+        pushOperation(state,opConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.boolean,constBuffer[i].pos));
         break;
       case CONSTANT_CHAR:
-        pushOperation(state,opConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.charId,constBuffer[i].pos));
+        pushOperation(state,opConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.charId,constBuffer[i].pos));
         break;
       case CONSTANT_INT:
         intVal=constBuffer[i].value.as.i64;
-        pushOperation(state,opConstant(constantType(&constBuffer[i].value),intVal,constBuffer[i].pos));
+        pushOperation(state,opConstant(constBuffer[i].value.valueType,intVal,constBuffer[i].pos));
         break;
       case CONSTANT_TYPE:
-        pushOperation(state,opTypeConstant(constantType(&constBuffer[i].value),constBuffer[i].value.as.type,constBuffer[i].pos));
+        pushOperation(state,opTypeConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.type,constBuffer[i].pos));
         break;
       case CONSTANT_WILDCARD:
         fprintf(stderr,"cannot store constants of type %s\n",constTypeName(CONSTANT_WILDCARD));
@@ -4224,7 +4210,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError("directly pre-declaration is only supporte for extern procedures",ERROR_SYNTAX,wordPos);
       idType=ID_PROCEDURE;
     }
-    ConstantValue val={.type=CONSTANT_NONE};
+    ConstantValue val=(ConstantValue){.type=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
     if(typeEquals(type,TYPE_TYPE)){
       val.type=CONSTANT_TYPE;
       val.as.type=newNamedType(labelId,TYPE_UNDEFINED);
@@ -4247,7 +4233,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       idType=ID_TYPE;
       TypeId constType=popTypeConstant(wordPos,"type constant",false);
       type=newNamedType(labelId,constType);
-      ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
+      ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
       declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&constValue);
       return;
     }else if(isProcedureType(type)){
@@ -4558,13 +4544,13 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     IdentifierType idType=localScopeCount>0?ID_LOCAL_VAR:ID_GLOBAL_VAR;
     TypeId mType=newAutoType(state->autoTypes++);
     if(bufferedConstants>0){
-      TypeId constType=constantType(peekConstValue());
+      TypeId constType=peekConstValue()->valueType;
       if(!typeEquals(constType,TYPE_UNDEFINED))
         mType=constType;
       if(typeEquals(mType,TYPE_TYPE)){
         constType=popTypeConstant(wordPos,"type constant",false);
         type=newNamedType(labelId,constType);
-        ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.as.type=type};
+        ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
         declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
         return;
       }
@@ -4622,7 +4608,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError("cannot get the address of a constant",ERROR_SYNTAX,wordPos);
       Constant const* constant=peekConstant();
       bufferedConstants--;//remove constant before pushing operation
-      pushOperation(state,(Operation){.opType=OP_GET,.dataType=constantType(&constant->value),
+      pushOperation(state,(Operation){.opType=OP_GET,.dataType=constant->value.valueType,
         .filePos=constant->pos,.dataAs={.idInfo=constant->idInfo}});
     }
     if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CALL){
@@ -5150,7 +5136,7 @@ void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWrit
       state->typeStack[i].opCount=reference?2:1;
       state->typeStack[i].isAddressable=false;
       if(!keepWritable)
-        state->typeStack[i].isWritable=false;
+        state->typeStack[i].isWritable=state->opStack[newOffset-1].dataAs.idInfo.isMutable;
       continue;
     }
     if(newOffset!=offset)
@@ -5404,8 +5390,17 @@ void pushValue(TypeCheckState* state,Operation op){
   if(ensureOpStackCap(state,state->opStackCount+1)){
     handleError("exceeded operation stack capacity",ERROR_MEMORY,op.filePos);
   }
+  if(state->blockCount>0&&isCompositeType(op.dataType)&&(op.opType!=OP_GET||!op.dataAs.idInfo.isMutable)){//make composite stack-values mutable
+    int32_t tmpId=newTmpId(state);
+    pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
+    pushCompiledOperation(state,op);
+    op=opGetIntermediate(op.dataType,tmpId,op.filePos);
+  }
   state->opStack[state->opStackCount++]=op;
   pushType(state,op.dataType,op.filePos);
+  if(op.opType==OP_GET){
+    setTypeStackFlags(state,(op.dataAs.idInfo.type!=ID_INTERMEDIATE_RESULT||op.dataAs.idInfo.type!=ID_TMP_VAR),op.dataAs.idInfo.isMutable);
+  }
 }
 
 void insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
@@ -5469,7 +5464,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
       if(state->opStack[opOffset].opType!=OP_CONSTANT)
         handleError("static arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
       if(typeEquals(state->opStack[opOffset].dataType,TYPE_TYPE)){
-        argValues[i]=(ConstantValue){.type=CONSTANT_TYPE,.as.type=state->opStack[opOffset].dataAs.sourceType};
+        argValues[i]=(ConstantValue){.type=CONSTANT_TYPE,.valueType=state->opStack[opOffset].dataType,.as.type=state->opStack[opOffset].dataAs.sourceType};
         continue;
       }
       handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
@@ -5527,14 +5522,12 @@ void pushProcArgs(TypeCheckState* state,TypeId procType,FilePosition pos){
   if(inTypes->typeCount==1){
     pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,
       .dataAs={.idInfo={.type=ID_ARGUMENT,.id=0,.labelId=inTypes->labelOffset,.isMutable=false}}});
-    setTypeStackFlags(state,true,false);
     return;
   }
   for(int32_t i=0;i<inTypes->typeCount;i++){
     LabelId labelId=inTypes->labelOffset==LABEL_ID_UNKNOWN?LABEL_ID_UNKNOWN:inTypes->labelOffset+i;
     pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,
       .dataAs={.idInfo={.type=ID_ARGUMENT,.id=i,.labelId=labelId,.isMutable=false}}});
-    setTypeStackFlags(state,true,false);
   }
 }
 
@@ -5716,7 +5709,6 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         return;
       }
       pushValue(state,*op);
-      setTypeStackFlags(state,true,op->dataAs.idInfo.isMutable);
       return;
     case ID_TUPLE_ELEMENT:
       if(state->typeCount<1){

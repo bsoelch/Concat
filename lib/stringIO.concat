@@ -42,17 +42,13 @@
       while err FILE_ERROR_NONE == do
         #dup .length delta + ensureCap
         file #over .data #over:2 .length delta fread err =
-        #swap 
-          =:: mut sbTmp ## XXX make tuples on stack writable
-          sbTmp .length #over + sbTmp .length =
-          sbTmp 
-        #swap
+        #over .length #over + #over:2 .length =
         delta ==  delta 8192 <= & if 
           delta 2 * delta =
         end
       end
       err FILE_ERR_END_OF_FILE == if 
-        FILE_ERROR_NONE IOError cast ## XXX remember correct type of constant
+        FILE_ERROR_NONE
       else 
         err
       end
