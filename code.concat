@@ -6,18 +6,31 @@
 
 entryPoint:
   "./code.concat" io.OPEN_READ io.fopen #drop =:: f
-  128 sb.create 
+  128 sb.create
     '\n' sb.appendC
     f sb.appendFile #drop
     '\n' sb.appendC
   sb.toStr printTokens
 end
 
+struct( string2 : mut fileName i64 : mut line i64 : mut posInLine ) =:: FilePosition
+struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: FileState
+
 proc( string2 => ) =: printTokens
-  while 
+  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
+  while
     io.stdOut '\"' io.fputc #drop
-    nextToken io.stdOut #swap io.fputs2 #drop #dup .length 0 >
-    "\"" io.puts #drop
+    state addrOf nextToken io.stdOut #swap io.fputs2 #drop #dup .length 0 >
+    io.stdOut '\"' io.fputc #drop
+    32 sb.create
+      " at " sb.appendStr
+      state .wordStart .fileName sb.appendStr2
+      ':' sb.appendC
+      state .wordStart .line sb.appendI
+      ':' sb.appendC
+      state .wordStart .posInLine sb.appendI
+      '\n' sb.appendC
+    io.stdOut #swap io.fputSb #drop
   do end #drop
 end
 proc( char => bool ) =: isWhitespace
@@ -28,47 +41,75 @@ proc( char => bool ) =: isWhitespace
       false return
   end
 end
-proc( string2 : code => string2 ) =: skipSpaces
+proc( i8 : chr  FileState ptr mut : fileState => ) =: updateState
+  chr '\n' == if
+      fileState [] .currentPos .line ++ #drop
+    1 fileState [] .currentPos .posInLine =
+  else
+    fileState [] .currentPos .posInLine ++ #drop
+  end
+end
+proc( string2 : code FileState ptr mut : fileState => string2 ) =: skipSpaces
   0 while #dup code .length < code #over:2 string.charAt isWhitespace & do
+    code #over string.charAt fileState updateState
     1 +
   end
   code #swap string.tail return
 end
-proc( string2 : code => string2 string2 ) =: nextToken
+proc( string2 : code FileState ptr mut : fileState => string2 string2 ) =: nextToken
   code .length 0 <= if
     "" 0 string.create code return
   end
-  code skipSpaces ## cut of leading white-spaces
+  code fileState skipSpaces ## cut of leading white-spaces
     #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
-      #dup '\n' string.indexOf  
-      string.tail skipSpaces
+      '#' fileState updateState
+      '#' fileState updateState
+      2 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\n' != & do
+        #over #over string.charAt fileState updateState
+        1 +
+      end
+      string.tail fileState skipSpaces
     end
     #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
-      #dup  "+#" #dup .length string.create  string.indexOfStr 
-      string.tail skipSpaces
+      '#' fileState updateState
+      '+' fileState updateState
+      2 while #dup #over:2 .length <  #over:2 #over:2 1 - string.charAt '+' !=  #over:3 #over:3 string.charAt '#' != |  & do
+        #over #over string.charAt fileState updateState
+        1 +
+      end
+      string.tail fileState skipSpaces
     end
+    fileState [] .currentPos fileState [] .wordStart =
+    #dup 0 string.charAt fileState updateState
     #dup 0 string.charAt '"' == if ## string
       1 string.tail
       0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '"' != & do
         #over #over string.charAt '\\' == if ##escape characters
+          #over #over string.charAt fileState updateState
           1 +
         end
+        #over #over string.charAt fileState updateState
         1 +
       end
+      #over #over string.charAt fileState updateState
       string.splitIndex return
     end
     #dup 0 string.charAt '\'' == if ## char
       1 string.tail
       0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\'' != & do
         #over #over string.charAt '\\' == if ##escape characters
+          #over #over string.charAt fileState updateState
           1 +
         end
+        #over #over string.charAt fileState updateState
         1 +
       end
+      #over #over string.charAt fileState updateState
       string.splitIndex return
     end
     1 while #dup #over:2 .length < #over:2 #over:2 string.charAt isWhitespace ! & do
+      #over #over string.charAt fileState updateState
       1 +
     end
-  string.splitIndex return
+  string.cutIndex return
 end

@@ -27,7 +27,7 @@ static const IOError FILE_ERR_INVALID_FILE=8;
 
 static const OpenMode OPEN_READ=1;
 static const OpenMode OPEN_WRITE=2;
-static const OpenMode OPEN_APPEND=3;
+static const OpenMode OPEN_APPEND=4;
 
 typedef struct{
   concat_File* e0;
