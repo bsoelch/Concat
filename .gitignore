@@ -8,5 +8,6 @@ tmp/*
 syntaxHighlighting/update.sh
 concat
 code
+code.c
 featureMap.concat
 !tests/*/*.out
