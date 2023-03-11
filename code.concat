@@ -1,0 +1,11 @@
+#include string
+
+proc( i64 : static k  i8 k ptr : str => string2 ) =: toStr
+  str k string2 new return
+end
+
+#find toStr
+
+entryPoint:
+  "Hello World" toStr .length print
+end

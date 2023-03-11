@@ -13,7 +13,7 @@
         return
       end
       minCap minCap 8 / + 8 +
-        #over .data #over i8 mem.realloc #over:2 .data =
+        #over .data #over mem.realloc #over:2 .data =
         #over .cap =
     return
   end
@@ -26,21 +26,21 @@
   proc( stringBuilder : buffer string : str => stringBuilder ) =: public appendStr
     buffer
       #dup .length str .length + sb.ensureCap
-      #dup .data #over .length + str i8 rawptr cast str .length i8 mem.copy #drop
+      #dup .data #over .length + str i8 rawptr cast str .length mem.copy #drop
       #dup .length str .length + #over .length =
     return
   end
   proc( stringBuilder : buffer string2 : str => stringBuilder ) =: public appendStr2
     buffer
       #dup .length str .length + sb.ensureCap
-      #dup .data #over .length + str .data str .length i8 mem.copy #drop
+      #dup .data #over .length + str .data str .length mem.copy #drop
       #dup .length str .length + #over .length =
     return
   end
   proc( stringBuilder : buffer stringBuilder : str => stringBuilder ) =: public appendSb
     buffer
       #dup .length str .length + sb.ensureCap
-      #dup .data #over .length + str .data str .length i8 mem.copy #drop
+      #dup .data #over .length + str .data str .length mem.copy #drop
       #dup .length str .length + #over .length =
     return
   end

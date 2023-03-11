@@ -9,7 +9,7 @@ struct( i8 rawptr : data i64 : length ) =:: public string2
   end
   proc( string2 : s1 string2 : s2 => i32 ) =: public compare
     s1 .length s2 .length < if s1 .length else s2 .length end =:: l
-    s1 .data s2 .data l i8 mem.compare
+    s1 .data s2 .data l mem.compare
     #dup 0 != if
       return
     else #drop end

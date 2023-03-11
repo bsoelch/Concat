@@ -360,17 +360,14 @@ bool typeEquals(TypeId a,TypeId b){
    return a.dataAs.id==b.dataAs.id;
 }
 
-typedef enum{
-  STATIC_ARG_NONE,
-  STATIC_ARG_TYPE,
-}StaticArgType;
 typedef struct{
   LabelId label;
   union{
     TypeId type;
-    //XXX? generic ints
+    int64_t genericId;
   }as;
-  StaticArgType type;
+  TypeId type;
+  int32_t index;
 }StaticArgument;
 
 typedef struct{
@@ -399,11 +396,15 @@ typedef struct{
   bool pointerUsed;
 }ProcedureType;
 typedef struct{
+  int64_t value;
+  bool isInt;
+}ArraySize;
+typedef struct{
   TypeId base;
-  int64_t const* sizes;
+  ArraySize const* sizes;
   int32_t dims;
   int32_t id;
-  bool sizeKnown;
+  bool fixedSize;
   bool sizeUsed;
   bool viewOnly;
   bool isMutable;
@@ -561,7 +562,7 @@ bool isEnumLabelType(TypeId type){
   type=unwrapNamedType(type);
   return type.class==TYPECLASS_ENUM_LABEL;
 }
-bool isCompositeType(TypeId type){
+bool isMultiValueType(TypeId type){
   return isTupleType(type)||isEnumType(type)||(isArrayType(type)&&!isArrayViewType(type));
 }
 bool isMutableType(TypeId type){
@@ -683,7 +684,7 @@ bool setNamedType(TypeId type,TypeId newValue){
 }
 
 TypeId pointerType(TypeId target,bool mutable);
-TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool isMutable);
+TypeId arrayType(bool isView,TypeId base, int32_t dims,ArraySize const* sizes,bool isMutable);
 bool makeMutable(TypeId* t){
   if(isMutableType(*t))
     return true;
@@ -914,7 +915,7 @@ TypeId asUnlabeledProc(TypeId procType,FilePosition pos){
   TypeId newProc=procedureType(in,proc->outType,proc->staticArgs,proc->staticArgsCount);
   return isPtr?pointerType(newProc,false):newProc;
 }
-TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool isMutable){
+TypeId arrayType(bool isView,TypeId base, int32_t dims,ArraySize const* sizes,bool isMutable){
   if(dims<0||((dims==0)&&!isView))
     return TYPE_UNDEFINED;
   if(typeEquals(base,TYPE_UNDEFINED)||isProcedureType(base))
@@ -930,7 +931,7 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool
       continue;
     bool match=true;
     for(int32_t j=0;j<dims;j++){
-      if(arrayTypes[i].sizes[j]!=sizes[j]){
+      if((arrayTypes[i].sizes[j].isInt!=sizes[j].isInt)||(arrayTypes[i].sizes[j].value!=sizes[j].value)){
         match=false;
         break;
       }
@@ -940,14 +941,15 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,int64_t const* sizes,bool
       return (TypeId){.class=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.dataAs.id=i};
     }
   }
-  int64_t* mSizes=NULL;
+  ArraySize* mSizes=NULL;
   if(dims>0&&sizes!=NULL){
     mSizes=malloc(dims*sizeof(*mSizes));
     if(mSizes==NULL)
       return TYPE_UNDEFINED;
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
   }
-  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,.sizeKnown=(dims==0)||(sizes!=NULL),.isMutable=isMutable,.viewOnly=isView};
+  arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,
+    .fixedSize=(dims==0)||(sizes!=NULL),.isMutable=isMutable,.viewOnly=isView};
   TypeId newArray=(TypeId){.class=isView?TYPECLASS_ARRAY_VIEW:TYPECLASS_ARRAY,.dataAs.id=arrayTypeCount++};
   declareMultiType(newArray);
   return newArray;
@@ -962,6 +964,7 @@ typedef enum{
   CONSTANT_STRING,
   CONSTANT_TYPE,
   CONSTANT_WILDCARD,
+  GENERIC_INT,
 }ConstantType;
 char const* constTypeName(ConstantType type){
   switch(type){
@@ -972,6 +975,7 @@ char const* constTypeName(ConstantType type){
     case CONSTANT_STRING:return "string";
     case CONSTANT_TYPE:return "type";
     case CONSTANT_WILDCARD:return "_";
+    case GENERIC_INT:return "generic int";
   }
   return "unknown type";
 }
@@ -1008,9 +1012,81 @@ void printConstValue(ConstantValue constant,FILE* file){
     case CONSTANT_WILDCARD:
       fputs("_",file);
       return;
+    case GENERIC_INT:
+      fprintf(file,"(%"PRIi64")",constant.as.i64);
+      return;
   }
 }
 
+void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantValue* values,int32_t count){
+  src=unwrapNamedType(src);//type names not important for generics
+  expect=unwrapNamedType(expect);
+  if(expect.class==TYPECLASS_GENERIC_TYPE){
+    for(int32_t i=0;i<count;i++){
+      if(values[i].type==CONSTANT_NONE&&typeEquals(args[i].type,TYPE_TYPE)&&typeEquals(args[i].as.type,expect)){
+        values[i]=(ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=src};
+        break;
+      }
+    }
+    return;
+  }
+  if(isComposite(src)&&isComposite(expect)){
+    if(getTypeElementCount(src)!=getTypeElementCount(expect))
+      return;//incompatible types
+    for(int32_t i=0;i<getTypeElementCount(src);i++){
+      resolveTypeGenerics(compositeTypeData(src)->types[i],compositeTypeData(expect)->types[i],args,values,count);
+    }
+    return;
+  }
+  if(src.class!=expect.class){
+    return;//not equivalent -> resolving not possible
+  }
+  switch(src.class){
+    case TYPECLASS_PRIMITIVE:
+    case TYPECLASS_AUTO_TYPE://XXX? handle auto-types
+      return;
+    case TYPECLASS_POINTER:
+      resolveTypeGenerics(getBaseType(src),getBaseType(expect),args,values,count);
+      return;
+    case TYPECLASS_PROCEDURE:
+      resolveTypeGenerics(procTypeData(src)->inType,procTypeData(expect)->inType,args,values,count);
+      resolveTypeGenerics(procTypeData(src)->outType,procTypeData(expect)->outType,args,values,count);
+      return;
+    case TYPECLASS_ARRAY:
+    case TYPECLASS_ARRAY_VIEW:
+      resolveTypeGenerics(getBaseType(src),getBaseType(expect),args,values,count);
+      if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize&&arrayTypeData(src)->dims==arrayTypeData(expect)->dims){//XXX support different numbers of dimensions
+        for(int32_t d=0;d<arrayTypeData(src)->dims;d++){
+          if(!arrayTypeData(src)->sizes[d].isInt)
+            continue;
+          if(!arrayTypeData(expect)->sizes[d].isInt){
+            for(int32_t i=0;i<count;i++){
+              if(values[i].type==CONSTANT_NONE&&isIntType(args[i].type)&&args[i].as.genericId==arrayTypeData(expect)->sizes[d].value){
+                values[i]=(ConstantValue){.type=CONSTANT_INT,.valueType=primitiveType(PRIMITIVE_I64),.as.i64=arrayTypeData(src)->sizes[d].value};
+                break;
+              }
+            }
+          }
+        }
+      }
+      return;
+    case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL:
+      resolveTypeGenerics(unwrapNamedType(src),unwrapNamedType(expect),args,values,count);
+      return;
+    case TYPECLASS_TUPLE:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
+    case TYPECLASS_PROC_OUT:
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_ENUM:
+    case TYPECLASS_ENUM_LABEL:
+    case TYPECLASS_GENERIC_TYPE:
+      fputs("unreachable",stderr);
+      exit(EXIT_FAILURE);//should have been covered by if-statements before switch
+      return;
+  }
+}
 TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* values,int32_t count){//XXX prevent unnecessary recreation of types
   TypeId tmp;
   switch(type.class){
@@ -1024,11 +1100,30 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
               replaceGenericTypes(procTypes[type.dataAs.id].outType,args,values,count),
               procTypes[type.dataAs.id].staticArgs,procTypes[type.dataAs.id].staticArgsCount);
     case TYPECLASS_ARRAY:
-      return arrayType(false,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
-        arrayTypes[type.dataAs.id].dims,arrayTypes[type.dataAs.id].sizes,arrayTypes[type.dataAs.id].isMutable);
-    case TYPECLASS_ARRAY_VIEW:
-      return arrayType(true,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
-        arrayTypes[type.dataAs.id].dims,arrayTypes[type.dataAs.id].sizes,arrayTypes[type.dataAs.id].isMutable);
+    case TYPECLASS_ARRAY_VIEW:;
+      ArraySize* newSizes=NULL;
+      if(arrayTypes[type.dataAs.id].fixedSize){
+        newSizes=malloc(arrayTypes[type.dataAs.id].dims*sizeof(ArraySize));
+        for(int32_t d=0;d<arrayTypes[type.dataAs.id].dims;d++){
+          if(!arrayTypes[type.dataAs.id].sizes[d].isInt){
+            bool match=false;
+            for(int32_t i=0;i<count;i++){
+              if(isIntType(args[i].type)&&args[i].as.genericId==arrayTypes[type.dataAs.id].sizes[d].value){
+                newSizes[d]=(ArraySize){.isInt=true,.value=values[i].as.i64};
+                match=true;
+                break;
+              }
+            }
+            if(match)
+              continue;
+          }
+          newSizes[d]=arrayTypes[type.dataAs.id].sizes[d];
+        }
+      }
+       tmp=arrayType(type.class==TYPECLASS_ARRAY_VIEW,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
+        arrayTypes[type.dataAs.id].dims,newSizes,arrayTypes[type.dataAs.id].isMutable);
+      free(newSizes);
+      return tmp;
     case TYPECLASS_NAMED_TYPE:
     case TYPECLASS_NAMED_ENUM_LABEL:
       tmp=replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count);
@@ -1051,7 +1146,7 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
       return res;
     case TYPECLASS_GENERIC_TYPE:
       for(int32_t i=0;i<count;i++){
-        if(args[i].type==STATIC_ARG_TYPE&&typeEquals(args[i].as.type,type))
+        if(typeEquals(args[i].type,TYPE_TYPE)&&typeEquals(args[i].as.type,type))
           return values[i].as.type;
       }
       return type;
@@ -1190,7 +1285,6 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
       }
       fputs(" ( ",file);
       printTypeNameIntenal(procTypeData(type)->inType,file,true);
-      //TODO static arguments
       fputs(" => ",file);
       printTypeNameIntenal(procTypeData(type)->outType,file,true);
       fputs(" )",file);
@@ -1200,8 +1294,12 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
     case TYPECLASS_ARRAY_VIEW:
       printTypeNameIntenal(getBaseType(type),file,noRecurse);
       for(int32_t i=0;i<arrayTypeData(type)->dims;i++){
-        if(arrayTypeData(type)->sizeKnown){
-          fprintf(file," %"PRIi64,arrayTypeData(type)->sizes[i]);
+        if(arrayTypeData(type)->fixedSize){
+          if(arrayTypeData(type)->sizes[i].isInt){
+            fprintf(file," %"PRIi64,arrayTypeData(type)->sizes[i].value);
+            continue;
+          }
+          fprintf(file," generic(%"PRIi64")",arrayTypeData(type)->sizes[i].value);
           continue;
         }
         if(arrayTypeData(type)->dims>1)
@@ -1265,7 +1363,7 @@ void printTypeNameC(TypeId type,FILE* file){
       fprintf(file,"array%"PRIi32,type.dataAs.id);
       return;
     case TYPECLASS_ARRAY_VIEW:
-      if(!arrayTypeData(type)->sizeKnown){//array with unknown size
+      if(!arrayTypeData(type)->fixedSize){//array with unknown size
         fprintf(file,"array%"PRIi32,type.dataAs.id);
         return;
       }
@@ -2223,37 +2321,17 @@ void printGlobalIdentifer(Label const* mName,FILE* target){
   }
   printAsciifiedString(mName->label,target);
 }
-TypeId staticArgType(StaticArgType argType){
-  switch(argType){
-    case STATIC_ARG_NONE:
-      return TYPE_UNDEFINED;
-    case STATIC_ARG_TYPE:
-      return TYPE_TYPE;
-  }
-  return TYPE_UNDEFINED;
-}
 void printProcArgumentTypesC(ProcedureType const* proc,FILE* target,bool printArgNames){
   if(!isProcInType(proc->inType)){
     fprintf(stderr,"unexpected procedure argument type-class: %s\n",typeClassName(proc->inType.class));
     exit(EXIT_FAILURE);
   }
-  bool hasArgs=false;
-  for(int32_t i=0;i<proc->staticArgsCount;i++){
-    if(hasArgs)
-      fputs(", ",target);
-    hasArgs=true;
-    printTypeNameC(staticArgType(proc->staticArgs[i].type),target);
-    if(printArgNames)
-      fprintf(target," staticArg%"PRIi32,i);
-
-  }
   CompositeType const* inTypes=compositeTypeData(proc->inType);
-  if(proc->staticArgsCount+inTypes->typeCount==0)
+  if(inTypes->typeCount==0)
     fputs("void",target);
   for(int32_t e=0;e<inTypes->typeCount;e++){
-    if(hasArgs)
+    if(e>0)
       fputs(", ",target);
-    hasArgs=true;
     printTypeNameC(inTypes->types[e],target);
     if(printArgNames)
       fprintf(target," arg%"PRIi32,e);
@@ -2352,7 +2430,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       fputs("((",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
       fputs(")",target);
-      if(!isArrayViewType(op->dataType)||!arrayTypeData(op->dataType)->sizeKnown)
+      if(!isArrayViewType(op->dataType)||!arrayTypeData(op->dataType)->fixedSize)
         fputs(".data",target);
       for(int32_t i=0;i<arrayTypeData(op->dataType)->dims;i++){
         fputs("[",target);
@@ -2363,8 +2441,10 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       return size+tupleElementAccess(target,op->dataAs.idInfo.id,op+size,opSize-size,false);
     case ID_ARRAY_SIZE:;
       if(op->dataAs.idInfo.id==0){//is length
-        if(arrayTypeData(op->dataType)->sizeKnown){
-          fprintf(target,"/*length*/((int64_t)%"PRIi64")",arrayTypeData(op->dataType)->sizes[0]);
+        if(arrayTypeData(op->dataType)->fixedSize){
+          if(!arrayTypeData(op->dataType)->sizes[0].isInt)
+            handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,op->filePos);
+          fprintf(target,"/*length*/((int64_t)%"PRIi64")",arrayTypeData(op->dataType)->sizes[0].value);
           return size;
         }
         fputs("((",target);
@@ -2372,7 +2452,7 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
         fprintf(target,").sizes[%"PRIi32"])",arrayTypeData(op->dataType)->dims-1);
         return size;
       }
-      if(arrayTypeData(op->dataType)->sizeKnown){
+      if(arrayTypeData(op->dataType)->fixedSize){
         fprintf(target,"arraySizes%"PRIi32,arrayTypeData(op->dataType)->id);
         return size;
       }
@@ -2401,17 +2481,9 @@ size_t compileProcArgs(FILE* target,size_t compiledOps,Operation const* op,size_
     handleError(NULL,ERROR_MEMORY,op->filePos);
   }
   fputs("(",target);
-  bool hasArgs=false;
-  for(int32_t e=0;e<procTypeData(op->dataType)->staticArgsCount;e++){
-    if(hasArgs)
-      fputs(",",target);
-    hasArgs=true;
-    COMPILE_OP_RETURN_ERROR(target,op,opSize);
-  }
   for(int32_t e=0;e<getTypeElementCount(in);e++){
-    if(hasArgs)
+    if(e>0)
       fputs(",",target);
-    hasArgs=true;
     COMPILE_OP_RETURN_ERROR(target,op,opSize);
   }
   fputs(")",target);
@@ -2468,7 +2540,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         fputs("(void const*)",target);
       }
       COMPILE_OP_RETURN_ERROR(target,op,opSize);
-      if(isArrayType(op->dataType)&&!arrayTypeData(op->dataType)->sizeKnown){
+      if(isArrayType(op->dataType)&&!arrayTypeData(op->dataType)->fixedSize){
         fputs(".data",target);
       }
       if(boolMode){
@@ -2498,10 +2570,10 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
             break;
           }
         }
-        if(!arrayTypeData(op->dataType)->sizeKnown)
+        if(!arrayTypeData(op->dataType)->fixedSize)
           fputs("{.data=",target);
         fprintf(target,"(arrayData%"PRIi32"+%"PRIi32")",programStrings[i].charsId,programStrings[i].charsOffset);
-        if(!arrayTypeData(op->dataType)->sizeKnown)
+        if(!arrayTypeData(op->dataType)->fixedSize)
           fprintf(target,",.sizes={%zu}}",programStrings[i].value.length);
         if(needCast)
           fputs(")",target);
@@ -2717,7 +2789,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         return size;
       }
       if(isArrayType(op->dataType)&&!isArrayViewType(op->dataType)){
-        if(!arrayTypeData(op->dataType)->sizeKnown)
+        if(!arrayTypeData(op->dataType)->fixedSize)
           handleError("new is not implemented for var-size arrays",ERROR_UNIMPLEMENTED,op->filePos);
         if(needCast){
           fputs("(",target);
@@ -2742,7 +2814,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           printTypeNameC(op->dataType,target);
           fputs(")",target);
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          if(isSrcView&&srcArray->sizeKnown){
+          if(isSrcView&&srcArray->fixedSize){
             fputs(")",target);
             return size;//value is already pointer
           }
@@ -2754,28 +2826,34 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("((",target);
           printTypeNameC(op->dataType,target);
           fputs(")",target);
-          if(!targetArray->sizeKnown){
+          if(!targetArray->fixedSize){
             fputs("{.data=",target);
           }
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
-          if(!isSrcView||!srcArray->sizeKnown){
+          if(!isSrcView||!srcArray->fixedSize){
             fputs(".data",target);
           }
-          if(!targetArray->sizeKnown){
-            if(!srcArray->sizeKnown)
+          if(!targetArray->fixedSize){
+            if(!srcArray->fixedSize)
               break;
             fputs(",.sizes={",target);
             if(targetArray->dims==1){
               int64_t l=1;
-              for(int32_t d=0;d<srcArray->dims;d++)
-                l*=srcArray->sizes[d];
+              for(int32_t d=0;d<srcArray->dims;d++){
+                if(!srcArray->sizes[d].isInt)
+                  handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,op->filePos);
+                l*=srcArray->sizes[d].value;
+              }
               fprintf(target,"%"PRIi64,l);
             }else{
               if(targetArray->dims!=srcArray->dims){
                 handleError("casting between arrays of different dimensions is not supported",ERROR_SYNTAX,op->filePos);
               }
-              for(int32_t d=0;d<srcArray->dims;d++)
-                fprintf(target,"%"PRIi64",",srcArray->sizes[d]);
+              for(int32_t d=0;d<srcArray->dims;d++){
+                if(!srcArray->sizes[d].isInt)
+                  handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,op->filePos);
+                fprintf(target,"%"PRIi64",",srcArray->sizes[d].value);
+              }
             }
             fputs("}}",target);
           }
@@ -3072,7 +3150,7 @@ void compileToC(FILE* target,Program const* p){
     }
   }
   for(int32_t i=0;i<arrayTypeCount;i++){
-      if(arrayTypes[i].viewOnly&&arrayTypes[i].sizeKnown)
+      if(arrayTypes[i].viewOnly&&arrayTypes[i].fixedSize)
         continue;//skip view-only arrays with known size
       fprintf(target,"typedef struct array%"PRIi32"Impl array%"PRIi32";\n",i,i);
   }
@@ -3089,15 +3167,17 @@ void compileToC(FILE* target,Program const* p){
   for(int32_t i=0;i<declaredMultiTypeCount;i++){//got through multi-types in order of declaration
     int32_t id=declaredMultiTypes[i].dataAs.id;
     if(isArrayType(declaredMultiTypes[i])){
-      if(arrayTypes[id].viewOnly&&arrayTypes[id].sizeKnown)
+      if(arrayTypes[id].viewOnly&&arrayTypes[id].fixedSize)
         continue;//skip view-only arrays with known size
       //initialize array types
       fprintf(target,"struct array%"PRIi32"Impl{\n",id);
       printTypeNameC(arrayTypes[id].base,target);
-      if(arrayTypes[id].sizeKnown){
+      if(arrayTypes[id].fixedSize){
         fputs(" data",target);
         for(int32_t d=arrayTypes[id].dims-1;d>=0;d--){//C orders sizes the other way around
-          fprintf(target,"[%"PRIi64"]",arrayTypes[id].sizes[d]);
+          if(!arrayTypes[id].sizes[d].isInt)
+            handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,(FilePosition){0});
+          fprintf(target,"[%"PRIi64"]",arrayTypes[id].sizes[d].value);
         }
       }else{
         if(!arrayTypes[id].isMutable)
@@ -3105,16 +3185,18 @@ void compileToC(FILE* target,Program const* p){
         fputs("* data",target);
       }
       fputs(";\n",target);
-      if(!arrayTypes[id].sizeKnown)
+      if(!arrayTypes[id].fixedSize)
         fprintf(target,"int64_t sizes[%"PRIi32"];\n",arrayTypes[id].dims);//don't declare as const to allow overwriting structure
       fputs("};\n",target);
-      if((!arrayTypes[id].sizeKnown)||(!arrayTypes[id].sizeUsed))
+      if((!arrayTypes[id].fixedSize)||(!arrayTypes[id].sizeUsed))
         continue;
       fprintf(target,"int64_t const arraySizes%"PRIi32"[%"PRIi32"]={",arrayTypes[id].id,arrayTypes[id].dims);
       for(int32_t d=0;d<arrayTypes[id].dims;d++){
+        if(!arrayTypes[id].sizes[d].isInt)
+          handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,(FilePosition){0});
         if(d>0)
           fputs(",",target);
-        fprintf(target,"%"PRIi64,arrayTypes[id].sizes[d]);
+        fprintf(target,"%"PRIi64,arrayTypes[id].sizes[d].value);
       }
       fputs("};\n",target);
       continue;
@@ -3316,11 +3398,11 @@ int32_t nextId(IdentifierType idType,ParserState* state){
 
 Operation opDeclareIntermediate(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_DECLARE,.dataType=type,.filePos=pos,
-    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=isCompositeType(type)}}};
+    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=isMultiValueType(type)}}};
 }
 Operation opGetIntermediate(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_GET,.dataType=type,.filePos=pos,
-    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=isCompositeType(type)}}};
+    .dataAs={.idInfo={.type=ID_INTERMEDIATE_RESULT,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=isMultiValueType(type)}}};
 }
 Operation opPredeclareTmpVar(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_PRE_DECLARE,.dataType=type,.filePos=pos,
@@ -3652,7 +3734,7 @@ size_t bufferedConstants=0;
 Constant constBuffer[CONST_BUFFER_CAP];
 
 TypeId compositeTypeBuffer[MAX_COMPOSITE_ELEMENTS];
-int64_t arrayDimsBuffer[MAX_ARRAY_DIMS];
+ArraySize arrayDimsBuffer[MAX_ARRAY_DIMS];
 int64_t arrayDimsCount=0;
 int64_t arrayWildcardDimsCount=0;
 StaticArgument staticArgsBuffer[MAX_STATIC_ARGS];
@@ -3671,7 +3753,7 @@ void pushBoolConstant(bool value,FilePosition pos){
   pushConstant((ConstantValue){.type=CONSTANT_BOOL,.valueType=TYPE_BOOL,.as.boolean=value},pos,false,(IdentifierInfo){0});
 }
 void pushStringConstant(String value,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_STRING,.valueType=arrayType(true,TYPE_CHAR,1,(int64_t[]){value.length},false),.as.string=value}
+  pushConstant((ConstantValue){.type=CONSTANT_STRING,.valueType=arrayType(true,TYPE_CHAR,1,(ArraySize[]){{.value=value.length,.isInt=true}},false),.as.string=value}
     ,pos,false,(IdentifierInfo){0});
 }
 void pushTypeConstant(TypeId type,FilePosition pos){
@@ -3680,12 +3762,15 @@ void pushTypeConstant(TypeId type,FilePosition pos){
 void pushWildcardConstant(FilePosition pos){
   pushConstant((ConstantValue){.type=CONSTANT_WILDCARD,.valueType=TYPE_UNDEFINED,.as.i64=-1},pos,false,(IdentifierInfo){0});
 }
-void addStaticArgs(LabelId label,TypeId type,FilePosition pos){
+void addStaticArgument(int32_t index,LabelId label,TypeId type,FilePosition pos){
   StaticArgument arg;
-  if(!typeEquals(type,TYPE_TYPE)){
+  if(typeEquals(type,TYPE_TYPE)){
+    arg=(StaticArgument){.index=index,.label=label,.type=type,.as.type=newGenericType(staticArgsCount)};
+  }else if(isIntType(type)){
+    arg=(StaticArgument){.index=index,.label=label,.type=type,.as.genericId=staticArgsCount};
+  }else{
     handleError("static arguments have to be types",ERROR_SYNTAX,pos);
   }
-  arg=(StaticArgument){.label=label,.type=STATIC_ARG_TYPE,.as.type=newGenericType(staticArgsCount)};
   if(staticArgsCount>=MAX_STATIC_ARGS)
     handleError("static-argument buffer overflow",ERROR_MEMORY,pos);
   staticArgsBuffer[staticArgsCount]=arg;
@@ -3721,21 +3806,25 @@ TypeId popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid)
   }
   return constBuffer[bufferedConstants].value.as.type;
 }
-TypeId peekTypeConstant(FilePosition pos){
+TypeId peekTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid){
   if(bufferedConstants==0){
-    fputs("missing type\n",stderr);
+    fprintf(stderr,"missing %s\n",argumentName);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   if(constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
-    fprintf(stderr,"wrong constant type expected type got %s\n",constTypeName(constBuffer[bufferedConstants-1].value.type));
+    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants-1].value.type));
     fputs(" declared at ",stderr);
     printFilePosition(constBuffer[bufferedConstants-1].pos,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
+  if(!allowVoid&&typeEquals(constBuffer[bufferedConstants-1].value.as.type,TYPE_UNDEFINED)){
+    fprintf(stderr,"missing %s\n",argumentName);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
   return constBuffer[bufferedConstants-1].value.as.type;
 }
-int64_t* popArraySize(FilePosition pos){
+ArraySize* popArraySize(FilePosition pos){
   arrayDimsCount=0;
   arrayWildcardDimsCount=0;
   while(bufferedConstants>1&&constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
@@ -3745,7 +3834,11 @@ int64_t* popArraySize(FilePosition pos){
   for(int64_t i=0;i<arrayDimsCount;i++){
     if(constBuffer[bufferedConstants+i].value.type==CONSTANT_WILDCARD){
       arrayWildcardDimsCount++;
-      arrayDimsBuffer[i]=-1;
+      arrayDimsBuffer[i]=(ArraySize){.value=-1,.isInt=false};
+      continue;
+    }
+    if(constBuffer[bufferedConstants+i].value.type==GENERIC_INT){
+      arrayDimsBuffer[i]=(ArraySize){.value=constBuffer[bufferedConstants+i].value.as.i64,.isInt=false};
       continue;
     }
     if(constBuffer[bufferedConstants+i].value.type!=CONSTANT_INT){
@@ -3756,7 +3849,7 @@ int64_t* popArraySize(FilePosition pos){
       fprintf(stderr,"invalid array size: %"PRIi64" array sizes have to be greater than 0\n",constBuffer[bufferedConstants+i].value.as.i64);
       handleError(NULL,ERROR_SYNTAX,pos);
     }
-    arrayDimsBuffer[i]=constBuffer[bufferedConstants+i].value.as.i64;
+    arrayDimsBuffer[i]=(ArraySize){.value=constBuffer[bufferedConstants+i].value.as.i64,.isInt=true};
   }
   if(arrayWildcardDimsCount>0&&arrayDimsCount>1)
       handleError("wildcards are only allowed for one dimensional arrays",ERROR_SYNTAX,pos);
@@ -3818,8 +3911,12 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     return true;
   for(int i=0;i<staticArgsCount;i++){
     if(stringCompare(getLabelName(staticArgsBuffer[i].label),word)==0){
-      if(staticArgsBuffer[i].type==STATIC_ARG_TYPE){
+      if(typeEquals(staticArgsBuffer[i].type,TYPE_TYPE)){
         pushTypeConstant(staticArgsBuffer[i].as.type,wordPos);
+        return true;
+      }
+      if(isIntType(staticArgsBuffer[i].type)){
+        pushIntConstant(GENERIC_INT,staticArgsBuffer[i].as.genericId,wordPos);
         return true;
       }
       handleError("unexpected static argument",ERROR_UNIMPLEMENTED,wordPos);
@@ -3874,7 +3971,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       typesSinceLabel=0;
       LabelId labelId=readLabel(codeFile,"composite type labels",parserNamespace(state)->current,allowedFlags);//label is stored in label buffer
       if(isStaticLabelId(labelId)){
-        addStaticArgs(labelId,popTypeConstant(codeFile->wordStart,"static argument",false),codeFile->wordStart);//remember static types
+        addStaticArgument((bufferedConstants-1)-initOffset,labelId,peekTypeConstant(codeFile->wordStart,"static argument",false),codeFile->wordStart);//remember static types
       }
       currentOffset=bufferedConstants;
       continue;
@@ -3922,13 +4019,13 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
       typeClass=TYPECLASS_LABELED_PROC_IN;
     pushTypeConstant(compositeType(typeClass,elements,labelOffset,maxOffset-initOffset),codeFile->wordStart);
   }
-  if(typeEquals(peekTypeConstant(codeFile->wordStart),TYPE_UNDEFINED)){
+  if(typeEquals(peekTypeConstant(codeFile->wordStart,"composite type",true),TYPE_UNDEFINED)){
     handleError("unknown error while creating composite type",ERROR_SYNTAX,codeFile->wordStart);
     return;
   }
   if(checkEmpty&&maxOffset-initOffset==1){
     fputs("WARNING:\n  single element composite type: ",stderr);
-    printTypeName(peekTypeConstant(codeFile->wordStart),stderr);
+    printTypeName(peekTypeConstant(codeFile->wordStart,"composite element",false),stderr);
     fputs(" at ",stderr);
     printFilePosition(codeFile->wordStart,stderr);
     fputs("\n",stderr);
@@ -3985,7 +4082,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true;
   }
   if(wordEquals(&name,"ptr")){
-    int64_t* dims=popArraySize(codeFile->wordStart);
+    ArraySize* dims=popArraySize(codeFile->wordStart);
     TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);
     if(isProcedureType(target)){//TODO own type for procedure pointers
       if(arrayDimsCount>0)
@@ -4008,7 +4105,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     return true;
   }
   if(wordEquals(&name,"array")){
-    int64_t* dims=popArraySize(codeFile->wordStart);
+    ArraySize* dims=popArraySize(codeFile->wordStart);
     TypeId target=popTypeConstant(codeFile->wordStart,"array argument",false);
     if(arrayDimsCount==0){//array without size arguments
       handleError("zero-dimensional arrays are not supported",ERROR_SYNTAX,codeFile->wordStart);
@@ -4146,11 +4243,12 @@ void storeConstants(ParserState* state,FilePosition pos){
       case CONSTANT_TYPE:
         pushOperation(state,opTypeConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.type,constBuffer[i].pos));
         break;
-      case CONSTANT_WILDCARD:
-        fprintf(stderr,"cannot store constants of type %s\n",constTypeName(CONSTANT_WILDCARD));
-        handleError(NULL,ERROR_SYNTAX,pos);
-        break;
       case CONSTANT_NONE:
+        break;
+      case CONSTANT_WILDCARD:
+      case GENERIC_INT:
+        fprintf(stderr,"cannot store constants of type %s\n",constTypeName(constBuffer[i].value.type));
+        handleError(NULL,ERROR_SYNTAX,pos);
         break;
     }
   }
@@ -5274,12 +5372,12 @@ void checkSwitchTypes(TypeCheckState* state,SwitchBlockInfo* switchBlock,FilePos
 bool sizesCompatible(ArrayType const* src,ArrayType const* target){
   if(src->dims<target->dims)
     return false;
-  if(!target->sizeKnown)
+  if(!target->fixedSize)
     return true;
-  if(!src->sizeKnown)
+  if(!src->fixedSize)
     return false;
   for(int32_t i=0;i<target->dims;i++){
-    if(src->sizes[i]!=target->sizes[i])
+    if(src->sizes[i].isInt!=src->sizes[i].isInt||src->sizes[i].value!=target->sizes[i].value)
       return false;
   }
   return true;
@@ -5392,8 +5490,7 @@ void pushValue(TypeCheckState* state,Operation op){
   if(ensureOpStackCap(state,state->opStackCount+1)){
     handleError("exceeded operation stack capacity",ERROR_MEMORY,op.filePos);
   }
-  //FIXME allow getting address of constant variables
-  if(state->blockCount>0&&isCompositeType(op.dataType)&&(op.opType!=OP_GET||!op.dataAs.idInfo.isMutable)){//make composite stack-values mutable
+  if(state->blockCount>0&&isMultiValueType(op.dataType)&&(op.opType!=OP_GET||!op.dataAs.idInfo.isMutable)){//make composite stack-values mutable
     int32_t tmpId=newTmpId(state);
     pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
     pushCompiledOperation(state,op);
@@ -5453,39 +5550,76 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   CompositeType const* inTypes=compositeTypeData(procType->inType);
   size_t argCount=inTypes->typeCount;
   size_t totalOps=0;
+  if(procType->staticArgsCount>0){
+    ConstantValue* argValues=calloc(procType->staticArgsCount,sizeof(ConstantValue));
+    int64_t opOffset=state->opStackCount-(isPtr?state->typeStack[state->typeCount-1].opCount:0);
+    int64_t typeOffset=state->typeCount-(isPtr?1:0);
+    int32_t argId=procType->staticArgsCount-1;
+    if(ensureTypeStackCap(state,state->typeCount+procType->staticArgsCount)||ensureOpStackCap(state,state->opStackCount+procType->staticArgsCount))
+      handleError("allocating memory for static arguments failed",ERROR_MEMORY,op->filePos);
+    for(int32_t i=getTypeElementCount(procType->inType)-1;i>=0;i--){
+      if(argId>=0&&i==procType->staticArgs[argId].index&&argValues[argId].type!=CONSTANT_NONE){//insert constant value
+        memmove(state->typeStack+typeOffset+1,state->typeStack+typeOffset,(state->typeCount-typeOffset)*sizeof(TypeInfo));
+        state->typeStack[typeOffset]=(TypeInfo){.type=argValues[argId].valueType,.opCount=1,.isWritable=false};
+        typeOffset--;
+        state->typeCount++;
+        memmove(state->opStack+opOffset+1,state->opStack+opOffset,(state->opStackCount-opOffset)*sizeof(Operation));
+        if(typeEquals(argValues[argId].valueType,TYPE_TYPE)){
+          state->opStack[opOffset]=opTypeConstant(argValues[argId].valueType,argValues[argId].as.type,op->filePos);
+          state->opStackCount++;
+          argId--;
+          continue;
+        }else if(isIntType(argValues[argId].valueType)){
+          state->opStack[opOffset]=opConstant(argValues[argId].valueType,argValues[argId].as.i64,op->filePos);
+          state->opStackCount++;
+          argId--;
+          continue;
+        }
+        handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,op->filePos);
+        continue;
+      }
+      if(typeOffset--<=0)//XXX better message
+        handleError("not enough arguments for procedure",ERROR_SYNTAX,op->filePos);
+      opOffset-=state->typeStack[typeOffset].opCount;
+      if(opOffset<0)
+        handleError("types and operations out of sync",ERROR_MEMORY,op->filePos);
+      if(argId>=0&&i==procType->staticArgs[argId].index){//get constant value
+        if(state->opStack[opOffset].opType!=OP_CONSTANT)
+          handleError("static arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
+        if(!canAutoCast(state->opStack[opOffset].dataType,procType->staticArgs[argId].type)){
+          typeErrorMessage("static procedure argument",procType->staticArgs[argId].type,state->opStack[opOffset].dataType);
+          handleError(NULL,ERROR_TYPE,state->opStack[opOffset].filePos);
+        }
+        if(typeEquals(procType->staticArgs[argId].type,TYPE_TYPE)){
+          argValues[argId]=(ConstantValue){.type=CONSTANT_TYPE,.valueType=procType->staticArgs[argId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
+          argId--;
+          continue;
+        }
+        if(isIntType(procType->staticArgs[argId].type)){
+          argValues[argId]=(ConstantValue){.type=CONSTANT_INT,.valueType=procType->staticArgs[argId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
+          argId--;
+          continue;
+        }
+        handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
+        continue;
+      }
+      resolveTypeGenerics(state->typeStack[typeOffset].type,compositeTypeData(procType->inType)->types[i],procType->staticArgs,argValues,procType->staticArgsCount);
+    }
+    inTypes=compositeTypeData(replaceGenericTypes(procType->inType,procType->staticArgs,argValues,procType->staticArgsCount));
+    outTypes=compositeTypeData(replaceGenericTypes(procType->outType,procType->staticArgs,argValues,procType->staticArgsCount));
+  }
   if(state->typeCount<argCount){
     fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
     handleError(NULL,ERROR_TYPE,op->filePos);
   }
   //extract operations
   extractCompositeOps(state,argCount+(isPtr?1:0),false);
-  if(procType->staticArgsCount>0){//compile static args
-    ConstantValue* argValues=malloc(procType->staticArgsCount*sizeof(ConstantValue));
-    size_t opOffset=state->opStackCount-(isPtr?state->typeStack[state->typeCount-1].opCount:0);
-    for(int32_t i=procType->staticArgsCount-1;i>=0;i--){
-      opOffset-=state->typeStack[state->typeCount-(i+(isPtr?2:1))].opCount;
-      if(state->opStack[opOffset].opType!=OP_CONSTANT)
-        handleError("static arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
-      if(typeEquals(state->opStack[opOffset].dataType,TYPE_TYPE)){
-        argValues[i]=(ConstantValue){.type=CONSTANT_TYPE,.valueType=state->opStack[opOffset].dataType,.as.type=state->opStack[opOffset].dataAs.sourceType};
-        continue;
-      }
-      handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
-    }
-    inTypes=compositeTypeData(replaceGenericTypes(procType->inType,procType->staticArgs,argValues,procType->staticArgsCount));
-    outTypes=compositeTypeData(replaceGenericTypes(procType->outType,procType->staticArgs,argValues,procType->staticArgsCount));
-  }
   int32_t tmpId=-1;
   if(outTypes->typeCount!=0){//store non-void return in temp variable
     tmpId=newTmpId(state);
     pushCompiledOperation(state,opDeclareIntermediate(outTypes->typeCount==1?(outTypes->types[0]):procType->outType,tmpId,op->filePos));
   }
   addCompiledOps(state,*op,isPtr?1:0);
-  if(procType->staticArgsCount>0){//compile static args
-    for(int32_t i=procType->staticArgsCount-1;i>=0;i--){
-      addCompiledStackOps(state,*op/*ignored*/,1,false);
-    }
-  }
   requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
   size_t offset=state->typeCount-inTypes->typeCount;
   for(int32_t i=0;i<inTypes->typeCount;i++){
@@ -5677,8 +5811,10 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     indexOffset-=state->typeStack[state->typeCount-i].opCount;
     pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op->filePos,.dataAs={0}});
     pushCompiledOperations(state,state->opStack+indexOffset,state->typeStack[state->typeCount-i].opCount);//index
-    if(arrayTypeData(arrayType)->sizeKnown){//fixed-size array
-      pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[i-1],op->filePos));
+    if(arrayTypeData(arrayType)->fixedSize){//fixed-size array
+      if(!arrayData->sizes[i-1].isInt)
+        handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,op->filePos);
+      pushCompiledOperation(state,opConstant(primitiveType(PRIMITIVE_I64),arrayData->sizes[i-1].value,op->filePos));
     }else{
       pushCompiledOperation(state,(Operation){.opType=OP_GET,.dataType=arrayType,.filePos=op->filePos,
               .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}});//length
@@ -6055,7 +6191,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           //array-pointer equality
           if(isArrayViewType(inTypes[0])&&isArrayViewType(inTypes[1])&&
-              arrayTypeData(inTypes[0])->sizeKnown&&arrayTypeData(inTypes[1])->sizeKnown&&
+              arrayTypeData(inTypes[0])->fixedSize&&arrayTypeData(inTypes[1])->fixedSize&&
               typeEquals(getBaseType(inTypes[0]),getBaseType(inTypes[1]))){
             op.dataType=TYPE_BOOL;
             typesMatch=true;
@@ -6164,7 +6300,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         if(wordEquals(&op.dataAs.string,"length")){
           op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
             .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=0,.labelId=-1,.isMutable=false}}};
-          if(arrayTypeData(structType)->sizeKnown){
+          if(arrayTypeData(structType)->fixedSize){
             state->opStackCount-=peekTypeStack(state)->opCount;
             insertStackOperation(state,op,0);
             peekTypeStack(state)->opCount=1;//ignore array (length only depends on type)
@@ -6179,7 +6315,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           arrayTypes[arrayTypeData(structType)->id].sizeUsed=true;
           op=(Operation){.opType=OP_GET,.dataType=structType,.filePos=op.filePos,
             .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=1,.labelId=-1,.isMutable=false}}};
-          if(arrayTypeData(structType)->sizeKnown){
+          if(arrayTypeData(structType)->fixedSize){
             state->opStackCount-=peekTypeStack(state)->opCount;
             insertStackOperation(state,op,0);
             peekTypeStack(state)->opCount=1;//ignore array (size only depends on type)
@@ -6187,7 +6323,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             insertStackOperation(state,op,totalOps);
             peekTypeStack(state)->opCount++;
           }
-          int64_t dims=arrayTypeData(structType)->dims;
+          ArraySize dims=(ArraySize){.value=arrayTypeData(structType)->dims,.isInt=true};
           setTypeStackType(state,arrayType(true,primitiveType(PRIMITIVE_I64),1,&dims,false));
           return;
         }
@@ -6428,7 +6564,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         return;
       }
       if(isArrayType(op.dataType)&&!isArrayViewType(op.dataType)){
-        if(!arrayTypeData(op.dataType)->sizeKnown)
+        if(!arrayTypeData(op.dataType)->fixedSize)
           handleError("new is not implemented for var-size arrays",ERROR_UNIMPLEMENTED,op.filePos);
         pushValue(state,op);
         return;
