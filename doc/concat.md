@@ -107,6 +107,41 @@ entryPoint: ## the program entry point is marked with entry point, internally en
 end ## main code section ends with end
 ```
 
+### static arguments
+
+procedure arguments can be marked as static, static procedure arguments are resolved at compile time and can be used to declare other types appearing later in the procedure signature
+
+the type of a static procedure arguments has to be of type `type` or an integer type
+
+resolving of static arguments:
+procedure arguments are resolved from right to left, a static procedure argument is determined by its first (detectable) appearance:
+- if the first occurrence of the static argument is as an parameter, the compiler expected a constant value of the correct type as the corresponding procedure argument
+- if the first occurrence of a static argument is within the type of another argument, the matching type/integer will be used to define the static argument 
+
+!!! The current parser cannot detect the target of `rawptr` if the given argument is of type array !!!
+<!-- TODO update once parser is fixed -->
+
+Examples:
+
+```
+proc( i64 : static k  i8 k ptr : str => i64 ) =: strLen ## split the compile-type length parameter from a sized-pointer
+  k return
+end
+
+proc( i64 : k type : static T => T rawptr ) : extern malloc   ## return pointers of type given by parameter
+proc( type : static T  T rawptr : a T rawptr : b i64 : k => ) : extern memcpy  ## multiple uses of the same generic argument
+proc( type : static T  T rawptr : p => ) : extern free
+
+entryPoint:
+  "Hello World" strLen print  ## the value of k is determined by the compiler
+  16 i8 malloc =:: p        
+  p "Test" 4 memcpy           ## generic argument determined by type of constant string ( in current parser by type of p ) 
+  p free
+end
+
+```
+
+
 ## code blocks
 ### if-block
 
