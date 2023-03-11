@@ -1,5 +1,0 @@
-#include "tests/parser/empty.concat"
-
-
-proc( => ) : extern test
-
