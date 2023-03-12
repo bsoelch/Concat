@@ -1,9 +1,9 @@
 
 struct( i32 : x i64 : y ) =:: pos
-struct( i32 : id pos : mut p string : name ) type =: aStruct
+struct( i32 : id pos : mut p i8 4 ptr : name ) type =: aStruct
 
 entryPoint:
-  -2143124  42 -115 pos new  "Name" aStruct new =:: struct ## TODO identify structs with identical field names
+  -2143124  42 -115 pos new  "Name" aStruct new =:: struct
   struct .id print
   struct .p .x print
   struct =:: mut mutStruct

@@ -4082,10 +4082,6 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     pushTypeConstant(primitiveType(PRIMITIVE_FLOAT),codeFile->wordStart);
     return true;
   }
-  if(wordEquals(&name,"string")){
-    pushTypeConstant(arrayType(true,TYPE_CHAR,1,NULL,false),codeFile->wordStart);
-    return true ;
-  }
   //composite types
   if(wordEquals(&name,"rawptr")){//XXX move dynamic size arrays to standard library , rawptr -> _ ptr
     TypeId target=popTypeConstant(codeFile->wordStart,"pointer argument",false);

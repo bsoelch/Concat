@@ -1,17 +1,18 @@
+#include string
 
-proc( string => string i64 ) =: startItr
-  0
+proc( i64 : static k i8 k ptr : str => string2 i64 ) =: startItr
+  str k string.create 0
 end
-proc( string i64 => string i64 char bool ) =: nextChar
+proc( string2 i64 => string2 i64 char bool ) =: nextChar
   =:: i
   =:: s
   s
     i s .length >= if
       i '\x00'  false return
     end
-    i 1 +  s i [] true return 
+    i 1 +  s i string.charAt true return
 end
-proc( string i64 i8 => ) =: endItr
+proc( string2 i64 i8 => ) =: endItr
   #drop #drop #drop
 end
 

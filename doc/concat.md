@@ -26,7 +26,7 @@ Concat code is a sequence of 'words' separated by white-spaces
 ### string and characters literals
 
 string literals start and end with a `"` , character literals use a `'` 
-The type of a char literal is `char` ( which is an alias for `i8` ) while a string literals are represented by the array type `string` 
+The type of a char literal is `char` ( which is an alias for `i8` ) while a string literals are represented by the array type `i8 <length> ptr` 
 
 string and char literals are allowed to contain special characters including new-lines 
 additionally the following escape sequences are supported
@@ -35,7 +35,7 @@ additionally the following escape sequences are supported
 
 Examples:
 ```
-"Hello World!" string =: hello   ## create a new string saying Hello World
+"Hello World!" i8 12 ptr =: hello   ## create a new string saying Hello World
 "Multi-line
 string \" "                   
 'A' char =: aChar 
@@ -333,8 +333,6 @@ Concat supports the following primitive types:
 - `i32` 32-bit integer
 - `i64` 64-bit integer
 - `float` floating point type (currently unimplemented)
-
-<!-- TODO string (name alias for a special array) --> 
 
 ### pointers
 

@@ -17,7 +17,7 @@ entryPoint:
   end #drop
 end
 
-"string" string =: s3
+"string" =:: s3
 "strings can contain other strings as substring" =:: s4
 "\"'\\\u2203\U0001F4BB\t² \x00##" =:: specialString
 "Multi
