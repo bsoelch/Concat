@@ -4,7 +4,7 @@
 #include string
 
 entryPoint:
-  "./code.concat" io.OPEN_READ io.fopen #drop =:: f
+  "./parser.concat" io.OPEN_READ io.fopen #drop =:: f
   128 sb.create
     '\n' sb.appendC
     f sb.appendFile #drop
