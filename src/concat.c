@@ -6860,8 +6860,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(state->reachable)
             handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
           switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
-          switchBlock->switchData->caseCount++;//close last case
+          switchBlock->switchData->caseCount++;//close last case  FIXME get correct number of case statements
           if(isEnumLabelType(switchBlock->switchType)){
+            printf("switch %"PRIi64" %zu\n",switchBlock->switchData->caseCount,getTypeElementCount(switchBlock->switchType));
             if(switchBlock->switchData->caseCount<(size_t)getTypeElementCount(switchBlock->switchType)){
               handleError("switch statement does not cover all labels in enum",ERROR_SYNTAX,op.filePos);//TODO print uncovered labels
             }
