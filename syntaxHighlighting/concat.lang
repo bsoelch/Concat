@@ -141,7 +141,6 @@
           struct\(                     |
           array                        |
           (raw)?ptr ([[:space:]]+mut)? |
-          type            
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -155,6 +154,7 @@
           i32             |
           i64             |
           float           |
+          type            |
           string          
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
