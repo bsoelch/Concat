@@ -7,5 +7,5 @@
 entryPoint:
   "Hello World" string.wrap .length print
   "Hello World!" io.puts #drop
-  42 0x8FFF_FFFF_FFFF_FFFF print
+  42 0x7FFF_FFFF_FFFF_FFFF print print
 end

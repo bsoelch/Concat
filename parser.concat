@@ -121,7 +121,6 @@ proc( string => ) =: printTokens
   "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
     state addrOf nextToken
-    ## text sb
     128 sb.create
       #swap appendToken
       " at " sb.appendS

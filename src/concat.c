@@ -770,7 +770,7 @@ int64_t indexOfTypeArray(TypeId const* base,size_t baseLen,TypeId const* child,s
   }
   return -1;
 }
-//TODO prevent use of incomplete types (generics/opauqe-types/var-size array) as fields
+//TODO prevent use of incomplete types (generics/opauqe-types) as fields
 TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOffset,int32_t eltCount){
   if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
@@ -5892,6 +5892,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   BlockInfo* blockInfoPtr;
   IfBlockInfo* ifBlock;
   SwitchBlockInfo* switchBlock;
+  Label const* mLabel;
 
   resolveIdentifiers(state,&op);
   switch(op.opType){
@@ -6238,7 +6239,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         pushCompiledOperation(state,opConstant(lableType,labelIndex,op.filePos));
       }
       state->hasCheckEnum=1;
-      Label const* mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
+      mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
       op=(Operation){.opType=(op.opType==OP_ADDR_OF_LABEL)?OP_ADDR_OF:(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
         .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=isMutableLabel(mLabel)}}};
       if(op.opType==OP_ADDR_OF){
@@ -6860,11 +6861,28 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           if(state->reachable)
             handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
           switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
-          switchBlock->switchData->caseCount++;//close last case  FIXME get correct number of case statements
+          switchBlock->switchData->caseCount++;//close last case
           if(isEnumLabelType(switchBlock->switchType)){
-            printf("switch %"PRIi64" %zu\n",switchBlock->switchData->caseCount,getTypeElementCount(switchBlock->switchType));
-            if(switchBlock->switchData->caseCount<(size_t)getTypeElementCount(switchBlock->switchType)){
-              handleError("switch statement does not cover all labels in enum",ERROR_SYNTAX,op.filePos);//TODO print uncovered labels
+            if(switchBlock->switchData->labelCount<(size_t)getTypeElementCount(switchBlock->switchType)){
+              fputs("switch statement does not cover all labels in enum ",stderr);
+              printTypeName(switchBlock->switchType,stderr);
+              fputs("\nmissing labels:\n",stderr);
+              for(int32_t i=0;i<getTypeElementCount(switchBlock->switchType);i++){
+                bool match=false;
+                for(size_t l=0;l<switchBlock->switchData->labelCount;l++){
+                  if(switchBlock->switchData->labelData[l].value==i){
+                    match=true;
+                    break;
+                  }
+                }
+                if(!match){
+                  mLabel=label(compositeTypeData(switchBlock->switchType)->labelOffset+i,op.filePos);
+                  fprintf(stderr," - %"PRI_STR"\n    declared at",PRI_STR_ARGS(mLabel->label));
+                  printFilePosition(mLabel->declaredAt,stderr);
+                  fputs("\n",stderr);
+                }
+              }
+              handleError(NULL,ERROR_SYNTAX,op.filePos);
             }
             if(switchBlock->endReachable){
               if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack)))
