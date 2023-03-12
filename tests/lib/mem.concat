@@ -1,14 +1,14 @@
 #include mem
 
 entryPoint:
-  1024 i32 mem.alloc i32 rawptr mut =: mut dynamicArray
+  1024 i32 mem.alloc i32 _ ptr mut =: mut dynamicArray
   1 dynamicArray 0 [] =
   2 dynamicArray 1023 [] =
   dynamicArray 0 [] print
   dynamicArray 2048 mem.realloc dynamicArray =
   dynamicArray 1023 [] print
   3 dynamicArray 2047 [] =
-  128 i32 mem.calloc i32 rawptr mut =: mut dynamicArray2
+  128 i32 mem.calloc i32 _ ptr mut =: mut dynamicArray2
   dynamicArray2 dynamicArray 128 mem.copy dynamicArray2 = 
   dynamicArray 16 mem.clear dynamicArray =
   dynamicArray 0 [] print
@@ -23,7 +23,7 @@ entryPoint:
   dynamicArray2 2 [] print
   dynamicArray2 3 [] print
   dynamicArray2 4 [] print
-  i8 "Hello" "World" 5 mem.compare 0 <  print
-  i8 "hello" "World" 5 mem.compare 0 >  print
-  i8 "World" "World" 5 mem.compare 0 == print
+  "Hello" "World" 5 mem.compare 0 <  print
+  "hello" "World" 5 mem.compare 0 >  print
+  "World" "World" 5 mem.compare 0 == print
 end

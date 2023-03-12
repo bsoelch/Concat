@@ -2,7 +2,7 @@
 #include string
 
 #namespace sb
-  struct( i8 rawptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
+  struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
 
   proc( i64 : cap => stringBuilder ) =: public create
     cap i8 mem.alloc cap 0 stringBuilder new return
@@ -26,7 +26,7 @@
   proc( stringBuilder : buffer i64 : static k i8 k ptr : str => stringBuilder ) =: public appendStr
     buffer
       #dup .length k + sb.ensureCap
-      #dup .data #over .length + str i8 rawptr cast k mem.copy #drop
+      #dup .data #over .length + str i8 _ ptr cast k mem.copy #drop
       #dup .length k + #over .length =
     return
   end

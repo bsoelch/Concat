@@ -27,9 +27,9 @@
   
   proc( i64 : static k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) : extern public fopen
   ## file buffer off count -> nRead errCode
-  proc( FILE : file i8 rawptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread
+  proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread
   ## file buffer off count -> nWritten errCode
-  proc( FILE : file i8 rawptr     : buffer i64 : off i64 : count => i64 IOError ) : extern public fwrite
+  proc( FILE : file i8 _ ptr     : buffer i64 : off i64 : count => i64 IOError ) : extern public fwrite
   proc( FILE => IOError ) : extern public fflush
   proc( FILE => IOError ) : extern public fclose
   ## XXX fseek
@@ -40,7 +40,7 @@
   proc( FILE : file  i64 : static k  i8 k ptr : str => IOError ) =: public fputs
     0 i64 =: mut off
     k =:: mut count
-    str i8 rawptr cast =:: data
+    str i8 _ ptr cast =:: data
     while count 0 > do
       file data off count fwrite 
         #dup FILE_ERROR_NONE != if ## error

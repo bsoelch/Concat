@@ -3,7 +3,6 @@ proc( i32 3 ptr : in  i64 2 3 array : multi => ) =: arrayTest
   i32 3 ptr : a
   i64 2 4 6 8 10 array : b
   i32 ptr 2 ptr mut : c
-  i32 _ array _ array : d
   in .length print
   multi .size 0 [] print
   in in 0 [] [] print 
@@ -18,6 +17,6 @@ entryPoint:
   
   i32 2 3 array new =:: mut matrix
   -14121 matrix 2 1 [] = ##  0 1  2 3  4 5
-  matrix i32 rawptr cast 5 [] print
+  matrix i32 _ ptr cast 5 [] print
 
 end

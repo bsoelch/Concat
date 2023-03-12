@@ -1,10 +1,10 @@
 #include mem
-struct( i8 rawptr : data i64 : length ) =:: public string2
+struct( i8 _ ptr : data i64 : length ) =:: public string2
 
 #namespace string
   "" 0 string2 new =:: EMPTY
 
-  proc( i8 rawptr  i64 => string2 ) =: public create
+  proc( i8 _ ptr  i64 => string2 ) =: public create
     string2 new return
   end
   proc( string2 : s1 string2 : s2 => i32 ) =: public compare

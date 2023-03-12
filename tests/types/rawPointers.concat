@@ -1,8 +1,8 @@
 0 i32 =: x
   
-proc( => ( ( i32 i32 rawptr ) rawptr i32 ) ) =: ptrTest
-  0  x addrOf  ( i32  i32 rawptr ) new =:: y
-  y addrOf 0 ( ( i32  i32 rawptr ) rawptr i32 ) new return
+proc( => ( ( i32 i32 _ ptr ) _ ptr i32 ) ) =: ptrTest
+  0  x addrOf  ( i32  i32 _ ptr ) new =:: y
+  y addrOf 0 ( ( i32  i32 _ ptr ) _ ptr i32 ) new return
 end
 
 entryPoint:
@@ -11,14 +11,14 @@ entryPoint:
   1 2 ( i64 i64 ) new =:: mut tmp
   
   tmp .0 addrOf [] print
-  tmp addrOf ( i64 i64 ) rawptr =: tmpPtr
+  tmp addrOf ( i64 i64 ) _ ptr =: tmpPtr
   tmpPtr [] .1 print
   
   "Hello World!" 1 [] print
   "World" .length print
   
   0 =:: mut A
-  A addrOf  i32 rawptr mut =: mut aPtr
+  A addrOf  i32 _ ptr mut =: mut aPtr
   -312512  aPtr ++ [] = 
   #find aPtr
   aPtr -- -1 [] print

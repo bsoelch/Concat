@@ -1,15 +1,15 @@
 #namespace mem
- proc( i64 : k  type : static T => T rawptr mut ) : extern public alloc
- proc( i64 : k  type : static T => T rawptr mut ) : extern public calloc
+ proc( i64 : k  type : static T => T _ ptr mut ) : extern public alloc
+ proc( i64 : k  type : static T => T _ ptr mut ) : extern public calloc
  ## XXX mem.callocPtr
- proc( type : static T   T rawptr mut : prev i64 : k => T rawptr mut ) : extern public realloc
+ proc( type : static T   T _ ptr mut : prev i64 : k => T _ ptr mut ) : extern public realloc
  ## set memory to zero
- proc( type : static T   T rawptr mut : src  i64 : k => T rawptr mut ) : extern public clear
+ proc( type : static T   T _ ptr mut : src  i64 : k => T _ ptr mut ) : extern public clear
  ## XXX mem.clearPtr
- proc( type : static T   T rawptr mut : target T rawptr : src i64 : k => T rawptr mut ) : extern public copy
- proc( type : static T   T rawptr mut : target T rawptr : src i64 : k => T rawptr mut ) : extern public move
- proc( type : static T   T rawptr mut : data => ) : extern public free
+ proc( type : static T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public copy
+ proc( type : static T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public move
+ proc( type : static T   T _ ptr mut : data => ) : extern public free
  ## XXX mem.fill (once there are templates)
 
- proc( type : static T  T rawptr : a  T rawptr : b  i64 : k   => i32 ) : extern public compare
+ proc( type : static T  T _ ptr : a  T _ ptr : b  i64 : k   => i32 ) : extern public compare
 #end

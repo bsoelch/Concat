@@ -118,9 +118,6 @@ procedure arguments are resolved from right to left, a static procedure argument
 - if the first occurrence of the static argument is as an parameter, the compiler expected a constant value of the correct type as the corresponding procedure argument
 - if the first occurrence of a static argument is within the type of another argument, the matching type/integer will be used to define the static argument 
 
-!!! The current parser cannot detect the target of `rawptr` if the given argument is of type array !!!
-<!-- TODO update once parser is fixed -->
-
 Examples:
 
 ```
@@ -128,9 +125,9 @@ proc( i64 : static k  i8 k ptr : str => i64 ) =: strLen ## split the compile-typ
   k return
 end
 
-proc( i64 : k type : static T => T rawptr ) : extern malloc   ## return pointers of type given by parameter
-proc( type : static T  T rawptr : a T rawptr : b i64 : k => ) : extern memcpy  ## multiple uses of the same generic argument
-proc( type : static T  T rawptr : p => ) : extern free
+proc( i64 : k type : static T => T _ ptr ) : extern malloc   ## return pointers of type given by parameter
+proc( type : static T  T _ ptr : a T _ ptr : b i64 : k => ) : extern memcpy  ## multiple uses of the same generic argument
+proc( type : static T  T _ ptr : p => ) : extern free
 
 entryPoint:
   "Hello World" strLen print  ## the value of k is determined by the compiler
@@ -340,12 +337,9 @@ Concat supports the following primitive types:
 Pointer types can be created by appending `ptr`, optionally preceded with an array size <!-- TODO  like to array section -->
  after the name of the target type.
 
-Pointer types point to a fixed number of elements (the given array size or 1 if no size is given), trying to access elements outside the allowed area will trigger a run-time error.
-If the 
+Sized pointer types point to a fixed number of elements (the given array size or 1 if no size is given), trying to access elements outside the allowed area will trigger a run-time error.
 
-
-The "raw" pointer type `rawptr` can be used for unknown size pointer (e.g. pointers returned for C-functions)
-unlike the default pointer operations on raw pointers are unchecked.
+The "raw" pointer type `_ ptr` can be used for unknown size pointer unlike the default pointer operations on raw pointers are unchecked.
 C-style pointer arithmetic can be used on raw pointers.
 
 By default the pointer target cannot be modified, if the pointer should allow modification this can be signaled by appending `mut`
@@ -359,9 +353,9 @@ Examples:
 ```
 0 =:: mut x                    ## declare a mutable integer x 
 x addrOf =:: xAddr             ## the address of x  (will have type  i32 ptr mut)
-x addrOf i32 rawptr =: xPtr    ## get the address of x as (immutable) raw i32 pointer
+x addrOf i32 _ ptr =: xPtr     ## get the address of x as (immutable) raw i32 pointer
 "Hello" i8 5 ptr =: str        ## strings are i8 array-pointers with the length as argument
-str i8 _ ptr cast  =: str2     ## fixed size arrays can be assigned to dynamic size arrays
+str i8 _ ptr cast  =: str2     ## fixed size pointers can be assigned to raw pointers
 str2 .length                   ## the length in the most significant dimension of array&pointer types can be read through the '.length' field
 ```
 
