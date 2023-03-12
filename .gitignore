@@ -9,5 +9,6 @@ syntaxHighlighting/update.sh
 concat
 code
 code.c
+parser.c
 featureMap.concat
 !tests/*/*.out
