@@ -23,11 +23,11 @@
       chr #over .data #over:2 .length ++ [] =
     return
   end
-  proc( stringBuilder : buffer string : str => stringBuilder ) =: public appendStr
+  proc( stringBuilder : buffer i64 : static k i8 k ptr : str => stringBuilder ) =: public appendStr
     buffer
-      #dup .length str .length + sb.ensureCap
-      #dup .data #over .length + str i8 rawptr cast str .length mem.copy #drop
-      #dup .length str .length + #over .length =
+      #dup .length k + sb.ensureCap
+      #dup .data #over .length + str i8 rawptr cast k mem.copy #drop
+      #dup .length k + #over .length =
     return
   end
   proc( stringBuilder : buffer string2 : str => stringBuilder ) =: public appendStr2

@@ -5,11 +5,6 @@
 #include <inttypes.h>
 #include <errno.h>
 
-typedef struct{
-  int8_t const* data;
-  int64_t sizes[1];
-}i8xarray;
-
 typedef void concat_File;
 typedef int32_t IOError;
 typedef int32_t OpenMode;
@@ -72,14 +67,14 @@ static IOError getErrorId(int errnoVal){
 #define MAX_PATH 4096
 #endif
 static char fopenBuffer[MAX_PATH+1];//XXX make buffer thread safe
-fileAndErr concat_io_dfopen(i8xarray fileName,OpenMode mode){
-  char const* path=(char const*)fileName.data;
-  if(fileName.data[fileName.sizes[0]-1]!='\0'){
-    if(fileName.sizes[0]>MAX_PATH){
+fileAndErr concat_io_dfopen(int64_t nameLength,int8_t const* nameChars,OpenMode mode){
+  char const* path=(char const*)nameChars;
+  if(nameChars[nameLength-1]!='\0'){
+    if(nameLength>MAX_PATH){
       return (fileAndErr){.e0=NULL,.e1=FILE_ERR_PATH_OVERFLOW};
     }
-    memcpy(fopenBuffer,fileName.data,fileName.sizes[0]*sizeof(int8_t));
-    fopenBuffer[fileName.sizes[0]]='\0';
+    memcpy(fopenBuffer,nameChars,nameLength*sizeof(int8_t));
+    fopenBuffer[nameLength]='\0';
     path=fopenBuffer;
   }
   char const* openMode="r+b";

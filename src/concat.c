@@ -360,6 +360,8 @@ bool typeEquals(TypeId a,TypeId b){
    return a.dataAs.id==b.dataAs.id;
 }
 
+const TypeId TYPE_TYPE;
+int32_t autoTypeId(TypeId);
 typedef struct{
   LabelId label;
   union{
@@ -367,8 +369,12 @@ typedef struct{
     int64_t genericId;
   }as;
   TypeId type;
-  int32_t index;
 }StaticArgument;
+int32_t staticArgIndex(StaticArgument const* arg){
+  if(typeEquals(arg->type,TYPE_TYPE))
+    return autoTypeId(arg->as.type);
+  return arg->as.genericId;
+}
 
 typedef struct{
   TypeId target;
@@ -988,10 +994,10 @@ typedef struct{
     bool    boolean;
   }as;
   TypeId valueType;
-  ConstantType type;
+  ConstantType constType;
 }ConstantValue;
 void printConstValue(ConstantValue constant,FILE* file){
-  switch(constant.type){
+  switch(constant.constType){
     case CONSTANT_NONE:
       return;
     case CONSTANT_BOOL:
@@ -1023,8 +1029,8 @@ void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantV
   expect=unwrapNamedType(expect);
   if(expect.class==TYPECLASS_GENERIC_TYPE){
     for(int32_t i=0;i<count;i++){
-      if(values[i].type==CONSTANT_NONE&&typeEquals(args[i].type,TYPE_TYPE)&&typeEquals(args[i].as.type,expect)){
-        values[i]=(ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=src};
+      if(values[i].constType==CONSTANT_NONE&&typeEquals(args[i].type,TYPE_TYPE)&&typeEquals(args[i].as.type,expect)){
+        values[i]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=src};
         break;
       }
     }
@@ -1057,12 +1063,13 @@ void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantV
       resolveTypeGenerics(getBaseType(src),getBaseType(expect),args,values,count);
       if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize&&arrayTypeData(src)->dims==arrayTypeData(expect)->dims){//XXX support different numbers of dimensions
         for(int32_t d=0;d<arrayTypeData(src)->dims;d++){
-          if(!arrayTypeData(src)->sizes[d].isInt)
-            continue;
           if(!arrayTypeData(expect)->sizes[d].isInt){
             for(int32_t i=0;i<count;i++){
-              if(values[i].type==CONSTANT_NONE&&isIntType(args[i].type)&&args[i].as.genericId==arrayTypeData(expect)->sizes[d].value){
-                values[i]=(ConstantValue){.type=CONSTANT_INT,.valueType=primitiveType(PRIMITIVE_I64),.as.i64=arrayTypeData(src)->sizes[d].value};
+              if(values[i].constType==CONSTANT_NONE&&isIntType(args[i].type)&&args[i].as.genericId==arrayTypeData(expect)->sizes[d].value){
+                if(arrayTypeData(src)->sizes[d].isInt)
+                  values[i]=(ConstantValue){.constType=CONSTANT_INT,.valueType=primitiveType(PRIMITIVE_I64),.as.i64=arrayTypeData(src)->sizes[d].value};
+                else
+                  values[i]=(ConstantValue){.constType=GENERIC_INT,.valueType=primitiveType(PRIMITIVE_I64),.as.i64=arrayTypeData(src)->sizes[d].value};
                 break;
               }
             }
@@ -2023,7 +2030,7 @@ void printIdentiferMatch(ScopeNode* asIdentifier,FilePosition pos){
     fputs("mutable ",stdout);
   printf("%s: ",idNames[asIdentifier->idType]);
   printTypeName(asIdentifier->type,stdout);
-  if(asIdentifier->constValue.type!=CONSTANT_NONE){
+  if(asIdentifier->constValue.constType!=CONSTANT_NONE){
     fputs(" ",stdout);
     printConstValue(asIdentifier->constValue,stdout);
   }
@@ -2164,7 +2171,7 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
     (*node)->constValue=*constValue;
     (*node)->constValue.valueType=type;
   }else{
-    (*node)->constValue=(ConstantValue){.type=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
+    (*node)->constValue=(ConstantValue){.constType=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
   }
   (*node)->next=NULL;
   return *node;
@@ -2173,7 +2180,7 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
 bool includeIfGlobal(ScopeNode* aNode,bool onlyConst,Scope* globalScope,FilePosition pos){
   Label const* mLabel=label(aNode->labelId,pos);
   ScopeNode** mNode;
-  if(onlyConst&&aNode->constValue.type==CONSTANT_NONE)
+  if(onlyConst&&aNode->constValue.constType==CONSTANT_NONE)
     return false;
   if(!isPublicLabel(mLabel)&&!isExternLabel(mLabel))
       return false;
@@ -3420,6 +3427,10 @@ Operation opSetTmpVar(TypeId type,int32_t tmpId,FilePosition pos){
   return (Operation){.opType=OP_SET,.dataType=type,.filePos=pos,
     .dataAs={.idInfo={.type=ID_TMP_VAR,.id=tmpId,.labelId=LABEL_ID_UNKNOWN,.isMutable=true}}};
 }
+Operation opGetArgument(TypeId type,int32_t argId,LabelId labelId,FilePosition pos){
+  return (Operation){.opType=OP_GET,.dataType=type,.filePos=pos,
+    .dataAs={.idInfo={.type=ID_ARGUMENT,.id=argId,.labelId=labelId,.isMutable=false}}};
+}
 
 Operation opBinaryOperator(BinaryOperator binOpType,FilePosition pos){
   return (Operation){.opType=OP_BINARY_OPERATOR,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={.binOp=binOpType}};
@@ -3747,27 +3758,27 @@ void pushConstant(ConstantValue constValue,FilePosition pos,bool hasId,Identifie
 }
 void pushIntConstant(ConstantType constType,int64_t constId,FilePosition pos){
   TypeId type=(constType==CONSTANT_CHAR)?TYPE_CHAR:primitiveType(((constId<=INT32_MAX&&constId>=INT32_MIN)?PRIMITIVE_I32:PRIMITIVE_I64));
-  pushConstant((ConstantValue){.type=constType,.valueType=type,.as.i64=constId},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.constType=constType,.valueType=type,.as.i64=constId},pos,false,(IdentifierInfo){0});
 }
 void pushBoolConstant(bool value,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_BOOL,.valueType=TYPE_BOOL,.as.boolean=value},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.constType=CONSTANT_BOOL,.valueType=TYPE_BOOL,.as.boolean=value},pos,false,(IdentifierInfo){0});
 }
 void pushStringConstant(String value,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_STRING,.valueType=arrayType(true,TYPE_CHAR,1,(ArraySize[]){{.value=value.length,.isInt=true}},false),.as.string=value}
+  pushConstant((ConstantValue){.constType=CONSTANT_STRING,.valueType=arrayType(true,TYPE_CHAR,1,(ArraySize[]){{.value=value.length,.isInt=true}},false),.as.string=value}
     ,pos,false,(IdentifierInfo){0});
 }
 void pushTypeConstant(TypeId type,FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type},pos,false,(IdentifierInfo){0});
 }
 void pushWildcardConstant(FilePosition pos){
-  pushConstant((ConstantValue){.type=CONSTANT_WILDCARD,.valueType=TYPE_UNDEFINED,.as.i64=-1},pos,false,(IdentifierInfo){0});
+  pushConstant((ConstantValue){.constType=CONSTANT_WILDCARD,.valueType=TYPE_UNDEFINED,.as.i64=-1},pos,false,(IdentifierInfo){0});
 }
 void addStaticArgument(int32_t index,LabelId label,TypeId type,FilePosition pos){
   StaticArgument arg;
   if(typeEquals(type,TYPE_TYPE)){
-    arg=(StaticArgument){.index=index,.label=label,.type=type,.as.type=newGenericType(staticArgsCount)};
+    arg=(StaticArgument){.label=label,.type=type,.as.type=newGenericType(index)};
   }else if(isIntType(type)){
-    arg=(StaticArgument){.index=index,.label=label,.type=type,.as.genericId=staticArgsCount};
+    arg=(StaticArgument){.label=label,.type=type,.as.genericId=index};
   }else{
     handleError("static arguments have to be types",ERROR_SYNTAX,pos);
   }
@@ -3793,8 +3804,8 @@ TypeId popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid)
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   bufferedConstants--;
-  if(constBuffer[bufferedConstants].value.type!=CONSTANT_TYPE){
-    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].value.type));
+  if(constBuffer[bufferedConstants].value.constType!=CONSTANT_TYPE){
+    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].value.constType));
     fputs(" declared at ",stderr);
     printFilePosition(constBuffer[bufferedConstants].pos,stderr);
     fputs("\n",stderr);
@@ -3811,8 +3822,8 @@ TypeId peekTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid
     fprintf(stderr,"missing %s\n",argumentName);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
-  if(constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
-    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants-1].value.type));
+  if(constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
+    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants-1].value.constType));
     fputs(" declared at ",stderr);
     printFilePosition(constBuffer[bufferedConstants-1].pos,stderr);
     fputs("\n",stderr);
@@ -3827,22 +3838,22 @@ TypeId peekTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid
 ArraySize* popArraySize(FilePosition pos){
   arrayDimsCount=0;
   arrayWildcardDimsCount=0;
-  while(bufferedConstants>1&&constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
+  while(bufferedConstants>1&&constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
     bufferedConstants--;
     arrayDimsCount++;
   }
   for(int64_t i=0;i<arrayDimsCount;i++){
-    if(constBuffer[bufferedConstants+i].value.type==CONSTANT_WILDCARD){
+    if(constBuffer[bufferedConstants+i].value.constType==CONSTANT_WILDCARD){
       arrayWildcardDimsCount++;
       arrayDimsBuffer[i]=(ArraySize){.value=-1,.isInt=false};
       continue;
     }
-    if(constBuffer[bufferedConstants+i].value.type==GENERIC_INT){
+    if(constBuffer[bufferedConstants+i].value.constType==GENERIC_INT){
       arrayDimsBuffer[i]=(ArraySize){.value=constBuffer[bufferedConstants+i].value.as.i64,.isInt=false};
       continue;
     }
-    if(constBuffer[bufferedConstants+i].value.type!=CONSTANT_INT){
-      fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].value.type));
+    if(constBuffer[bufferedConstants+i].value.constType!=CONSTANT_INT){
+      fprintf(stderr,"unexpected constant for array size expected int got %s\n",constTypeName(constBuffer[bufferedConstants+i].value.constType));
       handleError(NULL,ERROR_SYNTAX,pos);
     }
     if(constBuffer[bufferedConstants+i].value.as.i64<=0){
@@ -3928,7 +3939,7 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     handleError("error while reading identifier",r,codeFile->wordStart);
     return false;
   }
-  if(r>0||asIdentifier->constValue.type==CONSTANT_NONE)//identifier does not exist
+  if(r>0||asIdentifier->constValue.constType==CONSTANT_NONE)//identifier does not exist
     return readType(word,codeFile,state);
   pushConstant(asIdentifier->constValue,codeFile->wordStart,true,(IdentifierInfo){.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
     .isMutable=isMutableLabelId(asIdentifier->labelId)});
@@ -4225,7 +4236,7 @@ void storeConstants(ParserState* state,FilePosition pos){
   size_t constCount=bufferedConstants;
   bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
   for(size_t i=0;i<constCount;i++){
-    switch(constBuffer[i].value.type){
+    switch(constBuffer[i].value.constType){
       case CONSTANT_STRING:
         intVal=addProgString(constBuffer[i].value.as.string,constBuffer[i].pos);
         pushOperation(state,opConstant(constBuffer[i].value.valueType,intVal,constBuffer[i].pos));
@@ -4247,7 +4258,7 @@ void storeConstants(ParserState* state,FilePosition pos){
         break;
       case CONSTANT_WILDCARD:
       case GENERIC_INT:
-        fprintf(stderr,"cannot store constants of type %s\n",constTypeName(constBuffer[i].value.type));
+        fprintf(stderr,"cannot store constants of type %s\n",constTypeName(constBuffer[i].value.constType));
         handleError(NULL,ERROR_SYNTAX,pos);
         break;
     }
@@ -4313,9 +4324,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError("directly pre-declaration is only supporte for extern procedures",ERROR_SYNTAX,wordPos);
       idType=ID_PROCEDURE;
     }
-    ConstantValue val=(ConstantValue){.type=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
+    ConstantValue val=(ConstantValue){.constType=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
     if(typeEquals(type,TYPE_TYPE)){
-      val.type=CONSTANT_TYPE;
+      val.constType=CONSTANT_TYPE;
       val.as.type=newNamedType(labelId,TYPE_UNDEFINED);
       idType=ID_TYPE;
     }
@@ -4336,7 +4347,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       idType=ID_TYPE;
       TypeId constType=popTypeConstant(wordPos,"type constant",false);
       type=newNamedType(labelId,constType);
-      ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
+      ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
       declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&constValue);
       return;
     }else if(isProcedureType(type)){
@@ -4388,7 +4399,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
   }else if(word.length>1&&charAt(word,0)=='.'){
     word=sliceStart(word,1);//remove first character
-    if(bufferedConstants==0||constBuffer[bufferedConstants-1].value.type!=CONSTANT_TYPE){
+    if(bufferedConstants==0||constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
       IntOrErrorCode index=parseInt(word,10);
       if(!index.isError){
         pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
@@ -4656,7 +4667,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(typeEquals(mType,TYPE_TYPE)){
         constType=popTypeConstant(wordPos,"type constant",false);
         type=newNamedType(labelId,constType);
-        ConstantValue constValue=(ConstantValue){.type=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
+        ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
         declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
         return;
       }
@@ -4667,7 +4678,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"=")){
     if(bufferedConstants>0){
-      if(!peekConstant()->hasId||peekConstValue()->type!=CONSTANT_TYPE)
+      if(!peekConstant()->hasId||peekConstValue()->constType!=CONSTANT_TYPE)
         handleError("cannot assign values to constant",ERROR_SYNTAX,wordPos);
       Label const* mLabel=label(peekConstant()->idInfo.labelId,wordPos);
       if(isExternLabel(mLabel))
@@ -4682,7 +4693,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         handleError("can only replace opaque named types",ERROR_SYNTAX,wordPos);
       //get new value of constant
       TypeId constType=popTypeConstant(wordPos,"type constant",false);
-      if(prevId->idType!=ID_TYPE||prevId->constValue.type!=CONSTANT_TYPE||!setNamedType(prevId->constValue.as.type,constType)){//can only override named types
+      if(prevId->idType!=ID_TYPE||prevId->constValue.constType!=CONSTANT_TYPE||!setNamedType(prevId->constValue.as.type,constType)){//can only override named types
         handleError("error while changing Type information",ERROR_MEMORY,wordPos);
       }
       return;
@@ -5558,19 +5569,27 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     if(ensureTypeStackCap(state,state->typeCount+procType->staticArgsCount)||ensureOpStackCap(state,state->opStackCount+procType->staticArgsCount))
       handleError("allocating memory for static arguments failed",ERROR_MEMORY,op->filePos);
     for(int32_t i=getTypeElementCount(procType->inType)-1;i>=0;i--){
-      if(argId>=0&&i==procType->staticArgs[argId].index&&argValues[argId].type!=CONSTANT_NONE){//insert constant value
+      if(argId<0)
+        break;//resolved all arguments
+      if(argId>=0&&i==staticArgIndex(&procType->staticArgs[argId])&&argValues[argId].constType!=CONSTANT_NONE){//insert constant value
         memmove(state->typeStack+typeOffset+1,state->typeStack+typeOffset,(state->typeCount-typeOffset)*sizeof(TypeInfo));
         state->typeStack[typeOffset]=(TypeInfo){.type=argValues[argId].valueType,.opCount=1,.isWritable=false};
         typeOffset--;
         state->typeCount++;
         memmove(state->opStack+opOffset+1,state->opStack+opOffset,(state->opStackCount-opOffset)*sizeof(Operation));
         if(typeEquals(argValues[argId].valueType,TYPE_TYPE)){
-          state->opStack[opOffset]=opTypeConstant(argValues[argId].valueType,argValues[argId].as.type,op->filePos);
+          if(argValues[argId].as.type.class==TYPECLASS_GENERIC_TYPE)
+            state->opStack[opOffset]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[argId].as.type),LABEL_ID_UNKNOWN,op->filePos);
+          else
+            state->opStack[opOffset]=opTypeConstant(argValues[argId].valueType,argValues[argId].as.type,op->filePos);
           state->opStackCount++;
           argId--;
           continue;
         }else if(isIntType(argValues[argId].valueType)){
-          state->opStack[opOffset]=opConstant(argValues[argId].valueType,argValues[argId].as.i64,op->filePos);
+          if(argValues[argId].constType==GENERIC_INT)
+            state->opStack[opOffset]=opGetArgument(argValues[argId].valueType,argValues[argId].as.i64,LABEL_ID_UNKNOWN,op->filePos);
+          else
+            state->opStack[opOffset]=opConstant(argValues[argId].valueType,argValues[argId].as.i64,op->filePos);
           state->opStackCount++;
           argId--;
           continue;
@@ -5583,20 +5602,20 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
       opOffset-=state->typeStack[typeOffset].opCount;
       if(opOffset<0)
         handleError("types and operations out of sync",ERROR_MEMORY,op->filePos);
-      if(argId>=0&&i==procType->staticArgs[argId].index){//get constant value
-        if(state->opStack[opOffset].opType!=OP_CONSTANT)
+      if(argId>=0&&i==staticArgIndex(&procType->staticArgs[argId])){//get constant value
+        if(state->opStack[opOffset].opType!=OP_CONSTANT)//XXX allow static procedure arguments
           handleError("static arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
         if(!canAutoCast(state->opStack[opOffset].dataType,procType->staticArgs[argId].type)){
           typeErrorMessage("static procedure argument",procType->staticArgs[argId].type,state->opStack[opOffset].dataType);
           handleError(NULL,ERROR_TYPE,state->opStack[opOffset].filePos);
         }
         if(typeEquals(procType->staticArgs[argId].type,TYPE_TYPE)){
-          argValues[argId]=(ConstantValue){.type=CONSTANT_TYPE,.valueType=procType->staticArgs[argId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
+          argValues[argId]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=procType->staticArgs[argId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
           argId--;
           continue;
         }
         if(isIntType(procType->staticArgs[argId].type)){
-          argValues[argId]=(ConstantValue){.type=CONSTANT_INT,.valueType=procType->staticArgs[argId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
+          argValues[argId]=(ConstantValue){.constType=CONSTANT_INT,.valueType=procType->staticArgs[argId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
           argId--;
           continue;
         }
@@ -5657,14 +5676,12 @@ void pushProcArgs(TypeCheckState* state,TypeId procType,FilePosition pos){
   if(inTypes->typeCount==0)
     return;//no input arguments
   if(inTypes->typeCount==1){
-    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[0],.filePos=pos,
-      .dataAs={.idInfo={.type=ID_ARGUMENT,.id=0,.labelId=inTypes->labelOffset,.isMutable=false}}});
+    pushValue(state,opGetArgument(inTypes->types[0],0,inTypes->labelOffset,pos));
     return;
   }
   for(int32_t i=0;i<inTypes->typeCount;i++){
     LabelId labelId=inTypes->labelOffset==LABEL_ID_UNKNOWN?LABEL_ID_UNKNOWN:inTypes->labelOffset+i;
-    pushValue(state,(Operation){.opType=OP_GET,.dataType=inTypes->types[i],.filePos=pos,
-      .dataAs={.idInfo={.type=ID_ARGUMENT,.id=i,.labelId=labelId,.isMutable=false}}});
+    pushValue(state,opGetArgument(inTypes->types[i],i,labelId,pos));
   }
 }
 

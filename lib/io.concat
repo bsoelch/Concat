@@ -25,7 +25,7 @@
   proc( => FILE ) : extern public stdOut
   proc( => FILE ) : extern public stdErr
   
-  proc( string : fileName OpenMode : mode => FILE IOError ) : extern public fopen
+  proc( i64 : static k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) : extern public fopen
   ## file buffer off count -> nRead errCode
   proc( FILE : file i8 rawptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread
   ## file buffer off count -> nWritten errCode
@@ -37,9 +37,9 @@
   proc( FILE : file char : chr => IOError ) =: public fputc
     file chr addrOf 0 1 fwrite #swap #drop return
   end
-  proc( FILE : file string : str => IOError ) =: public fputs
+  proc( FILE : file  i64 : static k  i8 k ptr : str => IOError ) =: public fputs
     0 i64 =: mut off
-    str .length i64 =: mut count
+    k =:: mut count
     str i8 rawptr cast =:: data
     while count 0 > do
       file data off count fwrite 
@@ -55,7 +55,7 @@
   proc( FILE : file => FILE IOError ) =: public fstart
     file FILE_ERROR_NONE return
   end
-  proc( FILE : file IOError : err string : str => FILE  IOError ) =: public fappendStr
+  proc( FILE : file IOError : err  i64 : static k  i8 k ptr : str => FILE  IOError ) =: public fappendStr
     err FILE_ERROR_NONE != if
       file err return
     end
@@ -68,7 +68,7 @@
     file #dup c fputc return
   end
   
-  proc( string : str => IOError ) =: public puts
+  proc( i64 : static k  i8 k ptr : str => IOError ) =: public puts
     stdOut fstart 
       str  fappendStr 
       "\n" fappendStr
