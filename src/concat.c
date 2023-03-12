@@ -180,6 +180,7 @@ typedef enum{
   OP_CALL,         // procType procId
   OP_CALL_PTR,
   ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END
+  OP_UNREACHABLE,
 
   //compile-time operations
   OP_MODIFY_STACK,
@@ -213,6 +214,7 @@ char const* opName(OpType type){
     case OP_ADDR_OF_ARRAY:return "OP_ADDR_OF_ARRAY";
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
     case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
+    case OP_UNREACHABLE:return "OP_UNREACHABLE";
     case OP_MODIFY_STACK:return "OP_MODIFY_STACK";
     case OP_COMPILER_INFO:return "OP_COMPILER_INFO";
   }
@@ -2563,6 +2565,9 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       COMPILE_OP_RETURN_ERROR(target,op,opSize);//index
       fprintf(target,".label,%"PRIi64");\n",op->dataAs.i64);
       return size;
+    case OP_UNREACHABLE:
+      fputs("exit(EXIT_FAILURE);//unreachable\n",target);
+      return size;
     case OP_GET:
       return compileGetValue(target,compiledOps,op,size,opSize,isGlobal);
     case OP_ADDR_OF:
@@ -2708,7 +2713,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         }
         fprintf(target,"{.label=%"PRIi64,op->dataAs.i64);
         if(typeEquals(getTypeElements(op->dataType)[op->dataAs.i64],TYPE_UNDEFINED)){
-          fputs(",.data={0}}",target);
+          fputs(",}",target);
           return size;
         }
         fprintf(target,",.data={.e%"PRIi64"=",op->dataAs.i64);
@@ -3322,6 +3327,9 @@ Operation opConstant(TypeId type,int64_t constData,FilePosition pos){
 }
 Operation opTypeConstant(TypeId type,TypeId constData,FilePosition pos){
   return (Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=pos,.dataAs={.sourceType=constData}};
+}
+Operation opUnreachable(FilePosition pos){
+  return (Operation){.opType=OP_UNREACHABLE,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={0}};
 }
 
 //XXX more operation generator functions
@@ -6125,6 +6133,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       break;
     case OP_CHECK_ARRAY_BOUNDS:
     case OP_CHECK_ENUM_INDEX:
+    case OP_UNREACHABLE:
       break;
     case OP_GET:
     case OP_SET:
@@ -6843,7 +6852,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           }
           state->reachable=true;
           break;
-        case BLOCK_CASE://TODO check if all enum labels of are covered
+        case BLOCK_CASE:
           if(op.dataAs.block.type!=BLOCK_CASE&&op.dataAs.block.type!=BLOCK_UNKNOWN){
             fprintf(stderr,"unexpected end for %s-block expected end-case\n",blockNames[op.dataAs.block.type]);
             handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
@@ -6852,10 +6861,23 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             handleError("missing break statement at end of case",ERROR_SYNTAX,op.filePos);
           switchBlock=&(blockInfoPtr->blockDataAs.switchBlock);
           switchBlock->switchData->caseCount++;//close last case
-          declareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack),&(switchBlock->inStack),"switch",op.filePos);
-          if(resetStack(state,&(switchBlock->outStack)))
-            handleError(NULL,ERROR_TYPE,op.filePos);
-          state->reachable=true;
+          if(isEnumLabelType(switchBlock->switchType)){
+            if(switchBlock->switchData->caseCount<(size_t)getTypeElementCount(switchBlock->switchType)){
+              handleError("switch statement does not cover all labels in enum",ERROR_SYNTAX,op.filePos);//TODO print uncovered labels
+            }
+            if(switchBlock->endReachable){
+              if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack)))
+                 handleError(NULL,ERROR_TYPE,op.filePos);
+              if(resetStack(state,&(switchBlock->outStack)))
+                handleError(NULL,ERROR_TYPE,op.filePos);
+            }
+            state->reachable=switchBlock->endReachable;
+          }else{
+            declareBlockVariables(state,blockInfoPtr->blockStart,&(switchBlock->outStack),&(switchBlock->inStack),"switch",op.filePos);
+            if(resetStack(state,&(switchBlock->outStack)))
+              handleError(NULL,ERROR_TYPE,op.filePos);
+            state->reachable=true;
+          }
           free(switchBlock->inStack.types);
           free(switchBlock->inStack.ops);
           free(switchBlock->outStack.types);
@@ -6894,6 +6916,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       while(endCount-->0){
         pushCompiledOperation(state,op);
+      }
+      if(!state->reachable){
+        pushCompiledOperation(state,opUnreachable(op.filePos));
       }
       popBlock(state);//pop block after writing operations
       return;

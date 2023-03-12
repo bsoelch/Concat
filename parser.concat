@@ -12,16 +12,98 @@ entryPoint:
   sb.toStr printTokens
 end
 
+proc( i8 : chr => i32 ) =: parseDigit
+  chr '0' >= chr '9' <= & if
+    chr '0' - return
+  else chr 'A' >= chr 'Z' <= & _if
+    chr 'A' - 10 + return
+  else chr 'a' >= chr 'z' <= & _if
+    chr 'a' - 10 + return
+  end
+  -1 return
+end
+proc( string : str  i32 : base => i64 bool ) =: tryParseInt
+  false =:: mut sign
+  base 2 < base 36 > | if ## XXX auto detect base from prefix if base is zero
+    0 false return ## ERR_INVALID_BASE XXX? return type of error
+  end
+  0 =:: mut res
+  false =:: mut overflow
+  sign if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end base /u =:: maxSafe
+  str
+    #dup 0 string.charAt '-' == if
+      true sign =
+      1 string.tail
+    else #dup 0 string.charAt '+' == _if
+      1 string.tail
+    end
+    #dup .length 0 == if
+      #drop 0 false return
+    end
+    0 while #dup #over:2 .length < do
+      #over #over string.charAt
+        #dup '_' == #over '\'' == | if
+          #drop ## ignore _ and ' in numbers
+          1 + continue
+        end
+      parseDigit
+        #dup 0 < #over base > | if
+          #drop:3 0 false return ## ERR_INVALID_CHAR
+        end
+      res
+        #dup maxSafe > if
+          true overflow =
+        end
+        base * +
+      res = ## add digit to number
+      1 +
+    end #drop
+  #drop
+  res
+    sign if neg end
+  overflow ! return
+end
+
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: FilePosition
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: FileState
+
+enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER ) =:: Token
+
+proc( sb.stringBuilder : sb Token : token => sb.stringBuilder ) =: appendToken
+  token switch
+    EMPTY case
+      sb "empty" sb.appendS return
+    IDENTIFER case
+      sb
+        "identifer \"" sb.appendS
+        token .IDENTIFER sb.appendStr
+        '\"' sb.appendC
+      return
+    STRING case
+      sb
+        "string \"" sb.appendS
+        token .STRING sb.appendStr
+        '\"' sb.appendC
+      return
+    CHAR case
+      sb "char \"" sb.appendS
+        token .CHAR sb.appendStr
+        '\"' sb.appendC
+      return
+    INTEGER case
+      sb "integer " sb.appendS
+        token .INTEGER sb.appendI
+      return
+  end
+end
 
 proc( string => ) =: printTokens
   "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
-    io.stdOut '\"' io.fputc #drop
-    state addrOf nextToken io.stdOut #swap io.fputs2 #drop #dup .length 0 >
-    io.stdOut '\"' io.fputc #drop
-    32 sb.create
+    state addrOf nextToken
+    ## text sb
+    128 sb.create
+      #swap appendToken
       " at " sb.appendS
       state .wordStart .fileName sb.appendStr
       ':' sb.appendC
@@ -30,6 +112,7 @@ proc( string => ) =: printTokens
       state .wordStart .posInLine sb.appendI
       '\n' sb.appendC
     io.stdOut #swap io.fputSb #drop
+    #dup .length 0 >
   do end #drop
 end
 proc( char => bool ) =: isWhitespace
@@ -55,9 +138,9 @@ proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
   end
   code #swap string.tail return
 end
-proc( string : code FileState ptr mut : fileState => string string ) =: nextToken
+proc( string : code FileState ptr mut : fileState => string Token ) =: nextToken
   code .length 0 <= if
-    "" 0 string.create code return
+    "" string.wrap Token .EMPTY return
   end
   code fileState skipSpaces ## cut of leading white-spaces
     #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
@@ -91,7 +174,7 @@ proc( string : code FileState ptr mut : fileState => string string ) =: nextToke
         1 +
       end
       #over #over string.charAt fileState updateState
-      string.splitIndex return
+      string.splitIndex Token .STRING new return
     end
     #dup 0 string.charAt '\'' == if ## char
       1 string.tail
@@ -104,11 +187,18 @@ proc( string : code FileState ptr mut : fileState => string string ) =: nextToke
         1 +
       end
       #over #over string.charAt fileState updateState
-      string.splitIndex return
+      string.splitIndex Token .CHAR new return
     end
     1 while #dup #over:2 .length < #over:2 #over:2 string.charAt isWhitespace ! & do
       #over #over string.charAt fileState updateState
       1 +
     end
-  string.cutIndex return
+  string.cutIndex
+    #dup 10 tryParseInt if ## XXX auto-detect base using prefix
+      #swap #drop Token .INTEGER new return
+    end #drop
+    #dup .length 0 == if
+      #drop Token .EMPTY return
+    end
+  Token .IDENTIFER new return
 end

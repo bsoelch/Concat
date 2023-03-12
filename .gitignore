@@ -10,5 +10,6 @@ concat
 code
 code.c
 parser.c
+parser
 featureMap.concat
 !tests/*/*.out
