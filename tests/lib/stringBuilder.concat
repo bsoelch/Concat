@@ -3,14 +3,14 @@
 
 entryPoint: 
   16 sb.create
-    "Hello" sb.appendStr
+    "Hello" sb.appendS
     ' '     sb.appendC
-    "World" sb.appendStr
+    "World" sb.appendS
     '\n'    sb.appendC
     -12345678             sb.appendI    '\n' sb.appendC
-    "0x"                  sb.appendStr
+    "0x"                  sb.appendS
     0x1234567             sb.appendHex  '\n' sb.appendC
-    "0b"                  sb.appendStr 
+    "0b"                  sb.appendS 
     0b11001001            sb.appendBin  '\n' sb.appendC
     0x7fff_ffff_ffff_ffff sb.appendHex  '\n' sb.appendC
    -0x8000_0000_0000_0000 sb.appendI    '\n' sb.appendC

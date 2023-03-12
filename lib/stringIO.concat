@@ -2,7 +2,7 @@
 #include io
 
 #namespace io
-  proc( FILE : file string2 : str => IOError ) =: public fputs2
+  proc( FILE : file string : str => IOError ) =: public fputs2
     0 i64 =: mut off
     str .length i64 =: mut count
     str .data =:: data
@@ -20,7 +20,7 @@
   proc( FILE : file sb.stringBuilder : str => IOError ) =: public fputSb
     file  str sb.toStr fputs2 return
   end
-  proc( FILE : file IOError : err string2 : str => FILE  IOError ) =: public fappendStr2
+  proc( FILE : file IOError : err string : str => FILE  IOError ) =: public fappendStr
     err FILE_ERROR_NONE != if
       file err return
     end

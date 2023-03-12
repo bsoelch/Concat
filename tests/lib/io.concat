@@ -18,8 +18,8 @@ entryPoint:
   file fflush print
   file fclose print
   stdErr fstart
-    "printing to stderr" fappendStr
+    "printing to stderr" fappendS
     '\n' fappendC
-    "non ASCII string: ä×√φ\U0001F4BB□\n" fappendStr
+    "non ASCII string: ä×√φ\U0001F4BB□\n" fappendS
   print #drop
 end

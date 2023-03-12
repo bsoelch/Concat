@@ -1,13 +1,17 @@
 #include mem
-struct( i8 _ ptr : data i64 : length ) =:: public string2
+struct( i8 _ ptr : data i64 : length ) =:: public string
 
 #namespace string
-  "" 0 string2 new =:: EMPTY
+  "" 0 string new =:: EMPTY
 
-  proc( i8 _ ptr  i64 => string2 ) =: public create
-    string2 new return
+  proc( i8 _ ptr  i64 => string ) =: public create
+    string new return
   end
-  proc( string2 : s1 string2 : s2 => i32 ) =: public compare
+  proc( i64 : static k  i8 k ptr : str => string ) =: public wrap
+    str k create return
+  end
+  
+  proc( string : s1 string : s2 => i32 ) =: public compare
     s1 .length s2 .length < if s1 .length else s2 .length end =:: l
     s1 .data s2 .data l mem.compare
     #dup 0 != if
@@ -22,10 +26,10 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
        0 return
     end
   end
-  proc( string2 string2 => bool ) =: public eq
+  proc( string string => bool ) =: public eq
     compare 0 == return
   end
-  proc( string2 : str => i32 ) =: hash
+  proc( string : str => i32 ) =: hash
     0 ## hash
       0 ## index
       while #dup str .length < do
@@ -39,13 +43,13 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     return
   end
 
-  proc( string2 : str i64 : index => i8 ) =: public charAt
+  proc( string : str i64 : index => i8 ) =: public charAt
     index 0 < index str .length >= | if
       '\x00' return ## TODO error handling
     end
     str .data index [] return
   end
-  proc( string2 : str i8 : chr => i64 ) =: public indexOf
+  proc( string : str i8 : chr => i64 ) =: public indexOf
     0 ## index
     while #dup str .length < do
       str .data #over [] chr == if
@@ -56,7 +60,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     #drop
     -1 return
   end
-  proc( string2 : str i8 : chr => i64 ) =: public lastIndexOf
+  proc( string : str i8 : chr => i64 ) =: public lastIndexOf
     str .length 1 - ## index
     while #dup 0 >= do
       str .data #over [] chr == if
@@ -66,7 +70,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     end
     return
   end
-  proc( string2 : base string2 : subStr => i64 ) =: public indexOfStr
+  proc( string : base string : subStr => i64 ) =: public indexOfStr
     subStr .length base .length > if
       -1 return
     end
@@ -81,7 +85,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     #drop
     -1 return
   end
-  proc( string2 : base string2 : subStr => i64 ) =: public lastIndexOfStr
+  proc( string : base string : subStr => i64 ) =: public lastIndexOfStr
     subStr .length base .length > if
       -1 return
     end
@@ -94,15 +98,15 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
       end
     return
   end
-  proc( string2 : str i8 : chr => bool ) =: public contains
+  proc( string : str i8 : chr => bool ) =: public contains
     str chr indexOf -1 != return
   end
-  proc( string2 : base string2 : subStr => bool ) =: public isSubstring
+  proc( string : base string : subStr => bool ) =: public isSubstring
     base subStr indexOfStr -1 != return
   end
 
   ## first n characters
-  proc( string2 : str i64 : n => string2 ) =: public head
+  proc( string : str i64 : n => string ) =: public head
     n 0 <= if
       EMPTY return
     end
@@ -112,7 +116,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     str .data  n create return
   end
   ## everything excluding the first n characters
-  proc( string2 : str i64 : n => string2 ) =: public tail
+  proc( string : str i64 : n => string ) =: public tail
     n 0 <= if
       str return
     end
@@ -122,7 +126,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     str .data n +  str .length n -  create return
   end
   ## equivalent to:  <from> tail <len> head
-  proc( string2 : str i64 : from i64 : len => string2 ) =: public slice
+  proc( string : str i64 : from i64 : len => string ) =: public slice
     len 0 <= if
       EMPTY return
     end
@@ -137,12 +141,12 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     end
     str .data from +  len  create return
   end
-  proc( string2 : str i64 : index => string2 string2 ) =: public cutIndex
+  proc( string : str i64 : index => string string ) =: public cutIndex
     str index tail
     str index head
     return
   end
-  proc( string2 : str i64 : index => string2 string2 ) =: public splitIndex
+  proc( string : str i64 : index => string string ) =: public splitIndex
     index 0 < if
       EMPTY str return
     end
@@ -150,7 +154,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string2
     str index head
     return
   end
-  proc( string2 : str i8 : chr => string2 string2 ) =: public split
+  proc( string : str i8 : chr => string string ) =: public split
     str
       str chr indexOf
     splitIndex return

@@ -5,13 +5,13 @@ entryPoint:
   "Hello World!" io.puts print
 
   
-  "Hello World!" #dup .length string.create "World" #dup .length string.create  string.indexOfStr print
-  "Hello World!" #dup .length string.create "substring" #dup .length string.create string.indexOfStr print
-  "Hello World!" #dup .length string.create 'o' string.contains print
-  "This sentence will be split into Worlds!" #dup .length string.create ' ' printSplit
+  "Hello World!" string.wrap "World" string.wrap  string.indexOfStr print
+  "Hello World!" string.wrap "substring" string.wrap string.indexOfStr print
+  "Hello World!" string.wrap 'o' string.contains print
+  "This sentence will be split into Worlds!" string.wrap ' ' printSplit
 end
 
-proc( string2 : str i8 : chr => ) =: printSplit
+proc( string : str i8 : chr => ) =: printSplit
   0 =:: mut i
   str 
   while
@@ -20,7 +20,7 @@ proc( string2 : str i8 : chr => ) =: printSplit
   do end #drop
 end
 
-proc( string2 : str => ) =: printStr
+proc( string : str => ) =: printStr
   io.stdOut str .data 0 str .length io.fwrite #drop:2
   io.stdOut  '\n' io.fputc #drop
 end

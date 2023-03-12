@@ -1,9 +1,9 @@
 #include string
 
-proc( i64 : static k i8 k ptr : str => string2 i64 ) =: startItr
-  str k string.create 0
+proc( i64 : static k i8 k ptr : str => string i64 ) =: startItr
+  str string.wrap 0
 end
-proc( string2 i64 => string2 i64 char bool ) =: nextChar
+proc( string i64 => string i64 char bool ) =: nextChar
   =:: i
   =:: s
   s
@@ -12,7 +12,7 @@ proc( string2 i64 => string2 i64 char bool ) =: nextChar
     end
     i 1 +  s i string.charAt true return
 end
-proc( string2 i64 i8 => ) =: endItr
+proc( string i64 i8 => ) =: endItr
   #drop #drop #drop
 end
 

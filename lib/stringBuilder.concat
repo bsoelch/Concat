@@ -23,14 +23,14 @@
       chr #over .data #over:2 .length ++ [] =
     return
   end
-  proc( stringBuilder : buffer i64 : static k i8 k ptr : str => stringBuilder ) =: public appendStr
+  proc( stringBuilder : buffer i64 : static k i8 k ptr : str => stringBuilder ) =: public appendS
     buffer
       #dup .length k + sb.ensureCap
       #dup .data #over .length + str i8 _ ptr cast k mem.copy #drop
       #dup .length k + #over .length =
     return
   end
-  proc( stringBuilder : buffer string2 : str => stringBuilder ) =: public appendStr2
+  proc( stringBuilder : buffer string : str => stringBuilder ) =: public appendStr
     buffer
       #dup .length str .length + sb.ensureCap
       #dup .data #over .length + str .data str .length mem.copy #drop
@@ -44,7 +44,7 @@
       #dup .length str .length + #over .length =
     return
   end
-  proc( stringBuilder => string2 ) =: public toStr
+  proc( stringBuilder => string ) =: public toStr
     #dup .data #swap .length string.create return
   end
   

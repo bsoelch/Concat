@@ -55,7 +55,7 @@
   proc( FILE : file => FILE IOError ) =: public fstart
     file FILE_ERROR_NONE return
   end
-  proc( FILE : file IOError : err  i64 : static k  i8 k ptr : str => FILE  IOError ) =: public fappendStr
+  proc( FILE : file IOError : err  i64 : static k  i8 k ptr : str => FILE  IOError ) =: public fappendS
     err FILE_ERROR_NONE != if
       file err return
     end
@@ -70,8 +70,8 @@
   
   proc( i64 : static k  i8 k ptr : str => IOError ) =: public puts
     stdOut fstart 
-      str  fappendStr 
-      "\n" fappendStr
+      str  fappendS 
+      "\n" fappendS
     #swap #drop return
   end
 #end
