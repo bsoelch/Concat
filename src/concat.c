@@ -5858,8 +5858,15 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
       genericTypes[i].argId=i;
       genericTypes[i].isTemplate=true;
     }
-    if(staticArgsOffset>0)//find out which template arguments can be resolved implicitly using the arguments
-      resolveTypeGenerics(procType->inType,procType->inType,genericTypes,argValues,staticArgsOffset);
+    for(int32_t i=0;i<procType->staticArgsCount;i++){
+      genericTypes[staticArgsOffset+i].type=procType->staticArgs[i].type;
+      if(typeEquals(procType->staticArgs[i].type,TYPE_TYPE))
+        genericTypes[staticArgsOffset+i].argId=autoTypeId(procType->staticArgs[i].as.type);
+      else
+        genericTypes[staticArgsOffset+i].argId=procType->staticArgs[i].as.genericId;
+      genericTypes[staticArgsOffset+i].isTemplate=false;
+    }
+    resolveTypeGenerics(procType->inType,procType->inType,genericTypes,argValues,staticArgsOffset+procType->staticArgsCount);
     for(int32_t i=0;i<staticArgsOffset;i++){//get values for explicit template arguments
       if(argValues[i].constType==CONSTANT_NONE){
         typeOffset--;
@@ -5888,73 +5895,75 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
       }
       argValues[i].constType=CONSTANT_NONE;
     }
+    int32_t resolvableStaticArgs=0;
+    int64_t* staticArgValueOffsets=malloc(procType->staticArgsCount*sizeof(int64_t));
     for(int32_t i=0;i<procType->staticArgsCount;i++){
-      genericTypes[staticArgsOffset+i].type=procType->staticArgs[i].type;
-      if(typeEquals(procType->staticArgs[i].type,TYPE_TYPE))
-        genericTypes[staticArgsOffset+i].argId=autoTypeId(procType->staticArgs[i].as.type);
-      else
-        genericTypes[staticArgsOffset+i].argId=procType->staticArgs[i].as.genericId;
-      genericTypes[staticArgsOffset+i].isTemplate=false;
+      if(argValues[staticArgsOffset+i].constType!=CONSTANT_NONE){
+        resolvableStaticArgs++;
+      }
+      staticArgValueOffsets[i]=-1;
     }
-    int32_t argId=procType->staticArgsCount-1;
-    if(ensureTypeStackCap(state,state->typeCount+procType->staticArgsCount)||ensureOpStackCap(state,state->opStackCount+procType->staticArgsCount))
+    if(staticArgValueOffsets==NULL||ensureTypeStackCap(state,state->typeCount+resolvableStaticArgs)||ensureOpStackCap(state,state->opStackCount+resolvableStaticArgs))
       handleError("allocating memory for static arguments failed",ERROR_MEMORY,op->filePos);
-    //TODO resolve template arguments the other way round
-    // 1. determine uncovered static/template arguments
-    // 2. parser parameters in declaration order, skipping all covered static arguments
-    for(int32_t i=getTypeElementCount(procType->inType)-1;i>=0;i--){//resolve remaining arguments
-      if(argId>=0&&i==staticArgIndex(&procType->staticArgs[argId])&&argValues[staticArgsOffset+argId].constType!=CONSTANT_NONE){//insert constant value
-        memmove(state->typeStack+typeOffset+1,state->typeStack+typeOffset,(state->typeCount-typeOffset)*sizeof(TypeInfo));
-        state->typeStack[typeOffset]=(TypeInfo){.type=argValues[staticArgsOffset+argId].valueType,.opCount=1,.isWritable=false};
-        state->typeCount++;
-        memmove(state->opStack+opOffset+1,state->opStack+opOffset,(state->opStackCount-opOffset)*sizeof(Operation));
-        if(typeEquals(argValues[staticArgsOffset+argId].valueType,TYPE_TYPE)){
-          if(argValues[staticArgsOffset+argId].as.type.class==TYPECLASS_GENERIC_TYPE)
-            state->opStack[opOffset]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[staticArgsOffset+argId].as.type),LABEL_ID_UNKNOWN,op->filePos);
-          else
-            state->opStack[opOffset]=opTypeConstant(argValues[staticArgsOffset+argId].valueType,argValues[staticArgsOffset+argId].as.type,op->filePos);
+    typeOffset=state->typeCount-(getTypeElementCount(procType->inType)-resolvableStaticArgs)-(isPtr?1:0);
+    opOffset=state->opStackCount;
+    for(size_t i=typeOffset;i<state->typeCount;i++){//compute operation offset
+      opOffset-=state->typeStack[i].opCount;
+    }
+    int32_t staticArgId=0,argIndex=0;
+    for(size_t i=typeOffset;i<state->typeCount-(isPtr?1:0);argIndex++,opOffset+=state->typeStack[i].opCount,i++){
+      if(staticArgId<procType->staticArgsCount&&argIndex==staticArgIndex(&procType->staticArgs[staticArgId])){//static argument
+        if(argValues[staticArgsOffset+staticArgId].constType!=CONSTANT_NONE){//argument with resolvable type
+          argValues[staticArgsOffset+staticArgId].constType=CONSTANT_NONE;
+          memmove(state->typeStack+i+1,state->typeStack+i,(state->typeCount-i)*sizeof(TypeInfo));
+          state->typeStack[i]=(TypeInfo){.type=argValues[staticArgsOffset+staticArgId].valueType,.opCount=1,.isWritable=false};
+          state->typeCount++;
+          memmove(state->opStack+opOffset+1,state->opStack+opOffset,(state->opStackCount-opOffset)*sizeof(Operation));
+          staticArgValueOffsets[staticArgId]=opOffset;
           state->opStackCount++;
-          argId--;
-          continue;
-        }else if(isIntType(argValues[staticArgsOffset+argId].valueType)){
-          if(argValues[staticArgsOffset+argId].constType==GENERIC_INT)
-            state->opStack[opOffset]=opGetArgument(argValues[staticArgsOffset+argId].valueType,argValues[staticArgsOffset+argId].as.i64,LABEL_ID_UNKNOWN,op->filePos);
-          else
-            state->opStack[opOffset]=opConstant(argValues[staticArgsOffset+argId].valueType,argValues[staticArgsOffset+argId].as.i64,op->filePos);
-          state->opStackCount++;
-          argId--;
+          staticArgId++;
           continue;
         }
-        handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,op->filePos);
-        continue;
-      }
-      typeOffset--;
-      if(typeOffset<0)//XXX better message
-        handleError("not enough arguments for procedure",ERROR_SYNTAX,op->filePos);
-      opOffset-=state->typeStack[typeOffset].opCount;
-      if(opOffset<0)
-        handleError("types and operations out of sync",ERROR_MEMORY,op->filePos);
-      if(argId>=0&&i==staticArgIndex(&procType->staticArgs[argId])){//get constant value
         if(state->opStack[opOffset].opType!=OP_CONSTANT)//XXX allow static procedure arguments as values
           handleError("static arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
-        if(!canAutoCast(state->opStack[opOffset].dataType,procType->staticArgs[argId].type)){
-          typeErrorMessage("static procedure argument",procType->staticArgs[argId].type,state->opStack[opOffset].dataType);
+        if(!canAutoCast(state->opStack[opOffset].dataType,procType->staticArgs[staticArgId].type)){
+          typeErrorMessage("static procedure argument",procType->staticArgs[staticArgId].type,state->opStack[opOffset].dataType);
           handleError(NULL,ERROR_TYPE,state->opStack[opOffset].filePos);
         }
-        if(typeEquals(procType->staticArgs[argId].type,TYPE_TYPE)){
-          argValues[staticArgsOffset+argId]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=procType->staticArgs[argId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
-          argId--;
+        if(typeEquals(procType->staticArgs[staticArgId].type,TYPE_TYPE)){
+          argValues[staticArgsOffset+staticArgId]=(ConstantValue){.constType=CONSTANT_TYPE,
+            .valueType=procType->staticArgs[staticArgId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
+          staticArgId++;
           continue;
         }
-        if(isIntType(procType->staticArgs[argId].type)){
-          argValues[staticArgsOffset+argId]=(ConstantValue){.constType=CONSTANT_INT,.valueType=procType->staticArgs[argId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
-          argId--;
+        if(isIntType(procType->staticArgs[staticArgId].type)){
+          argValues[staticArgsOffset+staticArgId]=(ConstantValue){.constType=CONSTANT_INT,
+            .valueType=procType->staticArgs[staticArgId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
+          staticArgId++;
           continue;
         }
         handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
         continue;
       }
-      resolveTypeGenerics(state->typeStack[typeOffset].type,compositeTypeData(procType->inType)->types[i],genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
+      resolveTypeGenerics(state->typeStack[i].type,compositeTypeData(procType->inType)->types[argIndex],genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
+    }
+    for(int32_t i=0;i<staticArgsOffset;i++){
+      if(argValues[i].constType==CONSTANT_NONE)
+        handleError("unresolved template argument",ERROR_MEMORY,op->filePos);
+    }
+    for(int32_t i=0;i<procType->staticArgsCount;i++){
+      if(argValues[staticArgsOffset+i].constType==CONSTANT_NONE)
+        handleError("unresolved static argument",ERROR_MEMORY,op->filePos);
+      if(staticArgValueOffsets[i]!=-1){
+        if(argValues[staticArgsOffset+i].as.type.class==TYPECLASS_GENERIC_TYPE&&typeEquals(argValues[staticArgsOffset+i].valueType,TYPE_TYPE)){
+          state->opStack[staticArgValueOffsets[i]]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[staticArgsOffset+i].as.type),LABEL_ID_UNKNOWN,op->filePos);
+          continue;
+        }else if(argValues[staticArgsOffset+i].constType==GENERIC_INT&&isIntType(argValues[staticArgsOffset+i].valueType)){
+          state->opStack[staticArgValueOffsets[i]]=opGetArgument(argValues[staticArgsOffset+i].valueType,argValues[staticArgsOffset+i].as.i64,LABEL_ID_UNKNOWN,op->filePos);
+          continue;
+        }
+        state->opStack[staticArgValueOffsets[i]]=opFromConstant(argValues[staticArgsOffset+i],op->filePos);
+      }
     }
     TypeId newIn=replaceGenericTypes(procType->inType,genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
     TypeId newOut=replaceGenericTypes(procType->outType,genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
