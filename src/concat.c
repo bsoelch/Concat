@@ -1957,6 +1957,9 @@ typedef struct{
 CompilerBlock compilerBlocks [MAX_COMPILER_BLOCKS];
 size_t compilerBlockCount=0;
 
+typedef int32_t FileId;
+const FileId FILE_ID_NONE=-1;
+
 typedef struct{
   ConstantValue* argValues;
   TypeId implType;
@@ -1967,6 +1970,7 @@ typedef struct{
   size_t codeOffset;
   size_t codeSize;
   TemplateImplementation* implementations;
+  FileId srcFile;
   int32_t implCount;
   int32_t implCap;
   int32_t compiledImpls;
@@ -2010,7 +2014,7 @@ void endCompileTimeBlock(FilePosition pos){
     handleError("no open compiler blocks",ERROR_SYNTAX,pos);
   compilerBlockCount--;
 }
-void startTemplate(TypeId templateTypes,FilePosition pos){
+void startTemplate(TypeId templateTypes,FileId srcFile,FilePosition pos){
   if(compilerBlockCount>=MAX_COMPILER_BLOCKS)
     handleError("compiler block overflow",ERROR_MEMORY,pos);
   if(hasOpenTemplate())
@@ -2021,7 +2025,8 @@ void startTemplate(TypeId templateTypes,FilePosition pos){
   compilerBlocks[compilerBlockCount++]=(CompilerBlock){.isNamespace=false,.as.template=templateTypes};
   if(ensureTemplatesCap(templateCount+1))
     handleError("could not allocate template array",ERROR_MEMORY,pos);
-  templates[templateCount++]=(TemplateInfo){.args=templateTypes,.implementations=NULL,.implCount=0,.compiledImpls=0,.implCap=0,.codeOffset=templateOpCount,.codeSize=0};
+  templates[templateCount++]=(TemplateInfo){.args=templateTypes,.implementations=NULL,.implCount=0,.compiledImpls=0,.implCap=0,
+    .codeOffset=templateOpCount,.codeSize=0,.srcFile=srcFile};
 }
 void endOpenTemplate(FilePosition pos){
   if(!hasOpenTemplate())
@@ -2095,8 +2100,6 @@ size_t scopeNodeCount=0;
 Scope scopeBuffer [SCOPE_CAP];
 size_t localScopeCount=0;
 
-typedef int32_t FileId;
-const FileId FILE_ID_NONE=-1;
 typedef struct{
   FilePosition includePos;
   FileId id;
@@ -4788,7 +4791,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       }
       readCompositeType(TYPECLASS_LABELED_PROC_IN,codeFile,state,LABEL_TYPE_STRUCT,"#end",false);
       TypeId templateTypes=popTypeConstant(wordPos,"template types",false);
-      startTemplate(templateTypes,wordPos);
+      startTemplate(templateTypes,state->currentFile,wordPos);
       return;
     }
     //compiler commands
@@ -6387,12 +6390,41 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     fprintf(stderr," unknown identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(mLabel));
     handleError(NULL,r,op->filePos);
   }
-  if(asIdentifier->templateData.templateId!=-1)
-    handleError("resolving template identifiers",ERROR_UNIMPLEMENTED,op->filePos);
   if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
     handleError("cannot set value of procedure",ERROR_SYNTAX,op->filePos);
-  *op=(Operation){.opType=op->opType==OP_SET_IDENTIFIER?OP_SET:(op->opType==OP_IDENTIFIER_ADDRESS?OP_ADDR_OF:(asIdentifier->idType==ID_PROCEDURE)?OP_CALL:OP_GET),
-    .dataType=asIdentifier->type,.filePos=op->filePos,
+  OpType opType;
+  switch(op->opType){
+    case OP_IDENTIFIER:
+      opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET;
+      break;
+    case OP_SET_IDENTIFIER:
+      opType=OP_SET;
+      break;
+    case OP_IDENTIFIER_ADDRESS:
+      opType=OP_ADDR_OF;
+      break;
+    default:
+      handleError("unexpected identifier type",ERROR_MEMORY,op->filePos);
+  }
+  if(asIdentifier->templateData.templateId!=-1){
+    switch(opType){
+      case OP_GET:
+        opType=OP_GET_TEMPLATE;
+        break;
+      case OP_CALL:
+        opType=OP_CALL_TEMPLATE;
+        break;
+      case OP_SET:
+        opType=OP_SET_TEMPLATE;
+        break;
+      case OP_ADDR_OF:
+        opType=OP_ADDR_OF_TEMPLATE;
+        break;
+      default:
+        handleError("unexpected identifier type",ERROR_MEMORY,op->filePos);
+    }
+  }
+  *op=(Operation){.opType=opType,.dataType=asIdentifier->type,.filePos=op->filePos,
       .dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=isMutableLabelId(asIdentifier->labelId)}}};
 }
 void typeCheckOperation(Operation op,TypeCheckState* state){
@@ -7666,7 +7698,8 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     do{//compiling template implementations may produce new template implementations 
       compiledImpl=false;
       for(size_t t=0;t<templateCount;t++){
-        if(templates[t].codeSize>0&&templates[t].implCount>templates[t].compiledImpls){
+        if(templates[t].codeSize>0&&templates[t].implCount>templates[t].compiledImpls){//TODO use correct global scope
+          state.globalScope=&prog->files[templates[t].srcFile].globalScope;
           compiledImpl=true;
           argCount=getTypeElementCount(templates[t].args);
           templateArgs=malloc(argCount*sizeof(GenericType));
