@@ -1164,8 +1164,8 @@ void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,Consta
       if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize&&arrayTypeData(src)->dims==arrayTypeData(expect)->dims){//XXX support different numbers of dimensions
         for(int32_t d=0;d<arrayTypeData(src)->dims;d++){
           if(!arrayTypeData(expect)->sizes[d].isInt){
-            for(int32_t i=0;i<count;i++){//TODO check if generic or template
-              if(values[i].constType==CONSTANT_NONE&&isIntType(args[i].type)&&args[i].argId==arrayTypeData(expect)->sizes[d].value){
+            for(int32_t i=0;i<count;i++){
+              if(values[i].constType==CONSTANT_NONE&&isIntType(args[i].type)&&!args[i].isTemplate&&args[i].argId==arrayTypeData(expect)->sizes[d].value){
                 if(arrayTypeData(src)->sizes[d].isInt)
                   values[i]=(ConstantValue){.constType=CONSTANT_INT,.valueType=TYPE_I64,.as.i64=arrayTypeData(src)->sizes[d].value};
                 else
@@ -1214,8 +1214,8 @@ TypeId replaceGenericTypes(TypeId type,GenericType const* args,ConstantValue* va
         for(int32_t d=0;d<arrayTypes[type.dataAs.id].dims;d++){
           if(!arrayTypes[type.dataAs.id].sizes[d].isInt){
             bool match=false;
-            for(int32_t i=0;i<count;i++){//TODO check if generic or template
-              if(isIntType(args[i].type)&&args[i].argId==arrayTypes[type.dataAs.id].sizes[d].value){
+            for(int32_t i=0;i<count;i++){
+              if(isIntType(args[i].type)&&!args[i].isTemplate&&args[i].argId==arrayTypes[type.dataAs.id].sizes[d].value){
                 newSizes[d]=(ArraySize){.isInt=true,.value=values[i].as.i64};
                 match=true;
                 break;
@@ -7698,7 +7698,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     do{//compiling template implementations may produce new template implementations 
       compiledImpl=false;
       for(size_t t=0;t<templateCount;t++){
-        if(templates[t].codeSize>0&&templates[t].implCount>templates[t].compiledImpls){//TODO use correct global scope
+        if(templates[t].codeSize>0&&templates[t].implCount>templates[t].compiledImpls){
           state.globalScope=&prog->files[templates[t].srcFile].globalScope;
           compiledImpl=true;
           argCount=getTypeElementCount(templates[t].args);
