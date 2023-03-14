@@ -17,7 +17,7 @@
     end
     FILE_ERROR_NONE return
   end
-  proc( FILE : file sb.stringBuilder : str => IOError ) =: public fputSb
+  proc( FILE : file stringBuilder : str => IOError ) =: public fputSb
     file  str sb.toStr fputStr return
   end
   proc( FILE : file IOError : err string : str => FILE  IOError ) =: public fappendStr
@@ -26,7 +26,7 @@
     end
     file #dup str fputStr return
   end
-  proc( FILE : file IOError : err sb.stringBuilder : str => FILE  IOError ) =: public fappendSb
+  proc( FILE : file IOError : err stringBuilder : str => FILE  IOError ) =: public fappendSb
     err FILE_ERROR_NONE != if
       file err return
     end

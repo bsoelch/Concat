@@ -1,9 +1,8 @@
 #include mem
 #include string
 
+struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
 #namespace sb
-  struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
-
   proc( i64 : cap => stringBuilder ) =: public create
     cap i8 mem.alloc cap 0 stringBuilder new return
   end

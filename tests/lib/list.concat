@@ -1,0 +1,31 @@
+#include list
+
+#template type : T #end
+proc( T list : l => ) =: printList
+  0 while #dup l .length < do
+    l .data #over [] print
+    1 +
+  end #drop
+end
+
+entryPoint:
+  4 i32 list.create
+    1 list.append
+    2 list.append
+    3 list.append
+    4 list.append
+    5 list.append
+    6 list.append
+  printList
+  
+  8 i8 list.create "World" list.appendP =:: l
+  16 i8 list.create
+    "Hello" list.appendP
+    ' '     list.append
+    l       list.appendAll
+  printList
+ 
+  l 0 list.get print
+  '\x2a' l 3 list.set
+  l 3 list.get print
+end

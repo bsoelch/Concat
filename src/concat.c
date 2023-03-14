@@ -1344,11 +1344,9 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
       fprintf(file,"namedType \"%"PRI_STR"\"",PRI_STR_ARGS(getLabelName(namedTypes[type.dataAs.id].name)));
       if(deep)
         fprintf(file," (%"PRIi32")",type.dataAs.id);
-      if(!noRecurse){
-        fputs(" [ ",file);
-        printTypeNameInternal(unwrapNamedType(type),file,noRecurse&!deep,deep);
-        fputs(" ]",file);
-      }
+      fputs(" [ ",file);
+      printTypeNameInternal(unwrapNamedType(type),file,noRecurse&!deep,deep);
+      fputs(" ]",file);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_AUTO_TYPE:
@@ -4074,7 +4072,7 @@ TypeId peekTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid
 ArraySize* popArraySize(FilePosition pos){
   arrayDimsCount=0;
   arrayWildcardDimsCount=0;
-  while(bufferedConstants>1&&constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
+  while(bufferedConstants>1&&!typeEquals(constBuffer[bufferedConstants-1].value.valueType,TYPE_TYPE)){
     bufferedConstants--;
     arrayDimsCount++;
   }
@@ -4586,7 +4584,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       idType=ID_TYPE;
     }
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&val);
-    endOpenTemplate(wordPos);
+    if(localScopeCount==0)
+      endOpenTemplate(wordPos);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return;
     if(localScopeCount>0)//global identifiers are predeclared implicitly)
@@ -4605,7 +4604,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       type=newNamedType(labelId,constType);
       ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
       declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
-      endOpenTemplate(wordPos);
+      if(localScopeCount==0)
+        endOpenTemplate(wordPos);
       return;
     }else if(isProcedureType(type)){
       idType=ID_PROCEDURE;
@@ -4628,7 +4628,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
             declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos,NULL);
          }
       }
-    }else{
+    }else if(localScopeCount==0){
       endOpenTemplate(wordPos);
     }
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName->declaredAt,
@@ -4938,12 +4938,14 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         type=newNamedType(labelId,constType);
         ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
         declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
-        endOpenTemplate(wordPos);
+        if(localScopeCount==0)
+          endOpenTemplate(wordPos);
         return;
       }
     }
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
-    endOpenTemplate(wordPos);
+    if(localScopeCount==0)
+      endOpenTemplate(wordPos);
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName->declaredAt,
       .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
@@ -5096,9 +5098,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opEndCodeBlock(closed,wordPos));
     if(closed==BLOCK_PROCEDURE){//exited procedure
       state->currentProcId=-1;
-      endOpenTemplate(wordPos);
     }
     closeScope(state);
+    if(localScopeCount==0)
+      endOpenTemplate(wordPos);
     return;
   }else if(wordEquals(&word,"return")){
     if(state->currentProcId<0){
@@ -5844,6 +5847,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   int64_t opOffset=state->opStackCount-(isPtr?state->typeStack[state->typeCount-1].opCount:0);
   int64_t typeOffset=state->typeCount-(isPtr?1:0);
   op->dataAs.idInfo.id=0;//op call does not need id
+  bool hasUnresolvedGenericArguments=false;
   if(op->opType==OP_CALL_TEMPLATE||procType->staticArgsCount>0){
     TemplateInfo* mTemplate=getTemplateInfo(label(op->dataAs.idInfo.labelId,op->filePos)->templateId);
     if(mTemplate!=NULL)
@@ -5851,7 +5855,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     else if(op->opType==OP_CALL_TEMPLATE)
       handleError("missing template data",ERROR_MEMORY,op->filePos);
     argValues=calloc(staticArgsOffset+procType->staticArgsCount,sizeof(ConstantValue));
-    genericTypes=malloc(staticArgsOffset+procType->staticArgsCount);
+    genericTypes=malloc((staticArgsOffset+procType->staticArgsCount)*sizeof(*genericTypes));
     if(argValues==NULL||genericTypes==NULL)
       handleError("allocating buffer for template arguments failed",ERROR_MEMORY,op->filePos);
     if(mTemplate!=NULL&&isPtr)
@@ -5952,11 +5956,11 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     }
     for(int32_t i=0;i<staticArgsOffset;i++){
       if(argValues[i].constType==CONSTANT_NONE)
-        handleError("unresolved template argument",ERROR_MEMORY,op->filePos);
+        hasUnresolvedGenericArguments=true;//run check for unresolved arguments after trying to resolve signature to give better error message if signature is incorrect
     }
     for(int32_t i=0;i<procType->staticArgsCount;i++){
       if(argValues[staticArgsOffset+i].constType==CONSTANT_NONE)
-        handleError("unresolved static argument",ERROR_MEMORY,op->filePos);
+        hasUnresolvedGenericArguments=true;
       if(staticArgValueOffsets[i]!=-1){
         if(argValues[staticArgsOffset+i].as.type.class==TYPECLASS_GENERIC_TYPE&&typeEquals(argValues[staticArgsOffset+i].valueType,TYPE_TYPE)){
           state->opStack[staticArgValueOffsets[i]]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[staticArgsOffset+i].as.type),LABEL_ID_UNKNOWN,op->filePos);
@@ -5968,11 +5972,13 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
         state->opStack[staticArgValueOffsets[i]]=opFromConstant(argValues[staticArgsOffset+i],op->filePos);
       }
     }
+    free(staticArgValueOffsets);
     TypeId newIn=replaceGenericTypes(procType->inType,genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
     TypeId newOut=replaceGenericTypes(procType->outType,genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
+    op->dataType=procedureType(newIn,newOut,NULL,0);
     inTypes=compositeTypeData(newIn);
     outTypes=compositeTypeData(newOut);
-    op->dataType=procedureType(newIn,newOut,NULL,0);
+    procType=procTypeData(op->dataType);
     if(op->opType==OP_CALL_TEMPLATE){
       bool match;
       int32_t implId=-1;
@@ -6014,6 +6020,8 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   }
   addCompiledOps(state,*op,isPtr?1:0);
   requireTypes("procedure argument",state,inTypes->types,inTypes->typeCount,op->filePos);
+  if(hasUnresolvedGenericArguments)
+    handleError("unresolved generic argument",ERROR_MEMORY,op->filePos);
   size_t offset=state->typeCount-inTypes->typeCount;
   for(int32_t i=0;i<inTypes->typeCount;i++){
     totalOps+=state->typeStack[offset+i].opCount;

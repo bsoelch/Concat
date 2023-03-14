@@ -1,0 +1,116 @@
+#include mem
+
+#template type : T #end
+struct( T _ ptr : data i64 : length ) =:: public arrayView
+## TODO writable array view
+
+#namespace array
+  #template type : T #end
+  proc( => T arrayView ) =: public EMPTY
+    0 T mem.alloc 0 T arrayView new return
+  end  
+  
+  #template type : T #end
+  proc( T _ ptr  i64 => T arrayView ) =: public create
+    T arrayView new return
+  end
+  #template type : T #end
+  proc( i64 : static k  T k ptr : elts => T arrayView ) =: public wrap
+    elts k create return
+  end
+  #template type : T #end
+  proc( T arrayView : elts i64 : index => T ) =: public get
+    index 0 < index elts .length >= | if
+      ## TODO error handling
+    end
+    elts .data index [] return
+  end
+  #template type : T #end
+  proc( T arrayView : elts T : elt => i64 ) =: public indexOf
+    0 ## index
+    while #dup elts .length < do
+      elts .data #over [] elt == if
+        return
+      end
+      1 +
+    end
+    #drop
+    -1 return
+  end
+  #template type : T #end
+  proc( T arrayView : elts T : elt => i64 ) =: public lastIndexOf
+    elts .length 1 - ## index
+    while #dup 0 >= do
+      elts .data #over [] elt == if
+        return
+      end
+      1 -
+    end
+    return
+  end
+  #template type : T #end
+  proc( T arrayView : elts T : elt => bool ) =: public contains
+    elts elt indexOf -1 != return
+  end
+
+  ## first n characters
+  #template type : T #end
+  proc( T arrayView : elts i64 : n => T arrayView ) =: public head
+    n 0 <= if
+      T EMPTY return
+    end
+    n elts .length >= if
+      elts return
+    end
+    elts .data  n create return
+  end
+  ## everything excluding the first n characters
+  #template type : T #end
+  proc( T arrayView : elts i64 : n => T arrayView ) =: public tail
+    n 0 <= if
+      elts return
+    end
+    n elts .length >= if
+      T EMPTY return
+    end
+    elts .data n +  elts .length n -  create return
+  end
+  ## equivalent to:  <from> tail <len> head
+  #template type : T #end
+  proc( T arrayView : elts i64 : from i64 : len => T arrayView ) =: public slice
+    len 0 <= if
+      T EMPTY return
+    end
+    from elts .length >= if
+      T EMPTY return
+    end
+    from 0 <= if
+      elts  len head return
+    end
+    from len + elts .length >= if
+      elts .data from +  elts .length from -  create return
+    end
+    elts .data from +  len  create return
+  end
+  #template type : T #end
+  proc( T arrayView : elts i64 : index => T arrayView T arrayView ) =: public cutIndex
+    elts index tail
+    elts index head
+    return
+  end
+  #template type : T #end
+  proc( T arrayView : elts i64 : index => T arrayView T arrayView ) =: public splitIndex
+    index 0 < if
+      T EMPTY elts return
+    end
+    elts index 1 + tail
+    elts index head
+    return
+  end
+  #template type : T #end
+  proc( T arrayView : elts T : elt => T arrayView T arrayView ) =: public split
+    elts
+      elts elt indexOf
+    splitIndex return
+  end
+#end

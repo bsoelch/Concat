@@ -1,6 +1,6 @@
 -----------------
 identifier "selfPtr":
-  - type: type [ type: namedType "selfPtr" [ tuple (0) ( i32 namedType "selfPtr" pointer ) ] ]
+  - type: type [ type: namedType "selfPtr" [ tuple (0) ( i32 namedType "selfPtr" [ tuple (0) ] pointer ) ] ]
       at selfPtr.concat:1:8
 -----------------
 true

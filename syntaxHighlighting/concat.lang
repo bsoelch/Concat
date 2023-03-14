@@ -117,7 +117,21 @@
     <context id="compile-time" style-ref="compile-time">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          \#([^[:space:]])+
+          \#(
+            dup(\:[0-9]+)?     |
+            drop(\:[0-9]+)?    |
+            swap               |
+            over(\:[0-9]+)?    |
+            namespace          |
+            using              |
+            end                |
+            include            |
+            template           |
+            types              |
+            stack              |
+            ops                |
+            find          
+          )
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -140,12 +154,20 @@
           enum\(                       |
           struct\(                     |
           array                        |
-          (raw)?ptr ([[:space:]]+mut)? |
+          ptr ([[:space:]]+mut)?
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+    <context id="libtype-keywords" style-ref="type-keyword">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          list                         |
+          arrayView
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
     
-    <context id="typeName" style-ref="type">
+    <context id="primitiveType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           bool            |
@@ -154,8 +176,18 @@
           i32             |
           i64             |
           float           |
-          type            |
-          string          
+          type         
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+    <context id="libType" style-ref="type">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          string          |
+          stringBuilder   |
+          (io\.)?FILE     |
+          (io\.)?IOError  |
+          (io\.)?OpenMode
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -262,7 +294,9 @@
         <context ref="postfix-keyword"/>
         <context ref="declaration"/>
         <context ref="type-keywords"/>
-        <context ref="typeName"/>
+        <context ref="libtype-keywords"/>
+        <context ref="primitiveType"/>
+        <context ref="libType"/>
         <context ref="string"/>
         <context ref="char"/>
     <!--    <context ref="float"/> -->
