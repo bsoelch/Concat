@@ -1,11 +1,47 @@
-#include string
-#include io
+#include mem
 
+#template type : T #end
+struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: list
+#namespace list
+  #template type : T #end
+  proc( i64 : k => T list ) =: create
+    k T mem.alloc  0 k  T list new return
+  end
+  #template type : T #end
+  proc( T list : elts i64 : minCap => T list ) =: public ensureCap
+    elts
+      #dup .cap minCap > if
+        return
+      end
+      minCap minCap 8 / + 8 +
+        #over .data #over mem.realloc #over:2 .data =
+        #over .cap =
+    return
+  end
+  #template type : T #end
+  proc( T list : elts T : elt => T list ) =: append
+    elts
+      #dup .length 1 + ensureCap
+      elt #over .data #over:2 .length ++ [] =
+    return
+  end
+#end
 
-#find asStr
+#template type : T #end
+proc( T list : l => ) =: printList
+  0 while #dup l .length < do
+    l .data #over [] print
+    1 +
+  end #drop
+end
 
 entryPoint:
-  "Hello World" string.wrap .length print
-  "Hello World!" io.puts #drop
-  42 0x7FFF_FFFF_FFFF_FFFF print print
+  4 i32 list.create
+    1 list.append
+    2 list.append
+    3 list.append
+    4 list.append
+    5 list.append
+    6 list.append
+  printList
 end

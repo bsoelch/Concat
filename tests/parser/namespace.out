@@ -1,14 +1,14 @@
 -----------------
 identifier "i":
-  - global variable: i32 4
+  - global variable: i32 [ int: 4 ]
       at namespace.concat:42:9
-  - global variable: i32 0
+  - global variable: i32 [ int: 0 ]
       at namespace.concat:37:7
-  - global variable: i32 3
+  - global variable: i32 [ int: 3 ]
       at namespace.concat:35:9
-  - global variable: i32 2
+  - global variable: i32 [ int: 2 ]
       at namespace.concat:32:9
-  - global variable: i32 1
+  - global variable: i32 [ int: 1 ]
       at namespace.concat:29:9
 -----------------
 0

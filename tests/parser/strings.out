@@ -1,6 +1,6 @@
 -----------------
 identifier "s2":
-  - global variable: i8 8 pointer "A string"
+  - global variable: i8 8 pointer [ string: "A string" ]
       at strings.concat:2:16
 -----------------
 true

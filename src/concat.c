@@ -149,6 +149,7 @@ int writeUnicodeChar(int64_t codepoint,char* target){
 typedef enum{
   OP_PRINT,
   OP_CONSTANT,
+  OP_TEMPLATE_ARG,
 
   OP_PRE_DECLARE,
   OP_DECLARE,
@@ -157,6 +158,9 @@ typedef enum{
   OP_GET_LABEL,
   OP_SET_LABEL,
   OP_ADDR_OF_LABEL,
+  OP_GET_TEMPLATE,
+  OP_SET_TEMPLATE,
+  OP_ADDR_OF_TEMPLATE,
 
   OP_IDENTIFIER,
   OP_SET_IDENTIFIER,
@@ -178,6 +182,7 @@ typedef enum{
 
   OP_RETURN,
   OP_CALL,         // procType procId
+  OP_CALL_TEMPLATE,
   OP_CALL_PTR,
   ENTRY_POINT,     //entry point of the program, starts the main code section, section will close at the matching BLOCK_END
   OP_UNREACHABLE,
@@ -190,6 +195,7 @@ char const* opName(OpType type){
   switch(type){
     case OP_PRINT:return "OP_PRINT";
     case OP_CONSTANT:return "OP_CONSTANT";
+    case OP_TEMPLATE_ARG:return "OP_TEMPLATE_ARG";
     case OP_DECLARE:return "OP_DECLARE";
     case OP_PRE_DECLARE:return "OP_PRE_DECLARE";
     case OP_GET:return "OP_GET";
@@ -212,6 +218,10 @@ char const* opName(OpType type){
     case OP_CAST:return "OP_CAST";
     case OP_ADDR_OF:return "OP_ADDR_OF";
     case OP_ADDR_OF_ARRAY:return "OP_ADDR_OF_ARRAY";
+    case OP_GET_TEMPLATE:return "OP_GET_TEMPLATE";
+    case OP_SET_TEMPLATE:return "OP_SET_TEMPLATE";
+    case OP_ADDR_OF_TEMPLATE:return "OP_ADDR_OF_TEMPLATE";
+    case OP_CALL_TEMPLATE:return "OP_CALL_TEMPLATE";
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
     case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
     case OP_UNREACHABLE:return "OP_UNREACHABLE";
@@ -231,6 +241,8 @@ typedef struct {
   NamespaceId current;
   NamespaceImportId namespaceImports;
 }NamespaceInfo;
+//id of the template that was last opened
+int32_t currentTemplateId=-1;
 
 #define LABEL_CAP 4096
 typedef int32_t LabelId;
@@ -245,6 +257,7 @@ typedef struct{
   String label;
   FilePosition declaredAt;
   NamespaceId namespace;
+  int32_t templateId;
   LabelFlags flags;
 }Label;
 Label labelBuffer[LABEL_CAP];
@@ -262,7 +275,7 @@ Label const* label(LabelId labelId,FilePosition pos){
 LabelId newLabel(String label,LabelFlags flags,NamespaceId namespace,FilePosition declaredAt){
   if(labelBufferCount>=LABEL_CAP)
     handleError("exceeded label capacity",ERROR_MEMORY,declaredAt);
-  labelBuffer[labelBufferCount]=(Label){.label=label,.flags=flags,.namespace=namespace,.declaredAt=declaredAt};
+  labelBuffer[labelBufferCount]=(Label){.label=label,.flags=flags,.namespace=namespace,.templateId=currentTemplateId,.declaredAt=declaredAt};
   return labelBufferCount++;
 }
 int32_t findLabel(LabelId labelOffset,int32_t labelCount,String const* labelName){
@@ -328,6 +341,7 @@ typedef enum{
   TYPECLASS_NAMED_TYPE,
   TYPECLASS_AUTO_TYPE,
   TYPECLASS_GENERIC_TYPE,
+  TYPECLASS_TEMPLATE_TYPE,
   TYPECLASS_STRUCT,
   TYPECLASS_ENUM,
   TYPECLASS_ENUM_LABEL,
@@ -387,6 +401,8 @@ typedef struct{
 #define FLAG_IS_STRUCT     8
 #define FLAG_IS_ENUM       16
 #define FLAG_VOID_ONLY     32
+#define FLAG_STATIC_ARGS   64
+#define FLAG_TEMPLATE      128
 typedef struct{
   TypeId const* types;
   int32_t id;
@@ -603,6 +619,7 @@ bool isComposite(TypeId type){
     case TYPECLASS_NAMED_ENUM_LABEL:
     case TYPECLASS_AUTO_TYPE:
     case TYPECLASS_GENERIC_TYPE:
+    case TYPECLASS_TEMPLATE_TYPE:
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
       return false;
@@ -702,6 +719,7 @@ bool makeMutable(TypeId* t){
     case TYPECLASS_NAMED_ENUM_LABEL:
     case TYPECLASS_AUTO_TYPE:
     case TYPECLASS_GENERIC_TYPE:
+    case TYPECLASS_TEMPLATE_TYPE:
     case TYPECLASS_ENUM_LABEL:
       return false;
   }
@@ -745,8 +763,11 @@ TypeId newAutoType(int32_t id){
 TypeId newGenericType(int32_t id){
   return (TypeId){.class=TYPECLASS_GENERIC_TYPE,.dataAs.id=id};
 }
+TypeId newTemplateType(int32_t id){
+  return (TypeId){.class=TYPECLASS_TEMPLATE_TYPE,.dataAs.id=id};
+}
 int32_t autoTypeId(TypeId autoType){
-  if(autoType.class!=TYPECLASS_AUTO_TYPE&&autoType.class!=TYPECLASS_GENERIC_TYPE)
+  if(autoType.class!=TYPECLASS_AUTO_TYPE&&autoType.class!=TYPECLASS_GENERIC_TYPE&&autoType.class!=TYPECLASS_TEMPLATE_TYPE)
     return -1;
   return autoType.dataAs.id;
 }
@@ -770,7 +791,7 @@ int64_t indexOfTypeArray(TypeId const* base,size_t baseLen,TypeId const* child,s
   }
   return -1;
 }
-//TODO prevent use of incomplete types (generics/opauqe-types) as fields
+bool checkGenericType(TypeId type,bool isStatic,bool isTemplate);
 TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOffset,int32_t eltCount){
   if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
@@ -805,15 +826,22 @@ TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOff
     default:
       return TYPE_UNDEFINED;
   }
-  bool isVoid=true;
+  bool isVoid=true,isStatic=false,isTemplate=false;
   for(int32_t i=0;i<eltCount;i++){
-    if(!typeEquals(elements[i],TYPE_UNDEFINED)){
+    if(!typeEquals(elements[i],TYPE_UNDEFINED))
       isVoid=false;
-      break;
-    }
+    //TODO prevent use of incomplete types (generics/opauqe-types) as fields
+    if(checkGenericType(elements[i],true,false))
+      isStatic=true;
+    if(checkGenericType(elements[i],false,true))
+      isTemplate=true;
   }
   if(isVoid)
     classFlag|=FLAG_VOID_ONLY;
+  if(isStatic)
+    classFlag|=FLAG_STATIC_ARGS;
+  if(isTemplate)
+    classFlag|=FLAG_TEMPLATE;
   if(eltCount==0){//empty composite
     int32_t match=-1;
     for(int32_t i=0;i<compositeTypeCount;i++){
@@ -953,6 +981,7 @@ typedef enum{
   CONSTANT_TYPE,
   CONSTANT_WILDCARD,
   GENERIC_INT,
+  TEMPLATE_ARGUMENT,
 }ConstantType;
 char const* constTypeName(ConstantType type){
   switch(type){
@@ -964,6 +993,7 @@ char const* constTypeName(ConstantType type){
     case CONSTANT_TYPE:return "type";
     case CONSTANT_WILDCARD:return "_";
     case GENERIC_INT:return "generic int";
+    case TEMPLATE_ARGUMENT:return "template argument";
   }
   return "unknown type";
 }
@@ -978,40 +1008,129 @@ typedef struct{
   TypeId valueType;
   ConstantType constType;
 }ConstantValue;
-void printConstValue(ConstantValue constant,FILE* file){
-  switch(constant.constType){
-    case CONSTANT_NONE:
-      return;
-    case CONSTANT_BOOL:
-      fputs(constant.as.i64?"true":"false",file);
-      return;
-    case CONSTANT_INT:
-      fprintf(file,"%"PRIi64,constant.as.i64);
-      return;
-    case CONSTANT_CHAR:
-      fprintf(file,"'%c' (0x%"PRIx64")",(char)constant.as.charId&0xff,constant.as.charId);
-      return;
-    case CONSTANT_STRING:
-      fprintf(file,"\"%"PRI_STR"\"",PRI_STR_ARGS(constant.as.string));
-      return;
-    case CONSTANT_TYPE:
-      printTypeName(constant.as.type,file);
-      return;
-    case CONSTANT_WILDCARD:
-      fputs("_",file);
-      return;
-    case GENERIC_INT:
-      fprintf(file,"(%"PRIi64")",constant.as.i64);
-      return;
+bool constantEquals(ConstantValue c1,ConstantValue c2){
+  if(c1.constType!=c2.constType)
+    return false;
+  if(!typeEquals(c1.valueType,c2.valueType))
+    return false;
+  if(c1.constType==CONSTANT_NONE)
+    return true;
+  if(typeEquals(c1.valueType,TYPE_BOOL)){
+    return c1.as.boolean==c2.as.boolean;
   }
+  if(isIntType(c1.valueType)){
+    return c1.as.i64==c2.as.i64;
+  }
+  if(typeEquals(c1.valueType,TYPE_CHAR)){
+    return c1.as.charId==c2.as.charId;
+  }
+  if(typeEquals(c1.valueType,TYPE_TYPE)){
+    return typeEquals(c1.as.type,c2.as.type);
+  }
+  if(c1.constType==CONSTANT_STRING){
+    return stringCompare(c1.as.string,c2.as.string)==0;
+  }
+  fputs("unsupported constant value: ",stderr);
+  printTypeName(c1.valueType,stderr);
+  fputs("\n",stderr);
+  return false;
+}
+void printConstValue(ConstantValue constant,FILE* file){
+  fprintf(file,"%s: ",constTypeName(constant.constType));
+  if(constant.constType==CONSTANT_NONE)
+    return;
+  if(typeEquals(constant.valueType,TYPE_BOOL)){
+    fputs(constant.as.boolean?"true":"false",file);
+    return;
+  }
+  if(isIntType(constant.valueType)){
+    fprintf(file,"%"PRIi64,constant.as.i64);
+    return;
+  }
+  if(typeEquals(constant.valueType,TYPE_CHAR)){
+    fprintf(file,"'%c' (0x%"PRIx64")",(char)constant.as.charId&0xff,constant.as.charId);
+    return;
+  }
+  if(typeEquals(constant.valueType,TYPE_TYPE)){
+    printTypeName(constant.as.type,file);
+    return;
+  }
+  if(constant.constType==CONSTANT_STRING){
+    fprintf(file,"\"%"PRI_STR"\"",PRI_STR_ARGS(constant.as.string));
+    return;
+  }
+  fputs("unsupported constant value: ",stderr);
+  printTypeName(constant.valueType,stderr);
+  fputs("\n",stderr);
 }
 
-void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantValue* values,int32_t count){
-  src=unwrapNamedType(src);//type names not important for generics
-  expect=unwrapNamedType(expect);
-  if(expect.class==TYPECLASS_GENERIC_TYPE){
+typedef struct{
+  TypeId type;
+  int32_t argId;
+  bool isTemplate;
+}GenericType;
+
+bool isCompositeStatic(CompositeType const* comp){
+  return comp!=NULL&&(comp->flags&FLAG_STATIC_ARGS)!=0;
+}
+bool isCompositeTemplate(CompositeType const* comp){
+  return comp!=NULL&&(comp->flags&FLAG_TEMPLATE)!=0;
+}
+bool isCompositeGeneric(CompositeType const* comp){
+  return comp!=NULL&&(comp->flags&(FLAG_STATIC_ARGS|FLAG_TEMPLATE))!=0;
+}
+bool checkGenericType(TypeId type,bool isStatic,bool isTemplate){
+  type=unwrapNamedType(type);
+  switch(type.class){
+    case TYPECLASS_PRIMITIVE:
+    case TYPECLASS_AUTO_TYPE://XXX? handle auto-types
+      return false;
+    case TYPECLASS_PROCEDURE:
+      return checkGenericType(procTypeData(type)->inType,isStatic,isTemplate)||checkGenericType(procTypeData(type)->outType,isStatic,isTemplate);
+    case TYPECLASS_ARRAY:
+    case TYPECLASS_ARRAY_VIEW:
+      if(checkGenericType(getBaseType(type),isStatic,isTemplate))
+        return true;
+      if(arrayTypeData(type)->fixedSize){
+        for(int32_t d=0;d<arrayTypeData(type)->dims;d++){
+          if(isStatic&&!arrayTypeData(type)->sizes[d].isInt){
+            return true;
+          }
+        }
+      }
+      return false;
+    case TYPECLASS_NAMED_TYPE:
+    case TYPECLASS_NAMED_ENUM_LABEL:
+      return checkGenericType(unwrapNamedType(type),isStatic,isTemplate);
+    case TYPECLASS_TUPLE:
+    case TYPECLASS_PROC_IN:
+    case TYPECLASS_LABELED_PROC_IN:
+    case TYPECLASS_PROC_OUT:
+    case TYPECLASS_STRUCT:
+    case TYPECLASS_ENUM:
+    case TYPECLASS_ENUM_LABEL:
+      if(isStatic&&isCompositeStatic(compositeTypeData(type)))
+        return true;
+      if(isTemplate&&isCompositeTemplate(compositeTypeData(type)))
+        return true;
+      return false;
+    case TYPECLASS_GENERIC_TYPE:
+      return isStatic;
+    case TYPECLASS_TEMPLATE_TYPE:
+      return isTemplate;
+  }
+  return false;
+}
+bool isTemplateType(TypeId type){
+  return checkGenericType(type,false,true);
+}
+
+char const* typeClassName(TypeClass cls);
+void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,ConstantValue* values,int32_t count){
+  if(expect.class==TYPECLASS_GENERIC_TYPE||expect.class==TYPECLASS_TEMPLATE_TYPE){
     for(int32_t i=0;i<count;i++){
-      if(values[i].constType==CONSTANT_NONE&&typeEquals(args[i].type,TYPE_TYPE)&&typeEquals(args[i].as.type,expect)){
+      if((args[i].isTemplate==(expect.class==TYPECLASS_TEMPLATE_TYPE))&&values[i].constType==CONSTANT_NONE&&
+          typeEquals(args[i].type,TYPE_TYPE)&&args[i].argId==autoTypeId(expect)){
         values[i]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=src};
         break;
       }
@@ -1019,6 +1138,8 @@ void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantV
     return;
   }
   if(isComposite(src)&&isComposite(expect)){
+    if(!isCompositeGeneric(compositeTypeData(expect)))
+      return;
     if(getTypeElementCount(src)!=getTypeElementCount(expect))
       return;//incompatible types
     for(int32_t i=0;i<getTypeElementCount(src);i++){
@@ -1043,8 +1164,8 @@ void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantV
       if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize&&arrayTypeData(src)->dims==arrayTypeData(expect)->dims){//XXX support different numbers of dimensions
         for(int32_t d=0;d<arrayTypeData(src)->dims;d++){
           if(!arrayTypeData(expect)->sizes[d].isInt){
-            for(int32_t i=0;i<count;i++){
-              if(values[i].constType==CONSTANT_NONE&&isIntType(args[i].type)&&args[i].as.genericId==arrayTypeData(expect)->sizes[d].value){
+            for(int32_t i=0;i<count;i++){//TODO check if generic or template
+              if(values[i].constType==CONSTANT_NONE&&isIntType(args[i].type)&&args[i].argId==arrayTypeData(expect)->sizes[d].value){
                 if(arrayTypeData(src)->sizes[d].isInt)
                   values[i]=(ConstantValue){.constType=CONSTANT_INT,.valueType=TYPE_I64,.as.i64=arrayTypeData(src)->sizes[d].value};
                 else
@@ -1068,12 +1189,14 @@ void resolveTypeGenerics(TypeId src,TypeId expect,StaticArgument* args,ConstantV
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
     case TYPECLASS_GENERIC_TYPE:
+    case TYPECLASS_TEMPLATE_TYPE:
       fputs("unreachable",stderr);
       exit(EXIT_FAILURE);//should have been covered by if-statements before switch
       return;
   }
 }
-TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* values,int32_t count){//XXX prevent unnecessary recreation of types
+void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep);
+TypeId replaceGenericTypes(TypeId type,GenericType const* args,ConstantValue* values,int32_t count){//XXX prevent unnecessary recreation of types
   TypeId tmp;
   switch(type.class){
     case TYPECLASS_PRIMITIVE:
@@ -1091,8 +1214,8 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
         for(int32_t d=0;d<arrayTypes[type.dataAs.id].dims;d++){
           if(!arrayTypes[type.dataAs.id].sizes[d].isInt){
             bool match=false;
-            for(int32_t i=0;i<count;i++){
-              if(isIntType(args[i].type)&&args[i].as.genericId==arrayTypes[type.dataAs.id].sizes[d].value){
+            for(int32_t i=0;i<count;i++){//TODO check if generic or template
+              if(isIntType(args[i].type)&&args[i].argId==arrayTypes[type.dataAs.id].sizes[d].value){
                 newSizes[d]=(ArraySize){.isInt=true,.value=values[i].as.i64};
                 match=true;
                 break;
@@ -1104,7 +1227,7 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
           newSizes[d]=arrayTypes[type.dataAs.id].sizes[d];
         }
       }
-       tmp=arrayType(type.class==TYPECLASS_ARRAY_VIEW,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
+      tmp=arrayType(type.class==TYPECLASS_ARRAY_VIEW,replaceGenericTypes(arrayTypes[type.dataAs.id].base,args,values,count),
         arrayTypes[type.dataAs.id].dims,newSizes,arrayTypes[type.dataAs.id].isMutable);
       free(newSizes);
       return tmp;
@@ -1113,6 +1236,11 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
       tmp=replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count);
       if(typeEquals(tmp,unwrapNamedType(type)))
         return type;
+      for(int32_t i=0;i<namedTypeCount;i++){
+        if(typeEquals(tmp,namedTypes[i].type)){
+          return (TypeId){.class=type.class,.dataAs.id=i};
+        }
+      }
       return newNamedType(namedTypes[type.dataAs.id].name,tmp);
     case TYPECLASS_TUPLE:
     case TYPECLASS_PROC_IN:
@@ -1121,6 +1249,8 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
     case TYPECLASS_STRUCT:
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:;
+      if(!isCompositeGeneric(compositeTypeData(type)))
+        return type;
       TypeId* newTypes=malloc(compositeTypes[type.dataAs.id].typeCount*sizeof(TypeId));
       for(int32_t i=0;i<compositeTypes[type.dataAs.id].typeCount;i++){
         newTypes[i]=replaceGenericTypes(compositeTypes[type.dataAs.id].types[i],args,values,count);
@@ -1129,9 +1259,11 @@ TypeId replaceGenericTypes(TypeId type,StaticArgument* args,ConstantValue* value
       free(newTypes);//compositeType(...) does not store the given type-array
       return res;
     case TYPECLASS_GENERIC_TYPE:
+    case TYPECLASS_TEMPLATE_TYPE:
       for(int32_t i=0;i<count;i++){
-        if(typeEquals(args[i].type,TYPE_TYPE)&&typeEquals(args[i].as.type,type))
+        if((args[i].isTemplate==(type.class==TYPECLASS_TEMPLATE_TYPE))&&typeEquals(args[i].type,TYPE_TYPE)&&args[i].argId==autoTypeId(type)){
           return values[i].as.type;
+        }
       }
       return type;
   }
@@ -1160,6 +1292,8 @@ char const* typeClassName(TypeClass cls){
       return "auto";
     case TYPECLASS_GENERIC_TYPE:
       return "generic";
+    case TYPECLASS_TEMPLATE_TYPE:
+      return "template argument";
     case TYPECLASS_STRUCT:
       return "structure";
     case TYPECLASS_ENUM:
@@ -1198,7 +1332,7 @@ void printTypeFlags(TypeId type,FILE* file){
   if(isMutableType(type))
     fputs(" mut",file);
 }
-void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
+void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
   String labelName;
   switch(type.class){
     case TYPECLASS_PRIMITIVE:
@@ -1208,15 +1342,18 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
     case TYPECLASS_NAMED_TYPE:
     case TYPECLASS_NAMED_ENUM_LABEL:
       fprintf(file,"namedType \"%"PRI_STR"\"",PRI_STR_ARGS(getLabelName(namedTypes[type.dataAs.id].name)));
+      if(deep)
+        fprintf(file," (%"PRIi32")",type.dataAs.id);
       if(!noRecurse){
         fputs(" [ ",file);
-        printTypeNameIntenal(unwrapNamedType(type),file,true);
+        printTypeNameInternal(unwrapNamedType(type),file,noRecurse&!deep,deep);
         fputs(" ]",file);
       }
       printTypeFlags(type,file);
       return;
     case TYPECLASS_AUTO_TYPE:
     case TYPECLASS_GENERIC_TYPE:
+    case TYPECLASS_TEMPLATE_TYPE:
       fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
       printTypeFlags(type,file);
       return;
@@ -1243,7 +1380,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
           continue;
         }
         fputs(" ",file);
-        printTypeNameIntenal(getTypeElements(type)[e],file,true);//only one recursion level
+        printTypeNameInternal(getTypeElements(type)[e],file,!deep,deep);//only one recursion level
         if(!typeElementsLabeled(type))
           continue;
         labelName=getLabelName(getTypeElementLabel(type,e));
@@ -1261,15 +1398,17 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
         return;
       }
       fputs(" ( ",file);
-      printTypeNameIntenal(procTypeData(type)->inType,file,true);
+      printTypeNameInternal(procTypeData(type)->inType,file,!deep,deep);
       fputs(" => ",file);
-      printTypeNameIntenal(procTypeData(type)->outType,file,true);
+      printTypeNameInternal(procTypeData(type)->outType,file,!deep,deep);
       fputs(" )",file);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
-      printTypeNameIntenal(getBaseType(type),file,noRecurse);
+      printTypeNameInternal(getBaseType(type),file,noRecurse|!deep,deep);
+      if(deep)
+        fprintf(file," (%"PRIi32")",type.dataAs.id);
       for(int32_t i=0;i<arrayTypeData(type)->dims;i++){
         if(arrayTypeData(type)->fixedSize){
           if(arrayTypeData(type)->sizes[i].isInt){
@@ -1289,7 +1428,7 @@ void printTypeNameIntenal(TypeId type,FILE* file,bool noRecurse){
   fprintf(file,"unknown type-class %i",type.class);
 }
 void printTypeName(TypeId type,FILE* file){
-  printTypeNameIntenal(type,file,false);
+  printTypeNameInternal(type,file,false,false);
 }
 
 char const* primitiveNameC(PrimitiveType t){
@@ -1321,6 +1460,10 @@ void printTypeNameC(TypeId type,FILE* file){
     case TYPECLASS_AUTO_TYPE:
       fputs("void",file);
       fputs("auto-types are not supported at compile type\n",stderr);
+      return;
+    case TYPECLASS_TEMPLATE_TYPE:
+      fputs("void",file);
+      fputs(" template-types are not supported at compile type\n",stderr);
       return;
     case TYPECLASS_GENERIC_TYPE://generic pointer -> void*
       fputs("void",file);
@@ -1465,6 +1608,7 @@ typedef enum{
   ID_INTERMEDIATE_RESULT,
   ID_TMP_VAR,
   ID_TYPE,
+  ID_TEMPLATE_ARGUMENT,
 }IdentifierType;
 typedef struct{
   int32_t id;
@@ -1475,7 +1619,7 @@ typedef struct{
 char const* const idNames []={[ID_LOCAL_VAR]="local variable",[ID_GLOBAL_VAR]="global variable",[ID_ARGUMENT]="procedure argument",
   [ID_PROCEDURE]="procedure",[ID_TUPLE]="(tuple element)",[ID_TUPLE_ELEMENT]="tuple element",[ID_ENUM_LABEL]="enum label",[ID_ENUM_ELEMENT]="enum element",[ID_POINTER]="pointer value",
   [ID_POINTER_OFFSET]="pointer offset",[ID_ARRAY_ELEMENT]="array element",[ID_ARRAY_SIZE]="array size",[ID_INTERMEDIATE_RESULT]="intermediate result",
-  [ID_TMP_VAR]="temporary variable",[ID_TYPE]="type"};
+  [ID_TMP_VAR]="temporary variable",[ID_TYPE]="type",[ID_TEMPLATE_ARGUMENT]="template argument"};
 void printIdInfo(IdentifierInfo info,FILE* out){
   if(info.isMutable)
     fputs("mutable ",out);
@@ -1612,8 +1756,13 @@ void printOperation(Operation op,FILE* out){
   }
   switch(op.opType){
     case OP_CONSTANT:
+    case OP_TEMPLATE_ARG:
     case OP_CHECK_ENUM_INDEX:
-      fprintf(out,"(%"PRIi64")",op.dataAs.i64);
+      if(!typeEquals(op.dataType,TYPE_TYPE)){
+        fprintf(out,"(%"PRIi64")",op.dataAs.i64);
+        break;
+      }
+      printTypeName(op.dataAs.sourceType,out);
       break;
     case OP_GET:
     case OP_SET:
@@ -1621,6 +1770,10 @@ void printOperation(Operation op,FILE* out){
     case OP_PRE_DECLARE:
     case OP_CALL:
     case OP_ADDR_OF:
+    case OP_CALL_TEMPLATE:
+    case OP_GET_TEMPLATE:
+    case OP_SET_TEMPLATE:
+    case OP_ADDR_OF_TEMPLATE:
       printIdInfo(op.dataAs.idInfo,out);
       break;
     case OP_BINARY_OPERATOR:
@@ -1792,14 +1945,96 @@ typedef struct{
   NamespaceImportId prevImports;
 }NamespaceBlock;
 
+typedef struct{
+  bool isNamespace;
+  union{
+    NamespaceBlock namespace;
+    TypeId template;
+  }as;
+}CompilerBlock;
+
 #define MAX_COMPILER_BLOCKS 128
-NamespaceBlock compilerBlocks [MAX_COMPILER_BLOCKS];
+CompilerBlock compilerBlocks [MAX_COMPILER_BLOCKS];
 size_t compilerBlockCount=0;
 
+typedef struct{
+  ConstantValue* argValues;
+  TypeId implType;
+  FilePosition implPos;
+}TemplateImplementation;
+typedef struct{
+  TypeId args;
+  size_t codeOffset;
+  size_t codeSize;
+  TemplateImplementation* implementations;
+  int32_t implCount;
+  int32_t implCap;
+  int32_t compiledImpls;
+}TemplateInfo;
+  
+Operation* templateOps=NULL;
+size_t templateOpCount=0;
+size_t templateOpCap=0;
+TemplateInfo* templates=NULL;
+size_t templateCount=0;
+size_t templateCap=0;
+bool ensureCap(void** mList,size_t* cap,size_t eltSize,size_t newSize);
+bool ensureTemplatesCap(size_t newSize){
+  void* ops=templates;
+  if(ensureCap(&ops,&templateCap,sizeof(TemplateInfo),newSize))
+    return true;
+  templates=ops;
+  return false;
+}
+bool ensureTemplateImplCap(TemplateInfo* info,size_t newSize){
+  void* ops=info->implementations;
+  size_t cap=info->implCap;
+  if(ensureCap(&ops,&cap,sizeof(TemplateImplementation),newSize))
+    return true;
+  info->implementations=ops;
+  info->implCap=cap;
+  return false;
+}
+TemplateInfo* getTemplateInfo(int32_t templateId){
+  if(templateId<0||(size_t)templateId>=templateCount)
+    return NULL;
+  return &templates[templateId];
+}
+
+
+bool hasOpenTemplate(void){
+  return compilerBlockCount>0&&!compilerBlocks[compilerBlockCount-1].isNamespace;
+}
+void endCompileTimeBlock(FilePosition pos){
+  if(compilerBlockCount==0)
+    handleError("no open compiler blocks",ERROR_SYNTAX,pos);
+  compilerBlockCount--;
+}
+void startTemplate(TypeId templateTypes,FilePosition pos){
+  if(compilerBlockCount>=MAX_COMPILER_BLOCKS)
+    handleError("compiler block overflow",ERROR_MEMORY,pos);
+  if(hasOpenTemplate())
+    handleError("cannot open templates within a template",ERROR_SYNTAX,pos);
+  currentTemplateId++;
+  if(currentTemplateId!=(int64_t)templateCount)
+    handleError("current template id and template count out of sync",ERROR_MEMORY,pos);
+  compilerBlocks[compilerBlockCount++]=(CompilerBlock){.isNamespace=false,.as.template=templateTypes};
+  if(ensureTemplatesCap(templateCount+1))
+    handleError("could not allocate template array",ERROR_MEMORY,pos);
+  templates[templateCount++]=(TemplateInfo){.args=templateTypes,.implementations=NULL,.implCount=0,.compiledImpls=0,.implCap=0,.codeOffset=templateOpCount,.codeSize=0};
+}
+void endOpenTemplate(FilePosition pos){
+  if(!hasOpenTemplate())
+    return;
+  templates[templateCount-1].codeSize=templateOpCount-templates[templateCount-1].codeOffset;
+  endCompileTimeBlock(pos);
+}
 void startNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
   if(compilerBlockCount>=MAX_COMPILER_BLOCKS)
     handleError("compiler block overflow",ERROR_MEMORY,pos);
-  compilerBlocks[compilerBlockCount++]=(NamespaceBlock){.prevImports=namespace->namespaceImports};
+  if(hasOpenTemplate())
+    handleError("cannot open namespaces within a template",ERROR_SYNTAX,pos);
+  compilerBlocks[compilerBlockCount++]=(CompilerBlock){.isNamespace=true,.as.namespace.prevImports=namespace->namespaceImports};
   namespace->current=childId(namespace->current,label,true);
   if(namespace->current==NAMESPACE_ID_NONE)
     handleError("storing namespace failed",ERROR_MEMORY,pos);
@@ -1815,17 +2050,16 @@ void importNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
     handleError("error while allocating namespace import information",ERROR_MEMORY,pos);
   namespace->namespaceImports=importId;
 }
-void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
-  if(compilerBlockCount==0)
-    handleError("no open compiler blocks",ERROR_SYNTAX,pos);
-  compilerBlockCount--;
-  //if block is namespace
+void endNamespace(NamespaceInfo* namespace,FilePosition pos){
+  endCompileTimeBlock(pos);
+  if(!compilerBlocks[compilerBlockCount].isNamespace)
+    handleError("current code-block is not a namespace",ERROR_MEMORY,pos);
   if(namespace->current==NAMESPACE_ID_NONE)
     handleError("invalid value for current namespace",ERROR_MEMORY,pos);
   namespace->current=namespaceBuffer[namespace->current].parent;
   if(namespace->current==NAMESPACE_ID_NONE)
     handleError("no open namespaces",ERROR_SYNTAX,pos);
-  namespace->namespaceImports=compilerBlocks[compilerBlockCount].prevImports;
+  namespace->namespaceImports=compilerBlocks[compilerBlockCount].as.namespace.prevImports;
 }
 
 
@@ -1833,11 +2067,16 @@ void endCompileTimeBlock(NamespaceInfo* namespace,FilePosition pos){
 #define SCOPE_CAP 256
 #define SCOPE_MAP_CAP 1024
 typedef struct ScopeNode ScopeNode;
+typedef struct{
+  TypeId args;
+  int32_t templateId;
+}TemplateData;
 struct ScopeNode{
   String key;
   TypeId type;
   ScopeNode* next;
   ConstantValue constValue;
+  TemplateData templateData;
   NamespaceId namespaceId;
   LabelId labelId;
   int32_t id;
@@ -1850,6 +2089,7 @@ typedef struct{
   NamespaceImportId prevImports;
   size_t nodeBufferOffset;
 }Scope;
+ScopeNode tmpScopeNode;
 ScopeNode scopeNodeBuffer [SCOPE_NODE_CAP];
 size_t scopeNodeCount=0;
 Scope scopeBuffer [SCOPE_CAP];
@@ -1861,6 +2101,7 @@ typedef struct{
   FilePosition includePos;
   FileId id;
 }IncludedFile;
+  
 typedef struct{
   Scope globalScope;
   NamespaceInfo namespaceInfo;
@@ -1991,8 +2232,14 @@ void printIdentiferMatch(ScopeNode* asIdentifier,FilePosition pos){
   printf("%s: ",idNames[asIdentifier->idType]);
   printTypeName(asIdentifier->type,stdout);
   if(asIdentifier->constValue.constType!=CONSTANT_NONE){
-    fputs(" ",stdout);
+    fputs(" [ ",stdout);
     printConstValue(asIdentifier->constValue,stdout);
+    fputs(" ]",stdout);
+  }
+  if(asIdentifier->templateData.templateId!=-1){
+    fprintf(stdout," template(%"PRIi32"):(",asIdentifier->templateData.templateId);
+    printTypeName(asIdentifier->templateData.args,stdout);
+    fputs(" )",stdout);
   }
   fputs("\n      at ",stdout);
   printFilePosition(mLabel->declaredAt,stdout);
@@ -2075,6 +2322,32 @@ int searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String nam
   }
   if(!firstDuplicate)
     handleWarning(NULL,ERROR_SYNTAX,pos);
+  if(compilerBlockCount>0&&!compilerBlocks[compilerBlockCount-1].isNamespace){
+    for(int32_t i=0;i<getTypeElementCount(compilerBlocks[compilerBlockCount-1].as.template);i++){
+      if(stringCompare(name,getLabelName(compositeTypeData(compilerBlocks[compilerBlockCount-1].as.template)->labelOffset+i))==0){
+        tmpScopeNode.key=name;
+        tmpScopeNode.type=compositeTypeData(compilerBlocks[compilerBlockCount-1].as.template)->types[i];
+        tmpScopeNode.next=NULL;
+        if(typeEquals(tmpScopeNode.type,TYPE_TYPE)){
+          tmpScopeNode.constValue=(ConstantValue){.constType=TEMPLATE_ARGUMENT,.valueType=tmpScopeNode.type,.as.type=newTemplateType(i)};
+        }else{
+          tmpScopeNode.constValue=(ConstantValue){.constType=TEMPLATE_ARGUMENT,.valueType=tmpScopeNode.type,.as.i64=i};
+        }
+        tmpScopeNode.namespaceId=namespace.current;
+        tmpScopeNode.labelId=compositeTypeData(compilerBlocks[compilerBlockCount-1].as.template)->labelOffset+i;
+        tmpScopeNode.id=i;
+        tmpScopeNode.idType=ID_TEMPLATE_ARGUMENT;
+        if(printMatches)
+          printIdentiferMatch(&tmpScopeNode,pos);
+        if(match==NAMESPACE_ID_NONE){
+          *out=&tmpScopeNode;
+          match=namespace.current;
+        }
+        if(!printMatches)
+          return 0;
+      }
+    }
+  }
   if(match!=NAMESPACE_ID_NONE)
     return 0;//found matching namespace
   return ERROR_SYNTAX;
@@ -2127,6 +2400,12 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
   (*node)->idType=idType;
   (*node)->id=id;
   (*node)->labelId=labelId;
+  if(hasOpenTemplate()&&(isTemplateType(type)||(constValue!=NULL&&
+    (constValue->constType==TEMPLATE_ARGUMENT||(typeEquals(constValue->valueType,TYPE_TYPE)&&isTemplateType(constValue->as.type)))))){//is template value
+    (*node)->templateData=(TemplateData){.args=compilerBlocks[compilerBlockCount-1].as.template,.templateId=currentTemplateId};
+  }else{
+    (*node)->templateData=(TemplateData){.args=TYPE_UNDEFINED,.templateId=-1};
+  }
   if(constValue!=NULL&&!isMutableLabelId(labelId)){
     (*node)->constValue=*constValue;
     (*node)->constValue.valueType=type;
@@ -2304,10 +2583,13 @@ void printProcArgumentTypesC(ProcedureType const* proc,FILE* target,bool printAr
       fprintf(target," arg%"PRIi32,e);
   }
 }
-void printProcedureSignatureC(ProcedureType const* procedure,Label const* procLabel,FILE* target,bool printArgNames){
+void printProcedureSignatureC(ProcedureType const* procedure,Label const* procLabel,int32_t templateImplId,FILE* target,bool printArgNames){
   printTypeNameC(procedure->outType,target);
   fputs(" ",target);
   printGlobalIdentifer(procLabel,target);
+  if(templateImplId!=-1){
+    fprintf(target,"_I%"PRIi32,templateImplId);
+  }
   fputs(" (",target);
   printProcArgumentTypesC(procedure,target,printArgNames);
   fputs(")",target);
@@ -2413,6 +2695,9 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
       }
       fprintf(target,"arraySizes%"PRIi32,arrayTypeData(op->dataType)->id);
       return size;
+    case ID_TEMPLATE_ARGUMENT:
+      handleError("template arguments should not exist at this stage of compilation",ERROR_MEMORY,op->filePos);
+      break;
     case ID_TYPE:
       handleError("type information is not accessible at runtime",ERROR_SYNTAX,op->filePos);
       break;
@@ -2609,7 +2894,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case ID_PROCEDURE:
           if(!isProcedureType(op->dataType))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(procTypeData(op->dataType),label(op->dataAs.idInfo.labelId,op->filePos),target,false);
+          printProcedureSignatureC(procTypeData(op->dataType),label(op->dataAs.idInfo.labelId,op->filePos),-1,target,false);
           fputs(";\n",target);
           return size;
         case ID_INTERMEDIATE_RESULT:
@@ -2623,6 +2908,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case ID_ARRAY_ELEMENT:
         case ID_ARRAY_SIZE:
         case ID_TYPE:
+        case ID_TEMPLATE_ARGUMENT:
           fprintf(stderr,"cannot pre-declare %s\n",idNames[op->dataAs.idInfo.type]);
           handleError(NULL,ERROR_SYNTAX,op->filePos);
           break;
@@ -2653,7 +2939,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case ID_PROCEDURE:
           if(!isProcedureType(op->dataType))
             handleError("invalid type for ID_PROCEDURE",ERROR_TYPE,op->filePos);
-          printProcedureSignatureC(procTypeData(op->dataType),label(op->dataAs.idInfo.labelId,op->filePos),target,true);
+          printProcedureSignatureC(procTypeData(op->dataType),label(op->dataAs.idInfo.labelId,op->filePos),op->dataAs.idInfo.id,target,true);
           fputs("{\n",target);
           return size;
         case ID_ARGUMENT:
@@ -2674,6 +2960,9 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
         case ID_ARRAY_ELEMENT:
         case ID_ARRAY_SIZE:
           handleError("cannot declare arrays",ERROR_SYNTAX,op->filePos);
+          break;
+        case ID_TEMPLATE_ARGUMENT:
+          handleError("cannot declare template arguments",ERROR_SYNTAX,op->filePos);
           break;
         case ID_TYPE:
           handleError("cannot declare types",ERROR_SYNTAX,op->filePos);
@@ -2937,7 +3226,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           fputs("default:\n",target);
           return size;
         case BLOCK_UNKNOWN:
-          fprintf(stderr,"code block %s should not exist at this stage of compilation\n",blockNames[op->dataAs.block.type]);
+          fprintf(stderr,"code-block %s should not exist at this stage of compilation\n",blockNames[op->dataAs.block.type]);
           handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
       break;
@@ -2979,11 +3268,15 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       fputs(")",target);
       return compileProcArgs(target,compiledOps,op,size,opSize,isGlobal);
     case OP_CALL:
+    case OP_CALL_TEMPLATE:
       if(op->dataAs.idInfo.type!=ID_PROCEDURE){
         fprintf(stderr,"calling %s directly is not supported\n",idNames[op->dataAs.idInfo.type]);
         handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
       printGlobalIdentifer(label(op->dataAs.idInfo.labelId,op->filePos),target);
+      if(op->opType==OP_CALL_TEMPLATE){
+        fprintf(target,"_I%"PRIi32,op->dataAs.idInfo.id);
+      }
       return compileProcArgs(target,compiledOps,op,size,opSize,isGlobal);
     case OP_GET_LABEL:
     case OP_SET_LABEL:
@@ -2993,6 +3286,10 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
     case OP_IDENTIFIER_ADDRESS:
     case OP_MODIFY_STACK:
     case OP_COMPILER_INFO:
+    case OP_TEMPLATE_ARG:
+    case OP_GET_TEMPLATE:
+    case OP_SET_TEMPLATE:
+    case OP_ADDR_OF_TEMPLATE:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op->opType));
       handleError(NULL,ERROR_SYNTAX,op->filePos);
       break;
@@ -3025,23 +3322,27 @@ void compileToC(FILE* target,Program const* p){
   //initialize strings
   if(progStringCount>0)
     initProgStringChars();//initialize characters
-  //declare composite types
-  for(int32_t i=0;i<compositeTypeCount;i++){
-    if(isUsedTuple(&compositeTypes[i])){
-      fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",i,i);
+  //declare multi-types
+  for(int32_t i=0;i<declaredMultiTypeCount;i++){
+    int32_t id=declaredMultiTypes[i].dataAs.id;
+    if(isTemplateType(declaredMultiTypes[i]))
+      continue;
+    if(isPointerType(declaredMultiTypes[i])||isArrayType(declaredMultiTypes[i])){
+      if(arrayTypes[id].viewOnly)
+        continue;//skip view-only arrays with known size
+      fprintf(target,"typedef struct array%"PRIi32"Impl array%"PRIi32";\n",id,id);
+      continue;
     }
-    if(compositeTypes[i].flags&(FLAG_IS_ENUM)){
-      if(compositeTypes[i].flags&FLAG_VOID_ONLY){
-        fprintf(target,"typedef int32_t enum%"PRIi32";\n",i);
+    if(isUsedTuple(&compositeTypes[id])){
+      fprintf(target,"typedef struct tuple%"PRIi32"Impl tuple%"PRIi32";\n",id,id);
+    }
+    if((compositeTypes[id].flags&FLAG_IS_ENUM)!=0){
+      if(compositeTypes[id].flags&FLAG_VOID_ONLY){
+        fprintf(target,"typedef int32_t enum%"PRIi32";\n",id);
       }else{
-        fprintf(target,"typedef struct enum%"PRIi32"Impl enum%"PRIi32";\n",i,i);
+        fprintf(target,"typedef struct enum%"PRIi32"Impl enum%"PRIi32";\n",id,id);
       }
     }
-  }
-  for(int32_t i=0;i<arrayTypeCount;i++){
-      if(arrayTypes[i].viewOnly)
-        continue;//skip view-only arrays with known size
-      fprintf(target,"typedef struct array%"PRIi32"Impl array%"PRIi32";\n",i,i);
   }
   //declare procedure pointers
   for(int32_t i=0;i<procTypeCount;i++){
@@ -3053,8 +3354,11 @@ void compileToC(FILE* target,Program const* p){
       fputs(");\n",target);
     }
   }
-  for(int32_t i=0;i<declaredMultiTypeCount;i++){//got through multi-types in order of declaration
+  //initialize multi-types
+  for(int32_t i=0;i<declaredMultiTypeCount;i++){
     int32_t id=declaredMultiTypes[i].dataAs.id;
+    if(isTemplateType(declaredMultiTypes[i]))
+      continue;
     if(isPointerType(declaredMultiTypes[i])||isArrayType(declaredMultiTypes[i])){
       if(arrayTypes[id].viewOnly)
         continue;//skip view-only arrays with known size
@@ -3147,18 +3451,27 @@ void compileToC(FILE* target,Program const* p){
       Label const* mLabel=label(n->labelId,(FilePosition){0});
       if(!wordEquals(&p->files[f].fileName,mLabel->declaredAt.fileName))
         continue;//declared in different file
-      if(isExternLabel(mLabel))
-        fputs("extern ",target);
-      if(isProcedureType(n->type)){
-        printProcedureSignatureC(procTypeData(n->type),mLabel,target,false);
-        fputs(";\n",target);
-        continue;
-      }
       if(isAutoType(n->type)){
         if(p->autoTypes==NULL||autoTypeId(n->type)<0||autoTypeId(n->type)>=p->nAutoTypes){
           handleError("predeclared id out of expected range",ERROR_TYPE,mLabel->declaredAt);
         }
         n->type=p->autoTypes[autoTypeId(n->type)];//get predeceased type
+      }
+      if(n->templateData.templateId!=-1){
+        if(isExternLabel(mLabel))
+          handleError("templates cannot be extern",ERROR_TYPE,mLabel->declaredAt);
+        for(int32_t i=0;i<templates[n->templateData.templateId].implCount;i++){
+          printProcedureSignatureC(procTypeData(templates[n->templateData.templateId].implementations[i].implType),mLabel,i,target,false);
+          fputs(";\n",target);
+        }
+        continue;
+      }
+      if(isExternLabel(mLabel))
+        fputs("extern ",target);
+      if(isProcedureType(n->type)){
+        printProcedureSignatureC(procTypeData(n->type),mLabel,-1,target,false);
+        fputs(";\n",target);
+        continue;
       }
       printTypeNameC(n->type,target);
       fputs(" ",target);
@@ -3183,6 +3496,10 @@ void compileToC(FILE* target,Program const* p){
     for(size_t i=0;i<p->files[f].localOpCount;){
       i+=compileOp(target,i,p->files[f].localOps+i,p->files[f].localOpCount-i,false);
     }
+  }
+  fputs("//template code\n",target);
+  for(size_t i=0;i<templateOpCount;){
+    i+=compileOp(target,i,templateOps+i,templateOpCount-i,false);
   }
 }
 
@@ -3258,6 +3575,7 @@ int32_t nextId(IdentifierType idType,ParserState* state){
     case ID_GLOBAL_VAR:
     case ID_TYPE:
     case ID_PROCEDURE:
+    case ID_TEMPLATE_ARGUMENT:
       return state->globalVars++;
     //local
     case ID_LOCAL_VAR:
@@ -3327,6 +3645,32 @@ Operation opConstant(TypeId type,int64_t constData,FilePosition pos){
 }
 Operation opTypeConstant(TypeId type,TypeId constData,FilePosition pos){
   return (Operation){.opType=OP_CONSTANT,.dataType=type,.filePos=pos,.dataAs={.sourceType=constData}};
+}
+Operation opFromConstant(ConstantValue constant,FilePosition pos){
+  if(constant.constType==CONSTANT_NONE||constant.constType==CONSTANT_WILDCARD||constant.constType==GENERIC_INT){
+    fprintf(stderr,"cannot convert constants of type %s to operation",constTypeName(constant.constType));
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
+  if(typeEquals(constant.valueType,TYPE_BOOL))
+    return (Operation){.opType=OP_CONSTANT,.dataType=constant.valueType,.filePos=pos,.dataAs={.i64=constant.as.boolean}};
+  if(isIntType(constant.valueType))
+    return (Operation){.opType=OP_CONSTANT,.dataType=constant.valueType,.filePos=pos,.dataAs={.i64=constant.as.i64}};
+  if(typeEquals(constant.valueType,TYPE_CHAR))
+    return (Operation){.opType=OP_CONSTANT,.dataType=constant.valueType,.filePos=pos,.dataAs={.i64=constant.as.charId}};
+  if(typeEquals(constant.valueType,TYPE_TYPE))
+    return (Operation){.opType=OP_CONSTANT,.dataType=constant.valueType,.filePos=pos,.dataAs={.sourceType=constant.as.type}};
+  if(constant.constType==CONSTANT_STRING)
+    return (Operation){.opType=OP_CONSTANT,.dataType=constant.valueType,.filePos=pos,.dataAs={.i64=addProgString(constant.as.string,pos)}};
+  fputs("unexpected type of constant: ",stderr);
+  printTypeName(constant.valueType,stderr);
+  fputs("\n",stderr);
+  handleError(NULL,ERROR_SYNTAX,pos);
+}
+Operation opTemplateValue(TypeId type,int64_t argId,FilePosition pos){
+  return (Operation){.opType=OP_TEMPLATE_ARG,.dataType=type,.filePos=pos,.dataAs={.i64=argId}};
+}
+Operation opTemplateType(TypeId type,TypeId constData,FilePosition pos){
+  return (Operation){.opType=OP_TEMPLATE_ARG,.dataType=type,.filePos=pos,.dataAs={.sourceType=constData}};
 }
 Operation opUnreachable(FilePosition pos){
   return (Operation){.opType=OP_UNREACHABLE,.dataType=TYPE_UNDEFINED,.filePos=pos,.dataAs={0}};
@@ -3609,6 +3953,14 @@ LabelId readLabel(CodeFile* codeFile,char const* labelType,NamespaceId namespace
 }
 
 
+void typeErrorMessage(char const* exprName,TypeId expected,TypeId got){
+  fprintf(stderr,"wrong type for %s: expected ",exprName);
+  printTypeName(expected,stderr);
+  fputs(" got ",stderr);
+  printTypeName(got,stderr);
+  fputs("\n",stderr);
+}
+
 //temporary buffer for storing constants
 #define CONST_BUFFER_CAP       512
 #define MAX_COMPOSITE_ELEMENTS 128
@@ -3683,9 +4035,10 @@ TypeId popTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid)
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   bufferedConstants--;
-  if(constBuffer[bufferedConstants].value.constType!=CONSTANT_TYPE){
-    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants].value.constType));
-    fputs(" declared at ",stderr);
+  if(!typeEquals(constBuffer[bufferedConstants].value.valueType,TYPE_TYPE)){
+    fprintf(stderr,"wrong type for constant %s expected type got ",argumentName);
+    printTypeName(constBuffer[bufferedConstants].value.valueType,stderr);
+    fputs("\n  declared at ",stderr);
     printFilePosition(constBuffer[bufferedConstants].pos,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,pos);
@@ -3701,9 +4054,10 @@ TypeId peekTypeConstant(FilePosition pos,char const* argumentName,bool allowVoid
     fprintf(stderr,"missing %s\n",argumentName);
     handleError(NULL,ERROR_SYNTAX,pos);
   }
-  if(constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
-    fprintf(stderr,"wrong constant type for %s expected type got %s\n",argumentName,constTypeName(constBuffer[bufferedConstants-1].value.constType));
-    fputs(" declared at ",stderr);
+  if(!typeEquals(constBuffer[bufferedConstants-1].value.valueType,TYPE_TYPE)){
+    fprintf(stderr,"wrong type for constant %s expected type got ",argumentName);
+    printTypeName(constBuffer[bufferedConstants].value.valueType,stderr);
+    fputs("\n  declared at ",stderr);
     printFilePosition(constBuffer[bufferedConstants-1].pos,stderr);
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,pos);
@@ -3754,6 +4108,22 @@ TypeId const* popTypeConstants(size_t count,FilePosition pos,char const* argumen
     compositeTypeBuffer[i]=popTypeConstant(pos,argumentName,allowVoid);
   }
   return compositeTypeBuffer;
+}
+/*
+pops the generic arguments for the given template 
+the returned array points to a subsection of the constant buffer and becomes invalid once any new constants get added
+*/
+Constant const* popTemplateArguments(TypeId templateArgs,String templateName,FilePosition pos){
+  if(!isComposite(templateArgs))
+    handleError("templateArgs has to be a composite type",ERROR_MEMORY,pos);
+  if((size_t)getTypeElementCount(templateArgs)>bufferedConstants)
+    fprintf(stderr,"not enough arguments for template %"PRI_STR": %zu need:%"PRIi64"\n",PRI_STR_ARGS(templateName),bufferedConstants,getTypeElementCount(templateArgs));
+  bufferedConstants-=getTypeElementCount(templateArgs);
+  for(int32_t i=0;i<getTypeElementCount(templateArgs);i++){
+    if(!typeEquals(constBuffer[bufferedConstants+i].value.valueType,compositeTypeData(templateArgs)->types[i]))
+      typeErrorMessage("template argument",compositeTypeData(templateArgs)->types[i],constBuffer[bufferedConstants+i].value.valueType);
+  }
+  return &constBuffer[bufferedConstants];
 }
 
 #define LABEL_TYPE_NONE    0 // no labels
@@ -3818,8 +4188,30 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     handleError("error while reading identifier",r,codeFile->wordStart);
     return false;
   }
-  if(r>0||asIdentifier->constValue.constType==CONSTANT_NONE)//identifier does not exist
+  if(r>0||asIdentifier->constValue.constType==CONSTANT_NONE)//identifier does not represent a constant
     return readType(word,codeFile,state);
+  if(asIdentifier->templateData.templateId!=-1&&asIdentifier->idType!=ID_TEMPLATE_ARGUMENT){//fill template constants
+    Constant const* args=popTemplateArguments(asIdentifier->templateData.args,word,codeFile->wordStart);
+    if(typeEquals(asIdentifier->type,TYPE_TYPE)){
+      int32_t count=getTypeElementCount(asIdentifier->templateData.args);
+      GenericType* templateVars=malloc(count*sizeof(GenericType));
+      ConstantValue* vals=malloc(count*sizeof(ConstantValue));
+      if(templateVars==NULL||vals==NULL)
+        handleError("allocation of template argument buffer failed",ERROR_MEMORY,wordPos);
+      for(int32_t i=0;i<count;i++){
+        templateVars[i].type=compositeTypeData(asIdentifier->templateData.args)->types[i];
+        templateVars[i].argId=i;
+        templateVars[i].isTemplate=true;
+        vals[i]=args[i].value;
+      }
+      TypeId val=replaceGenericTypes(asIdentifier->constValue.as.type,templateVars,vals,count);
+      pushTypeConstant(val,codeFile->wordStart);
+      return true;
+    }else{
+      handleError("template constants",ERROR_UNIMPLEMENTED,wordPos);
+      (void)args;
+    }
+  }
   pushConstant(asIdentifier->constValue,codeFile->wordStart,true,(IdentifierInfo){.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
     .isMutable=isMutableLabelId(asIdentifier->labelId)});
   return true;
@@ -3839,17 +4231,16 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
   do{
     word=nextWord(codeFile,&wordType);
     if(readConstants(word,wordType,codeFile,state)){
-      typesSinceLabel+=(bufferedConstants-currentOffset);
-      currentOffset=bufferedConstants;
       continue;
     }
+    typesSinceLabel=(bufferedConstants-currentOffset);
     if(wordEquals(&word,endString))
       break;
     if(wordEquals(&word,":")){//start label
       if(labelType==LABEL_TYPE_NONE)
         handleError("expected type got ':' ",ERROR_SYNTAX,codeFile->wordStart);
       if(typesSinceLabel>1){
-        fprintf(stderr,"too many types for field declaration expected 1 got %i\n",typesSinceLabel);
+        fprintf(stderr,"too many types for type field declaration expected 1 got %i\n",typesSinceLabel);
         handleError(NULL,ERROR_SYNTAX,codeFile->wordStart);
         return;
       }
@@ -4101,44 +4492,26 @@ void includeFile(ParserState * state,char const* includePath,FilePosition includ
 
 void pushOperation(ParserState* state,Operation op);
 
-void storeConstants(ParserState* state,FilePosition pos){
-  int64_t intVal;
+void storeConstants(ParserState* state){
   size_t constCount=bufferedConstants;
   bufferedConstants=0;//set constant count to 0 to prevent infinite recursion
   for(size_t i=0;i<constCount;i++){
-    switch(constBuffer[i].value.constType){
-      case CONSTANT_STRING:
-        intVal=addProgString(constBuffer[i].value.as.string,constBuffer[i].pos);
-        pushOperation(state,opConstant(constBuffer[i].value.valueType,intVal,constBuffer[i].pos));
-        break;
-    case CONSTANT_BOOL:
-        pushOperation(state,opConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.boolean,constBuffer[i].pos));
-        break;
-      case CONSTANT_CHAR:
-        pushOperation(state,opConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.charId,constBuffer[i].pos));
-        break;
-      case CONSTANT_INT:
-        intVal=constBuffer[i].value.as.i64;
-        pushOperation(state,opConstant(constBuffer[i].value.valueType,intVal,constBuffer[i].pos));
-        break;
-      case CONSTANT_TYPE:
-        pushOperation(state,opTypeConstant(constBuffer[i].value.valueType,constBuffer[i].value.as.type,constBuffer[i].pos));
-        break;
-      case CONSTANT_NONE:
-        break;
-      case CONSTANT_WILDCARD:
-      case GENERIC_INT:
-        fprintf(stderr,"cannot store constants of type %s\n",constTypeName(constBuffer[i].value.constType));
-        handleError(NULL,ERROR_SYNTAX,pos);
-        break;
-    }
+    if(constBuffer[i].value.constType!=CONSTANT_NONE)
+        pushOperation(state,opFromConstant(constBuffer[i].value,constBuffer[i].pos));
   }
 }
 void pushOperation(ParserState* state,Operation op){
   if(bufferedConstants>0){
-    storeConstants(state,op.filePos);
+    storeConstants(state);
   }
   ProgramFile* currentFile=&state->files[state->currentFile];
+  if(hasOpenTemplate()){//template
+    if(ensureOpCap(&templateOps,&templateOpCap,templateOpCount+bufferedConstants+16)){
+      handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
+    }
+    templateOps[templateOpCount++]=op;
+    return;
+  }
   if(localScopeCount>0){//local
     if(ensureOpCap(&currentFile->localOps,&currentFile->localOpCap,currentFile->localOpCount+bufferedConstants+16)){
       handleError("exceeded operation capacity",ERROR_MEMORY,op.filePos);
@@ -4153,6 +4526,8 @@ void pushOperation(ParserState* state,Operation op){
 }
 bool canPeekOperationParser(ParserState* state){
   ProgramFile* currentFile=&state->files[state->currentFile];
+  if(hasOpenTemplate())//template
+    return templateOpCount>0;
   if(localScopeCount>0){//local
     return currentFile->localOpCount>0;
   }
@@ -4160,6 +4535,12 @@ bool canPeekOperationParser(ParserState* state){
 }
 Operation* peekOperation(ParserState* state,FilePosition pos){
   ProgramFile* currentFile=&state->files[state->currentFile];
+  if(hasOpenTemplate()){//template
+    if(templateOpCount==0){
+      handleError("operation underflow",ERROR_MEMORY,pos);
+    }
+    return &templateOps[templateOpCount-1];
+  }
   if(localScopeCount>0){//local
     if(currentFile->localOpCount==0){
       handleError("operation underflow",ERROR_MEMORY,pos);
@@ -4197,10 +4578,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     ConstantValue val=(ConstantValue){.constType=CONSTANT_NONE,.valueType=TYPE_UNDEFINED,.as.i64=0};
     if(typeEquals(type,TYPE_TYPE)){
       val.constType=CONSTANT_TYPE;
+      val.valueType=TYPE_TYPE;
       val.as.type=newNamedType(labelId,TYPE_UNDEFINED);
       idType=ID_TYPE;
     }
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&val);
+    endOpenTemplate(wordPos);
     if(idType==ID_TYPE)//declaring type does not produce any code
       return;
     if(localScopeCount>0)//global identifiers are predeclared implicitly)
@@ -4218,7 +4601,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       TypeId constType=popTypeConstant(wordPos,"type constant",false);
       type=newNamedType(labelId,constType);
       ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
-      declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,type,idType,nextId(idType,state),wordPos,&constValue);
+      declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
+      endOpenTemplate(wordPos);
       return;
     }else if(isProcedureType(type)){
       idType=ID_PROCEDURE;
@@ -4241,8 +4625,11 @@ void readOperation(ParserState* state,CodeFile* codeFile){
             declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),inTypes->labelOffset+i,inTypes->types[i],ID_ARGUMENT,i,wordPos,NULL);
          }
       }
+    }else{
+      endOpenTemplate(wordPos);
     }
-    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName->declaredAt,.dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
+    pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName->declaredAt,
+      .dataAs={.idInfo={.type=idType,.id=idType==ID_PROCEDURE?-1:id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
   }else if(wordEquals(&word,"new")){
     if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
@@ -4365,7 +4752,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
         handleError(NULL,ERROR_SYNTAX,wordPos);
       }
-      endCompileTimeBlock(parserNamespace(state),wordPos);
+      endNamespace(parserNamespace(state),wordPos);
       return;
     }else if(wordEquals(&word,"include")){
       if(localScopeCount>0){
@@ -4394,6 +4781,15 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         return;
       }
       handleError("included names have to be identifiers or strings",ERROR_SYNTAX,wordPos);
+    }else if(wordEquals(&word,"template")){
+      if(localScopeCount>0){
+        fprintf(stderr,"#%"PRI_STR" can only be used at global level\n",PRI_STR_ARGS(word));
+        handleError(NULL,ERROR_SYNTAX,wordPos);
+      }
+      readCompositeType(TYPECLASS_LABELED_PROC_IN,codeFile,state,LABEL_TYPE_STRUCT,"#end",false);
+      TypeId templateTypes=popTypeConstant(wordPos,"template types",false);
+      startTemplate(templateTypes,wordPos);
+      return;
     }
     //compiler commands
     if(wordEquals(&word,"types")){
@@ -4435,7 +4831,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       size_t opCount=localScopeCount>0?f->localOpCount:f->globalOpCount;
       size_t i0=(count<0||((size_t)count)>opCount)?0:opCount-count;
       for(size_t i=i0;i<opCount;i++){
-        printOperation((localScopeCount>0?f->localOps:f->globalOps)[i],stdout);
+        printOperation((hasOpenTemplate()?templateOps:localScopeCount>0?f->localOps:f->globalOps)[i],stdout);
       }
       puts("-----------------");
       return;
@@ -4539,10 +4935,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
         type=newNamedType(labelId,constType);
         ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
         declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,idType,nextId(idType,state),wordPos,&constValue);
+        endOpenTemplate(wordPos);
         return;
       }
     }
     ScopeNode const* id=declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,mType,idType,nextId(idType,state),wordPos,peekConstValue());
+    endOpenTemplate(wordPos);
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=mType,.filePos=varName->declaredAt,
       .dataAs={.idInfo={.type=idType,.id=id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
@@ -4557,6 +4955,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId,wordPos);
       if(r!=0)
         handleError("error while resolving identifier",r,wordPos);
+      if(prevId->templateData.templateId!=-1)
+        handleError("assigning to template identifiers",ERROR_UNIMPLEMENTED,wordPos);
       //get previous value of type constant
       TypeId opaque=popTypeConstant(wordPos,"opaqueType",false);
       if(!isNamedType(opaque)||!typeEquals(unwrapNamedType(opaque),TYPE_UNDEFINED))
@@ -4578,6 +4978,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
           return;
         case OP_IDENTIFIER:
           peekOperation(state,wordPos)->opType=OP_SET_IDENTIFIER;
+          return;
+        case OP_GET_TEMPLATE:
+          peekOperation(state,wordPos)->opType=OP_SET_TEMPLATE;
           return;
         default:
           printf("cannot set operations of type %s\n",opName(peekOperation(state,wordPos)->opType));
@@ -4614,6 +5017,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     }
     if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_GET_LABEL){
       peekOperation(state,wordPos)->opType=OP_ADDR_OF_LABEL;
+      return;
+    }
+    if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_GET_TEMPLATE){
+      peekOperation(state,wordPos)->opType=OP_ADDR_OF_TEMPLATE;
       return;
     }
     handleError("stack value address",ERROR_UNIMPLEMENTED,wordPos);
@@ -4686,6 +5093,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opEndCodeBlock(closed,wordPos));
     if(closed==BLOCK_PROCEDURE){//exited procedure
       state->currentProcId=-1;
+      endOpenTemplate(wordPos);
     }
     closeScope(state);
     return;
@@ -4696,6 +5104,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_RETURN,.dataType=procTypes[state->currentProcId].outType,.filePos=wordPos,.dataAs={0}});
     return;
   }else if(wordEquals(&word,"entryPoint:")){
+    if(hasOpenTemplate())
+      handleError("entry point cannot be declared within a template",ERROR_SYNTAX,wordPos);
     if(hasEntryPointParser(state)){
       fputs("program already has an entry point\n  at ",stderr);
       printFilePosition(getEntryPointPosParser(state),stderr);
@@ -4720,6 +5130,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   if(r<0)//internal error while reading identifier
     handleError("error while resolving identifier",r,wordPos);
   if(r==0){//identifier
+    if(asIdentifier->templateData.templateId!=-1){
+      pushOperation(state,(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL_TEMPLATE:OP_GET_TEMPLATE,
+        .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
+        .isMutable=isMutableLabelId(asIdentifier->labelId)}}});
+      return;
+    }
     pushOperation(state,(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET,
       .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
       .isMutable=isMutableLabelId(asIdentifier->labelId)}}});
@@ -4738,13 +5154,9 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
   }
   size_t opsCap=128;
   Operation*  globalOps=malloc(opsCap*sizeof(Operation));
-  if(globalOps==NULL){
-    handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
-    return FILE_ID_NONE;
-  }
   Operation*  localOps=malloc(opsCap*sizeof(Operation));
-  if(localOps==NULL){
-    handleError("could not allocate operation array",ERROR_MEMORY,codeFile->currentPos);
+  if(globalOps==NULL||localOps==NULL){
+    handleError("could not allocate operation arrays",ERROR_MEMORY,codeFile->currentPos);
     return FILE_ID_NONE;
   }
   size_t includeCap=16;
@@ -4753,6 +5165,7 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
     handleError("could not allocate includes array",ERROR_MEMORY,codeFile->currentPos);
     return FILE_ID_NONE;
   }
+  
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   FileId prevFile=state->currentFile;
   FileId included=state->fileCount++;
@@ -4772,6 +5185,10 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
   while(codeFile->codeSize>0){
     readOperation(state,codeFile);
   }
+  if(localScopeCount>0)//XXX print start position
+    handleError("unfinished code-block",ERROR_SYNTAX,codeFile->currentPos);
+  if(compilerBlockCount>0)
+    handleError("unfinished compiler block",ERROR_SYNTAX,codeFile->currentPos);
   state->currentFile=prevFile;
   if(!quietMode)
     printf("  parsed file %"PRI_STR" : %zu global and %zu local operations\n",PRI_STR_ARGS(state->files[included].fileName),
@@ -4790,14 +5207,6 @@ Program compileToOps(CodeFile* rootFile){
   parseFile(&state,rootFile);
   return (Program){.files=state.files,.fileCount=state.fileCount,
     .hasEntryPoint=hasEntryPointParser(&state),.nAutoTypes=state.autoTypes,.autoTypes=NULL};
-}
-
-void typeErrorMessage(char const* exprName,TypeId expected,TypeId got){
-  fprintf(stderr,"wrong type for %s: expected ",exprName);
-  printTypeName(expected,stderr);
-  fputs(" got ",stderr);
-  printTypeName(got,stderr);
-  fputs("\n",stderr);
 }
 
 TypeId typeCheckPointerArithmetic(TypeId* inTypes,bool subtract){
@@ -5426,35 +5835,92 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
   CompositeType const* inTypes=compositeTypeData(procType->inType);
   size_t argCount=inTypes->typeCount;
   size_t totalOps=0;
-  if(procType->staticArgsCount>0){
-    ConstantValue* argValues=calloc(procType->staticArgsCount,sizeof(ConstantValue));
-    int64_t opOffset=state->opStackCount-(isPtr?state->typeStack[state->typeCount-1].opCount:0);
-    int64_t typeOffset=state->typeCount-(isPtr?1:0);
+  ConstantValue* argValues=NULL;
+  GenericType* genericTypes=NULL;
+  int32_t staticArgsOffset=0;
+  int64_t opOffset=state->opStackCount-(isPtr?state->typeStack[state->typeCount-1].opCount:0);
+  int64_t typeOffset=state->typeCount-(isPtr?1:0);
+  op->dataAs.idInfo.id=0;//op call does not need id
+  if(op->opType==OP_CALL_TEMPLATE||procType->staticArgsCount>0){
+    TemplateInfo* mTemplate=getTemplateInfo(label(op->dataAs.idInfo.labelId,op->filePos)->templateId);
+    if(mTemplate!=NULL)
+      staticArgsOffset=getTypeElementCount(mTemplate->args);
+    else if(op->opType==OP_CALL_TEMPLATE)
+      handleError("missing template data",ERROR_MEMORY,op->filePos);
+    argValues=calloc(staticArgsOffset+procType->staticArgsCount,sizeof(ConstantValue));
+    genericTypes=malloc(staticArgsOffset+procType->staticArgsCount);
+    if(argValues==NULL||genericTypes==NULL)
+      handleError("allocating buffer for template arguments failed",ERROR_MEMORY,op->filePos);
+    if(mTemplate!=NULL&&isPtr)
+      handleError("op call template should not be used with procedure pointers",ERROR_MEMORY,op->filePos);
+    for(int32_t i=0;i<staticArgsOffset;i++){
+      genericTypes[i].type=compositeTypeData(mTemplate->args)->types[i];
+      genericTypes[i].argId=i;
+      genericTypes[i].isTemplate=true;
+    }
+    if(staticArgsOffset>0)//find out which template arguments can be resolved implicitly using the arguments
+      resolveTypeGenerics(procType->inType,procType->inType,genericTypes,argValues,staticArgsOffset);
+    for(int32_t i=0;i<staticArgsOffset;i++){//get values for explicit template arguments
+      if(argValues[i].constType==CONSTANT_NONE){
+        typeOffset--;
+        if(typeOffset<0)//XXX better message
+          handleError("not enough arguments for procedure",ERROR_SYNTAX,op->filePos);
+        opOffset-=state->typeStack[typeOffset].opCount;
+        if(opOffset<0)
+          handleError("types and operations out of sync",ERROR_MEMORY,op->filePos);
+        if(state->opStack[opOffset].opType!=OP_CONSTANT)
+          handleError("template arguments have to be constants",ERROR_SYNTAX,state->opStack[opOffset].filePos);
+        if(!canAutoCast(state->opStack[opOffset].dataType,genericTypes[i].type)){
+          typeErrorMessage("template argument",genericTypes[i].type,state->opStack[opOffset].dataType);
+          handleError(NULL,ERROR_TYPE,state->opStack[opOffset].filePos);
+        }
+        if(typeEquals(genericTypes[i].type,TYPE_TYPE)){
+          argValues[i]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=genericTypes[i].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
+        }else if(isIntType(genericTypes[i].type)){
+          argValues[i]=(ConstantValue){.constType=CONSTANT_INT,.valueType=genericTypes[i].type,.as.i64=state->opStack[opOffset].dataAs.i64};
+        }else{
+          handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
+        }
+        //remove operation from stack (call template never used on procedure pointer -> type arguments are at top of stack)
+        state->opStackCount-=state->typeStack[typeOffset].opCount;
+        state->typeCount--;
+        continue;
+      }
+      argValues[i].constType=CONSTANT_NONE;
+    }
+    for(int32_t i=0;i<procType->staticArgsCount;i++){
+      genericTypes[staticArgsOffset+i].type=procType->staticArgs[i].type;
+      if(typeEquals(procType->staticArgs[i].type,TYPE_TYPE))
+        genericTypes[staticArgsOffset+i].argId=autoTypeId(procType->staticArgs[i].as.type);
+      else
+        genericTypes[staticArgsOffset+i].argId=procType->staticArgs[i].as.genericId;
+      genericTypes[staticArgsOffset+i].isTemplate=false;
+    }
     int32_t argId=procType->staticArgsCount-1;
     if(ensureTypeStackCap(state,state->typeCount+procType->staticArgsCount)||ensureOpStackCap(state,state->opStackCount+procType->staticArgsCount))
       handleError("allocating memory for static arguments failed",ERROR_MEMORY,op->filePos);
-    for(int32_t i=getTypeElementCount(procType->inType)-1;i>=0;i--){
-      if(argId<0)
-        break;//resolved all arguments
-      if(argId>=0&&i==staticArgIndex(&procType->staticArgs[argId])&&argValues[argId].constType!=CONSTANT_NONE){//insert constant value
+    //TODO resolve template arguments the other way round
+    // 1. determine uncovered static/template arguments
+    // 2. parser parameters in declaration order, skipping all covered static arguments
+    for(int32_t i=getTypeElementCount(procType->inType)-1;i>=0;i--){//resolve remaining arguments
+      if(argId>=0&&i==staticArgIndex(&procType->staticArgs[argId])&&argValues[staticArgsOffset+argId].constType!=CONSTANT_NONE){//insert constant value
         memmove(state->typeStack+typeOffset+1,state->typeStack+typeOffset,(state->typeCount-typeOffset)*sizeof(TypeInfo));
-        state->typeStack[typeOffset]=(TypeInfo){.type=argValues[argId].valueType,.opCount=1,.isWritable=false};
-        typeOffset--;
+        state->typeStack[typeOffset]=(TypeInfo){.type=argValues[staticArgsOffset+argId].valueType,.opCount=1,.isWritable=false};
         state->typeCount++;
         memmove(state->opStack+opOffset+1,state->opStack+opOffset,(state->opStackCount-opOffset)*sizeof(Operation));
-        if(typeEquals(argValues[argId].valueType,TYPE_TYPE)){
-          if(argValues[argId].as.type.class==TYPECLASS_GENERIC_TYPE)
-            state->opStack[opOffset]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[argId].as.type),LABEL_ID_UNKNOWN,op->filePos);
+        if(typeEquals(argValues[staticArgsOffset+argId].valueType,TYPE_TYPE)){
+          if(argValues[staticArgsOffset+argId].as.type.class==TYPECLASS_GENERIC_TYPE)
+            state->opStack[opOffset]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[staticArgsOffset+argId].as.type),LABEL_ID_UNKNOWN,op->filePos);
           else
-            state->opStack[opOffset]=opTypeConstant(argValues[argId].valueType,argValues[argId].as.type,op->filePos);
+            state->opStack[opOffset]=opTypeConstant(argValues[staticArgsOffset+argId].valueType,argValues[staticArgsOffset+argId].as.type,op->filePos);
           state->opStackCount++;
           argId--;
           continue;
-        }else if(isIntType(argValues[argId].valueType)){
-          if(argValues[argId].constType==GENERIC_INT)
-            state->opStack[opOffset]=opGetArgument(argValues[argId].valueType,argValues[argId].as.i64,LABEL_ID_UNKNOWN,op->filePos);
+        }else if(isIntType(argValues[staticArgsOffset+argId].valueType)){
+          if(argValues[staticArgsOffset+argId].constType==GENERIC_INT)
+            state->opStack[opOffset]=opGetArgument(argValues[staticArgsOffset+argId].valueType,argValues[staticArgsOffset+argId].as.i64,LABEL_ID_UNKNOWN,op->filePos);
           else
-            state->opStack[opOffset]=opConstant(argValues[argId].valueType,argValues[argId].as.i64,op->filePos);
+            state->opStack[opOffset]=opConstant(argValues[staticArgsOffset+argId].valueType,argValues[staticArgsOffset+argId].as.i64,op->filePos);
           state->opStackCount++;
           argId--;
           continue;
@@ -5462,7 +5928,8 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
         handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,op->filePos);
         continue;
       }
-      if(typeOffset--<=0)//XXX better message
+      typeOffset--;
+      if(typeOffset<0)//XXX better message
         handleError("not enough arguments for procedure",ERROR_SYNTAX,op->filePos);
       opOffset-=state->typeStack[typeOffset].opCount;
       if(opOffset<0)
@@ -5475,22 +5942,52 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
           handleError(NULL,ERROR_TYPE,state->opStack[opOffset].filePos);
         }
         if(typeEquals(procType->staticArgs[argId].type,TYPE_TYPE)){
-          argValues[argId]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=procType->staticArgs[argId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
+          argValues[staticArgsOffset+argId]=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=procType->staticArgs[argId].type,.as.type=state->opStack[opOffset].dataAs.sourceType};
           argId--;
           continue;
         }
         if(isIntType(procType->staticArgs[argId].type)){
-          argValues[argId]=(ConstantValue){.constType=CONSTANT_INT,.valueType=procType->staticArgs[argId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
+          argValues[staticArgsOffset+argId]=(ConstantValue){.constType=CONSTANT_INT,.valueType=procType->staticArgs[argId].type,.as.i64=state->opStack[opOffset].dataAs.i64};
           argId--;
           continue;
         }
         handleError("unsupported static argument type",ERROR_UNIMPLEMENTED,state->opStack[opOffset].filePos);
         continue;
       }
-      resolveTypeGenerics(state->typeStack[typeOffset].type,compositeTypeData(procType->inType)->types[i],procType->staticArgs,argValues,procType->staticArgsCount);
+      resolveTypeGenerics(state->typeStack[typeOffset].type,compositeTypeData(procType->inType)->types[i],genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
     }
-    inTypes=compositeTypeData(replaceGenericTypes(procType->inType,procType->staticArgs,argValues,procType->staticArgsCount));
-    outTypes=compositeTypeData(replaceGenericTypes(procType->outType,procType->staticArgs,argValues,procType->staticArgsCount));
+    TypeId newIn=replaceGenericTypes(procType->inType,genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
+    TypeId newOut=replaceGenericTypes(procType->outType,genericTypes,argValues,procType->staticArgsCount+staticArgsOffset);
+    inTypes=compositeTypeData(newIn);
+    outTypes=compositeTypeData(newOut);
+    op->dataType=procedureType(newIn,newOut,NULL,0);
+    if(op->opType==OP_CALL_TEMPLATE){
+      bool match;
+      int32_t implId=-1;
+      for(int32_t i=0;i<mTemplate->implCount;i++){
+        match=true;
+        for(int32_t k=0;k<staticArgsOffset;k++){
+          if(!constantEquals(argValues[k],mTemplate->implementations[i].argValues[k])){
+            match=false;
+            break;
+          }
+        }
+        if(match){
+          implId=i;
+          break;
+        }
+      }
+      if(implId==-1){
+        if(ensureTemplateImplCap(mTemplate,mTemplate->implCount+1))
+          handleError("could not allocate template implementation",ERROR_MEMORY,op->filePos);
+        mTemplate->implementations[mTemplate->implCount]=(TemplateImplementation){.argValues=argValues,.implType=op->dataType,.implPos=op->filePos};
+        implId=mTemplate->implCount++;
+      }
+      op->dataAs.idInfo.id=implId;
+      argValues=NULL;
+    }
+    free(argValues);
+    free(genericTypes);
   }
   if(state->typeCount<argCount){
     fprintf(stderr,"not enough operands for procedure call: need %zu got %zu\n",argCount,state->typeCount);
@@ -5825,11 +6322,13 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
     case ID_ENUM_LABEL:
     case ID_ENUM_ELEMENT:
     case ID_ARRAY_SIZE:
+    case ID_TEMPLATE_ARGUMENT:
       fprintf(stderr,"direct access to %s should not exist at this stage of compilation\n",idNames[op->dataAs.idInfo.type]);
       handleError(NULL,ERROR_SYNTAX,op->filePos);
     case ID_TYPE:
       fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
       handleError(NULL,ERROR_SYNTAX,op->filePos);
+      break;
   }
 }
 
@@ -5879,6 +6378,8 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     fprintf(stderr," unknown identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(mLabel));
     handleError(NULL,r,op->filePos);
   }
+  if(asIdentifier->templateData.templateId!=-1)
+    handleError("resolving template identifiers",ERROR_UNIMPLEMENTED,op->filePos);
   if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
     handleError("cannot set value of procedure",ERROR_SYNTAX,op->filePos);
   *op=(Operation){.opType=op->opType==OP_SET_IDENTIFIER?OP_SET:(op->opType==OP_IDENTIFIER_ADDRESS?OP_ADDR_OF:(asIdentifier->idType==ID_PROCEDURE)?OP_CALL:OP_GET),
@@ -5931,6 +6432,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       //other unreachable constants
       checkReachable(state,op);
       return;
+    case OP_TEMPLATE_ARG:
+      break;
     case OP_UNARY_OPERATOR:
       checkReachable(state,op);
       checkLocal(state,op);
@@ -6297,13 +6800,16 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_ENUM_LABEL:
         case ID_ENUM_ELEMENT:
         case ID_ARRAY_SIZE:
-            fputs("cannot (directly) declare ",stderr);
-            printIdInfo(op.dataAs.idInfo,stderr);
-            fputs("\n",stderr);
-            handleError(NULL,ERROR_SYNTAX,op.filePos);
+        case ID_TEMPLATE_ARGUMENT:
+          fputs("cannot (directly) declare ",stderr);
+          printIdInfo(op.dataAs.idInfo,stderr);
+          fputs("\n",stderr);
+          handleError(NULL,ERROR_SYNTAX,op.filePos);
+          break;
         case ID_TYPE:
           fputs("identifiers of type-names should not exist at this stage of compilation\n",stderr);
           handleError(NULL,ERROR_SYNTAX,op.filePos);
+          break;
       }
       break;
     case OP_DECLARE:
@@ -6367,6 +6873,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case ID_ENUM_LABEL:
         case ID_ENUM_ELEMENT:
         case ID_ARRAY_SIZE:
+        case ID_TEMPLATE_ARGUMENT:
             fputs("cannot (directly) declare ",stderr);
             printIdInfo(op.dataAs.idInfo,stderr);
             fputs("\n",stderr);
@@ -6947,6 +7454,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       typeCheckCall(&op,state,true);
       return;
     case OP_CALL:
+    case OP_CALL_TEMPLATE:
       checkReachable(state,op);
       checkLocal(state,op);
       typeCheckCall(&op,state,false);
@@ -6968,6 +7476,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       pushCompiledOperation(state,op);
       return;
+    case OP_GET_TEMPLATE:
+    case OP_SET_TEMPLATE:
+    case OP_ADDR_OF_TEMPLATE:
+      break;
     case OP_IDENTIFIER:
     case OP_SET_IDENTIFIER:
     case OP_IDENTIFIER_ADDRESS:
@@ -7133,6 +7645,65 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     state.compiledOperations=NULL;
     if(!quietMode)
       printf("  typeChecked file %"PRI_STR" : %zu global and %zu local operations\n",PRI_STR_ARGS(f->fileName),f->globalOpCount,f->localOpCount);
+  }
+  //type check templates
+  if(templateOpCount>0){
+    int32_t argCount;
+    state.opCap=0;
+    state.opCount=0;
+    state.compiledOperations=NULL;
+    GenericType* templateArgs=NULL;
+    bool compiledImpl;//XXX? check directly if implementations have been added
+    do{//compiling template implementations may produce new template implementations 
+      compiledImpl=false;
+      for(size_t t=0;t<templateCount;t++){
+        if(templates[t].codeSize>0&&templates[t].implCount>templates[t].compiledImpls){
+          compiledImpl=true;
+          argCount=getTypeElementCount(templates[t].args);
+          templateArgs=malloc(argCount*sizeof(GenericType));
+          if(templateArgs==NULL||ensureOpCap(&state.compiledOperations,&state.opCap,state.opCount+(templates[t].implCount-templates[t].compiledImpls)*templates[t].codeSize)){
+            freeContents(&state);
+            handleError("allocation of memory for template implementations failed",ERROR_MEMORY,templates[t].implementations[0].implPos);
+          }
+          for(int32_t a=0;a<argCount;a++){
+            templateArgs[a].type=compositeTypeData(templates[t].args)->types[a];
+            templateArgs[a].argId=a;
+            templateArgs[a].isTemplate=true;
+          }
+          for(int32_t i=templates[t].compiledImpls;i<templates[t].implCount;i++){
+            state.tmpCount=0;//XXX differentiate between local and global template code
+            state.index=0;
+            while(state.index<templates[t].codeSize){
+              Operation op=templateOps[templates[t].codeOffset+state.index++];
+              if(op.opType==OP_TEMPLATE_ARG){
+                op=opFromConstant(templates[t].implementations[i].argValues[op.dataAs.i64],op.filePos);
+              }else if(op.opType==OP_GET_TEMPLATE&&(op.dataAs.idInfo.type==ID_ARGUMENT||op.dataAs.idInfo.type==ID_LOCAL_VAR)){
+                op.opType=OP_GET;
+                op.dataType=replaceGenericTypes(op.dataType,templateArgs,templates[t].implementations[i].argValues,argCount);
+              }else if(op.opType!=OP_GET_TEMPLATE&&op.opType!=OP_SET_TEMPLATE&&op.opType!=OP_CALL_TEMPLATE&&op.opType!=OP_ADDR_OF_TEMPLATE){//all except access to other templates
+                op.dataType=replaceGenericTypes(op.dataType,templateArgs,templates[t].implementations[i].argValues,argCount);
+                if(op.opType==OP_CAST||(op.opType==OP_CONSTANT&&typeEquals(op.dataType,TYPE_TYPE))){//operations with source-type
+                  op.dataAs.sourceType=replaceGenericTypes(op.dataAs.sourceType,templateArgs,templates[t].implementations[i].argValues,argCount);              
+                }
+              }
+              if(op.opType==OP_DECLARE&&(op.dataAs.idInfo.type==ID_PROCEDURE||op.dataAs.idInfo.type==ID_GLOBAL_VAR)){
+                op.dataAs.idInfo.id=i;//replace declaration id
+              }
+              typeCheckOperation(op,&state);
+            }
+            if(state.blockCount>0){
+              freeContents(&state);
+              handleError("unfinished code-block",ERROR_SYNTAX,src->currentPos);
+            }
+          }
+          templates[t].compiledImpls=templates[t].implCount;
+        }
+      }
+    }while(compiledImpl);//if any new implementations compiled rerun loop
+    free(templateOps);
+    templateOps=state.compiledOperations;
+    templateOpCount=state.opCount;
+    state.compiledOperations=NULL;
   }
   prog->hasCheckBounds=state.hasCheckBounds;
   prog->hasCheckEnum=state.hasCheckEnum;
@@ -7307,6 +7878,10 @@ int main(int argc,char** argv){
         printOperation(f->localOps[i],intermediate);
       }
     }
+    fputs("## templates\n",intermediate);
+    for(size_t i=0;i<templateOpCount;i++){
+      printOperation(templateOps[i],intermediate);
+    }
     fclose(intermediate);
   }
 	//3. type-check operations
@@ -7331,6 +7906,10 @@ int main(int argc,char** argv){
       for(size_t i=0;i<f->localOpCount;i++){
         printOperation(f->localOps[i],intermediate);
       }
+    }
+    fputs("## templates\n",intermediate);
+    for(size_t i=0;i<templateOpCount;i++){
+      printOperation(templateOps[i],intermediate);
     }
     fclose(intermediate);
   }
