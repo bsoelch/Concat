@@ -9,7 +9,7 @@ syntaxHighlighting/update.sh
 concat
 code
 code.c
-parser.c
-parser
+concat.concat/*.c
+concat.concat/parser
 featureMap.concat
 !tests/*/*.out

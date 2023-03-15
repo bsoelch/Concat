@@ -228,6 +228,35 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: nextToken
   Token .IDENTIFER new return
 end
 
+enum( UNDEFINED BOOL I8 I32 I64 FLOAT TYPE ) =:: PrimitiveType
+
+i32 =:: ArrayId
+i32 =:: CompositeId
+i32 =:: ProcId
+i32 =:: NamedTypeId
+
+enum( 
+  PrimitiveType : primitive
+        ArrayId : ptr
+        ArrayId : array 
+    CompositeId : tuple
+    CompositeId : struct
+    CompositeId : labeledProcIn
+    CompositeId : procIn
+    CompositeId : procOut
+    CompositeId : enum
+    CompositeId : enumLabel
+         ProcId : procedure
+    NamedTypeId : namedType
+    NamedTypeId : namedLabel
+            i32 : autoType
+            i32 : genericType
+            i32 : templateType
+) =:: Type
+
+
+## XXX composite types, proc types, named types, array types
+
 
 enum( i64 : int string : str i8 : chr ) =:: ConstValue
 enum( NOP ConstValue : Constant string : Error  string : Unknown ) =:: OpValue
@@ -297,25 +326,30 @@ proc( Operation => ) =: printOp
   io.stdOut #swap io.fputSb #drop
 end
 
-proc( string : code Token : token FileState ptr mut : fileState => string Operation ) =: parseOperation
+proc( string : code Token : token FileState ptr mut : fileState  Operation list ptr mut : ops => string ) =: parseOperation
   code
     token switch
       EMPTY case
-        fileState [] .wordStart opNOP return
+        return
       STRING case ## TODO escape sequences
-        token .STRING fileState [] .wordStart opConstStr return
+        token .STRING fileState [] .wordStart opConstStr  ops [] #swap list.append ops [] =
+        return
       CHAR case
         token .CHAR
           #dup .length 1 != if
             #drop
-            "A character literal has to contain exactly one character" string.wrap fileState [] .wordStart opError return
+            "A character literal has to contain exactly one character" string.wrap fileState [] .wordStart opError  ops [] #swap list.append ops [] = 
+            return
           end
           0 string.charAt
-        fileState [] .wordStart opConstChar return
+        fileState [] .wordStart opConstChar ops [] #swap list.append ops [] = 
+        return
       INTEGER case
-        token .INTEGER fileState [] .wordStart opConstInt return
+        token .INTEGER fileState [] .wordStart opConstInt  ops [] #swap list.append ops [] =
+        return
       ERROR case
-        token .ERROR fileState [] .wordStart opError return
+        token .ERROR fileState [] .wordStart opError  ops [] #swap list.append ops [] =
+        return
       IDENTIFER case
         token .IDENTIFER
         break
@@ -326,31 +360,41 @@ proc( string : code Token : token FileState ptr mut : fileState => string Operat
           fileState nextToken
           #dup Token .STRING == if .STRING
             ## TODO include local file
-            #drop fileState [] .wordStart opNOP return
+            #drop 
+            return
           else #dup Token .IDENTIFER == _if .IDENTIFER
             ## TODO include library file
-            #drop fileState [] .wordStart opNOP return
+            #drop 
+            return
           end
           64 sb.create
             "invalid token for include" sb.appendS
             #swap appendToken
-          sb.toStr fileState [] .wordStart opError return
+          sb.toStr fileState [] .wordStart opError  ops [] #swap list.append ops [] = 
+          return
         end
       64 sb.create
         "unknown compiler command \"" sb.appendS
         #swap                         sb.appendStr
         '\"'                          sb.appendC
-      sb.toStr fileState [] .wordStart opError return
+      sb.toStr fileState [] .wordStart opError  ops [] #swap list.append ops [] =
+      return
     end
     ## TODO try parsing identifier
-  fileState [] .wordStart opUnknown return
+  fileState [] .wordStart opUnknown  ops [] #swap list.append ops [] =
+  return
 end
 proc( string => ) =: parseTokens
   "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
+  128 Operation list.create =:: mut ops
   state addrOf #swap
     while
-      #over nextToken #over:2 parseOperation printOp
+      #over nextToken #over:2 ops addrOf parseOperation
       #dup .length 0 >
     do end #drop
   #drop
+  0 while #dup ops .length < do
+    ops #over list.get printOp
+    1 +
+  end #drop
 end
