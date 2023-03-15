@@ -5797,6 +5797,8 @@ void insertStackOperation(TypeCheckState* state,Operation op,size_t totalOps){
   if(ensureOpStackCap(state,state->opStackCount+1)){
     handleError("exceeded operation stack capacity",ERROR_MEMORY,op.filePos);
   }
+  if(totalOps>state->opStackCount)
+    handleError("op-stack underflow",ERROR_MEMORY,op.filePos);
   memmove(state->opStack+state->opStackCount-totalOps+1,state->opStack+state->opStackCount-totalOps,totalOps*sizeof(Operation));
   state->opStack[state->opStackCount-totalOps]=op;
   state->opStackCount++;
@@ -6803,7 +6805,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         op.dataType=getAddressType(op.dataType,&op);
       }
       insertStackOperation(state,op,totalOps);
-      peekTypeStack(state)->opCount+=totalOps;
+      peekTypeStack(state)->opCount++;
       setTypeStackType(state,mStruct->types[labelIndex]);
       setTypeStackFlags(state,isMutableLabel(mLabel)&writable);
       if(op.opType==OP_SET){
@@ -7303,7 +7305,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case BLOCK_DEFAULT:
           blockInfoPtr=peekBlock(state);
           if(blockInfoPtr==NULL||blockInfoPtr->type!=BLOCK_CASE){
-            fputs("unexpected default statement, default statements are only allowed in switch-case blocks\n",stderr);
+            fputs("unexpected default statement, default statements are only allowed in switch-case blocks after the first case statement\n",stderr);
             if(blockInfoPtr!=NULL&&blockInfoPtr->type==BLOCK_SWITCH)
               fputs("switch statements have to contain at least one case\n",stderr);
             if(blockInfoPtr!=NULL&&blockInfoPtr->type==BLOCK_DEFAULT)
