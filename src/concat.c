@@ -6632,6 +6632,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             typesMatch=true;
             break;
           }
+          //boolean equality
+          if(typeEquals(inTypes[0],TYPE_BOOL)&&typeEquals(inTypes[1],TYPE_BOOL)){
+            op.dataType=TYPE_BOOL;
+            typesMatch=true;
+            break;
+          }
           //number equality
           op.dataType=typeCheckCompare(inTypes);
           if(!typeEquals(op.dataType,TYPE_UNDEFINED)){
@@ -7392,7 +7398,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"unexpected end for %s-block expected end-while\n",blockNames[op.dataAs.block.type]);
             handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
           }
-          if(!state->reachable){
+          if(!state->reachable){//TODO only error if no continue in loop
             fputs("end of while block cannot be reached\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
