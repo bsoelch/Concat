@@ -1,9 +1,9 @@
 #!/bin/sh
-compilerSrc=( "./src/concat.c" "./src/strings.c" )
-compilerTarget="./concat"
+compilerSrc=( "../src/concat.c" "../src/strings.c" )
+compilerTarget="../concat"
 codeSrc="./parser.concat"
-codeCTarget="./parser.c"
-codeTarget="./parser"
+codeCTarget="./concat2.c"
+codeTarget="./concat2"
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
 
 # clear console
@@ -13,7 +13,7 @@ echo "-----------------------------------------"
 gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
   echo "compile program"
   echo "-----------------------------------------"
-  $compilerTarget "$codeSrc" -o "$codeCTarget" -W -p "./parser.out" -t "./typeCheck.out"
+  $compilerTarget "$codeSrc" -o "$codeCTarget" -W -l "../lib/"
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"

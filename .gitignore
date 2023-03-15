@@ -10,6 +10,7 @@ concat
 code
 code.c
 concat.concat/*.c
-concat.concat/parser
+!concat.concat/extern.c
+concat.concat/concat2
 featureMap.concat
 !tests/*/*.out

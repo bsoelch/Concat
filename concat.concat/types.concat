@@ -1,0 +1,32 @@
+#include list
+
+enum( UNDEFINED BOOL I8 I32 I64 FLOAT TYPE ) =:: public PrimitiveType
+
+i32 =:: public ArrayId
+i32 =:: public CompositeId
+i32 =:: public ProcId
+i32 =:: public NamedTypeId
+
+enum( 
+  PrimitiveType : primitive
+        ArrayId : ptr
+        ArrayId : array 
+    CompositeId : tuple
+    CompositeId : struct
+    CompositeId : labeledProcIn
+    CompositeId : procIn
+    CompositeId : procOut
+    CompositeId : enum
+    CompositeId : enumLabel
+         ProcId : procedure
+    NamedTypeId : namedType
+    NamedTypeId : namedLabel
+            i32 : autoType
+            i32 : genericType
+            i32 : templateType
+) =:: public Type
+
+
+## XXX composite types, proc types, named types, array types
+
+

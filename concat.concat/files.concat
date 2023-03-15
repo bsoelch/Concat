@@ -1,0 +1,145 @@
+#include string
+#include stringBuilder
+#include io
+#include stringIO
+
+#include "lib.concat"
+
+struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
+struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public FileState
+
+enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER string : ERROR ) =:: public Token
+
+proc( string => ) =: public printTokens
+  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
+  while
+    state addrOf nextToken
+    128 sb.create
+      #swap appendToken
+      " at " sb.appendS
+      state .wordStart .fileName sb.appendStr
+      ':' sb.appendC
+      state .wordStart .line sb.appendI
+      ':' sb.appendC
+      state .wordStart .posInLine sb.appendI
+      '\n' sb.appendC
+    io.stdOut #swap io.fputSb #drop
+    #dup .length 0 >
+  do end #drop
+end
+proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
+  token switch
+    EMPTY case
+      sb "empty" sb.appendS return
+    IDENTIFER case
+      sb
+        "identifier \"" sb.appendS
+        token .IDENTIFER sb.appendStr
+        '\"' sb.appendC
+      return
+    STRING case
+      sb
+        "string \"" sb.appendS
+        token .STRING sb.appendStr
+        '\"' sb.appendC
+      return
+    CHAR case
+      sb "char \"" sb.appendS
+        token .CHAR sb.appendStr
+        '\"' sb.appendC
+      return
+    INTEGER case
+      sb "integer " sb.appendS
+        token .INTEGER sb.appendI
+      return
+    ERROR case
+      sb "error \"" sb.appendS
+        token .ERROR sb.appendStr
+        '\"' sb.appendC
+      return
+  end
+end
+
+proc( i8 : chr  FileState ptr mut : fileState => ) =: updateState
+  chr '\n' == if
+      fileState [] .currentPos .line ++ #drop
+    1 fileState [] .currentPos .posInLine =
+  else
+    fileState [] .currentPos .posInLine ++ #drop
+  end
+end
+proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
+  0 while #dup code .length < code #over:2 string.charAt isWhitespace & do
+    code #over string.charAt fileState updateState
+    1 +
+  end
+  code #swap string.tail return
+end
+proc( string : code FileState ptr mut : fileState => string Token ) =: public nextToken
+  code .length 0 <= if
+    "" string.wrap Token .EMPTY return
+  end
+  code fileState skipSpaces ## cut of leading white-spaces
+    #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
+      '#' fileState updateState
+      '#' fileState updateState
+      2 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\n' != & do
+        #over #over string.charAt fileState updateState
+        1 +
+      end
+      string.tail fileState skipSpaces
+    end
+    #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
+      '#' fileState updateState
+      '+' fileState updateState
+      2 while #dup #over:2 .length <  #over:2 #over:2 1 - string.charAt '+' !=  #over:3 #over:3 string.charAt '#' != |  & do
+        #over #over string.charAt fileState updateState
+        1 +
+      end
+      string.tail fileState skipSpaces
+    end
+    fileState [] .currentPos fileState [] .wordStart =
+    #dup 0 string.charAt fileState updateState
+    #dup 0 string.charAt '"' == if ## string
+      1 string.tail
+      0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '"' != & do
+        #over #over string.charAt '\\' == if ##escape characters
+          #over #over string.charAt fileState updateState
+          1 +
+        end
+        #over #over string.charAt fileState updateState
+        1 +
+      end
+      #over #over string.charAt fileState updateState
+      string.splitIndex Token .STRING new return
+    end
+    #dup 0 string.charAt '\'' == if ## char
+      1 string.tail
+      0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\'' != & do
+        #over #over string.charAt '\\' == if ##escape characters
+          #over #over string.charAt fileState updateState
+          1 +
+        end
+        #over #over string.charAt fileState updateState
+        1 +
+      end
+      #over #over string.charAt fileState updateState
+      string.splitIndex Token .CHAR new return
+    end
+    1 while #dup #over:2 .length < #over:2 #over:2 string.charAt isWhitespace ! & do
+      #over #over string.charAt fileState updateState
+      1 +
+    end
+  string.cutIndex
+    #dup 0 tryParseInt
+      #dup ParseIntError .NONE == if #drop
+        #swap #drop Token .INTEGER new return
+      else #dup ParseIntError .OVERFLOW == _if #drop:3
+        "Integer Overflow" string.wrap Token .ERROR new return
+      end
+    #drop:2
+    #dup .length 0 == if
+      #drop Token .EMPTY return
+    end
+  Token .IDENTIFER new return
+end
