@@ -7889,11 +7889,11 @@ bool parseArgs(char** argv){
     return false;
   }
   basePath=newString(srcFile,iSlash+1);
-  if(hasLib&&charAt(libPath,libPath.length-1)!='/'){
+  if(!hasLib){
+    libPath=cstrToStr("./lib/");
+  }else if(charAt(libPath,libPath.length-1)!='/'){
     puts("library path has to end with /");
     return true;
-  }else{
-    libPath=cstrToStr("./lib/");
   }//XXX check if libPath exists
   return false;
 }
