@@ -114,9 +114,8 @@ procedure arguments can be marked as static, static procedure arguments are reso
 the type of a static procedure arguments has to be of type `type` or an integer type
 
 resolving of static arguments:
-procedure arguments are resolved from right to left, a static procedure argument is determined by its first (detectable) appearance:
-- if the first occurrence of the static argument is as an parameter, the compiler expected a constant value of the correct type as the corresponding procedure argument
-- if the first occurrence of a static argument is within the type of another argument, the matching type/integer will be used to define the static argument 
+If a static argument appears in the input signature of a procedure, the compiler will automatically resolve the correct value and will ignore the corresponding parameter,
+otherwise the argument has to be given as a constant value at the correct position in the signature
 
 Examples:
 
@@ -138,6 +137,37 @@ end
 
 ```
 
+## templates
+
+Templates start with `#template` followed by multiply identifier definitions ( syntax `<type> : <name> ` )  followed by `#end` 
+the template is applied to all code that comes before the end of the next global declaration.
+
+For every combination of template arguments, the compiler will generate a version of the given global variable with 
+the template parameters replaced by the corresponding arguments.
+
+resolving of template arguments:
+If a template argument appears in the input signature of a procedure, the compiler will automatically resolve the correct value.
+the remaining template arguments have to be given explicitly (before all procedure arguments), in the order they were declared in.
+
+Examples:
+
+```
+#template type : T #end
+proc( T _ ptr : data i64 : count T : elt => ) =: fill ## fills an array with a given element
+  0 while #dup count < do
+    elt ptr #over:2 [] =
+  end #drop
+end
+#template type : T #end
+struct( T _ ptr : data i64 : len ) =: arrayView
+
+entryPoint:
+  "Hello" #dup .length i8 arrayView new =:: str
+  16 i32 array new =:: a
+  a addrOf a .length -1 fill  ## fill array with -1
+end
+
+```
 
 ## code blocks
 ### if-block
