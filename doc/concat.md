@@ -153,13 +153,14 @@ Examples:
 
 ```
 #template type : T #end
-proc( T _ ptr : data i64 : count T : elt => ) =: fill ## fills an array with a given element
+proc( T _ ptr mut : data i64 : count T : elt => ) =: fill
   0 while #dup count < do
-    elt ptr #over:2 [] =
+    elt data #over:2 [] =
+    1 +
   end #drop
 end
 #template type : T #end
-struct( T _ ptr : data i64 : len ) =: arrayView
+struct( T _ ptr mut : data i64 : len ) =: arrayView
 
 entryPoint:
   "Hello" #dup .length i8 arrayView new =:: str

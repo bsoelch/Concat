@@ -9,7 +9,14 @@
  proc( type : static T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public copy
  proc( type : static T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public move
  proc( type : static T   T _ ptr mut : data => ) : extern public free
- ## XXX mem.fill (once there are templates)
-
+ 
  proc( type : static T  T _ ptr : a  T _ ptr : b  i64 : k   => i32 ) : extern public compare
+ 
+  #template type : T #end
+  proc( T _ ptr mut : data i64 : count T : elt => ) =: public fill
+    0 while #dup count < do
+      elt data #over:2 [] =
+      1 +
+    end #drop
+  end
 #end

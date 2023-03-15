@@ -2017,9 +2017,7 @@ void startTemplate(TypeId templateTypes,FileId srcFile,FilePosition pos){
     handleError("compiler block overflow",ERROR_MEMORY,pos);
   if(hasOpenTemplate())
     handleError("cannot open templates within a template",ERROR_SYNTAX,pos);
-  currentTemplateId++;
-  if(currentTemplateId!=(int64_t)templateCount)
-    handleError("current template id and template count out of sync",ERROR_MEMORY,pos);
+  currentTemplateId=templateCount;
   compilerBlocks[compilerBlockCount++]=(CompilerBlock){.isNamespace=false,.as.template=templateTypes};
   if(ensureTemplatesCap(templateCount+1))
     handleError("could not allocate template array",ERROR_MEMORY,pos);
@@ -2029,7 +2027,8 @@ void startTemplate(TypeId templateTypes,FileId srcFile,FilePosition pos){
 void endOpenTemplate(FilePosition pos){
   if(!hasOpenTemplate())
     return;
-  templates[templateCount-1].codeSize=templateOpCount-templates[templateCount-1].codeOffset;
+  templates[currentTemplateId].codeSize=templateOpCount-templates[templateCount-1].codeOffset;
+  currentTemplateId=-1;
   endCompileTimeBlock(pos);
 }
 void startNamespace(NamespaceInfo* namespace,String label,FilePosition pos){
@@ -5777,7 +5776,7 @@ void pushType(TypeCheckState* state,TypeId dataType,FilePosition pos){
   }
   state->typeStack[state->typeCount++]=(TypeInfo){.type=dataType,.opCount=1,.isWritable=false};
 }
-void pushValue(TypeCheckState* state,Operation op){
+void pushValue(TypeCheckState* state,Operation op){//TODO don't allow pointers to intermediate values
   if(ensureOpStackCap(state,state->opStackCount+1)){
     handleError("exceeded operation stack capacity",ERROR_MEMORY,op.filePos);
   }
@@ -5877,8 +5876,8 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     for(int32_t i=0;i<staticArgsOffset;i++){//get values for explicit template arguments
       if(argValues[i].constType==CONSTANT_NONE){
         typeOffset--;
-        if(typeOffset<0)//XXX better message
-          handleError("not enough arguments for procedure",ERROR_SYNTAX,op->filePos);
+        if(typeOffset<0)
+          handleError("not enough template arguments for procedure",ERROR_SYNTAX,op->filePos);
         opOffset-=state->typeStack[typeOffset].opCount;
         if(opOffset<0)
           handleError("types and operations out of sync",ERROR_MEMORY,op->filePos);
@@ -5913,10 +5912,16 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     if(staticArgValueOffsets==NULL||ensureTypeStackCap(state,state->typeCount+resolvableStaticArgs)||ensureOpStackCap(state,state->opStackCount+resolvableStaticArgs))
       handleError("allocating memory for static arguments failed",ERROR_MEMORY,op->filePos);
     typeOffset=state->typeCount-(getTypeElementCount(procType->inType)-resolvableStaticArgs)-(isPtr?1:0);
+    if(typeOffset<0){
+      fprintf(stderr,"not enough operands for procedure call: need %"PRIi64" got: %zu\n",getTypeElementCount(procType->inType)-resolvableStaticArgs+(isPtr?1:0),state->typeCount);
+      handleError(NULL,ERROR_SYNTAX,op->filePos);
+    }
     opOffset=state->opStackCount;
     for(size_t i=typeOffset;i<state->typeCount;i++){//compute operation offset
       opOffset-=state->typeStack[i].opCount;
     }
+    if(opOffset<0)
+      handleError("types and operations out of sync",ERROR_MEMORY,op->filePos);
     int32_t staticArgId=0,argIndex=0;
     for(size_t i=typeOffset;i<state->typeCount-(isPtr?1:0);argIndex++,opOffset+=state->typeStack[i].opCount,i++){
       if(staticArgId<procType->staticArgsCount&&argIndex==staticArgIndex(&procType->staticArgs[staticArgId])){//static argument
