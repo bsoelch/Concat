@@ -2,6 +2,7 @@
 #include io
 #include stringBuilder
 #include string
+#include list
 
 entryPoint:
   "./parser.concat" io.OPEN_READ io.fopen #drop =:: f
@@ -9,9 +10,17 @@ entryPoint:
     '\n' sb.appendC
     f sb.appendFile #drop
     '\n' sb.appendC
-  sb.toStr printTokens
+  sb.toStr parseTokens ##printTokens
 end
 
+proc( char => bool ) =: isWhitespace
+  switch
+    ' ' '\n' '\t' '\v' '\f' '\r' case
+      true return
+    default
+      false return
+  end
+end
 proc( i8 : chr => i32 ) =: parseDigit
   chr '0' >= chr '9' <= & if
     chr '0' - return
@@ -78,13 +87,13 @@ proc( string : str  i32 : base => i64 ParseIntError ) =: tryParseInt
   overflow if ParseIntError .OVERFLOW return else ParseIntError .NONE return end
 end
 
-
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: FilePosition
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: FileState
 
 enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER string : ERROR ) =:: Token
 
-proc( sb.stringBuilder : sb Token : token => sb.stringBuilder ) =: appendToken
+
+proc( stringBuilder : sb Token : token => stringBuilder ) =: appendToken
   token switch
     EMPTY case
       sb "empty" sb.appendS return
@@ -116,7 +125,6 @@ proc( sb.stringBuilder : sb Token : token => sb.stringBuilder ) =: appendToken
       return
   end
 end
-
 proc( string => ) =: printTokens
   "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
@@ -134,14 +142,8 @@ proc( string => ) =: printTokens
     #dup .length 0 >
   do end #drop
 end
-proc( char => bool ) =: isWhitespace
-  switch
-    ' ' '\n' '\t' '\v' '\f' '\r' case
-      true return
-    default
-      false return
-  end
-end
+
+
 proc( i8 : chr  FileState ptr mut : fileState => ) =: updateState
   chr '\n' == if
       fileState [] .currentPos .line ++ #drop
@@ -224,4 +226,131 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: nextToken
       #drop Token .EMPTY return
     end
   Token .IDENTIFER new return
+end
+
+
+enum( i64 : int string : str i8 : chr ) =:: ConstValue
+enum( NOP ConstValue : Constant string : Error  string : Unknown ) =:: OpValue
+struct( OpValue : val FilePosition : pos ) =:: Operation
+
+proc( FilePosition => Operation ) =: opNOP
+  OpValue .NOP #swap Operation new return
+end
+proc( i64 FilePosition => Operation ) =: opConstInt
+  #swap ConstValue .int new OpValue .Constant new #swap Operation new return
+end
+proc( string FilePosition => Operation ) =: opConstStr
+  #swap ConstValue .str new OpValue .Constant new #swap Operation new return
+end
+proc( i8 FilePosition => Operation ) =: opConstChar
+  #swap ConstValue .chr new OpValue .Constant new #swap Operation new return
+end
+proc( string FilePosition  => Operation ) =: opError
+  #swap OpValue .Error new #swap Operation new return
+end
+proc( string FilePosition  => Operation ) =: opUnknown
+  #swap OpValue .Unknown new #swap Operation new return
+end
+proc( Operation => ) =: printOp
+  64 sb.create
+    #over .val switch
+      NOP case break
+      Constant case
+        "Constant: " sb.appendS
+        #over .val .Constant #swap
+          #over switch
+            int case
+              "integer "  sb.appendS
+              #over .int sb.appendI
+              break
+            str case
+              "string \""  sb.appendS
+              #over .str   sb.appendStr
+                     '\"'  sb.appendC
+              break
+            chr case
+              "char \'"  sb.appendS
+              #over .chr sb.appendC
+                   '\''  sb.appendC
+              break
+          end
+        #swap #drop
+        break
+      Error case
+        "Error: " sb.appendS
+        #over .val .Error sb.appendStr
+        break
+      Unknown case
+        "Unknown Operation: " sb.appendS
+        #over .val .Unknown sb.appendStr
+        break
+      default
+    end
+    " at " sb.appendS
+    #over .pos .fileName sb.appendStr
+    ':' sb.appendC
+    #over .pos .line sb.appendI
+    ':' sb.appendC
+    #over .pos .posInLine sb.appendI
+    '\n' sb.appendC
+    #swap #drop
+  io.stdOut #swap io.fputSb #drop
+end
+
+proc( string : code Token : token FileState ptr mut : fileState => string Operation ) =: parseOperation
+  code
+    token switch
+      EMPTY case
+        fileState [] .wordStart opNOP return
+      STRING case ## TODO escape sequences
+        token .STRING fileState [] .wordStart opConstStr return
+      CHAR case
+        token .CHAR
+          #dup .length 1 != if
+            #drop
+            "A character literal has to contain exactly one character" string.wrap fileState [] .wordStart opError return
+          end
+          0 string.charAt
+        fileState [] .wordStart opConstChar return
+      INTEGER case
+        token .INTEGER fileState [] .wordStart opConstInt return
+      ERROR case
+        token .ERROR fileState [] .wordStart opError return
+      IDENTIFER case
+        token .IDENTIFER
+        break
+    end
+    #dup 0 string.charAt '#' == if ## compiler command
+      1 string.tail
+        "include" string.wrap #over string.eq if #drop
+          fileState nextToken
+          #dup Token .STRING == if .STRING
+            ## TODO include local file
+            #drop fileState [] .wordStart opNOP return
+          else #dup Token .IDENTIFER == _if .IDENTIFER
+            ## TODO include library file
+            #drop fileState [] .wordStart opNOP return
+          end
+          64 sb.create
+            "invalid token for include" sb.appendS
+            #swap appendToken
+          sb.toStr fileState [] .wordStart opError return
+        end
+      64 sb.create
+        "unknown compiler command \"" sb.appendS
+        #swap                         sb.appendStr
+        '\"'                          sb.appendC
+      sb.toStr fileState [] .wordStart opError return
+    end
+    ## TODO try parsing identifier
+  fileState [] .wordStart opUnknown return
+end
+proc( string => ) =: parseTokens
+  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
+  state addrOf #swap
+    while
+      #over nextToken #over:2 parseOperation printOp
+      #dup .length 0 >
+    do end #drop
+  #drop
 end
