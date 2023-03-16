@@ -2512,11 +2512,12 @@ void initProgStringChars(void){
   bool isBaseString=true;
   for(size_t i=0;i<progStringCount;i++){
     isBaseString=true;
+    charOff=0;
     for(size_t j=0;j<i;j++){
       if(programStrings[j].isBaseString){//search all previous base-strings
          charOff=indexOfString(programStrings[j].value,programStrings[i].value);
          if(charOff>-1){
-           charId=j;
+           charId=programStrings[j].charsId;
            isBaseString=false;
            break;
          }
@@ -2848,12 +2849,16 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       COMPILE_OP_RETURN_ERROR(target,op,opSize);//index
       fputs(",",target);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);//length
-      fputs(");\n",target);
+      fputs(",\"",target);
+      printFilePosition(op->filePos,target);
+      fputs("\");\n",target);
       return size;
     case OP_CHECK_ENUM_INDEX:
       fprintf(target,"%s(",CHECK_ENUM_INDEX_NAME);
       COMPILE_OP_RETURN_ERROR(target,op,opSize);//index
-      fprintf(target,".label,%"PRIi64");\n",op->dataAs.i64);
+      fprintf(target,".label,%"PRIi64",\"",op->dataAs.i64);
+      printFilePosition(op->filePos,target);
+      fputs("\");\n",target);
       return size;
     case OP_UNREACHABLE:
       fputs("exit(EXIT_FAILURE);//unreachable\n",target);
@@ -3432,16 +3437,16 @@ void compileToC(FILE* target,Program const* p){
     }
   }
   if(p->hasCheckBounds){
-    fprintf(target,"void %s(int64_t index,int64_t length){\n",CHECK_BOUNDS_NAME);
+    fprintf(target,"void %s(int64_t index,int64_t length,char const* pos){\n",CHECK_BOUNDS_NAME);
     fputs("  if(index>=0 && index<length)\n    return;\n",target);
-    fputs("  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\"\\n\",index,length);\n",target);
+    fputs("  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\" at %s\\n\",index,length,pos);\n",target);
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_ARRAY_OUT_OF_RANGE);
     fputs("}\n",target);
   }
   if(p->hasCheckEnum){
-    fprintf(target,"void %s(int64_t current,int64_t expected){\n",CHECK_ENUM_INDEX_NAME);
+    fprintf(target,"void %s(int64_t current,int64_t expected,char const* pos){\n",CHECK_ENUM_INDEX_NAME);
     fputs("  if(current==expected)\n    return;\n",target);
-    fputs("  fprintf(stderr,\"enum index (%\"PRIi64\") does not match current value (%\"PRIi64\")\\n\",expected,current);\n",target);
+    fputs("  fprintf(stderr,\"enum index (%\"PRIi64\") does not match current value (%\"PRIi64\") at %s\\n\",expected,current,pos);\n",target);
     fprintf(target,"  exit(%i);\n",PROG_EXIT_CODE_WRONG_ENUM_INDEX);
     fputs("}\n",target);
   }
@@ -6635,6 +6640,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           //enum-entry equality
           if(isEnumLabel(inTypes[0],inTypes[1])||(isEnumType(inTypes[0])&&typeEquals(inTypes[0],inTypes[1]))){
             if(changeEnumType(&inTypes[0],true))
+              handleError("could not update enum type",ERROR_MEMORY,op.filePos);
+            if(changeEnumType(&inTypes[1],true))
               handleError("could not update enum type",ERROR_MEMORY,op.filePos);
             op.dataType=TYPE_BOOL;
             typesMatch=true;
