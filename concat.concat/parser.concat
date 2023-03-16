@@ -3,13 +3,15 @@
 #include stringBuilder
 #include string
 #include list
+#include arrayView
 
 #include "lib.concat"
 #include "files.concat"
+#include "labels.concat"
 #include "types.concat"
 
 entryPoint:
-  "./parser.concat" io.OPEN_READ io.fopen #drop =:: f
+  "./test.concat" io.OPEN_READ io.fopen #drop =:: f
   128 sb.create
     '\n' sb.appendC
     f sb.appendFile #drop
@@ -17,22 +19,29 @@ entryPoint:
   sb.toStr parseTokens ##printTokens
 end
 
-enum( i64 : int string : str i8 : chr ) =:: ConstValue
+enum( i64 : int string : str i8 : chr types.Type : typeId ) =:: ConstValue
+struct( ConstValue : val FilePosition : pos ) =:: Constant
+
+proc( i64 FilePosition => Constant ) =: constInt
+  #swap ConstValue .int new #swap Constant new return
+end
+proc( string FilePosition => Constant ) =: constStr
+  #swap ConstValue .str new #swap Constant new return
+end
+proc( i8 FilePosition => Constant ) =: constChar
+  #swap ConstValue .chr new #swap Constant new return
+end
+proc( types.Type FilePosition => Constant ) =: constType
+  #swap ConstValue .typeId new #swap Constant new return
+end
 
 enum( NOP ConstValue : Constant string : Error  string : Unknown ) =:: OpValue
 struct( OpValue : val FilePosition : pos ) =:: Operation
-
 proc( FilePosition => Operation ) =: opNOP
   OpValue .NOP #swap Operation new return
 end
-proc( i64 FilePosition => Operation ) =: opConstInt
-  #swap ConstValue .int new OpValue .Constant new #swap Operation new return
-end
-proc( string FilePosition => Operation ) =: opConstStr
-  #swap ConstValue .str new OpValue .Constant new #swap Operation new return
-end
-proc( i8 FilePosition => Operation ) =: opConstChar
-  #swap ConstValue .chr new OpValue .Constant new #swap Operation new return
+proc( Constant  => Operation ) =: opConst
+  #dup .val OpValue .Constant new #swap .pos Operation new return
 end
 proc( string FilePosition  => Operation ) =: opError
   #swap OpValue .Error new #swap Operation new return
@@ -40,13 +49,14 @@ end
 proc( string FilePosition  => Operation ) =: opUnknown
   #swap OpValue .Unknown new #swap Operation new return
 end
-proc( Operation => ) =: printOp
+proc( Operation types.TypeContext ptr => ) =: printOp
+  =:: typeContext
   64 sb.create
     #over .val switch
       NOP case break
-      Constant case
+      OpValue .Constant case
         "Constant: " sb.appendS
-        #over .val .Constant #swap
+        #over .val .Constant #swap ## XXX sb.appendConstValue
           #over switch
             int case
               "integer "  sb.appendS
@@ -61,6 +71,11 @@ proc( Operation => ) =: printOp
               "char \'"  sb.appendS
               #over .chr sb.appendC
                    '\''  sb.appendC
+              break
+            typeId case
+              "type \'"     sb.appendS
+              #over .typeId typeContext sb.appendType
+                   '\''     sb.appendC
               break
           end
         #swap #drop
@@ -85,34 +100,215 @@ proc( Operation => ) =: printOp
     #swap #drop
   io.stdOut #swap io.fputSb #drop
 end
+struct( 
+    types.TypeContext : mut typeContext 
+  labels.LabelContext : mut labelContext 
+        Constant list : mut constants 
+                  i64 : mut constOffset 
+      types.Type list : mut typeBuffer 
+       Operation list : mut ops 
+) =:: ParserState
 
-proc( string : code Token : token FileState ptr mut : fileState  Operation list ptr mut : ops => string ) =: parseOperation
+
+proc( Operation : op ParserState ptr mut : state bool : pushConstants => ) =: appendOpInternal
+  state [] .ops 
+    pushConstants if
+      0 while #dup state [] .constants .length < do
+        #swap
+          state [] .constants #over:2 list.get opConst list.append
+        #swap
+        1 +
+      end #drop
+      state [] .constants list.reset state [] .constants =
+    end
+    op list.append
+  state [] .ops  =
+end
+proc( Operation ParserState ptr mut => ) =: appendOp
+  true appendOpInternal
+end
+proc( Operation ParserState ptr mut => ) =: appendError
+  false appendOpInternal
+end
+proc( Constant : const ParserState ptr mut : state => ) =: pushConst
+  state [] .constants const list.append state [] .constants  =
+end
+## TODO get array size
+proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: popTypeConstant
+  state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
+    "missing type constant" string.wrap fileState [] .wordStart opError state appendError
+     types.primitiveType.UNDEFINED true return
+  end
+  state [] .constants list.peek .val ConstValue .typeId != if 
+    "wrong type for constant expected type" string.wrap state [] .constants list.peek .pos opError state appendError
+    types.primitiveType.UNDEFINED true return
+  end
+  state [] .constants list.pop #swap state [] .constants = 
+    .val .typeId false return
+end
+proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types.Type arrayView bool ) =: popTypeConstants
+  state [] .constants .length state [] .constOffset n + < if
+    "missing type constant" string.wrap fileState [] .wordStart opError state appendError
+     types.Type array.empty true return
+  end
+  state [] .typeBuffer list.reset state [] .typeBuffer =
+  state [] .constants .length n - 
+    #dup while #dup state [] .constants .length < do
+      state [] .constants #over list.get .val ConstValue .typeId != if #drop:2
+        "wrong type for constant, expected type" string.wrap state [] .constants list.peek .pos opError state appendError
+         types.Type array.empty true return
+      end
+      state [] .typeBuffer state [] .constants #over:2 list.get .val .typeId list.append state [] .typeBuffer =
+      1 +
+    end #drop
+  state [] .constants .length =
+  state [] .typeBuffer list.asArray false return
+end
+proc( ParserState ptr mut : state => i64 ) =: offsetConstants
+  state [] .constOffset =:: prev
+    state [] .constants .length state [] .constOffset =
+  prev return
+end
+proc( i64 ParserState ptr mut => ) =: resetConstants
+  [] .constOffset =
+end
+
+enum( NONE STRUCT ENUM PROC_IN ) =:: LabelType
+proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string labels.LabelId types.Type arrayView bool ) =: readCompositeType
+  state offsetConstants =:: constOffset
+  labelType LabelType .NONE == if
+    labels.LABEL_ID_NONE
+  else
+    state [] .labelContext addrOf labels.labelOffset 
+  end =:: labelOffset ## XXX use real label offset
   code
+    while fileState nextToken 
+      fileState state tryParseConstant if #drop continue end
+      #dup endString string.eq if #drop
+        constOffset state resetConstants
+        labelOffset state [] .constants .length constOffset - fileState state popTypeConstants return
+      else #dup ":" string.wrap string.eq _if #drop
+        labelType LabelType .NONE == if
+          "unexpected ':' operator" string.wrap fileState [] .wordStart opError  state appendOp 
+        end
+        fileState nextToken 
+        #dup Token .IDENTIFER != if
+          "expected identifier" string.wrap fileState [] .wordStart opError  state appendOp 
+        end
+        .IDENTIFER
+        ## XXX check if correct number of types/labels
+        ## TODO read label flags
+        fileState [] .wordStart state [] .labelContext addrOf labels.newLabel #drop
+        continue
+      end
+      #drop
+      ## TODO read enum label
+      #dup .length 0 >
+    do end
+  labels.LABEL_ID_NONE types.Type array.empty true return 
+end
+proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string string bool ) =: tryParseConstant
+  code 
     token switch
       EMPTY case
-        return
+        "" string.wrap true return
       STRING case ## TODO escape sequences
-        token .STRING fileState [] .wordStart opConstStr  ops [] #swap list.append ops [] =
-        return
+        token .STRING fileState [] .wordStart constStr  state pushConst
+        "" string.wrap true return
       CHAR case
         token .CHAR
           #dup .length 1 != if
             #drop
-            "A character literal has to contain exactly one character" string.wrap fileState [] .wordStart opError  ops [] #swap list.append ops [] = 
-            return
+            "A character literal has to contain exactly one character" string.wrap fileState [] .wordStart opError  state appendOp 
+            "" string.wrap true return
           end
           0 string.charAt
-        fileState [] .wordStart opConstChar ops [] #swap list.append ops [] = 
-        return
+        fileState [] .wordStart constChar state pushConst 
+        "" string.wrap true return
       INTEGER case
-        token .INTEGER fileState [] .wordStart opConstInt  ops [] #swap list.append ops [] =
-        return
+        token .INTEGER fileState [] .wordStart constInt  state pushConst
+        "" string.wrap true return
       ERROR case
-        token .ERROR fileState [] .wordStart opError  ops [] #swap list.append ops [] =
-        return
+        token .ERROR fileState [] .wordStart opError  state appendOp
+        "" string.wrap true return
       IDENTIFER case
         token .IDENTIFER
         break
+    end
+    #dup "bool" string.wrap string.eq if
+      types.primitiveType.BOOL fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "i8" string.wrap string.eq _if
+      types.primitiveType.I8 fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "i32" string.wrap string.eq _if
+      types.primitiveType.I32 fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "i64" string.wrap string.eq _if
+      types.primitiveType.I64 fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "float" string.wrap string.eq _if
+      types.primitiveType.FLOAT fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "type" string.wrap string.eq _if
+      types.primitiveType.TYPE fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "ptr" string.wrap string.eq _if
+      ## XXX get size
+      fileState state popTypeConstant if #drop
+        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        true return
+      end
+      true #swap types.ArraySize array.empty true false state [] .typeContext addrOf types.newArrayType if #drop
+        "could not create array type" string.wrap fileState [] .wordStart opError  state appendError true return
+      end
+        fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "array" string.wrap string.eq _if
+      ## XXX get size
+      fileState state popTypeConstant if #drop
+        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        true return
+      end
+      false #swap types.ArraySize array.empty true false state [] .typeContext addrOf types.newArrayType if #drop
+        "could not create array type" string.wrap fileState [] .wordStart opError  state appendError true return
+      end
+        fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "mut" string.wrap string.eq _if
+      fileState state popTypeConstant if #drop
+        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        true return
+      end
+      ## TODO make type mutable
+      fileState [] .wordStart constType  state pushConst
+      true return
+    else #dup "proc(" string.wrap string.eq _if ## TODO reading of composite types
+    else #dup "(" string.wrap string.eq  #over "tuple(" string.wrap string.eq | #over "struct(" string.wrap string.eq | _if
+      "struct(" string.wrap string.eq if
+        LabelType .STRUCT ")" string.wrap fileState state readCompositeType
+      else
+        LabelType .NONE ")" string.wrap fileState state readCompositeType
+      end
+      if #drop:2
+        "error while parsing tuple type" string.wrap fileState [] .wordStart opError  state appendError 
+        "" string.wrap true return
+      end 
+      #swap state [] .typeContext addrOf types.newTuple if #drop
+        "could not create tuple type" string.wrap fileState [] .wordStart opError  state appendError 
+        "" string.wrap true return
+      end 
+      fileState [] .wordStart constType  state pushConst
+      "" string.wrap true return
+    else #dup "enum(" string.wrap string.eq _if
+    else #dup "proc(" string.wrap string.eq _if
+    end
+  false return
+end
+proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
+  code
+    token fileState state tryParseConstant if 
+      #drop return
     end
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
@@ -130,31 +326,37 @@ proc( string : code Token : token FileState ptr mut : fileState  Operation list 
           64 sb.create
             "invalid token for include" sb.appendS
             #swap appendToken
-          sb.toStr fileState [] .wordStart opError  ops [] #swap list.append ops [] = 
+          sb.toStr fileState [] .wordStart opError  state appendOp 
           return
         end
       64 sb.create
         "unknown compiler command \"" sb.appendS
         #swap                         sb.appendStr
         '\"'                          sb.appendC
-      sb.toStr fileState [] .wordStart opError  ops [] #swap list.append ops [] =
+      sb.toStr fileState [] .wordStart opError  state appendOp
       return
     end
     ## TODO try parsing identifier
-  fileState [] .wordStart opUnknown  ops [] #swap list.append ops [] =
+  fileState [] .wordStart opUnknown  state appendOp
   return
 end
 proc( string => ) =: parseTokens
-  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
-  128 Operation list.create =:: mut ops
-  state addrOf #swap
+  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut fileState
+  ## ParserState
+    types.newTypeContext
+    labels.newLabelContext
+    128 Constant   list.create 0
+    128 types.Type list.create
+    128 Operation  list.create 
+  ParserState new =:: mut state
+  fileState addrOf #swap
     while
-      #over nextToken #over:2 ops addrOf parseOperation
+      #over nextToken #over:2 state addrOf parseOperation
       #dup .length 0 >
     do end #drop
   #drop
-  0 while #dup ops .length < do
-    ops #over list.get printOp
+  0 while #dup state .ops .length < do
+    state .ops #over list.get state .typeContext addrOf printOp
     1 +
   end #drop
 end

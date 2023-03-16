@@ -1,4 +1,5 @@
 #include string
+#include arrayView
 
 proc( char => bool ) =: public isWhitespace
   switch
@@ -52,12 +53,12 @@ proc( string : str  i32 : base => i64 ParseIntError ) =: public tryParseInt
     sign if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end mBase /u =:: maxSafe
     0 while #dup #over:2 .length < do
       #over #over string.charAt
-        #dup '_' == #over '\'' == | if
+        #over 0 > #over '_' == #over:2 '\'' == | & if
           #drop ## ignore _ and ' in numbers
           1 + continue
         end
       parseDigit
-        #dup 0 < #over mBase > | if
+        #dup 0 < #over mBase >= | if
           #drop:3 0 ParseIntError .INVALID_CHAR return ## ERR_INVALID_CHAR
         end
       res
@@ -73,4 +74,13 @@ proc( string : str  i32 : base => i64 ParseIntError ) =: public tryParseInt
     sign if neg end
   overflow if ParseIntError .OVERFLOW return else ParseIntError .NONE return end
 end
+
+#namespace array
+  #template type : T #end
+  proc( T arrayView : src => T arrayView ) =: public clone
+    src .length T mem.alloc
+      src .data src .length mem.copy
+    src .length array.create return
+  end
+#end
 

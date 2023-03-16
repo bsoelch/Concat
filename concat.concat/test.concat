@@ -1,0 +1,31 @@
+#include string
+
+( i32 i64 ) =:: aTuple
+struct( i8 ptr mut : data i64 : len ) type =: string
+enum( A B string : C i64 3 array : D ) =:: anEnum
+
+proc( i32 aTuple => string anEnum ) =: aProc
+  0 == if
+    "Hello" #swap .0 string new #swap .1  anEnum .C new return
+  else #dup .0 2 == _if
+    "World!" 5 string new anEnum .B return
+  end
+end
+
+proc( i32 => ) =: switchTest
+  switch
+    0 1 2 case
+      break
+    3 4 case
+      break
+    default
+      return
+  end
+end
+
+entryPoint:
+  0 while #dup "Hello" .length < do
+    "Hello" #over [] print
+    1 +
+  end #drop
+end
