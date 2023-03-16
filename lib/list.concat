@@ -1,4 +1,5 @@
 #include mem
+#include arrayView
 
 #template type : T #end
 struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
@@ -20,6 +21,13 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     return
   end
   #template type : T #end
+  proc( T list => T list ) =: public clear
+    #dup .data mem.free
+      0 #over .cap =
+      0 #over .length =
+    return
+  end
+  #template type : T #end
   proc( T list : elts T : elt => T list ) =: public append
     elts
       #dup .length 1 + ensureCap
@@ -35,6 +43,14 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     return
   end
   #template type : T #end
+  proc( T list : a T arrayView : b => T list ) =: public appendArray
+    a
+      #dup .length   b .length + ensureCap
+      #dup .data #over .length + b .data b .length mem.copy #drop
+      #dup .length   b .length + #over .length =
+    return
+  end
+  #template type : T #end
   proc( T list : a T list : b => T list ) =: public appendAll
     a
       #dup .length   b .length + ensureCap
@@ -42,7 +58,6 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
       #dup .length   b .length + #over .length =
     return
   end
-  ## XXX append array view
   
   #template type : T #end
   proc( T list : elts i64 : index => T ) =: public get
@@ -50,6 +65,13 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
       ## TODO error handling
     end
     elts .data index [] return
+  end
+  #template type : T #end
+  proc( T list : elts i64 : index => T _ ptr mut ) =: public at
+    index 0 < index elts .length >= | if
+      ## TODO error handling
+    end
+    elts .data index + return
   end
   #template type : T #end
   proc( T : elt T list : elts i64 : index => ) =: public set
