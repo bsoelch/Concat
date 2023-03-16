@@ -6,7 +6,7 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
 
 #namespace array
   #template type : T #end
-  proc( => T arrayView ) =: public EMPTY
+  proc( => T arrayView ) =: public empty
     0 T mem.alloc 0 T arrayView new return
   end  
   
@@ -57,7 +57,7 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
   #template type : T #end
   proc( T arrayView : elts i64 : n => T arrayView ) =: public head
     n 0 <= if
-      T EMPTY return
+      T empty return
     end
     n elts .length >= if
       elts return
@@ -71,7 +71,7 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
       elts return
     end
     n elts .length >= if
-      T EMPTY return
+      T empty return
     end
     elts .data n +  elts .length n -  create return
   end
@@ -79,10 +79,10 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
   #template type : T #end
   proc( T arrayView : elts i64 : from i64 : len => T arrayView ) =: public slice
     len 0 <= if
-      T EMPTY return
+      T empty return
     end
     from elts .length >= if
-      T EMPTY return
+      T empty return
     end
     from 0 <= if
       elts  len head return
@@ -101,7 +101,7 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
   #template type : T #end
   proc( T arrayView : elts i64 : index => T arrayView T arrayView ) =: public splitIndex
     index 0 < if
-      T EMPTY elts return
+      T empty elts return
     end
     elts index 1 + tail
     elts index head

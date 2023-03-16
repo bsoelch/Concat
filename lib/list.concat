@@ -1,6 +1,8 @@
 #include mem
 #include arrayView
 
+## XXX allow auto-cast from list -> arrayView
+
 #template type : T #end
 struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
 
@@ -28,11 +30,21 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     return
   end
   #template type : T #end
+  proc( T list => T list ) =: public reset
+    ## list
+      0 #over .length =
+    return
+  end
+  #template type : T #end
   proc( T list : elts T : elt => T list ) =: public append
     elts
       #dup .length 1 + ensureCap
       elt #over .data #over:2 .length ++ [] =
     return
+  end
+  #template type : T #end
+  proc( T list  T => T list ) =: public push
+    append return
   end
   #template type : T #end
   proc( T list : a i64 : static k  T k ptr : b => T list ) =: public appendP
@@ -58,7 +70,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
       #dup .length   b .length + #over .length =
     return
   end
-  
+
   #template type : T #end
   proc( T list : elts i64 : index => T ) =: public get
     index 0 < index elts .length >= | if
@@ -80,5 +92,31 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     end
     elt elts .data index [] =
   end
+  #template type : T #end
+  proc( T list : elts => T ) =: public peek
+    elts .length 0 <= if
+      ## TODO error handling
+    end
+    elts .data elts .length 1 - [] return
+  end
+  #template type : T #end
+  proc( T list : elts => T list T ) =: public pop
+    elts .length 0 <= if
+      ## TODO error handling
+    end
+    elts
+      #dup .length 1 - #over .length =
+    #dup .data #over .length [] return
+  end
   ## XXX insert
+
+
+  #template type : T #end
+  proc( T list : elts => T arrayView ) =: public asArray
+    elts .data elts .length array.create return
+  end
+  #template type : T #end
+  proc( T list : elts i64 : from i64 : len => T arrayView ) =: public slice
+    elts asArray from len array.slice return
+  end
 #end
