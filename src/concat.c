@@ -895,7 +895,7 @@ TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOff
 TypeId procedureType(TypeId inType,TypeId outType,StaticArgument* staticArgs,int32_t staticArgsCount){
   if(typeEquals(inType,TYPE_UNDEFINED)||typeEquals(outType,TYPE_UNDEFINED))
     return TYPE_UNDEFINED;
-  for(int32_t i=0;i<procTypeCount;i++){
+  for(int32_t i=0;i<procTypeCount;i++){//TODO check static arguments for equality
     if(typeEquals(procTypes[i].inType,inType)&&typeEquals(procTypes[i].outType,outType))
       return (TypeId){.class=TYPECLASS_PROCEDURE,.dataAs.id=i};
   }
@@ -1416,8 +1416,7 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
           fprintf(file," generic(%"PRIi64")",arrayTypeData(type)->sizes[i].value);
           continue;
         }
-        if(arrayTypeData(type)->dims>1)
-          fputs(" _",file);
+        fputs(" _",file);
       }
       fprintf(file," %s",typeClassName(type.class));
       printTypeFlags(type,file);
@@ -1834,7 +1833,7 @@ NamespaceId allocNamespace(NamespaceId parent,String name){
   namespaceBuffer[buffredNamespaces].parent=parent;
   namespaceBuffer[buffredNamespaces].name=name;
   size_t initCap=16;
-  namespaceBuffer[buffredNamespaces].children=malloc(initCap);
+  namespaceBuffer[buffredNamespaces].children=malloc(initCap*sizeof(*namespaceBuffer[buffredNamespaces].children));
   namespaceBuffer[buffredNamespaces].childCap=initCap;
   namespaceBuffer[buffredNamespaces].childCount=0;
   if(namespaceBuffer[buffredNamespaces].children==NULL)
@@ -1849,6 +1848,8 @@ bool namespaceTrieInit(void){
 NamespaceId childId(NamespaceId base,String childName,bool create){
   if(base==NAMESPACE_ID_NONE||childName.length==0)
     return NAMESPACE_ID_NONE;
+  if(base<0||(size_t)base>buffredNamespaces)
+    return NAMESPACE_ID_NONE;//outside allowed range
   for(size_t i=0;i<namespaceBuffer[base].childCount;i++){
     NamespaceId childId=namespaceBuffer[base].children[i];
     if(stringCompare(namespaceBuffer[childId].name,childName)==0)
@@ -2151,6 +2152,10 @@ FilePosition getEntryPointPosParser(ParserState const* state){
   return entryFile->localOps[entryFile->entryPointIndex].filePos;
 }
 void initEntryPointParser(ParserState const* state){
+  if(state->entryFile<0||state->entryFile>=state->fileCount){
+    fputs("entry file outside allowed range\n",stderr);
+    exit(EXIT_FAILURE);
+  }
   ProgramFile* entryFile=&state->files[state->entryFile];
   entryFile->entryPointIndex=entryFile->localOpCount;
 }
@@ -3648,7 +3653,7 @@ Operation opTypeConstant(TypeId type,TypeId constData,FilePosition pos){
 }
 Operation opFromConstant(ConstantValue constant,FilePosition pos){
   if(constant.constType==CONSTANT_NONE||constant.constType==CONSTANT_WILDCARD||constant.constType==GENERIC_INT){
-    fprintf(stderr,"cannot convert constants of type %s to operation",constTypeName(constant.constType));
+    fprintf(stderr,"cannot convert constants of type %s to operation\n",constTypeName(constant.constType));
     handleError(NULL,ERROR_SYNTAX,pos);
   }
   if(typeEquals(constant.valueType,TYPE_BOOL))
@@ -4553,7 +4558,7 @@ Operation* peekOperation(ParserState* state,FilePosition pos){
   return &currentFile->globalOps[currentFile->globalOpCount-1];
 }
 void readOperation(ParserState* state,CodeFile* codeFile){
-  int wordType;
+  int wordType=0;
   String word=nextWord(codeFile,&wordType);
   TypeId type;
   FilePosition wordPos=codeFile->wordStart;
@@ -5174,6 +5179,8 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   FileId prevFile=state->currentFile;
   FileId included=state->fileCount++;
+  if(state->entryFile==FILE_ID_NONE)
+    state->entryFile=included;
   if(ensureFilesCap(&state->files,&state->filesCap,state->fileCount+1)){
     handleError("could not allocate files array",ERROR_MEMORY,codeFile->currentPos);
     return FILE_ID_NONE;
@@ -5297,6 +5304,7 @@ typedef struct{
 
   bool hasDo;
   bool hasBreak;
+  bool doesLoop;
 }WhileBlockInfo;
 typedef struct{
   StackState inStack;
@@ -6736,7 +6744,9 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           handleError(NULL,ERROR_SYNTAX,op.filePos);
         }
         if(wordEquals(&op.dataAs.string,"length")){
-          if(arrayTypeData(structType)->sizes[0].isInt)
+          if(arrayTypeData(structType)->dims==0)
+            op=opConstant(TYPE_I64,0,op.filePos);
+          else if(arrayTypeData(structType)->sizes[0].isInt)
             op=opConstant(TYPE_I64,arrayTypeData(structType)->sizes[0].value,op.filePos);
           else
             op=opGetArgument(TYPE_I64,arrayTypeData(structType)->sizes[0].value,LABEL_ID_UNKNOWN,op.filePos);
@@ -6775,9 +6785,10 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         fprintf(stderr," does not have a field \"%"PRI_STR"\"\n",PRI_STR_ARGS(op.dataAs.string));
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
+      mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
       if(isTupleType(structType)){
         op=(Operation){.opType=(op.opType==OP_ADDR_OF_LABEL)?OP_ADDR_OF:(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=structType,.filePos=op.filePos,
-          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=false}}};
+          .dataAs={.idInfo={.type=ID_TUPLE_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=isMutableLabel(mLabel)}}};
         typeCheckGetTupleElement(state,structType,writable,&op);
         return;
       }
@@ -6804,7 +6815,6 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         pushCompiledOperation(state,opConstant(lableType,labelIndex,op.filePos));
       }
       state->hasCheckEnum=1;
-      mLabel=label(mStruct->labelOffset+labelIndex,op.filePos);
       op=(Operation){.opType=(op.opType==OP_ADDR_OF_LABEL)?OP_ADDR_OF:(op.opType==OP_SET_LABEL)?OP_SET:OP_GET,.dataType=mStruct->types[labelIndex],.filePos=op.filePos,
         .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=isMutableLabel(mLabel)}}};
       if(op.opType==OP_ADDR_OF){
@@ -7220,6 +7230,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fputs("break can only appear in while blocks\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
+          if(blockInfoPtr->blockDataAs.whileBlock.hasDo)//continue after do -> loop
+            blockInfoPtr->blockDataAs.whileBlock.doesLoop=true;
           checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
           op.dataAs.block.id=blockInfoPtr->blockId;
           pushCompiledOperation(state,op);
@@ -7398,11 +7410,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"unexpected end for %s-block expected end-while\n",blockNames[op.dataAs.block.type]);
             handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
           }
-          if(!state->reachable){//TODO only error if no continue in loop
+          if(!state->reachable&&!blockInfoPtr->blockDataAs.whileBlock.doesLoop){
             fputs("end of while block cannot be reached\n",stderr);
             handleError(NULL,ERROR_SYNTAX,op.filePos);
           }
-          checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
+          if(state->reachable)
+            checkWhileTypes(state,&(blockInfoPtr->blockDataAs.whileBlock),op.filePos);
           if(predeclareBlockVariables(state,blockInfoPtr->blockStart,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))
              handleError(NULL,ERROR_TYPE,op.filePos);
           if(resetStack(state,&(blockInfoPtr->blockDataAs.whileBlock.outStack)))

@@ -9,8 +9,9 @@ syntaxHighlighting/update.sh
 concat
 code
 code.c
-concat.concat/*.c
-!concat.concat/extern.c
-concat.concat/concat2
+# concat.concat/*.c
+# !concat.concat/extern.c
+# concat.concat/concat2
+concat.concat/*
 featureMap.concat
 !tests/*/*.out
