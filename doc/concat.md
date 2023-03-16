@@ -442,7 +442,8 @@ enum( empty i64 : asInt float : asFloat ) type =: number?  ## decalre an enum wi
 The enum constants can be accessed using `.<elementName>`, 
 if the label does not hold a value storing these constants in a variable or returning them from a function automatically creates a matching instance of the corresponding enum. 
 To create enum instances with stored values use the `new` operator on the corresponding enum constant.
-The `==` and `!=` operators can be used to check if an enum instance stores a value of a given constant
+The `==` and `!=` operators can be used to check if an enum instance stores a value of a given constant.
+!!! using == on two enum values checks if they store values of the same type, the actual stored values may be different even if `==` returned `true` !!!
 To access the value stored in the enum use `.<elementName>` on a matching instance, accessing the field on instances of other enum constants will lead to a run-time error.
 
 ```
