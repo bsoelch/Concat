@@ -2,10 +2,10 @@ struct( i32 : mut a i32 : b ) =:: struct
 
 entryPoint:
   0 0 struct new =:: s
-  s .a addrOf ## TODO this should produce a constant pointer to the same location as s.a
+  s .a addrOf
   s .b addrOf
   #types
-  #drop 1 #swap [] =
+  #drop:2
   s .a print
   s .b print
 

@@ -5006,7 +5006,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_GET,.dataType=TYPE_UNDEFINED,.filePos=wordPos,
       .dataAs={.idInfo={.type=ID_ARRAY_ELEMENT,.id=0,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}});
     return;
-  }else if(wordEquals(&word,"addrOf")){
+  }else if(wordEquals(&word,"@")||wordEquals(&word,"addrOf")){
     if(bufferedConstants>0){//try getting address of constant
       if(!peekConstant()->hasId)
         handleError("cannot get the address of a constant",ERROR_SYNTAX,wordPos);
@@ -5783,6 +5783,25 @@ void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,s
   }
 }
 
+void ensureStackHeadIsValue(TypeCheckState* state){
+  if(state->blockCount==0)//no extracting of values at global level XXX ? how do stack operations work on global level
+    return;
+  if(state->typeCount==0)
+    return;
+  TypeId type=state->typeStack[state->typeCount-1].type;
+  size_t count=state->typeStack[state->typeCount-1].opCount;
+  Operation* op=&state->opStack[state->opStackCount-count];
+  if((op->opType==OP_GET&&(op->dataAs.idInfo.type!=ID_INTERMEDIATE_RESULT&&op->dataAs.idInfo.type!=ID_TMP_VAR))
+    ||(isMultiValueType(type)&&!op->dataAs.idInfo.isMutable)){//make composite stack-values mutable
+    int32_t tmpId=newTmpId(state);
+    pushCompiledOperation(state,opDeclareIntermediate(type,tmpId,op->filePos));
+    pushCompiledOperations(state,op,count);
+    *op=opGetIntermediate(type,tmpId,op->filePos);
+    state->typeStack[state->typeCount-1].opCount=1;
+    state->typeStack[state->typeCount-1].isWritable=isMultiValueType(type);
+    state->opStackCount-=count-1;
+  }
+}
 void pushType(TypeCheckState* state,TypeId dataType,FilePosition pos){
   if(ensureTypeStackCap(state,state->typeCount+1)){
     handleError("exceeded type stack capacity",ERROR_MEMORY,pos);
@@ -5793,12 +5812,7 @@ void pushValue(TypeCheckState* state,Operation op){//TODO don't allow pointers t
   if(ensureOpStackCap(state,state->opStackCount+1)){
     handleError("exceeded operation stack capacity",ERROR_MEMORY,op.filePos);
   }
-  if(state->blockCount>0&&isMultiValueType(op.dataType)&&(op.opType!=OP_GET||!op.dataAs.idInfo.isMutable)){//make composite stack-values mutable
-    int32_t tmpId=newTmpId(state);
-    pushCompiledOperation(state,opDeclareIntermediate(op.dataType,tmpId,op.filePos));
-    pushCompiledOperation(state,op);
-    op=opGetIntermediate(op.dataType,tmpId,op.filePos);
-  }
+  ensureStackHeadIsValue(state);
   state->opStack[state->opStackCount++]=op;
   pushType(state,op.dataType,op.filePos);
   if(op.opType==OP_GET){
@@ -6060,6 +6074,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     handleError("exceeded op-stack capacity",ERROR_MEMORY,op->filePos);
   }
   for(int32_t e=0;e<outTypes->typeCount;e++){
+    ensureStackHeadIsValue(state);
     state->typeStack[state->typeCount++]=(TypeInfo){.type=outTypes->types[e],.opCount=3,.isWritable=false};
     state->opStack[state->opStackCount++]=(Operation){.opType=OP_GET,.dataType=procType->outType,.filePos=op->filePos,
       .dataAs={.idInfo={.type=ID_TUPLE,.id=1,.labelId=LABEL_ID_UNKNOWN,.isMutable=false}}};
@@ -6317,9 +6332,17 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         offset--;
         indexCount++;
       }
-      if(isPointerType(state->typeStack[offset].type)&&isProcedureType(getBaseType(state->typeStack[offset].type)))
+      if(!isPointerType(state->typeStack[offset].type)){
+        fprintf(stderr,"invalid first operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
+        printTypeName(state->typeStack[offset].type,stderr);
+        fputs(" is not a pointer\n",stderr);
+        if(isArrayType(state->typeStack[offset].type))
+          handleError("to access the elements of an array use <array> @ <index...> [] \n",ERROR_SYNTAX,op->filePos); // XXX better message
+        handleError(NULL,ERROR_TYPE,op->filePos);
+      }
+      if(isProcedureType(getBaseType(state->typeStack[offset].type)))
         handleError("cannot dereference procedure pointers",ERROR_SYNTAX,op->filePos);
-      if(isArrayType(state->typeStack[offset].type)||(isPointerType(state->typeStack[offset].type)&&arrayTypeData(state->typeStack[offset].type)->fixedSize)){
+      if(arrayTypeData(state->typeStack[offset].type)->fixedSize){
         typeCheckArrayElementAccess(state,state->typeStack[offset].type,indexCount,op);
         return;
       }
@@ -6328,12 +6351,6 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         handleError(NULL,ERROR_SYNTAX,op->filePos);
       }
       op->dataAs.idInfo.type=indexCount==0?ID_POINTER:ID_POINTER_OFFSET;
-      if(!isPointerType(state->typeStack[offset].type)){
-        fprintf(stderr,"invalid first operand for %s %s : ",opName(op->opType),idNames[op->dataAs.idInfo.type]);
-        printTypeName(state->typeStack[offset].type,stderr);
-        fputs(" is not a pointer or an array\n",stderr);
-        handleError(NULL,ERROR_TYPE,op->filePos);
-      }
       op->dataType=getBaseType(state->typeStack[offset].type);
       //wrap composite operations
       extractCompositeOps(state,indexCount+1+(op->opType==OP_SET),true);
@@ -7588,6 +7605,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"not enough operands for operation %s: need %"PRIi32" got %zu\n",opName(op.opType),count,state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
+          ensureStackHeadIsValue(state);
           extractCompositeOps(state,count,true);
           totalOps=0;
           for(int64_t i=1;i<=count;i++){
@@ -7615,6 +7633,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"not enough operands for operation %s: need %"PRIi32" got %zu\n",opName(op.opType),count+1,state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
+          ensureStackHeadIsValue(state);
           extractCompositeOps(state,count+1,true);
           offset=0;
           for(int64_t i=1;i<=(count+1);i++){
@@ -7633,6 +7652,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
             fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
+          ensureStackHeadIsValue(state);
           extractCompositeOps(state,2,true);
           offset=state->typeStack[state->typeCount-1].opCount+state->typeStack[state->typeCount-2].opCount;
           totalOps=state->typeStack[state->typeCount-2].opCount;

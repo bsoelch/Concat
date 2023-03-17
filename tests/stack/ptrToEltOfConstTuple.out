@@ -1,7 +1,7 @@
 types:
 -----------------
 i32 pointer
-writable i32 pointer mut
+i32 pointer
 -----------------
 types:
 -----------------

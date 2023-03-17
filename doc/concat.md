@@ -73,6 +73,27 @@ Examples:
 <!-- TODO --> 
 
 
+## the stack
+<!-- TODO basics about stack -->
+
+if the top element of the stack is a variable or dereferenced pointer,
+calling setting its value or the value of one of its sub-elements will modify the variable/pointer
+once a new value is pushed on the stack (including values pushed using the `#dup` operator) the top element looses the connection to its source and will only act as its value.
+
+Writing to a duped value will modify the instance of that variable that remains on the stack.
+
+Examples:
+```
+0 0 ( i32 i32 ) new =:: mut tuple
+1 tuple .0 = ## sets element 0 in tuple
+tuple #dup
+  2 #over .1 = ## sets element 1 of the tuple on the stack, but does not modify the variable tuple
+.1 print ## prints 2
+.1 print ## prints 2
+tuple .1 print ## prints 0
+```
+
+
 ## procedures
 
 a procedure declaration starts with a procedure type followed type `=:` and the name of the procedure

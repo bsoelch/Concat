@@ -1,0 +1,11 @@
+proc( i64 ptr mut : arg => i64 ) =: set2
+  arg []
+    2 arg [] =
+  return
+end
+
+entryPoint:
+  0 i64 =: mut val
+  val addrOf set2 print
+  val print
+end
