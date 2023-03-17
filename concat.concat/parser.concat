@@ -19,9 +19,12 @@ entryPoint:
   sb.toStr parseTokens ##printTokens
 end
 
-enum( i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: ConstValue
+enum( wildCard bool : boolean i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: ConstValue
 struct( ConstValue : val FilePosition : pos ) =:: Constant
 
+proc( FilePosition => Constant ) =: constWildcard
+  ConstValue .wildCard new #swap Constant new return
+end
 proc( i64 FilePosition => Constant ) =: constInt
   #swap ConstValue .int new #swap Constant new return
 end
@@ -30,6 +33,9 @@ proc( id.StringConstant FilePosition => Constant ) =: constStr
 end
 proc( i8 FilePosition => Constant ) =: constChar
   #swap ConstValue .chr new #swap Constant new return
+end
+proc( bool FilePosition => Constant ) =: constBool
+  #swap ConstValue .boolean new #swap Constant new return
 end
 proc( types.Type FilePosition => Constant ) =: constType
   #swap ConstValue .typeId new #swap Constant new return
@@ -55,6 +61,7 @@ struct(
         Constant list : mut constants
                   i64 : mut constOffset
       types.Type list : mut typeBuffer
+ types.ArraySize list : mut arraySizeBuffer
        Operation list : mut ops
 ) =:: ParserState
 proc( Operation ParserState ptr => ) =: printOp
@@ -64,8 +71,15 @@ proc( Operation ParserState ptr => ) =: printOp
       NOP case break
       OpValue .Constant case
         "Constant: " sb.appendS
-        #over .val .Constant #swap ## XXX sb.appendConstValue
+        #over .val .Constant #swap ## XXX extract to sb.appendConstValue
           #over switch
+            wildCard case
+              "_"  sb.appendS
+              break
+            boolean case
+              "boolean " sb.appendS
+              #over .boolean if "true" sb.appendS else "false" sb.appendS end
+              break
             int case
               "integer "  sb.appendS
               #over .int sb.appendI
@@ -133,7 +147,7 @@ end
 proc( Constant : const ParserState ptr mut : state => ) =: pushConst
   state [] .constants const list.append state [] .constants  =
 end
-## TODO get array size
+
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: popTypeConstant
   state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
     "missing type constant" string.wrap fileState [] .wordStart opError state appendError
@@ -145,6 +159,36 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bo
   end
   state [] .constants list.pop #swap state [] .constants =
     .val .typeId false return
+end
+proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySize arrayView bool #+fixed-size+# ) =: popArraySize
+  state [] .constants .length state [] .constOffset <= if
+    types.ArraySize array.empty true return
+  end
+  state [] .constants list.peek .val ConstValue .wildCard == if
+    state [] .constants list.pop #drop state [] .constants = ## remove wildcard constant
+    types.ArraySize array.empty false return
+  end
+  state [] .constants .length 1 - while #dup state [] .constOffset >= do
+    state [] .constants #over list.get .val ConstValue .int != if ## TODO support generic sizes
+      break
+    end
+    1 -
+  end
+  1 + ##revert last decrement
+  #dup
+  state [] .arraySizeBuffer
+    list.reset
+    #over state [] .constOffset - list.ensureCap
+    #swap while #dup state [] .constants .length < do
+      #swap
+        ## XXX check if generic
+        state [] .constants #over:2 list.get .val .int true types.ArraySize new list.append
+      #swap
+      1 +
+    end #drop
+  state [] .arraySizeBuffer =
+  state [] .constants .length =
+  state [] .arraySizeBuffer list.asArray true return
 end
 proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types.Type arrayView bool ) =: popTypeConstants
   state [] .constants .length state [] .constOffset n + < if
@@ -197,9 +241,9 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       end
       isModifer ! if
         break
-      end 
+      end
     isModifer do #drop
-      fileState nextToken 
+      fileState nextToken
       #dup Token .IDENTIFER != if #drop
         "expected identifier" string.wrap state [] .constants list.peek .pos opError state appendError
         "" string.wrap
@@ -287,7 +331,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     token switch
       EMPTY case
         "" string.wrap true return
-      STRING case ## TODO escape sequences
+      STRING case
         token .STRING state [] .labelContext addrOf id.newStringConstant fileState [] .wordStart constStr  state pushConst
         "" string.wrap true return
       CHAR case
@@ -310,7 +354,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         token .IDENTIFER
         break
     end
-    #dup "bool" string.wrap string.eq if
+    #dup "_" string.wrap string.eq if
+      fileState [] .wordStart constWildcard  state pushConst
+      true return
+    else #dup "true" string.wrap string.eq _if
+      true fileState [] .wordStart constBool  state pushConst
+      true return
+    else #dup "false" string.wrap string.eq _if
+      false fileState [] .wordStart constBool  state pushConst
+      true return
+    else #dup "bool" string.wrap string.eq _if
       types.primitiveType.BOOL fileState [] .wordStart constType  state pushConst
       true return
     else #dup "i8" string.wrap string.eq _if
@@ -329,24 +382,28 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       types.primitiveType.TYPE fileState [] .wordStart constType  state pushConst
       true return
     else #dup "ptr" string.wrap string.eq _if
-      ## XXX get size
+      fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
         types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
         true return
       end
-      true types.ArraySize array.empty true false state [] .typeContext addrOf types.newArrayType if #drop
-        "could not create array type" string.wrap fileState [] .wordStart opError  state appendError true return
+      true sizes fixedSize false state [] .typeContext addrOf types.newArrayType if #drop
+        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        "could not create pointer type" string.wrap fileState [] .wordStart opError  state appendError
+        true return
       end
         fileState [] .wordStart constType  state pushConst
       true return
     else #dup "array" string.wrap string.eq _if
-      ## XXX get size
+      fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
         types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
         true return
       end
-      false types.ArraySize array.empty true false state [] .typeContext addrOf types.newArrayType if #drop
-        "could not create array type" string.wrap fileState [] .wordStart opError  state appendError true return
+      false sizes fixedSize false state [] .typeContext addrOf types.newArrayType if #drop
+        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        "could not create array type" string.wrap fileState [] .wordStart opError  state appendError
+        true return
       end
         fileState [] .wordStart constType  state pushConst
       true return
@@ -437,11 +494,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       sb.toStr fileState [] .wordStart opError  state appendError
       return
     else #dup ":" string.wrap string.eq _if
-      
+
     else #dup "=:" string.wrap string.eq _if
-    
+
     else #dup "=::" string.wrap string.eq _if
-    
+
     end
     ## TODO try parsing identifier
   fileState [] .wordStart opUnknown  state appendOp
@@ -454,6 +511,7 @@ proc( string => ) =: parseTokens
     id.newLabelContext
     128 Constant   list.create 0
     128 types.Type list.create
+    128 types.ArraySize list.create
     128 Operation  list.create
   ParserState new =:: mut state
   fileState addrOf #swap
