@@ -1,0 +1,93 @@
+#include string
+#include list
+
+#include "files.concat"
+
+
+#namespace id
+  i32 =:: public LabelId
+  -1 LabelId =: public LABEL_ID_NONE
+  
+  i32 =:: public LabelFlag
+  0  LabelFlag =: public FLAG_NONE
+  1  LabelFlag =: public FLAG_MUTABLE
+  2  LabelFlag =: public FLAG_STATIC
+  4  LabelFlag =: public FLAG_EXTERN
+  8  LabelFlag =: public FLAG_PUBLIC
+  16 LabelFlag =: public FLAG_PRIVATE
+  32 LabelFlag =: public FLAG_EMPTY
+
+  struct( i64 : bufferOffset FilePosition : pos ) =:: Label
+  struct( i8 list : mut nameBuffer Label list : mut labels ) =:: public LabelContext
+  proc( => LabelContext ) =: public newLabelContext
+    1024    i8 list.create
+    128  Label list.create
+    LabelContext new return
+  end
+
+  proc( LabelContext ptr => LabelId ) =: public labelOffset
+    [] .labels .length LabelId cast return
+  end
+  proc( string : str LabelFlag : flags FilePosition : pos LabelContext ptr mut : context => LabelId ) =: public newLabel
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer  str .data str .length array.create list.appendArray context [] .nameBuffer =
+    context [] .labels
+      offset pos Label new list.append
+    context [] .labels =
+    context [] .labels .length 1 - LabelId cast return
+  end
+  struct( i64 : offset i64 : length ) =:: public StringConstant
+  proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
+    context [] .nameBuffer .data const .offset + const .length string.create return
+  end
+  proc( string : str LabelContext ptr mut : context => StringConstant ) =: public newStringConstant
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer 
+      #dup .length str .length + list.ensureCap
+      0 while #dup str .length < do
+        #swap
+          str #over:2 string.charAt #dup '\\' != if
+            list.append
+            #swap 
+              1 + 
+            continue
+          end #drop
+        #swap
+        1 +
+        #swap 
+          str #over:2 string.charAt #dup switch
+            '\\' '\'' '"' case 
+              list.append
+              break
+            'n' case #drop
+              '\n' list.append
+              break
+            't' case #drop
+              '\t' list.append
+              break
+            'b' case #drop
+              '\b' list.append
+              break
+            'r' case #drop
+              '\r' list.append
+              break
+            'f' case #drop
+              '\f' list.append
+              break
+            'v' case #drop
+              '\v' list.append
+              break
+            'x' 'u' 'U' case #drop
+              ## TODO hex escape codes more escape characters
+              break
+            default 
+              list.append
+              ## TODO handle invalid escape characters
+          end
+        #swap
+        1 +
+      end #drop
+    context [] .nameBuffer =
+    offset context [] .nameBuffer .length offset - StringConstant new return
+  end
+#end

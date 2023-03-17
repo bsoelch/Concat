@@ -7,7 +7,7 @@
 
 #include "lib.concat"
 #include "files.concat"
-#include "labels.concat"
+#include "identifers.concat"
 #include "types.concat"
 
 entryPoint:
@@ -19,13 +19,13 @@ entryPoint:
   sb.toStr parseTokens ##printTokens
 end
 
-enum( i64 : int string : str i8 : chr types.Type : typeId ) =:: ConstValue
+enum( i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: ConstValue
 struct( ConstValue : val FilePosition : pos ) =:: Constant
 
 proc( i64 FilePosition => Constant ) =: constInt
   #swap ConstValue .int new #swap Constant new return
 end
-proc( string FilePosition => Constant ) =: constStr
+proc( id.StringConstant FilePosition => Constant ) =: constStr
   #swap ConstValue .str new #swap Constant new return
 end
 proc( i8 FilePosition => Constant ) =: constChar
@@ -49,8 +49,16 @@ end
 proc( string FilePosition  => Operation ) =: opUnknown
   #swap OpValue .Unknown new #swap Operation new return
 end
-proc( Operation types.TypeContext ptr => ) =: printOp
-  =:: typeContext
+struct(
+    types.TypeContext : mut typeContext
+      id.LabelContext : mut labelContext
+        Constant list : mut constants
+                  i64 : mut constOffset
+      types.Type list : mut typeBuffer
+       Operation list : mut ops
+) =:: ParserState
+proc( Operation ParserState ptr => ) =: printOp
+  =:: context
   64 sb.create
     #over .val switch
       NOP case break
@@ -64,7 +72,7 @@ proc( Operation types.TypeContext ptr => ) =: printOp
               break
             str case
               "string \""  sb.appendS
-              #over .str   sb.appendStr
+              #over .str context [] .labelContext addrOf id.scAsStr  sb.appendStr
                      '\"'  sb.appendC
               break
             chr case
@@ -74,7 +82,7 @@ proc( Operation types.TypeContext ptr => ) =: printOp
               break
             typeId case
               "type \'"     sb.appendS
-              #over .typeId typeContext sb.appendType
+              #over .typeId context [] .typeContext addrOf sb.appendType
                    '\''     sb.appendC
               break
           end
@@ -100,14 +108,6 @@ proc( Operation types.TypeContext ptr => ) =: printOp
     #swap #drop
   io.stdOut #swap io.fputSb #drop
 end
-struct(
-    types.TypeContext : mut typeContext
-  labels.LabelContext : mut labelContext
-        Constant list : mut constants
-                  i64 : mut constOffset
-      types.Type list : mut typeBuffer
-       Operation list : mut ops
-) =:: ParserState
 
 
 proc( Operation : op ParserState ptr mut : state bool : pushConstants => ) =: appendOpInternal
@@ -173,13 +173,49 @@ proc( i64 ParserState ptr mut => ) =: resetConstants
   [] .constOffset =
 end
 
+proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string id.LabelId ) =: readLabel
+  0 id.LabelFlag =: mut flags
+  false =:: mut isModifer
+  code start
+    while
+      false isModifer =
+      #dup "mut" string.wrap string.eq if
+        id.FLAG_MUTABLE flags | flags =
+        true isModifer =
+      else #dup "static" string.wrap string.eq _if
+        id.FLAG_STATIC flags | flags =
+        true isModifer =
+      else #dup "extern" string.wrap string.eq _if
+        id.FLAG_EXTERN flags | flags =
+        true isModifer =
+      else #dup "public" string.wrap string.eq _if
+        id.FLAG_PUBLIC flags | flags =
+        true isModifer =
+      else #dup "private" string.wrap string.eq _if
+        id.FLAG_PRIVATE flags | flags =
+        true isModifer =
+      end
+      isModifer ! if
+        break
+      end 
+    isModifer do #drop
+      fileState nextToken 
+      #dup Token .IDENTIFER != if #drop
+        "expected identifier" string.wrap state [] .constants list.peek .pos opError state appendError
+        "" string.wrap
+      else
+        .IDENTIFER
+      end
+    end
+  flags fileState [] .wordStart state [] .labelContext addrOf id.newLabel return
+end
 enum( NONE STRUCT ENUM PROC_IN ) =:: LabelType
-proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string labels.LabelId types.Type arrayView bool ) =: readCompositeType
+proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string id.LabelId types.Type arrayView bool ) =: readCompositeType
   state offsetConstants =:: constOffset
   labelType LabelType .NONE == if
-    labels.LABEL_ID_NONE
+    id.LABEL_ID_NONE
   else
-    state [] .labelContext addrOf labels.labelOffset
+    state [] .labelContext addrOf id.labelOffset
   end =:: labelOffset
   code
     while fileState nextToken
@@ -193,10 +229,10 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           "unexpected ':' operator" string.wrap fileState [] .wordStart opError  state appendError
         end
         state [] .constants .length constOffset - 1 -
-        state [] .labelContext addrOf labels.labelOffset labelOffset - - #dup 0 > if
+        state [] .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
           "two many types for label" string.wrap fileState [] .wordStart opError  state appendError
           while #dup 0 > do
-            "" string.wrap fileState [] .wordStart state [] .labelContext addrOf labels.newLabel #drop
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .labelContext addrOf id.newLabel #drop
             1 -
           end
         else #dup 0 < _if
@@ -211,8 +247,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           "expected identifier" string.wrap fileState [] .wordStart opError  state appendError
         end
         .IDENTIFER
-        ## TODO read label flags
-        fileState [] .wordStart state [] .labelContext addrOf labels.newLabel #drop
+        fileState state readLabel #drop
         continue
       end
       labelType LabelType .ENUM != if
@@ -225,13 +260,13 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         continue
       end
         state [] .constants .length constOffset -
-        state [] .labelContext addrOf labels.labelOffset labelOffset - - #dup 0 > if
+        state [] .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
           "unexpected label in enum, expected ':' " string.wrap fileState [] .wordStart opError  state appendError
           while #dup 1 > do
-            "" string.wrap fileState [] .wordStart state [] .labelContext addrOf labels.newLabel #drop
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .labelContext addrOf id.newLabel #drop
             1 -
           end #drop
-          fileState [] .wordStart state [] .labelContext addrOf labels.newLabel #drop
+          fileState state readLabel #drop
           continue
         else #dup 0 < _if
           "not enough types for label" string.wrap fileState [] .wordStart opError  state appendError
@@ -240,12 +275,12 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
             1 +
           end
         end #drop
-      fileState [] .wordStart state [] .labelContext addrOf labels.newLabel #drop
+      id.FLAG_NONE fileState [] .wordStart state [] .labelContext addrOf id.newLabel #drop
       types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
       #dup .length 0 >
     do end
   "unexpected end of file" string.wrap fileState [] .wordStart opError  state appendError
-  labels.LABEL_ID_NONE types.Type array.empty true return
+  id.LABEL_ID_NONE types.Type array.empty true return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string string bool ) =: tryParseConstant
   code
@@ -253,15 +288,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       EMPTY case
         "" string.wrap true return
       STRING case ## TODO escape sequences
-        token .STRING fileState [] .wordStart constStr  state pushConst
+        token .STRING state [] .labelContext addrOf id.newStringConstant fileState [] .wordStart constStr  state pushConst
         "" string.wrap true return
       CHAR case
         token .CHAR
+          state [] .labelContext addrOf id.newStringConstant ## escape character
           #dup .length 1 != if
-            #drop
             "A character literal has to contain exactly one character" string.wrap fileState [] .wordStart opError  state appendError
-            "" string.wrap true return
           end
+          state [] .labelContext addrOf id.scAsStr
           0 string.charAt
         fileState [] .wordStart constChar state pushConst
         "" string.wrap true return
@@ -401,6 +436,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         '\"'                          sb.appendC
       sb.toStr fileState [] .wordStart opError  state appendError
       return
+    else #dup ":" string.wrap string.eq _if
+      
+    else #dup "=:" string.wrap string.eq _if
+    
+    else #dup "=::" string.wrap string.eq _if
+    
     end
     ## TODO try parsing identifier
   fileState [] .wordStart opUnknown  state appendOp
@@ -410,7 +451,7 @@ proc( string => ) =: parseTokens
   "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut fileState
   ## ParserState
     types.newTypeContext
-    labels.newLabelContext
+    id.newLabelContext
     128 Constant   list.create 0
     128 types.Type list.create
     128 Operation  list.create
@@ -422,7 +463,7 @@ proc( string => ) =: parseTokens
     do end #drop
   #drop
   0 while #dup state .ops .length < do
-    state .ops #over list.get state .typeContext addrOf printOp
+    state .ops #over list.get state addrOf printOp
     1 +
   end #drop
 end

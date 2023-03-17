@@ -20,6 +20,8 @@ proc( i32 aTuple => string anEnum ) =: aProc
   end
 end
 
+proc( type : static T i64 : k => T _ ptr ) : extern malloc
+
 proc( i32 => ) =: switchTest
   switch
     0 1 2 case
