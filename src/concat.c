@@ -585,7 +585,7 @@ bool isMultiValueType(TypeId type){
 }
 bool isMutableType(TypeId type){
   type=unwrapNamedType(type);
-  if(isPointerType(type)||isArrayType(type))
+  if(isPointerType(type))
     return arrayTypes[type.dataAs.id].isMutable;
   return false;
 }
@@ -699,13 +699,13 @@ bool setNamedType(TypeId type,TypeId newValue){
 
 TypeId pointerType(TypeId target,bool mutable);
 TypeId arrayType(bool isView,TypeId base, int32_t dims,ArraySize const* sizes,bool isMutable);
-bool makeMutable(TypeId* t){
-  if(isMutableType(*t))
-    return true;
+bool setMutability(TypeId* t,bool isMutable){
+  if(isMutableType(*t)==isMutable)
+    return false;
   switch(t->class){
     case TYPECLASS_ARRAY_VIEW:
-      *t=arrayType(true,getBaseType(*t),arrayTypes[t->dataAs.id].dims,arrayTypes[t->dataAs.id].sizes,true);
-      return true;
+      *t=arrayType(true,getBaseType(*t),arrayTypes[t->dataAs.id].dims,arrayTypes[t->dataAs.id].sizes,isMutable);
+      return false;
     case TYPECLASS_PRIMITIVE:
     case TYPECLASS_ARRAY://mutability of composite types controlled by their container
     case TYPECLASS_TUPLE:
@@ -721,9 +721,9 @@ bool makeMutable(TypeId* t){
     case TYPECLASS_GENERIC_TYPE:
     case TYPECLASS_TEMPLATE_TYPE:
     case TYPECLASS_ENUM_LABEL:
-      return false;
+      return true;
   }
-  return false;
+  return true;
 }
 void printTypeName(TypeId,FILE*);
 bool changeEnumType(TypeId* anEnum,bool isLabel){
@@ -3233,7 +3233,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
             fputs(" is not implemented\n",stderr);
             handleError(NULL,ERROR_UNIMPLEMENTED,op->filePos);
           }
-          fputs("default:\n",target);
+          fputs("default:;\n",target);
           return size;
         case BLOCK_UNKNOWN:
           fprintf(stderr,"code-block %s should not exist at this stage of compilation\n",blockNames[op->dataAs.block.type]);
@@ -4375,7 +4375,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     TypeId target=popTypeConstant(codeFile->wordStart,"mutability argument",false);
     if(isMutableType(target))
       handleError("type is already mutable",ERROR_TYPE,codeFile->wordStart);
-    if(!makeMutable(&target)){
+    if(setMutability(&target,true)){
       fprintf(stderr,"%s types cannot be mutable\n",typeClassName(target.class));
       handleError(NULL,ERROR_TYPE,codeFile->wordStart);
     }
@@ -6165,6 +6165,8 @@ void typeCheckGetTupleElement(TypeCheckState* state,TypeId tupleType,bool tupleW
   bool mutable=canWriteTupleElement(tupleType,op->dataAs.idInfo.id,op->filePos);
   if(op->opType==OP_ADDR_OF){//update type of address elements
     eltType=getAddressType(eltType,op);
+    if(!tupleWritable&&setMutability(&eltType,false))//pointer to element of non-writable tuple is non-writable
+      handleError("could not make element pointer immutable",ERROR_MEMORY,op->filePos);
   }
   if((blockStart->opType==OP_GET||blockStart->opType==OP_SET||blockStart->opType==OP_ADDR_OF)&&(
       blockStart->dataAs.idInfo.type==ID_POINTER||blockStart->dataAs.idInfo.type==ID_POINTER_OFFSET||
@@ -6255,6 +6257,8 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     typeCheckSetStackValue(state,op,arrayData->base);
   }else if(op->opType==OP_ADDR_OF){
     op->dataType=getAddressType(op->dataType,op);
+    if(!writable&&setMutability(&op->dataType,false))
+      handleError("could not make array pointer immutable",ERROR_SYNTAX,op->filePos);
   }
 }
 void typeCheckGet(TypeCheckState* state,Operation* op){
@@ -6353,6 +6357,8 @@ void typeCheckGet(TypeCheckState* state,Operation* op){
         typeCheckSetStackValue(state,op,op->dataType);
       }else if(op->opType==OP_ADDR_OF){
         op->dataType=getAddressType(op->dataType,op);
+        if(!writable&&setMutability(&op->dataType,false))
+          handleError("could not make pointer address immutable",ERROR_SYNTAX,op->filePos);
       }
       return;
     case ID_INTERMEDIATE_RESULT:
@@ -6826,6 +6832,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         .dataAs={.idInfo={.type=ID_ENUM_ELEMENT,.id=labelIndex,.labelId=mStruct->labelOffset+labelIndex,.isMutable=isMutableLabel(mLabel)}}};
       if(op.opType==OP_ADDR_OF){
         op.dataType=getAddressType(op.dataType,&op);
+        if(!writable&&setMutability(&op.dataType,false))
+          handleError("could not make enum pointer immutable",ERROR_SYNTAX,op.filePos);
       }
       insertStackOperation(state,op,totalOps);
       peekTypeStack(state)->opCount++;

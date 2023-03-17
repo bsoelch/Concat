@@ -1,0 +1,35 @@
+struct( i32 : mut a i32 : b ) =:: struct
+
+entryPoint:
+  0 0 struct new =:: s
+  s .a addrOf ## TODO this should produce a constant pointer to the same location as s.a
+  s .b addrOf
+  #types
+  #drop 1 #swap [] =
+  s .a print
+  s .b print
+
+  0 0 struct new =:: mut mutS
+  mutS .a addrOf
+  mutS .b addrOf
+  #types
+  #drop 1 #swap [] =
+  mutS .a print
+  mutS .b print
+
+  s addrOf =:: sP
+  sP [] .a addrOf
+  sP [] .b addrOf
+  #types
+  #drop:2
+  sP [] .a print
+  sP [] .b print
+
+  mutS addrOf =:: mutSP
+  mutSP [] .a addrOf
+  mutSP [] .b addrOf
+  #types
+  #drop 2 #swap [] =
+  mutSP [] .a print
+  mutSP [] .b print
+end

@@ -1,0 +1,11 @@
+struct( i32 : mut a i32 : b ) =: struct
+
+entryPoint:
+  0 0 struct new =:: s
+  s .a addrOf
+  s .b addrOf
+  s =:: mut mutS
+  mutS .a addrOf
+  mutS .b addrOf
+  #drop:4
+end

@@ -1,0 +1,28 @@
+types:
+-----------------
+i32 pointer
+writable i32 pointer mut
+-----------------
+types:
+-----------------
+i32 pointer
+writable i32 pointer mut
+-----------------
+types:
+-----------------
+i32 pointer
+i32 pointer
+-----------------
+types:
+-----------------
+i32 pointer
+writable i32 pointer mut
+-----------------
+0
+0
+1
+0
+0
+0
+2
+0
