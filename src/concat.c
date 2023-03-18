@@ -58,6 +58,7 @@ void printFilePosition(FilePosition pos,FILE* out){
   fprintf(out,"%s:%zu:%zu",pos.fileName,pos.line,pos.posInLine);
 }
 
+
 __attribute__((noreturn)) void handleError(char const* message,int errCode,FilePosition pos){
   if(message!=NULL){
     fputs(message,stderr);
@@ -1125,8 +1126,22 @@ bool isTemplateType(TypeId type){
   return checkGenericType(type,false,true);
 }
 
+typedef struct{
+  int32_t* visited;
+  size_t count;
+  size_t cap;
+}GenericVisitCache;
+bool visitedGenericTuple(GenericVisitCache* dejaVu,int32_t typeId){
+  for(size_t i=0;i<dejaVu->count;i++){
+    if(dejaVu->visited[i]==typeId)
+      return true;
+  }
+  //TODO ensure cap
+  dejaVu->visited[dejaVu->count++]=typeId;
+  return false;
+}
 char const* typeClassName(TypeClass cls);
-void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,ConstantValue* values,int32_t count){
+void resolveTypeGenericsRec(TypeId src,TypeId expect,GenericType const* args,ConstantValue* values,int32_t count,GenericVisitCache* dejaVu){
   if(expect.class==TYPECLASS_GENERIC_TYPE||expect.class==TYPECLASS_TEMPLATE_TYPE){
     for(int32_t i=0;i<count;i++){
       if((args[i].isTemplate==(expect.class==TYPECLASS_TEMPLATE_TYPE))&&values[i].constType==CONSTANT_NONE&&
@@ -1143,7 +1158,7 @@ void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,Consta
     if(getTypeElementCount(src)!=getTypeElementCount(expect))
       return;//incompatible types
     for(int32_t i=0;i<getTypeElementCount(src);i++){
-      resolveTypeGenerics(compositeTypeData(src)->types[i],compositeTypeData(expect)->types[i],args,values,count);
+      resolveTypeGenericsRec(compositeTypeData(src)->types[i],compositeTypeData(expect)->types[i],args,values,count,dejaVu);
     }
     return;
   }
@@ -1155,12 +1170,12 @@ void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,Consta
     case TYPECLASS_AUTO_TYPE://XXX? handle auto-types
       return;
     case TYPECLASS_PROCEDURE:
-      resolveTypeGenerics(procTypeData(src)->inType,procTypeData(expect)->inType,args,values,count);
-      resolveTypeGenerics(procTypeData(src)->outType,procTypeData(expect)->outType,args,values,count);
+      resolveTypeGenericsRec(procTypeData(src)->inType,procTypeData(expect)->inType,args,values,count,dejaVu);
+      resolveTypeGenericsRec(procTypeData(src)->outType,procTypeData(expect)->outType,args,values,count,dejaVu);
       return;
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
-      resolveTypeGenerics(getBaseType(src),getBaseType(expect),args,values,count);
+      resolveTypeGenericsRec(getBaseType(src),getBaseType(expect),args,values,count,dejaVu);
       if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize&&arrayTypeData(src)->dims==arrayTypeData(expect)->dims){//XXX support different numbers of dimensions
         for(int32_t d=0;d<arrayTypeData(src)->dims;d++){
           if(!arrayTypeData(expect)->sizes[d].isInt){
@@ -1179,7 +1194,9 @@ void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,Consta
       return;
     case TYPECLASS_NAMED_TYPE:
     case TYPECLASS_NAMED_ENUM_LABEL:
-      resolveTypeGenerics(unwrapNamedType(src),unwrapNamedType(expect),args,values,count);
+      if(visitedGenericTuple(dejaVu,src.dataAs.id))
+        return;
+      resolveTypeGenericsRec(unwrapNamedType(src),unwrapNamedType(expect),args,values,count,dejaVu);
       return;
     case TYPECLASS_TUPLE:
     case TYPECLASS_PROC_IN:
@@ -1194,6 +1211,10 @@ void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,Consta
       exit(EXIT_FAILURE);//should have been covered by if-statements before switch
       return;
   }
+}
+void resolveTypeGenerics(TypeId src,TypeId expect,GenericType const* args,ConstantValue* values,int32_t count){
+  GenericVisitCache dejaVu={.visited=malloc(128*sizeof(int32_t)),.cap=128,.count=0};
+  resolveTypeGenericsRec(src,expect,args,values,count,&dejaVu);
 }
 void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep);
 TypeId replaceGenericTypes(TypeId type,GenericType const* args,ConstantValue* values,int32_t count){//XXX prevent unnecessary recreation of types
@@ -1232,7 +1253,10 @@ TypeId replaceGenericTypes(TypeId type,GenericType const* args,ConstantValue* va
       free(newSizes);
       return tmp;
     case TYPECLASS_NAMED_TYPE:
-    case TYPECLASS_NAMED_ENUM_LABEL:
+    case TYPECLASS_NAMED_ENUM_LABEL:;
+      Label const* mLabel=label(namedTypes[type.dataAs.id].name,(FilePosition){0});
+      if(mLabel->templateId==-1)//TODO store info about template information in named type
+        return type;// named types cannot have generic arguments
       tmp=replaceGenericTypes(namedTypes[type.dataAs.id].type,args,values,count);
       if(typeEquals(tmp,unwrapNamedType(type)))
         return type;
@@ -2405,7 +2429,7 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
   (*node)->idType=idType;
   (*node)->id=id;
   (*node)->labelId=labelId;
-  if(hasOpenTemplate()&&(isTemplateType(type)||(constValue!=NULL&&
+  if(hasOpenTemplate()&&(localScopeCount==0||isTemplateType(type)||(constValue!=NULL&&
     (constValue->constType==TEMPLATE_ARGUMENT||(typeEquals(constValue->valueType,TYPE_TYPE)&&isTemplateType(constValue->as.type)))))){//is template value
     (*node)->templateData=(TemplateData){.args=compilerBlocks[compilerBlockCount-1].as.template,.templateId=currentTemplateId};
   }else{
@@ -4127,7 +4151,7 @@ Constant const* popTemplateArguments(TypeId templateArgs,String templateName,Fil
   if(!isComposite(templateArgs))
     handleError("templateArgs has to be a composite type",ERROR_MEMORY,pos);
   if((size_t)getTypeElementCount(templateArgs)>bufferedConstants)
-    fprintf(stderr,"not enough arguments for template %"PRI_STR": %zu need:%"PRIi64"\n",PRI_STR_ARGS(templateName),bufferedConstants,getTypeElementCount(templateArgs));
+    fprintf(stderr,"not enough arguments for template %"PRI_STR" need: %zu got: %"PRIi64"\n",PRI_STR_ARGS(templateName),getTypeElementCount(templateArgs),bufferedConstants);
   bufferedConstants-=getTypeElementCount(templateArgs);
   for(int32_t i=0;i<getTypeElementCount(templateArgs);i++){
     if(!typeEquals(constBuffer[bufferedConstants+i].value.valueType,compositeTypeData(templateArgs)->types[i]))
@@ -4215,7 +4239,9 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
         vals[i]=args[i].value;
       }
       TypeId val=replaceGenericTypes(asIdentifier->constValue.as.type,templateVars,vals,count);
-      pushTypeConstant(val,codeFile->wordStart);
+      pushConstant((ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=val},
+        codeFile->wordStart,true,(IdentifierInfo){.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
+        .isMutable=isMutableLabelId(asIdentifier->labelId)});
       return true;
     }else{
       handleError("template constants",ERROR_UNIMPLEMENTED,wordPos);
@@ -4960,7 +4986,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"=")){
     if(bufferedConstants>0){
-      if(!peekConstant()->hasId||peekConstValue()->constType!=CONSTANT_TYPE)
+      if(!peekConstant()->hasId||!typeEquals(peekConstValue()->valueType,TYPE_TYPE))
         handleError("cannot assign values to constant",ERROR_SYNTAX,wordPos);
       Label const* mLabel=label(peekConstant()->idInfo.labelId,wordPos);
       if(isExternLabel(mLabel))
@@ -4969,8 +4995,13 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId,wordPos);
       if(r!=0)
         handleError("error while resolving identifier",r,wordPos);
-      if(prevId->templateData.templateId!=-1)
-        handleError("assigning to template identifiers",ERROR_UNIMPLEMENTED,wordPos);
+      if(prevId->templateData.templateId!=-1){
+        handleError("replacing template types",ERROR_UNIMPLEMENTED,wordPos);
+        //TODO ensure templates have same signature
+        prevId->templateData.templateId=currentTemplateId;//update template id
+        printConstValue(peekConstant()->value,stdout);
+        printf(" %i\n",peekConstant()->hasId);
+      }
       //get previous value of type constant
       TypeId opaque=popTypeConstant(wordPos,"opaqueType",false);
       if(!isNamedType(opaque)||!typeEquals(unwrapNamedType(opaque),TYPE_UNDEFINED))
@@ -4980,6 +5011,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(prevId->idType!=ID_TYPE||prevId->constValue.constType!=CONSTANT_TYPE||!setNamedType(prevId->constValue.as.type,constType)){//can only override named types
         handleError("error while changing Type information",ERROR_MEMORY,wordPos);
       }
+      if(localScopeCount==0)//end open template when replacing type
+        endOpenTemplate(wordPos);
       return;
     }
     if(canPeekOperationParser(state)){
