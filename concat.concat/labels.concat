@@ -36,6 +36,7 @@
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
+  
   struct( i64 : offset i64 : length ) =:: public StringConstant
   proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
     context [] .nameBuffer .data const .offset + const .length string.create return

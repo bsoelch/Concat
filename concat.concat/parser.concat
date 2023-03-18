@@ -7,8 +7,11 @@
 
 #include "lib.concat"
 #include "files.concat"
-#include "identifers.concat"
+#include "labels.concat"
 #include "types.concat"
+#include "constants.concat"
+#include "codeBlocks.concat"
+#include "identifiers.concat"
 
 entryPoint:
   "./test.concat" io.OPEN_READ io.fopen #drop =:: f
@@ -19,27 +22,6 @@ entryPoint:
   sb.toStr parseTokens ##printTokens
 end
 
-enum( wildCard bool : boolean i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: ConstValue
-struct( ConstValue : val FilePosition : pos ) =:: Constant
-
-proc( FilePosition => Constant ) =: constWildcard
-  ConstValue .wildCard new #swap Constant new return
-end
-proc( i64 FilePosition => Constant ) =: constInt
-  #swap ConstValue .int new #swap Constant new return
-end
-proc( id.StringConstant FilePosition => Constant ) =: constStr
-  #swap ConstValue .str new #swap Constant new return
-end
-proc( i8 FilePosition => Constant ) =: constChar
-  #swap ConstValue .chr new #swap Constant new return
-end
-proc( bool FilePosition => Constant ) =: constBool
-  #swap ConstValue .boolean new #swap Constant new return
-end
-proc( types.Type FilePosition => Constant ) =: constType
-  #swap ConstValue .typeId new #swap Constant new return
-end
 
 enum( NOP ConstValue : Constant string : Error  string : Unknown ) =:: OpValue
 struct( OpValue : val FilePosition : pos ) =:: Operation

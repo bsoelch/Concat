@@ -1,0 +1,26 @@
+
+#include "files.concat"
+#include "labels.concat"
+#include "types.concat"
+
+enum( wildCard bool : boolean i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
+struct( ConstValue : val FilePosition : pos ) =:: public Constant
+
+proc( FilePosition => Constant ) =: public constWildcard
+  ConstValue .wildCard new #swap Constant new return
+end
+proc( i64 FilePosition => Constant ) =: public constInt
+  #swap ConstValue .int new #swap Constant new return
+end
+proc( id.StringConstant FilePosition => Constant ) =: public constStr
+  #swap ConstValue .str new #swap Constant new return
+end
+proc( i8 FilePosition => Constant ) =: public constChar
+  #swap ConstValue .chr new #swap Constant new return
+end
+proc( bool FilePosition => Constant ) =: public constBool
+  #swap ConstValue .boolean new #swap Constant new return
+end
+proc( types.Type FilePosition => Constant ) =: public constType
+  #swap ConstValue .typeId new #swap Constant new return
+end

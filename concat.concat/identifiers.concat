@@ -1,0 +1,43 @@
+#include string
+#include map
+
+#include "types.concat"
+#include "constants.concat"
+#include "labels.concat"
+#include "codeBlocks.concat"
+
+#namespace id
+  i32 =:: NamespaceId
+  enum( LOCAL_VAR GLOBAL_VAR  ) =:: IdentifierType
+  
+  struct( types.Type : type ConstValue : constValue id.LabelId : labelId #+XXX template data+# NamespaceId : namespaceId i32 : id IdentifierType : idType ) =:: IdentifierData
+  
+  ## XXX also use namespace in key
+  struct( string IdentifierData hashMap : mut identifiers codeBlocks.BlockType : blockType #+XXX prevNamespaceId+# ) =:: Scope
+  
+  struct( Scope list : mut localScopes ) =:: IdentiferContext
+  
+  proc( codeBlocks.BlockType : blockType IdentiferContext ptr mut : context => ) =: public openScope
+    context [] .localScopes
+      string.hash @ string.eq @ 128 IdentifierData map.create blockType Scope new list.append
+    context [] .localScopes =
+  end
+  proc( IdentiferContext ptr mut : context => codeBlocks.BlockType ) =: public currentScope
+    #using codeBlocks
+    context [] .localScopes .length 0 == if
+      BlockType .UNKNOWN return
+    end
+    context [] .localScopes list.peek .blockType return
+  end
+  proc( IdentiferContext ptr mut : context => bool ) =: public closeScope
+    context [] .localScopes .length 0 == if
+      true return
+    end
+    context [] .localScopes list.pop #swap context [] .localScopes =
+      #dup .identifiers addrOf map.free
+      ## XXX reset namespace imports
+    #drop
+    false return
+  end
+  ## TODO searchIdentifer/getIdentifer/declareIdentifer
+#end

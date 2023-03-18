@@ -1422,15 +1422,15 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
         return;
       }
       fputs(" ( ",file);
-      printTypeNameInternal(procTypeData(type)->inType,file,!deep,deep);
+      printTypeNameInternal(procTypeData(type)->inType,file,noRecurse&!deep,deep);
       fputs(" => ",file);
-      printTypeNameInternal(procTypeData(type)->outType,file,!deep,deep);
+      printTypeNameInternal(procTypeData(type)->outType,file,noRecurse&!deep,deep);
       fputs(" )",file);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
-      printTypeNameInternal(getBaseType(type),file,noRecurse|!deep,deep);
+      printTypeNameInternal(getBaseType(type),file,noRecurse&!deep,deep);
       if(deep)
         fprintf(file," (%"PRIi32")",type.dataAs.id);
       for(int32_t i=0;i<arrayTypeData(type)->dims;i++){
@@ -2475,6 +2475,7 @@ bool includeIfGlobal(ScopeNode* aNode,bool onlyConst,Scope* globalScope,FilePosi
   }
   *mNode=allocScopeNode();
   memcpy(*mNode,aNode,sizeof(ScopeNode));
+  (*mNode)->next=NULL;//unlink from previous node
   return false;
 }
 bool includeConstants(Scope* globalScope,Scope* src,FilePosition pos){
@@ -5052,7 +5053,6 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       return;
     }
     if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CALL){
-      peekOperation(state,wordPos)->dataType=asUnlabeledProc(peekOperation(state,wordPos)->dataType,wordPos);
       peekOperation(state,wordPos)->opType=OP_ADDR_OF;
       return;
     }
@@ -6164,6 +6164,9 @@ TypeId getAddressType(TypeId eltType,Operation* op){
     op->opType=OP_ADDR_OF_ARRAY;
     return arrayType(true,getBaseType(eltType),arrayData->dims,arrayData->sizes,op->dataAs.idInfo.isMutable);
   }
+  if(isProcedureType(eltType)){
+    eltType=asUnlabeledProc(eltType,op->filePos);
+  }
   return arrayType(true,eltType,0,NULL,op->dataAs.idInfo.isMutable);
 }
 
@@ -6479,6 +6482,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
   if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
     handleError("cannot set value of procedure",ERROR_SYNTAX,op->filePos);
   OpType opType;
+  TypeId dataType=asIdentifier->type;
   switch(op->opType){
     case OP_IDENTIFIER:
       opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL:OP_GET;
@@ -6510,7 +6514,7 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
         handleError("unexpected identifier type",ERROR_MEMORY,op->filePos);
     }
   }
-  *op=(Operation){.opType=opType,.dataType=asIdentifier->type,.filePos=op->filePos,
+  *op=(Operation){.opType=opType,.dataType=dataType,.filePos=op->filePos,
       .dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,.isMutable=isMutableLabelId(asIdentifier->labelId)}}};
 }
 void typeCheckOperation(Operation op,TypeCheckState* state){

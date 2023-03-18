@@ -1,0 +1,7 @@
+
+#namespace codeBlocks
+  enum( UNKNOWN PROCEDURE IF _IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
+#end
+
+
+

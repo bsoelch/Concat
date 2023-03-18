@@ -29,7 +29,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
   proc( string string => bool ) =: public eq
     compare 0 == return
   end
-  proc( string : str => i32 ) =: hash
+  proc( string : str => i32 ) =: public hash
     0 ## hash
       0 ## index
       while #dup str .length < do
