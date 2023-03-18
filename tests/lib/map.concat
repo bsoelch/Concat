@@ -1,0 +1,41 @@
+#include map
+#include optional
+
+#include io
+#include stringBuilder
+#include stringIO
+
+proc( i32 => i32 ) =: i32Hash end
+proc( i32 i32 => bool ) =: i32Eq  == end
+
+proc( i64 optional => ) =: printOpt
+  #dup i64 optional .empty == if #drop
+    "empty" io.puts #drop
+    return
+  end
+  16 sb.create 
+    "optional(" sb.appendS
+    #swap .data sb.appendI
+    ")\n"         sb.appendS
+  io.stdOut #swap io.fputSb #drop
+end
+
+entryPoint:
+  i32Hash @ i32Eq @ 16 i64 map.create =:: mut myMap
+  myMap addrOf
+    #dup 0   1 map.put printOpt
+    #dup -5  2 map.put printOpt
+    #dup 2   3 map.put printOpt
+    #dup 11  4 map.put printOpt
+    #dup 11  5 map.put printOpt
+    #dup 2   6 map.put printOpt
+    #dup 42  7 map.put printOpt
+    "-------------" io.puts #drop
+    #dup 0   map.get printOpt
+    #dup -5  map.get printOpt
+    #dup 2   map.get printOpt
+    #dup 11  map.get printOpt
+    #dup 42  map.get printOpt
+    #dup 16  map.get printOpt
+ map.free
+end

@@ -1,0 +1,88 @@
+#include mem
+#include list
+#include optional
+
+#namespace map
+  i64 =:: NodeId
+  
+  #template type : K type : V #end
+  struct( K : key V : mut value  NodeId : mut next ) =:: Node
+#end
+
+#template type : K type : V #end
+struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 : mut cap  proc( K => i32 ) ptr : hash  proc( K K => bool ) ptr : eq  ) =:: public hashMap
+
+#namespace map
+  #template type : K type : V #end
+  proc( proc( K => i32 ) ptr : hash proc( K K => bool ) ptr : eq i64 : initCap => K V hashMap ) =: public create
+    initCap K V Node list.create
+    initCap NodeId mem.calloc
+    initCap ## XXX find smallest power of 2 larger than cap, store shift distance
+    hash
+    eq
+    K V hashMap new return
+  end
+  #template type : K type : V #end
+  proc( K V hashMap ptr mut : data => ) =: public free
+    data [] .nodeBuffer 
+      list.clear
+    data [] .nodeBuffer =
+    data [] .data mem.free
+    0 data [] .cap =
+  end
+  
+  #template type : K type : V #end
+  proc( K V hashMap ptr mut : data  K : key bool : newNode => NodeId ) =: find
+    data [] .cap 0 == if ## TODO ensure cap/ error message
+       0 return
+    end
+    key data [] .hash () data [] .cap %u  NodeId cast
+      data [] .data #over []
+        #dup 0 == if #drop
+          newNode if
+            data [] .nodeBuffer .length 1 +
+              #dup data [] .data #over:3 [] =
+            #swap #drop
+            NodeId cast return
+          end
+          #drop 0 return
+        end
+        while #dup 0 > do #swap #drop
+          data [] .nodeBuffer #over 1 - list.get
+            #dup .key key data [] .eq () if #drop
+              return
+            end
+          .next
+        end #drop
+      newNode if
+        data [] .nodeBuffer .length 1 +
+          #dup data [] .nodeBuffer #over:3 1 - list.at [] .next =
+        #swap #drop
+        NodeId cast return
+      end
+    #drop 0 return
+  end  
+
+  #template type : K type : V #end
+  proc( K V hashMap ptr mut : data  K : key => V optional ) =: public get
+    data key false find
+      #dup 0 == if #drop
+        V optional.empty return
+      end
+    data [] .nodeBuffer #swap 1 - list.get .value optional.wrap return
+  end
+  #template type : K type : V #end
+  proc( K V hashMap ptr mut : data  K : key V : value => V optional ) =: public put
+    data key true find
+      #dup data [] .nodeBuffer .length > if #drop
+        data [] .nodeBuffer
+          key value 0 K V Node new list.append
+        data [] .nodeBuffer =
+        V optional.empty return
+      end
+    data [] .nodeBuffer #swap 1 - list.at 
+      #dup [] .value #swap
+      value #swap [] .value =
+    optional.wrap return
+  end
+#end

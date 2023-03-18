@@ -1,5 +1,4 @@
 
- 
 enum( A i32 : B i64 : ERROR ) =:: e
 
 ( i32 i64 ) =:: ERROR
@@ -15,5 +14,5 @@ entryPoint:
       break
   end
 end
-
-
+## TODO correct error message for argument name shadowing global variable
+## TODO rename list.clear -> list.free

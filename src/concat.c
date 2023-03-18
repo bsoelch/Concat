@@ -793,6 +793,7 @@ int64_t indexOfTypeArray(TypeId const* base,size_t baseLen,TypeId const* child,s
   return -1;
 }
 bool checkGenericType(TypeId type,bool isStatic,bool isTemplate);
+bool isTemplateType(TypeId type);
 TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOffset,int32_t eltCount){
   if(eltCount==0&&(typeClass!=TYPECLASS_PROC_IN)&&(typeClass!=TYPECLASS_LABELED_PROC_IN)&&(typeClass!=TYPECLASS_PROC_OUT)){
     return TYPE_UNDEFINED;//only procedure in/out can be empty composites
@@ -935,7 +936,8 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,ArraySize const* sizes,bo
   if(isProcedureType(base)){
     if(!isView)
       return TYPE_UNDEFINED;
-    procTypes[base.dataAs.id].pointerUsed=true;
+    if(!isTemplateType(base))
+      procTypes[base.dataAs.id].pointerUsed=true;
   }
   for(int32_t i=0;i<arrayTypeCount;i++){
     if((!typeEquals(arrayTypes[i].base,base))||arrayTypes[i].dims!=dims||arrayTypes[i].isMutable!=isMutable)
@@ -7682,7 +7684,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           return;
         case STACK_OP_SWAP:
           if(state->typeCount<2){
-            fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+            fprintf(stderr,"not enough operands for operation %s: need 2 got %zu\n",opName(op.opType),state->typeCount);
             handleError(NULL,ERROR_TYPE,op.filePos);
           }
           ensureStackHeadIsValue(state);
