@@ -1889,24 +1889,6 @@ NamespaceId childId(NamespaceId base,String childName,bool create){
   }
   return NAMESPACE_ID_NONE;
 }
-NamespaceId namespaceIdRelative(NamespaceId root,String* path,size_t pathLength,bool create){
-  if(root==NAMESPACE_ID_NONE||pathLength==0)
-    return NAMESPACE_ID_NONE;
-  NamespaceId id=root;
-  for(size_t i=0;i<pathLength;i++){
-    id=childId(id,path[i],create);
-    if(id==NAMESPACE_ID_NONE)
-      return NAMESPACE_ID_NONE;
-  }
-  return id;
-}
-NamespaceId namespaceId(String* path,size_t pathLength,bool create){
-  return namespaceIdRelative(0,path,pathLength,create);
-}
-//returns true if adding namespace failed
-NamespaceId addNamespace(String* path,size_t pathLength){
-  return namespaceId(path,pathLength,true);
-}
 NamespaceId findNamespace(NamespaceId base,String name){
   if(name.length==0)
     return base;
