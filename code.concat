@@ -14,5 +14,7 @@ entryPoint:
       break
   end
 end
+
 ## TODO correct error message for argument name shadowing global variable
 ## TODO rename list.clear -> list.free
+## TODO correct error message for list.appendP with raw pointer

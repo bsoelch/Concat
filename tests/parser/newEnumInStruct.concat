@@ -1,0 +1,7 @@
+
+enum( A B C ) =:: e
+struct( i32 : a e : b ) =:: enumInStruct
+
+0 e .A enumInStruct new =:: newErr
+entryPoint:
+end

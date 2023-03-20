@@ -2237,7 +2237,7 @@ ScopeNode* scopeItrNext(ScopeIterator* itr){
   itr->n=itr->n->next;
   return n;
 }
-void printIdentiferMatch(ScopeNode* asIdentifier,FilePosition pos){
+void printIdentiferMatch(ScopeNode const* asIdentifier,FilePosition pos){
   fputs("  - ",stdout);
   Label const* mLabel=label(asIdentifier->labelId,pos);
   if(isMutableLabel(mLabel))
@@ -2258,7 +2258,7 @@ void printIdentiferMatch(ScopeNode* asIdentifier,FilePosition pos){
   printFilePosition(mLabel->declaredAt,stdout);
   puts("");
 }
-int searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out,FilePosition pos,bool printMatches){
+bool searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out,FilePosition pos,bool printMatches){
   int64_t dotIndex=lastIndexOfChar(name,'.');
   NamespaceId mNamespaceId=namespace.current;
   NamespaceId relativeSpace;
@@ -2281,7 +2281,7 @@ int searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String nam
       if(*node!=NULL){
         *out=*node;
         if(!printMatches)
-          return 0;
+          return false;
         printIdentiferMatch(*out,pos);
       }
     }
@@ -2296,7 +2296,7 @@ int searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String nam
       if(*node!=NULL){
         *out=*node;
         if(!printMatches)
-          return 0;
+          return false;
         printIdentiferMatch(*out,pos);
       }
     }
@@ -2357,15 +2357,15 @@ int searchIdentifier(Scope const* globalScope,NamespaceInfo namespace,String nam
           match=namespace.current;
         }
         if(!printMatches)
-          return 0;
+          return false;
       }
     }
   }
   if(match!=NAMESPACE_ID_NONE)
-    return 0;//found matching namespace
-  return ERROR_SYNTAX;
+    return false;//found matching namespace
+  return true;
 }
-int getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out,FilePosition pos){
+bool getIdentifier(Scope const* globalScope,NamespaceInfo namespace,String name,ScopeNode** out,FilePosition pos){
   return searchIdentifier(globalScope,namespace,name,out,pos,false);
 }
 
@@ -2395,9 +2395,8 @@ ScopeNode const* declareIdentifier(Scope* globalScope,NamespaceInfo namespace,La
     fputs("\n",stderr);
     handleError(NULL,ERROR_SYNTAX,mLabel->declaredAt);
   }
-  ScopeNode* shaddow;
-  getIdentifier(globalScope,namespace,mLabel->label,&shaddow,pos);
-  if(shaddow!=NULL){
+  ScopeNode* shaddow=NULL;
+  if(!getIdentifier(globalScope,namespace,mLabel->label,&shaddow,pos)&&shaddow!=NULL){
     fprintf(stderr,"Warning:\n  declaration of %s \"%"PRI_STR"\"\n",idNames[idType],PRI_STR_ARGS(mLabel->label));
     fprintf(stderr,"  shadows previous declaration: %s \"%"PRI_STR"\" at ",idNames[shaddow->idType],PRI_STR_ARGS(shaddow->key));
     printFilePosition(label(shaddow->labelId,pos)->declaredAt,stderr);
@@ -4202,12 +4201,7 @@ bool readConstants(String word,int wordType,CodeFile* codeFile,ParserState* stat
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier,wordPos);
-  if(r<0){//internal error while reading identifier
-    handleError("error while reading identifier",r,codeFile->wordStart);
-    return false;
-  }
-  if(r>0||asIdentifier->constValue.constType==CONSTANT_NONE)//identifier does not represent a constant
+  if(getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier,wordPos)||asIdentifier->constValue.constType==CONSTANT_NONE)//identifier does not represent a constant
     return readType(word,codeFile,state);
   if(asIdentifier->templateData.templateId!=-1&&asIdentifier->idType!=ID_TEMPLATE_ARGUMENT){//fill template constants
     Constant const* args=popTemplateArguments(asIdentifier->templateData.args,word,codeFile->wordStart);
@@ -4654,8 +4648,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,(Operation){.opType=OP_DECLARE,.dataType=type,.filePos=varName->declaredAt,
       .dataAs={.idInfo={.type=idType,.id=idType==ID_PROCEDURE?-1:id->id,.labelId=labelId,.isMutable=isMutableLabel(varName)}}});
     return;
-  }else if(wordEquals(&word,"new")){
-    if(canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
+  }else if(wordEquals(&word,"new")){//XXX? enum-label constants
+    if(bufferedConstants==0 && canPeekOperationParser(state)&&peekOperation(state,wordPos)->opType==OP_CONSTANT&&isEnumLabelType(peekOperation(state,wordPos)->dataType)){
       //change enum label to enum declaration
       peekOperation(state,wordPos)->opType=OP_NEW;
       peekOperation(state,wordPos)->filePos=wordPos;
@@ -4977,9 +4971,8 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(isExternLabel(mLabel))
         handleError("cannot assign values to extern types",ERROR_SYNTAX,wordPos);
       ScopeNode * prevId;
-      int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId,wordPos);
-      if(r!=0)
-        handleError("error while resolving identifier",r,wordPos);
+      if(getIdentifier(getGlobalScopeParser(state),*parserNamespace(state)/*name-space is still the same*/,mLabel->label,&prevId,wordPos))
+        handleError("could not find identifier",ERROR_SYNTAX,wordPos);
       if(prevId->templateData.templateId!=-1){
         handleError("replacing template types",ERROR_UNIMPLEMENTED,wordPos);
         //TODO ensure templates have same signature
@@ -5158,10 +5151,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }
 
   ScopeNode* asIdentifier;
-  int r=getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier,wordPos);//try to parse variable as identifier
-  if(r<0)//internal error while reading identifier
-    handleError("error while resolving identifier",r,wordPos);
-  if(r==0){//identifier
+  if(!getIdentifier(getGlobalScopeParser(state),*parserNamespace(state),word,&asIdentifier,wordPos)){//identifier
     if(asIdentifier->templateData.templateId!=-1){
       pushOperation(state,(Operation){.opType=asIdentifier->idType==ID_PROCEDURE?OP_CALL_TEMPLATE:OP_GET_TEMPLATE,
         .dataType=asIdentifier->type,.filePos=wordPos,.dataAs={.idInfo={.type=asIdentifier->idType,.id=asIdentifier->id,.labelId=asIdentifier->labelId,
@@ -6456,10 +6446,9 @@ void resolveIdentifiers(TypeCheckState* state,Operation* op){
     }
   }
   ScopeNode* asIdentifier;
-  int r=getIdentifier(state->globalScope,op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier,op->filePos);
-  if(r!=0){
+  if(getIdentifier(state->globalScope,op->dataAs.localLabel.spaceInfo,mLabel,&asIdentifier,op->filePos)){
     fprintf(stderr," unknown identifier \"%"PRI_STR"\"\n",PRI_STR_ARGS(mLabel));
-    handleError(NULL,r,op->filePos);
+    handleError(NULL,ERROR_SYNTAX,op->filePos);
   }
   if(op->opType==OP_SET_IDENTIFIER&&asIdentifier->idType==ID_PROCEDURE)
     handleError("cannot set value of procedure",ERROR_SYNTAX,op->filePos);
