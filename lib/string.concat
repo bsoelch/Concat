@@ -4,6 +4,9 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
 #namespace string
   "" 0 string new =:: EMPTY
 
+  proc( => string ) =: public empty
+    EMPTY return
+  end
   proc( i8 _ ptr  i64 => string ) =: public create
     string new return
   end

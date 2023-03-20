@@ -2,6 +2,14 @@
 enum( empty V : data ) =:: public optional
 #namespace optional
 #template type : V #end
+proc( V optional => bool ) =: public isEmpty
+  V optional .empty == return
+end
+#template type : V #end
+proc( V optional => bool ) =: public hasData
+  V optional .data == return
+end
+#template type : V #end
 proc( => V optional ) =: public empty
   V optional .empty return
 end

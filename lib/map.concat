@@ -72,6 +72,14 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
     data [] .nodeBuffer #swap 1 - list.get .value optional.wrap return
   end
   #template type : K type : V #end
+  proc( K V hashMap ptr mut : data  K : key => V ptr mut optional ) =: public at
+    data key false find
+      #dup 0 == if #drop
+        V ptr mut optional.empty return
+      end
+    data [] .nodeBuffer #swap 1 - list.at [] .value addrOf optional.wrap return
+  end
+  #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key V : value => V optional ) =: public put
     data key true find
       #dup data [] .nodeBuffer .length > if #drop
