@@ -12,9 +12,9 @@
   
   enum( TYPE PROCEDURE GLOBAL_VAR  LOCAL_VAR ARGUMENT TMP_VAR ) =:: IdentifierType
   
-  struct( types.Type : valueType ConstValue : constValue id.LabelId : labelId #+XXX template data+# i32 : id IdentifierType : idType ) =:: IdentifierData
+  struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId #+XXX template data+# i32 : id IdentifierType : idType ) =:: IdentifierData
 
-  types.Type .undefined ConstValue .none LABEL_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
+  types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
 
   struct( string : name NamespaceId : mut namespace ) =:: IdentiferName
   struct( IdentiferName : name IdentifierData ptr : data ) =:: IdentifierMatch
@@ -140,6 +140,61 @@
   proc( string : id NamespaceInfo : base  IdentiferContext ptr mut : context => IdentiferName IdentifierData ptr bool ) =: getIdentifier
     id base context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  
-  ## TODO declareIdentifer
+  proc( LabelId : label types.Type : valType IdentifierType : idType FilePosition : declaredAt NamespaceInfo : base  IdentiferContext ptr mut : context =>  IdentiferName IdentifierData ptr bool ) =: declareIdentifier
+    label LABEL_ID_NONE == if
+      "invalid label id" string.wrap NAMESPACE_ID_NONE IdentiferName new 
+        ID_NONE_DATA @ true return
+    end
+    label  context [] .labelContext addrOf 
+      #over #over labelFlags =:: flags
+      #over #over labelName .data =:: name
+    labelPos .data =:: labelPos
+    
+    flags FLAG_MUTABLE & 0 != if
+      idType IdentifierType .TYPE == if
+        "type definitions cannot be mutable" string.wrap NAMESPACE_ID_NONE IdentiferName new 
+          ID_NONE_DATA @ true return
+      end
+      idType IdentifierType .PROCEDURE == if
+        "procedures cannot be mutable" string.wrap NAMESPACE_ID_NONE IdentiferName new 
+          ID_NONE_DATA @ true return
+      end
+      idType IdentifierType .ARGUMENT ==  if
+        "procedure arguments cannot be mutable" string.wrap NAMESPACE_ID_NONE IdentiferName new 
+          ID_NONE_DATA @ true return
+      end
+    end
+    name 0 string.charAt '#' == if
+      "identifier names cannot start with '#'" string.wrap NAMESPACE_ID_NONE IdentiferName new 
+        ID_NONE_DATA @ true return
+    end
+    name '.' string.contains if
+      "identifier names cannot contain '.'" string.wrap NAMESPACE_ID_NONE IdentiferName new 
+        ID_NONE_DATA @ true return
+    end
+    context [] .localScopes .length 0 > if
+      context [] .localScopes #dup .length 1 - list.at
+    else
+      context [] .globalScope  Scope _ ptr mut cast ## TODO make list.at return (optional) size-one pointer
+    end =:: mScope 
+    name base .current IdentiferName new =:: mut idName
+    mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data
+      idName #swap true return
+    end #drop
+    name base context getIdentifier if
+      true return ## shadowed identifier
+    end #drop:2
+    mScope [] .identifiers addrOf
+      idName
+      valType
+      ConstValue .none ## TODO const value
+      declaredAt
+      label
+      -1 ## TODO id
+      ## XXX template data
+      idType
+      IdentifierData new
+    map.put #drop ## previous entry is always empty
+    idName mScope [] .identifiers addrOf idName map.at .data true return
+  end
 #end
