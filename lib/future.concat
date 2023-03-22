@@ -11,13 +11,15 @@ proc( char => bool ) =: public isWhitespace
   end
 end
 
-proc( i8 : chr => i32 ) =: public parseDigit
+proc( i8 : chr i32 : base => i32 ) =: public parseDigit
   chr '0' >= chr '9' <= & if
     chr '0' - return
   else chr 'A' >= chr 'Z' <= & _if
     chr 'A' - 10 + return
   else chr 'a' >= chr 'z' <= & _if
-    chr 'a' - 10 + return
+    chr 'a' -
+      base 36 > if 36 else 10 end +
+    return
   end
   -1 return
 end
@@ -62,7 +64,7 @@ proc( string : str  i32 : base => i64 ParseIntError ) =: public tryParseInt
           #drop ## ignore _ and ' in numbers
           1 + continue
         end
-      parseDigit
+      mBase parseDigit
         #dup 0 < #over mBase >= | if
           #drop:3 0 ParseIntError .INVALID_CHAR return
         end
@@ -166,7 +168,7 @@ proc( string : str i32 : base => float ParseIntError ) =: tryParseFloat
         10 mBase = ## exponent written in base 10
         c 4 * c = ## scale c to power of 2
         break
-      else #over #over string.charAt parseDigit
+      else #over #over string.charAt mBase parseDigit
         #dup 0 < #over mBase >= | if
           #drop:3 float.NaN ParseIntError .INVALID_CHAR return
         end
