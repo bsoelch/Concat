@@ -16,7 +16,8 @@
 
   types.Type .undefined ConstValue .none LABEL_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
 
-  struct( string : name NamespaceId : namespace ) =:: IdentiferName
+  struct( string : name NamespaceId : mut namespace ) =:: IdentiferName
+  struct( IdentiferName : name IdentifierData ptr : data ) =:: IdentifierMatch
   
   proc( IdentiferName : a => i32 ) =: idHash
     a .name string.hash a .namespace i32 cast ^ return
@@ -27,7 +28,7 @@
   
   struct( IdentiferName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : blockType NamespaceImportId : prevImports ) =:: Scope
   
-  struct( LabelContext : mut labelConext Scope list : mut localScopes Scope ptr mut : globalScope NamespaceImportId : currentNamespace ) =:: IdentiferContext
+  struct( LabelContext : mut labelContext Scope list : mut localScopes Scope ptr mut : globalScope NamespaceImportId : currentNamespace ) =:: IdentiferContext
   
   proc( codeBlocks.BlockType : blockType  IdentiferContext ptr mut : context => ) =: public openScope
     context [] .localScopes
@@ -57,8 +58,9 @@
     false return
   end
   ## TODO scopeItr
-  proc( string : id NamespaceInfo : base bool : printMatches IdentiferContext ptr mut : context => IdentiferName IdentifierData ptr bool ) =: searchIdentifer
-    base .current =:: mNamespace
+  ## TODO different return flags for: error, no-match, match, multi-match 
+  proc( string : id NamespaceInfo : base  IdentiferContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentiferName IdentifierData ptr bool ) =: searchIdentifier
+    base .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id" string.wrap NAMESPACE_ID_NONE IdentiferName new ID_NONE_DATA @ true return
@@ -66,25 +68,78 @@
     id '.' string.split 
       =:: name
       =:: path
-    ## TODO printMatches/collectMatches mode
     ## 1. search in local scopes
-    mNamespace path  context [] .labelConext addrOf findNamespace relSpace =
+    mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
     name relSpace IdentiferName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .localScopes .length 1 - 
       while #dup 0 >= do
         context [] .localScopes #over list.get .identifiers addrOf idName map.at
-        #dup optional.hasData if .data #swap #drop
-          idName #swap false return
-        end #drop
+        #dup optional.hasData if .data
+          matches optional.isEmpty if #swap #drop
+            idName #swap false return
+          end
+          matches .data [] 
+            idName #over:2 IdentifierMatch new list.append
+          matches .data [] =
+          #drop
+        else #drop end
         1 -
       end #drop
     end
-    ## TODO search identifier
     ## 2. search global variable in current&parent namespaces
+    while mNamespace NAMESPACE_ID_NONE != do
+      mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
+      relSpace idName .namespace =
+      relSpace NAMESPACE_ID_NONE != if
+        context [] .globalScope [] .identifiers addrOf idName map.at
+        #dup optional.hasData if .data
+          matches optional.isEmpty if
+            idName #swap false return
+          end
+          matches .data [] 
+            idName #over:2 IdentifierMatch new list.append
+          matches .data [] =
+          #drop
+        else #drop end
+      end
+      context [] .labelContext .namespaces mNamespace list.get .parent mNamespace =
+    end
     ## 3. search imports
+    false =:: mut multiMatch
+    IdentifierData ptr optional.empty =:: mut match
+    base .imports while #dup NAMESPACE_IMPORT_NONE != do
+      context [] .labelContext .namespaceImports #swap list.get
+        #dup .imported path  context [] .labelContext addrOf findNamespace relSpace =
+        relSpace idName .namespace =
+        relSpace NAMESPACE_ID_NONE != if
+          context [] .globalScope [] .identifiers addrOf idName map.at
+          #dup optional.hasData if .data
+            matches optional.hasData if
+              matches .data [] 
+                idName #over:2 IdentifierMatch new list.append
+              matches .data [] =
+            end
+            mNamespace NAMESPACE_ID_NONE == if
+              IdentifierData ptr cast optional.wrap match =
+              #dup .imported mNamespace =
+            else #drop
+              true multiMatch =
+            end
+          else #drop end
+        end
+     .parent
+    end #drop
+    matches optional.isEmpty match optional.hasData & if ## XXX return value indicating multi-match
+      idName match .data multiMatch return
+    end
     ## 4. template arguments
+    ## TODO search identifier in template arguments
     "unimplemented" string.wrap NAMESPACE_ID_NONE IdentiferName new ID_NONE_DATA @ true return
   end
-  ## TODO getIdentifer/declareIdentifer
+  proc( string : id NamespaceInfo : base  IdentiferContext ptr mut : context => IdentiferName IdentifierData ptr bool ) =: getIdentifier
+    id base context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
+  end
+  
+  ## TODO declareIdentifer
 #end
