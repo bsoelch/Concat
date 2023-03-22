@@ -5624,14 +5624,14 @@ void storeStackValues(TypeCheckState* state,StackState* stackState,StackState* e
     stackState->types=typeCount==0?NULL:malloc((typeCount)*sizeof(TypeInfo));
     stackState->ops=typeCount==0?NULL:malloc((typeCount)*sizeof(Operation));
   }
-  if(typeCount>0&&(stackState->types==NULL||stackState->ops==NULL)){
-      handleError("allocation of stack-state failed",ERROR_MEMORY,pos);
-  }
   if(!initStackState){
     if(typeCount!=expectedState->typeCount){
       fprintf(stderr,"wrong number of types at end of %s expected %zu got %zu\n",errorMessage,expectedState->typeCount,typeCount);
       handleError(NULL,ERROR_TYPE,pos);
     }
+  }
+  if(typeCount>0&&(stackState->types==NULL||stackState->ops==NULL)){
+      handleError("allocation of stack-state failed",ERROR_MEMORY,pos);
   }
   int32_t varId;
   size_t offset=state->opStackCount;
