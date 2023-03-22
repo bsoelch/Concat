@@ -5,7 +5,8 @@
 #include list
 #include arrayView
 
-#include "lib.concat"
+#include future
+
 #include "files.concat"
 #include "labels.concat"
 #include "types.concat"
@@ -55,6 +56,9 @@ proc( Operation ParserState ptr => ) =: printOp
         "Constant: " sb.appendS
         #over .val .Constant #swap ## XXX extract to sb.appendConstValue
           #over switch
+            none case
+              "none"  sb.appendS
+              break
             wildCard case
               "_"  sb.appendS
               break
@@ -133,11 +137,11 @@ end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: popTypeConstant
   state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
     "missing type constant" string.wrap fileState [] .wordStart opError state appendError
-     types.primitiveType.UNDEFINED true return
+     types.Type .undefined true return
   end
   state [] .constants list.peek .val ConstValue .typeId != if
     "wrong type for constant expected type" string.wrap state [] .constants list.peek .pos opError state appendError
-    types.primitiveType.UNDEFINED true return
+    types.Type .undefined true return
   end
   state [] .constants list.pop #swap state [] .constants =
     .val .typeId false return
@@ -264,7 +268,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         else #dup 0 < _if
           "not enough types for label" string.wrap fileState [] .wordStart opError  state appendError
           while #dup 0 < do
-            types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+            types.Type .undefined fileState [] .wordStart constType  state pushConst
             1 +
           end
         end #drop
@@ -282,7 +286,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           #over sb.appendStr
         sb.toStr fileState [] .wordStart opError  state appendError
         #drop
-        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        types.Type .undefined fileState [] .wordStart constType  state pushConst
         continue
       end
         state [] .constants .length constOffset -
@@ -297,12 +301,12 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         else #dup 0 < _if
           "not enough types for label" string.wrap fileState [] .wordStart opError  state appendError
           while #dup 0 < do
-            types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+            types.Type .undefined fileState [] .wordStart constType  state pushConst
             1 +
           end
         end #drop
       id.FLAG_NONE fileState [] .wordStart state [] .labelContext addrOf id.newLabel #drop
-      types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+      types.Type .undefined fileState [] .wordStart constType  state pushConst
       #dup .length 0 >
     do end
   "unexpected end of file" string.wrap fileState [] .wordStart opError  state appendError
@@ -346,31 +350,31 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       false fileState [] .wordStart constBool  state pushConst
       true return
     else #dup "bool" string.wrap string.eq _if
-      types.primitiveType.BOOL fileState [] .wordStart constType  state pushConst
+      types.primitive.BOOL fileState [] .wordStart constType  state pushConst
       true return
     else #dup "i8" string.wrap string.eq _if
-      types.primitiveType.I8 fileState [] .wordStart constType  state pushConst
+      types.primitive.I8 fileState [] .wordStart constType  state pushConst
       true return
     else #dup "i32" string.wrap string.eq _if
-      types.primitiveType.I32 fileState [] .wordStart constType  state pushConst
+      types.primitive.I32 fileState [] .wordStart constType  state pushConst
       true return
     else #dup "i64" string.wrap string.eq _if
-      types.primitiveType.I64 fileState [] .wordStart constType  state pushConst
+      types.primitive.I64 fileState [] .wordStart constType  state pushConst
       true return
     else #dup "float" string.wrap string.eq _if
-      types.primitiveType.FLOAT fileState [] .wordStart constType  state pushConst
+      types.primitive.FLOAT fileState [] .wordStart constType  state pushConst
       true return
     else #dup "type" string.wrap string.eq _if
-      types.primitiveType.TYPE fileState [] .wordStart constType  state pushConst
+      types.primitive.TYPE fileState [] .wordStart constType  state pushConst
       true return
     else #dup "ptr" string.wrap string.eq _if
       fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
-        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        types.Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
       true sizes fixedSize false state [] .typeContext addrOf types.newArrayType if #drop
-        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        types.Type .undefined fileState [] .wordStart constType  state pushConst
         "could not create pointer type" string.wrap fileState [] .wordStart opError  state appendError
         true return
       end
@@ -379,11 +383,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "array" string.wrap string.eq _if
       fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
-        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        types.Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
       false sizes fixedSize false state [] .typeContext addrOf types.newArrayType if #drop
-        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        types.Type .undefined fileState [] .wordStart constType  state pushConst
         "could not create array type" string.wrap fileState [] .wordStart opError  state appendError
         true return
       end
@@ -391,7 +395,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       true return
     else #dup "mut" string.wrap string.eq _if
       fileState state popTypeConstant if #drop
-        types.primitiveType.UNDEFINED fileState [] .wordStart constType  state pushConst
+        types.Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
       ## TODO make type mutable

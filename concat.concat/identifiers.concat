@@ -1,25 +1,42 @@
+#include mem
 #include string
 #include map
+#include optional
 
 #include "types.concat"
 #include "constants.concat"
 #include "labels.concat"
 #include "codeBlocks.concat"
 
-#namespace id
-  i32 =:: NamespaceId
-  enum( LOCAL_VAR GLOBAL_VAR  ) =:: IdentifierType
+#namespace id  
   
-  struct( types.Type : type ConstValue : constValue id.LabelId : labelId #+XXX template data+# NamespaceId : namespaceId i32 : id IdentifierType : idType ) =:: IdentifierData
+  enum( TYPE PROCEDURE GLOBAL_VAR  LOCAL_VAR ARGUMENT TMP_VAR ) =:: IdentifierType
   
-  ## XXX also use namespace in key
-  struct( string IdentifierData hashMap : mut identifiers codeBlocks.BlockType : blockType #+XXX prevNamespaceId+# ) =:: Scope
+  struct( types.Type : valueType ConstValue : constValue id.LabelId : labelId #+XXX template data+# i32 : id IdentifierType : idType ) =:: IdentifierData
+
+  types.Type .undefined ConstValue .none LABEL_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
+
+  struct( string : name NamespaceId : namespace ) =:: IdentiferName
   
-  struct( Scope list : mut localScopes ) =:: IdentiferContext
+  proc( IdentiferName : a => i32 ) =: idHash
+    a .name string.hash a .namespace i32 cast ^ return
+  end
+  proc( IdentiferName : a IdentiferName : b => bool ) =: idEq
+    a .namespace b .namespace == a .name b .name string.eq & return
+  end
   
-  proc( codeBlocks.BlockType : blockType IdentiferContext ptr mut : context => ) =: public openScope
+  struct( IdentiferName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : blockType NamespaceImportId : prevImports ) =:: Scope
+  
+  struct( LabelContext : mut labelConext Scope list : mut localScopes Scope ptr mut : globalScope NamespaceImportId : currentNamespace ) =:: IdentiferContext
+  
+  proc( codeBlocks.BlockType : blockType  IdentiferContext ptr mut : context => ) =: public openScope
     context [] .localScopes
-      string.hash @ string.eq @ 128 IdentifierData map.create blockType Scope new list.append
+        idHash @ 
+        idEq @ 
+      128 IdentifierData map.create 
+      blockType
+      context [] .currentNamespace
+      Scope new list.append
     context [] .localScopes =
   end
   proc( IdentiferContext ptr mut : context => codeBlocks.BlockType ) =: public currentScope
@@ -39,5 +56,35 @@
     #drop
     false return
   end
-  ## TODO searchIdentifer/getIdentifer/declareIdentifer
+  ## TODO scopeItr
+  proc( string : id NamespaceInfo : base bool : printMatches IdentiferContext ptr mut : context => IdentiferName IdentifierData ptr bool ) =: searchIdentifer
+    base .current =:: mNamespace
+    NamespaceId : mut relSpace
+    mNamespace NAMESPACE_ID_NONE == if
+      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE IdentiferName new ID_NONE_DATA @ true return
+    end
+    id '.' string.split 
+      =:: name
+      =:: path
+    ## TODO printMatches/collectMatches mode
+    ## 1. search in local scopes
+    mNamespace path  context [] .labelConext addrOf findNamespace relSpace =
+    name relSpace IdentiferName new =:: mut idName
+    relSpace NAMESPACE_ID_NONE != if
+      context [] .localScopes .length 1 - 
+      while #dup 0 >= do
+        context [] .localScopes #over list.get .identifiers addrOf idName map.at
+        #dup optional.hasData if .data #swap #drop
+          idName #swap false return
+        end #drop
+        1 -
+      end #drop
+    end
+    ## TODO search identifier
+    ## 2. search global variable in current&parent namespaces
+    ## 3. search imports
+    ## 4. template arguments
+    "unimplemented" string.wrap NAMESPACE_ID_NONE IdentiferName new ID_NONE_DATA @ true return
+  end
+  ## TODO getIdentifer/declareIdentifer
 #end

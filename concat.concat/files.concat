@@ -3,7 +3,7 @@
 #include io
 #include stringIO
 
-#include "lib.concat"
+#include future
 
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public FileState

@@ -7,7 +7,7 @@
 
 #namespace types
 
-enum( UNDEFINED BOOL I8 I32 I64 FLOAT TYPE ) =:: PrimitiveType
+enum( BOOL I8 I32 I64 FLOAT TYPE ) =:: PrimitiveType
 
 i32 =:: public ArrayId
 i32 =:: public CompositeId
@@ -15,6 +15,7 @@ i32 =:: public ProcId
 i32 =:: public NamedTypeId
 
 enum(
+                  undefined
   PrimitiveType : primitiveType
         ArrayId : pointer
         ArrayId : arrayType
@@ -38,6 +39,8 @@ proc( Type : a Type : b => bool ) =: typeEquals
     false return
   end
   a switch
+    undefined case
+      true return ## there is only one undefined
     primitiveType case
       a .primitiveType b .primitiveType == return
     pointer case
@@ -77,8 +80,6 @@ type : public TypeContext
 #namespace sb
 proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveType
   switch
-    UNDEFINED case
-      "undefined" appendS return
     BOOL case
       "bool" appendS return
     I8 case
@@ -97,6 +98,8 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
   =:: allowRecurse
   =:: context
   #dup switch
+    undefined case #drop
+      "undefined" appendS return
     primitiveType case
       .primitiveType appendPrimitiveType return
     pointer case ## XXX print sizes
@@ -207,8 +210,7 @@ proc( Type => ) =: declaredType
 end
 
 ## primitive types
-#namespace primitiveType
-  PrimitiveType .UNDEFINED Type .primitiveType new Type =: public UNDEFINED
+#namespace primitive
   PrimitiveType .BOOL      Type .primitiveType new Type =: public BOOL
   PrimitiveType .I8        Type .primitiveType new Type =: public I8
   PrimitiveType .I32       Type .primitiveType new Type =: public I32
@@ -234,7 +236,7 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
   box isArray if
     context [] .arrayTypes box .arrayType list.get .base return
   end
-  primitiveType.UNDEFINED return
+  Type .undefined return
 end
 proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqual
   a .length b .length != if
@@ -253,14 +255,14 @@ end
 ## XXX arraySize compatible
 proc( Type : base bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool : mutable  TypeContext ptr mut : context => Type bool ) =: public newArrayType
   isPtr ! sizes .length 0 == & if
-    primitiveType.UNDEFINED true return
+    Type .undefined true return
   end
-  base primitiveType.UNDEFINED  typeEquals if
-    primitiveType.UNDEFINED true return
+  base Type .undefined  == if
+    Type .undefined true return
   end
   ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
   base isProcedure  isPtr ! fixedSize ! | sizes .length 0 > | & if
-    primitiveType.UNDEFINED true return
+    Type .undefined true return
   end
   context [] .arrayTypes addrOf =:: arrays
   0 while #dup arrays [] .length < do
@@ -329,7 +331,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset T
   classFlag CompositeFlag =: mut flags
   true =:: mut isVoid
   0 while #dup elts .length < do
-    elts #over array.get primitiveType.UNDEFINED typeEquals ! if
+    elts #over array.get Type .undefined != if
       false isVoid =
     end
     ## TODO check for generic and template
@@ -366,7 +368,7 @@ end
 ## creates struct or tuple
 proc( Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
-    primitiveType.UNDEFINED true return
+    Type .undefined true return
   end
   COMP_FLAG_TUPLE elts labelOffset context newCompositeType =:: newType
   labelOffset id.LABEL_ID_NONE == if Type .tuple new else Type .struct new end
@@ -385,7 +387,7 @@ proc( Type arrayView : elts id.LabelId : labelOffset bool : isOut TypeContext pt
 end
 proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext ptr mut : context => Type bool ) =: public newEnum
   elts .length 0 ==  labelOffset id.LABEL_ID_NONE == | if
-    primitiveType.UNDEFINED true return
+    Type .undefined true return
   end
   COMP_FLAG_TUPLE elts labelOffset context newCompositeType =:: newType
   isLabel if Type .enumLabel new else Type .enum new end
@@ -425,8 +427,8 @@ proc( Type : mType TypeContext ptr mut : context => bool ) =: public isCallable
   Type .procedure == return
 end
 proc( Type : in Type : out #+ TODO static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
-  in primitiveType.UNDEFINED typeEquals out primitiveType.UNDEFINED typeEquals | if
-    primitiveType.UNDEFINED true return
+  in Type .undefined == out Type .undefined == | if
+    Type .undefined true return
   end
   context [] .procTypes addrOf =:: procs
   0 while #dup procs [] .length < do

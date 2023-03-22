@@ -5,6 +5,20 @@
 
 
 #namespace id
+  i32 =:: public NamespaceId
+  -1 NamespaceId =: public NAMESPACE_ID_NONE
+  i32 =:: public NamespaceImportId
+  -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
+  
+  struct( NamespaceId : current NamespaceImportId : imports ) =:: public NamespaceInfo
+
+  struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: public NamespaceImport
+  
+  struct( i64 : offset i64 : length ) =:: public StringConstant
+  struct( StringConstant : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
+  
+  
+  
   i32 =:: public LabelId
   -1 LabelId =: public LABEL_ID_NONE
   
@@ -17,30 +31,37 @@
   16 LabelFlag =: public FLAG_PRIVATE
   32 LabelFlag =: public FLAG_EMPTY
 
-  struct( i64 : bufferOffset FilePosition : pos ) =:: Label
-  struct( i8 list : mut nameBuffer Label list : mut labels ) =:: public LabelContext
+  struct( StringConstant : name FilePosition : pos ) =:: Label ## XXX store namespace id in label
+  
+  struct( i8 list : mut nameBuffer Label list : mut labels  Namespace list : mut namespaces NamespaceImport list : mut namespaceImports ) =:: public LabelContext
+  
   proc( => LabelContext ) =: public newLabelContext
-    1024    i8 list.create
-    128  Label list.create
+    1024            i8 list.create
+    128          Label list.create
+    32       Namespace list.create
+      0 0 StringConstant new
+      32 NamespaceId list.create
+      NAMESPACE_ID_NONE
+      Namespace new list.append ## root namespace
+    32 NamespaceImport list.create
     LabelContext new return
   end
-
+  
   proc( LabelContext ptr => LabelId ) =: public labelOffset
     [] .labels .length LabelId cast return
+  end
+  proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
+    context [] .nameBuffer .data const .offset + const .length string.create return
   end
   proc( string : str LabelFlag : flags FilePosition : pos LabelContext ptr mut : context => LabelId ) =: public newLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer  str .data str .length array.create list.appendArray context [] .nameBuffer =
     context [] .labels
-      offset pos Label new list.append
+      offset str .length StringConstant  new pos Label new list.append
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
   
-  struct( i64 : offset i64 : length ) =:: public StringConstant
-  proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
-    context [] .nameBuffer .data const .offset + const .length string.create return
-  end
   proc( string : str LabelContext ptr mut : context => StringConstant ) =: public newStringConstant
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer 
@@ -90,5 +111,100 @@
       end #drop
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
+  end
+  
+  proc( NamespaceId : parent string : name  LabelContext ptr mut : context => NamespaceId ) =: public newNamespace
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer
+      name .data name .length array.create list.appendArray
+    context [] .nameBuffer =
+    context [] .namespaces .length =:: id
+    context [] .namespaces
+      offset name .length StringConstant new
+      16 NamespaceId list.create
+      parent
+      Namespace new list.append
+    context [] .namespaces =
+    id NamespaceId cast return
+  end
+  proc( NamespaceId : base string : childName bool : create  LabelContext ptr mut : context  => NamespaceId ) =: public childId
+    base NAMESPACE_ID_NONE == childName .length 0 == | if
+      NAMESPACE_ID_NONE return
+    end
+    base 0 < base  context [] .namespaces .length >= | if
+      NAMESPACE_ID_NONE return ## id out of range
+    end
+    context [] .namespaces base list.get
+      0 while #dup #over:2 .children .length < do
+        #over .children #over list.get
+          context [] .namespaces #over list.get .name context scAsStr childName string.eq if
+            #swap #drop #swap #drop
+            return
+          end
+        #drop
+        1 +
+      end #drop
+    #drop
+    create ! if
+      NAMESPACE_ID_NONE return
+    end
+    base childName context newNamespace return
+  end
+  proc( NamespaceId : base string : path  LabelContext ptr mut : context => NamespaceId ) =: public findNamespace
+    base NamespaceId =: mut id
+    path
+      while #dup .length 0 > do
+        '.' string.split
+        id #swap false context childId id =
+        id NAMESPACE_ID_NONE == if 
+          break
+        end
+      end
+    #drop
+    id return
+  end
+  proc( NamespaceId : id LabelContext ptr mut : context => string ) =: public namespaceName
+    id NAMESPACE_ID_NONE == if
+      string.empty return
+    end
+    context [] .namespaces id list.get .name context scAsStr return
+  end
+  proc( NamespaceId : id LabelContext ptr mut : context => NamespaceId ) =: public parentNamespace
+    id NAMESPACE_ID_NONE == if
+      NAMESPACE_ID_NONE return
+    end
+    context [] .namespaces id list.get .parent return
+  end
+  proc( NamespaceImportId : parent NamespaceId : import LabelContext ptr mut : context => NamespaceImportId ) =: public getNamespaceImportId
+    context [] .namespaceImports .length 0 > if
+      parent NAMESPACE_IMPORT_NONE == if 
+        0 NamespaceImportId cast
+      else 
+        context [] .namespaceImports parent list.get .firstChild 
+      end
+      #dup NAMESPACE_IMPORT_NONE == if
+        context [] .namespaceImports .length NamespaceImportId cast
+          context [] .namespaceImports parent list.at [] .firstChild =
+      end
+      NAMESPACE_IMPORT_NONE #swap
+        while #dup NAMESPACE_IMPORT_NONE != do #swap #drop
+          context [] .namespaceImports #over list.get .imported import == if
+            return
+          end
+          context [] .namespaceImports #over list.get .next
+        end #drop
+      #dup NAMESPACE_IMPORT_NONE != if
+        context [] .namespaceImports .length NamespaceImportId cast
+          context [] .namespaceImports #over:2 list.at [] .next =
+      end #drop
+    end
+    context [] .namespaceImports
+      parent
+      import
+      NAMESPACE_IMPORT_NONE
+      NAMESPACE_IMPORT_NONE
+      NamespaceImport new list.append
+    context [] .namespaceImports =
+    context [] .namespaceImports .length 1 - NamespaceImportId cast return
   end
 #end
