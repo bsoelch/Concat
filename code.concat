@@ -10,3 +10,4 @@ end
 ## TODO correct error message for list.appendP with raw pointer
 ## TODO [] @ ?
 ## TODO check if public variables from different imports can collide
+## TODO automatically convert label at end of if to enum-value

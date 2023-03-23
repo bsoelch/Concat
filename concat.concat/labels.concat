@@ -11,7 +11,7 @@
   i32 =:: public NamespaceImportId
   -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
   
-  struct( NamespaceId : current NamespaceImportId : imports ) =:: public NamespaceInfo
+  struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: public NamespaceInfo
 
   struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: public NamespaceImport
   

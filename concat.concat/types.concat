@@ -34,7 +34,7 @@ enum(
             i32 : templateType
 ) =:: public Type
 
-proc( Type : a Type : b => bool ) =: typeEquals
+proc( Type : a Type : b => bool ) =: public typeEquals
   a b != if
     false return
   end
