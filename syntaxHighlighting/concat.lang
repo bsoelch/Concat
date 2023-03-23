@@ -66,6 +66,7 @@
           end             |
           new             |
           cast            |
+          cast!           |
           print          
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
