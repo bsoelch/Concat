@@ -203,7 +203,7 @@
       end
       #dup NAMESPACE_IMPORT_NONE == if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports parent list.at [] .firstChild =
+          context [] .namespaceImports parent list.at .data [] .firstChild =
       end
       NAMESPACE_IMPORT_NONE #swap
         while #dup NAMESPACE_IMPORT_NONE != do #swap #drop
@@ -214,7 +214,7 @@
         end #drop
       #dup NAMESPACE_IMPORT_NONE != if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports #over:2 list.at [] .next =
+          context [] .namespaceImports #over:2 list.at .data [] .next =
       end #drop
     end
     context [] .namespaceImports

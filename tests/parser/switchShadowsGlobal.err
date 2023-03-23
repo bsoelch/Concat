@@ -1,0 +1,2 @@
+wrong type for switch label: expected namedType "e" [ enum label (0) ( A i32 : B i64 : ERROR ) ] got type
+type error at switchShadowsGlobal.concat:11:5

@@ -282,7 +282,7 @@ proc( Type : base bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool
       context [] .arraySizes #over .sizeOffset #over:2 .dims list.slice sizes arraySizeEqual ! if #drop
         1 + continue
       end
-    .ptrOnly isPtr & arrays [] #over:2 list.at [] .ptrOnly = ## update ptrOnly flag
+    .ptrOnly isPtr & arrays [] #over:2 list.at .data [] .ptrOnly = ## update ptrOnly flag
     ## found match
     isPtr if ArrayId cast Type .pointer new else ArrayId cast Type .arrayType new end false return
   end #drop
@@ -352,7 +352,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset T
       context [] .compositeData #over .eltsOffset #over:2 .eltCount list.slice elts typesOffset 0 != if #drop
         1 + continue
       end
-    .flags flags | composites [] #over:2 list.at [] .flags = ## update flags
+    .flags flags | composites [] #over:2 list.at .data [] .flags = ## update flags
     ## found match
     CompositeId cast false return
   end #drop

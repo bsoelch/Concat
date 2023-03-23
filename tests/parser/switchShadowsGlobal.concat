@@ -1,0 +1,14 @@
+enum( A i32 : B i64 : ERROR ) =:: e
+
+( i32 i64 ) =:: ERROR
+
+entryPoint:
+  e .A switch
+    A case
+      break
+    B case 
+      break
+    ERROR case
+      break
+  end
+end

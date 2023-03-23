@@ -169,6 +169,7 @@ typedef enum{
 
   OP_NEW,
   OP_CAST,
+  OP_FORCE_CAST,
   OP_ADDR_OF,// (pointer to given value)
   OP_ADDR_OF_ARRAY,
 
@@ -217,6 +218,7 @@ char const* opName(OpType type){
     case ENTRY_POINT:return "ENTRY_POINT";
     case OP_NEW:return "OP_NEW";
     case OP_CAST:return "OP_CAST";
+    case OP_FORCE_CAST:return "OP_FORCE_CAST";
     case OP_ADDR_OF:return "OP_ADDR_OF";
     case OP_ADDR_OF_ARRAY:return "OP_ADDR_OF_ARRAY";
     case OP_GET_TEMPLATE:return "OP_GET_TEMPLATE";
@@ -1820,6 +1822,7 @@ void printOperation(Operation op,FILE* out){
       fprintf(out,"%"PRI_STR"",PRI_STR_ARGS(getLabelName(op.dataAs.localLabel.label)));
       break;
     case OP_CAST:
+    case OP_FORCE_CAST:
       fputs("[ ",out);
       printTypeName(op.dataAs.sourceType,out);
       fputs(" ]",out);
@@ -3042,6 +3045,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       handleError("unexpected type for OP_NEW",ERROR_UNIMPLEMENTED,op->filePos);
       break;
     case OP_CAST:
+    case OP_FORCE_CAST:
       if(typeEquals(unwrapNamedType(op->dataAs.sourceType),unwrapNamedType(op->dataType))){//no cast neccessary
         COMPILE_OP_RETURN_ERROR(target,op,opSize);
         return size;
@@ -4671,6 +4675,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     requireCompileTimeTypes(&word,&type,1,wordPos);
     pushOperation(state,(Operation){.opType=OP_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=TYPE_UNDEFINED}});
       return;
+  }else if(wordEquals(&word,"cast!")){
+    requireCompileTimeTypes(&word,&type,1,wordPos);
+    pushOperation(state,(Operation){.opType=OP_FORCE_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=TYPE_UNDEFINED}});
+      return;
   }else if(word.length>1&&charAt(word,0)=='.'){
     word=sliceStart(word,1);//remove first character
     if(bufferedConstants==0||constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
@@ -5712,11 +5720,21 @@ bool canAutoCast(TypeId src,TypeId target){//? allow cast T ptr mut ptr -> T ptr
   return isInteger(primitiveTypeData(src))&&isInteger(primitiveTypeData(target))&&
     numberRank(primitiveTypeData(src))<=numberRank(primitiveTypeData(target));//implicit casts only from small int to large int
 }
-bool canCast(TypeId src,TypeId target){
+bool canCast(TypeId src,TypeId target,bool force){
   if(canAutoCast(src,target))
     return true;
   //XXX cast between arrays of different dimensions
-  return numberRank(primitiveTypeData(src))>-1&&numberRank(primitiveTypeData(target))>-1;//casts only between numbers
+  if(numberRank(primitiveTypeData(src))>-1&&numberRank(primitiveTypeData(target))>-1)//casts between numbers
+    return true;
+  if(!force)
+    return false;
+  if(isPointerType(src)&&isPointerType(target))
+    return true;//XXX? check for compatible element sizes
+  if(isPointerType(src)&&isIntType(target))
+    return true;
+  if(isIntType(src)&&isPointerType(target))
+    return true;
+  return false; 
 }
 
 void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,size_t nTypes,FilePosition pos){
@@ -5780,7 +5798,7 @@ void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,s
     memmove(state->opStack+offset+nCasts,state->opStack+offset,shiftCount*sizeof(Operation));
     shiftCount=0;
     nCasts--;
-    if(canCast(state->typeStack[state->typeCount-k].type,types[nTypes-k])){
+    if(canAutoCast(state->typeStack[state->typeCount-k].type,types[nTypes-k])){
       state->opStack[offset+nCasts]=(Operation){.opType=OP_CAST,.filePos=pos,.dataType=types[nTypes-k],.dataAs={.sourceType=state->typeStack[state->typeCount-k].type}};
       setTypeStackTypeOffset(state,k,types[nTypes-k]);
       state->typeStack[state->typeCount-k].opCount++;
@@ -6496,7 +6514,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   IfBlockInfo* ifBlock;
   SwitchBlockInfo* switchBlock;
   Label const* mLabel;
-
+  //TODO switch label should have a higher priority than global variable
   resolveIdentifiers(state,&op);
   switch(op.opType){
     case OP_CONSTANT:
@@ -6509,6 +6527,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         switchBlock=&blockInfoPtr->blockDataAs.switchBlock;
         if(!canAutoCast(op.dataType,switchBlock->switchType)){
           typeErrorMessage("switch label",switchBlock->switchType,op.dataType);
+          handleError(NULL,ERROR_TYPE,op.filePos);
         }
         if(switchBlock->switchData->labelCount>=switchBlock->switchData->labelCap)
           handleError("exceeded maximum number of allowed switch labels",ERROR_MEMORY,op.filePos);
@@ -7059,6 +7078,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       break;
     case OP_CAST:
+    case OP_FORCE_CAST:
       checkReachable(state,op);
       checkLocal(state,op);
       if(state->typeCount<1){
@@ -7066,7 +7086,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         handleError(NULL,ERROR_TYPE,op.filePos);
       }
       offset=state->typeCount-1;
-      if(!canCast(state->typeStack[offset].type,op.dataType)){
+      if(!canCast(state->typeStack[offset].type,op.dataType,op.opType==OP_FORCE_CAST)){
         fputs("cannot cast ",stderr);
         printTypeName(state->typeStack[offset].type,stderr);
         fputs(" to ",stderr);

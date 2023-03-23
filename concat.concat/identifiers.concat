@@ -45,7 +45,7 @@
     context [] .localScopes .length 0 == if
       BlockType .UNKNOWN return
     end
-    context [] .localScopes list.peek .blockType return
+    context [] .localScopes list.peek .data [] .blockType return
   end
   proc( IdentiferContext ptr mut : context => bool ) =: public closeScope
     context [] .localScopes .length 0 == if
@@ -173,9 +173,9 @@
         ID_NONE_DATA @ true return
     end
     context [] .localScopes .length 0 > if
-      context [] .localScopes #dup .length 1 - list.at
+      context [] .localScopes #dup .length 1 - list.at .data
     else
-      context [] .globalScope  Scope _ ptr mut cast ## TODO make list.at return (optional) size-one pointer
+      context [] .globalScope
     end =:: mScope 
     name base .current IdentiferName new =:: mut idName
     mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data

@@ -1,5 +1,6 @@
 #include mem
 #include arrayView
+#include optional
 
 ## XXX allow auto-cast from list -> arrayView
 
@@ -79,11 +80,11 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     elts .data index [] return
   end
   #template type : T #end
-  proc( T list : elts i64 : index => T _ ptr mut ) =: public at
+  proc( T list : elts i64 : index => T ptr mut optional ) =: public at
     index 0 < index elts .length >= | if
-      ## TODO error handling
+      T ptr mut optional.empty return
     end
-    elts .data index + return
+    elts .data index + T ptr mut cast! optional.wrap return
   end
   #template type : T #end
   proc( T : elt T list : elts i64 : index => ) =: public set
@@ -93,11 +94,11 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     elt elts .data index [] =
   end
   #template type : T #end
-  proc( T list : elts => T ) =: public peek
+  proc( T list : elts => T ptr mut optional ) =: public peek
     elts .length 0 <= if
-      ## TODO error handling
+      T ptr mut optional.empty return
     end
-    elts .data elts .length 1 - [] return
+    elts .data elts .length 1 - + T ptr mut cast! optional.wrap return
   end
   #template type : T #end
   proc( T list : elts => T list T ) =: public pop

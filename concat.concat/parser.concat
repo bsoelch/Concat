@@ -139,8 +139,8 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bo
     "missing type constant" string.wrap fileState [] .wordStart opError state appendError
      types.Type .undefined true return
   end
-  state [] .constants list.peek .val ConstValue .typeId != if
-    "wrong type for constant expected type" string.wrap state [] .constants list.peek .pos opError state appendError
+  state [] .constants list.peek .data [] .val ConstValue .typeId != if
+    "wrong type for constant expected type" string.wrap state [] .constants list.peek .data [] .pos opError state appendError
     types.Type .undefined true return
   end
   state [] .constants list.pop #swap state [] .constants =
@@ -150,7 +150,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
   state [] .constants .length state [] .constOffset <= if
     types.ArraySize array.empty true return
   end
-  state [] .constants list.peek .val ConstValue .wildCard == if
+  state [] .constants list.peek .data [] .val ConstValue .wildCard == if
     state [] .constants list.pop #drop state [] .constants = ## remove wildcard constant
     types.ArraySize array.empty false return
   end
@@ -185,7 +185,7 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types
   state [] .constants .length n -
     #dup while #dup state [] .constants .length < do
       state [] .constants #over list.get .val ConstValue .typeId != if #drop:2
-        "wrong type for constant, expected type" string.wrap state [] .constants list.peek .pos opError state appendError
+        "wrong type for constant, expected type" string.wrap state [] .constants list.peek .data [] .pos opError state appendError
          types.Type array.empty true return
       end
       state [] .typeBuffer state [] .constants #over:2 list.get .val .typeId list.append state [] .typeBuffer =
@@ -231,7 +231,7 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
     isModifer do #drop
       fileState nextToken
       #dup Token .IDENTIFER != if #drop
-        "expected identifier" string.wrap state [] .constants list.peek .pos opError state appendError
+        "expected identifier" string.wrap state [] .constants list.peek .data [] .pos opError state appendError
         "" string.wrap
       else
         .IDENTIFER
