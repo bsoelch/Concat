@@ -24,14 +24,14 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     return
   end
   #template type : T #end
-  proc( T list => T list ) =: public clear
+  proc( T list => T list ) =: public free
     #dup .data mem.free
       0 #over .cap =
       0 #over .length =
     return
   end
   #template type : T #end
-  proc( T list => T list ) =: public reset
+  proc( T list => T list ) =: public clear
     ## list
       0 #over .length =
     return

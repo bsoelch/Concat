@@ -1,7 +1,4 @@
 #include stringIO
-#include io
-#include stringBuilder
-#include string
 #include list
 #include arrayView
 
@@ -119,7 +116,7 @@ proc( Operation : op ParserState ptr mut : state bool : pushConstants => ) =: ap
         #swap
         1 +
       end #drop
-      state [] .constants list.reset state [] .constants =
+      state [] .constants list.clear state [] .constants =
     end
     op list.append
   state [] .ops  =
@@ -163,7 +160,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
   1 + ##revert last decrement
   #dup
   state [] .arraySizeBuffer
-    list.reset
+    list.clear
     #over state [] .constOffset - list.ensureCap
     #swap while #dup state [] .constants .length < do
       #swap
@@ -181,7 +178,7 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types
     "missing type constant" string.wrap fileState [] .wordStart opError state appendError
      types.Type array.empty true return
   end
-  state [] .typeBuffer list.reset state [] .typeBuffer =
+  state [] .typeBuffer list.clear state [] .typeBuffer =
   state [] .constants .length n -
     #dup while #dup state [] .constants .length < do
       state [] .constants #over list.get .val ConstValue .typeId != if #drop:2

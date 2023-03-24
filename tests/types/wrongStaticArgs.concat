@@ -1,0 +1,7 @@
+#include list
+
+entryPoint:
+  16 i8 list.create
+    "Hello" 3 list.appendP
+  list.free
+end

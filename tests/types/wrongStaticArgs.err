@@ -1,0 +1,2 @@
+wrong type for procedure argument: expected template argument (0) 1 pointer got i32
+type error at wrongStaticArgs.concat:5:15

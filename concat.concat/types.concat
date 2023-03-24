@@ -495,12 +495,12 @@ proc( => TypeContext ) =: public newTypeContext
 end
 proc( TypeContext : context => TypeContext ) =: public clearTypeContent
   context
-    #dup .arrayTypes     list.clear #over .arrayTypes =
-    #dup .arraySizes     list.clear #over .arraySizes =
-    #dup .compositeTypes list.clear #over .compositeTypes =
-    #dup .compositeData  list.clear #over .compositeData =
-    #dup .procTypes      list.clear #over .procTypes =
-    #dup .namedTypes     list.clear #over .namedTypes =
+    #dup .arrayTypes     list.free #over .arrayTypes =
+    #dup .arraySizes     list.free #over .arraySizes =
+    #dup .compositeTypes list.free #over .compositeTypes =
+    #dup .compositeData  list.free #over .compositeData =
+    #dup .procTypes      list.free #over .procTypes =
+    #dup .namedTypes     list.free #over .namedTypes =
   return
 end
 #end

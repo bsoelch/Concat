@@ -25,7 +25,7 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data => ) =: public free
     data [] .nodeBuffer 
-      list.clear
+      list.free
     data [] .nodeBuffer =
     data [] .data mem.free
     0 data [] .cap =

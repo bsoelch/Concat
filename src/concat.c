@@ -1795,6 +1795,7 @@ void printOperation(Operation op,FILE* out){
     case OP_PRE_DECLARE:
     case OP_CALL:
     case OP_ADDR_OF:
+    case OP_ADDR_OF_ARRAY:
     case OP_CALL_TEMPLATE:
     case OP_GET_TEMPLATE:
     case OP_SET_TEMPLATE:
@@ -6020,7 +6021,7 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     for(int32_t i=0;i<procType->staticArgsCount;i++){
       if(argValues[staticArgsOffset+i].constType==CONSTANT_NONE)
         hasUnresolvedGenericArguments=true;
-      if(staticArgValueOffsets[i]!=-1){
+      else if(staticArgValueOffsets[i]!=-1){
         if(argValues[staticArgsOffset+i].as.type.class==TYPECLASS_GENERIC_TYPE&&typeEquals(argValues[staticArgsOffset+i].valueType,TYPE_TYPE)){
           state->opStack[staticArgValueOffsets[i]]=opGetArgument(TYPE_TYPE,autoTypeId(argValues[staticArgsOffset+i].as.type),LABEL_ID_UNKNOWN,op->filePos);
           continue;
@@ -6281,8 +6282,6 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
     //TODO OP_GET_SUBARRAY/OP_SET_SUBARRAY
   op->dataAs.idInfo.type=ID_ARRAY_ELEMENT;
   op->dataType=arrayType;
-  //update operation stack
-  insertStackOperation(state,*op,indexCount+state->typeStack[typeOffset].opCount);
   //update type-stack
   state->typeCount-=indexCount;
   bool writable;
@@ -6291,17 +6290,22 @@ void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t 
   }else{
     writable=state->typeStack[typeOffset].isWritable;
   }
-  setTypeStackType(state,arrayData->base);
+  TypeId eltType=arrayData->base;
+  if(op->opType==OP_ADDR_OF){
+    eltType=getAddressType(eltType,op);
+    if(setMutability(&eltType,writable))
+      handleError("could set mutability of array element pointer",ERROR_SYNTAX,op->filePos);
+    writable=false;
+  }
+  //update operation stack
+  insertStackOperation(state,*op,indexCount+state->typeStack[typeOffset].opCount);
+  setTypeStackType(state,eltType);
   setTypeStackFlags(state,writable);
   state->typeStack[typeOffset].opCount+=(state->opStackCount-indexOffset);
   if(op->opType==OP_SET){
     if(!writable)
       handleError("cannot write to immutable array",ERROR_SYNTAX,op->filePos);
-    typeCheckSetStackValue(state,op,arrayData->base);
-  }else if(op->opType==OP_ADDR_OF){
-    op->dataType=getAddressType(op->dataType,op);
-    if(!writable&&setMutability(&op->dataType,false))
-      handleError("could not make array pointer immutable",ERROR_SYNTAX,op->filePos);
+    typeCheckSetStackValue(state,op,eltType);
   }
 }
 void typeCheckGet(TypeCheckState* state,Operation* op){
@@ -7717,6 +7721,21 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   fputs(" is incomplete\n",stderr);
   handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
 }
+void deepIncludeGlobals(TypeCheckState* state,Program* prog,FileId fId){
+  if(!quietMode)
+    printf("include globals: %"PRIi32"\n",fId);
+  ProgramFile* f=&prog->files[fId];
+  for(size_t incId=0;incId<f->includeCount;incId++){
+    IncludedFile inc=f->includes[incId];
+    if(inc.id<fId){
+      deepIncludeGlobals(state,prog,inc.id);
+    }
+    if(includeGlobals(&f->globalScope,&prog->files[inc.id].globalScope,inc.includePos)){
+      freeContents(state);
+      handleError(NULL,ERROR_SYNTAX,inc.includePos);
+    }
+  }
+}
 void typeCheckProgram(Program* prog,CodeFile* src){
   TypeCheckState state=(TypeCheckState){
     .compiledOperations=NULL,.opCap=0,.opCount=0,
@@ -7731,15 +7750,11 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     freeContents(&state);
     handleError("allocation of type-check state failed",ERROR_MEMORY,src->currentPos);
   }
+  for(FileId fId=prog->fileCount-1;fId>=0;fId--){
+    deepIncludeGlobals(&state,prog,fId);
+  }
   for(FileId fId=0;fId<prog->fileCount;fId++){
     ProgramFile* f=&prog->files[fId];
-    for(size_t incId=0;incId<f->includeCount;incId++){
-      IncludedFile inc=f->includes[incId];
-      if(includeGlobals(&f->globalScope,&prog->files[inc.id].globalScope,inc.includePos)){
-        freeContents(&state);
-        handleError(NULL,ERROR_SYNTAX,inc.includePos);
-      }
-    }
     state.globalScope=&f->globalScope;
     //type check global operations
     state.index=0;

@@ -1,13 +1,6 @@
-#include list
 
 entryPoint:
-  16 i8 list.create
-    "Hello" 5 list.appendP
-  list.clear
+
 end
 
-## TODO rename list.clear -> list.free
-## TODO correct error message for list.appendP with raw pointer
-## TODO [] @ ?
-## TODO check if public variables from different imports can collide
 ## TODO automatically convert label at end of if to enum-value
