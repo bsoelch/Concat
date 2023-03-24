@@ -21,13 +21,19 @@ entryPoint:
 end
 
 
-enum( NOP ConstValue : Constant string : Error  string : Unknown ) =:: OpValue
+enum( NOP ConstValue : Constant codeBlocks.BlockInfo : block codeBlocks.BlockInfo : blockEnd string : Error string : Unknown ) =:: OpValue
 struct( OpValue : val FilePosition : pos ) =:: Operation
 proc( FilePosition => Operation ) =: opNOP
   OpValue .NOP #swap Operation new return
 end
 proc( Constant  => Operation ) =: opConst
   #dup .val OpValue .Constant new #swap .pos Operation new return
+end
+proc( codeBlocks.BlockType FilePosition => Operation ) =: opBlock
+  #swap -1 codeBlocks.BlockInfo new OpValue .block new #swap Operation new return
+end
+proc( codeBlocks.BlockType FilePosition => Operation ) =: opEndBlock
+  #swap -1 codeBlocks.BlockInfo new OpValue .blockEnd new #swap Operation new return
 end
 proc( string FilePosition  => Operation ) =: opError
   #swap OpValue .Error new #swap Operation new return
@@ -85,6 +91,14 @@ proc( Operation ParserState ptr => ) =: printOp
           end
         #swap #drop
         break
+      block case
+        "Block: " sb.appendS
+        #over .val .block .blockType sb.appendBlockType
+        break
+      blockEnd case
+        "End: " sb.appendS
+        #over .val .blockEnd .blockType sb.appendBlockType
+        break
       Error case
         "Error: " sb.appendS
         #over .val .Error sb.appendStr
@@ -93,7 +107,6 @@ proc( Operation ParserState ptr => ) =: printOp
         "Unknown Operation: " sb.appendS
         #over .val .Unknown sb.appendStr
         break
-      default
     end
     " at " sb.appendS
     #over .pos .fileName sb.appendStr
@@ -453,6 +466,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart constType  state pushConst
       "" string.wrap true return
     end
+    ## TODO check if name is constant identifier
   false return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
@@ -489,7 +503,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
        #over "=:" string.wrap string.eq | _if
       ":" string.wrap string.eq =:: isInit
       fileState state nextWord fileState state readLabel
-        fileState state popTypeConstant #drop
+        fileState state popTypeConstant #drop =:: valType
+        valType
           #dup types.isProcedure if
             ## TODO check for declaration of non-extern procedures
             id.IdentifierType .PROCEDURE new ## TODO automatically convert label at end of if to enum-value
@@ -501,55 +516,109 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             id.IdentifierType .LOCAL_VAR new
           end
-          ## TODO try to get constant value
+        ## TODO try to get constant value
       fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
         .name fileState [] .wordStart opError  state appendError
         return
       end
+      #dup [] .idType id.IdentifierType .TYPE == if
+        #drop:2
+        return
+      end
+      #dup [] .idType id.IdentifierType .PROCEDURE == isInit ! & if
+        state [] .idContext @ id.isGlobal ! if
+          "procedures have to be declared at global level" string.wrap fileState [] .wordStart opError  state appendError
+        end
+        codeBlocks.BlockType .PROCEDURE valType state [] .idContext @ id.openProcScope
+        ## TODO declare procedure label variables
+        #drop:2
+        codeBlocks.BlockType .PROCEDURE fileState [] .wordStart opBlock  state appendOp
+        return
+      end
       ## TODO add operation for identifier declaration
       #drop:2
+      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "=::" string.wrap string.eq _if #drop
       "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "entryPoint:" string.wrap string.eq _if #drop
+      codeBlocks.BlockType .PROCEDURE types.Type .undefined state [] .idContext @ id.openProcScope
       "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "if" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      codeBlocks.BlockType .IF  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .IF  state [] .idContext @ id.openScope
       return
     else #dup "_if" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      state [] .idContext @ id.currentScopeType codeBlocks.BlockType .ELSE != if
+        "'_if' is only allowed in else-blocks" string.wrap fileState [] .wordStart opError  state appendError
+        return
+      end
+      codeBlocks.BlockType ._IF fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .IF  state [] .idContext @ id.updateScopeType #drop
       return
     else #dup "else" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .IF != | if ## TODO  A if B _if ... end syntax
+        "'else' is only allowed in if-blocks" string.wrap fileState [] .wordStart opError  state appendError
+        return
+      end
+      codeBlocks.BlockType .ELSE  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .ELSE  state [] .idContext @ id.openScope
       return
     else #dup "while" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      codeBlocks.BlockType .WHILE  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .WHILE  state [] .idContext @ id.openScope
       return
     else #dup "do" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .WHILE != | if
+        "'do' is only allowed in while-blocks" string.wrap fileState [] .wordStart opError  state appendError
+        return
+      end
+      codeBlocks.BlockType .DO  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .DO  state [] .idContext @ id.openScope
       return
     else #dup "break" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      codeBlocks.BlockType .BREAK  fileState [] .wordStart opBlock  state appendOp
       return
     else #dup "continue" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      codeBlocks.BlockType .CONTINUE  fileState [] .wordStart opBlock  state appendOp
       return
     else #dup "switch" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      codeBlocks.BlockType .SWITCH  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .SWITCH  state [] .idContext @ id.openScope
       return
     else #dup "case" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      state [] .idContext @ id.closeScope #swap #dup codeBlocks.BlockType .SWITCH != #swap codeBlocks.BlockType .CASE != & | if
+        "'case' is only allowed in switch-blocks" string.wrap fileState [] .wordStart opError  state appendError
+        return
+      end
+      codeBlocks.BlockType .CASE  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .CASE  state [] .idContext @ id.openScope
       return
     else #dup "default" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .CASE != | if
+        "'default' is only allowed in switch-case-blocks" string.wrap fileState [] .wordStart opError  state appendError
+        return
+      end
+      codeBlocks.BlockType .DEFAULT  fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .DEFAULT  state [] .idContext @ id.openScope
       return
     else #dup "return" string.wrap string.eq _if #drop
+      state [] .idContext @ id.currentScopeProc
+        #dup types.Type .undefined types.typeEquals if
+          "return outside procedure" string.wrap fileState [] .wordStart opError  state appendError
+        end
+      #drop
+      ## TODO store return type in return operation
       "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "end" string.wrap string.eq _if #drop
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      state [] .idContext @ id.closeScope if #drop
+        "unexpected 'end'" string.wrap fileState [] .wordStart opError  state appendError
+        return
+      end
+        fileState [] .wordStart opEndBlock  state appendOp
       return
     end
     ## TODO try parsing identifier

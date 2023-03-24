@@ -4265,8 +4265,7 @@ void readCompositeType(TypeClass typeClass,CodeFile* codeFile,ParserState* state
         return;
       }
       if(typesSinceLabel==0){
-        if(labelType!=LABEL_TYPE_ENUM)
-          handleError("expected type got ':' ",ERROR_SYNTAX,codeFile->wordStart);
+        handleError("expected type got ':' ",ERROR_SYNTAX,codeFile->wordStart);
         pushTypeConstant(TYPE_UNDEFINED,codeFile->wordStart);
       }
       typesSinceLabel=0;
@@ -7722,8 +7721,6 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
   handleError(NULL,ERROR_UNIMPLEMENTED,op.filePos);
 }
 void deepIncludeGlobals(TypeCheckState* state,Program* prog,FileId fId){
-  if(!quietMode)
-    printf("include globals: %"PRIi32"\n",fId);
   ProgramFile* f=&prog->files[fId];
   for(size_t incId=0;incId<f->includeCount;incId++){
     IncludedFile inc=f->includes[incId];

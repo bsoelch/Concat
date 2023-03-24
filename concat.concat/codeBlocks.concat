@@ -1,7 +1,49 @@
+#include stringBuilder
 
 #namespace codeBlocks
   enum( UNKNOWN PROCEDURE IF _IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
+  struct( BlockType : blockType i32 : blockId ) =:: public BlockInfo
 #end
-
-
-
+#namespace sb
+#using codeBlocks
+  proc( stringBuilder BlockType => stringBuilder ) =: public appendBlockType
+    switch
+      UNKNOWN case
+        "unknown" sb.appendS
+        return
+      PROCEDURE case
+        "procedure" sb.appendS
+        return
+      IF case
+        "if" sb.appendS
+        return
+      _IF case
+        "_if" sb.appendS
+        return
+      ELSE case
+        "else" sb.appendS
+        return
+      WHILE case
+        "while" sb.appendS
+        return
+      DO case
+        "do" sb.appendS
+        return
+      BREAK case
+        "break" sb.appendS
+        return
+      CONTINUE case
+        "continue" sb.appendS
+        return
+      SWITCH case
+        "switch" sb.appendS
+        return
+      CASE case
+        "case" sb.appendS
+        return
+      DEFAULT case
+        "default" sb.appendS
+        return
+    end
+  end
+#end

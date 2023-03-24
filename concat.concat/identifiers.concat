@@ -25,13 +25,14 @@
     a .namespace b .namespace == a .name b .name string.eq & return
   end
 
-  struct( IdentifierName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : blockType NamespaceImportId : prevImports ) =:: Scope
+  struct( IdentifierName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : mut blockType types.Type : currentProc NamespaceImportId : prevImports ) =:: Scope
 
-  proc( codeBlocks.BlockType : blockType NamespaceImportId : imports => Scope ) =: newScope
+  proc( codeBlocks.BlockType : blockType types.Type : procType NamespaceImportId : imports => Scope ) =: newScope
     idHash @
     idEq @
     128 IdentifierData map.create
     blockType
+    procType
     imports
     Scope new return
   end
@@ -42,7 +43,7 @@
     newLabelContext
     128 Scope list.create
     128 Scope list.create
-      codeBlocks.BlockType .UNKNOWN NAMESPACE_IMPORT_NONE newScope list.append
+      codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
     0
       0
       NAMESPACE_IMPORT_NONE
@@ -56,28 +57,53 @@
   proc( IdentifierContext ptr mut : context => Scope ptr mut optional ) =: getGlobalScope
     context [] .globalScopes context [] .globalScopeId list.at return
   end
-  proc( codeBlocks.BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
+  proc( codeBlocks.BlockType : blockType types.Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
     context [] .localScopes
-       blockType context [] .namespaceInfo .imports newScope
+       blockType procType context [] .namespaceInfo .imports newScope
        list.append
     context [] .localScopes =
   end
-  proc( IdentifierContext ptr mut : context => codeBlocks.BlockType ) =: public currentScope
+  proc( codeBlocks.BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
+    context [] .localScopes .length 0 == if
+      types.Type .undefined new ## TODO fix label at end of if
+    else
+      context [] .localScopes list.peek .data [] .currentProc
+    end =:: currentProc
+    context [] .localScopes
+       blockType currentProc context [] .namespaceInfo .imports newScope
+       list.append
+    context [] .localScopes =
+  end
+  proc( codeBlocks.BlockType : blockType  IdentifierContext ptr mut : context => bool ) =: public updateScopeType
+    context [] .localScopes .length 0 == if
+      true return
+    end
+    blockType context [] .localScopes list.peek .data [] .blockType =
+    false return
+  end
+  proc( IdentifierContext ptr mut : context => codeBlocks.BlockType ) =: public currentScopeType
     #using codeBlocks
     context [] .localScopes .length 0 == if
       BlockType .UNKNOWN return
     end
     context [] .localScopes list.peek .data [] .blockType return
   end
-  proc( IdentifierContext ptr mut : context => bool ) =: public closeScope
+  proc( IdentifierContext ptr mut : context => types.Type ) =: public currentScopeProc
+    #using codeBlocks
     context [] .localScopes .length 0 == if
-      true return
+      types.Type .undefined return
+    end
+    context [] .localScopes list.peek .data [] .currentProc return
+  end
+  proc( IdentifierContext ptr mut : context => codeBlocks.BlockType bool ) =: public closeScope
+    #using codeBlocks
+    context [] .localScopes .length 0 == if
+      BlockType .UNKNOWN true return
     end
     context [] .localScopes list.pop #swap context [] .localScopes =
       #dup .identifiers addrOf map.free
       #dup .prevImports context [] .namespaceInfo .imports =
-    #drop
-    false return
+    .blockType false return
   end
   ## TODO scopeItr
   ## TODO different return flags for: error, no-match, match, multi-match
