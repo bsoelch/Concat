@@ -178,6 +178,9 @@ typedef enum{
 
   OP_CHECK_ARRAY_BOUNDS,//special operation for checking array bounds             params: index length            exits the program if index < 0 or index >= length
   OP_CHECK_ENUM_INDEX,//special operation for checking if enum index corresponds to current value  params: enum   exits the program if enum.lable != data.asI64
+  OP_PROG_ARGC,
+  OP_PROG_ARG,
+  OP_PROG_ARG_LEN,
 
   OP_CODE_BLOCK,
   OP_END_BLOCK,
@@ -227,12 +230,18 @@ char const* opName(OpType type){
     case OP_CALL_TEMPLATE:return "OP_CALL_TEMPLATE";
     case OP_CHECK_ARRAY_BOUNDS:return "OP_CHECK_ARRAY_BOUNDS";
     case OP_CHECK_ENUM_INDEX:return "OP_CHECK_ENUM_INDEX";
+    case OP_PROG_ARGC:return "OP_PROG_ARGC";
+    case OP_PROG_ARG:return "OP_PROG_ARG";
+    case OP_PROG_ARG_LEN:return "OP_PROG_ARG_LEN";
     case OP_UNREACHABLE:return "OP_UNREACHABLE";
     case OP_MODIFY_STACK:return "OP_MODIFY_STACK";
     case OP_COMPILER_INFO:return "OP_COMPILER_INFO";
   }
   return "UNDEFINED";
 }
+char const* ARGC_NAME="concatInternal_argc";
+char const* ARGV_NAME="concatInternal_argv";
+char const* MAIN_NAME="concatInternal_main";
 char const* CHECK_BOUNDS_NAME="concatInternal_checkArrayBounds";
 char const* CHECK_ENUM_INDEX_NAME="concatInternal_checkEnumIndex";
 //labels
@@ -2491,6 +2500,7 @@ typedef struct{
   bool hasEntryPoint;
   bool hasCheckBounds;
   bool hasCheckEnum;
+  bool hasGetArgs;
 }Program;
 
 typedef struct{
@@ -2871,6 +2881,19 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       fprintf(target,".label,%"PRIi64",\"",op->dataAs.i64);
       printFilePosition(op->filePos,target);
       fputs("\");\n",target);
+      return size;
+    case OP_PROG_ARGC:
+      fputs(ARGC_NAME,target);
+      return size;
+    case OP_PROG_ARG:
+      fprintf(target,"((int8_t const*)%s[",ARGV_NAME);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);//index
+      fputs("])",target);
+      return size;
+    case OP_PROG_ARG_LEN:
+      fprintf(target,"((int64_t)strlen(%s[",ARGV_NAME);
+      COMPILE_OP_RETURN_ERROR(target,op,opSize);//index
+      fputs("]))",target);
       return size;
     case OP_UNREACHABLE:
       fputs("exit(EXIT_FAILURE);//unreachable\n",target);
@@ -3283,7 +3306,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
       fputs("};\n",target);
       return size;
     case ENTRY_POINT:
-      fputs("int main(void){\n",target);
+      fprintf(target,"void %s(void){\n",MAIN_NAME);
       return size;
     case OP_CALL_PTR:
       fputs("(",target);
@@ -3449,6 +3472,12 @@ void compileToC(FILE* target,Program const* p){
       fputs("0x00};\n",target);
     }
   }
+  if(p->hasEntryPoint)
+    fprintf(target,"void %s(void);\n",MAIN_NAME);
+  if(p->hasGetArgs){
+    fprintf(target,"static int %s;\n",ARGC_NAME);
+    fprintf(target,"static char** %s;\n",ARGV_NAME);
+  }
   if(p->hasCheckBounds){
     fprintf(target,"void %s(int64_t index,int64_t length,char const* pos){\n",CHECK_BOUNDS_NAME);
     fputs("  if(index>=0 && index<length)\n    return;\n",target);
@@ -3524,6 +3553,18 @@ void compileToC(FILE* target,Program const* p){
   for(size_t i=0;i<templateOpCount;){
     i+=compileOp(target,i,templateOps+i,templateOpCount-i,false);
   }
+  if(!p->hasEntryPoint)
+    return;
+  if(p->hasGetArgs){
+    fputs("int main(int argc,char** argv){\n",target);
+    fprintf(target,"%s=argc;\n",ARGC_NAME);
+    fprintf(target,"%s=argv;\n",ARGV_NAME);
+  }else{
+    fputs("int main(void){\n",target);
+  }
+  fprintf(target,"%s();\n",MAIN_NAME);
+  fputs("return EXIT_SUCCESS;\n",target);
+  fputs("}\n",target);
 }
 
 typedef struct{
@@ -4679,7 +4720,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     requireCompileTimeTypes(&word,&type,1,wordPos);
     pushOperation(state,(Operation){.opType=OP_FORCE_CAST,.dataType=type,.filePos=wordPos,.dataAs={.sourceType=TYPE_UNDEFINED}});
       return;
-  }else if(word.length>1&&charAt(word,0)=='.'){
+  }else if(word.length>1&&charAt(word,0)=='.'&&charAt(word,1)!='.'){
     word=sliceStart(word,1);//remove first character
     if(bufferedConstants==0||constBuffer[bufferedConstants-1].value.constType!=CONSTANT_TYPE){
       IntOrErrorCode index=parseInt(word,10);
@@ -4704,8 +4745,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opConstant(type,index,wordPos));
     return;
   }else if(word.length>1&&charAt(word,0)=='#'){//compiler command
-    word.chars++;//remove first character
-    word.length--;
+    word=sliceStart(word,1);//remove first character
     SlicedString args=sliceAtChar(word,':');
     word=args.head;
     //stack manipulation
@@ -5153,6 +5193,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"print")){
     pushOperation(state,(Operation){.opType=OP_PRINT,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});//printed type will be determined by type-checker
     return;
+  }else if(wordEquals(&word,"..argc")){
+    pushOperation(state,(Operation){.opType=OP_PROG_ARGC,.dataType=TYPE_I64,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"..getArg")){
+    pushOperation(state,(Operation){.opType=OP_PROG_ARG,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
   }else if(wordEquals(&word,"mut")){
     handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
     return;
@@ -5379,6 +5425,7 @@ typedef struct{
   bool reachable;//is current code position reachable
   bool hasCheckBounds;
   bool hasCheckEnum;
+  bool hasGetArgs;
 }TypeCheckState;
 
 int32_t newTmpId(TypeCheckState* state){
@@ -6769,8 +6816,39 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       break;
     case OP_CHECK_ARRAY_BOUNDS:
     case OP_CHECK_ENUM_INDEX:
+    case OP_PROG_ARG_LEN:
     case OP_UNREACHABLE:
       break;
+    case OP_PROG_ARGC:
+      state->hasGetArgs=1;
+      pushValue(state,op);
+      return;
+    case OP_PROG_ARG:
+      state->hasGetArgs=1;
+      //prepare argument
+      op.opType=OP_PROG_ARG;
+      op.dataType=pointerType(TYPE_CHAR,false);
+      requireTypes("program argument",state,&TYPE_I64,1,op.filePos);
+      extractCompositeOps(state,1,false);
+      totalOps=state->typeStack[state->typeCount-1].opCount;
+      //check index
+      pushCompiledOperation(state,(Operation){.opType=OP_CHECK_ARRAY_BOUNDS,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={0}});
+      pushCompiledOperations(state,state->opStack+state->opStackCount-totalOps,totalOps);//index
+      pushCompiledOperation(state,(Operation){.opType=OP_PROG_ARGC,.dataType=TYPE_UNDEFINED,.filePos=op.filePos,.dataAs={0}});
+      insertStackOperation(state,op,totalOps);//length
+      state->typeStack[state->typeCount-1].opCount++;
+      state->typeStack[state->typeCount-1].type=op.dataType;
+      // stack: ... I64: [[LEN] [argIndex]]
+      op.opType=OP_PROG_ARG_LEN;
+      op.dataType=TYPE_I64;
+      pushValue(state,op);//value
+      if(ensureOpStackCap(state,state->opStackCount+totalOps))
+        handleError("exceeded op-stack capacity",ERROR_TYPE,op.filePos);
+      memmove(state->opStack+state->opStackCount,state->opStack+state->opStackCount-(totalOps+1),totalOps*sizeof(*(state->opStack)));
+      state->opStackCount+=totalOps;
+      state->typeStack[state->typeCount-1].opCount+=totalOps;
+      // stack: ... I64: [[LEN] [argIndex]] I8 ptr:[[VAL] [argIndex]]
+      return;
     case OP_GET:
     case OP_SET:
     case OP_ADDR_OF:
@@ -7741,7 +7819,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     .openBlocks=malloc(INIT_CAP*sizeof(BlockInfo)),.blockCap=INIT_CAP,.blockCount=0,
     .autoTypes=malloc(prog->nAutoTypes*sizeof(TypeId)),.nAutoTypes=prog->nAutoTypes,
     .globalScope=NULL,.tmpCount=0,.ifCount=0,.whileCount=0,.index=0,
-    .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,};
+    .reachable=true,.hasCheckBounds=false,.hasCheckEnum=false,.hasGetArgs=false};
   int32_t globalTmpCount=0;
   if(state.opStack==NULL||state.typeStack==NULL||state.openBlocks==NULL||state.autoTypes==NULL){//memory allocation failed
     freeContents(&state);
@@ -7860,6 +7938,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
   }
   prog->hasCheckBounds=state.hasCheckBounds;
   prog->hasCheckEnum=state.hasCheckEnum;
+  prog->hasGetArgs=state.hasGetArgs;
   prog->autoTypes=state.autoTypes;
   state.autoTypes=NULL;
   freeContents(&state);
