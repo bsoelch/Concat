@@ -1,4 +1,4 @@
-#include string
+#include stringBuilder
 #include map
 #include optional
 
@@ -8,10 +8,11 @@
 #include "codeBlocks.concat"
 
 #namespace id
-
   enum( TYPE PROCEDURE GLOBAL_VAR  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
 
+
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId #+XXX template data+# i32 : id IdentifierType : idType ) =:: IdentifierData
+  struct( IdentifierType : idType LabelId : labelId i32 : id #+XXX template data+# ) =:: public IdentifierInfo
 
   types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
 
@@ -49,6 +50,13 @@
       NAMESPACE_IMPORT_NONE
     NamespaceInfo new
     IdentifierContext new return
+  end
+
+  proc( IdentifierData ptr : idData => IdentifierInfo ) =: public asIdInfo
+    idData [] .idType
+    idData [] .labelId
+    idData [] .id
+    IdentifierInfo new return
   end
 
   proc( IdentifierContext ptr mut : context => bool ) =: public isGlobal
@@ -188,7 +196,7 @@
   proc( string : id  IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
     id context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( LabelId : label types.Type : valType IdentifierType : idType FilePosition : declaredAt IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+  proc( LabelId : label types.Type : valType IdentifierType : idType ConstValue : constVal FilePosition : declaredAt IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
       "invalid label id" string.wrap NAMESPACE_ID_NONE IdentifierName new
         ID_NONE_DATA @ true return
@@ -235,7 +243,7 @@
     mScope [] .identifiers addrOf
       idName
       valType
-      ConstValue .none ## TODO const value
+      flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
       declaredAt
       label
       -1 ## TODO id
@@ -244,5 +252,43 @@
       IdentifierData new
     map.put #drop ## previous entry is always empty
     idName mScope [] .identifiers addrOf idName map.at .data false return
+  end
+#end
+#namespace sb
+  proc( stringBuilder : sb id.IdentifierInfo : id id.LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
+    sb
+      id .idType switch
+        TYPE case
+          "type " sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          return
+        PROCEDURE case
+          "procedure " sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          return
+        GLOBAL_VAR case
+          "global variable " sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          return
+        LOCAL_VAR case
+          "local variable (" sb.appendS
+          id .id sb.appendI
+          ") " sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          return
+        ARGUMENT case
+          "procedure argument (" sb.appendS
+          id .id sb.appendI
+          ") " sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          return
+        TMP_VAR case
+          "temporary variable (" sb.appendS
+          id .id sb.appendI
+          ") " sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          return
+      end
+
   end
 #end

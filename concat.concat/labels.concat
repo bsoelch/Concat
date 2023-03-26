@@ -54,19 +54,19 @@
   proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
     context [] .nameBuffer .data const .offset + const .length string.create return
   end
-  proc( LabelId : id LabelContext ptr mut : context => string optional ) =: public labelName
+  proc( LabelId : id LabelContext ptr : context => string optional ) =: public labelName
     id 0 < id context [] .labels .length >= | if
       string optional.empty return
     end
     context [] .labels id list.get .name context scAsStr optional.wrap return
   end
-  proc( LabelId : id LabelContext ptr mut : context => LabelFlag ) =: public labelFlags
+  proc( LabelId : id LabelContext ptr : context => LabelFlag ) =: public labelFlags
     id 0 < id context [] .labels .length >= | if
       0 LabelFlag cast return
     end
     context [] .labels id list.get .flags return
   end
-  proc( LabelId : id LabelContext ptr mut : context => FilePosition optional ) =: public labelPos
+  proc( LabelId : id LabelContext ptr : context => FilePosition optional ) =: public labelPos
     id 0 < id context [] .labels .length >= | if
       FilePosition optional.empty return
     end

@@ -1,7 +1,7 @@
 #include string
 
 ( i32 i64 ) =:: aTuple
-struct( i8 _ ptr : data bool i64 : len ) type =: string
+struct( i8 _ ptr : data i64 : len ) type =: string
 enum( A B i32 : C i8 ptr mut : D ) =:: enum1
 enum( A B string : C i64 3 array : D ) =:: anEnum
 
@@ -34,6 +34,9 @@ proc( i32 => ) =: switchTest
 end
 
 entryPoint:
+  0 i32 =: mut x
+  1 x =
+  x print
   0 while #dup "Hello" .length < do
     "Hello" #over [] print
     1 +

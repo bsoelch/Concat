@@ -20,8 +20,19 @@ entryPoint:
   sb.toStr parseTokens ##printTokens
 end
 
-
-enum( NOP ConstValue : Constant codeBlocks.BlockInfo : block codeBlocks.BlockInfo : blockEnd string : Error string : Unknown ) =:: OpValue
+enum(
+                         NOP
+                         entryPoint
+            ConstValue : Constant
+  codeBlocks.BlockInfo : block
+  codeBlocks.BlockInfo : blockEnd
+     id.IdentifierInfo : getId
+     id.IdentifierInfo : setId
+     id.IdentifierInfo : declareId
+     id.IdentifierInfo : predeclareId
+                string : Error
+                string : Unknown
+) =:: OpValue
 struct( OpValue : val FilePosition : pos ) =:: Operation
 proc( FilePosition => Operation ) =: opNOP
   OpValue .NOP #swap Operation new return
@@ -34,6 +45,21 @@ proc( codeBlocks.BlockType FilePosition => Operation ) =: opBlock
 end
 proc( codeBlocks.BlockType FilePosition => Operation ) =: opEndBlock
   #swap -1 codeBlocks.BlockInfo new OpValue .blockEnd new #swap Operation new return
+end
+proc( id.IdentifierInfo FilePosition  => Operation ) =: opGet
+  #swap OpValue .getId new #swap Operation new return
+end
+proc( id.IdentifierInfo FilePosition  => Operation ) =: opSet
+  #swap OpValue .setId new #swap Operation new return
+end
+proc( id.IdentifierInfo FilePosition  => Operation ) =: opDeclare
+  #swap OpValue .declareId new #swap Operation new return
+end
+proc( id.IdentifierInfo FilePosition  => Operation ) =: opPredeclare
+  #swap OpValue .predeclareId new #swap Operation new return
+end
+proc( FilePosition => Operation ) =: opEntryPoint
+  OpValue .entryPoint #swap Operation new return
 end
 proc( string FilePosition  => Operation ) =: opError
   #swap OpValue .Error new #swap Operation new return
@@ -54,7 +80,12 @@ proc( Operation ParserState ptr => ) =: printOp
   =:: context
   64 sb.create
     #over .val switch
-      NOP case break
+      NOP case
+        "NOP" sb.appendS
+        break
+      entryPoint case
+        "entryPoint" sb.appendS
+        break
       OpValue .Constant case
         "Constant: " sb.appendS
         #over .val .Constant #swap ## XXX extract to sb.appendConstValue
@@ -98,6 +129,22 @@ proc( Operation ParserState ptr => ) =: printOp
       blockEnd case
         "End: " sb.appendS
         #over .val .blockEnd .blockType sb.appendBlockType
+        break
+      getId case
+        "get: " sb.appendS
+        #over .val .getId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      setId case
+        "set: " sb.appendS
+        #over .val .setId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      declareId case
+        "declare: " sb.appendS
+        #over .val .declareId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      predeclareId case
+        "predeclare: " sb.appendS
+        #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       Error case
         "Error: " sb.appendS
@@ -143,7 +190,15 @@ end
 proc( Constant : const ParserState ptr mut : state => ) =: pushConst
   state [] .constants const list.append state [] .constants  =
 end
+proc( ParserState ptr mut : state => bool ) =: hasConst
+  state [] .constants .length 0 > return
+end
 
+proc( ParserState ptr mut : state => Constant ) =: popConst
+  state [] .constants
+    list.pop #swap state [] .constants =
+  return
+end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: popTypeConstant
   state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
     "missing type constant" string.wrap fileState [] .wordStart opError state appendError
@@ -204,6 +259,7 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types
   state [] .constants .length =
   state [] .typeBuffer list.asArray false return
 end
+
 proc( ParserState ptr mut : state => i64 ) =: offsetConstants
   state [] .constOffset
     state [] .constants .length state [] .constOffset =
@@ -212,6 +268,7 @@ end
 proc( i64 ParserState ptr mut => ) =: resetConstants
   [] .constOffset =
 end
+
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state => string string ) =: nextWord
   code
     fileState nextToken
@@ -501,7 +558,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
-      ":" string.wrap string.eq =:: isInit
+      "=:" string.wrap string.eq =:: isInit
       fileState state nextWord fileState state readLabel
         fileState state popTypeConstant #drop =:: valType
         valType
@@ -516,7 +573,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             id.IdentifierType .LOCAL_VAR new
           end
-        ## TODO try to get constant value
+        isInit state hasConst & if
+          state popConst .val
+          ## TODO check if type correct
+        else
+          ConstValue .none new
+        end
       fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
         .name fileState [] .wordStart opError  state appendError
         return
@@ -525,26 +587,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #drop:2
         return
       end
-      #dup [] .idType id.IdentifierType .PROCEDURE == isInit ! & if
+      #dup [] .idType id.IdentifierType .PROCEDURE == isInit & if
         state [] .idContext @ id.isGlobal ! if
           "procedures have to be declared at global level" string.wrap fileState [] .wordStart opError  state appendError
         end
         codeBlocks.BlockType .PROCEDURE valType state [] .idContext @ id.openProcScope
         ## TODO declare procedure label variables
-        #drop:2
-        codeBlocks.BlockType .PROCEDURE fileState [] .wordStart opBlock  state appendOp
-        return
       end
-      ## TODO add operation for identifier declaration
-      #drop:2
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
-      return
+      id.asIdInfo fileState [] .wordStart isInit if
+        opDeclare
+      else
+        opPredeclare
+      end
+      state appendOp
+      #drop return
     else #dup "=::" string.wrap string.eq _if #drop
       "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "entryPoint:" string.wrap string.eq _if #drop
       codeBlocks.BlockType .PROCEDURE types.Type .undefined state [] .idContext @ id.openProcScope
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      fileState [] .wordStart opEntryPoint  state appendOp
       return
     else #dup "if" string.wrap string.eq _if #drop
       codeBlocks.BlockType .IF  fileState [] .wordStart opBlock  state appendOp
@@ -559,7 +621,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       codeBlocks.BlockType .IF  state [] .idContext @ id.updateScopeType #drop
       return
     else #dup "else" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .IF != | if ## TODO  A if B _if ... end syntax
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .IF != | if
         "'else' is only allowed in if-blocks" string.wrap fileState [] .wordStart opError  state appendError
         return
       end
@@ -621,7 +683,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart opEndBlock  state appendOp
       return
     end
-    ## TODO try parsing identifier
+  #dup state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
+    id.asIdInfo fileState [] .wordStart opGet state appendOp
+    #drop:2
+    return
+  end #drop:2
   fileState [] .wordStart opUnknown  state appendOp
   return
 end
