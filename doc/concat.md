@@ -611,6 +611,28 @@ proc( => i32 ) : extern externProc ## local extern procedure
 ```
 
 
- 
+## Program Arguments
+
+`..argc` and `..getArg` can be used to access the program arguments:
+
+- `..argc` pushes the number of arguments (as i64) onto the stack
+- `..getArg` takes an integer as argument and pushes the program argument with the given index followed by its length
+
+Example:
+
+The following program prints its program arguments, separated by newlines
+```
+#include stringIO
+
+entryPoint:
+  0 while #dup ..argc < do
+    #dup ..getArg string.create io.stdOut #swap io.fputStr #drop
+    io.stdOut '\n' io.fputc #drop
+    1 +
+  end #drop
+end
+```
+
+
 
 
