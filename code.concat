@@ -8,5 +8,3 @@ entryPoint:
     1 +
   end #drop
 end
-
-## TODO automatically convert label at end of if to enum-value

@@ -5617,6 +5617,24 @@ void extractCompositeOps(TypeCheckState* state,size_t nStackValues,bool keepWrit
   state->opStackCount=newOffset;
 }
 
+void labelConstToEnum(TypeCheckState* state,size_t typeOffset,size_t opOffset,FilePosition pos){
+  if(state->typeStack[typeOffset].opCount>1||state->opStack[opOffset].opType!=OP_CONSTANT){
+    handleError("unexpected operation with type ENUM_LABEL",ERROR_SYNTAX,pos);//enum-label type should only exist on enum-label constants
+  }
+  if(changeEnumType(&state->typeStack[typeOffset].type,false))
+    handleError("could not update enum type",ERROR_MEMORY,pos);
+  if(!typeEquals(getTypeElements(state->typeStack[typeOffset].type)[state->opStack[opOffset].dataAs.i64],TYPE_UNDEFINED)){
+    String label=getLabelName(getTypeElementLabel(state->typeStack[typeOffset].type,state->opStack[opOffset].dataAs.i64));
+    fprintf(stderr,"cannot directly convert enum label %"PRI_STR" to enum value in ",PRI_STR_ARGS(label));
+    printTypeName(state->typeStack[typeOffset].type,stderr);
+    fputs("\n  use the 'new' operator to create enum values with data\n",stderr);
+    handleError(NULL,ERROR_SYNTAX,pos);
+  }
+  state->opStack[opOffset].opType=OP_NEW;
+  if(changeEnumType(&state->opStack[opOffset].dataType,false))
+    handleError("could not update enum type",ERROR_MEMORY,pos);
+  setTypeStackTypeOffset(state,state->typeCount-typeOffset,state->opStack[opOffset].dataType);
+}
 
 bool predeclareBlockVariables(TypeCheckState* state,size_t blockStart,StackState* blockStack){
   if(ensureCompiledOpCap(state,state->opCount+blockStack->typeCount))
@@ -5693,6 +5711,10 @@ void storeStackValues(TypeCheckState* state,StackState* stackState,StackState* e
   if(ignoreFirst)
     offset-=state->typeStack[typeCount].opCount;
   for(int64_t i=typeCount-1;i>=0;i--){
+    offset-=state->typeStack[i].opCount;
+    if(isEnumLabelType(state->typeStack[i].type)){
+      labelConstToEnum(state,i,offset,pos);
+    }
     if(!initStackState&&!typeEquals(state->typeStack[i].type,expectedState->types[i].type)){
       fprintf(stderr,"wrong type at end of %s expected ",errorMessage);
       printTypeName(expectedState->types[i].type,stderr);
@@ -5708,8 +5730,7 @@ void storeStackValues(TypeCheckState* state,StackState* stackState,StackState* e
     }else{
       pushCompiledOperation(state,opSetTmpVar(state->typeStack[i].type,varId,pos));
     }
-    pushCompiledOperations(state,state->opStack+offset-state->typeStack[i].opCount,state->typeStack[i].opCount);
-    offset-=state->typeStack[i].opCount;
+    pushCompiledOperations(state,state->opStack+offset,state->typeStack[i].opCount);
     if(!ignoreFirst){//remove element from stack if ignoreFirst false
       state->opStackCount-=state->typeStack[i].opCount;
       state->typeCount--;
@@ -5807,22 +5828,7 @@ void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,s
     }
     //convert enum labels to enum constants
     if(isEnumLabel(types[nTypes-k],state->typeStack[state->typeCount-k].type)){
-      if(state->typeStack[state->typeCount-k].opCount>1||state->opStack[offset].opType!=OP_CONSTANT){
-        handleError("unexpected operation with type ENUM_LABEL",ERROR_SYNTAX,pos);//enum-label type should only exist on enum-label constants
-      }
-      if(changeEnumType(&state->typeStack[state->typeCount-k].type,false))
-        handleError("could not update enum type",ERROR_MEMORY,pos);
-      if(!typeEquals(getTypeElements(state->typeStack[state->typeCount-k].type)[state->opStack[offset].dataAs.i64],TYPE_UNDEFINED)){
-        String label=getLabelName(getTypeElementLabel(state->typeStack[state->typeCount-k].type,state->opStack[offset].dataAs.i64));
-        fprintf(stderr,"missing data value for creating enum constant %"PRI_STR" in ",PRI_STR_ARGS(label));
-        printTypeName(state->typeStack[state->typeCount-k].type,stderr);
-        fputs("\nto create enum values with data use the 'new' operator\n",stderr);
-        handleError(NULL,ERROR_SYNTAX,pos);
-      }
-      state->opStack[offset].opType=OP_NEW;
-      if(changeEnumType(&state->opStack[offset].dataType,false))
-        handleError("could not update enum type",ERROR_MEMORY,pos);
-      setTypeStackTypeOffset(state,k,state->opStack[offset].dataType);
+      labelConstToEnum(state,state->typeCount-k,offset,pos);
       continue;
     }
     typeErrorMessage(opName,types[nTypes-k],state->typeStack[state->typeCount-k].type);

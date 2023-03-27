@@ -1,0 +1,10 @@
+enum( A B i32 : C ) =:: anEnum
+
+entryPoint:
+  false if
+    anEnum .A
+  else
+    anEnum .B
+  end =:: e
+  e #types #drop
+end

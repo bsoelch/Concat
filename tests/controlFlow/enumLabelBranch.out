@@ -1,0 +1,4 @@
+types:
+-----------------
+namedType "anEnum" [ enum (0) ( A B i32 : C ) ]
+-----------------
