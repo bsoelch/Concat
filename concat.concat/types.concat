@@ -309,6 +309,73 @@ i32 =:: CompositeFlag
 64 CompositeFlag =: COMP_FLAG_TEMPLATE
 struct( i64 : eltsOffset i64 : eltCount id.LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
 
+proc( Type => bool ) =: public isComposite
+  ## XXX unwrap named type
+  switch
+    tuple struct labeledProcIn procIn procOut enum enumLabel case
+      true return
+    undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType case
+      false return
+  end
+end
+proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
+  composite
+    #dup switch
+      tuple case
+        .tuple
+        break
+      struct case
+        .struct
+        break
+      labeledProcIn case
+        .labeledProcIn
+        break
+      procIn case
+        .procIn
+        break
+      procOut case
+        .procOut
+        break
+      enum case
+        .enum
+        break
+      enumLabel case
+        .enumLabel
+        break
+      undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType case
+        #drop CompositeType ptr mut optional.empty return
+    end
+  context [] .compositeTypes #swap list.at return
+end
+proc( Type : composite TypeContext ptr mut : context => i64 ) =: public compositeEltCount
+  composite context compositeData
+    #dup optional.isEmpty if #drop
+      0 return
+    end
+  .data [] .eltCount return
+end
+proc( Type : composite i32 : index TypeContext ptr mut : context => id.LabelId ) =: public compositeGetLabel
+  composite switch
+    struct labeledProcIn enum enumLabel case
+      break
+    undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType tuple procIn procOut case
+      id.LABEL_ID_NONE return
+  end
+  composite context compositeData
+    #dup optional.isEmpty if #drop
+      id.LABEL_ID_NONE return
+    end
+  .data [] .labelOffset index + return
+end
+proc( Type : composite i64 : index TypeContext ptr mut : context => Type ) =: public compositeGetElement
+  composite context compositeData
+    #dup optional.isEmpty if #drop
+      Type .undefined return
+    end
+  .data [] .eltsOffset index + context [] .compositeData #swap list.get return
+end
+
+
 proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   a .length b .length < if
     -1 return
@@ -398,7 +465,7 @@ proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext 
 end
 #end
 #namespace sb
-proc( stringBuilder types.CompositeType types.TypeContext ptr => stringBuilder ) =: public appendComposite
+proc( stringBuilder types.CompositeType types.TypeContext ptr => stringBuilder ) =: appendComposite
   =:: context
   =:: comp
   0 while #dup comp .eltCount < do
@@ -425,6 +492,12 @@ proc( Type : mType TypeContext ptr mut : context => bool ) =: public isCallable
     context getBaseType
   end
   Type .procedure == return
+end
+proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public getProcIn
+  proc isProcedure ! if
+    Type .undefined true return
+  end
+  context [] .procTypes proc .procedure list.get .in false return
 end
 proc( Type : in Type : out #+ TODO static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
   in Type .undefined == out Type .undefined == | if

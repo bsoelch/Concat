@@ -196,7 +196,7 @@
   proc( string : id  IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
     id context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( LabelId : label types.Type : valType IdentifierType : idType ConstValue : constVal FilePosition : declaredAt IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+  proc( LabelId : label types.Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
       "invalid label id" string.wrap NAMESPACE_ID_NONE IdentifierName new
         ID_NONE_DATA @ true return
@@ -246,7 +246,7 @@
       flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
       declaredAt
       label
-      -1 ## TODO id
+      id
       ## XXX template data
       idType
       IdentifierData new
@@ -259,34 +259,40 @@
     sb
       id .idType switch
         TYPE case
-          "type " sb.appendS
+          "type \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
           return
         PROCEDURE case
-          "procedure " sb.appendS
+          "procedure \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
           return
         GLOBAL_VAR case
-          "global variable " sb.appendS
+          "global variable \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
           return
         LOCAL_VAR case
           "local variable (" sb.appendS
           id .id sb.appendI
-          ") " sb.appendS
+          ") \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
           return
         ARGUMENT case
           "procedure argument (" sb.appendS
           id .id sb.appendI
-          ") " sb.appendS
+          ") \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
           return
         TMP_VAR case
           "temporary variable (" sb.appendS
           id .id sb.appendI
-          ") " sb.appendS
+          ") \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
           return
       end
 

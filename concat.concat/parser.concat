@@ -335,9 +335,29 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
     while fileState nextToken
       fileState state tryParseConstant if #drop continue end
       #dup endString string.eq if #drop
-        ## TODO check if labels balanced
+        labelType LabelType .NONE == if
+          id.LABEL_ID_NONE
+        else labelType LabelType .PROC_IN == state [] .idContext .labelContext addrOf id.labelOffset labelOffset == & _if
+          id.LABEL_ID_NONE ## procedure with no lables
+        else
+          state [] .constants .length constOffset -
+          state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
+            "two many types for label" string.wrap fileState [] .wordStart opError  state appendError
+            while #dup 0 > do
+              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel #drop
+              1 -
+            end
+          else #dup 0 < _if
+            "not enough types for label" string.wrap fileState [] .wordStart opError  state appendError
+            while #dup 0 < do
+              types.Type .undefined fileState [] .wordStart constType  state pushConst
+              1 +
+            end
+          end #drop
+          labelOffset
+        end
         prevConstants state resetConstants
-        labelOffset state [] .constants .length constOffset - fileState state popTypeConstants return
+        state [] .constants .length constOffset - fileState state popTypeConstants return
       else #dup ":" string.wrap string.eq _if #drop
         labelType LabelType .NONE == if
           "unexpected ':' operator" string.wrap fileState [] .wordStart opError  state appendError
@@ -586,11 +606,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             id.IdentifierType .LOCAL_VAR
           end
+        -1 ## id
         isInit state hasConst & if
           state popConst .val
           ## TODO check if type correct
         else
-          ConstValue .none new
+          ConstValue .none
         end
       fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
         .name fileState [] .wordStart opError  state appendError
@@ -605,7 +626,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           "procedures have to be declared at global level" string.wrap fileState [] .wordStart opError  state appendError
         end
         codeBlocks.BlockType .PROCEDURE valType state [] .idContext @ id.openProcScope
-        ## TODO declare procedure label variables
+        #dup [] .valueType state [] .typeContext @ types.getProcIn if
+          "could not resolve procedure signature" string.wrap fileState [] .wordStart opError  state appendError
+        end =:: inType
+        inType types.Type .labeledProcIn == if
+          inType
+            #dup state [] .typeContext @ types.compositeEltCount =:: count
+            0 while #dup count < do
+              #over #over state [] .typeContext @ types.compositeGetLabel
+                #dup id.LABEL_ID_NONE != if
+                    #over:2 #over:2 state [] .typeContext @ types.compositeGetElement
+                  id.IdentifierType .ARGUMENT #over:3 ConstValue .none fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
+                    .name fileState [] .wordStart opError  state appendError
+                    #drop:4 return
+                  end #drop:2
+                else #drop end
+              1 +
+            end #drop
+          #drop
+        end
       end
       id.asIdInfo fileState [] .wordStart isInit if
         opDeclare
@@ -629,6 +668,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             else
               id.IdentifierType .LOCAL_VAR
             end
+          -1 ## id
           const .val fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
             .name fileState [] .wordStart opError  state appendError
             return
