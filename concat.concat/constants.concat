@@ -1,26 +1,36 @@
+#include future
 
 #include "files.concat"
 #include "labels.concat"
 #include "types.concat"
 
 enum( none wildCard bool : boolean i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
-struct( ConstValue : val FilePosition : pos ) =:: public Constant
+struct( types.Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
 
-proc( FilePosition => Constant ) =: public constWildcard
-  ConstValue .wildCard new #swap Constant new return
+proc( FilePosition : pos => Constant ) =: public constWildcard
+  types.Type .undefined ConstValue .wildCard new pos Constant new return
 end
 proc( i64 FilePosition => Constant ) =: public constInt
-  #swap ConstValue .int new #swap Constant new return
+  =:: pos
+  #dup i32.MIN < #over i32.MAX > | if types.primitive.I64 else types.primitive.I32 end #swap ConstValue .int new pos Constant new return
 end
 proc( id.StringConstant FilePosition => Constant ) =: public constStr
-  #swap ConstValue .str new #swap Constant new return
+  =:: pos
+  types.Type .undefined #swap ConstValue .str new pos Constant new return ## TODO store correct string type
 end
 proc( i8 FilePosition => Constant ) =: public constChar
-  #swap ConstValue .chr new #swap Constant new return
+  =:: pos
+  types.primitive.I8 #swap ConstValue .chr new pos Constant new return
 end
 proc( bool FilePosition => Constant ) =: public constBool
-  #swap ConstValue .boolean new #swap Constant new return
+  =:: pos
+  types.primitive.BOOL #swap ConstValue .boolean new pos Constant new return
 end
 proc( types.Type FilePosition => Constant ) =: public constType
-  #swap ConstValue .typeId new #swap Constant new return
+  =:: pos
+  types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
+end
+proc( ConstValue types.Type FilePosition => Constant ) =: public newConst
+  =:: pos
+  #swap pos Constant new return
 end

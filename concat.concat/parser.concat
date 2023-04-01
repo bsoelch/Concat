@@ -30,6 +30,7 @@ enum(
      id.IdentifierInfo : setId
      id.IdentifierInfo : declareId
      id.IdentifierInfo : predeclareId
+            types.Type : Return
                 string : Error
                 string : Unknown
 ) =:: OpValue
@@ -60,6 +61,9 @@ proc( id.IdentifierInfo FilePosition  => Operation ) =: opPredeclare
 end
 proc( FilePosition => Operation ) =: opEntryPoint
   OpValue .entryPoint #swap Operation new return
+end
+proc( types.Type FilePosition => Operation ) =: opReturn
+  #swap OpValue .Return new #swap Operation new return
 end
 proc( string FilePosition  => Operation ) =: opError
   #swap OpValue .Error new #swap Operation new return
@@ -115,9 +119,9 @@ proc( Operation ParserState ptr => ) =: printOp
                    '\''  sb.appendC
               break
             typeId case
-              "type \'"     sb.appendS
+              "type \""     sb.appendS
               #over .typeId context [] .typeContext addrOf sb.appendType
-                   '\''     sb.appendC
+                   '\"'     sb.appendC
               break
           end
         #swap #drop
@@ -145,6 +149,10 @@ proc( Operation ParserState ptr => ) =: printOp
       predeclareId case
         "predeclare: " sb.appendS
         #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      Return case
+        "Return: " sb.appendS
+        #over .val .Return context [] .typeContext @ sb.appendType
         break
       Error case
         "Error: " sb.appendS
@@ -523,7 +531,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart constType  state pushConst
       "" string.wrap true return
     end
-    ## TODO check if name is constant identifier
+    #dup state [] .idContext @ id.getIdentifier ! if ## read named constants
+      #dup [] .constValue ConstValue .none != if
+        #dup [] .constValue #over [] .valueType fileState [] .wordStart newConst  state pushConst
+        #drop:2 true return
+      end
+      #drop:2
+    else #drop:2 end
   false return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
@@ -563,15 +577,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState state popTypeConstant #drop =:: valType
         valType
           #dup types.isProcedure if
-            ## TODO check for declaration of non-extern procedures
-            id.IdentifierType .PROCEDURE new ## TODO automatically convert label at end of if to enum-value
+            id.IdentifierType .PROCEDURE
           else #dup types.primitive.TYPE types.typeEquals _if
             ## TODO create constant for declarations
-            id.IdentifierType .TYPE new
+            id.IdentifierType .TYPE
           else state [] .idContext @ id.isGlobal _if
-            id.IdentifierType .GLOBAL_VAR new
+            id.IdentifierType .GLOBAL_VAR
           else
-            id.IdentifierType .LOCAL_VAR new
+            id.IdentifierType .LOCAL_VAR
           end
         isInit state hasConst & if
           state popConst .val
@@ -602,6 +615,32 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state appendOp
       #drop return
     else #dup "=::" string.wrap string.eq _if #drop
+      fileState state nextWord fileState state readLabel
+        state hasConst if
+          state popConst =:: const
+          const .valueType
+            #dup types.isProcedure if
+              "unexpected procedure" string.wrap fileState [] .wordStart opError  state appendError
+              #drop:2 return
+            else #dup types.primitive.TYPE types.typeEquals _if
+              id.IdentifierType .TYPE
+            else state [] .idContext @ id.isGlobal _if
+              id.IdentifierType .GLOBAL_VAR
+            else
+              id.IdentifierType .LOCAL_VAR
+            end
+          const .val fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
+            .name fileState [] .wordStart opError  state appendError
+            return
+          end
+          #dup [] .idType id.IdentifierType .TYPE == if
+            #drop:2
+            return
+          end
+          id.asIdInfo fileState [] .wordStart opDeclare state appendOp
+          #drop return
+        end
+      #drop
       "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "entryPoint:" string.wrap string.eq _if #drop
@@ -671,9 +710,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup types.Type .undefined types.typeEquals if
           "return outside procedure" string.wrap fileState [] .wordStart opError  state appendError
         end
-      #drop
-      ## TODO store return type in return operation
-      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      #+XXX only store out-type+# fileState [] .wordStart opReturn state appendOp
       return
     else #dup "end" string.wrap string.eq _if #drop
       state [] .idContext @ id.closeScope if #drop

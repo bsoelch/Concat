@@ -7,7 +7,7 @@ codeTarget="./concat2"
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
 
 # clear console
-clear
+clear > "/dev/null"
 echo "recompile compiler"
 echo "-----------------------------------------"
 gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {

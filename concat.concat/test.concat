@@ -34,7 +34,7 @@ proc( i32 => ) =: switchTest
 end
 
 entryPoint:
-  0 i32 =: mut x
+  0 =:: x
   1 x =
   x print
   0 while #dup "Hello" .length < do

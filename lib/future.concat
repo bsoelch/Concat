@@ -223,6 +223,11 @@ entryPoint:
 end
 +#
 
+#namespace i32
+  -0x8000_0000 i32 =: public MIN
+   0x7fff_ffff i32 =: public MAX
+#end
+
 #namespace array
   #template type : T #end
   proc( T arrayView : src => T arrayView ) =: public clone
