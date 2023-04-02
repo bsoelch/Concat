@@ -1,2 +1,7 @@
+proc( => i32 ) =: getInt
+  1 return
+end
+
 entryPoint:
+  false if 0 else getInt true _if end print ## FIXME handle tmp variables that are created in else branch
 end
