@@ -84,8 +84,8 @@ enum(
             ConstValue : Constant
   codeBlocks.BlockInfo : block
   codeBlocks.BlockInfo : blockEnd
-     id.IdentifierInfo : getId
-     id.IdentifierInfo : setId
+     id.IdentifierInfo : mut getId
+     id.IdentifierInfo : mut setId
      id.IdentifierInfo : declareId
      id.IdentifierInfo : predeclareId
             types.Type : Return
@@ -94,7 +94,7 @@ enum(
          stringBuilder : Error
                 string : Unknown
 ) =:: OpValue
-struct( OpValue : val FilePosition : pos ) =:: Operation
+struct( OpValue : mut val FilePosition : mut pos ) =:: Operation
 proc( FilePosition => Operation ) =: opNOP
   OpValue .NOP #swap Operation new return
 end
@@ -280,6 +280,10 @@ proc( stringBuilder FilePosition ParserState ptr mut => ) =: appendError
   =:: state
   opError state false appendOpInternal
 end
+proc( ParserState ptr mut => Operation ptr mut optional ) =: peekOp
+  [] .ops list.peek
+end
+
 proc( Constant : const ParserState ptr mut : state => ) =: pushConst
   state [] .constants const list.append state [] .constants  =
 end
@@ -884,9 +888,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "unimplemented" sb.wrap fileState [] .wordStart state appendError
       return
     else #dup "=" string.wrap string.eq _if #drop
-      ## TODO convert get to set
-      "unimplemented" sb.wrap fileState [] .wordStart state appendError
-      return
+      state hasConst if ## XXX allow overwriting of uninitialized type constants
+        "cannot assign value to constant" sb.wrap fileState [] .wordStart state appendError
+        return
+      end
+      state peekOp #dup optional.isEmpty if #drop
+        "unexpected \"=\"" sb.wrap fileState [] .wordStart state appendError
+        return
+      end .data
+      #dup [] .val OpValue .getId == if
+        #dup [] .val .getId #over [] .val .setId =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else
+        "unexpected operation for \"=\" \n" sb.wrap
+          #swap [] state sb.appendOp
+        fileState [] .wordStart state appendError
+        return
+      end
     else #dup "entryPoint:" string.wrap string.eq _if #drop
       codeBlocks.BlockType .PROCEDURE types.Type .undefined state [] .idContext @ id.openProcScope
       fileState [] .wordStart opEntryPoint  state appendOp

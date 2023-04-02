@@ -35,8 +35,9 @@ end
 
 entryPoint:
   0 =:: x
+  0 =:: mut y
   i32 2 malloc =:: p
-  1 x =
+  1 y =
   x print
   0 while #dup "Hello" .length < do
     "Hello" #over [] print
