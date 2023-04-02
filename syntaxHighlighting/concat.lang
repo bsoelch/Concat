@@ -63,11 +63,7 @@
           case            |
           default         |
           return          |
-          end             |
-          new             |
-          cast            |
-          cast!           |
-          print          
+          end             
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -110,7 +106,13 @@
           &lt;&lt;            |
           &gt;&gt;            |
           &gt;&gt;u           |
-          addrOf
+          addrOf              |
+          new                 |
+          cast                |
+          cast!               |
+          ..argc              |
+          ..getArg            |
+          print          
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -140,7 +142,7 @@
     <context id="field-access" style-ref="field">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          \.([^[:space:]])+
+          \.([^\.[:space:]])+
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
