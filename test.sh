@@ -18,10 +18,16 @@ for f in *.concat; do ## go through all concat files in the test directory
   touch ".${f%.*}.out"
   touch ".${f%.*}.err"
   
+  args=( )
+  if [ -f "${f%.*}.args" ] 
+  then
+    mapfile -t args < "${f%.*}.args"
+  fi
+  
   ../../concat "$f" -o "${f%.*}.c" -l "../../lib/" -q > ".${f%.*}.out" 2> ".${f%.*}.err" &&
   gcc ${cArgs[@]} -Wno-unused "${f%.*}.c" "../extern.c" -o "${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
   ( [ -f "${f%.*}.in" ] && cat "${f%.*}.in" || echo "" ) | # use ${f%.*}.in as input if it exists otherwise use empty stdin
-    "./${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err"
+    "./${f%.*}" "${args[@]}" >> ".${f%.*}.out" 2>> ".${f%.*}.err"
   nTested=$((nTested+1))
   ##compare output with expected output, print passed/failed remove output files
   if ( [ -f "${f%.*}.out" ] || [ -s ".${f%.*}.out" ] ) && ! ( cmp -s "${f%.*}.out" ".${f%.*}.out" )

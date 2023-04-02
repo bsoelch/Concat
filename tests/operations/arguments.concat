@@ -1,0 +1,9 @@
+#include stringIO
+
+entryPoint:
+  0 while #dup ..argc < do
+    #dup ..getArg string.create io.stdOut #swap io.fputStr #drop
+    io.stdOut '\n' io.fputc #drop
+    1 +
+  end #drop
+end
