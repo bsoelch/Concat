@@ -634,7 +634,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             #dup state [] .typeContext @ types.compositeEltCount =:: count
             0 while #dup count < do
               #over #over state [] .typeContext @ types.compositeGetLabel
-                #dup id.LABEL_ID_NONE != if
+                #dup state [] .idContext .labelContext @ id.isLabelEmpty ! if
                     #over:2 #over:2 state [] .typeContext @ types.compositeGetElement
                   id.IdentifierType .ARGUMENT #over:3 ConstValue .none fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
                     .name fileState [] .wordStart opError  state appendError

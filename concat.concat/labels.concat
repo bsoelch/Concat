@@ -66,6 +66,12 @@
     end
     context [] .labels id list.get .flags return
   end
+  proc( LabelId : id LabelContext ptr : context => bool ) =: public isLabelEmpty
+    id 0 < id context [] .labels .length >= | if
+      true return
+    end
+    context [] .labels id list.get .flags FLAG_EMPTY & 0 != return
+  end
   proc( LabelId : id LabelContext ptr : context => FilePosition optional ) =: public labelPos
     id 0 < id context [] .labels .length >= | if
       FilePosition optional.empty return
