@@ -73,7 +73,7 @@
   end
   proc( codeBlocks.BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
     context [] .localScopes .length 0 == if
-      types.Type .undefined new ## TODO fix label at end of if
+      types.Type .undefined
     else
       context [] .localScopes list.peek .data [] .currentProc
     end =:: currentProc

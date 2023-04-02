@@ -122,7 +122,7 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
         end
        ")" appendS
        return
-    struct case ## TODO print composite types, proc types, ...
+    struct case
       .struct
       #swap
         "struct[" appendS
@@ -187,7 +187,7 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
         end
        ")" appendS
        return
-    namedType case
+    namedType case ## TODO print named types, generic types
       .namedType appendI return
     namedLabel case
       .namedLabel appendI return
