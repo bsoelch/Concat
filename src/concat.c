@@ -889,8 +889,10 @@ TypeId compositeType(TypeClass typeClass,TypeId const* elements,LabelId labelOff
       }
     }
   }
-  if(compositeTypeCount+1>=MAX_COMPOSITE)
+  if(compositeTypeCount>=MAX_COMPOSITE){
+    fputs("composite type overflow\n",stderr);
     return TYPE_UNDEFINED;
+  }
   TypeId const* types;
   if(typeMatch!=-1){
     types=compositeTypes[typeMatch].types+matchIndex;
@@ -977,6 +979,10 @@ TypeId arrayType(bool isView,TypeId base, int32_t dims,ArraySize const* sizes,bo
     if(mSizes==NULL)
       return TYPE_UNDEFINED;
     memcpy(mSizes,sizes,dims*sizeof(*mSizes));
+  }
+  if(arrayTypeCount>=MAX_ARRAY_TYPES){
+    fputs("array type overflow\n",stderr);
+    return TYPE_UNDEFINED;
   }
   arrayTypes[arrayTypeCount]=(ArrayType){.base=base,.dims=dims,.sizes=mSizes,.id=arrayTypeCount,.sizeUsed=false,
     .fixedSize=(dims==0)||(sizes!=NULL),.isMutable=isMutable,.viewOnly=isView};
@@ -1854,6 +1860,7 @@ void printOperation(Operation op,FILE* out){
 String basePath={0};
 String libPath={0};
 bool quietMode=false;
+int32_t maxTemplateDepth=128;
 
 #define MAX_NAMESPACES 1024
 typedef struct{
@@ -7890,6 +7897,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     state.compiledOperations=NULL;
     GenericType* templateArgs=NULL;
     bool compiledImpl;//XXX? check directly if implementations have been added
+    int64_t templateDepth=0;
     do{//compiling template implementations may produce new template implementations 
       compiledImpl=false;
       for(size_t t=0;t<templateCount;t++){
@@ -7907,6 +7915,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
             templateArgs[a].argId=a;
             templateArgs[a].isTemplate=true;
           }
+          int32_t prevImpl=templates[t].implCount;
           for(int32_t i=templates[t].compiledImpls;i<templates[t].implCount;i++){
             state.tmpCount=0;//XXX differentiate between local and global template code
             state.index=0;
@@ -7932,9 +7941,18 @@ void typeCheckProgram(Program* prog,CodeFile* src){
               freeContents(&state);
               handleError("unfinished code-block",ERROR_SYNTAX,src->currentPos);
             }
+            if(templates[t].implCount>prevImpl&&templateDepth++>maxTemplateDepth){
+              prevImpl=templates[t].implCount;
+              freeContents(&state);
+              handleError("exceeded maximum template expansion depth",ERROR_SYNTAX,src->currentPos);
+            }
           }
           templates[t].compiledImpls=templates[t].implCount;
         }
+      }
+      if(templateDepth++>maxTemplateDepth){
+        freeContents(&state);
+        handleError("exceeded maximum template expansion depth",ERROR_SYNTAX,src->currentPos);
       }
     }while(compiledImpl);//if any new implementations compiled rerun loop
     free(templateOps);

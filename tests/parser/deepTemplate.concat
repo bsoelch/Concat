@@ -1,0 +1,8 @@
+#template type : T #end
+proc( => ) =: infiniteExpand
+  ( T T ) infiniteExpand
+end
+
+entryPoint:
+  i32 infiniteExpand
+end
