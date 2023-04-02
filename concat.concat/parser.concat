@@ -17,7 +17,7 @@ entryPoint:
     '\n' sb.appendC
     f sb.appendFile #drop
     '\n' sb.appendC
-  sb.toStr parseTokens ##printTokens
+  sb.toStr parseTokens
 end
 
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: BinaryOperator
@@ -101,6 +101,8 @@ end
 proc( string FilePosition  => Operation ) =: opUnknown
   #swap OpValue .Unknown new #swap Operation new return
 end
+
+struct( types.Type : argType ConstValue : val id.LabelId : labelId ) =:: StaticArgument
 struct(
     types.TypeContext : mut typeContext
  id.IdentifierContext : mut idContext
@@ -108,11 +110,14 @@ struct(
                   i64 : mut constOffset
       types.Type list : mut typeBuffer
  types.ArraySize list : mut arraySizeBuffer
+  StaticArgument list : mut staticArgs
+                  i64 : mut staticArgsOffset
        Operation list : mut ops
 ) =:: ParserState
-proc( Operation ParserState ptr => ) =: printOp
+#namespace sb
+proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
   =:: context
-  64 sb.create
+  #swap
     #over .val switch
       NOP case
         "NOP" sb.appendS
@@ -152,6 +157,10 @@ proc( Operation ParserState ptr => ) =: printOp
               "type \""     sb.appendS
               #over .typeId context [] .typeContext addrOf sb.appendType
                    '\"'     sb.appendC
+              break
+            genericInt case
+              "generic integer "  sb.appendS
+              #over .int sb.appendI
               break
           end
         #swap #drop
@@ -205,9 +214,9 @@ proc( Operation ParserState ptr => ) =: printOp
     #over .pos .posInLine sb.appendI
     '\n' sb.appendC
     #swap #drop
-  io.stdOut #swap io.fputSb #drop
+  return
 end
-
+#end
 
 proc( Operation : op ParserState ptr mut : state bool : pushConstants => ) =: appendOpInternal
   state [] .ops
@@ -240,6 +249,17 @@ proc( ParserState ptr mut : state => Constant ) =: popConst
   state [] .constants
     list.pop #swap state [] .constants =
   return
+end
+proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: peekTypeConstant
+  state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
+    "missing type constant" string.wrap fileState [] .wordStart opError state appendError
+     types.Type .undefined true return
+  end
+  state [] .constants list.peek .data [] .val ConstValue .typeId != if
+    "wrong type for constant expected type" string.wrap state [] .constants list.peek .data [] .pos opError state appendError
+    types.Type .undefined true return
+  end
+  state [] .constants list.peek .data [] .val .typeId false return
 end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: popTypeConstant
   state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
@@ -301,6 +321,29 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types
   state [] .constants .length =
   state [] .typeBuffer list.asArray false return
 end
+proc( id.LabelId : label types.Type : valType i64 : index ParserState ptr mut : state => ) =: newStaticArg
+  state [] .staticArgs
+    valType
+      #dup types.primitive.TYPE types.typeEquals if
+        index i32 cast types.newGenericType ConstValue .typeId new
+      else
+        index ConstValue .genericInt new
+      end
+    label
+    StaticArgument new
+  list.append state [] .staticArgs =
+end
+proc( string : name ParserState ptr mut : state => StaticArgument optional ) =: getStaticArg
+  state [] .staticArgsOffset while #dup state [] .staticArgs .length < do
+    state [] .staticArgs #over list.get
+      #dup .labelId state [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
+        #swap #drop optional.wrap return
+      end
+    #drop
+    1 +
+  end #drop
+  StaticArgument optional.empty return
+end
 
 proc( ParserState ptr mut : state => i64 ) =: offsetConstants
   state [] .constOffset
@@ -309,6 +352,17 @@ proc( ParserState ptr mut : state => i64 ) =: offsetConstants
 end
 proc( i64 ParserState ptr mut => ) =: resetConstants
   [] .constOffset =
+end
+proc( ParserState ptr mut : state => i64 ) =: offsetStaticArgs
+  state [] .staticArgsOffset
+    state [] .staticArgs .length state [] .staticArgsOffset =
+  return
+end
+proc( i64 ParserState ptr mut =>  ) =: resetStaticArgs
+  =:: state
+  #dup
+    state [] .staticArgsOffset =
+  state [] .staticArgs .length =
 end
 
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state => string string ) =: nextWord
@@ -415,7 +469,16 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           "expected identifier" string.wrap fileState [] .wordStart opError  state appendError
         end
         .IDENTIFER
-        fileState state readLabel #drop
+        fileState state readLabel
+          #dup state [] .idContext .labelContext @ id.labelFlags  id.FLAG_STATIC & 0 != if
+            labelType LabelType .PROC_IN != if
+              "unexpected static label" string.wrap fileState [] .wordStart opError  state appendError
+            end
+            fileState state peekTypeConstant if
+              "missing type for static label" string.wrap fileState [] .wordStart opError  state appendError
+            end
+           state [] .constants .length constOffset - 1 - state newStaticArg
+          else #drop end
         continue
       end
       labelType LabelType .ENUM != if
@@ -564,6 +627,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart constType  state pushConst
       "" string.wrap true return
     else #dup "proc(" string.wrap string.eq _if #drop
+      state offsetStaticArgs =:: prevArgs
       LabelType .PROC_IN "=>" string.wrap fileState state readCompositeType
       if
         "error while parsing procedure arguments" string.wrap fileState [] .wordStart opError  state appendError
@@ -573,6 +637,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       =:: in
       LabelType .NONE ")" string.wrap fileState state readCompositeType
+      prevArgs state resetStaticArgs
       if
         "error while parsing procedure return values" string.wrap fileState [] .wordStart opError  state appendError
       end
@@ -585,6 +650,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart constType  state pushConst
       "" string.wrap true return
     end
+    #dup state getStaticArg #dup optional.hasData if .data
+      #dup .val #swap .argType fileState [] .wordStart newConst state pushConst
+      true return
+    else #drop end
     #dup state [] .idContext @ id.getIdentifier ! if ## read named constants
       #dup [] .constValue ConstValue .none != if
         #dup [] .constValue #over [] .valueType fileState [] .wordStart newConst  state pushConst
@@ -617,7 +686,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             #swap appendToken
           sb.toStr fileState [] .wordStart opError  state appendError
           return
-        end
+        end ## TODO swap drop over dup
       64 sb.create
         "unknown compiler command \"" sb.appendS
         #swap                         sb.appendStr
@@ -877,6 +946,7 @@ proc( string => ) =: parseTokens
     128 Constant   list.create 0
     128 types.Type list.create
     128 types.ArraySize list.create
+    32 StaticArgument list.create 0
     128 Operation  list.create
   ParserState new =:: mut state
   fileState addrOf #swap
@@ -885,8 +955,14 @@ proc( string => ) =: parseTokens
       #dup .length 0 >
     do end #drop
   #drop
-  0 while #dup state .ops .length < do
-    state .ops #over list.get state addrOf printOp
-    1 +
-  end #drop
+  1024 sb.create
+    0 while #dup state .ops .length < do
+      #swap
+        state .ops #over:2 list.get state addrOf sb.appendOp
+      #swap
+      1 +
+    end #drop
+  "./out.txt\x00" io.OPEN_WRITE io.fopen #drop
+    #swap #over #swap io.fputSb #drop
+  io.fclose #drop
 end

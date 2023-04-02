@@ -548,7 +548,17 @@ struct( string : name Type : data ) =:: public NamedType
 ## TODO named types
 
 ## generic,template & auto-types
+proc( i32 : id => Type ) =: public newAutoType
+  id Type .autoType new return
+end
+proc( i32 : id => Type ) =: public newGenericType
+  id Type .genericType new return
+end
+proc( i32 : id => Type ) =: public newTempalteType
+  id Type .templateType new return
+end
 
+## type context
 struct(
   ArrayType     list : mut arrayTypes
   ArraySize     list : mut arraySizes

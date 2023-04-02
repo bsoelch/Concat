@@ -4,7 +4,7 @@
 #include "labels.concat"
 #include "types.concat"
 
-enum( none wildCard bool : boolean i64 : int id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
+enum( none wildCard bool : boolean i64 : int i64 : genericInt id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
 struct( types.Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
 
 proc( FilePosition : pos => Constant ) =: public constWildcard
