@@ -20,6 +20,32 @@ entryPoint:
   sb.toStr parseTokens ##printTokens
 end
 
+enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: BinaryOperator
+#namespace sb
+proc( stringBuilder BinaryOperator => stringBuilder ) =: appendBinaryOperator
+  switch
+    ADD case "ADD" sb.appendS return
+    SUBTRACT case "SUBTRACT" sb.appendS return
+    MULTIPLY case "MULTIPLY" sb.appendS return
+    DIVIDE case "DIVIDE" sb.appendS return
+    MOD case "MOD" sb.appendS return
+    UDIVIDE case "UDIVIDE" sb.appendS return
+    UMOD case "UMOD" sb.appendS return
+    AND case "AND" sb.appendS return
+    OR case "OR" sb.appendS return
+    XOR case "XOR" sb.appendS return
+    EQ case "EQ" sb.appendS return
+    NE case "NE" sb.appendS return
+    LT case "LT" sb.appendS return
+    LE case "LE" sb.appendS return
+    GE case "GE" sb.appendS return
+    GT case "GT" sb.appendS return
+    LSHIFT case "LSHIFT" sb.appendS return
+    RSHIFT case "RSHIFT" sb.appendS return
+    URSHIFT case "URSHIFT" sb.appendS return
+  end
+end
+#end
 enum(
                          NOP
                          entryPoint
@@ -31,6 +57,7 @@ enum(
      id.IdentifierInfo : declareId
      id.IdentifierInfo : predeclareId
             types.Type : Return
+        BinaryOperator : binaryOperator
                 string : Error
                 string : Unknown
 ) =:: OpValue
@@ -64,6 +91,9 @@ proc( FilePosition => Operation ) =: opEntryPoint
 end
 proc( types.Type FilePosition => Operation ) =: opReturn
   #swap OpValue .Return new #swap Operation new return
+end
+proc( BinaryOperator FilePosition => Operation ) =: opBinOp
+  #swap OpValue .binaryOperator new #swap Operation new return
 end
 proc( string FilePosition  => Operation ) =: opError
   #swap OpValue .Error new #swap Operation new return
@@ -153,6 +183,10 @@ proc( Operation ParserState ptr => ) =: printOp
       Return case
         "Return: " sb.appendS
         #over .val .Return context [] .typeContext @ sb.appendType
+        break
+      binaryOperator case
+        "binary Operator: " sb.appendS
+        #over .val .binaryOperator sb.appendBinaryOperator
         break
       Error case
         "Error: " sb.appendS
@@ -681,6 +715,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #drop return
         end
       #drop
+      ## TODO =:: with non-constant type
+      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      return
+    else #dup "=" string.wrap string.eq _if #drop
+      ## TODO convert get to set
       "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
       return
     else #dup "entryPoint:" string.wrap string.eq _if #drop
@@ -758,6 +797,68 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
         fileState [] .wordStart opEndBlock  state appendOp
+      return
+    else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
+      1 string.tail #drop
+      ## TODO get field
+      "unimplemented" string.wrap fileState [] .wordStart opError  state appendError
+      return
+    else #dup "+" string.wrap string.eq _if #drop ## TODO constant folding
+      BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "-" string.wrap string.eq _if #drop
+      BinaryOperator .SUBTRACT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "*" string.wrap string.eq _if #drop
+      BinaryOperator .MULTIPLY fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "/" string.wrap string.eq _if #drop
+      BinaryOperator .DIVIDE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "/u" string.wrap string.eq _if #drop
+      BinaryOperator .UDIVIDE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "%" string.wrap string.eq _if #drop
+      BinaryOperator .MOD fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "%u" string.wrap string.eq _if #drop
+      BinaryOperator .UMOD fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "&" string.wrap string.eq _if #drop
+      BinaryOperator .AND fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "|" string.wrap string.eq _if #drop
+      BinaryOperator .OR fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "^" string.wrap string.eq _if #drop
+      BinaryOperator .XOR fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "<<" string.wrap string.eq _if #drop
+      BinaryOperator .LSHIFT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup ">>" string.wrap string.eq _if #drop
+      BinaryOperator .RSHIFT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup ">>u" string.wrap string.eq _if #drop
+      BinaryOperator .URSHIFT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "==" string.wrap string.eq _if #drop
+      BinaryOperator .EQ fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "!=" string.wrap string.eq _if #drop
+      BinaryOperator .NE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "<" string.wrap string.eq _if #drop
+      BinaryOperator .LT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "<=" string.wrap string.eq _if #drop
+      BinaryOperator .LE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup ">=" string.wrap string.eq _if #drop
+      BinaryOperator .GE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup ">" string.wrap string.eq _if #drop
+      BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
       return
     end
   #dup state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier

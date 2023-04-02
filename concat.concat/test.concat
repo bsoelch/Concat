@@ -35,6 +35,7 @@ end
 
 entryPoint:
   0 =:: x
+  i32 2 malloc =:: p
   1 x =
   x print
   0 while #dup "Hello" .length < do
