@@ -20,8 +20,18 @@ entryPoint:
   sb.toStr parseTokens
 end
 
+enum( NEGATE INCREMENT DECREMENT NOT FLIP ) =:: UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: BinaryOperator
 #namespace sb
+proc( stringBuilder UnaryOperator => stringBuilder ) =: appendUnaryOperator
+  switch
+    NEGATE case "NEGATE" sb.appendS return
+    INCREMENT case "INCREMENT" sb.appendS return
+    DECREMENT case "DECREMENT" sb.appendS return
+    NOT case "NOT" sb.appendS return
+    FLIP case "FLIP" sb.appendS return
+  end
+end
 proc( stringBuilder BinaryOperator => stringBuilder ) =: appendBinaryOperator
   switch
     ADD case "ADD" sb.appendS return
@@ -102,6 +112,9 @@ enum(
                          Return
                          New
                    i32 : newEnum
+            types.Type : Cast
+            types.Type : Cast!
+         UnaryOperator : unaryOperator
         BinaryOperator : binaryOperator
      StackModification : stackMod
          stringBuilder : Error
@@ -157,6 +170,13 @@ proc( BinaryOperator FilePosition => Operation ) =: opBinOp
   =:: pos
   OpValue .binaryOperator new types.Type .undefined pos Operation new return
 end
+proc( UnaryOperator FilePosition => Operation ) =: opUnaryOp
+  =:: pos
+  OpValue .unaryOperator new types.Type .undefined pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: opPrint
+  OpValue .Print types.Type .undefined pos Operation new return
+end
 proc( types.Type FilePosition => Operation ) =: opNew
   =:: pos
   OpValue .New #swap pos Operation new return
@@ -165,8 +185,11 @@ proc( types.Type i32 FilePosition => Operation ) =: opNewEnum
   =:: pos
   OpValue .newEnum new #swap pos Operation new return
 end
-proc( FilePosition : pos => Operation ) =: opPrint
-  OpValue .Print types.Type .undefined pos Operation new return
+proc( types.Type : target FilePosition : pos => Operation ) =: opCast
+   types.Type .undefined OpValue .Cast new target pos Operation new return
+end
+proc( types.Type : target FilePosition : pos => Operation ) =: opCast!
+   types.Type .undefined OpValue .Cast! new target pos Operation new return
 end
 proc( i32 i32 StackModType FilePosition => Operation ) =: opStackMod
   =:: pos
@@ -313,6 +336,16 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         " ) : " sb.appendS
         #over .val .binaryOperator sb.appendBinaryOperator
         break
+      unaryOperator case
+        "unary Operator ( " sb.appendS
+        #over .dataType context [] .typeContext @ sb.appendType
+        " ) : " sb.appendS
+        #over .val .unaryOperator sb.appendUnaryOperator
+        break
+      Print case
+        "print: " sb.appendS
+        #over .dataType context [] .typeContext @ sb.appendType
+        break
       New case
         "new: " sb.appendS
         #over .dataType context [] .typeContext @ sb.appendType
@@ -323,9 +356,17 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         " ) : " sb.appendS
         #over .val .newEnum sb.appendI
         break
-      Print case
-        "print: " sb.appendS
+      Cast case
+        "cast ( " sb.appendS
         #over .dataType context [] .typeContext @ sb.appendType
+        " ) src: " sb.appendS
+        #over .val .Cast context [] .typeContext @ sb.appendType
+        break
+      Cast! case
+        "cast ( " sb.appendS
+        #over .dataType context [] .typeContext @ sb.appendType
+        " ) src: " sb.appendS
+        #over .val .Cast! context [] .typeContext @ sb.appendType
         break
       stackMod case
         "stack modification: " sb.appendS
@@ -1206,7 +1247,45 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #swap .val state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError
       return
-    else #dup "+" string.wrap string.eq _if #drop ## TODO constant folding
+    else #dup "cast" string.wrap string.eq #over "cast!" string.wrap string.eq | _if =:: opName
+      state hasConst ! if
+        "missing parameter for \"" sb.wrap
+          opName sb.appendStr
+        "\" expected type" sb.appendS fileState [] .wordStart state appendError
+        return
+      end
+      state popConst #dup .val ConstValue .typeId != if
+        "wrong constant parameter for \"" sb.wrap
+          opName sb.appendStr
+        "\": " sb.appendS
+        #swap .val state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+        " expected type" sb.appendS fileState [] .wordStart state appendError
+        return
+      end
+      .val .typeId fileState [] .wordStart
+      opName "cast" string.wrap string.eq if
+        opCast!
+      else
+        opCast
+      end
+      state appendOp
+      return
+    else #dup "neg" string.wrap string.eq #over "negate" string.wrap string.eq | _if #drop ## XXX? constant folding
+      UnaryOperator .NEGATE fileState [] .wordStart opUnaryOp state appendOp
+      return
+    else #dup "!" string.wrap string.eq _if #drop
+      UnaryOperator .NOT fileState [] .wordStart opUnaryOp state appendOp
+      return
+    else #dup "~" string.wrap string.eq _if #drop
+      UnaryOperator .FLIP fileState [] .wordStart opUnaryOp state appendOp
+      return
+    else #dup "++" string.wrap string.eq _if #drop
+      UnaryOperator .INCREMENT fileState [] .wordStart opUnaryOp state appendOp
+      return
+    else #dup "--" string.wrap string.eq _if #drop
+      UnaryOperator .DECREMENT fileState [] .wordStart opUnaryOp state appendOp
+      return
+    else #dup "+" string.wrap string.eq _if #drop
       BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "-" string.wrap string.eq _if #drop
