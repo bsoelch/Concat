@@ -9,7 +9,7 @@ proc( i64 : static k  i8 k ptr : str => string ) =: asStr
   str k string new return
 end
 proc( i8 i32 => i64 bool ) =: proc0
-  #drop:2 0 false return
+  #drop:2 0 i64 cast false return
 end
 proc( i64 : a i64 : b => i64 i64 ) =: proc1
   a b / a b % return
@@ -23,6 +23,13 @@ proc( i32 aTuple => string anEnum ) =: aProc
   else #dup .0 2 == _if
     "World!" 5 string new anEnum .B return
   end
+end
+
+#template type : T1 type : T2 #end
+proc( T1 ptr : src T2 ptr mut : target i64 : k => ) =: castArray
+  0 while #dup k < do
+    src #over [] T2 cast target #over:2 [] =
+  end #drop
 end
 
 proc( type : static T i64 : k => T _ ptr ) : extern malloc
