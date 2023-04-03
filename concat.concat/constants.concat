@@ -1,10 +1,11 @@
+#include stringBuilder
 #include future
 
 #include "files.concat"
 #include "labels.concat"
 #include "types.concat"
 
-enum( none wildCard bool : boolean i64 : int i64 : genericInt id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
+enum( none wildCard bool : boolean i32 : enumLabel i64 : int i64 : genericInt id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
 struct( types.Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
 
 proc( FilePosition : pos => Constant ) =: public constWildcard
@@ -30,7 +31,59 @@ proc( types.Type FilePosition => Constant ) =: public constType
   =:: pos
   types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
 end
+proc( types.Type i32 FilePosition => Constant ) =: public constEnumLabel
+  =:: pos ## TODO? convert type to enum-label type
+  ConstValue .enumLabel new pos Constant new return
+end
 proc( ConstValue types.Type FilePosition => Constant ) =: public newConst
   =:: pos
   #swap pos Constant new return
 end
+#namespace sb
+proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendConstant
+  =:: typeContext
+  =:: labelContext
+  #swap
+    #over switch
+      none case
+        "none"  sb.appendS
+        break
+      wildCard case
+        "_"  sb.appendS
+        break
+      boolean case
+        "boolean " sb.appendS
+        #over .boolean if "true" sb.appendS else "false" sb.appendS end
+        break
+      int case
+        "integer "  sb.appendS
+        #over .int sb.appendI
+        break
+      str case
+        "string \""  sb.appendS
+        #over .str labelContext id.scAsStr  sb.appendStr
+               '\"'  sb.appendC
+        break
+      chr case
+        "char \'"  sb.appendS
+        #over .chr sb.appendC
+             '\''  sb.appendC
+        break
+      typeId case
+        "type \""     sb.appendS
+        #over .typeId typeContext sb.appendType
+             '\"'     sb.appendC
+        break
+      enumLabel case
+        "enum label ("   sb.appendS
+        #over .enumLabel sb.appendI
+                 ')'     sb.appendC
+        break
+      genericInt case
+        "generic integer "  sb.appendS
+        #over .int sb.appendI
+        break
+    end
+   #swap #drop return
+end
+#end

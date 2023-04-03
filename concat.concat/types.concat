@@ -318,6 +318,12 @@ proc( Type => bool ) =: public isComposite
       false return
   end
 end
+proc( Type => bool ) =: public isEnum
+  Type .enum == return
+end
+proc( Type => bool ) =: public isEnumLabel
+  Type .enumLabel == return
+end
 proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
   composite
     #dup switch
@@ -463,6 +469,7 @@ proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext 
     end
   false return
 end
+## TODO? enum as label
 #end
 #namespace sb
 proc( stringBuilder types.CompositeType types.TypeContext ptr => stringBuilder ) =: appendComposite

@@ -84,11 +84,15 @@ enum(
             ConstValue : Constant
   codeBlocks.BlockInfo : block
   codeBlocks.BlockInfo : blockEnd
-     id.IdentifierInfo : mut getId
+     id.IdentifierInfo : getId
      id.IdentifierInfo : mut setId
      id.IdentifierInfo : declareId
      id.IdentifierInfo : predeclareId
             types.Type : Return
+            id.LabelId : getLabel
+            id.LabelId : mut setLabel
+                   i32 : getTupleElement
+                   i32 : mut setTupleElement
         BinaryOperator : binaryOperator
      StackModification : stackMod
          stringBuilder : Error
@@ -110,14 +114,17 @@ end
 proc( id.IdentifierInfo FilePosition  => Operation ) =: opGet
   #swap OpValue .getId new #swap Operation new return
 end
-proc( id.IdentifierInfo FilePosition  => Operation ) =: opSet
-  #swap OpValue .setId new #swap Operation new return
-end
 proc( id.IdentifierInfo FilePosition  => Operation ) =: opDeclare
   #swap OpValue .declareId new #swap Operation new return
 end
 proc( id.IdentifierInfo FilePosition  => Operation ) =: opPredeclare
   #swap OpValue .predeclareId new #swap Operation new return
+end
+proc( i32 FilePosition  => Operation ) =: opTupleGet
+  #swap OpValue .getTupleElement new #swap Operation new return
+end
+proc( id.LabelId FilePosition  => Operation ) =: opGetLabel
+  #swap OpValue .getLabel new #swap Operation new return
 end
 proc( FilePosition => Operation ) =: opEntryPoint
   OpValue .entryPoint #swap Operation new return
@@ -164,43 +171,7 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         break
       OpValue .Constant case
         "Constant: " sb.appendS
-        #over .val .Constant #swap ## XXX extract to sb.appendConstValue
-          #over switch
-            none case
-              "none"  sb.appendS
-              break
-            wildCard case
-              "_"  sb.appendS
-              break
-            boolean case
-              "boolean " sb.appendS
-              #over .boolean if "true" sb.appendS else "false" sb.appendS end
-              break
-            int case
-              "integer "  sb.appendS
-              #over .int sb.appendI
-              break
-            str case
-              "string \""  sb.appendS
-              #over .str context [] .idContext .labelContext addrOf id.scAsStr  sb.appendStr
-                     '\"'  sb.appendC
-              break
-            chr case
-              "char \'"  sb.appendS
-              #over .chr sb.appendC
-                   '\''  sb.appendC
-              break
-            typeId case
-              "type \""     sb.appendS
-              #over .typeId context [] .typeContext addrOf sb.appendType
-                   '\"'     sb.appendC
-              break
-            genericInt case
-              "generic integer "  sb.appendS
-              #over .int sb.appendI
-              break
-          end
-        #swap #drop
+        #over .val .Constant context [] .idContext .labelContext addrOf context [] .typeContext addrOf sb.appendConstant
         break
       block case
         "Block: " sb.appendS
@@ -217,6 +188,22 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
       setId case
         "set: " sb.appendS
         #over .val .setId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      getLabel case
+        "get label: " sb.appendS
+        #over .val .getLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
+        break
+      setLabel case
+        "set label: " sb.appendS
+        #over .val .setLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
+        break
+      getTupleElement case
+        "get tuple element: " sb.appendS
+        #over .val .getTupleElement sb.appendI
+        break
+      setTupleElement case
+        "set tuple element: " sb.appendS
+        #over .val .setTupleElement sb.appendI
         break
       declareId case
         "declare: " sb.appendS
@@ -900,6 +887,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup [] .val .getId #over [] .val .setId =
         fileState [] .wordStart #swap [] .pos =
         return
+      else #dup [] .val OpValue .getLabel == _if
+        #dup [] .val .getLabel #over [] .val .setLabel =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else #dup [] .val OpValue .getTupleElement == _if
+        #dup [] .val .getTupleElement #over [] .val .setTupleElement =
+        fileState [] .wordStart #swap [] .pos =
+        return
       else
         "unexpected operation for \"=\" \n" sb.wrap
           #swap [] state sb.appendOp
@@ -983,9 +978,44 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart opEndBlock  state appendOp
       return
     else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
-      1 string.tail #drop
-      ## TODO get field
-      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      1 string.tail
+        state hasConst if
+          state popConst
+            #dup .val ConstValue .typeId == if #dup .val .typeId types.isEnum else false end if #dup .val .typeId
+              #dup state [] .typeContext @ types.compositeEltCount =:: count
+              0 while #dup count < do
+                #over #over state [] .typeContext @ types.compositeGetLabel
+                  state [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data #over:4 string.eq else #drop false end if
+                    fileState [] .wordStart constEnumLabel state pushConst
+                    #drop:2 return
+                  end
+                1 +
+              end #drop
+              #drop
+            else #dup .val ConstValue .str == #over:2 "length" string.wrap string.eq & _if
+              .val .str .length fileState [] .wordStart constInt state pushConst
+              #drop
+              return
+            end
+          "constant "                    sb.wrap
+            #swap .val state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+            " does not have a field: \"" sb.appendS
+            #swap                        sb.appendStr
+          '"' sb.appendC fileState [] .wordStart state appendError
+          return
+        end
+      #dup 10 tryParseInt ParseIntError .NONE == if i32 cast #swap #drop
+        #dup 0 < if
+          "tuple index has to be non-negative got: " sb.wrap
+            #swap sb.appendI
+          fileState [] .wordStart state appendError
+          0
+        end
+        fileState [] .wordStart opTupleGet state appendOp
+        return
+      else #drop end
+        id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel
+      fileState [] .wordStart opGetLabel state appendOp
       return
     else #dup "+" string.wrap string.eq _if #drop ## TODO constant folding
       BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp
