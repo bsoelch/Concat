@@ -2,7 +2,7 @@
 
 <language id="concat" name="Concat" version="2.0" _section="Source">
   <metadata>
-    <property name="mimetypes">text/*</property>
+    <property name="mimetypes">text/x-concat</property>
     <property name="globs">*.concat</property>
     <property name="line-comment-start">--</property>
     <property name="suggested-suffix">.concat</property>
