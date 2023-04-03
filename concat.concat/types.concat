@@ -249,6 +249,7 @@ proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqua
     a #over array.get .value b #over:2 array.get .value != if
       #drop false return
     end
+    1 +
   end #drop
   true return
 end

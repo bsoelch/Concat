@@ -86,13 +86,19 @@ enum(
   codeBlocks.BlockInfo : blockEnd
      id.IdentifierInfo : getId
      id.IdentifierInfo : mut setId
+     id.IdentifierInfo : mut @Id
      id.IdentifierInfo : declareId
      id.IdentifierInfo : predeclareId
             types.Type : Return
             id.LabelId : getLabel
             id.LabelId : mut setLabel
+            id.LabelId : mut @Label
                    i32 : getTupleElement
                    i32 : mut setTupleElement
+                   i32 : mut @TupleElement
+                   i32 : getArrayElement
+                   i32 : mut setArrayElement
+                   i32 : mut @ArrayElement
         BinaryOperator : binaryOperator
      StackModification : stackMod
          stringBuilder : Error
@@ -119,6 +125,9 @@ proc( id.IdentifierInfo FilePosition  => Operation ) =: opDeclare
 end
 proc( id.IdentifierInfo FilePosition  => Operation ) =: opPredeclare
   #swap OpValue .predeclareId new #swap Operation new return
+end
+proc( i32 FilePosition  => Operation ) =: opArrayGet
+  #swap OpValue .getArrayElement new #swap Operation new return
 end
 proc( i32 FilePosition  => Operation ) =: opTupleGet
   #swap OpValue .getTupleElement new #swap Operation new return
@@ -190,6 +199,18 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         "set: " sb.appendS
         #over .val .setId context [] .idContext .labelContext @ sb.appendIdInfo
         break
+      @Id case
+        "address: " sb.appendS
+        #over .val .@Id context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      declareId case
+        "declare: " sb.appendS
+        #over .val .declareId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
+      predeclareId case
+        "predeclare: " sb.appendS
+        #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
+        break
       getLabel case
         "get label: " sb.appendS
         #over .val .getLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
@@ -197,6 +218,10 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
       setLabel case
         "set label: " sb.appendS
         #over .val .setLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
+        break
+      @Label case
+        "label address: " sb.appendS
+        #over .val .@Label context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       getTupleElement case
         "get tuple element: " sb.appendS
@@ -206,13 +231,21 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         "set tuple element: " sb.appendS
         #over .val .setTupleElement sb.appendI
         break
-      declareId case
-        "declare: " sb.appendS
-        #over .val .declareId context [] .idContext .labelContext @ sb.appendIdInfo
+      @TupleElement case
+        "tuple element address: " sb.appendS
+        #over .val .@TupleElement sb.appendI
         break
-      predeclareId case
-        "predeclare: " sb.appendS
-        #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
+      getArrayElement case
+        "get array element: " sb.appendS
+        #over .val .getArrayElement sb.appendI
+        break
+      setArrayElement case
+        "set array element: " sb.appendS
+        #over .val .setArrayElement sb.appendI
+        break
+      @ArrayElement case
+        "array element address: " sb.appendS
+        #over .val .@ArrayElement sb.appendI
         break
       Return case
         "Return: " sb.appendS
@@ -902,6 +935,43 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup [] .val .getTupleElement #over [] .val .setTupleElement =
         fileState [] .wordStart #swap [] .pos =
         return
+      else #dup [] .val OpValue .getArrayElement == _if
+        #dup [] .val .getArrayElement #over [] .val .setArrayElement =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else
+        "unexpected operation for \"=\" \n" sb.wrap
+          #swap [] state sb.appendOp
+        fileState [] .wordStart state appendError
+        return
+      end
+    else #dup "@" string.wrap string.eq #over "addrOf" string.wrap string.eq | _if #drop
+      state hasConst if ## TODO address of constant variables
+        "cannot get address of constant value" sb.wrap fileState [] .wordStart state appendError
+        return
+      end
+      state peekOp #dup optional.isEmpty if #drop
+        "unexpected \"" sb.wrap
+          #over sb.appendStr
+        '"' sb.appendC fileState [] .wordStart state appendError
+        return
+      end .data
+      #dup [] .val OpValue .getId == if
+        #dup [] .val .getId #over [] .val .@Id =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else #dup [] .val OpValue .getLabel == _if
+        #dup [] .val .getLabel #over [] .val .@Label =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else #dup [] .val OpValue .getTupleElement == _if
+        #dup [] .val .getTupleElement #over [] .val .@TupleElement =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else #dup [] .val OpValue .getArrayElement == _if
+        #dup [] .val .getArrayElement #over [] .val .@ArrayElement =
+        fileState [] .wordStart #swap [] .pos =
+        return
       else
         "unexpected operation for \"=\" \n" sb.wrap
           #swap [] state sb.appendOp
@@ -1023,6 +1093,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else #drop end
         id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel
       fileState [] .wordStart opGetLabel state appendOp
+      return
+    else #dup "[]" string.wrap string.eq _if #drop
+      -1 fileState [] .wordStart opArrayGet state appendOp
       return
     else #dup "+" string.wrap string.eq _if #drop ## TODO constant folding
       BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp

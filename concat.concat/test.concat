@@ -13,7 +13,8 @@ proc( i64 : a i64 : b => i64 i64 ) =: proc1
 end
 
 proc( i32 aTuple => string anEnum ) =: aProc
-  0 i64 =: anInt
+  i64 3 array new =:: anArray
+  2 anArray @ 0 [] =
   0 == if
     "Hello" #swap .0 string new #swap .1  anEnum .C new return
   else #dup .0 2 == _if
