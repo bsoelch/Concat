@@ -319,6 +319,10 @@ proc( Type => bool ) =: public isComposite
       false return
   end
 end
+proc( Type => bool ) =: public isTupleType
+  ## XXX unwrap named type
+  #dup Type .tuple == #swap Type .struct == | return
+end
 proc( Type => bool ) =: public isEnum
   Type .enum == return
 end
