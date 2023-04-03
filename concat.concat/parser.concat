@@ -349,7 +349,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
     types.ArraySize array.empty false return
   end
   state [] .constants .length 1 - while #dup state [] .constOffset >= do
-    state [] .constants #over list.get .val ConstValue .int != if ## TODO support generic sizes
+    state [] .constants #over list.get .val #dup ConstValue .int != #swap ConstValue .genericInt != & if
       break
     end
     1 -
@@ -362,7 +362,16 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
     #swap while #dup state [] .constants .length < do
       #swap
         ## XXX check if generic
-        state [] .constants #over:2 list.get .val .int true types.ArraySize new list.append
+        state [] .constants #over:2 list.get .val
+          #dup ConstValue .int == if
+            .int true types.ArraySize new list.append
+          else #dup ConstValue .genericInt == _if
+            .genericInt false types.ArraySize new list.append
+          else
+            "unexpected constant for array size: " sb.wrap
+              #swap state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+            state [] .constants #over:4 list.get .pos state appendError
+          end
       #swap
       1 +
     end #drop
