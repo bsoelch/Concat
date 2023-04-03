@@ -38,13 +38,14 @@
     Scope new return
   end
 
-  struct( LabelContext : mut labelContext Scope list : mut localScopes Scope list : mut globalScopes i32 : globalScopeId NamespaceInfo : mut namespaceInfo ) =:: public IdentifierContext
+  struct( LabelContext : mut labelContext Scope list : mut localScopes Scope list : mut globalScopes i32 : mut globalScopeId i32 : mut localVarCount NamespaceInfo : mut namespaceInfo ) =:: public IdentifierContext
 
   proc( => IdentifierContext ) =: public newIdentifierContext
     newLabelContext
     128 Scope list.create
     128 Scope list.create
       codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
+    0
     0
       0
       NAMESPACE_IMPORT_NONE
@@ -111,6 +112,9 @@
     context [] .localScopes list.pop #swap context [] .localScopes =
       #dup .identifiers addrOf map.free
       #dup .prevImports context [] .namespaceInfo .imports =
+      #dup .blockType codeBlocks.BlockType .PROCEDURE == if
+        0 context [] .localVarCount = ## XXX handle nested procedures
+      end
     .blockType false return
   end
   ## TODO scopeItr
@@ -246,7 +250,11 @@
       flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
       declaredAt
       label
-      id
+      id -1 == idType IdentifierType .LOCAL_VAR == & if
+        context [] .localVarCount ++
+      else
+        id
+      end
       ## XXX template data
       idType
       IdentifierData new

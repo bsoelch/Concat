@@ -157,6 +157,7 @@ struct(
   StaticArgument list : mut staticArgs
                   i64 : mut staticArgsOffset
        Operation list : mut ops
+                  i32 : mut autoTypeCount
 ) =:: ParserState
 #namespace sb
 proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
@@ -859,21 +860,27 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               id.IdentifierType .LOCAL_VAR
             end
           -1 ## id
-          const .val fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
-            .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
-            return
+          const .val
+        else
+          state [] .autoTypeCount ++ types.newAutoType
+          state [] .idContext @ id.isGlobal if
+            id.IdentifierType .GLOBAL_VAR
+          else
+            id.IdentifierType .LOCAL_VAR
           end
-          #dup [] .idType id.IdentifierType .TYPE == if
-            #drop:2
-            return
-          end
-          id.asIdInfo fileState [] .wordStart opDeclare state appendOp
-          #drop return
+          -1
+          ConstValue .none
         end
-      #drop
-      ## TODO =:: with non-constant type
-      "unimplemented" sb.wrap fileState [] .wordStart state appendError
-      return
+        fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
+          .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
+          return
+        end
+        #dup [] .idType id.IdentifierType .TYPE == if
+          #drop:2
+          return
+        end
+        id.asIdInfo fileState [] .wordStart opDeclare state appendOp
+        #drop return
     else #dup "=" string.wrap string.eq _if #drop
       state hasConst if ## XXX allow overwriting of uninitialized type constants
         "cannot assign value to constant" sb.wrap fileState [] .wordStart state appendError
@@ -1093,6 +1100,7 @@ proc( string => ) =: parseTokens
     128 types.ArraySize list.create
     32 StaticArgument list.create 0
     128 Operation  list.create
+    0
   ParserState new =:: mut state
   fileState addrOf #swap
     while
