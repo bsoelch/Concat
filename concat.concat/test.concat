@@ -5,6 +5,9 @@ struct( i8 _ ptr : data i64 : len ) type =: string
 enum( A B i32 : C i8 ptr mut : D ) =:: enum1
 enum( A B string : C i64 3 array : D ) =:: anEnum
 
+type : selfPtr
+struct( i32 : data selfPtr : self ) selfPtr =
+
 proc( i64 : static k  i8 k ptr : str => string ) =: asStr
   str k string new return
 end
