@@ -1,6 +1,11 @@
+#template type : T #end
+type : Node
+#template type : T #end
+struct( T : data  T Node ptr : next ) Node =
 
 entryPoint:
-
+  i32 Node : aNode
+  0 aNode @ aNode =
 end
 
 
