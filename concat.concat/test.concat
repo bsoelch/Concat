@@ -51,6 +51,8 @@ end
 entryPoint:
   0 =:: x
   0 =:: mut y
+  selfPtr : test
+  0 test @ selfPtr new test =
   i32 2 malloc =:: p
   1 y =
   x print

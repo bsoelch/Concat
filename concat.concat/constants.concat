@@ -71,7 +71,7 @@ proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stri
         break
       typeId case
         "type \""     sb.appendS
-        #over .typeId typeContext sb.appendType
+        #over .typeId labelContext typeContext sb.appendType
              '\"'     sb.appendC
         break
       enumLabel case

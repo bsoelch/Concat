@@ -94,19 +94,20 @@ proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveTyp
       "type" appendS return
   end
 end
-proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: public appendTypeRecursive
+proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool => stringBuilder ) =: public appendTypeRecursive
   =:: allowRecurse
   =:: context
+  =:: labelContext
   #dup switch
     undefined case #drop
       "undefined" appendS return
     primitiveType case
       .primitiveType appendPrimitiveType return
     pointer case ## XXX print sizes
-      context types.getBaseType context false appendTypeRecursive
+      context types.getBaseType labelContext context allowRecurse appendTypeRecursive
       " ptr" appendS return
     arrayType case
-      context types.getBaseType context false appendTypeRecursive
+      context types.getBaseType labelContext context allowRecurse appendTypeRecursive
       " array" appendS return
     tuple case
       .tuple
@@ -116,7 +117,7 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
         "]( "    appendS
       #swap
         allowRecurse if
-          context [] .compositeTypes #swap list.get context appendComposite
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
         else #drop
           "... " appendS
         end
@@ -130,7 +131,7 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
         "]( "    appendS
       #swap
         allowRecurse if
-          context [] .compositeTypes #swap list.get context appendComposite
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
         else #drop
           "... " appendS
         end
@@ -144,7 +145,7 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
         "]( "    appendS
       #swap
         allowRecurse if
-          context [] .compositeTypes #swap list.get context appendComposite
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
         else #drop
           "... " appendS
         end
@@ -158,18 +159,18 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
         "]( "    appendS
       #swap
         allowRecurse if
-          context [] .compositeTypes #swap list.get context appendComposite
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
         else #drop
           "... " appendS
         end
        ")" appendS
        return
     labeledProcIn case
-       .labeledProcIn context [] .compositeTypes #swap list.get context appendComposite return
+       .labeledProcIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
     procIn case
-      .procIn context [] .compositeTypes #swap list.get context appendComposite return
+      .procIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
     procOut case
-      .procOut context [] .compositeTypes #swap list.get context appendComposite return
+      .procOut context [] .compositeTypes #swap list.get labelContext context appendComposite return
     procedure case
       .procedure
       #swap
@@ -179,27 +180,52 @@ proc( stringBuilder types.Type types.TypeContext ptr bool => stringBuilder ) =: 
       #swap
         allowRecurse if
           context [] .procTypes #swap list.get #swap
-          #over .in context false appendTypeRecursive
+          #over .in labelContext context allowRecurse appendTypeRecursive
           "=> " appendS
-          #swap .out context false appendTypeRecursive
+          #swap .out labelContext context allowRecurse appendTypeRecursive
         else #drop
           "... " appendS
         end
        ")" appendS
        return
-    namedType case ## TODO print named types, generic types
-      .namedType appendI return
+    namedType case
+      .namedType
+      #swap
+        "named[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+      context [] .namedTypes #swap list.get labelContext context appendNamedType
+      ')' appendC
+      return
     namedLabel case
-      .namedLabel appendI return
+      .namedLabel
+      #swap
+        "named[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+      context [] .namedTypes #swap list.get labelContext context appendNamedType
+      ')' appendC
+      return
     autoType case
-      .autoType appendI return
+      #swap "auto["     appendS
+        #swap .autoType appendI
+                "]"     appendS
+      return
     genericType case
-      .genericType appendI return
+      #swap "generic["     appendS
+        #swap .genericType appendI
+                   "]"     appendS
+      return
     templateType case
-      .templateType appendI return
+      #swap "template["     appendS
+        #swap .templateType appendI
+                    "]"     appendS
+      return
   end
 end
-proc( stringBuilder types.Type types.TypeContext ptr => stringBuilder ) =: public appendType
+proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendType
   true appendTypeRecursive return
 end
 #end
@@ -223,19 +249,23 @@ end
 struct( i64 : value bool : isInt ) =:: public ArraySize
 struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut ptrOnly bool : mutable ) =:: ArrayType
 
-proc( Type => bool ) =: public isPointer
+proc( Type TypeContext ptr => bool ) =: public isPointer
+  unwrapNamed
   Type .pointer == return
 end
-proc( Type => bool ) =: public isArray
+proc( Type TypeContext ptr => bool ) =: public isArray
+  unwrapNamed
   Type .arrayType == return
 end
 proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
-  box isPointer if
-    context [] .arrayTypes box .pointer list.get .base return
-  end
-  box isArray if
-    context [] .arrayTypes box .arrayType list.get .base return
-  end
+  box context unwrapNamed
+    #dup context isPointer if
+      context [] .arrayTypes #swap .pointer list.get .base return
+    end
+    #dup context isArray if
+      context [] .arrayTypes #swap .arrayType list.get .base return
+    end
+  #drop
   Type .undefined return
 end
 proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqual
@@ -262,7 +292,7 @@ proc( Type : base bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool
     Type .undefined true return
   end
   ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
-  base isProcedure  isPtr ! fixedSize ! | sizes .length 0 > | & if
+  base context isProcedure  isPtr ! fixedSize ! | sizes .length 0 > | & if
     Type .undefined true return
   end
   context [] .arrayTypes addrOf =:: arrays
@@ -310,8 +340,8 @@ i32 =:: CompositeFlag
 64 CompositeFlag =: COMP_FLAG_TEMPLATE
 struct( i64 : eltsOffset i64 : eltCount id.LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
 
-proc( Type => bool ) =: public isComposite
-  ## XXX unwrap named type
+proc( Type TypeContext ptr => bool ) =: public isComposite
+  unwrapNamed
   switch
     tuple struct labeledProcIn procIn procOut enum enumLabel case
       true return
@@ -319,18 +349,20 @@ proc( Type => bool ) =: public isComposite
       false return
   end
 end
-proc( Type => bool ) =: public isTupleType
-  ## XXX unwrap named type
+proc( Type TypeContext ptr => bool ) =: public isTupleType
+  unwrapNamed
   #dup Type .tuple == #swap Type .struct == | return
 end
-proc( Type => bool ) =: public isEnum
+proc( Type TypeContext ptr => bool ) =: public isEnum
+  unwrapNamed
   Type .enum == return
 end
-proc( Type => bool ) =: public isEnumLabel
+proc( Type TypeContext ptr => bool ) =: public isEnumLabel
+  unwrapNamed
   Type .enumLabel == return
 end
 proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
-  composite
+  composite context unwrapNamed
     #dup switch
       tuple case
         .tuple
@@ -366,13 +398,14 @@ proc( Type : composite TypeContext ptr mut : context => i64 ) =: public composit
   .data [] .eltCount return
 end
 proc( Type : composite i32 : index TypeContext ptr mut : context => id.LabelId ) =: public compositeGetLabel
-  composite switch
-    struct labeledProcIn enum enumLabel case
-      break
-    undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType tuple procIn procOut case
-      id.LABEL_ID_NONE return
-  end
-  composite context compositeData
+  composite context unwrapNamed
+    #dup switch
+      struct labeledProcIn enum enumLabel case
+        break
+      undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType tuple procIn procOut case
+        #drop id.LABEL_ID_NONE return
+    end
+  context compositeData
     #dup optional.isEmpty if #drop
       id.LABEL_ID_NONE return
     end
@@ -477,12 +510,13 @@ end
 ## TODO? enum as label
 #end
 #namespace sb
-proc( stringBuilder types.CompositeType types.TypeContext ptr => stringBuilder ) =: appendComposite
+proc( stringBuilder types.CompositeType id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: appendComposite
   =:: context
+  =:: labelContext
   =:: comp
-  0 while #dup comp .eltCount < do
+  0 while #dup comp .eltCount < do ## TODO labels
     #swap
-      context [] .compositeData #over:2 comp .eltsOffset + list.get context false appendTypeRecursive
+      context [] .compositeData #over:2 comp .eltsOffset + list.get labelContext context false appendTypeRecursive
       ' ' appendC
     #swap
     1 +
@@ -495,21 +529,23 @@ end
 ## procedure types
 struct( Type : in Type : out ) =:: ProcType
 
-proc( Type => bool ) =: public isProcedure
+proc( Type TypeContext ptr => bool ) =: public isProcedure
+  unwrapNamed
   Type .procedure == return
 end
-proc( Type : mType TypeContext ptr mut : context => bool ) =: public isCallable
-  mType
-  #dup isPointer if
-    context getBaseType
-  end
+proc( Type : mType TypeContext ptr : context => bool ) =: public isCallable
+  mType context unwrapNamed
+    #dup context isPointer if
+      context getBaseType
+    end
   Type .procedure == return
 end
-proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public getProcIn
-  proc isProcedure ! if
-    Type .undefined true return
-  end
-  context [] .procTypes proc .procedure list.get .in false return
+proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcIn
+  proc context unwrapNamed
+    #dup context isProcedure ! if #drop
+      Type .undefined true return
+    end
+  context [] .procTypes #swap .procedure list.get .in false return
 end
 proc( Type : in Type : out #+ TODO static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
   in Type .undefined == out Type .undefined == | if
@@ -531,33 +567,75 @@ proc( Type : in Type : out #+ TODO static arguments +# TypeContext ptr mut : con
   false return
 end
 proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlabeledProc
-  proc context isCallable ! if
-    proc false return
-  end
-  false =:: mut isPtr
-  proc
-  #dup isPointer if
-    context getBaseType
-    true isPtr =
-  end
+  proc context unwrapNamed
+    #dup context isCallable ! if #drop
+      proc true return
+    end
+    false =:: mut isPtr
+    #dup context isPointer if
+      context getBaseType
+      true isPtr =
+    end
   =:: mProc
   context [] .procTypes mProc .procedure list.get
     #dup .in Type .procIn == if #drop
-      proc true return
+      proc false return
     end
     context [] .compositeTypes #over .in .labeledProcIn list.get =:: mut inType
     context [] .compositeData inType .eltsOffset inType .eltCount list.slice id.LABEL_ID_NONE false context newProcArgs
-    ! if #drop:2 proc false return end
-  #swap .out context newProcedure ! if #drop proc false return  end
+    ! if #drop:2 proc true return end
+  #swap .out context newProcedure ! if #drop proc true return  end
     isPtr if
       true ArraySize array.empty true false context newArrayType return
     end
-  true return
+  false return
 end
 
 ## named types
-struct( string : name Type : data ) =:: public NamedType
-## TODO named types
+struct( Type : mut data id.LabelId : name ) =:: NamedType
+proc( Type id.LabelId types.TypeContext ptr mut => Type ) =: public newNamedType
+  =:: context
+  NamedType new context [] .namedTypes #swap list.append context [] .namedTypes =
+  context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType new return
+end
+proc( Type => bool ) =: public isNamedType
+  #dup Type .namedType == #swap Type .namedLabel == | return
+end
+proc( Type types.TypeContext ptr => Type ) =: public unwrapNamed
+  =:: context
+  #dup Type .namedType == if
+    context [] .namedTypes #swap .namedType list.get .data return
+  else #dup Type .namedLabel == _if
+    context [] .namedTypes #swap .namedLabel list.get .data return
+  end
+  return
+end
+proc( Type : named Type : value types.TypeContext ptr mut : context => bool ) =: public setNamedType
+  named Type .namedType == if
+    context [] .namedTypes named .namedType list.at .data
+      #dup [] .data Type .undefined typeEquals if
+        value #swap [] .data =
+        false return
+      end
+    #drop
+  end
+  true return
+end
+
+#end
+#namespace sb
+proc( stringBuilder types.NamedType id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: appendNamedType
+  =:: context
+  =:: labelContext
+  #swap
+    #over .name labelContext id.labelName .data sb.appendStr
+    " [ " sb.appendS
+    #swap .data labelContext context false appendTypeRecursive
+    " ]"  sb.appendS
+  return
+end
+#end
+#namespace types
 
 ## generic,template & auto-types
 proc( i32 : id => Type ) =: public newAutoType

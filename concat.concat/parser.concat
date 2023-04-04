@@ -230,7 +230,7 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         break
       OpValue .Constant case
         "constant ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .Constant context [] .idContext .labelContext addrOf context [] .typeContext addrOf sb.appendConstant
         break
@@ -244,129 +244,129 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         break
       getId case
         "get ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       setId case
         "set ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       @Id case
         "address ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@Id context [] .idContext .labelContext @ sb.appendIdInfo
         break
       declareId case
         "declare ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .declareId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       predeclareId case
         "predeclare ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       getLabel case
         "get label ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       setLabel case
         "set label ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       @Label case
         "label address ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@Label context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       getTupleElement case
         "get tuple element ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getTupleElement sb.appendI
         break
       setTupleElement case
         "set tuple element ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setTupleElement sb.appendI
         break
       @TupleElement case
         "tuple element address ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@TupleElement sb.appendI
         break
       getArrayElement case
         "get array element ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getArrayElement sb.appendI
         break
       setArrayElement case
         "set array element ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setArrayElement sb.appendI
         break
       @ArrayElement case
         "array element address ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@ArrayElement sb.appendI
         break
       Return case
         "Return: " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         break
       binaryOperator case
         "binary Operator ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .binaryOperator sb.appendBinaryOperator
         break
       unaryOperator case
         "unary Operator ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .unaryOperator sb.appendUnaryOperator
         break
       Print case
         "print: " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         break
       New case
         "new: " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         break
       newEnum case
         "new enum ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .newEnum sb.appendI
         break
       Cast case
         "cast ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) src: " sb.appendS
-        #over .val .Cast context [] .typeContext @ sb.appendType
+        #over .val .Cast  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         break
       Cast! case
         "cast ( " sb.appendS
-        #over .dataType context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         " ) src: " sb.appendS
-        #over .val .Cast! context [] .typeContext @ sb.appendType
+        #over .val .Cast!  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
         break
       stackMod case
         "stack modification: " sb.appendS
@@ -871,7 +871,6 @@ proc( string FilePosition ParserState ptr mut => i32 ) =: getStackModParam
       #swap sb.appendI
     pos state appendError
     1
-  else ## TODO fix  else #+create+# ... _if ... end
   end
   return
 end
@@ -941,10 +940,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState state nextWord fileState state readLabel
         fileState state popTypeConstant #drop =:: valType
         valType
-          #dup types.isProcedure if
+          #dup state [] .typeContext @ types.isProcedure if
             id.IdentifierType .PROCEDURE
           else #dup types.primitive.TYPE types.typeEquals _if
-            ## TODO create constant for declarations
             id.IdentifierType .TYPE
           else state [] .idContext @ id.isGlobal _if
             id.IdentifierType .GLOBAL_VAR
@@ -952,7 +950,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             id.IdentifierType .LOCAL_VAR
           end
         -1 ## id
-        isInit state hasConst & if
+        #over id.IdentifierType .TYPE == if
+          isInit if
+            fileState state popTypeConstant #drop ## ignore error code and use default value
+          else
+            types.Type .undefined
+          end
+          #over:4 state [] .typeContext @ types.newNamedType fileState [] .wordStart constType .val
+        else isInit state hasConst & _if
           state popConst .val
           ## TODO check if type correct
         else
@@ -1003,7 +1008,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state hasConst if
           state popConst =:: const
           const .valueType
-            #dup types.isProcedure if
+            #dup state [] .typeContext @ types.isProcedure if
               "unexpected procedure" sb.wrap fileState [] .wordStart state appendError
               #drop:2 return
             else #dup types.primitive.TYPE types.typeEquals _if
@@ -1036,7 +1041,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opDeclare state appendOp
         #drop return
     else #dup "=" string.wrap string.eq _if #drop
-      state hasConst if ## XXX allow overwriting of uninitialized type constants
+      state hasConst if state popConst
+        .val #dup ConstValue .typeId == if .typeId
+          #dup types.isNamedType if
+            fileState state popTypeConstant ! if
+              state [] .typeContext @ types.setNamedType ! if
+                return
+              end
+            else #drop:2 end
+          else #drop end
+        else #drop end
         "cannot assign value to constant" sb.wrap fileState [] .wordStart state appendError
         return
       end
@@ -1185,7 +1199,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       1 string.tail
         state hasConst if
           state popConst
-            #dup .val ConstValue .typeId == if #dup .val .typeId types.isEnum else false end if #dup .val .typeId
+            #dup .val ConstValue .typeId == if #dup .val .typeId state [] .typeContext @ types.isEnum else false end if #dup .val .typeId
               #dup state [] .typeContext @ types.compositeEltCount =:: count
               0 while #dup count < do
                 #over #over state [] .typeContext @ types.compositeGetLabel
@@ -1236,7 +1250,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       state popConst
         #dup .val ConstValue .typeId == if #dup .val .typeId
-          #dup types.isTupleType #over types.isArray | if
+          #dup state [] .typeContext @ types.isTupleType #over state [] .typeContext @ types.isArray | if
             fileState [] .wordStart opNew state appendOp
             #drop return
           end
