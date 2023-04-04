@@ -1674,7 +1674,6 @@ void printIdInfo(IdentifierInfo info,FILE* out){
 typedef enum{
   BLOCK_PROCEDURE,
   BLOCK_IF,        // if( EXPR ){
-  BLOCK_IF2,       // if(EXPR){ ... } (auto-closes at end of current if -statement)
   BLOCK_ELSE,      // }else{
   BLOCK_WHILE,     // while( EXPR ){
   BLOCK_DO,        // do{
@@ -1686,7 +1685,7 @@ typedef enum{
   BLOCK_UNKNOWN,   // end of unknown block
 }BlockType;
 char const* const blockNames []={[BLOCK_PROCEDURE]="procedure",[BLOCK_IF]="if",
-  [BLOCK_IF2]="_if",[BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",
+  [BLOCK_ELSE]="else",[BLOCK_WHILE]="while",[BLOCK_DO]="do",[BLOCK_BREAK]="break",[BLOCK_CONTINUE]="continue",
   [BLOCK_SWITCH]="switch",[BLOCK_CASE]="case",[BLOCK_DEFAULT]="default",
   [BLOCK_UNKNOWN]="unknown"};
 
@@ -2002,7 +2001,7 @@ typedef struct{
   int32_t implCap;
   int32_t compiledImpls;
 }TemplateInfo;
-  
+
 Operation* templateOps=NULL;
 size_t templateOpCount=0;
 size_t templateOpCap=0;
@@ -2117,6 +2116,7 @@ typedef struct{
   ScopeNode** nodes;
 
   BlockType scopeType;
+  bool autoClose;
   NamespaceImportId prevImports;
   size_t nodeBufferOffset;
 }Scope;
@@ -2130,7 +2130,7 @@ typedef struct{
   FilePosition includePos;
   FileId id;
 }IncludedFile;
-  
+
 typedef struct{
   Scope globalScope;
   NamespaceInfo namespaceInfo;
@@ -2200,6 +2200,7 @@ void initScope(Scope* scope,BlockType scopeType,ParserState const* state){
   scope->nodes=calloc(SCOPE_MAP_CAP,sizeof(ScopeNode*));
   scope->nodeBufferOffset=scopeNodeCount;
   scope->scopeType=scopeType;
+  scope->autoClose=false;
   scope->prevImports=parserNamespace(state)->namespaceImports;
 }
 bool openScope(BlockType scopeType,ParserState const* state){
@@ -2215,6 +2216,18 @@ BlockType currentScope(void){
   if(localScopeCount<1)
     return BLOCK_UNKNOWN;
   return scopeBuffer[localScopeCount-1].scopeType;
+}
+bool updateScopeType(BlockType newType,bool autoClose){
+  if(localScopeCount<1)
+    return true;
+  scopeBuffer[localScopeCount-1].scopeType=newType;
+  scopeBuffer[localScopeCount-1].autoClose=autoClose;
+  return false;
+}
+bool currentScopeAutoClose(void){
+  if(localScopeCount<1)
+    return false;
+  return scopeBuffer[localScopeCount-1].autoClose;
 }
 bool closeScope(ParserState const* state){
   if(localScopeCount<1)
@@ -3215,7 +3228,6 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
           handleError("block procedure should be eliminated at compile time",ERROR_SYNTAX,op->filePos);
           break;
         case BLOCK_IF:
-        case BLOCK_IF2:
           fputs("if(",target);
           COMPILE_OP_RETURN_ERROR(target,op,opSize);
           fputs("){\n",target);
@@ -4181,7 +4193,7 @@ TypeId const* popTypeConstants(size_t count,FilePosition pos,char const* argumen
   return compositeTypeBuffer;
 }
 /*
-pops the generic arguments for the given template 
+pops the generic arguments for the given template
 the returned array points to a subsection of the constant buffer and becomes invalid once any new constants get added
 */
 Constant const* popTemplateArguments(TypeId templateArgs,String templateName,FilePosition pos){
@@ -5113,8 +5125,10 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     pushOperation(state,opCodeBlock(BLOCK_IF,wordPos));
     return;
   }else if(wordEquals(&word,"_if")){
+    if(openScope(BLOCK_IF,state)||updateScopeType(BLOCK_IF,true))
+      handleError("could not open _if scope",ERROR_MEMORY,wordPos);
     //no scope change for _if
-    pushOperation(state,opCodeBlock(BLOCK_IF2,wordPos));
+    pushOperation(state,opCodeBlock(BLOCK_IF,wordPos));
     return;
   }else if(wordEquals(&word,"while")){
     if(openScope(BLOCK_WHILE,state))
@@ -5126,15 +5140,16 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     if(openScope(BLOCK_WHILE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
     //scope count does not change
-
     pushOperation(state,opCodeBlock(BLOCK_DO,wordPos));
     return;
   }else if(wordEquals(&word,"else")){
+    bool autoClose=currentScopeAutoClose();
     closeScope(state);
     if(openScope(BLOCK_ELSE,state))
       handleError("scope buffer overflow",ERROR_MEMORY,wordPos);
+    if(autoClose&&updateScopeType(BLOCK_ELSE,true))
+      handleError("error while creating else scope",ERROR_MEMORY,wordPos);
     //scope count does not change
-
     pushOperation(state,opCodeBlock(BLOCK_ELSE,wordPos));
     return;
   }else if(wordEquals(&word,"break")){
@@ -5168,12 +5183,17 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"end")){
     //end operation block before closing scope
-    BlockType closed=currentScope();
-    pushOperation(state,opEndCodeBlock(closed,wordPos));
-    if(closed==BLOCK_PROCEDURE){//exited procedure
-      state->currentProcId=-1;
-    }
-    closeScope(state);
+    BlockType closed;
+    bool autoClose;
+    do{
+      closed=currentScope();
+      autoClose=currentScopeAutoClose();
+      pushOperation(state,opEndCodeBlock(closed,wordPos));
+      if(closed==BLOCK_PROCEDURE){//exited procedure
+        state->currentProcId=-1;
+      }
+      closeScope(state);
+    }while(autoClose);
     if(localScopeCount==0)
       endOpenTemplate(wordPos);
     return;
@@ -5248,7 +5268,7 @@ FileId parseFile(ParserState* state,CodeFile* codeFile){
     handleError("could not allocate includes array",ERROR_MEMORY,codeFile->currentPos);
     return FILE_ID_NONE;
   }
-  
+
   NamespaceInfo namespaceInfo=(NamespaceInfo){.current=0,.namespaceImports=NAMESPACE_IMPORT_NONE};
   FileId prevFile=state->currentFile;
   FileId included=state->fileCount++;
@@ -5809,7 +5829,7 @@ bool canCast(TypeId src,TypeId target,bool force){
     return true;
   if(isIntType(src)&&isPointerType(target))
     return true;
-  return false; 
+  return false;
 }
 
 void requireTypes(char const* opName,TypeCheckState* state,TypeId const* types,size_t nTypes,FilePosition pos){
@@ -6310,7 +6330,7 @@ void typeCheckGetTupleElement(TypeCheckState* state,TypeId tupleType,bool tupleW
       handleError("cannot write to field of constant tuple",ERROR_SYNTAX,op->filePos);
     checkTupleElementMutable(&state->opStack[state->opStackCount-1],1);
     typeCheckSetStackValue(state,op,eltType);
-  } 
+  }
 }
 void typeCheckArrayElementAccess(TypeCheckState* state,TypeId arrayType,int32_t indexCount,Operation* op){
   if(indexCount>arrayTypeData(arrayType)->dims){
@@ -6745,7 +6765,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         case EQ:
         case NE:
           //pointer equality
-          if(isPointerType(inTypes[0])&&isPointerType(inTypes[1])&&//XXX? check sizes 
+          if(isPointerType(inTypes[0])&&isPointerType(inTypes[1])&&//XXX? check sizes
               (arrayTypeData(inTypes[0])->fixedSize==arrayTypeData(inTypes[1])->fixedSize)&&
               typeEquals(getBaseType(inTypes[0]),getBaseType(inTypes[1]))){
             op.dataType=TYPE_BOOL;
@@ -6992,7 +7012,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           handleError(NULL,ERROR_SYNTAX,op.filePos);
         }
         typeCheckSetStackValue(state,&op,op.dataType);
-      } 
+      }
       return;
     case OP_PRE_DECLARE:
       checkReachable(state,op);
@@ -7258,48 +7278,6 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           op.dataAs.block.id=blockInfoPtr->blockId;
           op.dataAs.block.subId=ifBlock->elifCount;
           pushCompiledOperation(state,op);
-          return;
-        case BLOCK_IF2:
-          checkReachable(state,op);
-          blockInfoPtr=peekBlock(state);
-          if(blockInfoPtr==NULL||blockInfoPtr->type!=BLOCK_ELSE){//wrong position for _IF
-            fputs("_IF can only appear in ELSE blocks\n",stderr);
-            printf("%u\n",blockInfo.type);
-            handleError(NULL,ERROR_SYNTAX,op.filePos);
-          }
-          //update inTypes
-          ifBlock=&(blockInfoPtr->blockDataAs.ifBlock);
-          if(state->typeCount>1){
-            if(ifBlock->inStack.typeCount<state->typeCount-1){
-              //if allocation fails program will be terminated -> can directly assign result of realloc
-              ifBlock->inStack.types=realloc(ifBlock->inStack.types,(state->typeCount-1)*sizeof(TypeInfo));
-            }
-            ifBlock->inStack.typeCount=state->typeCount-1;
-            if(ifBlock->inStack.opCount<state->opStackCount-state->typeStack[state->typeCount-1].opCount){
-              //if allocation fails program will be terminated -> can directly assign result of realloc
-              ifBlock->inStack.ops=realloc(ifBlock->inStack.ops,(state->opStackCount-state->typeStack[state->typeCount-1].opCount)*sizeof(Operation));
-            }
-            ifBlock->inStack.opCount=state->opStackCount-state->typeStack[state->typeCount-1].opCount;
-            if(ifBlock->inStack.types==NULL||ifBlock->inStack.ops==NULL){
-              handleError("ifBlock->inStack allocation failed",ERROR_MEMORY,op.filePos);
-            }
-            memcpy(ifBlock->inStack.types,state->typeStack,(state->typeCount-1)*sizeof(TypeInfo));
-            memcpy(ifBlock->inStack.ops,state->opStack,(ifBlock->inStack.opCount)*sizeof(Operation));
-          }else{
-            ifBlock->inStack.typeCount=0;
-            ifBlock->inStack.opCount=0;
-            //the memory sections will be freed when an end-block is encountered
-          }
-          //update block
-          blockInfoPtr->type=BLOCK_IF;
-          ifBlock->elsePos=state->opCount;
-          op.dataType=TYPE_BOOL;
-          requireTypes("if-condition",state,&op.dataType,1,op.filePos);
-          extractCompositeOps(state,1,false);
-          offset=state->typeCount-1;
-          op.dataAs.block.id=blockInfoPtr->blockId;
-          op.dataAs.block.subId=ifBlock->elifCount++;
-          addCompiledOps(state,op,1);
           return;
         case BLOCK_WHILE:
           checkReachable(state,op);
@@ -7898,7 +7876,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
     GenericType* templateArgs=NULL;
     bool compiledImpl;//XXX? check directly if implementations have been added
     int64_t templateDepth=0;
-    do{//compiling template implementations may produce new template implementations 
+    do{//compiling template implementations may produce new template implementations
       compiledImpl=false;
       for(size_t t=0;t<templateCount;t++){
         if(templates[t].codeSize>0&&templates[t].implCount>templates[t].compiledImpls){
@@ -7929,7 +7907,7 @@ void typeCheckProgram(Program* prog,CodeFile* src){
               }else if(op.opType!=OP_GET_TEMPLATE&&op.opType!=OP_SET_TEMPLATE&&op.opType!=OP_CALL_TEMPLATE&&op.opType!=OP_ADDR_OF_TEMPLATE){//all except access to other templates
                 op.dataType=replaceGenericTypes(op.dataType,templateArgs,templates[t].implementations[i].argValues,argCount);
                 if(op.opType==OP_CAST||(op.opType==OP_CONSTANT&&typeEquals(op.dataType,TYPE_TYPE))){//operations with source-type
-                  op.dataAs.sourceType=replaceGenericTypes(op.dataAs.sourceType,templateArgs,templates[t].implementations[i].argValues,argCount);              
+                  op.dataAs.sourceType=replaceGenericTypes(op.dataAs.sourceType,templateArgs,templates[t].implementations[i].argValues,argCount);
                 }
               }
               if(op.opType==OP_DECLARE&&(op.dataAs.idInfo.type==ID_PROCEDURE||op.dataAs.idInfo.type==ID_GLOBAL_VAR)){
