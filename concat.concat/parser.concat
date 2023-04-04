@@ -1112,26 +1112,30 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "'_if' is only allowed in else-blocks" sb.wrap fileState [] .wordStart state appendError
         return
       end
-      codeBlocks.BlockType ._IF fileState [] .wordStart opBlock  state appendOp
-      codeBlocks.BlockType .IF  state [] .idContext @ id.updateScopeType #drop
+      codeBlocks.BlockType .IF fileState [] .wordStart opBlock  state appendOp
+      codeBlocks.BlockType .IF state [] .idContext @ id.openScope
+      codeBlocks.BlockType .IF true state [] .idContext @ id.updateScopeType #drop
       return
     else #dup "else" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .IF != | if
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .IF != | if #+autoClose+# #drop
         "'else' is only allowed in if-blocks" sb.wrap fileState [] .wordStart state appendError
         return
       end
       codeBlocks.BlockType .ELSE  fileState [] .wordStart opBlock  state appendOp
       codeBlocks.BlockType .ELSE  state [] .idContext @ id.openScope
+      #+auto-close+# if
+        codeBlocks.BlockType .ELSE true state [] .idContext @ id.updateScopeType #drop
+      end
       return
     else #dup "while" string.wrap string.eq _if #drop
       codeBlocks.BlockType .WHILE  fileState [] .wordStart opBlock  state appendOp
       codeBlocks.BlockType .WHILE  state [] .idContext @ id.openScope
       return
     else #dup "do" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .WHILE != | if
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .WHILE != | if #+autoClose+# #drop
         "'do' is only allowed in while-blocks" sb.wrap fileState [] .wordStart state appendError
         return
-      end
+      end #drop ## ignore auto-close
       codeBlocks.BlockType .DO  fileState [] .wordStart opBlock  state appendOp
       codeBlocks.BlockType .DO  state [] .idContext @ id.openScope
       return
@@ -1146,18 +1150,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       codeBlocks.BlockType .SWITCH  state [] .idContext @ id.openScope
       return
     else #dup "case" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap #dup codeBlocks.BlockType .SWITCH != #swap codeBlocks.BlockType .CASE != & | if
+      state [] .idContext @ id.closeScope #swap #dup codeBlocks.BlockType .SWITCH != #swap codeBlocks.BlockType .CASE != & | if #+autoClose+# #drop
         "'case' is only allowed in switch-blocks" sb.wrap fileState [] .wordStart state appendError
         return
-      end
+      end #drop ## ignore auto-close
       codeBlocks.BlockType .CASE  fileState [] .wordStart opBlock  state appendOp
       codeBlocks.BlockType .CASE  state [] .idContext @ id.openScope
       return
     else #dup "default" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .CASE != | if
+      state [] .idContext @ id.closeScope #swap codeBlocks.BlockType .CASE != | if #+autoClose+# #drop
         "'default' is only allowed in switch-case-blocks" sb.wrap fileState [] .wordStart state appendError
         return
-      end
+      end #drop ## ignore auto-close
       codeBlocks.BlockType .DEFAULT  fileState [] .wordStart opBlock  state appendOp
       codeBlocks.BlockType .DEFAULT  state [] .idContext @ id.openScope
       return
@@ -1169,11 +1173,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #+XXX only store out-type+# fileState [] .wordStart opReturn state appendOp
       return
     else #dup "end" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope if #drop
-        "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError
-        return
-      end
+      while
+        state [] .idContext @ id.closeScope if #+autoClose blockType+# #drop:2
+          "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError
+          return
+        end
         fileState [] .wordStart opEndBlock  state appendOp
+      do end
       return
     else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
       1 string.tail

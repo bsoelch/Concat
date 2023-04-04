@@ -1,7 +1,7 @@
 #include stringBuilder
 
 #namespace codeBlocks
-  enum( UNKNOWN PROCEDURE IF _IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
+  enum( UNKNOWN PROCEDURE IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
   struct( BlockType : blockType i32 : blockId ) =:: public BlockInfo
 #end
 #namespace sb
@@ -16,9 +16,6 @@
         return
       IF case
         "if" sb.appendS
-        return
-      _IF case
-        "_if" sb.appendS
         return
       ELSE case
         "else" sb.appendS

@@ -26,7 +26,7 @@
     a .namespace b .namespace == a .name b .name string.eq & return
   end
 
-  struct( IdentifierName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : mut blockType types.Type : currentProc NamespaceImportId : prevImports ) =:: Scope
+  struct( IdentifierName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : mut blockType types.Type : currentProc NamespaceImportId : prevImports bool : mut autoClose ) =:: Scope
 
   proc( codeBlocks.BlockType : blockType types.Type : procType NamespaceImportId : imports => Scope ) =: newScope
     idHash @
@@ -35,6 +35,7 @@
     blockType
     procType
     imports
+    false
     Scope new return
   end
 
@@ -83,11 +84,12 @@
        list.append
     context [] .localScopes =
   end
-  proc( codeBlocks.BlockType : blockType  IdentifierContext ptr mut : context => bool ) =: public updateScopeType
+  proc( codeBlocks.BlockType : blockType  bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
     context [] .localScopes .length 0 == if
       true return
     end
     blockType context [] .localScopes list.peek .data [] .blockType =
+    autoClose context [] .localScopes list.peek .data [] .autoClose =
     false return
   end
   proc( IdentifierContext ptr mut : context => codeBlocks.BlockType ) =: public currentScopeType
@@ -104,10 +106,10 @@
     end
     context [] .localScopes list.peek .data [] .currentProc return
   end
-  proc( IdentifierContext ptr mut : context => codeBlocks.BlockType bool ) =: public closeScope
+  proc( IdentifierContext ptr mut : context => bool codeBlocks.BlockType bool ) =: public closeScope
     #using codeBlocks
     context [] .localScopes .length 0 == if
-      BlockType .UNKNOWN true return
+      false BlockType .UNKNOWN true return
     end
     context [] .localScopes list.pop #swap context [] .localScopes =
       #dup .identifiers addrOf map.free
@@ -115,7 +117,7 @@
       #dup .blockType codeBlocks.BlockType .PROCEDURE == if
         0 context [] .localVarCount = ## XXX handle nested procedures
       end
-    .blockType false return
+    #dup .autoClose #swap .blockType false return
   end
   ## TODO scopeItr
   ## TODO different return flags for: error, no-match, match, multi-match
