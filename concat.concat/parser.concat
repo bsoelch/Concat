@@ -999,7 +999,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart isInit if
         opDeclare
       else
-        opPredeclare
+        opPredeclare ## XXX don't create op for global pre-declaration
       end
       state appendOp
       #drop return
@@ -1241,6 +1241,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "[]" string.wrap string.eq _if #drop
       -1 fileState [] .wordStart opArrayGet state appendOp
       return
+    else #dup "()" string.wrap string.eq _if #drop
+      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      return
     else #dup "new" string.wrap string.eq _if =:: opName
       state hasConst ! if
         "missing parameter for \"" sb.wrap
@@ -1361,6 +1364,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup ">" string.wrap string.eq _if #drop
       BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "..argc" string.wrap string.eq _if #drop
+      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      return
+    else #dup "..getArg" string.wrap string.eq _if #drop
+      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      return
+    else #dup "mut" string.wrap string.eq _if #drop
+      "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError
       return
     end
   #dup state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
