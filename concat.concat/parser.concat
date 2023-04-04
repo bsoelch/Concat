@@ -882,23 +882,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
       ':' string.split
-        "include" string.wrap #over string.eq if #drop:2
-          fileState nextToken
-          #dup Token .STRING == if .STRING
-            ## TODO include local file
-            #drop
-            return
-          else #dup Token .IDENTIFER == _if .IDENTIFER
-            ## TODO include library file
-            #drop
-            return
-          end
-          64 sb.create
-            "invalid token for include" sb.appendS
-            #swap appendToken
-          fileState [] .wordStart state appendError
-          return
-        else "dup" string.wrap #over string.eq _if #drop ':' string.split #swap #drop ## ignore 2nd parameter
+        "dup" string.wrap #over string.eq if #drop ':' string.split #swap #drop ## ignore 2nd parameter
           1 #swap
           fileState [] .wordStart state getStackModParam ## :count
           StackModType .DUP fileState [] .wordStart opStackMod state appendOp
@@ -922,6 +906,46 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           1 #swap
           fileState [] .wordStart state getStackModParam ## :count
           StackModType .DROP fileState [] .wordStart opStackMod state appendOp
+          return
+        else "include" string.wrap #over string.eq _if #drop:2
+          fileState nextToken
+          #dup Token .STRING == if .STRING
+            ## TODO include local file
+            #drop
+            return
+          else #dup Token .IDENTIFER == _if .IDENTIFER
+            ## TODO include library file
+            #drop
+            return
+          end
+          64 sb.create
+            "invalid token for include" sb.appendS
+            #swap appendToken
+          fileState [] .wordStart state appendError
+          return
+        else "namespace" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "using" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "end" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "template" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "types" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "stack" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "ops" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          return
+        else "find" string.wrap #over string.eq _if #drop:2
+          "unimplemented" sb.wrap fileState [] .wordStart state appendError
           return
         end
       64 sb.create
