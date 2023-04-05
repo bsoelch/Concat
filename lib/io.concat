@@ -25,7 +25,10 @@
   proc( => FILE ) : extern public stdOut
   proc( => FILE ) : extern public stdErr
   
-  proc( i64 : static k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) : extern public fopen
+  proc( i8 _ ptr : fileName i64 : nameLength OpenMode : mode => FILE IOError ) : extern public fopen
+  proc( i64 : static k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) =: public fopenS
+    fileName k mode fopen return
+  end
   ## file buffer off count -> nRead errCode
   proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread
   ## file buffer off count -> nWritten errCode

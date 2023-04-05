@@ -67,7 +67,7 @@ static IOError getErrorId(int errnoVal){
 #define MAX_PATH 4096
 #endif
 static char fopenBuffer[MAX_PATH+1];//XXX make buffer thread safe
-fileAndErr concat_io_dfopen(int64_t nameLength,int8_t const* nameChars,OpenMode mode){
+fileAndErr concat_io_dfopen(int8_t const* nameChars,int64_t nameLength,OpenMode mode){
   char const* path=(char const*)nameChars;
   if(nameChars[nameLength-1]!='\0'){
     if(nameLength>MAX_PATH){

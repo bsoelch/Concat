@@ -6,10 +6,22 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
   proc( i64 : cap => stringBuilder ) =: public create
     cap i8 mem.alloc cap 0 stringBuilder new return
   end
+  proc( stringBuilder => stringBuilder ) =: public free
+    #dup .data mem.free
+    0 #over .cap =
+    0 #over .length =
+    return
+  end
   proc( i64 : static k  i8 k ptr : str => stringBuilder ) =: public wrap
     k create
       str appendS
     return
+  end
+  proc( stringBuilder : str i64 : index => i8 ) =: public charAt
+    index 0 < index str .length >= | if
+      '\x00' return ## TODO error handling
+    end
+    str .data index [] return
   end
   proc( stringBuilder : buffer i64 : minCap => stringBuilder ) =: public ensureCap
     buffer
