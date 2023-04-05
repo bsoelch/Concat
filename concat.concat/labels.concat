@@ -6,11 +6,6 @@
 
 
 #namespace id
-  i32 =:: public NamespaceId
-  -1 NamespaceId =: public NAMESPACE_ID_NONE
-  i32 =:: public NamespaceImportId
-  -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
-
   struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: public NamespaceInfo
 
   struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: public NamespaceImport
@@ -18,10 +13,6 @@
   struct( i64 : offset i64 : length ) =:: public StringConstant
   struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
 
-
-
-  i32 =:: public LabelId
-  -1 LabelId =: public LABEL_ID_NONE
 
   i32 =:: public LabelFlag
   0  LabelFlag =: public FLAG_NONE

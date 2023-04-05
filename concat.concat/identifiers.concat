@@ -6,6 +6,7 @@
 #include "constants.concat"
 #include "labels.concat"
 #include "codeBlocks.concat"
+#include "common.concat"
 
 #namespace id
   enum( TYPE PROCEDURE GLOBAL_VAR  TEMPLATE_ARG  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
@@ -22,14 +23,17 @@
   types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
   types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
 
-  struct( string : name NamespaceId : mut namespace ) =:: IdentifierName
+  struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
 
   proc( IdentifierName : a => i32 ) =: idHash
-    a .name string.hash a .namespace i32 cast ^ return
+    a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
   end
   proc( IdentifierName : a IdentifierName : b => bool ) =: idEq
-    a .namespace b .namespace == a .name b .name string.eq & return
+    a .fileId b .fileId != a .namespace b .namespace != | if
+      false return
+    end
+    a .name b .name string.eq return
   end
 
   struct(
@@ -155,16 +159,16 @@
       end
     #dup .autoClose #swap .blockType false return
   end
-  ## TODO scopeItr
+
   ## TODO different return flags for: error, no-match, match, multi-match
-  proc( string : id IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr bool ) =: public searchIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr bool ) =: public searchIdentifier
     context [] .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
-      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
+      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
     end
     id 0 string.charAt '.' == if
-      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
+      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
     end
     id '.' string.split
       #over .length 0 == if
@@ -174,7 +178,7 @@
     =:: name
     ## 1. search in local scopes
     mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
-    name relSpace IdentifierName new =:: mut idName
+    name relSpace fileId IdentifierName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .localScopes .length 1 -
       while #dup 0 >= do
@@ -192,9 +196,11 @@
       end #drop
     end
     ## 2. search global variable in current&parent namespaces
+    name relSpace FILE_ID_NONE IdentifierName new =:: mut globalName
     while mNamespace NAMESPACE_ID_NONE != do
       mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
       relSpace idName .namespace =
+      relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
         context getGlobalScope .data [] .identifiers addrOf idName map.at
         #dup optional.hasData if .data
@@ -203,6 +209,16 @@
           end
           matches .data []
             idName #over:2 IdentifierMatch new list.append
+          matches .data [] =
+          #drop
+        else #drop end
+        context getGlobalScope .data [] .identifiers addrOf globalName map.at
+        #dup optional.hasData if .data
+          matches optional.isEmpty if
+            globalName #swap false return
+          end
+          matches .data []
+            globalName #over:2 IdentifierMatch new list.append
           matches .data [] =
           #drop
         else #drop end
@@ -216,6 +232,7 @@
       context [] .labelContext .namespaceImports #swap list.get
         #dup .imported path  context [] .labelContext addrOf findNamespace relSpace =
         relSpace idName .namespace =
+        relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
           context getGlobalScope .data [] .identifiers addrOf idName map.at
           #dup optional.hasData if .data
@@ -231,11 +248,25 @@
               true multiMatch =
             end
           else #drop end
+          context getGlobalScope .data [] .identifiers addrOf globalName map.at
+          #dup optional.hasData if .data
+            matches optional.hasData if
+              matches .data []
+                globalName #over:2 IdentifierMatch new list.append
+              matches .data [] =
+            end
+            mNamespace NAMESPACE_ID_NONE == if
+              IdentifierData ptr cast optional.wrap match =
+              #dup .imported mNamespace =
+            else #drop
+              true multiMatch =
+            end
+          else #drop end
         end
      .parent
     end #drop
     matches optional.isEmpty match optional.hasData & if ## XXX return value indicating multi-match
-      idName match .data multiMatch return
+      idName match .data multiMatch return ## XXX use global id if match is global
     end
     ## 4. template arguments
     context hasOpenTemplate if
@@ -258,48 +289,52 @@
               tId
               IdentifierType .TEMPLATE_ARG
               IdentifierData new ID_TMP_DATA =
-              name context [] .namespaceInfo .current IdentifierName new ID_TMP_DATA @ false return
+              name context [] .namespaceInfo .current fileId IdentifierName new ID_TMP_DATA @ false return
             end
           #swap
           1 +
         end #drop
       #drop
     end
-    "could not find identifier" string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
+    "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
   end
-  proc( string : id  IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
-    id context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
+    id fileId context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( LabelId : label types.Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+  proc( LabelId : label types.Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
-      "invalid label id" string.wrap NAMESPACE_ID_NONE IdentifierName new
+      "invalid label id" string.wrap NAMESPACE_ID_NONE currentFile IdentifierName new
         ID_NONE_DATA @ true return
     end
     label  context [] .labelContext addrOf
       #over #over labelFlags =:: flags
       #over #over labelName .data =:: name
     labelPos .data =:: labelPos
-
+    context id.isGlobal flags FLAG_PUBLIC & 0 != & if ## public global -> ignore fileId
+      FILE_ID_NONE
+    else
+      currentFile
+    end =:: fileId
     flags FLAG_MUTABLE & 0 != if
       idType IdentifierType .TYPE == if
-        "type definitions cannot be mutable" string.wrap NAMESPACE_ID_NONE IdentifierName new
+        "type definitions cannot be mutable" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
           ID_NONE_DATA @ true return
       end
       idType IdentifierType .PROCEDURE == if
-        "procedures cannot be mutable" string.wrap NAMESPACE_ID_NONE IdentifierName new
+        "procedures cannot be mutable" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
           ID_NONE_DATA @ true return
       end
       idType IdentifierType .ARGUMENT ==  if
-        "procedure arguments cannot be mutable" string.wrap NAMESPACE_ID_NONE IdentifierName new
+        "procedure arguments cannot be mutable" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
           ID_NONE_DATA @ true return
       end
     end
     name 0 string.charAt '#' == if
-      "identifier names cannot start with '#'" string.wrap NAMESPACE_ID_NONE IdentifierName new
+      "identifier names cannot start with '#'" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
         ID_NONE_DATA @ true return
     end
     name '.' string.contains if
-      "identifier names cannot contain '.'" string.wrap NAMESPACE_ID_NONE IdentifierName new
+      "identifier names cannot contain '.'" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
         ID_NONE_DATA @ true return
     end
     context [] .localScopes .length 0 > if
@@ -307,11 +342,11 @@
     else
       context getGlobalScope .data
     end =:: mScope
-    name context [] .namespaceInfo .current IdentifierName new =:: mut idName
+    name context [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
     mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data
       idName #swap true return
     end #drop
-    name context getIdentifier ! if
+    name fileId context getIdentifier ! if
       true return ## shadowed identifier
     end #drop:2
     mScope [] .identifiers addrOf

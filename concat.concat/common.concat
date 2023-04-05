@@ -1,0 +1,18 @@
+## collection of basic declarations used by all compiler files
+#include string
+
+i32 =:: public FileId
+-1 FileId =: public FILE_ID_NONE
+
+struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
+
+#namespace id
+  i32 =:: public LabelId
+  -1 LabelId =: public LABEL_ID_NONE
+
+  i32 =:: public NamespaceId
+  -1 NamespaceId =: public NAMESPACE_ID_NONE
+
+  i32 =:: public NamespaceImportId
+  -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
+#end

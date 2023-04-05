@@ -2,7 +2,8 @@
 
 #include future
 
-struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
+#include "common.concat"
+
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public FileState
 
 enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER string : ERROR ) =:: public Token

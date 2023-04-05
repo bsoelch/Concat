@@ -501,7 +501,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #dup .val #swap .argType fileState [] .wordStart newConst state pushConst
       true return
     else #drop end
-    #dup state [] .idContext @ id.getIdentifier ! if ## read named constants TODO generic arguments
+    #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## read named constants TODO generic arguments
       #dup [] .constValue ConstValue .none != if
         #dup [] .constValue #over [] .valueType fileState [] .wordStart newConst  state pushConst
         #drop:2 true return
@@ -701,7 +701,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else
           ConstValue .none
         end
-      fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
+      fileState [] .wordStart state [] .currentFile state [] .idContext @ id.declareIdentifier if #drop
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
         return
       end
@@ -732,7 +732,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #over #over state [] .idContext .typeContext @ types.compositeGetLabel
                 #dup state [] .idContext .labelContext @ id.isLabelEmpty ! if
                     #over:2 #over:2 state [] .idContext .typeContext @ types.compositeGetElement
-                  id.IdentifierType .ARGUMENT #over:3 ConstValue .none fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
+                  id.IdentifierType .ARGUMENT #over:3 ConstValue .none fileState [] .wordStart state [] .currentFile state [] .idContext @ id.declareIdentifier if #drop
                     .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
                     #drop:4 return
                   end #drop:2
@@ -782,7 +782,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           -1
           ConstValue .none
         end
-        fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
+        fileState [] .wordStart state [] .currentFile state [] .idContext @ id.declareIdentifier if #drop
           .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
           return
         end
@@ -1139,7 +1139,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError
       return
     end
-  #dup state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
+  #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
     #drop:2
     return
@@ -1159,7 +1159,6 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   included FILE_ID_NONE == if ## file has not yet been included
     fileName state parseFile included =
   end
-  ## TODO include constants
   state [] .progFiles state [] .currentFile list.at .data
   #dup [] .includedFiles
       included
@@ -1207,14 +1206,15 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId ) =: parseF
   fileName
     #dup #over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
+      #dup .length 1 - #over .length = ## ensure there is a zero-terminator after the last character
     end
-    #dup .data #over .length 1 - string.create #+cut of trailing zero-terminator+# 0 1 FilePosition new #dup FileState new =:: mut fileState
+    #dup sb.toStr 0 1 FilePosition new #dup FileState new =:: mut fileState
     state [] .progFiles
       #over state [] .progFiles .length FileId cast state [] .idContext @ newProgFile list.append
     state [] .progFiles =
   state [] .currentFile
     state [] .progFiles .length 1 - FileId cast state [] .currentFile =
-    #swap #dup .data #swap .length io.OPEN_READ io.fopen #drop =:: f
+    #swap #dup .data #swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen #drop =:: f
       128 sb.create
         '\n' sb.appendC
         f sb.appendFile #drop
@@ -1228,8 +1228,6 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId ) =: parseF
       do end #drop
     #drop
     fileBody sb.free #drop
-    state [] .progFiles state [] .currentFile list.at .data
-    #dup [] .fileName .length 1 - #swap [] .fileName .length = ## remove zero-terminator
     state [] .currentFile #swap
   state [] .currentFile =
 end

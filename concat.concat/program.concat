@@ -3,6 +3,7 @@
 #include "constants.concat"
 #include "codeBlocks.concat"
 #include "identifiers.concat"
+#include "common.concat"
 
 enum( NEGATE INCREMENT DECREMENT NOT FLIP ) =:: public UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: public BinaryOperator
@@ -119,9 +120,6 @@ proc( string FilePosition  => Operation ) =: public opUnknown
   OpValue .Unknown new types.Type .undefined pos Operation new return
 end
 struct( stringBuilder : message FilePosition : pos ) =:: public CompilerError
-
-i32 =:: public FileId
--1 FileId =: public FILE_ID_NONE
 
 struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
 
