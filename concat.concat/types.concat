@@ -196,7 +196,7 @@ proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool =>
         "]( "    appendS
       #swap
       context [] .namedTypes #swap list.get labelContext context appendNamedType
-      ')' appendC
+      " )" appendS
       return
     namedLabel case
       .namedLabel
@@ -206,7 +206,7 @@ proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool =>
         "]( "    appendS
       #swap
       context [] .namedTypes #swap list.get labelContext context appendNamedType
-      ')' appendC
+      " )" appendS
       return
     autoType case
       #swap "auto["     appendS
@@ -244,6 +244,20 @@ end
   PrimitiveType .FLOAT     Type .primitiveType new Type =: public FLOAT
   PrimitiveType .TYPE      Type .primitiveType new Type =: public TYPE
 #end
+proc( Type => bool ) =: public isPrimitive
+  Type .primitiveType == return
+end
+proc( Type => bool ) =: public isInt
+  #dup isPrimitive ! if #drop
+    false return
+  end .primitiveType
+  switch
+    BOOL FLOAT TYPE case
+      false return
+    I8 I32 I64 case
+      true return
+  end
+end
 
 ## array & pointer types
 struct( i64 : value bool : isInt ) =:: public ArraySize
@@ -644,7 +658,7 @@ end
 proc( i32 : id => Type ) =: public newGenericType
   id Type .genericType new return
 end
-proc( i32 : id => Type ) =: public newTempalteType
+proc( i32 : id => Type ) =: public newTemplateType
   id Type .templateType new return
 end
 

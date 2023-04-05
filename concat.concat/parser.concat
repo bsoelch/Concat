@@ -117,7 +117,6 @@ enum(
          UnaryOperator : unaryOperator
         BinaryOperator : binaryOperator
      StackModification : stackMod
-         stringBuilder : Error
                 string : Unknown
 ) =:: OpValue
 struct( OpValue : mut val types.Type : mut dataType FilePosition : mut pos ) =:: Operation
@@ -195,18 +194,14 @@ proc( i32 i32 StackModType FilePosition => Operation ) =: opStackMod
   =:: pos
   StackModification new OpValue .stackMod new types.Type .undefined pos Operation new return
 end
-proc( stringBuilder FilePosition  => Operation ) =: opError
-  =:: pos
-  OpValue .Error new types.Type .undefined pos Operation new return
-end
 proc( string FilePosition  => Operation ) =: opUnknown
   =:: pos
   OpValue .Unknown new types.Type .undefined pos Operation new return
 end
 
+struct( stringBuilder : message FilePosition : pos ) =:: CompilerError
 struct( types.Type : argType ConstValue : val id.LabelId : labelId ) =:: StaticArgument
 struct(
-    types.TypeContext : mut typeContext
  id.IdentifierContext : mut idContext
         Constant list : mut constants
                   i64 : mut constOffset
@@ -214,10 +209,23 @@ struct(
  types.ArraySize list : mut arraySizeBuffer
   StaticArgument list : mut staticArgs
                   i64 : mut staticArgsOffset
-       Operation list : mut ops
+       Operation list : mut globalOps
+       Operation list : mut localOps
+       Operation list : mut templateOps
+   CompilerError list : mut errors
                   i32 : mut autoTypeCount
 ) =:: ParserState
 #namespace sb
+proc( stringBuilder FilePosition => stringBuilder ) =: appendPos
+  #swap
+    #over .fileName sb.appendStr
+    ':' sb.appendC
+    #over .line sb.appendI
+    ':' sb.appendC
+    #swap .posInLine sb.appendI
+    '\n' sb.appendC
+  return
+end
 proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
   =:: context
   #swap
@@ -230,9 +238,9 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         break
       OpValue .Constant case
         "constant ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
-        #over .val .Constant context [] .idContext .labelContext addrOf context [] .typeContext addrOf sb.appendConstant
+        #over .val .Constant context [] .idContext .labelContext addrOf context [] .idContext .typeContext addrOf sb.appendConstant
         break
       block case
         "Block: " sb.appendS
@@ -244,137 +252,133 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         break
       getId case
         "get ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       setId case
         "set ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       @Id case
         "address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@Id context [] .idContext .labelContext @ sb.appendIdInfo
         break
       declareId case
         "declare ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .declareId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       predeclareId case
         "predeclare ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
         break
       getLabel case
         "get label ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       setLabel case
         "set label ( " sb.appendS
-        #over .dataType context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       @Label case
         "label address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@Label context [] .idContext .labelContext @ id.labelName .data sb.appendStr
         break
       getTupleElement case
         "get tuple element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getTupleElement sb.appendI
         break
       setTupleElement case
         "set tuple element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setTupleElement sb.appendI
         break
       @TupleElement case
         "tuple element address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@TupleElement sb.appendI
         break
       getArrayElement case
         "get array element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .getArrayElement sb.appendI
         break
       setArrayElement case
         "set array element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .setArrayElement sb.appendI
         break
       @ArrayElement case
         "array element address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .@ArrayElement sb.appendI
         break
       Return case
         "Return: " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         break
       binaryOperator case
         "binary Operator ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .binaryOperator sb.appendBinaryOperator
         break
       unaryOperator case
         "unary Operator ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .unaryOperator sb.appendUnaryOperator
         break
       Print case
         "print: " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         break
       New case
         "new: " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         break
       newEnum case
         "new enum ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) : " sb.appendS
         #over .val .newEnum sb.appendI
         break
       Cast case
         "cast ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) src: " sb.appendS
-        #over .val .Cast  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .val .Cast  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         break
       Cast! case
         "cast ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         " ) src: " sb.appendS
-        #over .val .Cast!  context [] .idContext .labelContext @ context [] .typeContext @ sb.appendType
+        #over .val .Cast!  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
         break
       stackMod case
         "stack modification: " sb.appendS
         #over .val .stackMod sb.appendStackMod
-        break
-      Error case
-        "Error: " sb.appendS
-        #over .val .Error sb.appendSb
         break
       Unknown case
         "Unknown Operation: " sb.appendS
@@ -382,40 +386,51 @@ proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
         break
     end
     " at " sb.appendS
-    #over .pos .fileName sb.appendStr
-    ':' sb.appendC
-    #over .pos .line sb.appendI
-    ':' sb.appendC
-    #over .pos .posInLine sb.appendI
-    '\n' sb.appendC
-    #swap #drop
+    #swap .pos appendPos
   return
+end
+proc( stringBuilder CompilerError => stringBuilder ) =: appendCompilerError
+  =:: err
+  err .message sb.appendSb
+  " at "       sb.appendS
+  err .pos     sb.appendPos
 end
 #end
 
-proc( Operation : op ParserState ptr mut : state bool : pushConstants => ) =: appendOpInternal
-  state [] .ops
-    pushConstants if
-      0 while #dup state [] .constants .length < do
-        #swap
-          state [] .constants #over:2 list.get opConst list.append
-        #swap
-        1 +
-      end #drop
-      state [] .constants list.clear state [] .constants =
-    end
+proc( Operation : op ParserState ptr mut : state => ) =: appendOp
+  state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+    state [] .templateOps @
+  else state [] .idContext @ id.isGlobal _if
+    state [] .globalOps @
+  else
+    state [] .localOps @
+  end
+  #dup []
+    0 while #dup state [] .constants .length < do
+      #swap
+        state [] .constants #over:2 list.get opConst list.append
+      #swap
+      1 +
+    end #drop
+    state [] .constants list.clear state [] .constants =
     op list.append
-  state [] .ops  =
-end
-proc( Operation ParserState ptr mut => ) =: appendOp
-  true appendOpInternal
+  #swap [] =
 end
 proc( stringBuilder FilePosition ParserState ptr mut => ) =: appendError
   =:: state
-  opError state false appendOpInternal
+  CompilerError new
+  state [] .errors
+    #swap list.append
+  state [] .errors =
 end
-proc( ParserState ptr mut => Operation ptr mut optional ) =: peekOp
-  [] .ops list.peek
+proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
+  state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+    state [] .templateOps
+  else state [] .idContext @ id.isGlobal _if
+    state [] .globalOps
+  else
+    state [] .localOps
+  end list.peek
 end
 
 proc( Constant : const ParserState ptr mut : state => ) =: pushConst
@@ -462,7 +477,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
     types.ArraySize array.empty false return
   end
   state [] .constants .length 1 - while #dup state [] .constOffset >= do
-    state [] .constants #over list.get .val #dup ConstValue .int != #swap ConstValue .genericInt != & if
+    state [] .constants #over list.get .valueType types.isInt ! if
       break
     end
     1 -
@@ -477,11 +492,11 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
         state [] .constants #over:2 list.get .val
           #dup ConstValue .int == if
             .int true types.ArraySize new list.append
-          else #dup ConstValue .genericInt == _if
-            .genericInt false types.ArraySize new list.append
+          else #dup ConstValue .genericArg == _if
+            .genericArg false types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
-              #swap state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+              #swap state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
             state [] .constants #over:4 list.get .pos state appendError
           end
       #swap
@@ -515,7 +530,7 @@ proc( id.LabelId : label types.Type : valType i64 : index ParserState ptr mut : 
       #dup types.primitive.TYPE types.typeEquals if
         index i32 cast types.newGenericType ConstValue .typeId new
       else
-        index ConstValue .genericInt new
+        index ConstValue .genericArg new
       end
     label
     StaticArgument new
@@ -764,7 +779,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         types.Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
-      true sizes fixedSize false state [] .typeContext addrOf types.newArrayType if #drop
+      true sizes fixedSize false state [] .idContext .typeContext addrOf types.newArrayType if #drop
         types.Type .undefined fileState [] .wordStart constType  state pushConst
         "could not create pointer type" sb.wrap fileState [] .wordStart state appendError
         true return
@@ -777,7 +792,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         types.Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
-      false sizes fixedSize false state [] .typeContext addrOf types.newArrayType if #drop
+      false sizes fixedSize false state [] .idContext .typeContext addrOf types.newArrayType if #drop
         types.Type .undefined fileState [] .wordStart constType  state pushConst
         "could not create array type" sb.wrap fileState [] .wordStart state appendError
         true return
@@ -801,7 +816,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       if
         "error while parsing tuple type" sb.wrap fileState [] .wordStart state appendError
       end
-      #swap state [] .typeContext addrOf types.newTuple if
+      #swap state [] .idContext .typeContext addrOf types.newTuple if
         "error while creating tuple type" sb.wrap fileState [] .wordStart state appendError
       end
       fileState [] .wordStart constType  state pushConst
@@ -811,7 +826,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       if
         "error while parsing enum type" sb.wrap fileState [] .wordStart state appendError
       end
-      #swap false state [] .typeContext addrOf types.newEnum if
+      #swap false state [] .idContext .typeContext addrOf types.newEnum if
         "error while creating enum type" sb.wrap fileState [] .wordStart state appendError
       end
       fileState [] .wordStart constType  state pushConst
@@ -822,7 +837,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       if
         "error while parsing procedure arguments" sb.wrap fileState [] .wordStart state appendError
       end
-      #swap false state [] .typeContext addrOf types.newProcArgs if
+      #swap false state [] .idContext .typeContext addrOf types.newProcArgs if
         "error while creating procedure arguments" sb.wrap fileState [] .wordStart state appendError
       end
       =:: in
@@ -831,10 +846,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       if
         "error while parsing procedure return values" sb.wrap fileState [] .wordStart state appendError
       end
-      #swap true state [] .typeContext addrOf types.newProcArgs if
+      #swap true state [] .idContext .typeContext addrOf types.newProcArgs if
         "error while creating procedure return values" sb.wrap fileState [] .wordStart state appendError
       end
-      in #swap state [] .typeContext addrOf  types.newProcedure if
+      in #swap state [] .idContext .typeContext addrOf  types.newProcedure if
         "error while creating procedure type" sb.wrap fileState [] .wordStart state appendError
       end
       fileState [] .wordStart constType  state pushConst
@@ -940,8 +955,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "\" is not a valid namespace name" sb.appendS
             fileState [] .wordStart state appendError return
           end
+          state [] .idContext @ id.hasOpenTemplate if #drop
+            "cannot open namespace inside template" sb.wrap fileState [] .wordStart state appendError
+            return
+          end
           id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel
-          state [] .idContext @ id.startNamespace
+          state [] .idContext @ id.beginNamespace
           return
         else "using" string.wrap #over string.eq _if #drop:2
           fileState nextToken
@@ -966,8 +985,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "no open namespaces" sb.wrap fileState [] .wordStart state appendError
           end
           return
-        else "template" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+        else "template" string.wrap #over string.eq _if #drop
+          state [] .idContext @ id.isGlobal ! if
+            "#" sb.wrap
+              #swap sb.appendStr
+            " can only be used at global level" sb.appendS fileState [] .wordStart state appendError
+          else #drop end
+          LabelType .STRUCT "#end" string.wrap fileState state readCompositeType if
+            "error while parsing template arguments" sb.wrap fileState [] .wordStart state appendError
+          end
+          #swap false state [] .idContext .typeContext addrOf types.newProcArgs if
+            "error while creating template arguments" sb.wrap fileState [] .wordStart state appendError
+          end
+          state [] .templateOps .length fileState [] .wordStart state [] .idContext @ id.beginTemplate if
+            "could not create template" sb.wrap fileState [] .wordStart state appendError
+          end
           return
         else "types" string.wrap #over string.eq _if #drop:2
           "unimplemented" sb.wrap fileState [] .wordStart state appendError
@@ -998,7 +1030,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState state nextWord fileState state readLabel
         fileState state popTypeConstant #drop =:: valType
         valType
-          #dup state [] .typeContext @ types.isProcedure if
+          #dup state [] .idContext .typeContext @ types.isProcedure if
             id.IdentifierType .PROCEDURE
           else #dup types.primitive.TYPE types.typeEquals _if
             id.IdentifierType .TYPE
@@ -1014,16 +1046,23 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             types.Type .undefined
           end
-          #over:4 state [] .typeContext @ types.newNamedType fileState [] .wordStart constType .val
-        else isInit state hasConst & _if
-          state popConst .val
-          ## TODO check if type correct
+          #over:4 state [] .idContext .typeContext @ types.newNamedType fileState [] .wordStart constType .val
+        else #over id.IdentifierType .PROCEDURE != isInit state hasConst & & _if
+          state popConst
+            ## TODO check if type correct
+            #dup opConst state appendOp
+          .val
         else
           ConstValue .none
         end
       fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
         return
+      end
+      state [] .idContext @ id.isGlobal if
+        #dup [] .idType id.IdentifierType .PROCEDURE != isInit ! | if
+          state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+        end
       end
       #dup [] .idType id.IdentifierType .TYPE == if
         #drop:2
@@ -1033,17 +1072,20 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .idContext @ id.isGlobal ! if
           "procedures have to be declared at global level" sb.wrap fileState [] .wordStart state appendError
         end
+        state hasConst if
+          "unexpected constant at global level" sb.wrap state popConst .pos state appendError
+        end
         codeBlocks.BlockType .PROCEDURE valType state [] .idContext @ id.openProcScope
-        #dup [] .valueType state [] .typeContext @ types.getProcIn if
+        #dup [] .valueType state [] .idContext .typeContext @ types.getProcIn if
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError
         end =:: inType
         inType types.Type .labeledProcIn == if
           inType
-            #dup state [] .typeContext @ types.compositeEltCount =:: count
+            #dup state [] .idContext .typeContext @ types.compositeEltCount =:: count
             0 while #dup count < do
-              #over #over state [] .typeContext @ types.compositeGetLabel
+              #over #over state [] .idContext .typeContext @ types.compositeGetLabel
                 #dup state [] .idContext .labelContext @ id.isLabelEmpty ! if
-                    #over:2 #over:2 state [] .typeContext @ types.compositeGetElement
+                    #over:2 #over:2 state [] .idContext .typeContext @ types.compositeGetElement
                   id.IdentifierType .ARGUMENT #over:3 ConstValue .none fileState [] .wordStart state [] .idContext @ id.declareIdentifier if #drop
                     .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
                     #drop:4 return
@@ -1054,10 +1096,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #drop
         end
       end
+      isInit ! state [] .idContext @ id.isGlobal & if #drop:2
+        return ## no operation for global pre-declaration
+      end
       #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart isInit if
         opDeclare
       else
-        opPredeclare ## XXX don't create op for global pre-declaration
+        opPredeclare
       end
       state appendOp
       #drop return
@@ -1066,7 +1111,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state hasConst if
           state popConst =:: const
           const .valueType
-            #dup state [] .typeContext @ types.isProcedure if
+            #dup state [] .idContext .typeContext @ types.isProcedure if
               "unexpected procedure" sb.wrap fileState [] .wordStart state appendError
               #drop:2 return
             else #dup types.primitive.TYPE types.typeEquals _if
@@ -1078,6 +1123,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             end
           -1 ## id
           const .val
+          #over:2 id.IdentifierType .TYPE != if
+            const opConst state appendOp
+          end
         else
           state [] .autoTypeCount ++ types.newAutoType
           state [] .idContext @ id.isGlobal if
@@ -1092,6 +1140,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
           return
         end
+        state [] .idContext @ id.isGlobal if
+          state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+        end
         #dup [] .idType id.IdentifierType .TYPE == if
           #drop:2
           return
@@ -1103,7 +1154,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .val #dup ConstValue .typeId == if .typeId
           #dup types.isNamedType if
             fileState state popTypeConstant ! if
-              state [] .typeContext @ types.setNamedType ! if
+              state [] .idContext .typeContext @ types.setNamedType ! if
+                state [] .idContext @ id.isGlobal if
+                  state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+                end
                 return
               end
             else #drop:2 end
@@ -1246,21 +1300,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "end" string.wrap string.eq _if #drop
       while
+        state [] .idContext @ id.currentScopeType
+        fileState [] .wordStart opEndBlock  state appendOp
         state [] .idContext @ id.closeScope if #+autoClose blockType+# #drop:2
           "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError
           return
-        end
-        fileState [] .wordStart opEndBlock  state appendOp
+        end #drop
       do end
+      state [] .idContext @ id.isGlobal if
+        state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+      end
       return
     else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
       1 string.tail
         state hasConst if
           state popConst
-            #dup .val ConstValue .typeId == if #dup .val .typeId state [] .typeContext @ types.isEnum else false end if #dup .val .typeId
-              #dup state [] .typeContext @ types.compositeEltCount =:: count
+            #dup .val ConstValue .typeId == if #dup .val .typeId state [] .idContext .typeContext @ types.isEnum else false end if #dup .val .typeId
+              #dup state [] .idContext .typeContext @ types.compositeEltCount =:: count
               0 while #dup count < do
-                #over #over state [] .typeContext @ types.compositeGetLabel
+                #over #over state [] .idContext .typeContext @ types.compositeGetLabel
                   state [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data #over:4 string.eq else #drop false end if
                     fileState [] .wordStart constEnumLabel state pushConst
                     #drop:2 return
@@ -1274,7 +1332,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end
           "constant "                    sb.wrap
-            #swap .val state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+            #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
             " does not have a field: \"" sb.appendS
             #swap                        sb.appendStr
           '"' sb.appendC fileState [] .wordStart state appendError
@@ -1311,7 +1369,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       state popConst
         #dup .val ConstValue .typeId == if #dup .val .typeId
-          #dup state [] .typeContext @ types.isTupleType #over state [] .typeContext @ types.isArray | if
+          #dup state [] .idContext .typeContext @ types.isTupleType #over state [] .idContext .typeContext @ types.isArray | if
             fileState [] .wordStart opNew state appendOp
             #drop return
           end
@@ -1325,7 +1383,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+        #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError
       return
     else #dup "cast" string.wrap string.eq #over "cast!" string.wrap string.eq | _if =:: opName
@@ -1339,7 +1397,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .labelContext addrOf state [] .typeContext addrOf sb.appendConstant
+        #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
         " expected type" sb.appendS fileState [] .wordStart state appendError
         return
       end
@@ -1444,13 +1502,15 @@ end
 proc( string => ) =: parseTokens
   "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut fileState
   ## ParserState
-    types.newTypeContext
     id.newIdentifierContext
-    128 Constant   list.create 0
-    128 types.Type list.create
+    128 Constant        list.create 0
+    128 types.Type      list.create
     128 types.ArraySize list.create
-    32 StaticArgument list.create 0
-    128 Operation  list.create
+    32 StaticArgument   list.create 0
+    128 Operation       list.create
+    128 Operation       list.create
+    128 Operation       list.create
+    32 CompilerError    list.create
     0
   ParserState new =:: mut state
   fileState addrOf #swap
@@ -1460,9 +1520,31 @@ proc( string => ) =: parseTokens
     do end #drop
   #drop
   1024 sb.create
-    0 while #dup state .ops .length < do
+    "## errors:\n" sb.appendS
+    0 while #dup state .errors .length < do
       #swap
-        state .ops #over:2 list.get state addrOf sb.appendOp
+        state .errors #over:2 list.get sb.appendCompilerError
+      #swap
+      1 +
+    end #drop
+    "## global:\n" sb.appendS
+    0 while #dup state .globalOps .length < do
+      #swap
+        state .globalOps #over:2 list.get state addrOf sb.appendOp
+      #swap
+      1 +
+    end #drop
+    "## local:\n" sb.appendS
+    0 while #dup state .localOps .length < do
+      #swap
+        state .localOps #over:2 list.get state addrOf sb.appendOp
+      #swap
+      1 +
+    end #drop
+    "## templates:\n" sb.appendS
+    0 while #dup state .templateOps .length < do
+      #swap
+        state .templateOps #over:2 list.get state addrOf sb.appendOp
       #swap
       1 +
     end #drop

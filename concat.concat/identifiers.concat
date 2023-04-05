@@ -8,13 +8,19 @@
 #include "codeBlocks.concat"
 
 #namespace id
-  enum( TYPE PROCEDURE GLOBAL_VAR  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
+  enum( TYPE PROCEDURE GLOBAL_VAR  TEMPLATE_ARG  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
 
+  i32 =:: public TemplateId
+  -1 TemplateId =: public TEMPLATE_ID_NONE
+  struct( ConstValue arrayView : argValues types.Type : implType FilePosition : implPos ) =:: public TemplateImplementation
+  ## XXX? ( offset length file code-Type ) -> code-position
+  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength #+XXX scrFile+# TemplateImplementation list : implementations i64 : compiledImpls ) =:: public TemplateInfo
 
-  struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId #+XXX template data+# i32 : id IdentifierType : idType ) =:: IdentifierData
-  struct( IdentifierType : idType LabelId : labelId i32 : id #+XXX template data+# ) =:: public IdentifierInfo
+  struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
+  struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : id ) =:: public IdentifierInfo
 
-  types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
+  types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
+  types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
 
   struct( string : name NamespaceId : mut namespace ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
@@ -26,7 +32,13 @@
     a .namespace b .namespace == a .name b .name string.eq & return
   end
 
-  struct( IdentifierName IdentifierData hashMap : mut identifiers codeBlocks.BlockType : mut blockType types.Type : currentProc NamespaceImportId : prevImports bool : mut autoClose ) =:: Scope
+  struct(
+    IdentifierName IdentifierData hashMap : mut identifiers
+    codeBlocks.BlockType : mut blockType
+    types.Type : currentProc
+    NamespaceImportId : prevImports
+    bool : mut autoClose
+  ) =:: Scope
 
   proc( codeBlocks.BlockType : blockType types.Type : procType NamespaceImportId : imports => Scope ) =: newScope
     idHash @
@@ -39,25 +51,40 @@
     Scope new return
   end
 
-  struct( LabelContext : mut labelContext Scope list : mut localScopes Scope list : mut globalScopes NamespaceImportId list : mut prevImports NamespaceInfo : mut namespaceInfo i32 : mut globalScopeId i32 : mut localVarCount ) =:: public IdentifierContext
+  struct(
+    LabelContext : mut labelContext
+    types.TypeContext : mut typeContext
+    Scope list : mut localScopes
+    Scope list : mut globalScopes
+    TemplateInfo list : mut templateInfos
+    NamespaceImportId list : mut prevImports
+    NamespaceInfo : mut namespaceInfo
+    i32 : mut globalScopeId
+    i32 : mut localVarCount
+    TemplateId : mut currentTemplate
+  ) =:: public IdentifierContext
 
   proc( => IdentifierContext ) =: public newIdentifierContext
     newLabelContext
+    types.newTypeContext
     128 Scope list.create
     128 Scope list.create
       codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
-    0 NamespaceImportId list.create
+    128 TemplateInfo      list.create
+    32  NamespaceImportId list.create
       0
       NAMESPACE_IMPORT_NONE
     NamespaceInfo new
     0
     0
+    TEMPLATE_ID_NONE
     IdentifierContext new return
   end
 
   proc( IdentifierData ptr : idData => IdentifierInfo ) =: public asIdInfo
     idData [] .idType
     idData [] .labelId
+    idData [] .templateId
     idData [] .id
     IdentifierInfo new return
   end
@@ -203,8 +230,34 @@
       idName match .data multiMatch return
     end
     ## 4. template arguments
-    ## TODO search identifier in template arguments
-    "unimplemented" string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
+    context hasOpenTemplate if
+      context [] .templateInfos context [] .currentTemplate list.get =:: template
+      template .templateType
+        0 while #dup #over:2 context [] .typeContext @ types.compositeEltCount < do
+          #swap
+            #dup #over:2 context [] .typeContext @ types.compositeGetLabel context [] .labelContext @ labelName .data id string.eq if
+              =:: tType =:: tId
+              tType tId context [] .typeContext @ types.compositeGetElement =:: eType
+              eType
+              eType types.primitive.TYPE types.typeEquals if
+                tId types.newTemplateType ConstValue .typeId new
+              else
+                tId ConstValue .templateArg new
+              end
+              template .declaredAt
+              tType tId context [] .typeContext @ types.compositeGetLabel
+              context [] .currentTemplate
+              tId
+              IdentifierType .TEMPLATE_ARG
+              IdentifierData new ID_TMP_DATA =
+              name context [] .namespaceInfo .current IdentifierName new ID_TMP_DATA @ false return
+            end
+          #swap
+          1 +
+        end #drop
+      #drop
+    end
+    "could not find identifier" string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
   end
   proc( string : id  IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
     id context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
@@ -259,12 +312,12 @@
       flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
       declaredAt
       label
+      context [] .currentTemplate
       id -1 == idType IdentifierType .LOCAL_VAR == & if
         context [] .localVarCount ++
       else
         id
       end
-      ## XXX template data
       idType
       IdentifierData new
     map.put #drop ## previous entry is always empty
@@ -273,7 +326,7 @@
 #end
 #namespace sb
   proc( stringBuilder : sb id.IdentifierInfo : id id.LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
-    sb
+    sb ## TODO print mutability & template data
       id .idType switch
         TYPE case
           "type \"" sb.appendS
@@ -311,12 +364,18 @@
           id .labelId labelContext id.labelName .data sb.appendStr
           "\"" sb.appendS
           return
+        TEMPLATE_ARG case
+          "template argument (" sb.appendS
+          id .id sb.appendI
+          ") \"" sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
+          return
       end
   end
 #end
 #namespace id
-  proc( LabelId : name IdentifierContext ptr mut : context => ) =: public startNamespace
-    ## XXX check for open template
+  proc( LabelId : name IdentifierContext ptr mut : context => ) =: public beginNamespace
     context [] .prevImports
       context [] .namespaceInfo .imports list.append
     context [] .prevImports =
@@ -345,6 +404,42 @@
     context [] .prevImports =
     context [] .namespaceInfo .imports =
     false
+  end
+
+  proc( IdentifierContext ptr mut : context => bool ) =: public hasOpenTemplate
+    context [] .currentTemplate TEMPLATE_ID_NONE != return
+  end
+  proc( TemplateId : id IdentifierContext ptr mut : context => TemplateInfo ptr mut optional ) =: public getTemplateInfo
+    id 0 < id context [] .templateInfos .length >= | if
+      TemplateInfo ptr mut optional.empty return
+    end
+    context [] .templateInfos id list.at return
+  end
+  proc( types.Type : templateTypes i64 : templateOpsOffset #+XXX src-file+# FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
+    context hasOpenTemplate if
+      true return
+    end
+    context [] .templateInfos
+      #dup .length TemplateId cast context [] .currentTemplate =
+      ## TemplateInfo
+        templateTypes
+        pos
+        templateOpsOffset
+        0
+        8 TemplateImplementation list.create
+        0
+      TemplateInfo new list.append
+    context [] .templateInfos =
+    false return
+  end
+  proc( i64 : templateOpsOffset IdentifierContext ptr mut : context => ) =: public endOpenTemplate
+    context hasOpenTemplate ! if
+      return
+    end
+    context [] .templateInfos context [] .currentTemplate list.at .data
+      templateOpsOffset #over [] .codeOffset -
+      #swap [] .codeLength =
+    TEMPLATE_ID_NONE context [] .currentTemplate =
   end
 #end
 

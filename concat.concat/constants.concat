@@ -5,7 +5,7 @@
 #include "labels.concat"
 #include "types.concat"
 
-enum( none wildCard bool : boolean i32 : enumLabel i64 : int i64 : genericInt id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
+enum( none wildCard bool : boolean i32 : enumLabel i64 : int i64 : genericArg i64 : templateArg id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
 struct( types.Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
 
 proc( FilePosition : pos => Constant ) =: public constWildcard
@@ -79,9 +79,13 @@ proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stri
         #over .enumLabel sb.appendI
                  ')'     sb.appendC
         break
-      genericInt case
-        "generic integer "  sb.appendS
-        #over .int sb.appendI
+      genericArg case
+        "generic argument "  sb.appendS
+        #over .genericArg sb.appendI
+        break
+      templateArg case
+        "template argument "  sb.appendS
+        #over .genericArg sb.appendI
         break
     end
    #swap #drop return
