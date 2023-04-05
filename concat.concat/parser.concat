@@ -923,14 +923,48 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             #swap appendToken
           fileState [] .wordStart state appendError
           return
-        else "namespace" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+        else "namespace" string.wrap #over string.eq _if #drop
+          state [] .idContext @ id.isGlobal ! if
+            "#" sb.wrap
+              #swap sb.appendStr
+            " can only be used at global level" sb.appendS fileState [] .wordStart state appendError
+          else #drop end
+          fileState nextToken
+          #dup Token .IDENTIFER != if #drop
+            "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError
+            return
+          end .IDENTIFER
+          #dup .length 0 == #over 0 string.charAt '#' == | #over '.' string.contains | if
+            "\"" sb.wrap
+              #swap sb.appendStr
+            "\" is not a valid namespace name" sb.appendS
+            fileState [] .wordStart state appendError return
+          end
+          id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel
+          state [] .idContext @ id.startNamespace
           return
         else "using" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          fileState nextToken
+          #dup Token .IDENTIFER != if #drop
+            "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError
+            return
+          end .IDENTIFER
+          #dup id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel
+          state [] .idContext @ id.importNamespace if
+            "namespace \"" sb.wrap
+              #swap sb.appendStr
+            "\" does not exist" sb.appendS fileState [] .wordStart state appendError
+          else #drop end
           return
-        else "end" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+        else "end" string.wrap #over string.eq _if #drop
+          state [] .idContext @ id.isGlobal ! if
+            "#" sb.wrap
+              #swap sb.appendStr
+            " can only be used at global level" sb.appendS fileState [] .wordStart state appendError
+          else #drop end
+          state [] .idContext @ id.endNamespace if
+            "no open namespaces" sb.wrap fileState [] .wordStart state appendError
+          end
           return
         else "template" string.wrap #over string.eq _if #drop:2
           "unimplemented" sb.wrap fileState [] .wordStart state appendError

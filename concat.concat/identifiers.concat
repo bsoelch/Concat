@@ -39,18 +39,19 @@
     Scope new return
   end
 
-  struct( LabelContext : mut labelContext Scope list : mut localScopes Scope list : mut globalScopes i32 : mut globalScopeId i32 : mut localVarCount NamespaceInfo : mut namespaceInfo ) =:: public IdentifierContext
+  struct( LabelContext : mut labelContext Scope list : mut localScopes Scope list : mut globalScopes NamespaceImportId list : mut prevImports NamespaceInfo : mut namespaceInfo i32 : mut globalScopeId i32 : mut localVarCount ) =:: public IdentifierContext
 
   proc( => IdentifierContext ) =: public newIdentifierContext
     newLabelContext
     128 Scope list.create
     128 Scope list.create
       codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
-    0
-    0
+    0 NamespaceImportId list.create
       0
       NAMESPACE_IMPORT_NONE
     NamespaceInfo new
+    0
+    0
     IdentifierContext new return
   end
 
@@ -127,9 +128,15 @@
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id" string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
     end
+    id 0 string.charAt '.' == if
+      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE IdentifierName new ID_NONE_DATA @ true return
+    end
     id '.' string.split
-      =:: name
-      =:: path
+      #over .length 0 == if
+        #swap
+      end
+    =:: path
+    =:: name
     ## 1. search in local scopes
     mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
     name relSpace IdentifierName new =:: mut idName
@@ -305,6 +312,39 @@
           "\"" sb.appendS
           return
       end
-
   end
 #end
+#namespace id
+  proc( LabelId : name IdentifierContext ptr mut : context => ) =: public startNamespace
+    ## XXX check for open template
+    context [] .prevImports
+      context [] .namespaceInfo .imports list.append
+    context [] .prevImports =
+    context [] .namespaceInfo .current
+      name context [] .labelContext @ labelName .data true context [] .labelContext @ childId
+    context [] .namespaceInfo .current =
+  end
+  proc( LabelId : name IdentifierContext ptr mut : context => bool ) =: public importNamespace
+    0 NamespaceId cast name context [] .labelContext @ labelName .data context [] .labelContext @ findNamespace
+    #dup NAMESPACE_ID_NONE == if #drop
+      true return
+    end
+    context [] .namespaceInfo .imports
+      #swap context [] .labelContext @ getNamespaceImportId
+    context [] .namespaceInfo .imports =
+    false return
+  end
+  proc( IdentifierContext ptr mut : context => bool ) =: public endNamespace
+    context [] .namespaceInfo .current 0 == if
+      true return
+    end
+    context [] .namespaceInfo .current context [] .labelContext @ parentNamespace
+    context [] .namespaceInfo .current =
+    context [] .prevImports
+      list.pop #swap
+    context [] .prevImports =
+    context [] .namespaceInfo .imports =
+    false
+  end
+#end
+

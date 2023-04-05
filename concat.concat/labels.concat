@@ -10,19 +10,19 @@
   -1 NamespaceId =: public NAMESPACE_ID_NONE
   i32 =:: public NamespaceImportId
   -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
-  
+
   struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: public NamespaceInfo
 
   struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: public NamespaceImport
-  
+
   struct( i64 : offset i64 : length ) =:: public StringConstant
-  struct( StringConstant : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
-  
-  
-  
+  struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
+
+
+
   i32 =:: public LabelId
   -1 LabelId =: public LABEL_ID_NONE
-  
+
   i32 =:: public LabelFlag
   0  LabelFlag =: public FLAG_NONE
   1  LabelFlag =: public FLAG_MUTABLE
@@ -33,9 +33,9 @@
   32 LabelFlag =: public FLAG_EMPTY
 
   struct( StringConstant : name FilePosition : pos LabelFlag : flags ) =:: Label ## XXX store namespace id in label
-  
+
   struct( i8 list : mut nameBuffer Label list : mut labels  Namespace list : mut namespaces NamespaceImport list : mut namespaceImports ) =:: public LabelContext
-  
+
   proc( => LabelContext ) =: public newLabelContext
     1024            i8 list.create
     128          Label list.create
@@ -47,7 +47,7 @@
     32 NamespaceImport list.create
     LabelContext new return
   end
-  
+
   proc( LabelContext ptr => LabelId ) =: public labelOffset
     [] .labels .length LabelId cast return
   end
@@ -86,24 +86,24 @@
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  
+
   proc( string : str LabelContext ptr mut : context => StringConstant ) =: public newStringConstant
     context [] .nameBuffer .length =:: offset
-    context [] .nameBuffer 
+    context [] .nameBuffer
       #dup .length str .length + list.ensureCap
       0 while #dup str .length < do
         #swap
           str #over:2 string.charAt #dup '\\' != if
             list.append
-            #swap 
-              1 + 
+            #swap
+              1 +
             continue
           end #drop
         #swap
         1 +
-        #swap 
+        #swap
           str #over:2 string.charAt #dup switch
-            '\\' '\'' '"' case 
+            '\\' '\'' '"' case
               list.append
               break
             'n' case #drop
@@ -127,7 +127,7 @@
             'x' 'u' 'U' case #drop
               ## TODO hex escape codes more escape characters
               break
-            default 
+            default
               list.append
               ## TODO handle invalid escape characters
           end
@@ -137,8 +137,8 @@
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
-  
-  proc( NamespaceId : parent string : name  LabelContext ptr mut : context => NamespaceId ) =: public newNamespace
+
+  proc( NamespaceId : parent string : name  LabelContext ptr mut : context => NamespaceId ) =: newNamespace
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       name .data name .length array.create list.appendArray
@@ -173,7 +173,12 @@
     create ! if
       NAMESPACE_ID_NONE return
     end
-    base childName context newNamespace return
+    base childName context newNamespace
+      context [] .namespaces base list.at .data
+        #dup [] .children
+          #over:2 list.append
+      #swap [] .children =
+    return
   end
   proc( NamespaceId : base string : path  LabelContext ptr mut : context => NamespaceId ) =: public findNamespace
     base NamespaceId =: mut id
@@ -181,7 +186,7 @@
       while #dup .length 0 > do
         '.' string.split
         id #swap false context childId id =
-        id NAMESPACE_ID_NONE == if 
+        id NAMESPACE_ID_NONE == if
           break
         end
       end
@@ -202,10 +207,10 @@
   end
   proc( NamespaceImportId : parent NamespaceId : import LabelContext ptr mut : context => NamespaceImportId ) =: public getNamespaceImportId
     context [] .namespaceImports .length 0 > if
-      parent NAMESPACE_IMPORT_NONE == if 
+      parent NAMESPACE_IMPORT_NONE == if
         0 NamespaceImportId cast
-      else 
-        context [] .namespaceImports parent list.get .firstChild 
+      else
+        context [] .namespaceImports parent list.get .firstChild
       end
       #dup NAMESPACE_IMPORT_NONE == if
         context [] .namespaceImports .length NamespaceImportId cast

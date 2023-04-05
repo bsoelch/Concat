@@ -35,7 +35,9 @@ proc( T1 ptr : src T2 ptr mut : target i64 : k => ) =: castArray
   end #drop
 end
 
-proc( type : static T i64 : k => T _ ptr ) : extern malloc
+#namespace mem
+proc( type : static T i64 : k => T _ ptr ) : extern alloc
+#end
 
 proc( i32 => ) =: switchTest
   switch
@@ -53,7 +55,7 @@ entryPoint:
   0 =:: mut y
   selfPtr : test
   0 test @ selfPtr new test =
-  i32 2 malloc =:: p
+  i32 2 mem.alloc =:: p
   1 y =
   x print
   0 while #dup "Hello" .length < do
