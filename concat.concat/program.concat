@@ -1,0 +1,442 @@
+#include stringBuilder
+
+#include "constants.concat"
+#include "codeBlocks.concat"
+#include "identifiers.concat"
+
+enum( NEGATE INCREMENT DECREMENT NOT FLIP ) =:: public UnaryOperator
+enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: public BinaryOperator
+enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
+struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
+enum(
+                         NOP
+                         entryPoint
+            ConstValue : Constant
+  codeBlocks.BlockInfo : block
+  codeBlocks.BlockInfo : blockEnd
+     id.IdentifierInfo : getId
+     id.IdentifierInfo : mut setId
+     id.IdentifierInfo : mut @Id
+     id.IdentifierInfo : declareId
+     id.IdentifierInfo : predeclareId
+            id.LabelId : getLabel
+            id.LabelId : mut setLabel
+            id.LabelId : mut @Label
+                   i32 : getTupleElement
+                   i32 : mut setTupleElement
+                   i32 : mut @TupleElement
+                   i32 : getArrayElement
+                   i32 : mut setArrayElement
+                   i32 : mut @ArrayElement
+                         Print
+                         Return
+                         New
+                   i32 : newEnum
+            types.Type : Cast
+            types.Type : Cast!
+         UnaryOperator : unaryOperator
+        BinaryOperator : binaryOperator
+     StackModification : stackMod
+                string : Unknown
+) =:: public OpValue
+struct( OpValue : mut val types.Type : mut dataType FilePosition : mut pos ) =:: public Operation
+proc( FilePosition : pos => Operation ) =: public opNOP
+  OpValue .NOP types.Type .undefined pos Operation new return
+end
+proc( Constant  => Operation ) =: public opConst
+  #dup .val OpValue .Constant new #swap #dup .valueType #swap .pos Operation new return
+end
+proc( codeBlocks.BlockType FilePosition => Operation ) =: public opBlock
+  =:: pos
+  -1 codeBlocks.BlockInfo new OpValue .block new types.Type .undefined pos Operation new return
+end
+proc( codeBlocks.BlockType FilePosition => Operation ) =: public opEndBlock
+  =:: pos
+  -1 codeBlocks.BlockInfo new OpValue .blockEnd new types.Type .undefined pos Operation new return
+end
+proc( types.Type id.IdentifierInfo FilePosition  => Operation ) =: public opGet
+  =:: pos
+  OpValue .getId new #swap pos Operation new return
+end
+proc( types.Type id.IdentifierInfo FilePosition  => Operation ) =: public opDeclare
+  =:: pos
+  OpValue .declareId new #swap pos Operation new return
+end
+proc( types.Type id.IdentifierInfo FilePosition  => Operation ) =: public opPredeclare
+  =:: pos
+  OpValue .predeclareId new #swap pos Operation new return
+end
+proc( i32 FilePosition  => Operation ) =: public opArrayGet
+  =:: pos
+  OpValue .getArrayElement new types.Type .undefined pos Operation new return
+end
+proc( i32 FilePosition  => Operation ) =: public opTupleGet
+  =:: pos
+  OpValue .getTupleElement new types.Type .undefined pos Operation new return
+end
+proc( id.LabelId FilePosition  => Operation ) =: public opGetLabel
+  =:: pos
+  OpValue .getLabel new types.Type .undefined pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opEntryPoint
+  OpValue .entryPoint types.Type .undefined pos Operation new return
+end
+proc( types.Type FilePosition => Operation ) =: public opReturn
+  =:: pos
+  OpValue .Return #swap pos Operation new return
+end
+proc( BinaryOperator FilePosition => Operation ) =: public opBinOp
+  =:: pos
+  OpValue .binaryOperator new types.Type .undefined pos Operation new return
+end
+proc( UnaryOperator FilePosition => Operation ) =: public opUnaryOp
+  =:: pos
+  OpValue .unaryOperator new types.Type .undefined pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opPrint
+  OpValue .Print types.Type .undefined pos Operation new return
+end
+proc( types.Type FilePosition => Operation ) =: public opNew
+  =:: pos
+  OpValue .New #swap pos Operation new return
+end
+proc( types.Type i32 FilePosition => Operation ) =: public opNewEnum
+  =:: pos
+  OpValue .newEnum new #swap pos Operation new return
+end
+proc( types.Type : target FilePosition : pos => Operation ) =: public opCast
+   types.Type .undefined OpValue .Cast new target pos Operation new return
+end
+proc( types.Type : target FilePosition : pos => Operation ) =: public opCast!
+   types.Type .undefined OpValue .Cast! new target pos Operation new return
+end
+proc( i32 i32 StackModType FilePosition => Operation ) =: public opStackMod
+  =:: pos
+  StackModification new OpValue .stackMod new types.Type .undefined pos Operation new return
+end
+proc( string FilePosition  => Operation ) =: public opUnknown
+  =:: pos
+  OpValue .Unknown new types.Type .undefined pos Operation new return
+end
+struct( stringBuilder : message FilePosition : pos ) =:: public CompilerError
+
+i32 =:: public FileId
+-1 FileId =: public FILE_ID_NONE
+
+struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
+
+struct(
+     Operation list : mut globalOps
+     Operation list : mut localOps
+  IncludedFile list : mut includedFiles
+
+                i32 : mut globalScopeId
+      stringBuilder : mut fileName
+             FileId : id
+) =:: public ProgramFile
+
+struct(
+  id.IdentifierContext : mut idContext
+      ProgramFile list : mut progFiles
+       types.Type list : mut autoTypes
+        Operation list : mut templateOps
+    CompilerError list : mut errors
+                  bool : mut hasEntryPoint
+                  bool : mut hasCheckBounds
+                  bool : mut hasCheckEnum
+                  bool : mut hasGetArgs
+) =:: public Program
+
+proc( stringBuilder : fileName FileId : id id.IdentifierContext ptr mut : idContext => ProgramFile ) =: public newProgFile
+  128 Operation list.create
+  128 Operation list.create
+  16 IncludedFile list.create
+  idContext id.newGlobalScope
+  fileName
+  id
+  ProgramFile new return
+end
+
+#namespace sb
+  proc( stringBuilder UnaryOperator => stringBuilder ) =: public appendUnaryOperator
+    switch
+      NEGATE case "NEGATE" sb.appendS return
+      INCREMENT case "INCREMENT" sb.appendS return
+      DECREMENT case "DECREMENT" sb.appendS return
+      NOT case "NOT" sb.appendS return
+      FLIP case "FLIP" sb.appendS return
+    end
+  end
+  proc( stringBuilder BinaryOperator => stringBuilder ) =: public appendBinaryOperator
+    switch
+      ADD case "ADD" sb.appendS return
+      SUBTRACT case "SUBTRACT" sb.appendS return
+      MULTIPLY case "MULTIPLY" sb.appendS return
+      DIVIDE case "DIVIDE" sb.appendS return
+      MOD case "MOD" sb.appendS return
+      UDIVIDE case "UDIVIDE" sb.appendS return
+      UMOD case "UMOD" sb.appendS return
+      AND case "AND" sb.appendS return
+      OR case "OR" sb.appendS return
+      XOR case "XOR" sb.appendS return
+      EQ case "EQ" sb.appendS return
+      NE case "NE" sb.appendS return
+      LT case "LT" sb.appendS return
+      LE case "LE" sb.appendS return
+      GE case "GE" sb.appendS return
+      GT case "GT" sb.appendS return
+      LSHIFT case "LSHIFT" sb.appendS return
+      RSHIFT case "RSHIFT" sb.appendS return
+      URSHIFT case "URSHIFT" sb.appendS return
+    end
+  end
+  proc( stringBuilder StackModification => stringBuilder ) =: public appendStackMod
+    #dup .modType switch
+      DUP case
+        #swap "DUP " sb.appendS
+        #swap .count sb.appendI
+        break
+      OVER case
+        #swap "OVER " sb.appendS
+        #over .offset sb.appendI
+                  ' ' sb.appendC
+        #swap .count  sb.appendI
+        break
+      SWAP case
+        #swap "SWAP " sb.appendS
+        #swap .offset sb.appendI
+        break
+      ROT case
+        #swap "ROTATE " sb.appendS
+        #over .count    sb.appendI
+                  ' '   sb.appendC
+        #swap .offset   sb.appendI
+        break
+      DROP case
+        #swap "DROP " sb.appendS
+        #swap .count  sb.appendI
+        break
+    end
+    end
+  proc( stringBuilder FilePosition => stringBuilder ) =: public appendPos
+    #swap
+      #over .fileName sb.appendStr
+      ':' sb.appendC
+      #over .line sb.appendI
+      ':' sb.appendC
+      #swap .posInLine sb.appendI
+      '\n' sb.appendC
+    return
+  end
+  proc( stringBuilder Operation id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendOp
+    =:: typeContext
+    =:: labelContext
+    #swap
+      #over .val switch
+        NOP case
+          "NOP" sb.appendS
+          break
+        entryPoint case
+          "entryPoint" sb.appendS
+          break
+        OpValue .Constant case
+          "constant ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .Constant labelContext typeContext sb.appendConstant
+          break
+        block case
+          "Block: " sb.appendS
+          #over .val .block .blockType sb.appendBlockType
+          break
+        blockEnd case
+          "End: " sb.appendS
+          #over .val .blockEnd .blockType sb.appendBlockType
+          break
+        getId case
+          "get ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .getId labelContext sb.appendIdInfo
+          break
+        setId case
+          "set ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .setId labelContext sb.appendIdInfo
+          break
+        @Id case
+          "address ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .@Id labelContext sb.appendIdInfo
+          break
+        declareId case
+          "declare ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .declareId labelContext sb.appendIdInfo
+          break
+        predeclareId case
+          "predeclare ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .predeclareId labelContext sb.appendIdInfo
+          break
+        getLabel case
+          "get label ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .getLabel labelContext id.labelName .data sb.appendStr
+          break
+        setLabel case
+          "set label ( " sb.appendS
+          #over .dataType labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .setLabel labelContext id.labelName .data sb.appendStr
+          break
+        @Label case
+          "label address ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .@Label labelContext id.labelName .data sb.appendStr
+          break
+        getTupleElement case
+          "get tuple element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .getTupleElement sb.appendI
+          break
+        setTupleElement case
+          "set tuple element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .setTupleElement sb.appendI
+          break
+        @TupleElement case
+          "tuple element address ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .@TupleElement sb.appendI
+          break
+        getArrayElement case
+          "get array element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .getArrayElement sb.appendI
+          break
+        setArrayElement case
+          "set array element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .setArrayElement sb.appendI
+          break
+        @ArrayElement case
+          "array element address ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .@ArrayElement sb.appendI
+          break
+        Return case
+          "Return: " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          break
+        binaryOperator case
+          "binary Operator ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .binaryOperator sb.appendBinaryOperator
+          break
+        unaryOperator case
+          "unary Operator ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .unaryOperator sb.appendUnaryOperator
+          break
+        Print case
+          "print: " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          break
+        New case
+          "new: " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          break
+        newEnum case
+          "new enum ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .newEnum sb.appendI
+          break
+        Cast case
+          "cast ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) src: " sb.appendS
+          #over .val .Cast  labelContext typeContext sb.appendType
+          break
+        Cast! case
+          "cast ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) src: " sb.appendS
+          #over .val .Cast!  labelContext typeContext sb.appendType
+          break
+        stackMod case
+          "stack modification: " sb.appendS
+          #over .val .stackMod sb.appendStackMod
+          break
+        Unknown case
+          "Unknown Operation: " sb.appendS
+          #over .val .Unknown sb.appendStr
+          break
+      end
+      " at " sb.appendS
+      #swap .pos appendPos
+    return
+  end
+  proc( stringBuilder CompilerError => stringBuilder ) =: public appendCompilerError
+    =:: err
+    err .message sb.appendSb
+    " at "       sb.appendS
+    err .pos     sb.appendPos
+  end
+  proc( stringBuilder Program => stringBuilder ) =: public appendProgram
+    =:: prog
+      "## errors:\n" sb.appendS
+      0 while #dup prog .errors .length < do
+        #swap
+          prog .errors #over:2 list.get sb.appendCompilerError
+        #swap
+        1 +
+      end #drop
+      0 while #dup prog .progFiles .length < do
+        #swap
+          prog .progFiles #over:2 list.get =:: f
+          "## "          sb.appendS
+          f .fileName    sb.appendSb
+          '\n'           sb.appendC
+          "## global:\n" sb.appendS
+          0 while #dup f .globalOps .length < do
+            #swap
+              f .globalOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @  sb.appendOp
+            #swap
+            1 +
+          end #drop
+          "## local:\n" sb.appendS
+          0 while #dup f .localOps .length < do
+            #swap
+              f .localOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+            #swap
+            1 +
+          end #drop
+        #swap
+        1 +
+      end #drop
+      "## templates:\n" sb.appendS
+      0 while #dup prog .templateOps .length < do
+        #swap
+          prog .templateOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+        #swap
+        1 +
+      end #drop
+  end
+#end
+

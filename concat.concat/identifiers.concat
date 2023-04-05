@@ -69,7 +69,6 @@
     types.newTypeContext
     128 Scope list.create
     128 Scope list.create
-      codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
     128 TemplateInfo      list.create
     32  NamespaceImportId list.create
       0
@@ -78,7 +77,9 @@
     0
     0
     TEMPLATE_ID_NONE
-    IdentifierContext new return
+    IdentifierContext new =:: mut newContext
+    newContext @ newGlobalScope #drop
+    newContext return
   end
 
   proc( IdentifierData ptr : idData => IdentifierInfo ) =: public asIdInfo
@@ -91,6 +92,13 @@
 
   proc( IdentifierContext ptr mut : context => bool ) =: public isGlobal
     context [] .localScopes .length 0 == return
+  end
+  proc( IdentifierContext ptr mut : context => i32 ) =: public newGlobalScope
+    context [] .globalScopes .length i32 cast
+      context [] .globalScopes
+         codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
+      context [] .globalScopes =
+    return
   end
   proc( IdentifierContext ptr mut : context => Scope ptr mut optional ) =: getGlobalScope
     context [] .globalScopes context [] .globalScopeId list.at return

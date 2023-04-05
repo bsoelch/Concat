@@ -4,6 +4,7 @@
 
 #include future
 
+#include "program.concat"
 #include "files.concat"
 #include "labels.concat"
 #include "types.concat"
@@ -12,196 +13,18 @@
 #include "identifiers.concat"
 
 entryPoint:
-  "./test.concat" io.OPEN_READ io.fopen #drop =:: f
-  128 sb.create
-    '\n' sb.appendC
-    f sb.appendFile #drop
-    '\n' sb.appendC
-  sb.toStr parseTokens
+  "./test.concat" sb.wrap parseProgram
+  1024 sb.create
+    #swap sb.appendProgram
+  "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
+    #swap #over #swap io.fputSb #drop
+  io.fclose #drop
 end
 
-enum( NEGATE INCREMENT DECREMENT NOT FLIP ) =:: UnaryOperator
-enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: BinaryOperator
-#namespace sb
-proc( stringBuilder UnaryOperator => stringBuilder ) =: appendUnaryOperator
-  switch
-    NEGATE case "NEGATE" sb.appendS return
-    INCREMENT case "INCREMENT" sb.appendS return
-    DECREMENT case "DECREMENT" sb.appendS return
-    NOT case "NOT" sb.appendS return
-    FLIP case "FLIP" sb.appendS return
-  end
-end
-proc( stringBuilder BinaryOperator => stringBuilder ) =: appendBinaryOperator
-  switch
-    ADD case "ADD" sb.appendS return
-    SUBTRACT case "SUBTRACT" sb.appendS return
-    MULTIPLY case "MULTIPLY" sb.appendS return
-    DIVIDE case "DIVIDE" sb.appendS return
-    MOD case "MOD" sb.appendS return
-    UDIVIDE case "UDIVIDE" sb.appendS return
-    UMOD case "UMOD" sb.appendS return
-    AND case "AND" sb.appendS return
-    OR case "OR" sb.appendS return
-    XOR case "XOR" sb.appendS return
-    EQ case "EQ" sb.appendS return
-    NE case "NE" sb.appendS return
-    LT case "LT" sb.appendS return
-    LE case "LE" sb.appendS return
-    GE case "GE" sb.appendS return
-    GT case "GT" sb.appendS return
-    LSHIFT case "LSHIFT" sb.appendS return
-    RSHIFT case "RSHIFT" sb.appendS return
-    URSHIFT case "URSHIFT" sb.appendS return
-  end
-end
-#end
-enum( DUP OVER SWAP ROT DROP ) =:: StackModType
-struct( i32 : offset i32 : count StackModType : modType ) =:: StackModification
-#namespace sb
-  proc( stringBuilder StackModification => stringBuilder ) =: appendStackMod
-    #dup .modType switch
-      DUP case
-        #swap "DUP " sb.appendS
-        #swap .count sb.appendI
-        break
-      OVER case
-        #swap "OVER " sb.appendS
-        #over .offset sb.appendI
-                  ' ' sb.appendC
-        #swap .count  sb.appendI
-        break
-      SWAP case
-        #swap "SWAP " sb.appendS
-        #swap .offset sb.appendI
-        break
-      ROT case
-        #swap "ROTATE " sb.appendS
-        #over .count    sb.appendI
-                  ' '   sb.appendC
-        #swap .offset   sb.appendI
-        break
-      DROP case
-        #swap "DROP " sb.appendS
-        #swap .count  sb.appendI
-        break
-    end
-  end
-#end
-enum(
-                         NOP
-                         entryPoint
-            ConstValue : Constant
-  codeBlocks.BlockInfo : block
-  codeBlocks.BlockInfo : blockEnd
-     id.IdentifierInfo : getId
-     id.IdentifierInfo : mut setId
-     id.IdentifierInfo : mut @Id
-     id.IdentifierInfo : declareId
-     id.IdentifierInfo : predeclareId
-            id.LabelId : getLabel
-            id.LabelId : mut setLabel
-            id.LabelId : mut @Label
-                   i32 : getTupleElement
-                   i32 : mut setTupleElement
-                   i32 : mut @TupleElement
-                   i32 : getArrayElement
-                   i32 : mut setArrayElement
-                   i32 : mut @ArrayElement
-                         Print
-                         Return
-                         New
-                   i32 : newEnum
-            types.Type : Cast
-            types.Type : Cast!
-         UnaryOperator : unaryOperator
-        BinaryOperator : binaryOperator
-     StackModification : stackMod
-                string : Unknown
-) =:: OpValue
-struct( OpValue : mut val types.Type : mut dataType FilePosition : mut pos ) =:: Operation
-proc( FilePosition : pos => Operation ) =: opNOP
-  OpValue .NOP types.Type .undefined pos Operation new return
-end
-proc( Constant  => Operation ) =: opConst
-  #dup .val OpValue .Constant new #swap #dup .valueType #swap .pos Operation new return
-end
-proc( codeBlocks.BlockType FilePosition => Operation ) =: opBlock
-  =:: pos
-  -1 codeBlocks.BlockInfo new OpValue .block new types.Type .undefined pos Operation new return
-end
-proc( codeBlocks.BlockType FilePosition => Operation ) =: opEndBlock
-  =:: pos
-  -1 codeBlocks.BlockInfo new OpValue .blockEnd new types.Type .undefined pos Operation new return
-end
-proc( types.Type id.IdentifierInfo FilePosition  => Operation ) =: opGet
-  =:: pos
-  OpValue .getId new #swap pos Operation new return
-end
-proc( types.Type id.IdentifierInfo FilePosition  => Operation ) =: opDeclare
-  =:: pos
-  OpValue .declareId new #swap pos Operation new return
-end
-proc( types.Type id.IdentifierInfo FilePosition  => Operation ) =: opPredeclare
-  =:: pos
-  OpValue .predeclareId new #swap pos Operation new return
-end
-proc( i32 FilePosition  => Operation ) =: opArrayGet
-  =:: pos
-  OpValue .getArrayElement new types.Type .undefined pos Operation new return
-end
-proc( i32 FilePosition  => Operation ) =: opTupleGet
-  =:: pos
-  OpValue .getTupleElement new types.Type .undefined pos Operation new return
-end
-proc( id.LabelId FilePosition  => Operation ) =: opGetLabel
-  =:: pos
-  OpValue .getLabel new types.Type .undefined pos Operation new return
-end
-proc( FilePosition : pos => Operation ) =: opEntryPoint
-  OpValue .entryPoint types.Type .undefined pos Operation new return
-end
-proc( types.Type FilePosition => Operation ) =: opReturn
-  =:: pos
-  OpValue .Return #swap pos Operation new return
-end
-proc( BinaryOperator FilePosition => Operation ) =: opBinOp
-  =:: pos
-  OpValue .binaryOperator new types.Type .undefined pos Operation new return
-end
-proc( UnaryOperator FilePosition => Operation ) =: opUnaryOp
-  =:: pos
-  OpValue .unaryOperator new types.Type .undefined pos Operation new return
-end
-proc( FilePosition : pos => Operation ) =: opPrint
-  OpValue .Print types.Type .undefined pos Operation new return
-end
-proc( types.Type FilePosition => Operation ) =: opNew
-  =:: pos
-  OpValue .New #swap pos Operation new return
-end
-proc( types.Type i32 FilePosition => Operation ) =: opNewEnum
-  =:: pos
-  OpValue .newEnum new #swap pos Operation new return
-end
-proc( types.Type : target FilePosition : pos => Operation ) =: opCast
-   types.Type .undefined OpValue .Cast new target pos Operation new return
-end
-proc( types.Type : target FilePosition : pos => Operation ) =: opCast!
-   types.Type .undefined OpValue .Cast! new target pos Operation new return
-end
-proc( i32 i32 StackModType FilePosition => Operation ) =: opStackMod
-  =:: pos
-  StackModification new OpValue .stackMod new types.Type .undefined pos Operation new return
-end
-proc( string FilePosition  => Operation ) =: opUnknown
-  =:: pos
-  OpValue .Unknown new types.Type .undefined pos Operation new return
-end
-
-struct( stringBuilder : message FilePosition : pos ) =:: CompilerError
 struct( types.Type : argType ConstValue : val id.LabelId : labelId ) =:: StaticArgument
 struct(
+        stringBuilder : mut basePath
+        stringBuilder : mut libPath
  id.IdentifierContext : mut idContext
         Constant list : mut constants
                   i64 : mut constOffset
@@ -209,201 +32,20 @@ struct(
  types.ArraySize list : mut arraySizeBuffer
   StaticArgument list : mut staticArgs
                   i64 : mut staticArgsOffset
-       Operation list : mut globalOps
-       Operation list : mut localOps
+     ProgramFile list : mut progFiles
+               FileId : mut currentFile
        Operation list : mut templateOps
    CompilerError list : mut errors
                   i32 : mut autoTypeCount
 ) =:: ParserState
-#namespace sb
-proc( stringBuilder FilePosition => stringBuilder ) =: appendPos
-  #swap
-    #over .fileName sb.appendStr
-    ':' sb.appendC
-    #over .line sb.appendI
-    ':' sb.appendC
-    #swap .posInLine sb.appendI
-    '\n' sb.appendC
-  return
-end
-proc( stringBuilder Operation ParserState ptr => stringBuilder ) =: appendOp
-  =:: context
-  #swap
-    #over .val switch
-      NOP case
-        "NOP" sb.appendS
-        break
-      entryPoint case
-        "entryPoint" sb.appendS
-        break
-      OpValue .Constant case
-        "constant ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .Constant context [] .idContext .labelContext addrOf context [] .idContext .typeContext addrOf sb.appendConstant
-        break
-      block case
-        "Block: " sb.appendS
-        #over .val .block .blockType sb.appendBlockType
-        break
-      blockEnd case
-        "End: " sb.appendS
-        #over .val .blockEnd .blockType sb.appendBlockType
-        break
-      getId case
-        "get ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .getId context [] .idContext .labelContext @ sb.appendIdInfo
-        break
-      setId case
-        "set ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .setId context [] .idContext .labelContext @ sb.appendIdInfo
-        break
-      @Id case
-        "address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .@Id context [] .idContext .labelContext @ sb.appendIdInfo
-        break
-      declareId case
-        "declare ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .declareId context [] .idContext .labelContext @ sb.appendIdInfo
-        break
-      predeclareId case
-        "predeclare ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .predeclareId context [] .idContext .labelContext @ sb.appendIdInfo
-        break
-      getLabel case
-        "get label ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .getLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
-        break
-      setLabel case
-        "set label ( " sb.appendS
-        #over .dataType context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .setLabel context [] .idContext .labelContext @ id.labelName .data sb.appendStr
-        break
-      @Label case
-        "label address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .@Label context [] .idContext .labelContext @ id.labelName .data sb.appendStr
-        break
-      getTupleElement case
-        "get tuple element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .getTupleElement sb.appendI
-        break
-      setTupleElement case
-        "set tuple element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .setTupleElement sb.appendI
-        break
-      @TupleElement case
-        "tuple element address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .@TupleElement sb.appendI
-        break
-      getArrayElement case
-        "get array element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .getArrayElement sb.appendI
-        break
-      setArrayElement case
-        "set array element ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .setArrayElement sb.appendI
-        break
-      @ArrayElement case
-        "array element address ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .@ArrayElement sb.appendI
-        break
-      Return case
-        "Return: " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        break
-      binaryOperator case
-        "binary Operator ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .binaryOperator sb.appendBinaryOperator
-        break
-      unaryOperator case
-        "unary Operator ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .unaryOperator sb.appendUnaryOperator
-        break
-      Print case
-        "print: " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        break
-      New case
-        "new: " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        break
-      newEnum case
-        "new enum ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) : " sb.appendS
-        #over .val .newEnum sb.appendI
-        break
-      Cast case
-        "cast ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) src: " sb.appendS
-        #over .val .Cast  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        break
-      Cast! case
-        "cast ( " sb.appendS
-        #over .dataType  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        " ) src: " sb.appendS
-        #over .val .Cast!  context [] .idContext .labelContext @ context [] .idContext .typeContext @ sb.appendType
-        break
-      stackMod case
-        "stack modification: " sb.appendS
-        #over .val .stackMod sb.appendStackMod
-        break
-      Unknown case
-        "Unknown Operation: " sb.appendS
-        #over .val .Unknown sb.appendStr
-        break
-    end
-    " at " sb.appendS
-    #swap .pos appendPos
-  return
-end
-proc( stringBuilder CompilerError => stringBuilder ) =: appendCompilerError
-  =:: err
-  err .message sb.appendSb
-  " at "       sb.appendS
-  err .pos     sb.appendPos
-end
-#end
 
 proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     state [] .templateOps @
   else state [] .idContext @ id.isGlobal _if
-    state [] .globalOps @
+    state [] .progFiles state [] .currentFile list.at .data [] .globalOps @
   else
-    state [] .localOps @
+    state [] .progFiles state [] .currentFile list.at .data [] .localOps @
   end
   #dup []
     0 while #dup state [] .constants .length < do
@@ -427,9 +69,9 @@ proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
   state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     state [] .templateOps
   else state [] .idContext @ id.isGlobal _if
-    state [] .globalOps
+    state [] .progFiles state [] .currentFile list.get .globalOps
   else
-    state [] .localOps
+    state [] .progFiles state [] .currentFile list.get .localOps
   end list.peek
 end
 
@@ -859,7 +501,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #dup .val #swap .argType fileState [] .wordStart newConst state pushConst
       true return
     else #drop end
-    #dup state [] .idContext @ id.getIdentifier ! if ## read named constants
+    #dup state [] .idContext @ id.getIdentifier ! if ## read named constants TODO generic arguments
       #dup [] .constValue ConstValue .none != if
         #dup [] .constValue #over [] .valueType fileState [] .wordStart newConst  state pushConst
         #drop:2 true return
@@ -924,13 +566,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         else "include" string.wrap #over string.eq _if #drop:2
           fileState nextToken
-          #dup Token .STRING == if .STRING
-            ## TODO include local file
-            #drop
+          #dup Token .STRING == if .STRING ## local file
+            state [] .basePath .length #over .length + sb.create
+              state [] .basePath sb.appendSb
+              #swap sb.appendStr
+            fileState [] .wordStart state includeFile
             return
-          else #dup Token .IDENTIFER == _if .IDENTIFER
-            ## TODO include library file
-            #drop
+          else #dup Token .IDENTIFER == _if .IDENTIFER ## library file
+            state [] .libPath .length #over .length + ".concat" .length + sb.create
+              state [] .libPath sb.appendSb
+              #swap sb.appendStr ".concat" sb.appendS
+            fileState [] .wordStart state includeFile
             return
           end
           64 sb.create
@@ -1025,7 +671,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError
       return
     else #dup ":" string.wrap string.eq
-       #over "=:" string.wrap string.eq | _if
+       #over "=:" string.wrap string.eq | _if ## TODO better error message for re-declarations
       "=:" string.wrap string.eq =:: isInit
       fileState state nextWord fileState state readLabel
         fileState state popTypeConstant #drop =:: valType
@@ -1188,18 +834,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       else
         "unexpected operation for \"=\" \n" sb.wrap
-          #swap [] state sb.appendOp
+          #swap [] state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendOp
         fileState [] .wordStart state appendError
         return
       end
-    else #dup "@" string.wrap string.eq #over "addrOf" string.wrap string.eq | _if #drop
+    else #dup "@" string.wrap string.eq #over "addrOf" string.wrap string.eq | _if =:: opName
       state hasConst if ## TODO address of constant variables
         "cannot get address of constant value" sb.wrap fileState [] .wordStart state appendError
         return
       end
       state peekOp #dup optional.isEmpty if #drop
         "unexpected \"" sb.wrap
-          #over sb.appendStr
+          opName sb.appendStr
         '"' sb.appendC fileState [] .wordStart state appendError
         return
       end .data
@@ -1220,8 +866,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart #swap [] .pos =
         return
       else
-        "unexpected operation for \"=\" \n" sb.wrap
-          #swap [] state sb.appendOp
+        "unexpected operation for \"" sb.wrap
+        opName sb.appendStr
+        "\"\n" sb.appendS
+        #swap [] state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendOp
         fileState [] .wordStart state appendError
         return
       end
@@ -1499,56 +1147,89 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   fileState [] .wordStart opUnknown  state appendOp
   return
 end
-proc( string => ) =: parseTokens
-  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut fileState
+proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile
+  FILE_ID_NONE =:: mut included
+  0 while #dup state [] .progFiles .length < do
+    state [] .progFiles #over list.get .fileName sb.toStr fileName sb.toStr string.eq if
+      #dup included =
+      break
+    end
+    1 +
+  end #drop
+  included FILE_ID_NONE == if ## file has not yet been included
+    fileName state parseFile included =
+  end
+  ## TODO include constants
+  state [] .progFiles state [] .currentFile list.at .data
+  #dup [] .includedFiles
+      included
+      pos
+    IncludedFile new list.append
+  #swap [] .includedFiles =
+end
+
+
+proc( stringBuilder : rootFile => Program ) =: parseProgram
   ## ParserState
+    "./" sb.wrap ## TODO compute basePath from rootFile name
+    "../lib/" sb.wrap
     id.newIdentifierContext
     128 Constant        list.create 0
     128 types.Type      list.create
     128 types.ArraySize list.create
     32 StaticArgument   list.create 0
-    128 Operation       list.create
-    128 Operation       list.create
+    16 ProgramFile      list.create
+    FILE_ID_NONE
     128 Operation       list.create
     32 CompilerError    list.create
     0
   ParserState new =:: mut state
-  fileState addrOf #swap
-    while
-      #over nextToken #over:2 state addrOf parseOperation
-      #dup .length 0 >
-    do end #drop
-  #drop
-  1024 sb.create
-    "## errors:\n" sb.appendS
-    0 while #dup state .errors .length < do
-      #swap
-        state .errors #over:2 list.get sb.appendCompilerError
-      #swap
-      1 +
-    end #drop
-    "## global:\n" sb.appendS
-    0 while #dup state .globalOps .length < do
-      #swap
-        state .globalOps #over:2 list.get state addrOf sb.appendOp
-      #swap
-      1 +
-    end #drop
-    "## local:\n" sb.appendS
-    0 while #dup state .localOps .length < do
-      #swap
-        state .localOps #over:2 list.get state addrOf sb.appendOp
-      #swap
-      1 +
-    end #drop
-    "## templates:\n" sb.appendS
-    0 while #dup state .templateOps .length < do
-      #swap
-        state .templateOps #over:2 list.get state addrOf sb.appendOp
-      #swap
-      1 +
-    end #drop
-  "./out.txt\x00" io.OPEN_WRITE io.fopen #drop
-    #swap #over #swap io.fputSb #drop
-  io.fclose #drop
+  rootFile state @ parseFile #drop
+  ## cleanup parser memory
+  state .constants list.free #drop
+  state .typeBuffer list.free #drop
+  state .arraySizeBuffer list.free #drop
+  state .staticArgs list.free #drop
+  state .basePath sb.free #drop
+  state .libPath sb.free #drop
+  ## Program
+    state .idContext
+    state .progFiles
+    state .autoTypeCount types.Type list.create
+    state .templateOps
+    state .errors
+    false ## has entry point XXX check in parser?
+    false false ## helper function flags, set in type-check phase
+    false ## has getArgs
+  Program new return
+end
+proc( stringBuilder : fileName ParserState ptr mut : state => FileId ) =: parseFile
+  fileName
+    #dup #over .length 1 - sb.charAt '\x00' != if
+      '\x00' sb.appendC ## ensure file-name is zero terminated
+    end
+    #dup .data #over .length 1 - string.create #+cut of trailing zero-terminator+# 0 1 FilePosition new #dup FileState new =:: mut fileState
+    state [] .progFiles
+      #over state [] .progFiles .length FileId cast state [] .idContext @ newProgFile list.append
+    state [] .progFiles =
+  state [] .currentFile
+    state [] .progFiles .length 1 - FileId cast state [] .currentFile =
+    #swap #dup .data #swap .length io.OPEN_READ io.fopen #drop =:: f
+      128 sb.create
+        '\n' sb.appendC
+        f sb.appendFile #drop
+        '\n' sb.appendC
+      =:: fileBody
+    f io.fclose #drop ## TODO check file errors
+    fileState @
+      fileBody sb.toStr while
+        #over nextToken #over:2 state parseOperation
+        #dup .length 0 >
+      do end #drop
+    #drop
+    fileBody sb.free #drop
+    state [] .progFiles state [] .currentFile list.at .data
+    #dup [] .fileName .length 1 - #swap [] .fileName .length = ## remove zero-terminator
+    state [] .currentFile #swap
+  state [] .currentFile =
 end
