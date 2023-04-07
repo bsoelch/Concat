@@ -195,7 +195,7 @@ proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool =>
         #over    appendI
         "]( "    appendS
       #swap
-      context [] .namedTypes #swap list.get labelContext context appendNamedType
+      context [] .namedTypes #swap list.get labelContext context allowRecurse appendNamedType
       " )" appendS
       return
     namedLabel case
@@ -205,7 +205,7 @@ proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool =>
         #over    appendI
         "]( "    appendS
       #swap
-      context [] .namedTypes #swap list.get labelContext context appendNamedType
+      context [] .namedTypes #swap list.get labelContext context allowRecurse appendNamedType
       " )" appendS
       return
     autoType case
@@ -231,7 +231,7 @@ end
 #end
 #namespace types
 
-proc( Type => ) =: declaredType
+proc( Type => ) =: public declaredType
   #drop ## XXX store one instance of each type ( in declaration order )
 end
 
@@ -349,9 +349,11 @@ i32 =:: CompositeFlag
 2  CompositeFlag =: COMP_FLAG_ENUM
 4  CompositeFlag =: COMP_FLAG_PROC_IN
 8  CompositeFlag =: COMP_FLAG_PROC_OUT
-16 CompositeFlag =: COMP_FLAG_VOID_ONLY
-32 CompositeFlag =: COMP_FLAG_STATIC_ARGS
-64 CompositeFlag =: COMP_FLAG_TEMPLATE
+15 CompositeFlag =: public COMP_CLASS_MASK
+16 CompositeFlag =: public COMP_FLAG_VOID_ONLY
+32 CompositeFlag =: public COMP_FLAG_STATIC_ARGS
+64 CompositeFlag =: public COMP_FLAG_TEMPLATE
+96 CompositeFlag =: public COMP_GENERIC_MASK
 struct( i64 : eltsOffset i64 : eltCount id.LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
@@ -433,7 +435,6 @@ proc( Type : composite i64 : index TypeContext ptr mut : context => Type ) =: pu
   .data [] .eltsOffset index + context [] .compositeData #swap list.get return
 end
 
-
 proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   a .length b .length < if
     -1 return
@@ -452,14 +453,21 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   end #drop
   -1 return
 end
-proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => CompositeId bool #+declared type+# ) =: newCompositeType
+proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => CompositeId bool #+declared type+# ) =: public newCompositeType
   classFlag CompositeFlag =: mut flags
   true =:: mut isVoid
   0 while #dup elts .length < do
-    elts #over array.get Type .undefined != if
-      false isVoid =
-    end
-    ## TODO check for generic and template
+    elts #over array.get
+      #dup Type .undefined != if
+        false isVoid =
+      end
+      #dup context containsGeneric if
+        flags COMP_FLAG_STATIC_ARGS | flags =
+      end
+      #+2nd return value+# if
+        flags COMP_FLAG_TEMPLATE | flags =
+      end
+    #drop
     1 +
   end #drop
   isVoid if
@@ -606,10 +614,10 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
 end
 
 ## named types
-struct( Type : mut data id.LabelId : name ) =:: NamedType
-proc( Type id.LabelId types.TypeContext ptr mut => Type ) =: public newNamedType
+struct( Type : mut data id.LabelId : name id.TemplateId : templateId i32 : mut implId ) =:: NamedType
+proc( Type id.LabelId id.TemplateId types.TypeContext ptr mut => Type ) =: public newNamedType
   =:: context
-  NamedType new context [] .namedTypes #swap list.append context [] .namedTypes =
+  -1 NamedType new context [] .namedTypes #swap list.append context [] .namedTypes =
   context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType new return
 end
 proc( Type => bool ) =: public isNamedType
@@ -624,11 +632,12 @@ proc( Type types.TypeContext ptr => Type ) =: public unwrapNamed
   end
   return
 end
-proc( Type : named Type : value types.TypeContext ptr mut : context => bool ) =: public setNamedType
+proc( Type : named Type : value i32 : implId types.TypeContext ptr mut : context => bool ) =: public setNamedType
   named Type .namedType == if
     context [] .namedTypes named .namedType list.at .data
       #dup [] .data Type .undefined typeEquals if
-        value #swap [] .data =
+        value #over [] .data =
+        implId #swap [] .implId =
         false return
       end
     #drop
@@ -638,13 +647,14 @@ end
 
 #end
 #namespace sb
-proc( stringBuilder types.NamedType id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: appendNamedType
+proc( stringBuilder types.NamedType id.LabelContext ptr types.TypeContext ptr bool => stringBuilder ) =: appendNamedType
+  =:: allowRecurse
   =:: context
   =:: labelContext
   #swap
     #over .name labelContext id.labelName .data sb.appendStr
     " [ " sb.appendS
-    #swap .data labelContext context false appendTypeRecursive
+    #swap .data labelContext context allowRecurse appendTypeRecursive
     " ]"  sb.appendS
   return
 end
@@ -660,6 +670,27 @@ proc( i32 : id => Type ) =: public newGenericType
 end
 proc( i32 : id => Type ) =: public newTemplateType
   id Type .templateType new return
+end
+
+proc( Type : t TypeContext ptr mut : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
+  t context unwrapNamed switch
+    undefined primitiveType autoType case
+      false false return
+    pointer arrayType case  ## TODO check for generic size
+      t context getBaseType context containsGeneric return
+    tuple struct labeledProcIn procIn procOut enum enumLabel case
+      t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
+    procedure case
+      context [] .procTypes t .procedure list.get
+        #dup .in context containsGeneric =:: isTemplate =:: isStatic
+        .out context containsGeneric isStatic & #swap isTemplate & #swap return
+    namedType namedLabel case
+      t context unwrapNamed context containsGeneric return
+    genericType case
+      false true return
+    templateType case
+      true false return
+  end
 end
 
 ## type context

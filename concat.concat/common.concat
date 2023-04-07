@@ -15,4 +15,6 @@ struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public Fi
 
   i32 =:: public NamespaceImportId
   -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
+  i32 =:: public TemplateId
+  -1 TemplateId =: public TEMPLATE_ID_NONE
 #end

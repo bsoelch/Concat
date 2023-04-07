@@ -64,4 +64,7 @@ entryPoint:
     "Hello" #over [] print
     1 +
   end #drop
+  i32 optional print
+  i64 optional print
+  i32 optional print
 end

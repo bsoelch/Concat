@@ -2,8 +2,8 @@
 #include map
 #include optional
 
-#include "types.concat"
 #include "constants.concat"
+#include "types.concat"
 #include "labels.concat"
 #include "codeBlocks.concat"
 #include "common.concat"
@@ -11,11 +11,9 @@
 #namespace id
   enum( TYPE PROCEDURE GLOBAL_VAR  TEMPLATE_ARG  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
 
-  i32 =:: public TemplateId
-  -1 TemplateId =: public TEMPLATE_ID_NONE
-  struct( ConstValue arrayView : argValues types.Type : implType FilePosition : implPos ) =:: public TemplateImplementation
+  struct( types.Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
-  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength #+XXX scrFile+# TemplateImplementation list : implementations i64 : compiledImpls ) =:: public TemplateInfo
+  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength #+XXX scrFile+# TemplateImplementation list : mut implementations i64 : compiledImpls ) =:: public TemplateInfo
 
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
   struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : id ) =:: public IdentifierInfo
@@ -56,6 +54,7 @@
   end
 
   struct(
+    ConstantContext : mut constContext
     LabelContext : mut labelContext
     types.TypeContext : mut typeContext
     Scope list : mut localScopes
@@ -69,6 +68,7 @@
   ) =:: public IdentifierContext
 
   proc( => IdentifierContext ) =: public newIdentifierContext
+    newConstContext
     newLabelContext
     types.newTypeContext
     128 Scope list.create
@@ -458,6 +458,12 @@
     end
     context [] .templateInfos id list.at return
   end
+  proc( TemplateId : id IdentifierContext ptr mut : context => types.Type ) =: public templateArgs
+    id 0 < id context [] .templateInfos .length >= | if
+      types.Type .undefined return
+    end
+    context [] .templateInfos id list.get .templateType return
+  end
   proc( types.Type : templateTypes i64 : templateOpsOffset #+XXX src-file+# FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
     context hasOpenTemplate if
       true return
@@ -483,6 +489,144 @@
       templateOpsOffset #over [] .codeOffset -
       #swap [] .codeLength =
     TEMPLATE_ID_NONE context [] .currentTemplate =
+  end
+#end
+
+#namespace types
+  proc( CompositeId : src ConstValue arrayView : templateArgs ConstValue arrayView : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => CompositeId bool #+is new type+# ) =: replaceGenericsComposite
+    context [] .typeContext .compositeTypes src list.get
+      #dup .flags COMP_FLAG_VOID_ONLY & 0 != #over .flags COMP_GENERIC_MASK & 0 == | if #drop
+        src false return ## no generic elements
+      end
+      #dup .eltCount Type list.create
+        0 while #dup #over:3 .eltCount < do
+          #swap ## composite index list
+            context [] .typeContext .compositeData #over:3 .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenerics list.append
+          #swap 1 +
+        end #drop
+        #over .flags COMP_CLASS_MASK &
+        #over list.asArray
+        #over:3 .labelOffset
+        context [] .typeContext @
+        newCompositeType =:: isNewType
+      #swap list.free #drop
+    #swap #drop
+    isNewType return
+  end
+  proc( Type : src ConstValue arrayView : templateArgs ConstValue arrayView : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => Type ) =: public replaceGenerics
+    src context [] .typeContext @ containsGeneric genericArgs .length 0 > & #swap templateArgs .length 0 > & | ! if
+      src return ## no generics to replace
+    end
+    src switch
+      undefined primitiveType autoType case
+        src return ## no generic info
+      pointer arrayType case
+        src Type .pointer == =:: isPtr
+        src isPtr if .pointer else .arrayType end
+        context [] .typeContext .arrayTypes #swap list.get =:: arrayType
+          arrayType .base templateArgs genericArgs implPos context replaceGenerics
+          isPtr
+          arrayType .fixedSize if
+            ## XXX check if array-size is generic
+            context [] .typeContext .arraySizes .data arrayType .sizeOffset + arrayType .dims array.create ## TODO update sizes
+            true
+          else
+            ArraySize array.empty
+            false
+          end
+          arrayType .mutable
+          context [] .typeContext @
+        newArrayType #drop return
+      tuple case
+        src .tuple templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .tuple new
+        isNewType if #dup declaredType end return
+      struct case
+        src .struct templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .struct new
+        isNewType if #dup declaredType end return
+      labeledProcIn case
+        src .labeledProcIn templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .labeledProcIn new
+        isNewType if #dup declaredType end return
+      procIn case
+        src .procIn templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .procIn new
+        isNewType if #dup declaredType end return
+      procOut case
+        src .procOut templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .procOut new
+        isNewType if #dup declaredType end return
+      enum case
+        src .enum templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .enum new
+        isNewType if #dup declaredType end return
+      enumLabel case
+        src .enumLabel templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .enumLabel new
+        isNewType if #dup declaredType end return
+      procedure case
+        context [] .typeContext .procTypes src .procedure list.get
+          #dup .in templateArgs genericArgs implPos context replaceGenerics
+          #swap .out templateArgs genericArgs implPos context replaceGenerics
+        context [] .typeContext @ newProcedure #drop return
+      namedType namedLabel case
+        src Type .namedLabel == =:: isLabel
+        context [] .typeContext .namedTypes
+          src isLabel if .namedLabel else .namedType end
+        list.get =:: typeData
+        typeData .templateId id.TEMPLATE_ID_NONE == if
+          src return ## no template data in type
+        end
+        context [] .templateInfos typeData .templateId list.at .data =:: templateInfo
+        typeData .implId -1 == if ## first implementation
+          ## TODO check if template arguments have correct size
+          0 while #dup templateInfo [] .implementations .length < do ## check if template arguments have already been implemented
+            templateInfo [] .implementations #over list.get
+              true 0 while #dup #over:3 .argValues .length < do
+                #swap #drop
+                  #over .argValues context [] .constContext @ constArrayAsArray #over array.get templateArgs #over:2 array.get context [] .labelContext @ constantEquals #dup ! if
+                    #swap break
+                  end
+                #swap 1 +
+              end #drop
+              if ## already implemented
+                .implType
+                #swap #drop return
+              end
+            #drop
+            1 +
+          end #drop
+          ## create implementation
+          Type .undefined typeData .name typeData .templateId context [] .typeContext @ newNamedType =:: newType
+          templateInfo [] .implementations
+              newType
+              templateArgs context [] .constContext @ constArray
+              implPos
+            id.TemplateImplementation new list.append
+          templateInfo [] .implementations =
+          ## compute value
+          newType
+            typeData .data templateArgs genericArgs implPos context replaceGenerics
+            templateInfo [] .implementations .length i32 cast
+            context [] .typeContext @
+          setNamedType #drop
+          newType return
+        end
+        ## TODO check if any arguments appear in template-arguments of implementation
+        ## + add updated implementation for new arguments
+        typeData .data templateArgs genericArgs implPos context replaceGenerics
+        typeData .name
+        typeData .templateId
+        context [] .typeContext @ newNamedType return
+      genericType case
+        src .genericType
+          #dup 0 >= #over genericArgs .length < & if
+            genericArgs #swap array.get .typeId return
+          end
+        #drop
+        src return
+      templateType case
+        src .templateType
+          #dup 0 >= #over templateArgs .length < & if
+            templateArgs #swap array.get .typeId return
+          end
+        #drop
+        src return
+    end
   end
 #end
 

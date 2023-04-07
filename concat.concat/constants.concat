@@ -5,8 +5,43 @@
 #include "labels.concat"
 #include "types.concat"
 
-enum( none wildCard bool : boolean i32 : enumLabel i64 : int i64 : genericArg i64 : templateArg id.StringConstant : str i8 : chr types.Type : typeId ) =:: public ConstValue
+enum(
+  none
+  wildCard
+  bool : boolean
+  i32 : enumLabel
+  i64 : int
+  i64 : genericArg
+  i64 : templateArg
+  id.StringConstant : str
+  i8 : chr
+  types.Type : typeId
+) =:: public ConstValue
 struct( types.Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
+
+struct( ConstValue list : mut arrayValues ) =:: public ConstantContext
+struct( i64 : offset i64 : length ) =:: public ConstantArray
+
+proc( => ConstantContext ) =: public newConstContext
+ 128 ConstValue list.create
+ ConstantContext new return
+end
+proc( ConstValue arrayView : elts ConstantContext ptr mut : context => ConstantArray ) =: public constArray
+  context [] .arrayValues .length
+    context [] .arrayValues
+      elts list.appendArray
+    context [] .arrayValues =
+  elts .length ConstantArray new return
+end
+proc( ConstantArray : elts ConstantContext ptr mut : context => ConstValue arrayView ) =: public constArrayAsArray
+  elts .offset 0 < if
+    ConstValue array.empty return
+  end
+  context [] .arrayValues .length elts .offset elts .length + < if
+    ConstValue array.empty return
+  end
+  context [] .arrayValues .data elts .offset + elts .length array.create return
+end
 
 proc( FilePosition : pos => Constant ) =: public constWildcard
   types.Type .undefined ConstValue .wildCard new pos Constant new return
@@ -39,6 +74,39 @@ proc( ConstValue types.Type FilePosition => Constant ) =: public newConst
   =:: pos
   #swap pos Constant new return
 end
+
+proc( ConstValue : a ConstValue : b id.LabelContext ptr : labelContext => bool ) =: public constantEquals
+  a b != if ##different constant types
+    false return
+  end
+  a switch
+    none wildCard case
+      true return
+    boolean case
+      a .boolean b .boolean == return
+    enumLabel case
+      a .enumLabel b .enumLabel == return
+    int case
+      a .int b .int == return
+    chr case
+      a .chr b .chr == return
+    str case
+      a .str .length b .str .length != if
+        false return
+      end
+      a .str .offset b .str .offset == if
+        true return
+      end
+      a .str labelContext id.scAsStr b .str labelContext id.scAsStr string.eq return
+    typeId case
+      a .typeId b .typeId types.typeEquals return
+    templateArg case
+      a .templateArg b .templateArg == return
+    genericArg case
+      a .genericArg b .genericArg == return
+  end
+end
+
 #namespace sb
 proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendConstant
   =:: typeContext

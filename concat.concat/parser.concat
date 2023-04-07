@@ -32,6 +32,7 @@ struct(
  types.ArraySize list : mut arraySizeBuffer
   StaticArgument list : mut staticArgs
                   i64 : mut staticArgsOffset
+      ConstValue list : mut templateArgBuffer
      ProgramFile list : mut progFiles
                FileId : mut currentFile
        Operation list : mut templateOps
@@ -165,6 +166,29 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types
     end #drop
   state [] .constants .length =
   state [] .typeBuffer list.asArray false return
+end
+proc( types.Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state => ConstValue arrayView bool ) =: popTemplateArguments
+  argTypes state [] .idContext .typeContext @ types.compositeEltCount =:: count
+  count state [] .constants .length > if
+    "not enough arguments for template" sb.wrap fileState [] .wordStart state appendError
+     ConstValue array.empty true return
+  end
+  state [] .templateArgBuffer
+    list.clear
+  state [] .templateArgBuffer =
+  state [] .constants .length count - state [] .constants .length =
+  0 while #dup count < do
+    state [] .constants .data #over state [] .constants .length + []
+      #dup .valueType argTypes #over:3 state [] .idContext .typeContext @ types.compositeGetElement types.typeEquals ! if
+        "incompatible type for template argument" sb.wrap fileState [] .wordStart state appendError ## XXX print types in error message
+        #drop:2 ConstValue array.empty true return
+      end
+    state [] .templateArgBuffer
+      #swap .val list.append
+    state [] .templateArgBuffer =
+    1 +
+  end #drop
+  state [] .templateArgBuffer list.asArray false return
 end
 proc( id.LabelId : label types.Type : valType i64 : index ParserState ptr mut : state => ) =: newStaticArg
   state [] .staticArgs
@@ -501,14 +525,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #dup .val #swap .argType fileState [] .wordStart newConst state pushConst
       true return
     else #drop end
-    #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## read named constants TODO generic arguments
-      #dup [] .constValue ConstValue .none != if
-        #dup [] .constValue #over [] .valueType fileState [] .wordStart newConst  state pushConst
-        #drop:2 true return
+    #dup state [] .currentFile state [] .idContext @ id.getIdentifier if ## read named constants
+      #drop:2 false return
+    end
+    #dup [] .constValue ConstValue .none == if
+      #drop:2 false return
+    end
+    #dup [] .constValue =:: mut constVal
+    #dup [] .templateId -1 != #over [] .idType id.IdentifierType .TEMPLATE_ARG != & if
+      #dup [] .templateId state [] .idContext @ id.templateArgs fileState state popTemplateArguments if
+        "could not get template arguments" sb.wrap fileState [] .wordStart state appendError
+        #drop:3 true return
+      end =:: args
+      #dup [] .valueType types.primitive.TYPE types.typeEquals if
+        constVal .typeId args ConstValue array.empty fileState [] .wordStart state [] .idContext @ types.replaceGenerics ConstValue .typeId new constVal =
+      else
+        "unimplemented: generic constants" sb.wrap fileState [] .wordStart state appendError
       end
-      #drop:2
-    else #drop:2 end
-  false return
+    end
+    constVal #over [] .valueType fileState [] .wordStart newConst  state pushConst
+  #drop:2 true return
 end
 proc( string FilePosition ParserState ptr mut => i32 ) =: getStackModParam
   =:: state
@@ -692,7 +728,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             types.Type .undefined
           end
-          #over:4 state [] .idContext .typeContext @ types.newNamedType fileState [] .wordStart constType .val
+          #over:4 state [] .idContext .currentTemplate state [] .idContext .typeContext @ types.newNamedType fileState [] .wordStart constType .val
         else #over id.IdentifierType .PROCEDURE != isInit state hasConst & & _if
           state popConst
             ## TODO check if type correct
@@ -769,7 +805,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             end
           -1 ## id
           const .val
-          #over:2 id.IdentifierType .TYPE != if
+          #over:2 id.IdentifierType .TYPE == if .typeId
+            #dup state [] .idContext .typeContext @ types.isProcedure if
+              "Declaration of a procedure type as constant\n Use '=:' to declare procedures" sb.wrap fileState [] .wordStart state appendError
+            end
+            #over:4 state [] .idContext .currentTemplate state [] .idContext .typeContext @ types.newNamedType ConstValue .typeId new
+          else
             const opConst state appendOp
           end
         else
@@ -800,7 +841,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .val #dup ConstValue .typeId == if .typeId
           #dup types.isNamedType if
             fileState state popTypeConstant ! if
-              state [] .idContext .typeContext @ types.setNamedType ! if
+              -1 state [] .idContext .typeContext @ types.setNamedType ! if
                 state [] .idContext @ id.isGlobal if
                   state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
                 end
@@ -816,6 +857,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected \"=\"" sb.wrap fileState [] .wordStart state appendError
         return
       end .data
+      ## TODO check for assignment to template variable
       #dup [] .val OpValue .getId == if
         #dup [] .val .getId #over [] .val .setId =
         fileState [] .wordStart #swap [] .pos =
@@ -1140,6 +1182,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     end
   #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
+    ## TODO get procedure -> call
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
     #drop:2
     return
@@ -1177,6 +1220,7 @@ proc( stringBuilder : rootFile => Program ) =: parseProgram
     128 types.Type      list.create
     128 types.ArraySize list.create
     32 StaticArgument   list.create 0
+    32 ConstValue       list.create
     16 ProgramFile      list.create
     FILE_ID_NONE
     128 Operation       list.create
