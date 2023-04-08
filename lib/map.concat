@@ -30,13 +30,13 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
     data [] .data mem.free
     0 data [] .cap =
   end
-  
+
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key bool : newNode => NodeId ) =: find
     data [] .cap 0 == if ## TODO ensure cap/ error message
        0 return
     end
-    key data [] .hash () data [] .cap %u  NodeId cast
+    key data [] .hash () data [] .cap %u  NodeId cast ## sync types in loop
       data [] .data #over []
         #dup 0 == if #drop
           newNode if
@@ -61,7 +61,7 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
         NodeId cast return
       end
     #drop 0 return
-  end  
+  end
 
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key => V optional ) =: public get
