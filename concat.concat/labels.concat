@@ -221,8 +221,8 @@
       end #drop
     end
     context [] .namespaceImports
-      parent
       import
+      parent
       NAMESPACE_IMPORT_NONE
       NAMESPACE_IMPORT_NONE
       NamespaceImport new list.append

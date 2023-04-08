@@ -300,8 +300,7 @@
     end
     label  context [] .labelContext addrOf
       #over #over labelFlags =:: flags
-      #over #over labelName .data =:: name
-    labelPos .data =:: labelPos
+    labelName .data =:: name
     context id.isGlobal flags FLAG_PUBLIC & 0 != & if ## public global -> ignore fileId
       FILE_ID_NONE
     else

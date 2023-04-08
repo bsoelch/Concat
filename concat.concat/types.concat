@@ -673,8 +673,9 @@ proc( i32 : id => Type ) =: public newTemplateType
   id Type .templateType new return
 end
 
-proc( Type : t TypeContext ptr mut : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
-  t context unwrapNamed switch
+proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
+  t0 context unwrapNamed =:: t
+  t switch
     undefined primitiveType autoType case
       false false return
     pointer arrayType case
