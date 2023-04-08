@@ -107,7 +107,7 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendI
     10 appendInt?
   end
-  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendHex
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendX
     16 appendInt?
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUBin
