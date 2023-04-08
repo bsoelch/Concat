@@ -111,6 +111,30 @@ proc( ConstValue : a ConstValue : b id.LabelContext ptr : labelContext => bool )
 end
 
 #namespace sb
+proc( stringBuilder i8 => stringBuilder ) =: public appendEscapedChr
+  =:: chr
+  chr 0x20 < chr 0x7f == | if ## non-printable ASCII-characters + hex-codes for multi-char characters
+    "\\x" sb.appendS
+    chr 0xff &
+      #dup 0x10 < if #swap '0' sb.appendC #swap end
+    sb.appendX
+    return
+  end
+  chr '\\' == chr '\'' == | chr '\"' == | if
+    '\\' sb.appendC
+    chr  sb.appendC
+    return
+  end
+  chr  sb.appendC
+end
+proc( stringBuilder string => stringBuilder ) =: public appendEscapedStr
+  =:: str
+  0 while #dup str .length < do
+    #swap
+      str #over:2 string.charAt appendEscapedChr
+    #swap 1 +
+  end #drop
+end
 proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendConstant
   =:: typeContext
   =:: labelContext
@@ -132,12 +156,12 @@ proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stri
         break
       str case
         "string \""  sb.appendS
-        #over .str labelContext id.scAsStr  sb.appendStr
+        #over .str labelContext id.scAsStr  sb.appendEscapedStr
                '\"'  sb.appendC
         break
       chr case
         "char \'"  sb.appendS
-        #over .chr sb.appendC
+        #over .chr sb.appendEscapedChr
              '\''  sb.appendC
         break
       typeId case

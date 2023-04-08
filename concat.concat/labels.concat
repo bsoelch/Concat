@@ -3,7 +3,7 @@
 #include optional
 
 #include "files.concat"
-
+#include "common.concat"
 
 #namespace id
   struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: public NamespaceInfo
@@ -78,13 +78,16 @@
     context [] .labels .length 1 - LabelId cast return
   end
 
-  proc( string : str LabelContext ptr mut : context => StringConstant ) =: public newStringConstant
+  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context => StringConstant ) =: public newStringConstant
+    stringStart =:: mut pos
+    '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       #dup .length str .length + list.ensureCap
       0 while #dup str .length < do
         #swap
           str #over:2 string.charAt #dup '\\' != if
+            #dup pos @ updateFilePos
             list.append
             #swap
               1 +
@@ -95,32 +98,90 @@
         #swap
           str #over:2 string.charAt #dup switch
             '\\' '\'' '"' case
+              '\\' pos @ updateFilePos
+              #dup pos @ updateFilePos
               list.append
               break
-            'n' case #drop
+            'n' case
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
               '\n' list.append
               break
-            't' case #drop
+            't' case
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
               '\t' list.append
               break
-            'b' case #drop
+            'b' case
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
               '\b' list.append
               break
-            'r' case #drop
+            'r' case
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
               '\r' list.append
               break
-            'f' case #drop
+            'f' case
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
               '\f' list.append
               break
-            'v' case #drop
+            'v' case
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
               '\v' list.append
               break
-            'x' 'u' 'U' case #drop
-              ## TODO hex escape codes more escape characters
-              break
+            'x' 'u' 'U' case =:: c
+              c 'x' == if 2 else c 'u' == _if 4 else 8 end =:: nChars
+              #over nChars + str .length >= if
+                "not enough characters for escape sequence \"\\" sb.wrap
+                  c                     sb.appendC
+                  "\" need "            sb.appendS
+                  nChars                sb.appendI
+                  " got "               sb.appendS
+                  str .length #over:3 - sb.appendI
+                pos CompilerError new
+                errors []
+                  #swap list.append
+                errors [] =
+                '\\' pos @ updateFilePos
+                c pos @ updateFilePos
+                #swap 1 +
+                continue
+              end
+              '\\' pos @ updateFilePos
+              c pos @ updateFilePos
+              #swap
+              1 +
+              #swap
+                str .data #over:2 + nChars string.create 16 tryParseInt ParseIntError .NONE == if
+                  c 'x' == if
+                    i8 cast list.append
+                  else
+                    #drop
+                    errors []
+                      "Unicode escape sequences are not yet supported" sb.wrap pos CompilerError new list.append
+                    errors [] =
+                  end
+                else #drop
+                  errors []
+                    "invalid hex-code for escape sequence: \"" sb.wrap str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos CompilerError new list.append
+                  errors [] =
+                end
+              #swap ## update file position
+                0 while #dup nChars < do
+                  str #over #over:2 + string.charAt pos @ updateFilePos
+                  #swap 1 +
+                  #swap 1 +
+                end #drop
+              continue
             default
-              list.append
-              ## TODO handle invalid escape characters
+              errors []
+                "unknown escape sequence \"\\" sb.wrap #over:2 sb.appendC '\"' sb.appendC pos CompilerError new list.append
+              errors [] =
+              '\\' pos @ updateFilePos
+              pos @ updateFilePos
           end
         #swap
         1 +

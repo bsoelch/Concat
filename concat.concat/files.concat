@@ -58,17 +58,18 @@ proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
   end
 end
 
-proc( i8 : chr  FileState ptr mut : fileState => ) =: updateState
+
+proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: public updateFilePos
   chr '\n' == if
-      fileState [] .currentPos .line ++ #drop
-    1 fileState [] .currentPos .posInLine =
+      currentPos [] .line ++ #drop
+    1 currentPos [] .posInLine =
   else
-    fileState [] .currentPos .posInLine ++ #drop
+    currentPos [] .posInLine ++ #drop
   end
 end
 proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
   0 while #dup code .length < code #over:2 string.charAt isWhitespace & do
-    code #over string.charAt fileState updateState
+    code #over string.charAt fileState [] .currentPos @ updateFilePos
     1 +
   end
   code #swap string.tail return
@@ -80,58 +81,58 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
   code fileState skipSpaces ## cut of leading white-spaces
     while
       #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
-        '#' fileState updateState
-        '#' fileState updateState
+        '#' fileState [] .currentPos @ updateFilePos
+        '#' fileState [] .currentPos @ updateFilePos
         2 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\n' != & do
-          #over #over string.charAt fileState updateState
+          #over #over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
         string.tail fileState skipSpaces
         true
       else false end #swap
       #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
-        '#' fileState updateState
-        '+' fileState updateState
+        '#' fileState [] .currentPos @ updateFilePos
+        '+' fileState [] .currentPos @ updateFilePos
         2 while #dup #over:2 .length <  #over:2 #over:2 1 - string.charAt '+' !=  #over:3 #over:3 string.charAt '#' != |  & do
-          #over #over string.charAt fileState updateState
+          #over #over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
-        #over #over string.charAt fileState updateState
+        #over #over string.charAt fileState [] .currentPos @ updateFilePos
         1 +
         string.tail fileState skipSpaces
         #swap #drop true
       else #swap end
     do end
     fileState [] .currentPos fileState [] .wordStart =
-    #dup 0 string.charAt fileState updateState
+    #dup 0 string.charAt fileState [] .currentPos @ updateFilePos
     #dup 0 string.charAt '"' == if ## string
       1 string.tail
       0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '"' != & do
         #over #over string.charAt '\\' == if ##escape characters
-          #over #over string.charAt fileState updateState
+          #over #over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
-        #over #over string.charAt fileState updateState
+        #over #over string.charAt fileState [] .currentPos @ updateFilePos
         1 +
       end
-      #over #over string.charAt fileState updateState
+      #over #over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .STRING new return
     end
     #dup 0 string.charAt '\'' == if ## char
       1 string.tail
       0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\'' != & do
         #over #over string.charAt '\\' == if ##escape characters
-          #over #over string.charAt fileState updateState
+          #over #over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
-        #over #over string.charAt fileState updateState
+        #over #over string.charAt fileState [] .currentPos @ updateFilePos
         1 +
       end
-      #over #over string.charAt fileState updateState
+      #over #over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .CHAR new return
     end
     1 while #dup #over:2 .length < #over:2 #over:2 string.charAt isWhitespace ! & do
-      #over #over string.charAt fileState updateState
+      #over #over string.charAt fileState [] .currentPos @ updateFilePos
       1 +
     end
   string.cutIndex

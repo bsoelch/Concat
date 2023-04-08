@@ -1,10 +1,11 @@
 ## collection of basic declarations used by all compiler files
-#include string
+#include stringBuilder
 
 i32 =:: public FileId
 -1 FileId =: public FILE_ID_NONE
 
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
+struct( stringBuilder : message FilePosition : pos ) =:: public CompilerError
 
 #namespace id
   i32 =:: public LabelId

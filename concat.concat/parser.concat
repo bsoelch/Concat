@@ -391,11 +391,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       EMPTY case
         "" string.wrap true return
       STRING case
-        token .STRING state [] .idContext .labelContext addrOf id.newStringConstant fileState [] .wordStart constStr  state pushConst
+        token .STRING fileState [] .wordStart state [] .errors @ state [] .idContext .labelContext @ id.newStringConstant fileState [] .wordStart constStr  state pushConst
         "" string.wrap true return
       CHAR case
         token .CHAR
-          state [] .idContext .labelContext addrOf id.newStringConstant ## escape character
+          fileState [] .wordStart state [] .errors @  state [] .idContext .labelContext @ id.newStringConstant ## escape character
           #dup .length 1 != if
             "A character literal has to contain exactly one character" sb.wrap fileState [] .wordStart state appendError
           end

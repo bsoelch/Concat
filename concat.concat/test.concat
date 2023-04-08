@@ -51,7 +51,7 @@ proc( i32 => ) =: switchTest
       return
   end
 end
-
+"Escäpe ,e!\x00" =:: escapleMe
 entryPoint:
   0 =:: x
   0 =:: mut y

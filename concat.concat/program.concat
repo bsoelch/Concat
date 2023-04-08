@@ -119,8 +119,6 @@ proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
   =:: pos
   OpValue .Unknown new types.Type .undefined pos Operation new return
 end
-struct( stringBuilder : message FilePosition : pos ) =:: public CompilerError
-
 struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
 
 struct(
