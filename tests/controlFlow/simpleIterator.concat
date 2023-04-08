@@ -3,7 +3,7 @@
 proc( i64 : static k i8 k ptr : str => string i64 ) =: startItr
   str string.wrap 0
 end
-proc( string i64 => string i64 char bool ) =: nextChar
+proc( string i64 => string i64 i8 bool ) =: nextChar
   =:: i
   =:: s
   s

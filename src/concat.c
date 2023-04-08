@@ -4415,7 +4415,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     pushTypeConstant(TYPE_BOOL,codeFile->wordStart);
     return true;
   }
-  if(wordEquals(&name,"i8")||wordEquals(&name,"char")){
+  if(wordEquals(&name,"i8")){
     pushTypeConstant(TYPE_CHAR,codeFile->wordStart);
     return true;
   }

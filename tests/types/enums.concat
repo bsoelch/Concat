@@ -1,5 +1,5 @@
 
-enum( A B i32 : C  ( i32 char ) : mut D ) type =: anEnum
+enum( A B i32 : C  ( i32 i8 ) : mut D ) type =: anEnum
 enum( A B C ) type =: labelEnum 
 enum( empty i64 ptr : data ) type =: optionalI64
 
@@ -19,7 +19,7 @@ entryPoint:
     labelEnum .C new l1 =
   end
   
-  2 'A' ( i32 char ) new e .D =
+  2 'A' ( i32 i8 ) new e .D =
   e .D 
     241 #over .0 =
     #dup .1 print

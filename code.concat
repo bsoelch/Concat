@@ -7,5 +7,3 @@ entryPoint:
   i32 Node : aNode
   0 aNode @ aNode =
 end
-
-

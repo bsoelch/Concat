@@ -37,7 +37,7 @@
   proc( FILE => IOError ) : extern public fclose
   ## XXX fseek
   
-  proc( FILE : file char : chr => IOError ) =: public fputc
+  proc( FILE : file i8 : chr => IOError ) =: public fputc
     file chr addrOf 0 1 fwrite #swap #drop return
   end
   proc( FILE : file  i64 : static k  i8 k ptr : str => IOError ) =: public fputs
@@ -64,7 +64,7 @@
     end
     file #dup str fputs return
   end
-  proc( FILE : file IOError : err char : c => FILE  IOError ) =: public fappendC
+  proc( FILE : file IOError : err i8 : c => FILE  IOError ) =: public fappendC
     err FILE_ERROR_NONE != if
       file err return
     end

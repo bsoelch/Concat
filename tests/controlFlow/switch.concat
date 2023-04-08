@@ -1,6 +1,6 @@
 enum( A B i32 : C i8 : D ) =:: anEnum
 
-proc( i32 : i anEnum : e char : c => ) =: switchTest
+proc( i32 : i anEnum : e i8 : c => ) =: switchTest
   i switch
     1 2 case
       return
