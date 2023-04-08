@@ -162,10 +162,7 @@
     id 0 string.charAt '.' == if
       "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
     end
-    id '.' string.split
-      #over .length 0 == if
-        #swap
-      end
+    id '.' string.splitLast
     =:: path
     =:: name
     ## 1. search in local scopes

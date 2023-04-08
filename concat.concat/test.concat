@@ -41,6 +41,12 @@ end
 proc( type : static T i64 : k => T _ ptr ) : extern alloc
 #end
 
+#namespace nested
+  #namespace namespace
+    0 =:: mut variable
+  #end
+#end
+
 proc( i32 => ) =: switchTest
   switch
     0 1 2 case
@@ -53,6 +59,7 @@ proc( i32 => ) =: switchTest
 end
 "Escäpe ,e!\x00" =:: escapleMe
 entryPoint:
+  nested.namespace.variable print
   0 =:: x
   0 =:: mut y
   selfPtr : test
