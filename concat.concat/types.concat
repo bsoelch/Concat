@@ -260,7 +260,8 @@ proc( Type => bool ) =: public isInt
 end
 
 ## array & pointer types
-struct( i64 : value bool : isInt ) =:: public ArraySize
+enum( int templateArg staticArg ) =:: public ArraySizeType
+struct( i64 : value ArraySizeType : sizeType ) =:: public ArraySize
 struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut ptrOnly bool : mutable ) =:: ArrayType
 
 proc( Type TypeContext ptr => bool ) =: public isPointer
@@ -282,12 +283,13 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
   #drop
   Type .undefined return
 end
+## XXX procedure for checking if array-size is compatible ( same number of elements / fixed-size -> var-size )
 proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqual
   a .length b .length != if
     false return
   end
   0 while #dup a .length < do
-    a #over array.get .isInt b #over:2 array.get .isInt != if
+    a #over array.get .sizeType b #over:2 array.get .sizeType != if
       #drop false return
     end
     a #over array.get .value b #over:2 array.get .value != if
@@ -297,7 +299,6 @@ proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqua
   end #drop
   true return
 end
-## XXX arraySize compatible
 proc( Type : base bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool : mutable  TypeContext ptr mut : context => Type bool ) =: public newArrayType
   isPtr ! sizes .length 0 == & if
     Type .undefined true return
@@ -676,13 +677,28 @@ proc( Type : t TypeContext ptr mut : context => bool #+has template+# bool #+has
   t context unwrapNamed switch
     undefined primitiveType autoType case
       false false return
-    pointer arrayType case  ## TODO check for generic size
-      t context getBaseType context containsGeneric return
+    pointer arrayType case
+      context [] .arrayTypes t #dup Type .pointer == if .pointer else .arrayType end list.get =:: arrayType
+      arrayType .base context containsGeneric =:: mut isStatic =:: mut isTemplate
+      isTemplate isStatic & arrayType .fixedSize ! | if
+        isTemplate isStatic return
+      end
+      0 while #dup arrayType .dims < do
+        context [] .arraySizes arrayType .sizeOffset #over:2 + list.get .sizeType
+          #dup ArraySizeType .staticArg == if
+            true isStatic =
+          end
+        ArraySizeType .templateArg == if
+            true isTemplate =
+        end
+        1 +
+      end #drop
+      isTemplate isStatic return
     tuple struct labeledProcIn procIn procOut enum enumLabel case
       t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
     procedure case
       context [] .procTypes t .procedure list.get
-        #dup .in context containsGeneric =:: isTemplate =:: isStatic
+        #dup .in context containsGeneric =:: isStatic =:: isTemplate
         .out context containsGeneric isStatic & #swap isTemplate & #swap return
     namedType namedLabel case
       t context unwrapNamed context containsGeneric return

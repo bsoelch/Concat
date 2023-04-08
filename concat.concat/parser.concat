@@ -29,10 +29,8 @@ struct(
         Constant list : mut constants
                   i64 : mut constOffset
       types.Type list : mut typeBuffer
- types.ArraySize list : mut arraySizeBuffer
   StaticArgument list : mut staticArgs
                   i64 : mut staticArgsOffset
-      ConstValue list : mut templateArgBuffer
      ProgramFile list : mut progFiles
                FileId : mut currentFile
        Operation list : mut templateOps
@@ -127,16 +125,18 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
   end
   1 + ##revert last decrement
   #dup
-  state [] .arraySizeBuffer
+  state [] .idContext .arraySizeBuffer
     list.clear
     #over state [] .constOffset - list.ensureCap
     #swap while #dup state [] .constants .length < do
       #swap
         state [] .constants #over:2 list.get .val
           #dup ConstValue .int == if
-            .int true types.ArraySize new list.append
+            .int types.ArraySizeType .int types.ArraySize new list.append
           else #dup ConstValue .genericArg == _if
-            .genericArg false types.ArraySize new list.append
+            .genericArg types.ArraySizeType .staticArg types.ArraySize new list.append
+          else #dup ConstValue .templateArg == _if
+            .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
               #swap state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
@@ -145,9 +145,9 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
       #swap
       1 +
     end #drop
-  state [] .arraySizeBuffer =
+  state [] .idContext .arraySizeBuffer =
   state [] .constants .length =
-  state [] .arraySizeBuffer list.asArray true return
+  state [] .idContext .arraySizeBuffer list.asArray true return
 end
 proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types.Type arrayView bool ) =: popTypeConstants
   state [] .constants .length state [] .constOffset n + < if
@@ -167,28 +167,26 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => types
   state [] .constants .length =
   state [] .typeBuffer list.asArray false return
 end
-proc( types.Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state => ConstValue arrayView bool ) =: popTemplateArguments
+proc( types.Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state => ConstantArray bool ) =: popTemplateArguments
   argTypes state [] .idContext .typeContext @ types.compositeEltCount =:: count
   count state [] .constants .length > if
     "not enough arguments for template" sb.wrap fileState [] .wordStart state appendError
-     ConstValue array.empty true return
+     0 0 ConstantArray new true return
   end
-  state [] .templateArgBuffer
-    list.clear
-  state [] .templateArgBuffer =
+  state [] .idContext .templateArgBuffer .length =:: offset
   state [] .constants .length count - state [] .constants .length =
   0 while #dup count < do
     state [] .constants .data #over state [] .constants .length + []
       #dup .valueType argTypes #over:3 state [] .idContext .typeContext @ types.compositeGetElement types.typeEquals ! if
         "incompatible type for template argument" sb.wrap fileState [] .wordStart state appendError ## XXX print types in error message
-        #drop:2 ConstValue array.empty true return
+        #drop:2 0 0 ConstantArray new true return
       end
-    state [] .templateArgBuffer
+    state [] .idContext .templateArgBuffer
       #swap .val list.append
-    state [] .templateArgBuffer =
+    state [] .idContext .templateArgBuffer =
     1 +
   end #drop
-  state [] .templateArgBuffer list.asArray false return
+  offset state [] .idContext .templateArgBuffer .length offset - ConstantArray new false return
 end
 proc( id.LabelId : label types.Type : valType i64 : index ParserState ptr mut : state => ) =: newStaticArg
   state [] .staticArgs
@@ -533,15 +531,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     end
     #dup [] .constValue =:: mut constVal
     #dup [] .templateId -1 != #over [] .idType id.IdentifierType .TEMPLATE_ARG != & if
+      state [] .idContext .templateArgBuffer .length =:: offset
       #dup [] .templateId state [] .idContext @ id.templateArgs fileState state popTemplateArguments if
         "could not get template arguments" sb.wrap fileState [] .wordStart state appendError
+        offset state [] .idContext .templateArgBuffer .length = ## reset template arguments
         #drop:3 true return
       end =:: args
-      #dup [] .valueType types.primitive.TYPE types.typeEquals if
-        constVal .typeId args ConstValue array.empty fileState [] .wordStart state [] .idContext @ types.replaceGenerics ConstValue .typeId new constVal =
-      else
-        "unimplemented: generic constants" sb.wrap fileState [] .wordStart state appendError
-      end
+      constVal args 0 0 ConstantArray new fileState [] .wordStart state [] .idContext @ types.replaceGenerics constVal =
+      offset state [] .idContext .templateArgBuffer .length =
     end
     constVal #over [] .valueType fileState [] .wordStart newConst  state pushConst
   #drop:2 true return
@@ -1218,9 +1215,7 @@ proc( stringBuilder : rootFile => Program ) =: parseProgram
     id.newIdentifierContext
     128 Constant        list.create 0
     128 types.Type      list.create
-    128 types.ArraySize list.create
     32 StaticArgument   list.create 0
-    32 ConstValue       list.create
     16 ProgramFile      list.create
     FILE_ID_NONE
     128 Operation       list.create
@@ -1231,7 +1226,6 @@ proc( stringBuilder : rootFile => Program ) =: parseProgram
   ## cleanup parser memory
   state .constants list.free #drop
   state .typeBuffer list.free #drop
-  state .arraySizeBuffer list.free #drop
   state .staticArgs list.free #drop
   state .basePath sb.free #drop
   state .libPath sb.free #drop
