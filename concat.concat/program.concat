@@ -32,6 +32,10 @@ enum(
                          Print
                          Return
                          New
+                         callPtr
+                         argc
+                         getArg
+                         getArgLen
                    i32 : newEnum
             types.Type : Cast
             types.Type : Cast!
@@ -114,6 +118,18 @@ end
 proc( i32 i32 StackModType FilePosition => Operation ) =: public opStackMod
   =:: pos
   StackModification new OpValue .stackMod new types.Type .undefined pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opCallPtr
+  OpValue .callPtr types.Type .undefined pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opArgc
+  OpValue .argc types.primitive.I64 pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opGetArg
+  OpValue .getArg types.Type .undefined pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opGetArgLen
+  OpValue .getArgLen types.primitive.I64 pos Operation new return
 end
 proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
   =:: pos
@@ -372,6 +388,26 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) src: " sb.appendS
           #over .val .Cast!  labelContext typeContext sb.appendType
+          break
+        callPtr case
+          "call pointer (" sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
+          break
+        argc case
+          "get program argument count (" sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
+          break
+        getArg case
+          "get program argument (" sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
+          break
+        getArgLen case
+          "get program argument length (" sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
           break
         stackMod case
           "stack modification: " sb.appendS

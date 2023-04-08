@@ -1050,7 +1050,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       -1 fileState [] .wordStart opArrayGet state appendOp
       return
     else #dup "()" string.wrap string.eq _if #drop
-      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      fileState [] .wordStart opCallPtr state appendOp
       return
     else #dup "new" string.wrap string.eq _if =:: opName
       state hasConst ! if
@@ -1174,10 +1174,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "..argc" string.wrap string.eq _if #drop
-      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      fileState [] .wordStart opArgc state appendOp
       return
     else #dup "..getArg" string.wrap string.eq _if #drop
-      "unimplemented" sb.wrap fileState [] .wordStart state appendError
+      fileState [] .wordStart opGetArg state appendOp
       return
     else #dup "mut" string.wrap string.eq _if #drop
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError
