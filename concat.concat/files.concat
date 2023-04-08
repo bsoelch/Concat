@@ -78,24 +78,30 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
     "" string.wrap Token .EMPTY return
   end
   code fileState skipSpaces ## cut of leading white-spaces
-    #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
-      '#' fileState updateState
-      '#' fileState updateState
-      2 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\n' != & do
+    while
+      #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
+        '#' fileState updateState
+        '#' fileState updateState
+        2 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\n' != & do
+          #over #over string.charAt fileState updateState
+          1 +
+        end
+        string.tail fileState skipSpaces
+        true
+      else false end #swap
+      #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
+        '#' fileState updateState
+        '+' fileState updateState
+        2 while #dup #over:2 .length <  #over:2 #over:2 1 - string.charAt '+' !=  #over:3 #over:3 string.charAt '#' != |  & do
+          #over #over string.charAt fileState updateState
+          1 +
+        end
         #over #over string.charAt fileState updateState
         1 +
-      end
-      string.tail fileState skipSpaces
-    end
-    #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
-      '#' fileState updateState
-      '+' fileState updateState
-      2 while #dup #over:2 .length <  #over:2 #over:2 1 - string.charAt '+' !=  #over:3 #over:3 string.charAt '#' != |  & do
-        #over #over string.charAt fileState updateState
-        1 +
-      end
-      string.tail fileState skipSpaces
-    end
+        string.tail fileState skipSpaces
+        #swap #drop true
+      else #swap end
+    do end
     fileState [] .currentPos fileState [] .wordStart =
     #dup 0 string.charAt fileState updateState
     #dup 0 string.charAt '"' == if ## string
