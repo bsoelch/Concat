@@ -162,4 +162,12 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
       str chr indexOf
     splitIndex return
   end
+  proc( string : str i8 : chr => string string ) =: public splitLast
+    str
+      str chr lastIndexOf
+      #dup -1 == if #drop:2
+        str EMPTY return
+      end
+    splitIndex return
+  end
 #end
