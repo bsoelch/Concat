@@ -1184,7 +1184,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     #drop:2
     return
   end #drop:2
-  fileState [] .wordStart opUnknown  state appendOp
+  id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opUnknown  state appendOp
   return
 end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile

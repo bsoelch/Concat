@@ -57,14 +57,13 @@
     ConstantContext : mut constContext
     LabelContext : mut labelContext
     types.TypeContext : mut typeContext
+    Scope : mut globalScope
     Scope list : mut localScopes
-    Scope list : mut globalScopes
     TemplateInfo list : mut templateInfos
     ConstValue list : mut templateArgBuffer
     types.ArraySize list : mut arraySizeBuffer
     NamespaceImportId list : mut prevImports
     NamespaceInfo : mut namespaceInfo
-    i32 : mut globalScopeId
     i32 : mut localVarCount
     TemplateId : mut currentTemplate
   ) =:: public IdentifierContext
@@ -73,7 +72,7 @@
     newConstContext
     newLabelContext
     types.newTypeContext
-    128 Scope list.create
+    codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     128 TemplateInfo      list.create
     32  ConstValue        list.create
@@ -83,10 +82,8 @@
       NAMESPACE_IMPORT_NONE
     NamespaceInfo new
     0
-    0
     TEMPLATE_ID_NONE
     IdentifierContext new =:: mut newContext
-    newContext @ newGlobalScope #drop
     newContext return
   end
 
@@ -100,16 +97,6 @@
 
   proc( IdentifierContext ptr mut : context => bool ) =: public isGlobal
     context [] .localScopes .length 0 == return
-  end
-  proc( IdentifierContext ptr mut : context => i32 ) =: public newGlobalScope
-    context [] .globalScopes .length i32 cast
-      context [] .globalScopes
-         codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope list.append
-      context [] .globalScopes =
-    return
-  end
-  proc( IdentifierContext ptr mut : context => Scope ptr mut optional ) =: getGlobalScope
-    context [] .globalScopes context [] .globalScopeId list.at return
   end
   proc( codeBlocks.BlockType : blockType types.Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
     context [] .localScopes
@@ -163,7 +150,8 @@
       end
     #dup .autoClose #swap .blockType false return
   end
-
+  IdentifierData ptr : mut tmp
+  false =:: mut hasTmp
   ## TODO different return flags for: error, no-match, match, multi-match
   proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr bool ) =: public searchIdentifier
     context [] .namespaceInfo .current =:: mut mNamespace
@@ -206,7 +194,7 @@
       relSpace idName .namespace =
       relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
-        context getGlobalScope .data [] .identifiers addrOf idName map.at
+        context [] .globalScope .identifiers addrOf idName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if
             idName #swap false return
@@ -216,7 +204,7 @@
           matches .data [] =
           #drop
         else #drop end
-        context getGlobalScope .data [] .identifiers addrOf globalName map.at
+        context [] .globalScope .identifiers addrOf globalName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if
             globalName #swap false return
@@ -238,7 +226,7 @@
         relSpace idName .namespace =
         relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
-          context getGlobalScope .data [] .identifiers addrOf idName map.at
+          context [] .globalScope .identifiers addrOf idName map.at
           #dup optional.hasData if .data
             matches optional.hasData if
               matches .data []
@@ -252,7 +240,7 @@
               true multiMatch =
             end
           else #drop end
-          context getGlobalScope .data [] .identifiers addrOf globalName map.at
+          context [] .globalScope .identifiers addrOf globalName map.at
           #dup optional.hasData if .data
             matches optional.hasData if
               matches .data []
@@ -344,9 +332,10 @@
     context [] .localScopes .length 0 > if
       context [] .localScopes #dup .length 1 - list.at .data
     else
-      context getGlobalScope .data
+      context [] .globalScope @
     end =:: mScope
-    name context [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
+    name .length sb.create name sb.appendStr sb.toStr ## FIXME find better way to store element names in constant memory
+    context [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
     mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data
       idName #swap true return
     end #drop

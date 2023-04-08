@@ -38,7 +38,7 @@ enum(
          UnaryOperator : unaryOperator
         BinaryOperator : binaryOperator
      StackModification : stackMod
-                string : Unknown
+            id.LabelId : Unknown
 ) =:: public OpValue
 struct( OpValue : mut val types.Type : mut dataType FilePosition : mut pos ) =:: public Operation
 proc( FilePosition : pos => Operation ) =: public opNOP
@@ -115,7 +115,7 @@ proc( i32 i32 StackModType FilePosition => Operation ) =: public opStackMod
   =:: pos
   StackModification new OpValue .stackMod new types.Type .undefined pos Operation new return
 end
-proc( string FilePosition  => Operation ) =: public opUnknown
+proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
   =:: pos
   OpValue .Unknown new types.Type .undefined pos Operation new return
 end
@@ -128,7 +128,6 @@ struct(
      Operation list : mut localOps
   IncludedFile list : mut includedFiles
 
-                i32 : mut globalScopeId
       stringBuilder : mut fileName
              FileId : id
 ) =:: public ProgramFile
@@ -149,7 +148,6 @@ proc( stringBuilder : fileName FileId : id id.IdentifierContext ptr mut : idCont
   128 Operation list.create
   128 Operation list.create
   16 IncludedFile list.create
-  idContext id.newGlobalScope
   fileName
   id
   ProgramFile new return
@@ -383,7 +381,7 @@ end
           break
         Unknown case
           "Unknown Operation: " sb.appendS
-          #over .val .Unknown sb.appendStr
+          #over .val .Unknown labelContext id.labelName .data sb.appendStr
           break
       end
       " at " sb.appendS

@@ -153,7 +153,8 @@
     context [] .namespaces base list.get
       0 while #dup #over:2 .children .length < do
         #over .children #over list.get
-          context [] .namespaces #over list.get .name context scAsStr childName string.eq if
+          context [] .namespaces #over list.get .name context scAsStr
+          childName string.eq if
             #swap #drop #swap #drop
             return
           end
