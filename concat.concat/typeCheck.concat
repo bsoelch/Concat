@@ -3,7 +3,7 @@
 
 struct( types.Type : valType i32 : opCount bool : writable ) =:: TypeInfo
 enum( empty ifBlock whileBlock switchBlock procBlock ) =:: BlockData
-struct( codeBlocks.BlockType : blockType BlockData : mut blockData i64 : blockStart i32 : blockId ) =:: BlockInfo
+struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : blockType ) =:: BlockInfo
 
 struct(
   id.IdentifierContext ptr mut : mut idContext
@@ -26,6 +26,13 @@ struct(
   bool : mut hasCheckEnum
   bool : mut hasGetArgs
 ) =:: TypeCheckState
+proc( stringBuilder FilePosition TypeCheckState ptr mut => ) =: appendError
+  =:: state
+  CompilerError new
+  state [] .errors
+    #swap list.append
+  state [] .errors =
+end
 
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   ## TODO compile operation
@@ -53,7 +60,6 @@ proc( Program ptr mut => ) =: public typeCheckProgram
     prog [] .hasGetArgs
   TypeCheckState new =:: mut state
   0 =:: mut globalTmpCount
-  ## TODO create type check state
   0 while #dup prog [] .progFiles .length < do
     prog [] .progFiles #over list.at .data
       globalTmpCount state .tmpCount =
@@ -64,7 +70,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
         #swap 1 +
       end #drop
       state .openBlocks .length 0 > if
-        ## TODO error unfinished block
+        "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError
+        state .openBlocks list.clear state .openBlocks =
       end
       #dup [] .globalOps list.clear
         state .compiledOps list.appendAll
@@ -78,7 +85,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
         #swap 1 +
       end #drop
       state .openBlocks .length 0 > if
-        ## TODO error unfinished block
+        "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError
+        state .openBlocks list.clear state .openBlocks =
       end
       #dup [] .localOps list.clear
         state .compiledOps list.appendAll
