@@ -37,7 +37,7 @@ end
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   ## TODO compile operation
   state [] .compiledOps
-    op [] list.append ## XXX ? use list appendP
+    op list.appendP
   state [] .compiledOps =
 end
 
