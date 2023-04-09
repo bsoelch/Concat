@@ -13,6 +13,10 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     k T mem.alloc  0 k  T list new return
   end
   #template type : T #end
+  proc( i64 : k => T list ) =: public createZeroInit ## creates zero-initialized list of the given length
+    k T mem.calloc  k k  T list new return
+  end
+  #template type : T #end
   proc( T list : elts i64 : minCap => T list ) =: public ensureCap
     elts
       #dup .cap minCap > if

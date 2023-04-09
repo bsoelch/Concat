@@ -1261,7 +1261,7 @@ proc( stringBuilder : rootFile => Program ) =: public parseProgram
   ## Program
     state .idContext
     state .progFiles
-    state .autoTypeCount types.Type list.create
+    state .autoTypeCount types.Type list.createZeroInit ## ! assumes Type .undefined has all zero memory representation
     state .templateOps
     state .errors
     false ## has entry point XXX check in parser?
