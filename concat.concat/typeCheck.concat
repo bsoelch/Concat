@@ -1,0 +1,95 @@
+#include list
+#include "program.concat"
+
+struct( types.Type : valType i32 : opCount bool : writable ) =:: TypeInfo
+enum( empty ifBlock whileBlock switchBlock procBlock ) =:: BlockData
+struct( codeBlocks.BlockType : blockType BlockData : mut blockData i64 : blockStart i32 : blockId ) =:: BlockInfo
+
+struct(
+  id.IdentifierContext ptr mut : mut idContext
+
+  Operation list : mut compiledOps
+
+  Operation list : mut opStack
+  TypeInfo list : mut typeStack
+  BlockInfo list : mut openBlocks
+
+  types.Type list : mut autoTypes
+  CompilerError list : mut errors
+
+  i32 : mut tmpCount
+  i32 : mut ifCount
+  i32 : mut whileCount
+
+  bool : mut reachable
+  bool : mut hasCheckBounds
+  bool : mut hasCheckEnum
+  bool : mut hasGetArgs
+) =:: TypeCheckState
+
+proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckOp
+  ## TODO compile operation
+  state [] .compiledOps
+    op [] list.append ## XXX ? use list appendP
+  state [] .compiledOps =
+end
+
+proc( Program ptr mut => ) =: public typeCheckProgram
+  =:: mut prog
+  ## TypeCheckState
+    prog [] .idContext @
+    128 Operation list.create
+    128 Operation list.create
+    128 TypeInfo  list.create
+    128 BlockInfo list.create
+    prog [] .autoTypes
+    prog [] .errors
+    0
+    0
+    0
+    true
+    prog [] .hasCheckBounds
+    prog [] .hasCheckEnum
+    prog [] .hasGetArgs
+  TypeCheckState new =:: mut state
+  0 =:: mut globalTmpCount
+  ## TODO create type check state
+  0 while #dup prog [] .progFiles .length < do
+    prog [] .progFiles #over list.at .data
+      globalTmpCount state .tmpCount =
+      state .compiledOps list.clear state .compiledOps =
+      0 while #dup #over:2 [] .globalOps .length < do
+        #swap
+          #dup [] .globalOps #over:2 list.at .data state @ typeCheckOp
+        #swap 1 +
+      end #drop
+      state .openBlocks .length 0 > if
+        ## TODO error unfinished block
+      end
+      #dup [] .globalOps list.clear
+        state .compiledOps list.appendAll
+      #over [] .globalOps =
+      state .tmpCount globalTmpCount =
+      0 state .tmpCount =
+      state .compiledOps list.clear state .compiledOps =
+      0 while #dup #over:2 [] .localOps .length < do
+        #swap
+          #dup [] .localOps #over:2 list.at .data state @ typeCheckOp
+        #swap 1 +
+      end #drop
+      state .openBlocks .length 0 > if
+        ## TODO error unfinished block
+      end
+      #dup [] .localOps list.clear
+        state .compiledOps list.appendAll
+      #over [] .localOps =
+    #drop
+    1 +
+  end #drop
+  ## TODO type check template implementations
+  state .errors         prog [] .errors =
+  state .autoTypes      prog [] .autoTypes =
+  state .hasCheckBounds prog [] .hasCheckBounds =
+  state .hasCheckEnum   prog [] .hasCheckEnum =
+  state .hasGetArgs     prog [] .hasGetArgs =
+end
