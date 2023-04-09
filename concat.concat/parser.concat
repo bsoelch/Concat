@@ -12,20 +12,6 @@
 #include "codeBlocks.concat"
 #include "identifiers.concat"
 
-entryPoint:
-  ..argc 1 > if
-    0 sb.create 1 ..getArg string.create sb.appendStr
-  else
-    "./test.concat" sb.wrap
-  end
-  parseProgram
-  1024 sb.create
-    #swap sb.appendProgram
-  "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
-    #swap #over #swap io.fputSb #drop
-  io.fclose #drop
-end
-
 struct( types.Type : argType ConstValue : val id.LabelId : labelId ) =:: StaticArgument
 struct(
                string : mut basePath
@@ -1216,6 +1202,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opUnknown  state appendOp
   return
 end
+proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: checkIOError
+  #using io
+  err switch
+    FILE_ERROR_NONE case
+      return
+    FILE_ERR_PATH_OVERFLOW FILE_ERR_OPEN_MODE FILE_ERR_FILE_NOT_FOUND FILE_ERR_FILE_IS_DIR FILE_ERR_ACCESS_DENIED FILE_ERR_INVALID_FILE case
+      "cannot include file \"" sb.wrap fileName sb.appendSb '"' sb.appendC pos state appendError
+      return
+    default
+      "error while reading file \"" sb.wrap fileName sb.appendSb '"' sb.appendC pos state appendError
+      return
+  end
+end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile
   FILE_ID_NONE =:: mut included
   0 while #dup state [] .progFiles .length < do
@@ -1226,7 +1225,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
     1 +
   end #drop
   included FILE_ID_NONE == if ## file has not yet been included
-    fileName state parseFile included =
+    fileName state parseFile fileName pos state checkIOError included =
   end
   state [] .progFiles state [] .currentFile list.at .data
   #dup [] .includedFiles
@@ -1236,8 +1235,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   #swap [] .includedFiles =
 end
 
-
-proc( stringBuilder : rootFile => Program ) =: parseProgram
+proc( stringBuilder : rootFile => Program ) =: public parseProgram
   ## ParserState
     rootFile sb.toStr '/' string.lastIndexOf #dup 0 >= if
       rootFile .data #swap 1 + string.create
@@ -1255,7 +1253,7 @@ proc( stringBuilder : rootFile => Program ) =: parseProgram
     32 CompilerError    list.create
     0
   ParserState new =:: mut state
-  rootFile state @ parseFile #drop
+  rootFile state @ parseFile rootFile rootFile sb.toStr 0 0 FilePosition new state @ checkIOError #drop
   ## cleanup parser memory
   state .constants list.free #drop
   state .typeBuffer list.free #drop
@@ -1271,7 +1269,7 @@ proc( stringBuilder : rootFile => Program ) =: parseProgram
     false ## has getArgs
   Program new return
 end
-proc( stringBuilder : fileName ParserState ptr mut : state => FileId ) =: parseFile
+proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError ) =: parseFile
   fileName
     #dup #over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
@@ -1283,13 +1281,25 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId ) =: parseF
     state [] .progFiles =
   state [] .currentFile
     state [] .progFiles .length 1 - FileId cast state [] .currentFile =
-    #swap #dup .data #swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen #drop =:: f
+    #swap #dup .data #swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
+      #dup io.FILE_ERROR_NONE != if
+        #swap #drop ## discard code file
+        #swap state [] .currentFile = ## reset file id
+        FILE_ID_NONE #swap return
+      end #drop =:: f
       128 sb.create
         '\n' sb.appendC
-        f sb.appendFile #drop
+        f sb.appendFile =:: err
         '\n' sb.appendC
       =:: fileBody
-    f io.fclose #drop ## TODO check file errors
+    f io.fclose #dup io.FILE_ERROR_NONE != err io.FILE_ERROR_NONE != | if
+      #swap state [] .currentFile = ## reset file id
+      err io.FILE_ERROR_NONE != if #drop
+        FILE_ID_NONE err return
+      else
+        FILE_ID_NONE #swap return
+      end
+    end #drop
     fileState @
       fileBody sb.toStr while
         #over nextToken #over:2 state parseOperation
@@ -1299,4 +1309,5 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId ) =: parseF
     fileBody sb.free #drop
     state [] .currentFile #swap
   state [] .currentFile =
+  io.FILE_ERROR_NONE return
 end

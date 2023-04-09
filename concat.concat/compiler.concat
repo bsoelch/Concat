@@ -1,0 +1,18 @@
+#include "parser.concat"
+
+entryPoint:
+  ..argc 1 > if
+    0 sb.create 1 ..getArg string.create sb.appendStr
+  else
+    "./test.concat" sb.wrap
+  end =:: rootFile
+  rootFile parseProgram
+
+  1024 sb.create
+    #swap sb.appendProgram
+  =:: parsedOps
+  "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
+    #dup parsedOps io.fputSb #drop
+  io.fclose #drop
+  parsedOps sb.free #drop
+end
