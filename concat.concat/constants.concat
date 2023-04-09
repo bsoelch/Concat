@@ -53,9 +53,10 @@ proc( i64 FilePosition => Constant ) =: public constInt
   =:: pos
   #dup i32.MIN < #over i32.MAX > | if types.primitive.I64 else types.primitive.I32 end #swap ConstValue .int new pos Constant new return
 end
-proc( id.StringConstant FilePosition => Constant ) =: public constStr
-  =:: pos
-  types.Type .undefined #swap ConstValue .str new pos Constant new return ## TODO store correct string type
+proc( id.StringConstant : str FilePosition : pos types.TypeContext ptr mut : context => Constant ) =: public constStr
+  #using types
+  str .length ArraySizeType .int ArraySize new =:: size
+  types.primitive.I8 true size @ 1 array.create true false context newArrayType #drop str ConstValue .str new pos Constant new return
 end
 proc( i8 FilePosition => Constant ) =: public constChar
   =:: pos
@@ -70,7 +71,7 @@ proc( types.Type FilePosition => Constant ) =: public constType
   types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
 end
 proc( types.Type i32 FilePosition => Constant ) =: public constEnumLabel
-  =:: pos ## TODO? convert type to enum-label type
+  =:: pos ## XXX? convert type to enum-label type
   ConstValue .enumLabel new pos Constant new return
 end
 proc( ConstValue types.Type FilePosition => Constant ) =: public newConst

@@ -103,9 +103,13 @@ proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool =>
       "undefined" appendS return
     primitiveType case
       .primitiveType appendPrimitiveType return
-    pointer case ## XXX print sizes
-      context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-      " ptr" appendS return
+    pointer case =:: t ## XXX print sizes
+      t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
+      " ptr" appendS
+      t context types.isMutable if
+        " mut" appendS
+      end
+      return
     arrayType case
       context types.getBaseType labelContext context allowRecurse appendTypeRecursive
       " array" appendS return
@@ -282,6 +286,39 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
     end
   #drop
   Type .undefined return
+end
+proc( Type TypeContext ptr => bool ) =: public isMutable
+  =:: context
+  context unwrapNamed
+    #dup context isPointer if
+      context [] .arrayTypes #swap .pointer list.get .mutable return
+    end
+  #drop false return
+end
+proc( Type ptr mut : t bool : mutable TypeContext ptr mut : context => bool ) =: public setMutability
+  t [] context isMutable  mutable == if
+    false return
+  end
+  t [] Type .pointer == if
+    context [] .arrayTypes t [] .pointer list.get =:: arrayType
+    ## newArrayType
+      t [] context getBaseType
+      true
+      arrayType .fixedSize if
+        context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice
+        true
+      else
+        ArraySize array.empty
+        false
+      end
+      mutable
+    context newArrayType if
+      #drop true return
+    end t [] =
+    false return
+  end
+  ## XXX ? allow marking named pointer types as mutable
+  true return
 end
 ## XXX procedure for checking if array-size is compatible ( same number of elements / fixed-size -> var-size )
 proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqual
@@ -530,7 +567,7 @@ proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext 
     end
   false return
 end
-## TODO? enum as label
+## XXX? enum as label
 #end
 #namespace sb
 proc( stringBuilder types.CompositeType id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: appendComposite
@@ -570,7 +607,7 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcIn
     end
   context [] .procTypes #swap .procedure list.get .in false return
 end
-proc( Type : in Type : out #+ TODO static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
+proc( Type : in Type : out #+ XXX static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
   in Type .undefined == out Type .undefined == | if
     Type .undefined true return
   end

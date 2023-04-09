@@ -23,9 +23,15 @@
   16 LabelFlag =: public FLAG_PRIVATE
   32 LabelFlag =: public FLAG_EMPTY
 
-  struct( StringConstant : name FilePosition : pos LabelFlag : flags ) =:: Label ## XXX store namespace id in label
+  struct( StringConstant : name FilePosition : pos NamespaceId : namespace LabelFlag : flags ) =:: Label
 
-  struct( i8 list : mut nameBuffer Label list : mut labels  Namespace list : mut namespaces NamespaceImport list : mut namespaceImports ) =:: public LabelContext
+  struct(
+    i8 list : mut nameBuffer
+    Label list : mut labels
+    Namespace list : mut namespaces
+    NamespaceImport list : mut namespaceImports
+    NamespaceInfo : mut namespaceInfo
+  ) =:: public LabelContext
 
   proc( => LabelContext ) =: public newLabelContext
     1024            i8 list.create
@@ -36,6 +42,9 @@
       NAMESPACE_ID_NONE
       Namespace new list.append ## root namespace
     32 NamespaceImport list.create
+      0
+      NAMESPACE_IMPORT_NONE
+    NamespaceInfo new
     LabelContext new return
   end
 
@@ -73,7 +82,12 @@
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer  str .data str .length array.create list.appendArray context [] .nameBuffer =
     context [] .labels
-      offset str .length StringConstant  new pos flags Label new list.append
+      ## Label
+        offset str .length StringConstant new
+        pos
+        context [] .namespaceInfo .current
+        flags
+      Label new list.append
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end

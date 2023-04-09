@@ -28,8 +28,8 @@ end
 
 struct( types.Type : argType ConstValue : val id.LabelId : labelId ) =:: StaticArgument
 struct(
-        stringBuilder : mut basePath
-        stringBuilder : mut libPath
+               string : mut basePath
+               string : mut libPath
  id.IdentifierContext : mut idContext
         Constant list : mut constants
                   i64 : mut constOffset
@@ -391,7 +391,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       EMPTY case
         "" string.wrap true return
       STRING case
-        token .STRING fileState [] .wordStart state [] .errors @ state [] .idContext .labelContext @ id.newStringConstant fileState [] .wordStart constStr  state pushConst
+        ## constStr
+          ## newStringConstant
+            token .STRING
+            fileState [] .wordStart
+            state [] .errors @
+            state [] .idContext .labelContext @
+          id.newStringConstant
+          fileState [] .wordStart
+          state [] .idContext .typeContext @
+        constStr state pushConst
         "" string.wrap true return
       CHAR case
         token .CHAR
@@ -473,8 +482,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         types.Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
-      ## TODO make type mutable
-      fileState [] .wordStart constType  state pushConst
+      #dup state [] .idContext .typeContext @ types.isMutable if
+        "type is already mutable" sb.wrap fileState [] .wordStart state appendError
+      end
+      =:: mut t
+      t @ true state [] .idContext .typeContext @ types.setMutability if
+        "could not change mutability of type" sb.wrap fileState [] .wordStart state appendError
+      end
+      t fileState [] .wordStart constType  state pushConst
       true return
     else #dup "(" string.wrap string.eq  #over "tuple(" string.wrap string.eq | #over "struct(" string.wrap string.eq | _if
       "struct(" string.wrap string.eq if
@@ -606,13 +621,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState nextToken
           #dup Token .STRING == if .STRING ## local file
             state [] .basePath .length #over .length + sb.create
-              state [] .basePath sb.appendSb
+              state [] .basePath sb.appendStr
               #swap sb.appendStr
             fileState [] .wordStart state includeFile
             return
           else #dup Token .IDENTIFER == _if .IDENTIFER ## library file
             state [] .libPath .length #over .length + ".concat" .length + sb.create
-              state [] .libPath sb.appendSb
+              state [] .libPath sb.appendStr
               #swap sb.appendStr ".concat" sb.appendS
             fileState [] .wordStart state includeFile
             return
@@ -681,7 +696,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #swap false state [] .idContext .typeContext addrOf types.newProcArgs if
             "error while creating template arguments" sb.wrap fileState [] .wordStart state appendError
           end
-          state [] .templateOps .length fileState [] .wordStart state [] .idContext @ id.beginTemplate if
+          state [] .templateOps .length state [] .currentFile fileState [] .wordStart state [] .idContext @ id.beginTemplate if
             "could not create template" sb.wrap fileState [] .wordStart state appendError
           end
           return
@@ -709,7 +724,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError
       return
     else #dup ":" string.wrap string.eq
-       #over "=:" string.wrap string.eq | _if ## TODO better error message for re-declarations
+       #over "=:" string.wrap string.eq | _if
       "=:" string.wrap string.eq =:: isInit
       fileState state nextWord fileState state readLabel
         fileState state popTypeConstant #drop =:: valType
@@ -739,7 +754,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else
           ConstValue .none
         end
-      fileState [] .wordStart state [] .currentFile state [] .idContext @ id.declareIdentifier if #drop
+      fileState [] .wordStart state [] .currentFile state [] .idContext @ state [] .errors @ id.declareIdentifier if #drop
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
         return
       end
@@ -769,8 +784,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             0 while #dup count < do
               #over #over state [] .idContext .typeContext @ types.compositeGetLabel
                 #dup state [] .idContext .labelContext @ id.isLabelEmpty ! if
-                    #over:2 #over:2 state [] .idContext .typeContext @ types.compositeGetElement
-                  id.IdentifierType .ARGUMENT #over:3 ConstValue .none fileState [] .wordStart state [] .currentFile state [] .idContext @ id.declareIdentifier if #drop
+                  ## declareIdentifier
+                    #over:2
+                    #over:2 state [] .idContext .typeContext @ types.compositeGetElement
+                    id.IdentifierType .ARGUMENT
+                    #over:3
+                    ConstValue .none
+                    fileState [] .wordStart
+                    state [] .currentFile
+                    state [] .idContext @
+                    state [] .errors @
+                  id.declareIdentifier if #drop
                     .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
                     #drop:4 return
                   end #drop:2
@@ -825,7 +849,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           -1
           ConstValue .none
         end
-        fileState [] .wordStart state [] .currentFile state [] .idContext @ id.declareIdentifier if #drop
+        fileState [] .wordStart state [] .currentFile state [] .idContext @ state [] .errors @ id.declareIdentifier if #drop
           .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
           return
         end
@@ -1215,8 +1239,12 @@ end
 
 proc( stringBuilder : rootFile => Program ) =: parseProgram
   ## ParserState
-    "./" sb.wrap ## TODO compute basePath from rootFile name
-    "../lib/" sb.wrap
+    rootFile sb.toStr '/' string.lastIndexOf #dup 0 >= if
+      rootFile .data #swap 1 + string.create
+    else
+      #drop "./" string.wrap
+    end
+    "../lib/" string.wrap ## XXX allow to specify lib-path through arguments
     id.newIdentifierContext
     128 Constant        list.create 0
     128 types.Type      list.create
@@ -1232,8 +1260,6 @@ proc( stringBuilder : rootFile => Program ) =: parseProgram
   state .constants list.free #drop
   state .typeBuffer list.free #drop
   state .staticArgs list.free #drop
-  state .basePath sb.free #drop
-  state .libPath sb.free #drop
   ## Program
     state .idContext
     state .progFiles

@@ -13,16 +13,18 @@
 
   struct( types.Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
-  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength #+XXX scrFile+# TemplateImplementation list : mut implementations i64 : compiledImpls ) =:: public TemplateInfo
+  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i64 : compiledImpls ) =:: public TemplateInfo
 
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
   struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : id ) =:: public IdentifierInfo
 
+  struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
+  struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
+
+  "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
   types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
   types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
 
-  struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
-  struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
 
   proc( IdentifierName : a => i32 ) =: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
@@ -36,6 +38,7 @@
 
   struct(
     IdentifierName IdentifierData hashMap : mut identifiers
+    i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
     codeBlocks.BlockType : mut blockType
     types.Type : currentProc
     NamespaceImportId : prevImports
@@ -46,6 +49,7 @@
     idHash @
     idEq @
     128 IdentifierData map.create
+    128 i8 _ ptr mut list.create
     blockType
     procType
     imports
@@ -63,7 +67,6 @@
     ConstValue list : mut templateArgBuffer
     types.ArraySize list : mut arraySizeBuffer
     NamespaceImportId list : mut prevImports
-    NamespaceInfo : mut namespaceInfo
     i32 : mut localVarCount
     TemplateId : mut currentTemplate
   ) =:: public IdentifierContext
@@ -78,9 +81,6 @@
     32  ConstValue        list.create
     128 types.ArraySize   list.create
     32  NamespaceImportId list.create
-      0
-      NAMESPACE_IMPORT_NONE
-    NamespaceInfo new
     0
     TEMPLATE_ID_NONE
     IdentifierContext new =:: mut newContext
@@ -100,7 +100,7 @@
   end
   proc( codeBlocks.BlockType : blockType types.Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
     context [] .localScopes
-       blockType procType context [] .namespaceInfo .imports newScope
+       blockType procType context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .localScopes =
   end
@@ -111,7 +111,7 @@
       context [] .localScopes list.peek .data [] .currentProc
     end =:: currentProc
     context [] .localScopes
-       blockType currentProc context [] .namespaceInfo .imports newScope
+       blockType currentProc context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .localScopes =
   end
@@ -137,24 +137,30 @@
     end
     context [] .localScopes list.peek .data [] .currentProc return
   end
+  proc( i8 _ ptr mut list => i8 _ ptr mut list ) =: freeScopeStrings
+    0 while #dup #over:2 .length < do
+      #over #over list.get mem.free
+      1 +
+    end #drop
+    list.free
+  end
   proc( IdentifierContext ptr mut : context => bool codeBlocks.BlockType bool ) =: public closeScope
     #using codeBlocks
     context [] .localScopes .length 0 == if
       false BlockType .UNKNOWN true return
     end
     context [] .localScopes list.pop #swap context [] .localScopes =
-      #dup .identifiers addrOf map.free
-      #dup .prevImports context [] .namespaceInfo .imports =
+      #dup .scopeStrings freeScopeStrings #over .scopeStrings =
+      #dup .identifiers @ map.free
+      #dup .prevImports context [] .labelContext .namespaceInfo .imports =
       #dup .blockType codeBlocks.BlockType .PROCEDURE == if
         0 context [] .localVarCount = ## XXX handle nested procedures
       end
     #dup .autoClose #swap .blockType false return
   end
-  IdentifierData ptr : mut tmp
-  false =:: mut hasTmp
-  ## TODO different return flags for: error, no-match, match, multi-match
+
   proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr bool ) =: public searchIdentifier
-    context [] .namespaceInfo .current =:: mut mNamespace
+    context [] .labelContext .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
@@ -217,7 +223,8 @@
     ## 3. search imports
     false =:: mut multiMatch
     IdentifierData ptr optional.empty =:: mut match
-    context [] .namespaceInfo .imports while #dup NAMESPACE_IMPORT_NONE != do
+    false =:: mut matchGlobal
+    context [] .labelContext .namespaceInfo .imports while #dup NAMESPACE_IMPORT_NONE != do
       context [] .labelContext .namespaceImports #swap list.get
         #dup .imported path  context [] .labelContext addrOf findNamespace relSpace =
         relSpace idName .namespace =
@@ -232,6 +239,7 @@
             end
             mNamespace NAMESPACE_ID_NONE == if
               IdentifierData ptr cast optional.wrap match =
+              false matchGlobal =
               #dup .imported mNamespace =
             else #drop
               true multiMatch =
@@ -246,6 +254,7 @@
             end
             mNamespace NAMESPACE_ID_NONE == if
               IdentifierData ptr cast optional.wrap match =
+              true matchGlobal =
               #dup .imported mNamespace =
             else #drop
               true multiMatch =
@@ -255,7 +264,7 @@
      .parent
     end #drop
     matches optional.isEmpty match optional.hasData & if ## XXX return value indicating multi-match
-      idName match .data multiMatch return ## XXX use global id if match is global
+      matchGlobal if globalName else idName end match .data false return
     end
     ## 4. template arguments
     context hasOpenTemplate if
@@ -278,7 +287,7 @@
               tId
               IdentifierType .TEMPLATE_ARG
               IdentifierData new ID_TMP_DATA =
-              name context [] .namespaceInfo .current fileId IdentifierName new ID_TMP_DATA @ false return
+              name context [] .labelContext .namespaceInfo .current fileId IdentifierName new ID_TMP_DATA @ false return
             end
           #swap
           1 +
@@ -288,12 +297,14 @@
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
   end
   proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
-    id fileId context  IdentifierMatch list ptr mut optional.empty searchIdentifier return
+    id fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( LabelId : label types.Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+  proc( LabelId : label types.Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
-      "invalid label id" string.wrap NAMESPACE_ID_NONE currentFile IdentifierName new
-        ID_NONE_DATA @ true return
+      errors []
+        "invalid label id" sb.wrap declaredAt CompilerError new list.append
+      errors [] =
+      ID_NONE ID_NONE_DATA @ true return
     end
     label  context [] .labelContext addrOf
       #over #over labelFlags =:: flags
@@ -305,38 +316,59 @@
     end =:: fileId
     flags FLAG_MUTABLE & 0 != if
       idType IdentifierType .TYPE == if
-        "type definitions cannot be mutable" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
-          ID_NONE_DATA @ true return
+        errors []
+          "type definitions cannot be mutable" sb.wrap declaredAt CompilerError new list.append
+        errors [] =
+        ID_NONE ID_NONE_DATA @ true return
       end
       idType IdentifierType .PROCEDURE == if
-        "procedures cannot be mutable" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
-          ID_NONE_DATA @ true return
+        errors []
+          "procedures cannot be mutable" sb.wrap declaredAt CompilerError new list.append
+        errors [] =
+        ID_NONE ID_NONE_DATA @ true return
       end
       idType IdentifierType .ARGUMENT ==  if
-        "procedure arguments cannot be mutable" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
-          ID_NONE_DATA @ true return
+        errors []
+          "procedure arguments cannot be mutable" sb.wrap declaredAt CompilerError new list.append
+        errors [] =
+        ID_NONE ID_NONE_DATA @ true return
       end
     end
     name 0 string.charAt '#' == if
-      "identifier names cannot start with '#'" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
-        ID_NONE_DATA @ true return
+      errors []
+        "identifier names cannot start with '#'" sb.wrap declaredAt CompilerError new list.append
+      errors [] =
+      ID_NONE ID_NONE_DATA @ true return
     end
     name '.' string.contains if
-      "identifier names cannot contain '.'" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new
-        ID_NONE_DATA @ true return
+      errors []
+        "identifier names cannot contain '.'" sb.wrap declaredAt CompilerError new list.append
+      errors [] =
+      ID_NONE ID_NONE_DATA @ true return
     end
     context [] .localScopes .length 0 > if
       context [] .localScopes #dup .length 1 - list.at .data
     else
       context [] .globalScope @
     end =:: mScope
-    name .length sb.create name sb.appendStr sb.toStr ## FIXME find better way to store element names in constant memory
-    context [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
-    mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data
-      idName #swap true return
+    name .length sb.create name sb.appendStr ## ensure name allocation stays valid for whole lifetime of scope
+      mScope [] .scopeStrings
+        #over .data list.append ## remember allocated string
+      mScope [] .scopeStrings =
+    sb.toStr
+    context [] .labelContext .namespaceInfo .current fileId IdentifierName new =:: mut idName
+    mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data =:: prevDec
+      errors []
+        "re declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt CompilerError new list.append
+        "previous declaration " sb.wrap prevDec [] .declaredAt CompilerError new list.append
+      errors [] =
+      ID_NONE ID_NONE_DATA @ true return
     end #drop
     name fileId context getIdentifier ! if
-      true return ## shadowed identifier
+      errors []
+        "declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt CompilerError new list.append
+        "shadows previous declaration " sb.wrap #over:2 [] .declaredAt CompilerError new list.append
+      errors [] =
     end #drop:2
     mScope [] .identifiers addrOf
       idName
@@ -358,7 +390,10 @@
 #end
 #namespace sb
   proc( stringBuilder : sb id.IdentifierInfo : id id.LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
-    sb ## TODO print mutability & template data
+    sb ## XXX print template data
+      id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != if
+        "mutable " sb.appendS
+      end
       id .idType switch
         TYPE case
           "type \"" sb.appendS
@@ -409,32 +444,32 @@
 #namespace id
   proc( LabelId : name IdentifierContext ptr mut : context => ) =: public beginNamespace
     context [] .prevImports
-      context [] .namespaceInfo .imports list.append
+      context [] .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
-    context [] .namespaceInfo .current
+    context [] .labelContext .namespaceInfo .current
       name context [] .labelContext @ labelName .data true context [] .labelContext @ childId
-    context [] .namespaceInfo .current =
+    context [] .labelContext .namespaceInfo .current =
   end
   proc( LabelId : name IdentifierContext ptr mut : context => bool ) =: public importNamespace
     0 NamespaceId cast name context [] .labelContext @ labelName .data context [] .labelContext @ findNamespace
     #dup NAMESPACE_ID_NONE == if #drop
       true return
     end
-    context [] .namespaceInfo .imports
+    context [] .labelContext .namespaceInfo .imports
       #swap context [] .labelContext @ getNamespaceImportId
-    context [] .namespaceInfo .imports =
+    context [] .labelContext .namespaceInfo .imports =
     false return
   end
   proc( IdentifierContext ptr mut : context => bool ) =: public endNamespace
-    context [] .namespaceInfo .current 0 == if
+    context [] .labelContext .namespaceInfo .current 0 == if
       true return
     end
-    context [] .namespaceInfo .current context [] .labelContext @ parentNamespace
-    context [] .namespaceInfo .current =
+    context [] .labelContext .namespaceInfo .current context [] .labelContext @ parentNamespace
+    context [] .labelContext .namespaceInfo .current =
     context [] .prevImports
       list.pop #swap
     context [] .prevImports =
-    context [] .namespaceInfo .imports =
+    context [] .labelContext .namespaceInfo .imports =
     false
   end
 
@@ -453,7 +488,7 @@
     end
     context [] .templateInfos id list.get .templateType return
   end
-  proc( types.Type : templateTypes i64 : templateOpsOffset #+XXX src-file+# FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
+  proc( types.Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
     context hasOpenTemplate if
       true return
     end
@@ -464,6 +499,7 @@
         pos
         templateOpsOffset
         0
+        srcFile
         8 TemplateImplementation list.create
         0
       TemplateInfo new list.append
