@@ -1,3 +1,4 @@
+#+
 #template type : T #end
 type : Node
 #template type : T #end
@@ -6,4 +7,17 @@ struct( T : data  T Node ptr : next ) Node =
 entryPoint:
   i32 Node : aNode
   0 aNode @ aNode =
+end
++#
+
+#include list
+
+entryPoint:
+  i32 1 array new =:: a
+  0 =:: b
+  16 i32 mem.calloc =:: c
+  16 i32 list.create
+    a @ list.appendP
+    b @ list.appendP
+  list.free #drop
 end

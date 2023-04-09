@@ -55,7 +55,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
   proc( T list : a i64 : static k  T k ptr : b => T list ) =: public appendP
     a
       #dup .length k + ensureCap
-      #dup .data #over .length + b i8 _ ptr cast k mem.copy #drop
+      #dup .data #over .length + b T _ ptr cast k mem.copy #drop
       #dup .length k + #over .length =
     return
   end
