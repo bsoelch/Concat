@@ -1195,12 +1195,14 @@ void resolveTypeGenericsRec(TypeId src,TypeId expect,GenericType const* args,Con
     case TYPECLASS_ARRAY:
     case TYPECLASS_ARRAY_VIEW:
       resolveTypeGenericsRec(getBaseType(src),getBaseType(expect),args,values,count,dejaVu);
-      if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize&&arrayTypeData(src)->dims==arrayTypeData(expect)->dims){//XXX support different numbers of dimensions
-        for(int32_t d=0;d<arrayTypeData(src)->dims;d++){
+      if(arrayTypeData(src)->fixedSize&&arrayTypeData(expect)->fixedSize){
+        for(int32_t d=0;d<arrayTypeData(expect)->dims;d++){
           if(!arrayTypeData(expect)->sizes[d].isInt){
             for(int32_t i=0;i<count;i++){
               if(values[i].constType==CONSTANT_NONE&&isIntType(args[i].type)&&!args[i].isTemplate&&args[i].argId==arrayTypeData(expect)->sizes[d].value){
-                if(arrayTypeData(src)->sizes[d].isInt)
+                if(d>=arrayTypeData(src)->dims)
+                  values[i]=(ConstantValue){.constType=CONSTANT_INT,.valueType=TYPE_I64,.as.i64=1};
+                else if(arrayTypeData(src)->sizes[d].isInt)
                   values[i]=(ConstantValue){.constType=CONSTANT_INT,.valueType=TYPE_I64,.as.i64=arrayTypeData(src)->sizes[d].value};
                 else
                   values[i]=(ConstantValue){.constType=GENERIC_INT,.valueType=TYPE_I64,.as.i64=arrayTypeData(src)->sizes[d].value};
@@ -5792,6 +5794,8 @@ bool sizesCompatible(ArrayType const* src,ArrayType const* target){
     return true;
   if(!src->fixedSize)
     return false;
+  if(src->dims==0&&target->dims==1&&target->sizes[0].isInt&&target->sizes[0].value==1)
+    return true;//A ptr -> A 1 ptr
   if(src->dims<target->dims)
     return false;
   for(int32_t i=0;i<target->dims;i++){
