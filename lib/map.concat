@@ -30,6 +30,20 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
     data [] .data mem.free
     0 data [] .cap =
   end
+  #template type : K type : V #end
+  proc( proc( K => ) ptr : freeKey  proc( V => ) ptr : freeValue  K V hashMap ptr mut : data => ) =: public freeAll
+    data [] .nodeBuffer
+      0 while #dup #over:2 .length < do
+        #over #over list.get
+          #dup .key freeKey ()
+        .value freeValue ()
+        1 +
+      end #drop
+      list.free
+    data [] .nodeBuffer =
+    data [] .data mem.free
+    0 data [] .cap =
+  end
 
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key bool : newNode => NodeId ) =: find
