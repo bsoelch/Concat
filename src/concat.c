@@ -6857,10 +6857,12 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_UNREACHABLE:
       break;
     case OP_PROG_ARGC:
+      checkReachable(state,op);
       state->hasGetArgs=1;
       pushValue(state,op);
       return;
     case OP_PROG_ARG:
+      checkReachable(state,op);
       state->hasGetArgs=1;
       //prepare argument
       op.opType=OP_PROG_ARG;
