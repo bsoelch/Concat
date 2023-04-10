@@ -7,10 +7,13 @@ entryPoint:
   else
     "./test.concat" sb.wrap
   end =:: rootFile
-  rootFile parseProgram
+  rootFile parseProgram =:: mut prog
 
+  prog .errors .length 0 == if
+    prog @ typeCheckProgram
+  end
   1024 sb.create
-    #swap sb.appendProgram
+    prog sb.appendProgram
   =:: parsedOps
   "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
     #dup parsedOps io.fputSb #drop

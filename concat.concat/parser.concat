@@ -109,7 +109,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
     types.ArraySize array.empty false return
   end
   state [] .constants .length 1 - while #dup state [] .constOffset >= do
-    state [] .constants #over list.get .valueType types.isInt ! if
+    state [] .constants #over list.get .valueType state [] .idContext .typeContext @ types.isInt ! if
       break
     end
     1 -

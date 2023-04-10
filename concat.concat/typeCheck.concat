@@ -1,7 +1,10 @@
 #include list
-#include "program.concat"
 
-struct( types.Type : valType i32 : opCount bool : writable ) =:: TypeInfo
+#include "program.concat"
+#include "types.concat"
+#include "labels.concat"
+
+struct( types.Type : valType i32 : mut opCount bool : writable ) =:: TypeInfo
 enum( empty ifBlock whileBlock switchBlock procBlock ) =:: BlockData
 struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : blockType ) =:: BlockInfo
 
@@ -26,6 +29,7 @@ struct(
   bool : mut hasCheckEnum
   bool : mut hasGetArgs
 ) =:: TypeCheckState
+
 proc( stringBuilder FilePosition TypeCheckState ptr mut => ) =: appendError
   =:: state
   CompilerError new
@@ -33,9 +37,361 @@ proc( stringBuilder FilePosition TypeCheckState ptr mut => ) =: appendError
     #swap list.append
   state [] .errors =
 end
+proc( types.Type : valType TypeCheckState ptr mut : state => ) =: pushType
+  state [] .typeStack
+    ## TypeInfo
+      valType
+      1
+      false
+    TypeInfo new list.append
+  state [] .typeStack =
+end
+proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
+  ## XXX ensure stack head is value
+  state [] .opStack
+    op list.appendP
+  state [] .opStack =
+  op [] .dataType state pushType
+  ## XXX stack flags
+end
 
-proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckOp
-  ## TODO compile operation
+proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: insertStackOp
+  0
+    0 while #dup typeCount < do
+      #swap
+        state [] .typeStack #over:2 list.get .opCount +
+      #swap 1 +
+    end #drop
+  =:: totalOps
+  state [] .opStack
+    #dup .length 1 + list.ensureCap
+  state [] .opStack =
+  state [] .opStack .length totalOps - =:: offset
+  state [] .opStack .data offset + 1 + state [] .opStack .data offset +  totalOps mem.move #drop
+  state [] .opStack .data offset + op 1 mem.copy #drop
+  state [] .opStack .length 1 + state [] .opStack .length =
+  state [] .typeStack .length
+    totalOps -
+  state [] .typeStack .length =
+  op [] .dataType state pushType
+  totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
+end
+
+proc( types.Type : a types.Type : b types.TypeContext ptr mut : context => types.Type ) =: checkBinOpNumber
+  a context types.isNumber ! b context types.isNumber ! | if
+    types.Type .undefined return
+  end
+  a context types.isInt b context types.isInt != if ## XXX? allow assigning i32 -> float
+    types.Type .undefined return ## implicit conversion from int to float
+  end
+  a context types.numberPrecision b context types.numberPrecision < if
+    b return
+  else
+    a return
+  end
+end
+
+proc( types.Type : a types.Type : b types.TypeContext ptr mut : context => types.Type ) =: checkBinOpInt
+  a context types.isInt ! b context types.isInt ! | if
+    types.Type .undefined return
+  end
+  a context types.numberPrecision b context types.numberPrecision < if
+    b return
+  else
+    a return
+  end
+end
+
+proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkReachable
+  state [] .reachable if
+    return
+  end
+  "unreachable operation: " sb.wrap
+    op [] state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
+  op [] .pos state appendError
+end
+proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkLocal
+  true if return end ## TODO remove once code-blocks are implemented
+  state [] .openBlocks .length 0 > if
+    return
+  end
+  "unexpected operation at global level: " sb.wrap
+    op [] state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
+  op [] .pos state appendError
+end
+
+proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  ## TODO prepare identifiers
+  op [] .val switch
+    OpValue .Constant case
+      state [] .reachable if
+        op state pushValue return
+      end
+      ## TODO resolve switch labels
+      op state checkReachable
+      break
+    unaryOperator case
+      op state checkReachable
+      state [] .typeStack list.peek #dup optional.isEmpty if #drop
+        "not enough operands for : " sb.wrap
+          op [] labelContext typeContext sb.appendOp
+        op [] .pos state appendError
+        return
+      end .data =:: src
+      ## XXX try constant evaluation
+      op state checkLocal
+      src [] .valType op [] .dataType =
+      op [] .val .unaryOperator switch
+        INCREMENT DECREMENT case
+          src [] .writable ! if
+            "the operand for unary operator " sb.wrap
+              op [] .val .unaryOperator sb.appendUnaryOperator
+              " has to be writable" sb.appendS
+            op [] .pos state appendError
+          end
+          ## XXX ensure operation is kept mutable
+          src [] .valType
+            #dup typeContext types.isFixedSizePtr if
+              #drop break
+            end
+          #dup typeContext types.isNumber ! if
+            "wrong operand for unary operator " sb.wrap
+              op [] .val .unaryOperator sb.appendUnaryOperator
+              " expected number got " sb.appendS
+              #swap labelContext typeContext sb.appendType
+            op [] .pos state appendError
+          else #drop end
+          break
+        NEGATE case
+          src [] .valType
+          #dup typeContext types.isNumber ! if
+            "wrong operand for unary operator " sb.wrap
+              op [] .val .unaryOperator sb.appendUnaryOperator
+              " expected number got " sb.appendS
+              #swap labelContext typeContext sb.appendType
+            op [] .pos state appendError
+          else #drop end
+          break
+        FLIP case
+          src [] .valType
+          #dup typeContext types.isInt ! if
+            "wrong operand for unary operator " sb.wrap
+              op [] .val .unaryOperator sb.appendUnaryOperator
+              " expected integer got " sb.appendS
+              #swap labelContext typeContext sb.appendType
+            op [] .pos state appendError
+          else #drop end
+          break
+        NOT case
+          src [] .valType
+          #dup typeContext types.isBoolean ! if
+            "wrong operand for unary operator " sb.wrap
+              op [] .val .unaryOperator sb.appendUnaryOperator
+              " expected boolean got " sb.appendS
+              #swap labelContext typeContext sb.appendType
+            op [] .pos state appendError
+          else #drop end
+          break
+      end
+      ## XXX extract composites
+      op 1 state insertStackOp
+      return
+    binaryOperator case
+      op state checkReachable
+      state [] .typeStack .length 2 < if
+        "not enough operands for : " sb.wrap
+          op [] labelContext typeContext sb.appendOp
+          " need 2 got " sb.appendS
+          state [] .typeStack .length sb.appendI
+        op [] .pos state appendError
+        return
+      end
+      state [] .typeStack #dup .length 1 - list.at .data =:: right
+      state [] .typeStack #dup .length 2 - list.at .data =:: left
+      ## XXX try constant evaluation
+      op state checkLocal
+      op [] .val .binaryOperator switch
+        ADD case
+          ## number+number -> number
+          left [] .valType right [] .valType typeContext checkBinOpNumber #dup types.Type .undefined != if
+            op [] .dataType =
+          else #drop end
+          ## pointer+integer -> pointer
+          left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
+            left [] .valType op [] .dataType =
+          end
+          break
+        SUBTRACT case
+          ## number-number -> number
+          left [] .valType right [] .valType typeContext checkBinOpNumber #dup types.Type .undefined != if
+            op [] .dataType =
+          else #drop end
+          ## pointer-integer -> pointer
+          left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
+            left [] .valType op [] .dataType =
+          end
+          ## pointer-pointer -> integer
+          left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
+          left [] .valType right [] .valType types.typeEquals & if
+            types.primitive.I64 op [] .dataType = ## XXX ? pointer-diff integer type
+          end
+          break
+        MULTIPLY DIVIDE MOD case
+          ## number*number -> number
+          left [] .valType right [] .valType typeContext checkBinOpNumber #dup types.Type .undefined != if
+            op [] .dataType =
+          else #drop end
+          break
+        UDIVIDE UMOD LSHIFT RSHIFT URSHIFT case
+          ## integer>>integer -> integer
+          left [] .valType right [] .valType typeContext checkBinOpInt #dup types.Type .undefined != if
+            op [] .dataType =
+          else #drop end
+          break
+        AND OR XOR case
+          ## integer&integer -> integer
+          left [] .valType right [] .valType typeContext checkBinOpInt types.Type .undefined != if
+            types.primitive.BOOL op [] .dataType =
+          end
+          ## bool&bool -> bool
+          left [] .valType typeContext types.isBoolean right [] .valType typeContext types.isBoolean & if
+            types.primitive.BOOL op [] .dataType =
+          end
+          break
+        EQ NE case
+          ## number==number -> bool
+          left [] .valType right [] .valType typeContext checkBinOpNumber types.Type .undefined != if
+            types.primitive.BOOL op [] .dataType =
+          end
+          ## ptr==ptr -> bool
+          left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
+          left [] .valType right [] .valType types.typeEquals & if
+            types.primitive.BOOL op [] .dataType =
+          end
+          ## bool==bool -> bool
+          left [] .valType typeContext types.isBoolean right [] .valType typeContext types.isBoolean & if
+            types.primitive.BOOL op [] .dataType =
+          end
+          ## enum==enum -> bool TODO
+          break
+        LT LE GE GT case
+          ## number<number -> bool
+          left [] .valType right [] .valType typeContext checkBinOpNumber types.Type .undefined != if
+            types.primitive.BOOL op [] .dataType =
+          end
+          break
+      end
+      op [] .dataType types.Type .undefined == if
+        "no version of binary operator " sb.wrap
+          op [] .val .binaryOperator sb.appendBinaryOperator
+          " accepts types " sb.appendS
+          left [] .valType labelContext typeContext sb.appendType
+          " and " sb.appendS
+          right [] .valType labelContext typeContext sb.appendType
+        op [] .pos state appendError
+      end
+      ## TODO prepare argument types
+      ## XXX extract composites
+      op 2 state insertStackOp
+      break
+    block case
+      break ## TODO
+    blockEnd case
+      break ## TODO
+    getId case
+      op state checkReachable
+      break ## TODO
+    setId case
+      op state checkReachable
+      break ## TODO
+    @Id case
+      op state checkReachable
+      break ## TODO
+    declareId case
+      op state checkReachable
+      break ## TODO
+    predeclareId case
+      op state checkReachable
+      break ## TODO
+    getLabel case
+      op state checkReachable
+      break ## TODO
+    setLabel case
+      op state checkReachable
+      break ## TODO
+    @Label case
+      op state checkReachable
+      break ## TODO
+    getTupleElement case
+      op state checkReachable
+      break ## TODO
+    setTupleElement case
+      op state checkReachable
+      break ## TODO
+    @TupleElement case
+      op state checkReachable
+      break ## TODO
+    getArrayElement case
+      op state checkReachable
+      break ## TODO
+    setArrayElement case
+      op state checkReachable
+      break ## TODO
+    @ArrayElement case
+      op state checkReachable
+      break ## TODO
+    Print case
+      op state checkReachable
+      break ## TODO
+    Return case
+      op state checkReachable
+      break ## TODO
+    New case
+      op state checkReachable
+      break ## TODO
+    newEnum case
+      op state checkReachable
+      break ## TODO
+    callPtr case
+      op state checkReachable
+      break ## TODO
+    argc case
+      op state checkReachable
+      break ## TODO
+    getArg case
+      op state checkReachable
+      break ## TODO
+    getArgLen case
+      op state checkReachable
+      break ## TODO
+    Cast case
+      op state checkReachable
+      break ## TODO
+    Cast! case
+      op state checkReachable
+      break ## TODO
+    entryPoint case
+      op state checkReachable
+      break ## TODO
+    stackMod case
+      op state checkReachable
+      break ## TODO
+    Unknown case
+      "unknown identifier: \"" sb.wrap
+        op [] .val .Unknown labelContext id.labelName .data sb.appendStr
+        '\"' sb.appendC
+      op [] .pos state appendError
+      return
+    NOP case
+      return ## do nothing
+  end
+  "type-checking for operation " sb.wrap
+    op [] labelContext typeContext sb.appendOp
+    " is not implemented" sb.appendS
+  op [] .pos state appendError
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
