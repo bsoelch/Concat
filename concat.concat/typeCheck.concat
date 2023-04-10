@@ -4,7 +4,7 @@
 #include "types.concat"
 #include "labels.concat"
 
-struct( types.Type : valType i32 : mut opCount bool : writable ) =:: TypeInfo
+struct( types.Type : mut valType i32 : mut opCount bool : writable ) =:: TypeInfo
 enum( empty ifBlock whileBlock switchBlock procBlock ) =:: BlockData
 struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : blockType ) =:: BlockInfo
 
@@ -77,7 +77,7 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
   totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
 end
 
-proc( types.Type : a types.Type : b types.TypeContext ptr mut : context => types.Type ) =: checkBinOpNumber
+proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeContext ptr mut : context => types.Type ) =: checkBinOpNumber
   a context types.isNumber ! b context types.isNumber ! | if
     types.Type .undefined return
   end
@@ -85,20 +85,131 @@ proc( types.Type : a types.Type : b types.TypeContext ptr mut : context => types
     types.Type .undefined return ## implicit conversion from int to float
   end
   a context types.numberPrecision b context types.numberPrecision < if
+    b inTypes 0 [] =
     b return
   else
+    a inTypes 1 [] =
     a return
   end
 end
-
-proc( types.Type : a types.Type : b types.TypeContext ptr mut : context => types.Type ) =: checkBinOpInt
+proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeContext ptr mut : context => types.Type ) =: checkBinOpInt
   a context types.isInt ! b context types.isInt ! | if
     types.Type .undefined return
   end
   a context types.numberPrecision b context types.numberPrecision < if
+    b inTypes 0 [] =
     b return
   else
+    a inTypes 1 [] =
     a return
+  end
+end
+
+proc( types.Type : a types.Type : b types.TypeContext ptr : context => bool ) =: canAutoCast
+  a b types.typeEquals if
+    true return
+  end
+  ## TODO canAutoCast
+  false return
+end
+proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state => ) =: requireTypes
+  state [] .typeStack .length types .length < if
+    "not enough types for " sb.wrap
+      opName sb.appendStr
+      " need " sb.appendS
+      types .length sb.appendI
+      " have " sb.appendS
+      state [] .typeStack .length sb.appendI
+    pos state appendError
+    return
+  end
+  0 =:: mut nCasts
+  false =:: mut isError
+  state [] .opStack .length
+    1 while #dup types .length <= do
+      #swap
+        state [] .typeStack #dup .length #over:3 - list.at .data =:: src
+        types #dup .length #over:3 - array.get =:: expected
+        src [] .opCount -
+        src [] .valType expected types.typeEquals if
+          #swap 1 + continue
+        end
+        src [] .valType expected state [] .idContext [] .typeContext @ canAutoCast if
+          src [] .opCount 1 == state [] .opStack #over:2 list.at .data #swap #over [] .val OpValue .Constant == & if
+            expected #swap [] .dataType =
+            expected src [] .valType =
+            #swap 1 + continue
+          else #drop end
+          nCasts 1 + nCasts =
+          #swap 1 + continue
+        end
+        ## TODO convert enum labels to enum constants
+        "wrong type for " sb.wrap
+          opName sb.appendStr
+          " expected " sb.appendS
+          expected state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendType
+          " got " sb.appendS
+          src [] .valType state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendType
+        pos state appendError
+        true isError =
+      #swap 1 +
+    end #drop
+  #drop
+  nCasts 0 == isError | if
+    return
+  end
+  state [] .opStack .length =:: mut offset
+  0 =:: mut shiftCount
+  state [] .opStack #dup .length nCasts + list.ensureCap state [] .opStack =
+  1 while #dup types .length <= do
+    state [] .typeStack #dup .length #over:2 - list.at .data =:: op
+    types #dup .length #over:2 - array.get =:: expected
+    offset op [] .opCount - offset =
+    shiftCount op [] .opCount + shiftCount =
+    op [] .valType expected types.typeEquals if
+      1 + continue
+    end
+    state [] .opStack .data offset + nCasts + state [] .opStack .data offset + shiftCount mem.move #drop
+    0 shiftCount =
+    nCasts 1 - nCasts =
+    op [] .valType expected state [] .idContext [] .typeContext @ canAutoCast ! if
+      "unexpected type conversion" sb.wrap pos state appendError
+    end
+    ## op
+      op [] .valType
+      expected
+      pos
+    opCastFrom state [] .opStack .data offset + nCasts + [] =
+    op [] .opCount 1 + op [] .opCount =
+    expected op [] .valType =
+    1 +
+  end #drop
+end
+
+proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => ) =: typeCheckGetId
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  idInfo .idType switch
+    LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT case
+      ## TODO check for undefined
+      ## TODO resolve auto-types
+      op [] .val OpValue .setId == if
+        ## TODO check source-variable
+      end
+      op [] .val OpValue .@Id == if
+        ## TODO change type to id-type
+      end
+      op state pushValue return
+    PROCEDURE case
+      ## TODO call
+      break
+    TEMPLATE_ARG TYPE case
+      "operation " sb.wrap
+        op [] labelContext typeContext sb.appendOp
+        " should not exist at this stage of compilation" sb.appendS
+      op [] .pos state appendError
+      break
   end
 end
 
@@ -211,27 +322,32 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       state [] .typeStack #dup .length 1 - list.at .data =:: right
       state [] .typeStack #dup .length 2 - list.at .data =:: left
+      types.Type 2 array new =:: mut inTypes
+      left [] .valType  inTypes @ 0 [] =
+      right [] .valType inTypes @ 1 [] =
       ## XXX try constant evaluation
       op state checkLocal
       op [] .val .binaryOperator switch
         ADD case
           ## number+number -> number
-          left [] .valType right [] .valType typeContext checkBinOpNumber #dup types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup types.Type .undefined != if
             op [] .dataType =
           else #drop end
           ## pointer+integer -> pointer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
             left [] .valType op [] .dataType =
+            types.primitive.I64 inTypes @ 1 [] = ## XXX? ptrDiff
           end
           break
         SUBTRACT case
           ## number-number -> number
-          left [] .valType right [] .valType typeContext checkBinOpNumber #dup types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup types.Type .undefined != if
             op [] .dataType =
           else #drop end
           ## pointer-integer -> pointer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
             left [] .valType op [] .dataType =
+            types.primitive.I64 inTypes @ 1 [] = ## XXX? ptrDiff
           end
           ## pointer-pointer -> integer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
@@ -241,19 +357,19 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
         MULTIPLY DIVIDE MOD case
           ## number*number -> number
-          left [] .valType right [] .valType typeContext checkBinOpNumber #dup types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup types.Type .undefined != if
             op [] .dataType =
           else #drop end
           break
         UDIVIDE UMOD LSHIFT RSHIFT URSHIFT case
           ## integer>>integer -> integer
-          left [] .valType right [] .valType typeContext checkBinOpInt #dup types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpInt #dup types.Type .undefined != if
             op [] .dataType =
           else #drop end
           break
         AND OR XOR case
           ## integer&integer -> integer
-          left [] .valType right [] .valType typeContext checkBinOpInt types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpInt types.Type .undefined != if
             types.primitive.BOOL op [] .dataType =
           end
           ## bool&bool -> bool
@@ -263,7 +379,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
         EQ NE case
           ## number==number -> bool
-          left [] .valType right [] .valType typeContext checkBinOpNumber types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber types.Type .undefined != if
             types.primitive.BOOL op [] .dataType =
           end
           ## ptr==ptr -> bool
@@ -279,7 +395,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
         LT LE GE GT case
           ## number<number -> bool
-          left [] .valType right [] .valType typeContext checkBinOpNumber types.Type .undefined != if
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber types.Type .undefined != if
             types.primitive.BOOL op [] .dataType =
           end
           break
@@ -293,8 +409,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           right [] .valType labelContext typeContext sb.appendType
         op [] .pos state appendError
       end
-      ## TODO prepare argument types
       ## XXX extract composites
+      "binary operator " sb.wrap op [] .val .binaryOperator sb.appendBinaryOperator
+        inTypes @ array.wrap #over sb.toStr op [] .pos  state requireTypes
+      sb.free #drop
       op 2 state insertStackOp
       break
     block case
@@ -303,13 +421,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break ## TODO
     getId case
       op state checkReachable
-      break ## TODO
+      op op [] .val .getId state typeCheckGetId
+      break
     setId case
       op state checkReachable
-      break ## TODO
+      op op [] .val .setId state typeCheckGetId
+      break
     @Id case
       op state checkReachable
-      break ## TODO
+      op op [] .val .@Id state typeCheckGetId
+      break
     declareId case
       op state checkReachable
       break ## TODO
@@ -388,13 +509,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     NOP case
       return ## do nothing
   end
+  #+ XXX re-enable once significant portion of operations is implemented
   "type-checking for operation " sb.wrap
     op [] labelContext typeContext sb.appendOp
     " is not implemented" sb.appendS
   op [] .pos state appendError
-  state [] .compiledOps
-    op list.appendP
-  state [] .compiledOps =
+  +#
 end
 
 proc( Program ptr mut => ) =: public typeCheckProgram

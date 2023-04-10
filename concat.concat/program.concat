@@ -115,6 +115,12 @@ end
 proc( types.Type : target FilePosition : pos => Operation ) =: public opCast!
    types.Type .undefined OpValue .Cast! new target pos Operation new return
 end
+proc( types.Type : src types.Type : target FilePosition : pos => Operation ) =: public opCastFrom
+   src OpValue .Cast new target pos Operation new return
+end
+proc( types.Type : src types.Type : target FilePosition : pos => Operation ) =: public opCast!From
+   src OpValue .Cast! new target pos Operation new return
+end
 proc( i32 i32 StackModType FilePosition => Operation ) =: public opStackMod
   =:: pos
   StackModification new OpValue .stackMod new types.Type .undefined pos Operation new return
