@@ -342,6 +342,19 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
   #drop
   Type .undefined return
 end
+proc( Type : box TypeContext ptr : context => ArraySize arrayView ) =: public getArraySize
+  box context unwrapNamed
+    #dup context isPointer if
+      context [] .arrayTypes #swap .pointer list.get =:: arrayType
+      context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice return
+    end
+    #dup context isArray if
+      context [] .arrayTypes #swap .arrayType list.get =:: arrayType
+      context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice return
+    end
+  #drop
+  ArraySize array.empty return
+end
 proc( Type TypeContext ptr => bool ) =: public isMutable
   =:: context
   context unwrapNamed
@@ -800,6 +813,19 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
     templateType case
       true false return
   end
+end
+
+proc( types.Type : src bool : mutable types.TypeContext ptr mut : context => types.Type ) =: public getAddressType
+  src context isArray if
+    src context unwrapNamed =:: unwraped
+    unwraped context getBaseType true unwraped context getArraySize true mutable context newArrayType #drop return
+  end
+  src context isProcedure if
+    src context asUnlabeledProc #drop ## XXX? check error codes
+  else
+    src
+  end
+  true ArraySize array.empty true mutable context newArrayType #drop return
 end
 
 ## type context

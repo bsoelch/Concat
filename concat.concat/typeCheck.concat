@@ -76,6 +76,25 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
   op [] .dataType state pushType
   totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
 end
+proc( i64 : count TypeCheckState ptr mut : state => ) =: addCompiledStackOps
+  state [] .typeStack .length count - =:: typeOffset
+  0
+    typeOffset while #dup state [] .typeStack .length < do
+      #swap
+        state [] .typeStack #over:2 list.get .opCount +
+      #swap 1 +
+    end #drop
+  =:: opCount
+  state [] .opStack .length opCount - =:: opOffset
+  ## add operations to compiled code
+  ## XXX use appendP (once generics are fixed)
+  state [] .compiledOps #dup .length opCount + list.ensureCap state [] .compiledOps =
+  state [] .compiledOps #dup .data #swap .length + state [] .opStack .data opOffset + opCount mem.copy #drop
+  state [] .compiledOps .length opCount + state [] .compiledOps .length =
+  ## remove operations from stack
+  state [] .opStack .length opCount - state [] .opStack .length =
+  state [] .typeStack .length count - state [] .typeStack .length =
+end
 
 proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeContext ptr mut : context => types.Type ) =: checkBinOpNumber
   a context types.isNumber ! b context types.isNumber ! | if
@@ -113,6 +132,9 @@ proc( types.Type : a types.Type : b types.TypeContext ptr : context => bool ) =:
   false return
 end
 proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state => ) =: requireTypes
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length types .length < if
     "not enough types for " sb.wrap
       opName sb.appendStr
@@ -134,7 +156,7 @@ proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckS
         src [] .valType expected types.typeEquals if
           #swap 1 + continue
         end
-        src [] .valType expected state [] .idContext [] .typeContext @ canAutoCast if
+        src [] .valType expected typeContext canAutoCast if
           src [] .opCount 1 == state [] .opStack #over:2 list.at .data #swap #over [] .val OpValue .Constant == & if
             expected #swap [] .dataType =
             expected src [] .valType =
@@ -147,9 +169,9 @@ proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckS
         "wrong type for " sb.wrap
           opName sb.appendStr
           " expected " sb.appendS
-          expected state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendType
+          expected labelContext typeContext sb.appendType
           " got " sb.appendS
-          src [] .valType state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendType
+          src [] .valType labelContext typeContext sb.appendType
         pos state appendError
         true isError =
       #swap 1 +
@@ -195,16 +217,94 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       ## TODO check for undefined
       ## TODO resolve auto-types
       op [] .val OpValue .setId == if
-        ## TODO check source-variable
+        idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
+          "variable " sb.wrap
+            idInfo .labelId labelContext id.labelName .data sb.appendStr
+            " is not mutable" sb.appendS
+          op [] .pos state appendError
+        end
+        op [] .dataType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
+        ## XXX? extract composite ops
+        state [] .compiledOps
+          op list.appendP
+        state [] .compiledOps =
+        1 state addCompiledStackOps
+        return
       end
       op [] .val OpValue .@Id == if
-        ## TODO change type to id-type
+        ## getAddressType
+          op [] .dataType
+          idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 ==
+          typeContext
+        types.getAddressType op [] .dataType =
       end
       op state pushValue return
     PROCEDURE case
       ## TODO call
       break
     TEMPLATE_ARG TYPE case
+      "operation " sb.wrap
+        op [] labelContext typeContext sb.appendOp
+        " should not exist at this stage of compilation" sb.appendS
+      op [] .pos state appendError
+      break
+  end
+end
+proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => ) =: typeCheckDeclareId
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  idInfo .idType switch
+    LOCAL_VAR GLOBAL_VAR TMP_VAR case
+      ## XXX check if type is undefined
+      op [] .val OpValue .declareId == if
+        ## XXX resolve auto-types
+        op [] .dataType @ array.wrap "variable declaration" string.wrap op [] .pos  state requireTypes
+        ## XXX? extract types (if local)
+      end
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      op [] .val OpValue .declareId == if
+        1 state addCompiledStackOps
+      end
+      return
+    PROCEDURE case
+      ## XXX check if type is procedure
+      op [] .val OpValue .predeclareId == if
+        state [] .compiledOps
+          op list.appendP
+        state [] .compiledOps =
+        return
+      end
+      ## XXX check if stack is non-empty
+      ## XXX check if procedure is on global level
+      ## XXX open procedure block
+      0 state [] .tmpCount =
+      op [] .dataType typeContext types.getProcIn #drop =:: inTypes
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      Operation : mut tmp
+      0 while #dup inTypes typeContext types.compositeEltCount < do
+        inTypes #over typeContext types.compositeGetLabel =:: label
+        label labelContext id.isLabelEmpty if
+          ## opGet
+            inTypes #over typeContext types.compositeGetElement
+            ## IdInfo
+              id.IdentifierType .ARGUMENT
+              label
+              -1
+              #over:4
+            id.IdentifierInfo new
+            op [] .pos
+          opGet tmp =
+          tmp @ state pushValue
+        end
+        1 +
+      end #drop
+      break
+    ARGUMENT TEMPLATE_ARG TYPE case
       "operation " sb.wrap
         op [] labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
@@ -433,10 +533,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     declareId case
       op state checkReachable
-      break ## TODO
+      op op [] .val .declareId state typeCheckDeclareId
+      break
     predeclareId case
       op state checkReachable
-      break ## TODO
+      op op [] .val .predeclareId state typeCheckDeclareId
+      break
     getLabel case
       op state checkReachable
       break ## TODO
