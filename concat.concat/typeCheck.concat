@@ -5,8 +5,8 @@
 #include "labels.concat"
 
 struct( types.Type : mut valType i32 : mut opCount bool : writable ) =:: TypeInfo
-enum( empty ifBlock whileBlock switchBlock procBlock ) =:: BlockData
-struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : blockType ) =:: BlockInfo
+enum( empty ifBlock whileBlock switchBlock types.Type : procBlock ) =:: BlockData
+struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : mut blockType ) =:: BlockInfo
 
 struct(
   id.IdentifierContext ptr mut : mut idContext
@@ -76,8 +76,12 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
   op [] .dataType state pushType
   totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
 end
-proc( i64 : count TypeCheckState ptr mut : state => ) =: addCompiledStackOps
-  state [] .typeStack .length count - =:: typeOffset
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addCompiledStackOps
+  state [] .typeStack .length count -
+  #dup 0 < if #drop
+    "type stack underflow" sb.wrap pos state appendError
+    0 i64 cast
+  end =:: typeOffset
   0
     typeOffset while #dup state [] .typeStack .length < do
       #swap
@@ -208,7 +212,7 @@ proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckS
   end #drop
 end
 
-proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => ) =: typeCheckGetId
+proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => bool #+XXX remove return value once implementation is complete+# ) =: typeCheckGetId
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -228,8 +232,8 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
         state [] .compiledOps
           op list.appendP
         state [] .compiledOps =
-        1 state addCompiledStackOps
-        return
+        1 op [] .pos state addCompiledStackOps
+        false return
       end
       op [] .val OpValue .@Id == if
         ## getAddressType
@@ -238,9 +242,11 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
           typeContext
         types.getAddressType op [] .dataType =
       end
-      op state pushValue return
+      op state pushValue
+      false return
     PROCEDURE case
       ## TODO call
+      true return
       break
     TEMPLATE_ARG TYPE case
       "operation " sb.wrap
@@ -249,6 +255,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       op [] .pos state appendError
       break
   end
+  false return
 end
 proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => ) =: typeCheckDeclareId
   state [] .idContext =:: idContext
@@ -266,7 +273,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
         op list.appendP
       state [] .compiledOps =
       op [] .val OpValue .declareId == if
-        1 state addCompiledStackOps
+        1 op [] .pos state addCompiledStackOps
       end
       return
     PROCEDURE case
@@ -279,7 +286,16 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       end
       ## XXX check if stack is non-empty
       ## XXX check if procedure is on global level
-      ## XXX open procedure block
+      state [] .openBlocks
+        ## BlockInfo
+            op [] .dataType typeContext types.getProcOut #drop
+          BlockData .procBlock new
+          op [] .pos
+          state [] .compiledOps .length
+          -1
+          codeBlocks.BlockType .PROCEDURE
+        BlockInfo new list.append
+      state [] .openBlocks =
       0 state [] .tmpCount =
       op [] .dataType typeContext types.getProcIn #drop =:: inTypes
       state [] .compiledOps
@@ -516,21 +532,149 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op 2 state insertStackOp
       break
     block case
-      break ## TODO
+      op state checkLocal
+      op [] .val .block .blockType switch ## TODO
+        IF case
+          op state checkReachable
+          ## BlockInfo
+              ## TODO ifBlock data
+            BlockData .ifBlock new
+            op [] .pos
+            state [] .compiledOps .length
+            state [] .ifCount ++
+            codeBlocks.BlockType .PROCEDURE
+          BlockInfo new =:: ifBlock
+          ifBlock .blockId op [] .val .block .blockId =
+          ## begin if-block code
+          types.primitive.BOOL op [] .dataType =
+          op [] .dataType @ array.wrap "if condition" string.wrap op [] .pos state requireTypes
+          ## XXX extract composite ops
+          state [] .compiledOps
+            op list.appendP
+          state [] .compiledOps =
+          1 op [] .pos state addCompiledStackOps
+          ## TODO remember in-types
+          state [] .openBlocks
+            ifBlock list.append
+          state [] .openBlocks =
+          break
+        ELSE case
+          state [] .openBlocks .length 0 == if
+            "unexpected else statement" sb.wrap op [] .pos state appendError
+            return
+          end
+          state [] .openBlocks list.peek .data =:: ifBlock
+          ifBlock [] .blockType codeBlocks.BlockType .IF != if
+            "else can only appear in if blocks" sb.wrap op [] .pos state appendError
+            return
+          end
+          ## XXX remember if else is reachable
+          ## TODO remember else types
+          ## TODO restore stack
+          ## TODO remember position of else
+          codeBlocks.BlockType .ELSE ifBlock [] .blockType =
+          ifBlock [] .blockId op [] .val .block .blockId =
+          state [] .compiledOps
+            op list.appendP
+          state [] .compiledOps =
+          true state [] .reachable =
+          break
+        WHILE case
+          op state checkReachable
+          break
+        DO case
+          break
+        BREAK case
+          break
+        CONTINUE case
+          op state checkReachable
+          break
+        SWITCH case
+          op state checkReachable
+          break
+        CASE case
+          break
+        DEFAULT case
+          break
+        UNKNOWN PROCEDURE case
+          "blocks of type " sb.wrap
+            op [] .val .block .blockType sb.appendBlockType
+          " are not supported" sb.appendS
+          op [] .pos state appendError
+          break
+      end
+      break
     blockEnd case
-      break ## TODO
+      state [] .openBlocks .length 0 == if
+        "unexpected end of " sb.wrap
+          op [] .val .blockEnd .blockType sb.appendBlockType
+        op [] .pos state appendError
+        return
+      end
+      state [] .openBlocks list.peek .data =:: closed
+      op [] .val .blockEnd .blockType closed [] .blockType != if
+        "unexpected end of " sb.wrap
+          op [] .val .blockEnd .blockType sb.appendBlockType
+        " block expected end " sb.appendS
+          closed [] .blockType sb.appendBlockType
+        op [] .pos state appendError
+      end
+      false =:: mut implemented ## XXX remove once all block-types are implemented
+      closed [] .blockType switch  ## TODO
+        IF case
+          break
+        ELSE case
+          break
+        WHILE case
+          break
+        DO case
+          break
+        BREAK case
+          break
+        CONTINUE case
+          break
+        SWITCH case
+          break
+        CASE case
+          break
+        DEFAULT case
+          break
+        PROCEDURE case
+          ## XXX add implicit return at end of procedure with return value
+          ## XXX check for empty stack at end of void procedure
+          true state [] .reachable =
+          true implemented =
+          break
+        UNKNOWN case
+          "blocks of type " sb.wrap
+            op [] .val .blockEnd .blockType sb.appendBlockType
+          " are not supported" sb.appendS
+          op [] .pos state appendError
+          break
+      end
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      ## XXX push op-unreachable if unreachable
+      state [] .openBlocks
+        list.pop #drop ## remove closed block after writing operations
+      state [] .openBlocks =
+      implemented if
+        return
+      end
+      break
     getId case
       op state checkReachable
-      op op [] .val .getId state typeCheckGetId
-      break
+      op op [] .val .getId state typeCheckGetId if break end
+      return
     setId case
       op state checkReachable
-      op op [] .val .setId state typeCheckGetId
-      break
+      op op [] .val .setId state typeCheckGetId if break end
+      return
     @Id case
       op state checkReachable
-      op op [] .val .@Id state typeCheckGetId
-      break
+      op op [] .val .@Id state typeCheckGetId if break end
+      return
     declareId case
       op state checkReachable
       op op [] .val .declareId state typeCheckDeclareId
@@ -568,13 +712,28 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break ## TODO
     Print case
       op state checkReachable
-      break ## TODO
+      state [] .typeStack .length 0 == if
+        "not enough operands for : " sb.wrap
+          op [] labelContext typeContext sb.appendOp
+        op [] .pos state appendError
+        return
+      end
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      1 op [] .pos state addCompiledStackOps
+      return
     Return case
       op state checkReachable
       break ## TODO
     New case
       op state checkReachable
-      break ## TODO
+      op [] .dataType typeContext types.isArray if
+        ## XXX? check for fixed size
+        op state pushValue return
+      end
+      ## TODO new Tuple
+      break
     newEnum case
       op state checkReachable
       break ## TODO

@@ -13,8 +13,8 @@ enum(
                          NOP
                          entryPoint
             ConstValue : Constant
-  codeBlocks.BlockInfo : block
-  codeBlocks.BlockInfo : blockEnd
+  codeBlocks.BlockInfo : mut block
+  codeBlocks.BlockInfo : mut blockEnd
      id.IdentifierInfo : getId
      id.IdentifierInfo : mut setId
      id.IdentifierInfo : mut @Id

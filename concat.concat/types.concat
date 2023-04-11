@@ -675,6 +675,13 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcIn
     end
   context [] .procTypes #swap .procedure list.get .in false return
 end
+proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcOut
+  proc context unwrapNamed
+    #dup context isProcedure ! if #drop
+      Type .undefined true return
+    end
+  context [] .procTypes #swap .procedure list.get .out false return
+end
 proc( Type : in Type : out #+ XXX static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
   in Type .undefined == out Type .undefined == | if
     Type .undefined true return

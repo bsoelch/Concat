@@ -2,7 +2,7 @@
 
 #namespace codeBlocks
   enum( UNKNOWN PROCEDURE IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
-  struct( BlockType : blockType i32 : blockId ) =:: public BlockInfo
+  struct( BlockType : blockType i32 : mut blockId ) =:: public BlockInfo
 #end
 #namespace sb
 #using codeBlocks
