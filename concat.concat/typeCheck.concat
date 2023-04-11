@@ -5,9 +5,11 @@
 #include "labels.concat"
 
 struct( types.Type : mut valType i32 : mut opCount bool : writable ) =:: TypeInfo
-enum( empty ifBlock whileBlock switchBlock types.Type : procBlock ) =:: BlockData
+struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
+struct( StackState : inTypes StackState : mut ifTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
+struct( StackState : inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
+enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock switchBlock types.Type : procBlock ) =:: BlockData
 struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : mut blockType ) =:: BlockInfo
-
 struct(
   id.IdentifierContext ptr mut : mut idContext
 
@@ -37,6 +39,31 @@ proc( stringBuilder FilePosition TypeCheckState ptr mut => ) =: appendError
     #swap list.append
   state [] .errors =
 end
+proc( => StackState ) =: emptyStackState
+    0 Operation list.create
+    0 TypeInfo  list.create
+  StackState new return
+end
+proc( TypeCheckState ptr mut : state => StackState ) =: copyStack
+    0 Operation list.create
+      state [] .opStack list.appendAll
+    0 TypeInfo  list.create
+      state [] .typeStack list.appendAll
+  StackState new return
+end
+proc( StackState ptr : src TypeCheckState ptr mut : state => StackState ) =: resetStack
+    state [] .opStack
+    state [] .typeStack
+  StackState new
+    0 Operation list.create
+      src [] .opStack list.appendAll
+    state [] .opStack =
+    0 TypeInfo  list.create
+      src [] .typeStack list.appendAll
+    state [] .typeStack =
+ return
+end
+
 proc( types.Type : valType TypeCheckState ptr mut : state => ) =: pushType
   state [] .typeStack
     ## TypeInfo
@@ -54,7 +81,6 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
   op [] .dataType state pushType
   ## XXX stack flags
 end
-
 proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: insertStackOp
   0
     0 while #dup typeCount < do
@@ -67,7 +93,7 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
     #dup .length 1 + list.ensureCap
   state [] .opStack =
   state [] .opStack .length totalOps - =:: offset
-  state [] .opStack .data offset + 1 + state [] .opStack .data offset +  totalOps mem.move #drop
+  state [] .opStack .data offset + 1 + state [] .opStack .data offset +  totalOps mem.move #drop ## TODO list.insertArray
   state [] .opStack .data offset + op 1 mem.copy #drop
   state [] .opStack .length 1 + state [] .opStack .length =
   state [] .typeStack .length
@@ -91,13 +117,30 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addC
   =:: opCount
   state [] .opStack .length opCount - =:: opOffset
   ## add operations to compiled code
-  ## XXX use appendP (once generics are fixed)
   state [] .compiledOps #dup .length opCount + list.ensureCap state [] .compiledOps =
-  state [] .compiledOps #dup .data #swap .length + state [] .opStack .data opOffset + opCount mem.copy #drop
-  state [] .compiledOps .length opCount + state [] .compiledOps .length =
+  state [] .compiledOps
+    state [] .opStack .data opOffset + opCount array.create list.appendArray
+  state [] .compiledOps =
   ## remove operations from stack
   state [] .opStack .length opCount - state [] .opStack .length =
   state [] .typeStack .length count - state [] .typeStack .length =
+end
+
+proc( bool : breakSwitch TypeCheckState ptr mut : state => BlockInfo ptr mut optional ) =: findBreakableBlock
+  state [] .openBlocks .length 1 - while #dup 0 >= do
+    state [] .openBlocks #over list.at
+      #dup .data [] .blockType #dup codeBlocks.BlockType .WHILE == #swap codeBlocks.BlockType .DO == | if
+        #swap #drop
+        return
+      end
+      breakSwitch #over .data [] .blockType #dup codeBlocks.BlockType .CASE == #swap codeBlocks.BlockType .DEFAULT == | & if
+        #swap #drop
+        return
+      end
+    #drop
+    1 -
+  end #drop
+  BlockInfo ptr mut optional.empty return
 end
 
 proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeContext ptr mut : context => types.Type ) =: checkBinOpNumber
@@ -212,6 +255,131 @@ proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckS
   end #drop
 end
 
+proc( BlockInfo ptr mut : whileBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeLoopInTypes
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .typeStack .length =:: nTypes
+  whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
+  id.IdentifierInfo : mut tmpId
+  0 =::  mut opOffset
+  whileBlock [] .blockStart =:: mut blockStart
+  0 while #dup nTypes < do
+    state [] .typeStack #over list.at .data =:: typeInfo
+    inTypes [] .opStack #over list.get .val .getId tmpId =
+    ## TODO check type
+    ## XXX prevent assignment of variable to itself
+    state [] .compiledOps
+      ## opSet
+        typeInfo [] .valType
+        tmpId
+        pos
+      opSet list.append
+    state [] .compiledOps =
+    state [] .compiledOps
+      state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
+    state [] .compiledOps =
+    opOffset typeInfo [] .opCount + opOffset =
+    1 typeInfo [] .opCount =
+    1 +
+  end #drop
+end
+proc( BlockInfo ptr mut : whileBlock bool : isBreak FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeLoopOutTypes
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .typeStack .length
+  isBreak ! if
+    1 -
+  end =:: nTypes
+  whileBlock [] .blockData .whileBlock .hasOutTypes ! =:: create
+  whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
+  whileBlock [] .blockData .whileBlock .outTypes @ =:: outTypes
+  create if
+    nTypes =:: mut newTypes
+    0 while #dup inTypes [] .typeStack .length < #over nTypes < & do
+      outTypes [] .opStack
+        inTypes [] .opStack .length list.ensureCap
+      outTypes [] .opStack =
+      inTypes [] .typeStack #over list.get .valType state [] .typeStack #over:2 list.get .valType types.typeEquals ! if
+        break
+      end
+      outTypes [] .opStack
+        inTypes [] .opStack #over:2 list.at .data list.appendP
+      outTypes [] .opStack =
+      newTypes 1 - newTypes =
+      1 +
+    end #drop
+    newTypes 0 > if
+      state [] .compiledOps
+        #dup .length state [] .opStack .length + newTypes + list.ensureCap
+      state [] .compiledOps =
+      state [] .compiledOps .data whileBlock [] .blockStart + =:: whileStart
+      ## mem.move
+        whileStart newTypes +
+        whileStart
+        state [] .compiledOps .length whileBlock [] .blockStart -
+      mem.move #drop
+      state [] .compiledOps .length nTypes + state [] .compiledOps .length =
+    end
+  end
+  id.IdentifierInfo : mut tmpId
+  0 =::  mut opOffset
+  whileBlock [] .blockStart =:: mut blockStart
+  0 while #dup nTypes < do
+    state [] .typeStack #over list.at .data =:: typeInfo
+    create #over outTypes [] .opStack .length >= & if
+      ## IdInfo
+        id.IdentifierType .TMP_VAR
+        ## newLabel
+          string.empty
+          id.FLAG_NONE id.FLAG_MUTABLE |
+          pos
+          labelContext
+        id.newLabel
+        -1
+        state [] .tmpCount ++
+      id.IdentifierInfo new tmpId =
+      ## opPredeclare
+        typeInfo [] .valType
+        tmpId
+        pos
+      opPredeclare state [] .compiledOps .data blockStart [] =
+      blockStart 1 + blockStart =
+      outTypes [] .opStack
+        ## opSet
+          typeInfo [] .valType
+          tmpId
+          pos
+        opGet list.append
+      outTypes [] .opStack =
+    else
+      outTypes [] .opStack #over list.get .val .getId tmpId =
+      ## TODO check type
+    end
+    ## XXX prevent assignment of variable to itself
+    state [] .compiledOps
+      ## opSet
+        typeInfo [] .valType
+        tmpId
+        pos
+      opSet list.append
+    state [] .compiledOps =
+    state [] .compiledOps
+      state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
+    state [] .compiledOps =
+    opOffset typeInfo [] .opCount + opOffset =
+    1 typeInfo [] .opCount =
+    1 +
+  end #drop
+  create if
+    outTypes [] .typeStack
+      state [] .typeStack list.appendAll
+    outTypes [] .typeStack =
+  end
+  nTypes return
+end
+
 proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => bool #+XXX remove return value once implementation is complete+# ) =: typeCheckGetId
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -297,10 +465,10 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
         BlockInfo new list.append
       state [] .openBlocks =
       0 state [] .tmpCount =
-      op [] .dataType typeContext types.getProcIn #drop =:: inTypes
       state [] .compiledOps
         op list.appendP
       state [] .compiledOps =
+      op [] .dataType typeContext types.getProcIn #drop =:: inTypes
       Operation : mut tmp
       0 while #dup inTypes typeContext types.compositeEltCount < do
         inTypes #over typeContext types.compositeGetLabel =:: label
@@ -536,24 +704,28 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .val .block .blockType switch ## TODO
         IF case
           op state checkReachable
-          ## BlockInfo
-              ## TODO ifBlock data
-            BlockData .ifBlock new
-            op [] .pos
-            state [] .compiledOps .length
-            state [] .ifCount ++
-            codeBlocks.BlockType .PROCEDURE
-          BlockInfo new =:: ifBlock
-          ifBlock .blockId op [] .val .block .blockId =
+          state [] .ifCount ++ =:: blockId
+          blockId op [] .val .block .blockId =
           ## begin if-block code
           types.primitive.BOOL op [] .dataType =
           op [] .dataType @ array.wrap "if condition" string.wrap op [] .pos state requireTypes
           ## XXX extract composite ops
+          ## BlockInfo
+              state copyStack
+              emptyStackState
+              -1
+              false
+            IfBlockData new BlockData .ifBlock new
+            op [] .pos
+            state [] .compiledOps .length
+            blockId
+            codeBlocks.BlockType .IF
+          BlockInfo new =:: ifBlock
           state [] .compiledOps
             op list.appendP
           state [] .compiledOps =
+          ## update stack
           1 op [] .pos state addCompiledStackOps
-          ## TODO remember in-types
           state [] .openBlocks
             ifBlock list.append
           state [] .openBlocks =
@@ -568,10 +740,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "else can only appear in if blocks" sb.wrap op [] .pos state appendError
             return
           end
-          ## XXX remember if else is reachable
-          ## TODO remember else types
-          ## TODO restore stack
-          ## TODO remember position of else
+          state [] .reachable ifBlock [] .blockData .ifBlock .elseReachable =
+          ifBlock [] .blockData .ifBlock .inTypes @
+            state resetStack
+          ifBlock [] .blockData .ifBlock .ifTypes =
+          state [] .compiledOps .length ifBlock [] .blockData .ifBlock .elsePos =
           codeBlocks.BlockType .ELSE ifBlock [] .blockType =
           ifBlock [] .blockId op [] .val .block .blockId =
           state [] .compiledOps
@@ -581,13 +754,126 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
         WHILE case
           op state checkReachable
+          state [] .whileCount ++ =:: blockId
+          blockId op [] .val .block .blockId =
+          0 =:: mut opOffset
+          0 while #dup state [] .typeStack .length < do
+            state [] .typeStack #over list.at .data =:: typeInfo
+            ## IdInfo
+              id.IdentifierType .TMP_VAR
+              ## newLabel
+                string.empty
+                id.FLAG_NONE id.FLAG_MUTABLE |
+                op [] .pos
+                labelContext
+              id.newLabel
+              -1
+              state [] .tmpCount ++
+            id.IdentifierInfo new =:: tmpId
+            state [] .compiledOps
+              ## opDeclare
+                typeInfo [] .valType
+                tmpId
+                op [] .pos
+              opDeclare list.append
+            state [] .compiledOps =
+            state [] .compiledOps
+              state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
+            state [] .compiledOps =
+            opOffset typeInfo [] .opCount + opOffset =
+            ## opGet
+              typeInfo [] .valType
+              tmpId
+              op [] .pos
+            opGet state [] .opStack .data #over:2 [] =
+            1 typeInfo [] .opCount =
+            1 +
+          end state [] .opStack .length =
+          ## XXX extract composite ops
+          ## BlockInfo
+              state copyStack
+              emptyStackState
+              false
+              false
+            WhileBlockData new BlockData .whileBlock new
+            op [] .pos
+            state [] .compiledOps .length
+            blockId
+            codeBlocks.BlockType .WHILE
+          BlockInfo new =:: whileBlock
+          state [] .compiledOps
+            op list.appendP
+          state [] .compiledOps =
+          state [] .openBlocks
+            whileBlock list.append
+          state [] .openBlocks =
           break
         DO case
+          op state checkReachable
+          state [] .openBlocks .length 0 == if
+            "unexpected do statement" sb.wrap op [] .pos state appendError
+            return
+          end
+          state [] .openBlocks list.peek .data =:: whileBlock
+          whileBlock [] .blockType codeBlocks.BlockType .WHILE != if
+            "do can only appear in while blocks" sb.wrap op [] .pos state appendError
+            return
+          end
+          whileBlock false op [] .pos state storeLoopOutTypes =:: newOpCount
+          ## compile condition
+          whileBlock [] .blockId op [] .val .block .blockId =
+          types.primitive.BOOL op [] .dataType =
+          op [] .dataType @ array.wrap "do condition" string.wrap op [] .pos state requireTypes
+          state [] .compiledOps
+            op list.appendP
+          state [] .compiledOps =
+          1 op [] .pos state addCompiledStackOps
+          newOpCount state [] .opStack .length =
+          ## update block
+          codeBlocks.BlockType .DO whileBlock [] .blockType =
+          state copyStack whileBlock [] .blockData .whileBlock .outTypes =
+          ## XXX update stack types
           break
         BREAK case
+          op state checkReachable ## XXX allow unreachable break at end of case statement
+          true state findBreakableBlock #dup optional.isEmpty if #drop
+            60 sb.create
+              codeBlocks.BlockType .BREAK sb.appendBlockType
+              " can only appear in loops and switch-case statements" sb.appendS
+            op [] .pos state appendError
+            return
+          end .data =:: breakBlock
+          breakBlock [] .blockId op [] .val .block .blockId =
+          false state [] .reachable =
+          breakBlock [] .blockType #dup codeBlocks.BlockType .WHILE == #swap codeBlocks.BlockType .DO == | if
+            breakBlock false op [] .pos state storeLoopOutTypes #drop
+            state [] .opStack list.clear state [] .opStack =
+            state [] .typeStack list.clear state [] .typeStack =
+            state [] .compiledOps
+              op list.appendP
+            state [] .compiledOps =
+            return
+          end
+          ## TODO break switch
           break
         CONTINUE case
           op state checkReachable
+          false state findBreakableBlock #dup optional.isEmpty if #drop
+            35 sb.create
+              codeBlocks.BlockType .CONTINUE sb.appendBlockType
+              " can only appear in loops" sb.appendS
+            op [] .pos state appendError
+            return
+          end .data =:: breakBlock
+          breakBlock [] .blockId op [] .val .block .blockId =
+          false state [] .reachable =
+          breakBlock [] .blockType #dup codeBlocks.BlockType .WHILE == #swap codeBlocks.BlockType .DO == | if
+            breakBlock op [] .pos state storeLoopInTypes
+            state [] .compiledOps
+              op list.appendP
+            state [] .compiledOps =
+          end
+
           break
         SWITCH case
           op state checkReachable
@@ -757,7 +1043,21 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break ## TODO
     entryPoint case
       op state checkReachable
-      break ## TODO
+      state [] .openBlocks
+        ## BlockInfo
+            types.Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs #drop
+          BlockData .procBlock new
+          op [] .pos
+          state [] .compiledOps .length
+          -1
+          codeBlocks.BlockType .PROCEDURE
+        BlockInfo new list.append
+      state [] .openBlocks =
+      0 state [] .tmpCount =
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      return
     stackMod case
       op state checkReachable
       break ## TODO
