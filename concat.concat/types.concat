@@ -315,6 +315,17 @@ proc( Type TypeContext ptr => bool ) =: public isArray
   unwrapNamed
   Type .arrayType == return
 end
+proc( Type TypeContext ptr => bool ) =: public isFixedSize
+  =:: context
+  context unwrapNamed
+  #dup Type .pointer == if
+    context [] .arrayTypes #swap .pointer list.get .fixedSize return
+  end
+  #dup Type .arrayType == if
+    context [] .arrayTypes #swap .arrayType list.get .fixedSize return
+  end #drop
+  false return
+end
 proc( Type TypeContext ptr => bool ) =: public isFixedSizePtr
   =:: context
   context unwrapNamed
@@ -471,7 +482,7 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
       false return
   end
 end
-proc( Type TypeContext ptr => bool ) =: public isTupleType
+proc( Type TypeContext ptr => bool ) =: public isTuple
   unwrapNamed
   #dup Type .tuple == #swap Type .struct == | return
 end
@@ -539,6 +550,14 @@ proc( Type : composite i64 : index TypeContext ptr mut : context => Type ) =: pu
       Type .undefined return
     end
   .data [] .eltsOffset index + context [] .compositeData #swap list.get return
+end
+proc( Type : composite TypeContext ptr mut : context => Type arrayView ) =: public compositeElts
+  composite context compositeData
+    #dup optional.isEmpty if #drop
+      Type array.empty return
+    end
+  .data =:: data
+  context [] .compositeData .data data [] .eltsOffset + data [] .eltCount array.create return
 end
 
 proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
@@ -778,11 +797,28 @@ end
 proc( i32 : id => Type ) =: public newAutoType
   id Type .autoType new return
 end
+proc( Type => bool ) =: public isAutoType
+  Type .autoType == return
+end
 proc( i32 : id => Type ) =: public newGenericType
   id Type .genericType new return
 end
 proc( i32 : id => Type ) =: public newTemplateType
   id Type .templateType new return
+end
+
+proc( Type => i32 ) =: public typeId
+  #dup Type .autoType == if
+    .autoType return
+  end
+  #dup Type .genericType == if
+    .genericType return
+  end
+  #dup Type .templateType == if
+    .templateType return
+  end
+  #drop
+  -1 return
 end
 
 proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric

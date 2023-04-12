@@ -37,8 +37,8 @@ enum(
                          getArg
                          getArgLen
                    i32 : newEnum
-            types.Type : Cast
-            types.Type : Cast!
+            types.Type : mut Cast
+            types.Type : mut Cast!
          UnaryOperator : unaryOperator
         BinaryOperator : binaryOperator
      StackModification : stackMod

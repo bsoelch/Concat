@@ -1071,7 +1071,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       state popConst
         #dup .val ConstValue .typeId == if #dup .val .typeId
-          #dup state [] .idContext .typeContext @ types.isTupleType #over state [] .idContext .typeContext @ types.isArray | if
+          #dup state [] .idContext .typeContext @ types.isTuple #over state [] .idContext .typeContext @ types.isArray | if
             fileState [] .wordStart opNew state appendOp
             #drop return
           end

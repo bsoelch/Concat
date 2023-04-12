@@ -6,7 +6,7 @@ enum( A B i32 : C i8 ptr mut : D ) =:: enum1
 enum( A B string : C i64 3 array : D ) =:: anEnum
 
 type : selfPtr
-struct( i32 : data selfPtr : self ) selfPtr =
+struct( i32 : data selfPtr ptr : self ) selfPtr =
 
 0 =:: globalVar
 

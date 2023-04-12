@@ -225,6 +225,14 @@ proc( types.Type : a types.Type : b types.TypeContext ptr : context => bool ) =:
   ## TODO canAutoCast
   false return
 end
+proc( types.Type : a types.Type : b bool : forceCast types.TypeContext ptr : context => bool ) =: canCast
+  a b context canAutoCast if
+    true return
+  end
+  ## TODO canCast
+  false return
+end
+
 proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state => ) =: requireTypes
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -521,8 +529,18 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
   idContext [] .typeContext @ =:: typeContext
   idInfo .idType switch
     LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT case
-      ## TODO check for undefined
-      ## TODO resolve auto-types
+      op [] .dataType types.isAutoType if
+        op [] .dataType types.typeId #dup 0 < #over state [] .autoTypes .length >= | if
+          "auto-type id out of range " sb.wrap
+            #swap sb.appendI
+            " max:" sb.appendS
+            state [] .autoTypes .length 1 - sb.appendI
+          op [] .pos state appendError
+        else
+          state [] .autoTypes #swap list.get op [] .dataType =
+        end
+      end
+      ## XXX? check for undefined
       op [] .val OpValue .setId == if
         idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
           "variable " sb.wrap
@@ -566,12 +584,26 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
   idContext [] .typeContext @ =:: typeContext
   idInfo .idType switch
     LOCAL_VAR GLOBAL_VAR TMP_VAR case
-      ## XXX check if type is undefined
       op [] .val OpValue .declareId == if
-        ## XXX resolve auto-types
+        op [] .dataType types.isAutoType if
+          op [] .dataType types.typeId =:: autoTypeId
+          autoTypeId 0 < autoTypeId state [] .autoTypes .length >= | if
+            "auto-type id out of range " sb.wrap
+              autoTypeId sb.appendI
+              " max:" sb.appendS
+              state [] .autoTypes .length 1 - sb.appendI
+            op [] .pos state appendError
+          else state [] .typeStack list.peek #dup optional.hasData _if
+            ## XXX? convert enum-label to enum
+            .data [] .valType
+              #dup state [] .autoTypes autoTypeId list.set
+            op [] .dataType =
+          else #drop end
+        end
         op [] .dataType @ array.wrap "variable declaration" string.wrap op [] .pos  state requireTypes
         ## XXX? extract types (if local)
       end
+      ## XXX check if type is undefined
       state [] .compiledOps
         op list.appendP
       state [] .compiledOps =
@@ -641,7 +673,6 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkReachable
   op [] .pos state appendError
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkLocal
-  true if return end ## TODO remove once code-blocks are implemented
   state [] .openBlocks .length 0 > if
     return
   end
@@ -1227,7 +1258,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           closed [] .blockData .switchBlock @ =:: switchBlock
           state [] .reachable if
             closed op [] .pos state storeSwitchOutTypes #drop
-            ## TODO push explicit break
+            state [] .compiledOps
+              ## opBlock
+                codeBlocks.BlockType .BREAK
+                op [] .pos
+              opBlock list.append
+            state [] .compiledOps =
           end
           switchBlock [] .outTypes @ state resetStack
           switchBlock [] .endReachable state [] .reachable =
@@ -1331,10 +1367,17 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     New case
       op state checkReachable
       op [] .dataType typeContext types.isArray if
-        ## XXX? check for fixed size
+        op [] .dataType typeContext types.isFixedSize ! if
+          "variable size arrays are not supported" sb.wrap op [] .pos state appendError
+        end
         op state pushValue return
       end
-      ## TODO new Tuple
+      op [] .dataType typeContext types.isTuple if
+        op [] .dataType typeContext types.compositeEltCount =:: count
+        op [] .dataType typeContext types.compositeElts "tuple creation" string.wrap op [] .pos state requireTypes
+        ## XXX? extract composite ops
+        op count state insertStackOp
+      end
       break
     newEnum case
       op state checkReachable
@@ -1351,12 +1394,28 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getArgLen case
       op state checkReachable
       break ## TODO
-    Cast case
+    Cast Cast! case
+      op [] .val OpValue .Cast! == =:: forceCast
+      state [] .typeStack list.peek #dup optional.isEmpty if #drop
+        "not enough operands for : " sb.wrap
+          op [] labelContext typeContext sb.appendOp
+        op [] .pos state appendError
+        return
+      end .data =:: src
+      src [] .valType forceCast if op [] .val .Cast! = else op [] .val .Cast = end
+      src [] .valType op [] .dataType forceCast typeContext canCast ! if
+        "cannot cast " sb.wrap
+          src [] .valType labelContext typeContext sb.appendType
+          " to " sb.appendS
+          op [] .dataType labelContext typeContext sb.appendType
+        op [] .pos state appendError
+      end
+      ## XXX constant evaluation
       op state checkReachable
-      break ## TODO
-    Cast! case
-      op state checkReachable
-      break ## TODO
+      op state checkLocal
+      ## XXX? extract composite ops
+      1 op [] .pos state addCompiledStackOps
+      break
     entryPoint case
       op state checkReachable
       state [] .openBlocks
