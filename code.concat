@@ -10,14 +10,12 @@ entryPoint:
 end
 +#
 
-#include list
+struct( i32 : A i32 : B ) =:: A
+enum( i32 : A A : mut B ) =:: B
+struct( i32 : A B : mut B ) =:: C
 
 entryPoint:
-  i32 1 array new =:: a
-  0 =:: b
-  16 i32 mem.calloc =:: c
-  16 i32 list.create
-    a @ list.appendP
-    b @ list.appendP
-  list.free #drop
+  1 2 3 A new B .B new C new =:: mut struct
+  struct @ =:: structPtr
+  structPtr [] .B .B @ =:: iPtr
 end

@@ -7003,7 +7003,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       }
       insertStackOperation(state,op,totalOps);
       peekTypeStack(state)->opCount++;
-      setTypeStackType(state,mStruct->types[labelIndex]);
+      setTypeStackType(state,op.dataType);
       setTypeStackFlags(state,isMutableLabel(mLabel)&writable);
       if(op.opType==OP_SET){
         if(!writable)
