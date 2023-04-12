@@ -218,18 +218,50 @@ proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeCon
   end
 end
 
-proc( types.Type : a types.Type : b types.TypeContext ptr : context => bool ) =: canAutoCast
-  a b types.typeEquals if
+proc( types.Type : src types.Type : to types.TypeContext ptr : context => bool ) =: canAutoCast
+  to =:: mut target
+  src types.isNamedType ! target types.isNamedType & if
+    target context types.unwrapNamed target =
+  end
+  src target types.typeEquals if
     true return
   end
-  ## TODO canAutoCast
+  src context types.isNumber target context types.isNumber & if
+    src context types.numberPrecision target context types.numberPrecision <=
+    src context types.numberSize target context types.numberSize <= & return
+  end
+  ## XXX cast enum-label -> enum
+  src context types.isPointer src context types.isArray | target context types.isPointer & if
+  src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
+    #+ TODO check for compare sizes +#
+    true return
+  end end
+  src types.isPrimitive ! target types.isPrimitive ! | if
+    false return
+  end
   false return
 end
 proc( types.Type : a types.Type : b bool : forceCast types.TypeContext ptr : context => bool ) =: canCast
-  a b context canAutoCast if
+  a context types.unwrapNamed =:: mut src
+  b context types.unwrapNamed =:: mut target
+  src target context canAutoCast if
     true return
   end
-  ## TODO canCast
+  src context types.isNumber target context types.isNumber & if
+    true return
+  end
+  forceCast ! if
+    false return
+  end
+  src context types.isPointer target context types.isPointer & if
+    true return ## XXX check for compatible element sizes?, compatible mutability
+  end
+  src context types.isPointer target context types.isInt & if
+    true return
+  end
+  src context types.isInt target context types.isPointer & if
+    true return
+  end
   false return
 end
 
