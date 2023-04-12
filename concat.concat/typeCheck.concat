@@ -7,8 +7,9 @@
 struct( types.Type : mut valType i32 : mut opCount bool : writable ) =:: TypeInfo
 struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
 struct( StackState : inTypes StackState : mut outTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
-struct( i64 : offset i64 : count ) =:: CaseInfo
+struct( i64 : offset i64 : mut count ) =:: CaseInfo
 struct( ConstValue : value FilePosition : pos ) =:: LabelData
+struct( LabelData list : mut labels CaseInfo list : mut cases ) =:: SwitchData
 struct( StackState : inTypes StackState : mut outTypes LabelData list : mut labels CaseInfo list : mut cases types.Type : switchType bool : mut endReachable bool : mut explicitBreak ) =:: SwitchBlockData
 struct( StackState : inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
 enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock SwitchBlockData : mut switchBlock types.Type : procBlock ) =:: BlockData
@@ -23,12 +24,12 @@ struct(
   BlockInfo list : mut openBlocks
 
   types.Type list : mut autoTypes
+  SwitchData list : mut switchData
   CompilerError list : mut errors
 
   i32 : mut tmpCount
   i32 : mut ifCount
   i32 : mut whileCount
-  i32 : mut switchCount
 
   bool : mut reachable
   bool : mut hasCheckBounds
@@ -100,6 +101,10 @@ proc( StackState ptr : src TypeCheckState ptr mut : state => ) =: resetStack
   state [] .typeStack list.clear
     src [] .typeStack list.appendAll
   state [] .typeStack =
+end
+proc( StackState ptr : src => ) =: freeStackState
+  src [] .opStack list.free #drop
+  src [] .typeStack list.free #drop
 end
 
 proc( types.Type : valType TypeCheckState ptr mut : state => ) =: pushType
@@ -655,7 +660,41 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .reachable if
         op state pushValue return
       end
-      ## TODO resolve switch labels
+      state [] .openBlocks list.peek #dup optional.hasData if .data =:: block
+        block [] .blockType #dup codeBlocks.BlockType .SWITCH == #swap codeBlocks.BlockType .CASE == | if
+          block [] .blockData .switchBlock .labels @ =:: lables
+          block [] .blockData .switchBlock .switchType =:: switchType
+          op [] .val .Constant =:: constant
+          op [] .dataType switchType typeContext canAutoCast ! if ## XXX ? allow extended constant casts?
+            "wrong type for switch-label expected" sb.wrap
+               switchType labelContext typeContext sb.appendType
+               " got " sb.appendS
+               op [] .dataType labelContext typeContext sb.appendType
+             op [] .pos state appendError
+          end
+          0 while #dup lables [] .length < do
+            lables [] #over list.at .data [] .value constant labelContext constantEquals if
+              "duplicate label " sb.wrap
+                 switchType typeContext types.isEnum if ## XXX handle missing name
+                  switchType constant .enumLabel typeContext types.compositeGetLabel labelContext id.labelName .data sb.appendStr
+                else
+                  constant labelContext typeContext sb.appendConstant
+                end
+                " in switch-case" sb.appendS
+              op [] .pos state appendError
+            end
+            1 +
+          end #drop
+          lables []
+            ## LabelData
+              constant
+              op [] .pos
+            LabelData new list.append
+          lables [] =
+          block [] .blockData .switchBlock .cases list.peek .data [] .count ++ #drop
+          return
+        end
+      else #drop end
       op state checkReachable
       break
     unaryOperator case
@@ -931,7 +970,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ## update block
           codeBlocks.BlockType .DO whileBlock [] .blockType =
           state copyStack whileBlock [] .blockData .whileBlock .outTypes =
-          ## XXX update stack types
           break
         BREAK case
           true state findBreakableBlock #dup optional.isEmpty if #drop
@@ -986,7 +1024,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
         SWITCH case
           op state checkReachable
-          state [] .switchCount ++ =:: blockId
+          state [] .switchData .length i32 cast =:: blockId
           blockId op [] .val .block .blockId =
           state [] .typeStack list.peek #dup optional.isEmpty if #drop
             "missing argument for switch-statement" sb.wrap op [] .pos state appendError
@@ -1127,7 +1165,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           closed [] .blockType sb.appendBlockType
         op [] .pos state appendError
       end
-      true =:: mut implemented ## XXX remove once all block-types are implemented
       closed [] .blockType switch
         IF ELSE case
           state [] .reachable if
@@ -1137,7 +1174,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             closed [] .blockData .ifBlock .elseReachable |
             closed [] .blockData .ifBlock .elsePos -1 == |
           state [] .reachable =
-          ## TODO free block data
+          closed [] .blockData .ifBlock .inTypes @ freeStackState
+          closed [] .blockData .ifBlock .outTypes @ freeStackState
           break
         WHILE case
           "unexpected end of " sb.wrap
@@ -1145,7 +1183,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "-block expected " sb.appendS
             codeBlocks.BlockType .DO sb.appendBlockType
           op [] .pos state appendError
-          ## TODO free block data
+          closed [] .blockData .whileBlock .inTypes @ freeStackState
+          closed [] .blockData .whileBlock .outTypes @ freeStackState
           break
         DO case
           state [] .reachable closed [] .blockData .whileBlock .doesLoop | ! if
@@ -1156,7 +1195,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           closed [] .blockData .whileBlock .outTypes @ state resetStack
           true state [] .reachable =
-          ## TODO free block data
+          closed [] .blockData .whileBlock .inTypes @ freeStackState
+          closed [] .blockData .whileBlock .outTypes @ freeStackState
           break
         SWITCH case
           "unexpected end of " sb.wrap
@@ -1164,12 +1204,40 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "-block expected " sb.appendS
             codeBlocks.BlockType .CASE sb.appendBlockType
           op [] .pos state appendError
+          closed [] .blockData .switchBlock .inTypes @ freeStackState
+          closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
         CASE case
-          false implemented =
+          state [] .reachable if
+            "missing break statement at end of case" sb.wrap op [] .pos state appendError
+          end
+          closed [] .blockData .switchBlock @ =:: switchBlock
+          ## TODO check if all labels are covered
+          switchBlock [] .outTypes @ state resetStack
+          switchBlock [] .endReachable state [] .reachable =
+          state [] .switchData
+            switchBlock [] .labels
+            switchBlock [] .cases
+            SwitchData new list.append
+          state [] .switchData =
+          closed [] .blockData .switchBlock .inTypes @ freeStackState
+          closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
         DEFAULT case
-          false implemented =
+          closed [] .blockData .switchBlock @ =:: switchBlock
+          state [] .reachable if
+            closed op [] .pos state storeSwitchOutTypes #drop
+            ## TODO push explicit break
+          end
+          switchBlock [] .outTypes @ state resetStack
+          switchBlock [] .endReachable state [] .reachable =
+          state [] .switchData
+            switchBlock [] .labels
+            switchBlock [] .cases
+            SwitchData new list.append
+          state [] .switchData =
+          closed [] .blockData .switchBlock .inTypes @ freeStackState
+          closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
         PROCEDURE case
           ## XXX add implicit return at end of procedure with return value
@@ -1196,9 +1264,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .openBlocks
         list.pop #drop ## remove closed block after writing operations
       state [] .openBlocks =
-      implemented if
-        return
-      end
       break
     getId case
       op state checkReachable
@@ -1338,8 +1403,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
     128 TypeInfo  list.create
     128 BlockInfo list.create
     prog [] .autoTypes
+    128 SwitchData list.create
     prog [] .errors
-    0
     0
     0
     0
