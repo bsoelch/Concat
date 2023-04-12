@@ -1,0 +1,9 @@
+struct( i32 : A i32 : B ) =:: A
+enum( i32 : A A : mut B ) =:: B
+struct( i32 : A B : mut B ) =:: C
+
+entryPoint:
+  1 2 3 A new B .B new C new =:: mut struct
+  struct @ =:: structPtr
+  structPtr [] .B .B @ =:: iPtr
+end
