@@ -67,11 +67,12 @@ entryPoint:
   i32 2 mem.alloc =:: p
   1 y =
   x print
-  0 while #dup "Hello" .length < do
+  0 while #dup "Hello" ..length < do
     "Hello" #over [] print
     1 +
   end #drop
   "Test" 4 string new =:: aString
+  "Hello World" "Hello" ..length 1 + [] print
   aString .len print
   i32 optional print
   i64 optional print

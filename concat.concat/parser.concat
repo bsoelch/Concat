@@ -1028,10 +1028,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 1 +
               end #drop
               #drop
-            else #dup .val ConstValue .str == #over:2 "length" string.wrap string.eq & _if
-              .val .str .length fileState [] .wordStart constInt state pushConst
-              #drop
-              return
             end
           "constant "                    sb.wrap
             #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
@@ -1190,6 +1186,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart opGetArg state appendOp
       return
     else #dup "..length" string.wrap string.eq _if #drop
+      state hasConst if
+        state popConst
+          #dup .val ConstValue .str == if
+            .val .str .length fileState [] .wordStart constInt state pushConst
+            return
+          end
+        "cannot determine the length of constant " sb.wrap
+          #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
+        fileState [] .wordStart state appendError
+        return
+      end
       fileState [] .wordStart opLength state appendOp
       return
     else #dup "..size" string.wrap string.eq _if #drop
