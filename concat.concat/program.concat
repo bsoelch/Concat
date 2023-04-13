@@ -32,11 +32,13 @@ enum(
                          Print
                          Return
                          New
+                   i32 : newEnum
                          callPtr
                          argc
                          getArg
                          getArgLen
-                   i32 : newEnum
+                         length
+                         size
             types.Type : mut Cast
             types.Type : mut Cast!
          UnaryOperator : unaryOperator
@@ -140,6 +142,12 @@ proc( FilePosition : pos => Operation ) =: public opGetArg
 end
 proc( FilePosition : pos => Operation ) =: public opGetArgLen
   OpValue .getArgLen types.primitive.I64 pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opLength
+  OpValue .length types.primitive.I64 pos Operation new return
+end
+proc( FilePosition : pos => Operation ) =: public opSize
+  OpValue .size types.Type .undefined pos Operation new return
 end
 proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
   =:: pos
@@ -416,6 +424,16 @@ end
           break
         getArgLen case
           "get program argument length (" sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
+          break
+        length case
+          "length (" sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
+          break
+        size case
+          "size (" sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break

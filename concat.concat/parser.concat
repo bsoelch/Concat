@@ -1189,6 +1189,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "..getArg" string.wrap string.eq _if #drop
       fileState [] .wordStart opGetArg state appendOp
       return
+    else #dup "..length" string.wrap string.eq _if #drop
+      fileState [] .wordStart opLength state appendOp
+      return
+    else #dup "..size" string.wrap string.eq _if #drop
+      fileState [] .wordStart opSize state appendOp
+      return
     else #dup "mut" string.wrap string.eq _if #drop
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError
       return

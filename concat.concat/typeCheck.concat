@@ -1559,6 +1559,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getArgLen case
       op state checkReachable
       break ## TODO
+    length size case
+      op state checkReachable
+      break ## TODO
     Cast Cast! case
       op [] .val OpValue .Cast! == =:: forceCast
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
