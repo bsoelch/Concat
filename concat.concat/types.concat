@@ -564,6 +564,27 @@ proc( Type : composite i32 : index TypeContext ptr mut : context => id.LabelId )
     end
   .data [] .labelOffset index + return
 end
+proc( Type : composite string : name id.LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
+  composite context unwrapNamed
+    #dup switch
+      struct labeledProcIn enum enumLabel case
+        break
+      undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType tuple procIn procOut case
+        #drop -1 return
+    end
+  context compositeData
+    #dup optional.isEmpty if #drop
+      -1 return
+    end
+  .data =:: labels
+  0 while #dup labels [] .eltCount < do
+    labels [] .labelOffset #over + labelContext id.labelName #dup optional.hasData if .data name string.eq if
+      return
+    end else #drop end
+    1 +
+  end #drop
+  -1 return
+end
 proc( Type : composite i64 : index TypeContext ptr mut : context => Type ) =: public compositeGetElement
   composite context compositeData
     #dup optional.isEmpty if #drop

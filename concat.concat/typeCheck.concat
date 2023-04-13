@@ -6,12 +6,12 @@
 
 struct( types.Type : mut valType i32 : mut opCount bool : writable ) =:: TypeInfo
 struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
-struct( StackState : inTypes StackState : mut outTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
+struct( StackState : mut inTypes StackState : mut outTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
 struct( i64 : offset i64 : mut count ) =:: CaseInfo
 struct( ConstValue : value FilePosition : pos ) =:: LabelData
 struct( LabelData list : mut labels CaseInfo list : mut cases ) =:: SwitchData
 struct( StackState : inTypes StackState : mut outTypes LabelData list : mut labels CaseInfo list : mut cases types.Type : switchType bool : mut endReachable bool : mut explicitBreak ) =:: SwitchBlockData
-struct( StackState : inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
+struct( StackState : mut inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
 enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock SwitchBlockData : mut switchBlock types.Type : procBlock ) =:: BlockData
 struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId codeBlocks.BlockType : mut blockType ) =:: BlockInfo
 struct(
@@ -194,16 +194,17 @@ proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeCon
   a context types.isNumber ! b context types.isNumber ! | if
     types.Type .undefined return
   end
-  a context types.isInt b context types.isInt != if ## XXX? allow assigning i32 -> float
-    types.Type .undefined return ## implicit conversion from int to float
-  end
-  a context types.numberPrecision b context types.numberPrecision < if
+  a context types.numberPrecision b context types.numberPrecision <=
+  a context types.numberSize b context types.numberSize <= & if
     b inTypes 0 [] =
     b return
-  else
+  end
+  a context types.numberPrecision b context types.numberPrecision >=
+  a context types.numberSize b context types.numberSize >= & if
     a inTypes 1 [] =
     a return
   end
+  types.Type .undefined return
 end
 proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeContext ptr mut : context => types.Type ) =: checkBinOpInt
   a context types.isInt ! b context types.isInt ! | if
@@ -218,6 +219,44 @@ proc( types.Type : a types.Type : b types.Type 2 ptr mut : inTypes types.TypeCon
   end
 end
 
+proc( types.Type : src types.Type : target bool : reshape types.TypeContext ptr : context => bool ) =: sizeCompatible
+  #using types
+  target context isFixedSize ! if
+    true return
+  end
+  src context isFixedSize ! if
+    false return
+  end
+  src context getArraySize =:: srcSize
+  target context getArraySize =:: targetSize
+  srcSize .length targetSize .length < if srcSize .length else targetSize .length end =:: commonPart
+  1 i64 =: mut srcTotal
+  1 i64 =: mut targetTotal
+  0 while #dup commonPart < do
+    srcSize #over array.get .sizeType targetSize #over:2 array.get .sizeType != if #drop
+      false return
+    end
+    reshape srcSize #over:2 array.get .sizeType ArraySizeType .int != & if
+      srcTotal srcSize #over array.get .value * srcTotal =
+      targetTotal targetSize #over array.get .value * targetTotal =
+      1 + continue
+    end
+    srcSize #over array.get .value targetSize #over:2 array.get .value != if #drop
+      false return
+    end
+    1 +
+  end #drop
+  reshape if
+    srcTotal targetTotal == return
+  end
+  srcSize .length while #dup targetSize .length < do
+    targetSize #over array.get .sizeType ArraySizeType .int !=  ! targetSize #over:2 array.get .value 1 != | if #drop
+      false return
+    end
+    1 +
+  end #drop
+  true return
+end
 proc( types.Type : src types.Type : to types.TypeContext ptr : context => bool ) =: canAutoCast
   to =:: mut target
   src types.isNamedType ! target types.isNamedType & if
@@ -233,8 +272,7 @@ proc( types.Type : src types.Type : to types.TypeContext ptr : context => bool )
   ## XXX cast enum-label -> enum
   src context types.isPointer src context types.isArray | target context types.isPointer & if
   src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
-    #+ TODO check for compare sizes +#
-    true return
+    src target false context sizeCompatible return
   end end
   src types.isPrimitive ! target types.isPrimitive ! | if
     false return
@@ -250,6 +288,10 @@ proc( types.Type : a types.Type : b bool : forceCast types.TypeContext ptr : con
   src context types.isNumber target context types.isNumber & if
     true return
   end
+  src context types.isPointer src context types.isArray | target context types.isPointer & if
+  src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
+    src target true context sizeCompatible return
+  end end
   forceCast ! if
     false return
   end
@@ -383,41 +425,7 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state => i64 ) 
     1 +
   end return
 end
-proc( BlockInfo ptr mut : whileBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeLoopInTypes
-  state [] .idContext =:: idContext
-  idContext [] .labelContext @ =:: labelContext
-  idContext [] .typeContext @ =:: typeContext
-  state [] .typeStack .length =:: nTypes
-  whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
-  id.IdentifierInfo : mut tmpId
-  0 =::  mut opOffset
-  whileBlock [] .blockStart =:: mut blockStart
-  0 while #dup nTypes < do
-    state [] .typeStack #over list.at .data =:: typeInfo
-    inTypes [] .opStack #over list.get .val .getId tmpId =
-    ## TODO check type
-    typeInfo [] .opCount 1 == state [] .opStack opOffset list.get .val #swap #over OpValue .getId == & if
-      .getId #dup .idType id.IdentifierType .TMP_VAR == #swap .id tmpId .id == & if ## assignment of tmp-var to itself
-        opOffset 1 + opOffset =
-        1 + continue
-      end
-    else #drop end
-    state [] .compiledOps
-      ## opSet
-        typeInfo [] .valType
-        tmpId
-        pos
-      opSet list.append
-    state [] .compiledOps =
-    state [] .compiledOps
-      state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
-    state [] .compiledOps =
-    opOffset typeInfo [] .opCount + opOffset =
-    1 typeInfo [] .opCount =
-    1 +
-  end #drop
-end
-proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bool : create i64 : blockStart FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeOutTypes
+proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bool : create codeBlocks.BlockType : blockName i64 : blockStart FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeOutTypes
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -452,7 +460,7 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bo
   else
     nTypes outTypes [] .typeStack .length != if
       "wrong number of types at the end of " sb.wrap
-        #+TODO print code-block name+#
+        blockName sb.appendBlockType
         "-statement expected " sb.appendS
         outTypes [] .typeStack .length sb.appendI
         " got " sb.appendS
@@ -530,6 +538,11 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bo
   end
   nTypes return
 end
+proc( BlockInfo ptr mut : whileBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeLoopInTypes
+  state [] .typeStack .length =:: nTypes
+  whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
+  inTypes inTypes nTypes false whileBlock [] .blockType whileBlock [] .blockStart pos state storeOutTypes state [] .opStack .length =
+end
 proc( BlockInfo ptr mut : whileBlock bool : isBreak FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeLoopOutTypes
   state [] .typeStack .length
   isBreak ! if
@@ -538,21 +551,21 @@ proc( BlockInfo ptr mut : whileBlock bool : isBreak FilePosition : pos TypeCheck
   whileBlock [] .blockData .whileBlock .hasOutTypes ! =:: create
   whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
   whileBlock [] .blockData .whileBlock .outTypes @ =:: outTypes
-  inTypes outTypes nTypes create whileBlock [] .blockStart pos state storeOutTypes return
+  inTypes outTypes nTypes create whileBlock [] .blockType  whileBlock [] .blockStart pos state storeOutTypes return
 end
-proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeIfOutTypes
+proc( BlockInfo ptr mut : ifBlock bool : noElse FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeIfOutTypes
   state [] .typeStack .length =:: nTypes
-  ifBlock [] .blockData .ifBlock .elsePos -1 == =:: create
+  noElse if false else ifBlock [] .blockData .ifBlock .elsePos -1 == end =:: create
   ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
-  ifBlock [] .blockData .ifBlock .outTypes @ =:: outTypes
-  inTypes outTypes nTypes create ifBlock [] .blockStart pos state storeOutTypes return
+  noElse if inTypes else ifBlock [] .blockData .ifBlock .outTypes @ end =:: outTypes
+  inTypes outTypes nTypes create ifBlock [] .blockType ifBlock [] .blockStart pos state storeOutTypes return
 end
 proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeSwitchOutTypes
   state [] .typeStack .length =:: nTypes
   switchBlock [] .blockData .switchBlock .endReachable ! =:: create
   switchBlock [] .blockData .switchBlock .inTypes @ =:: inTypes
   switchBlock [] .blockData .switchBlock .outTypes @ =:: outTypes
-  inTypes outTypes nTypes create switchBlock [] .blockStart pos state storeOutTypes return
+  inTypes outTypes nTypes create switchBlock [] .blockType switchBlock [] .blockStart pos state storeOutTypes return
 end
 
 proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => bool #+XXX remove return value once implementation is complete+# ) =: typeCheckGetId
@@ -581,7 +594,6 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
           op [] .pos state appendError
         end
         op [] .dataType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
-        ## XXX? extract composite ops
         state [] .compiledOps
           op list.appendP
         state [] .compiledOps =
@@ -633,7 +645,6 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
           else #drop end
         end
         op [] .dataType @ array.wrap "variable declaration" string.wrap op [] .pos  state requireTypes
-        ## XXX? extract types (if local)
       end
       ## XXX check if type is undefined
       state [] .compiledOps
@@ -694,6 +705,124 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       op [] .pos state appendError
       break
   end
+end
+proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state => ) =: typeCheckGetTupleElement
+  #using types
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .typeStack list.peek #dup optional.isEmpty if #drop
+    "not enough operands for : " sb.wrap
+      op [] labelContext typeContext sb.appendOp
+    op [] .pos state appendError
+    return
+  end .data =:: tupleInfo
+  tupleInfo [] .valType typeContext isTuple ! if ## TODO element access through pointers
+    0 sb.create
+      tupleInfo [] .valType labelContext typeContext sb.appendType
+      " is not a tuple type" sb.appendS
+    op [] .pos state appendError
+    return
+  end
+  tupleInfo [] .valType typeContext unwrapNamed =:: tupleType
+  tupleIndex 0 < tupleIndex tupleType typeContext compositeEltCount >= | if
+    "tuple element index outside allowed range " sb.wrap
+      tupleIndex sb.appendI
+      " size:" sb.appendS
+      tupleType typeContext compositeEltCount sb.appendI
+    op [] .pos state appendError
+    return
+  end
+  tupleType tupleIndex typeContext compositeGetElement =:: elementType
+  tupleType tupleIndex typeContext compositeGetLabel =:: elementLabel
+  tupleInfo [] .writable elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != & =:: mutable
+  op [] .val OpValue .@TupleElement == if
+    elementType mutable typeContext getAddressType
+  else
+    elementType
+  end
+  op [] .dataType =
+  op [] .val OpValue .setTupleElement == if ## SET_TUPLE_ELEMENT <tuple> <value>
+    mutable ! if
+      "element " sb.wrap
+        elementLabel labelContext id.isLabelEmpty if
+          tupleIndex sb.appendI
+        else
+          elementLabel labelContext id.labelName .data sb.appendStr
+        end
+        " in tuple " sb.appendS
+        tupleInfo [] .valType labelContext typeContext sb.appendType
+        " is not mutable" sb.appendS
+      op [] .pos state appendError
+    end
+    state [] .compiledOps
+      op list.appendP
+    state [] .compiledOps =
+    1 op [] .pos state addCompiledStackOps
+    op [] .dataType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
+    1 op [] .pos state addCompiledStackOps
+    return
+  end
+  ## GET_TUPLE_ELEMENT(index) <tuple>
+  ## ADDR_OF_TUPLE_ELEMENT(index) <tuple>
+  op 1 state insertStackOp
+end
+proc( Operation ptr mut : op id.LabelId  : label TypeCheckState ptr mut : state => ) =: typeCheckGetLabel
+  #using types
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  label labelContext id.isLabelEmpty if
+    "missing label name " sb.wrap op [] .pos state appendError
+    return
+  end
+  label labelContext id.labelName .data =:: labelName
+  state [] .typeStack list.peek #dup optional.isEmpty if #drop
+    "not enough operands for : " sb.wrap
+      op [] labelContext typeContext sb.appendOp
+    op [] .pos state appendError
+    return
+  end .data =:: typeInfo
+  typeInfo [] .valType =:: mut targetType
+  targetType typeContext isPointer if
+    targetType typeContext getBaseType targetType =
+  end
+  targetType typeContext isTuple if
+    targetType typeContext unwrapNamed =:: tupleType
+    tupleType labelName labelContext typeContext compositeFindLabel =:: index
+    index 0 >= if
+      op [] .val switch
+        getLabel case
+          index op [] .val .getTupleElement =
+          break
+        setLabel case
+          index op [] .val .setTupleElement =
+          break
+        @Label case
+          index op [] .val .@TupleElement =
+          break
+        default
+          "unexpected operation for get label: " sb.wrap
+            op [] labelContext typeContext sb.appendOp
+          op [] .pos state appendError
+          return
+      end
+      op index state typeCheckGetTupleElement
+      return
+    end
+  end
+  targetType typeContext isEnum if
+    targetType typeContext unwrapNamed =:: enumType
+    enumType labelName labelContext typeContext compositeFindLabel =:: index
+    index 0 >= if
+      ## TODO enum-element access
+    end
+  end
+  0 sb.create
+    typeInfo [] .valType labelContext typeContext sb.appendType
+    "does not have a label " sb.appendS
+    labelName sb.appendStr
+  op [] .pos state appendError
 end
 
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkReachable
@@ -781,16 +910,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           ## XXX ensure operation is kept mutable
           src [] .valType
-            #dup typeContext types.isFixedSizePtr if
+            #dup typeContext types.isRawPointer if
               #drop break
             end
-          #dup typeContext types.isNumber ! if
-            "wrong operand for unary operator " sb.wrap
-              op [] .val .unaryOperator sb.appendUnaryOperator
-              " expected number got " sb.appendS
-              #swap labelContext typeContext sb.appendType
-            op [] .pos state appendError
-          else #drop end
+            #dup typeContext types.isNumber ! if
+              "wrong operand for unary operator " sb.wrap
+                op [] .val .unaryOperator sb.appendUnaryOperator
+                " expected number got " sb.appendS
+                #swap labelContext typeContext sb.appendType
+              op [] .pos state appendError
+            else #drop end
           break
         NEGATE case
           src [] .valType
@@ -823,7 +952,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           else #drop end
           break
       end
-      ## XXX extract composites
       op 1 state insertStackOp
       return
     binaryOperator case
@@ -925,7 +1053,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           right [] .valType labelContext typeContext sb.appendType
         op [] .pos state appendError
       end
-      ## XXX extract composites
       "binary operator " sb.wrap op [] .val .binaryOperator sb.appendBinaryOperator
         inTypes @ array.wrap #over sb.toStr op [] .pos  state requireTypes
       sb.free #drop
@@ -975,7 +1102,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           state [] .reachable ifBlock [] .blockData .ifBlock .elseReachable =
           state [] .reachable if
-            ifBlock op [] .pos state storeIfOutTypes state [] .opStack .length =
+            ifBlock false op [] .pos state storeIfOutTypes state [] .opStack .length =
           end
           ifBlock [] .blockData .ifBlock .inTypes @ state resetStack
           state [] .compiledOps .length ifBlock [] .blockData .ifBlock .elsePos =
@@ -1231,7 +1358,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       closed [] .blockType switch
         IF ELSE case
           state [] .reachable if
-            closed op [] .pos state storeIfOutTypes state [] .opStack .length =
+            closed closed [] .blockType codeBlocks.BlockType .IF == op [] .pos state storeIfOutTypes state [] .opStack .length =
           end
           state [] .reachable
             closed [] .blockData .ifBlock .elseReachable |
@@ -1355,22 +1482,28 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     getLabel case
       op state checkReachable
-      break ## TODO
+      op op [] .val .getLabel state typeCheckGetLabel
+      return
     setLabel case
       op state checkReachable
-      break ## TODO
+      op op [] .val .setLabel state typeCheckGetLabel
+      return
     @Label case
       op state checkReachable
-      break ## TODO
+      op op [] .val .@Label state typeCheckGetLabel
+      return
     getTupleElement case
       op state checkReachable
-      break ## TODO
+      op op [] .val .getTupleElement state typeCheckGetTupleElement
+      return
     setTupleElement case
       op state checkReachable
-      break ## TODO
+      op op [] .val .setTupleElement state typeCheckGetTupleElement
+      return
     @TupleElement case
       op state checkReachable
-      break ## TODO
+      op op [] .val .@TupleElement state typeCheckGetTupleElement
+      return
     getArrayElement case
       op state checkReachable
       break ## TODO
@@ -1388,6 +1521,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos state appendError
         return
       end
+      state [] .typeStack list.peek .data [] .valType op [] .dataType =
       state [] .compiledOps
         op list.appendP
       state [] .compiledOps =
@@ -1407,7 +1541,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .dataType typeContext types.isTuple if
         op [] .dataType typeContext types.compositeEltCount =:: count
         op [] .dataType typeContext types.compositeElts "tuple creation" string.wrap op [] .pos state requireTypes
-        ## XXX? extract composite ops
         op count state insertStackOp
       end
       break
@@ -1445,7 +1578,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       ## XXX constant evaluation
       op state checkReachable
       op state checkLocal
-      ## XXX? extract composite ops
       1 op [] .pos state addCompiledStackOps
       break
     entryPoint case

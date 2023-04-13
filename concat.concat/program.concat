@@ -23,7 +23,7 @@ enum(
             id.LabelId : getLabel
             id.LabelId : mut setLabel
             id.LabelId : mut @Label
-                   i32 : getTupleElement
+                   i32 : mut getTupleElement
                    i32 : mut setTupleElement
                    i32 : mut @TupleElement
                    i32 : getArrayElement

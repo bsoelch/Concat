@@ -71,6 +71,8 @@ entryPoint:
     "Hello" #over [] print
     1 +
   end #drop
+  "Test" 4 string new =:: aString
+  aString .len print
   i32 optional print
   i64 optional print
   i32 optional print
