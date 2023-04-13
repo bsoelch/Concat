@@ -77,6 +77,9 @@ proc( ParserState ptr mut : state => Constant ) =: popConst
     list.pop #swap state [] .constants =
   return
 end
+proc( ParserState ptr mut : state => Constant ptr mut optional ) =: peekConst
+  state [] .constants list.peek return
+end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.Type bool ) =: peekTypeConstant
   state [] .constants .length state [] .constOffset <= if ## XXX more descriptive messages
     "missing type constant" sb.wrap fileState [] .wordStart state appendError
@@ -1162,9 +1165,27 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .URSHIFT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "==" string.wrap string.eq _if #drop
+      state hasConst if
+        state peekConst .data =:: const
+        const [] .val ConstValue .enumLabel == if
+          const [] .valueType const [] .val .enumLabel fileState [] .wordStart opCheckEnum
+            state popConst #drop
+          state appendOp
+          return
+        end
+      end
       BinaryOperator .EQ fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "!=" string.wrap string.eq _if #drop
+      state hasConst if
+        state peekConst .data =:: const
+        const [] .val ConstValue .enumLabel == if
+          const [] .valueType const [] .val .enumLabel fileState [] .wordStart opCheckEnumNE
+            state popConst #drop
+          state appendOp
+          return
+        end
+      end
       BinaryOperator .NE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<" string.wrap string.eq _if #drop

@@ -381,7 +381,6 @@ proc( types.Type : src types.Type : to types.TypeContext ptr : context => bool )
     src context types.numberPrecision target context types.numberPrecision <=
     src context types.numberSize target context types.numberSize <= & return
   end
-  ## XXX cast enum-label -> enum
   src context types.isPointer src context types.isArray | target context types.isPointer & if
   src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
     src target false context sizeCompatible return
@@ -453,7 +452,6 @@ proc( types.Type arrayView : types string : opName FilePosition : pos TypeCheckS
           nCasts 1 + nCasts =
           #swap 1 + continue
         end
-        ## TODO convert enum labels to enum constants
         "wrong type for " sb.wrap
           opName sb.appendStr
           " expected " sb.appendS
@@ -733,7 +731,6 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
               state [] .autoTypes .length 1 - sb.appendI
             op [] .pos state appendError
           else state [] .typeStack list.peek #dup optional.hasData _if
-            ## XXX? convert enum-label to enum
             .data [] .valType
               #dup state [] .autoTypes autoTypeId list.set
             op [] .dataType =
@@ -1019,6 +1016,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   op [] .val switch
     OpValue .Constant case
       state [] .reachable if
+        ## TODO check if enum-constants need fields
         op state pushValue return
       end
       state [] .openBlocks list.peek #dup optional.hasData if .data =:: block
@@ -1390,7 +1388,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           switchType typeContext types.isInt if
             switchType op [] .dataType =
           else switchType typeContext types.isEnum _if
-            ## XXX change enum to label
             switchType op [] .dataType =
           else
             "cannot switch values of type " sb.wrap
@@ -1727,6 +1724,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       break ## TODO
     length size case
+      op state checkReachable
+      break ## TODO
+    checkEnum checkEnumNE case
       op state checkReachable
       break ## TODO
     Cast Cast! case

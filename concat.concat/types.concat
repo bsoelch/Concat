@@ -710,7 +710,6 @@ proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext 
     end
   false return
 end
-## XXX? enum as label
 #end
 #namespace sb
 proc( stringBuilder types.CompositeType id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: appendComposite

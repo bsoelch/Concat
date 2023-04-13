@@ -71,7 +71,7 @@ proc( types.Type FilePosition => Constant ) =: public constType
   types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
 end
 proc( types.Type i32 FilePosition => Constant ) =: public constEnumLabel
-  =:: pos ## XXX? convert type to enum-label type
+  =:: pos
   ConstValue .enumLabel new pos Constant new return
 end
 proc( ConstValue types.Type FilePosition => Constant ) =: public newConst
