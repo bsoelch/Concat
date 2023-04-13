@@ -3,7 +3,7 @@
 ( i32 i64 ) =:: aTuple
 struct( i8 _ ptr : data i64 : len ) type =: string
 enum( A B i32 : C i8 ptr mut : D ) =:: enum1
-enum( A B string : C i64 3 array : D ) =:: anEnum
+enum( A B string : C i64 3 array : D i32 : mut E ) =:: anEnum
 
 type : selfPtr
 struct( i32 : data selfPtr ptr : self ) selfPtr =
@@ -75,6 +75,12 @@ entryPoint:
   "Hello World" "Hello" ..length 1 + [] print
   0 0 0 aTuple new aProc anEnum .C == if
     .len print
+  end
+  anEnum .A anEnum .B == if
+    aString anEnum .C new =:: mut enum
+    enum anEnum .D == print
+    enum .C print
+    2 enum .E =
   end
   aString .len print
   i32 optional print

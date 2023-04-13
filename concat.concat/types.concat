@@ -251,6 +251,10 @@ end
 proc( Type => bool ) =: public isPrimitive
   Type .primitiveType == return
 end
+proc( Type TypeContext ptr => bool ) =: public isEmpty
+  unwrapNamed
+  Type .undefined == return
+end
 proc( Type TypeContext ptr => bool ) =: public isBoolean
   unwrapNamed
     #dup isPrimitive ! if #drop

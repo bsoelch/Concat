@@ -1168,7 +1168,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state hasConst if
         state peekConst .data =:: const
         const [] .val ConstValue .enumLabel == if
-          const [] .valueType const [] .val .enumLabel fileState [] .wordStart opCheckEnum
+          const [] .valueType const [] .val .enumLabel fileState [] .wordStart opLabelEQ
             state popConst #drop
           state appendOp
           return
@@ -1180,7 +1180,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state hasConst if
         state peekConst .data =:: const
         const [] .val ConstValue .enumLabel == if
-          const [] .valueType const [] .val .enumLabel fileState [] .wordStart opCheckEnumNE
+          const [] .valueType const [] .val .enumLabel fileState [] .wordStart opLabelNE
             state popConst #drop
           state appendOp
           return

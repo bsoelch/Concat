@@ -29,6 +29,9 @@ enum(
                    i32 : mut getArrayElement
                    i32 : mut setArrayElement
                    i32 : mut @ArrayElement
+                   i32 : mut getEnumElement
+                   i32 : mut setEnumElement
+                   i32 : mut @EnumElement
                          Print
                          Return
                          New
@@ -43,8 +46,10 @@ enum(
             types.Type : mut Cast!
          UnaryOperator : unaryOperator
         BinaryOperator : binaryOperator
-                   i32 : checkEnum
-                   i32 : checkEnumNE
+                   i32 : enumLabelEq
+                   i32 : enumLabelNe
+                   i32 : checkEnumLabel
+                         checkArrayIndex
      StackModification : stackMod
             id.LabelId : Unknown
 ) =:: public OpValue
@@ -151,13 +156,21 @@ end
 proc( FilePosition : pos => Operation ) =: public opSize
   OpValue .size types.Type .undefined pos Operation new return
 end
+proc( types.Type i32 FilePosition => Operation ) =: public opLabelEQ
+  =:: pos
+  OpValue .enumLabelEq new #swap pos Operation new return
+end
+proc( types.Type i32 FilePosition => Operation ) =: public opLabelNE
+  =:: pos
+  OpValue .enumLabelNe new #swap pos Operation new return
+end
 proc( types.Type i32 FilePosition => Operation ) =: public opCheckEnum
   =:: pos
-  OpValue .checkEnum new #swap pos Operation new return
+  OpValue .checkEnumLabel new #swap pos Operation new return
 end
-proc( types.Type i32 FilePosition => Operation ) =: public opCheckEnumNE
+proc( types.Type FilePosition => Operation ) =: public opCheckIndex
   =:: pos
-  OpValue .checkEnumNE new #swap pos Operation new return
+  OpValue .checkArrayIndex #swap pos Operation new return
 end
 proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
   =:: pos
@@ -375,6 +388,24 @@ end
           " ) : " sb.appendS
           #over .val .@ArrayElement sb.appendI
           break
+        getEnumElement case
+          "get enum element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .getEnumElement sb.appendI
+          break
+        setEnumElement case
+          "set enum element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .setEnumElement sb.appendI
+          break
+        @EnumElement case
+          "enum element address ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .@EnumElement sb.appendI
+          break
         Return case
           "Return: " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
@@ -447,17 +478,28 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
-        checkEnum case
+        enumLabelEq case
+          "enum label equal ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .enumLabelEq sb.appendI
+          break
+        enumLabelNe case
+          "enum label not equal ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .enumLabelNe sb.appendI
+          break
+        checkEnumLabel case
           "check enum label ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .checkEnum sb.appendI
+          #over .val .checkEnumLabel sb.appendI
           break
-        checkEnumNE case
-          "check enum label not equal ( " sb.appendS
+        checkArrayIndex case
+          "check array index ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .checkEnumNE sb.appendI
+          " )" sb.appendS
           break
         stackMod case
           "stack modification: " sb.appendS

@@ -130,7 +130,7 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
     return
   end
   0
-    0 while #dup typeCount < do
+    state [] .typeStack .length typeCount - while #dup state [] .typeStack .length  < do
       #swap
         state [] .typeStack #over:2 list.get .opCount +
       #swap 1 +
@@ -859,7 +859,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
       op list.appendP
     state [] .compiledOps =
     indexCount 1 + op [] .pos state addCompiledStackOps
-    baseType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
+    baseType @ array.wrap "pointer assignment" string.wrap op [] .pos state requireTypes
     1 op [] .pos state addCompiledStackOps
     return
   end
@@ -921,7 +921,7 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
       op list.appendP
     state [] .compiledOps =
     1 op [] .pos state addCompiledStackOps
-    op [] .dataType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
+    op [] .dataType @ array.wrap "tuple assignment" string.wrap op [] .pos state requireTypes
     1 op [] .pos state addCompiledStackOps
     return
   end
@@ -980,12 +980,70 @@ proc( Operation ptr mut : op id.LabelId  : label TypeCheckState ptr mut : state 
     targetType typeContext unwrapNamed =:: enumType
     enumType labelName labelContext typeContext compositeFindLabel =:: index
     index 0 >= if
-      ## TODO enum-element access
+      enumType index typeContext compositeGetElement =:: eltType
+      eltType typeContext isEmpty if
+        "element " sb.wrap
+          labelName sb.appendStr
+          " in enum " sb.appendS
+          targetType labelContext typeContext sb.appendType
+          " does not hold a value" sb.appendS
+        op [] .pos state appendError
+      end
+      enumType index typeContext compositeGetLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != typeInfo [] .writable & =:: mutable
+      op [] .val OpValue .@Label == if
+        eltType mutable typeContext getAddressType
+      else
+        eltType
+      end
+      op [] .dataType =
+      op [] .val switch
+        getLabel case
+          index op [] .val .getEnumElement =
+          break
+        setLabel case
+          index op [] .val .setEnumElement =
+          break
+        @Label case
+          index op [] .val .@EnumElement =
+          break
+        default
+          "unexpected operation for get label: " sb.wrap
+            op [] labelContext typeContext sb.appendOp
+          op [] .pos state appendError
+          return
+      end
+      op [] .val OpValue .setEnumElement == if
+        mutable ! if
+          "element " sb.wrap
+            labelName sb.appendStr
+            " in enum " sb.appendS
+            targetType labelContext typeContext sb.appendType
+            " is not mutable" sb.appendS
+          op [] .pos state appendError
+        end
+        state [] .compiledOps
+          op list.appendP
+        state [] .compiledOps =
+        1 op [] .pos state addCompiledStackOps
+        op [] .dataType @ array.wrap "enum assignment" string.wrap op [] .pos state requireTypes
+        1 op [] .pos state addCompiledStackOps
+        return
+      end
+      1 true op [] .pos state extractCompositeOps
+      ## check index
+      typeInfo [] .opCount =:: opCount ## extractCompositeOps does not modify type-stack -> typeInfo still valid
+      state [] .compiledOps
+        enumType index op [] .pos opCheckEnum list.append
+        state [] .opStack .data state [] .opStack .length opCount - + opCount array.create list.appendArray
+      state [] .compiledOps =
+      ## get value
+      op 1 state insertStackOp
+      return
     end
   end
   0 sb.create
     typeInfo [] .valType labelContext typeContext sb.appendType
-    "does not have a label " sb.appendS
+    " does not have a label " sb.appendS
     labelName sb.appendStr
   op [] .pos state appendError
 end
@@ -1016,7 +1074,19 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   op [] .val switch
     OpValue .Constant case
       state [] .reachable if
-        ## TODO check if enum-constants need fields
+        op [] .val .Constant ConstValue .enumLabel == if
+          op [] .dataType op [] .val .Constant .enumLabel typeContext types.compositeGetElement
+            #dup typeContext types.isEmpty ! if
+              "cannot directly use enum label \"" sb.wrap
+                  op [] .dataType op [] .val .Constant .enumLabel typeContext types.compositeGetLabel
+                labelContext id.labelName .data sb.appendStr
+               "\" in " sb.appendS
+               op [] .dataType labelContext typeContext sb.appendType
+               " use \"new\" to create enum values" sb.appendS
+             op [] .pos state appendError
+            end
+          #drop
+        end
         op state pushValue return
       end
       state [] .openBlocks list.peek #dup optional.hasData if .data =:: block
@@ -1200,7 +1270,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           left [] .valType typeContext types.isBoolean right [] .valType typeContext types.isBoolean & if
             types.primitive.BOOL op [] .dataType =
           end
-          ## enum==enum -> bool TODO
+          ## enum==enum -> bool
+          left [] .valType typeContext types.isEnum left [] .valType right [] .valType types.typeEquals & if
+            types.primitive.BOOL op [] .dataType =
+          end
           break
         LT LE GE GT case
           ## number<number -> bool
@@ -1710,7 +1783,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     newEnum case
       op state checkReachable
-      break ## TODO
+      op [] .dataType typeContext types.isEnum ! if
+        "unexpected type for newEnum: " sb.wrap
+          op [] .dataType labelContext typeContext sb.appendType
+        op [] .pos state appendError
+        return
+      end
+      op [] .dataType op [] .val .newEnum typeContext types.compositeGetElement =:: labelType
+      labelType typeContext types.isEmpty if
+        op state pushValue ## XXX? convert to constant
+        return
+      end
+      labelType @ 1 array.create "enum creation" string.wrap op [] .pos state requireTypes
+      op 1 state insertStackOp
+      return
     callPtr case
       op state checkReachable
       break ## TODO
@@ -1726,9 +1812,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     length size case
       op state checkReachable
       break ## TODO
-    checkEnum checkEnumNE case
+    enumLabelEq enumLabelNe case
       op state checkReachable
-      break ## TODO
+      op [] .dataType @ array.wrap "check enum label" string.wrap op [] .pos state requireTypes
+      op 1 state insertStackOp
+      break
     Cast Cast! case
       op [] .val OpValue .Cast! == =:: forceCast
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
@@ -1769,6 +1857,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     stackMod case
       op state checkReachable
       break ## TODO
+    checkEnumLabel checkArrayIndex getEnumElement setEnumElement @EnumElement case
+      break ## TODO error message?
     Unknown case
       "unknown identifier: \"" sb.wrap
         op [] .val .Unknown labelContext id.labelName .data sb.appendStr
