@@ -172,6 +172,118 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addC
   state [] .opStack .length opCount - state [] .opStack .length =
   state [] .typeStack .length count - state [] .typeStack .length =
 end
+proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => id.IdentifierInfo ) =: newTmpVar
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  id.FLAG_NONE mutable if id.FLAG_MUTABLE | id.LabelFlag cast end =:: flags
+  ## IdInfo
+    id.IdentifierType .TMP_VAR
+    ## newLabel
+      string.empty
+      flags
+      pos
+      labelContext
+    id.newLabel
+    -1
+    state [] .tmpCount ++
+  id.IdentifierInfo new return
+end
+proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut : state => ) =: extractCompositeOps
+  state [] .idContext =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .openBlocks .length 0 == if
+    return ## don't extract composites at global level
+  end
+  state [] .typeStack .length count -
+  #dup 0 < if #drop
+    "type stack underflow" sb.wrap pos state appendError
+    0 i64 cast
+  end =:: typeOffset
+  state [] .opStack .length
+    typeOffset while #dup state [] .typeStack .length < do
+      #swap
+        state [] .typeStack #over:2 list.get .opCount -
+      #swap 1 +
+    end #drop
+  =:: mut opOffset
+  opOffset =:: mut newOffset
+  typeOffset while #dup state [] .typeStack .length < do
+    state [] .typeStack #over list.at .data =:: typeInfo
+    typeInfo [] .opCount 0 <= if
+      1 + continue
+    end
+    typeInfo [] .opCount 1 == if
+      opOffset newOffset != if
+        state [] .opStack .data opOffset [] state [] .opStack .data newOffset [] =
+      end
+      opOffset ++ #drop
+      newOffset ++ #drop
+      1 + continue
+    end
+    keepWritable typeInfo [] .writable & if
+      state [] .opStack opOffset list.at .data =:: opHead
+      opHead [] .val switch
+        getId case ## writable getId -> access to writable variable
+          opHead [] .val .getId opHead [] .val .@Id =
+          break
+        getTupleElement case
+          opHead [] .val .getTupleElement opHead [] .val .@TupleElement =
+          break
+        getArrayElement case
+          opHead [] .val .getArrayElement opHead [] .val .@ArrayElement =
+          break
+        default
+          opOffset newOffset != if
+            state [] .opStack .data newOffset + state [] .opStack .data opOffset + typeInfo [] .opCount mem.move #drop
+          end
+          opOffset typeInfo [] .opCount + opOffset =
+          newOffset typeInfo [] .opCount + newOffset =
+          1 + continue
+      end
+      opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
+      false pos state newTmpVar =:: tmpId
+      state [] .compiledOps
+        ## opDeclare
+          opHead [] .dataType
+          tmpId
+          pos
+        opDeclare list.append
+        state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
+      state [] .compiledOps =
+      opOffset typeInfo [] .opCount + opOffset =
+      ## opArrayGet
+        0
+        pos
+      opArrayGet
+        typeInfo [] .valType #over .dataType =
+        0 #over .val .getArrayElement =
+      state [] .opStack .data newOffset ++ [] =
+      ## opGet
+        opHead [] .dataType
+        tmpId
+        pos
+      opGet state [] .opStack .data newOffset ++ [] =
+      1 + continue
+    end
+    false pos state newTmpVar =:: tmpId
+    state [] .compiledOps
+      ## opDeclare
+        typeInfo [] .valType
+        tmpId
+        pos
+      opDeclare list.append
+      state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
+    state [] .compiledOps =
+    opOffset typeInfo [] .opCount + opOffset =
+    ## opGet
+      typeInfo [] .valType
+      tmpId
+      pos
+    opGet state [] .opStack .data newOffset ++ [] =
+    1 +
+  end #drop
+  newOffset state [] .opStack .length =
+end
 
 proc( bool : breakSwitch TypeCheckState ptr mut : state => BlockInfo ptr mut optional ) =: findBreakableBlock
   state [] .openBlocks .length 1 - while #dup 0 >= do
@@ -394,17 +506,7 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state => i64 ) 
   =:: count
   0 while #dup count < do
     state [] .typeStack #over list.at .data =:: typeInfo
-    ## IdInfo
-      id.IdentifierType .TMP_VAR
-      ## newLabel
-        string.empty
-        id.FLAG_NONE id.FLAG_MUTABLE |
-        pos
-        labelContext
-      id.newLabel
-      -1
-      state [] .tmpCount ++
-    id.IdentifierInfo new =:: tmpId
+    true pos state newTmpVar =:: tmpId
     state [] .compiledOps
       ## opDeclare
         typeInfo [] .valType
@@ -478,17 +580,7 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bo
   0 while #dup nTypes < do
     state [] .typeStack #over list.at .data =:: typeInfo
     create #over outTypes [] .opStack .length >= & if
-      ## IdInfo
-        id.IdentifierType .TMP_VAR
-        ## newLabel
-          string.empty
-          id.FLAG_NONE id.FLAG_MUTABLE |
-          pos
-          labelContext
-        id.newLabel
-        -1
-        state [] .tmpCount ++
-      id.IdentifierInfo new tmpId =
+      true pos state newTmpVar tmpId =
       ## opPredeclare
         typeInfo [] .valType
         tmpId
@@ -732,6 +824,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     end
     indexCount 1 + indexCount =
   end
+  indexCount sizeCount [] =
   state [] .typeStack offset list.at .data [] .valType =:: pointerType
   pointerType typeContext isCallable if
     "cannot deference procedure pointer" sb.wrap
@@ -747,7 +840,10 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     op [] .pos state appendError
     return
   end
-  ## TODO check indices if fixed-size
+  pointerType typeContext isFixedSize if
+    indexCount 1 + false op [] .pos state extractCompositeOps ## extract elements
+    ## TODO check if indices are in range
+  end
   op [] .val OpValue .@ArrayElement == if
     ## TODO compute correct type for partial array access
     ## <i32 3 3 ptr> 1 [] @ -> <i32 3 ptr>
