@@ -29,7 +29,7 @@ entryPoint:
   
   i32 16 array new =:: mut a
   a addrOf 10 42 mem.fill
-  0 while #dup a .length < do
+  0 while #dup a ..length < do
     a @ #over [] print
     1 +
   end #drop

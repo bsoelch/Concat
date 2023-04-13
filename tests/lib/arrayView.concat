@@ -18,7 +18,7 @@ entryPoint:
   str 'o' lastIndexOf print
   str 'c' contains print
   i32 10 array new =:: mut a
-  0 while #dup a .length < do
+  0 while #dup a ..length < do
     #dup #dup * a @ #over:2 [] =
     1 +
   end #drop

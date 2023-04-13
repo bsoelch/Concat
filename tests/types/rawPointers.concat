@@ -15,7 +15,7 @@ entryPoint:
   tmpPtr [] .1 print
   
   "Hello World!" 1 [] print
-  "World" .length print
+  "World" ..length print
   
   0 =:: mut A
   A addrOf  i32 _ ptr mut =: mut aPtr

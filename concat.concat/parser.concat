@@ -612,7 +612,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             fileState [] .wordStart state includeFile
             return
           else #dup Token .IDENTIFER == _if .IDENTIFER ## library file
-            state [] .libPath .length #over .length + ".concat" .length + sb.create
+            state [] .libPath .length #over .length + ".concat" ..length + sb.create
               state [] .libPath sb.appendStr
               #swap sb.appendStr ".concat" sb.appendS
             fileState [] .wordStart state includeFile

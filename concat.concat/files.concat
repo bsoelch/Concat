@@ -9,7 +9,7 @@ struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public 
 enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER string : ERROR ) =:: public Token
 
 proc( string => ) =: public printTokens
-  "test" #dup .length string.create 0 1 FilePosition new #dup FileState new =:: mut state
+  "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
     state addrOf nextToken
     128 sb.create

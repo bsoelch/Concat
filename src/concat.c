@@ -182,6 +182,9 @@ typedef enum{
   OP_PROG_ARG,
   OP_PROG_ARG_LEN,
 
+  OP_GET_LENGTH,
+  OP_GET_SIZE,
+
   OP_CODE_BLOCK,
   OP_END_BLOCK,
 
@@ -233,6 +236,8 @@ char const* opName(OpType type){
     case OP_PROG_ARGC:return "OP_PROG_ARGC";
     case OP_PROG_ARG:return "OP_PROG_ARG";
     case OP_PROG_ARG_LEN:return "OP_PROG_ARG_LEN";
+    case OP_GET_LENGTH:return "OP_GET_LENGTH";
+    case OP_GET_SIZE:return "OP_GET_SIZE";
     case OP_UNREACHABLE:return "OP_UNREACHABLE";
     case OP_MODIFY_STACK:return "OP_MODIFY_STACK";
     case OP_COMPILER_INFO:return "OP_COMPILER_INFO";
@@ -256,7 +261,7 @@ typedef struct {
 //id of the template that was last opened
 int32_t currentTemplateId=-1;
 
-#define LABEL_CAP 4096
+#define LABEL_CAP 8192
 typedef int32_t LabelId;
 const LabelId LABEL_ID_UNKNOWN=-1;
 typedef int16_t LabelFlags;
@@ -3357,6 +3362,8 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
     case OP_GET_TEMPLATE:
     case OP_SET_TEMPLATE:
     case OP_ADDR_OF_TEMPLATE:
+    case OP_GET_LENGTH:
+    case OP_GET_SIZE:
       fprintf(stderr,"operation %s should not exist at this stage of compilation\n",opName(op->opType));
       handleError(NULL,ERROR_SYNTAX,op->filePos);
       break;
@@ -5228,6 +5235,12 @@ void readOperation(ParserState* state,CodeFile* codeFile){
   }else if(wordEquals(&word,"..getArg")){
     pushOperation(state,(Operation){.opType=OP_PROG_ARG,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
     return;
+  }else if(wordEquals(&word,"..length")){
+    pushOperation(state,(Operation){.opType=OP_GET_LENGTH,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"..size")){
+    pushOperation(state,(Operation){.opType=OP_GET_SIZE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
   }else if(wordEquals(&word,"mut")){
     handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
     return;
@@ -6907,6 +6920,8 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
       bool writable=peekTypeStack(state)->isWritable;
       totalOps=peekTypeStack(state)->opCount;
       if(isArrayType(structType)||isPointerType(structType)){
+        printFilePosition(op.filePos,stdout);
+        puts(" the field .length and .size of arrays&pointers will be removed in a future update use ..length / ..size instead");
         if(!arrayTypeData(structType)->fixedSize){
           printTypeName(structType,stderr);
           fprintf(stderr," does not have a field \"%"PRI_STR"\"\n",PRI_STR_ARGS(op.dataAs.string));
@@ -7020,6 +7035,49 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         typeCheckSetStackValue(state,&op,op.dataType);
       }
       return;
+    case OP_GET_LENGTH:
+    case OP_GET_SIZE:
+      checkReachable(state,op);
+      checkLocal(state,op);
+      if(state->typeCount<1){
+        fprintf(stderr,"not enough operands for operation %s: need 1 got %zu\n",opName(op.opType),state->typeCount);
+        handleError(NULL,ERROR_TYPE,op.filePos);
+      }
+      TypeId targetType=peekTypeStack(state)->type;
+      if(isArrayType(targetType)||isPointerType(targetType)){
+        if(!arrayTypeData(targetType)->fixedSize){
+          fprintf(stderr,"invalid operand for \"%s\": ",opName(op.opType));
+          printTypeName(targetType,stderr);
+          handleError(NULL,ERROR_SYNTAX,op.filePos);
+        }
+        if(op.opType==OP_GET_LENGTH){
+          if(arrayTypeData(targetType)->dims==0)
+            op=opConstant(TYPE_I64,0,op.filePos);
+          else if(arrayTypeData(targetType)->sizes[0].isInt)
+            op=opConstant(TYPE_I64,arrayTypeData(targetType)->sizes[0].value,op.filePos);
+          else
+            op=opGetArgument(TYPE_I64,arrayTypeData(targetType)->sizes[0].value,LABEL_ID_UNKNOWN,op.filePos);
+          //replace array with length (length only depends on type)
+          state->opStackCount-=peekTypeStack(state)->opCount;
+          insertStackOperation(state,op,0);
+          peekTypeStack(state)->opCount=1;
+          setTypeStackType(state,TYPE_I64);
+          return;
+        }
+        if(op.opType==OP_GET_SIZE){
+          arrayTypes[arrayTypeData(targetType)->id].sizeUsed=true;
+          op=(Operation){.opType=OP_GET,.dataType=targetType,.filePos=op.filePos,
+            .dataAs={.idInfo={.type=ID_ARRAY_SIZE,.id=1,.labelId=-1,.isMutable=false}}};
+          //replace array with length (length only depends on type)
+          state->opStackCount-=peekTypeStack(state)->opCount;
+          insertStackOperation(state,op,0);
+          peekTypeStack(state)->opCount=1;
+          ArraySize dims=(ArraySize){.value=arrayTypeData(targetType)->dims,.isInt=true};
+          setTypeStackType(state,arrayType(true,TYPE_I64,1,&dims,false));
+          return;
+        }
+      }
+      break;
     case OP_PRE_DECLARE:
       checkReachable(state,op);
       switch(op.dataAs.idInfo.type){
