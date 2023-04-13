@@ -4,7 +4,7 @@
 #include "types.concat"
 #include "labels.concat"
 
-struct( types.Type : mut valType i32 : mut opCount bool : writable ) =:: TypeInfo
+struct( types.Type : mut valType i32 : mut opCount bool : mut writable ) =:: TypeInfo
 struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
 struct( StackState : mut inTypes StackState : mut outTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
 struct( i64 : offset i64 : mut count ) =:: CaseInfo
@@ -608,6 +608,9 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
         types.getAddressType op [] .dataType =
       end
       op state pushValue
+      op [] .val OpValue .getId == if
+        idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != state [] .typeStack list.peek .data [] .writable =
+      end
       false return
     PROCEDURE case
       ## TODO call
@@ -706,6 +709,72 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       break
   end
 end
+proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : state => ) =: typeCheckGetArrayElement
+  #using types
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .typeStack .length =:: mut offset
+  0 =:: mut indexCount
+  while offset 0 > do
+    offset 1 - offset =
+    state [] .typeStack offset list.get .valType typeContext isPointer if
+      break
+    end
+    state [] .typeStack offset list.at .data [] .valType typeContext isInt ! if
+      "invalid type for operation " sb.wrap
+        op [] labelContext typeContext sb.appendOp
+        " " sb.appendS
+        state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
+        " is not a pointer" sb.appendS
+      op [] .pos state appendError
+      return
+    end
+    indexCount 1 + indexCount =
+  end
+  state [] .typeStack offset list.at .data [] .valType =:: pointerType
+  pointerType typeContext isCallable if
+    "cannot deference procedure pointer" sb.wrap
+       pointerType labelContext typeContext sb.appendType
+     op [] .pos state appendError return
+  end
+  pointerType typeContext getBaseType =:: baseType
+  indexCount pointerType typeContext getArrayDims > if
+    "too much indices for pointer access " sb.wrap
+      indexCount sb.appendI
+      " dimensions:" sb.appendS
+      pointerType typeContext getArrayDims sb.appendI
+    op [] .pos state appendError
+    return
+  end
+  ## TODO check indices if fixed-size
+  op [] .val OpValue .@ArrayElement == if
+    ## TODO compute correct type for partial array access
+    ## <i32 3 3 ptr> 1 [] @ -> <i32 3 ptr>
+    baseType pointerType typeContext isMutable typeContext getAddressType op [] .dataType =
+  else
+    baseType op [] .dataType =
+  end
+  op [] .val OpValue .setArrayElement == if ## SET_ARRAY_ELEMENT <array> <value>
+    pointerType typeContext isMutable ! if
+      0 sb.create
+        pointerType labelContext typeContext sb.appendType
+        " is not mutable" sb.appendS
+      op [] .pos state appendError
+    end
+    state [] .compiledOps
+      op list.appendP
+    state [] .compiledOps =
+    indexCount 1 + op [] .pos state addCompiledStackOps
+    baseType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
+    1 op [] .pos state addCompiledStackOps
+    return
+  end
+  op indexCount 1 + state insertStackOp
+  op [] .val OpValue .getArrayElement == if
+    pointerType typeContext isMutable state [] .typeStack list.peek .data [] .writable =
+  end
+end
 proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state => ) =: typeCheckGetTupleElement
   #using types
   state [] .idContext =:: idContext
@@ -766,6 +835,9 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
   ## GET_TUPLE_ELEMENT(index) <tuple>
   ## ADDR_OF_TUPLE_ELEMENT(index) <tuple>
   op 1 state insertStackOp
+  op [] .val OpValue .getTupleElement == if
+    mutable state [] .typeStack list.peek .data [] .writable =
+  end
 end
 proc( Operation ptr mut : op id.LabelId  : label TypeCheckState ptr mut : state => ) =: typeCheckGetLabel
   #using types
@@ -842,6 +914,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkLocal
   op [] .pos state appendError
 end
 
+## TODO? constant evalutation
 proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -897,7 +970,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos state appendError
         return
       end .data =:: src
-      ## XXX try constant evaluation
       op state checkLocal
       src [] .valType op [] .dataType =
       op [] .val .unaryOperator switch
@@ -969,7 +1041,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       types.Type 2 array new =:: mut inTypes
       left [] .valType  inTypes @ 0 [] =
       right [] .valType inTypes @ 1 [] =
-      ## XXX try constant evaluation
       op state checkLocal
       op [] .val .binaryOperator switch
         ADD case
@@ -1505,14 +1576,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op op [] .val .@TupleElement state typeCheckGetTupleElement
       return
     getArrayElement case
-      op state checkReachable
-      break ## TODO
+      op op [] .val .getArrayElement @ state typeCheckGetArrayElement
+      return
     setArrayElement case
-      op state checkReachable
-      break ## TODO
+      op op [] .val .setArrayElement @ state typeCheckGetArrayElement
+      return
     @ArrayElement case
-      op state checkReachable
-      break ## TODO
+      op op [] .val .@ArrayElement @ state typeCheckGetArrayElement
+      return
     Print case
       op state checkReachable
       state [] .typeStack .length 0 == if
@@ -1578,7 +1649,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .dataType labelContext typeContext sb.appendType
         op [] .pos state appendError
       end
-      ## XXX constant evaluation
       op state checkReachable
       op state checkLocal
       1 op [] .pos state addCompiledStackOps

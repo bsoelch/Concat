@@ -373,6 +373,21 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
   #drop
   Type .undefined return
 end
+proc( Type : box TypeContext ptr : context => i64 ) =: public getArrayDims
+  box context unwrapNamed
+    #dup context isPointer if
+      context [] .arrayTypes #swap .pointer list.get =:: arrayType
+      arrayType .fixedSize ! if 1 return end
+      arrayType .dims return
+    end
+    #dup context isArray if
+      context [] .arrayTypes #swap .arrayType list.get =:: arrayType
+      arrayType .fixedSize ! if 1 return end
+      arrayType .dims return
+    end
+  #drop
+  0 return
+end
 proc( Type : box TypeContext ptr : context => ArraySize arrayView ) =: public getArraySize
   box context unwrapNamed
     #dup context isPointer if

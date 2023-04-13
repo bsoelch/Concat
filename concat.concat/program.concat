@@ -26,7 +26,7 @@ enum(
                    i32 : mut getTupleElement
                    i32 : mut setTupleElement
                    i32 : mut @TupleElement
-                   i32 : getArrayElement
+                   i32 : mut getArrayElement
                    i32 : mut setArrayElement
                    i32 : mut @ArrayElement
                          Print
