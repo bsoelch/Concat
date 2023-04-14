@@ -32,7 +32,7 @@ struct(
   i32 : mut whileCount
 
   bool : mut reachable
-  bool : mut hasCheckBounds
+  bool : mut hasCheckIndex
   bool : mut hasCheckEnum
   bool : mut hasGetArgs
 ) =:: TypeCheckState
@@ -679,7 +679,7 @@ proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut 
   inTypes outTypes nTypes create switchBlock [] .blockType switchBlock [] .blockStart pos state storeOutTypes return
 end
 
-proc( Operation ptr mut : op id.TemplateId ptr mut : templateId bool : isPtr TypeCheckState ptr mut : state => ) =: typeCheckCall
+proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : templateImpl bool : isPtr TypeCheckState ptr mut : state => ) =: typeCheckCall
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -687,7 +687,12 @@ proc( Operation ptr mut : op id.TemplateId ptr mut : templateId bool : isPtr Typ
 
   op [] .dataType =:: mut calledType
   isPtr if
-    ## TODO get called type
+    state [] .typeStack list.peek #dup optional.isEmpty if #drop
+      "missing argument for operation" sb.wrap
+        op [] labelContext typeContext sb.appendOp
+      op [] .pos state appendError
+      return
+    end .data [] .valType calledType =
   end
   calledType typeContext isCallable ! if
     "cannot call values of type " sb.wrap
@@ -702,9 +707,9 @@ proc( Operation ptr mut : op id.TemplateId ptr mut : templateId bool : isPtr Typ
   calledType typeContext getProcOut #drop =:: mut outType
   inType typeContext compositeEltCount =:: argCount
   outType typeContext compositeEltCount =:: resCount
-  templateId [] id.TEMPLATE_ID_NONE != calledType typeContext hasStaticArgs | if
-    templateId [] id.TEMPLATE_ID_NONE != if
-      idContext [] .templateInfos templateId [] list.at
+  templateId id.TEMPLATE_ID_NONE != calledType typeContext hasStaticArgs | if
+    templateId id.TEMPLATE_ID_NONE != if
+      idContext [] .templateInfos templateId list.at
     else
       id.TemplateInfo ptr mut optional.empty
     end =:: templateInfo
@@ -791,7 +796,44 @@ proc( Operation ptr mut : op id.TemplateId ptr mut : templateId bool : isPtr Typ
     outType templateIndices genericIndices op [] .pos idContext replaceGenericsType outType =
     inType outType typeContext newProcedure #drop calledType =
     calledType op [] .dataType =
-    ## TODO update template implementations
+    templateInfo optional.hasData if templateInfo .data =:: templateData
+      -1 =:: mut mImpl
+      false =:: mut match
+      0 while #dup templateData [] .implementations .length < do
+        templateData [] .implementations #over list.get =:: impl
+        true match =
+        0 while #dup impl .argValues .length < do
+          ## constantEquals
+            impl .argValues #over idContext [] .constContext @ constArrayGet
+            state [] .idContext [] .templateArgBuffer #over:2 list.get
+            labelContext
+          constantEquals ! if
+            false match =
+            break
+          end
+          1 +
+        end #drop
+        match if
+          #dup mImpl =
+          break
+        end
+        1 +
+      end #drop
+      mImpl -1 == if
+        templateData [] .implementations .length i32 cast mImpl =
+        templateData [] .implementations
+            calledType
+            argValues [] .data argBufferOffset + templateCount array.create idContext [] .constContext @ constArray
+            op [] .pos
+          id.TemplateImplementation new list.append
+        templateData [] .implementations =
+      end
+      templateImpl optional.hasData if
+        mImpl templateImpl .data [] =
+      else
+        "could not store template info for call" sb.wrap op [] .pos state appendError
+      end
+    end
     argBufferOffset state [] .idContext [] .templateArgBuffer .length = ## reset argument buffer
   end
   resCount 1 == if
@@ -826,6 +868,7 @@ proc( Operation ptr mut : op id.TemplateId ptr mut : templateId bool : isPtr Typ
       retId
       op [] .pos
     opGet =:: tmp tmp @ state pushValue
+    return
   end
   0 while #dup resCount < do
       retType
@@ -885,7 +928,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       end
       return
     PROCEDURE case
-      op op [] .val .getId .templateId @ false state typeCheckCall
+      op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap false state typeCheckCall
       return
     TEMPLATE_ARG TYPE case
       "operation " sb.wrap
@@ -1033,8 +1076,29 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     return
   end
   pointerType typeContext isFixedSize if
+    pointerType typeContext getArraySize =:: sizes
     indexCount 1 + false op [] .pos state extractCompositeOps ## extract elements
-    ## TODO check if indices are in range
+    state [] .typeStack .length =:: mut typeOffset
+    state [] .opStack .length =:: mut opOffset
+    indexCount 0 > if
+      true state [] .hasCheckIndex =
+    end
+    0 while #dup indexCount < do
+      typeOffset 1 - typeOffset =
+      state [] .typeStack typeOffset #over:2 + list.at .data =:: typeInfo
+      opOffset typeInfo [] .opCount - opOffset =
+      state [] .compiledOps
+        ## opCheckIndex
+          pointerType
+          sizes #over:3 array.get #dup .sizeType ArraySizeType .int != if
+            "unexpected type for array-size, generics should no longer exist at this point of compilation" sb.wrap op [] .pos state appendError
+          end .value
+          op [] .pos
+        opCheckIndex list.append
+        state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
+      state [] .compiledOps =
+      1 +
+    end #drop
   end
   op [] .val OpValue .@ArrayElement == if
     ## TODO compute correct type for partial array access
@@ -1231,6 +1295,7 @@ proc( Operation ptr mut : op id.LabelId  : label TypeCheckState ptr mut : state 
         enumType index op [] .pos opCheckEnum list.append
         state [] .opStack .data state [] .opStack .length opCount - + opCount array.create list.appendArray
       state [] .compiledOps =
+      true state [] .hasCheckEnum =
       ## get value
       op 1 state insertStackOp
       return
@@ -2024,7 +2089,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     callPtr case
       op state checkReachable
-      break ## TODO
+      op state checkLocal
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty true state typeCheckCall
+      break
     argc case
       op state checkReachable
       break ## TODO
@@ -2216,7 +2283,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
     0
     0
     true
-    prog [] .hasCheckBounds
+    prog [] .hasCheckIndex
     prog [] .hasCheckEnum
     prog [] .hasGetArgs
   TypeCheckState new =:: mut state
@@ -2258,7 +2325,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
   ## TODO type check template implementations
   state .errors         prog [] .errors =
   state .autoTypes      prog [] .autoTypes =
-  state .hasCheckBounds prog [] .hasCheckBounds =
+  state .hasCheckIndex  prog [] .hasCheckIndex =
   state .hasCheckEnum   prog [] .hasCheckEnum =
   state .hasGetArgs     prog [] .hasGetArgs =
 end

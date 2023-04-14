@@ -77,6 +77,7 @@ entryPoint:
   0 0 0 aTuple new aProc anEnum .C == if
     #dup .len print
   end
+  #drop
   anEnum .A anEnum .B == if
     aString anEnum .C new =:: mut enum
     enum anEnum .D == print
@@ -84,8 +85,8 @@ entryPoint:
     2 enum .E =
   end
   aString .len print
-  i32 optional print
-  i64 optional print
-  i32 optional print
-  #drop:2
+  i32 optional.empty print
+  i64 optional.empty print
+  i32 optional.empty print
+  42 optional.wrap print
 end

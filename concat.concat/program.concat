@@ -49,7 +49,7 @@ enum(
                    i32 : enumLabelEq
                    i32 : enumLabelNe
                    i32 : checkEnumLabel
-                         checkArrayIndex
+                   i64 : checkArrayIndex
      StackModification : stackMod
             id.LabelId : Unknown
 ) =:: public OpValue
@@ -168,9 +168,9 @@ proc( types.Type i32 FilePosition => Operation ) =: public opCheckEnum
   =:: pos
   OpValue .checkEnumLabel new #swap pos Operation new return
 end
-proc( types.Type FilePosition => Operation ) =: public opCheckIndex
+proc( types.Type i64 FilePosition => Operation ) =: public opCheckIndex
   =:: pos
-  OpValue .checkArrayIndex #swap pos Operation new return
+  OpValue .checkArrayIndex new #swap pos Operation new return
 end
 proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
   =:: pos
@@ -194,7 +194,7 @@ struct(
         Operation list : mut templateOps
     CompilerError list : mut errors
                   bool : mut hasEntryPoint
-                  bool : mut hasCheckBounds
+                  bool : mut hasCheckIndex
                   bool : mut hasCheckEnum
                   bool : mut hasGetArgs
 ) =:: public Program
@@ -499,7 +499,8 @@ end
         checkArrayIndex case
           "check array index ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
-          " )" sb.appendS
+          " ) : " sb.appendS
+          #over .val .checkArrayIndex sb.appendI
           break
         stackMod case
           "stack modification: " sb.appendS

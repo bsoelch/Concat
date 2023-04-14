@@ -16,7 +16,7 @@
   struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i64 : compiledImpls ) =:: public TemplateInfo
 
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
-  struct( IdentifierType : idType LabelId : labelId TemplateId : mut templateId i32 : id ) =:: public IdentifierInfo
+  struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
@@ -390,9 +390,18 @@
 #end
 #namespace sb
   proc( stringBuilder : sb id.IdentifierInfo : id id.LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
-    sb ## XXX print template data
+    sb
       id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != if
         "mutable " sb.appendS
+      end
+      id .templateId id.TEMPLATE_ID_NONE != if
+        "template " sb.appendS
+        id .templateId sb.appendI
+        id .id -1 != if
+          ':' sb.appendC
+          id .id sb.appendI
+        end
+        ' ' sb.appendC
       end
       id .idType switch
         TYPE case
@@ -641,7 +650,7 @@
         end
         context [] .templateInfos typeData .templateId list.at .data =:: templateInfo
         context [] .templateArgBuffer .length =:: offset
-        typeData .implId -1 != if ## first implementation
+        typeData .implId -1 != if ## already implemented
           templateInfo [] .implementations typeData .implId list.get .argValues =:: argValues
           0 while #dup argValues .length < do
             context [] .templateArgBuffer
@@ -684,7 +693,7 @@
         ## compute value
         newType
           typeData .data args genericArgs implPos context replaceGenericsType
-          templateInfo [] .implementations .length i32 cast
+          templateInfo [] .implementations .length 1 - i32 cast
           context [] .typeContext @
         setNamedType #drop
         offset context [] .templateArgBuffer .length = ## reset template buffer
@@ -741,6 +750,7 @@
         src ConstValue .typeId new values expected .templateType [] =
       end
       true visitedValues expected .templateType [] =
+      return
     end
     expected Type .genericType == if
       expected .genericType 0 < expected .genericType genericCount >= | if
@@ -750,6 +760,7 @@
         src ConstValue .typeId new values expected .genericType templateCount + [] =
       end
       true visitedValues expected .genericType templateCount + [] =
+      return
     end
     expected typeContext containsGeneric genericCount 0 > & #swap templateCount 0 > & | ! if
       return ## no generics to replace
@@ -765,6 +776,7 @@
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         1 +
       end #drop
+      return
     end
     src expected != if
       return
