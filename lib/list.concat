@@ -40,16 +40,34 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
       0 #over .length =
     return
   end
+
+  #template type : T #end
+  proc( T list : elts i64 : index => T ) =: public get
+    index 0 < index elts .length >= | if
+      ## TODO error handling
+    end
+    elts .data index [] return
+  end
+  #template type : T #end
+  proc( T list : elts i64 : index => T ptr mut optional ) =: public at
+    index 0 < index elts .length >= | if
+      T ptr mut optional.empty return
+    end
+    elts .data index + T ptr mut cast! optional.wrap return
+  end
+  #template type : T #end
+  proc( T : elt T list : elts i64 : index => ) =: public set
+    index 0 < index elts .length >= | if
+      ## TODO error handling
+    end
+    elt elts .data index [] =
+  end
   #template type : T #end
   proc( T list : elts T : elt => T list ) =: public append
     elts
       #dup .length 1 + ensureCap
       elt #over .data #over:2 .length ++ [] =
     return
-  end
-  #template type : T #end
-  proc( T list  T => T list ) =: public push
-    append return
   end
   #template type : T #end
   proc( T list : a i64 : static k  T k ptr : b => T list ) =: public appendP
@@ -77,32 +95,61 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
   end
 
   #template type : T #end
-  proc( T list : elts i64 : index => T ) =: public get
-    index 0 < index elts .length >= | if
-      ## TODO error handling
-    end
-    elts .data index [] return
-  end
-  #template type : T #end
-  proc( T list : elts i64 : index => T ptr mut optional ) =: public at
-    index 0 < index elts .length >= | if
-      T ptr mut optional.empty return
-    end
-    elts .data index + T ptr mut cast! optional.wrap return
-  end
-  #template type : T #end
-  proc( T : elt T list : elts i64 : index => ) =: public set
-    index 0 < index elts .length >= | if
-      ## TODO error handling
-    end
+  proc( T list : a T : elt i64 : index => T list ) =: public insert
+    a =:: mut elts
+    elts
+      elts .length 1 + ensureCap
+    elts =
+    elts .data index 1 + + elts .data index + elts .length index - mem.move #drop
     elt elts .data index [] =
+    elts .length 1 + elts .length =
+    elts return
   end
+  #template type : T #end
+  proc( T list : a i64 : static k  T k ptr : b i64 : index => T list ) =: public insertP
+    a =:: mut elts
+    elts
+      elts .length k + ensureCap
+    elts =
+    elts .data index k + +  elts .data index +  elts .length index -  mem.move #drop
+    elts .data index +  b T _ ptr cast  k  mem.copy #drop
+    elts .length k + elts .length =
+    elts return
+  end
+  #template type : T #end
+  proc( T list : a T arrayView : b i64 : index => T list ) =: public insertArray
+    a =:: mut elts
+    elts
+      elts .length b .length + ensureCap
+    elts =
+    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move #drop
+    elts .data index +  b .data b .length  mem.copy #drop
+    elts .length b .length + elts .length =
+    elts return
+  end
+  #template type : T #end
+  proc( T list : a T list : b i64 : index => T list ) =: public insertAll
+    a =:: mut elts
+    elts
+      elts .length b .length + ensureCap
+    elts =
+    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move #drop
+    elts .data index +  b .data b .length  mem.copy #drop
+    elts .length b .length + elts .length =
+    elts return
+  end
+
+
   #template type : T #end
   proc( T list : elts => T ptr mut optional ) =: public peek
     elts .length 0 <= if
       T ptr mut optional.empty return
     end
     elts .data elts .length 1 - + T ptr mut cast! optional.wrap return
+  end
+  #template type : T #end
+  proc( T list  T => T list ) =: public push
+    append return
   end
   #template type : T #end
   proc( T list : elts => T list T ) =: public pop
@@ -113,7 +160,6 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
       #dup .length 1 - #over .length =
     #dup .data #over .length [] return
   end
-  ## XXX insert
 
 
   #template type : T #end
