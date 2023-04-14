@@ -24,10 +24,11 @@ proc( i32 aTuple => string anEnum ) =: aProc
   i64 3 array new =:: anArray
   2 anArray @ 0 [] =
   .1 0 == if
-    "Hello" #swap string new #swap .1  anEnum .C new return
-  else #dup 2 == _if
+    "Hello" #swap string new #dup anEnum .C new return
+  else 2 == _if
     "World!" 5 string new anEnum .B return
   end
+  "\n" 1 string new anEnum .A return
 end
 
 #template type : T1 type : T2 #end
@@ -74,7 +75,7 @@ entryPoint:
   "Test" 4 string new =:: aString
   "Hello World" "Hello" ..length 1 + [] print
   0 0 0 aTuple new aProc anEnum .C == if
-    .len print
+    #dup .len print
   end
   anEnum .A anEnum .B == if
     aString anEnum .C new =:: mut enum
@@ -86,4 +87,5 @@ entryPoint:
   i32 optional print
   i64 optional print
   i32 optional print
+  #drop:2
 end

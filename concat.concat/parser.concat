@@ -235,7 +235,7 @@ proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state =
     .IDENTIFER
   return
 end
-proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string id.LabelId ) =: readLabel
+proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state id.LabelFlag : initFlags => string id.LabelId ) =: readLabelAddFlags
   0 id.LabelFlag =: mut flags
   false =:: mut isModifer
   code start
@@ -269,7 +269,10 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
         .IDENTIFER
       end
     end
-  flags fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel return
+  flags initFlags | fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel return
+end
+proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string id.LabelId ) =: readLabel
+  code start fileState state 0 readLabelAddFlags
 end
 enum( NONE STRUCT ENUM PROC_IN ) =:: LabelType
 proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string id.LabelId types.Type arrayView bool ) =: readCompositeType
@@ -582,27 +585,27 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       1 string.tail
       ':' string.split
         "dup" string.wrap #over string.eq if #drop ':' string.split #swap #drop ## ignore 2nd parameter
-          1 #swap
+          0 #swap
           fileState [] .wordStart state getStackModParam ## :count
           StackModType .DUP fileState [] .wordStart opStackMod state appendOp
           return
         else "over" string.wrap #over string.eq _if #drop ':' string.split
           fileState [] .wordStart state getStackModParam #swap ':' string.split #swap #drop
-          fileState [] .wordStart state getStackModParam #swap ## :offset:count
+          fileState [] .wordStart state getStackModParam ## :offset:count
           StackModType .OVER fileState [] .wordStart opStackMod state appendOp
           return
-        else "swap" string.wrap #over string.eq _if #drop ':' string.split #swap #drop
-          fileState [] .wordStart state getStackModParam ## :index
-          1 #swap
+        else "swap" string.wrap #over string.eq _if #drop ':' string.split
+          fileState [] .wordStart state getStackModParam #swap ':' string.split #swap #drop
+          fileState [] .wordStart state getStackModParam ## :offset:count
           StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
           return
         else "rot" string.wrap #over string.eq "rotate" string.wrap #over:2 string.eq | _if #drop ':' string.split
           fileState [] .wordStart state getStackModParam #swap ':' string.split #swap #drop
-          fileState [] .wordStart state getStackModParam ## :count:amount
+          fileState [] .wordStart state getStackModParam #swap ## :count:amount
           StackModType .ROT fileState [] .wordStart opStackMod state appendOp
           return
         else "drop" string.wrap #over string.eq _if #drop ':' string.split #swap #drop
-          1 #swap
+          0 #swap
           fileState [] .wordStart state getStackModParam ## :count
           StackModType .DROP fileState [] .wordStart opStackMod state appendOp
           return
@@ -715,27 +718,35 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
       "=:" string.wrap string.eq =:: isInit
-      fileState state nextWord fileState state readLabel
-        fileState state popTypeConstant #drop =:: valType
+      fileState state popTypeConstant #drop =:: valType
+      false =:: mut forceConst
+      valType state [] .idContext .typeContext @ types.isProcedure if
+        id.IdentifierType .PROCEDURE
+        true forceConst =
+      else valType types.primitive.TYPE types.typeEquals _if
+        id.IdentifierType .TYPE
+        true forceConst =
+      else state [] .idContext @ id.isGlobal _if
+        id.IdentifierType .GLOBAL_VAR
+      else
+        id.IdentifierType .LOCAL_VAR
+      end =:: idType
+      isInit forceConst | if
+        fileState state nextWord fileState state readLabel
+      else ## make pre-declared variables mutable by default
+        fileState state nextWord fileState state id.FLAG_MUTABLE readLabelAddFlags
+      end
         valType
-          #dup state [] .idContext .typeContext @ types.isProcedure if
-            id.IdentifierType .PROCEDURE
-          else #dup types.primitive.TYPE types.typeEquals _if
-            id.IdentifierType .TYPE
-          else state [] .idContext @ id.isGlobal _if
-            id.IdentifierType .GLOBAL_VAR
-          else
-            id.IdentifierType .LOCAL_VAR
-          end
+        idType
         -1 ## id
-        #over id.IdentifierType .TYPE == if
+        idType id.IdentifierType .TYPE == if
           isInit if
             fileState state popTypeConstant #drop ## ignore error code and use default value
           else
             types.Type .undefined
           end
           #over:4 state [] .idContext .currentTemplate state [] .idContext .typeContext @ types.newNamedType fileState [] .wordStart constType .val
-        else #over id.IdentifierType .PROCEDURE != isInit state hasConst & & _if
+        else idType id.IdentifierType .PROCEDURE != isInit state hasConst & & _if
           state popConst
             ## TODO check if type correct
             #dup opConst state appendOp

@@ -77,6 +77,12 @@ proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut :
   return
 end
 #end
+proc( TypeCheckState ptr mut : state => ) =: printTypesDebug
+  0 sb.create
+    "---------------\n" sb.appendS
+    true -1 state sb.appendTypeStack
+  io.stdOut #swap io.fputSb #drop
+end
 
 proc( stringBuilder FilePosition TypeCheckState ptr mut => ) =: appendError
   =:: state
@@ -110,6 +116,19 @@ proc( StackState ptr : src => ) =: freeStackState
   src [] .typeStack list.free #drop
 end
 
+## returns the number of elements in the opStack corresponding to the elements starting at index from in the typeStack
+##  ( with 0 being the index of the top stack element )
+proc( i64 : from i64 : len TypeCheckState ptr mut : state => i64 ) =: countStackOps
+  0 =:: mut count
+  state [] .typeStack .length from - =:: offset
+  1 while #dup len <= do
+    state [] .typeStack offset #over:2 - list.at #dup optional.hasData if .data
+      count #swap  [] .opCount + count =
+    else #drop end
+    1 +
+  end #drop
+  count return
+end
 proc( types.Type : valType TypeCheckState ptr mut : state => ) =: pushType
   state [] .typeStack
     ## TypeInfo
@@ -966,7 +985,13 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length =:: mut offset
   0 =:: mut indexCount
-  while offset 0 >= do
+  state [] .typeStack .length 0 == if
+    "missing argument for operation " sb.wrap
+      op [] labelContext typeContext sb.appendOp
+    op [] .pos state appendError
+    return
+  end
+  while offset 0 > do
     offset 1 - offset =
     state [] .typeStack offset list.get .valType typeContext isPointer if
       break
@@ -981,6 +1006,15 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
       return
     end
     indexCount 1 + indexCount =
+  end
+  state [] .typeStack offset list.get .valType typeContext isPointer ! if
+    "invalid type for operation " sb.wrap
+      op [] labelContext typeContext sb.appendOp
+      " " sb.appendS
+      state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
+      " is not a pointer" sb.appendS
+    op [] .pos state appendError
+    return
   end
   indexCount sizeCount [] =
   state [] .typeStack offset list.at .data [] .valType =:: pointerType
@@ -2006,6 +2040,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     enumLabelEq enumLabelNe case
       op state checkReachable
       op [] .dataType @ array.wrap "check enum label" string.wrap op [] .pos state requireTypes
+      types.primitive.BOOL op [] .dataType = ## enum type is determined by variable
       op 1 state insertStackOp
       return
     Cast Cast! case
@@ -2026,7 +2061,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       op state checkReachable
       op state checkLocal
-      1 op [] .pos state addCompiledStackOps
+      op 1 state insertStackOp
       return
     entryPoint case
       op state checkReachable
@@ -2050,7 +2085,105 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     stackMod case
       op state checkReachable
-      break ## TODO
+      op [] .val .stackMod .count =:: count
+      op [] .val .stackMod .offset =:: offset
+      count 0 < offset 0 < | if
+        "stack modification parameters have to be non-negative got:" sb.wrap
+          offset sb.appendI
+          " and " sb.appendS
+          count sb.appendI
+        op [] .pos state appendError
+        return
+      end
+      op [] .val .stackMod .modType switch
+        DROP case
+          offset count + state [] .typeStack .length > if
+            "type-stack underflow" sb.wrap op [] .pos state appendError
+            0 state [] .typeStack .length =
+            0 state [] .opStack .length =
+            return
+          end
+          0 offset state countStackOps =:: opOffset
+          offset count state countStackOps =:: removed
+          offset 0 > if
+            ## mem.move
+              state [] .typeStack .data state [] .typeStack .length + offset - count -
+              state [] .typeStack .data state [] .typeStack .length + offset -
+              offset
+            mem.move #drop
+            ## mem.move
+              state [] .opStack .data state [] .opStack .length + opOffset - removed -
+              state [] .opStack .data state [] .opStack .length + opOffset -
+              opOffset
+            mem.move #drop
+          end
+          state [] .typeStack .length count - state [] .typeStack .length =
+          state [] .opStack .length removed - state [] .opStack .length =
+          return
+        DUP OVER case
+          offset count + state [] .typeStack .length > if
+            "type-stack underflow" sb.wrap op [] .pos state appendError
+            return
+          end
+          0 offset state countStackOps =:: opOffset
+          offset count state countStackOps =:: copied
+          count 0 > if
+            state [] .typeStack #dup .length count + list.ensureCap state [] .typeStack =
+            state [] .opStack #dup .length copied + list.ensureCap state [] .opStack =
+            ## mem.move
+              state [] .typeStack .data state [] .typeStack .length +
+              state [] .typeStack .data state [] .typeStack .length + offset - count -
+              count
+            mem.move #drop
+            ## mem.move
+              state [] .opStack .data state [] .opStack .length +
+              state [] .opStack .data state [] .opStack .length + opOffset - copied -
+              copied
+            mem.move #drop
+            state [] .typeStack .length count + state [] .typeStack .length =
+            state [] .opStack .length copied + state [] .opStack .length =
+          end
+          return
+        SWAP case
+          offset count + state [] .typeStack .length > if
+            "type-stack underflow" sb.wrap op [] .pos state appendError
+            return
+          end
+          offset count < if
+            "swap: offset has to be greater or equal to count" sb.wrap op [] .pos state appendError
+            return
+          end
+          0 offset state countStackOps =:: opOffset
+          offset count state countStackOps =:: copied
+          count 0 > if
+            state [] .typeStack #dup .length count + list.ensureCap state [] .typeStack =
+            state [] .opStack #dup .length copied + list.ensureCap state [] .opStack =
+            ## mem.move
+              state [] .typeStack .data state [] .typeStack .length +
+              state [] .typeStack .data state [] .typeStack .length + offset - count -
+              count
+            mem.move #drop
+            ## mem.move
+              state [] .opStack .data state [] .opStack .length +
+              state [] .opStack .data state [] .opStack .length + opOffset - copied -
+              copied
+            mem.move #drop
+            ## mem.move
+              state [] .typeStack .data state [] .typeStack .length + offset - count -
+              state [] .typeStack .data state [] .typeStack .length + offset -
+              offset count +
+            mem.move #drop
+            ## mem.move
+              state [] .opStack .data state [] .opStack .length + opOffset - copied -
+              state [] .opStack .data state [] .opStack .length + opOffset -
+              opOffset copied +
+            mem.move #drop
+          end
+          return
+        ROT case
+          break
+      end
+      break
     checkEnumLabel checkArrayIndex getEnumElement setEnumElement @EnumElement case
       break ## TODO error message?
     Unknown case
