@@ -772,7 +772,7 @@ proc( Operation ptr mut : op id.TemplateId ptr mut : templateId bool : isPtr Typ
     outType templateIndices genericIndices op [] .pos idContext replaceGenericsType outType =
     inType outType typeContext newProcedure #drop calledType =
     calledType op [] .dataType =
-    ## TODO update template implemementations
+    ## TODO update template implementations
     argBufferOffset state [] .idContext [] .templateArgBuffer .length = ## reset argument buffer
   end
   resCount 1 == if

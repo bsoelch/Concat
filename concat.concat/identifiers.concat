@@ -701,20 +701,18 @@
           #dup 0 >= #over genericArgs .length < & if
             genericArgs #swap context argBufferGet #dup ConstValue .typeId == if
               .typeId return
-            end
+            end #drop
             ## TODO error message if argument is not typeId
-          end
-        #drop
+        else #drop end
         src return
       templateType case
         src .templateType
           #dup 0 >= #over templateArgs .length < & if
             templateArgs #swap context argBufferGet #dup ConstValue .typeId == if
               .typeId return
-            end
+            end #drop
             ## error message if argument is not typeId
-          end
-        #drop
+        else #drop end
         src return
     end
   end
