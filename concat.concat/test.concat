@@ -23,9 +23,9 @@ end
 proc( i32 aTuple => string anEnum ) =: aProc
   i64 3 array new =:: anArray
   2 anArray @ 0 [] =
-  0 == if
-    "Hello" #swap .0 string new #swap .1  anEnum .C new return
-  else #dup .0 2 == _if
+  .1 0 == if
+    "Hello" #swap string new #swap .1  anEnum .C new return
+  else #dup 2 == _if
     "World!" 5 string new anEnum .B return
   end
 end

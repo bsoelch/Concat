@@ -16,7 +16,7 @@
   struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i64 : compiledImpls ) =:: public TemplateInfo
 
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
-  struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : id ) =:: public IdentifierInfo
+  struct( IdentifierType : idType LabelId : labelId TemplateId : mut templateId i32 : id ) =:: public IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
@@ -699,14 +699,20 @@
       genericType case
         src .genericType
           #dup 0 >= #over genericArgs .length < & if
-            genericArgs #swap context argBufferGet .typeId return
+            genericArgs #swap context argBufferGet #dup ConstValue .typeId == if
+              .typeId return
+            end
+            ## TODO error message if argument is not typeId
           end
         #drop
         src return
       templateType case
         src .templateType
           #dup 0 >= #over templateArgs .length < & if
-            templateArgs #swap context argBufferGet .typeId return
+            templateArgs #swap context argBufferGet #dup ConstValue .typeId == if
+              .typeId return
+            end
+            ## error message if argument is not typeId
           end
         #drop
         src return
@@ -731,6 +737,141 @@
         end #drop
         src return
     end
+  end
+
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes id.IdentifierContext ptr mut : context => ) =: resolveGenericsTypeInternal
+    #using types
+    context [] .typeContext @ =:: typeContext
+    expected Type .templateType == if
+      expected .templateType 0 < expected .templateType templateCount >= | if
+        return
+      end
+      visitedValues expected .templateType [] if
+        src ConstValue .typeId new values expected .templateType [] =
+      end
+      true visitedValues expected .templateType [] =
+    end
+    expected Type .genericType == if
+      expected .genericType 0 < expected .genericType genericCount >= | if
+        return
+      end
+      visitedValues expected .genericType templateCount + [] ! if
+        src ConstValue .typeId new values expected .genericType templateCount + [] =
+      end
+      true visitedValues expected .genericType templateCount + [] =
+    end
+    expected typeContext containsGeneric genericCount 0 > & #swap templateCount 0 > & | ! if
+      return ## no generics to replace
+    end
+    src typeContext isComposite expected typeContext isComposite & if
+      src typeContext compositeEltCount =:: srcCount
+      expected typeContext compositeEltCount =:: expectedCount
+      srcCount expectedCount < if srcCount else expectedCount end =:: count
+      0 while #dup count < do
+        ## resolveGenericsType
+          src #over typeContext compositeGetElement
+          expected #over:2 typeContext compositeGetElement
+        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
+        1 +
+      end #drop
+    end
+    src expected != if
+      return
+    end
+    expected switch
+      undefined primitiveType autoType case
+        break
+      procedure case
+        ## resolveGenericsType
+          src typeContext getProcIn #drop
+          expected typeContext getProcIn #drop
+        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
+        ## resolveGenericsType
+          src typeContext getProcOut #drop
+          expected typeContext getProcOut #drop
+        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
+        break
+      pointer arrayType case
+        ## resolveGenericsType
+          src typeContext getBaseType
+          expected typeContext getBaseType
+        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
+        src typeContext isFixedSize  expected typeContext isFixedSize & if
+          src typeContext getArraySize =:: srcSizes
+          expected typeContext getArraySize =:: sizes
+          0 while #dup sizes .length < do
+            #dup srcSizes .length < if
+              srcSizes #over array.get
+              #dup .sizeType switch
+                int case
+                  .value ConstValue .int new
+                  break
+                templateArg case
+                  .value ConstValue .templateArg new
+                  break
+                staticArg case
+                  .value ConstValue .genericArg new
+                  break
+              end
+            else
+              1 ConstValue .int new
+            end =:: srcVal
+            sizes #over array.get =:: val
+            val .sizeType switch
+             int case
+               1 + continue
+             templateArg case
+              val .value 0 < val .value templateCount >= | if
+                break
+              end
+              visitedValues val .value [] if
+                srcVal values val .value [] =
+              end
+              true visitedValues val .value [] =
+              break
+             staticArg case
+              val .value 0 < val .value templateCount >= | if
+                break
+              end
+              visitedValues val .value templateCount + [] if
+                srcVal values val .value templateCount + [] =
+              end
+              true visitedValues val .value templateCount + [] =
+              break
+            end
+            1 +
+          end #drop
+        end
+        break
+      namedType namedLabel case
+        expected Type .namedType == if expected .namedType else expected .namedLabel end =:: id
+        visitedTypes [] list.asArray id array.contains if
+          return
+        end
+        visitedTypes []
+          id list.append
+        visitedTypes [] =
+        ## resolveGenericsType
+          src typeContext unwrapNamed
+          expected typeContext unwrapNamed
+        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
+        break
+      tuple struct labeledProcIn procIn procOut enum enumLabel genericType templateType case
+        io.stdErr "unreachable\n" io.fputs #drop ## TODO mark as unreachable
+        break
+    end
+  end
+  ## XXX resolve generics method for general constants
+
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset id.IdentifierContext ptr mut : context => ) =: public resolveGenericsType
+    templateCount genericCount + bool mem.alloc =:: visitedValues
+    64 i32 list.create =:: mut visitedTypes
+    values []
+      templateCount genericCount + valOffset + list.ensureCap
+    values [] =
+    src expected templateCount genericCount visitedValues  values [] .data valOffset +  visitedTypes @ context resolveGenericsTypeInternal
+    visitedValues mem.free
+    visitedTypes list.free visitedTypes =
   end
 #end
 

@@ -15,7 +15,7 @@ enum(
             ConstValue : Constant
   codeBlocks.BlockInfo : mut block
   codeBlocks.BlockInfo : mut blockEnd
-     id.IdentifierInfo : getId
+     id.IdentifierInfo : mut getId
      id.IdentifierInfo : mut setId
      id.IdentifierInfo : mut @Id
      id.IdentifierInfo : declareId

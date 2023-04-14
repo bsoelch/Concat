@@ -803,6 +803,9 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
     end
   false return
 end
+proc( Type : proc TypeContext ptr mut : context => bool ) =: public hasStaticArgs
+ true return ## TODO implement hasStaticArgs
+end
 
 ## named types
 struct( Type : mut data id.LabelId : name id.TemplateId : templateId i32 : mut implId ) =:: NamedType
