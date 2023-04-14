@@ -235,10 +235,6 @@ end
 #end
 #namespace types
 
-proc( Type => ) =: public declaredType
-  #drop ## XXX store one instance of each type ( in declaration order )
-end
-
 ## primitive types
 #namespace primitive
   PrimitiveType .BOOL      Type .primitiveType new Type =: public BOOL
@@ -247,6 +243,9 @@ end
   PrimitiveType .I64       Type .primitiveType new Type =: public I64
   PrimitiveType .FLOAT     Type .primitiveType new Type =: public FLOAT
   PrimitiveType .TYPE      Type .primitiveType new Type =: public TYPE
+  ## compiler internal type-aliases for special purpose types
+  PrimitiveType .I64       Type .primitiveType new Type =: public I_SIZE ## size-off memory-sections
+  PrimitiveType .I64       Type .primitiveType new Type =: public I_PTR  ## integer that can hold a pointer
 #end
 proc( Type => bool ) =: public isPrimitive
   Type .primitiveType == return
@@ -438,7 +437,6 @@ proc( Type ptr mut : t bool : mutable TypeContext ptr mut : context => bool ) =:
   ## XXX ? allow marking named pointer types as mutable
   true return
 end
-## XXX procedure for checking if array-size is compatible ( same number of elements / fixed-size -> var-size )
 proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqual
   a .length b .length != if
     false return
@@ -495,7 +493,6 @@ proc( Type : base bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool
     base sizeOffset sizes .length fixedSize isPtr mutable ArrayType new list.append
   arrays [] =
   arrays [] .length 1 - isPtr if ArrayId cast Type .pointer new else ArrayId cast Type .arrayType new end
-    #dup declaredType
   false return
 end
 
@@ -638,7 +635,7 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   end #drop
   -1 return
 end
-proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => CompositeId bool #+declared type+# ) =: public newCompositeType
+proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
   classFlag CompositeFlag =: mut flags
   true =:: mut isVoid
   0 while #dup elts .length < do
@@ -672,7 +669,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset T
       end
     .flags flags | composites [] #over:2 list.at .data [] .flags = ## update flags
     ## found match
-    CompositeId cast false return
+    CompositeId cast return
   end #drop
   context [] .compositeData
     #dup .length =:: eltsOffset
@@ -681,37 +678,29 @@ proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset T
   composites []
     eltsOffset elts .length labelOffset flags CompositeType new list.append
   composites [] =
-  composites [] .length 1 - CompositeId cast true return
+  composites [] .length 1 - CompositeId cast
+  return
 end
 ## creates struct or tuple
 proc( Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
     Type .undefined true return
   end
-  COMP_FLAG_TUPLE elts labelOffset context newCompositeType =:: newType
+  COMP_FLAG_TUPLE elts labelOffset context newCompositeType
   labelOffset id.LABEL_ID_NONE == if Type .tuple new else Type .struct new end
-    newType if
-      #dup declaredType
-    end
   false return
 end
 proc( Type arrayView : elts id.LabelId : labelOffset bool : isOut TypeContext ptr mut : context => Type bool ) =: public newProcArgs
-  isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labelOffset context newCompositeType =:: newType
+  isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labelOffset context newCompositeType
   isOut if Type .procOut new else labelOffset id.LABEL_ID_NONE == _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
-    newType if
-      #dup declaredType
-    end
   false return
 end
 proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext ptr mut : context => Type bool ) =: public newEnum
   elts .length 0 ==  labelOffset id.LABEL_ID_NONE == | if
     Type .undefined true return
   end
-  COMP_FLAG_TUPLE elts labelOffset context newCompositeType =:: newType
+  COMP_FLAG_TUPLE elts labelOffset context newCompositeType
   isLabel if Type .enumLabel new else Type .enum new end
-    newType if
-      #dup declaredType
-    end
   false return
 end
 #end
@@ -760,14 +749,14 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcOut
     end
   context [] .procTypes #swap .procedure list.get .out false return
 end
-proc( Type : in Type : out #+ XXX static arguments +# TypeContext ptr mut : context => Type bool ) =: public newProcedure
+proc( Type : in Type : out TypeContext ptr mut : context => Type bool ) =: public newProcedure
   in Type .undefined == out Type .undefined == | if
     Type .undefined true return
   end
   context [] .procTypes addrOf =:: procs
   0 while #dup procs [] .length < do
     procs [] #over list.get .in in typeEquals
-    procs [] #over:2 list.get .out out typeEquals & if ## XXX compare static arguments
+    procs [] #over:2 list.get .out out typeEquals & if
       ProcId cast Type .procedure new false return
     end
     1 +
@@ -776,7 +765,6 @@ proc( Type : in Type : out #+ XXX static arguments +# TypeContext ptr mut : cont
     in out ProcType new list.append
   procs [] =
   procs [] .length 1 - ProcId cast Type .procedure new
-    #dup declaredType
   false return
 end
 proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlabeledProc
@@ -926,7 +914,7 @@ proc( types.Type : src bool : mutable types.TypeContext ptr mut : context => typ
     unwraped context getBaseType true unwraped context getArraySize true mutable context newArrayType #drop return
   end
   src context isProcedure if
-    src context asUnlabeledProc #drop ## XXX? check error codes
+    src context asUnlabeledProc #drop
   else
     src
   end

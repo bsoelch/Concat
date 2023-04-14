@@ -1441,7 +1441,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ## pointer+integer -> pointer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
             left [] .valType op [] .dataType =
-            types.primitive.I64 inTypes @ 1 [] = ## XXX? ptrDiff
+            types.primitive.I_PTR inTypes @ 1 [] =
           end
           break
         SUBTRACT case
@@ -1452,12 +1452,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ## pointer-integer -> pointer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
             left [] .valType op [] .dataType =
-            types.primitive.I64 inTypes @ 1 [] = ## XXX? ptrDiff
+            types.primitive.I_PTR inTypes @ 1 [] =
           end
           ## pointer-pointer -> integer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
           left [] .valType right [] .valType types.typeEquals & if
-            types.primitive.I64 op [] .dataType = ## XXX ? pointer-diff integer type
+            types.primitive.I_PTR op [] .dataType =
           end
           break
         MULTIPLY DIVIDE MOD case

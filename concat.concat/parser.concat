@@ -1012,7 +1012,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup types.Type .undefined types.typeEquals if
           "return outside procedure" sb.wrap fileState [] .wordStart state appendError
         end
-      #+XXX only store out-type+# fileState [] .wordStart opReturn state appendOp
+      fileState [] .wordStart opReturn state appendOp
       return
     else #dup "end" string.wrap string.eq _if #drop
       while
@@ -1121,7 +1121,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       state appendOp
       return
-    else #dup "neg" string.wrap string.eq #over "negate" string.wrap string.eq | _if #drop ## XXX? constant folding
+    else #dup "neg" string.wrap string.eq #over "negate" string.wrap string.eq | _if #drop
       UnaryOperator .NEGATE fileState [] .wordStart opUnaryOp state appendOp
       return
     else #dup "!" string.wrap string.eq _if #drop
@@ -1239,7 +1239,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     end
   #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
-    ## TODO get procedure -> call
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
     #drop:2
     return

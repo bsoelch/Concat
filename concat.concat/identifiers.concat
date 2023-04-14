@@ -524,10 +524,10 @@
   proc( ConstantArray : data id.IdentifierContext ptr mut : context => ConstValue arrayView ) =: argBufferAsArray
     context [] .templateArgBuffer .data data .offset + data .length array.create return
   end
-  proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => CompositeId bool #+is new type+# ) =: replaceGenericsComposite
+  proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => CompositeId ) =: replaceGenericsComposite
     context [] .typeContext .compositeTypes src list.get
       #dup .flags COMP_FLAG_VOID_ONLY & 0 != #over .flags COMP_GENERIC_MASK & 0 == | if #drop
-        src false return ## no generic elements
+        src return ## no generic elements
       end
       #dup .eltCount Type list.create
         0 while #dup #over:3 .eltCount < do
@@ -539,10 +539,10 @@
         #over list.asArray
         #over:3 .labelOffset
         context [] .typeContext @
-        newCompositeType =:: isNewType
+        newCompositeType
       #swap list.free #drop
     #swap #drop
-    isNewType return
+    return
   end
   proc( ConstValue => ArraySize bool ) =: constToSize
     #dup ConstValue .int == if
@@ -613,26 +613,19 @@
           context [] .typeContext @
         newArrayType #drop return
       tuple case
-        src .tuple templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .tuple new
-        isNewType if #dup declaredType end return
+        src .tuple templateArgs genericArgs implPos context replaceGenericsComposite Type .tuple new return
       struct case
-        src .struct templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .struct new
-        isNewType if #dup declaredType end return
+        src .struct templateArgs genericArgs implPos context replaceGenericsComposite Type .struct new return
       labeledProcIn case
-        src .labeledProcIn templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .labeledProcIn new
-        isNewType if #dup declaredType end return
+        src .labeledProcIn templateArgs genericArgs implPos context replaceGenericsComposite Type .labeledProcIn new return
       procIn case
-        src .procIn templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .procIn new
-        isNewType if #dup declaredType end return
+        src .procIn templateArgs genericArgs implPos context replaceGenericsComposite Type .procIn new return
       procOut case
-        src .procOut templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .procOut new
-        isNewType if #dup declaredType end return
+        src .procOut templateArgs genericArgs implPos context replaceGenericsComposite Type .procOut new return
       enum case
-        src .enum templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .enum new
-        isNewType if #dup declaredType end return
+        src .enum templateArgs genericArgs implPos context replaceGenericsComposite Type .enum new return
       enumLabel case
-        src .enumLabel templateArgs genericArgs implPos context replaceGenericsComposite =:: isNewType Type .enumLabel new
-        isNewType if #dup declaredType end return
+        src .enumLabel templateArgs genericArgs implPos context replaceGenericsComposite Type .enumLabel new return
       procedure case
         context [] .typeContext .procTypes src .procedure list.get
           #dup .in templateArgs genericArgs implPos context replaceGenericsType

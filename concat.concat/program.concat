@@ -142,16 +142,16 @@ proc( FilePosition : pos => Operation ) =: public opCallPtr
   OpValue .callPtr types.Type .undefined pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opArgc
-  OpValue .argc types.primitive.I64 pos Operation new return
+  OpValue .argc types.primitive.I_SIZE pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opGetArg
   OpValue .getArg types.Type .undefined pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opGetArgLen
-  OpValue .getArgLen types.primitive.I64 pos Operation new return
+  OpValue .getArgLen types.primitive.I_SIZE pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opLength
-  OpValue .length types.primitive.I64 pos Operation new return
+  OpValue .length types.primitive.I_SIZE pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opSize
   OpValue .size types.Type .undefined pos Operation new return
