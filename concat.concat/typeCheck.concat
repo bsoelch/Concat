@@ -658,6 +658,8 @@ proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut 
   inTypes outTypes nTypes create switchBlock [] .blockType switchBlock [] .blockStart pos state storeOutTypes return
 end
 
+## TODO type check call
+
 proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut : state => bool #+XXX remove return value once implementation is complete+# ) =: typeCheckGetId
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -758,7 +760,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       ## XXX check if procedure is on global level
       state [] .openBlocks
         ## BlockInfo
-            op [] .dataType typeContext types.getProcOut #drop
+            op [] .dataType
           BlockData .procBlock new
           op [] .pos
           state [] .compiledOps .length
@@ -1046,6 +1048,36 @@ proc( Operation ptr mut : op id.LabelId  : label TypeCheckState ptr mut : state 
     " does not have a label " sb.appendS
     labelName sb.appendStr
   op [] .pos state appendError
+end
+proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckReturn
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  op [] .dataType typeContext types.isProcedure ! if
+    "unexpected type for return: " sb.wrap
+      op [] .dataType labelContext typeContext sb.appendType
+      " expected procedure" sb.appendS
+    op [] .pos state appendError
+    return
+  end
+  op [] .dataType typeContext types.getProcOut if #drop
+    "could not resolve procedure return value" sb.wrap op [] .pos state appendError
+    return
+  end =:: procOut
+  procOut typeContext types.compositeEltCount =:: valCount
+  valCount state [] .typeStack .length < if ## typeCount < valCount will be handled by requireTypes
+    "wrong number of return values at the end of procedure expected: " sb.wrap
+      valCount                    sb.appendI
+      " got "                     sb.appendS
+      state [] .typeStack .length sb.appendI
+    op [] .pos state appendError
+  end
+  procOut typeContext types.compositeElts "return statement" string.wrap op [] .pos state requireTypes
+  state [] .compiledOps
+    op list.appendP
+  state [] .compiledOps =
+  state [] .typeStack .length op [] .pos state addCompiledStackOps
+  false state [] .reachable =
 end
 
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkReachable
@@ -1672,15 +1704,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
         PROCEDURE case
-          ## XXX add implicit return at end of procedure with return value
-          ## XXX check for empty stack at end of void procedure
+          closed [] .blockData .procBlock
+          op [] .pos
+          opReturn =:: tmp
+          tmp @ state typeCheckReturn
           true state [] .reachable =
-          state [] .opStack
-            list.clear
-          state [] .opStack =
-          state [] .typeStack
-            list.clear
-          state [] .typeStack =
           break
         BREAK CONTINUE UNKNOWN case
           "closing blocks of type " sb.wrap
@@ -1766,7 +1794,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     Return case
       op state checkReachable
-      break ## TODO
+      op state typeCheckReturn
+      return
     New case
       op state checkReachable
       op [] .dataType typeContext types.isArray if
@@ -1841,7 +1870,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       state [] .openBlocks
         ## BlockInfo
+            types.Type array.empty id.LABEL_ID_NONE false typeContext types.newProcArgs #drop
             types.Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs #drop
+            typeContext
+            types.newProcedure #drop
           BlockData .procBlock new
           op [] .pos
           state [] .compiledOps .length
