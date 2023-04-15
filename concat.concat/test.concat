@@ -21,7 +21,7 @@ proc( i64 : a i64 : b => i64 i64 ) =: proc1
 end
 
 proc( i32 aTuple => string anEnum ) =: aProc
-  i64 3 array new =:: anArray
+  i64 3 array new =:: mut anArray
   2 anArray @ 0 [] =
   .1 0 == if
     "Hello" #swap string new #dup anEnum .C new return
@@ -38,7 +38,7 @@ proc( T1 ptr : src T2 ptr mut : target i64 : k => ) =: castArray
   end #drop
 end
 
-#namespace mem
+#namespace m
 proc( type : static T i64 : k => T _ ptr ) : extern alloc
 #end
 
@@ -65,11 +65,12 @@ entryPoint:
   0 =:: mut y
   selfPtr : test
   0 test @ selfPtr new test =
-  i32 2 mem.alloc =:: p
+  i32 2 m.alloc =:: p
   1 y =
   x print
   0 while #dup "Hello" ..length < do
     "Hello" #over [] print
+    false if break end
     1 +
   end #drop
   "Test" 4 string new =:: aString
@@ -92,12 +93,20 @@ entryPoint:
     C D E case
       break
   end
+  false if
+    1
+  else false _if
+    2
+  else
+    3
+  end #drop
   aString .len print
   i32 optional.empty print
   i64 optional.empty print
   i32 optional.empty print
   42 optional.wrap print
   declareAfterUse print
+  "hello" asStr print
 end
 proc( => i32 ) =: declareAfterUse
   -17 return

@@ -13,7 +13,7 @@
 
   struct( types.Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
-  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i64 : mut compiledImpls ) =:: public TemplateInfo
+  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: public TemplateInfo
 
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
   struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
@@ -606,9 +606,10 @@
           arrayType .fixedSize if
             context [] .typeContext .arraySizes .data arrayType .sizeOffset + arrayType .dims array.create =:: prevSizes
             0 while #dup prevSizes .length < do
+              prevSizes #over array.get
+                templateArgs genericArgs implPos context replaceGenericsSize
               context [] .arraySizeBuffer
-                  prevSizes #over:2 array.get
-                templateArgs genericArgs implPos context replaceGenericsSize list.append
+                #swap list.append
               context [] .arraySizeBuffer =
               1 +
             end #drop
@@ -653,10 +654,10 @@
         typeData .implId -1 != if ## already implemented
           templateInfo [] .implementations typeData .implId list.get .argValues =:: argValues
           0 while #dup argValues .length < do
-            context [] .templateArgBuffer
-              argValues #over:2 context [] .constContext @ constArrayGet
+              argValues #over context [] .constContext @ constArrayGet
                 templateArgs genericArgs implPos context replaceGenerics
-              list.append
+            context [] .templateArgBuffer
+              #swap list.append
             context [] .templateArgBuffer =
             1 +
           end #drop
@@ -684,6 +685,7 @@
         end #drop
         ## create implementation
         Type .undefined typeData .name typeData .templateId context [] .typeContext @ newNamedType =:: newType
+        templateInfo [] .implementations .length i32 cast =:: newId
         templateInfo [] .implementations
             newType
             args context argBufferAsArray context [] .constContext @ constArray
@@ -692,8 +694,8 @@
         templateInfo [] .implementations =
         ## compute value
         newType
-          typeData .data args genericArgs implPos context replaceGenericsType
-          templateInfo [] .implementations .length 1 - i32 cast
+          typeData .data templateArgs genericArgs implPos context replaceGenericsType
+          newId
           context [] .typeContext @
         setNamedType #drop
         offset context [] .templateArgBuffer .length = ## reset template buffer
@@ -833,7 +835,7 @@
               true visitedValues val .value [] =
               break
              staticArg case
-              val .value 0 < val .value templateCount >= | if
+              val .value 0 < val .value genericCount >= | if
                 break
               end
               visitedValues val .value templateCount + [] if

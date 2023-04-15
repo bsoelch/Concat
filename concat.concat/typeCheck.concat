@@ -75,6 +75,9 @@ proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut :
         end #drop
       #swap 1 -
     end #drop
+    offset 0 > if
+      "out of sync\n" sb.appendS
+    end
   return
 end
 #end
@@ -130,13 +133,20 @@ proc( i64 : from i64 : len TypeCheckState ptr mut : state => i64 ) =: countStack
   end #drop
   count return
 end
+proc( TypeCheckState ptr mut : state => bool ) =: checkSync
+  state [] .opStack .length 0 <  state [] .typeStack .length 0 < |
+  0 state [] .typeStack .length state countStackOps state [] .opStack .length != | return
+end
+proc( types.Type : valType => TypeInfo ) =: newTypeInfo
+  ## TypeInfo
+    valType
+    1
+    false
+  TypeInfo new return
+end
 proc( types.Type : valType TypeCheckState ptr mut : state => ) =: pushType
   state [] .typeStack
-    ## TypeInfo
-      valType
-      1
-      false
-    TypeInfo new list.append
+     valType newTypeInfo list.append
   state [] .typeStack =
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
@@ -192,8 +202,8 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addC
     state [] .opStack .data opOffset + opCount array.create list.appendArray
   state [] .compiledOps =
   ## remove operations from stack
-  state [] .opStack .length opCount - state [] .opStack .length =
-  state [] .typeStack .length count - state [] .typeStack .length =
+  opOffset state [] .opStack .length =
+  typeOffset state [] .typeStack .length =
 end
 proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => id.IdentifierInfo ) =: newTmpVar
   state [] .idContext =:: idContext
@@ -286,6 +296,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
         tmpId
         pos
       opGet state [] .opStack .data newOffset ++ [] =
+      2 typeInfo [] .opCount =
       1 + continue
     end
     false pos state newTmpVar =:: tmpId
@@ -303,6 +314,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       tmpId
       pos
     opGet state [] .opStack .data newOffset ++ [] =
+    1 typeInfo [] .opCount =
     1 +
   end #drop
   newOffset state [] .opStack .length =
@@ -547,11 +559,16 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state => i64 ) 
     1 +
   end return
 end
-proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bool : create codeBlocks.BlockType : blockName i64 : blockStart FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeOutTypes
+proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create codeBlocks.BlockType : blockName i64 : blockStart bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state => ) =: storeOutTypes
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
-  stackTypes =:: mut nTypes
+  state [] .typeStack .length
+    ignoreLast if 1 - end
+  =:: nTypes
+  nTypes 0 <= if ## nothing to create
+    return
+  end
   create if
     nTypes =:: mut newTypes
     outTypes [] .opStack
@@ -588,10 +605,7 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bo
         " got " sb.appendS
         nTypes sb.appendI
       pos state appendError
-      nTypes return
-    end
-    outTypes [] .typeStack .length nTypes < if
-      outTypes [] .typeStack .length nTypes =
+      return
     end
   end
   id.IdentifierInfo : mut tmpId
@@ -643,41 +657,44 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes i64 : stackTypes bo
     1 typeInfo [] .opCount =
     1 +
   end #drop
+  ignoreLast if
+    state [] .typeStack list.peek .data [] .opCount =:: stackHeadOps
+    state [] .opStack .data nTypes + state [] .opStack .data opOffset + stackHeadOps mem.move #drop
+    nTypes stackHeadOps + state [] .opStack .length =
+  else
+    nTypes state [] .opStack .length =
+  end
   create if
     outTypes [] .typeStack
       state [] .typeStack list.appendAll
     outTypes [] .typeStack =
+    ignoreLast if ## don't store last element
+      outTypes [] .typeStack .length 1 - outTypes [] .typeStack .length =
+    end
   end
-  nTypes return
 end
 proc( BlockInfo ptr mut : whileBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeLoopInTypes
-  state [] .typeStack .length =:: nTypes
   whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
-  inTypes inTypes nTypes false whileBlock [] .blockType whileBlock [] .blockStart pos state storeOutTypes state [] .opStack .length =
+  inTypes inTypes false whileBlock [] .blockType whileBlock [] .blockStart false pos state storeOutTypes
 end
-proc( BlockInfo ptr mut : whileBlock bool : isBreak FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeLoopOutTypes
-  state [] .typeStack .length
-  isBreak ! if
-    1 -
-  end =:: nTypes
+proc( BlockInfo ptr mut : whileBlock bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state => ) =: storeLoopOutTypes
   whileBlock [] .blockData .whileBlock .hasOutTypes ! =:: create
   whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
   whileBlock [] .blockData .whileBlock .outTypes @ =:: outTypes
-  inTypes outTypes nTypes create whileBlock [] .blockType  whileBlock [] .blockStart pos state storeOutTypes return
+  inTypes outTypes create whileBlock [] .blockType  whileBlock [] .blockStart ignoreLast pos state storeOutTypes
+  true whileBlock [] .blockData .whileBlock .hasOutTypes =
 end
-proc( BlockInfo ptr mut : ifBlock bool : noElse FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeIfOutTypes
-  state [] .typeStack .length =:: nTypes
-  noElse if false else ifBlock [] .blockData .ifBlock .elsePos -1 == end =:: create
+proc( BlockInfo ptr mut : ifBlock bool : noElse FilePosition : pos TypeCheckState ptr mut : state => ) =: storeIfOutTypes
+  noElse if false else ifBlock [] .blockData .ifBlock .elseReachable ! end =:: create
   ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
   noElse if inTypes else ifBlock [] .blockData .ifBlock .outTypes @ end =:: outTypes
-  inTypes outTypes nTypes create ifBlock [] .blockType ifBlock [] .blockStart pos state storeOutTypes return
+  inTypes outTypes create ifBlock [] .blockType ifBlock [] .blockStart false pos state storeOutTypes
 end
-proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut : state => i64 ) =: storeSwitchOutTypes
-  state [] .typeStack .length =:: nTypes
+proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeSwitchOutTypes
   switchBlock [] .blockData .switchBlock .endReachable ! =:: create
   switchBlock [] .blockData .switchBlock .inTypes @ =:: inTypes
   switchBlock [] .blockData .switchBlock .outTypes @ =:: outTypes
-  inTypes outTypes nTypes create switchBlock [] .blockType switchBlock [] .blockStart pos state storeOutTypes return
+  inTypes outTypes create switchBlock [] .blockType switchBlock [] .blockStart false pos state storeOutTypes
 end
 
 proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : templateImpl bool : isPtr TypeCheckState ptr mut : state => ) =: typeCheckCall
@@ -726,6 +743,7 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
       argBufferOffset templateCount staticArgCount + + list.ensureCap
     argValues [] =
     argValues [] .data argBufferOffset + templateCount staticArgCount + mem.clear #drop
+    argValues [] .length templateCount staticArgCount + + argValues [] .length =
     inType inType templateCount staticArgCount argValues argBufferOffset idContext resolveGenericsType ## check which arguments appear in the input signature
     ## get values for template arguments not appearing in signature
     templateCount 1 - while #dup 0 >= do
@@ -757,7 +775,9 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
         constVal ConstValue .none != if
           ## static arguments can only appear after their declaration -> value cannot be changed by remaining arguments
           ## insert constant into stack
-          argType state pushType
+          state [] .typeStack
+            argType newTypeInfo typeOffset list.insert
+          state [] .typeStack =
           state [] .opStack
               constVal
               argType
@@ -793,6 +813,17 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
     end #drop
     argBufferOffset templateCount ConstantArray new =:: templateIndices
     argBufferOffset templateCount + staticArgCount ConstantArray new =:: genericIndices
+    false if ## DEBUG
+      "-----------------\n" sb.wrap
+        op [] labelContext typeContext sb.appendOp
+        0 while #dup templateCount < do
+          #swap
+            argValues [] #over:2 argBufferOffset + list.get labelContext typeContext sb.appendConstant
+            '\n' sb.appendC
+          #swap 1 +
+        end #drop
+      io.stdOut #swap io.fputSb #drop
+    end
     inType templateIndices genericIndices op [] .pos idContext replaceGenericsType inType =
     outType templateIndices genericIndices op [] .pos idContext replaceGenericsType outType =
     inType outType typeContext newProcedure #drop calledType =
@@ -919,7 +950,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       op [] .val OpValue .@Id == if
         ## getAddressType
           op [] .dataType
-          idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 ==
+          idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 !=
           typeContext
         types.getAddressType op [] .dataType =
       end
@@ -929,8 +960,20 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
       end
       return
     PROCEDURE case
-      op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap false state typeCheckCall
-      return
+      op [] .val OpValue .getId == if
+        op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap false state typeCheckCall
+        return
+      end
+      op [] .val OpValue .@Id == if
+        "unimplemented" sb.wrap op [] .pos state appendError
+        ## get procedure pointer
+        return
+      end
+      op [] .val OpValue .setId == if
+        "cannot set the value of a procedure" sb.wrap op [] .pos state appendError
+        return
+      end
+      break
     TEMPLATE_ARG TYPE case
       "operation " sb.wrap
         op [] labelContext typeContext sb.appendOp
@@ -1417,6 +1460,18 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  state checkSync if
+    "type-stack out of sync " sb.wrap
+      " at " sb.appendS
+      op [] .pos .fileName sb.appendStr
+      ':' sb.appendC
+      op [] .pos .line sb.appendI
+      ':' sb.appendC
+      op [] .pos .posInLine sb.appendI
+      '\n' sb.appendC
+    io.stdErr #swap io.fputSb #drop
+    return
+  end
   op state resolveIdentifiers
   op [] .val switch
     OpValue .Constant case
@@ -1595,9 +1650,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
         AND OR XOR case
           ## integer&integer -> integer
-          left [] .valType right [] .valType inTypes @ typeContext checkBinOpInt types.Type .undefined != if
-            types.primitive.BOOL op [] .dataType =
-          end
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpInt #dup types.Type .undefined != if
+            op [] .dataType =
+          else #drop end
           ## bool&bool -> bool
           left [] .valType typeContext types.isBoolean right [] .valType typeContext types.isBoolean & if
             types.primitive.BOOL op [] .dataType =
@@ -1685,10 +1740,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "else can only appear in if blocks" sb.wrap op [] .pos state appendError
             return
           end
-          state [] .reachable ifBlock [] .blockData .ifBlock .elseReachable =
           state [] .reachable if
-            ifBlock false op [] .pos state storeIfOutTypes state [] .opStack .length =
+            ifBlock false op [] .pos state storeIfOutTypes
           end
+          state [] .reachable ifBlock [] .blockData .ifBlock .elseReachable =
           ifBlock [] .blockData .ifBlock .inTypes @ state resetStack
           state [] .compiledOps .length ifBlock [] .blockData .ifBlock .elsePos =
           codeBlocks.BlockType .ELSE ifBlock [] .blockType =
@@ -1732,16 +1787,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "do can only appear in while blocks" sb.wrap op [] .pos state appendError
             return
           end
-          whileBlock false op [] .pos state storeLoopOutTypes =:: newOpCount
           ## compile condition
           whileBlock [] .blockId op [] .val .block .blockId =
+          whileBlock true op [] .pos state storeLoopOutTypes
           types.primitive.BOOL op [] .dataType =
           op [] .dataType @ array.wrap "do condition" string.wrap op [] .pos state requireTypes
           state [] .compiledOps
             op list.appendP
           state [] .compiledOps =
           1 op [] .pos state addCompiledStackOps
-          newOpCount state [] .opStack .length =
           ## update block
           codeBlocks.BlockType .DO whileBlock [] .blockType =
           state copyStack whileBlock [] .blockData .whileBlock .outTypes =
@@ -1758,14 +1812,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           false =:: mut match
           breakBlock [] .blockType #dup codeBlocks.BlockType .WHILE == #swap codeBlocks.BlockType .DO == | if
             op state checkReachable
-            breakBlock false op [] .pos state storeLoopOutTypes #drop
+            breakBlock false op [] .pos state storeLoopOutTypes
             true match =
           end
           breakBlock [] .blockType #dup codeBlocks.BlockType .CASE == #swap codeBlocks.BlockType .DEFAULT == | if
             breakBlock [] .blockData .switchBlock .explicitBreak if
               op state checkReachable
             else
-              breakBlock op [] .pos state storeSwitchOutTypes #drop
+              breakBlock op [] .pos state storeSwitchOutTypes
               true breakBlock [] .blockData .switchBlock .explicitBreak =
             end
             true breakBlock [] .blockData .switchBlock .endReachable =
@@ -1942,7 +1996,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       closed [] .blockType switch
         IF ELSE case
           state [] .reachable if
-            closed closed [] .blockType codeBlocks.BlockType .IF == op [] .pos state storeIfOutTypes state [] .opStack .length =
+            closed closed [] .blockType codeBlocks.BlockType .IF == op [] .pos state storeIfOutTypes
+          else closed [] .blockType codeBlocks.BlockType .IF == _if
+            closed [] .blockData .ifBlock .inTypes @ state resetStack
           end
           state [] .reachable
             closed [] .blockData .ifBlock .elseReachable |
@@ -2000,7 +2056,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         DEFAULT case
           closed [] .blockData .switchBlock @ =:: switchBlock
           state [] .reachable if
-            closed op [] .pos state storeSwitchOutTypes #drop
+            closed op [] .pos state storeSwitchOutTypes
             state [] .compiledOps
               ## opBlock
                 codeBlocks.BlockType .BREAK
@@ -2425,6 +2481,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
     prog [] .progFiles #over list.at .data
       globalTmpCount state .tmpCount =
       state .compiledOps list.clear state .compiledOps =
+      state .typeStack list.clear state .typeStack =
+      state .opStack list.clear state .opStack =
       0 while #dup #over:2 [] .globalOps .length < do
         #swap
           #dup [] .globalOps #over:2 list.at .data state @ typeCheckOp
@@ -2433,13 +2491,15 @@ proc( Program ptr mut => ) =: public typeCheckProgram
       state .openBlocks .length 0 > if
         "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError
         state .openBlocks list.clear state .openBlocks =
-      end
+      end ## XXX check for unfinished operations on stack
       #dup [] .globalOps list.clear
         state .compiledOps list.appendAll
       #over [] .globalOps =
       state .tmpCount globalTmpCount =
       0 state .tmpCount =
       state .compiledOps list.clear state .compiledOps =
+      state .typeStack list.clear state .typeStack =
+      state .opStack list.clear state .opStack =
       0 while #dup #over:2 [] .localOps .length < do
         #swap
           #dup [] .localOps #over:2 list.at .data state @ typeCheckOp
@@ -2470,8 +2530,10 @@ proc( Program ptr mut => ) =: public typeCheckProgram
           template [] .implementations .length =:: mut prevImpl
           template [] .srcFile state .fileId =
           prog [] .progFiles template [] .srcFile list.at .data [] .templateOps state .compiledOps =
-          0 while #dup template [] .implementations .length < do
+          template [] .compiledImpls while #dup template [] .implementations .length < do
             0 state .tmpCount =
+            state .typeStack list.clear state .typeStack =
+            state .opStack list.clear state .opStack =
             template [] .implementations #over list.at .data =:: impl
             state .idContext [] .templateArgBuffer .length =:: argBufferOffset
             state .idContext [] .templateArgBuffer
@@ -2498,13 +2560,14 @@ proc( Program ptr mut => ) =: public typeCheckProgram
             end
             1 +
           end #drop
-          template [] .implementations .length template [] .compiledImpls =
+          template [] .implementations .length i32 cast template [] .compiledImpls =
           state .compiledOps prog [] .progFiles template [] .srcFile list.at .data [] .templateOps =
         end
         1 +
       end #drop
     compiledImpl do end
   end
+  prog [] .templateOps list.clear prog [] .templateOps =
   state .errors         prog [] .errors =
   state .autoTypes      prog [] .autoTypes =
   state .hasCheckIndex  prog [] .hasCheckIndex =

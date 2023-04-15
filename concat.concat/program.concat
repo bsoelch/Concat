@@ -453,32 +453,32 @@ end
           #over .val .Cast!  labelContext typeContext sb.appendType
           break
         callPtr case
-          "call pointer (" sb.appendS
+          "call pointer ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
         argc case
-          "get program argument count (" sb.appendS
+          "get program argument count ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
         getArg case
-          "get program argument (" sb.appendS
+          "get program argument ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
         getArgLen case
-          "get program argument length (" sb.appendS
+          "get program argument length ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
         length case
-          "length (" sb.appendS
+          "length ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
         size case
-          "size (" sb.appendS
+          "size ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
           break
