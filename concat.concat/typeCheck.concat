@@ -2268,6 +2268,69 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   op [] .pos state appendError
 end
 
+proc(
+  Operation ptr mut : op
+  id.IdentifierInfo : idInfo
+  id.TemplateInfo ptr : template
+  id.TemplateImplementation ptr : impl
+  i32 : implId
+  ConstantArray : argsIndices
+  TypeCheckState ptr mut : state =>
+) =: resolveTemplateGetIdentifer
+  idInfo .idType switch
+    TEMPLATE_ARG case
+      ## newConst
+        impl [] .argValues idInfo .id state [] .idContext [] .constContext @ constArrayGet
+        template [] .templateType idInfo .id state [] .idContext [] .typeContext @ types.compositeGetElement
+        template [] .declaredAt
+      newConst opConst op [] =
+      break
+    TMP_VAR LOCAL_VAR ARGUMENT case
+      op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+      break
+    GLOBAL_VAR PROCEDURE TYPE case
+      op [] .val OpValue .declareId == if
+        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+        implId op [] .val .declareId .id =
+      end
+      op [] .val OpValue .predeclareId == if
+        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+        implId op [] .val .predeclareId .id =
+      end
+      break
+  end
+end
+proc(
+  Operation ptr mut : op
+  id.TemplateInfo ptr : template
+  id.TemplateImplementation ptr : impl
+  i32 : implId
+  ConstantArray : argsIndices
+  TypeCheckState ptr mut : state =>
+) =: resolveTemplateOp
+  op [] .val OpValue .getId == if
+    op op [] .val .getId template impl implId argsIndices state resolveTemplateGetIdentifer
+  else op [] .val OpValue .setId == _if
+    op op [] .val .setId template impl implId argsIndices state resolveTemplateGetIdentifer
+  else op [] .val OpValue .@Id == _if
+    op op [] .val .@Id template impl implId argsIndices state resolveTemplateGetIdentifer
+  else op [] .val OpValue .declareId == _if
+    op op [] .val .declareId template impl implId argsIndices state resolveTemplateGetIdentifer
+  else op [] .val OpValue .predeclareId == _if
+    op op [] .val .predeclareId template impl implId argsIndices state resolveTemplateGetIdentifer
+  else
+    op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+    op [] .val OpValue .Cast == if
+      op [] .val .Cast argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .val .Cast =
+    else op [] .val OpValue .Cast! == _if
+      op [] .val .Cast! argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .val .Cast! =
+    else op [] .val OpValue .Constant == _if
+      op [] .val .Constant argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenerics op [] .val .Constant =
+    end
+  end
+end
+
+128 =:: MAX_TEMPLATE_DEPTH
 proc( Program ptr mut => ) =: public typeCheckProgram
   =:: mut prog
   ## TypeCheckState
@@ -2319,10 +2382,58 @@ proc( Program ptr mut => ) =: public typeCheckProgram
       #dup [] .localOps list.clear
         state .compiledOps list.appendAll
       #over [] .localOps =
+      ## XXX ensure template ops are empty
     #drop
     1 +
   end #drop
-  ## TODO type check template implementations
+  state .compiledOps list.free state .compiledOps =
+  prog [] .templateOps .length 0 > if
+    0 =:: mut depth
+    false =:: mut compiledImpl
+    while
+      false compiledImpl =
+      depth 1 + depth =
+      0 while #dup state .idContext [] .templateInfos .length < do
+        state .idContext [] .templateInfos #over list.at .data =:: template
+        template [] .codeLength 0 > template [] .implementations .length template [] .compiledImpls > & if
+          true compiledImpl =
+          template [] .implementations .length =:: mut prevImpl
+          prog [] .progFiles template [] .srcFile list.at .data [] .templateOps state .compiledOps =
+          0 while #dup template [] .implementations .length < do
+            0 state .tmpCount =
+            template [] .implementations #over list.at .data =:: impl
+            state .idContext [] .templateArgBuffer .length =:: argBufferOffset
+            state .idContext [] .templateArgBuffer
+              impl [] .argValues state .idContext [] .constContext @ constArrayAsArray list.appendArray
+            state .idContext [] .templateArgBuffer =
+            argBufferOffset state .idContext [] .templateArgBuffer .length argBufferOffset - ConstantArray new =:: argsIndices
+            0 while #dup template [] .codeLength < do
+              prog [] .templateOps template [] .codeOffset #over:2 + list.get =:: mut op ## copy by value to allow modification
+              op @ template impl #over:4 argsIndices state @ resolveTemplateOp
+              op @ state @ typeCheckOp
+              1 +
+            end #drop
+            argBufferOffset state .idContext [] .templateArgBuffer .length = ## reset template argument buffer
+            state .openBlocks .length 0 > if
+              "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError
+              state .openBlocks list.clear state .openBlocks =
+            end
+            template [] .implementations .length prevImpl > if
+              depth 1 + depth =
+            end
+            depth MAX_TEMPLATE_DEPTH > if ## XXX? print implementation position
+              "exceeded maximum template depth" sb.wrap template [] .declaredAt state @ appendError
+              break
+            end
+            1 +
+          end #drop
+          template [] .implementations .length template [] .compiledImpls =
+          state .compiledOps prog [] .progFiles template [] .srcFile list.at .data [] .templateOps =
+        end
+        1 +
+      end #drop
+    compiledImpl do end
+  end
   state .errors         prog [] .errors =
   state .autoTypes      prog [] .autoTypes =
   state .hasCheckIndex  prog [] .hasCheckIndex =

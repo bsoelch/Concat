@@ -12,14 +12,14 @@ struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModifi
 enum(
                          NOP
                          entryPoint
-            ConstValue : Constant
+            ConstValue : mut Constant
   codeBlocks.BlockInfo : mut block
   codeBlocks.BlockInfo : mut blockEnd
      id.IdentifierInfo : mut getId
      id.IdentifierInfo : mut setId
      id.IdentifierInfo : mut @Id
-     id.IdentifierInfo : declareId
-     id.IdentifierInfo : predeclareId
+     id.IdentifierInfo : mut declareId
+     id.IdentifierInfo : mut predeclareId
             id.LabelId : getLabel
             id.LabelId : mut setLabel
             id.LabelId : mut @Label
@@ -181,6 +181,7 @@ struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
 struct(
      Operation list : mut globalOps
      Operation list : mut localOps
+     Operation list : mut templateOps
   IncludedFile list : mut includedFiles
 
       stringBuilder : mut fileName
@@ -200,6 +201,7 @@ struct(
 ) =:: public Program
 
 proc( stringBuilder : fileName FileId : id id.IdentifierContext ptr mut : idContext => ProgramFile ) =: public newProgFile
+  128 Operation list.create
   128 Operation list.create
   128 Operation list.create
   16 IncludedFile list.create
@@ -550,10 +552,17 @@ end
             #swap
             1 +
           end #drop
+          "## templates:\n" sb.appendS
+          0 while #dup f .templateOps .length < do
+            #swap
+              f .templateOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+            #swap
+            1 +
+          end #drop
         #swap
         1 +
       end #drop
-      "## templates:\n" sb.appendS
+      "## unresolved templates:\n" sb.appendS
       0 while #dup prog .templateOps .length < do
         #swap
           prog .templateOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp

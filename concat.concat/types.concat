@@ -621,17 +621,19 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   a .length b .length < if
     -1 return
   end
-  0 while #dup a .length b .length - < do
+  0 while #dup a .length b .length - <= do
     true =:: mut match
     0 while #dup b .length < do
       a #over:2 array.get b #over:3 array.get typeEquals ! if
         false match =
         break
       end
+      1 +
     end #drop
     match if
       return
     end
+    1 +
   end #drop
   -1 return
 end
@@ -898,7 +900,7 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
     procedure case
       context [] .procTypes t .procedure list.get
         #dup .in context containsGeneric =:: isStatic =:: isTemplate
-        .out context containsGeneric isStatic & #swap isTemplate & #swap return
+        .out context containsGeneric isStatic | #swap isTemplate | #swap return
     namedType namedLabel case
       t context unwrapNamed context containsGeneric return
     genericType case

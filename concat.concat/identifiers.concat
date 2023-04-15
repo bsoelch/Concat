@@ -13,7 +13,7 @@
 
   struct( types.Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
-  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i64 : compiledImpls ) =:: public TemplateInfo
+  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i64 : mut compiledImpls ) =:: public TemplateInfo
 
   struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
   struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
