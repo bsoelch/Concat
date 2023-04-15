@@ -900,6 +900,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup [] .val .getArrayElement #over [] .val .setArrayElement =
         fileState [] .wordStart #swap [] .pos =
         return
+      else #dup [] .val OpValue .getName == _if
+        #dup [] .val .getName #over [] .val .setName =
+        fileState [] .wordStart #swap [] .pos =
+        return
       else
         "unexpected operation for \"=\" \n" sb.wrap
           #swap [] state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendOp
@@ -931,6 +935,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       else #dup [] .val OpValue .getArrayElement == _if
         #dup [] .val .getArrayElement #over [] .val .@ArrayElement =
+        fileState [] .wordStart #swap [] .pos =
+        return
+      else #dup [] .val OpValue .getName == _if
+        #dup [] .val .getName #over [] .val .@Name =
         fileState [] .wordStart #swap [] .pos =
         return
       else
@@ -1243,7 +1251,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     #drop:2
     return
   end #drop:2
-  id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opUnknown  state appendOp
+  id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opGetName  state appendOp
   return
 end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: checkIOError

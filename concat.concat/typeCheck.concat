@@ -27,6 +27,7 @@ struct(
   SwitchData list : mut switchData
   CompilerError list : mut errors
 
+  FileId : mut fileId
   i32 : mut tmpCount
   i32 : mut ifCount
   i32 : mut whileCount
@@ -1356,12 +1357,67 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkLocal
   op [] .pos state appendError
 end
 
+proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: resolveIdentifiers
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+
+  op [] .val switch
+    getName case
+      op [] .val .getName
+      break
+    setName case
+      op [] .val .setName
+      break
+    @Name case
+      op [] .val .@Name
+      break
+    default
+      return
+  end labelContext id.labelName #dup optional.isEmpty if #drop
+    return
+  end .data =:: name
+  state [] .openBlocks list.peek #dup optional.hasData state [] .reachable ! & if .data =:: block
+  block [] .blockType #dup codeBlocks.BlockType .SWITCH == #swap codeBlocks.BlockType .CASE == | if
+  block [] .blockData .switchBlock .switchType =:: switchType
+  switchType typeContext types.isEnum if
+    switchType typeContext types.compositeEltCount =:: count
+    0 while #dup count < do
+      switchType #over typeContext types.compositeGetLabel labelContext id.labelName #dup optional.isEmpty if #drop
+        1 + continue
+      end .data name string.eq if
+        switchType op [] .dataType =
+        ConstValue .enumLabel new op [] .val .Constant =
+        return
+      end
+      1 +
+    end #drop
+  end end else #drop end
+  name state [] .fileId state [] .idContext id.getIdentifier if
+    #drop:2 return
+  end
+  #swap #drop
+  #dup [] .valueType op [] .dataType =
+  op [] .val switch
+    getName case
+      id.asIdInfo op [] .val .getId =
+      break
+    setName case
+      id.asIdInfo op [] .val .setId =
+      break
+    @Name case
+      id.asIdInfo op [] .val .@Id =
+      break
+    default #drop
+      break
+  end
+end
 ## TODO? constant evalutation
 proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
-  ## TODO prepare identifiers
+  op state resolveIdentifiers
   op [] .val switch
     OpValue .Constant case
       state [] .reachable if
@@ -1386,7 +1442,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           block [] .blockData .switchBlock .switchType =:: switchType
           op [] .val .Constant =:: constant
           op [] .dataType switchType typeContext canAutoCast ! if ## XXX ? allow extended constant casts?
-            "wrong type for switch-label expected" sb.wrap
+            "wrong type for switch-label expected " sb.wrap
                switchType labelContext typeContext sb.appendType
                " got " sb.appendS
                op [] .dataType labelContext typeContext sb.appendType
@@ -2253,10 +2309,22 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     checkEnumLabel checkArrayIndex getEnumElement setEnumElement @EnumElement case
       break ## TODO error message?
-    Unknown case
-      "unknown identifier: \"" sb.wrap
-        op [] .val .Unknown labelContext id.labelName .data sb.appendStr
-        '\"' sb.appendC
+    getName case
+      "unresolved identifier: \"" sb.wrap
+        op [] .val .getName labelContext id.labelName .data sb.appendStr
+        '"' sb.appendC
+      op [] .pos state appendError
+      return
+    setName case
+      "unresolved identifier: \"" sb.wrap
+        op [] .val .setName labelContext id.labelName .data sb.appendStr
+        '"' sb.appendC
+      op [] .pos state appendError
+      return
+    @Name case
+      "unresolved identifier: \"" sb.wrap
+        op [] .val .@Name labelContext id.labelName .data sb.appendStr
+        '"' sb.appendC
       op [] .pos state appendError
       return
     NOP case
@@ -2342,6 +2410,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
     prog [] .autoTypes
     128 SwitchData list.create
     prog [] .errors
+    FILE_ID_NONE
     0
     0
     0
@@ -2352,6 +2421,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
   TypeCheckState new =:: mut state
   0 =:: mut globalTmpCount
   0 while #dup prog [] .progFiles .length < do
+    #dup state .fileId =
     prog [] .progFiles #over list.at .data
       globalTmpCount state .tmpCount =
       state .compiledOps list.clear state .compiledOps =
@@ -2398,6 +2468,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
         template [] .codeLength 0 > template [] .implementations .length template [] .compiledImpls > & if
           true compiledImpl =
           template [] .implementations .length =:: mut prevImpl
+          template [] .srcFile state .fileId =
           prog [] .progFiles template [] .srcFile list.at .data [] .templateOps state .compiledOps =
           0 while #dup template [] .implementations .length < do
             0 state .tmpCount =

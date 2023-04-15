@@ -624,7 +624,7 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   0 while #dup a .length b .length - <= do
     true =:: mut match
     0 while #dup b .length < do
-      a #over:2 array.get b #over:3 array.get typeEquals ! if
+      a #over:2 #over:2 + array.get b #over:3 #over:3 + array.get typeEquals ! if
         false match =
         break
       end

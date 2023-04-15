@@ -84,9 +84,21 @@ entryPoint:
     enum .C print
     2 enum .E =
   end
+  anEnum .A switch
+    A case
+      break
+    B case
+      break
+    C D E case
+      break
+  end
   aString .len print
   i32 optional.empty print
   i64 optional.empty print
   i32 optional.empty print
   42 optional.wrap print
+  declareAfterUse print
+end
+proc( => i32 ) =: declareAfterUse
+  -17 return
 end

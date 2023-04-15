@@ -51,7 +51,9 @@ enum(
                    i32 : checkEnumLabel
                    i64 : checkArrayIndex
      StackModification : stackMod
-            id.LabelId : Unknown
+            id.LabelId : getName
+            id.LabelId : mut setName
+            id.LabelId : mut @Name
 ) =:: public OpValue
 struct( OpValue : mut val types.Type : mut dataType FilePosition : mut pos ) =:: public Operation
 proc( FilePosition : pos => Operation ) =: public opNOP
@@ -172,9 +174,9 @@ proc( types.Type i64 FilePosition => Operation ) =: public opCheckIndex
   =:: pos
   OpValue .checkArrayIndex new #swap pos Operation new return
 end
-proc( id.LabelId FilePosition  => Operation ) =: public opUnknown
+proc( id.LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
-  OpValue .Unknown new types.Type .undefined pos Operation new return
+  OpValue .getName new types.Type .undefined pos Operation new return
 end
 struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
 
@@ -508,9 +510,17 @@ end
           "stack modification: " sb.appendS
           #over .val .stackMod sb.appendStackMod
           break
-        Unknown case
-          "Unknown Operation: " sb.appendS
-          #over .val .Unknown labelContext id.labelName .data sb.appendStr
+        getName case
+          "get: " sb.appendS
+          #over .val .getName labelContext id.labelName .data sb.appendStr
+          break
+        setName case
+          "set: " sb.appendS
+          #over .val .setName labelContext id.labelName .data sb.appendStr
+          break
+        @Name case
+          "address of: " sb.appendS
+          #over .val .@Name labelContext id.labelName .data sb.appendStr
           break
       end
       " at " sb.appendS
