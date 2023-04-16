@@ -888,9 +888,7 @@ proc( types.Type : src types.TypeContext ptr mut : context => bool ) =: public i
     #dup context isArray if #drop
       true return
     end
-    #dup context isPointer if #drop
-      true return
-    end
+    ## pointer is only a single value
   #drop
   false return
 end

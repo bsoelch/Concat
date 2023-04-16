@@ -2307,13 +2307,52 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     argc case
       op state checkReachable
-      break ## TODO
+      op state pushValue
+      true state [] .hasGetArgs =
+      return
     getArg case
       op state checkReachable
-      break ## TODO
-    getArgLen case
-      op state checkReachable
-      break ## TODO
+      op state checkLocal
+      state [] .typeStack list.peek #dup optional.isEmpty if #drop
+        "not enough operands for : " sb.wrap
+          op [] labelContext typeContext sb.appendOp
+          " need 1 got " sb.appendS
+          state [] .typeStack .length sb.appendI
+        op [] .pos state appendError
+        return
+      end .data =:: mut argIndex
+      1 false op [] .pos state extractCompositeOps
+      argIndex [] .valType typeContext types.isInt ! if
+        "wrong type for argument index : " sb.wrap
+          argIndex [] .valType labelContext typeContext sb.appendType
+          " expected integer" sb.appendS
+        op [] .pos state appendError
+        return
+      end
+      types.primitive.I8 true types.ArraySize array.empty false false typeContext types.newArrayType #drop op [] .dataType =
+      state [] .compiledOps
+        ## opCheckIndex
+          op [] .dataType
+          -1
+          op [] .pos
+        opCheckIndex list.append
+        op [] .pos opArgc list.append
+        state [] .opStack .data state [] .opStack .length + argIndex [] .opCount - argIndex [] .opCount array.create list.appendArray
+      state [] .compiledOps =
+      ## ... INDEX
+      op 1 state insertStackOp
+      ## ... size:[ARG index]
+      OpValue .getArgLen op [] .val =
+      types.primitive.I_SIZE op [] .dataType =
+      op state pushValue ## XXX! pushValue  may remove length from stack
+      state [] .typeStack state [] .typeStack .length 2 - list.at .data argIndex = ## old argIndex may no-longer be valid
+      state [] .opStack #dup .length argIndex [] .opCount + list.ensureCap state [] .opStack =
+      state [] .opStack .data state [] .opStack .length +  #dup argIndex [] .opCount -  argIndex [] .opCount 1 - mem.move #drop
+      state [] .opStack .length argIndex [] .opCount 1 - + state [] .opStack .length =
+      state [] .typeStack list.peek .data [] .opCount  argIndex [] .opCount 1 - +  state [] .typeStack list.peek .data [] .opCount =
+      ## ... | ARG INDEX | ARG_LEN INDEX |
+      true state [] .hasGetArgs =
+      return
     length size case
       op state checkReachable
       op state checkLocal
@@ -2525,7 +2564,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
       end
       break
-    checkEnumLabel checkArrayIndex getEnumElement setEnumElement @EnumElement case
+    checkEnumLabel checkArrayIndex getEnumElement setEnumElement @EnumElement getArgLen case
       break ## TODO error message?
     getName case
       "unresolved identifier: \"" sb.wrap
