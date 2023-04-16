@@ -7052,7 +7052,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
         }
         if(op.opType==OP_GET_LENGTH){
           if(arrayTypeData(targetType)->dims==0)
-            op=opConstant(TYPE_I64,0,op.filePos);
+            op=opConstant(TYPE_I64,1,op.filePos);
           else if(arrayTypeData(targetType)->sizes[0].isInt)
             op=opConstant(TYPE_I64,arrayTypeData(targetType)->sizes[0].value,op.filePos);
           else
