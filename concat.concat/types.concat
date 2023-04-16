@@ -859,7 +859,7 @@ proc( i32 : id => Type ) =: public newTemplateType
   id Type .templateType new return
 end
 
-proc( Type => i32 ) =: public typeId
+proc( Type => i32 ) =: public getTypeId
   #dup Type .autoType == if
     .autoType return
   end
@@ -871,6 +871,21 @@ proc( Type => i32 ) =: public typeId
   end
   #drop
   -1 return
+end
+
+proc( types.Type : src types.TypeContext ptr mut : context => bool ) =: public isMultiValueType
+  src context unwrapNamed
+    #dup context isComposite if #drop
+      true return
+    end
+    #dup context isArray if #drop
+      true return
+    end
+    #dup context isPointer if #drop
+      true return
+    end
+  #drop
+  false return
 end
 
 proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric

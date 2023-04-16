@@ -54,6 +54,12 @@
   proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
     context [] .nameBuffer .data const .offset + const .length string.create return
   end
+  proc( LabelId : id LabelContext ptr mut : context => ) =: public inLabelNamespace
+    id 0 < id context [] .labels .length >= | if
+      return
+    end
+    context [] .labels id list.get .namespace context [] .namespaceInfo .current =
+  end
   proc( LabelId : id LabelContext ptr : context => string optional ) =: public labelName
     id 0 < id context [] .labels .length >= | if
       string optional.empty return

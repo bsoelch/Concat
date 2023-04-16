@@ -144,13 +144,83 @@ proc( types.Type : valType => TypeInfo ) =: newTypeInfo
     false
   TypeInfo new return
 end
+proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => id.IdentifierInfo ) =: newTmpVar
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  id.FLAG_NONE mutable if id.FLAG_MUTABLE | id.LabelFlag cast end =:: flags
+  ## IdInfo
+    id.IdentifierType .TMP_VAR
+    ## newLabel
+      string.empty
+      flags
+      pos
+      labelContext
+    id.newLabel
+    -1
+    state [] .tmpCount ++
+  id.IdentifierInfo new return
+end
+
+proc( TypeCheckState ptr mut : state => ) =: ensureStackHeadIsValue
+  state [] .openBlocks .length 0 == if
+    return ## no extracting of values at global level XXX ? allow stack operations at global level
+  end
+  state [] .typeStack .length 0 == if
+    return
+  end
+  state [] .idContext =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .typeStack list.peek .data =:: head
+  head [] .opCount 0 == if
+    return
+  end
+  state [] .opStack #dup .length head [] .opCount - list.at .data =:: opHead
+  head [] .valType typeContext types.isMultiValueType ! head [] .writable ! & if
+    return
+  end
+  ## XXX? isStackValue flag for TypeInfo
+  head [] .writable head [] .valType typeContext types.isMultiValueType ! | if
+    opHead [] .val OpValue .getId != if
+      opHead [] .val OpValue .getTupleElement !=
+      opHead [] .val OpValue .getArrayElement != &
+      opHead [] .val OpValue .getEnumElement != & if
+        return
+      end
+      ## TODO keep access to pointer to stack-values intact
+    else opHead [] .val .getId .idType id.IdentifierType .TMP_VAR == _if
+      return
+    end
+  end
+  ## immutable mult-val type or writable multi-value that does not lie on the stack
+  true opHead [] .pos state newTmpVar =:: tmpId
+  state [] .compiledOps
+    ## opDeclare
+      head [] .valType
+      tmpId
+      opHead [] .pos
+    opDeclare list.append
+  state [] .compiledOps =
+  state [] .compiledOps
+    state [] .opStack .data state [] .opStack .length + head [] .opCount - head [] .opCount array.create list.appendArray
+  state [] .compiledOps =
+  state [] .opStack .length head [] .opCount - state [] .opStack .length =
+  state [] .opStack
+    ## opGet
+      head [] .valType
+      tmpId
+      opHead [] .pos
+    opGet list.append
+  state [] .opStack =
+  1 head [] .opCount =
+  true head [] .writable =
+end
 proc( types.Type : valType TypeCheckState ptr mut : state => ) =: pushType
   state [] .typeStack
      valType newTypeInfo list.append
   state [] .typeStack =
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
-  ## XXX ensure stack head is value
+  state ensureStackHeadIsValue
   state [] .opStack
     op list.appendP
   state [] .opStack =
@@ -204,22 +274,6 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addC
   ## remove operations from stack
   opOffset state [] .opStack .length =
   typeOffset state [] .typeStack .length =
-end
-proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => id.IdentifierInfo ) =: newTmpVar
-  state [] .idContext =:: idContext
-  idContext [] .labelContext @ =:: labelContext
-  id.FLAG_NONE mutable if id.FLAG_MUTABLE | id.LabelFlag cast end =:: flags
-  ## IdInfo
-    id.IdentifierType .TMP_VAR
-    ## newLabel
-      string.empty
-      flags
-      pos
-      labelContext
-    id.newLabel
-    -1
-    state [] .tmpCount ++
-  id.IdentifierInfo new return
 end
 proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut : state => ) =: extractCompositeOps
   state [] .idContext =:: idContext
@@ -383,9 +437,13 @@ proc( types.Type : src types.Type : target bool : reshape types.TypeContext ptr 
     srcSize #over array.get .sizeType targetSize #over:2 array.get .sizeType != if #drop
       false return
     end
-    reshape srcSize #over:2 array.get .sizeType ArraySizeType .int != & if
-      srcTotal srcSize #over array.get .value * srcTotal =
-      targetTotal targetSize #over array.get .value * targetTotal =
+    reshape if
+      srcSize #over array.get .sizeType ArraySizeType .int == if
+        srcTotal srcSize #over array.get .value * srcTotal =
+        targetTotal targetSize #over array.get .value * targetTotal =
+      else srcTotal targetTotal != _if #drop
+        false return
+      end
       1 + continue
     end
     srcSize #over array.get .value targetSize #over:2 array.get .value != if #drop
@@ -393,11 +451,11 @@ proc( types.Type : src types.Type : target bool : reshape types.TypeContext ptr 
     end
     1 +
   end #drop
-  reshape if
+  reshape if ## TODO look at remaining sizes
     srcTotal targetTotal == return
   end
   srcSize .length while #dup targetSize .length < do
-    targetSize #over array.get .sizeType ArraySizeType .int !=  ! targetSize #over:2 array.get .value 1 != | if #drop
+    targetSize #over array.get .sizeType ArraySizeType .int != targetSize #over:2 array.get .value 1 != | if #drop
       false return
     end
     1 +
@@ -875,7 +933,9 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
   end =:: retType
   id.IdentifierInfo : mut retId
   resCount 0 != if
-    false op [] .pos state newTmpVar retId =
+    resCount 1 == if
+      retType typeContext types.isMultiValueType
+    else false end op [] .pos state newTmpVar retId =
     state [] .compiledOps
         retType
         retId
@@ -902,15 +962,30 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
     opGet =:: tmp tmp @ state pushValue
     return
   end
+  state ensureStackHeadIsValue
   0 while #dup resCount < do
-      retType
-      retId
+    retType #over typeContext compositeGetElement =:: eltType
+      eltType typeContext types.isMultiValueType
       op [] .pos
-    opGet =:: mut tmp
-    tmp @ state pushValue
-    0 op [] .pos opTupleGet tmp =
-    retType #over typeContext compositeGetElement tmp .dataType =
-    tmp @ 1 state insertStackOp
+      state
+    newTmpVar =:: eltId
+    state [] .compiledOps
+        eltType
+        eltId
+        op [] .pos
+      opDeclare list.append
+      #over op [] .pos opTupleGet
+        eltType #over .dataType =
+      list.append
+        retType
+        retId
+        op [] .pos
+      opGet list.append
+    state [] .compiledOps =
+      eltType
+      eltId
+      op [] .pos
+    opGet =:: tmp tmp @ state pushValue
     1 +
   end #drop
 end
@@ -922,7 +997,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
   idInfo .idType switch
     LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT case
       op [] .dataType types.isAutoType if
-        op [] .dataType types.typeId #dup 0 < #over state [] .autoTypes .length >= | if
+        op [] .dataType types.getTypeId #dup 0 < #over state [] .autoTypes .length >= | if
           "auto-type id out of range " sb.wrap
             #swap sb.appendI
             " max:" sb.appendS
@@ -990,7 +1065,7 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
     LOCAL_VAR GLOBAL_VAR TMP_VAR case
       op [] .val OpValue .declareId == if
         op [] .dataType types.isAutoType if
-          op [] .dataType types.typeId =:: autoTypeId
+          op [] .dataType types.getTypeId =:: autoTypeId
           autoTypeId 0 < autoTypeId state [] .autoTypes .length >= | if
             "auto-type id out of range " sb.wrap
               autoTypeId sb.appendI
@@ -1134,7 +1209,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
       state [] .compiledOps
         ## opCheckIndex
           pointerType
-          sizes #over:3 array.get #dup .sizeType ArraySizeType .int != if
+          sizes #over:3 array.get #dup .sizeType ArraySizeType .int != if ## XXX allow generic sizes (use correct procedure argument as 2nd parameter for checkIndex)
             "unexpected type for array-size, generics should no longer exist at this point of compilation" sb.wrap op [] .pos state appendError
           end .value
           op [] .pos
@@ -1417,7 +1492,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: resolveIdent
       break
     default
       return
-  end labelContext id.labelName #dup optional.isEmpty if #drop
+  end =:: label
+  label labelContext id.labelName #dup optional.isEmpty if #drop
     return
   end .data =:: name
   state [] .openBlocks list.peek #dup optional.hasData state [] .reachable ! & if .data =:: block
@@ -1436,7 +1512,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: resolveIdent
       1 +
     end #drop
   end end else #drop end
-  name state [] .fileId state [] .idContext id.getIdentifier if
+  label labelContext id.inLabelNamespace
+  name state [] .fileId idContext id.getIdentifier if
     #drop:2 return
   end
   #swap #drop
@@ -1845,6 +1922,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           breakBlock [] .blockId op [] .val .block .blockId =
           false state [] .reachable =
           breakBlock [] .blockType #dup codeBlocks.BlockType .WHILE == #swap codeBlocks.BlockType .DO == | if
+            breakBlock [] .blockType codeBlocks.BlockType .DO == if
+              true breakBlock []  .blockData .whileBlock .doesLoop =
+            end
             breakBlock op [] .pos state storeLoopInTypes
             state [] .compiledOps
               op list.appendP
@@ -2304,6 +2384,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "type-stack underflow" sb.wrap op [] .pos state appendError
             return
           end
+          state ensureStackHeadIsValue
           0 offset state countStackOps =:: opOffset
           offset count state countStackOps =:: copied
           count 0 > if
@@ -2332,6 +2413,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "swap: offset has to be greater or equal to count" sb.wrap op [] .pos state appendError
             return
           end
+          state ensureStackHeadIsValue
           0 offset state countStackOps =:: opOffset
           offset count state countStackOps =:: copied
           count 0 > if
@@ -2360,6 +2442,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           return
         ROT case
+          state ensureStackHeadIsValue
           break
       end
       break
@@ -2564,6 +2647,9 @@ proc( Program ptr mut => ) =: public typeCheckProgram
           state .compiledOps prog [] .progFiles template [] .srcFile list.at .data [] .templateOps =
         end
         1 +
+        depth MAX_TEMPLATE_DEPTH > if
+          break ## message in inner loop
+        end
       end #drop
     compiledImpl do end
   end

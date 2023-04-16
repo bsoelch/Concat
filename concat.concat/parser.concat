@@ -1128,7 +1128,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
       .val .typeId fileState [] .wordStart
-      opName "cast" string.wrap string.eq if
+      opName "cast!" string.wrap string.eq if
         opCast!
       else
         opCast
