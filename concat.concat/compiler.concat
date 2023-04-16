@@ -12,6 +12,16 @@ entryPoint:
   prog .errors .length 0 == if
     prog @ typeCheckProgram
   end
+  prog .errors .length 0 > if
+    0 while #dup prog .progFiles .length < do
+      prog .progFiles #over list.at .data
+        #dup [] .localOps list.clear #over [] .localOps =
+        #dup [] .globalOps list.clear #over [] .globalOps =
+        #dup [] .templateOps list.clear #over [] .templateOps =
+      #drop
+      1 +
+    end #drop
+  end
   1024 sb.create
     prog sb.appendProgram
   =:: parsedOps
