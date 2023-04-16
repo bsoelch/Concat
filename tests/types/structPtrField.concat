@@ -1,0 +1,14 @@
+
+enum( i32 : mut x i32 : y ) =:: anEnum
+struct( anEnum : mut a i32 : mut b ) =:: aStruct
+
+proc( aStruct ptr mut : p => i32 ptr mut ) =: test
+  p [] .a .x @ =:: e
+  e return
+end
+
+entryPoint:
+ 0 anEnum .x new 0 aStruct new =:: mut s
+ 1 s @ test [] =
+ s .a .x print
+end

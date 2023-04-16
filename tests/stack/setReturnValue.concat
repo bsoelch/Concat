@@ -1,0 +1,13 @@
+#include list
+
+struct( i32 : a i32 : mut b ) =:: aStruct
+
+entryPoint:
+  16 aStruct list.create
+    0 1 aStruct new list.append
+    2 3 aStruct new list.append
+    4 5 aStruct new list.append
+  =:: l
+  0 l 2 list.get .b  =
+  l 2 list.get .b print
+end
