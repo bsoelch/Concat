@@ -616,6 +616,7 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state => i64 ) 
       pos
     opGet state [] .opStack .data #over:2 [] =
     1 typeInfo [] .opCount =
+    true typeInfo [] .writable =
     1 +
   end return
 end
@@ -715,6 +716,7 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create codeB
         pos
     opGet state [] .opStack #over:2 list.set
     1 typeInfo [] .opCount =
+    tmpId .label labelContext id.labelFlags id.FLAG_MUTABLE & 0 != typeInfo [] .writable =
     1 +
   end #drop
   ignoreLast if
@@ -962,6 +964,7 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
       retId
       op [] .pos
     opGet =:: tmp tmp @ state pushValue
+    retType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
     return
   end
   state ensureStackHeadIsValue
@@ -988,6 +991,7 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
       eltId
       op [] .pos
     opGet =:: tmp tmp @ state pushValue
+    eltType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
     1 +
   end #drop
 end
