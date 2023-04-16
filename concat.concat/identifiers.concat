@@ -376,7 +376,11 @@
       flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
       declaredAt
       label
-      context [] .currentTemplate
+      idType IdentifierType .LOCAL_VAR == idType IdentifierType .ARGUMENT == | idType IdentifierType .TMP_VAR == | if
+        TEMPLATE_ID_NONE
+      else
+        context [] .currentTemplate
+      end
       id -1 == idType IdentifierType .LOCAL_VAR == & if
         context [] .localVarCount ++
       else
@@ -748,7 +752,7 @@
       expected .templateType 0 < expected .templateType templateCount >= | if
         return
       end
-      visitedValues expected .templateType [] if
+      visitedValues expected .templateType [] ! if
         src ConstValue .typeId new values expected .templateType [] =
       end
       true visitedValues expected .templateType [] =
@@ -829,7 +833,7 @@
               val .value 0 < val .value templateCount >= | if
                 break
               end
-              visitedValues val .value [] if
+              visitedValues val .value [] ! if
                 srcVal values val .value [] =
               end
               true visitedValues val .value [] =
@@ -838,7 +842,7 @@
               val .value 0 < val .value genericCount >= | if
                 break
               end
-              visitedValues val .value templateCount + [] if
+              visitedValues val .value templateCount + [] ! if
                 srcVal values val .value templateCount + [] =
               end
               true visitedValues val .value templateCount + [] =
@@ -869,7 +873,7 @@
   ## XXX resolve generics method for general constants
 
   proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset id.IdentifierContext ptr mut : context => ) =: public resolveGenericsType
-    templateCount genericCount + bool mem.alloc =:: visitedValues
+    templateCount genericCount + bool mem.calloc =:: visitedValues
     64 i32 list.create =:: mut visitedTypes
     values []
       templateCount genericCount + valOffset + list.ensureCap

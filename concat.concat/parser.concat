@@ -779,29 +779,35 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError
         end =:: inType
         inType types.Type .labeledProcIn == if
-          inType
-            #dup state [] .idContext .typeContext @ types.compositeEltCount =:: count
-            0 while #dup count < do
-              #over #over state [] .idContext .typeContext @ types.compositeGetLabel
-                #dup state [] .idContext .labelContext @ id.isLabelEmpty ! if
-                  ## declareIdentifier
-                    #over:2
-                    #over:2 state [] .idContext .typeContext @ types.compositeGetElement
-                    id.IdentifierType .ARGUMENT
-                    #over:3
+          inType state [] .idContext .typeContext @ types.compositeEltCount =:: count
+          0 while #dup count < do
+            inType #over state [] .idContext .typeContext @ types.compositeGetLabel =:: argLabel
+              argLabel state [] .idContext .labelContext @ id.isLabelEmpty ! if
+                ## declareIdentifier
+                  argLabel
+                  inType #over:2 state [] .idContext .typeContext @ types.compositeGetElement
+                  id.IdentifierType .ARGUMENT
+                  #over:3
+                  argLabel state [] .idContext .labelContext @ id.labelFlags id.FLAG_STATIC & 0 != if
+                    inType types.primitive.TYPE types.typeEquals if
+                      #over:4 types.newGenericType ConstValue .typeId new
+                    else
+                      #over:4 ConstValue .genericArg new
+                    end
+                  else
                     ConstValue .none
-                    fileState [] .wordStart
-                    state [] .currentFile
-                    state [] .idContext @
-                    state [] .errors @
-                  id.declareIdentifier if #drop
-                    .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
-                    #drop:4 return
-                  end #drop:2
-                else #drop end
-              1 +
-            end #drop
-          #drop
+                  end
+                  fileState [] .wordStart
+                  state [] .currentFile
+                  state [] .idContext @
+                  state [] .errors @
+                id.declareIdentifier if #drop
+                  .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError
+                  #drop:3 return
+                end #drop:2
+              end
+            1 +
+          end #drop
         end
       end
       isInit ! state [] .idContext @ id.isGlobal & if #drop:2

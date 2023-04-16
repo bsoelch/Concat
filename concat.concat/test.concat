@@ -40,6 +40,7 @@ end
 
 #namespace m
 proc( type : static T i64 : k => T _ ptr ) : extern alloc
+proc( type : static T T _ ptr : mut p => ) : extern free
 #end
 
 #namespace nested
@@ -66,6 +67,7 @@ entryPoint:
   selfPtr : test
   0 test @ selfPtr new test =
   i32 2 m.alloc =:: p
+  p m.free
   1 y =
   x print
   0 while #dup "Hello" ..length < do
