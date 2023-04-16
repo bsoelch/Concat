@@ -177,7 +177,7 @@
     relSpace NAMESPACE_ID_NONE != if
       context [] .localScopes .length 1 -
       while #dup 0 >= do
-        context [] .localScopes #over list.get .identifiers addrOf idName map.at
+        context [] .localScopes #over list.at .data [] .identifiers addrOf idName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if #swap #drop
             idName #swap false return

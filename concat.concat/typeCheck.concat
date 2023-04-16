@@ -494,7 +494,9 @@ proc( types.Type : a types.Type : b bool : forceCast types.TypeContext ptr : con
   end
   src context types.isPointer src context types.isArray | target context types.isPointer & if
   src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
-    src target true context sizeCompatible return
+    src target true context sizeCompatible if
+      true return
+    end
   end end
   forceCast ! if
     false return
@@ -890,12 +892,12 @@ proc( Operation ptr mut : op id.TemplateId : templateId i32 ptr mut optional : t
       -1 =:: mut mImpl
       false =:: mut match
       0 while #dup templateData [] .implementations .length < do
-        templateData [] .implementations #over list.get =:: impl
+        templateData [] .implementations #over list.at .data [] .argValues idContext [] .constContext @ constArrayAsArray =:: implArgs
         true match =
-        0 while #dup impl .argValues .length < do
+        0 while #dup implArgs  .length < do
           ## constantEquals
-            impl .argValues #over idContext [] .constContext @ constArrayGet
-            state [] .idContext [] .templateArgBuffer #over:2 list.get
+            implArgs #over array.get
+            argValues [] argBufferOffset #over:3 + list.get
             labelContext
           constantEquals ! if
             false match =
@@ -1040,8 +1042,12 @@ proc( Operation ptr mut : op id.IdentifierInfo : idInfo TypeCheckState ptr mut :
         return
       end
       op [] .val OpValue .@Id == if
-        "unimplemented" sb.wrap op [] .pos state appendError
-        ## get procedure pointer
+        ## getAddressType
+          op [] .dataType
+          false
+          typeContext
+        types.getAddressType op [] .dataType =
+        op state pushValue
         return
       end
       op [] .val OpValue .setId == if
@@ -1417,6 +1423,9 @@ proc( Operation ptr mut : op id.LabelId  : label TypeCheckState ptr mut : state 
       true state [] .hasCheckEnum =
       ## get value
       op 1 state insertStackOp
+      op [] .val OpValue .getEnumElement == if
+        mutable state [] .typeStack list.peek .data [] .writable =
+      end
       return
     end
   end
@@ -2283,7 +2292,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       op state checkLocal
       op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty true state typeCheckCall
-      break
+      return
     argc case
       op state checkReachable
       break ## TODO
@@ -2303,14 +2312,18 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op 1 state insertStackOp
       return
     Cast Cast! case
-      op [] .val OpValue .Cast! == =:: forceCast
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
         "not enough operands for : " sb.wrap
           op [] labelContext typeContext sb.appendOp
         op [] .pos state appendError
         return
       end .data =:: src
-      src [] .valType forceCast if op [] .val .Cast! = else op [] .val .Cast = end
+      src [] .valType
+      op [] .val OpValue .Cast! == if
+        op [] .val .Cast! = true
+      else
+        op [] .val .Cast = false
+      end =:: forceCast
       src [] .valType op [] .dataType forceCast typeContext canCast ! if
         "cannot cast " sb.wrap
           src [] .valType labelContext typeContext sb.appendType
@@ -2326,8 +2339,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       state [] .openBlocks
         ## BlockInfo
-            types.Type array.empty id.LABEL_ID_NONE false typeContext types.newProcArgs #drop
-            types.Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs #drop
+            types.Type array.empty id.LABEL_ID_NONE false typeContext types.newProcArgs
+            types.Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs
             typeContext
             types.newProcedure #drop
           BlockData .procBlock new
@@ -2634,10 +2647,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
               "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError
               state .openBlocks list.clear state .openBlocks =
             end
-            template [] .implementations .length prevImpl > if
-              depth 1 + depth =
-            end
-            depth MAX_TEMPLATE_DEPTH > if ## XXX? print implementation position
+            template [] .implementations .length prevImpl - depth + MAX_TEMPLATE_DEPTH > if ## XXX? print implementation position
               "exceeded maximum template depth" sb.wrap template [] .declaredAt state @ appendError
               break
             end
@@ -2647,8 +2657,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
           state .compiledOps prog [] .progFiles template [] .srcFile list.at .data [] .templateOps =
         end
         1 +
-        depth MAX_TEMPLATE_DEPTH > if
-          break ## message in inner loop
+        depth ++ MAX_TEMPLATE_DEPTH > if
+          break ## error message in inner loop
         end
       end #drop
     compiledImpl do end

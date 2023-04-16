@@ -452,16 +452,24 @@ proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqua
   end #drop
   true return
 end
-proc( Type : base bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool : mutable  TypeContext ptr mut : context => Type bool ) =: public newArrayType
+proc( Type : target bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool : mutable  TypeContext ptr mut : context => Type bool ) =: public newArrayType
   isPtr ! sizes .length 0 == & if
     Type .undefined true return
   end
+  target =:: mut base
   base Type .undefined  == if
     Type .undefined true return
   end
   ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
-  base context isProcedure  isPtr ! fixedSize ! | sizes .length 0 > | & if
-    Type .undefined true return
+  base context isProcedure if
+    isPtr ! fixedSize ! | sizes .length 0 > | if
+      Type .undefined true return
+    end
+    base
+      context asUnlabeledProc if #drop
+        Type .undefined true return
+      end
+    base =
   end
   context [] .arrayTypes addrOf =:: arrays
   0 while #dup arrays [] .length < do
@@ -692,10 +700,10 @@ proc( Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : conte
   labelOffset id.LABEL_ID_NONE == if Type .tuple new else Type .struct new end
   false return
 end
-proc( Type arrayView : elts id.LabelId : labelOffset bool : isOut TypeContext ptr mut : context => Type bool ) =: public newProcArgs
+proc( Type arrayView : elts id.LabelId : labelOffset bool : isOut TypeContext ptr mut : context => Type ) =: public newProcArgs
   isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labelOffset context newCompositeType
   isOut if Type .procOut new else labelOffset id.LABEL_ID_NONE == _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
-  false return
+  return
 end
 proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext ptr mut : context => Type bool ) =: public newEnum
   elts .length 0 ==  labelOffset id.LABEL_ID_NONE == | if
@@ -786,8 +794,7 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
     end
     context [] .compositeTypes #over .in .labeledProcIn list.get =:: mut inType
     context [] .compositeData inType .eltsOffset inType .eltCount list.slice id.LABEL_ID_NONE false context newProcArgs
-    ! if #drop:2 proc true return end
-  #swap .out context newProcedure ! if #drop proc true return  end
+  #swap .out context newProcedure if #drop proc true return end
     isPtr if
       true ArraySize array.empty true false context newArrayType return
     end
