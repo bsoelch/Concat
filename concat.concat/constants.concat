@@ -13,11 +13,11 @@ enum(
   i64 : int
   i64 : genericArg
   i64 : templateArg
-  id.StringConstant : str
+  StringConstant : str
   i8 : chr
-  types.Type : typeId
+  Type : typeId
 ) =:: public ConstValue
-struct( types.Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
+struct( Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
 
 struct( ConstValue list : mut arrayValues ) =:: public ConstantContext
 struct( i64 : offset i64 : length ) =:: public ConstantArray
@@ -47,13 +47,13 @@ proc( ConstantArray : elts ConstantContext ptr mut : context => ConstValue array
 end
 
 proc( FilePosition : pos => Constant ) =: public constWildcard
-  types.Type .undefined ConstValue .wildCard new pos Constant new return
+  Type .undefined ConstValue .wildCard new pos Constant new return
 end
 proc( i64 FilePosition => Constant ) =: public constInt
   =:: pos
   #dup i32.MIN < #over i32.MAX > | if types.primitive.I64 else types.primitive.I32 end #swap ConstValue .int new pos Constant new return
 end
-proc( id.StringConstant : str FilePosition : pos types.TypeContext ptr mut : context => Constant ) =: public constStr
+proc( StringConstant : str FilePosition : pos TypeContext ptr mut : context => Constant ) =: public constStr
   #using types
   str .length ArraySizeType .int ArraySize new =:: size
   types.primitive.I8 true size @ 1 array.create true false context newArrayType #drop str ConstValue .str new pos Constant new return
@@ -66,20 +66,20 @@ proc( bool FilePosition => Constant ) =: public constBool
   =:: pos
   types.primitive.BOOL #swap ConstValue .boolean new pos Constant new return
 end
-proc( types.Type FilePosition => Constant ) =: public constType
+proc( Type FilePosition => Constant ) =: public constType
   =:: pos
   types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
 end
-proc( types.Type i32 FilePosition => Constant ) =: public constEnumLabel
+proc( Type i32 FilePosition => Constant ) =: public constEnumLabel
   =:: pos
   ConstValue .enumLabel new pos Constant new return
 end
-proc( ConstValue types.Type FilePosition => Constant ) =: public newConst
+proc( ConstValue Type FilePosition => Constant ) =: public newConst
   =:: pos
   #swap pos Constant new return
 end
 
-proc( ConstValue : a ConstValue : b id.LabelContext ptr : labelContext => bool ) =: public constantEquals
+proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext => bool ) =: public constantEquals
   a b != if ##different constant types
     false return
   end
@@ -136,7 +136,7 @@ proc( stringBuilder string => stringBuilder ) =: public appendEscapedStr
     #swap 1 +
   end #drop
 end
-proc( stringBuilder ConstValue id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendConstant
+proc( stringBuilder ConstValue LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendConstant
   =:: typeContext
   =:: labelContext
   #swap

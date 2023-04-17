@@ -7,15 +7,13 @@ i32 =:: public FileId
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
 struct( stringBuilder : message FilePosition : pos ) =:: public CompilerError
 
+i32 =:: public LabelId
+i32 =:: public NamespaceId
+i32 =:: public NamespaceImportId
+i32 =:: public TemplateId
 #namespace id
-  i32 =:: public LabelId
   -1 LabelId =: public LABEL_ID_NONE
-
-  i32 =:: public NamespaceId
   -1 NamespaceId =: public NAMESPACE_ID_NONE
-
-  i32 =:: public NamespaceImportId
   -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
-  i32 =:: public TemplateId
   -1 TemplateId =: public TEMPLATE_ID_NONE
 #end

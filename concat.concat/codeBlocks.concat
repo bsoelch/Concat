@@ -1,11 +1,8 @@
 #include stringBuilder
 
-#namespace codeBlocks
-  enum( UNKNOWN PROCEDURE IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
-  struct( BlockType : blockType i32 : mut blockId ) =:: public BlockInfo
-#end
+enum( UNKNOWN PROCEDURE IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
+struct( BlockType : blockType i32 : mut blockId ) =:: public BlockId
 #namespace sb
-#using codeBlocks
   proc( stringBuilder BlockType => stringBuilder ) =: public appendBlockType
     switch
       UNKNOWN case

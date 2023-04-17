@@ -5,16 +5,14 @@
 #include "files.concat"
 #include "common.concat"
 
+struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: public NamespaceInfo
+
+struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: public NamespaceImport
+
+struct( i64 : offset i64 : length ) =:: public StringConstant
+
+i32 =:: public LabelFlag
 #namespace id
-  struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: public NamespaceInfo
-
-  struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: public NamespaceImport
-
-  struct( i64 : offset i64 : length ) =:: public StringConstant
-  struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
-
-
-  i32 =:: public LabelFlag
   0  LabelFlag =: public FLAG_NONE
   1  LabelFlag =: public FLAG_MUTABLE
   2  LabelFlag =: public FLAG_STATIC
@@ -22,16 +20,19 @@
   8  LabelFlag =: public FLAG_PUBLIC
   16 LabelFlag =: public FLAG_PRIVATE
   32 LabelFlag =: public FLAG_EMPTY
+#end
 
-  struct( StringConstant : name FilePosition : pos NamespaceId : namespace LabelFlag : flags ) =:: Label
+struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
+struct( StringConstant : name FilePosition : pos NamespaceId : namespace LabelFlag : flags ) =:: Label
 
-  struct(
-    i8 list : mut nameBuffer
-    Label list : mut labels
-    Namespace list : mut namespaces
-    NamespaceImport list : mut namespaceImports
-    NamespaceInfo : mut namespaceInfo
-  ) =:: public LabelContext
+struct(
+  i8 list : mut nameBuffer
+  Label list : mut labels
+  Namespace list : mut namespaces
+  NamespaceImport list : mut namespaceImports
+  NamespaceInfo : mut namespaceInfo
+) =:: public LabelContext
+#namespace id
 
   proc( => LabelContext ) =: public newLabelContext
     1024            i8 list.create

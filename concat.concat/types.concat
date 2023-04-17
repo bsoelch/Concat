@@ -6,34 +6,33 @@
 #include "labels.concat"
 
 #namespace types
-
 enum( BOOL I8 I32 I64 FLOAT TYPE ) =:: PrimitiveType
-
 i32 =:: public ArrayId
 i32 =:: public CompositeId
 i32 =:: public ProcId
 i32 =:: public NamedTypeId
+#end
 
 enum(
-                  undefined
-  PrimitiveType : primitiveType
-        ArrayId : pointer
-        ArrayId : arrayType
-    CompositeId : tuple
-    CompositeId : struct
-    CompositeId : labeledProcIn
-    CompositeId : procIn
-    CompositeId : procOut
-    CompositeId : enum
-    CompositeId : enumLabel
-         ProcId : procedure
-    NamedTypeId : namedType
-    NamedTypeId : namedLabel
-            i32 : autoType
-            i32 : genericType
-            i32 : templateType
+                        undefined
+  types.PrimitiveType : primitiveType
+        types.ArrayId : pointer
+        types.ArrayId : arrayType
+    types.CompositeId : tuple
+    types.CompositeId : struct
+    types.CompositeId : labeledProcIn
+    types.CompositeId : procIn
+    types.CompositeId : procOut
+    types.CompositeId : enum
+    types.CompositeId : enumLabel
+         types.ProcId : procedure
+    types.NamedTypeId : namedType
+    types.NamedTypeId : namedLabel
+                  i32 : autoType
+                  i32 : genericType
+                  i32 : templateType
 ) =:: public Type
-
+#namespace types
 proc( Type : a Type : b => bool ) =: public typeEquals
   a b != if
     false return
@@ -75,8 +74,8 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .templateType b .templateType == return
   end
 end
-type : public TypeContext
 #end
+type : public TypeContext
 #namespace sb
 proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveType
   switch
@@ -94,7 +93,7 @@ proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveTyp
       "type" appendS return
   end
 end
-proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool => stringBuilder ) =: public appendTypeRecursive
+proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder ) =: public appendTypeRecursive
   =:: allowRecurse
   =:: context
   =:: labelContext
@@ -229,7 +228,7 @@ proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr bool =>
       return
   end
 end
-proc( stringBuilder types.Type id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: public appendType
+proc( stringBuilder Type LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendType
   true appendTypeRecursive return
 end
 #end
@@ -515,7 +514,7 @@ i32 =:: CompositeFlag
 32 CompositeFlag =: public COMP_FLAG_STATIC_ARGS
 64 CompositeFlag =: public COMP_FLAG_TEMPLATE
 96 CompositeFlag =: public COMP_GENERIC_MASK
-struct( i64 : eltsOffset i64 : eltCount id.LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
+struct( i64 : eltsOffset i64 : eltCount LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
@@ -574,7 +573,7 @@ proc( Type : composite TypeContext ptr mut : context => i64 ) =: public composit
     end
   .data [] .eltCount return
 end
-proc( Type : composite i32 : index TypeContext ptr mut : context => id.LabelId ) =: public compositeGetLabel
+proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
       struct labeledProcIn enum enumLabel case
@@ -588,7 +587,7 @@ proc( Type : composite i32 : index TypeContext ptr mut : context => id.LabelId )
     end
   .data [] .labelOffset index + return
 end
-proc( Type : composite string : name id.LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
+proc( Type : composite string : name LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
       struct labeledProcIn enum enumLabel case
@@ -645,7 +644,7 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   end #drop
   -1 return
 end
-proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
+proc( CompositeFlag : classFlag Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
   classFlag CompositeFlag =: mut flags
   true =:: mut isVoid
   0 while #dup elts .length < do
@@ -692,7 +691,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts id.LabelId : labelOffset T
   return
 end
 ## creates struct or tuple
-proc( Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newTuple
+proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
     Type .undefined true return
   end
@@ -700,12 +699,12 @@ proc( Type arrayView : elts id.LabelId : labelOffset TypeContext ptr mut : conte
   labelOffset id.LABEL_ID_NONE == if Type .tuple new else Type .struct new end
   false return
 end
-proc( Type arrayView : elts id.LabelId : labelOffset bool : isOut TypeContext ptr mut : context => Type ) =: public newProcArgs
+proc( Type arrayView : elts LabelId : labelOffset bool : isOut TypeContext ptr mut : context => Type ) =: public newProcArgs
   isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labelOffset context newCompositeType
   isOut if Type .procOut new else labelOffset id.LABEL_ID_NONE == _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
   return
 end
-proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext ptr mut : context => Type bool ) =: public newEnum
+proc( Type arrayView : elts LabelId : labelOffset bool : isLabel TypeContext ptr mut : context => Type bool ) =: public newEnum
   elts .length 0 ==  labelOffset id.LABEL_ID_NONE == | if
     Type .undefined true return
   end
@@ -715,7 +714,7 @@ proc( Type arrayView : elts id.LabelId : labelOffset bool : isLabel TypeContext 
 end
 #end
 #namespace sb
-proc( stringBuilder types.CompositeType id.LabelContext ptr types.TypeContext ptr => stringBuilder ) =: appendComposite
+proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stringBuilder ) =: appendComposite
   =:: context
   =:: labelContext
   =:: comp
@@ -805,8 +804,8 @@ proc( Type : proc TypeContext ptr mut : context => bool ) =: public hasStaticArg
 end
 
 ## named types
-struct( Type : mut data id.LabelId : name id.TemplateId : templateId i32 : mut implId ) =:: NamedType
-proc( Type id.LabelId id.TemplateId types.TypeContext ptr mut => Type ) =: public newNamedType
+struct( Type : mut data LabelId : name TemplateId : templateId i32 : mut implId ) =:: NamedType
+proc( Type LabelId TemplateId TypeContext ptr mut => Type ) =: public newNamedType
   =:: context
   -1 NamedType new context [] .namedTypes #swap list.append context [] .namedTypes =
   context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType new return
@@ -814,7 +813,7 @@ end
 proc( Type => bool ) =: public isNamedType
   #dup Type .namedType == #swap Type .namedLabel == | return
 end
-proc( Type types.TypeContext ptr => Type ) =: public unwrapNamed
+proc( Type TypeContext ptr => Type ) =: public unwrapNamed
   =:: context
   #dup Type .namedType == if
     context [] .namedTypes #swap .namedType list.get .data return
@@ -823,7 +822,7 @@ proc( Type types.TypeContext ptr => Type ) =: public unwrapNamed
   end
   return
 end
-proc( Type : named Type : value i32 : implId types.TypeContext ptr mut : context => bool ) =: public setNamedType
+proc( Type : named Type : value i32 : implId TypeContext ptr mut : context => bool ) =: public setNamedType
   named Type .namedType == if
     context [] .namedTypes named .namedType list.at .data
       #dup [] .data Type .undefined typeEquals if
@@ -838,7 +837,7 @@ end
 
 #end
 #namespace sb
-proc( stringBuilder types.NamedType id.LabelContext ptr types.TypeContext ptr bool => stringBuilder ) =: appendNamedType
+proc( stringBuilder types.NamedType LabelContext ptr TypeContext ptr bool => stringBuilder ) =: appendNamedType
   =:: allowRecurse
   =:: context
   =:: labelContext
@@ -880,7 +879,7 @@ proc( Type => i32 ) =: public getTypeId
   -1 return
 end
 
-proc( types.Type : src types.TypeContext ptr mut : context => bool ) =: public isMultiValueType
+proc( Type : src TypeContext ptr mut : context => bool ) =: public isMultiValueType
   src context unwrapNamed
     #dup context isComposite if #drop
       true return
@@ -930,7 +929,7 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
   end
 end
 
-proc( types.Type : src bool : mutable types.TypeContext ptr mut : context => types.Type ) =: public getAddressType
+proc( Type : src bool : mutable TypeContext ptr mut : context => Type ) =: public getAddressType
   src context isArray if
     src context unwrapNamed =:: unwraped
     unwraped context getBaseType true unwraped context getArraySize true mutable context newArrayType #drop return
@@ -943,15 +942,17 @@ proc( types.Type : src bool : mutable types.TypeContext ptr mut : context => typ
   true ArraySize array.empty true mutable context newArrayType #drop return
 end
 
+#end
 ## type context
 struct(
-  ArrayType     list : mut arrayTypes
-  ArraySize     list : mut arraySizes
-  CompositeType list : mut compositeTypes
-  Type          list : mut compositeData
-  ProcType      list : mut procTypes
-  NamedType     list : mut namedTypes
+  types.ArrayType     list : mut arrayTypes
+  types.ArraySize     list : mut arraySizes
+  types.CompositeType list : mut compositeTypes
+  Type                list : mut compositeData
+  types.ProcType      list : mut procTypes
+  types.NamedType     list : mut namedTypes
 ) TypeContext =
+#namespace types
 proc( => TypeContext ) =: public newTypeContext
   128 ArrayType     list.create ## arrayTypes
   128 ArraySize     list.create ## arraySizes

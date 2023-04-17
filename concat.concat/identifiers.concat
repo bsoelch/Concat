@@ -8,22 +8,22 @@
 #include "codeBlocks.concat"
 #include "common.concat"
 
-#namespace id
   enum( TYPE PROCEDURE GLOBAL_VAR  TEMPLATE_ARG  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
 
-  struct( types.Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
+  struct( Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
-  struct( types.Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: public TemplateInfo
+  struct( Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: public TemplateInfo
 
-  struct( types.Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
+  struct( Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
   struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
+#namespace id
 
   "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
-  types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
-  types.Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
+  Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
+  Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
 
 
   proc( IdentifierName : a => i32 ) =: idHash
@@ -39,13 +39,13 @@
   struct(
     IdentifierName IdentifierData hashMap : mut identifiers
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
-    codeBlocks.BlockType : mut blockType
-    types.Type : currentProc
+    BlockType : mut blockType
+    Type : currentProc
     NamespaceImportId : prevImports
     bool : mut autoClose
   ) =:: Scope
 
-  proc( codeBlocks.BlockType : blockType types.Type : procType NamespaceImportId : imports => Scope ) =: newScope
+  proc( BlockType : blockType Type : procType NamespaceImportId : imports => Scope ) =: newScope
     idHash @
     idEq @
     128 IdentifierData map.create
@@ -56,13 +56,13 @@
     false
     Scope new return
   end
-
+#end
   struct(
     ConstantContext : mut constContext
     LabelContext : mut labelContext
-    types.TypeContext : mut typeContext
-    Scope : mut globalScope
-    Scope list : mut localScopes
+    TypeContext : mut typeContext
+    id.Scope : mut globalScope
+    id.Scope list : mut localScopes
     TemplateInfo list : mut templateInfos
     ConstValue list : mut templateArgBuffer
     types.ArraySize list : mut arraySizeBuffer
@@ -70,12 +70,13 @@
     i32 : mut localVarCount
     TemplateId : mut currentTemplate
   ) =:: public IdentifierContext
+#namespace id
 
   proc( => IdentifierContext ) =: public newIdentifierContext
     newConstContext
     newLabelContext
     types.newTypeContext
-    codeBlocks.BlockType .UNKNOWN types.Type .undefined NAMESPACE_IMPORT_NONE newScope
+    BlockType .UNKNOWN Type .undefined NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     128 TemplateInfo      list.create
     32  ConstValue        list.create
@@ -98,15 +99,15 @@
   proc( IdentifierContext ptr mut : context => bool ) =: public isGlobal
     context [] .localScopes .length 0 == return
   end
-  proc( codeBlocks.BlockType : blockType types.Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
+  proc( BlockType : blockType Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
     context [] .localScopes
        blockType procType context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .localScopes =
   end
-  proc( codeBlocks.BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
+  proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
     context [] .localScopes .length 0 == if
-      types.Type .undefined
+      Type .undefined
     else
       context [] .localScopes list.peek .data [] .currentProc
     end =:: currentProc
@@ -115,7 +116,7 @@
        list.append
     context [] .localScopes =
   end
-  proc( codeBlocks.BlockType : blockType  bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
+  proc( BlockType : blockType  bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
     context [] .localScopes .length 0 == if
       true return
     end
@@ -123,17 +124,15 @@
     autoClose context [] .localScopes list.peek .data [] .autoClose =
     false return
   end
-  proc( IdentifierContext ptr mut : context => codeBlocks.BlockType ) =: public currentScopeType
-    #using codeBlocks
+  proc( IdentifierContext ptr mut : context => BlockType ) =: public currentScopeType
     context [] .localScopes .length 0 == if
       BlockType .UNKNOWN return
     end
     context [] .localScopes list.peek .data [] .blockType return
   end
-  proc( IdentifierContext ptr mut : context => types.Type ) =: public currentScopeProc
-    #using codeBlocks
+  proc( IdentifierContext ptr mut : context => Type ) =: public currentScopeProc
     context [] .localScopes .length 0 == if
-      types.Type .undefined return
+      Type .undefined return
     end
     context [] .localScopes list.peek .data [] .currentProc return
   end
@@ -144,8 +143,7 @@
     end #drop
     list.free
   end
-  proc( IdentifierContext ptr mut : context => bool codeBlocks.BlockType bool ) =: public closeScope
-    #using codeBlocks
+  proc( IdentifierContext ptr mut : context => bool BlockType bool ) =: public closeScope
     context [] .localScopes .length 0 == if
       false BlockType .UNKNOWN true return
     end
@@ -153,7 +151,7 @@
       #dup .scopeStrings freeScopeStrings #over .scopeStrings =
       #dup .identifiers @ map.free
       #dup .prevImports context [] .labelContext .namespaceInfo .imports =
-      #dup .blockType codeBlocks.BlockType .PROCEDURE == if
+      #dup .blockType BlockType .PROCEDURE == if
         0 context [] .localVarCount = ## XXX handle nested procedures
       end
     #dup .autoClose #swap .blockType false return
@@ -299,7 +297,7 @@
   proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
     id fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( LabelId : label types.Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
       errors []
         "invalid label id" sb.wrap declaredAt CompilerError new list.append
@@ -393,7 +391,7 @@
   end
 #end
 #namespace sb
-  proc( stringBuilder : sb id.IdentifierInfo : id id.LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
+  proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
     sb
       id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != if
         "mutable " sb.appendS
@@ -495,13 +493,13 @@
     end
     context [] .templateInfos id list.at return
   end
-  proc( TemplateId : id IdentifierContext ptr mut : context => types.Type ) =: public templateArgs
+  proc( TemplateId : id IdentifierContext ptr mut : context => Type ) =: public templateArgs
     id 0 < id context [] .templateInfos .length >= | if
-      types.Type .undefined return
+      Type .undefined return
     end
     context [] .templateInfos id list.get .templateType return
   end
-  proc( types.Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
+  proc( Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
     context hasOpenTemplate if
       true return
     end
@@ -531,13 +529,13 @@
 #end
 
 #namespace types
-  proc( ConstantArray : data i64 : index id.IdentifierContext ptr mut : context => ConstValue ) =: argBufferGet
+  proc( ConstantArray : data i64 : index IdentifierContext ptr mut : context => ConstValue ) =: argBufferGet
     context [] .templateArgBuffer data .offset index + list.get return
   end
-  proc( ConstantArray : data id.IdentifierContext ptr mut : context => ConstValue arrayView ) =: argBufferAsArray
+  proc( ConstantArray : data IdentifierContext ptr mut : context => ConstValue arrayView ) =: argBufferAsArray
     context [] .templateArgBuffer .data data .offset + data .length array.create return
   end
-  proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => CompositeId ) =: replaceGenericsComposite
+  proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => CompositeId ) =: replaceGenericsComposite
     context [] .typeContext .compositeTypes src list.get
       #dup .flags COMP_FLAG_VOID_ONLY & 0 != #over .flags COMP_GENERIC_MASK & 0 == | if #drop
         src return ## no generic elements
@@ -570,7 +568,7 @@
     #drop
     -1 ArraySizeType .int ArraySize new true return
   end
-  proc( ArraySize : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => ArraySize ) =: replaceGenericsSize
+  proc( ArraySize : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => ArraySize ) =: replaceGenericsSize
     src .sizeType switch
       int case
         src return
@@ -593,7 +591,7 @@
         src return
     end
   end
-  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => Type ) =: public replaceGenericsType
+  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => Type ) =: public replaceGenericsType
     src context [] .typeContext @ containsGeneric genericArgs .length 0 > & #swap templateArgs .length 0 > & | ! if
       src return ## no generics to replace
     end
@@ -694,7 +692,7 @@
             newType
             args context argBufferAsArray context [] .constContext @ constArray
             implPos
-          id.TemplateImplementation new list.append
+          TemplateImplementation new list.append
         templateInfo [] .implementations =
         ## compute value
         newType
@@ -724,7 +722,7 @@
         src return
     end
   end
-  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos id.IdentifierContext ptr mut : context => ConstValue ) =: public replaceGenerics
+  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => ConstValue ) =: public replaceGenerics
     src switch
       none wildCard boolean int enumLabel chr str case
         src return
@@ -745,7 +743,7 @@
     end
   end
 
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes id.IdentifierContext ptr mut : context => ) =: resolveGenericsTypeInternal
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes IdentifierContext ptr mut : context => ) =: resolveGenericsTypeInternal
     #using types
     context [] .typeContext @ =:: typeContext
     expected Type .templateType == if
@@ -872,7 +870,7 @@
   end
   ## XXX resolve generics method for general constants
 
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset id.IdentifierContext ptr mut : context => ) =: public resolveGenericsType
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset IdentifierContext ptr mut : context => ) =: public resolveGenericsType
     templateCount genericCount + bool mem.calloc =:: visitedValues
     64 i32 list.create =:: mut visitedTypes
     values []
