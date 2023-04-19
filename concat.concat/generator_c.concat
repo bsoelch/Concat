@@ -57,7 +57,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       end
       break
     autoType case
-      break ## TODO resolve auto-types?
+      break ## TODO? resolve auto-types
     pointer case
       t typeContext types.getBaseType target prog printTypeName
       t typeContext types.isCallable if
@@ -69,7 +69,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       target "*" io.fputs #drop
       break
     labeledProcIn procIn case
-      ## TODO print proc-in
+      ## TODO? print proc-in
       break
     arrayType case
       "array" string.wrap t .arrayType target printCompositeName
@@ -104,7 +104,30 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
   end
 end
 proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
-  ## TODO procedure argument types
+  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.getProcIn #drop typeContext types.compositeElts =:: args
+  args .length 0 == if
+    target "(void)" io.fputs #drop
+    return
+  end
+  target "(" io.fputs #drop
+  0 while #dup args .length < do
+      #dup 0 > if
+        target "," io.fputs #drop
+      end
+      args #over array.get target prog printTypeName
+      argNames if
+        16 sb.create
+          " arg" sb.appendS
+          #over  sb.appendI
+          ## XXX print argument label (if existent)
+          target #over io.fputSb #drop
+        sb.free #drop
+      end
+    1 +
+  end #drop
+  target ")" io.fputs #drop
 end
 proc( string : name i32 : id io.FILE : target => ) =: printCompositeDeclaration
   128 sb.create
@@ -141,7 +164,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
             ") " sb.appendS
             target #over io.fputSb #drop
           sb.free #drop
-          t false target prog printProcArgs
+          base false target prog printProcArgs
           target ";\n" io.fputs #drop
         end
         break
