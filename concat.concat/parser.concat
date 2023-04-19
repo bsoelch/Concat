@@ -502,7 +502,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       if
         "error while parsing enum type" sb.wrap fileState [] .wordStart state appendError
       end
-      #swap false state [] .idContext .typeContext addrOf types.newEnum if
+      #swap state [] .idContext .typeContext addrOf types.newEnum if
         "error while creating enum type" sb.wrap fileState [] .wordStart state appendError
       end
       fileState [] .wordStart constType  state pushConst

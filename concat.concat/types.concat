@@ -24,7 +24,6 @@ enum(
     types.CompositeId : procIn
     types.CompositeId : procOut
     types.CompositeId : enum
-    types.CompositeId : enumLabel
          types.ProcId : procedure
     types.NamedTypeId : namedType
                   i32 : autoType
@@ -57,8 +56,6 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .procOut b .procOut == return
     enum case
       a .enum b .enum == return
-    enumLabel case
-      a .enumLabel b .enumLabel == return
     procedure case
       a .procedure b .procedure == return
     namedType case
@@ -104,18 +101,16 @@ proc( Type : a => i32 ) =: public typeHash
       bigPrime 8 * a .procOut + return
     enum case
       bigPrime 9 * a .enum + return
-    enumLabel case
-      bigPrime 10 * a .enumLabel + return
     procedure case
-      bigPrime 11 * a .procedure + return
+      bigPrime 10 * a .procedure + return
     namedType case
-      bigPrime 12 * a .namedType + return
+      bigPrime 11 * a .namedType + return
     autoType case
-      bigPrime 13 * a .autoType + return
+      bigPrime 12 * a .autoType + return
     genericType case
-      bigPrime 14 * a .genericType + return
+      bigPrime 13 * a .genericType + return
     templateType case
-      bigPrime 15 * a .templateType + return
+      bigPrime 14 * a .templateType + return
   end
 end
 
@@ -189,20 +184,6 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       .enum
       #swap
         "enum[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    enumLabel case
-      .enumLabel
-      #swap
-        "enum-label[" appendS
         #over    appendI
         "]( "    appendS
       #swap
@@ -554,7 +535,7 @@ struct( i64 : eltsOffset i64 : eltCount LabelId : labelOffset CompositeFlag : mu
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
   switch
-    tuple struct labeledProcIn procIn procOut enum enumLabel case
+    tuple struct labeledProcIn procIn procOut enum case
       true return
     undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
       false return
@@ -567,10 +548,6 @@ end
 proc( Type TypeContext ptr => bool ) =: public isEnum
   unwrapNamed
   Type .enum == return
-end
-proc( Type TypeContext ptr => bool ) =: public isEnumLabel
-  unwrapNamed
-  Type .enumLabel == return
 end
 proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
   composite context unwrapNamed
@@ -593,9 +570,6 @@ proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut op
       enum case
         .enum
         break
-      enumLabel case
-        .enumLabel
-        break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
         #drop CompositeType ptr mut optional.empty return
     end
@@ -611,7 +585,7 @@ end
 proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
-      struct labeledProcIn enum enumLabel case
+      struct labeledProcIn enum case
         break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop id.LABEL_ID_NONE return
@@ -625,7 +599,7 @@ end
 proc( Type : composite string : name LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
-      struct labeledProcIn enum enumLabel case
+      struct labeledProcIn enum case
         break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop -1 return
@@ -739,13 +713,11 @@ proc( Type arrayView : elts LabelId : labelOffset bool : isOut TypeContext ptr m
   isOut if Type .procOut new else labelOffset id.LABEL_ID_NONE == _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
   return
 end
-proc( Type arrayView : elts LabelId : labelOffset bool : isLabel TypeContext ptr mut : context => Type bool ) =: public newEnum
+proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newEnum
   elts .length 0 ==  labelOffset id.LABEL_ID_NONE == | if
     Type .undefined true return
   end
-  COMP_FLAG_TUPLE elts labelOffset context newCompositeType
-  isLabel if Type .enumLabel new else Type .enum new end
-  false return
+  COMP_FLAG_TUPLE elts labelOffset context newCompositeType Type .enum new false return
 end
 #end
 #namespace sb
@@ -855,6 +827,20 @@ proc( Type TypeContext ptr => Type ) =: public unwrapNamed
   end
   return
 end
+proc( Type TypeContext ptr => LabelId ) =: public namedTypeName
+  =:: context
+  #dup Type .namedType == if
+    context [] .namedTypes #swap .namedType list.get .name return
+  end
+  #drop id.LABEL_ID_NONE return
+end
+proc( Type TypeContext ptr => LabelId ) =: public getImplId
+  =:: context
+  #dup Type .namedType == if
+    context [] .namedTypes #swap .namedType list.get .implId return
+  end
+  #drop -1 return
+end
 proc( Type : named Type : value i32 : implId TypeContext ptr mut : context => bool ) =: public setNamedType
   named Type .namedType == if
     context [] .namedTypes named .namedType list.at .data
@@ -899,17 +885,22 @@ proc( i32 : id => Type ) =: public newTemplateType
 end
 
 proc( Type => i32 ) =: public getTypeId
-  #dup Type .autoType == if
-    .autoType return
+  #dup switch
+    autoType case .autoType return
+    genericType case .genericType return
+    templateType case .templateType return
+    pointer case .pointer return
+    arrayType case .arrayType return
+    tuple case .tuple return
+    struct case .struct return
+    labeledProcIn case .labeledProcIn return
+    procIn case .procIn return
+    procOut case .procOut return
+    enum case .enum return
+    procedure case .procedure return
+    namedType case .namedType return
+    undefined primitiveType case #drop -1 return
   end
-  #dup Type .genericType == if
-    .genericType return
-  end
-  #dup Type .templateType == if
-    .templateType return
-  end
-  #drop
-  -1 return
 end
 
 proc( Type : src TypeContext ptr mut : context => bool ) =: public isMultiValueType
@@ -947,7 +938,7 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
         1 +
       end #drop
       isTemplate isStatic return
-    tuple struct labeledProcIn procIn procOut enum enumLabel case
+    tuple struct labeledProcIn procIn procOut enum case
       t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
     procedure case
       context [] .procTypes t .procedure list.get

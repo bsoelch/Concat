@@ -1,6 +1,6 @@
 #include "parser.concat"
 #include "typeCheck.concat"
-#include "generators.concat"
+#include "generator_c.concat"
 
 entryPoint:
   ..argc 1 > if
@@ -13,7 +13,12 @@ entryPoint:
   prog .errors .length 0 == if
     prog @ typeCheckProgram
   end
-  prog .errors .length 0 > if
+  prog .errors .length 0 == if
+    "./out.c\x00" io.OPEN_WRITE io.fopenS #drop ## TODO check return value
+      #dup prog @ compileToC
+    io.fclose #drop
+  end
+  prog .errors .length 0 > if ## TODO only print errors
     0 while #dup prog .progFiles .length < do
       prog .progFiles #over list.at .data
         #dup [] .localOps list.clear #over [] .localOps =
@@ -23,17 +28,6 @@ entryPoint:
       1 +
     end #drop
   end
-  prog @ getDeclaredTypes =:: types
-  "./types.txt\x00" io.OPEN_WRITE io.fopenS #drop =:: typesFile
-  1024 sb.create
-    0 while #dup types .length < do
-      #swap
-        types #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @ sb.appendType
-        '\n' sb.appendC
-      #swap 1 +
-    end #drop
-  typesFile #swap io.fputSb #drop
-  typesFile io.fclose #drop
   1024 sb.create
     prog sb.appendProgram
   =:: parsedOps

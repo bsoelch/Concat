@@ -636,8 +636,6 @@
         src .procOut templateArgs genericArgs implPos context replaceGenericsComposite Type .procOut new return
       enum case
         src .enum templateArgs genericArgs implPos context replaceGenericsComposite Type .enum new return
-      enumLabel case
-        src .enumLabel templateArgs genericArgs implPos context replaceGenericsComposite Type .enumLabel new return
       procedure case
         context [] .typeContext .procTypes src .procedure list.get
           #dup .in templateArgs genericArgs implPos context replaceGenericsType
@@ -862,7 +860,7 @@
           expected typeContext unwrapNamed
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
-      tuple struct labeledProcIn procIn procOut enum enumLabel genericType templateType case
+      tuple struct labeledProcIn procIn procOut enum genericType templateType case
         io.stdErr "unreachable\n" io.fputs #drop ## TODO mark as unreachable
         break
     end
