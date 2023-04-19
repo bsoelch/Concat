@@ -456,7 +456,7 @@ typedef struct{
 
 #define MAX_TYPES       2048
 #define MAX_POINTERS    1024
-#define MAX_COMPOSITE   1024
+#define MAX_COMPOSITE   2048
 #define MAX_ARRAY_TYPES 1024
 #define MAX_PROC_TYPES  1024
 #define MAX_NAMED_TYPES 1024
@@ -6134,6 +6134,9 @@ void typeCheckCall(Operation* op,TypeCheckState* state,bool isPtr){
     op->dataType=procedureType(newIn,newOut,NULL,0);
     inTypes=compositeTypeData(newIn);
     outTypes=compositeTypeData(newOut);
+    if(inTypes==NULL||outTypes==NULL){
+      handleError("could not get procedure types",ERROR_MEMORY,op->filePos);
+    }
     procType=procTypeData(op->dataType);
     if(op->opType==OP_CALL_TEMPLATE){
       bool match;

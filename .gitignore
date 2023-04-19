@@ -15,3 +15,4 @@ concat.concat/out.txt
 concat.concat/concat2
 featureMap.concat
 !tests/*/*.out
+lib/future/*
