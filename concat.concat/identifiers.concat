@@ -643,10 +643,9 @@
           #dup .in templateArgs genericArgs implPos context replaceGenericsType
           #swap .out templateArgs genericArgs implPos context replaceGenericsType
         context [] .typeContext @ newProcedure #drop return
-      namedType namedLabel case
-        src Type .namedLabel == =:: isLabel
+      namedType case
         context [] .typeContext .namedTypes
-          src isLabel if .namedLabel else .namedType end
+          src .namedType
         list.get =:: typeData
         typeData .templateId id.TEMPLATE_ID_NONE == if
           src return ## no template data in type
@@ -850,8 +849,8 @@
           end #drop
         end
         break
-      namedType namedLabel case
-        expected Type .namedType == if expected .namedType else expected .namedLabel end =:: id
+      namedType case
+        expected .namedType =:: id
         visitedTypes [] list.asArray id array.contains if
           return
         end

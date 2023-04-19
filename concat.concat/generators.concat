@@ -1,0 +1,101 @@
+#+
+common code for code generators
++#
+#include map
+
+#include "program.concat"
+#include "types.concat"
+
+
+proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: declaredType
+  prog [] .idContext .typeContext @ =:: typeContext
+  visited declared map.at #dup optional.hasData if .data []
+    ptrLevel == if
+      0 sb.create
+        declared prog [] .idContext .labelContext @ prog [] .idContext .typeContext @ sb.appendType
+        "! \n" sb.appendS
+      io.stdOut #swap io.fputSb #drop
+      ## TODO add to error messages instead of printing to console
+    end
+    return
+  else #drop end
+  visited declared ptrLevel map.put #drop
+  declared switch
+    undefined primitiveType autoType templateType genericType case
+      break
+    pointer case
+      declared typeContext types.getBaseType ptrLevel 1 + prog visited types declaredType
+      types []
+        declared list.append
+      types [] =
+      break
+    arrayType case
+      declared typeContext types.getBaseType ptrLevel prog visited types declaredType
+      types []
+        declared list.append
+      types [] =
+      break
+    tuple struct labeledProcIn procIn procOut enum enumLabel case
+      declared typeContext types.compositeElts =:: elts
+      0 while #dup elts .length < do
+        elts #over array.get ptrLevel prog visited types declaredType
+        1 +
+      end #drop
+      declared Type .labeledProcIn == declared Type .procIn == | if
+        break ## don't add proc-in to list of declared types
+      end
+      declared Type .procOut == elts .length 2 < & if
+        break ## don't add single element proc-out to list of declared types
+      end
+      types []
+        declared list.append
+      types [] =
+      break
+    procedure case
+      declared typeContext types.getProcIn #drop ptrLevel prog visited types declaredType
+      declared typeContext types.getProcOut #drop ptrLevel prog visited types declaredType
+      ## don't add procedure type to list of declared types
+      ## type declaration of proc-pointer will be covered by surrounding pointer type
+      break
+    namedType case
+      declared typeContext types.unwrapNamed ptrLevel prog visited types declaredType
+      types []
+        declared list.append
+      types [] =
+      break
+  end
+  -1 visited declared map.at .data [] = ## finished declaration
+end
+
+proc( Operation ptr : op Program ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: addOpType
+  op [] .val OpValue .declareId == op [] .val OpValue .predeclareId == | if
+    op [] .dataType 0 prog visited types declaredType
+  end
+end
+
+proc( Program ptr mut : prog => Type list ) =: public getDeclaredTypes
+  types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut visited ## XXX start with power of two closest to total type count as capacity 
+  128 Type list.create =:: mut types
+  0 while #dup prog [] .progFiles .length < do
+    prog [] .progFiles #over list.at .data
+      0 while #dup #over:2 [] .globalOps .length < do
+        #swap
+          #dup [] .globalOps #over:2 list.at .data prog visited @ types @ addOpType
+        #swap 1 +
+      end #drop
+      0 while #dup #over:2 [] .localOps .length < do
+        #swap
+          #dup [] .localOps #over:2 list.at .data prog visited @ types @ addOpType
+        #swap 1 +
+      end #drop
+      0 while #dup #over:2 [] .templateOps .length < do
+        #swap
+          #dup [] .templateOps #over:2 list.at .data prog visited @ types @ addOpType
+        #swap 1 +
+      end #drop
+    #drop
+    1 +
+  end #drop
+  visited @ map.free
+  types return
+end

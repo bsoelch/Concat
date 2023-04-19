@@ -27,7 +27,6 @@ enum(
     types.CompositeId : enumLabel
          types.ProcId : procedure
     types.NamedTypeId : namedType
-    types.NamedTypeId : namedLabel
                   i32 : autoType
                   i32 : genericType
                   i32 : templateType
@@ -64,8 +63,6 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .procedure b .procedure == return
     namedType case
       a .namedType b .namedType == return
-    namedLabel case
-      a .namedLabel b .namedLabel == return
     autoType case
       a .autoType b .autoType == return
     genericType case
@@ -74,6 +71,54 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .templateType b .templateType == return
   end
 end
+1011001 =:: bigPrime
+proc( PrimitiveType => i32 ) =: primitiveId ## XXX ? allow direct access to enum id
+  switch
+    BOOL case 0 return
+    I8 case 1 return
+    I32 case 2 return
+    I64 case 3 return
+    FLOAT case 4 return
+    TYPE case 5 return
+  end
+end
+proc( Type : a => i32 ) =: public typeHash
+  a switch
+    undefined case
+      0 return ## there is only one undefined
+    primitiveType case
+      bigPrime a .primitiveType primitiveId + return
+    pointer case
+      bigPrime 2 * a .pointer + return
+    arrayType case
+      bigPrime 3 * a .arrayType + return
+    tuple case
+      bigPrime 4 * a .tuple + return
+    struct case
+      bigPrime 5 * a .struct + return
+    labeledProcIn case
+      bigPrime 6 * a .labeledProcIn + return
+    procIn case
+      bigPrime 7 * a .procIn + return
+    procOut case
+      bigPrime 8 * a .procOut + return
+    enum case
+      bigPrime 9 * a .enum + return
+    enumLabel case
+      bigPrime 10 * a .enumLabel + return
+    procedure case
+      bigPrime 11 * a .procedure + return
+    namedType case
+      bigPrime 12 * a .namedType + return
+    autoType case
+      bigPrime 13 * a .autoType + return
+    genericType case
+      bigPrime 14 * a .genericType + return
+    templateType case
+      bigPrime 15 * a .templateType + return
+  end
+end
+
 #end
 type : public TypeContext
 #namespace sb
@@ -193,16 +238,6 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
        return
     namedType case
       .namedType
-      #swap
-        "named[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-      context [] .namedTypes #swap list.get labelContext context allowRecurse appendNamedType
-      " )" appendS
-      return
-    namedLabel case
-      .namedLabel
       #swap
         "named[" appendS
         #over    appendI
@@ -521,7 +556,7 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
   switch
     tuple struct labeledProcIn procIn procOut enum enumLabel case
       true return
-    undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType case
+    undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
       false return
   end
 end
@@ -561,7 +596,7 @@ proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut op
       enumLabel case
         .enumLabel
         break
-      undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType case
+      undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
         #drop CompositeType ptr mut optional.empty return
     end
   context [] .compositeTypes #swap list.at return
@@ -578,7 +613,7 @@ proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =:
     #dup switch
       struct labeledProcIn enum enumLabel case
         break
-      undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType tuple procIn procOut case
+      undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -592,7 +627,7 @@ proc( Type : composite string : name LabelContext ptr mut : labelContext TypeCon
     #dup switch
       struct labeledProcIn enum enumLabel case
         break
-      undefined primitiveType pointer arrayType procedure namedType namedLabel autoType genericType templateType tuple procIn procOut case
+      undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop -1 return
     end
   context compositeData
@@ -811,14 +846,12 @@ proc( Type LabelId TemplateId TypeContext ptr mut => Type ) =: public newNamedTy
   context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType new return
 end
 proc( Type => bool ) =: public isNamedType
-  #dup Type .namedType == #swap Type .namedLabel == | return
+  Type .namedType == return
 end
 proc( Type TypeContext ptr => Type ) =: public unwrapNamed
   =:: context
   #dup Type .namedType == if
     context [] .namedTypes #swap .namedType list.get .data return
-  else #dup Type .namedLabel == _if
-    context [] .namedTypes #swap .namedLabel list.get .data return
   end
   return
 end
@@ -920,7 +953,7 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
       context [] .procTypes t .procedure list.get
         #dup .in context containsGeneric =:: isStatic =:: isTemplate
         .out context containsGeneric isStatic | #swap isTemplate | #swap return
-    namedType namedLabel case
+    namedType case
       t context unwrapNamed context containsGeneric return
     genericType case
       false true return

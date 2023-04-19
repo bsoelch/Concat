@@ -1,5 +1,6 @@
 #include "parser.concat"
 #include "typeCheck.concat"
+#include "generators.concat"
 
 entryPoint:
   ..argc 1 > if
@@ -22,6 +23,17 @@ entryPoint:
       1 +
     end #drop
   end
+  prog @ getDeclaredTypes =:: types
+  "./types.txt\x00" io.OPEN_WRITE io.fopenS #drop =:: typesFile
+  1024 sb.create
+    0 while #dup types .length < do
+      #swap
+        types #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @ sb.appendType
+        '\n' sb.appendC
+      #swap 1 +
+    end #drop
+  typesFile #swap io.fputSb #drop
+  typesFile io.fclose #drop
   1024 sb.create
     prog sb.appendProgram
   =:: parsedOps

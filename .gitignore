@@ -11,6 +11,7 @@ code
 code.c
 concat.concat/*.c
 concat.concat/out.txt
+concat.concat/types.txt
 !concat.concat/extern.c
 concat.concat/concat2
 featureMap.concat
