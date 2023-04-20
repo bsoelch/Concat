@@ -232,18 +232,15 @@ struct(
     base 0 < base  context [] .namespaces .length >= | if
       NAMESPACE_ID_NONE return ## id out of range
     end
-    context [] .namespaces base list.get
-      0 while #dup #over:2 .children .length < do
-        #over .children #over list.get
-          context [] .namespaces #over list.get .name context scAsStr
-          childName string.eq if
-            #swap #drop #swap #drop
-            return
-          end
-        #drop
-        1 +
-      end #drop
-    #drop
+    context [] .namespaces base list.at .data =:: baseSpace
+    0 while #dup baseSpace [] .children .length < do
+      baseSpace [] .children #over list.get =:: child
+      context [] .namespaces child list.get .name context scAsStr
+      childName string.eq if #drop
+        child return
+      end
+      1 +
+    end #drop
     create ! if
       NAMESPACE_ID_NONE return
     end
