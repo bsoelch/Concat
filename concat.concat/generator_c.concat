@@ -4,6 +4,13 @@
 #include "measure.concat"
 
 "cct_" =:: CONCAT_PREFIX
+"internal_argc"            =:: ARGC_NAME
+"internal_argv"            =:: ARGV_NAME
+"internal_main"            =:: MAIN_NAME
+"internal_checkArrayIndex" =:: CHECK_INDEX_NAME
+"internal_checkEnumIndex"  =:: CHECK_ENUM_NAME
+1 =:: EXIT_CODE_ARRAY_INDEX
+2 =:: EXIT_CODE_ENUM_INDEX
 
 proc( io.FILE : target => ) =: printHeader
   target
@@ -270,7 +277,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         "tuple" string.wrap t .enum target printCompositeName
         target "{\nunion{\n" io.fputs #drop
         t target prog printCompositeElements
-        target "}data;\nint32_t label;\n};\n" io.fputs #drop
+        target "}data;\nint32_t label;\n};\n" io.fputs #drop ## XXX smaller int-type for smaller label count
         break
     end
     1 +
@@ -281,7 +288,61 @@ end
 proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
   target printHeader
   target prog printTypes
-  ## TODO compile code
+  ## TODO initialize string data
+  prog [] .hasEntryPoint if
+    64 sb.create
+      "static void " sb.appendS
+      CONCAT_PREFIX  sb.appendS
+      MAIN_NAME      sb.appendS
+      "(void);\n"    sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+  end
+  prog [] .hasGetArgs if
+    64 sb.create
+      "static int " sb.appendS
+      CONCAT_PREFIX sb.appendS
+      ARGC_NAME     sb.appendS
+      ";\n"         sb.appendS
+      target #over io.fputSb #drop
+    sb.clear
+      "static char** " sb.appendS
+      CONCAT_PREFIX    sb.appendS
+      ARGV_NAME        sb.appendS
+      ";\n"            sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+  end
+  prog [] .hasCheckIndex if
+    64 sb.create
+      "static void " sb.appendS
+      CONCAT_PREFIX  sb.appendS
+      CHECK_INDEX_NAME sb.appendS
+      "(int64_t index,int64_t length,char const* pos){\n" sb.appendS
+      "  if(index>=0 && index<length)\n    return;\n" sb.appendS
+      "  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\" at %s\\n\",index,length,pos);\n" sb.appendS
+      "  exit(" sb.appendS
+      EXIT_CODE_ARRAY_INDEX sb.appendI
+      ");\n}\n" sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+  end
+  prog [] .hasCheckEnum if
+    64 sb.create
+      "static void " sb.appendS
+      CONCAT_PREFIX  sb.appendS
+      CHECK_ENUM_NAME sb.appendS
+      "(int64_t current,int64_t expected,char const* pos){\n" sb.appendS
+      "  if(current==expected)\n    return;\n" sb.appendS
+      "  fprintf(stderr,\"enum index (%\"PRIi64\") does not match current value (%\"PRIi64\") at %s\\n\",expected,current,pos);\n" sb.appendS
+      "  exit(" sb.appendS
+      EXIT_CODE_ENUM_INDEX sb.appendI
+      ");\n}\n" sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+  end
+  ## TODO global declarations
+  ## TODO code
   0 while #dup prog [] .progFiles .length < do
     prog [] .progFiles #over list.at .data
       0 while #dup #over:2 [] .globalOps .length < do
@@ -302,4 +363,28 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
     #drop
     1 +
   end #drop
+  prog [] .hasEntryPoint ! if
+    return
+  end
+  prog [] .hasGetArgs if
+    128 sb.create
+      "int main(int argc,char** argv){\n" sb.appendS
+      CONCAT_PREFIX sb.appendS
+      ARGC_NAME     sb.appendS
+      "=argc;\n"    sb.appendS
+      CONCAT_PREFIX sb.appendS
+      ARGV_NAME     sb.appendS
+      "=argv;\n"    sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+  else
+    target "int main(void){\n" io.fputs #drop
+  end
+  64 sb.create
+    CONCAT_PREFIX sb.appendS
+    MAIN_NAME     sb.appendS
+    "();\n"       sb.appendS
+    "return EXIT_SUCCESS;\n}\n" sb.appendS
+    target #over io.fputSb #drop
+  sb.free #drop
 end
