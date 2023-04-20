@@ -6,6 +6,10 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
   proc( i64 : cap => stringBuilder ) =: public create
     cap i8 mem.alloc cap 0 stringBuilder new return
   end
+  proc( stringBuilder => stringBuilder ) =: public clear
+    0 #over .length =
+    return
+  end
   proc( stringBuilder => stringBuilder ) =: public free
     #dup .data mem.free
     0 #over .cap =
