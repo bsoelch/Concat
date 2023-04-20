@@ -143,6 +143,22 @@ proc( string : name i32 : id io.FILE : target => ) =: printCompositeDeclaration
     target #over io.fputSb #drop
   sb.free #drop
 end
+proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printCompositeElements
+  prog [] .idContext .typeContext @ =:: typeContext
+  composite typeContext types.compositeElts =:: elts
+  0 while #dup elts .length < do
+    elts #over array.get #dup typeContext types.isEmpty if ## skip empty types
+      #drop 1 + continue
+    end target prog printTypeName
+    64 sb.create
+      " e"  sb.appendS
+      #over sb.appendI
+      ";\n" sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+    1 +
+  end #drop
+end
 proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   prog [] .idContext .typeContext @ =:: typeContext
   prog getDeclaredTypes =:: types
@@ -159,7 +175,9 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
           target "typedef " io.fputs #drop
           base typeContext types.getProcOut #drop target prog printTypeName
           32 sb.create
-            " (*proc" sb.appendS
+            " (*" sb.appendS
+            CONCAT_PREFIX sb.appendS
+            "proc" sb.appendS
             base types.getTypeId sb.appendI
             ") " sb.appendS
             target #over io.fputSb #drop
@@ -200,19 +218,59 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
       undefined primitiveType autoType templateType genericType procedure labeledProcIn procIn pointer namedType case ## no initialization necessary
         break
       arrayType case
-        "array" string.wrap t .arrayType target printCompositeDeclaration
+        t typeContext types.isFixedSize ! if
+          ## TODO add to compiler error list
+          "arrays cannot be variable sized" io.puts #drop
+        end
+        target "struct " io.fputs #drop
+        "array" string.wrap t .arrayType target printCompositeName
+        target "{\n" io.fputs #drop
+        t typeContext types.getBaseType target prog printTypeName
+        32 sb.create
+          " data[" sb.appendS
+          t typeContext types.getArraySize =:: sizes
+          1 i64 =: mut totalSize
+          0 while #dup sizes .length < do
+            #swap
+              sizes #over:2 array.get
+                #dup .sizeType types.ArraySizeType .int != if
+                  "non-integer array sizes should not exist at this stage of compilation" io.puts #drop
+                end
+              .value totalSize * totalSize =
+            #swap 1 +
+          end #drop
+          totalSize sb.appendI
+          "];\n};\n" sb.appendS
+          target #over io.fputSb #drop
+        sb.free #drop
         break
       tuple case
-        "tuple" string.wrap t .tuple target printCompositeDeclaration
+        target "struct " io.fputs #drop
+        "tuple" string.wrap t .tuple target printCompositeName
+        target "{\n" io.fputs #drop
+        t target prog printCompositeElements
+        target "};\n" io.fputs #drop
         break
       struct case
-        "tuple" string.wrap t .struct target printCompositeDeclaration
+        target "struct " io.fputs #drop
+        "tuple" string.wrap t .struct target printCompositeName
+        target "{\n" io.fputs #drop
+        t target prog printCompositeElements
+        target "};\n" io.fputs #drop
         break
       procOut case
-        "tuple" string.wrap t .procOut target printCompositeDeclaration
+        target "struct " io.fputs #drop
+        "tuple" string.wrap t .procOut target printCompositeName
+        target "{\n" io.fputs #drop
+        t target prog printCompositeElements
+        target "};\n" io.fputs #drop
         break
       enum case
-        "enum" string.wrap t .enum target printCompositeDeclaration
+        target "enum " io.fputs #drop
+        "tuple" string.wrap t .enum target printCompositeName
+        target "{\nunion{\n" io.fputs #drop
+        t target prog printCompositeElements
+        target "}data;\nint32_t label;\n};\n" io.fputs #drop
         break
     end
     1 +
