@@ -38,6 +38,20 @@ proc( LabelId : label i32 : implId io.FILE : target Program ptr mut : prog => ) 
     target #over io.fputSb #drop
   sb.free #drop
 end
+proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => ) =: printArgName
+  prog [] .idContext .labelContext @ =:: labelContext
+  labelId labelContext id.labelName =:: labelName
+  64 sb.create
+    "arg" sb.appendS
+    index sb.appendI
+    labelName optional.hasData if
+      "/*" sb.appendS
+      labelName .data sb.appendStr ## TODO asciify
+      "*/" sb.appendS
+    end
+    target #over io.fputSb #drop
+  sb.free #drop
+end
 proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: printIdName
   prog [] .idContext .labelContext @ =:: labelContext
   idInfo .idType switch
@@ -63,17 +77,7 @@ proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: pr
       sb.free #drop
       return
     ARGUMENT case
-      idInfo .labelId labelContext id.labelName =:: labelName
-      64 sb.create
-        "arg" sb.appendS
-        idInfo .id sb.appendI
-        labelName optional.hasData if
-          "/*" sb.appendS
-          labelName .data sb.appendStr ## TODO asciify
-          "*/" sb.appendS
-        end
-        target #over io.fputSb #drop
-      sb.free #drop
+      idInfo .id idInfo .labelId target prog printArgName
       return
     TYPE TEMPLATE_ARG case
       break ## XXX? error message
@@ -105,7 +109,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       end
       break
     autoType case
-      break ## TODO? resolve auto-types
+      break ## XXX? resolve auto-types
     pointer case
       t typeContext types.getBaseType target prog printTypeName
       t typeContext types.isCallable if
@@ -117,7 +121,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       target "*" io.fputs #drop
       break
     labeledProcIn procIn case
-      ## TODO? print proc-in
+      ## XXX? print proc-in
       break
     arrayType case
       "array" string.wrap t .arrayType target printCompositeName
@@ -169,7 +173,8 @@ end
 proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
-  t typeContext types.getProcIn #drop typeContext types.compositeElts =:: args
+  t typeContext types.getProcIn #drop =:: inType
+  inType typeContext types.compositeElts =:: args
   args .length 0 == if
     target "(void)" io.fputs #drop
     return
@@ -181,12 +186,8 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
     end
     args #over array.get target prog printTypeName
     argNames if
-      16 sb.create
-        " arg" sb.appendS
-        #over  sb.appendI
-        ## XXX print argument label (if existent)
-        target #over io.fputSb #drop
-      sb.free #drop
+      target " " io.fputs #drop
+      #dup inType #over typeContext types.compositeGetLabel target prog printArgName
     end
     1 +
   end #drop
@@ -340,8 +341,8 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         target "};\n" io.fputs #drop
         break
       enum case
-        target "enum " io.fputs #drop
-        "tuple" string.wrap t .enum target printCompositeName
+        target "struct " io.fputs #drop
+        "enum" string.wrap t .enum target printCompositeName
         target "{\nunion{\n" io.fputs #drop
         t target prog printCompositeElements
         target "}data;\nint32_t label;\n};\n" io.fputs #drop ## XXX smaller int-type for smaller label count
@@ -362,7 +363,7 @@ proc( BinaryOperator => bool ) =: isUnsignedOp
   end
 end
 ## XXX? compiler context
-proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCallArgs
+proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t typeContext types.getProcIn #drop typeContext types.compositeEltCount =:: argCount
@@ -375,6 +376,9 @@ proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlo
     1 +
   end #drop
   target ")" io.fputs #drop
+  t typeContext types.getProcOut #drop typeContext types.compositeEltCount 0 == if
+    target ";\n" io.fputs #drop
+  end
 end
 proc( Type : base i32 : eltIndex bool : isEnum Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileGetElt
   target "(" io.fputs #drop
@@ -444,6 +448,25 @@ proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool
   end #drop
   target "})" io.fputs #drop
 end
+proc( Operation ptr : op bool : isGlobal io.FILE : target Program ptr mut : prog => stringBuilder ) =: constStart
+  64 sb.create
+    isGlobal ! if
+      "((" sb.appendS
+      target #over io.fputSb #drop
+      sb.clear
+      op [] .dataType target prog printTypeName
+      ")" sb.appendS
+    end
+  return
+end
+proc( stringBuilder : sb Operation ptr : op bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: constEnd
+  sb
+    isGlobal ! if
+      ")" sb.appendS
+    end
+    target #over io.fputSb #drop
+  sb.free #drop
+end
 
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
@@ -459,14 +482,101 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     index [] 1 + index [] =
     op [] .val OpValue .NOP ==
   do end
-  ## TODO compile operations
   op [] .val switch
-    OpValue .Constant
-    Print
-    case
-      target "(?)" io.fputs #drop
-      break
     NOP case
+      break
+    OpValue .Constant case
+      op [] .val .Constant switch
+        boolean case
+          op [] .val .Constant .boolean if
+            target "true" io.fputs #drop
+          else
+            target "false" io.fputs #drop
+          end
+          return
+        chr case
+          op isGlobal target prog constStart
+            op [] .val .Constant .chr sb.appendI
+          op isGlobal target prog constEnd
+          return
+        int case
+          op isGlobal target prog constStart
+            op [] .val .Constant .int sb.appendI
+          op isGlobal target prog constEnd
+          return
+        enumLabel case
+          op isGlobal target prog constStart
+            "{.label=" sb.appendS
+            op [] .val .Constant .enumLabel sb.appendI
+            "}" sb.appendS
+          op isGlobal target prog constEnd
+          return
+        typeId case
+          op isGlobal target prog constStart
+            "sizeof(" sb.appendS
+            target #over io.fputSb #drop
+            sb.clear
+            op [] .val .Constant .typeId target prog printTypeName
+            ")" sb.appendS
+          op isGlobal target prog constEnd
+          return
+        str case ## TODO string constants
+          op isGlobal target prog constStart
+          '"' sb.appendC
+          op [] .val .Constant .str labelContext id.scAsStr sb.appendEscapedStr
+          '"' sb.appendC
+          op isGlobal target prog constEnd
+          break
+        genericArg case ## XXX find correct label
+          op [] .val .Constant .genericArg id.LABEL_ID_NONE target prog printArgName
+          return
+        none wildCard templateArg case
+          break ## XXX error message
+      end
+      break
+    Print case
+      op [] .dataType typeContext types.unwrapNamed =:: printType
+      printType types.isPrimitive if
+        printType .primitiveType switch
+          BOOL case
+            target "printf(\"%s\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target "?\"true\":\"false\");\n" io.fputs #drop
+            return
+          I8 case
+            target "printf(\"%1$\"PRIi8\" '%1$c'\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target ");\n" io.fputs #drop
+            return
+          I32 case
+            target "printf(\"%\"PRIi32\"\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target ");\n" io.fputs #drop
+            return
+          I64 case
+            target "printf(\"%\"PRIi64\"\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target ");\n" io.fputs #drop
+            return
+          FLOAT case
+            target "printf(\"%g\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target ");\n" io.fputs #drop
+            return
+          TYPE case ## at run-time only size of types is known
+            target "printf(\"%zu\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target ");\n" io.fputs #drop
+            return
+        end
+      end
+      printType typeContext types.isPointer if
+        target "printf(\"%p\\n\",(void const*)" io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target ");\n" io.fputs #drop
+        return
+      end
+      ## XXX print array/tuple types
       break
     New case
       op [] .dataType typeContext types.isTuple if
@@ -631,7 +741,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     callPtr case
       operations index isGlobal target prog compileOp
-      op [] .dataType operations index isGlobal target prog compileCallArgs
+      op [] .dataType operations index isGlobal target prog compileCall
       break
     getId case
       op [] .val .getId =:: idInfo
@@ -641,7 +751,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
         PROCEDURE case
           idInfo target prog printIdName
-          op [] .dataType operations index isGlobal target prog compileCallArgs
+          op [] .dataType operations index isGlobal target prog compileCall
           break
         TYPE TEMPLATE_ARG case
           break ## XXX error message
@@ -653,6 +763,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT PROCEDURE case
           target "(&" io.fputs #drop
           idInfo target prog printIdName
+          op [] .dataType typeContext types.getArrayDims 0 > if
+            target ".data[0]" io.fputs #drop
+          end
           target ")" io.fputs #drop
           return
         TYPE TEMPLATE_ARG case
@@ -736,6 +849,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     @ArrayElement case
       target "(&" io.fputs #drop
       op [] .dataType op [] .val .@ArrayElement operations index isGlobal target prog compileGetIndex
+      op [] .dataType typeContext types.getArrayDims 0 > if
+        target ".data[0]" io.fputs #drop
+      end
       target ")" io.fputs #drop
       break
     getTupleElement case
@@ -750,6 +866,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     @TupleElement case
       target "(&" io.fputs #drop
       op [] .dataType op [] .val .@TupleElement false operations index isGlobal target prog compileGetElt
+      op [] .dataType typeContext types.getArrayDims 0 > if
+        target ".data[0]" io.fputs #drop
+      end
       target ")" io.fputs #drop
       return
     getEnumElement case
@@ -764,6 +883,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     @EnumElement case
       target "(&" io.fputs #drop
       op [] .dataType op [] .val .@EnumElement true operations index isGlobal target prog compileGetElt
+      op [] .dataType typeContext types.getArrayDims 0 > if
+        target ".data[0]" io.fputs #drop
+      end
       target ")" io.fputs #drop
       return
     block case
@@ -799,7 +921,32 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target "){\n" io.fputs #drop
           return
         CASE case
-          ## TODO compile case statements
+          prog [] .switchData op [] .val .block .blockId list.at
+            #dup optional.isEmpty if #drop
+              ## TODO error message
+              return
+            end
+          .data =:: switchData
+          switchData [] .cases op [] .val .block .subId list.at .data =:: caseData
+          64 sb.create
+            0 while #dup caseData [] .count < do
+              #swap
+                "case " sb.appendS
+                switchData [] .labels #over:2 caseData [] .offset + list.get .value =:: caseVal
+                caseVal switch
+                  int case caseVal .int sb.appendI break
+                  chr case caseVal .chr sb.appendI break
+                  enumLabel case caseVal .enumLabel sb.appendI break
+                  none wildCard boolean genericArg templateArg str typeId case
+                    ## TODO error message
+                    break
+                end
+                ":" sb.appendS
+              #swap 1 +
+            end #drop
+            ";\n" sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
           break
         DEFAULT case
           target "default:;\n" io.fputs #drop

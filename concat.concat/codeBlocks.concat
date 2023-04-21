@@ -1,7 +1,7 @@
 #include stringBuilder
 
 enum( UNKNOWN PROCEDURE IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT ) =:: public BlockType
-struct( BlockType : blockType i32 : mut blockId ) =:: public BlockId
+struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: public BlockId
 #namespace sb
   proc( stringBuilder BlockType => stringBuilder ) =: public appendBlockType
     switch

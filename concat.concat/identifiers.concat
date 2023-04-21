@@ -811,10 +811,10 @@
                   .value ConstValue .int new
                   break
                 templateArg case
-                  .value ConstValue .templateArg new
+                  .value i32 cast ConstValue .templateArg new
                   break
                 staticArg case
-                  .value ConstValue .genericArg new
+                  .value i32 cast ConstValue .genericArg new
                   break
               end
             else

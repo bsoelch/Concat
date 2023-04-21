@@ -11,8 +11,8 @@ enum(
   bool : boolean
   i32 : enumLabel
   i64 : int
-  i64 : genericArg
-  i64 : templateArg
+  i32 : genericArg
+  i32 : templateArg
   StringConstant : str
   i8 : chr
   Type : typeId

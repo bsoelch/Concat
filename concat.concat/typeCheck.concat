@@ -7,10 +7,7 @@
 struct( Type : mut valType i32 : mut opCount bool : mut writable ) =:: TypeInfo
 struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
 struct( StackState : mut inTypes StackState : mut outTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
-struct( i64 : offset i64 : mut count ) =:: CaseInfo
-struct( ConstValue : value FilePosition : pos ) =:: LabelData
-struct( LabelData list : mut labels CaseInfo list : mut cases ) =:: SwitchData
-struct( StackState : inTypes StackState : mut outTypes LabelData list : mut labels CaseInfo list : mut cases Type : switchType bool : mut endReachable bool : mut explicitBreak ) =:: SwitchBlockData
+struct( StackState : inTypes StackState : mut outTypes Type : switchType bool : mut endReachable bool : mut explicitBreak ) =:: SwitchBlockData
 struct( StackState : mut inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
 enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock SwitchBlockData : mut switchBlock Type : procBlock ) =:: BlockData
 struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId BlockType : mut blockType ) =:: BlockInfo
@@ -1585,7 +1582,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       state [] .openBlocks list.peek #dup optional.hasData if .data =:: block
         block [] .blockType #dup BlockType .SWITCH == #swap BlockType .CASE == | if
-          block [] .blockData .switchBlock .labels @ =:: lables
+          state [] .switchData block [] .blockId list.at .data [] .labels @ =:: lables
           block [] .blockData .switchBlock .switchType =:: switchType
           op [] .val .Constant =:: constant
           op [] .dataType switchType typeContext canAutoCast ! if ## XXX ? allow extended constant casts?
@@ -1614,7 +1611,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               op [] .pos
             LabelData new list.append
           lables [] =
-          block [] .blockData .switchBlock .cases list.peek .data [] .count ++ #drop
+          state [] .switchData block [] .blockId list.at .data [] .cases list.peek .data [] .count ++ #drop
           return
         end
       else #drop end
@@ -1951,6 +1948,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         SWITCH case
           op state checkReachable
           state [] .switchData .length i32 cast =:: blockId
+          state [] .switchData
+            16 LabelData list.create
+            16 CaseInfo list.create
+              0 0 CaseInfo new list.append
+            SwitchData new list.append
+          state [] .switchData =
           blockId op [] .val .block .blockId =
           state [] .typeStack list.peek #dup optional.isEmpty if #drop
             "missing argument for switch-statement" sb.wrap op [] .pos state appendError
@@ -1976,9 +1979,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ## BlockInfo
               state copyStack
               emptyStackState
-              0 LabelData list.create
-              0 CaseInfo list.create
-                0 0 CaseInfo new list.append
               switchType
               false
               false
@@ -2013,21 +2013,22 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               BlockType .CASE sb.appendBlockType
             " statement" sb.appendS op [] .pos state appendError
           end
-          switchBlock [] .blockData .switchBlock .cases list.peek .data [] .count 0 == if
+          state [] .switchData switchBlock [] .blockId list.at .data [] .cases @ =:: cases
+          cases [] list.peek .data [] .count 0 == if
             60 sb.create
               BlockType .CASE sb.appendBlockType
             "-statement has to be preceded by at least one label" sb.appendS op [] .pos state appendError
           end
-          switchBlock [] .blockData .switchBlock .cases
-            switchBlock [] .blockData .switchBlock .labels .length 0 CaseInfo new list.append
-          switchBlock [] .blockData .switchBlock .cases =
+          switchBlock [] .blockId op [] .val .block .blockId =
+          cases [] .length 1 - i32 cast op [] .val .block .subId =
+          cases []
+            state [] .switchData switchBlock [] .blockId list.at .data [] .labels .length 0 CaseInfo new list.append
+          cases [] =
           true state [] .reachable =
           switchBlock [] .blockData .switchBlock .inTypes @ state resetStack
           BlockType .CASE switchBlock [] .blockType =
           false switchBlock [] .blockData .switchBlock .explicitBreak =
           switchBlock [] .blockData .switchBlock .switchType op [] .dataType =
-          switchBlock [] .blockId op [] .val .block .blockId =
-          ## XXX? sub-id
           state [] .compiledOps
             op list.appendP
           state [] .compiledOps =
@@ -2052,7 +2053,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               BlockType .CASE sb.appendBlockType
             " statement" sb.appendS op [] .pos state appendError
           end
-          switchBlock [] .blockData .switchBlock .cases list.peek .data [] .count 0 != if
+          state [] .switchData switchBlock [] .blockId list.at .data [] .cases list.peek .data [] .count 0 != if
             60 sb.create
               BlockType .DEFAULT sb.appendBlockType
             "-statement cannot be preceded by at labels" sb.appendS op [] .pos state appendError
@@ -2142,11 +2143,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ## TODO check if all labels are covered
           switchBlock [] .outTypes @ state resetStack
           switchBlock [] .endReachable state [] .reachable =
-          state [] .switchData
-            switchBlock [] .labels
-            switchBlock [] .cases
-            SwitchData new list.append
-          state [] .switchData =
           closed [] .blockData .switchBlock .inTypes @ freeStackState
           closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
@@ -2163,11 +2159,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           switchBlock [] .outTypes @ state resetStack
           switchBlock [] .endReachable state [] .reachable =
-          state [] .switchData
-            switchBlock [] .labels
-            switchBlock [] .cases
-            SwitchData new list.append
-          state [] .switchData =
           closed [] .blockData .switchBlock .inTypes @ freeStackState
           closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
@@ -2386,7 +2377,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             constInt opConst op [] =
           else sizes 0 array.get .sizeType types.ArraySizeType .staticArg == _if
             ## newConstant
-            sizes 0 array.get .value ConstValue .genericArg new
+            sizes 0 array.get .value i32 cast ConstValue .genericArg new
             types.primitive.I_SIZE
             op [] .pos
             newConst opConst op [] =
@@ -2767,6 +2758,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
     compiledImpl do end
   end
   prog [] .templateOps list.clear prog [] .templateOps =
+  state .switchData     prog [] .switchData =
   state .errors         prog [] .errors =
   state .autoTypes      prog [] .autoTypes =
   state .hasCheckIndex  prog [] .hasCheckIndex =

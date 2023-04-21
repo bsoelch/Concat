@@ -189,7 +189,7 @@ proc( LabelId : label Type : valType i64 : index ParserState ptr mut : state => 
       #dup types.primitive.TYPE types.typeEquals if
         index i32 cast types.newGenericType ConstValue .typeId new
       else
-        index ConstValue .genericArg new
+        index i32 cast ConstValue .genericArg new
       end
     label
     StaticArgument new
@@ -1321,6 +1321,7 @@ proc( stringBuilder : rootFile => Program ) =: public parseProgram
     state .progFiles
     state .autoTypeCount Type list.createZeroInit ## ! assumes Type .undefined has all zero memory representation
     state .templateOps
+    0 SwitchData list.create
     state .errors
     state .hasEntryPoint
     false false ## helper function flags, set in type-check phase

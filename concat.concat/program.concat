@@ -64,11 +64,11 @@ proc( Constant  => Operation ) =: public opConst
 end
 proc( BlockType FilePosition => Operation ) =: public opBlock
   =:: pos
-  -1 BlockId new OpValue .block new Type .undefined pos Operation new return
+  -1 -1 BlockId new OpValue .block new Type .undefined pos Operation new return
 end
 proc( BlockType FilePosition => Operation ) =: public opEndBlock
   =:: pos
-  -1 BlockId new OpValue .blockEnd new Type .undefined pos Operation new return
+  -1 -1 BlockId new OpValue .blockEnd new Type .undefined pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  => Operation ) =: public opGet
   =:: pos
@@ -190,11 +190,15 @@ struct(
              FileId : id
 ) =:: public ProgramFile
 
+struct( ConstValue : value FilePosition : pos ) =:: public LabelData
+struct( i64 : offset i64 : mut count ) =:: public CaseInfo
+struct( LabelData list : mut labels CaseInfo list : mut cases ) =:: public SwitchData
 struct(
   IdentifierContext : mut idContext
    ProgramFile list : mut progFiles
           Type list : mut autoTypes
      Operation list : mut templateOps
+    SwitchData list : mut switchData
  CompilerError list : mut errors
                bool : mut hasEntryPoint
                bool : mut hasCheckIndex
