@@ -8,56 +8,63 @@ struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public 
 
 enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER string : ERROR ) =:: public Token
 
+#namespace sb
+  proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
+    token switch
+      EMPTY case
+        sb "empty" sb.appendS return
+      IDENTIFER case
+        sb
+          "identifier \"" sb.appendS
+          token .IDENTIFER sb.appendStr
+          '\"' sb.appendC
+        return
+      STRING case
+        sb
+          "string \"" sb.appendS
+          token .STRING sb.appendStr
+          '\"' sb.appendC
+        return
+      CHAR case
+        sb "char \"" sb.appendS
+          token .CHAR sb.appendStr
+          '\"' sb.appendC
+        return
+      INTEGER case
+        sb "integer " sb.appendS
+          token .INTEGER sb.appendI
+        return
+      ERROR case
+        sb "error \"" sb.appendS
+          token .ERROR sb.appendStr
+          '\"' sb.appendC
+        return
+    end
+  end
+  proc( stringBuilder : sb FilePosition : pos => stringBuilder ) =: public appendPos
+    sb
+      pos .fileName sb.appendStr
+      ':' sb.appendC
+      pos .line sb.appendI
+      ':' sb.appendC
+      pos .posInLine sb.appendI
+    return
+  end
+#end
+
 proc( string => ) =: public printTokens
   "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
     state addrOf nextToken
     128 sb.create
-      #swap appendToken
+      #swap sb.appendToken
       " at " sb.appendS
-      state .wordStart .fileName sb.appendStr
-      ':' sb.appendC
-      state .wordStart .line sb.appendI
-      ':' sb.appendC
-      state .wordStart .posInLine sb.appendI
+      state .wordStart sb.appendPos
       '\n' sb.appendC
     io.stdOut #swap io.fputSb #drop
     #dup .length 0 >
   do end #drop
 end
-proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
-  token switch
-    EMPTY case
-      sb "empty" sb.appendS return
-    IDENTIFER case
-      sb
-        "identifier \"" sb.appendS
-        token .IDENTIFER sb.appendStr
-        '\"' sb.appendC
-      return
-    STRING case
-      sb
-        "string \"" sb.appendS
-        token .STRING sb.appendStr
-        '\"' sb.appendC
-      return
-    CHAR case
-      sb "char \"" sb.appendS
-        token .CHAR sb.appendStr
-        '\"' sb.appendC
-      return
-    INTEGER case
-      sb "integer " sb.appendS
-        token .INTEGER sb.appendI
-      return
-    ERROR case
-      sb "error \"" sb.appendS
-        token .ERROR sb.appendStr
-        '\"' sb.appendC
-      return
-  end
-end
-
 
 proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: public updateFilePos
   chr '\n' == if

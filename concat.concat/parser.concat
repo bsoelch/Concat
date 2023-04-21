@@ -27,6 +27,7 @@ struct(
       Operation list : mut templateOps
   CompilerError list : mut errors
                  i32 : mut autoTypeCount
+                bool : mut hasEntryPoint
 ) =:: ParserState
 
 proc( Operation : op ParserState ptr mut : state => ) =: appendOp
@@ -622,7 +623,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           64 sb.create
             "invalid token for include" sb.appendS
-            #swap appendToken
+            #swap sb.appendToken
           fileState [] .wordStart state appendError
           return
         else "namespace" string.wrap #over string.eq _if #drop
@@ -950,6 +951,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
     else #dup "entryPoint:" string.wrap string.eq _if #drop
+      state [] .hasEntryPoint if ## TODO print position of previous entry point
+        "program already has an entry point" sb.wrap fileState [] .wordStart state appendError
+      end
+      true state [] .hasEntryPoint =
       BlockType .PROCEDURE Type .undefined state [] .idContext @ id.openProcScope
       fileState [] .wordStart opEntryPoint  state appendOp
       return
@@ -1304,6 +1309,7 @@ proc( stringBuilder : rootFile => Program ) =: public parseProgram
     128 Operation       list.create
     32 CompilerError    list.create
     0
+    false
   ParserState new =:: mut state
   rootFile state @ parseFile rootFile rootFile sb.toStr 0 0 FilePosition new state @ checkIOError #drop
   ## cleanup parser memory
@@ -1316,7 +1322,7 @@ proc( stringBuilder : rootFile => Program ) =: public parseProgram
     state .autoTypeCount Type list.createZeroInit ## ! assumes Type .undefined has all zero memory representation
     state .templateOps
     state .errors
-    false ## has entry point XXX check in parser?
+    state .hasEntryPoint
     false false ## helper function flags, set in type-check phase
     false ## has getArgs
   Program new return

@@ -285,6 +285,242 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   types list.free #drop
 end
 
+proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
+  prog [] .idContext @ =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  Operation ptr : mut op
+  while
+    index [] operations .length >= if
+      ## TODO error: missing operation
+      return
+    end
+    operations index [] array.at .data op =
+    index [] 1 + index [] =
+    op [] .val OpValue .NOP ==
+  do end
+  ## TODO compile operations
+  op [] .val switch
+    OpValue .Constant
+    getId
+    setId
+    @Id
+    getLabel
+    setLabel
+    @Label
+    getTupleElement
+    setTupleElement
+    @TupleElement
+    getArrayElement
+    setArrayElement
+    @ArrayElement
+    getEnumElement
+    setEnumElement
+    @EnumElement
+    Print
+    Return
+    New
+    newEnum
+    callPtr
+    argc
+    getArg
+    getArgLen
+    length
+    size
+    Cast
+    Cast!
+    unaryOperator
+    binaryOperator
+    enumLabelEq
+    enumLabelNe
+    checkEnumLabel
+    checkArrayIndex
+    stackMod
+    getName
+    setName
+    @Name case
+      break
+    NOP case
+      break
+    declareId case
+      op [] .val .declareId =:: idInfo
+      idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
+      idInfo .idType switch
+        PROCEDURE case
+          op [] .dataType typeContext types.getProcOut #drop target prog printTypeName
+          target " " io.fputs #drop
+          idInfo .labelId  idInfo .id  target prog printGlobalName
+          op [] .dataType true target prog printProcArgs
+          target "{\n" io.fputs #drop
+          return
+        LOCAL_VAR case
+          op [] .dataType target prog printTypeName
+          64 sb.create
+            immutable if
+              " const" sb.appendS
+            end
+            " l" sb.appendS
+            idInfo .id sb.appendI
+            idInfo .labelId labelContext id.labelName #dup optional.hasData if
+              #swap
+                "_" sb.appendS
+              #swap .data sb.appendStr ## TODO asciify
+            else #drop end
+            " = "  sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
+          break
+        GLOBAL_VAR case
+          op [] .dataType target prog printTypeName
+          64 sb.create
+            ' ' sb.appendC
+            immutable if
+              "const " sb.appendS
+            end
+            idInfo .labelId  idInfo .id  target prog printGlobalName
+            " = "  sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
+          break
+        TMP_VAR case
+          op [] .dataType target prog printTypeName
+          64 sb.create
+            immutable if
+              " const" sb.appendS
+            end
+            " tmp" sb.appendS
+            idInfo .id sb.appendI
+            " = "  sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
+          break
+        TYPE ARGUMENT TEMPLATE_ARG case
+          return ## XXX error message
+      end
+      operations index isGlobal target prog compileOp
+      target ";\n" io.fputs #drop
+      break
+    predeclareId case
+      op [] .val .predeclareId =:: idInfo
+      idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
+      idInfo .idType switch
+        PROCEDURE case
+          op [] .dataType typeContext types.getProcOut #drop target prog printTypeName
+          target " " io.fputs #drop
+          idInfo .labelId  idInfo .id  target prog printGlobalName
+          op [] .dataType false target prog printProcArgs
+          target ";\n" io.fputs #drop
+          return
+        LOCAL_VAR case
+          op [] .dataType target prog printTypeName
+          64 sb.create
+            immutable if
+              " const" sb.appendS
+            end
+            " l" sb.appendS
+            idInfo .id sb.appendI
+            idInfo .labelId labelContext id.labelName #dup optional.hasData if
+              #swap
+                "_" sb.appendS
+              #swap .data sb.appendStr ## TODO asciify
+            else #drop end
+            ";\n"  sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
+          return
+        GLOBAL_VAR case
+          op [] .dataType target prog printTypeName
+          64 sb.create
+            ' ' sb.appendC
+            immutable if
+              "const " sb.appendS
+            end
+            idInfo .labelId  idInfo .id  target prog printGlobalName
+            ";\n"  sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
+          return
+        TMP_VAR case
+          op [] .dataType target prog printTypeName
+          64 sb.create
+            immutable if
+              " const" sb.appendS
+            end
+            " tmp" sb.appendS
+            idInfo .id sb.appendI
+            ";\n"  sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
+          return
+        TYPE ARGUMENT TEMPLATE_ARG case
+          break ## XXX error message
+      end
+      break
+    block case
+      op [] .val .block .blockType switch
+        UNKNOWN PROCEDURE case
+          ## XXX error message
+          break
+        IF case
+          target "if(" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target "){\n" io.fputs #drop
+          return
+        ELSE case
+          target "}else{\n" io.fputs #drop
+          return
+        WHILE case
+          target "do{\n" io.fputs #drop
+          return
+        DO case
+          target "if(!" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target ")\n  break;\n" io.fputs #drop
+          return
+        BREAK case
+          target "break;\n" io.fputs #drop
+          return
+        CONTINUE case
+          target "continue;\n" io.fputs #drop
+          return
+        SWITCH case
+          target "switch(" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target "){\n" io.fputs #drop
+          return
+        CASE case
+          ## TODO compile case statements
+          break
+        DEFAULT case
+          target "default:;\n" io.fputs #drop
+          return
+      end
+      break
+    blockEnd case
+      op [] .val .blockEnd .blockType switch
+        UNKNOWN BREAK CONTINUE SWITCH case
+          ## XXX error message
+          break
+        PROCEDURE IF ELSE WHILE CASE DEFAULT case
+          target "}\n" io.fputs #drop
+          return
+        DO case
+          target "}while(1);\n" io.fputs #drop
+          return
+      end
+      break
+    entryPoint case
+      64 sb.create
+        "static void " sb.appendS
+        CONCAT_PREFIX  sb.appendS
+        MAIN_NAME      sb.appendS
+        "(void){\n"    sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+  end
+end
+
 proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
   target printHeader
   target prog printTypes
@@ -342,25 +578,35 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
     sb.free #drop
   end
   ## TODO global declarations
-  ## TODO code
   0 while #dup prog [] .progFiles .length < do
-    prog [] .progFiles #over list.at .data
-      0 while #dup #over:2 [] .globalOps .length < do
-        #swap
-          #dup [] .globalOps #over:2 list.at .data #drop
-        #swap 1 +
-      end #drop
-      0 while #dup #over:2 [] .localOps .length < do
-        #swap
-          #dup [] .localOps #over:2 list.at .data #drop
-        #swap 1 +
-      end #drop
-      0 while #dup #over:2 [] .templateOps .length < do
-        #swap
-          #dup [] .templateOps #over:2 list.at .data #drop
-        #swap 1 +
-      end #drop
-    #drop
+    prog [] .progFiles #over list.at .data =:: f
+    64 sb.create
+      "// " sb.appendS
+      f [] .fileName sb.appendSb
+      "\n"    sb.appendS
+      target #over io.fputSb #drop
+    sb.free #drop
+    f [] .globalOps .length 0 > if
+      target "//global\n" io.fputs #drop
+    end
+    0 =:: mut index
+    while index f [] .globalOps .length < do
+      f [] .globalOps list.asArray index @ true target prog compileOp
+    end
+    f [] .localOps .length 0 > if
+      target "//local\n" io.fputs #drop
+    end
+    0 index =
+    while index f [] .localOps .length < do
+      f [] .localOps list.asArray index @ false target prog compileOp
+    end
+    f [] .templateOps .length 0 > if
+      target "//templates\n" io.fputs #drop
+    end
+    0 index =
+    while index f [] .templateOps .length < do
+      f [] .templateOps list.asArray index @ false target prog compileOp
+    end
     1 +
   end #drop
   prog [] .hasEntryPoint ! if

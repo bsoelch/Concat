@@ -273,16 +273,6 @@ end
         break
     end
     end
-  proc( stringBuilder FilePosition => stringBuilder ) =: public appendPos
-    #swap
-      #over .fileName sb.appendStr
-      ':' sb.appendC
-      #over .line sb.appendI
-      ':' sb.appendC
-      #swap .posInLine sb.appendI
-      '\n' sb.appendC
-    return
-  end
   proc( stringBuilder Operation LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendOp
     =:: typeContext
     =:: labelContext
@@ -524,7 +514,8 @@ end
           break
       end
       " at " sb.appendS
-      #swap .pos appendPos
+      #swap .pos sb.appendPos
+      '\n' sb.appendC
     return
   end
   proc( stringBuilder CompilerError => stringBuilder ) =: public appendCompilerError
@@ -532,6 +523,7 @@ end
     err .message sb.appendSb
     " at "       sb.appendS
     err .pos     sb.appendPos
+    '\n'         sb.appendC
   end
   proc( stringBuilder Program => stringBuilder ) =: public appendProgram
     =:: prog
