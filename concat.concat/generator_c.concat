@@ -455,22 +455,19 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         ADD case target "+" io.fputs #drop break
         SUBTRACT case target "-" io.fputs #drop break
         MULTIPLY case target "*" io.fputs #drop break
-        DIVIDE case target "/" io.fputs #drop break
-        MOD case target "%" io.fputs #drop break
+        DIVIDE UDIVIDE case target "/" io.fputs #drop break
+        MOD UMOD case target "%" io.fputs #drop break
         AND case target "&" io.fputs #drop break
         OR case target "|" io.fputs #drop break
         XOR case target "^" io.fputs #drop break
         LSHIFT case target "<<" io.fputs #drop break
-        RSHIFT case target ">>" io.fputs #drop break
+        RSHIFT URSHIFT case target ">>" io.fputs #drop break
         EQ case target "==" io.fputs #drop break
         NE case target "!=" io.fputs #drop break
         LE case target "<=" io.fputs #drop break
         GE case target ">=" io.fputs #drop break
         LT case target "<" io.fputs #drop break
         GT case target ">" io.fputs #drop break
-        UDIVIDE case target "/" io.fputs #drop break
-        UMOD case target "%" io.fputs #drop break
-        URSHIFT case target ">>" io.fputs #drop break
       end
       op [] .val .binaryOperator isUnsignedOp if
         target "((" io.fputs #drop
