@@ -1,4 +1,5 @@
 #include mem
+#include optional
 
 #template type : T #end
 struct( T _ ptr : data i64 : length ) =:: public arrayView
@@ -24,6 +25,13 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
       ## TODO error handling
     end
     elts .data index [] return
+  end
+  #template type : T #end
+  proc( T arrayView : elts i64 : index => T ptr optional ) =: public at
+    index 0 < index elts .length >= | if
+      T ptr optional.empty return
+    end
+    elts .data index + T ptr cast! optional.wrap return
   end
   #template type : T #end
   proc( T arrayView : elts T : elt => i64 ) =: public indexOf
