@@ -82,7 +82,6 @@ proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: pr
       break ## XXX? error message
   end
 end
-
 proc( string : name i32 : id io.FILE : target => ) =: printCompositeName
   128 sb.create
     CONCAT_PREFIX sb.appendS
@@ -210,6 +209,20 @@ proc( string : name i32 : id io.FILE : target => ) =: printCompositeDeclaration
     target #over io.fputSb #drop
   sb.free #drop
 end
+proc( Type : composite i32 : index io.FILE : target Program ptr mut : prog => ) =: printEltName
+  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext @ =:: typeContext
+  64 sb.create
+    "e" sb.appendS
+    index sb.appendI
+    composite index typeContext types.compositeGetLabel labelContext id.labelName #dup optional.hasData if
+      #swap
+        "_" sb.appendS
+      #swap .data sb.appendStr ## TODO asciify
+    else #drop end
+    target #over io.fputSb #drop
+  sb.free #drop
+end
 proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printCompositeElements
   prog [] .idContext .typeContext @ =:: typeContext
   composite typeContext types.compositeElts =:: elts
@@ -217,12 +230,9 @@ proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printComp
     elts #over array.get #dup typeContext types.isEmpty if ## skip empty types
       #drop 1 + continue
     end target prog printTypeName
-    64 sb.create
-      " e"  sb.appendS
-      #over sb.appendI
-      ";\n" sb.appendS
-      target #over io.fputSb #drop
-    sb.free #drop
+    target " " io.fputs #drop
+    composite #over target prog printEltName
+    target ";\n" io.fputs #drop
     1 +
   end #drop
 end
@@ -369,6 +379,50 @@ proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlo
   end #drop
   target ")" io.fputs #drop
 end
+proc( Type : base i32 : eltIndex bool : isEnum Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileGetElt
+  target "(" io.fputs #drop
+  operations index isGlobal target prog compileOp
+  isEnum if
+    target ".data." io.fputs #drop
+  else
+    target "." io.fputs #drop
+  end
+  base eltIndex target prog printEltName
+  target ")" io.fputs #drop
+end
+proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileGetIndex
+  prog [] .idContext .typeContext @ =:: typeContext
+  dims 0 == if
+    target "(*" io.fputs #drop
+    operations index isGlobal target prog compileOp
+    target ")" io.fputs #drop
+    return
+  end
+  base typeContext types.getArraySize =:: sizes
+  target "(" io.fputs #drop
+  operations index isGlobal target prog compileOp
+  64 sb.create
+    "[" sb.appendS
+    target #over io.fputSb #drop
+    sb.clear
+    0 while #dup dims < do
+      operations index isGlobal target prog compileOp
+      #dup sizes .length < if
+        #swap
+          "*" sb.appendS
+          sizes #over:2 array.get .value sb.appendI
+          "+" sb.appendS
+          target #over io.fputSb #drop
+          sb.clear
+        #swap
+      end
+      1 +
+    end #drop
+    "])" sb.appendS
+    target #over io.fputSb #drop
+  sb.free #drop
+end
+
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -386,27 +440,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
   ## TODO compile operations
   op [] .val switch
     OpValue .Constant
-    getTupleElement
-    setTupleElement
-    @TupleElement
-    getArrayElement
-    setArrayElement
-    @ArrayElement
-    getEnumElement
-    setEnumElement
-    @EnumElement
     Print
     Return
     New
     newEnum
     callPtr
-    argc
-    getArg
-    getArgLen
-    enumLabelEq
-    enumLabelNe
-    checkEnumLabel
-    checkArrayIndex
     case
       target "(?)" io.fputs #drop
       break
@@ -513,6 +551,26 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       operations index isGlobal target prog compileOp
       target ")" io.fputs #drop
       return
+    enumLabelEq case
+      target "(" io.fputs #drop
+      operations index isGlobal target prog compileOp
+      64 sb.create
+        ".label=="              sb.appendS
+        op [] .val .enumLabelEq sb.appendI
+        ")"                     sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      break
+    enumLabelNe case
+      target "(" io.fputs #drop
+      operations index isGlobal target prog compileOp
+      64 sb.create
+        ".label!="              sb.appendS
+        op [] .val .enumLabelNe sb.appendI
+        ")"                     sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      break
     getId case
       op [] .val .getId =:: idInfo
       idInfo .idType switch
@@ -598,13 +656,54 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             target " " io.fputs #drop
           end
           idInfo target prog printIdName
-          operations index isGlobal target prog compileOp
           target ";\n" io.fputs #drop
           return
         TYPE ARGUMENT TEMPLATE_ARG case
           break ## XXX error message
       end
       break
+    getArrayElement case
+      op [] .dataType op [] .val .getArrayElement operations index isGlobal target prog compileGetIndex
+      return
+    setArrayElement case
+      op [] .dataType op [] .val .setArrayElement operations index isGlobal target prog compileGetIndex
+      target " = " io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target ";\n" io.fputs #drop
+      break
+    @ArrayElement case
+      target "(&" io.fputs #drop
+      op [] .dataType op [] .val .@ArrayElement operations index isGlobal target prog compileGetIndex
+      target ")" io.fputs #drop
+      break
+    getTupleElement case
+      op [] .dataType op [] .val .getTupleElement false operations index isGlobal target prog compileGetElt
+      return
+    setTupleElement case
+      op [] .dataType op [] .val .setTupleElement false operations index isGlobal target prog compileGetElt
+      target " = " io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target ";\n" io.fputs #drop
+      return
+    @TupleElement case
+      target "(&" io.fputs #drop
+      op [] .dataType op [] .val .@TupleElement false operations index isGlobal target prog compileGetElt
+      target ")" io.fputs #drop
+      return
+    getEnumElement case
+      op [] .dataType op [] .val .getEnumElement true operations index isGlobal target prog compileGetElt
+      return
+    setEnumElement case
+      op [] .dataType op [] .val .setEnumElement true operations index isGlobal target prog compileGetElt
+      target " = " io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target ";\n" io.fputs #drop
+      return
+    @EnumElement case
+      target "(&" io.fputs #drop
+      op [] .dataType op [] .val .@EnumElement true operations index isGlobal target prog compileGetElt
+      target ")" io.fputs #drop
+      return
     block case
       op [] .val .block .blockType switch
         UNKNOWN PROCEDURE case
@@ -658,6 +757,82 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
       end
       break
+    argc case
+      64 sb.create
+        CONCAT_PREFIX sb.appendS
+        ARGC_NAME     sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    getArg case
+      target "((" io.fputs #drop
+      op [] .dataType target prog printTypeName
+      64 sb.create
+        ")" sb.appendS
+        CONCAT_PREFIX      sb.appendS
+        ARGV_NAME          sb.appendS
+        "["                sb.appendS
+        target #over io.fputSb #drop
+      sb.clear
+        operations index isGlobal target prog compileOp
+        "])"               sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    getArgLen case
+      target "((" io.fputs #drop
+      op [] .dataType target prog printTypeName
+      64 sb.create
+        ")strlen("  sb.appendS
+        CONCAT_PREFIX        sb.appendS
+        ARGV_NAME            sb.appendS
+        "["                  sb.appendS
+        target #over io.fputSb #drop
+      sb.clear
+        operations index isGlobal target prog compileOp
+        "]))"                sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    checkEnumLabel case
+      64 sb.create
+        CONCAT_PREFIX   sb.appendS
+        CHECK_ENUM_NAME sb.appendS
+        "("             sb.appendS
+        target #over io.fputSb #drop
+      sb.clear
+        operations index isGlobal target prog compileOp
+        ".label,"       sb.appendS
+        op [] .val .checkEnumLabel sb.appendI
+        ",\""           sb.appendS
+        op [] .pos      sb.appendPos
+        "\");\n"        sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    checkArrayIndex case
+      64 sb.create
+        CONCAT_PREFIX   sb.appendS
+        CHECK_INDEX_NAME sb.appendS
+        "("             sb.appendS
+        op [] .val .checkArrayIndex
+        #dup -1 == if #drop
+          target #over io.fputSb #drop
+      sb.clear
+          operations index isGlobal target prog compileOp
+        else
+          sb.appendI
+        end
+        ","         sb.appendS
+        target #over io.fputSb #drop
+      sb.clear
+        operations index isGlobal target prog compileOp
+        ",\""       sb.appendS
+        op [] .pos  sb.appendPos
+        "\");\n"    sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
     entryPoint case
       64 sb.create
         "static void " sb.appendS
