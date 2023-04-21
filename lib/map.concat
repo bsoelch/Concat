@@ -4,7 +4,7 @@
 
 #namespace map
   i64 =:: NodeId
-  
+
   #template type : K type : V #end
   struct( K : key V : mut value  NodeId : mut next ) =:: Node
 #end
@@ -24,7 +24,7 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
   end
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data => ) =: public free
-    data [] .nodeBuffer 
+    data [] .nodeBuffer
       list.free
     data [] .nodeBuffer =
     data [] .data mem.free
@@ -110,4 +110,40 @@ struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 
       value #swap [] .value =
     optional.wrap return
   end
+
+  #template type : K type : V #end
+  struct( K V hashMap ptr : map NodeId : mut next i32 : mut index ) =:: Iterator
+#namespace itr
+  #template type : K type : V #end
+  proc( K V hashMap ptr mut : map => K V Iterator ) =: public start
+    0 while #dup map [] .cap < do
+      map [] .data #over [] 0 != if
+        map #swap map [] .data #over [] #swap 1 + K V Iterator new return
+      end
+      1 +
+    end #drop
+    map 0 map [] .cap i32 cast K V Iterator new return
+  end
+  #template type : K type : V #end
+  proc( K V Iterator => K V Iterator bool ) =: public hasNext
+    #dup .next 0 != return
+  end
+  #template type : K type : V #end
+  proc( K V Iterator => K V Iterator ( K ptr V ptr mut ) ) =: public next
+    =:: mut itr
+    itr .map [] .nodeBuffer itr .next 1 - list.at .data =:: res
+    res [] .next itr .next =
+    itr .next 0 == if
+      while itr .index itr .map [] .cap < do
+        itr .map [] .data itr .index [] 0 != if
+          itr .map [] .data itr .index [] itr .next =
+          itr .index 1 + itr .index =
+          break
+        end
+        itr .index 1 + itr .index =
+      end
+    end
+    itr res [] .key @ res [] .value @ ( K ptr V ptr mut ) new return
+  end
+#end
 #end
