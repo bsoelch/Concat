@@ -69,7 +69,7 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
   end
   
   
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
   
   proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
     base 2 < if 
