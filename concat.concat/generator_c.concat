@@ -65,15 +65,12 @@ proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: pr
     ARGUMENT case
       idInfo .labelId labelContext id.labelName =:: labelName
       64 sb.create
-        labelName optional.hasData if
-          "a" sb.appendS
-        else
-          "arg" sb.appendS
-        end
+        "arg" sb.appendS
         idInfo .id sb.appendI
         labelName optional.hasData if
-          "_" sb.appendS
+          "/*" sb.appendS
           labelName .data sb.appendStr ## TODO asciify
+          "*/" sb.appendS
         end
         target #over io.fputSb #drop
       sb.free #drop
@@ -422,6 +419,31 @@ proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : inde
     target #over io.fputSb #drop
   sb.free #drop
 end
+proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileCreateTuple
+  prog [] .idContext .typeContext @ =:: typeContext
+  composite typeContext types.compositeElts =:: elts
+  target "(" io.fputs #drop
+  isGlobal ! if
+    target "(" io.fputs #drop
+    composite target prog printTypeName
+    target ")" io.fputs #drop
+  end
+  target "{" io.fputs #drop
+  0 while #dup elts .length < do
+    #dup 0 > if
+      target "," io.fputs #drop
+    end
+    elts #over array.get typeContext types.isEmpty if ## skip empty types
+      1 + continue
+    end
+    target "." io.fputs #drop
+    composite #over target prog printEltName
+    target " = " io.fputs #drop
+    operations index isGlobal target prog compileOp
+    1 +
+  end #drop
+  target "})" io.fputs #drop
+end
 
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
@@ -441,15 +463,51 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
   op [] .val switch
     OpValue .Constant
     Print
-    Return
-    New
-    newEnum
-    callPtr
     case
       target "(?)" io.fputs #drop
       break
     NOP case
       break
+    New case
+      op [] .dataType typeContext types.isTuple if
+        op [] .dataType operations index isGlobal target prog compileCreateTuple
+        return
+      end
+      op [] .dataType typeContext types.isArray if
+        isGlobal ! if
+          target "(" io.fputs #drop
+          op [] .dataType target prog printTypeName
+          target ")" io.fputs #drop
+        end
+        target "{0}" io.fputs #drop
+      end
+      break
+    newEnum case
+      target "(" io.fputs #drop
+      isGlobal ! if
+        target "(" io.fputs #drop
+        op [] .dataType target prog printTypeName
+        target ")" io.fputs #drop
+      end
+      ## TODO empty enum
+      64 sb.create
+        "{.label="        sb.appendS
+        op [] .val .newEnum sb.appendI
+        op [] .dataType op [] .val .newEnum typeContext types.compositeGetElement typeContext types.isEmpty ! if
+          ",.data={."         sb.appendS
+          target #over io.fputSb #drop
+          sb.clear
+          op [] .dataType op [] .val .newEnum target prog printEltName
+          " = "               sb.appendS
+          target #over io.fputSb #drop
+          sb.clear
+          operations index isGlobal target prog compileOp
+          "}"                sb.appendS
+        end
+        "})"               sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
     unaryOperator case
       target "(" io.fputs #drop
       op [] .val .unaryOperator switch
@@ -570,6 +628,10 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         ")"                     sb.appendS
         target #over io.fputSb #drop
       sb.free #drop
+      break
+    callPtr case
+      operations index isGlobal target prog compileOp
+      op [] .dataType operations index isGlobal target prog compileCallArgs
       break
     getId case
       op [] .val .getId =:: idInfo
@@ -757,6 +819,23 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
       end
       break
+    Return case
+      op [] .dataType typeContext types.getProcOut #drop =:: retType
+      retType typeContext types.compositeEltCount =:: retCount
+      retCount 0 == if
+        target "return;\n" io.fputs #drop
+        return
+      end
+      retCount 1 == if
+        target "return " io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target ";\n" io.fputs #drop
+        return
+      end
+      target "return " io.fputs #drop
+      retType operations index isGlobal target prog compileCreateTuple
+      target ";\n" io.fputs #drop
+      return
     argc case
       64 sb.create
         CONCAT_PREFIX sb.appendS
