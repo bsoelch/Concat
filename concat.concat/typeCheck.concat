@@ -1285,15 +1285,13 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
     op [] .pos state appendError
     return
   end
-  tupleType tupleIndex typeContext compositeGetElement =:: elementType
+  tupleType tupleIndex typeContext compositeGetElement =:: mut elementType
   tupleType tupleIndex typeContext compositeGetLabel =:: elementLabel
   tupleInfo [] .writable elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != & =:: mutable
   op [] .val OpValue .@TupleElement == if
-    elementType mutable typeContext getAddressType
-  else
-    elementType
+    elementType mutable typeContext getAddressType elementType =
   end
-  op [] .dataType =
+  tupleType op [] .dataType =
   op [] .val OpValue .setTupleElement == if ## SET_TUPLE_ELEMENT <tuple> <value>
     mutable ! if
       "element " sb.wrap
@@ -1311,13 +1309,14 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
       op list.appendP
     state [] .compiledOps =
     1 op [] .pos state addCompiledStackOps
-    op [] .dataType @ array.wrap "tuple assignment" string.wrap op [] .pos state requireTypes
+    elementType @ array.wrap "tuple assignment" string.wrap op [] .pos state requireTypes
     1 op [] .pos state addCompiledStackOps
     return
   end
   ## GET_TUPLE_ELEMENT(index) <tuple>
   ## ADDR_OF_TUPLE_ELEMENT(index) <tuple>
   op 1 state insertStackOp
+  elementType state [] .typeStack list.peek .data [] .valType = ## change type on stack
   op [] .val OpValue .getTupleElement == if
     mutable state [] .typeStack list.peek .data [] .writable =
   end
@@ -1372,7 +1371,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
     targetType typeContext unwrapNamed =:: enumType
     enumType labelName labelContext typeContext compositeFindLabel =:: index
     index 0 >= if
-      enumType index typeContext compositeGetElement =:: eltType
+      enumType index typeContext compositeGetElement =:: mut eltType
       eltType typeContext isEmpty if
         "element " sb.wrap
           labelName sb.appendStr
@@ -1383,11 +1382,9 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       end
       enumType index typeContext compositeGetLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != typeInfo [] .writable & =:: mutable
       op [] .val OpValue .@Label == if
-        eltType mutable typeContext getAddressType
-      else
-        eltType
+        eltType mutable typeContext getAddressType eltType =
       end
-      op [] .dataType =
+      enumType op [] .dataType =
       op [] .val switch
         getLabel case
           index op [] .val .getEnumElement =
@@ -1417,7 +1414,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           op list.appendP
         state [] .compiledOps =
         1 op [] .pos state addCompiledStackOps
-        op [] .dataType @ array.wrap "enum assignment" string.wrap op [] .pos state requireTypes
+        eltType @ array.wrap "enum assignment" string.wrap op [] .pos state requireTypes
         1 op [] .pos state addCompiledStackOps
         return
       end
@@ -1431,6 +1428,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       true state [] .hasCheckEnum =
       ## get value
       op 1 state insertStackOp
+      eltType state [] .typeStack list.peek .data [] .valType = ## change type on stack
       op [] .val OpValue .getEnumElement == if
         mutable state [] .typeStack list.peek .data [] .writable =
       end
