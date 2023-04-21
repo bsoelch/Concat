@@ -26,7 +26,8 @@ proc( LabelId : label i32 : implId io.FILE : target Program ptr mut : prog => ) 
   prog [] .idContext .labelContext @ =:: labelContext
   128 sb.create
     CONCAT_PREFIX sb.appendS
-    ## XXX file id for non-public labels
+    ## TODO file id for non-public labels
+    ## TODO namespace
     label labelContext id.labelName #dup optional.hasData if
       .data sb.appendStr ## TODO asciify name
     else #drop end
@@ -36,6 +37,50 @@ proc( LabelId : label i32 : implId io.FILE : target Program ptr mut : prog => ) 
     end
     target #over io.fputSb #drop
   sb.free #drop
+end
+proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: printIdName
+  prog [] .idContext .labelContext @ =:: labelContext
+  idInfo .idType switch
+    PROCEDURE GLOBAL_VAR case
+      idInfo .labelId idInfo .id target prog printGlobalName return
+    LOCAL_VAR case
+      64 sb.create
+        "l" sb.appendS
+        idInfo .id sb.appendI
+        idInfo .labelId labelContext id.labelName #dup optional.hasData if
+          #swap
+            "_" sb.appendS
+          #swap .data sb.appendStr ## TODO asciify
+        else #drop end
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    TMP_VAR case
+      64 sb.create
+        "tmp" sb.appendS
+        idInfo .id sb.appendI
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    ARGUMENT case
+      idInfo .labelId labelContext id.labelName =:: labelName
+      64 sb.create
+        labelName optional.hasData if
+          "a" sb.appendS
+        else
+          "arg" sb.appendS
+        end
+        idInfo .id sb.appendI
+        labelName optional.hasData if
+          "_" sb.appendS
+          labelName .data sb.appendStr ## TODO asciify
+        end
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    TYPE TEMPLATE_ARG case
+      break ## XXX? error message
+  end
 end
 
 proc( string : name i32 : id io.FILE : target => ) =: printCompositeName
@@ -47,7 +92,7 @@ proc( string : name i32 : id io.FILE : target => ) =: printCompositeName
   sb.free #drop
 end
 proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
-  prog [] .idContext .typeContext @ =:: labelContext
+  prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t switch
     undefined templateType genericType case ## no global type necessary
@@ -110,6 +155,21 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       break
   end
 end
+proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printUnsignedTypeName
+  prog [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.isInt ! if
+    t target prog printTypeName
+    return
+  end
+  t typeContext types.unwrapNamed .primitiveType switch
+    TYPE  case target "size_t"  io.fputs #drop break
+    BOOL  case target "bool"    io.fputs #drop break
+    I8    case target "uint8_t"  io.fputs #drop break
+    I32   case target "uint32_t" io.fputs #drop break
+    I64   case target "uint64_t" io.fputs #drop break
+    FLOAT case target "float"   io.fputs #drop break
+  end
+end
 proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
@@ -120,18 +180,18 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
   end
   target "(" io.fputs #drop
   0 while #dup args .length < do
-      #dup 0 > if
-        target "," io.fputs #drop
-      end
-      args #over array.get target prog printTypeName
-      argNames if
-        16 sb.create
-          " arg" sb.appendS
-          #over  sb.appendI
-          ## XXX print argument label (if existent)
-          target #over io.fputSb #drop
-        sb.free #drop
-      end
+    #dup 0 > if
+      target "," io.fputs #drop
+    end
+    args #over array.get target prog printTypeName
+    argNames if
+      16 sb.create
+        " arg" sb.appendS
+        #over  sb.appendI
+        ## XXX print argument label (if existent)
+        target #over io.fputSb #drop
+      sb.free #drop
+    end
     1 +
   end #drop
   target ")" io.fputs #drop
@@ -284,7 +344,31 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   end #drop
   types list.free #drop
 end
-
+proc( BinaryOperator => bool ) =: isUnsignedOp
+  switch
+    ADD SUBTRACT MULTIPLY DIVIDE MOD
+    AND OR XOR LSHIFT RSHIFT
+    EQ NE LE GE LT GT case
+      false return
+    UDIVIDE UMOD URSHIFT case
+      true return
+  end
+end
+## XXX? compiler context
+proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCallArgs
+  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.getProcIn #drop typeContext types.compositeEltCount =:: argCount
+  target "(" io.fputs #drop
+  0 while #dup argCount < do
+    #dup 0 > if
+      target "," io.fputs #drop
+    end
+    operations index isGlobal target prog compileOp
+    1 +
+  end #drop
+  target ")" io.fputs #drop
+end
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -302,12 +386,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
   ## TODO compile operations
   op [] .val switch
     OpValue .Constant
-    getId
-    setId
-    @Id
-    getLabel
-    setLabel
-    @Label
     getTupleElement
     setTupleElement
     @TupleElement
@@ -325,22 +403,157 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     argc
     getArg
     getArgLen
-    length
-    size
-    Cast
-    Cast!
-    unaryOperator
-    binaryOperator
     enumLabelEq
     enumLabelNe
     checkEnumLabel
     checkArrayIndex
-    stackMod
-    getName
-    setName
-    @Name case
+    case
+      target "(?)" io.fputs #drop
       break
     NOP case
+      break
+    unaryOperator case
+      target "(" io.fputs #drop
+      op [] .val .unaryOperator switch
+        NOT case
+          target "!" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          break
+        NEGATE case
+          target "-" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          break
+        FLIP case
+          target "~" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          break
+        INCREMENT case
+          operations index isGlobal target prog compileOp
+          target "++" io.fputs #drop
+          break
+        DECREMENT case
+          operations index isGlobal target prog compileOp
+          target "--" io.fputs #drop
+          break
+      end
+      target ")" io.fputs #drop
+      break
+    binaryOperator case
+      target "(" io.fputs #drop
+      op [] .val .binaryOperator isUnsignedOp if
+        target "(" io.fputs #drop
+        op [] .dataType target prog printTypeName
+        target ")(((" io.fputs #drop
+        op [] .dataType target prog printUnsignedTypeName
+        target ")" io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target ")" io.fputs #drop
+      else
+        operations index isGlobal target prog compileOp
+      end
+      op [] .val .binaryOperator switch
+        ADD case target "+" io.fputs #drop break
+        SUBTRACT case target "-" io.fputs #drop break
+        MULTIPLY case target "*" io.fputs #drop break
+        DIVIDE case target "/" io.fputs #drop break
+        MOD case target "%" io.fputs #drop break
+        AND case target "&" io.fputs #drop break
+        OR case target "|" io.fputs #drop break
+        XOR case target "^" io.fputs #drop break
+        LSHIFT case target "<<" io.fputs #drop break
+        RSHIFT case target ">>" io.fputs #drop break
+        EQ case target "==" io.fputs #drop break
+        NE case target "!=" io.fputs #drop break
+        LE case target "<=" io.fputs #drop break
+        GE case target ">=" io.fputs #drop break
+        LT case target "<" io.fputs #drop break
+        GT case target ">" io.fputs #drop break
+        UDIVIDE case target "/" io.fputs #drop break
+        UMOD case target "%" io.fputs #drop break
+        URSHIFT case target ">>" io.fputs #drop break
+      end
+      op [] .val .binaryOperator isUnsignedOp if
+        target "((" io.fputs #drop
+        op [] .dataType target prog printUnsignedTypeName
+        target ")" io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target "))" io.fputs #drop
+      else
+        operations index isGlobal target prog compileOp
+      end
+      target ")" io.fputs #drop
+      break
+    Cast Cast! case
+      op [] .val OpValue .Cast! == if op [] .val .Cast! else op [] .val .Cast end =:: src
+      src typeContext types.unwrapNamed op [] .dataType typeContext types.unwrapNamed types.typeEquals if
+        operations index isGlobal target prog compileOp ## cast type to itself
+        return
+      end
+      src typeContext types.isArray if
+        op [] .dataType typeContext types.isPointer if ## array -> pointer
+          target "((" io.fputs #drop
+          op [] .dataType target prog printTypeName
+          target ")" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target ".data)" io.fputs #drop
+          return
+        end
+        break ## unknown cast
+      end
+      src typeContext types.isEnum if #+TODO emtpy enums, optional pointer+#
+        op [] .dataType typeContext types.isInt if ## enum ->int
+          target "((" io.fputs #drop
+          op [] .dataType target prog printTypeName
+          target ")" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target ".label)" io.fputs #drop
+        end
+        break ## unknown cast
+      end
+      target "((" io.fputs #drop
+      op [] .dataType target prog printTypeName
+      target ")" io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target ")" io.fputs #drop
+      return
+    getId case
+      op [] .val .getId =:: idInfo
+      idInfo .idType switch
+        LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT case
+          idInfo target prog printIdName
+          return
+        PROCEDURE case
+          idInfo target prog printIdName
+          op [] .dataType operations index isGlobal target prog compileCallArgs
+          break
+        TYPE TEMPLATE_ARG case
+          break ## XXX error message
+      end
+      break
+    @Id case
+      op [] .val .@Id =:: idInfo
+      idInfo .idType switch
+        LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT PROCEDURE case
+          target "(&" io.fputs #drop
+          idInfo target prog printIdName
+          target ")" io.fputs #drop
+          return
+        TYPE TEMPLATE_ARG case
+          break ## XXX error message
+      end
+      break
+    setId case
+      op [] .val .setId =:: idInfo
+      idInfo .idType switch
+        LOCAL_VAR GLOBAL_VAR TMP_VAR case
+          idInfo target prog printIdName
+          target " = " io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target ";\n" io.fputs #drop
+          return
+        TYPE ARGUMENT TEMPLATE_ARG PROCEDURE case
+          break ## XXX error message
+      end
       break
     declareId case
       op [] .val .declareId =:: idInfo
@@ -353,52 +566,21 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           op [] .dataType true target prog printProcArgs
           target "{\n" io.fputs #drop
           return
-        LOCAL_VAR case
+        LOCAL_VAR GLOBAL_VAR TMP_VAR case
           op [] .dataType target prog printTypeName
-          64 sb.create
-            immutable if
-              " const" sb.appendS
-            end
-            " l" sb.appendS
-            idInfo .id sb.appendI
-            idInfo .labelId labelContext id.labelName #dup optional.hasData if
-              #swap
-                "_" sb.appendS
-              #swap .data sb.appendStr ## TODO asciify
-            else #drop end
-            " = "  sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
-          break
-        GLOBAL_VAR case
-          op [] .dataType target prog printTypeName
-          64 sb.create
-            ' ' sb.appendC
-            immutable if
-              "const " sb.appendS
-            end
-            idInfo .labelId  idInfo .id  target prog printGlobalName
-            " = "  sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
-          break
-        TMP_VAR case
-          op [] .dataType target prog printTypeName
-          64 sb.create
-            immutable if
-              " const" sb.appendS
-            end
-            " tmp" sb.appendS
-            idInfo .id sb.appendI
-            " = "  sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
-          break
+          immutable if
+            target " const " io.fputs #drop
+          else
+            target " " io.fputs #drop
+          end
+          idInfo target prog printIdName
+          target " = " io.fputs #drop
+          operations index isGlobal target prog compileOp
+          target ";\n" io.fputs #drop
+          return
         TYPE ARGUMENT TEMPLATE_ARG case
-          return ## XXX error message
+          break ## XXX error message
       end
-      operations index isGlobal target prog compileOp
-      target ";\n" io.fputs #drop
       break
     predeclareId case
       op [] .val .predeclareId =:: idInfo
@@ -411,46 +593,16 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           op [] .dataType false target prog printProcArgs
           target ";\n" io.fputs #drop
           return
-        LOCAL_VAR case
+        LOCAL_VAR GLOBAL_VAR TMP_VAR case
           op [] .dataType target prog printTypeName
-          64 sb.create
-            immutable if
-              " const" sb.appendS
-            end
-            " l" sb.appendS
-            idInfo .id sb.appendI
-            idInfo .labelId labelContext id.labelName #dup optional.hasData if
-              #swap
-                "_" sb.appendS
-              #swap .data sb.appendStr ## TODO asciify
-            else #drop end
-            ";\n"  sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
-          return
-        GLOBAL_VAR case
-          op [] .dataType target prog printTypeName
-          64 sb.create
-            ' ' sb.appendC
-            immutable if
-              "const " sb.appendS
-            end
-            idInfo .labelId  idInfo .id  target prog printGlobalName
-            ";\n"  sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
-          return
-        TMP_VAR case
-          op [] .dataType target prog printTypeName
-          64 sb.create
-            immutable if
-              " const" sb.appendS
-            end
-            " tmp" sb.appendS
-            idInfo .id sb.appendI
-            ";\n"  sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
+          immutable if
+            target " const " io.fputs #drop
+          else
+            target " " io.fputs #drop
+          end
+          idInfo target prog printIdName
+          operations index isGlobal target prog compileOp
+          target ";\n" io.fputs #drop
           return
         TYPE ARGUMENT TEMPLATE_ARG case
           break ## XXX error message
@@ -518,6 +670,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
+    getName setName @Name getLabel setLabel @Label length size stackMod case
+      break ## XXX error message
   end
 end
 
