@@ -3,7 +3,7 @@
 #include "program.concat"
 #include "measure.concat"
 
-"cct_" =:: CONCAT_PREFIX
+"concat_" =:: CONCAT_PREFIX ## TODO? shorten to cct_ (current name for compatibility with old library C code)
 "internal_argc"            =:: ARGC_NAME
 "internal_argv"            =:: ARGV_NAME
 "internal_main"            =:: MAIN_NAME
@@ -22,14 +22,57 @@ proc( io.FILE : target => ) =: printHeader
   #drop
 end
 
+#namespace sb
+proc( stringBuilder string => stringBuilder ) =: appendAsciified
+  =:: str
+  0 while #dup str .length < do
+    #swap
+      str #over:2 string.charAt =:: c
+      c '0' >= c '9' <= & if
+        c sb.appendC
+        #swap 1 + continue
+      end
+      c 'A' >= c 'Z' <= & if
+        c sb.appendC
+        #swap 1 + continue
+      end
+      c 'a' >= c 'z' <= & if
+        c sb.appendC
+        #swap 1 + continue
+      end
+      c '_' == if
+        "__" sb.appendS
+        #swap 1 + continue
+      end
+      c '.' == if
+        "_d" sb.appendS
+        #swap 1 + continue
+      end
+      "_X" sb.appendS
+      c 0xff & 0x10 < if
+        '0' sb.appendC
+      end
+      c 0xff & sb.appendI
+    #swap 1 +
+  end #drop
+end
+#end
 proc( LabelId : label i32 : implId io.FILE : target Program ptr mut : prog => ) =: printGlobalName
   prog [] .idContext .labelContext @ =:: labelContext
   128 sb.create
     CONCAT_PREFIX sb.appendS
-    ## TODO file id for non-public labels
-    ## TODO namespace
+    label labelContext id.labelFlags id.FLAG_PUBLIC & 0 == if
+      label labelContext id.getLabelFile sb.appendI
+      "_F" sb.appendS
+    end
+    label labelContext id.getLabelNamespace =:: mut mNamespace
+    while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
+      mNamespace labelContext id.namespaceName sb.appendAsciified
+      "." string.wrap sb.appendAsciified
+      mNamespace labelContext id.parentNamespace mNamespace =
+    end ## XXX? reverse order
     label labelContext id.labelName #dup optional.hasData if
-      .data sb.appendStr ## TODO asciify name
+      .data sb.appendAsciified
     else #drop end
     implId 0 >= if
       "_I" sb.appendS
@@ -46,7 +89,7 @@ proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => )
     index sb.appendI
     labelName optional.hasData if
       "/*" sb.appendS
-      labelName .data sb.appendStr ## TODO asciify
+      labelName .data sb.appendAsciified
       "*/" sb.appendS
     end
     target #over io.fputSb #drop
@@ -64,7 +107,7 @@ proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: pr
         idInfo .labelId labelContext id.labelName #dup optional.hasData if
           #swap
             "_" sb.appendS
-          #swap .data sb.appendStr ## TODO asciify
+          #swap .data sb.appendAsciified
         else #drop end
         target #over io.fputSb #drop
       sb.free #drop
@@ -216,7 +259,7 @@ proc( Type : composite i32 : index io.FILE : target Program ptr mut : prog => ) 
     composite index typeContext types.compositeGetLabel labelContext id.labelName #dup optional.hasData if
       #swap
         "_" sb.appendS
-      #swap .data sb.appendStr ## TODO asciify
+      #swap .data sb.appendAsciified
     else #drop end
     target #over io.fputSb #drop
   sb.free #drop
@@ -343,9 +386,13 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
       enum case
         target "struct " io.fputs #drop
         "enum" string.wrap t .enum target printCompositeName
-        target "{\nunion{\n" io.fputs #drop
-        t target prog printCompositeElements
-        target "}data;\nint32_t label;\n};\n" io.fputs #drop ## XXX smaller int-type for smaller label count
+        target "{\n" io.fputs #drop
+        t typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & 0 == if
+          target "union{\n" io.fputs #drop
+          t target prog printCompositeElements
+          target "}data;\n" io.fputs #drop
+        end
+        target "int32_t label;\n};\n" io.fputs #drop ## XXX smaller int-type for smaller label count
         break
     end
     1 +
@@ -426,9 +473,8 @@ end
 proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileCreateTuple
   prog [] .idContext .typeContext @ =:: typeContext
   composite typeContext types.compositeElts =:: elts
-  target "(" io.fputs #drop
   isGlobal ! if
-    target "(" io.fputs #drop
+    target "((" io.fputs #drop
     composite target prog printTypeName
     target ")" io.fputs #drop
   end
@@ -446,7 +492,11 @@ proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool
     operations index isGlobal target prog compileOp
     1 +
   end #drop
-  target "})" io.fputs #drop
+  isGlobal if
+    target "}" io.fputs #drop
+  else
+    target "})" io.fputs #drop
+  end
 end
 proc( Operation ptr : op bool : isGlobal io.FILE : target Program ptr mut : prog => stringBuilder ) =: constStart
   64 sb.create
@@ -501,7 +551,13 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
         int case
           op isGlobal target prog constStart
-            op [] .val .Constant .int sb.appendI
+            op [] .val .Constant .int i64.MIN == if
+              '(' sb.appendC
+              op [] .val .Constant .int 1 + sb.appendI
+              "-1)" sb.appendS
+            else
+              op [] .val .Constant .int sb.appendI
+            end
           op isGlobal target prog constEnd
           return
         enumLabel case
@@ -522,7 +578,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
         str case ## TODO string constants
           op isGlobal target prog constStart
-          '"' sb.appendC
+          "(int8_t const*)\"" sb.appendS
           op [] .val .Constant .str labelContext id.scAsStr sb.appendEscapedStr
           '"' sb.appendC
           op isGlobal target prog constEnd
@@ -544,7 +600,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             target "?\"true\":\"false\");\n" io.fputs #drop
             return
           I8 case
-            target "printf(\"%1$\"PRIi8\" '%1$c'\\n\"," io.fputs #drop
+            target "printf(\"%\"PRIi8\"\\n\"," io.fputs #drop ## XXX? also print char value
             operations index isGlobal target prog compileOp
             target ");\n" io.fputs #drop
             return
@@ -576,6 +632,10 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target ");\n" io.fputs #drop
         return
       end
+      ## remove printed element
+      target "(void)" io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target ";\n" io.fputs #drop
       ## XXX print array/tuple types
       break
     New case
@@ -589,13 +649,12 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           op [] .dataType target prog printTypeName
           target ")" io.fputs #drop
         end
-        target "{0}" io.fputs #drop
+        target "{0,}" io.fputs #drop
       end
       break
     newEnum case
-      target "(" io.fputs #drop
       isGlobal ! if
-        target "(" io.fputs #drop
+        target "((" io.fputs #drop
         op [] .dataType target prog printTypeName
         target ")" io.fputs #drop
       end
@@ -614,7 +673,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           operations index isGlobal target prog compileOp
           "}"                sb.appendS
         end
-        "})"               sb.appendS
+        isGlobal if
+          "}"                sb.appendS
+        else
+          "})"               sb.appendS
+        end
         target #over io.fputSb #drop
       sb.free #drop
       return
@@ -657,6 +720,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       else
         operations index isGlobal target prog compileOp
       end
+      op [] .dataType typeContext types.isEnum if
+        target ".label" io.fputs #drop
+      end
       op [] .val .binaryOperator switch
         ADD case target "+" io.fputs #drop break
         SUBTRACT case target "-" io.fputs #drop break
@@ -683,6 +749,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target "))" io.fputs #drop
       else
         operations index isGlobal target prog compileOp
+      end
+      op [] .dataType typeContext types.isEnum if
+        target ".label" io.fputs #drop
       end
       target ")" io.fputs #drop
       break
@@ -918,6 +987,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         SWITCH case
           target "switch(" io.fputs #drop
           operations index isGlobal target prog compileOp
+          op [] .dataType typeContext types.isEnum if ## TODO empty enums
+            target ".label" io.fputs #drop
+          end
           target "){\n" io.fputs #drop
           return
         CASE case
@@ -1068,12 +1140,19 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
+    unreachable case
+      ## XXX? printf-statement for error message
+      target "exit(EXIT_FAILURE);//unreachable\n" io.fputs #drop
+      return
     getName setName @Name getLabel setLabel @Label length size stackMod case
       break ## XXX error message
   end
 end
 
 proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
+  prog [] .idContext @ =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
   target printHeader
   target prog printTypes
   ## TODO initialize string data
@@ -1106,7 +1185,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
       "static void " sb.appendS
       CONCAT_PREFIX  sb.appendS
       CHECK_INDEX_NAME sb.appendS
-      "(int64_t index,int64_t length,char const* pos){\n" sb.appendS
+      "(int64_t length,int64_t index,char const* pos){\n" sb.appendS
       "  if(index>=0 && index<length)\n    return;\n" sb.appendS
       "  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\" at %s\\n\",index,length,pos);\n" sb.appendS
       "  exit(" sb.appendS
@@ -1129,6 +1208,57 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
       target #over io.fputSb #drop
     sb.free #drop
   end
+  target "//declarations\n" io.fputs #drop
+  prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
+    =:: declaration ## TODO find out which declarations are actually used
+    declaration .1 [] .valueType =:: mut mType
+    declaration .1 [] .labelId labelContext id.labelFlags =:: labelFlags
+    mType types.primitive.TYPE types.typeEquals if
+      continue
+    end
+     mType types.isAutoType if
+      prog [] .autoTypes
+        mType types.getTypeId
+      list.at .data []
+      mType =
+    end
+    declaration .1 [] .templateId -1 != if
+      labelFlags id.FLAG_EXTERN & 0 != if
+        ## TODO error message
+        continue
+      end
+      idContext [] .templateInfos declaration .1 [] .templateId
+      list.at .data =:: templateInfo
+      0 while #dup templateInfo [] .implementations .length < do
+        templateInfo [] .implementations #over list.at .data [] .implType mType =
+        mType typeContext types.getProcOut #drop target prog printTypeName
+      target " " io.fputs #drop
+      declaration .1 [] .labelId #over target prog printGlobalName
+      mType false target prog printProcArgs
+      target ";\n" io.fputs #drop
+        1 +
+      end #drop
+      continue
+    end
+    labelFlags id.FLAG_EXTERN & 0 != if
+      target "extern " io.fputs #drop
+    end
+    mType typeContext types.isProcedure if
+      mType typeContext types.getProcOut #drop target prog printTypeName
+      target " " io.fputs #drop
+      declaration .1 [] .labelId -1 target prog printGlobalName
+      mType false target prog printProcArgs
+      target ";\n" io.fputs #drop
+      continue
+    end
+    mType target prog printTypeName
+    target " " io.fputs #drop
+    labelFlags id.FLAG_MUTABLE & 0 == if
+      target "const " io.fputs #drop
+    end
+    declaration .1 [] .labelId -1 target prog printGlobalName
+    target ";\n" io.fputs #drop
+  end #drop
   ## TODO global declarations
   0 while #dup prog [] .progFiles .length < do
     prog [] .progFiles #over list.at .data =:: f

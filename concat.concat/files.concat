@@ -68,10 +68,10 @@ end
 
 proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: public updateFilePos
   chr '\n' == if
-      currentPos [] .line ++ #drop
+      currentPos [] .line 1 + currentPos [] .line =
     1 currentPos [] .posInLine =
   else
-    currentPos [] .posInLine ++ #drop
+    currentPos [] .posInLine 1 + currentPos [] .posInLine =
   end
 end
 proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces

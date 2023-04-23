@@ -151,6 +151,7 @@ proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => Identi
       string.empty
       flags
       pos
+      state [] .fileId
       labelContext
     id.newLabel
     -1
@@ -300,21 +301,27 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       opOffset newOffset != if
         state [] .opStack .data opOffset [] state [] .opStack .data newOffset [] =
       end
-      opOffset ++ #drop
-      newOffset ++ #drop
+      opOffset 1 + opOffset =
+      newOffset 1 + newOffset =
       1 + continue
     end
     keepWritable typeInfo [] .writable & if
       state [] .opStack opOffset list.at .data =:: opHead
+      state [] .typeStack list.peek .data =:: stackHead
       opHead [] .val switch
         getId case ## writable getId -> access to writable variable
           opHead [] .val .getId opHead [] .val .@Id =
+          opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
+          opHead [] .dataType stackHead [] .valType =
           break
         getTupleElement case
           opHead [] .val .getTupleElement opHead [] .val .@TupleElement =
+          stackHead [] .valType true typeContext types.getAddressType stackHead [] .valType =
           break
         getArrayElement case
           opHead [] .val .getArrayElement opHead [] .val .@ArrayElement =
+          opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
+          opHead [] .dataType stackHead [] .valType =
           break
         default
           opOffset newOffset != if
@@ -324,11 +331,10 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
           newOffset typeInfo [] .opCount + newOffset =
           1 + continue
       end
-      opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
       false pos state newTmpVar =:: tmpId
       state [] .compiledOps
         ## opDeclare
-          opHead [] .dataType
+          stackHead [] .valType
           tmpId
           pos
         opDeclare list.append
@@ -343,7 +349,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
         0 #over .val .getArrayElement =
       state [] .opStack .data newOffset ++ [] =
       ## opGet
-        opHead [] .dataType
+        stackHead [] .valType
         tmpId
         pos
       opGet state [] .opStack .data newOffset ++ [] =
@@ -690,8 +696,9 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
       outTypes [] .opStack #over list.get .val .getId tmpId =
       ## TODO check type
     end
-    typeInfo [] .opCount 1 == state [] .opStack opOffset list.get .val #swap #over OpValue .getId == & if
+    typeInfo [] .opCount 1 == state [] .opStack opOffset list.at .data [] .val #swap #over OpValue .getId == & if
       .getId #dup .idType IdentifierType .TMP_VAR == #swap .id tmpId .id == & if ## assignment of tmp-var to itself
+        state [] .opStack opOffset list.at .data [] state [] .opStack #over:2 list.set
         opOffset 1 + opOffset =
         1 + continue
       end
@@ -702,8 +709,6 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
         tmpId
         pos
       opSet list.append
-    state [] .compiledOps =
-    state [] .compiledOps
       state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
     state [] .compiledOps =
     opOffset typeInfo [] .opCount + opOffset =
@@ -977,7 +982,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         op [] .pos
       opDeclare list.append
       #over op [] .pos opTupleGet
-        eltType #over .dataType =
+        retType #over .dataType =
       list.append
         retType
         retId
@@ -1611,7 +1616,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               op [] .pos
             LabelData new list.append
           lables [] =
-          state [] .switchData block [] .blockId list.at .data [] .cases list.peek .data [] .count ++ #drop
+          state [] .switchData block [] .blockId list.at .data [] .cases list.peek .data
+            #dup [] .count
+              1 +
+            #swap [] .count =
           return
         end
       else #drop end
@@ -1696,6 +1704,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .typeStack #dup .length 1 - list.at .data =:: right
       state [] .typeStack #dup .length 2 - list.at .data =:: left
       Type 2 array new =:: mut inTypes
+      Type .undefined =:: mut outType
       left [] .valType  inTypes @ 0 [] =
       right [] .valType inTypes @ 1 [] =
       op state checkLocal
@@ -1703,79 +1712,98 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         ADD case
           ## number+number -> number
           left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup Type .undefined != if
-            op [] .dataType =
+            #dup op [] .dataType =
+            outType =
           else #drop end
           ## pointer+integer -> pointer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
-            left [] .valType op [] .dataType =
+            left [] .valType
+              #dup op [] .dataType =
+            outType =
             types.primitive.I_PTR inTypes @ 1 [] =
           end
           break
         SUBTRACT case
           ## number-number -> number
           left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup Type .undefined != if
-            op [] .dataType =
+            #dup op [] .dataType =
+            outType =
           else #drop end
           ## pointer-integer -> pointer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isInt & if
-            left [] .valType op [] .dataType =
+            left [] .valType
+              #dup op [] .dataType =
+            outType =
             types.primitive.I_PTR inTypes @ 1 [] =
           end
           ## pointer-pointer -> integer
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
           left [] .valType right [] .valType types.typeEquals & if
-            types.primitive.I_PTR op [] .dataType =
+            types.primitive.I_PTR
+              #dup op [] .dataType =
+            outType =
           end
           break
         MULTIPLY DIVIDE MOD case
           ## number*number -> number
           left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup Type .undefined != if
-            op [] .dataType =
+            #dup op [] .dataType =
+            outType =
           else #drop end
           break
         UDIVIDE UMOD LSHIFT RSHIFT URSHIFT case
           ## integer>>integer -> integer
           left [] .valType right [] .valType inTypes @ typeContext checkBinOpInt #dup Type .undefined != if
-            op [] .dataType =
+            #dup op [] .dataType =
+            outType =
           else #drop end
           break
         AND OR XOR case
           ## integer&integer -> integer
           left [] .valType right [] .valType inTypes @ typeContext checkBinOpInt #dup Type .undefined != if
-            op [] .dataType =
+            #dup op [] .dataType =
+            outType =
           else #drop end
           ## bool&bool -> bool
           left [] .valType typeContext types.isBoolean right [] .valType typeContext types.isBoolean & if
-            types.primitive.BOOL op [] .dataType =
+            types.primitive.BOOL
+              #dup op [] .dataType =
+            outType =
           end
           break
         EQ NE case
           ## number==number -> bool
-          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber Type .undefined != if
-            types.primitive.BOOL op [] .dataType =
-          end
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup Type .undefined != if
+            op [] .dataType =
+            types.primitive.BOOL outType =
+          else #drop end
           ## ptr==ptr -> bool
           left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
           left [] .valType right [] .valType types.typeEquals & if
-            types.primitive.BOOL op [] .dataType =
+            left [] .valType op [] .dataType =
+            types.primitive.BOOL outType =
           end
           ## bool==bool -> bool
           left [] .valType typeContext types.isBoolean right [] .valType typeContext types.isBoolean & if
-            types.primitive.BOOL op [] .dataType =
+            types.primitive.BOOL
+              #dup op [] .dataType =
+            outType =
           end
           ## enum==enum -> bool
           left [] .valType typeContext types.isEnum left [] .valType right [] .valType types.typeEquals & if
-            types.primitive.BOOL op [] .dataType =
+            left [] .valType op [] .dataType =
+            types.primitive.BOOL outType =
           end
           break
         LT LE GE GT case
           ## number<number -> bool
-          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber Type .undefined != if
-            types.primitive.BOOL op [] .dataType =
-          end
+          left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup Type .undefined != if
+            op [] .dataType =
+            types.primitive.BOOL outType =
+          else #drop end
           break
       end
-      op [] .dataType Type .undefined == if
+      outType Type .undefined == if
         "no version of binary operator " sb.wrap
           op [] .val .binaryOperator sb.appendBinaryOperator
           " accepts types " sb.appendS
@@ -1788,6 +1816,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         inTypes @ array.wrap #over sb.toStr op [] .pos  state requireTypes
       sb.free #drop
       op 2 state insertStackOp
+      outType state [] .typeStack list.peek .data [] .valType =
       return
     block case
       op state checkLocal
@@ -2180,8 +2209,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       state [] .compiledOps
         op list.appendP
+        state [] .reachable ! if
+          op [] .pos opUnreachable list.append
+        end
       state [] .compiledOps =
-      ## XXX push op-unreachable if unreachable
       state [] .openBlocks
         list.pop #drop ## remove closed block after writing operations
       state [] .openBlocks =
@@ -2573,6 +2604,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         '"' sb.appendC
       op [] .pos state appendError
       return
+    unreachable case
+      state [] .opStack list.clear state [] .opStack =
+      state [] .typeStack list.clear state [] .typeStack =
+      state [] .compiledOps
+        op [] list.append
+      state [] .compiledOps =
+      false state [] .reachable =
+      return
     NOP case
       return ## do nothing
   end
@@ -2714,7 +2753,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
       false compiledImpl =
       depth 1 + depth =
       0 while #dup state .idContext [] .templateInfos .length < do
-        state .idContext [] .templateInfos #over list.at .data =:: template
+        state .idContext [] .templateInfos #over list.at .data =:: mut template
         template [] .codeLength 0 > template [] .implementations .length template [] .compiledImpls > & if
           true compiledImpl =
           template [] .implementations .length =:: mut prevImpl
@@ -2734,6 +2773,7 @@ proc( Program ptr mut => ) =: public typeCheckProgram
               prog [] .templateOps template [] .codeOffset #over:2 + list.get =:: mut op ## copy by value to allow modification
               op @ template impl #over:4 argsIndices state @ resolveTemplateOp
               op @ state @ typeCheckOp
+              state .idContext [] .templateInfos #over:3 list.at .data template = ## compiling operation can change template list
               1 +
             end #drop
             argBufferOffset state .idContext [] .templateArgBuffer .length = ## reset template argument buffer
@@ -2751,10 +2791,10 @@ proc( Program ptr mut => ) =: public typeCheckProgram
           state .compiledOps prog [] .progFiles template [] .srcFile list.at .data [] .templateOps =
         end
         1 +
-        depth ++ MAX_TEMPLATE_DEPTH > if
-          break ## error message in inner loop
-        end
       end #drop
+      depth ++ MAX_TEMPLATE_DEPTH > if
+        break ## error message in inner loop
+      end
     compiledImpl do end
   end
   prog [] .templateOps list.clear prog [] .templateOps =

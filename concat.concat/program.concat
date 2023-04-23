@@ -54,6 +54,7 @@ enum(
             LabelId : getName
             LabelId : mut setName
             LabelId : mut @Name
+                      unreachable
 ) =:: public OpValue
 struct( OpValue : mut val Type : mut dataType FilePosition : mut pos ) =:: public Operation
 proc( FilePosition : pos => Operation ) =: public opNOP
@@ -178,6 +179,10 @@ proc( LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
   OpValue .getName new Type .undefined pos Operation new return
 end
+proc( FilePosition : pos => Operation ) =: public opUnreachable
+  OpValue .unreachable Type .undefined pos Operation new return
+end
+
 struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
 
 struct(
@@ -515,6 +520,9 @@ end
         @Name case
           "address of: " sb.appendS
           #over .val .@Name labelContext id.labelName .data sb.appendStr
+          break
+        unreachable case
+          "unreachable " sb.appendS
           break
       end
       " at " sb.appendS

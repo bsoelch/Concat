@@ -632,6 +632,13 @@ proc( Type : composite TypeContext ptr mut : context => Type arrayView ) =: publ
   .data =:: data
   context [] .compositeData .data data [] .eltsOffset + data [] .eltCount array.create return
 end
+proc( Type : composite TypeContext ptr mut : context => CompositeFlag ) =: public compositeFlags
+  composite context compositeData
+    #dup optional.isEmpty if #drop
+      0 return
+    end
+  .data [] .flags return
+end
 
 proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   a .length b .length < if

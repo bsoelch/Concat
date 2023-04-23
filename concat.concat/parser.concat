@@ -270,7 +270,7 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
         .IDENTIFER
       end
     end
-  flags initFlags | fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel return
+  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel return
 end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId ) =: readLabel
   code start fileState state 0 readLabelAddFlags
@@ -297,7 +297,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
             "two many types for label" sb.wrap fileState [] .wordStart state appendError
             while #dup 0 > do
-              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel #drop
+              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
               1 -
             end
           else #dup 0 < _if
@@ -319,7 +319,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
           "two many types for label" sb.wrap fileState [] .wordStart state appendError
           while #dup 0 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel #drop
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
             1 -
           end
         else #dup 0 < _if
@@ -359,7 +359,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
           "unexpected label in enum, expected ':' " sb.wrap fileState [] .wordStart state appendError
           while #dup 1 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel #drop
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
             1 -
           end #drop
           fileState state readLabel #drop
@@ -371,7 +371,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
             1 +
           end
         end #drop
-      id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel #drop
+      id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
       Type .undefined fileState [] .wordStart constType  state pushConst
       #dup .length 0 >
     do end
@@ -475,10 +475,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         Type .undefined fileState [] .wordStart constType  state pushConst
         true return
       end
-      #dup state [] .idContext .typeContext @ types.isMutable if
+      =:: mut t
+      t state [] .idContext .typeContext @ types.isMutable if
         "type is already mutable" sb.wrap fileState [] .wordStart state appendError
       end
-      =:: mut t
       t @ true state [] .idContext .typeContext @ types.setMutability if
         "could not change mutability of type" sb.wrap fileState [] .wordStart state appendError
       end
@@ -647,7 +647,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "cannot open namespace inside template" sb.wrap fileState [] .wordStart state appendError
             return
           end
-          id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel
+          id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
           state [] .idContext @ id.beginNamespace
           return
         else "using" string.wrap #over string.eq _if #drop:2
@@ -656,7 +656,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError
             return
           end .IDENTIFER
-          #dup id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel
+          #dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
           state [] .idContext @ id.importNamespace if
             "namespace \"" sb.wrap
               #swap sb.appendStr
@@ -1073,7 +1073,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart opTupleGet state appendOp
         return
       else #drop end
-        id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext addrOf id.newLabel
+        id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel
       fileState [] .wordStart opGetLabel state appendOp
       return
     else #dup "print" string.wrap string.eq _if #drop
@@ -1143,7 +1143,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "~" string.wrap string.eq _if #drop
       UnaryOperator .FLIP fileState [] .wordStart opUnaryOp state appendOp
       return
-    else #dup "++" string.wrap string.eq _if #drop
+    else #dup "++" string.wrap string.eq _if #drop ## TODO? remove ++ and -- operators (operators with side effects do not really fit in languate)
       UnaryOperator .INCREMENT fileState [] .wordStart opUnaryOp state appendOp
       return
     else #dup "--" string.wrap string.eq _if #drop
@@ -1256,7 +1256,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     #drop:2
     return
   end #drop:2
-  id.FLAG_NONE fileState [] .wordStart state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opGetName  state appendOp
+  id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opGetName  state appendOp
   return
 end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: checkIOError

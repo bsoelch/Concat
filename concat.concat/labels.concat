@@ -23,7 +23,7 @@ i32 =:: public LabelFlag
 #end
 
 struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
-struct( StringConstant : name FilePosition : pos NamespaceId : namespace LabelFlag : flags ) =:: Label
+struct( StringConstant : name FilePosition : pos NamespaceId : namespace FileId : srcFile LabelFlag : flags ) =:: Label
 
 struct(
   i8 list : mut nameBuffer
@@ -55,6 +55,18 @@ struct(
   proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
     context [] .nameBuffer .data const .offset + const .length string.create return
   end
+  proc( LabelId : id LabelContext ptr mut : context => NamespaceId ) =: public getLabelNamespace
+    id 0 < id context [] .labels .length >= | if
+      NAMESPACE_ID_NONE return
+    end
+    context [] .labels id list.at .data [] .namespace return
+  end
+  proc( LabelId : id LabelContext ptr mut : context => FileId ) =: public getLabelFile
+    id 0 < id context [] .labels .length >= | if
+      FILE_ID_NONE return
+    end
+    context [] .labels id list.at .data [] .srcFile return
+  end
   proc( LabelId : id LabelContext ptr mut : context => ) =: public inLabelNamespace
     id 0 < id context [] .labels .length >= | if
       return
@@ -85,7 +97,7 @@ struct(
     end
     context [] .labels id list.get .pos optional.wrap return
   end
-  proc( string : str LabelFlag : flags FilePosition : pos LabelContext ptr mut : context => LabelId ) =: public newLabel
+  proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context => LabelId ) =: public newLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer  str .data str .length array.create list.appendArray context [] .nameBuffer =
     context [] .labels
@@ -93,6 +105,7 @@ struct(
         offset str .length StringConstant new
         pos
         context [] .namespaceInfo .current
+        srcFile
         flags
       Label new list.append
     context [] .labels =
