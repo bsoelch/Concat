@@ -69,7 +69,7 @@ proc( Type : a Type : b => bool ) =: public typeEquals
   end
 end
 1011001 =:: bigPrime
-proc( PrimitiveType => i32 ) =: primitiveId ## XXX ? allow direct access to enum id
+proc( PrimitiveType => i32 ) =: primitiveId
   switch
     BOOL case 0 return
     I8 case 1 return
@@ -142,9 +142,35 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       "undefined" appendS return
     primitiveType case
       .primitiveType appendPrimitiveType return
-    pointer case =:: t ## XXX print sizes
+    pointer case =:: t
       t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-      " ptr" appendS
+      t context types.isFixedSize if
+        t context types.getArraySize =:: sizes
+        0 while #dup sizes .length < do
+          #swap
+            sizes #over:2 array.at .data =:: s
+            s [] .sizeType switch
+              int case
+                ' ' sb.appendC
+                s [] .value sb.appendI
+                break
+              staticArg case
+                " staticArg(" sb.appendS
+                s [] .value sb.appendI
+                ")" sb.appendS
+                break
+              templateArg case
+                " templateArg(" sb.appendS
+                s [] .value sb.appendI
+                ")" sb.appendS
+                break
+            end
+          #swap 1 +
+        end #drop
+        " ptr" appendS
+      else
+        " _ ptr" appendS
+      end
       t context types.isMutable if
         " mut" appendS
       end
@@ -732,10 +758,26 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
   =:: context
   =:: labelContext
   =:: comp
-  0 while #dup comp .eltCount < do ## TODO labels
+  0 while #dup comp .eltCount < do
     #swap
-      context [] .compositeData #over:2 comp .eltsOffset + list.get labelContext context false appendTypeRecursive
-      ' ' appendC
+      context [] .compositeData #over:2 comp .eltsOffset + list.at .data =:: eltType
+      comp .labelOffset #over:2 + =:: label
+      label labelContext id.labelName =:: labelName
+      eltType [] context types.isEmpty ! if
+        eltType [] labelContext context false appendTypeRecursive
+        labelName optional.hasData if
+          " : " appendS
+        else
+          ' ' appendC
+        end
+      end
+      labelName optional.hasData if
+        label labelContext id.labelFlags id.FLAG_MUTABLE & 0 != if
+          "mut " appendS
+        end
+        labelName .data appendStr
+        ' ' appendC
+      end
     #swap
     1 +
   end #drop

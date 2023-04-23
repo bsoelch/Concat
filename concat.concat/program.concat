@@ -5,7 +5,7 @@
 #include "identifiers.concat"
 #include "common.concat"
 
-enum( NEGATE INCREMENT DECREMENT NOT FLIP ) =:: public UnaryOperator
+enum( NEGATE NOT FLIP ) =:: public UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: public BinaryOperator
 enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
 struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
@@ -230,8 +230,6 @@ end
   proc( stringBuilder UnaryOperator => stringBuilder ) =: public appendUnaryOperator
     switch
       NEGATE case "NEGATE" sb.appendS return
-      INCREMENT case "INCREMENT" sb.appendS return
-      DECREMENT case "DECREMENT" sb.appendS return
       NOT case "NOT" sb.appendS return
       FLIP case "FLIP" sb.appendS return
     end

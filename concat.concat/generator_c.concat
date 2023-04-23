@@ -696,14 +696,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target "~" io.fputs #drop
           operations index isGlobal target prog compileOp
           break
-        INCREMENT case
-          operations index isGlobal target prog compileOp
-          target "++" io.fputs #drop
-          break
-        DECREMENT case
-          operations index isGlobal target prog compileOp
-          target "--" io.fputs #drop
-          break
       end
       target ")" io.fputs #drop
       break

@@ -225,7 +225,6 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
     op list.appendP
   state [] .opStack =
   op [] .dataType state pushType
-  ## XXX stack flags
 end
 proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: insertStackOp
   typeCount state [] .typeStack .length > if
@@ -1594,20 +1593,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       state [] .openBlocks list.peek #dup optional.hasData if .data =:: block
         block [] .blockType #dup BlockType .SWITCH == #swap BlockType .CASE == | if
-          state [] .switchData block [] .blockId list.at .data [] .labels @ =:: lables
+          state [] .switchData block [] .blockId list.at .data [] .labels @ =:: labels
           block [] .blockData .switchBlock .switchType =:: switchType
           op [] .val .Constant =:: constant
-          op [] .dataType switchType typeContext canAutoCast ! if ## XXX ? allow extended constant casts?
+          op [] .dataType switchType typeContext canAutoCast ! if
             "wrong type for switch-label expected " sb.wrap
                switchType labelContext typeContext sb.appendType
                " got " sb.appendS
                op [] .dataType labelContext typeContext sb.appendType
              op [] .pos state appendError
           end
-          0 while #dup lables [] .length < do
-            lables [] #over list.at .data [] .value constant labelContext constantEquals if
+          0 while #dup labels [] .length < do
+            labels [] #over list.at .data [] .value constant labelContext constantEquals if
               "duplicate label " sb.wrap
-                 switchType typeContext types.isEnum if ## XXX handle missing name
+                switchType typeContext types.isEnum if
                   switchType constant .enumLabel typeContext types.compositeGetLabel labelContext id.labelName .data sb.appendStr
                 else
                   constant labelContext typeContext sb.appendConstant
@@ -1617,12 +1616,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             end
             1 +
           end #drop
-          lables []
+          labels []
             ## LabelData
               constant
               op [] .pos
             LabelData new list.append
-          lables [] =
+          labels [] =
           state [] .switchData block [] .blockId list.at .data [] .cases list.peek .data
             #dup [] .count
               1 +
@@ -1645,26 +1644,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkLocal
       src [] .valType op [] .dataType =
       op [] .val .unaryOperator switch
-        INCREMENT DECREMENT case
-          src [] .writable ! if
-            "the operand for unary operator " sb.wrap
-              op [] .val .unaryOperator sb.appendUnaryOperator
-              " has to be writable" sb.appendS
-            op [] .pos state appendError
-          end
-          ## XXX ensure operation is kept mutable
-          src [] .valType
-            #dup typeContext types.isRawPointer if
-              #drop break
-            end
-            #dup typeContext types.isNumber ! if
-              "wrong operand for unary operator " sb.wrap
-                op [] .val .unaryOperator sb.appendUnaryOperator
-                " expected number got " sb.appendS
-                #swap labelContext typeContext sb.appendType
-              op [] .pos state appendError
-            else #drop end
-          break
         NEGATE case
           src [] .valType
           #dup typeContext types.isNumber ! if
@@ -2181,9 +2160,40 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "missing break statement at end of case" sb.wrap op [] .pos state appendError
           end
           closed [] .blockData .switchBlock @ =:: switchBlock
-          ## TODO check if all labels are covered
+          state [] .switchData closed [] .blockId list.at .data [] .labels =:: labels
+          switchBlock [] .switchType typeContext types.isEnum if ## check if all labels are covered
+            switchBlock [] .switchType typeContext types.compositeEltCount =:: eltCount
+            labels .length eltCount < if
+              "switch statement does not cover all labels in enum " sb.wrap
+                switchBlock [] .switchType labelContext typeContext sb.appendType
+                "\nmissing labels:\n" sb.appendS
+                0 while #dup eltCount < do
+                  #swap
+                  false =:: mut  match
+                  0 while #dup labels .length < do
+                    labels #over list.get .value .enumLabel #over:3 == if
+                      true match =
+                      break
+                    end
+                    1 +
+                  end #drop
+                  match ! if
+                    switchBlock [] .switchType #over:2 typeContext types.compositeGetLabel =:: label
+                    " - \"" sb.appendS
+                    label labelContext id.labelName .data sb.appendStr
+                    "\" declaredAt" sb.appendS
+                    label labelContext id.labelPos .data sb.appendPos
+                    '\n' sb.appendC
+                  end
+                  #swap 1 +
+                end #drop
+              op [] .pos state appendError
+            end
+            switchBlock [] .endReachable state [] .reachable =
+          else
+            true state [] .reachable =
+          end
           switchBlock [] .outTypes @ state resetStack
-          switchBlock [] .endReachable state [] .reachable =
           closed [] .blockData .switchBlock .inTypes @ freeStackState
           closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
@@ -2793,8 +2803,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
               "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError
               state .openBlocks list.clear state .openBlocks =
             end
-            template [] .implementations .length prevImpl - depth + MAX_TEMPLATE_DEPTH > if ## XXX? print implementation position
-              "exceeded maximum template depth" sb.wrap template [] .declaredAt state @ appendError
+            template [] .implementations .length prevImpl - depth + MAX_TEMPLATE_DEPTH > if
+              "exceeded maximum template depth" sb.wrap impl [] .implPos state @ appendError
               break
             end
             1 +
