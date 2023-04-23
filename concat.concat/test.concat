@@ -1,4 +1,5 @@
 #include optional
+#include mem
 
 ( i32 i64 ) =:: aTuple
 struct( i8 _ ptr : data i64 : len ) type =: string
@@ -66,8 +67,8 @@ entryPoint:
   0 =:: mut y
   selfPtr : test
   0 test @ selfPtr new test =
-  i32 2 m.alloc =:: p
-  p m.free
+  2 i32 mem.alloc =:: p
+  p mem.free
   1 y =
   x print
   0 while #dup "Hello" ..length < do

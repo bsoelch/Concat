@@ -40,7 +40,8 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
   proc( stringBuilder : buffer i8 : chr => stringBuilder ) =: public appendC
     buffer
       #dup .length 1 + sb.ensureCap
-      chr #over .data #over:2 .length ++ [] =
+      chr #over .data #over:2 .length [] =
+      #dup .length 1 + #over .length =
     return
   end
   proc( stringBuilder : buffer i64 : static k i8 k ptr : str => stringBuilder ) =: public appendS

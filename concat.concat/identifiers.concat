@@ -380,7 +380,8 @@
         context [] .currentTemplate
       end
       id -1 == idType IdentifierType .LOCAL_VAR == & if
-        context [] .localVarCount ++
+        context [] .localVarCount
+          #dup 1 + context [] .localVarCount =
       else
         id
       end

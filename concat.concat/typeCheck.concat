@@ -45,9 +45,10 @@ proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut :
   sb
     state [] .typeStack .length 1 - while #dup 0 >= do
       #swap
-        remaining -- 0 == if
+        remaining 0 == if
           #swap #drop return
         end
+        remaining 1 - remaining =
         state [] .typeStack #over:2 list.at .data =:: elt
         elt [] .writable if
           "writable " sb.appendS
@@ -155,7 +156,8 @@ proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => Identi
       labelContext
     id.newLabel
     -1
-    state [] .tmpCount ++
+    state [] .tmpCount
+      #dup 1 + state [] .tmpCount =
   IdentifierInfo new return
 end
 
@@ -347,12 +349,14 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       opArrayGet
         typeInfo [] .valType #over .dataType =
         0 #over .val .getArrayElement =
-      state [] .opStack .data newOffset ++ [] =
+      state [] .opStack .data newOffset [] =
+      newOffset 1 + newOffset =
       ## opGet
         stackHead [] .valType
         tmpId
         pos
-      opGet state [] .opStack .data newOffset ++ [] =
+      opGet state [] .opStack .data newOffset [] =
+      newOffset 1 + newOffset =
       2 typeInfo [] .opCount =
       1 + continue
     end
@@ -370,7 +374,8 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       typeInfo [] .valType
       tmpId
       pos
-    opGet state [] .opStack .data newOffset ++ [] =
+    opGet state [] .opStack .data newOffset [] =
+    newOffset 1 + newOffset =
     1 typeInfo [] .opCount =
     1 +
   end #drop
@@ -1823,7 +1828,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .val .block .blockType switch
         IF case
           op state checkReachable
-          state [] .ifCount ++ =:: blockId
+          state [] .ifCount =:: blockId
+          state [] .ifCount 1 + state [] .ifCount =
           blockId op [] .val .block .blockId =
           types.primitive.BOOL op [] .dataType =
           op [] .dataType @ array.wrap "if condition" string.wrap op [] .pos state requireTypes
@@ -1875,7 +1881,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
         WHILE case
           op state checkReachable
-          state [] .whileCount ++ =:: blockId
+          state [] .whileCount =:: blockId
+          state [] .whileCount 1 + state [] .whileCount =
           blockId op [] .val .block .blockId =
           false op [] .pos state storeStack state [] .opStack .length =
           ## BlockInfo
@@ -2792,7 +2799,8 @@ proc( Program ptr mut => ) =: public typeCheckProgram
         end
         1 +
       end #drop
-      depth ++ MAX_TEMPLATE_DEPTH > if
+      depth 1 + depth =
+      depth MAX_TEMPLATE_DEPTH > if
         break ## error message in inner loop
       end
     compiledImpl do end
