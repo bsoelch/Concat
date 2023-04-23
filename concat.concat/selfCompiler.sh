@@ -31,6 +31,6 @@ gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
 } && {
   echo "compile compiler with compiler"
   echo "-----------------------------------------"
-  $codeTarget2 "./test.concat"
+  $codeTarget2 $codeSrc
   diff "./out.c" "./out0.c"
 }

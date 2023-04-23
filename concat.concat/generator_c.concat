@@ -577,11 +577,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           op isGlobal target prog constEnd
           return
         str case ## TODO string constants
-          op isGlobal target prog constStart
-          "(int8_t const*)\"" sb.appendS
+          op false target prog constStart ## treat all strings as global constants (cast to int8_t*)
+          '"' sb.appendC
           op [] .val .Constant .str labelContext id.scAsStr sb.appendEscapedStr
           '"' sb.appendC
-          op isGlobal target prog constEnd
+          op false target prog constEnd
           break
         genericArg case ## XXX find correct label
           op [] .val .Constant .genericArg id.LABEL_ID_NONE target prog printArgName
@@ -1089,6 +1089,15 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       sb.clear
         operations index isGlobal target prog compileOp
         "]))"                sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    setEnumLabel case
+      operations index isGlobal target prog compileOp
+      32 sb.create
+        ".label = "       sb.appendS
+        op [] .val .setEnumLabel sb.appendI
+        ";\n"        sb.appendS
         target #over io.fputSb #drop
       sb.free #drop
       return

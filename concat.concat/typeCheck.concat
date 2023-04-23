@@ -1408,6 +1408,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           op [] .pos state appendError
           return
       end
+      1 true op [] .pos state extractCompositeOps
+      typeInfo [] .opCount =:: opCount ## extractCompositeOps does not modify type-stack -> typeInfo still valid
       op [] .val OpValue .setEnumElement == if
         mutable ! if
           "element " sb.wrap
@@ -1418,6 +1420,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           op [] .pos state appendError
         end
         state [] .compiledOps
+          enumType index op [] .pos opSetEnumLabel list.append
+          state [] .opStack .data state [] .opStack .length opCount - + opCount array.create list.appendArray
           op list.appendP
         state [] .compiledOps =
         1 op [] .pos state addCompiledStackOps
@@ -1425,9 +1429,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
         1 op [] .pos state addCompiledStackOps
         return
       end
-      1 true op [] .pos state extractCompositeOps
       ## check index
-      typeInfo [] .opCount =:: opCount ## extractCompositeOps does not modify type-stack -> typeInfo still valid
       state [] .compiledOps
         enumType index op [] .pos opCheckEnum list.append
         state [] .opStack .data state [] .opStack .length opCount - + opCount array.create list.appendArray
@@ -1832,6 +1834,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .ifCount 1 + state [] .ifCount =
           blockId op [] .val .block .blockId =
           types.primitive.BOOL op [] .dataType =
+          1 false op [] .pos state extractCompositeOps
           op [] .dataType @ array.wrap "if condition" string.wrap op [] .pos state requireTypes
           true op [] .pos state storeStack =:: newLength
           state [] .compiledOps .length =:: blockStart
@@ -1916,6 +1919,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           ## compile condition
           whileBlock [] .blockId op [] .val .block .blockId =
+          1 false op [] .pos state extractCompositeOps
           whileBlock true op [] .pos state storeLoopOutTypes
           types.primitive.BOOL op [] .dataType =
           op [] .dataType @ array.wrap "do condition" string.wrap op [] .pos state requireTypes
@@ -1995,6 +1999,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             "missing argument for switch-statement" sb.wrap op [] .pos state appendError
             Type .undefined
           else .data [] .valType end =:: switchType
+          1 false op [] .pos state extractCompositeOps
           switchType typeContext types.isInt if
             switchType op [] .dataType =
           else switchType typeContext types.isEnum _if
@@ -2591,7 +2596,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
       end
       break
-    checkEnumLabel checkArrayIndex getEnumElement setEnumElement @EnumElement getArgLen case
+    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case
       break ## TODO error message?
     getName case
       "unresolved identifier: \"" sb.wrap

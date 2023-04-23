@@ -49,6 +49,7 @@ enum(
                 i32 : enumLabelEq
                 i32 : enumLabelNe
                 i32 : checkEnumLabel
+                i32 : setEnumLabel
                 i64 : checkArrayIndex
   StackModification : stackMod
             LabelId : getName
@@ -170,6 +171,10 @@ end
 proc( Type i32 FilePosition => Operation ) =: public opCheckEnum
   =:: pos
   OpValue .checkEnumLabel new #swap pos Operation new return
+end
+proc( Type i32 FilePosition => Operation ) =: public opSetEnumLabel
+  =:: pos
+  OpValue .setEnumLabel new #swap pos Operation new return
 end
 proc( Type i64 FilePosition => Operation ) =: public opCheckIndex
   =:: pos
@@ -498,6 +503,12 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .checkEnumLabel sb.appendI
+          break
+        setEnumLabel case
+          "set enum label ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .setEnumLabel sb.appendI
           break
         checkArrayIndex case
           "check array index ( " sb.appendS
