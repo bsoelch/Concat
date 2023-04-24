@@ -1,0 +1,10 @@
+#namespace char
+proc( i8 => bool ) =: public isWhitespace
+  switch
+    ' ' '\n' '\t' '\v' '\f' '\r' case
+      true return
+    default
+      false return
+  end
+end
+#end

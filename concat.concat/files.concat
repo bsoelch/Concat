@@ -1,7 +1,6 @@
 #include stringIO
 #include numbers
-
-#include future
+#include chars
 
 #include "common.concat"
 
@@ -76,7 +75,7 @@ proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: public updateFilePos
   end
 end
 proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
-  0 while #dup code .length < code #over:2 string.charAt isWhitespace & do
+  0 while #dup code .length < code #over:2 string.charAt char.isWhitespace & do
     code #over string.charAt fileState [] .currentPos @ updateFilePos
     1 +
   end
@@ -139,7 +138,7 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
       #over #over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .CHAR new return
     end
-    1 while #dup #over:2 .length < #over:2 #over:2 string.charAt isWhitespace ! & do
+    1 while #dup #over:2 .length < #over:2 #over:2 string.charAt char.isWhitespace ! & do
       #over #over string.charAt fileState [] .currentPos @ updateFilePos
       1 +
     end
