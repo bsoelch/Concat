@@ -862,7 +862,8 @@
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
       tuple struct labeledProcIn procIn procOut enum genericType templateType case
-        io.stdErr "unreachable\n" io.fputs #drop ## TODO mark as unreachable
+        io.stdErr "unreachable\n" io.fputs #drop
+        ..unreachable
         break
     end
   end

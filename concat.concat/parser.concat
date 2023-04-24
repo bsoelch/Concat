@@ -441,6 +441,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "float" string.wrap string.eq _if
       types.primitive.FLOAT fileState [] .wordStart constType  state pushConst
       true return
+    else #dup "double" string.wrap string.eq _if
+      types.primitive.DOUBLE fileState [] .wordStart constType  state pushConst
+      true return
     else #dup "type" string.wrap string.eq _if
       types.primitive.TYPE fileState [] .wordStart constType  state pushConst
       true return
@@ -1241,6 +1244,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "..size" string.wrap string.eq _if #drop
       fileState [] .wordStart opSize state appendOp
+      return
+    else #dup "..unreachable" string.wrap string.eq _if #drop
+      fileState [] .wordStart opUnreachable state appendOp
       return
     else #dup "mut" string.wrap string.eq _if #drop
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError

@@ -283,6 +283,7 @@ end
   PrimitiveType .I32       Type .primitiveType new Type =: public I32
   PrimitiveType .I64       Type .primitiveType new Type =: public I64
   PrimitiveType .FLOAT     Type .primitiveType new Type =: public FLOAT
+  PrimitiveType .FLOAT     Type .primitiveType new Type =: public DOUBLE ## TODO make double and float different types
   PrimitiveType .TYPE      Type .primitiveType new Type =: public TYPE
   ## compiler internal type-aliases for special purpose types
   PrimitiveType .I64       Type .primitiveType new Type =: public I_SIZE ## size-off memory-sections
