@@ -1,3 +1,5 @@
+#include sys
+
 #include "parser.concat"
 #include "typeCheck.concat"
 #include "generator_c.concat"
@@ -18,15 +20,19 @@ entryPoint:
       #dup prog @ compileToC
     io.fclose #drop
   end
-  prog .errors .length 0 > if ## TODO only print errors
-    0 while #dup prog .progFiles .length < do
-      prog .progFiles #over list.at .data
-        #dup [] .localOps list.clear #over [] .localOps =
-        #dup [] .globalOps list.clear #over [] .globalOps =
-        #dup [] .templateOps list.clear #over [] .templateOps =
-      #drop
-      1 +
-    end #drop
+  prog .errors .length 0 > if
+    1024 sb.create
+      0 while #dup prog .errors .length < do
+        #swap
+          prog .errors #over:2 list.at .data [] sb.appendCompilerError
+        #swap 1 +
+      end #drop
+      "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
+        #dup #over:2 io.fputSb #drop
+      io.fclose #drop
+    sb.free #drop
+    1 sys.exit
+    ..unreachable
   end
   1024 sb.create
     prog sb.appendProgram
