@@ -4436,7 +4436,7 @@ bool readType(String name,CodeFile* codeFile,ParserState* state){
     pushTypeConstant(TYPE_I64,codeFile->wordStart);
     return true;
   }
-  if(wordEquals(&name,"float")){
+  if(wordEquals(&name,"float")||wordEquals(&name,"double")){
     pushTypeConstant(primitiveType(PRIMITIVE_FLOAT),codeFile->wordStart);
     return true;
   }
@@ -5240,6 +5240,9 @@ void readOperation(ParserState* state,CodeFile* codeFile){
     return;
   }else if(wordEquals(&word,"..size")){
     pushOperation(state,(Operation){.opType=OP_GET_SIZE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
+    return;
+  }else if(wordEquals(&word,"..unreachable")){
+    pushOperation(state,(Operation){.opType=OP_UNREACHABLE,.dataType=TYPE_UNDEFINED,.filePos=wordPos,.dataAs={0}});
     return;
   }else if(wordEquals(&word,"mut")){
     handleError("mut can only be used after types or declaration operations ( ':' '=:' '=::' )",ERROR_SYNTAX,wordPos);
@@ -6870,8 +6873,13 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
     case OP_CHECK_ARRAY_BOUNDS:
     case OP_CHECK_ENUM_INDEX:
     case OP_PROG_ARG_LEN:
-    case OP_UNREACHABLE:
       break;
+    case OP_UNREACHABLE:
+      state->reachable=false;
+      pushCompiledOperation(state,op);
+      state->typeCount=0;
+      state->opStackCount=0;
+      return;
     case OP_PROG_ARGC:
       checkReachable(state,op);
       state->hasGetArgs=1;

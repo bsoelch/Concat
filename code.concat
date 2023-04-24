@@ -1,3 +1,4 @@
+#+
 #template type : T #end
 type : Node
 #template type : T #end
@@ -7,5 +8,9 @@ entryPoint:
   i32 Node : aNode
   0 aNode @ aNode =
 end
++#
 
-
+entryPoint:
+  1 1 +
+  ..unreachable
+end
