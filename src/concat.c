@@ -1884,7 +1884,7 @@ NamespaceId allocNamespace(NamespaceId parent,String name){
     return NAMESPACE_ID_NONE;
   namespaceBuffer[buffredNamespaces].parent=parent;
   namespaceBuffer[buffredNamespaces].name=name;
-  size_t initCap=16;
+  size_t initCap=32;
   namespaceBuffer[buffredNamespaces].children=malloc(initCap*sizeof(*namespaceBuffer[buffredNamespaces].children));
   namespaceBuffer[buffredNamespaces].childCap=initCap;
   namespaceBuffer[buffredNamespaces].childCount=0;
