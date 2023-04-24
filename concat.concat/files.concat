@@ -1,4 +1,5 @@
 #include stringIO
+#include numbers
 
 #include future
 
@@ -143,10 +144,10 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
       1 +
     end
   string.cutIndex
-    #dup 0 tryParseInt
-      #dup ParseIntError .NONE == if #drop
+    #dup 0 number.tryParseInt
+      #dup number.ParserError .NONE == if #drop
         #swap #drop Token .INTEGER new return
-      else #dup ParseIntError .OVERFLOW == _if #drop:3
+      else #dup number.ParserError .OVERFLOW == _if #drop:3
         "Integer Overflow" string.wrap Token .ERROR new return
       end
     #drop:2

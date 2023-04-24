@@ -1,3 +1,4 @@
+#include numbers
 #include string
 #include list
 #include optional
@@ -189,7 +190,7 @@ struct(
               #swap
               1 +
               #swap
-                str .data #over:2 + nChars string.create 16 tryParseInt ParseIntError .NONE == if
+                str .data #over:2 + nChars string.create 16 number.tryParseInt number.ParserError .NONE == if
                   c 'x' == if
                     i8 cast list.append
                   else

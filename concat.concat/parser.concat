@@ -1,6 +1,7 @@
 #include stringIO
 #include list
 #include arrayView
+#include numbers
 
 #include future
 
@@ -558,7 +559,7 @@ end
 proc( string FilePosition ParserState ptr mut => i32 ) =: getStackModParam
   =:: state
   =:: pos
-  #dup 10 tryParseInt ParseIntError .NONE != if #drop
+  #dup 10 number.tryParseInt number.ParserError .NONE != if #drop
     #dup .length 0 > if
       64 sb.create
         "parameter of stack modification is not an integer: \"" sb.appendS
@@ -1067,7 +1068,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           '"' sb.appendC fileState [] .wordStart state appendError
           return
         end
-      #dup 10 tryParseInt ParseIntError .NONE == if i32 cast #swap #drop
+      #dup 10 number.tryParseInt number.ParserError .NONE == if i32 cast #swap #drop
         #dup 0 < if
           "tuple index has to be non-negative got: " sb.wrap
             #swap sb.appendI
