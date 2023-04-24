@@ -114,6 +114,7 @@
           \.\.getArg          |
           \.\.length          |
           \.\.size            |
+          \.\.unreachable     |
           print          
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
@@ -182,6 +183,7 @@
           i32             |
           i64             |
           float           |
+          double          |
           type         
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
