@@ -10,7 +10,7 @@ proc( T : x i64 : p => T ) =: public powI
     1 T cast  x p neg powI / return
   end
   x =:: mut xPow
-  1 T cast 
+  1 T cast
     p while #dup 0 != do
       #dup 1 & 0 != if
       #swap
@@ -65,7 +65,8 @@ proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseI
         end
       end
     end
-    unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end mBase /u =:: maxSafe
+    unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxVal
+    maxVal mBase /u =:: maxSafe
     0 while #dup #over:2 .length < do
       #over #over string.charAt
         #over 0 > #over '_' == #over:2 '\'' == | & if
@@ -76,11 +77,17 @@ proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseI
         #dup 0 < #over mBase >= | if
           #drop:3 0 ParserError .INVALID_CHAR return
         end
+      res maxSafe > if
+        true overflow =
+      end
       res
-        #dup maxSafe > if
-          true overflow =
+        mBase *
+        res maxSafe == if ## check last digit if previous value was exactly maxSafe
+          maxVal #over - #over:2 < if
+            true overflow =
+          end
         end
-        mBase * +
+        +
       res = ## add digit to number
       1 +
     end #drop
@@ -103,7 +110,7 @@ proc( i8 : chr i32 : base => bool ) =: isExpChar
       base 15 < return
     'x' 'X' case
       base 34 < return
-    '#' case 
+    '#' case
       true return
     default
       false return
@@ -117,7 +124,7 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
   end
   0 i64 =: mut c
   false bool =: mut d
-  0 i64 =: mut e 
+  0 i64 =: mut e
   0 i64 =: mut val
   1 i64 cast 56 << i64 =: mut maxVal ## higher precision than double, no overflow in base 62
   false =:: mut cStyleHex
@@ -186,14 +193,14 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
   end
   val double cast
     sign if neg end
-  mBase double cast  c -100 < if 
+  mBase double cast  c -100 < if
      ## calculate power of 1/base instead of negative power of base and
      ## split of last factor to prevent underflow of intermediate results
-     1 double cast #swap / 
+     1 double cast #swap /
      -1 c - powI *  mBase double cast /
-  else double cast 
+  else double cast
      c powI *
   end
-  d  e 0 > | if ParserError .NONE return else ParserError .INT return end 
+  d  e 0 > | if ParserError .NONE return else ParserError .INT return end
 end
 #end
