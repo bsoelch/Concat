@@ -4,6 +4,7 @@
 #include "measure.concat"
 
 "concat_" =:: CONCAT_PREFIX ## TODO? shorten to cct_ (current name for compatibility with old library C code)
+## XXX? use separate prefix for extern procedures
 "internal_argc"            =:: ARGC_NAME
 "internal_argv"            =:: ARGV_NAME
 "internal_main"            =:: MAIN_NAME

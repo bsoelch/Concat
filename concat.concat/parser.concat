@@ -576,6 +576,8 @@ proc( string FilePosition ParserState ptr mut => i32 ) =: getStackModParam
   return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
+  state [] .idContext .typeContext @ =:: typeContext
+  state [] .idContext .labelContext @ =:: labelContext
   code
     token fileState state tryParseConstant if
       #drop return
@@ -649,7 +651,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "cannot open namespace inside template" sb.wrap fileState [] .wordStart state appendError
             return
           end
-          id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+          id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
           state [] .idContext @ id.beginNamespace
           return
         else "using" string.wrap #over string.eq _if #drop:2
@@ -658,7 +660,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError
             return
           end .IDENTIFER
-          #dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+          #dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
           state [] .idContext @ id.importNamespace if
             "namespace \"" sb.wrap
               #swap sb.appendStr
@@ -717,7 +719,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "=:" string.wrap string.eq =:: isInit
       fileState state popTypeConstant #drop =:: valType
       false =:: mut forceConst
-      valType state [] .idContext .typeContext @ types.isProcedure if
+      valType typeContext types.isProcedure if
         IdentifierType .PROCEDURE
         true forceConst =
       else valType types.primitive.TYPE types.typeEquals _if
@@ -742,10 +744,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             Type .undefined
           end
-          #over:4 state [] .idContext .currentTemplate state [] .idContext .typeContext @ types.newNamedType fileState [] .wordStart constType .val
+          #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType fileState [] .wordStart constType .val
         else idType IdentifierType .PROCEDURE != isInit state hasConst & & _if
           state popConst
-            ## TODO check if type correct
+            #dup .valueType valType false typeContext types.canCast ! if
+              "cannot cast " sb.wrap
+                #over .valueType labelContext typeContext sb.appendType
+                " to " sb.appendS
+                valType labelContext typeContext sb.appendType
+              fileState [] .wordStart state appendError
+            end
             #dup opConst state appendOp
           .val
         else
@@ -772,20 +780,20 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           "unexpected constant at global level" sb.wrap state popConst .pos state appendError
         end
         BlockType .PROCEDURE valType state [] .idContext @ id.openProcScope
-        #dup [] .valueType state [] .idContext .typeContext @ types.getProcIn if
+        #dup [] .valueType typeContext types.getProcIn if
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError
         end =:: inType
         inType Type .labeledProcIn == if
-          inType state [] .idContext .typeContext @ types.compositeEltCount =:: count
+          inType typeContext types.compositeEltCount =:: count
           0 while #dup count < do
-            inType #over state [] .idContext .typeContext @ types.compositeGetLabel =:: argLabel
-              argLabel state [] .idContext .labelContext @ id.isLabelEmpty ! if
+            inType #over typeContext types.compositeGetLabel =:: argLabel
+              argLabel labelContext id.isLabelEmpty ! if
                 ## declareIdentifier
                   argLabel
-                  inType #over:2 state [] .idContext .typeContext @ types.compositeGetElement
+                  inType #over:2 typeContext types.compositeGetElement
                   IdentifierType .ARGUMENT
                   #over:3
-                  argLabel state [] .idContext .labelContext @ id.labelFlags id.FLAG_STATIC & 0 != if
+                  argLabel labelContext id.labelFlags id.FLAG_STATIC & 0 != if
                     inType types.primitive.TYPE types.typeEquals if
                       #over:4 types.newGenericType ConstValue .typeId new
                     else
@@ -822,7 +830,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state hasConst if
           state popConst =:: const
           const .valueType
-            #dup state [] .idContext .typeContext @ types.isProcedure if
+            #dup typeContext types.isProcedure if
               "unexpected procedure" sb.wrap fileState [] .wordStart state appendError
               #drop:2 return
             else #dup types.primitive.TYPE types.typeEquals _if
@@ -835,10 +843,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           -1 ## id
           const .val
           #over:2 IdentifierType .TYPE == if .typeId
-            #dup state [] .idContext .typeContext @ types.isProcedure if
+            #dup typeContext types.isProcedure if
               "Declaration of a procedure type as constant\n Use '=:' to declare procedures" sb.wrap fileState [] .wordStart state appendError
             end
-            #over:4 state [] .idContext .currentTemplate state [] .idContext .typeContext @ types.newNamedType ConstValue .typeId new
+            #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType ConstValue .typeId new
           else
             const opConst state appendOp
           end
@@ -871,7 +879,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .val #dup ConstValue .typeId == if .typeId
           #dup types.isNamedType if
             fileState state popTypeConstant ! if
-              -1 state [] .idContext .typeContext @ types.setNamedType ! if
+              -1 typeContext types.setNamedType ! if
                 state [] .idContext @ id.isGlobal if
                   state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
                 end
@@ -910,7 +918,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       else
         "unexpected operation for \"=\" \n" sb.wrap
-          #swap [] state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendOp
+          #swap [] labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError
         return
       end
@@ -949,7 +957,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected operation for \"" sb.wrap
         opName sb.appendStr
         "\"\n" sb.appendS
-        #swap [] state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendOp
+        #swap [] labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError
         return
       end
@@ -1047,11 +1055,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       1 string.tail
         state hasConst if
           state popConst
-            #dup .val ConstValue .typeId == if #dup .val .typeId state [] .idContext .typeContext @ types.isEnum else false end if #dup .val .typeId
-              #dup state [] .idContext .typeContext @ types.compositeEltCount =:: count
+            #dup .val ConstValue .typeId == if #dup .val .typeId typeContext types.isEnum else false end if #dup .val .typeId
+              #dup typeContext types.compositeEltCount =:: count
               0 while #dup count < do
-                #over #over state [] .idContext .typeContext @ types.compositeGetLabel
-                  state [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data #over:4 string.eq else #drop false end if
+                #over #over typeContext types.compositeGetLabel
+                  labelContext id.labelName #dup optional.hasData if .data #over:4 string.eq else #drop false end if
                     fileState [] .wordStart constEnumLabel state pushConst
                     #drop:2 return
                   end
@@ -1097,7 +1105,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       state popConst
         #dup .val ConstValue .typeId == if #dup .val .typeId
-          #dup state [] .idContext .typeContext @ types.isTuple #over state [] .idContext .typeContext @ types.isArray | if
+          #dup typeContext types.isTuple #over typeContext types.isArray | if
             fileState [] .wordStart opNew state appendOp
             #drop return
           end
@@ -1256,7 +1264,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     #drop:2
     return
   end #drop:2
-  id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel fileState [] .wordStart opGetName  state appendOp
+  id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel fileState [] .wordStart opGetName  state appendOp
   return
 end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: checkIOError

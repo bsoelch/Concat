@@ -1016,6 +1016,98 @@ proc( Type : src bool : mutable TypeContext ptr mut : context => Type ) =: publi
   true ArraySize array.empty true mutable context newArrayType #drop return
 end
 
+proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool ) =: sizeCompatible
+  #using types
+  target context isFixedSize ! if
+    true return
+  end
+  src context isFixedSize ! if
+    false return
+  end
+  src context getArraySize =:: srcSize
+  target context getArraySize =:: targetSize
+  srcSize .length targetSize .length < if srcSize .length else targetSize .length end =:: commonPart
+  1 i64 =: mut srcTotal
+  1 i64 =: mut targetTotal
+  0 while #dup commonPart < do
+    srcSize #over array.get .sizeType targetSize #over:2 array.get .sizeType != if #drop
+      false return
+    end
+    reshape if
+      srcSize #over array.get .sizeType ArraySizeType .int == if
+        srcTotal srcSize #over array.get .value * srcTotal =
+        targetTotal targetSize #over array.get .value * targetTotal =
+      else srcTotal targetTotal != _if #drop
+        false return
+      end
+      1 + continue
+    end
+    srcSize #over array.get .value targetSize #over:2 array.get .value != if #drop
+      false return
+    end
+    1 +
+  end #drop
+  reshape if ## TODO look at remaining sizes
+    srcTotal targetTotal == return
+  end
+  srcSize .length while #dup targetSize .length < do
+    targetSize #over array.get .sizeType ArraySizeType .int != targetSize #over:2 array.get .value 1 != | if #drop
+      false return
+    end
+    1 +
+  end #drop
+  true return
+end
+proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAutoCast
+  to =:: mut target
+  src types.isNamedType ! target types.isNamedType & if
+    target context types.unwrapNamed target =
+  end
+  src target types.typeEquals if
+    true return
+  end
+  src context types.isNumber target context types.isNumber & if
+    src context types.numberPrecision target context types.numberPrecision <=
+    src context types.numberSize target context types.numberSize <= & return
+  end
+  src context types.isPointer src context types.isArray | target context types.isPointer & if
+  src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
+    src target false context sizeCompatible return
+  end end
+  src types.isPrimitive ! target types.isPrimitive ! | if
+    false return
+  end
+  false return
+end
+proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: public canCast
+  a context types.unwrapNamed =:: mut src
+  b context types.unwrapNamed =:: mut target
+  src target context canAutoCast if
+    true return
+  end
+  src context types.isNumber target context types.isNumber & if
+    true return
+  end
+  src context types.isPointer src context types.isArray | target context types.isPointer & if
+  src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
+    src target true context sizeCompatible if
+      true return
+    end
+  end end
+  forceCast ! if
+    false return
+  end
+  src context types.isPointer target context types.isPointer & if
+    true return ## XXX check for compatible element sizes?, compatible mutability
+  end
+  src context types.isPointer target context types.isInt & if
+    true return
+  end
+  src context types.isInt target context types.isPointer & if
+    true return
+  end
+  false return
+end
 #end
 ## type context
 struct(

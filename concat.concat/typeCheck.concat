@@ -427,99 +427,6 @@ proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context =
   end
 end
 
-proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool ) =: sizeCompatible
-  #using types
-  target context isFixedSize ! if
-    true return
-  end
-  src context isFixedSize ! if
-    false return
-  end
-  src context getArraySize =:: srcSize
-  target context getArraySize =:: targetSize
-  srcSize .length targetSize .length < if srcSize .length else targetSize .length end =:: commonPart
-  1 i64 =: mut srcTotal
-  1 i64 =: mut targetTotal
-  0 while #dup commonPart < do
-    srcSize #over array.get .sizeType targetSize #over:2 array.get .sizeType != if #drop
-      false return
-    end
-    reshape if
-      srcSize #over array.get .sizeType ArraySizeType .int == if
-        srcTotal srcSize #over array.get .value * srcTotal =
-        targetTotal targetSize #over array.get .value * targetTotal =
-      else srcTotal targetTotal != _if #drop
-        false return
-      end
-      1 + continue
-    end
-    srcSize #over array.get .value targetSize #over:2 array.get .value != if #drop
-      false return
-    end
-    1 +
-  end #drop
-  reshape if ## TODO look at remaining sizes
-    srcTotal targetTotal == return
-  end
-  srcSize .length while #dup targetSize .length < do
-    targetSize #over array.get .sizeType ArraySizeType .int != targetSize #over:2 array.get .value 1 != | if #drop
-      false return
-    end
-    1 +
-  end #drop
-  true return
-end
-proc( Type : src Type : to TypeContext ptr : context => bool ) =: canAutoCast
-  to =:: mut target
-  src types.isNamedType ! target types.isNamedType & if
-    target context types.unwrapNamed target =
-  end
-  src target types.typeEquals if
-    true return
-  end
-  src context types.isNumber target context types.isNumber & if
-    src context types.numberPrecision target context types.numberPrecision <=
-    src context types.numberSize target context types.numberSize <= & return
-  end
-  src context types.isPointer src context types.isArray | target context types.isPointer & if
-  src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
-    src target false context sizeCompatible return
-  end end
-  src types.isPrimitive ! target types.isPrimitive ! | if
-    false return
-  end
-  false return
-end
-proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: canCast
-  a context types.unwrapNamed =:: mut src
-  b context types.unwrapNamed =:: mut target
-  src target context canAutoCast if
-    true return
-  end
-  src context types.isNumber target context types.isNumber & if
-    true return
-  end
-  src context types.isPointer src context types.isArray | target context types.isPointer & if
-  src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
-    src target true context sizeCompatible if
-      true return
-    end
-  end end
-  forceCast ! if
-    false return
-  end
-  src context types.isPointer target context types.isPointer & if
-    true return ## XXX check for compatible element sizes?, compatible mutability
-  end
-  src context types.isPointer target context types.isInt & if
-    true return
-  end
-  src context types.isInt target context types.isPointer & if
-    true return
-  end
-  false return
-end
-
 proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state => ) =: requireTypes
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -544,7 +451,7 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
     src [] .valType expected types.typeEquals if
       1 + continue
     end
-    src [] .valType expected typeContext canAutoCast if
+    src [] .valType expected typeContext types.canAutoCast if
       src [] .opCount 1 == state [] .opStack opOffset list.at .data #swap #over [] .val OpValue .Constant == & if
         expected #swap [] .dataType =
         expected src [] .valType =
@@ -581,7 +488,7 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
     state [] .opStack .data offset + nCasts + state [] .opStack .data offset + shiftCount mem.move #drop
     0 shiftCount =
     nCasts 1 - nCasts =
-    op [] .valType expected state [] .idContext [] .typeContext @ canAutoCast ! if
+    op [] .valType expected typeContext types.canAutoCast ! if
       "unexpected type conversion" sb.wrap pos state appendError
     end
     ## op
@@ -697,8 +604,17 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
         opGet list.append
       outTypes [] .opStack =
     else
-      outTypes [] .opStack #over list.get .val .getId tmpId =
-      ## TODO check type
+      outTypes [] .opStack #over list.at .data =:: out
+      out [] .val .getId tmpId =
+      typeInfo [] .valType out [] .dataType types.typeEquals ! if
+          "incompatible types at the end of " sb.wrap
+            blockName sb.appendBlockType
+            "-statement expected " sb.appendS
+            out [] .dataType labelContext typeContext sb.appendType
+            " got " sb.appendS
+            typeInfo [] .valType labelContext typeContext sb.appendType
+          pos state appendError
+      end
     end
     typeInfo [] .opCount 1 == state [] .opStack opOffset list.at .data [] .val #swap #over OpValue .getId == & if
       .getId #dup .idType IdentifierType .TMP_VAR == #swap .id tmpId .id == & if ## assignment of tmp-var to itself
@@ -814,25 +730,35 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     argValues [] .length templateCount staticArgCount + + argValues [] .length =
     inType inType templateCount staticArgCount argValues argBufferOffset idContext resolveGenericsType ## check which arguments appear in the input signature
     ## get values for template arguments not appearing in signature
-    templateCount 1 - while #dup 0 >= do
-      argValues [] #over argBufferOffset + list.get ConstValue .none == if
-        state [] .typeStack list.peek #dup optional.isEmpty if #drop:2
-          "type-stack underflow" sb.wrap op [] .pos state appendError
-          return
-        end .data =:: typeInfo
-        typeInfo [] .opCount 1 != state [] .opStack list.peek .data [] .val OpValue .Constant != | if #drop
-          "template arguments have to be constants" sb.wrap op [] .pos state appendError
-          return
+    templateCount 0 > if
+      templateInfo .data [] .templateType typeContext compositeElts =:: templateArgs
+      templateCount 1 - while #dup 0 >= do
+        argValues [] #over argBufferOffset + list.get ConstValue .none == if
+          state [] .typeStack list.peek #dup optional.isEmpty if #drop:2
+            "type-stack underflow" sb.wrap op [] .pos state appendError
+            return
+          end .data =:: typeInfo
+          state [] .opStack list.peek .data =:: argValue
+          typeInfo [] .opCount 1 != argValue [] .val OpValue .Constant != | if #drop
+            "template arguments have to be constants" sb.wrap op [] .pos state appendError
+            return
+          end
+          ## remove operation from stack (call template never uses on procedure pointer -> type arguments are at top of stack)
+          state [] .opStack .length typeInfo [] .opCount - state [] .opStack .length =
+          state [] .typeStack .length 1 - state [] .typeStack .length =
+          argValue [] .dataType templateArgs #over:2 array.get false typeContext canCast ! if
+            "cannot cast" sb.wrap
+                argValue [] .dataType labelContext typeContext sb.appendType
+                " to " sb.appendS
+                templateArgs #over:2 array.get labelContext typeContext sb.appendType
+            op [] .pos state appendError
+            1 - continue
+          end
+          argValue [] .val .Constant argValues [] #over:2 argBufferOffset + list.set
         end
-        state [] .opStack list.peek .data =:: argValue
-        ## TODO check type of constant
-        argValue [] .val .Constant argValues [] #over:2 argBufferOffset + list.set
-        ## remove operation from stack (call template never uses on procedure pointer -> type arguments are at top of stack)
-        state [] .opStack .length typeInfo [] .opCount - state [] .opStack .length =
-        state [] .typeStack .length 1 - state [] .typeStack .length =
-      end
-      1 -
-    end #drop
+        1 -
+      end #drop
+    end
     state [] .typeStack .length =:: mut typeOffset
     state [] .opStack .length =:: mut opOffset
     inType typeContext compositeElts =:: inTypes
@@ -866,7 +792,14 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           return
         end
         state [] .opStack opOffset list.at .data =:: argValue
-        ## TODO check type of constant
+        argValue [] .dataType inTypes #over:2 array.get false typeContext types.canCast ! if
+          "cannot cast" sb.wrap
+              argValue [] .dataType labelContext typeContext sb.appendType
+              " to " sb.appendS
+              inTypes #over:2 array.get labelContext typeContext sb.appendType
+          op [] .pos state appendError
+          1 - continue
+        end
         argValue [] .val .Constant argValues [] templateCount #over:3 + argBufferOffset + list.set
         1 - continue
       end
@@ -1596,7 +1529,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .switchData block [] .blockId list.at .data [] .labels @ =:: labels
           block [] .blockData .switchBlock .switchType =:: switchType
           op [] .val .Constant =:: constant
-          op [] .dataType switchType typeContext canAutoCast ! if
+          op [] .dataType switchType typeContext types.canAutoCast ! if
             "wrong type for switch-label expected " sb.wrap
                switchType labelContext typeContext sb.appendType
                " got " sb.appendS
@@ -2471,7 +2404,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       else
         op [] .val .Cast = false
       end =:: forceCast
-      src [] .valType op [] .dataType forceCast typeContext canCast ! if
+      src [] .valType op [] .dataType forceCast typeContext types.canCast ! if
         "cannot cast " sb.wrap
           src [] .valType labelContext typeContext sb.appendType
           " to " sb.appendS
@@ -2607,7 +2540,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       break
     checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case
-      break ## TODO error message?
+      "operation " sb.wrap
+        op [] labelContext typeContext sb.appendOp
+        " should not exist at this stage of compilation" sb.appendS
+      op [] .pos state appendError
+      return
     getName case
       "unresolved identifier: \"" sb.wrap
         op [] .val .getName labelContext id.labelName .data sb.appendStr
