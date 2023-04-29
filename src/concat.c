@@ -8059,7 +8059,7 @@ bool parseArgs(char** argv){
           puts("  -o \"fileName\": set output file  (default: \"./out.c\")");
           puts("  -p \"fileName\": dump the parsed tokens to the given file");
           puts("  -t \"fileName\": dump the compiled tokens to the given file");
-          puts("  -l \"fileName\": set path to standard library (default: \"./lib/\"");
+          puts("  -l \"fileName\": set path to standard library (default: \"./lib/\")");
           puts("  -W: treat warnings as errors");
           puts("  -q: do not print compiler progress");
           return true;
