@@ -18,7 +18,7 @@
   struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
-  struct( IdentifierName : name IdentifierData ptr : data ) =:: IdentifierMatch
+  struct( IdentifierName : name IdentifierData ptr : data ) =:: public IdentifierMatch
 #namespace id
 
   "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
@@ -394,9 +394,19 @@
 #namespace sb
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
     sb
-      id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != if
-        "mutable " sb.appendS
-      end
+      id .labelId labelContext id.labelFlags #swap
+        #over id.FLAG_PUBLIC & 0 != if
+          "public " sb.appendS
+        end
+        #over id.FLAG_EXTERN & 0 != if
+          "extern " sb.appendS
+        end
+        #over id.FLAG_MUTABLE & 0 != if
+          "mutable " sb.appendS
+        end
+      #swap #drop
+      ## TODO print namespace
+      ## TODO print templateInfo
       id .templateId id.TEMPLATE_ID_NONE != if
         "template " sb.appendS
         id .templateId sb.appendI

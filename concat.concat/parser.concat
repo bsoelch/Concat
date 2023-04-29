@@ -584,7 +584,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     end
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
-      ':' string.split
+      ':' string.split ## XXX? rename stack ops to ..drop ..dup ..over ..swap ..rot
         "dup" string.wrap #over string.eq if #drop ':' string.split #swap #drop ## ignore 2nd parameter
           0 #swap
           fileState [] .wordStart state getStackModParam ## :count
@@ -701,7 +701,41 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           "unimplemented" sb.wrap fileState [] .wordStart state appendError
           return
         else "find" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+          fileState nextToken
+          #dup Token .IDENTIFER != if #drop
+            "expected identifier" sb.wrap fileState [] .wordStart state appendError
+            return
+          end .IDENTIFER =:: idName
+          16 IdentifierMatch list.create =:: mut matches
+          idName state [] .currentFile state [] .idContext @ matches @ optional.wrap id.searchIdentifier #drop:3
+          matches .length 0 == if
+            "could not find identifier \"" sb.wrap
+              idName sb.appendStr
+              '"' sb.appendC
+            fileState [] .wordStart state appendError
+          end
+          "__________________\n" sb.wrap
+            "identifier " sb.appendS idName sb.appendStr ":\n" sb.appendS
+            0 while #dup matches .length < do
+              matches #over list.at .data =:: match
+              #swap
+                " - " sb.appendS
+                match [] .data id.asIdInfo labelContext sb.appendIdInfo
+                match [] .data [] .constValue ConstValue .none != if
+                  " [ " sb.appendS
+                  match [] .data [] .constValue labelContext typeContext sb.appendConstant
+                  " ]" sb.appendS
+                end
+                " declared at " sb.appendS
+                match [] .data [] .labelId labelContext id.labelPos #dup optional.hasData if .data sb.appendPos else #drop "?" sb.appendS end
+                '\n' sb.appendC
+              #swap 1 +
+            end #drop
+            "__________________\n" sb.appendS
+            io.stdOut #over io.fputSb #drop
+          sb.free #drop
+          matches list.free #drop
+          ## XXX rerun find after parsing phase has finished
           return
         end
       64 sb.create
