@@ -4,21 +4,192 @@
 #include "typeCheck.concat"
 #include "generator_c.concat"
 
-entryPoint:
-  ..argc 1 > if
-    0 sb.create 1 ..getArg string.create sb.appendStr
-  else
-    "./test.concat" sb.wrap
-  end =:: rootFile
-  rootFile parseProgram =:: mut prog
+stringBuilder : mut srcFile
+stringBuilder : mut outFile
+string : mut basePath
+string : mut libPath
+string optional : mut parserTokensFile
+string optional : mut compilerTokensFile
+string optional : mut errorFile
+false =:: mut wError
 
+proc( string : path => ) =: printUsage
+  "usage: " sb.wrap
+    path sb.appendStr
+    " \"inputFile\" [-o \"outputFile\"]\n" sb.appendS
+    "options:\n" sb.appendS
+    "  -h: print help text\n" sb.appendS
+    "  -o \"fileName\": set output file  (default: \"./out.c\")\n" sb.appendS
+    "  -p \"fileName\": dump the parsed tokens to the given file\n" sb.appendS
+    "  -t \"fileName\": dump the compiled tokens to the given file\n" sb.appendS
+    "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS
+    "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
+    "  -W: treat warnings as errors\n" sb.appendS
+    "  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\n" sb.appendS
+    io.stdOut #over io.fputSb #drop
+  sb.free #drop
+end
+enum( NONE IN OUT TOKENS_PARSER TOKENS_COMPILER LIB_PATH ERR_PATH ) =:: ArgParserState
+proc( => ) =: parseArgs
+  false =:: mut printedUsage
+  false =:: mut hasSrc
+  false =:: mut hasOut
+  false =:: mut hasLib
+  0 sb.create srcFile =
+  0 sb.create outFile =
+  string optional.empty parserTokensFile =
+  string optional.empty compilerTokensFile =
+  string optional.empty errorFile =
+  0 ..getArg string.create =:: path
+  ArgParserState .IN =:: mut state
+  1 while #dup ..argc < do
+    #dup ..getArg string.create =:: arg
+    arg .length 0 == if
+      1 + continue
+    end
+    arg 0 string.charAt '-' == if
+      arg .length 2 < if
+        io.stdErr "invalid argument \"-\"" io.fputs #drop
+        1 + continue
+      end
+      arg 1 string.charAt switch
+        'h' case
+          printedUsage if break end
+          path printUsage
+          true printedUsage =
+          break
+        'o' case
+          ArgParserState .OUT state =
+          break
+        'p' case
+          ArgParserState .TOKENS_PARSER state =
+          break
+        't' case
+          ArgParserState .TOKENS_COMPILER state =
+          break
+        'l' case
+          ArgParserState .LIB_PATH state =
+          break
+        'e' case
+          ArgParserState .ERR_PATH state =
+          break
+        'W' case
+          true wError =
+          break
+        'q' case
+          break
+        default
+          "unknown compiler option: \"" sb.wrap
+            arg sb.appendStr
+            "\"\n" sb.appendS
+            io.stdErr #over io.fputSb #drop
+          sb.free #drop
+      end
+      1 + continue
+    end
+    state switch
+      NONE case
+        "expected compiler option got \"" sb.wrap
+          arg sb.appendStr
+          "\"\n" sb.appendS
+          io.stdErr #over io.fputSb #drop
+        sb.free #drop
+        break
+      IN case
+        srcFile sb.clear arg sb.appendStr srcFile =
+        true hasSrc =
+        ArgParserState .NONE state =
+        break
+      OUT case
+        outFile sb.clear arg sb.appendStr outFile =
+        true hasOut =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        break
+      TOKENS_PARSER case
+        arg optional.wrap parserTokensFile =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        break
+      TOKENS_COMPILER case
+        arg optional.wrap compilerTokensFile =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        break
+      ERR_PATH case
+        arg optional.wrap errorFile =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        break
+      LIB_PATH case
+        arg libPath =
+        true hasLib =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        break
+    end
+    1 +
+  end #drop
+  hasSrc ! if
+    printedUsage if
+      0 sys.exit
+      ..unreachable
+    end
+    io.stdErr "no input file specified\n" io.fputs #drop
+    path printUsage
+    srcFile sb.free
+    outFile sb.free
+    1 sys.exit
+    ..unreachable
+  end
+  srcFile sb.asStr '.' string.lastIndexOf =:: mut iDot
+  srcFile sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
+  iDot iSlash < if
+    -1 iDot =
+  end
+  hasOut ! if
+    outFile
+      sb.clear
+      srcFile sb.appendSb
+    outFile =
+    iDot 0 > if
+      iDot outFile .length =
+    end
+    outFile
+      ".c\x00" sb.appendS
+    outFile =
+  end
+  iSlash 0 < if "./" string.wrap else srcFile .data iSlash 1 + string.create end basePath =
+  hasLib ! if
+    "./lib/" string.wrap libPath =
+  else libPath #dup .length 1 - string.charAt #dup '/' != #swap '\\' != & _if
+    io.stdErr "library path has to end with '/' or '\\'\n" io.fputs #drop
+    srcFile sb.free
+    outFile sb.free
+    1 sys.exit
+    ..unreachable
+  end
+  ## XXX check if libPath exists
+end
+
+entryPoint: ## TODO check return value of fopen
+  parseArgs
+  srcFile libPath basePath parseProgram =:: mut prog
+  parserTokensFile optional.hasData if
+    1024 sb.create
+      prog sb.appendProgram
+    =:: parsedOps
+    parserTokensFile .data io.OPEN_WRITE io.fopenStr #drop
+      #dup parsedOps io.fputSb #drop
+    io.fclose #drop
+    parsedOps sb.free #drop
+  end
   prog .errors .length 0 == if
     prog @ typeCheckProgram
   end
-  prog .errors .length 0 == if
-    "./out.c\x00" io.OPEN_WRITE io.fopenS #drop ## TODO check return value
-      #dup prog @ compileToC
+  compilerTokensFile optional.hasData if
+    1024 sb.create
+      prog sb.appendProgram
+    =:: parsedOps
+    compilerTokensFile .data io.OPEN_WRITE io.fopenStr #drop
+      #dup parsedOps io.fputSb #drop
     io.fclose #drop
+    parsedOps sb.free #drop
   end
   prog .errors .length 0 > if
     1024 sb.create
@@ -27,18 +198,16 @@ entryPoint:
           prog .errors #over:2 list.at .data [] sb.appendCompilerError
         #swap 1 +
       end #drop
-      "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
+      errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr #drop else io.stdErr end
         #dup #over:2 io.fputSb #drop
-      io.fclose #drop
+      errorFile optional.hasData if io.fclose #drop else #drop end ## don't close stdErr
     sb.free #drop
     1 sys.exit
     ..unreachable
   end
-  1024 sb.create
-    prog sb.appendProgram
-  =:: parsedOps
-  "./out.txt\x00" io.OPEN_WRITE io.fopenS #drop
-    #dup parsedOps io.fputSb #drop
-  io.fclose #drop
-  parsedOps sb.free #drop
+  prog .errors .length 0 == if
+    outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
+      #dup prog @ compileToC
+    io.fclose #drop
+  end
 end

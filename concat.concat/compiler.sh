@@ -21,5 +21,5 @@ gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
 } && {
   echo "run compiled code"
   echo "-----------------------------------------"
-  $codeTarget
+  $codeTarget "./test.concat" "-l" "../lib/"
 }

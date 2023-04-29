@@ -1300,14 +1300,10 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   #swap [] .includedFiles =
 end
 
-proc( stringBuilder : rootFile => Program ) =: public parseProgram
+proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =: public parseProgram
   ## ParserState
-    rootFile sb.toStr '/' string.lastIndexOf #dup 0 >= if
-      rootFile .data #swap 1 + string.create
-    else
-      #drop "./" string.wrap
-    end
-    "../lib/" string.wrap ## XXX allow to specify lib-path through arguments
+    basePath
+    libPath
     id.newIdentifierContext
     128 Constant        list.create 0
     128 Type      list.create
