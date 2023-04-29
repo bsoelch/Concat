@@ -353,7 +353,7 @@
       mScope [] .scopeStrings
         #over .data list.append ## remember allocated string
       mScope [] .scopeStrings =
-    sb.toStr
+    sb.asStr
     context [] .labelContext .namespaceInfo .current fileId IdentifierName new =:: mut idName
     mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data =:: prevDec
       errors []

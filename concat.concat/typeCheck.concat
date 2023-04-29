@@ -1732,7 +1732,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos state appendError
       end
       "binary operator " sb.wrap op [] .val .binaryOperator sb.appendBinaryOperator
-        inTypes @ array.wrap #over sb.toStr op [] .pos  state requireTypes
+        inTypes @ array.wrap #over sb.asStr op [] .pos  state requireTypes
       sb.free #drop
       op 2 state insertStackOp
       outType state [] .typeStack list.peek .data [] .valType =

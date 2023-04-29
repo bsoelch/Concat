@@ -1283,7 +1283,7 @@ end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile
   FILE_ID_NONE =:: mut included
   0 while #dup state [] .progFiles .length < do
-    state [] .progFiles #over list.get .fileName sb.toStr fileName sb.toStr string.eq if
+    state [] .progFiles #over list.get .fileName sb.asStr fileName sb.asStr string.eq if
       #dup included =
       break
     end
@@ -1315,7 +1315,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
     0
     false
   ParserState new =:: mut state
-  rootFile state @ parseFile rootFile rootFile sb.toStr 0 0 FilePosition new state @ checkIOError #drop
+  rootFile state @ parseFile rootFile rootFile sb.asStr 0 0 FilePosition new state @ checkIOError #drop
   ## cleanup parser memory
   state .constants list.free #drop
   state .typeBuffer list.free #drop
@@ -1338,7 +1338,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError 
       '\x00' sb.appendC ## ensure file-name is zero terminated
       #dup .length 1 - #over .length = ## ensure there is a zero-terminator after the last character
     end
-    #dup sb.toStr 0 1 FilePosition new #dup FileState new =:: mut fileState
+    #dup sb.asStr 0 1 FilePosition new #dup FileState new =:: mut fileState
     state [] .progFiles
       #over state [] .progFiles .length FileId cast state [] .idContext @ newProgFile list.append
     state [] .progFiles =
@@ -1364,7 +1364,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError 
       end
     end #drop
     fileState @
-      fileBody sb.toStr while
+      fileBody sb.asStr while
         #over nextToken #over:2 state parseOperation
         #dup .length 0 >
       do end #drop

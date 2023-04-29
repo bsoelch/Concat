@@ -2,6 +2,9 @@
 #include io
 
 #namespace io
+  proc( string : fileName  OpenMode : mode => FILE IOError ) =: public fopenStr
+    fileName .data fileName .length mode fopen return
+  end
   proc( FILE : file string : str => IOError ) =: public fputStr
     0 i64 =: mut off
     str .length i64 =: mut count
@@ -18,7 +21,7 @@
     FILE_ERROR_NONE return
   end
   proc( FILE : file stringBuilder : str => IOError ) =: public fputSb
-    file  str sb.toStr fputStr return
+    file  str sb.asStr fputStr return
   end
   proc( FILE : file IOError : err string : str => FILE  IOError ) =: public fappendStr
     err FILE_ERROR_NONE != if
@@ -30,7 +33,7 @@
     err FILE_ERROR_NONE != if
       file err return
     end
-    file #dup str sb.toStr fputStr return
+    file #dup str sb.asStr fputStr return
   end
 #end
 #namespace sb

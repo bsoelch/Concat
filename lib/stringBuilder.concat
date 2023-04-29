@@ -65,11 +65,10 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
       #dup .length str .length + #over .length =
     return
   end
-  proc( stringBuilder => string ) =: public toStr
+  proc( stringBuilder => string ) =: public asStr
     #dup .data #swap .length string.create return
   end
-  
-  
+
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
   
   proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
