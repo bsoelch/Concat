@@ -1226,7 +1226,7 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
   end
   tupleType tupleIndex typeContext compositeGetElement =:: mut elementType
   tupleType tupleIndex typeContext compositeGetLabel =:: elementLabel
-  tupleInfo [] .writable elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != & =:: mutable
+  tupleInfo [] .writable elementLabel id.LABEL_ID_NONE == elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != | & =:: mutable
   op [] .val OpValue .@TupleElement == if
     elementType mutable typeContext getAddressType elementType =
   end
@@ -1861,8 +1861,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           breakBlock [] .blockType #dup BlockType .CASE == #swap BlockType .DEFAULT == | if
             breakBlock [] .blockData .switchBlock .explicitBreak if
               op state checkReachable
-            else
-              breakBlock op [] .pos state storeSwitchOutTypes
+            end
+            breakBlock op [] .pos state storeSwitchOutTypes
+            state [] .openBlocks list.peek .data [] .blockType #dup BlockType .CASE == #swap BlockType .DEFAULT == | if
               true breakBlock [] .blockData .switchBlock .explicitBreak =
             end
             true breakBlock [] .blockData .switchBlock .endReachable =
