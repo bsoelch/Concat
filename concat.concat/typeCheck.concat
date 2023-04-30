@@ -2479,6 +2479,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             return
           end
           state ensureStackHeadIsValue
+          offset count + true op [] .pos state extractCompositeOps ## XXX only extract duplicated values
           0 offset state countStackOps =:: opOffset
           offset count state countStackOps =:: copied
           count 0 > if
@@ -2537,6 +2538,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
         ROT case
           state ensureStackHeadIsValue
+          ## TODO rotate
           break
       end
       break
