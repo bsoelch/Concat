@@ -554,13 +554,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     constVal #over [] .valueType fileState [] .wordStart newConst  state pushConst
   #drop:2 true return
 end
-proc( string FilePosition ParserState ptr mut => i32 ) =: getStackModParam
+proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 ) =: getCompilerOpParam
   =:: state
   =:: pos
+  =:: opName
   #dup 10 number.tryParseInt number.ParserError .NONE != if #drop
     #dup .length 0 > if
       64 sb.create
-        "parameter of stack modification is not an integer: \"" sb.appendS
+        "unexpected argument for " sb.appendS
+        opName sb.appendStr
+        " expected positive integer got: \"" sb.appendS
         #swap  sb.appendStr
         '"'    sb.appendC
       pos state appendError
@@ -568,7 +571,9 @@ proc( string FilePosition ParserState ptr mut => i32 ) =: getStackModParam
     1 return
   else #swap #drop i32 cast #dup 1 < _if
     50 sb.create
-      "size of stack modification has to be positive got: " sb.appendS
+      "argument of " sb.appendS
+        opName sb.appendStr
+      " has to be positive got: " sb.appendS
       #swap sb.appendI
     pos state appendError
     1
@@ -585,29 +590,29 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
       ':' string.split ## XXX? rename stack ops to ..drop ..dup ..over ..swap ..rot
-        "dup" string.wrap #over string.eq if #drop ':' string.split #swap #drop ## ignore 2nd parameter
+        "dup" string.wrap #over string.eq if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
           0 #swap
-          fileState [] .wordStart state getStackModParam ## :count
+          opName fileState [] .wordStart state getCompilerOpParam ## :count
           StackModType .DUP fileState [] .wordStart opStackMod state appendOp
           return
-        else "over" string.wrap #over string.eq _if #drop ':' string.split
-          fileState [] .wordStart state getStackModParam #swap ':' string.split #swap #drop
-          fileState [] .wordStart state getStackModParam ## :offset:count
+        else "over" string.wrap #over string.eq _if =:: opName ':' string.split
+          opName fileState [] .wordStart state getCompilerOpParam #swap ':' string.split #swap #drop
+          opName fileState [] .wordStart state getCompilerOpParam ## :offset:count
           StackModType .OVER fileState [] .wordStart opStackMod state appendOp
           return
-        else "swap" string.wrap #over string.eq _if #drop ':' string.split
-          fileState [] .wordStart state getStackModParam #swap ':' string.split #swap #drop
-          fileState [] .wordStart state getStackModParam ## :offset:count
+        else "swap" string.wrap #over string.eq _if =:: opName ':' string.split
+          opName fileState [] .wordStart state getCompilerOpParam #swap ':' string.split #swap #drop
+          opName fileState [] .wordStart state getCompilerOpParam ## :offset:count
           StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
           return
-        else "rot" string.wrap #over string.eq "rotate" string.wrap #over:2 string.eq | _if #drop ':' string.split
-          fileState [] .wordStart state getStackModParam #swap ':' string.split #swap #drop
-          fileState [] .wordStart state getStackModParam #swap ## :count:amount
+        else "rot" string.wrap #over string.eq "rotate" string.wrap #over:2 string.eq | _if =:: opName ':' string.split
+          opName fileState [] .wordStart state getCompilerOpParam #swap ':' string.split #swap #drop
+          opName fileState [] .wordStart state getCompilerOpParam #swap ## :count:amount
           StackModType .ROT fileState [] .wordStart opStackMod state appendOp
           return
-        else "drop" string.wrap #over string.eq _if #drop ':' string.split #swap #drop
+        else "drop" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop
           0 #swap
-          fileState [] .wordStart state getStackModParam ## :count
+          opName fileState [] .wordStart state getCompilerOpParam ## :count
           StackModType .DROP fileState [] .wordStart opStackMod state appendOp
           return
         else "include" string.wrap #over string.eq _if #drop:2
@@ -691,14 +696,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "could not create template" sb.wrap fileState [] .wordStart state appendError
           end
           return
-        else "types" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+        else "types" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
+          #dup .length 0 > if
+            opName fileState [] .wordStart state getCompilerOpParam
+          else #drop -1 end
+          fileState [] .wordStart opTypeInfo state appendOp
           return
-        else "stack" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+        else "stack" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
+          #dup .length 0 > if
+            opName fileState [] .wordStart state getCompilerOpParam
+          else #drop -1 end
+          fileState [] .wordStart opStackInfo state appendOp
           return
-        else "ops" string.wrap #over string.eq _if #drop:2
-          "unimplemented" sb.wrap fileState [] .wordStart state appendError
+        else "ops" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
+          #dup .length 0 > if
+            opName fileState [] .wordStart state getCompilerOpParam
+          else #drop -1 end
+          ## TODO print ops
+          fileState [] .wordStart opPrintCompiledOps state appendOp
           return
         else "find" string.wrap #over string.eq _if #drop:2
           fileState nextToken
@@ -735,7 +750,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             io.stdOut #over io.fputSb #drop
           sb.free #drop
           matches list.free #drop
-          ## XXX rerun find after parsing phase has finished
+          idName id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel fileState [] .wordStart opPrintIdentifierMatches state appendOp
           return
         end
       64 sb.create

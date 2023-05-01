@@ -9,6 +9,7 @@ enum( NEGATE NOT FLIP ) =:: public UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: public BinaryOperator
 enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
 struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
+enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
 enum(
                       NOP
                       entryPoint
@@ -56,6 +57,7 @@ enum(
             LabelId : mut setName
             LabelId : mut @Name
                       unreachable
+       CompilerInfo : compilerInfo
 ) =:: public OpValue
 struct( OpValue : mut val Type : mut dataType FilePosition : mut pos ) =:: public Operation
 proc( FilePosition : pos => Operation ) =: public opNOP
@@ -186,6 +188,18 @@ proc( LabelId FilePosition  => Operation ) =: public opGetName
 end
 proc( FilePosition : pos => Operation ) =: public opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
+end
+proc( i32 : count FilePosition : pos => Operation ) =: public opTypeInfo
+  count CompilerInfo .typeInfo new OpValue .compilerInfo new Type .undefined  pos Operation new return
+end
+proc( i32 : count FilePosition : pos => Operation ) =: public opStackInfo
+  count CompilerInfo .stackInfo new OpValue .compilerInfo new Type .undefined  pos Operation new return
+end
+proc( i32 : count FilePosition : pos => Operation ) =: public opPrintCompiledOps
+  count CompilerInfo .compiledOps new OpValue .compilerInfo new Type .undefined  pos Operation new return
+end
+proc( LabelId : name FilePosition : pos => Operation ) =: public opPrintIdentifierMatches
+  name CompilerInfo .find new OpValue .compilerInfo new Type .undefined  pos Operation new return
 end
 
 struct( FileId : id FilePosition : includePos ) =:: public IncludedFile
@@ -533,6 +547,9 @@ end
         unreachable case
           "unreachable " sb.appendS
           break
+        compilerInfo case
+          #over .val .compilerInfo labelContext sb.appendCompilerInfo
+          break
       end
       " at " sb.appendS
       #swap .pos sb.appendPos
@@ -545,6 +562,37 @@ end
     " at "       sb.appendS
     err .pos     sb.appendPos
     '\n'         sb.appendC
+  end
+  proc( stringBuilder CompilerInfo LabelContext ptr => stringBuilder ) =: public appendCompilerInfo
+    =:: labelContext
+    =:: info
+    info switch
+      typeInfo case
+        "#types" sb.appendS
+        info .typeInfo 0 > if
+          ':' sb.appendC
+          info .typeInfo sb.appendI
+        end
+        break
+      stackInfo case
+        "#stack" sb.appendS
+        info .stackInfo 0 > if
+          ':' sb.appendC
+          info .stackInfo sb.appendI
+        end
+        break
+      compiledOps case
+        "#ops" sb.appendS
+        info .compiledOps 0 > if
+          ':' sb.appendC
+          info .compiledOps sb.appendI
+        end
+        break
+      find case
+        "#find " sb.appendS
+        info .find labelContext id.labelName .data sb.appendStr
+        break
+    end
   end
   proc( stringBuilder Program => stringBuilder ) =: public appendProgram
     =:: prog

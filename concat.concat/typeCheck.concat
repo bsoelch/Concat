@@ -73,12 +73,16 @@ proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut :
         end #drop
       #swap 1 -
     end #drop
-    offset 0 > if
-      "out of sync\n" sb.appendS
-    end
   return
 end
 #end
+proc( bool : printOps i32 : maxTypes TypeCheckState ptr mut : state => ) =: printTypes
+  0 sb.create
+    "---------------\n" sb.appendS
+    printOps maxTypes state sb.appendTypeStack
+    "---------------\n" sb.appendS
+  io.stdOut #swap io.fputSb #drop
+end
 proc( TypeCheckState ptr mut : state => ) =: printTypesDebug
   0 sb.create
     "---------------\n" sb.appendS
@@ -2540,6 +2544,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state ensureStackHeadIsValue
           ## TODO rotate
           break
+      end
+      break
+    compilerInfo case
+      op [] .val .compilerInfo switch
+        typeInfo case
+          false op [] .val .compilerInfo .typeInfo state printTypes
+          return
+        stackInfo case
+          true op [] .val .compilerInfo .stackInfo state printTypes
+          return
+        compiledOps case
+          break ## TODO print ops
+        find case
+          break ## TODO find
       end
       break
     checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case

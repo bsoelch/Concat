@@ -1151,6 +1151,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       ## XXX? printf-statement for error message
       target "exit(EXIT_FAILURE);//unreachable\n" io.fputs #drop
       return
+    compilerInfo case
+      break
     getName setName @Name getLabel setLabel @Label length size stackMod case
       break ## XXX error message
   end
