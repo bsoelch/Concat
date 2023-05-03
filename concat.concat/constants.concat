@@ -46,7 +46,7 @@ proc( ConstantArray : elts ConstantContext ptr : context => ConstValue arrayView
   context [] .arrayValues .data elts .offset + elts .length array.create return
 end
 
-proc( FilePosition : pos => Constant ) =: public constWildcard
+proc( FilePosition : pos => Constant ) =: public constWildcard ## TODO rename const... to new...const
   Type .undefined ConstValue .wildCard new pos Constant new return
 end
 proc( i64 FilePosition => Constant ) =: public constInt
@@ -66,13 +66,16 @@ proc( bool FilePosition => Constant ) =: public constBool
   =:: pos
   types.primitive.BOOL #swap ConstValue .boolean new pos Constant new return
 end
-proc( Type FilePosition => Constant ) =: public constType
+proc( Type FilePosition => Constant ) =: public newTypeConst
   =:: pos
   types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
 end
 proc( Type i32 FilePosition => Constant ) =: public constEnumLabel
   =:: pos
   ConstValue .enumLabel new pos Constant new return
+end
+proc( Type : arrayType ConstValue arrayView : elts ConstantContext ptr mut : context FilePosition : pos => Constant ) =: public newArrayConst
+  arrayType elts context constArray ConstValue .arrayConstant new pos Constant new return
 end
 proc( ConstValue Type FilePosition => Constant ) =: public newConst
   =:: pos

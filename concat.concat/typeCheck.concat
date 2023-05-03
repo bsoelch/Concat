@@ -2055,6 +2055,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             closed closed [] .blockType BlockType .IF == op [] .pos state storeIfOutTypes
           else closed [] .blockType BlockType .IF == _if
             closed [] .blockData .ifBlock .inTypes @ state resetStack
+          else
+            closed [] .blockData .ifBlock .outTypes @ state resetStack
           end
           state [] .reachable
             closed [] .blockData .ifBlock .elseReachable |
@@ -2333,7 +2335,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       ## ... | ARG INDEX | ARG_LEN INDEX |
       true state [] .hasGetArgs =
       return
-    length size case
+    length case
       op state checkReachable
       op state checkLocal
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
@@ -2384,9 +2386,60 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op state pushValue
           return
         end
-        ## TODO size
       end
       ## XXX? tuple/enum length
+      break
+    size case
+      op state checkReachable
+      op state checkLocal
+      state [] .typeStack list.peek #dup optional.isEmpty if #drop
+        "not enough operands for : " sb.wrap
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          " need 1 got " sb.appendS
+          state [] .typeStack .length sb.appendI
+        op [] .pos state appendError
+        return
+      end .data =:: src
+      src [] .valType typeContext types.isPointer src [] .valType typeContext types.isArray | if
+        src [] .valType typeContext types.isFixedSize ! if
+          "invalid operand for : " sb.wrap
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+            " cannot get the length of " sb.appendS
+            src [] .valType labelContext typeContext sb.appendType
+          op [] .pos state appendError
+          return
+        end
+        src [] .valType typeContext types.getArraySize =:: sizes
+        idContext [] .templateArgBuffer .length =:: offset
+        0 while #dup sizes .length < do
+          sizes #over array.get =:: current
+          idContext [] .templateArgBuffer
+            current .sizeType types.ArraySizeType .int == if
+              current .value ConstValue .int new list.append
+            else current .sizeType types.ArraySizeType .staticArg == _if
+              current .value i32 cast ConstValue .genericArg new list.append
+            else #drop:2
+              "unsupported array-size type for " sb.wrap
+                op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+              op [] .pos state appendError
+              return
+            end
+          idContext [] .templateArgBuffer =
+          1 +
+        end #drop
+        sizes .length types.ArraySizeType .int types.ArraySize new =:: mSize
+        types.primitive.I_SIZE false mSize @ array.wrap true false typeContext types.newArrayType #drop
+        idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
+        idContext [] .constContext @
+        op [] .pos
+        newArrayConst opConst op [] =
+        offset idContext [] .templateArgBuffer .length =
+        ## remove top stack value
+        state [] .opStack .length src [] .opCount - state [] .opStack .length =
+        state [] .typeStack .length 1 - state [] .typeStack .length =
+        op state pushValue
+        return
+      end
       break
     enumLabelEq enumLabelNe case
       op state checkReachable

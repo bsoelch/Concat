@@ -302,7 +302,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           else #dup 0 < _if
             "not enough types for label" sb.wrap fileState [] .wordStart state appendError
             while #dup 0 < do
-              Type .undefined fileState [] .wordStart constType  state pushConst
+              Type .undefined fileState [] .wordStart newTypeConst  state pushConst
               1 +
             end
           end #drop
@@ -324,7 +324,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         else #dup 0 < _if
           "not enough types for label" sb.wrap fileState [] .wordStart state appendError
           while #dup 0 < do
-            Type .undefined fileState [] .wordStart constType  state pushConst
+            Type .undefined fileState [] .wordStart newTypeConst  state pushConst
             1 +
           end
         end #drop
@@ -351,7 +351,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           #over sb.appendStr
         fileState [] .wordStart state appendError
         #drop
-        Type .undefined fileState [] .wordStart constType  state pushConst
+        Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         continue
       end
         state [] .constants .length constOffset -
@@ -366,12 +366,12 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         else #dup 0 < _if
           "not enough types for label" sb.wrap fileState [] .wordStart state appendError
           while #dup 0 < do
-            Type .undefined fileState [] .wordStart constType  state pushConst
+            Type .undefined fileState [] .wordStart newTypeConst  state pushConst
             1 +
           end
         end #drop
       id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
-      Type .undefined fileState [] .wordStart constType  state pushConst
+      Type .undefined fileState [] .wordStart newTypeConst  state pushConst
       #dup .length 0 >
     do end
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError
@@ -426,55 +426,55 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       false fileState [] .wordStart constBool  state pushConst
       true return
     else #dup "bool" string.wrap string.eq _if
-      types.primitive.BOOL fileState [] .wordStart constType  state pushConst
+      types.primitive.BOOL fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "i8" string.wrap string.eq _if
-      types.primitive.I8 fileState [] .wordStart constType  state pushConst
+      types.primitive.I8 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "i32" string.wrap string.eq _if
-      types.primitive.I32 fileState [] .wordStart constType  state pushConst
+      types.primitive.I32 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "i64" string.wrap string.eq _if
-      types.primitive.I64 fileState [] .wordStart constType  state pushConst
+      types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "float" string.wrap string.eq _if
-      types.primitive.FLOAT fileState [] .wordStart constType  state pushConst
+      types.primitive.FLOAT fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "double" string.wrap string.eq _if
-      types.primitive.DOUBLE fileState [] .wordStart constType  state pushConst
+      types.primitive.DOUBLE fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "type" string.wrap string.eq _if
-      types.primitive.TYPE fileState [] .wordStart constType  state pushConst
+      types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "ptr" string.wrap string.eq _if
       fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
-        Type .undefined fileState [] .wordStart constType  state pushConst
+        Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         true return
       end
       true sizes fixedSize false state [] .idContext .typeContext addrOf types.newArrayType if #drop
-        Type .undefined fileState [] .wordStart constType  state pushConst
+        Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         "could not create pointer type" sb.wrap fileState [] .wordStart state appendError
         true return
       end
-        fileState [] .wordStart constType  state pushConst
+        fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "array" string.wrap string.eq _if
       fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
-        Type .undefined fileState [] .wordStart constType  state pushConst
+        Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         true return
       end
       false sizes fixedSize false state [] .idContext .typeContext addrOf types.newArrayType if #drop
-        Type .undefined fileState [] .wordStart constType  state pushConst
+        Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         "could not create array type" sb.wrap fileState [] .wordStart state appendError
         true return
       end
-        fileState [] .wordStart constType  state pushConst
+        fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "mut" string.wrap string.eq _if
       fileState state popTypeConstant if #drop
-        Type .undefined fileState [] .wordStart constType  state pushConst
+        Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         true return
       end
       =:: mut t
@@ -484,7 +484,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       t @ true state [] .idContext .typeContext @ types.setMutability if
         "could not change mutability of type" sb.wrap fileState [] .wordStart state appendError
       end
-      t fileState [] .wordStart constType  state pushConst
+      t fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "(" string.wrap string.eq  #over "tuple(" string.wrap string.eq | #over "struct(" string.wrap string.eq | _if
       "struct(" string.wrap string.eq if
@@ -498,7 +498,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #swap state [] .idContext .typeContext addrOf types.newTuple if
         "error while creating tuple type" sb.wrap fileState [] .wordStart state appendError
       end
-      fileState [] .wordStart constType  state pushConst
+      fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     else #dup "enum(" string.wrap string.eq _if #drop
       LabelType .ENUM ")" string.wrap fileState state readCompositeType
@@ -508,7 +508,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #swap state [] .idContext .typeContext addrOf types.newEnum if
         "error while creating enum type" sb.wrap fileState [] .wordStart state appendError
       end
-      fileState [] .wordStart constType  state pushConst
+      fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     else #dup "proc(" string.wrap string.eq _if #drop
       state offsetStaticArgs =:: prevArgs
@@ -527,7 +527,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       in #swap state [] .idContext .typeContext addrOf  types.newProcedure if
         "error while creating procedure type" sb.wrap fileState [] .wordStart state appendError
       end
-      fileState [] .wordStart constType  state pushConst
+      fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     end
     #dup state getStaticArg #dup optional.hasData if .data
@@ -794,7 +794,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             Type .undefined
           end
-          #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType fileState [] .wordStart constType .val
+          #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType fileState [] .wordStart newTypeConst .val
         else idType IdentifierType .PROCEDURE != isInit state hasConst & & _if
           state popConst
             #dup .valueType valType false typeContext types.canCast ! if

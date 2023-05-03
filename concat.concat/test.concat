@@ -110,6 +110,8 @@ entryPoint:
   42 optional.wrap print
   declareAfterUse print
   "hello" asStr print
+  "Hello" ..size =:: arraySize
+  arraySize @ 0 [] print
 end
 proc( => i32 ) =: declareAfterUse
   -17 return
