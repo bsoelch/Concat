@@ -68,7 +68,7 @@ proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut :
         0 while #dup elt [] .opCount < do
           #swap
           "   " sb.appendS
-          state [] .opStack offset #over:3 + list.get labelContext typeContext sb.appendOp
+          state [] .opStack offset #over:3 + list.get idContext [] .constContext @ labelContext typeContext sb.appendOp
           #swap 1 +
         end #drop
       #swap 1 -
@@ -695,7 +695,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   isPtr if
     state [] .typeStack list.peek #dup optional.isEmpty if #drop
       "missing argument for operation" sb.wrap
-        op [] labelContext typeContext sb.appendOp
+        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
       op [] .pos state appendError
       return
     end .data [] .valType calledType =
@@ -820,10 +820,10 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     argBufferOffset templateCount + staticArgCount ConstantArray new =:: genericIndices
     false if ## DEBUG
       "-----------------\n" sb.wrap
-        op [] labelContext typeContext sb.appendOp
+        op [] idContext [] .constContext @  labelContext typeContext sb.appendOp
         0 while #dup templateCount < do
           #swap
-            argValues [] #over:2 argBufferOffset + list.get labelContext typeContext sb.appendConstant
+            argValues [] #over:2 argBufferOffset + list.get idContext [] .constContext @ labelContext typeContext sb.appendConstant
             '\n' sb.appendC
           #swap 1 +
         end #drop
@@ -1004,7 +1004,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       break
     TEMPLATE_ARG TYPE case
       "operation " sb.wrap
-        op [] labelContext typeContext sb.appendOp
+        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
       op [] .pos state appendError
       break
@@ -1087,7 +1087,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       break
     ARGUMENT TEMPLATE_ARG TYPE case
       "operation " sb.wrap
-        op [] labelContext typeContext sb.appendOp
+        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
       op [] .pos state appendError
       break
@@ -1102,7 +1102,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   0 =:: mut indexCount
   state [] .typeStack .length 0 == if
     "missing argument for operation " sb.wrap
-      op [] labelContext typeContext sb.appendOp
+      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
     op [] .pos state appendError
     return
   end
@@ -1113,7 +1113,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     end
     state [] .typeStack offset list.at .data [] .valType typeContext isInt ! if
       "invalid type for operation " sb.wrap
-        op [] labelContext typeContext sb.appendOp
+        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " " sb.appendS
         state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
         " is not a pointer" sb.appendS
@@ -1124,7 +1124,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   end
   state [] .typeStack offset list.get .valType typeContext isPointer ! if
     "invalid type for operation " sb.wrap
-      op [] labelContext typeContext sb.appendOp
+      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
       " " sb.appendS
       state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
       " is not a pointer" sb.appendS
@@ -1206,7 +1206,7 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack list.peek #dup optional.isEmpty if #drop
     "not enough operands for : " sb.wrap
-      op [] labelContext typeContext sb.appendOp
+      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
       " need 1 got " sb.appendS
       state [] .typeStack .length sb.appendI
     op [] .pos state appendError
@@ -1276,7 +1276,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
   label labelContext id.labelName .data =:: labelName
   state [] .typeStack list.peek #dup optional.isEmpty if #drop
     "not enough operands for : " sb.wrap
-      op [] labelContext typeContext sb.appendOp
+      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
       " need 1 got " sb.appendS
       state [] .typeStack .length sb.appendI
     op [] .pos state appendError
@@ -1302,7 +1302,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           break
         default
           "unexpected operation for get label: " sb.wrap
-            op [] labelContext typeContext sb.appendOp
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           op [] .pos state appendError
           return
       end
@@ -1340,7 +1340,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           break
         default
           "unexpected operation for get label: " sb.wrap
-            op [] labelContext typeContext sb.appendOp
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           op [] .pos state appendError
           return
       end
@@ -1423,7 +1423,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkReachable
     return
   end
   "unreachable operation: " sb.wrap
-    op [] state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
+    op [] state [] .idContext [] .constContext @ state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
   op [] .pos state appendError
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkLocal
@@ -1431,7 +1431,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: checkLocal
     return
   end
   "unexpected operation at global level: " sb.wrap
-    op [] state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
+    op [] state [] .idContext [] .constContext @ state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
   op [] .pos state appendError
 end
 
@@ -1546,7 +1546,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
                 switchType typeContext types.isEnum if
                   switchType constant .enumLabel typeContext types.compositeGetLabel labelContext id.labelName .data sb.appendStr
                 else
-                  constant labelContext typeContext sb.appendConstant
+                  constant idContext [] .constContext @ labelContext typeContext sb.appendConstant
                 end
                 " in switch-case" sb.appendS
               op [] .pos state appendError
@@ -1572,7 +1572,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
         "not enough operands for : " sb.wrap
-          op [] labelContext typeContext sb.appendOp
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError
@@ -1618,7 +1618,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       state [] .typeStack .length 2 < if
         "not enough operands for : " sb.wrap
-          op [] labelContext typeContext sb.appendOp
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           " need 2 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError
@@ -2234,7 +2234,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       state [] .typeStack .length 0 == if
         "not enough operands for : " sb.wrap
-          op [] labelContext typeContext sb.appendOp
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError
@@ -2295,7 +2295,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkLocal
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
         "not enough operands for : " sb.wrap
-          op [] labelContext typeContext sb.appendOp
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError
@@ -2338,7 +2338,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkLocal
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
         "not enough operands for : " sb.wrap
-          op [] labelContext typeContext sb.appendOp
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError
@@ -2347,7 +2347,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       src [] .valType typeContext types.isPointer src [] .valType typeContext types.isArray | if
         src [] .valType typeContext types.isFixedSize ! if
           "invalid operand for : " sb.wrap
-            op [] labelContext typeContext sb.appendOp
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
             " cannot get the length of " sb.appendS
             src [] .valType labelContext typeContext sb.appendType
           op [] .pos state appendError
@@ -2374,7 +2374,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             newConst opConst op [] =
           else
             "unsupported array-size type for " sb.wrap
-              op [] labelContext typeContext sb.appendOp
+              op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
             op [] .pos state appendError
             return
           end
@@ -2397,7 +2397,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     Cast Cast! case
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
         "not enough operands for : " sb.wrap
-          op [] labelContext typeContext sb.appendOp
+          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError
@@ -2562,7 +2562,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case
       "operation " sb.wrap
-        op [] labelContext typeContext sb.appendOp
+        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
       op [] .pos state appendError
       return
@@ -2596,7 +2596,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return ## do nothing
   end
   "type-checking for operation " sb.wrap
-    op [] labelContext typeContext sb.appendOp
+    op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
     " is not implemented" sb.appendS
   op [] .pos state appendError
 end

@@ -4,22 +4,23 @@
 #include "labels.concat"
 #include "types.concat"
 
+struct( i64 : offset i64 : length ) =:: public ConstantArray
 enum(
   none
-  wildCard
   bool : boolean
   i32 : enumLabel
+  i8 : chr
   i64 : int
+  StringConstant : str
+  ConstantArray : arrayConstant
+  Type : typeId
+  wildCard
   i32 : genericArg
   i32 : templateArg
-  StringConstant : str
-  i8 : chr
-  Type : typeId
 ) =:: public ConstValue
 struct( Type : valueType ConstValue : val FilePosition : pos ) =:: public Constant
 
 struct( ConstValue list : mut arrayValues ) =:: public ConstantContext
-struct( i64 : offset i64 : length ) =:: public ConstantArray
 
 proc( => ConstantContext ) =: public newConstContext
  128 ConstValue list.create
@@ -32,10 +33,10 @@ proc( ConstValue arrayView : elts ConstantContext ptr mut : context => ConstantA
     context [] .arrayValues =
   elts .length ConstantArray new return
 end
-proc( ConstantArray : elts i64 : index ConstantContext ptr mut : context => ConstValue ) =: public constArrayGet
+proc( ConstantArray : elts i64 : index ConstantContext ptr : context => ConstValue ) =: public constArrayGet
   context [] .arrayValues elts .offset index + list.get return
 end
-proc( ConstantArray : elts ConstantContext ptr mut : context => ConstValue arrayView ) =: public constArrayAsArray
+proc( ConstantArray : elts ConstantContext ptr : context => ConstValue arrayView ) =: public constArrayAsArray
   elts .offset 0 < if
     ConstValue array.empty return
   end
@@ -101,6 +102,15 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext => bool ) =:
         true return
       end
       a .str labelContext id.scAsStr b .str labelContext id.scAsStr string.eq return
+    arrayConstant case
+      a .arrayConstant .length b .arrayConstant .length != if
+        false return
+      end
+      a .arrayConstant .offset b .arrayConstant .offset == if
+        true return
+      end
+      ## TODO array equality
+      false return
     typeId case
       a .typeId b .typeId types.typeEquals return
     templateArg case
@@ -135,9 +145,10 @@ proc( stringBuilder string => stringBuilder ) =: public appendEscapedStr
     #swap 1 +
   end #drop
 end
-proc( stringBuilder ConstValue LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendConstant
+proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendConstant
   =:: typeContext
   =:: labelContext
+  =:: constContext
   #swap
     #over switch
       none case
@@ -173,6 +184,16 @@ proc( stringBuilder ConstValue LabelContext ptr TypeContext ptr => stringBuilder
         "enum label ("   sb.appendS
         #over .enumLabel sb.appendI
                  ')'     sb.appendC
+        break
+      arrayConstant case #over .arrayConstant =:: mArray
+        "{ " sb.appendS
+        0 while #dup mArray .length < do
+          #swap
+            mArray #over:2 constContext constArrayGet constContext labelContext typeContext appendConstant
+            ' ' sb.appendC
+          #swap 1 +
+        end #drop
+        "}" sb.appendS
         break
       genericArg case
         "generic argument "  sb.appendS

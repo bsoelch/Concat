@@ -299,9 +299,10 @@ end
         break
     end
     end
-  proc( stringBuilder Operation LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendOp
+  proc( stringBuilder Operation ConstantContext ptr LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendOp
     =:: typeContext
     =:: labelContext
+    =:: constContext
     #swap
       #over .val switch
         NOP case
@@ -314,7 +315,7 @@ end
           "constant ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .Constant labelContext typeContext sb.appendConstant
+          #over .val .Constant constContext labelContext typeContext sb.appendConstant
           break
         block case
           "Block: " sb.appendS
@@ -612,21 +613,21 @@ end
           "## global:\n" sb.appendS
           0 while #dup f .globalOps .length < do
             #swap
-              f .globalOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @  sb.appendOp
+              f .globalOps #over:2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @  sb.appendOp
             #swap
             1 +
           end #drop
           "## local:\n" sb.appendS
           0 while #dup f .localOps .length < do
             #swap
-              f .localOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+              f .localOps #over:2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
             #swap
             1 +
           end #drop
           "## templates:\n" sb.appendS
           0 while #dup f .templateOps .length < do
             #swap
-              f .templateOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+              f .templateOps #over:2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
             #swap
             1 +
           end #drop
@@ -636,7 +637,7 @@ end
       "## unresolved templates:\n" sb.appendS
       0 while #dup prog .templateOps .length < do
         #swap
-          prog .templateOps #over:2 list.get prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+          prog .templateOps #over:2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
         #swap
         1 +
       end #drop

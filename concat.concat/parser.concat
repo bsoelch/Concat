@@ -133,7 +133,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
             .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
-              #swap state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
+              #swap state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
             state [] .constants #over:4 list.get .pos state appendError
           end
       #swap
@@ -581,8 +581,9 @@ proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 
   return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
-  state [] .idContext .typeContext @ =:: typeContext
-  state [] .idContext .labelContext @ =:: labelContext
+  state [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  idContext [] .labelContext @ =:: labelContext
   code
     token fileState state tryParseConstant if
       #drop return
@@ -738,7 +739,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 match [] .data id.asIdInfo labelContext sb.appendIdInfo
                 match [] .data [] .constValue ConstValue .none != if
                   " [ " sb.appendS
-                  match [] .data [] .constValue labelContext typeContext sb.appendConstant
+                  match [] .data [] .constValue state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
                   " ]" sb.appendS
                 end
                 " declared at " sb.appendS
@@ -967,7 +968,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       else
         "unexpected operation for \"=\" \n" sb.wrap
-          #swap [] labelContext typeContext sb.appendOp
+          #swap [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError
         return
       end
@@ -1006,7 +1007,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected operation for \"" sb.wrap
         opName sb.appendStr
         "\"\n" sb.appendS
-        #swap [] labelContext typeContext sb.appendOp
+        #swap [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError
         return
       end
@@ -1117,7 +1118,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #drop
             end
           "constant "                    sb.wrap
-            #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
+            #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
             " does not have a field: \"" sb.appendS
             #swap                        sb.appendStr
           '"' sb.appendC fileState [] .wordStart state appendError
@@ -1168,7 +1169,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
+        #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError
       return
     else #dup "cast" string.wrap string.eq #over "cast!" string.wrap string.eq | _if =:: opName
@@ -1182,7 +1183,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
+        #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
         " expected type" sb.appendS fileState [] .wordStart state appendError
         return
       end
@@ -1292,7 +1293,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             return
           end
         "cannot determine the length of constant " sb.wrap
-          #swap .val state [] .idContext .labelContext addrOf state [] .idContext .typeContext addrOf sb.appendConstant
+          #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
         fileState [] .wordStart state appendError
         return
       end

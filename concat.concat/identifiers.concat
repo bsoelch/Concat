@@ -734,6 +734,8 @@
     src switch
       none wildCard boolean int enumLabel chr str case
         src return
+      arrayConstant case
+        src return ## TODO array constants
       typeId case
         src .typeId templateArgs genericArgs implPos context replaceGenericsType ConstValue .typeId new return
       genericArg case

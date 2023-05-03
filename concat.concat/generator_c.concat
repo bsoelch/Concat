@@ -524,6 +524,79 @@ proc( stringBuilder : sb Operation ptr : op bool : isGlobal io.FILE : target Pro
   sb.free #drop
 end
 
+proc( Operation ptr : op ConstValue : const bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileConstant
+  prog [] .idContext @ =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  const switch
+    boolean case
+      const .boolean if
+        target "true" io.fputs #drop
+      else
+        target "false" io.fputs #drop
+      end
+      return
+    chr case
+      op isGlobal target prog constStart
+        const .chr sb.appendI
+      op isGlobal target prog constEnd
+      return
+    int case
+      op isGlobal target prog constStart
+        const .int i64.MIN == if
+          '(' sb.appendC
+          const .int 1 + sb.appendI
+          "-1)" sb.appendS
+        else
+          const .int sb.appendI
+        end
+      op isGlobal target prog constEnd
+      return
+    enumLabel case
+      op isGlobal target prog constStart
+        "{.label=" sb.appendS
+        const .enumLabel sb.appendI
+        "}" sb.appendS
+      op isGlobal target prog constEnd
+      return
+    typeId case
+      op isGlobal target prog constStart
+        "sizeof(" sb.appendS
+        target #over io.fputSb #drop
+        sb.clear
+        const .typeId target prog printTypeName
+        ")" sb.appendS
+      op isGlobal target prog constEnd
+      return
+    str case ## TODO string constants
+      op false target prog constStart ## treat all strings as global constants (cast to int8_t*)
+      '"' sb.appendC
+      const .str labelContext id.scAsStr sb.appendEscapedStr
+      '"' sb.appendC
+      op false target prog constEnd
+      break
+    arrayConstant case const .arrayConstant idContext [] .constContext @ constArrayAsArray =:: mArray
+      op isGlobal target prog constStart
+      '{' sb.appendC
+      0 while #dup mArray .length < do
+        #swap
+        #over 0 > if
+          ',' sb.appendC
+        end
+        op mArray #over:3 array.get isGlobal target prog compileConstant
+        #swap 1 +
+      end #drop
+      '}' sb.appendC
+      op isGlobal target prog constEnd
+      break
+    genericArg case ## XXX find correct label
+      const .genericArg id.LABEL_ID_NONE target prog printArgName
+      return
+    none wildCard templateArg case
+      break ## XXX error message
+  end
+end
+
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -542,59 +615,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     NOP case
       break
     OpValue .Constant case
-      op [] .val .Constant switch
-        boolean case
-          op [] .val .Constant .boolean if
-            target "true" io.fputs #drop
-          else
-            target "false" io.fputs #drop
-          end
-          return
-        chr case
-          op isGlobal target prog constStart
-            op [] .val .Constant .chr sb.appendI
-          op isGlobal target prog constEnd
-          return
-        int case
-          op isGlobal target prog constStart
-            op [] .val .Constant .int i64.MIN == if
-              '(' sb.appendC
-              op [] .val .Constant .int 1 + sb.appendI
-              "-1)" sb.appendS
-            else
-              op [] .val .Constant .int sb.appendI
-            end
-          op isGlobal target prog constEnd
-          return
-        enumLabel case
-          op isGlobal target prog constStart
-            "{.label=" sb.appendS
-            op [] .val .Constant .enumLabel sb.appendI
-            "}" sb.appendS
-          op isGlobal target prog constEnd
-          return
-        typeId case
-          op isGlobal target prog constStart
-            "sizeof(" sb.appendS
-            target #over io.fputSb #drop
-            sb.clear
-            op [] .val .Constant .typeId target prog printTypeName
-            ")" sb.appendS
-          op isGlobal target prog constEnd
-          return
-        str case ## TODO string constants
-          op false target prog constStart ## treat all strings as global constants (cast to int8_t*)
-          '"' sb.appendC
-          op [] .val .Constant .str labelContext id.scAsStr sb.appendEscapedStr
-          '"' sb.appendC
-          op false target prog constEnd
-          break
-        genericArg case ## XXX find correct label
-          op [] .val .Constant .genericArg id.LABEL_ID_NONE target prog printArgName
-          return
-        none wildCard templateArg case
-          break ## XXX error message
-      end
+      op op [] .val .Constant isGlobal target prog compileConstant
       break
     Print case
       op [] .dataType typeContext types.unwrapNamed =:: printType
@@ -1007,7 +1028,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
                   int case caseVal .int sb.appendI break
                   chr case caseVal .chr sb.appendI break
                   enumLabel case caseVal .enumLabel sb.appendI break
-                  none wildCard boolean genericArg templateArg str typeId case
+                  none wildCard boolean genericArg templateArg str typeId arrayConstant case
                     ## TODO error message
                     break
                 end
