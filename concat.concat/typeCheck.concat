@@ -780,7 +780,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
               constVal
               argType
               op [] .pos
-            newConst opConst opOffset list.insert
+            opConst opOffset list.insert
           state [] .opStack =
           ## inserted operations after offset -> offset does not change
           1 - continue
@@ -2358,22 +2358,24 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         src [] .valType typeContext types.getArraySize =:: sizes
         op [] .val OpValue .length == if
           sizes .length 0 == if
-            ## newConstant
-              1
+            ## opConst
+              1 #dup ConstValue .int new
+              #swap intConstType
               op [] .pos
-            constInt opConst op [] =
+            opConst op [] =
           end
           sizes 0 array.get .sizeType types.ArraySizeType .int == if
-            ## newConstant
-              sizes 0 array.get .value
+            ## opConst
+              sizes 0 array.get .value #dup ConstValue .int new
+              #swap intConstType
               op [] .pos
-            constInt opConst op [] =
+            opConst op [] =
           else sizes 0 array.get .sizeType types.ArraySizeType .staticArg == _if
-            ## newConstant
-            sizes 0 array.get .value i32 cast ConstValue .genericArg new
-            types.primitive.I_SIZE
-            op [] .pos
-            newConst opConst op [] =
+            ## opConst
+              sizes 0 array.get .value i32 cast ConstValue .genericArg new
+              types.primitive.I_SIZE
+              op [] .pos
+            opConst op [] =
           else
             "unsupported array-size type for " sb.wrap
               op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
@@ -2428,11 +2430,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           1 +
         end #drop
         sizes .length types.ArraySizeType .int types.ArraySize new =:: mSize
-        types.primitive.I_SIZE false mSize @ array.wrap true false typeContext types.newArrayType #drop
-        idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
-        idContext [] .constContext @
-        op [] .pos
-        newArrayConst opConst op [] =
+        ## opConst
+          ## newArrayConst
+            idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
+            idContext [] .constContext @
+          newArrayConst
+          types.primitive.I_SIZE false mSize @ array.wrap true false typeContext types.newArrayType #drop
+          op [] .pos
+        opConst op [] =
         offset idContext [] .templateArgBuffer .length =
         ## remove top stack value
         state [] .opStack .length src [] .opCount - state [] .opStack .length =
@@ -2665,11 +2670,11 @@ proc(
 ) =: resolveTemplateGetIdentifer
   idInfo .idType switch
     TEMPLATE_ARG case
-      ## newConst
+      ## opConst
         impl [] .argValues idInfo .id state [] .idContext [] .constContext @ constArrayGet
         template [] .templateType idInfo .id state [] .idContext [] .typeContext @ types.compositeGetElement
         template [] .declaredAt
-      newConst opConst op [] =
+      opConst op [] =
       break
     TMP_VAR LOCAL_VAR ARGUMENT case
       op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =

@@ -113,7 +113,7 @@ struct(
     context [] .labels .length 1 - LabelId cast return
   end
 
-  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context => StringConstant ) =: public newStringConstant
+  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context => StringConstant ) =: public parseStringConstant
     stringStart =:: mut pos
     '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset

@@ -11,6 +11,8 @@
 #include "codeBlocks.concat"
 #include "identifiers.concat"
 
+
+struct( Type : valueType ConstValue : val FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
 struct(
               string : mut basePath
@@ -29,6 +31,43 @@ struct(
                 bool : mut hasEntryPoint
 ) =:: ParserState
 
+proc( FilePosition : pos => Constant ) =: newWildcardConst
+  Type .undefined ConstValue .wildCard new pos Constant new return
+end
+proc( bool FilePosition => Constant ) =: newBoolConstant
+  =:: pos
+  types.primitive.BOOL #swap ConstValue .boolean new pos Constant new return
+end
+proc( i64 FilePosition => Constant ) =: newIntConstant
+  =:: pos
+  #dup intConstType #swap ConstValue .int new pos Constant new return
+end
+proc( i8 FilePosition => Constant ) =: newCharConstant
+  =:: pos
+  types.primitive.I8 #swap ConstValue .chr new pos Constant new return
+end
+proc( StringConstant : str FilePosition : pos TypeContext ptr mut : context => Constant ) =: newStringConstant
+  #using types
+  str .length ArraySizeType .int ArraySize new =:: size
+  types.primitive.I8 true size @ 1 array.create true false context newArrayType #drop str ConstValue .str new pos Constant new return
+end
+proc( Type FilePosition => Constant ) =: newTypeConst
+  =:: pos
+  types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
+end
+proc( Type i32 FilePosition => Constant ) =: newEnumLabelConstant
+  =:: pos
+  ConstValue .enumLabel new pos Constant new return
+end
+proc( ConstValue Type FilePosition => Constant ) =: newConstant
+  =:: pos
+  #swap pos Constant new return
+end
+
+proc( Constant : const => Operation ) =: constantToOp
+  const .val const .valueType const .pos opConst return
+end
+
 proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     state [] .templateOps @
@@ -40,7 +79,7 @@ proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   #dup []
     0 while #dup state [] .constants .length < do
       #swap
-        state [] .constants #over:2 list.get opConst list.append
+        state [] .constants #over:2 list.get constantToOp list.append
       #swap
       1 +
     end #drop
@@ -383,29 +422,29 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       EMPTY case
         "" string.wrap true return
       STRING case
-        ## constStr
-          ## newStringConstant
+        ## newStringConstant
+          ## parseStringConstant
             token .STRING
             fileState [] .wordStart
             state [] .errors @
             state [] .idContext .labelContext @
-          id.newStringConstant
+          id.parseStringConstant
           fileState [] .wordStart
           state [] .idContext .typeContext @
-        constStr state pushConst
+        newStringConstant state pushConst
         "" string.wrap true return
       CHAR case
         token .CHAR
-          fileState [] .wordStart state [] .errors @  state [] .idContext .labelContext @ id.newStringConstant ## escape character
+          fileState [] .wordStart state [] .errors @  state [] .idContext .labelContext @ id.parseStringConstant ## escape character
           #dup .length 1 != if
             "A character literal has to contain exactly one character" sb.wrap fileState [] .wordStart state appendError
           end
           state [] .idContext .labelContext addrOf id.scAsStr
           0 string.charAt
-        fileState [] .wordStart constChar state pushConst
+        fileState [] .wordStart newCharConstant state pushConst
         "" string.wrap true return
       INTEGER case
-        token .INTEGER fileState [] .wordStart constInt  state pushConst
+        token .INTEGER fileState [] .wordStart newIntConstant  state pushConst
         "" string.wrap true return
       ERROR case
         0 sb.create
@@ -417,13 +456,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         break
     end
     #dup "_" string.wrap string.eq if
-      fileState [] .wordStart constWildcard  state pushConst
+      fileState [] .wordStart newWildcardConst  state pushConst
       true return
     else #dup "true" string.wrap string.eq _if
-      true fileState [] .wordStart constBool  state pushConst
+      true fileState [] .wordStart newBoolConstant  state pushConst
       true return
     else #dup "false" string.wrap string.eq _if
-      false fileState [] .wordStart constBool  state pushConst
+      false fileState [] .wordStart newBoolConstant  state pushConst
       true return
     else #dup "bool" string.wrap string.eq _if
       types.primitive.BOOL fileState [] .wordStart newTypeConst  state pushConst
@@ -531,7 +570,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "" string.wrap true return
     end
     #dup state getStaticArg #dup optional.hasData if .data
-      #dup .val #swap .argType fileState [] .wordStart newConst state pushConst
+      #dup .val #swap .argType fileState [] .wordStart newConstant state pushConst
       true return
     else #drop end
     #dup state [] .currentFile state [] .idContext @ id.getIdentifier if ## read named constants
@@ -551,7 +590,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       constVal args 0 0 ConstantArray new fileState [] .wordStart state [] .idContext @ types.replaceGenerics constVal =
       offset state [] .idContext .templateArgBuffer .length =
     end
-    constVal #over [] .valueType fileState [] .wordStart newConst  state pushConst
+    constVal #over [] .valueType fileState [] .wordStart newConstant  state pushConst
   #drop:2 true return
 end
 proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 ) =: getCompilerOpParam
@@ -804,7 +843,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 valType labelContext typeContext sb.appendType
               fileState [] .wordStart state appendError
             end
-            #dup opConst state appendOp
+            #dup constantToOp state appendOp
           .val
         else
           ConstValue .none
@@ -898,7 +937,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             end
             #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType ConstValue .typeId new
           else
-            const opConst state appendOp
+            const constantToOp state appendOp
           end
         else
           state [] .autoTypeCount types.newAutoType
@@ -1110,7 +1149,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               0 while #dup count < do
                 #over #over typeContext types.compositeGetLabel
                   labelContext id.labelName #dup optional.hasData if .data #over:4 string.eq else #drop false end if
-                    fileState [] .wordStart constEnumLabel state pushConst
+                    fileState [] .wordStart newEnumLabelConstant state pushConst
                     #drop:2 return
                   end
                 1 +
@@ -1289,7 +1328,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state hasConst if
         state popConst
           #dup .val ConstValue .str == if
-            .val .str .length fileState [] .wordStart constInt state pushConst
+            .val .str .length fileState [] .wordStart newIntConstant state pushConst
             return
           end
         "cannot determine the length of constant " sb.wrap
