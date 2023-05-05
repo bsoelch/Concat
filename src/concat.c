@@ -2748,7 +2748,18 @@ size_t compileGetValue(FILE* target,size_t compiledOps,Operation const* op,size_
         handleError("array-type does not have a known size",ERROR_SYNTAX,op->filePos);
         break;
       }
-      fprintf(target,"arraySizes%"PRIi32,arrayTypeData(op->dataType)->id);
+      ArraySize dims=(ArraySize){.value=arrayTypeData(op->dataType)->dims,.isInt=true};
+      fputs("((",target);
+      printTypeNameC(arrayType(false,TYPE_I64,1,&dims,false),target);
+      fputs("){.data={",target);
+      for(int32_t d=0;d<arrayTypeData(op->dataType)->dims;d++){
+        if(!arrayTypeData(op->dataType)->sizes[d].isInt)
+          handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,(FilePosition){0});
+        if(d>0)
+          fputs(",",target);
+        fprintf(target,"%"PRIi64,arrayTypeData(op->dataType)->sizes[d].value);
+      }
+      fputs("}})\n",target);
       return size;
     case ID_TEMPLATE_ARGUMENT:
       handleError("template arguments should not exist at this stage of compilation",ERROR_MEMORY,op->filePos);
@@ -3448,17 +3459,6 @@ void compileToC(FILE* target,Program const* p){
         fprintf(target,"[%"PRIi64"]",arrayTypes[id].sizes[d].value);
       }
       fputs(";\n",target);
-      fputs("};\n",target);
-      if(!arrayTypes[id].sizeUsed)
-        continue;
-      fprintf(target,"int64_t const arraySizes%"PRIi32"[%"PRIi32"]={",arrayTypes[id].id,arrayTypes[id].dims);
-      for(int32_t d=0;d<arrayTypes[id].dims;d++){
-        if(!arrayTypes[id].sizes[d].isInt)
-          handleError("non integer array sizes should not exist at this state of compilation",ERROR_MEMORY,(FilePosition){0});
-        if(d>0)
-          fputs(",",target);
-        fprintf(target,"%"PRIi64,arrayTypes[id].sizes[d].value);
-      }
       fputs("};\n",target);
       continue;
     }
@@ -7084,7 +7084,7 @@ void typeCheckOperation(Operation op,TypeCheckState* state){
           insertStackOperation(state,op,0);
           peekTypeStack(state)->opCount=1;
           ArraySize dims=(ArraySize){.value=arrayTypeData(targetType)->dims,.isInt=true};
-          setTypeStackType(state,arrayType(true,TYPE_I64,1,&dims,false));
+          setTypeStackType(state,arrayType(false,TYPE_I64,1,&dims,false));
           return;
         }
       }
