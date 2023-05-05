@@ -82,6 +82,10 @@ proc( Type IdentifierInfo FilePosition  => Operation ) =: public opSet
   =:: pos
   OpValue .setId new #swap pos Operation new return
 end
+proc( Type IdentifierInfo FilePosition  => Operation ) =: public op@Id
+  =:: pos
+  OpValue .@Id new #swap pos Operation new return
+end
 proc( Type IdentifierInfo FilePosition  => Operation ) =: public opDeclare
   =:: pos
   OpValue .declareId new #swap pos Operation new return

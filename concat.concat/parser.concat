@@ -11,8 +11,7 @@
 #include "codeBlocks.concat"
 #include "identifiers.concat"
 
-
-struct( Type : valueType ConstValue : val FilePosition : pos ) =:: Constant
+struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
 struct(
               string : mut basePath
@@ -32,36 +31,32 @@ struct(
 ) =:: ParserState
 
 proc( FilePosition : pos => Constant ) =: newWildcardConst
-  Type .undefined ConstValue .wildCard new pos Constant new return
+  Type .undefined ConstValue .wildCard new IdentifierInfo optional.empty pos Constant new return
 end
 proc( bool FilePosition => Constant ) =: newBoolConstant
   =:: pos
-  types.primitive.BOOL #swap ConstValue .boolean new pos Constant new return
+  types.primitive.BOOL #swap ConstValue .boolean new IdentifierInfo optional.empty pos Constant new return
 end
 proc( i64 FilePosition => Constant ) =: newIntConstant
   =:: pos
-  #dup intConstType #swap ConstValue .int new pos Constant new return
+  #dup intConstType #swap ConstValue .int new IdentifierInfo optional.empty pos Constant new return
 end
 proc( i8 FilePosition => Constant ) =: newCharConstant
   =:: pos
-  types.primitive.I8 #swap ConstValue .chr new pos Constant new return
+  types.primitive.I8 #swap ConstValue .chr new IdentifierInfo optional.empty pos Constant new return
 end
 proc( StringConstant : str FilePosition : pos TypeContext ptr mut : context => Constant ) =: newStringConstant
   #using types
   str .length ArraySizeType .int ArraySize new =:: size
-  types.primitive.I8 true size @ 1 array.create true false context newArrayType #drop str ConstValue .str new pos Constant new return
+  types.primitive.I8 true size @ 1 array.create true false context newArrayType #drop str ConstValue .str new IdentifierInfo optional.empty pos Constant new return
 end
 proc( Type FilePosition => Constant ) =: newTypeConst
   =:: pos
-  types.primitive.TYPE #swap ConstValue .typeId new pos Constant new return
+  types.primitive.TYPE #swap ConstValue .typeId new IdentifierInfo optional.empty pos Constant new return
 end
 proc( Type i32 FilePosition => Constant ) =: newEnumLabelConstant
   =:: pos
-  ConstValue .enumLabel new pos Constant new return
-end
-proc( ConstValue Type FilePosition => Constant ) =: newConstant
-  =:: pos
-  #swap pos Constant new return
+  ConstValue .enumLabel new IdentifierInfo optional.empty pos Constant new return
 end
 
 proc( Constant : const => Operation ) =: constantToOp
@@ -566,7 +561,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "" string.wrap true return
     end
     #dup state getStaticArg #dup optional.hasData if .data
-      #dup .val #swap .argType fileState [] .wordStart newConstant state pushConst
+        #dup .argType
+        #swap .val
+        IdentifierInfo optional.empty ## XXX? id-info
+        fileState [] .wordStart
+      Constant new state pushConst
       true return
     else #drop end
     #dup state [] .currentFile state [] .idContext @ id.getIdentifier if ## read named constants
@@ -586,7 +585,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       constVal args 0 0 ConstantArray new fileState [] .wordStart state [] .idContext @ types.replaceGenerics constVal =
       offset state [] .idContext .templateArgBuffer .length =
     end
-    constVal #over [] .valueType fileState [] .wordStart newConstant  state pushConst
+    ## newIdentiferConstant
+      #dup [] .valueType
+      constVal
+      #over:2 id.asIdInfo optional.wrap
+      fileState [] .wordStart
+    Constant new state pushConst
   #drop:2 true return
 end
 proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 ) =: getCompilerOpParam
@@ -1004,8 +1008,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
     else #dup "@" string.wrap string.eq #over "addrOf" string.wrap string.eq | _if =:: opName
-      state hasConst if ## TODO address of constant variables
-        "cannot get address of constant value" sb.wrap fileState [] .wordStart state appendError2
+      state hasConst if
+        state popConst =:: mConst
+        mConst .idInfo optional.isEmpty if
+          "cannot get address of constant value" sb.wrap fileState [] .wordStart state appendError2
+        end
+        mConst .valueType mConst .idInfo .data fileState [] .wordStart op@Id state appendOp
         return
       end
       state peekOp #dup optional.isEmpty if #drop
