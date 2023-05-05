@@ -759,30 +759,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end .IDENTIFER =:: idName
           16 IdentifierMatch list.create =:: mut matches
           idName state [] .currentFile state [] .idContext @ matches @ optional.wrap id.searchIdentifier #drop:3
-          matches .length 0 == if
-            state [] .errors @ "could not find identifier \"" sb.wrap
-              idName sb.appendStr
-              '"' sb.appendC
-            fileState [] .wordStart appendWarning
-          end
-          "__________________\n" sb.wrap
-            "identifier " sb.appendS idName sb.appendStr ":\n" sb.appendS
+          "-----------------\n" sb.wrap
+            "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
             0 while #dup matches .length < do
               matches #over list.at .data =:: match
               #swap
                 " - " sb.appendS
                 match [] .data id.asIdInfo labelContext sb.appendIdInfo
+                " ( " sb.appendS
+                match [] .data [] .valueType labelContext typeContext sb.appendType
                 match [] .data [] .constValue ConstValue .none != if
                   " [ " sb.appendS
                   match [] .data [] .constValue state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
                   " ]" sb.appendS
                 end
-                " declared at " sb.appendS
+                " ) declared at " sb.appendS
                 match [] .data [] .labelId labelContext id.labelPos #dup optional.hasData if .data sb.appendPos else #drop "?" sb.appendS end
                 '\n' sb.appendC
               #swap 1 +
             end #drop
-            "__________________\n" sb.appendS
+            "-----------------\n" sb.appendS
             io.stdOut #over io.fputSb #drop
           sb.free #drop
           matches list.free #drop
