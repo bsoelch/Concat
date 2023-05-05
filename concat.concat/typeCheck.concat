@@ -77,15 +77,15 @@ proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut :
 end
 #end
 proc( bool : printOps i32 : maxTypes TypeCheckState ptr mut : state => ) =: printTypes
-  0 sb.create
-    "---------------\n" sb.appendS
+  printOps if "stack:\n" sb.wrap else "types:\n" sb.wrap end
+    "-----------------\n" sb.appendS
     printOps maxTypes state sb.appendTypeStack
-    "---------------\n" sb.appendS
+    "-----------------\n" sb.appendS
   io.stdOut #swap io.fputSb #drop
 end
 proc( TypeCheckState ptr mut : state => ) =: printTypesDebug
   0 sb.create
-    "---------------\n" sb.appendS
+    "-----------------\n" sb.appendS
     true -1 state sb.appendTypeStack
   io.stdOut #swap io.fputSb #drop
 end

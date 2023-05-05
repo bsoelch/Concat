@@ -1,4 +1,4 @@
 types:
 -----------------
-namedType "anEnum" [ enum (0) ( A B i32 : C ) ]
+named[0]( "anEnum" [ enum[0]( A B i32 : C ) ] )
 -----------------

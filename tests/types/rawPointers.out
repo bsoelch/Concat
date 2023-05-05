@@ -1,7 +1,6 @@
 -----------------
 identifier "aPtr":
-  - mutable local variable: i32 _ pointer mut
-      at rawPointers.concat:21:34
+ - mutable local variable "aPtr" ( i32 _ ptr mut ) declared at rawPointers.concat:21:34
 -----------------
 0
 1

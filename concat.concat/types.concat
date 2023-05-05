@@ -911,7 +911,9 @@ proc( stringBuilder types.NamedType LabelContext ptr TypeContext ptr bool => str
   =:: context
   =:: labelContext
   #swap
+    '"' sb.appendC
     #over .name labelContext id.labelName .data sb.appendStr
+    '"' sb.appendC
     " [ " sb.appendS
     #swap .data labelContext context allowRecurse appendTypeRecursive
     " ]"  sb.appendS

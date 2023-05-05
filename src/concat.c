@@ -1012,7 +1012,7 @@ char const* constTypeName(ConstantType type){
   switch(type){
     case CONSTANT_NONE:return "none";
     case CONSTANT_BOOL:return "bool";
-    case CONSTANT_INT:return "int";
+    case CONSTANT_INT:return "integer";
     case CONSTANT_CHAR:return "char";
     case CONSTANT_STRING:return "string";
     case CONSTANT_TYPE:return "type";
@@ -1343,7 +1343,7 @@ char const* typeClassName(TypeClass cls){
     case TYPECLASS_GENERIC_TYPE:
       return "generic";
     case TYPECLASS_TEMPLATE_TYPE:
-      return "template argument";
+      return "template";
     case TYPECLASS_STRUCT:
       return "structure";
     case TYPECLASS_ENUM:
@@ -1353,7 +1353,7 @@ char const* typeClassName(TypeClass cls){
     case TYPECLASS_ARRAY:
       return "array";
     case TYPECLASS_ARRAY_VIEW:
-      return "pointer";
+      return "ptr";
   }
   fprintf(stderr,"unexpected type-class %i",cls);
   return "";
@@ -1391,18 +1391,16 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
       return;
     case TYPECLASS_NAMED_TYPE:
     case TYPECLASS_NAMED_ENUM_LABEL:
-      fprintf(file,"namedType \"%"PRI_STR"\"",PRI_STR_ARGS(getLabelName(namedTypes[type.dataAs.id].name)));
-      if(deep)
-        fprintf(file," (%"PRIi32")",type.dataAs.id);
+      fprintf(file,"named[%"PRIi32"]( \"%"PRI_STR"\"",type.dataAs.id,PRI_STR_ARGS(getLabelName(namedTypes[type.dataAs.id].name)));
       fputs(" [ ",file);
       printTypeNameInternal(unwrapNamedType(type),file,noRecurse&!deep,deep);
-      fputs(" ]",file);
+      fputs(" ] )",file);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_AUTO_TYPE:
     case TYPECLASS_GENERIC_TYPE:
     case TYPECLASS_TEMPLATE_TYPE:
-      fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
+      fprintf(file,"%s[%"PRIi32"]",typeClassName(type.class),type.dataAs.id);
       printTypeFlags(type,file);
       return;
     case TYPECLASS_PROC_IN:
@@ -1413,12 +1411,12 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
     case TYPECLASS_ENUM:
     case TYPECLASS_ENUM_LABEL:
       if(!isProcInType(type)&&!isProcOutType(type)){
-        fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
+        fprintf(file,"%s[%"PRIi32"](",typeClassName(type.class),type.dataAs.id);
         if(noRecurse){
+          fputs(" ... )",file);
           printTypeFlags(type,file);
           return;
         }
-        fputs(" (",file);
       }
       for(int32_t e=0;e<getTypeElementCount(type);e++){
         if((isEnumType(type)||isEnumLabelType(type))&&typeEquals(getTypeElements(type)[e],TYPE_UNDEFINED)){
@@ -1440,12 +1438,13 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
       printTypeFlags(type,file);
       return;
     case TYPECLASS_PROCEDURE:
-      fprintf(file,"%s (%"PRIi32")",typeClassName(type.class),type.dataAs.id);
+      fprintf(file,"%s[%"PRIi32"]",typeClassName(type.class),type.dataAs.id);
       if(noRecurse){
+        fputs("( ... )",file);
         printTypeFlags(type,file);
         return;
       }
-      fputs(" ( ",file);
+      fputs("( ",file);
       printTypeNameInternal(procTypeData(type)->inType,file,noRecurse&!deep,deep);
       fputs(" => ",file);
       printTypeNameInternal(procTypeData(type)->outType,file,noRecurse&!deep,deep);
@@ -1463,7 +1462,7 @@ void printTypeNameInternal(TypeId type,FILE* file,bool noRecurse,bool deep){
             fprintf(file," %"PRIi64,arrayTypeData(type)->sizes[i].value);
             continue;
           }
-          fprintf(file," generic(%"PRIi64")",arrayTypeData(type)->sizes[i].value);
+          fprintf(file," staticArg(%"PRIi64")",arrayTypeData(type)->sizes[i].value);
           continue;
         }
         fputs(" _",file);
@@ -2278,23 +2277,24 @@ ScopeNode* scopeItrNext(ScopeIterator* itr){
   return n;
 }
 void printIdentiferMatch(ScopeNode const* asIdentifier,FilePosition pos){
-  fputs("  - ",stdout);
+  fputs(" - ",stdout);
   Label const* mLabel=label(asIdentifier->labelId,pos);
   if(isMutableLabel(mLabel))
     fputs("mutable ",stdout);
-  printf("%s: ",idNames[asIdentifier->idType]);
+  printf("%s \"%"PRI_STR"\" ( ",idNames[asIdentifier->idType],PRI_STR_ARGS(mLabel->label));
   printTypeName(asIdentifier->type,stdout);
   if(asIdentifier->constValue.constType!=CONSTANT_NONE){
     fputs(" [ ",stdout);
     printConstValue(asIdentifier->constValue,stdout);
     fputs(" ]",stdout);
   }
-  if(asIdentifier->templateData.templateId!=-1){
+  fputs(" )",stdout);
+  if(asIdentifier->templateData.templateId!=-1){//XXX synchronize printing of template info
     fprintf(stdout," template(%"PRIi32"):(",asIdentifier->templateData.templateId);
     printTypeName(asIdentifier->templateData.args,stdout);
     fputs(" )",stdout);
   }
-  fputs("\n      at ",stdout);
+  fputs(" declared at ",stdout);
   printFilePosition(mLabel->declaredAt,stdout);
   puts("");
 }

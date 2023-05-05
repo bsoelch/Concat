@@ -131,30 +131,29 @@ proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext 
         "_"  sb.appendS
         break
       boolean case
-        "boolean " sb.appendS
+        "bool: " sb.appendS
         #over .boolean if "true" sb.appendS else "false" sb.appendS end
         break
       int case
-        "integer "  sb.appendS
+        "integer: "  sb.appendS
         #over .int sb.appendI
         break
       str case
-        "string \""  sb.appendS
+        "string: \""  sb.appendS
         #over .str labelContext id.scAsStr  sb.appendEscapedStr
                '\"'  sb.appendC
         break
       chr case
-        "char \'"  sb.appendS
+        "char: \'"  sb.appendS
         #over .chr sb.appendEscapedChr
              '\''  sb.appendC
         break
       typeId case
-        "type \""     sb.appendS
+        "type: "     sb.appendS
         #over .typeId labelContext typeContext sb.appendType
-             '\"'     sb.appendC
         break
       enumLabel case
-        "enum label ("   sb.appendS
+        "enum label: ("   sb.appendS
         #over .enumLabel sb.appendI
                  ')'     sb.appendC
         break
@@ -169,11 +168,11 @@ proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext 
         "}" sb.appendS
         break
       genericArg case
-        "generic argument "  sb.appendS
+        "generic argument: "  sb.appendS
         #over .genericArg sb.appendI
         break
       templateArg case
-        "template argument "  sb.appendS
+        "template argument: "  sb.appendS
         #over .genericArg sb.appendI
         break
     end
