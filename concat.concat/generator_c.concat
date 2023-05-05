@@ -459,9 +459,15 @@ proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : inde
           "(" sb.appendS
         #swap 1 +
       end #drop
+      target #over io.fputSb #drop
+      sb.clear
       0 while #dup dims < do
         operations index isGlobal target prog compileOp
         #dup dims 1 - < if
+          #dup sizes .length >= if #drop:2
+            prog [] .errors @ "number of indices exceeds dimension" sb.wrap operations index [] 1 - array.at .data [] .pos appendError
+            return
+          end
           #swap
             "*" sb.appendS
             sizes #over:2 array.get .value sb.appendI
@@ -578,7 +584,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
     arrayConstant case const .arrayConstant idContext [] .constContext @ constArrayAsArray =:: mArray
       constType typeContext types.getBaseType =:: baseType
       constType isGlobal target prog constStart
-      '{' sb.appendC
+      "{.data={" sb.appendS
       0 while #dup mArray .length < do
         #swap
         #over 0 > if
@@ -589,7 +595,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
         baseType mArray #over:3 array.get isGlobal target prog compileConstant
         #swap 1 +
       end #drop
-      '}' sb.appendC
+      "}}" sb.appendS
       isGlobal target prog constEnd
       break
     genericArg case ## XXX find correct label
@@ -853,9 +859,12 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       idInfo .idType switch
         LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT PROCEDURE case
           target "(&" io.fputs #drop
+          op [] .dataType typeContext types.getArrayDims 0 > if
+            target "(" io.fputs #drop
+          end
           idInfo target prog printIdName
           op [] .dataType typeContext types.getArrayDims 0 > if
-            target ".data[0]" io.fputs #drop
+            target ".data[0])" io.fputs #drop
           end
           target ")" io.fputs #drop
           return
@@ -939,9 +948,13 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     @ArrayElement case
       target "(&" io.fputs #drop
+      op [] .dataType typeContext types.getBaseType =:: eltType
+      eltType typeContext types.getArrayDims 0 > if
+        target "(" io.fputs #drop
+      end
       op [] .dataType op [] .val .@ArrayElement operations index isGlobal target prog compileGetIndex
-      op [] .dataType typeContext types.getArrayDims 0 > if
-        target ".data[0]" io.fputs #drop
+      eltType typeContext types.getArrayDims 0 > if
+        target ".data[0])" io.fputs #drop
       end
       target ")" io.fputs #drop
       break
@@ -956,9 +969,13 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     @TupleElement case
       target "(&" io.fputs #drop
+      op [] .dataType op [] .val .@TupleElement typeContext types.compositeGetElement =:: eltType
+      eltType typeContext types.getArrayDims 0 > if
+        target "(" io.fputs #drop
+      end
       op [] .dataType op [] .val .@TupleElement false operations index isGlobal target prog compileGetElt
-      op [] .dataType typeContext types.getArrayDims 0 > if
-        target ".data[0]" io.fputs #drop
+      eltType typeContext types.getArrayDims 0 > if
+        target ".data[0])" io.fputs #drop
       end
       target ")" io.fputs #drop
       return
@@ -973,9 +990,12 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     @EnumElement case
       target "(&" io.fputs #drop
+      op [] .dataType typeContext types.getArrayDims 0 > if
+        target "(" io.fputs #drop
+      end
       op [] .dataType op [] .val .@EnumElement true operations index isGlobal target prog compileGetElt
       op [] .dataType typeContext types.getArrayDims 0 > if
-        target ".data[0]" io.fputs #drop
+        target ".data[0])" io.fputs #drop
       end
       target ")" io.fputs #drop
       return

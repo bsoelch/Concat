@@ -321,8 +321,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
           break
         getArrayElement case
           opHead [] .val .getArrayElement opHead [] .val .@ArrayElement =
-          opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
-          opHead [] .dataType stackHead [] .valType =
+          stackHead [] .valType true typeContext types.getAddressType stackHead [] .valType =
           break
         default
           opOffset newOffset != if
@@ -346,7 +345,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
         0
         pos
       opArrayGet
-        typeInfo [] .valType #over .dataType =
+        stackHead [] .valType #over .dataType =
         0 #over .val .getArrayElement =
       state [] .opStack .data newOffset [] =
       newOffset 1 + newOffset =
@@ -1168,13 +1167,14 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
       1 +
     end #drop
   end
+  pointerType op [] .dataType =
   op [] .val OpValue .@ArrayElement == if
     ## TODO compute correct type for partial array access
     ## <i32 3 3 ptr> 1 [] @ -> <i32 3 ptr>
-    baseType pointerType typeContext isMutable typeContext getAddressType op [] .dataType =
+    baseType pointerType typeContext isMutable typeContext getAddressType
   else
-    baseType op [] .dataType =
-  end
+    baseType
+  end =:: valType
   op [] .val OpValue .setArrayElement == if ## SET_ARRAY_ELEMENT <array> <value>
     pointerType typeContext isMutable ! if
       0 sb.create
@@ -1191,6 +1191,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     return
   end
   op indexCount 1 + state insertStackOp
+  valType state [] .typeStack list.peek .data [] .valType = ## change type on stack
   op [] .val OpValue .getArrayElement == if
     pointerType typeContext isMutable state [] .typeStack list.peek .data [] .writable =
   end
