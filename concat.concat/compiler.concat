@@ -167,6 +167,34 @@ proc( => ) =: parseArgs
   ## XXX check if libPath exists
 end
 
+proc( CompilerError list ptr mut : errors => ) =: checkErrors
+  errors [] .length 0 == if
+    return
+  end
+  false =:: mut hasError
+  1024 sb.create
+    0 while #dup errors [] .length < do
+      #swap
+        errors [] #over:2 list.at .data =:: err
+        err [] sb.appendCompilerError
+        err [] .errType ErrorType .ERROR == if
+          true hasError =
+        else wError err [] .errType ErrorType .WARNING == & _if -542 print
+          true hasError =
+        end
+      #swap 1 +
+    end #drop
+    errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr #drop else io.stdErr end
+      #dup #over:2 io.fputSb #drop
+    errorFile optional.hasData if io.fclose #drop else #drop end ## don't close stdErr
+  sb.free #drop
+  hasError if
+    1 sys.exit
+    ..unreachable
+  end
+  errors [] list.clear errors [] =
+end
+
 entryPoint: ## TODO check return value of fopen
   parseArgs
   srcFile libPath basePath parseProgram =:: mut prog
@@ -179,9 +207,8 @@ entryPoint: ## TODO check return value of fopen
     io.fclose #drop
     parsedOps sb.free #drop
   end
-  prog .errors .length 0 == if
-    prog @ typeCheckProgram
-  end
+  prog .errors @ checkErrors
+  prog @ typeCheckProgram
   compilerTokensFile optional.hasData if
     1024 sb.create
       prog sb.appendProgram
@@ -191,23 +218,9 @@ entryPoint: ## TODO check return value of fopen
     io.fclose #drop
     parsedOps sb.free #drop
   end
-  prog .errors .length 0 > if
-    1024 sb.create
-      0 while #dup prog .errors .length < do
-        #swap
-          prog .errors #over:2 list.at .data [] sb.appendCompilerError
-        #swap 1 +
-      end #drop
-      errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr #drop else io.stdErr end
-        #dup #over:2 io.fputSb #drop
-      errorFile optional.hasData if io.fclose #drop else #drop end ## don't close stdErr
-    sb.free #drop
-    1 sys.exit
-    ..unreachable
-  end
-  prog .errors .length 0 == if
-    outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
-      #dup prog @ compileToC
-    io.fclose #drop
-  end
+  prog .errors @ checkErrors
+  outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
+    #dup prog @ compileToC
+  io.fclose #drop
+  prog .errors @ checkErrors
 end

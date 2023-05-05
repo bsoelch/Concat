@@ -1,11 +1,28 @@
 ## collection of basic declarations used by all compiler files
 #include stringBuilder
+#include list
 
 i32 =:: public FileId
 -1 FileId =: public FILE_ID_NONE
 
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
-struct( stringBuilder : message FilePosition : pos ) =:: public CompilerError
+enum( ERROR WARNING INFO ) =:: public ErrorType
+struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: public CompilerError
+proc( CompilerError list ptr mut : errors stringBuilder : message FilePosition : pos => ) =: public appendError
+  errors []
+    message ErrorType .ERROR pos CompilerError new list.append
+  errors [] =
+end
+proc( CompilerError list ptr mut : errors stringBuilder : message FilePosition : pos => ) =: public appendWarning
+  errors []
+    message ErrorType .WARNING pos CompilerError new list.append
+  errors [] =
+end
+proc( CompilerError list ptr mut : errors stringBuilder : message FilePosition : pos => ) =: public appendInfo
+  errors []
+    message ErrorType .INFO pos CompilerError new list.append
+  errors [] =
+end
 
 i32 =:: public LabelId
 i32 =:: public NamespaceId

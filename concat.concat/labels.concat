@@ -170,16 +170,13 @@ struct(
             'x' 'u' 'U' case =:: c
               c 'x' == if 2 else c 'u' == _if 4 else 8 end =:: nChars
               #over nChars + str .length >= if
-                "not enough characters for escape sequence \"\\" sb.wrap
+                errors "not enough characters for escape sequence \"\\" sb.wrap
                   c                     sb.appendC
                   "\" need "            sb.appendS
                   nChars                sb.appendI
                   " got "               sb.appendS
-                  str .length #over:3 - sb.appendI
-                pos CompilerError new
-                errors []
-                  #swap list.append
-                errors [] =
+                  str .length #over:4 - sb.appendI
+                pos appendError
                 '\\' pos @ updateFilePos
                 c pos @ updateFilePos
                 #swap 1 +
@@ -195,14 +192,10 @@ struct(
                     i8 cast list.append
                   else
                     #drop
-                    errors []
-                      "Unicode escape sequences are not yet supported" sb.wrap pos CompilerError new list.append
-                    errors [] =
+                    errors "Unicode escape sequences are not yet supported" sb.wrap pos appendError
                   end
                 else #drop
-                  errors []
-                    "invalid hex-code for escape sequence: \"" sb.wrap str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos CompilerError new list.append
-                  errors [] =
+                  errors "invalid hex-code for escape sequence: \"" sb.wrap str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos appendError
                 end
               #swap ## update file position
                 0 while #dup nChars < do
@@ -212,9 +205,7 @@ struct(
                 end #drop
               continue
             default
-              errors []
-                "unknown escape sequence \"\\" sb.wrap #over:2 sb.appendC '\"' sb.appendC pos CompilerError new list.append
-              errors [] =
+              errors "unknown escape sequence \"\\" sb.wrap #over:2 sb.appendC '\"' sb.appendC pos appendError
               '\\' pos @ updateFilePos
               pos @ updateFilePos
           end
