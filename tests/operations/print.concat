@@ -3,5 +3,5 @@ entryPoint:
   'A' print
   0x123456789abcdef print
   true print
-  "Hello" print ## TODO find a constant address to get reproducable results
+  0x12345678 i8 8 ptr cast! print
 end
