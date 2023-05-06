@@ -24,7 +24,7 @@ i32 =:: public LabelFlag
 #end
 
 struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
-struct( StringConstant : name FilePosition : pos NamespaceId : namespace FileId : srcFile LabelFlag : flags ) =:: Label
+struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : flags ) =:: Label
 
 struct(
   i8 list : mut nameBuffer
@@ -60,7 +60,7 @@ struct(
     id 0 < id context [] .labels .length >= | if
       NAMESPACE_ID_NONE return
     end
-    context [] .labels id list.at .data [] .namespace return
+    context [] .labels id list.at .data [] .namespaceInfo .current return
   end
   proc( LabelId : id LabelContext ptr mut : context => FileId ) =: public getLabelFile
     id 0 < id context [] .labels .length >= | if
@@ -72,7 +72,7 @@ struct(
     id 0 < id context [] .labels .length >= | if
       return
     end
-    context [] .labels id list.get .namespace context [] .namespaceInfo .current =
+    context [] .labels id list.at .data [] .namespaceInfo context [] .namespaceInfo =
   end
   proc( LabelId : id LabelContext ptr : context => string optional ) =: public labelName
     id 0 < id context [] .labels .length >= | if
@@ -105,7 +105,7 @@ struct(
       ## Label
         offset str .length StringConstant new
         pos
-        context [] .namespaceInfo .current
+        context [] .namespaceInfo
         srcFile
         flags
       Label new list.append
