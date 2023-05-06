@@ -3,7 +3,6 @@
 
 entryPoint:
   #find s2
-  s1 i8 ptr cast  s2 i8 ptr cast == print
   s3 ..length print
   specialString ..length print
   0 while #dup specialString ..length < do

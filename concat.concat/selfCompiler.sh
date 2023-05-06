@@ -1,7 +1,6 @@
 #!/bin/sh
-compilerSrc=( "../src/concat.c" "../src/strings.c" )
-compilerTarget="../concat"
-codeSrc="./compiler.concat"
+baseCompiler="../concat"
+compilerSrc="./compiler.concat"
 codeCTarget="./concat2.c"
 codeTarget="./concat2"
 codeCTarget2="./concat3.c"
@@ -11,27 +10,26 @@ cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual"
 
 # clear console
 clear
-echo "recompile compiler"
-echo "-----------------------------------------"
-gcc ${cArgs[@]} ${compilerSrc[@]} -o $compilerTarget && {
-  echo "compile program"
+echo "-----------------------------------------" && {
+  echo "recompile compiler"
   echo "-----------------------------------------"
-  $compilerTarget "$codeSrc" -o "$codeCTarget" -W -q -l "../lib/"
+  $baseCompiler "$compilerSrc" -o "$codeCTarget" -W -q -l "../lib/"
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"
   gcc ${cArgs[@]} -Wno-unused $codeCTarget "./extern.c" -o $codeTarget
 } && {
-  echo "run compiled code"
+  echo "compile compiler with compiler"
   echo "-----------------------------------------"
-  $codeTarget $codeSrc -l "../lib/" -o $codeCTarget2
+  $codeTarget $compilerSrc -l "../lib/" -o $codeCTarget2
 } && {
-  echo "compile compiled code"
+  echo "compile generated C-code"
   echo "-----------------------------------------"
   gcc ${cArgs[@]} -Wno-unused $codeCTarget2 "./extern.c" -o $codeTarget2
 } && {
-  echo "compile compiler with compiler"
+  echo "check if compiler output is stable under recompilation"
   echo "-----------------------------------------"
-  $codeTarget2 $codeSrc -l "../lib/" -o $codeCTarget3
-  diff $codeCTarget2 $codeCTarget3
+  $codeTarget2 $compilerSrc -l "../lib/" -o $codeCTarget3
+} && {
+  diff $codeCTarget2 $codeCTarget3 && mv "./concat3" $baseCompiler
 }

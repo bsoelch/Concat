@@ -1,2 +1,1 @@
-wrong type for switch label: expected named[0]( "e" [ enum label[0]( A i32 : B i64 : ERROR ) ] ) got type
-type error at switchShadowsGlobal.concat:11:5
+wrong type for switch label: expected named[0]( "e" [ enum[0]( A i32 : B i64 : ERROR ) ] ) got type at switchShadowsGlobal.concat:11:5

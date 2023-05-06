@@ -1,9 +1,9 @@
 #template type : T #end
 type : Node
 #template type : T #end
-struct( T : data  T Node ptr : next ) Node =
+struct( T : data  T Node ptr : next ) T Node =
 
 entryPoint:
   i32 Node : aNode
-  0 aNode @ aNode =
+  0 aNode @ i32 Node new aNode =
 end

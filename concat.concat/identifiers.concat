@@ -261,7 +261,7 @@
         end
      .parent
     end #drop
-    matches optional.isEmpty match optional.hasData & if ## XXX return value indicating multi-match
+    matches optional.isEmpty match optional.hasData & if ## TODO return value indicating multi-match
       matchGlobal if globalName else idName end match .data false return
     end
     ## 4. template arguments

@@ -1531,7 +1531,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           block [] .blockData .switchBlock .switchType =:: switchType
           op [] .val .Constant =:: constant
           op [] .dataType switchType typeContext types.canAutoCast ! if
-            "wrong type for switch-label expected " sb.wrap
+            "wrong type for switch label: expected " sb.wrap
                switchType labelContext typeContext sb.appendType
                " got " sb.appendS
                op [] .dataType labelContext typeContext sb.appendType

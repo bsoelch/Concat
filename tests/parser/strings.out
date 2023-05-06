@@ -2,7 +2,6 @@
 identifier "s2":
  - global variable "s2" ( i8 8 ptr [ string: "A string" ] ) declared at strings.concat:2:16
 -----------------
-true
 6
 17
 34

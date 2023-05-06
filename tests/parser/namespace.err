@@ -1,9 +1,2 @@
-Warning:
-multiple matches for identifier "spaceVar"
-  - global variable "spaceVar" at namespace.concat:3:13
-  - global variable "spaceVar" at namespace.concat:5:12
-syntax error at namespace.concat:15:3
-Warning:
-  declaration of global variable "i"
-  shadows previous declaration: global variable "i" at namespace.concat:37:7
-syntax error at namespace.concat:42:9
+declaration of identifier "i" at namespace.concat:42:9
+shadows previous declaration  at namespace.concat:37:7
