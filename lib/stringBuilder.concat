@@ -1,5 +1,6 @@
 #include mem
 #include string
+#include arrayView
 
 struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
 #namespace sb
@@ -67,6 +68,9 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
   end
   proc( stringBuilder => string ) =: public asStr
     #dup .data #swap .length string.create return
+  end
+  proc( stringBuilder => i8 arrayView ) =: public asArray
+    #dup .data #swap .length array.create return
   end
 
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars

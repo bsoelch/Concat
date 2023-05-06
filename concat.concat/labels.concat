@@ -2,6 +2,7 @@
 #include string
 #include list
 #include optional
+#include utf8
 
 #include "files.concat"
 #include "common.concat"
@@ -117,6 +118,7 @@ struct(
     stringStart =:: mut pos
     '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset
+    6 sb.create =:: mut uft8Buff
     context [] .nameBuffer
       #dup .length str .length + list.ensureCap
       0 while #dup str .length < do
@@ -188,14 +190,40 @@ struct(
               1 +
               #swap
                 str .data #over:2 + nChars string.create 16 number.tryParseInt number.ParserError .NONE == if
-                  c 'x' == if
-                    i8 cast list.append
+                  #dup 0 < if #drop
+                    errors "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos appendError
                   else
-                    #drop
-                    errors "Unicode escape sequences are not yet supported" sb.wrap pos appendError
+                    c 'x' == if
+                      i8 cast list.append
+                    else c 'u' == _if
+                      uft8Buff sb.clear
+                        #swap i32 cast sb.appendCodePoint
+                      uft8Buff =
+                      uft8Buff sb.asArray list.appendArray
+                    else c 'U' == _if
+                      #dup i32.MAX > if
+                        errors "hex-code for escape sequence: \"\\U" sb.wrap
+                          str .data #over:5 + nChars string.create sb.appendStr
+                          "\" does not fit in a signed integer" sb.appendS
+                        pos appendError
+                      else #dup utf8.MAX_CODEPOINT > _if
+                        errors "code-point outside allowed range: \"\\U" sb.wrap
+                          str .data #over:5 + nChars string.create sb.appendStr
+                          "\" (maximum: " sb.appendS
+                          utf8.MAX_CODEPOINT sb.appendX
+                          ")" sb.appendS
+                        pos appendWarning
+                      end
+                      uft8Buff sb.clear
+                        #swap i32 cast sb.appendCodePoint
+                      uft8Buff =
+                      uft8Buff sb.asArray list.appendArray
+                    else #drop
+                      errors "unknown hex-escape sequence: \"\\" sb.wrap c sb.appendC '\"' sb.appendC pos appendError
+                    end
                   end
                 else #drop
-                  errors "invalid hex-code for escape sequence: \"" sb.wrap str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos appendError
+                  errors "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos appendError
                 end
               #swap ## update file position
                 0 while #dup nChars < do
@@ -213,6 +241,7 @@ struct(
         1 +
       end #drop
     context [] .nameBuffer =
+    uft8Buff sb.free #drop
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
 
