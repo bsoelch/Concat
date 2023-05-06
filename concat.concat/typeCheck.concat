@@ -1698,7 +1698,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             types.primitive.BOOL outType =
           else #drop end
           ## ptr==ptr -> bool
-          left [] .valType typeContext types.isRawPointer right [] .valType typeContext types.isRawPointer &
+          left [] .valType typeContext types.isPointer right [] .valType typeContext types.isPointer &
           left [] .valType right [] .valType types.typeEquals & if
             left [] .valType op [] .dataType =
             types.primitive.BOOL outType =
