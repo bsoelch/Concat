@@ -1,5 +1,5 @@
 #!/bin/sh
-compilerSrc=( "./src/concat.c" "./src/strings.c" )
+compilerSrc=( "./CConcat/concat.c" "./CConcat/strings.c" )
 compilerTarget="./concat"
 codeSrc="./code.concat"
 codeCTarget="./code.c"
