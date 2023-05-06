@@ -759,9 +759,15 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
   =:: context
   =:: labelContext
   =:: comp
+  comp .labelOffset id.LABEL_ID_NONE == =:: unlabeled
   0 while #dup comp .eltCount < do
     #swap
       context [] .compositeData #over:2 comp .eltsOffset + list.at .data =:: eltType
+      unlabeled if
+        eltType [] labelContext context false appendTypeRecursive
+        ' ' appendC
+        #swap 1 + continue
+      end
       comp .labelOffset #over:2 + =:: label
       label labelContext id.labelName =:: labelName
       eltType [] context types.isEmpty ! if
