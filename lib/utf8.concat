@@ -2,14 +2,17 @@
 
 
 #namespace utf8
-  i32 =:: public codePoint
-  -1 codePoint =: public UNKNOWN_CODEPOINT
-  0x10FFFF codePoint =: public MAX_CODEPOINT
+  i32 =:: public Codepoint
+  -1 Codepoint =: public UNKNOWN_CODEPOINT
+  0x10FFFF Codepoint =: public MAX_CODEPOINT
 #end
 
 #namespace sb
-  proc( stringBuilder : sb utf8.codePoint : cp => stringBuilder ) =: public appendCodePoint
+  proc( stringBuilder : sb utf8.Codepoint : cp => stringBuilder ) =: public appendCodepoint
     cp 0 < if ## invalid code point
+      cp -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
+        sb cp neg i8 cast sb.appendC return
+      end
       sb return
     end
     cp 0x80 < if ## 0*** ****
@@ -58,41 +61,59 @@
   end
 #end
 #namespace utf8
-  proc( codePoint => bool ) =: public isValid
+  proc( Codepoint => bool ) =: public isValid
     #dup 0 >= #swap MAX_CODEPOINT <= & return
   end
-  proc( string  : str i64 : index => string i64 codePoint ) =: public nextCodePoint
+  proc( string  : str i64 : index => string i64 Codepoint ) =: public nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
     index str .length >= if
       str str .length UNKNOWN_CODEPOINT return
     end
-    str index string.charAt 0 >= if ## 0x00 - 0x7f
-      str index 1 + str index string.charAt codePoint cast return
-    end
     index =:: mut i
-    while str i string.charAt 0xc0 & 0x80 == do
+    str i string.charAt 0xff & =:: mut c
+    c 0xc0 & 0x80 == c 0xfe >= | if ## invalid starting character
+      str index 1 + c neg Codepoint cast return
+    end
+    c 0x80 < if ## 0x00 - 0x7f
+      str index 1 + c Codepoint cast return
+    end
+    0x80 =:: mut mask
+    0 =:: mut count
+    while c mask & 0 != do
+      mask 1 >>u mask =
+      count 1 + count =
+    end
+    c mask 1 - & =:: mut cp
+    c =:: c0
+    i =:: i0
+    i count + str .length > if ## not enough characters
+      str i0 1 + c0 neg return
+    end
+    while count 1 > do
+      cp 6 << cp =
       i 1 + i =
-      i str .length >= if
-        str str .length UNKNOWN_CODEPOINT return
+      str i string.charAt 0xff & c =
+      c 0xc0 & 0x80 != if ## invalid character in sequence
+        str i0 1 + c0 neg return
       end
+      cp c 0x3f & | cp =
+      count 1 - count =
     end
-    str i string.charAt 0xff & =:: c
-    ## TODO read multi-byte unicode sequences
-    c 0b1110_0000 < if ## 110 ...
-    
+    cp 0x80 < if ## overlong single char
+      str i0 1 + c0 neg return
     end
-    c 0b1111_0000 < if ## 1110 ...
-    
+    count 2 > cp 0x800 < & if ## overlong character
+      str i0 1 + c0 neg return
     end
-    c 0b1111_1000 < if ## 1111 0...
-    
+    count 3 > cp 0x10000 < & if ## overlong character
+      str i0 1 + c0 neg return
     end
-    c 0b1111_1100 < if ## 1111 10...
-    
+    count 4 > cp 0x200000 < & if ## overlong character
+      str i0 1 + c0 neg return
     end
-    c 0b1111_1110 < if ## 1111 110...
-    
-    end    
-    str i 1 + UNKNOWN_CODEPOINT return
+    count 5 > cp 0x4000000 < & if ## overlong character
+      str i0 1 + c0 neg return
+    end
+    str i 1 + cp Codepoint cast return
   end
 
 #end

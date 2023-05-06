@@ -197,7 +197,7 @@ struct(
                       i8 cast list.append
                     else c 'u' == _if
                       uft8Buff sb.clear
-                        #swap i32 cast sb.appendCodePoint
+                        #swap i32 cast sb.appendCodepoint
                       uft8Buff =
                       uft8Buff sb.asArray list.appendArray
                     else c 'U' == _if
@@ -215,7 +215,7 @@ struct(
                         pos appendWarning
                       end
                       uft8Buff sb.clear
-                        #swap i32 cast sb.appendCodePoint
+                        #swap i32 cast sb.appendCodepoint
                       uft8Buff =
                       uft8Buff sb.asArray list.appendArray
                     else #drop
