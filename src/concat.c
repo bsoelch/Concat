@@ -2822,7 +2822,7 @@ size_t compileOp(FILE* target,size_t compiledOps,Operation const* op,size_t opSi
               fputs("\"PRIi64\"",target);
               break;
             case PRIMITIVE_FLOAT:
-              fputs("e",target);
+              fputs("g",target);
               break;
             default:
               fprintf(stderr,"printing primitive Type %s is not supported\n",primitiveName(op->dataType.dataAs.primitive));
