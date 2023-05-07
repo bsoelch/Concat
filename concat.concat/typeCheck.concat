@@ -2331,6 +2331,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .typeStack list.peek .data [] .opCount  argIndex [] .opCount 1 - +  state [] .typeStack list.peek .data [] .opCount =
       ## ... | ARG INDEX | ARG_LEN INDEX |
       true state [] .hasGetArgs =
+      true state [] .hasCheckIndex =
       return
     length case
       op state checkReachable
