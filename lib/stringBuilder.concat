@@ -1,21 +1,18 @@
 #include mem
+#include list
 #include string
 #include arrayView
 
-struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stringBuilder
+i8 list #typedef public stringBuilder
 #namespace sb
   proc( i64 : cap => stringBuilder ) =: public create
-    cap i8 mem.alloc cap 0 stringBuilder new return
+    cap i8 list.create return
   end
   proc( stringBuilder => stringBuilder ) =: public clear
-    0 #over .length =
-    return
+    list.clear return
   end
   proc( stringBuilder => stringBuilder ) =: public free
-    #dup .data mem.free
-    0 #over .cap =
-    0 #over .length =
-    return
+    list.free return
   end
   proc( i64 : static k  i8 k ptr : str => stringBuilder ) =: public wrap
     k create
@@ -23,56 +20,30 @@ struct( i8 _ ptr mut : mut data i64 : mut cap i64 : mut length ) =:: public stri
     return
   end
   proc( stringBuilder : str i64 : index => i8 ) =: public charAt
-    index 0 < index str .length >= | if
-      '\x00' return ## TODO error handling
-    end
-    str .data index [] return
+    str index list.get return
   end
   proc( stringBuilder : buffer i64 : minCap => stringBuilder ) =: public ensureCap
-    buffer
-      #dup .cap minCap > if
-        return
-      end
-      minCap minCap 8 / + 8 +
-        #over .data #over mem.realloc #over:2 .data =
-        #over .cap =
-    return
+    buffer minCap list.ensureCap return
   end
   proc( stringBuilder : buffer i8 : chr => stringBuilder ) =: public appendC
-    buffer
-      #dup .length 1 + sb.ensureCap
-      chr #over .data #over:2 .length [] =
-      #dup .length 1 + #over .length =
-    return
+    buffer chr list.append return
   end
   proc( stringBuilder : buffer i64 : static k i8 k ptr : str => stringBuilder ) =: public appendS
-    buffer
-      #dup .length k + sb.ensureCap
-      #dup .data #over .length + str i8 _ ptr cast k mem.copy #drop
-      #dup .length k + #over .length =
-    return
+    buffer str list.appendP return
   end
   proc( stringBuilder : buffer string : str => stringBuilder ) =: public appendStr
-    buffer
-      #dup .length str .length + sb.ensureCap
-      #dup .data #over .length + str .data str .length mem.copy #drop
-      #dup .length str .length + #over .length =
-    return
+    buffer str list.appendArray return
   end
   proc( stringBuilder : buffer stringBuilder : str => stringBuilder ) =: public appendSb
-    buffer
-      #dup .length str .length + sb.ensureCap
-      #dup .data #over .length + str .data str .length mem.copy #drop
-      #dup .length str .length + #over .length =
-    return
-  end
-  proc( stringBuilder => string ) =: public asStr
-    #dup .data #swap .length string.create return
+    buffer str list.appendAll return
   end
   proc( stringBuilder => i8 arrayView ) =: public asArray
     #dup .data #swap .length array.create return
   end
-
+  proc( stringBuilder => string ) =: public asStr
+    asArray return
+  end
+  ## XXX? move to number
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
   
   proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
