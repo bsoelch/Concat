@@ -1222,6 +1222,15 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
+    stackAlloc case
+      target "((" io.fputs #drop
+      op [] .dataType target prog printTypeName
+      target "*)alloca(sizeof(" io.fputs #drop
+      op [] .dataType target prog printTypeName
+      target ")*" io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target "))\n" io.fputs #drop
+      return
     unreachable case
       ## XXX? printf-statement for error message
       target "exit(EXIT_FAILURE);//unreachable\n" io.fputs #drop

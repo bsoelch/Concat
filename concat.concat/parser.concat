@@ -225,7 +225,7 @@ proc( LabelId : label Type : valType i64 : index ParserState ptr mut : state => 
   list.append state [] .staticArgs =
 end
 proc( string : name ParserState ptr mut : state => StaticArgument optional ) =: getStaticArg
-  state [] .staticArgsOffset while #dup state [] .staticArgs .length < do
+  0 while #dup state [] .staticArgs .length < do
     state [] .staticArgs #over list.get
       #dup .labelId state [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
         #swap #drop optional.wrap return
@@ -900,14 +900,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           inType typeContext types.compositeEltCount =:: count
           0 while #dup count < do
             inType #over typeContext types.compositeGetLabel =:: argLabel
+            inType #over typeContext types.compositeGetElement =:: argType
               argLabel labelContext id.isLabelEmpty ! if
                 ## declareIdentifier
                   argLabel
-                  inType #over:2 typeContext types.compositeGetElement
+                  argType
                   IdentifierType .ARGUMENT
                   #over:3
                   argLabel labelContext id.labelFlags id.FLAG_STATIC & 0 != if
-                    inType types.primitive.TYPE types.typeEquals if
+                    argType types.primitive.TYPE types.typeEquals if
                       #over:4 types.newGenericType ConstValue .typeId new
                     else
                       #over:4 ConstValue .genericArg new
@@ -1371,6 +1372,29 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "..unreachable" string.wrap string.eq _if #drop
       fileState [] .wordStart opUnreachable state appendOp
+      return
+    else #dup "..alloca" string.wrap string.eq _if =:: opName
+      state hasConst ! if
+        "missing parameter for \"" sb.wrap
+          opName sb.appendStr
+        "\" expected type" sb.appendS fileState [] .wordStart state appendError2
+        return
+      end
+      state popConst #dup .val ConstValue .typeId != if
+        "wrong constant parameter for \"" sb.wrap
+          opName sb.appendStr
+          "\": " sb.appendS
+          #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
+        " expected type" sb.appendS fileState [] .wordStart state appendError2
+        return
+      end
+      #dup .val .typeId typeContext types.isProcedure if
+        "cannot allocate arrays of type " sb.wrap
+          #swap .val .typeId state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendType
+        fileState [] .wordStart state appendError2
+        return
+      end
+      .val .typeId fileState [] .wordStart opStackAlloc state appendOp
       return
     else #dup "mut" string.wrap string.eq _if #drop
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError2
