@@ -121,4 +121,13 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
       elts elt indexOf
     splitIndex return
   end
+  #template type : T #end
+  proc( T arrayView : elts T : elt => T arrayView T arrayView ) =: public splitLast
+    elts
+      elts elt lastIndexOf
+      #dup -1 == if #drop:2
+        elts T empty return
+      end
+    splitIndex return
+  end
 #end

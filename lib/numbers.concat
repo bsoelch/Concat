@@ -44,6 +44,9 @@ proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseI
   0 i64 =: mut res
   false =:: mut overflow
   str
+    #dup .length 0 == if
+      #drop 0 ParserError .EMPTY return
+    end
     #dup 0 string.charAt '-' == if
       true sign =
       1 string.tail
@@ -129,6 +132,9 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
   1 i64 cast 56 << i64 =: mut maxVal ## higher precision than double, no overflow in base 62
   false =:: mut cStyleHex
   str
+    #dup .length 0 == if
+      #drop 0 double cast ParserError .EMPTY return
+    end
     #dup 0 string.charAt '-' == if
       true sign =
       1 string.tail

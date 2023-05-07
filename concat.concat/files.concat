@@ -83,10 +83,14 @@ proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
 end
 proc( string : code FileState ptr mut : fileState => string Token ) =: public nextToken
   code .length 0 <= if
-    "" string.wrap Token .EMPTY return
+    string.empty Token .EMPTY return
   end
   code fileState skipSpaces ## cut of leading white-spaces
+  #dup .length 0 <= if #drop
+    string.empty Token .EMPTY return
+  end
     while
+      #dup .length 2 < if break end
       #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
         '#' fileState [] .currentPos @ updateFilePos
         '#' fileState [] .currentPos @ updateFilePos

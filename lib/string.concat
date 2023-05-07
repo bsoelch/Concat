@@ -1,5 +1,7 @@
+#include arrayView
 #include mem
-struct( i8 _ ptr : data i64 : length ) =:: public string
+
+i8 arrayView #typedef public string
 
 #namespace string
   "" 0 string new =:: EMPTY
@@ -13,7 +15,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
   proc( i64 : static k  i8 k ptr : str => string ) =: public wrap
     str k create return
   end
-  
+
   proc( string : s1 string : s2 => i32 ) =: public compare
     s1 .length s2 .length < if s1 .length else s2 .length end =:: l
     s1 .data s2 .data l mem.compare
@@ -47,33 +49,15 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
   end
 
   proc( string : str i64 : index => i8 ) =: public charAt
-    index 0 < index str .length >= | if
-      '\x00' return ## TODO error handling
-    end
-    str .data index [] return
+    str index array.get return
   end
   proc( string : str i8 : chr => i64 ) =: public indexOf
-    0 ## index
-    while #dup str .length < do
-      str .data #over [] chr == if
-        return
-      end
-      1 +
-    end
-    #drop
-    -1 return
+    str chr array.indexOf return
   end
   proc( string : str i8 : chr => i64 ) =: public lastIndexOf
-    str .length 1 - ## index
-    while #dup 0 >= do
-      str .data #over [] chr == if
-        return
-      end
-      1 -
-    end
-    return
+    str chr array.lastIndexOf return
   end
-  proc( string : base string : subStr => i64 ) =: public indexOfStr
+  proc( string : base string : subStr => i64 ) =: public indexOfStr ## XXX move to arrayView
     subStr .length base .length > if
       -1 return
     end
@@ -102,7 +86,7 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
     return
   end
   proc( string : str i8 : chr => bool ) =: public contains
-    str chr indexOf -1 != return
+    str chr array.indexOf -1 != return
   end
   proc( string : base string : subStr => bool ) =: public isSubstring
     base subStr indexOfStr -1 != return
@@ -110,64 +94,26 @@ struct( i8 _ ptr : data i64 : length ) =:: public string
 
   ## first n characters
   proc( string : str i64 : n => string ) =: public head
-    n 0 <= if
-      EMPTY return
-    end
-    n str .length >= if
-      str return
-    end
-    str .data  n create return
+    str n array.head return
   end
   ## everything excluding the first n characters
   proc( string : str i64 : n => string ) =: public tail
-    n 0 <= if
-      str return
-    end
-    n str .length >= if
-      EMPTY return
-    end
-    str .data n +  str .length n -  create return
+    str n array.tail return
   end
   ## equivalent to:  <from> tail <len> head
   proc( string : str i64 : from i64 : len => string ) =: public slice
-    len 0 <= if
-      EMPTY return
-    end
-    from str .length >= if
-      EMPTY return
-    end
-    from 0 <= if
-      str .data  len create return
-    end
-    from len + str .length >= if
-      str .data from +  str .length from -  create return
-    end
-    str .data from +  len  create return
+    str from len array.slice return
   end
   proc( string : str i64 : index => string string ) =: public cutIndex
-    str index tail
-    str index head
-    return
+    str index array.cutIndex return
   end
   proc( string : str i64 : index => string string ) =: public splitIndex
-    index 0 < if
-      EMPTY str return
-    end
-    str index 1 + tail
-    str index head
-    return
+    str index array.splitIndex return
   end
   proc( string : str i8 : chr => string string ) =: public split
-    str
-      str chr indexOf
-    splitIndex return
+    str chr array.split return
   end
   proc( string : str i8 : chr => string string ) =: public splitLast
-    str
-      str chr lastIndexOf
-      #dup -1 == if #drop:2
-        str EMPTY return
-      end
-    splitIndex return
+    str chr array.splitLast return
   end
 #end
