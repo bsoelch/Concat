@@ -22,4 +22,8 @@ entryPoint:
   B print
   
   2 C =
+
+  0x7fff i16 cast =:: short1
+  1 i16 cast =:: short2
+  short1 short2 + print
 end

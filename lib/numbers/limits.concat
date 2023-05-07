@@ -9,25 +9,25 @@
 #end
 #namespace float
   ## XXX min/max/eps
-  proc( => float ) =: public Infinity 
+  proc( => float ) =: public Infinity
     1 float cast 0 float cast / return
   end
-  proc( => float ) =: public -Infinity 
+  proc( => float ) =: public -Infinity
     -1 float cast 0 float cast / return
   end
-  proc( => float ) =: public NaN 
+  proc( => float ) =: public NaN
     0 float cast 0 float cast / return
   end
 #end
 #namespace double
   ## XXX min/max/eps
-  proc( => double ) =: public Infinity 
+  proc( => double ) =: public Infinity
     1 double cast 0 double cast / return
   end
-  proc( => float ) =: public -Infinity 
+  proc( => double ) =: public -Infinity
     -1 double cast 0 double cast / return
   end
-  proc( => float ) =: public NaN 
+  proc( => double ) =: public NaN
     0 double cast 0 double cast / return
   end
 #end

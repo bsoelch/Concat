@@ -35,7 +35,7 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
         declared list.append
       types [] =
       break
-    tuple struct labeledProcIn procIn procOut enum case
+    tuple struct union labeledProcIn procIn procOut enum case
       declared typeContext types.compositeElts =:: elts
       0 while #dup elts .length < do
         elts #over array.get ptrLevel prog visited types declaredType

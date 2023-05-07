@@ -144,12 +144,14 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       break
     primitiveType case
       t .primitiveType switch
-        TYPE  case target "size_t"  io.fputs #drop break
-        BOOL  case target "bool"    io.fputs #drop break
-        I8    case target "int8_t"  io.fputs #drop break
-        I32   case target "int32_t" io.fputs #drop break
-        I64   case target "int64_t" io.fputs #drop break
-        FLOAT case target "double"  io.fputs #drop break ## TODO separate double and float
+        TYPE    case target "size_t"  io.fputs #drop break
+        BOOL    case target "bool"    io.fputs #drop break
+        I8      case target "int8_t"  io.fputs #drop break
+        I16     case target "int16_t" io.fputs #drop break
+        I32     case target "int32_t" io.fputs #drop break
+        I64     case target "int64_t" io.fputs #drop break
+        FLOAT32 case target "float"   io.fputs #drop break
+        FLOAT64 case target "double"  io.fputs #drop break
       end
       break
     autoType case
@@ -175,6 +177,9 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       break
     struct case
       "tuple" string.wrap t .struct target printCompositeName
+      break
+    union case
+      "union" string.wrap t .union target printCompositeName
       break
     procOut case
       t typeContext types.compositeEltCount =:: eltCount
@@ -206,12 +211,14 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printUnsignedType
     return
   end
   t typeContext types.unwrapNamed .primitiveType switch
-    TYPE  case target "size_t"  io.fputs #drop break
-    BOOL  case target "bool"    io.fputs #drop break
-    I8    case target "uint8_t"  io.fputs #drop break
-    I32   case target "uint32_t" io.fputs #drop break
-    I64   case target "uint64_t" io.fputs #drop break
-    FLOAT case target "float"   io.fputs #drop break
+    TYPE    case target "size_t"   io.fputs #drop break
+    BOOL    case target "bool"     io.fputs #drop break
+    I8      case target "uint8_t"  io.fputs #drop break
+    I16     case target "uint16_t" io.fputs #drop break
+    I32     case target "uint32_t" io.fputs #drop break
+    I64     case target "uint64_t" io.fputs #drop break
+    FLOAT32 case target "float"    io.fputs #drop break
+    FLOAT64 case target "double"   io.fputs #drop break
   end
 end
 proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
@@ -237,9 +244,11 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
   end #drop
   target ")" io.fputs #drop
 end
-proc( string : name i32 : id io.FILE : target => ) =: printCompositeDeclaration
+proc( string : name i32 : id string : cName io.FILE : target => ) =: printCompositeDeclaration
   128 sb.create
-    "typedef struct " sb.appendS
+    "typedef " sb.appendS
+    cName sb.appendStr
+    ' '   sb.appendC
     CONCAT_PREFIX sb.appendS
     name  sb.appendStr
     id    sb.appendI
@@ -306,19 +315,22 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         end
         break
       arrayType case
-        "array" string.wrap t .arrayType target printCompositeDeclaration
+        "array" string.wrap t .arrayType "struct" string.wrap target printCompositeDeclaration
         break
       tuple case
-        "tuple" string.wrap t .tuple target printCompositeDeclaration
+        "tuple" string.wrap t .tuple "struct" string.wrap target printCompositeDeclaration
         break
       struct case
-        "tuple" string.wrap t .struct target printCompositeDeclaration
+        "tuple" string.wrap t .struct "struct" string.wrap target printCompositeDeclaration
+        break
+      union case
+        "union" string.wrap t .union "union" string.wrap target printCompositeDeclaration
         break
       procOut case
-        "tuple" string.wrap t .procOut target printCompositeDeclaration
+        "tuple" string.wrap t .procOut "struct" string.wrap target printCompositeDeclaration
         break
       enum case
-        "enum" string.wrap t .enum target printCompositeDeclaration
+        "enum" string.wrap t .enum "struct" string.wrap target printCompositeDeclaration
         break
       namedType case
         target "typedef " io.fputs #drop
@@ -394,6 +406,13 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
           target "}data;\n" io.fputs #drop
         end
         target "int32_t label;\n};\n" io.fputs #drop ## XXX smaller int-type for smaller label count
+        break
+      union case
+        target "union " io.fputs #drop
+        "union" string.wrap t .union target printCompositeName
+        target "{\n" io.fputs #drop
+        t target prog printCompositeElements
+        target "};\n" io.fputs #drop
         break
     end
     1 +
@@ -640,6 +659,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             operations index isGlobal target prog compileOp
             target ");\n" io.fputs #drop
             return
+          I16 case
+            target "printf(\"%\"PRIi16\"\\n\"," io.fputs #drop
+            operations index isGlobal target prog compileOp
+            target ");\n" io.fputs #drop
+            return
           I32 case
             target "printf(\"%\"PRIi32\"\\n\"," io.fputs #drop
             operations index isGlobal target prog compileOp
@@ -650,7 +674,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             operations index isGlobal target prog compileOp
             target ");\n" io.fputs #drop
             return
-          FLOAT case
+          FLOAT32 FLOAT64 case
             target "printf(\"%g\\n\"," io.fputs #drop
             operations index isGlobal target prog compileOp
             target ");\n" io.fputs #drop
@@ -737,10 +761,14 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     binaryOperator case
       target "(" io.fputs #drop
-      op [] .val .binaryOperator isUnsignedOp if
+      op [] .dataType typeContext types.isNumber if ## ensure number operations have right type
+        ## compensates for automatic conversion of shorts to int in C
         target "(" io.fputs #drop
         op [] .dataType target prog printTypeName
-        target ")(((" io.fputs #drop
+        target ")(" io.fputs #drop
+      end
+      op [] .val .binaryOperator isUnsignedOp if
+        target "((" io.fputs #drop
         op [] .dataType target prog printUnsignedTypeName
         target ")" io.fputs #drop
         operations index isGlobal target prog compileOp
@@ -774,12 +802,15 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         op [] .dataType target prog printUnsignedTypeName
         target ")" io.fputs #drop
         operations index isGlobal target prog compileOp
-        target "))" io.fputs #drop
+        target ")" io.fputs #drop
       else
         operations index isGlobal target prog compileOp
       end
       op [] .dataType typeContext types.isEnum if
         target ".label" io.fputs #drop
+      end
+      op [] .dataType typeContext types.isNumber if
+        target ")" io.fputs #drop
       end
       target ")" io.fputs #drop
       break
@@ -958,22 +989,22 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       end
       target ")" io.fputs #drop
       break
-    getTupleElement case
-      op [] .dataType op [] .val .getTupleElement false operations index isGlobal target prog compileGetElt
+    getElement case
+      op [] .dataType op [] .val .getElement false operations index isGlobal target prog compileGetElt
       return
-    setTupleElement case
-      op [] .dataType op [] .val .setTupleElement false operations index isGlobal target prog compileGetElt
+    setElement case
+      op [] .dataType op [] .val .setElement false operations index isGlobal target prog compileGetElt
       target " = " io.fputs #drop
       operations index isGlobal target prog compileOp
       target ";\n" io.fputs #drop
       return
-    @TupleElement case
+    @Element case
       target "(&" io.fputs #drop
-      op [] .dataType op [] .val .@TupleElement typeContext types.compositeGetElement =:: eltType
+      op [] .dataType op [] .val .@Element typeContext types.compositeGetElement =:: eltType
       eltType typeContext types.getArrayDims 0 > if
         target "(" io.fputs #drop
       end
-      op [] .dataType op [] .val .@TupleElement false operations index isGlobal target prog compileGetElt
+      op [] .dataType op [] .val .@Element false operations index isGlobal target prog compileGetElt
       eltType typeContext types.getArrayDims 0 > if
         target ".data[0])" io.fputs #drop
       end

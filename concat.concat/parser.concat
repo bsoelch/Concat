@@ -461,6 +461,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "i8" string.wrap string.eq _if
       types.primitive.I8 fileState [] .wordStart newTypeConst  state pushConst
       true return
+    else #dup "i16" string.wrap string.eq _if
+      types.primitive.I16 fileState [] .wordStart newTypeConst  state pushConst
+      true return
     else #dup "i32" string.wrap string.eq _if
       types.primitive.I32 fileState [] .wordStart newTypeConst  state pushConst
       true return
@@ -468,10 +471,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "float" string.wrap string.eq _if
-      types.primitive.FLOAT fileState [] .wordStart newTypeConst  state pushConst
+      types.primitive.FLOAT32 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "double" string.wrap string.eq _if
-      types.primitive.DOUBLE fileState [] .wordStart newTypeConst  state pushConst
+      types.primitive.FLOAT64 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "type" string.wrap string.eq _if
       types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst
@@ -527,6 +530,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       #swap state [] .idContext .typeContext addrOf types.newTuple if
         "error while creating tuple type" sb.wrap fileState [] .wordStart state appendError2
+      end
+      fileState [] .wordStart newTypeConst  state pushConst
+      "" string.wrap true return
+    else #dup "union(" string.wrap string.eq _if #drop
+      LabelType .STRUCT ")" string.wrap fileState state readCompositeType
+      if
+        "error while parsing union type" sb.wrap fileState [] .wordStart state appendError2
+      end
+      #swap state [] .idContext .typeContext addrOf types.newUnion if
+        "error while creating union type" sb.wrap fileState [] .wordStart state appendError2
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
@@ -1004,8 +1017,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup [] .val .getLabel #over [] .val .setLabel =
         fileState [] .wordStart #swap [] .pos =
         return
-      else #dup [] .val OpValue .getTupleElement == _if
-        #dup [] .val .getTupleElement #over [] .val .setTupleElement =
+      else #dup [] .val OpValue .getElement == _if
+        #dup [] .val .getElement #over [] .val .setElement =
         fileState [] .wordStart #swap [] .pos =
         return
       else #dup [] .val OpValue .getArrayElement == _if
@@ -1045,8 +1058,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup [] .val .getLabel #over [] .val .@Label =
         fileState [] .wordStart #swap [] .pos =
         return
-      else #dup [] .val OpValue .getTupleElement == _if
-        #dup [] .val .getTupleElement #over [] .val .@TupleElement =
+      else #dup [] .val OpValue .getElement == _if
+        #dup [] .val .getElement #over [] .val .@Element =
         fileState [] .wordStart #swap [] .pos =
         return
       else #dup [] .val OpValue .getArrayElement == _if

@@ -623,6 +623,8 @@
         src .tuple templateArgs genericArgs implPos context replaceGenericsComposite Type .tuple new return
       struct case
         src .struct templateArgs genericArgs implPos context replaceGenericsComposite Type .struct new return
+      union case
+        src .union templateArgs genericArgs implPos context replaceGenericsComposite Type .union new return
       labeledProcIn case
         src .labeledProcIn templateArgs genericArgs implPos context replaceGenericsComposite Type .labeledProcIn new return
       procIn case
@@ -857,7 +859,7 @@
           expected typeContext unwrapNamed
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
-      tuple struct labeledProcIn procIn procOut enum genericType templateType case
+      tuple struct union labeledProcIn procIn procOut enum genericType templateType case
         io.stdErr "unreachable\n" io.fputs #drop
         ..unreachable
         break

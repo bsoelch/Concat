@@ -54,4 +54,6 @@
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUHex
     16 false appendInt??
   end
+
+  ## TODO appendFloat appendF
 #end

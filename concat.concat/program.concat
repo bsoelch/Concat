@@ -24,9 +24,9 @@ enum(
             LabelId : getLabel
             LabelId : mut setLabel
             LabelId : mut @Label
-                i32 : mut getTupleElement
-                i32 : mut setTupleElement
-                i32 : mut @TupleElement
+                i32 : mut getElement
+                i32 : mut setElement
+                i32 : mut @Element
                 i32 : mut getArrayElement
                 i32 : mut setArrayElement
                 i32 : mut @ArrayElement
@@ -100,7 +100,7 @@ proc( i32 FilePosition  => Operation ) =: public opArrayGet
 end
 proc( i32 FilePosition  => Operation ) =: public opTupleGet
   =:: pos
-  OpValue .getTupleElement new Type .undefined pos Operation new return
+  OpValue .getElement new Type .undefined pos Operation new return
 end
 proc( LabelId FilePosition  => Operation ) =: public opGetLabel
   =:: pos
@@ -377,23 +377,23 @@ end
           " ) : " sb.appendS
           #over .val .@Label labelContext id.labelName .data sb.appendStr
           break
-        getTupleElement case
-          "get tuple element ( " sb.appendS
+        getElement case
+          "get element ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .getTupleElement sb.appendI
+          #over .val .getElement sb.appendI
           break
-        setTupleElement case
-          "set tuple element ( " sb.appendS
+        setElement case
+          "set element ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .setTupleElement sb.appendI
+          #over .val .setElement sb.appendI
           break
-        @TupleElement case
-          "tuple element address ( " sb.appendS
+        @Element case
+          "element address ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .@TupleElement sb.appendI
+          #over .val .@Element sb.appendI
           break
         getArrayElement case
           "get array element ( " sb.appendS

@@ -6,7 +6,7 @@
 #include "labels.concat"
 
 #namespace types
-enum( BOOL I8 I32 I64 FLOAT TYPE ) =:: PrimitiveType
+enum( BOOL I8 I16 I32 I64 FLOAT32 FLOAT64 TYPE ) =:: PrimitiveType
 i32 =:: public ArrayId
 i32 =:: public CompositeId
 i32 =:: public ProcId
@@ -20,6 +20,7 @@ enum(
         types.ArrayId : arrayType
     types.CompositeId : tuple
     types.CompositeId : struct
+    types.CompositeId : union
     types.CompositeId : labeledProcIn
     types.CompositeId : procIn
     types.CompositeId : procOut
@@ -48,6 +49,8 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .tuple b .tuple == return
     struct case
       a .struct b .struct == return
+    union case
+      a .union b .union == return
     labeledProcIn case
       a .labeledProcIn b .labeledProcIn == return
     procIn case
@@ -73,10 +76,12 @@ proc( PrimitiveType => i32 ) =: primitiveId
   switch
     BOOL case 0 return
     I8 case 1 return
-    I32 case 2 return
-    I64 case 3 return
-    FLOAT case 4 return
-    TYPE case 5 return
+    I16 case 2 return
+    I32 case 3 return
+    I64 case 4 return
+    FLOAT32 case 5 return
+    FLOAT64 case 6 return
+    TYPE case 7 return
   end
 end
 proc( Type : a => i32 ) =: public typeHash
@@ -93,24 +98,26 @@ proc( Type : a => i32 ) =: public typeHash
       bigPrime 4 * a .tuple + return
     struct case
       bigPrime 5 * a .struct + return
+    union case
+      bigPrime 6 * a .union + return
     labeledProcIn case
-      bigPrime 6 * a .labeledProcIn + return
+      bigPrime 7 * a .labeledProcIn + return
     procIn case
-      bigPrime 7 * a .procIn + return
+      bigPrime 8 * a .procIn + return
     procOut case
-      bigPrime 8 * a .procOut + return
+      bigPrime 9 * a .procOut + return
     enum case
-      bigPrime 9 * a .enum + return
+      bigPrime 10 * a .enum + return
     procedure case
-      bigPrime 10 * a .procedure + return
+      bigPrime 11 * a .procedure + return
     namedType case
-      bigPrime 11 * a .namedType + return
+      bigPrime 12 * a .namedType + return
     autoType case
-      bigPrime 12 * a .autoType + return
+      bigPrime 13 * a .autoType + return
     genericType case
-      bigPrime 13 * a .genericType + return
+      bigPrime 14 * a .genericType + return
     templateType case
-      bigPrime 14 * a .templateType + return
+      bigPrime 15 * a .templateType + return
   end
 end
 
@@ -123,12 +130,16 @@ proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveTyp
       "bool" appendS return
     I8 case
       "i8" appendS return
+    I16 case
+      "i16" appendS return
     I32 case
       "i32" appendS return
     I64 case
       "i64" appendS return
-    FLOAT case
+    FLOAT32 case
       "float" appendS return
+    FLOAT64 case
+      "double" appendS return
     TYPE case
       "type" appendS return
   end
@@ -196,6 +207,20 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       .struct
       #swap
         "struct[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    union case
+      .union
+      #swap
+        "union[" appendS
         #over    appendI
         "]( "    appendS
       #swap
@@ -280,10 +305,11 @@ end
 #namespace primitive
   PrimitiveType .BOOL      Type .primitiveType new Type =: public BOOL
   PrimitiveType .I8        Type .primitiveType new Type =: public I8
+  PrimitiveType .I16       Type .primitiveType new Type =: public I16
   PrimitiveType .I32       Type .primitiveType new Type =: public I32
   PrimitiveType .I64       Type .primitiveType new Type =: public I64
-  PrimitiveType .FLOAT     Type .primitiveType new Type =: public FLOAT
-  PrimitiveType .FLOAT     Type .primitiveType new Type =: public DOUBLE ## TODO make double and float different types
+  PrimitiveType .FLOAT32   Type .primitiveType new Type =: public FLOAT32
+  PrimitiveType .FLOAT64   Type .primitiveType new Type =: public FLOAT64
   PrimitiveType .TYPE      Type .primitiveType new Type =: public TYPE
   ## compiler internal type-aliases for special purpose types
   PrimitiveType .I64       Type .primitiveType new Type =: public I_SIZE ## size-off memory-sections
@@ -309,9 +335,9 @@ proc( Type TypeContext ptr => bool ) =: public isInt
       false return
     end .primitiveType
     switch
-      BOOL FLOAT TYPE case
+      BOOL FLOAT32 FLOAT64 TYPE case
         false return
-      I8 I32 I64 case
+      I8 I16 I32 I64 case
         true return
     end
 end
@@ -323,7 +349,7 @@ proc( Type TypeContext ptr => bool ) =: public isNumber
     switch
       BOOL TYPE case
         false return
-      I8 I32 I64 FLOAT case
+      I8 I16 I32 I64 FLOAT32 FLOAT64 case
         true return
     end
 end
@@ -336,13 +362,16 @@ proc( Type TypeContext ptr => i32 ) =: public numberPrecision
       BOOL TYPE case
         -1 return
       I8 case
-        8 return
+        7 return
+      I16 case
+        15 return
       I32 case
-        32 return
+        31 return
       I64 case
-        64 return
-      ## float 32 -> 24
-      FLOAT case
+        63 return
+      FLOAT32 case
+        24 return ## IEEE float-32
+      FLOAT64 case
         53 return ## IEEE float-64
     end
 end
@@ -357,12 +386,15 @@ proc( Type TypeContext ptr => i32 ) =: public numberSize
         -1 return
       I8 case
         7 return
+      I16 case
+        15 return
       I32 case
         31 return
       I64 case
         63 return
-      ## float 32 -> 127
-      FLOAT case
+      FLOAT32 case
+        127 return ## IEEE float-32
+      FLOAT64 case
         1023 return ## IEEE float-64
     end
 end
@@ -548,21 +580,22 @@ end
 
 ## composite types
 i32 =:: CompositeFlag
-1  CompositeFlag =: COMP_FLAG_TUPLE
-2  CompositeFlag =: COMP_FLAG_ENUM
-4  CompositeFlag =: COMP_FLAG_PROC_IN
-8  CompositeFlag =: COMP_FLAG_PROC_OUT
-15 CompositeFlag =: public COMP_CLASS_MASK
-16 CompositeFlag =: public COMP_FLAG_VOID_ONLY
-32 CompositeFlag =: public COMP_FLAG_STATIC_ARGS
-64 CompositeFlag =: public COMP_FLAG_TEMPLATE
-96 CompositeFlag =: public COMP_GENERIC_MASK
+1   CompositeFlag =: COMP_FLAG_TUPLE
+2   CompositeFlag =: COMP_FLAG_ENUM
+4   CompositeFlag =: COMP_FLAG_UNION
+8   CompositeFlag =: COMP_FLAG_PROC_IN
+16  CompositeFlag =: COMP_FLAG_PROC_OUT
+31  CompositeFlag =: public COMP_CLASS_MASK
+32  CompositeFlag =: public COMP_FLAG_VOID_ONLY
+64  CompositeFlag =: public COMP_FLAG_STATIC_ARGS
+128 CompositeFlag =: public COMP_FLAG_TEMPLATE
+192 CompositeFlag =: public COMP_GENERIC_MASK
 struct( i64 : eltsOffset i64 : eltCount LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
   switch
-    tuple struct labeledProcIn procIn procOut enum case
+    tuple struct union labeledProcIn procIn procOut enum case
       true return
     undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
       false return
@@ -576,6 +609,10 @@ proc( Type TypeContext ptr => bool ) =: public isEnum
   unwrapNamed
   Type .enum == return
 end
+proc( Type TypeContext ptr => bool ) =: public isUnion
+  unwrapNamed
+  Type .union == return
+end
 proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
   composite context unwrapNamed
     #dup switch
@@ -584,6 +621,9 @@ proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut op
         break
       struct case
         .struct
+        break
+      union case
+        .union
         break
       labeledProcIn case
         .labeledProcIn
@@ -612,7 +652,7 @@ end
 proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
-      struct labeledProcIn enum case
+      struct union labeledProcIn enum case
         break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop id.LABEL_ID_NONE return
@@ -626,7 +666,7 @@ end
 proc( Type : composite string : name LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
-      struct labeledProcIn enum case
+      struct union labeledProcIn enum case
         break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop -1 return
@@ -752,6 +792,12 @@ proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context 
     Type .undefined true return
   end
   COMP_FLAG_TUPLE elts labelOffset context newCompositeType Type .enum new false return
+end
+proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newUnion
+  elts .length 0 == labelOffset id.LABEL_ID_NONE == | if
+    Type .undefined true return
+  end
+  COMP_FLAG_UNION elts labelOffset context newCompositeType Type .union new false return
 end
 #end
 #namespace sb
@@ -951,6 +997,7 @@ proc( Type => i32 ) =: public getTypeId
     arrayType case .arrayType return
     tuple case .tuple return
     struct case .struct return
+    union case .union return
     labeledProcIn case .labeledProcIn return
     procIn case .procIn return
     procOut case .procOut return
@@ -996,7 +1043,7 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
         1 +
       end #drop
       isTemplate isStatic return
-    tuple struct labeledProcIn procIn procOut enum case
+    tuple struct union labeledProcIn procIn procOut enum case
       t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
     procedure case
       context [] .procTypes t .procedure list.get
@@ -1066,7 +1113,7 @@ proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool 
   end #drop
   true return
 end
-proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAutoCast
+proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAutoCast ## TODO cast union element to union
   to =:: mut target
   src types.isNamedType ! target types.isNamedType & if
     target context types.unwrapNamed target =
@@ -1087,7 +1134,7 @@ proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAuto
   end
   false return
 end
-proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: public canCast
+proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: public canCast ## TODO cast union to union element
   a context types.unwrapNamed =:: mut src
   b context types.unwrapNamed =:: mut target
   src target context canAutoCast if

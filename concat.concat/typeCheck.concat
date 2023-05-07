@@ -181,7 +181,7 @@ proc( TypeCheckState ptr mut : state => ) =: ensureStackHeadIsValue
   ## XXX? isStackValue flag for TypeInfo
   head [] .writable head [] .valType typeContext types.isMultiValueType ! | if
     opHead [] .val OpValue .getId != if
-      opHead [] .val OpValue .getTupleElement !=
+      opHead [] .val OpValue .getElement !=
       opHead [] .val OpValue .getArrayElement != &
       opHead [] .val OpValue .getEnumElement != & if
         return
@@ -315,8 +315,8 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
           opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
           opHead [] .dataType stackHead [] .valType =
           break
-        getTupleElement case
-          opHead [] .val .getTupleElement opHead [] .val .@TupleElement =
+        getElement case
+          opHead [] .val .getElement opHead [] .val .@Element =
           stackHead [] .valType true typeContext types.getAddressType stackHead [] .valType =
           break
         getArrayElement case
@@ -1196,7 +1196,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     pointerType typeContext isMutable state [] .typeStack list.peek .data [] .writable =
   end
 end
-proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state => ) =: typeCheckGetTupleElement
+proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state => ) =: typeCheckGetElement
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -1208,40 +1208,40 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
       state [] .typeStack .length sb.appendI
     op [] .pos state appendError2
     return
-  end .data =:: tupleInfo
-  tupleInfo [] .valType typeContext isTuple ! if ## TODO element access through pointers
+  end .data =:: typeInfo
+  typeInfo [] .valType typeContext isTuple ! typeInfo [] .valType typeContext isUnion ! & if ## TODO element access through pointers
     0 sb.create
-      tupleInfo [] .valType labelContext typeContext sb.appendType
-      " is not a tuple type" sb.appendS
+      typeInfo [] .valType labelContext typeContext sb.appendType
+      " is not a tuple or union type" sb.appendS
     op [] .pos state appendError2
     return
   end
-  tupleInfo [] .valType typeContext unwrapNamed =:: tupleType
-  tupleIndex 0 < tupleIndex tupleType typeContext compositeEltCount >= | if
-    "tuple element index outside allowed range " sb.wrap
-      tupleIndex sb.appendI
+  typeInfo [] .valType typeContext unwrapNamed =:: compositeType
+  eltIndex 0 < eltIndex compositeType typeContext compositeEltCount >= | if
+    "element index outside allowed range " sb.wrap
+      eltIndex sb.appendI
       " size:" sb.appendS
-      tupleType typeContext compositeEltCount sb.appendI
+      compositeType typeContext compositeEltCount sb.appendI
     op [] .pos state appendError2
     return
   end
-  tupleType tupleIndex typeContext compositeGetElement =:: mut elementType
-  tupleType tupleIndex typeContext compositeGetLabel =:: elementLabel
-  tupleInfo [] .writable elementLabel id.LABEL_ID_NONE == elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != | & =:: mutable
-  op [] .val OpValue .@TupleElement == if
+  compositeType eltIndex typeContext compositeGetElement =:: mut elementType
+  compositeType eltIndex typeContext compositeGetLabel =:: elementLabel
+  typeInfo [] .writable elementLabel id.LABEL_ID_NONE == elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 != | & =:: mutable
+  op [] .val OpValue .@Element == if
     elementType mutable typeContext getAddressType elementType =
   end
-  tupleType op [] .dataType =
-  op [] .val OpValue .setTupleElement == if ## SET_TUPLE_ELEMENT <tuple> <value>
+  compositeType op [] .dataType =
+  op [] .val OpValue .setElement == if ## SET_TUPLE_ELEMENT <tuple> <value>
     mutable ! if
       "element " sb.wrap
         elementLabel labelContext id.isLabelEmpty if
-          tupleIndex sb.appendI
+          eltIndex sb.appendI
         else
           elementLabel labelContext id.labelName .data sb.appendStr
         end
-        " in tuple " sb.appendS
-        tupleInfo [] .valType labelContext typeContext sb.appendType
+        " in " sb.appendS
+        typeInfo [] .valType labelContext typeContext sb.appendType
         " is not mutable" sb.appendS
       op [] .pos state appendError2
     end
@@ -1257,7 +1257,7 @@ proc( Operation ptr mut : op i32  : tupleIndex TypeCheckState ptr mut : state =>
   ## ADDR_OF_TUPLE_ELEMENT(index) <tuple>
   op 1 state insertStackOp
   elementType state [] .typeStack list.peek .data [] .valType = ## change type on stack
-  op [] .val OpValue .getTupleElement == if
+  op [] .val OpValue .getElement == if
     mutable state [] .typeStack list.peek .data [] .writable =
   end
 end
@@ -1289,13 +1289,13 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
     index 0 >= if
       op [] .val switch
         getLabel case
-          index op [] .val .getTupleElement =
+          index op [] .val .getElement =
           break
         setLabel case
-          index op [] .val .setTupleElement =
+          index op [] .val .setElement =
           break
         @Label case
-          index op [] .val .@TupleElement =
+          index op [] .val .@Element =
           break
         default
           "unexpected operation for get label: " sb.wrap
@@ -1303,7 +1303,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           op [] .pos state appendError2
           return
       end
-      op index state typeCheckGetTupleElement
+      op index state typeCheckGetElement
       return
     end
   end
@@ -1374,6 +1374,30 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       op [] .val OpValue .getEnumElement == if
         mutable state [] .typeStack list.peek .data [] .writable =
       end
+      return
+    end
+  end
+  targetType typeContext isUnion if
+    targetType typeContext unwrapNamed =:: unionType
+    unionType labelName labelContext typeContext compositeFindLabel =:: index
+    index 0 >= if
+      op [] .val switch
+        getLabel case
+          index op [] .val .getElement =
+          break
+        setLabel case
+          index op [] .val .setElement =
+          break
+        @Label case
+          index op [] .val .@Element =
+          break
+        default
+          "unexpected operation for get label: " sb.wrap
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] .pos state appendError2
+          return
+      end
+      op index state typeCheckGetElement
       return
     end
   end
@@ -2208,17 +2232,17 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       op op [] .val .@Label state typeCheckGetLabel
       return
-    getTupleElement case
+    getElement case
       op state checkReachable
-      op op [] .val .getTupleElement state typeCheckGetTupleElement
+      op op [] .val .getElement state typeCheckGetElement
       return
-    setTupleElement case
+    setElement case
       op state checkReachable
-      op op [] .val .setTupleElement state typeCheckGetTupleElement
+      op op [] .val .setElement state typeCheckGetElement
       return
-    @TupleElement case
+    @Element case
       op state checkReachable
-      op op [] .val .@TupleElement state typeCheckGetTupleElement
+      op op [] .val .@Element state typeCheckGetElement
       return
     getArrayElement case
       op op [] .val .getArrayElement @ state typeCheckGetArrayElement
