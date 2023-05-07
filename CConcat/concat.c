@@ -4882,6 +4882,13 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       TypeId templateTypes=popTypeConstant(wordPos,"template types",false);
       startTemplate(templateTypes,state->currentFile,wordPos);
       return;
+    }else if(wordEquals(&word,"typedef")){
+      type=popTypeConstant(wordPos,"type constant",false);
+      LabelId labelId=readLabel(codeFile,localScopeCount>0?"local variables":"global variables",parserNamespace(state)->current,identiferFlags);
+      wordPos=codeFile->wordStart;
+      ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};
+      declareIdentifier(getGlobalScopeParser(state),*parserNamespace(state),labelId,TYPE_TYPE,ID_TYPE,nextId(ID_TYPE,state),wordPos,&constValue);
+      return;
     }
     //compiler commands
     if(wordEquals(&word,"types")){
@@ -5023,6 +5030,7 @@ void readOperation(ParserState* state,CodeFile* codeFile){
       if(!typeEquals(constType,TYPE_UNDEFINED))
         mType=constType;
       if(typeEquals(mType,TYPE_TYPE)){
+        idType=ID_TYPE;
         constType=popTypeConstant(wordPos,"type constant",false);
         type=newNamedType(labelId,constType);
         ConstantValue constValue=(ConstantValue){.constType=CONSTANT_TYPE,.valueType=TYPE_TYPE,.as.type=type};

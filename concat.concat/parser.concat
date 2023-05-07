@@ -736,6 +736,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "could not create template" sb.wrap fileState [] .wordStart state appendError2
           end
           return
+        else "typedef" string.wrap #over string.eq _if #drop:2
+          fileState state nextWord fileState state readLabel
+          ## declareIdentifier
+            types.primitive.TYPE
+            IdentifierType .TYPE
+            -1 ## id
+            fileState state popTypeConstant #drop ConstValue .typeId new
+          fileState [] .wordStart state [] .currentFile state [] .idContext @ state [] .errors @ id.declareIdentifier if #drop
+            .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
+            return
+          end
+          state [] .idContext @ id.isGlobal if
+            state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+          end
+          #drop:2 return
         else "types" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
           #dup .length 0 > if
             opName fileState [] .wordStart state getCompilerOpParam

@@ -179,7 +179,7 @@ proc( CompilerError list ptr mut : errors => ) =: checkErrors
         err [] sb.appendCompilerError
         err [] .errType ErrorType .ERROR == if
           true hasError =
-        else wError err [] .errType ErrorType .WARNING == & _if -542 print
+        else wError err [] .errType ErrorType .WARNING == & _if
           true hasError =
         end
       #swap 1 +
