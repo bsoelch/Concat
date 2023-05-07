@@ -159,6 +159,7 @@
           =&gt;                        |
           enum\(                       |
           struct\(                     |
+          union\(                      |
           array                        |
           ptr ([[:space:]]+mut)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
@@ -180,6 +181,7 @@
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           bool            |
           i8              |
+          i16             |
           i32             |
           i64             |
           float           |
