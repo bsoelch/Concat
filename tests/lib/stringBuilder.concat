@@ -1,5 +1,5 @@
+#include stringIO
 #include stringBuilder
-#include io
 
 entryPoint: 
   16 sb.create
@@ -7,15 +7,6 @@ entryPoint:
     ' '     sb.appendC
     "World" sb.appendS
     '\n'    sb.appendC
-    -12345678             sb.appendI    '\n' sb.appendC
-    "0x"                  sb.appendS
-    0x1234567             sb.appendX    '\n' sb.appendC
-    "0b"                  sb.appendS 
-    0b11001001            sb.appendBin  '\n' sb.appendC
-    0x7fff_ffff_ffff_ffff sb.appendX    '\n' sb.appendC
-   -0x8000_0000_0000_0000 sb.appendI    '\n' sb.appendC
-   -1                     sb.appendU    '\n' sb.appendC
-   -1                     sb.appendUBin '\n' sb.appendC
-  =:: buff
-  io.stdOut buff .data 0 buff .length io.fwrite print print
+    io.stdOut #over io.fputSb print
+  sb.free #drop
 end

@@ -1,0 +1,57 @@
+#include stringBuilder
+#namespace sb
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
+  
+  proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
+    base 2 < if 
+      ## TODO error handling
+      buffer return
+    end
+    i8 64 array new =:: mut chrBuff
+    buffer
+      i
+      #dup 0 < signed & if  
+        #swap '-' appendC #swap
+        neg 
+      else #dup 0 == _if
+        #drop '0' appendC return
+      end   
+      63 #swap ## index in chrBuff
+        while #dup 0 != do
+          #swap ## <buffer> <i> <chrIndex>
+            #over base %u stringChars #swap []
+            #over chrBuff @ #swap [] =
+            1 -
+          #swap
+          base /u
+        end #drop
+        while 1 + #dup 64 < do
+          #swap ## <chrIndex> <buffer>
+            #over chrBuff @ #swap [] appendC
+          #swap
+        end
+      #drop
+    return
+  end
+  proc( stringBuilder i64 #+value+# i32 #+base+# => stringBuilder ) =: public appendInt?
+    true appendInt??
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendBin
+    2  appendInt?
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendI
+    10 appendInt?
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendX
+    16 appendInt?
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUBin
+    2 false appendInt??
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendU
+    10 false appendInt??
+  end
+  proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUHex
+    16 false appendInt??
+  end
+#end
