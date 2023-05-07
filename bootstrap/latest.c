@@ -13692,15 +13692,19 @@ return (arg0.label==11);
 concat_Type concat_types_dunwrapNamed(concat_Type arg0,concat_TypeContext const* arg1){
 concat_Type tmp0 = arg0;
 concat_TypeContext const* const l0_context = arg1;
-bool const tmp1 = (tmp0.label==11);
-concat_Type tmp2 = tmp0;
-if(tmp1){
+concat_Type tmp1 = tmp0;
+do{
+bool const tmp2 = (tmp1.label==11);
+if(!tmp2)
+  break;
 concat_list_I12 tmp3 = ((*l0_context).e5_namedTypes);
-concat_internal_checkEnumIndex(tmp2.label,11,"./types.concat:882:34");
-concat_20_Ftypes_dNamedType tmp4 = concat_list_dget_I12(tmp3,((int64_t)(tmp2.data.e11_namedType)));
-return (tmp4.e0_data);
-}
-return tmp2;
+concat_internal_checkEnumIndex(tmp1.label,11,"./types.concat:882:34");
+concat_optional_I25 tmp4 = concat_list_dat_I9(tmp3,((int64_t)(tmp1.data.e11_namedType)));
+concat_internal_checkEnumIndex(tmp4.label,1,"./types.concat:882:53");
+concat_20_Ftypes_dNamedType* const tmp5 = (tmp4.data.e1_data);
+tmp1 = ((*tmp5).e0_data);
+}while(1);
+return tmp1;
 }
 concat_LabelId concat_types_dnamedTypeName(concat_Type arg0,concat_TypeContext const* arg1){
 concat_Type tmp0 = arg0;
@@ -13761,9 +13765,10 @@ concat_stringBuilder tmp4 = concat_sb_dappendStr(tmp2,(tmp3.data.e1_data));
 concat_stringBuilder tmp5 = concat_sb_dappendC(tmp4,((int8_t)34));
 concat_stringBuilder tmp6 = concat_sb_dappendS(tmp5,((int64_t)3),((int8_t const*)" [ "));
 concat_Type tmp7 = (tmp1.e0_data);
-concat_stringBuilder tmp8 = concat_sb_dappendTypeRecursive(tmp6,tmp7,l2_labelContext,l1_context,l0_allowRecurse);
-concat_stringBuilder tmp9 = concat_sb_dappendS(tmp8,((int64_t)2),((int8_t const*)" ]"));
-return tmp9;
+concat_Type tmp8 = concat_types_dunwrapNamed(tmp7,l1_context);
+concat_stringBuilder tmp9 = concat_sb_dappendTypeRecursive(tmp6,tmp8,l2_labelContext,l1_context,l0_allowRecurse);
+concat_stringBuilder tmp10 = concat_sb_dappendS(tmp9,((int64_t)2),((int8_t const*)" ]"));
+return tmp10;
 }
 concat_Type concat_types_dnewAutoType(int32_t arg0/*id*/){
 return ((concat_Type){.label=12,.data={.e12_autoType = arg0/*id*/}});

@@ -545,8 +545,8 @@ TypeId unwrapNamedType(TypeId type){
     enumID.class=TYPECLASS_ENUM_LABEL;
     return enumID;
   }
-  if(isNamedType(type))
-    return namedTypes[type.dataAs.id].type;
+  while(isNamedType(type))
+    type=namedTypes[type.dataAs.id].type;
   return type;
 }
 bool isPrimitiveType(TypeId type){
@@ -705,7 +705,6 @@ int64_t getTypeElementCount(TypeId type){
 }
 void printTypeName(TypeId id,FILE* file);
 bool setNamedType(TypeId type,TypeId newValue){
-  newValue=unwrapNamedType(newValue);
   if(!isNamedType(type))
     return false;
   if(!typeEquals(namedTypes[type.dataAs.id].type,TYPE_UNDEFINED))
