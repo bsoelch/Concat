@@ -6,7 +6,7 @@
 #include "common.concat"
 
 enum( NEGATE NOT FLIP ) =:: public UnaryOperator
-enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ) =:: public BinaryOperator
+enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: public BinaryOperator
 enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
 struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
@@ -274,6 +274,10 @@ end
       LE case "LE" sb.appendS return
       GE case "GE" sb.appendS return
       GT case "GT" sb.appendS return
+      ULT case "ULT" sb.appendS return
+      ULE case "ULE" sb.appendS return
+      UGE case "UGE" sb.appendS return
+      UGT case "UGT" sb.appendS return
       LSHIFT case "LSHIFT" sb.appendS return
       RSHIFT case "RSHIFT" sb.appendS return
       URSHIFT case "URSHIFT" sb.appendS return

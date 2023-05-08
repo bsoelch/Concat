@@ -1739,7 +1739,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             types.primitive.BOOL outType =
           end
           break
-        LT LE GE GT case
+        LT LE GE GT ULT ULE UGE UGT case
           ## number<number -> bool
           left [] .valType right [] .valType inTypes @ typeContext checkBinOpNumber #dup Type .undefined != if
             op [] .dataType =

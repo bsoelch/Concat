@@ -4,7 +4,7 @@
 #end
 #namespace u32
    0 i32 =: public MIN
-   0xffff_ffff i64 =: public MAX ## TODO change to i32 once unsigned compare exists
+   0xffff_ffff i64 =: public MAX
 #end
 #namespace i64
   -0x8000_0000_0000_0000 i64 =: public MIN

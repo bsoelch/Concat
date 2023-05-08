@@ -1450,6 +1450,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup ">" string.wrap string.eq _if #drop
       BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
       return
+    else #dup "<u" string.wrap string.eq _if #drop
+      BinaryOperator .ULT fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup "<=u" string.wrap string.eq _if #drop
+      BinaryOperator .ULE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup ">=u" string.wrap string.eq _if #drop
+      BinaryOperator .UGE fileState [] .wordStart opBinOp state appendOp
+      return
+    else #dup ">u" string.wrap string.eq _if #drop
+      BinaryOperator .UGT fileState [] .wordStart opBinOp state appendOp
+      return
     else #dup "..argc" string.wrap string.eq _if #drop
       fileState [] .wordStart opArgc state appendOp
       return

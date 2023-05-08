@@ -1,18 +1,11 @@
+proc( => i32 ) =: getInt
+ 0xffff_ffffu return
+end
+
 entryPoint:
-  10_000_000_000_000_000u =:: a
-  0xffff_ffff_ffff_ffffu =:: b
-  10_000_000_000_000_000i32 =:: c
-  0xffff_ffffu =:: d
-  -1 =:: e
-  1234i16 =:: f
-  -2i1 =:: g
-  3u1 =:: h
-  #find a
-  #find b
-  #find c
-  #find d
-  #find e
-  #find f
-  #find g
-  #find h
+  -1 0 <u print
+  -1 -2 >u print
+  getInt 0xffff_ffff == print
+  getInt 0xffff_ffff <=u print
+  getInt 0xffff_ffff >=u print
 end

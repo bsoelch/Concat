@@ -425,7 +425,7 @@ proc( BinaryOperator => bool ) =: isUnsignedOp
     AND OR XOR LSHIFT RSHIFT
     EQ NE LE GE LT GT case
       false return
-    UDIVIDE UMOD URSHIFT case
+    UDIVIDE UMOD URSHIFT ULE UGE ULT UGT case
       true return
   end
 end
@@ -792,10 +792,10 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         RSHIFT URSHIFT case target ">>" io.fputs #drop break
         EQ case target "==" io.fputs #drop break
         NE case target "!=" io.fputs #drop break
-        LE case target "<=" io.fputs #drop break
-        GE case target ">=" io.fputs #drop break
-        LT case target "<" io.fputs #drop break
-        GT case target ">" io.fputs #drop break
+        LE ULE case target "<=" io.fputs #drop break
+        GE UGE case target ">=" io.fputs #drop break
+        LT ULT case target "<" io.fputs #drop break
+        GT UGT case target ">" io.fputs #drop break
       end
       op [] .val .binaryOperator isUnsignedOp if
         target "((" io.fputs #drop
