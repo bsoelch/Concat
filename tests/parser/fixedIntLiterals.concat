@@ -1,0 +1,18 @@
+entryPoint:
+  10_000_000_000_000_000i256 =:: a
+  0xffff_ffff_ffff_ffffu =:: b
+  10_000_000_000_000_000i32 =:: c
+  0xffff_ffffu =:: d
+  -1 =:: e
+  1234i16 =:: f
+  -2i1 =:: g
+  3u1 =:: h
+  #find a
+  #find b
+  #find c
+  #find d
+  #find e
+  #find f
+  #find g
+  #find h
+end
