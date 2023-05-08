@@ -2385,15 +2385,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .val OpValue .length == if
           sizes .length 0 == if
             ## opConst
-              1 #dup ConstValue .int new
-              #swap intConstType
+              1 ConstValue .int new
+              types.primitive.I_SIZE
               op [] .pos
             opConst op [] =
           end
           sizes 0 array.get .sizeType types.ArraySizeType .int == if
             ## opConst
-              sizes 0 array.get .value #dup ConstValue .int new
-              #swap intConstType
+              sizes 0 array.get .value ConstValue .int new
+              types.primitive.I_SIZE
               op [] .pos
             opConst op [] =
           else sizes 0 array.get .sizeType types.ArraySizeType .staticArg == _if

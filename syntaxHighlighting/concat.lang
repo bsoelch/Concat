@@ -251,31 +251,15 @@
     <context id="binary" style-ref="binary">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?0[bB][01]([_']*[0-1])*
+          -?0[bB][01]([_']*[0-1])*(u|U|((u|U|i|I)[0-9]+))?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
 
-    <context id="invalid-binary" style-ref="error">
-      <match extended="true">
-        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?0[bB][01_']*[2-9a-zA-Z][01_']*
-        )(\Z|(?=[[:space:]])) # end of file or white-space
-      </match>
-    </context>
-    
     <context id="hexadecimal" style-ref="hexadecimal">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?0[xX][a-fA-F0-9]([_']*[a-fA-F0-9])*
-        )(\Z|(?=[[:space:]])) # end of file or white-space
-      </match>
-    </context>
-
-    <context id="invalid-hexadecimal" style-ref="error">
-      <match extended="true">
-        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?0[xX][a-fA-F0-9_']*[g-zG-Z][a-zA-Z0-9_']*
+          -?0[xX][a-fA-F0-9]([_']*[a-fA-F0-9])*(u|U|((u|U|i|I)[0-9]+))?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -283,7 +267,7 @@
     <context id="decimal" style-ref="decimal">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?[0-9]([_']*[0-9])*
+          -?[0-9]([_']*[0-9])*(u|U|((u|U|i|I)[0-9]+))?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -313,8 +297,6 @@
     <!--    <context ref="float"/> -->
         <context ref="hexadecimal"/>
         <context ref="binary"/>
-        <context ref="invalid-hexadecimal"/>
-        <context ref="invalid-binary"/>
         <context ref="decimal"/>
         <context ref="operators"/>
         <context ref="field-access"/>

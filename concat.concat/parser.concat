@@ -59,7 +59,12 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
   value 1 i64 cast unsigned if preferedSize 1 + else preferedSize end << >= return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state => Constant ) =: newIntConstant
-  preferedSize 0 <= if value intConstType
+  preferedSize 0 <= if
+   unsigned if
+     value 0 < value u32.MAX > | if types.primitive.I64 else types.primitive.I32 end
+   else
+     value i32.MIN < value i32.MAX > | if types.primitive.I64 else types.primitive.I32 end
+   end
   else preferedSize 8 <= _if types.primitive.I8
   else preferedSize 16 <= _if types.primitive.I16
   else preferedSize 32 <= _if types.primitive.I32
@@ -443,9 +448,6 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
   str .length 0 == if
     false return
   end
-  str 0 string.charAt char.isDigit ! if ##integer has to start with digit
-    false return
-  end
   false =:: mut unsigned
   0 =:: mut size
   str
@@ -486,7 +488,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
             end
             #swap break
           else char.isDigit ! _if ## integer literal has to end with digit or u,U,i or I followed by digits
-            #drop:2 false return
+            #swap break
           end
       #swap 1 -
     end #drop

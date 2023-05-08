@@ -45,9 +45,6 @@ proc( ConstantArray : elts ConstantContext ptr : context => ConstValue arrayView
   context [] .arrayValues .data elts .offset + elts .length array.create return
 end
 
-proc( i64 => Type ) =: public intConstType
-  #dup i32.MIN < #swap i32.MAX > | if types.primitive.I64 else types.primitive.I32 end return
-end
 proc( ConstValue arrayView : elts ConstantContext ptr mut : context => ConstValue ) =: public newArrayConst
   elts context constArray ConstValue .arrayConstant new return
 end
