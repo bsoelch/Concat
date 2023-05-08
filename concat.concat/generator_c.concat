@@ -484,7 +484,7 @@ proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : inde
         operations index isGlobal target prog compileOp
         #dup dims 1 - < if
           #dup sizes .length >= if #drop:2
-            prog [] .errors @ "number of indices exceeds dimension" sb.wrap operations index [] 1 - array.at .data [] .pos appendError
+            "number of indices exceeds dimension" sb.wrap operations index [] 1 - array.at .data [] .pos prog [] .errors @ appendError
             return
           end
           #swap

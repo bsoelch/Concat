@@ -7,4 +7,10 @@ proc( i8 => bool ) =: public isWhitespace
       false return
   end
 end
+proc( i8 : d => bool ) =: public isDigit
+  d '0' < if
+    false return
+  end
+  d '9' <= return
+end
 #end

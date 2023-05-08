@@ -172,13 +172,13 @@ struct(
             'x' 'u' 'U' case =:: c
               c 'x' == if 2 else c 'u' == _if 4 else 8 end =:: nChars
               #over nChars + str .length >= if
-                errors "not enough characters for escape sequence \"\\" sb.wrap
+                "not enough characters for escape sequence \"\\" sb.wrap
                   c                     sb.appendC
                   "\" need "            sb.appendS
                   nChars                sb.appendI
                   " got "               sb.appendS
-                  str .length #over:4 - sb.appendI
-                pos appendError
+                  str .length #over:3 - sb.appendI
+                pos errors appendError
                 '\\' pos @ updateFilePos
                 c pos @ updateFilePos
                 #swap 1 +
@@ -191,7 +191,7 @@ struct(
               #swap
                 str .data #over:2 + nChars string.create 16 number.tryParseInt number.ParserError .NONE == if
                   #dup 0 < if #drop
-                    errors "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos appendError
+                    "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                   else
                     c 'x' == if
                       i8 cast list.append
@@ -202,28 +202,28 @@ struct(
                       uft8Buff sb.asArray list.appendArray
                     else c 'U' == _if
                       #dup i32.MAX > if
-                        errors "hex-code for escape sequence: \"\\U" sb.wrap
-                          str .data #over:5 + nChars string.create sb.appendStr
+                        "hex-code for escape sequence: \"\\U" sb.wrap
+                          str .data #over:4 + nChars string.create sb.appendStr
                           "\" does not fit in a signed integer" sb.appendS
-                        pos appendError
+                        pos errors appendError
                       else #dup utf8.MAX_CODEPOINT > _if
-                        errors "code-point outside allowed range: \"\\U" sb.wrap
-                          str .data #over:5 + nChars string.create sb.appendStr
+                        "code-point outside allowed range: \"\\U" sb.wrap
+                          str .data #over:4 + nChars string.create sb.appendStr
                           "\" (maximum: " sb.appendS
                           utf8.MAX_CODEPOINT sb.appendX
                           ")" sb.appendS
-                        pos appendWarning
+                        pos errors appendWarning
                       end
                       uft8Buff sb.clear
                         #swap i32 cast sb.appendCodepoint
                       uft8Buff =
                       uft8Buff sb.asArray list.appendArray
                     else #drop
-                      errors "unknown hex-escape sequence: \"\\" sb.wrap c sb.appendC '\"' sb.appendC pos appendError
+                      "unknown hex-escape sequence: \"\\" sb.wrap c sb.appendC '\"' sb.appendC pos errors appendError
                     end
                   end
                 else #drop
-                  errors "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:4 + nChars string.create sb.appendStr '\"' sb.appendC pos appendError
+                  "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                 end
               #swap ## update file position
                 0 while #dup nChars < do
@@ -233,7 +233,7 @@ struct(
                 end #drop
               continue
             default
-              errors "unknown escape sequence \"\\" sb.wrap #over:2 sb.appendC '\"' sb.appendC pos appendError
+              "unknown escape sequence \"\\" sb.wrap #over sb.appendC '\"' sb.appendC pos errors appendError
               '\\' pos @ updateFilePos
               pos @ updateFilePos
           end

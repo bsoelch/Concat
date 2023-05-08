@@ -91,7 +91,7 @@ proc( TypeCheckState ptr mut : state => ) =: printTypesDebug
 end
 
 proc( stringBuilder : msg FilePosition : pos TypeCheckState ptr mut : state => ) =: appendError2
-  state [] .errors @ msg pos appendError
+  msg pos state [] .errors @ appendError
 end
 proc( => StackState ) =: emptyStackState
     0 Operation list.create

@@ -8,17 +8,17 @@ i32 =:: public FileId
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: public FilePosition
 enum( ERROR WARNING INFO ) =:: public ErrorType
 struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: public CompilerError
-proc( CompilerError list ptr mut : errors stringBuilder : message FilePosition : pos => ) =: public appendError
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors => ) =: public appendError
   errors []
     message ErrorType .ERROR pos CompilerError new list.append
   errors [] =
 end
-proc( CompilerError list ptr mut : errors stringBuilder : message FilePosition : pos => ) =: public appendWarning
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors => ) =: public appendWarning
   errors []
     message ErrorType .WARNING pos CompilerError new list.append
   errors [] =
 end
-proc( CompilerError list ptr mut : errors stringBuilder : message FilePosition : pos => ) =: public appendInfo
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors => ) =: public appendInfo
   errors []
     message ErrorType .INFO pos CompilerError new list.append
   errors [] =

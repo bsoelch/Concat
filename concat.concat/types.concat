@@ -375,6 +375,7 @@ proc( Type TypeContext ptr => i32 ) =: public numberPrecision
         53 return ## IEEE float-64
     end
 end
+64 =:: public MAX_INT_WIDTH
 #+largest integer n s.t. 2^n-1 fits in the type+#
 proc( Type TypeContext ptr => i32 ) =: public numberSize
   unwrapNamed

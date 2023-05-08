@@ -37,9 +37,41 @@ proc( bool FilePosition => Constant ) =: newBoolConstant
   =:: pos
   types.primitive.BOOL #swap ConstValue .boolean new IdentifierInfo optional.empty pos Constant new return
 end
-proc( i64 FilePosition => Constant ) =: newIntConstant
-  =:: pos
-  #dup intConstType #swap ConstValue .int new IdentifierInfo optional.empty pos Constant new return
+proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state => bool ) =: checkIntSize
+  preferedSize 0 <= if
+    false return
+  end
+  preferedSize types.MAX_INT_WIDTH >= if
+    false return
+  end
+  unsigned if
+    value 0 < if
+      true return
+    end
+    preferedSize types.MAX_INT_WIDTH 1 - == if
+      false return ## positive number fits in unsigned number of one smaller size
+    end
+  else
+    value 1 i64 cast preferedSize << neg < if
+      true return
+    end
+  end
+  value 1 i64 cast unsigned if preferedSize 1 + else preferedSize end << >= return
+end
+proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state => Constant ) =: newIntConstant
+  preferedSize 0 <= if value intConstType
+  else preferedSize 8 <= _if types.primitive.I8
+  else preferedSize 16 <= _if types.primitive.I16
+  else preferedSize 32 <= _if types.primitive.I32
+  else types.primitive.I64 end
+  value unsigned preferedSize pos state checkIntSize if
+    "integer value overflows given size: " sb.wrap
+      value unsigned if sb.appendU else sb.appendI end
+      unsigned if 'u' else 'i' end sb.appendC
+      preferedSize sb.appendU
+    pos state [] .errors @ appendWarning
+  end
+  value ConstValue .int new IdentifierInfo optional.empty pos Constant new return
 end
 proc( i8 FilePosition => Constant ) =: newCharConstant
   =:: pos
@@ -83,7 +115,7 @@ proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   #swap [] =
 end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendError2
-  state [] .errors @ msg pos appendError
+  msg pos state [] .errors @ appendError
 end
 proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
   state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
@@ -407,6 +439,79 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError2
   id.LABEL_ID_NONE Type array.empty true return
 end
+proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state => bool ) =: tryParseIntLiteral
+  str .length 0 == if
+    false return
+  end
+  str 0 string.charAt char.isDigit ! if ##integer has to start with digit
+    false return
+  end
+  false =:: mut unsigned
+  0 =:: mut size
+  str
+    str .length 1 - while #dup 0 > do
+      #swap
+        #dup #over:2 string.charAt
+          #dup 'u' == #over 'U' == | if #drop
+            true unsigned =
+            #over string.splitIndex #swap 10 number.tryParseInt #dup number.ParserError .EMPTY == if
+              #drop:2
+            else number.ParserError .NONE != _if
+              #drop:3 false return
+            else #dup types.MAX_INT_WIDTH > _if
+              "size of integer literal (" sb.wrap
+                #swap sb.appendI
+                ") exceeds maximum integer size (" sb.appendS
+                types.MAX_INT_WIDTH sb.appendI
+                ")" sb.appendS
+              fileState [] .wordStart state [] .errors @ appendWarning
+              64 size =
+            else
+              i32 cast size =
+            end
+            #swap break
+          else #dup 'i' == #over 'I' == | _if #drop
+            #over string.splitIndex #swap 10 number.tryParseInt number.ParserError .NONE != if
+              #drop:3 false return
+            else #dup types.MAX_INT_WIDTH > _if
+              "size of integer literal (" sb.wrap
+                #swap sb.appendI
+                ") exceeds maximum integer size (" sb.appendS
+                types.MAX_INT_WIDTH sb.appendI
+                ")" sb.appendS
+              fileState [] .wordStart state [] .errors @ appendWarning
+              64 size =
+            else
+              i32 cast size =
+            end
+            #swap break
+          else char.isDigit ! _if ## integer literal has to end with digit or u,U,i or I followed by digits
+            #drop:2 false return
+          end
+      #swap 1 -
+    end #drop
+  unsigned if
+    0 number.tryParseUInt
+  else
+    0 number.tryParseInt
+  end
+    #dup number.ParserError .NONE == if #drop
+      unsigned size fileState [] .wordStart state newIntConstant  state pushConst
+      true return
+    else #dup number.ParserError .SIGN == _if #drop:2
+      "unsigned value is marked as negative: " sb.wrap
+        str sb.appendStr
+      fileState [] .wordStart state [] .errors @ appendError
+      true return
+    else #dup number.ParserError .OVERFLOW == _if #drop:2
+      "integer value outside allowed range: " sb.wrap
+        str sb.appendStr
+      fileState [] .wordStart state appendError2
+      true return
+    end
+  #drop:2
+  false return
+end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string string bool ) =: tryParseConstant
   code
     token switch
@@ -434,16 +539,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           0 string.charAt
         fileState [] .wordStart newCharConstant state pushConst
         "" string.wrap true return
-      INTEGER case
-        token .INTEGER fileState [] .wordStart newIntConstant  state pushConst
-        "" string.wrap true return
-      ERROR case
-        0 sb.create
-          token .ERROR sb.appendStr
-        fileState [] .wordStart state appendError2
-        "" string.wrap true return
       IDENTIFER case
+        token .IDENTIFER fileState state tryParseIntLiteral if
+          "" string.wrap true return
+        end
         token .IDENTIFER
+        ## TODO floats
         break
     end
     #dup "_" string.wrap string.eq if
@@ -786,7 +887,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else "find" string.wrap #over string.eq _if #drop:2
           fileState nextToken
           #dup Token .IDENTIFER != if #drop
-            state [] .errors @ "expected identifier" sb.wrap fileState [] .wordStart appendWarning
+            "expected identifier" sb.wrap fileState [] .wordStart state [] .errors @ appendWarning
             return
           end .IDENTIFER =:: idName
           16 IdentifierMatch list.create =:: mut matches
@@ -1357,7 +1458,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state hasConst if
         state popConst
           #dup .val ConstValue .str == if
-            .val .str .length fileState [] .wordStart newIntConstant state pushConst
+            .val .str .length true 0 fileState [] .wordStart state newIntConstant state pushConst
             return
           end
         "cannot determine the length of constant " sb.wrap

@@ -299,7 +299,7 @@
   end
   proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
-      errors "invalid label id" sb.wrap declaredAt appendError
+      "invalid label id" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA @ true return
     end
     label  context [] .labelContext addrOf
@@ -312,24 +312,24 @@
     end =:: fileId
     flags FLAG_MUTABLE & 0 != if
       idType IdentifierType .TYPE == if
-        errors "type definitions cannot be mutable" sb.wrap declaredAt appendError
+        "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
       idType IdentifierType .PROCEDURE == if
-        errors "procedures cannot be mutable" sb.wrap declaredAt appendError
+        "procedures cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
       idType IdentifierType .ARGUMENT ==  if
-        errors "procedure arguments cannot be mutable" sb.wrap declaredAt appendError
+        "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
     end
     name 0 string.charAt '#' == if
-      errors "identifier names cannot start with '#'" sb.wrap declaredAt appendError
+      "identifier names cannot start with '#'" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA @ true return
     end
     name '.' string.contains if
-      errors "identifier names cannot contain '.'" sb.wrap declaredAt appendError
+      "identifier names cannot contain '.'" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA @ true return
     end
     context [] .localScopes .length 0 > if
@@ -344,13 +344,13 @@
     sb.asStr
     context [] .labelContext .namespaceInfo .current fileId IdentifierName new =:: mut idName
     mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data =:: prevDec
-      errors "re declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt appendWarning
-      errors "previous declaration " sb.wrap prevDec [] .declaredAt appendInfo
+      "re declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt errors appendWarning
+      "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
       ID_NONE ID_NONE_DATA @ true return
     end #drop
     name fileId context getIdentifier ! if
-      errors "declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt appendWarning
-      errors "shadows previous declaration " sb.wrap #over:2 [] .declaredAt appendInfo
+      "declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt errors appendWarning
+      "shadows previous declaration " sb.wrap #over [] .declaredAt errors appendInfo
     end #drop:2
     mScope [] .identifiers addrOf
       idName

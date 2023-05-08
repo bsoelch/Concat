@@ -85,6 +85,19 @@ i8 arrayView #typedef public string
       end
     return
   end
+  proc( string : base string : subStr => bool ) =: public startWith
+    subStr .length base .length > if
+      false return
+    end
+    base .data subStr .length create subStr compare 0 == return
+  end
+  proc( string : base string : subStr => bool ) =: public endsWith
+    subStr .length base .length > if
+      false return
+    end
+    base .data base .length subStr .length - + subStr .length create subStr compare 0 == return
+  end
+
   proc( string : str i8 : chr => bool ) =: public contains
     str chr array.indexOf -1 != return
   end

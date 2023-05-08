@@ -6,7 +6,7 @@
 
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public FileState
 
-enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER string : ERROR ) =:: public Token
+enum( EMPTY string : IDENTIFER string : STRING string : CHAR ) =:: public Token
 
 #namespace sb
   proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
@@ -28,15 +28,6 @@ enum( EMPTY string : IDENTIFER string : STRING string : CHAR i64 : INTEGER strin
       CHAR case
         sb "char \"" sb.appendS
           token .CHAR sb.appendStr
-          '\"' sb.appendC
-        return
-      INTEGER case
-        sb "integer " sb.appendS
-          token .INTEGER sb.appendI
-        return
-      ERROR case
-        sb "error \"" sb.appendS
-          token .ERROR sb.appendStr
           '\"' sb.appendC
         return
     end
@@ -147,13 +138,6 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
       1 +
     end
   string.cutIndex
-    #dup 0 number.tryParseInt
-      #dup number.ParserError .NONE == if #drop
-        #swap #drop Token .INTEGER new return
-      else #dup number.ParserError .OVERFLOW == _if #drop:3
-        "Integer Overflow" string.wrap Token .ERROR new return
-      end
-    #drop:2
     #dup .length 0 == if
       #drop Token .EMPTY return
     end
