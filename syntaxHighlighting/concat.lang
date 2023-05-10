@@ -11,6 +11,7 @@
   <styles>
     <style id="compile-time" name="compile time operation" map-to="def:preprocessor"/>
     <style id="comment"      name="Comment"      map-to="def:comment"/>
+    <style id="annotation"   name="annotation"   map-to="def:comment"/>
     <style id="variable"     name="Variable"                         />
     <style id="field"        name="Field"                            />
     <style id="symbol"       name="Symbol"                           />
@@ -139,6 +140,14 @@
             ops(\:[0-9]+)?     |
             find          
           )
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+    
+    <context id="annotation" style-ref="annotation">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          \#\:[^[:space:]]+
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -301,6 +310,7 @@
         <context ref="operators"/>
         <context ref="field-access"/>
         <context ref="compile-time"/>
+        <context ref="annotation"/>
         <context ref="boolean"/>
       </include>
     </context>

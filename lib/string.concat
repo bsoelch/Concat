@@ -85,7 +85,7 @@ i8 arrayView #typedef public string
       end
     return
   end
-  proc( string : base string : subStr => bool ) =: public startWith
+  proc( string : base string : subStr => bool ) =: public startsWith
     subStr .length base .length > if
       false return
     end

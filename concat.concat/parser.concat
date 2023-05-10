@@ -328,6 +328,8 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       else #dup "private" string.wrap string.eq _if
         id.FLAG_PRIVATE flags | flags =
         true isModifer =
+      else #dup "#:" string.wrap string.startsWith _if
+        true isModifer =
       end
       isModifer ! if
         break
@@ -760,6 +762,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     end
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
+      #dup ":" string.wrap string.startsWith if #drop
+        return ## ignore elements starting with #:
+      end
       ':' string.split ## XXX? rename stack ops to ..drop ..dup ..over ..swap ..rot
         "dup" string.wrap #over string.eq if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
           0 #swap
