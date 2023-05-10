@@ -8,7 +8,7 @@ codeTarget2="../build/concat3"
 codeCTarget3="../build/concat3_2.c"
 libPath="../lib/"
 externCFiles=( "../extern.c" )
-cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
+cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
 bootstrapC="../bootstrap/latest.c"
 
 # clear console

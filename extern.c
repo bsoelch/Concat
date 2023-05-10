@@ -2,5 +2,6 @@
 #include "./lib/io.c"
 #include "./lib/mem.c"
 #include "./lib/sys.c"
+#include "./lib/math.c"
 
 

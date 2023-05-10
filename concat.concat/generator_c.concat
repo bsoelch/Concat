@@ -577,6 +577,11 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
         end
       isGlobal target prog constEnd
       return
+    Float case
+      constType isGlobal target prog constStart
+      const .Float sb.appendF
+      isGlobal target prog constEnd
+      return
     enumLabel case
       constType isGlobal target prog constStart
         "{.label=" sb.appendS
@@ -1082,7 +1087,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
                   int case caseVal .int sb.appendI break
                   chr case caseVal .chr sb.appendI break
                   enumLabel case caseVal .enumLabel sb.appendI break
-                  none wildCard boolean genericArg templateArg str typeId arrayConstant case
+                  none wildCard boolean genericArg templateArg str typeId arrayConstant Float case
                     ## TODO error message
                     break
                 end

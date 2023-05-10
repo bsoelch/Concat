@@ -1,4 +1,6 @@
 #include stringBuilder
+#include tmp/ieeePrint
+
 #namespace sb
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
   
@@ -55,5 +57,7 @@
     16 false appendInt??
   end
 
-  ## TODO appendFloat appendF
+  proc( stringBuilder double #+value+# => stringBuilder ) =: public appendF
+    appendIeeeDouble ## TODO appendFloat appendF
+  end
 #end

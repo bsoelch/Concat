@@ -1,0 +1,38 @@
+#namespace math
+proc( double => double ) : public extern floor
+proc( double => double ) : public extern ceil
+proc( double => double ) : public extern round
+proc( double => double ) : public extern abs
+
+proc( double double => double ) : public extern min
+proc( double double => double ) : public extern max
+
+proc( double => double ) : public extern log2
+proc( double => double ) : public extern log
+proc( double => double ) : public extern exp
+
+proc( double => double ) : public extern sqrt
+proc( double => double ) : public extern cbrt
+proc( double double => double ) : public extern pow
+## XXX gamma function
+
+proc( double => double ) : public extern sin
+proc( double => double ) : public extern cos
+proc( double => double ) : public extern tan
+proc( double => double ) : public extern asin
+proc( double => double ) : public extern acos
+proc( double => double ) : public extern atan
+proc( double => double ) : public extern sinh
+proc( double => double ) : public extern cosh
+proc( double => double ) : public extern tanh
+proc( double => double ) : public extern asinh
+proc( double => double ) : public extern acosh
+proc( double => double ) : public extern atanh
+proc( double double => double ) : public extern atan2 ## y,x
+#end
+
+#namespace float
+proc( double => bool ) : public extern isNaN
+proc( double => bool ) : public extern isInfinite
+proc( double => bool ) : public extern isFinite
+#end

@@ -4,7 +4,7 @@ compilerTarget="./concat"
 codeSrc="./code.concat"
 codeCTarget="./code.c"
 codeTarget="./code"
-cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
+cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
 
 # clear console
 clear

@@ -8,7 +8,7 @@ proc( T : x i64 : p => T ) =: public powI
   p 0 == if
     1 T cast return
   else p 0 < _if
-    1 T cast  x p neg powI / return
+    1 T cast x / p neg powI return
   end
   x =:: mut xPow
   1 T cast
@@ -159,7 +159,7 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
     end
     0 while #dup #over:2 .length < do
       #over #over string.charAt '.' == if
-        d if
+        #dup 0 == d | if ## . cannot be first character
           #drop:2 double.NaN ParserError .INVALID_CHAR return
         end
         true d =

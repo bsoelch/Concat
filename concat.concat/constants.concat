@@ -11,6 +11,7 @@ enum(
   i32 : enumLabel
   i8 : chr
   i64 : int
+  double : Float
   StringConstant : str
   ConstantArray : arrayConstant
   Type : typeId
@@ -62,6 +63,8 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext => bool ) =:
       a .enumLabel b .enumLabel == return
     int case
       a .int b .int == return
+    Float case
+      a .Float b .Float == return
     chr case
       a .chr b .chr == return
     str case
@@ -134,6 +137,10 @@ proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext 
       int case
         "integer: "  sb.appendS
         #over .int sb.appendI
+        break
+      Float case
+        "float: "    sb.appendS
+        #over .Float sb.appendF
         break
       str case
         "string: \""  sb.appendS

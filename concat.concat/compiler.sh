@@ -3,7 +3,7 @@ baseCompiler="../concat"
 compilerSrc="./compiler.concat"
 compilerTarget="../build/concat2"
 compilerCTarget="../build/concat2.c"
-cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" )
+cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
 
 # clear console
 clear

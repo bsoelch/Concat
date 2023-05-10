@@ -59,6 +59,7 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
   value 1 i64 cast unsigned if preferedSize 1 + else preferedSize end << >= return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state => Constant ) =: newIntConstant
+   ## TODO? sign extend unsigned constants of smaller types
   preferedSize 0 <= if
    unsigned if
      value 0 < value u32.MAX > | if types.primitive.I64 else types.primitive.I32 end
@@ -94,6 +95,10 @@ end
 proc( Type i32 FilePosition => Constant ) =: newEnumLabelConstant
   =:: pos
   ConstValue .enumLabel new IdentifierInfo optional.empty pos Constant new return
+end
+proc( double FilePosition => Constant ) =: newFloatConst
+  =:: pos
+  types.primitive.FLOAT64 #swap ConstValue .Float new IdentifierInfo optional.empty pos Constant new return
 end
 
 proc( Constant : const => Operation ) =: constantToOp
@@ -444,7 +449,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError2
   id.LABEL_ID_NONE Type array.empty true return
 end
-proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state => bool ) =: tryParseIntLiteral
+proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state => bool ) =: tryParseNumberLiteral
   str .length 0 == if
     false return
   end
@@ -512,6 +517,17 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
       true return
     end
   #drop:2
+  str 0 number.tryParseFloat ## XXX? float32 constants
+    #dup number.ParserError .NONE == if #drop
+      fileState [] .wordStart newFloatConst state pushConst
+      true return
+    else #dup number.ParserError .INT == _if #drop:2
+      "integer value outside allowed range: " sb.wrap
+        str sb.appendStr
+      fileState [] .wordStart state appendError2
+      true return
+    end
+  #drop:2
   false return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string string bool ) =: tryParseConstant
@@ -542,11 +558,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart newCharConstant state pushConst
         "" string.wrap true return
       IDENTIFER case
-        token .IDENTIFER fileState state tryParseIntLiteral if
+        token .IDENTIFER fileState state tryParseNumberLiteral if
           "" string.wrap true return
         end
         token .IDENTIFER
-        ## TODO floats
         break
     end
     #dup "_" string.wrap string.eq if

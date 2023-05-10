@@ -1,3 +1,4 @@
+#+
 #template type : T #end
 type : Node
 #template type : T #end
@@ -6,4 +7,19 @@ struct( T : data  T Node ptr : next ) T Node =
 entryPoint:
   i32 Node : aNode
   0 aNode @ i32 Node new aNode =
+end
++#
+#include numbers
+#include tmp/ieeePrint
+#include stringIO
+
+entryPoint:
+  1.234 print
+  0 sb.create
+    0x123456789 double cast sb.appendIeeeDouble '\n' sb.appendC
+    10 double cast -323 number.powI 2 double cast / neg sb.appendIeeeDouble '\n' sb.appendC
+    2 double cast 10 double cast 307 number.powI * sb.appendIeeeDouble '\n' sb.appendC
+    10 double cast 400 number.powI sb.appendIeeeDouble '\n' sb.appendC
+    io.stdOut #over io.fputSb #drop
+  sb.free #drop
 end

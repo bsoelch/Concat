@@ -718,7 +718,7 @@
   end
   proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => ConstValue ) =: public replaceGenerics
     src switch
-      none wildCard boolean int enumLabel chr str case
+      none wildCard boolean int enumLabel chr str Float case
         src return
       arrayConstant case
         src return ## TODO array constants
