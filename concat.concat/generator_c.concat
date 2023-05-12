@@ -429,6 +429,15 @@ proc( BinaryOperator => bool ) =: isUnsignedOp
       true return
   end
 end
+proc( BinaryOperator => bool ) =: isArithimeticOp
+  switch
+    ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD
+    AND OR XOR LSHIFT RSHIFT URSHIFT case
+      true return
+     EQ NE LE GE LT GT ULE UGE ULT UGT case
+      false return
+  end
+end
 ## XXX? compiler context
 proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
   prog [] .idContext .labelContext @ =:: labelContext
@@ -766,7 +775,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     binaryOperator case
       target "(" io.fputs #drop
-      op [] .dataType typeContext types.isNumber if ## ensure number operations have right type
+      op [] .val .binaryOperator isArithimeticOp if ## ensure number operations have right type
         ## compensates for automatic conversion of shorts to int in C
         target "(" io.fputs #drop
         op [] .dataType target prog printTypeName
@@ -814,7 +823,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       op [] .dataType typeContext types.isEnum if
         target ".label" io.fputs #drop
       end
-      op [] .dataType typeContext types.isNumber if
+      op [] .val .binaryOperator isArithimeticOp if
         target ")" io.fputs #drop
       end
       target ")" io.fputs #drop

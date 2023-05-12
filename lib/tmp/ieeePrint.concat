@@ -39,6 +39,9 @@ proc( stringBuilder : sb double : f => stringBuilder ) =: public appendIeeeDoubl
     end
     "0x" sb.appendS
     exp ZERO_EXP == if
+      mantissa 0 == if
+        "0P0" sb.appendS return
+      end
       "0." sb.appendS
       MANTIASSA_HI_BLOCK while #dup mantissa & 0 == do
         #swap

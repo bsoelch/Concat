@@ -90,6 +90,7 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
           1 +
         end
         string.tail fileState skipSpaces
+        #dup .length 2 < if break end
         true
       else false end #swap
       #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
@@ -101,10 +102,13 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
         end
         #over #over string.charAt fileState [] .currentPos @ updateFilePos
         1 +
-        string.tail fileState skipSpaces
+        string.tail fileState skipSpaces ## length will be checked at start of next loop
         #swap #drop true
       else #swap end
     do end
+    #dup .length 0 <= if #drop
+      string.empty Token .EMPTY return
+    end
     fileState [] .currentPos fileState [] .wordStart =
     #dup 0 string.charAt fileState [] .currentPos @ updateFilePos
     #dup 0 string.charAt '"' == if ## string
