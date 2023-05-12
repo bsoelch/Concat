@@ -1,0 +1,212 @@
+#include stringBuilder
+#include numbers/printInt
+#include numbers/limits
+#include math
+
+proc( i32 => i8 ) =: getDigit
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" #swap []
+end
+
+#namespace double
+  0x0.0000000000001P-1022 =:: MIN_POSITIVE
+#end
+
+#namespace sb
+## appends the C-style hexadecimal representation of an IEEE double to a stringBuilder
+proc( stringBuilder : sb double : f => stringBuilder ) =: public appendIeeeDouble
+  f =:: mut value
+  -1022 =:: MIN_POW
+  1023 =:: MAX_POW
+  13 =:: DIGIT_COUNT
+  sb
+    value double.isFinite ! if
+      value double.isNaN if
+        "NAN" sb.appendS return
+      else value 0 > _if
+        "INFINITY" sb.appendS return
+      else
+        "-INFINITY" sb.appendS return
+      end
+    else value 0.0 == value -0.0 == | _if
+      "0" sb.appendS return
+    end
+    value 0 < if
+      '-' sb.appendC
+      value neg value =
+    end
+    "0x" sb.appendS
+    value math.log2 math.floor i64 cast =:: mut e
+    e MIN_POW < if
+      MIN_POW e =
+    else e MAX_POW > _if
+      MAX_POW e =
+    end
+    2 e double cast math.pow =:: mut p
+    value p / value =
+    value math.floor =:: mut d
+    d i32 cast getDigit sb.appendC
+    '.' sb.appendC
+    0 while #dup DIGIT_COUNT < do
+      #swap
+        value d - 16 * value =
+        value math.floor d = 
+        d i32 cast getDigit sb.appendC
+      #swap 1 +
+    end #drop
+    'P' sb.appendC
+    e sb.appendI
+  return
+end
+proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci => stringBuilder ) =: public appendFloat???
+  f =:: mut value
+  base 2 < base 62 > | if 
+    ## TODO error handling
+    sb return
+  end
+  sb
+    value double.isFinite ! if
+      value double.isNaN if
+        "[NaN]" sb.appendS return
+      else value 0 > _if
+        "[Infinity]" sb.appendS return
+      else
+        "-[Infinity]" sb.appendS return
+      end
+    else value 0.0 == value -0.0 == | _if
+      "0" sb.appendS return
+    end
+    value 0 < if
+      '-' sb.appendC
+      value neg value =
+    end
+    value math.log base math.log / math.floor i64 cast =:: mut e
+    e =:: mut e_max
+    base e double cast math.pow =:: mut p
+    i32 64 array new =:: mut buff
+    0 =:: mut n
+    0b1e-110100 #+2^-52+# value * =:: mut eps ##XXX? better implementation of eps
+    eps 0 == if ## adjust size of small numbers
+      base e 1 + double cast math.pow p =
+      value p / base * value =
+      double.MIN_POSITIVE p / eps =
+      1 p =
+    end
+    p double.isInfinite if ## adjust size for big numbers
+      base e 1 - double cast math.pow p =
+      value base / value =
+      eps base / eps =
+    end
+    while p eps > do
+      value p / math.floor i32 cast =:: d
+      d buff @ n [] =
+      n 1 + n =
+      ## XXX break loop if n large enough
+      value d p * - value =
+      p base / p =
+      e 1 + e =
+    end
+    precision 0 <= precision n >= | if
+      n 1 -
+    else
+      precision
+    end n =
+    n 0 == if 1 n = end
+    buff @ n [] base 2 / >= if
+      n 1 - =:: mut j
+      true =:: mut inc
+      while inc j 0 >= & do
+        buff @ j [] 1 +  buff @ j [] =
+        buff @ j [] base >= if
+          buff @ j [] base -  buff @ j [] =
+        else
+          false inc =
+        end
+        j 1 - j =
+      end
+      inc if
+        buff @ i32 _ ptr mut cast 1 + buff @ n mem.move #drop
+        1 buff @ 0 [] =
+        n 1 + n =
+        e_max 1 + e_max =
+      end
+    end
+    while n 1 - e_max > buff @ n 1 - [] 0 == & do
+      n 1 - n =
+    end
+    sci e_max n >= | e_max -5 < | if
+      while n 1 - 0 > buff @ n 1 - [] 0 == & do
+        n 1 - n =
+      end
+      buff @ 0 [] getDigit sb.appendC
+      n 1 > if
+        '.' sb.appendC
+        1 while #dup n < do
+           #swap
+             buff @ #over:2 [] getDigit sb.appendC
+           #swap 1 +
+        end #drop
+      end
+      base 10 <= if 'E' else base 30 <= _if 'X' else '#' end sb.appendC
+      e_max 0 >= if '+' sb.appendC end
+      e_max  base appendInt?
+    else e_max 0 >= _if
+      0 while #dup n < do
+        #swap
+          buff @ #over:2 [] getDigit sb.appendC
+          #over e_max == #over:2 n 1 - < & if
+            '.' sb.appendC
+          end
+        #swap 1 +
+      end #drop
+    else
+      "0." sb.appendS
+      1 e_max - while #dup 0 > do
+        #swap
+          '0' sb.appendC
+        #swap 1 -
+      end #drop
+      0 while #dup n < do
+        #swap
+          buff @ #over:2 [] getDigit sb.appendC
+        #swap 1 +
+      end #drop
+    end
+  return
+end
+proc( stringBuilder double #+value+# => stringBuilder ) =: public appendF
+  0 10 false appendFloat???
+end
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendF?
+  10 false appendFloat???
+end
+proc( stringBuilder double #+value+# => stringBuilder ) =: public appendE
+  0 10 true appendFloat???
+end
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendE?
+  10 true appendFloat???
+end
+proc( stringBuilder double #+value+# => stringBuilder ) =: public appendXF
+  0 16 false appendFloat???
+end
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendXF?
+  16 false appendFloat???
+end
+proc( stringBuilder double #+value+# => stringBuilder ) =: public appendXE
+  0 16 true appendFloat???
+end
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendXE?
+  16 true appendFloat???
+end
+proc( stringBuilder double #+value+# => stringBuilder ) =: public appendBF
+  0 2 false appendFloat???
+end
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendBF?
+  2 false appendFloat???
+end
+proc( stringBuilder double #+value+# => stringBuilder ) =: public appendBE
+  0 2 true appendFloat???
+end
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendBE?
+  2 true appendFloat???
+end
+#end

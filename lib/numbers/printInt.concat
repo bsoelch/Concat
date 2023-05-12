@@ -1,23 +1,22 @@
 #include stringBuilder
-#include tmp/ieeePrint
 
 #namespace sb
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
-  
+
   proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
-    base 2 < if 
+    base 2 < base 62 > | if
       ## TODO error handling
       buffer return
     end
     i8 64 array new =:: mut chrBuff
     buffer
       i
-      #dup 0 < signed & if  
+      #dup 0 < signed & if
         #swap '-' appendC #swap
-        neg 
+        neg
       else #dup 0 == _if
         #drop '0' appendC return
-      end   
+      end
       63 #swap ## index in chrBuff
         while #dup 0 != do
           #swap ## <buffer> <i> <chrIndex>
@@ -55,9 +54,5 @@
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUHex
     16 false appendInt??
-  end
-
-  proc( stringBuilder double #+value+# => stringBuilder ) =: public appendF
-    appendIeeeDouble ## TODO appendFloat appendF
   end
 #end

@@ -86,12 +86,12 @@ double concat_math_datan2(double y,double x){
 }
 
 
-bool concat_float_disNaN(double x){
+bool concat_double_disNaN(double x){
   return isnan(x);
 }
-bool concat_float_disInfinite(double x){
+bool concat_double_disInfinite(double x){
   return isinf(x)!=0;
 }
-bool concat_float_disFinite(double x){
+bool concat_double_disFinite(double x){
   return isfinite(x);
 }

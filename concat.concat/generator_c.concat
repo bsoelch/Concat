@@ -20,6 +20,7 @@ proc( io.FILE : target => ) =: printHeader
     #dup "#include <inttypes.h>\n" io.fputs #drop
     #dup "#include <string.h>\n" io.fputs #drop
     #dup "#include <stdbool.h>\n" io.fputs #drop
+    #dup "#include <math.h>\n // INFINITY and NAN macros" io.fputs #drop
   #drop
 end
 
@@ -588,7 +589,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
       return
     Float case
       constType isGlobal target prog constStart
-      const .Float sb.appendF
+      const .Float sb.appendIeeeDouble
       isGlobal target prog constEnd
       return
     enumLabel case

@@ -31,7 +31,7 @@ proc( double => double ) : public extern atanh
 proc( double double => double ) : public extern atan2 ## y,x
 #end
 
-#namespace float
+#namespace double
 proc( double => bool ) : public extern isNaN
 proc( double => bool ) : public extern isInfinite
 proc( double => bool ) : public extern isFinite

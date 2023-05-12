@@ -1,4 +1,5 @@
-#include numbers/sb
+#include numbers/printFloat
+#include numbers/printInt
 #include numbers/limits
 #include string
 
@@ -164,9 +165,15 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
         end
         true d =
       else #over #over string.charAt mBase isExpChar _if
+        #dup 0 == if ##-exp char cannot be first character
+          #drop:2 double.NaN ParserError .INVALID_CHAR return
+        end
         #dup 1 + e =
         break
       else #over #over string.charAt #dup 'p' == #swap 'P' == | mBase 16 == & _if
+        #dup 0 == if ##-exp char cannot be first character
+          #drop:2 double.NaN ParserError .INVALID_CHAR return
+        end
         #dup 1 + e =
         true cStyleHex =
         10 mBase = ## exponent written in base 10
@@ -205,7 +212,7 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
      ## split of last factor to prevent underflow of intermediate results
      1 double cast #swap /
      -1 c - powI *  mBase double cast /
-  else double cast
+  else
      c powI *
   end
   d  e 0 > | if ParserError .NONE return else ParserError .INT return end

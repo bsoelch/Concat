@@ -25,7 +25,7 @@ for f in *.concat; do ## go through all concat files in the test directory
   fi
   
   ../../concat "$f" -o "${f%.*}.c" -l "../../lib/" -q > ".${f%.*}.out" 2> ".${f%.*}.err" &&
-  gcc ${cArgs[@]} -Wno-unused "${f%.*}.c" "../extern.c" -o "${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
+  gcc ${cArgs[@]} -Wno-unused "${f%.*}.c" "../../extern.c" -o "${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
   ( [ -f "${f%.*}.in" ] && cat "${f%.*}.in" || echo "" ) | # use ${f%.*}.in as input if it exists otherwise use empty stdin
     "./${f%.*}" "${args[@]}" >> ".${f%.*}.out" 2>> ".${f%.*}.err"
   nTested=$((nTested+1))

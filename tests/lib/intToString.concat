@@ -1,4 +1,4 @@
-#include numbers/sb
+#include numbers/printInt
 #include stringIO
 
 entryPoint:
