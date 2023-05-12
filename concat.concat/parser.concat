@@ -1251,7 +1251,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "program already has an entry point" sb.wrap fileState [] .wordStart state appendError2
       end
       true state [] .hasEntryPoint =
-      BlockType .PROCEDURE Type .undefined state [] .idContext @ id.openProcScope
+      ## openProcScope
+        BlockType .PROCEDURE
+        ## newProcedure
+          Type array.empty id.LABEL_ID_NONE false typeContext types.newProcArgs
+          Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs
+        typeContext types.newProcedure #drop
+      state [] .idContext @ id.openProcScope
       fileState [] .wordStart opEntryPoint  state appendOp
       return
     else #dup "if" string.wrap string.eq _if #drop
