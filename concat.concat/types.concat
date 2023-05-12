@@ -123,182 +123,6 @@ end
 
 #end
 type : public TypeContext
-#namespace sb
-proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveType
-  switch
-    BOOL case
-      "bool" appendS return
-    I8 case
-      "i8" appendS return
-    I16 case
-      "i16" appendS return
-    I32 case
-      "i32" appendS return
-    I64 case
-      "i64" appendS return
-    FLOAT32 case
-      "float" appendS return
-    FLOAT64 case
-      "double" appendS return
-    TYPE case
-      "type" appendS return
-  end
-end
-proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder ) =: public appendTypeRecursive
-  =:: allowRecurse
-  =:: context
-  =:: labelContext
-  #dup switch
-    undefined case #drop
-      "undefined" appendS return
-    primitiveType case
-      .primitiveType appendPrimitiveType return
-    pointer case =:: t
-      t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-      t context types.isFixedSize if
-        t context types.getArraySize =:: sizes
-        0 while #dup sizes .length < do
-          #swap
-            sizes #over:2 array.at .data =:: s
-            s [] .sizeType switch
-              int case
-                ' ' sb.appendC
-                s [] .value sb.appendI
-                break
-              staticArg case
-                " staticArg(" sb.appendS
-                s [] .value sb.appendI
-                ")" sb.appendS
-                break
-              templateArg case
-                " templateArg(" sb.appendS
-                s [] .value sb.appendI
-                ")" sb.appendS
-                break
-            end
-          #swap 1 +
-        end #drop
-        " ptr" appendS
-      else
-        " _ ptr" appendS
-      end
-      t context types.isMutable if
-        " mut" appendS
-      end
-      return
-    arrayType case
-      context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-      " array" appendS return
-    tuple case
-      .tuple
-      #swap
-        "tuple[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    struct case
-      .struct
-      #swap
-        "struct[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    union case
-      .union
-      #swap
-        "union[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    enum case
-      .enum
-      #swap
-        "enum[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    labeledProcIn case
-       .labeledProcIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
-    procIn case
-      .procIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
-    procOut case
-      .procOut context [] .compositeTypes #swap list.get labelContext context appendComposite return
-    procedure case
-      .procedure
-      #swap
-        "proc[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .procTypes #swap list.get #swap
-          #over .in labelContext context allowRecurse appendTypeRecursive
-          "=> " appendS
-          #swap .out labelContext context allowRecurse appendTypeRecursive
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    namedType case
-      .namedType
-      #swap
-        "named[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-      context [] .namedTypes #swap list.get labelContext context allowRecurse appendNamedType
-      " )" appendS
-      return
-    autoType case
-      #swap "auto["     appendS
-        #swap .autoType appendI
-                "]"     appendS
-      return
-    genericType case
-      #swap "generic["     appendS
-        #swap .genericType appendI
-                   "]"     appendS
-      return
-    templateType case
-      #swap "template["     appendS
-        #swap .templateType appendI
-                    "]"     appendS
-      return
-  end
-end
-proc( stringBuilder Type LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendType
-  true appendTypeRecursive return
-end
-#end
 #namespace types
 
 ## primitive types
@@ -1193,5 +1017,186 @@ proc( TypeContext : context => TypeContext ) =: public clearTypeContent
     #dup .procTypes      list.free #over .procTypes =
     #dup .namedTypes     list.free #over .namedTypes =
   return
+end
+#end
+#namespace sb
+proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveType
+  switch
+    BOOL case
+      "bool" appendS return
+    I8 case
+      "i8" appendS return
+    I16 case
+      "i16" appendS return
+    I32 case
+      "i32" appendS return
+    I64 case
+      "i64" appendS return
+    FLOAT32 case
+      "float" appendS return
+    FLOAT64 case
+      "double" appendS return
+    TYPE case
+      "type" appendS return
+  end
+end
+proc( stringBuilder : sb types.ArraySize arrayView : sizes => stringBuilder  ) =: public appendArraySize
+  sb
+    0 while #dup sizes .length < do
+      #swap
+        sizes #over:2 array.at .data =:: s
+        s [] .sizeType switch
+          int case
+            ' ' sb.appendC
+            s [] .value sb.appendI
+            break
+          staticArg case
+            " staticArg(" sb.appendS
+            s [] .value sb.appendI
+            ")" sb.appendS
+            break
+          templateArg case
+            " templateArg(" sb.appendS
+            s [] .value sb.appendI
+            ")" sb.appendS
+            break
+        end
+      #swap 1 +
+    end #drop
+  return
+end
+proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder ) =: public appendTypeRecursive
+  =:: allowRecurse
+  =:: context
+  =:: labelContext
+  #dup switch
+    undefined case #drop
+      "undefined" appendS return
+    primitiveType case
+      .primitiveType appendPrimitiveType return
+    pointer case =:: t
+      t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
+      t context types.isFixedSize if
+        t context types.getArraySize appendArraySize
+        " ptr" appendS
+      else
+        " _ ptr" appendS
+      end
+      t context types.isMutable if
+        " mut" appendS
+      end
+      return
+    arrayType case =:: t
+      t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
+      t context types.getArraySize appendArraySize
+      " array" appendS return
+    tuple case
+      .tuple
+      #swap
+        "tuple[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    struct case
+      .struct
+      #swap
+        "struct[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    union case
+      .union
+      #swap
+        "union[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    enum case
+      .enum
+      #swap
+        "enum[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    labeledProcIn case
+       .labeledProcIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
+    procIn case
+      .procIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
+    procOut case
+      .procOut context [] .compositeTypes #swap list.get labelContext context appendComposite return
+    procedure case
+      .procedure
+      #swap
+        "proc[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .procTypes #swap list.get #swap
+          #over .in labelContext context allowRecurse appendTypeRecursive
+          "=> " appendS
+          #swap .out labelContext context allowRecurse appendTypeRecursive
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    namedType case
+      .namedType
+      #swap
+        "named[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+      context [] .namedTypes #swap list.get labelContext context allowRecurse appendNamedType
+      " )" appendS
+      return
+    autoType case
+      #swap "auto["     appendS
+        #swap .autoType appendI
+                "]"     appendS
+      return
+    genericType case
+      #swap "generic["     appendS
+        #swap .genericType appendI
+                   "]"     appendS
+      return
+    templateType case
+      #swap "template["     appendS
+        #swap .templateType appendI
+                    "]"     appendS
+      return
+  end
+end
+proc( stringBuilder Type LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendType
+  true appendTypeRecursive return
 end
 #end
