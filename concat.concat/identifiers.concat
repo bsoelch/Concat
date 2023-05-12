@@ -62,7 +62,7 @@
     LabelContext : mut labelContext
     TypeContext : mut typeContext
     id.Scope : mut globalScope
-    id.Scope list : mut localScopes
+    id.Scope list : mut openScopes
     TemplateInfo list : mut templateInfos
     ConstValue list : mut templateArgBuffer
     types.ArraySize list : mut arraySizeBuffer
@@ -96,45 +96,51 @@
     IdentifierInfo new return
   end
 
+  proc( IdentifierContext ptr mut : context => bool ) =: public isTopLevel
+    context [] .openScopes .length 0 == return
+  end
   proc( IdentifierContext ptr mut : context => bool ) =: public isGlobal
-    context [] .localScopes .length 0 == return
-  end
-  proc( BlockType : blockType Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
-    context [] .localScopes
-       blockType procType context [] .labelContext .namespaceInfo .imports newScope
-       list.append
-    context [] .localScopes =
-  end
-  proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
-    context [] .localScopes .length 0 == if
-      Type .undefined
-    else
-      context [] .localScopes list.peek .data [] .currentProc
-    end =:: currentProc
-    context [] .localScopes
-       blockType currentProc context [] .labelContext .namespaceInfo .imports newScope
-       list.append
-    context [] .localScopes =
-  end
-  proc( BlockType : blockType  bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
-    context [] .localScopes .length 0 == if
+    context [] .openScopes .length 0 == if
       true return
     end
-    blockType context [] .localScopes list.peek .data [] .blockType =
-    autoClose context [] .localScopes list.peek .data [] .autoClose =
+    context [] .openScopes list.peek .data [] .currentProc Type .undefined types.typeEquals return
+  end
+  proc( BlockType : blockType Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
+    context [] .openScopes
+       blockType procType context [] .labelContext .namespaceInfo .imports newScope
+       list.append
+    context [] .openScopes =
+  end
+  proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
+    context [] .openScopes .length 0 == if
+      Type .undefined
+    else
+      context [] .openScopes list.peek .data [] .currentProc
+    end =:: currentProc
+    context [] .openScopes
+       blockType currentProc context [] .labelContext .namespaceInfo .imports newScope
+       list.append
+    context [] .openScopes =
+  end
+  proc( BlockType : blockType  bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
+    context [] .openScopes .length 0 == if
+      true return
+    end
+    blockType context [] .openScopes list.peek .data [] .blockType =
+    autoClose context [] .openScopes list.peek .data [] .autoClose =
     false return
   end
   proc( IdentifierContext ptr mut : context => BlockType ) =: public currentScopeType
-    context [] .localScopes .length 0 == if
+    context [] .openScopes .length 0 == if
       BlockType .UNKNOWN return
     end
-    context [] .localScopes list.peek .data [] .blockType return
+    context [] .openScopes list.peek .data [] .blockType return
   end
   proc( IdentifierContext ptr mut : context => Type ) =: public currentScopeProc
-    context [] .localScopes .length 0 == if
+    context [] .openScopes .length 0 == if
       Type .undefined return
     end
-    context [] .localScopes list.peek .data [] .currentProc return
+    context [] .openScopes list.peek .data [] .currentProc return
   end
   proc( i8 _ ptr mut list => i8 _ ptr mut list ) =: freeScopeStrings
     0 while #dup #over:2 .length < do
@@ -144,10 +150,10 @@
     list.free
   end
   proc( IdentifierContext ptr mut : context => bool BlockType bool ) =: public closeScope
-    context [] .localScopes .length 0 == if
+    context [] .openScopes .length 0 == if
       false BlockType .UNKNOWN true return
     end
-    context [] .localScopes list.pop #swap context [] .localScopes =
+    context [] .openScopes list.pop #swap context [] .openScopes =
       #dup .scopeStrings freeScopeStrings #over .scopeStrings =
       #dup .identifiers @ map.free
       #dup .prevImports context [] .labelContext .namespaceInfo .imports =
@@ -173,9 +179,9 @@
     mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
     name relSpace fileId IdentifierName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
-      context [] .localScopes .length 1 -
+      context [] .openScopes .length 1 -
       while #dup 0 >= do
-        context [] .localScopes #over list.at .data [] .identifiers addrOf idName map.at
+        context [] .openScopes #over list.at .data [] .identifiers addrOf idName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if #swap #drop
             idName #swap false return
@@ -305,7 +311,7 @@
     label  context [] .labelContext addrOf
       #over #over labelFlags =:: flags
     labelName .data =:: name
-    context id.isGlobal flags FLAG_PUBLIC & 0 != & if ## public global -> ignore fileId
+    context id.isTopLevel flags FLAG_PUBLIC & 0 != & if ## public global -> ignore fileId
       FILE_ID_NONE
     else
       currentFile
@@ -332,8 +338,8 @@
       "identifier names cannot contain '.'" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA @ true return
     end
-    context [] .localScopes .length 0 > if
-      context [] .localScopes #dup .length 1 - list.at .data
+    context [] .openScopes .length 0 > if
+      context [] .openScopes #dup .length 1 - list.at .data
     else
       context [] .globalScope @
     end =:: mScope
