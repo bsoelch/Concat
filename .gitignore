@@ -10,6 +10,9 @@ syntaxHighlighting/update.sh
 concat
 code
 code.c
+code.concat
+concat.sh
+cconcat.sh
 concat.concat/*.c
 concat.concat/*.txt
 featureMap.concat
