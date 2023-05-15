@@ -20,7 +20,7 @@ proc( io.FILE : target => ) =: printHeader
     #dup "#include <inttypes.h>\n" io.fputs #drop
     #dup "#include <string.h>\n" io.fputs #drop
     #dup "#include <stdbool.h>\n" io.fputs #drop
-    #dup "#include <math.h>\n // INFINITY and NAN macros" io.fputs #drop
+    #dup "#include <math.h>\n // INFINITY and NAN macros" io.fputs #drop ## XXX? include only if there are non-finite float constants
   #drop
 end
 
@@ -659,7 +659,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     OpValue .Constant case
       op [] .dataType op [] .val .Constant isGlobal target prog compileConstant
-      break
+      return
     Print case
       op [] .dataType typeContext types.unwrapNamed =:: printType
       printType types.isPrimitive if
@@ -725,6 +725,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target ")" io.fputs #drop
         end
         target "{0,}" io.fputs #drop
+        return
       end
       break
     newEnum case
@@ -773,7 +774,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           break
       end
       target ")" io.fputs #drop
-      break
+      return
     binaryOperator case
       target "(" io.fputs #drop
       op [] .val .binaryOperator isArithimeticOp if ## ensure number operations have right type
@@ -828,12 +829,35 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target ")" io.fputs #drop
       end
       target ")" io.fputs #drop
-      break
+      return
     Cast Cast! case
       op [] .val OpValue .Cast! == if op [] .val .Cast! else op [] .val .Cast end =:: src
       src typeContext types.unwrapNamed op [] .dataType typeContext types.unwrapNamed types.typeEquals if
         operations index isGlobal target prog compileOp ## cast type to itself
         return
+      end
+      op [] .dataType typeContext types.isUnion if
+        isGlobal ! if
+          target "((" io.fputs #drop
+          op [] .dataType target prog printTypeName
+          target ")" io.fputs #drop
+        end
+        target "{." io.fputs #drop
+        op [] .dataType src labelContext typeContext types.findUnionTypeIndex if
+          "cannot store values of type \"" sb.wrap
+            src labelContext typeContext sb.appendType
+            "\" in " sb.appendS
+            op [] .dataType labelContext typeContext sb.appendType
+          op [] .pos prog [] .errors @ appendError
+        end
+        op [] .dataType #swap target prog printEltName
+        target "=" io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target "}" io.fputs #drop
+        isGlobal ! if
+          target ")" io.fputs #drop
+        end
+        return ## unknown cast
       end
       src typeContext types.isArray if
         op [] .dataType typeContext types.isPointer if ## array -> pointer
@@ -871,7 +895,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         ")"                     sb.appendS
         target #over io.fputSb #drop
       sb.free #drop
-      break
+      return
     enumLabelNe case
       target "(" io.fputs #drop
       operations index isGlobal target prog compileOp
@@ -881,11 +905,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         ")"                     sb.appendS
         target #over io.fputSb #drop
       sb.free #drop
-      break
+      return
     callPtr case
       operations index isGlobal target prog compileOp
       op [] .dataType operations index isGlobal target prog compileCall
-      break
+      return
     getId case
       op [] .val .getId =:: idInfo
       idInfo .idType switch
@@ -895,7 +919,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         PROCEDURE case
           idInfo target prog printIdName
           op [] .dataType operations index isGlobal target prog compileCall
-          break
+          return
         TYPE TEMPLATE_ARG case
           break ## XXX error message
       end
@@ -991,7 +1015,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       target " = " io.fputs #drop
       operations index isGlobal target prog compileOp
       target ";\n" io.fputs #drop
-      break
+      return
     @ArrayElement case
       target "(&" io.fputs #drop
       op [] .dataType typeContext types.getBaseType =:: eltType
@@ -1003,7 +1027,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target ".data[0])" io.fputs #drop
       end
       target ")" io.fputs #drop
-      break
+      return
     getElement case
       op [] .dataType op [] .val .getElement false operations index isGlobal target prog compileGetElt
       return
@@ -1107,7 +1131,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             ";\n" sb.appendS
             target #over io.fputSb #drop
           sb.free #drop
-          break
+          return
         DEFAULT case
           target "default:;\n" io.fputs #drop
           return
@@ -1255,6 +1279,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     getName setName @Name getLabel setLabel @Label length size stackMod case
       break ## XXX error message
   end
+  "compiling operation " sb.wrap
+    op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+  op [] .pos prog [] .errors @ appendError
 end
 
 proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC

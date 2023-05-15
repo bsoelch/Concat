@@ -451,11 +451,13 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
       1 + continue
     end
     src [] .valType expected typeContext types.canAutoCast if
-      src [] .opCount 1 == state [] .opStack opOffset list.at .data #swap #over [] .val OpValue .Constant == & if
-        expected #swap [] .dataType =
-        expected src [] .valType =
-        1 + continue
-      else #drop end
+      expected typeContext types.isUnion ! if ## TODO casting of union constants (remember original type)
+        src [] .opCount 1 == state [] .opStack opOffset list.at .data #swap #over [] .val OpValue .Constant == & if
+          expected #swap [] .dataType =
+          expected src [] .valType =
+          1 + continue
+        else #drop end
+      end
       nCasts 1 + nCasts =
       1 + continue
     end

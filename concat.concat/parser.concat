@@ -400,7 +400,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
     id.LABEL_ID_NONE
   else
     state [] .idContext .labelContext addrOf id.labelOffset
-  end =:: labelOffset
+  end =:: labelOffset ## FIXME handle nested labeled types
   code
     while fileState nextToken
       fileState state tryParseConstant if #drop continue end
