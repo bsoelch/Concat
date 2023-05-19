@@ -1,0 +1,824 @@
+#+big-integer implementation+#
+#include numbers/printInt
+
+#include stringIO ## debug
+
+#namespace i64
+proc( i64 i64 => i64 ) =: max
+  #over #over > if
+    #drop return
+  else
+    #swap #drop return
+  end
+end
+proc( i64 i64 => i64 ) =: min
+  #over #over < if
+    #drop return
+  else
+    #swap #drop return
+  end
+end
+#end
+#namespace u32
+  0xffff_ffffi64 =:: MASK
+#end
+
+union( i32 _ ptr mut : mut p i64 : mut i ) =:: i64OrPtr ## XXX inline once nested structures are supported
+struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: public int
+
+#namespace int
+  0 0 0  0i8 int new =:: ZERO
+  1 1 0  1i8 int new =:: ONE
+  2 1 0  1i8 int new =:: TWO
+  1 1 0 -1i8 int new =:: MINUS_ONE
+  
+  ## TODO from string
+  ## TODO from bits
+  proc( i64 : i => int ) =: public #:alloc:int wrap
+    i 0 < if
+      ## int
+        i neg
+        #dup 32 >>u 0 == if 1 else 2 end
+        0
+        -1i8
+      int new
+    else i 0 > _if
+      ## int
+        i
+        #dup 32 >>u 0 == if 1 else 2 end
+        0
+        1i8
+      int new
+    else
+       0 0 0 0i8 int new
+    end
+  end
+  proc( i64 : i i8 : sgn => int ) =: public #:alloc:int uwrap
+    i 0 != if
+      ## int
+        i
+        #dup 32 >>u 0 == if 1 else 2 end
+        0
+        sgn
+      int new
+    else
+       0 0 0 0i8 int new
+    end
+  end
+  proc( int : src => int ) =: public #:alloc:int copy
+    src .cap 0 == if
+      src .data .i src .sign uwrap return
+    end
+    src .cap i32 mem.alloc =:: newData
+    newData src .data .p src .size mem.copy #drop
+    newData src .size src .cap src .sign int new return
+  end
+  proc( int => ) =: public #:free:int free
+    #dup .cap 0 == if #drop
+      return
+    end
+    .data .p mem.free
+  end
+
+  proc( stringBuilder : sb int : i => stringBuilder ) =: public dumpHex
+    sb
+      i .sign 0 < if
+        '-' sb.appendC
+      end
+      i .cap 0 == if
+        i .data .i sb.appendUHex return
+      end
+      true =:: mut first
+      i .size 1 - while #dup 0 >= do
+        #swap
+          i .data .p #over:2 [] u32.MASK & =:: D
+          first ! if
+            '\'' sb.appendC
+            D 0 == if
+              "00000000" sb.appendS
+              #swap 1 - continue
+            end
+            0xf000_0000 while #dup D & 0 == do
+              #swap
+                '0' sb.appendC
+              #swap 4 >>u
+            end #drop
+          end
+          D sb.appendUHex
+        #swap 1 -
+        false first =
+      end #drop
+    return
+  end
+  proc( i32 arrayView : data => ) =: dumpIntData
+    17 data .length * sb.create
+      true =:: mut first
+      data .length 1 - while #dup 0 >= do
+        #swap
+          data #over:2 array.get u32.MASK & =:: D
+          first ! if
+            '\'' sb.appendC
+            D 0 == if
+              "00000000" sb.appendS
+              #swap 1 - continue
+            end
+            0xf000_0000 while #dup D & 0 == do
+              #swap
+                '0' sb.appendC
+              #swap 4 >>u
+            end #drop
+          end
+          D sb.appendUHex
+        #swap 1 -
+        false first =
+      end #drop
+      '\n' sb.appendC
+      io.stdOut #over io.fputSb #drop
+    sb.free #drop
+  end
+  
+  ## TODO toString
+
+  ## TODO sign, bit-count ...
+  proc( int : #:const a int : #:const b => i32 ) =: compare
+    a .sign b .sign != if
+      a .sign b .sign - return
+    end
+    a .size b .size != if
+      a .size b .size > if
+        1 return
+      else
+        -1 return
+      end
+    end
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 4 array new =:: mut intValues
+    a .cap 0 == if
+      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i 32 >>u i32 cast intValues @ 1 [] =
+      intValues @ 0 [] @ a .size array.create aData =
+    else
+      a .data .p a .size array.create aData =
+    end
+    b .cap 0 == if
+      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i 32 >>u i32 cast intValues @ 3 [] =
+      intValues @ 2 [] @ b .size array.create bData =
+    else
+      b .data .p b .size array.create bData =
+    end
+    a .size 1 - while #dup 0 >= do
+      aData #over array.get u32.MASK & i64 cast bData #over:2 array.get u32.MASK & i64 cast - ## no overflow (values cast to i64)
+      #dup 0 != if #swap #drop
+        0 < if
+          -1 return
+        end
+        1 return
+      end #drop
+      1 -
+    end #drop
+    0 return
+  end
+  
+  ## TODO versions of arithmetic operations than don't consume their parameters
+
+  ## TODO and,or,xor,not
+  
+  ## increments number, assumes, that incremented number first in target
+  proc( i32 _ ptr mut : target i64 : len => i64 ) =: incrementInternal
+    0 while #dup len < do
+      target #over [] 1 + target #over:2 [] =
+      target #over [] 0 != if #drop
+        len return
+      end
+      1 + 
+    end #drop
+    1 target len [] =
+    len 1 + return
+  end
+
+  #+assumes target has capacity >= a .length + ceil(amount/32) +#
+  proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target => i64 ) =: leftShiftInternal
+    amount 32 /u =:: offset
+    amount 32 %u =:: bitShift
+    a .length offset + =:: newLen
+    newLen 0 <= if
+      0 return
+    end
+    bitShift 0 == if
+      target offset + a .data a .length mem.move #drop
+      target offset mem.clear #drop
+      newLen return
+    end
+    a a .length 1 - array.get u32.MASK & i64 cast bitShift << i64 =: mut buffer
+    buffer 32 >>u i32 cast
+      #dup 0 != =:: extend
+    extend if target newLen 1 + [] = else #drop end ## XXX check branch
+    buffer 32 << buffer =
+    a .length 1 - while #dup 0 > do
+      a #over 1 - array.get u32.MASK & i64 cast bitShift << buffer | buffer =
+      buffer 32 >>u i32 cast target #over:2 offset + [] =
+      buffer 32 << buffer =
+      1 -
+    end #drop
+    buffer 32 >>u i32 cast target offset + [] =
+    target offset mem.clear #drop
+    extend if
+      newLen 1 + return
+    end
+    newLen return
+  end
+  #+assumes target has capacity >= a .length - floor(amount/32) +#
+  proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target bool : isNegative => i64 ) =: rightShiftInternal
+    ## (-a)>>b = - ((a-1)>>b +1) (?alternative: increment if one shifted of edge)
+    amount 32 /u =:: offset
+    amount 32 %u =:: bitShift
+    a .length offset - =:: newLen
+    false =:: mut needIncrement
+    isNegative if ## XXX check branch
+      0 while #dup offset < do
+        a #over array.get 0 != if
+          true needIncrement =
+          break
+        end
+        1 +
+      end #drop
+    end
+    newLen 0 <= if
+      0 return
+    end
+    bitShift 0 == if
+      target a .data offset + newLen mem.move #drop
+      needIncrement if
+        target newLen incrementInternal return
+      end
+      newLen return
+    end
+    32 bitShift - =:: reverseShift
+    isNegative if
+      a offset array.get reverseShift << 0 != needIncrement | needIncrement =
+    end
+    a offset array.get u32.MASK & i64 cast bitShift >>u =:: mut buffer
+    1 while #dup newLen < do
+      a #over offset + array.get u32.MASK & i64 cast reverseShift << buffer | buffer =
+      buffer u32.MASK & i32 cast target #over:2 1 - [] =
+      buffer 32 >>u buffer = 
+      1 +
+    end #drop
+    buffer u32.MASK & i32 cast target newLen 1 - [] =
+    needIncrement if
+      target newLen incrementInternal return
+    end
+    newLen return
+  end
+  proc( int : #:consume a i32 : amount => int ) =: #:alloc:int leftShiftBy
+    a .size amount 32 /u + 1 + =:: resCap
+    i32 arrayView : aData
+    i32 _ ptr mut : resData
+    i32 2 array new =:: mut intValues
+    a .cap 0 == if ## XXX check branch
+      amount 0 > amount 64 < & if
+        a .data .i 64 amount - >>u 0 == if
+          a .data .i amount << a .sign uwrap return
+        end
+      end
+      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i 32 >>u i32 cast intValues @ 1 [] =
+      intValues @ 0 [] @ a .size array.create aData =
+      resCap i32 mem.alloc resData =
+    else
+      a .cap resCap < if
+        a .data .p resCap mem.realloc resData =
+      else
+        a .data .p resData =
+      end
+      resData a .size array.create aData =
+    end
+    aData amount resData leftShiftInternal =:: resSize
+    resData resSize resCap a .sign int new return
+  end
+  proc( int : #:consume a i32 : amount => int ) =: #:alloc:int rightShiftBy
+    a .size amount 32 / - =:: resCap
+    resCap 0 <= if
+      a free
+      a .sign 0 < if -1 else 0 end wrap return
+    end
+    i32 arrayView : aData
+    i32 _ ptr mut : resData
+    i32 2 array new =:: mut intValues
+    a .cap 0 == if ## XXX check branch
+      amount 0 < amount 64 >= | if
+        a free
+        0 wrap return
+      end
+      a .sign 0 < if
+        a .data .i 1 - amount >>u 1 + a .sign uwrap return
+      end
+      a .data .i amount >>u a .sign uwrap return
+    end
+    a .data .p resData =
+    a .data .p a .size array.create aData =
+    aData amount resData a .sign 0i8 < rightShiftInternal =:: resSize
+    resData resSize resCap a .sign int new return
+  end
+  proc( int : #:consume a i32 : amount => int ) =: public #:alloc:int shiftLeftBy
+    a .sign 0 == if
+      a return
+    end
+    amount 0 == if
+      a return
+    end
+    amount 0 < if
+      a amount neg rightShiftBy return
+    end
+    a amount leftShiftBy return
+  end
+  proc( int : #:consume a i32 : amount => int ) =: public #:alloc:int shiftRightBy
+    a .sign 0 == if
+      a return
+    end
+    amount 0 == if
+      a return
+    end
+    amount 0 < if
+      a amount neg leftShiftBy return
+    end
+    a amount rightShiftBy return
+  end
+  
+  ## flips the sign of a
+  proc( int : #:update a => int ) =: public negated
+    a =:: mut tmp
+    tmp .sign neg tmp .sign =
+    tmp return
+  end 
+  #+assumes, target has cap at least max{a.length,b.length}+1+#
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: addInternal
+    a .length b .length i64.min =:: commonPart
+    0 i64 =: mut carry
+    0
+      while #dup commonPart < do
+        a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast + carry + =:: tmp
+        tmp u32.MASK & i32 cast target #over:2 [] =
+        tmp 32 >>u carry =
+        1 +
+      end
+      while #dup a .length < do
+        a #over array.get u32.MASK & i64 cast carry + =:: tmp
+        tmp u32.MASK & i32 cast target #over:2 [] =
+        tmp 32 >>u carry =
+        1 +
+      end
+      while #dup b .length < do
+        b #over array.get u32.MASK & i64 cast carry + =:: tmp
+        tmp u32.MASK & i32 cast target #over:2 [] =
+        tmp 32 >>u carry =
+        1 +
+      end
+      carry 0 != if
+        carry i32 cast target #over:2 [] =
+        1 +
+      end
+    return
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int addTo
+    b .sign 0 == if
+      a return
+    end
+    a .sign 0 == if
+      a free ## XXX reuse old pointer
+      b copy return
+    end 
+    a .sign b .sign != if
+      b =:: mut newB
+      b .sign neg newB .sign =
+      a newB subtractFrom return
+    end
+    false =:: mut aEqb
+    a .cap 0 == b .cap 0 == & if
+      a .data .i 0 > b .data .i 0 > & if
+        a .data .i b .data .i + a .sign uwrap =:: mut res
+        res return
+      end
+      a .data .i b .data .i == aEqb =
+    else
+      a .data .p b .data .p == aEqb =
+    end
+    a .size b .size i64.max 1 + =:: resCap
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    i32 4 array new =:: mut intValues
+    a .cap 0 == if
+      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i 32 >>u i32 cast intValues @ 1 [] =
+      intValues @ 0 [] @ a .size array.create aData =
+      resCap i32 mem.alloc resData =
+    else
+      a .cap resCap < if
+        a .data .p resCap mem.realloc resData =
+      else
+        a .data .p resData =
+      end
+      resData a .size array.create aData =
+    end
+    aEqb if
+      aData 1 resData leftShiftInternal =:: resSize
+      resData resSize resCap a .sign int new return
+    end
+    b .cap 0 == if
+      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i 32 >>u i32 cast intValues @ 3 [] =
+      intValues @ 2 [] @ b .size array.create bData =
+    else
+      b .data .p b .size array.create bData =
+    end
+    aData bData resData addInternal =:: resSize
+    resData resSize resCap a .sign int new return
+  end
+
+  #+! assumes that a .length >= b .length, target has cap at least max{a.length,b.length}+1+#
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: subtInternal
+    ## a .length b .length >= assert XXX assertions
+    0 i64 =: mut carry ## XXX? can carry take values except 0 and -1
+    0
+      while #dup b .length < do
+        a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast - carry + =:: tmp
+        tmp u32.MASK & i32 cast target #over:2 [] =
+        tmp 32 >> carry = ## keep sign
+        1 +
+      end
+      while #dup a .length < do
+        a #over array.get u32.MASK & i64 cast carry + =:: tmp
+        tmp u32.MASK & i32 cast target #over:2 [] =
+        tmp 32 >> carry = ## keep sign
+        1 +
+      end
+      ## carry 0 == assert
+      1 - ## length -> index
+      while #dup 0 > do ## remove leading zeros
+        target #over [] 0 != if
+          break
+        end
+        1 -
+      end
+      1 + ## length == maxIndex + 1
+    return
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int subtractFrom
+    b .sign 0 == if
+      a return
+    end
+    a .sign 0 == if
+      a free ## XXX reuse old pointer
+      b copy
+        #dup .sign neg #over .sign =
+      return
+    end
+    a .sign b .sign != if
+      b =:: mut newB
+      b .sign neg newB .sign =
+      a newB addTo return
+    end
+    ## subtract bigger number from smaller number
+    a b compare =:: cmp
+    cmp 0 == if ## covers case a==b
+      a free
+      0 wrap return
+    end
+    a .cap 0 == b .cap 0 == & if
+      cmp 0 > if
+        a .data .i b .data .i - a .sign uwrap return
+      else
+        b .data .i a .data .i - a .sign neg uwrap return
+      end
+    end
+    a .size b .size i64.max =:: resCap
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    i32 4 array new =:: mut intValues
+    a .cap 0 == if
+      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i 32 >>u i32 cast intValues @ 1 [] =
+      intValues @ 0 [] @ a .size array.create aData =
+      resCap i32 mem.alloc resData =
+    else
+      a .cap resCap < if
+        a .data .p resCap mem.realloc resData =
+      else
+        a .data .p resData =
+      end
+      resData a .size array.create aData =
+    end
+    b .cap 0 == if
+      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i 32 >>u i32 cast intValues @ 3 [] =
+      intValues @ 2 [] @ b .size array.create bData =
+    else
+      b .data .p b .size array.create bData =
+    end
+    cmp 0 > if
+      aData bData resData subtInternal =:: resSize
+      resData resSize resCap a .sign int new return
+    end
+    bData aData resData subtInternal =:: resSize
+    resData resSize resCap a .sign neg int new return
+  end
+  
+  proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi => ) =: simpleSqrtOverflow
+    resLow =:: mut buffer
+    resHi 32 << =:: mut overflow
+    i =:: mut pos
+    buffer u32.MASK & i32 cast target pos [] =
+    pos 1 + pos =
+    buffer 32 >>u buffer =
+    while overflow 0 != do
+      buffer overflow u32.MASK & + buffer =
+      overflow 32 >>u overflow =
+      buffer target pos [] u32.MASK & i64 cast + buffer =
+      buffer u32.MASK & i32 cast target pos [] =
+      pos 1 + pos =
+      buffer 32 >>u buffer =
+    end
+    while buffer 0 != do
+      buffer target pos [] u32.MASK & i64 cast + buffer =
+      buffer u32.MASK & i32 cast target pos [] =
+      pos 1 + pos =
+      buffer 32 >>u buffer =
+    end
+  end
+  #+assumes a and target are either the same pointer or non intersecting, assumes target has capacity >= 2* a .size-1+#
+  proc( i32 arrayView : a i32 _ ptr mut : target => i64 ) =: simpleSquare
+    a .length 0 <= if
+      0 return ## length 0 -> length 0
+    end
+    i64 : buffer
+    i64 : tmp
+    i64 : overflow
+    bool : canOverflow
+    bool : willOverflow
+    a .length 1 - =:: N
+    0 target a .length 2 * 1 - [] =
+    0i64 =:: mut s
+    while s N < do ## iterate through all pair (i,j) 0<=i,j<=N in order of descending i+j
+      0 buffer =
+      0 overflow =
+      0 =:: mut i
+      while i s  <= do
+        a N i - array.get u32.MASK & i64 cast  a N s i - - array.get u32.MASK & i64 cast * tmp =
+        buffer 0 < tmp 0 < & willOverflow =
+        buffer 0 < tmp 0 < | canOverflow =
+        buffer tmp + buffer =
+        willOverflow if
+          overflow 1 + overflow =
+        else canOverflow buffer 0 > & _if
+          overflow 1 + overflow =
+        end
+        i 1 + i =
+      end
+      target N 2 * s - buffer overflow simpleSqrtOverflow
+      s 1 + s =
+    end
+    N s =
+    while s 0 >= do
+      0 buffer =
+      0 overflow =
+      0 =:: mut i
+      while i s <= do
+        a i array.get u32.MASK & i64 cast  a s i - array.get u32.MASK & i64 cast * tmp =
+        buffer 0 < tmp 0 < & willOverflow =
+        buffer 0 < tmp 0 < | canOverflow =
+        buffer tmp + buffer =
+        willOverflow if
+          overflow 1 + overflow =
+        else canOverflow buffer 0 > & _if
+          overflow 1 + overflow =
+        end
+        i 1 + i =
+      end
+      target s buffer overflow simpleSqrtOverflow
+      s 1 - s =
+    end
+    a .length 2 * 1 - 
+      target #over [] 0 == if
+        1 -
+      end
+    1 + ## length == maxIndex + 1
+    return
+  end
+  #+assumes than one of the following is true:
+    1) a .data == b .data and a .length == b .length
+    2) a .data == target b .data and target don't intersect
+    3) a .data b .data and target don't intersect
+    additionally assumes, that target has capacity >= a.length + b .length-1
+  +#
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: simpleMultiply
+    a .length 0 <= b .length 0 <= | if
+      0 return ## multiply with length 0 -> length 0
+    end
+    a .data b .data == if
+      ## a .length b .length == assert
+      a target simpleSquare return
+    end
+    0 target a .length b .length + 1 - [] =
+    ## b .data target != assert
+    i64 : buffer
+    i64 : i
+    a .length 1 - while #dup 0 >= do
+      b .length 1 - while #dup 0 >= do
+        a #over:2 array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast * buffer =
+        #over #over + i =
+        #dup 0 != #over:2 a .length 1 - != & if
+          buffer target i [] u32.MASK & i64 cast + buffer = ## i32*i32+i32 fits in i64
+        end
+        buffer u32.MASK & i32 cast target i [] =
+        i 1 + i =
+        buffer 32 >>u buffer =
+        while buffer 0 != do
+          buffer target i [] u32.MASK & i64 cast + buffer =
+          buffer u32.MASK & i32 cast target i [] =
+          i 1 + i =
+          buffer 32 >>u buffer =
+        end
+        1 -
+      end #drop
+      1 -
+    end #drop
+    a .length b .length + 1 -
+      target #over [] 0 == if
+        1 -
+      end
+      1 + ## length == maxIndex + 1
+    return
+  end
+  4 =:: KARATSUBA_THRESHOLD ## XXX set to higher value once algorithm is stable
+  proc( i32 _ ptr : data i64 : index => i32 _ ptr i64 ) =: stripLeadingZeros
+    index 1 - =:: mut i
+    while i 0 >= do
+      data i [] 0 != if
+        break
+      end
+      i 1 - i =
+    end
+    data i 1 + return
+  end
+  proc( i32 arrayView : a i32 _ ptr mut : target => i64 ) =: karatsubaSquare
+    a .length 4 <= if
+      a target simpleSquare return
+    end
+    a .length 2 / =:: B
+    a .data B stripLeadingZeros array.create =:: a0
+    a .data B + a .length B - array.create =:: a1
+    ## a0+a1
+    a0 a1 target addInternal =:: a12_len
+    a12_len 2 * i32 mem.alloc =:: tmp
+    ##... | ... ,(a0+a1)(a0+a1)
+    target a12_len array.create tmp karatsubaSquare =:: mut tmp_len
+    ## a0*a0 | a1*a1 , (a0+a1)(a0+a1)
+    a0 target karatsubaSquare =:: a0_len
+    target a0_len + B 2 * a0_len - mem.clear #drop ## pad with zeros
+    a1 target B 2 * + karatsubaSquare =:: a1_len
+    ## a0*a0 | a1*a1 , (a0+a1)(a0+a1)-a0*a0-a1*a1
+    tmp tmp_len array.create target a0_len array.create tmp subtInternal tmp_len =
+    tmp tmp_len array.create target B 2 * + a1_len array.create tmp subtInternal tmp_len =
+    ## (a1*B+a0)*(a1*B+a0)
+    target B + a1_len B + array.create tmp tmp_len array.create target B + addInternal B + =:: total_len
+    tmp mem.free
+    total_len return
+  end
+  #+karatsuba multiplication if length of b <= half the length of a +#
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: karatsubaMultHalf
+    a .length 2 / =:: B
+    ## b .length B <= assert
+    ## (a0+B*a1)*b
+    a .data B stripLeadingZeros array.create =:: a0
+    a .data B + a .length B - array.create =:: a1
+    ## a0*b
+    a0 b target karatsubaMultiply =:: a0b_len
+    a0b_len B <= if ## numbers don't intersect
+      target a0b_len + B a0b_len - mem.clear #drop ## pad with zeros
+      ## a0*b | a1*b
+      a1 b target B + karatsubaMultiply B + return
+    end
+    ## a0*b | ... ,a1*b
+    a1 .length b .length + i32 mem.alloc =:: tmp
+    a1 b tmp karatsubaMultiply =:: mut tmp_len
+    ## (a1*b*B+a0*b)*(a1*B+a0)
+    target B + a0b_len B - array.create tmp tmp_len array.create target B + addInternal B + =:: total_len
+    tmp mem.free
+    total_len return
+  end
+  #+assumes a and b do not intersect target, target.length >= a.length+b.length-1+#
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: karatsubaMultiply
+    a .length 4 <= b .length 4 <= | if
+      a b target simpleMultiply return
+    end
+    a .length b .length i64.max 2 / =:: B
+    a .length B <= if
+      b a target karatsubaMultHalf return
+    end
+    b .length B <= if
+      a b target karatsubaMultHalf return
+    end
+    ## (a1*B+a0)*(b1*B+b0)
+    a .data B stripLeadingZeros array.create =:: a0
+    a .data B + a .length B - array.create =:: a1
+    b .data B stripLeadingZeros array.create =:: b0
+    b .data B + b .length B - array.create =:: b1
+    ## a0+a1 | b0+b1
+    a0 a1 target addInternal =:: a12_len
+    b0 b1 target a12_len + addInternal =:: b12_len
+    a12_len b12_len + i32 mem.alloc =:: tmp
+    ##... | ... ,(a0+a1)(b0+b1)
+    target a12_len array.create target a12_len + b12_len array.create tmp karatsubaMultiply =:: mut tmp_len
+    ## a0*b0 | a1*b1 , (a0+a1)(b0+b1)
+    a0 b0 target karatsubaMultiply =:: a0b0_len
+    target a0b0_len + B 2 * a0b0_len - mem.clear #drop ## pad with zeros
+    a1 b1 target B 2 * + karatsubaMultiply =:: a1b1_len
+    ## a0*b0 | a1*b1 , (a0+a1)(b0+b1)-a0*b0-a1*b1
+    tmp tmp_len array.create target a0b0_len array.create tmp subtInternal tmp_len =
+    tmp tmp_len array.create target B 2 * + a1b1_len array.create tmp subtInternal tmp_len =
+    ## (a1*B+a0)*(b1*B+b0)
+    target B + a1b1_len B + array.create tmp tmp_len array.create target B + addInternal B + =:: total_len
+    tmp mem.free
+    total_len return
+  end
+  ## XXX efficient multiplication algorithm for large numbers
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int multiplyWith
+    a .sign 0 == if
+      a return
+    end
+    b .sign 0 == if
+      a free
+      0 wrap return
+    end
+    a .sign b .sign * =:: sign
+    false =:: mut square
+    a .cap 0 == b .cap 0 == & if
+      a .size 1 <= b .size 1 <= & if
+        a .data .i b .data .i * sign uwrap return
+      end
+      a .data .i b .data .i == square =
+    else
+      a .data .p b .data .p == square =
+    end
+    a .size b .size + =:: resCap
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    i32 4 array new =:: mut intValues
+    a .size KARATSUBA_THRESHOLD <= b .size KARATSUBA_THRESHOLD <= | =:: simpleMult
+    a .cap 0 == if
+      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i 32 >>u i32 cast intValues @ 1 [] =
+      intValues @ 0 [] @ a .size array.create aData =
+      resCap i32 mem.alloc resData =
+    else
+      simpleMult if
+        a .cap resCap < if
+          a .data .p resCap mem.realloc resData =
+        else
+          a .data .p resData =
+        end
+        resData a .size array.create aData =
+      else
+        a .data .p a .size array.create aData =
+        resCap i32 mem.alloc resData =
+      end
+    end
+    square if
+      simpleMult if
+        aData resData simpleSquare =:: resSize
+        resData resSize resCap sign int new return
+      end
+      aData resData karatsubaSquare =:: resSize
+      resData resSize resCap sign int new return
+    end
+    b .cap 0 == if
+      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i 32 >>u i32 cast intValues @ 3 [] =
+      intValues @ 2 [] @ b .size array.create bData =
+    else
+      b .data .p b .size array.create bData =
+    end
+    simpleMult if
+      aData bData resData simpleMultiply =:: resSize
+      resData resSize resCap sign int new return
+    end
+    aData bData resData karatsubaMultiply =:: resSize
+    resData resSize resCap sign int new return
+  end
+  ## XXX separate procedure for squaring
+
+  ## divide,mod   -> simple_divmod [..]_divMod
+
+  ## gcd, lcm
+
+  ## pow
+  ## modPow
+#end
