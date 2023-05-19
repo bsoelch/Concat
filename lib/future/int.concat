@@ -31,7 +31,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   1 1 0  1i8 int new =:: ONE
   2 1 0  1i8 int new =:: TWO
   1 1 0 -1i8 int new =:: MINUS_ONE
-  
+ 
   ## TODO from string
   ## TODO from bits
   proc( i64 : i => int ) =: public #:alloc:int wrap
@@ -136,7 +136,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
       io.stdOut #over io.fputSb #drop
     sb.free #drop
   end
-  
+ 
   ## TODO toString
 
   ## TODO sign, bit-count ...
@@ -180,24 +180,78 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end #drop
     0 return
   end
-  
+ 
   ## TODO versions of arithmetic operations than don't consume their parameters
 
-  ## TODO and,or,xor,not
-  
   ## increments number, assumes, that incremented number first in target
-  proc( i32 _ ptr mut : target i64 : len => i64 ) =: incrementInternal
+  proc( i32 _ ptr mut : target i64 : len => bool ) =: incrementInternal
     0 while #dup len < do
       target #over [] 1 + target #over:2 [] =
       target #over [] 0 != if #drop
-        len return
+        false return
       end
-      1 + 
+      1 +
     end #drop
-    1 target len [] =
-    len 1 + return
+    true return
   end
-
+  ## decrements number, assumes that the number is greater than 0
+  proc( i32 _ ptr mut : target i64 : len => bool ) =: decrementInternal
+    0 while #dup len < do
+      target #over [] 1 - target #over:2 [] =
+      target #over [] -1 != if #drop
+        false return
+      end
+      1 +
+    end #drop
+    true return
+  end
+ 
+  proc( int : #:consume a => int ) =: public #:alloc:int logicalNotOf
+    a .sign 0 == if
+      a free
+      -1 wrap return
+    end
+    a .cap 0 == if
+      a .sign 0 < if
+        a .data .i 1 - 1i8 uwrap return
+      end
+      a .data .i -1 != if
+        a .data .i 1 + -1i8 uwrap return
+      end
+      a free
+      -1 wrap 64 shiftLeftBy return ## TODO? create int directly
+    end
+    a .sign 0 < if
+      a .data .p a .size decrementInternal if
+        ## false assert "Nonzero"
+        ..unreachable
+      end
+      a .size =:: mut newSize
+      a .data .p newSize 1 - [] 0 == if
+        newSize 1 - newSize =
+      end
+      a .data .p newSize a .cap 1i8 int new return
+    end
+    a .data .p a .size incrementInternal if
+      i32 _ ptr mut : newData
+      i64 : newCap
+      a .cap a .size > if
+        a .data .p newData =
+        a .cap newCap =
+      else
+        a .size 1 + newCap = ## XXX? leave more space
+        a .data .p newCap mem.realloc newData =
+      end
+      1 newData a .size [] =
+      newData a .size 1 + newCap -1i8 int new return
+    end
+    a .data .p a .size a .cap -1i8 int new return
+  end
+ 
+  ## TODO and,or,xor
+ 
+ 
+ 
   #+assumes target has capacity >= a .length + ceil(amount/32) +#
   proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target => i64 ) =: leftShiftInternal
     amount 32 /u =:: offset
@@ -214,7 +268,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     a a .length 1 - array.get u32.MASK & i64 cast bitShift << i64 =: mut buffer
     buffer 32 >>u i32 cast
       #dup 0 != =:: extend
-    extend if target newLen 1 + [] = else #drop end ## XXX check branch
+    extend if target newLen [] = else #drop end
     buffer 32 << buffer =
     a .length 1 - while #dup 0 > do
       a #over 1 - array.get u32.MASK & i64 cast bitShift << buffer | buffer =
@@ -234,9 +288,9 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     ## (-a)>>b = - ((a-1)>>b +1) (?alternative: increment if one shifted of edge)
     amount 32 /u =:: offset
     amount 32 %u =:: bitShift
-    a .length offset - =:: newLen
+    a .length offset - =:: mut newLen
     false =:: mut needIncrement
-    isNegative if ## XXX check branch
+    isNegative if
       0 while #dup offset < do
         a #over array.get 0 != if
           true needIncrement =
@@ -251,7 +305,11 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     bitShift 0 == if
       target a .data offset + newLen mem.move #drop
       needIncrement if
-        target newLen incrementInternal return
+        target newLen incrementInternal if
+          1 target newLen [] =
+          newLen 1 + return
+        end
+        newLen return
       end
       newLen return
     end
@@ -263,21 +321,29 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     1 while #dup newLen < do
       a #over offset + array.get u32.MASK & i64 cast reverseShift << buffer | buffer =
       buffer u32.MASK & i32 cast target #over:2 1 - [] =
-      buffer 32 >>u buffer = 
+      buffer 32 >>u buffer =
       1 +
     end #drop
-    buffer u32.MASK & i32 cast target newLen 1 - [] =
+    buffer 0 != if
+      buffer u32.MASK & i32 cast target newLen 1 - [] =
+    else
+      newLen 1 - newLen =
+    end
     needIncrement if
-      target newLen incrementInternal return
+      target newLen incrementInternal if
+        1 target newLen [] =
+        newLen 1 + return
+      end
+      newLen return
     end
     newLen return
   end
   proc( int : #:consume a i32 : amount => int ) =: #:alloc:int leftShiftBy
-    a .size amount 32 /u + 1 + =:: resCap
+    a .size amount 32 /u + 1 + =:: mut resCap
     i32 arrayView : aData
     i32 _ ptr mut : resData
     i32 2 array new =:: mut intValues
-    a .cap 0 == if ## XXX check branch
+    a .cap 0 == if
       amount 0 > amount 64 < & if
         a .data .i 64 amount - >>u 0 == if
           a .data .i amount << a .sign uwrap return
@@ -292,6 +358,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
         a .data .p resCap mem.realloc resData =
       else
         a .data .p resData =
+        a .cap resCap =
       end
       resData a .size array.create aData =
     end
@@ -307,7 +374,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     i32 arrayView : aData
     i32 _ ptr mut : resData
     i32 2 array new =:: mut intValues
-    a .cap 0 == if ## XXX check branch
+    a .cap 0 == if
       amount 0 < amount 64 >= | if
         a free
         0 wrap return
@@ -346,13 +413,13 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end
     a amount rightShiftBy return
   end
-  
+
   ## flips the sign of a
   proc( int : #:update a => int ) =: public negated
     a =:: mut tmp
     tmp .sign neg tmp .sign =
     tmp return
-  end 
+  end
   #+assumes, target has cap at least max{a.length,b.length}+1+#
   proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: addInternal
     a .length b .length i64.min =:: commonPart
@@ -390,7 +457,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     a .sign 0 == if
       a free ## XXX reuse old pointer
       b copy return
-    end 
+    end
     a .sign b .sign != if
       b =:: mut newB
       b .sign neg newB .sign =
@@ -406,7 +473,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     else
       a .data .p b .data .p == aEqb =
     end
-    a .size b .size i64.max 1 + =:: resCap
+    a .size b .size i64.max 1 + =:: mut resCap
     i32 arrayView : aData
     i32 arrayView : bData
     i32 _ ptr mut : resData
@@ -421,6 +488,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
         a .data .p resCap mem.realloc resData =
       else
         a .data .p resData =
+        a .cap resCap =
       end
       resData a .size array.create aData =
     end
@@ -496,7 +564,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
         b .data .i a .data .i - a .sign neg uwrap return
       end
     end
-    a .size b .size i64.max =:: resCap
+    a .size b .size i64.max =:: mut resCap
     i32 arrayView : aData
     i32 arrayView : bData
     i32 _ ptr mut : resData
@@ -511,6 +579,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
         a .data .p resCap mem.realloc resData =
       else
         a .data .p resData =
+        a .cap resCap =
       end
       resData a .size array.create aData =
     end
@@ -528,7 +597,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     bData aData resData subtInternal =:: resSize
     resData resSize resCap a .sign neg int new return
   end
-  
+
   proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi => ) =: simpleSqrtOverflow
     resLow =:: mut buffer
     resHi 32 << =:: mut overflow
@@ -603,7 +672,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
       target s buffer overflow simpleSqrtOverflow
       s 1 - s =
     end
-    a .length 2 * 1 - 
+    a .length 2 * 1 -
       target #over [] 0 == if
         1 -
       end
@@ -767,7 +836,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     else
       a .data .p b .data .p == square =
     end
-    a .size b .size + =:: resCap
+    a .size b .size + =:: mut resCap
     i32 arrayView : aData
     i32 arrayView : bData
     i32 _ ptr mut : resData
@@ -784,6 +853,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
           a .data .p resCap mem.realloc resData =
         else
           a .data .p resData =
+          a .cap resCap =
         end
         resData a .size array.create aData =
       else
