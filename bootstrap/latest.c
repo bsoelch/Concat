@@ -3467,7 +3467,7 @@ bool const tmp27 = (tmp26>((int64_t)0));
 concat_arrayView_I1 tmp28 = tmp22;
 int64_t tmp29 = tmp26;
 if(tmp27){
-concat_list_I1 tmp30 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"two many types for label"));
+concat_list_I1 tmp30 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"too many types for label"));
 concat_FilePosition tmp31 = ((*arg3/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp30,tmp31,arg4/*state*/);
 concat_arrayView_I1 tmp32 = tmp28;
@@ -3541,7 +3541,7 @@ bool const tmp64 = (tmp63>((int64_t)0));
 concat_arrayView_I1 tmp65 = tmp58;
 int64_t tmp66 = tmp63;
 if(tmp64){
-concat_list_I1 tmp67 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"two many types for label"));
+concat_list_I1 tmp67 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"too many types for label"));
 concat_FilePosition tmp68 = ((*arg3/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp67,tmp68,arg4/*state*/);
 concat_arrayView_I1 tmp69 = tmp65;
