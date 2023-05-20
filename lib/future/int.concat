@@ -31,7 +31,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   1 1 0  1i8 int new =:: ONE
   2 1 0  1i8 int new =:: TWO
   1 1 0 -1i8 int new =:: MINUS_ONE
- 
+
   ## TODO from string
   ## TODO from bits
   proc( i64 : i => int ) =: public #:alloc:int wrap
@@ -136,7 +136,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
       io.stdOut #over io.fputSb #drop
     sb.free #drop
   end
- 
+
   ## TODO toString
 
   ## TODO sign, bit-count ...
@@ -180,7 +180,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end #drop
     0 return
   end
- 
+
   ## TODO versions of arithmetic operations than don't consume their parameters
 
   ## increments number, assumes, that incremented number first in target
@@ -205,7 +205,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end #drop
     true return
   end
- 
+
   proc( int : #:consume a => int ) =: public #:alloc:int logicalNotOf
     a .sign 0 == if
       a free
@@ -247,11 +247,212 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end
     a .data .p a .size a .cap -1i8 int new return
   end
- 
-  ## TODO and,or,xor
- 
- 
- 
+
+  struct(  i32 arrayView : data i8 : sign i64 : mut index bool : mut hadNonzero ) =:: IntIterator
+  proc( IntIterator : #:update i => IntIterator i32 ) =: nextInt
+    i =:: mut itr
+    itr .index =:: index
+    itr .index 1 + itr .index =
+    index 0 < if
+      itr 0 return
+    end
+    index itr .data .length >= if
+      itr .sign 0 < if
+        itr -1 return
+      else
+        itr 0 return
+      end
+    end
+    itr .sign 0 >= if
+      itr itr .data index array.get return
+    end
+    itr .hadNonzero if
+      itr itr .data index array.get ~ return
+    end
+    itr .data index array.get =:: next
+    next 0 != itr .hadNonzero =
+    itr next neg return
+  end
+  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target => i64 ) =: andInternal
+    a aSign 0 false IntIterator new =:: mut aItr
+    b bSign 0 false IntIterator new =:: mut bItr
+    a .length b .length i64.max =:: resLen
+    while aItr .index resLen < do ## calculate result in twos complement
+      aItr .index =:: index
+      aItr nextInt =:: x aItr =
+      bItr nextInt =:: y bItr =
+      x y & target index [] =
+    end
+    aSign 0 < bSign 0 < & if ## decode twos complement if result is negative
+      target resLen array.create -1i8 0 false IntIterator new aItr =
+      while aItr .index resLen < do
+        aItr nextInt
+          target aItr .index [] =
+        aItr =
+      end
+    end
+    resLen 1 - ## length -> index
+      while #dup 0 > do ## remove leading zeros
+        target #over [] 0 != if
+          break
+        end
+        1 -
+      end
+      1 + ## length == maxIndex + 1
+    return
+  end
+  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target => i64 ) =: orInternal
+    a aSign 0 false IntIterator new =:: mut aItr
+    b bSign 0 false IntIterator new =:: mut bItr
+    a .length b .length i64.max =:: resLen
+    while aItr .index resLen < do ## calculate result in twos complement
+      aItr .index =:: index
+      aItr nextInt =:: x aItr =
+      bItr nextInt =:: y bItr =
+      x y | target index [] =
+    end
+    aSign 0 < bSign 0 < | if ## decode twos complement if result is negative
+      target resLen array.create -1i8 0 false IntIterator new aItr =
+      while aItr .index resLen < do
+        aItr nextInt
+          target aItr .index [] =
+        aItr =
+      end
+    end
+    resLen 1 - ## length -> index
+      while #dup 0 > do ## remove leading zeros
+        target #over [] 0 != if
+          break
+        end
+        1 -
+      end
+      1 + ## length == maxIndex + 1
+    return
+  end
+  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target => i64 ) =: xorInternal
+    a aSign 0 false IntIterator new =:: mut aItr
+    b bSign 0 false IntIterator new =:: mut bItr
+    a .length b .length i64.max =:: resLen
+    while aItr .index resLen < do ## calculate result in twos complement
+      aItr .index =:: index
+      aItr nextInt =:: x aItr =
+      bItr nextInt =:: y bItr =
+      x y ^ target index [] =
+    end
+    aSign bSign * 0 < if ## decode twos complement if result is negative
+      target resLen array.create -1i8 0 false IntIterator new aItr =
+      while aItr .index resLen < do
+        aItr nextInt
+          target aItr .index [] =
+        aItr =
+      end
+    end
+    resLen 1 - ## length -> index
+      while #dup 0 > do ## remove leading zeros
+        target #over [] 0 != if
+          break
+        end
+        1 -
+      end
+      1 + ## length == maxIndex + 1
+    return
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int andWith
+    b .sign 0 == a .sign 0 == | if
+      a free
+      0 wrap return
+    end
+    a .cap 0 == b .cap 0 == & if
+      a .data .i a .sign 0 < if neg end
+      b .data .i b .sign 0 < if neg end
+       & a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end uwrap return
+    end
+    a .data .p b .data .p == if
+      a return
+    end
+    a .size b .size i64.max =:: mut resCap
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    a .cap resCap < if
+      a .data .p resCap mem.realloc resData =
+    else
+      a .data .p resData =
+      a .cap resCap =
+    end
+    resData a .size array.create aData =
+    b .data .p b .size array.create bData =
+    aData a .sign bData b .sign resData andInternal =:: resSize
+    resData resSize resCap a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end int new return
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int orWith
+    b .sign 0 == if
+      a return
+    end
+    a .sign 0 == if
+      a free
+      b copy return
+    end
+    a .cap 0 == b .cap 0 == & if
+      a .data .i a .sign 0 < if neg end
+      b .data .i b .sign 0 < if neg end
+       | a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end uwrap return
+    end
+    a .data .p b .data .p == if
+      a return
+    end
+    a .size b .size i64.max =:: mut resCap
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    a .cap resCap < if
+      a .data .p resCap mem.realloc resData =
+    else
+      a .data .p resData =
+      a .cap resCap =
+    end
+    resData a .size array.create aData =
+    b .data .p b .size array.create bData =
+    aData a .sign bData b .sign resData orInternal =:: resSize
+    resData resSize resCap a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end int new return
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int xorWith
+    b .sign 0 == if
+      a return
+    end
+    a .sign 0 == if
+      a free
+      b copy return
+    end
+    a .cap 0 == b .cap 0 == & if
+      a .data .i a .sign 0 < if neg end
+      b .data .i b .sign 0 < if neg end
+       ^ a .sign b .sign * uwrap return
+    end
+    a .data .p b .data .p == if
+      a free
+      0 wrap return
+    end
+    a .size b .size i64.max =:: mut resCap
+    i32 arrayView : aData
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    a .cap resCap < if
+      a .data .p resCap mem.realloc resData =
+    else
+      a .data .p resData =
+      a .cap resCap =
+    end
+    resData a .size array.create aData =
+    b .data .p b .size array.create bData =
+    aData a .sign bData b .sign resData xorInternal =:: resSize
+    resData resSize resCap a .sign b .sign * int new return
+  end
+
+
   #+assumes target has capacity >= a .length + ceil(amount/32) +#
   proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target => i64 ) =: leftShiftInternal
     amount 32 /u =:: offset
@@ -510,7 +711,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   #+! assumes that a .length >= b .length, target has cap at least max{a.length,b.length}+1+#
   proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: subtInternal
     ## a .length b .length >= assert XXX assertions
-    0 i64 =: mut carry ## XXX? can carry take values except 0 and -1
+    0 i64 =: mut carry
     0
       while #dup b .length < do
         a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast - carry + =:: tmp
@@ -891,4 +1092,5 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
 
   ## pow
   ## modPow
+  ## modInv
 #end
