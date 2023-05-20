@@ -412,7 +412,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         else
           state [] .constants .length constOffset -
           state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
-            "two many types for label" sb.wrap fileState [] .wordStart state appendError2
+            "too many types for label" sb.wrap fileState [] .wordStart state appendError2
             while #dup 0 > do
               "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
               1 -
@@ -434,7 +434,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         end
         state [] .constants .length constOffset - 1 -
         state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
-          "two many types for label" sb.wrap fileState [] .wordStart state appendError2
+          "too many types for label" sb.wrap fileState [] .wordStart state appendError2
           while #dup 0 > do
             "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
             1 -
