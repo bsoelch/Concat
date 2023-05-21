@@ -27,13 +27,13 @@ union( i32 _ ptr mut : mut p i64 : mut i ) =:: i64OrPtr ## XXX inline once neste
 struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: public int
 
 #namespace int
-  0 0 0  0i8 int new =:: ZERO
-  1 1 0  1i8 int new =:: ONE
-  2 1 0  1i8 int new =:: TWO
-  1 1 0 -1i8 int new =:: MINUS_ONE
+  0 0 0  0i8 int new int =: public ZERO
+  1 1 0  1i8 int new int =: public ONE
+  2 1 0  1i8 int new int =: public TWO
+  1 1 0 -1i8 int new int =: public MINUS_ONE
 
   ## TODO from string
-  ## TODO from bits
+  ## XXX? from/to byte
   proc( i64 : i => int ) =: public #:alloc:int wrap
     i 0 < if
       ## int
@@ -65,14 +65,57 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
        0 0 0 0i8 int new
     end
   end
-  proc( int : src => int ) =: public #:alloc:int copy
+  proc( i32 : static k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray
+    data k sgn fromPtr return
+  end
+  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: public fromPtr
+    length i32 mem.alloc =:: mData
+    mData data length mem.copy #drop
+    mData length length sgn int new return
+  end
+  proc( i32 : static k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray_BE
+    data k sgn fromPtr_BE return
+  end
+  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: public fromPtr_BE
+    length i32 mem.alloc =:: mData
+    length 1 - =:: maxIndex
+    0 while #dup length < do ## reverse entries
+      data #over [] mData maxIndex #over:3 - [] =
+      1 +
+    end #drop
+    mData length length sgn int new return
+  end
+  proc( int : #:const src => int ) =: public #:alloc:int copy
     src .cap 0 == if
       src .data .i src .sign uwrap return
     end
-    src .cap i32 mem.alloc =:: newData
+    src .size i32 mem.alloc =:: newData
     newData src .data .p src .size mem.copy #drop
     newData src .size src .cap src .sign int new return
   end
+  proc( int : #:const src int : #:consume target => int ) =: #:alloc:int copyTo
+    src .cap 0 == if
+      target free
+      src .data .i src .sign uwrap return
+    end
+    src .size 0 == if
+      target free
+      ZERO return
+    end
+    i64 : newCap
+    i32 _ ptr mut : newData
+    target .cap src .size >= if
+      target .data .p newData =
+      target .cap newCap =
+    else
+      target free
+      src .size i32 mem.alloc newData =
+      src .size newCap =
+    end
+    newData src .data .p src .size mem.copy #drop
+    newData src .size src .cap src .sign int new return
+  end
+
   proc( int => ) =: public #:free:int free
     #dup .cap 0 == if #drop
       return
@@ -206,10 +249,11 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     true return
   end
 
+  { 0 0 1 } =:: 2POW64_data
   proc( int : #:consume a => int ) =: public #:alloc:int logicalNotOf
     a .sign 0 == if
       a free
-      -1 wrap return
+      MINUS_ONE return
     end
     a .cap 0 == if
       a .sign 0 < if
@@ -219,7 +263,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
         a .data .i 1 + -1i8 uwrap return
       end
       a free
-      -1 wrap 64 shiftLeftBy return ## TODO? create int directly
+      2POW64_data @ -1i8 fromArray return
     end
     a .sign 0 < if
       a .data .p a .size decrementInternal if
@@ -361,7 +405,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int andWith
     b .sign 0 == a .sign 0 == | if
       a free
-      0 wrap return
+      ZERO return
     end
     a .cap 0 == b .cap 0 == & if
       a .data .i a .sign 0 < if neg end
@@ -434,7 +478,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end
     a .data .p b .data .p == if
       a free
-      0 wrap return
+      ZERO return
     end
     a .size b .size i64.max =:: mut resCap
     i32 arrayView : aData
@@ -570,7 +614,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     a .size amount 32 / - =:: resCap
     resCap 0 <= if
       a free
-      a .sign 0 < if -1 else 0 end wrap return
+      a .sign 0 < if MINUS_ONE else ZERO end return
     end
     i32 arrayView : aData
     i32 _ ptr mut : resData
@@ -578,7 +622,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     a .cap 0 == if
       amount 0 < amount 64 >= | if
         a free
-        0 wrap return
+        ZERO return
       end
       a .sign 0 < if
         a .data .i 1 - amount >>u 1 + a .sign uwrap return
@@ -656,8 +700,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
       a return
     end
     a .sign 0 == if
-      a free ## XXX reuse old pointer
-      b copy return
+      b a copyTo return
     end
     a .sign b .sign != if
       b =:: mut newB
@@ -742,8 +785,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
       a return
     end
     a .sign 0 == if
-      a free ## XXX reuse old pointer
-      b copy
+      b a copyTo
         #dup .sign neg #over .sign =
       return
     end
@@ -756,7 +798,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     a b compare =:: cmp
     cmp 0 == if ## covers case a==b
       a free
-      0 wrap return
+      ZERO return
     end
     a .cap 0 == b .cap 0 == & if
       cmp 0 > if
@@ -1025,7 +1067,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     end
     b .sign 0 == if
       a free
-      0 wrap return
+      ZERO return
     end
     a .sign b .sign * =:: sign
     false =:: mut square
