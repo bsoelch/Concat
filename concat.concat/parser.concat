@@ -1208,6 +1208,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state popConst =:: mConst
         mConst .idInfo optional.isEmpty if
           "cannot get address of constant value" sb.wrap fileState [] .wordStart state appendError2
+          return ## XXX? allow getting address of constants via temporary variable
         end
         mConst .valueType mConst .idInfo .data fileState [] .wordStart op@Id state appendOp
         return
