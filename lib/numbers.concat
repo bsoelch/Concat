@@ -24,6 +24,8 @@ proc( T : x i64 : p => T ) =: public powI
     end #drop
   return
 end
+2 =:: public MIN_BASE
+62 =:: public MAX_BASE
 proc( i8 : chr i32 : base => i32 ) =: public parseDigit
   chr '0' >= chr '9' <= & if
     chr '0' - return
@@ -35,6 +37,18 @@ proc( i8 : chr i32 : base => i32 ) =: public parseDigit
     return
   end
   -1 return
+end
+proc( string => string i32 ) =: public resolveBase
+  #dup 0 string.charAt '0' == if
+    #dup 1 string.charAt 'x' == if
+      2 string.tail 16 return
+    else #dup 1 string.charAt 'o' == _if
+      2 string.tail 8 return
+    else #dup 1 string.charAt 'b' == _if
+      2 string.tail 2 return
+    end
+  end
+  10 return
 end
 enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR OVERFLOW ) =:: public ParserError
 proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseIntInternal
@@ -59,16 +73,7 @@ proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseI
       #drop 0 ParserError .EMPTY return
     end
     mBase 0 == if
-      10 mBase =
-      #dup 0 string.charAt '0' == if
-        #dup 1 string.charAt 'x' == if
-          16 mBase =
-          2 string.tail
-        else #dup 1 string.charAt 'b' == _if
-          2 mBase =
-          2 string.tail
-        end
-      end
+      resolveBase mBase =
     end
     unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxVal
     maxVal mBase /u =:: maxSafe
@@ -147,16 +152,7 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
       #drop 0 double cast ParserError .EMPTY return
     end
     mBase 0 == if
-      10 mBase =
-      #dup 0 string.charAt '0' == if
-        #dup 1 string.charAt 'x' == if
-          16 mBase =
-          2 string.tail
-        else #dup 1 string.charAt 'b' == _if
-          2 mBase =
-          2 string.tail
-        end
-      end
+      resolveBase mBase =
     end
     0 while #dup #over:2 .length < do
       #over #over string.charAt '.' == if
