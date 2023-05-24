@@ -21,6 +21,17 @@ end
 #end
 #namespace u32
   0xffff_ffffi64 =:: MASK
+  proc( i32 => i32 ) =: leadingZeros
+    =:: mut i
+    i 0 < if 0 return end
+    i 0 == if 32 return end
+    31
+      i 16 >> 0 != if 16 - i 16 >> i = end
+      i 8 >> 0 != if 8 - i 8 >> i = end
+      i 4 >> 0 != if 4 - i 4 >> i = end
+      i 2 >> 0 != if 2 - i 2 >> i = end
+      i 1 >> 0 != if 1 - i 1 >> i = end
+  end
 #end
 
 union( i32 _ ptr mut : mut p i64 : mut i ) =:: i64OrPtr ## XXX inline once nested structures are supported
@@ -304,10 +315,27 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   ## TODO toString
 
   ## TODO sign, bit-count ...
-  proc( int : #:const a int : #:const b => i32 ) =: compare
-    a .sign b .sign != if
-      a .sign b .sign - return
+  proc( i32 arrayView : #:const a i32 arrayView : #:const b => i32 ) =: cmpInternal
+    a .length b .length != if
+      a .length b .length > if
+        1 return
+      else
+        -1 return
+      end
     end
+    a .length 1 - while #dup 0 >= do
+      a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast - ## no overflow (values cast to i64)
+      #dup 0 != if #swap #drop
+        0 < if
+          -1 return
+        end
+        1 return
+      end #drop
+      1 -
+    end #drop
+    0 return
+  end
+  proc( int : #:const a int : #:const b => i32 ) =: compareAbs
     a .size b .size != if
       a .size b .size > if
         1 return
@@ -332,17 +360,13 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     else
       b .data .p b .size array.create bData =
     end
-    a .size 1 - while #dup 0 >= do
-      aData #over array.get u32.MASK & i64 cast bData #over:2 array.get u32.MASK & i64 cast - ## no overflow (values cast to i64)
-      #dup 0 != if #swap #drop
-        0 < if
-          -1 return
-        end
-        1 return
-      end #drop
-      1 -
-    end #drop
-    0 return
+    aData bData cmpInternal return
+  end
+  proc( int : #:const a int : #:const b => i32 ) =: compare
+    a .sign b .sign != if
+      a .sign b .sign - return
+    end
+    a b compareAbs return
   end
 
   ## TODO versions of arithmetic operations than don't consume their parameters
@@ -414,7 +438,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   end
 
   struct(  i32 arrayView : data i8 : sign i64 : mut index bool : mut hadNonzero ) =:: IntIterator
-  proc( IntIterator : #:update i => IntIterator i32 ) =: nextInt
+  proc( IntIterator : #:return i => IntIterator i32 ) =: nextInt
     i =:: mut itr
     itr .index =:: index
     itr .index 1 + itr .index =
@@ -781,7 +805,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   end
 
   ## flips the sign of a
-  proc( int : #:update a => int ) =: public negated
+  proc( int : #:return a => int ) =: public negated
     a =:: mut tmp
     tmp .sign neg tmp .sign =
     tmp return
@@ -1286,7 +1310,197 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   end
   ## XXX separate procedure for squaring
 
-  ## divide,mod   -> simple_divmod [..]_divMod
+  #+ writes the result of the division into target and its size into rSize, returns the remainder of the division+#
+  proc( i32 arrayView : a i32 : val bool : computeDivision i32 _ ptr mut : #:update target i64 ptr mut : #:update tSize => i32 #+remainder+# ) =: divideU32
+    a .length 0 == if 0 return end ## replace with assertion
+    val 0 == if 0 return end ## replace with assertion
+    val 1 == if 0 return end
+    val u32.MASK &  i64 cast =:: div
+    0 i64 =: mut carry
+    a .length 1 - while #dup 0 >= do
+      carry 32 << carry =
+      a #over array.get u32.MASK & i64 cast carry + carry =
+      computeDivision if
+        carry div / u32.MASK & i32 cast target #over:2 [] =
+      end
+      carry div % carry =
+      1 -
+    end #drop
+    computeDivision if
+      a .length
+        target a .length 1 - [] 0 == if
+          1 -
+        end
+      tSize [] =
+    end
+    carry u32.MASK & i32 cast return
+  end
+  #+
+  assumes that b. data!= a, b.length<=aSize, res has capacity at least a .length - b.length+1
+  computes a/b using [] division, stores the result of the division in res, returns the size
+  this procedure computes the remainder of the division as a byproduct, it will be stored in a, the size will be stored in aSize
+  +#
+  proc( i32 _ ptr mut : #:update a i64 ptr mut : #:update aSize i32 arrayView : b bool : computeDivision i32 _ ptr mut : #:update res => i64 ) =: simpleDivide
+    ## ... assert
+    b .length 0 == if 0 return end ## replace with assertion
+    b .length 1 == if ## call divideU32
+      aSize [] 1 - =:: mut resSize
+      a aSize [] array.create b 0 array.get computeDivision res resSize @ divideU32 =:: R
+      R a 0 [] =
+      R 0 == if 0 else 1 end aSize [] =
+      computeDivision if
+        resSize return
+      end
+      0 return
+    end
+    ## compute upper bound for division
+    b b .length 1 - array.get =:: hiB ## assert nonzero
+    32 hiB u32.leadingZeros 1 + - =:: shift
+    b .length 1 + i32 mem.alloc =:: mut buff
+    0 i64 =: mut buffSize
+    hiB u32.MASK & i64 cast 32 shift - << b b .length 2 - array.get u32.MASK & i64 cast shift >>u | 1 + =:: div ## XXX? overflow if hiB==-1
+    i64 : mut hiA
+    i32 : mut f
+    i64 : mut offset
+    0 i32 =: mut carry
+    aSize [] b .length - 1 + =:: mut remSize
+    while aSize [] b .length >= do
+      aSize [] 2 -
+        ## take highest two digits
+        a #over [] u32.MASK & i64 cast hiA =
+        a #over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
+      #drop
+      hiA div /u shift >>u u32.MASK & i32 cast f =
+      b f buff multU32 buffSize =
+      computeDivision if
+        f carry + res offset [] =
+        0 carry =
+      end
+      aSize [] b .length - offset =
+      aSize []
+        a offset + aSize [] offset - array.create buff buffSize array.create a offset + subtInternal offset + aSize [] = ## subtract f*b from A
+      aSize [] > if
+        continue ## number got shorter
+      end
+      ## adjust result
+      a offset + aSize [] offset - array.create b cmpInternal 0 >= if ## remainder larger or equal to b
+        computeDivision if
+          res offset [] 1 + res offset [] =
+        end
+        aSize []
+          a offset + aSize [] offset - array.create b a offset + subtInternal offset + aSize [] =
+        aSize [] > if
+          continue ## number got shorter
+        end
+      end
+      ## remaining value larger than i32
+      offset 0 == if break end
+      aSize [] 2 -
+        ## take highest two digits
+        a #over [] u32.MASK & i64 cast hiA =
+        a #over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
+      #drop
+      hiA hiB u32.MASK & i64 cast 1 + /u u32.MASK & i32 cast f = ## XXX? use low bits of first division to calculate better approximation [multiply than shift, store low bits in carry]
+      f carry =
+      b f buff multU32 buffSize =
+      offset 1 - offset =
+      aSize []
+        a offset + aSize [] offset - array.create buff buffSize array.create a offset + subtInternal offset + aSize [] = ## subtract f*b from A
+      aSize [] <= if ## replace with assertion
+        ..unreachable
+      end
+    end
+    buff mem.free
+    computeDivision if
+      res remSize 1 - [] 0 == if ## clear leading zero in result
+        remSize 1 - remSize =
+      end
+      remSize return
+    end
+    0 return
+  end
+  ## TODO efficient division algorithm
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b bool : computeDiv bool : computeRem => int #+remainder+# int #+divide+# ) =: #:alloc:int divideRemConsumeInternal
+    computeDiv computeRem | ! if
+      a free
+      ZERO ZERO return
+    end
+    a .sign 0 == if
+      a ZERO return
+    end
+    b .sign 0 == if ## TODO handle div by zero
+      a ZERO return
+    end
+    a .sign b .sign * =:: sign
+    a b compareAbs =:: cmp
+    cmp 0 < if
+      a ZERO return
+    else cmp 0 == _if
+      a free
+      ZERO sign 0 < if MINUS_ONE else ONE end return
+    end
+    a .cap 0 == b .cap 0 == & if
+      a .data .i b .data .i %u sign uwrap  a .data .i b .data .i /u sign uwrap return
+    end
+    a .size b .size - 1 + =:: mut resCap
+    i32 _ ptr mut : aData
+    i64 : mut aSize
+    i32 arrayView : bData
+    i32 _ ptr mut : resData
+    i32 4 array new =:: mut intValues
+    ## XXX check which division method should be used
+    a .cap 0 == if
+      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i 32 >>u i32 cast intValues @ 1 [] =
+      intValues @ 0 [] @ aData =
+    else
+      a .data .p aData =
+    end
+    a .size aSize =
+    b .cap 0 == if
+      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i 32 >>u i32 cast intValues @ 3 [] =
+      intValues @ 2 [] @ b .size array.create bData =
+    else
+      b .data .p b .size array.create bData =
+    end
+    a .size 2 <= b .size 2 <= & if ## integer division
+      a .size 2 == if aData 1 [] u32.MASK & i64 cast 32 <<  else 0i64 end
+      aData 0 [] u32.MASK & i64 cast | =:: aVal
+      a free
+      b .size 2 == if bData 1 array.get u32.MASK & i64 cast 32 <<  else 0i64 end
+      bData 0 array.get u32.MASK & i64 cast | =:: bVal
+      aVal bVal %u sign uwrap  aVal bVal /u sign uwrap return
+    end
+    b .size 1 == if ## division by u32
+      ## a .cap 0 > assert
+      aData aSize array.create bData 0 array.get computeDiv aData aSize @ divideU32 =:: R
+      computeDiv ! if
+        a free
+        R u32.MASK & sign uwrap ZERO return
+      end
+      R u32.MASK & sign uwrap a return
+    end
+    computeDiv if resCap else 0i64 end i32 mem.alloc resData =
+    aData aSize @ bData computeDiv resData simpleDivide =:: resSize
+    ## return
+      aData aSize a .cap sign int new
+      resData resSize resCap 1i8 int new
+    return
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int #+remainder+# int #+divide+# ) =: public #:alloc:int divideAndRemainderBy ## XXX better name
+    a b true true divideRemConsumeInternal
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int #+remainder+# ) =: public #:alloc:int divideBy
+    a b true false divideRemConsumeInternal #swap free ## remainder
+  end
+  ## consumes a, keeps b unchanged
+  proc( int : #:consume a int : #:const b => int #+remainder+# ) =: public #:alloc:int remainderBy
+    a b false true divideRemConsumeInternal free ## division result
+  end
 
   ## gcd, lcm
 
