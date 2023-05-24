@@ -632,6 +632,12 @@ entryPoint:
 end
 ```
 
+## Memory guarantees
+These are the only guarantees about internal memory layout:
 
+- calling `mem.alloc` with zero length returns a null-pointer not freeing result of allocation with zero length does not leak memory
+- a zero-initialized enum will always be interpreted as the first element
+- if `io.fopen` has a non-zero error code the returned FILE will be a null-pointer
+- passing a null-pointer to a io procedure will return with `FILE_ERR_INVALID_FILE` as exit code
 
 
