@@ -2510,8 +2510,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       state [] .openBlocks
         ## BlockInfo
-            Type array.empty id.LABEL_ID_NONE false typeContext types.newProcArgs
-            Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs
+            Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
+            Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
             typeContext
             types.newProcedure #drop
           BlockData .procBlock new

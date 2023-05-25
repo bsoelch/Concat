@@ -27,6 +27,7 @@ struct(
   FileId : mut currentFile
   Operation list : mut templateOps
   InitializerOffset list : mut openInitializers
+  LabelId list : mut labelBuffer
   CompilerError list : mut errors
   i32 : mut autoTypeCount
   bool : mut hasEntryPoint
@@ -393,28 +394,26 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
   code start fileState state 0 readLabelAddFlags
 end
 enum( NONE STRUCT ENUM PROC_IN ) =:: LabelType
-proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId Type arrayView bool ) =: readCompositeType
+proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId arrayView optional Type arrayView bool ) =: readCompositeType
   state offsetConstants =:: prevConstants
   state [] .constants .length =:: constOffset
-  labelType LabelType .NONE == if
-    id.LABEL_ID_NONE
-  else
-    state [] .idContext .labelContext addrOf id.labelOffset
-  end =:: labelOffset ## FIXME handle nested labeled types
+  state [] .labelBuffer .length =:: labelOffset
   code
     while fileState nextToken
       fileState state tryParseConstant if #drop continue end
       #dup endString string.eq if #drop
         labelType LabelType .NONE == if
-          id.LABEL_ID_NONE
-        else labelType LabelType .PROC_IN == state [] .idContext .labelContext addrOf id.labelOffset labelOffset == & _if
-          id.LABEL_ID_NONE ## procedure with no lables
+          LabelId arrayView optional.empty
+        else labelType LabelType .PROC_IN == state [] .labelBuffer .length labelOffset == & _if
+          LabelId arrayView optional.empty ## procedure with no lables
         else
           state [] .constants .length constOffset -
-          state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
+          state [] .labelBuffer .length labelOffset - - #dup 0 > if
             "too many types for label" sb.wrap fileState [] .wordStart state appendError2
             while #dup 0 > do
-              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
+              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+                state [] .labelBuffer #swap list.append
+              state [] .labelBuffer =
               1 -
             end
           else #dup 0 < _if
@@ -424,19 +423,22 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
               1 +
             end
           end #drop
-          labelOffset
+          state [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
         end
         prevConstants state resetConstants
+        labelOffset state [] .labelBuffer .length =
         state [] .constants .length constOffset - fileState state popTypeConstants return
       else #dup ":" string.wrap string.eq _if #drop
         labelType LabelType .NONE == if
           "unexpected ':' operator" sb.wrap fileState [] .wordStart state appendError2
         end
         state [] .constants .length constOffset - 1 -
-        state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
+        state [] .labelBuffer .length labelOffset - - #dup 0 > if
           "too many types for label" sb.wrap fileState [] .wordStart state appendError2
           while #dup 0 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+              state [] .labelBuffer #swap list.append
+            state [] .labelBuffer =
             1 -
           end
         else #dup 0 < _if
@@ -452,6 +454,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         end
         .IDENTIFER
         fileState state readLabel
+          state [] .labelBuffer #over list.append state [] .labelBuffer =
           #dup state [] .idContext .labelContext @ id.labelFlags  id.FLAG_STATIC & 0 != if
             labelType LabelType .PROC_IN != if
               "unexpected static label" sb.wrap fileState [] .wordStart state appendError2
@@ -473,13 +476,17 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         continue
       end
         state [] .constants .length constOffset -
-        state [] .idContext .labelContext addrOf id.labelOffset labelOffset - - #dup 0 > if
+        state [] .labelBuffer .length labelOffset - - #dup 0 > if
           "unexpected label in enum, expected ':' " sb.wrap fileState [] .wordStart state appendError2
           while #dup 1 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+              state [] .labelBuffer #swap list.append
+            state [] .labelBuffer =
             1 -
           end #drop
-          fileState state readLabel #drop
+          fileState state readLabel
+            state [] .labelBuffer #swap list.append
+          state [] .labelBuffer =
           continue
         else #dup 0 < _if
           "not enough types for label" sb.wrap fileState [] .wordStart state appendError2
@@ -488,12 +495,14 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
             1 +
           end
         end #drop
-      id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel #drop
+      id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+        state [] .labelBuffer #swap list.append
+      state [] .labelBuffer =
       Type .undefined fileState [] .wordStart newTypeConst  state pushConst
       #dup .length 0 >
     do end
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError2
-  id.LABEL_ID_NONE Type array.empty true return
+  LabelId arrayView optional.empty Type array.empty true return
 end
 proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state => bool ) =: tryParseNumberLiteral
   str .length 0 == if
@@ -719,7 +728,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "" string.wrap true return
     else #dup "proc(" string.wrap string.eq _if #drop
       state offsetStaticArgs =:: prevArgs
-      LabelType .PROC_IN "=>" string.wrap fileState state readCompositeType
+      LabelType .PROC_IN "=>" string.wrap fileState state readCompositeType ## FIXME procedure without => hangs compiler
       if
         "error while parsing procedure arguments" sb.wrap fileState [] .wordStart state appendError2
       end
@@ -1255,8 +1264,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ## openProcScope
         BlockType .PROCEDURE
         ## newProcedure
-          Type array.empty id.LABEL_ID_NONE false typeContext types.newProcArgs
-          Type array.empty id.LABEL_ID_NONE true typeContext types.newProcArgs
+          Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
+          Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
         typeContext types.newProcedure #drop
       state [] .idContext @ id.openProcScope
       fileState [] .wordStart opEntryPoint  state appendOp
@@ -1610,7 +1619,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           idContext [] .constContext @
         newArrayConst =:: value
         arrayType Type .undefined types.typeEquals if
-          types id.LABEL_ID_NONE typeContext types.newTuple if ## TODO handle empty array
+          types LabelId arrayView optional.empty typeContext types.newTuple if ## TODO handle empty array
             "could not create array-constant type" sb.wrap fileState [] .wordStart state appendError2
           end
         else ## TODO array of arrays -> 2D array
@@ -1690,6 +1699,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
     FILE_ID_NONE
     128 Operation       list.create
     128 InitializerOffset list.create
+    128 LabelId         list.create
     32 CompilerError    list.create
     0
     false

@@ -537,23 +537,27 @@
     context [] .templateArgBuffer .data data .offset + data .length array.create return
   end
   proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => CompositeId ) =: replaceGenericsComposite
-    context [] .typeContext .compositeTypes src list.get
-      #dup .flags COMP_FLAG_VOID_ONLY & 0 != #over .flags COMP_GENERIC_MASK & 0 == | if #drop
-        src return ## no generic elements
-      end
-      #dup .eltCount Type list.create
-        0 while #dup #over:3 .eltCount < do
-          #swap ## composite index list
-            context [] .typeContext .compositeData #over:3 .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
-          #swap 1 +
-        end #drop
-        #over .flags COMP_CLASS_MASK &
-        #over list.asArray
-        #over:3 .labelOffset
-        context [] .typeContext @
-        newCompositeType
-      #swap list.free #drop
-    #swap #drop
+    context [] .typeContext .compositeTypes src list.get =:: composite
+    composite .flags COMP_FLAG_VOID_ONLY & 0 != composite .flags COMP_GENERIC_MASK & 0 == | if
+      src return ## no generic elements
+    end
+    composite .eltCount Type list.create
+      0 while #dup composite .eltCount < do
+        #swap ## composite index list
+          context [] .typeContext .compositeData composite .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
+        #swap 1 +
+      end #drop
+      composite .flags COMP_CLASS_MASK &
+      #over list.asArray
+      composite ._labelOffset
+        #dup types.UNLABELED == if #drop
+          LabelId arrayView optional.empty
+        else
+          context [] .typeContext .elementLabels .data #swap + composite .eltCount array.create optional.wrap
+        end
+      context [] .typeContext @
+      newCompositeType
+    #swap list.free #drop
     return
   end
   proc( ConstValue => ArraySize bool ) =: constToSize

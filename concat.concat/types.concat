@@ -403,6 +403,8 @@ proc( Type : target bool : isPtr ArraySize arrayView : sizes bool : fixedSize bo
   false return
 end
 
+i32 =:: LabelOffset
+-1 LabelOffset =: public UNLABELED
 ## composite types
 i32 =:: CompositeFlag
 1   CompositeFlag =: COMP_FLAG_TUPLE
@@ -415,7 +417,7 @@ i32 =:: CompositeFlag
 64  CompositeFlag =: public COMP_FLAG_STATIC_ARGS
 128 CompositeFlag =: public COMP_FLAG_TEMPLATE
 192 CompositeFlag =: public COMP_GENERIC_MASK
-struct( i64 : eltsOffset i64 : eltCount LabelId : labelOffset CompositeFlag : mut flags ) =:: CompositeType
+struct( i64 : eltsOffset LabelOffset : _labelOffset i64 : eltCount CompositeFlag : mut flags ) =:: CompositeType
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
@@ -486,7 +488,11 @@ proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =:
     #dup optional.isEmpty if #drop
       id.LABEL_ID_NONE return
     end
-  .data [] .labelOffset index + return
+  .data [] ._labelOffset =:: offset
+  offset UNLABELED == if
+    id.LABEL_ID_NONE return
+  end
+  context [] .elementLabels offset index + list.get return
 end
 proc( Type : composite string : name LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
@@ -502,7 +508,7 @@ proc( Type : composite string : name LabelContext ptr mut : labelContext TypeCon
     end
   .data =:: labels
   0 while #dup labels [] .eltCount < do
-    labels [] .labelOffset #over + labelContext id.labelName #dup optional.hasData if .data name string.eq if
+    context [] .elementLabels labels [] ._labelOffset #over:2 + list.get labelContext id.labelName #dup optional.hasData if .data name string.eq if
       return
     end else #drop end
     1 +
@@ -568,7 +574,27 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   end #drop
   -1 return
 end
-proc( CompositeFlag : classFlag Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
+proc( LabelOffset : offset LabelId arrayView optional : labels TypeContext ptr mut : context => bool ) =: labelsEqual
+  offset UNLABELED == if ## unlabeled -> on labels
+    labels optional.isEmpty return
+  end
+  labels optional.isEmpty if
+    false return
+  end
+  labels .data =:: newLabels
+  context [] .elementLabels list.asArray offset array.tail =:: prevLabels
+  prevLabels .length newLabels .length < if
+    false return
+  end
+  0 while #dup newLabels .length < do
+    prevLabels #over array.get newLabels #over:2 array.get != if #drop ## XXX compare strings instead of labelIds
+      false return
+    end
+    1 +
+  end #drop
+  true return
+end
+proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
   classFlag CompositeFlag =: mut flags
   true =:: mut isVoid
   0 while #dup elts .length < do
@@ -594,7 +620,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts LabelId : labelOffset Type
       #dup .eltCount elts .length != if #drop
         1 + continue
       end
-      #dup .labelOffset labelOffset != if #drop
+      #dup ._labelOffset labels context labelsEqual ! if #drop
         1 + continue
       end
       context [] .compositeData #over .eltsOffset #over:2 .eltCount list.slice elts typesOffset 0 != if #drop
@@ -608,37 +634,46 @@ proc( CompositeFlag : classFlag Type arrayView : elts LabelId : labelOffset Type
     #dup .length =:: eltsOffset
     elts list.appendArray
   context [] .compositeData =
+  LabelOffset : labelOffset
+  labels optional.isEmpty if
+    UNLABELED labelOffset =
+  else
+    context [] .elementLabels
+      #dup .length LabelOffset cast labelOffset =
+      labels .data list.appendArray
+    context [] .elementLabels =
+  end
   composites []
-    eltsOffset elts .length labelOffset flags CompositeType new list.append
+    eltsOffset labelOffset elts .length flags CompositeType new list.append
   composites [] =
   composites [] .length 1 - CompositeId cast
   return
 end
 ## creates struct or tuple
-proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newTuple
+proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
     Type .undefined true return
   end
-  COMP_FLAG_TUPLE elts labelOffset context newCompositeType
-  labelOffset id.LABEL_ID_NONE == if Type .tuple new else Type .struct new end
+  COMP_FLAG_TUPLE elts labels context newCompositeType
+  labels optional.isEmpty if Type .tuple new else Type .struct new end
   false return
 end
-proc( Type arrayView : elts LabelId : labelOffset bool : isOut TypeContext ptr mut : context => Type ) =: public newProcArgs
-  isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labelOffset context newCompositeType
-  isOut if Type .procOut new else labelOffset id.LABEL_ID_NONE == _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
+proc( Type arrayView : elts LabelId arrayView optional : labels bool : isOut TypeContext ptr mut : context => Type ) =: public newProcArgs
+  isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labels context newCompositeType
+  isOut if Type .procOut new else labels optional.isEmpty _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
   return
 end
-proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newEnum
-  elts .length 0 ==  labelOffset id.LABEL_ID_NONE == | if
+proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newEnum
+  elts .length 0 ==  labels optional.isEmpty | if
     Type .undefined true return
   end
-  COMP_FLAG_TUPLE elts labelOffset context newCompositeType Type .enum new false return
+  COMP_FLAG_TUPLE elts labels context newCompositeType Type .enum new false return
 end
-proc( Type arrayView : elts LabelId : labelOffset TypeContext ptr mut : context => Type bool ) =: public newUnion
-  elts .length 0 == labelOffset id.LABEL_ID_NONE == | if
+proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newUnion
+  elts .length 0 == labels optional.isEmpty | if
     Type .undefined true return
   end
-  COMP_FLAG_UNION elts labelOffset context newCompositeType Type .union new false return
+  COMP_FLAG_UNION elts labels context newCompositeType Type .union new false return
 end
 #end
 #namespace sb
@@ -646,7 +681,7 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
   =:: context
   =:: labelContext
   =:: comp
-  comp .labelOffset id.LABEL_ID_NONE == =:: unlabeled
+  comp ._labelOffset types.UNLABELED == =:: unlabeled
   0 while #dup comp .eltCount < do
     #swap
       context [] .compositeData #over:2 comp .eltsOffset + list.at .data =:: eltType
@@ -655,7 +690,7 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
         ' ' appendC
         #swap 1 + continue
       end
-      comp .labelOffset #over:2 + =:: label
+      context [] .elementLabels comp ._labelOffset #over:3 + list.get =:: label
       label labelContext id.labelName =:: labelName
       eltType [] context types.isEmpty ! if
         eltType [] labelContext context false appendTypeRecursive
@@ -742,7 +777,7 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
       proc false return
     end
     context [] .compositeTypes #over .in .labeledProcIn list.get =:: mut inType
-    context [] .compositeData inType .eltsOffset inType .eltCount list.slice id.LABEL_ID_NONE false context newProcArgs
+    context [] .compositeData inType .eltsOffset inType .eltCount list.slice LabelId arrayView optional.empty false context newProcArgs
   #swap .out context newProcedure if #drop proc true return end
     isPtr if
       true ArraySize array.empty true false context newArrayType return
@@ -1022,6 +1057,7 @@ struct(
   Type                list : mut compositeData
   types.ProcType      list : mut procTypes
   types.NamedType     list : mut namedTypes
+  LabelId             list : mut elementLabels
 ) TypeContext =
 #namespace types
 proc( => TypeContext ) =: public newTypeContext
@@ -1031,6 +1067,7 @@ proc( => TypeContext ) =: public newTypeContext
   128 Type          list.create ## compositeData
   128 ProcType      list.create ## procTypes
   128 NamedType     list.create ## namedTypes
+  128 LabelId       list.create ## elementLabels
   TypeContext new return
 end
 proc( TypeContext : context => TypeContext ) =: public clearTypeContent
@@ -1041,6 +1078,7 @@ proc( TypeContext : context => TypeContext ) =: public clearTypeContent
     #dup .compositeData  list.free #over .compositeData =
     #dup .procTypes      list.free #over .procTypes =
     #dup .namedTypes     list.free #over .namedTypes =
+    #dup .elementLabels  list.free #over .elementLabels =
   return
 end
 #end

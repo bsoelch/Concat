@@ -34,8 +34,7 @@ end
   end
 #end
 
-union( i32 _ ptr mut : mut p i64 : mut i ) =:: i64OrPtr ## XXX inline once nested structures are supported
-struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: public int
+struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: public int
 
 #namespace int
   0 0 0  0i8 int new int =: public ZERO
@@ -1337,7 +1336,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
   end
   #+
   assumes that b. data!= a, b.length<=aSize, res has capacity at least a .length - b.length+1
-  computes a/b using [] division, stores the result of the division in res, returns the size
+  computes a/b using long division, stores the result of the division in res, returns the size
   this procedure computes the remainder of the division as a byproduct, it will be stored in a, the size will be stored in aSize
   +#
   proc( i32 _ ptr mut : #:update a i64 ptr mut : #:update aSize i32 arrayView : b bool : computeDivision i32 _ ptr mut : #:update res => i64 ) =: simpleDivide
@@ -1465,6 +1464,7 @@ struct( i64OrPtr : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: pub
     else
       b .data .p b .size array.create bData =
     end
+    ## TODO improve computations by using shifts to handle powers of two
     a .size 2 <= b .size 2 <= & if ## integer division
       a .size 2 == if aData 1 [] u32.MASK & i64 cast 32 <<  else 0i64 end
       aData 0 [] u32.MASK & i64 cast | =:: aVal
