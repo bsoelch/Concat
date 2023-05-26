@@ -809,6 +809,12 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     tmp .sign neg tmp .sign =
     tmp return
   end
+  ## creates a copy of a with value abs(a)
+  proc( int : #:const a => int ) =: public #:alloc:int abs
+    a copy =:: mut tmp
+    tmp .sign tmp .sign * tmp .sign = ## replace sign with its absolute value
+    tmp return
+  end
 
 
   #+assumes, target is large enough to hold the result of the addition +#
@@ -1494,15 +1500,28 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     a b true true divideRemConsumeInternal
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int #+remainder+# ) =: public #:alloc:int divideBy
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int divideBy
     a b true false divideRemConsumeInternal #swap free ## remainder
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int #+remainder+# ) =: public #:alloc:int remainderBy
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int remainderBy
     a b false true divideRemConsumeInternal free ## division result
   end
 
-  ## gcd, lcm
+  #+computes the gcd of a and b, a and b are not modified by the calculation+#
+  proc( int : #:const a int : #:const b => int ) =: public #:alloc:int gcd
+    a abs =:: mut x
+    b abs =:: mut y
+    x y compare 0 > if x y x = y = end ## ensure x<=y
+    while x .sign 0 != do ## XXX? use binary gcd algorithm
+      x
+        y x remainderBy x =
+      y =
+    end
+    x free
+    y return
+  end
+  ## XXX lcm
 
   ## pow
   ## modPow
