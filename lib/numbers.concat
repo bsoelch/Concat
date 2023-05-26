@@ -9,7 +9,7 @@ proc( T : x i64 : p => T ) =: public powI
   p 0 == if
     1 T cast return
   else p 0 < _if
-    1 T cast x / p neg powI return
+    1 T cast x / p -_ powI return
   end
   x =:: mut xPow
   1 T cast
@@ -103,7 +103,7 @@ proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseI
     end #drop
   #drop
   res
-    sign if neg end
+    sign if -_ end
   sign unsigned & if ParserError .SIGN return end
   overflow if ParserError .OVERFLOW return end
   ParserError .NONE return
@@ -202,7 +202,7 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
     2 mBase =
   end
   val double cast
-    sign if neg end
+    sign if -_ end
   mBase double cast  c -100 < if
      ## calculate power of 1/base instead of negative power of base and
      ## split of last factor to prevent underflow of intermediate results

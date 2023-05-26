@@ -9,6 +9,7 @@ codeCTarget3="./build/concat3_2.c"
 libPath="./lib/"
 externCFiles=( "./extern.c" )
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
+concatArgs=( -W -q -l $libPath )
 bootstrapC="./bootstrap/latest.c"
 
 # clear console
@@ -16,7 +17,7 @@ clear
 echo "-----------------------------------------" && {
   echo "recompile compiler"
   echo "-----------------------------------------"
-  $baseCompiler "$compilerSrc" -o "$codeCTarget" -W -q -l $libPath
+  $baseCompiler "$compilerSrc" -o "$codeCTarget" ${concatArgs[@]}
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"
@@ -24,7 +25,7 @@ echo "-----------------------------------------" && {
 } && {
   echo "compile compiler with compiler"
   echo "-----------------------------------------"
-  $codeTarget $compilerSrc -l $libPath -o $codeCTarget2
+  $codeTarget "$compilerSrc" -o "$codeCTarget2" ${concatArgs[@]}
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"
@@ -32,7 +33,7 @@ echo "-----------------------------------------" && {
 } && {
   echo "check if compiler output is stable under recompilation"
   echo "-----------------------------------------"
-  $codeTarget2 $compilerSrc -l $libPath -o $codeCTarget3
+  $codeTarget2 "$compilerSrc" -o "$codeCTarget3" ${concatArgs[@]}
 } && {
   diff $codeCTarget2 $codeCTarget3 && {
     mv $codeTarget2 $baseCompiler

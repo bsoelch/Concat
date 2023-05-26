@@ -32,7 +32,7 @@ proc( stringBuilder : sb double : f => stringBuilder ) =: public appendIeeeDoubl
     end
     value 0 < if
       '-' sb.appendC
-      value neg value =
+      value -_ value =
     end
     "0x" sb.appendS
     value math.log2 math.floor i64 cast =:: mut e
@@ -77,7 +77,7 @@ proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci => str
     end
     value 0 < if
       '-' sb.appendC
-      value neg value =
+      value -_ value =
     end
     value math.log base math.log / math.floor i64 cast =:: mut e
     e =:: mut e_max

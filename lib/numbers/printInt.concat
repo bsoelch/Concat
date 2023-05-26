@@ -13,7 +13,7 @@
       i
       #dup 0 < signed & if
         #swap '-' appendC #swap
-        neg
+        -_
       else #dup 0 == _if
         #drop '0' appendC return
       end

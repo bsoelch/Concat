@@ -46,7 +46,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   proc( i64 : i => int ) =: public #:alloc:int wrap
     i 0 < if
       ## int
-        i neg
+        i -_
         #dup 32 >>u 0 == if 1 else 2 end
         0
         -1i8
@@ -459,7 +459,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     itr .data index array.get =:: next
     next 0 != itr .hadNonzero =
-    itr next neg return
+    itr next -_ return
   end
   proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target => i64 ) =: andInternal
     a aSign 0 false IntIterator new =:: mut aItr
@@ -552,8 +552,8 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       ZERO return
     end
     a .cap 0 == b .cap 0 == & if
-      a .data .i a .sign 0 < if neg end
-      b .data .i b .sign 0 < if neg end
+      a .data .i a .sign 0 < if -_ end
+      b .data .i b .sign 0 < if -_ end
        & a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end uwrap return
     end
     a .data .p b .data .p == if
@@ -584,8 +584,8 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       b copy return
     end
     a .cap 0 == b .cap 0 == & if
-      a .data .i a .sign 0 < if neg end
-      b .data .i b .sign 0 < if neg end
+      a .data .i a .sign 0 < if -_ end
+      b .data .i b .sign 0 < if -_ end
        | a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end uwrap return
     end
     a .data .p b .data .p == if
@@ -616,8 +616,8 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       b copy return
     end
     a .cap 0 == b .cap 0 == & if
-      a .data .i a .sign 0 < if neg end
-      b .data .i b .sign 0 < if neg end
+      a .data .i a .sign 0 < if -_ end
+      b .data .i b .sign 0 < if -_ end
        ^ a .sign b .sign * uwrap return
     end
     a .data .p b .data .p == if
@@ -786,7 +786,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       a return
     end
     amount 0 < if
-      a amount neg rightShiftBy return
+      a amount -_ rightShiftBy return
     end
     a amount leftShiftBy return
   end
@@ -798,7 +798,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       a return
     end
     amount 0 < if
-      a amount neg leftShiftBy return
+      a amount -_ leftShiftBy return
     end
     a amount rightShiftBy return
   end
@@ -806,7 +806,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   ## flips the sign of a
   proc( int : #:return a => int ) =: public negated
     a =:: mut tmp
-    tmp .sign neg tmp .sign =
+    tmp .sign -_ tmp .sign =
     tmp return
   end
   ## creates a copy of a with value abs(a)
@@ -874,7 +874,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     a .sign b .sign != if
       b =:: mut newB
-      b .sign neg newB .sign =
+      b .sign -_ newB .sign =
       a newB subtractFrom return
     end
     false =:: mut aEqb
@@ -956,12 +956,12 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     a .sign 0 == if
       b a copyTo
-        #dup .sign neg #over .sign =
+        #dup .sign -_ #over .sign =
       return
     end
     a .sign b .sign != if
       b =:: mut newB
-      b .sign neg newB .sign =
+      b .sign -_ newB .sign =
       a newB addTo return
     end
     ## subtract bigger number from smaller number
@@ -974,7 +974,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       cmp 0 > if
         a .data .i b .data .i - a .sign uwrap return
       else
-        b .data .i a .data .i - a .sign neg uwrap return
+        b .data .i a .data .i - a .sign -_ uwrap return
       end
     end
     a .size b .size i64.max =:: mut resCap
@@ -1008,7 +1008,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       resData resSize resCap a .sign int new return
     end
     bData aData resData subtInternal =:: resSize
-    resData resSize resCap a .sign neg int new return
+    resData resSize resCap a .sign -_ int new return
   end
 
 
