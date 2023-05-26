@@ -398,32 +398,20 @@ proc( bool : breakSwitch TypeCheckState ptr mut : state => BlockInfo ptr mut opt
 end
 
 proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context => Type ) =: checkBinOpNumber
-  a context types.isNumber ! b context types.isNumber ! | if
-    Type .undefined return
-  end
-  a context types.numberPrecision b context types.numberPrecision <=
-  a context types.numberSize b context types.numberSize <= & if
-    b inTypes 0 [] =
-    b return
-  end
-  a context types.numberPrecision b context types.numberPrecision >=
-  a context types.numberSize b context types.numberSize >= & if
-    a inTypes 1 [] =
-    a return
-  end
-  Type .undefined return
+  a b context types.commonNumberType
+    #dup Type .undefined types.typeEquals ! if
+      #dup inTypes 0 [] =
+      #dup inTypes 1 [] =
+    end
+  return
 end
 proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context => Type ) =: checkBinOpInt
-  a context types.isInt ! b context types.isInt ! | if
-    Type .undefined return
-  end
-  a context types.numberPrecision b context types.numberPrecision < if
-    b inTypes 0 [] =
-    b return
-  else
-    a inTypes 1 [] =
-    a return
-  end
+  a b context types.commonIntType
+    #dup Type .undefined types.typeEquals ! if
+      #dup inTypes 0 [] =
+      #dup inTypes 1 [] =
+    end
+  return
 end
 
 proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state => ) =: requireTypes
@@ -1893,7 +1881,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             state [] .openBlocks list.peek .data [] .blockType #dup BlockType .CASE == #swap BlockType .DEFAULT == | if
               true breakBlock [] .blockData .switchBlock .explicitBreak =
             end
-            true breakBlock [] .blockData .switchBlock .endReachable =
+            state [] .reachable if
+              true breakBlock [] .blockData .switchBlock .endReachable =
+            end
             true match =
           end
           state [] .opStack list.clear state [] .opStack =

@@ -11,6 +11,8 @@
 #include "codeBlocks.concat"
 #include "identifiers.concat"
 
+#include "interpreter/operators.concat"
+
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
 struct( i64 : codeOffset i64 : constOffset ) =:: InitializerOffset
@@ -1463,24 +1465,115 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       UnaryOperator .FLIP fileState [] .wordStart opUnaryOp state appendOp
       return
     else #dup "+" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator+ ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "-" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator- ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .SUBTRACT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "*" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator* ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .MULTIPLY fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "/" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator/ ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .DIVIDE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "/u" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned/ ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .UDIVIDE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "%" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator% ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .MOD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "%u" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned% ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+        end
+      end
       BinaryOperator .UMOD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "&" string.wrap string.eq _if #drop

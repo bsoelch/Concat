@@ -223,6 +223,30 @@ proc( Type TypeContext ptr => i32 ) =: public numberSize
         1023 return ## IEEE float-64
     end
 end
+proc( Type : a Type : b TypeContext ptr mut : context => Type ) =: public commonIntType
+  a context types.isInt ! b context types.isInt ! | if
+    Type .undefined return
+  end
+  a context numberPrecision b context numberPrecision < if
+    b return
+  else
+    a return
+  end
+end
+proc( Type : a Type : b TypeContext ptr mut : context => Type ) =: public commonNumberType
+  a context types.isNumber ! b context types.isNumber ! | if
+    Type .undefined return
+  end
+  a context numberPrecision b context numberPrecision <=
+  a context numberSize b context numberSize <= & if
+    b return
+  end
+  a context numberPrecision b context numberPrecision >=
+  a context numberSize b context numberSize >= & if
+    a return
+  end
+  Type .undefined return
+end
 
 ## array & pointer types
 enum( int templateArg staticArg ) =:: public ArraySizeType
