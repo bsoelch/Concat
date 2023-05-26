@@ -45,7 +45,7 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       b err pos constAsF64 =:: e2
       + ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for operator+" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
@@ -68,7 +68,7 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       b err pos constAsF64 =:: e2
       - ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for operator-" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
@@ -91,7 +91,7 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       b err pos constAsF64 =:: e2
       * ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for operator*" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
@@ -114,7 +114,7 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       b err pos constAsF64 =:: e2
       / ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for operator/" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
@@ -141,7 +141,7 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       b err pos constAsInt =:: e2
       /u ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for unsigned operator/" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
@@ -159,7 +159,7 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       "float modulo currently unsupported" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
     BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for operator%" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
@@ -186,7 +186,121 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       b err pos constAsInt =:: e2
       %u ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for addition" sb.wrap pos err appendError
+      "unsupported type for unsigned operator%" sb.wrap pos err appendError
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator&
+  opType Type .primitiveType != if ## XXX print types
+    "constant evaluation is currently only supported for primitive types" sb.wrap pos err appendError
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 I16 I32 I64 case
+      a err pos constAsInt =:: e1
+      b err pos constAsInt =:: e2
+      & ConstValue .int new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 BOOL TYPE case
+      "unsupported type for operator&" sb.wrap pos err appendError
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator|
+  opType Type .primitiveType != if ## XXX print types
+    "constant evaluation is currently only supported for primitive types" sb.wrap pos err appendError
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 I16 I32 I64 case
+      a err pos constAsInt =:: e1
+      b err pos constAsInt =:: e2
+      | ConstValue .int new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 BOOL TYPE case
+      "unsupported type for operator|" sb.wrap pos err appendError
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator^
+  opType Type .primitiveType != if ## XXX print types
+    "constant evaluation is currently only supported for primitive types" sb.wrap pos err appendError
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 I16 I32 I64 case
+      a err pos constAsInt =:: e1
+      b err pos constAsInt =:: e2
+      ^ ConstValue .int new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 BOOL TYPE case
+      "unsupported type for operator^" sb.wrap pos err appendError
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator<<
+  opType Type .primitiveType != if ## XXX print types
+    "constant evaluation is currently only supported for primitive types" sb.wrap pos err appendError
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 I16 I32 I64 case
+      a err pos constAsInt =:: e1
+      b err pos constAsInt =:: e2
+      << ConstValue .int new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 BOOL TYPE case
+      "unsupported type for operator<<" sb.wrap pos err appendError
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator>>
+  opType Type .primitiveType != if ## XXX print types
+    "constant evaluation is currently only supported for primitive types" sb.wrap pos err appendError
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 case
+      a err pos constAsInt =:: e1 i8 cast
+      b err pos constAsInt =:: e2 i8 cast
+      >> ConstValue .int new opType #swap e1 e2 | return
+    I16 case
+      a err pos constAsInt =:: e1 i16 cast
+      b err pos constAsInt =:: e2 i16 cast
+      >> ConstValue .int new opType #swap e1 e2 | return
+    I32 case
+      a err pos constAsInt =:: e1 i32 cast
+      b err pos constAsInt =:: e2 i32 cast
+      >> ConstValue .int new opType #swap e1 e2 | return
+    I64 case
+      a err pos constAsInt =:: e1
+      b err pos constAsInt =:: e2
+      >> ConstValue .int new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 BOOL TYPE case
+      "unsupported type for operator<<" sb.wrap pos err appendError
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned>>
+  opType Type .primitiveType != if ## XXX print types
+    "constant evaluation is currently only supported for primitive types" sb.wrap pos err appendError
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 case
+      a err pos constAsInt =:: e1 0xff &
+      b err pos constAsInt =:: e2 i8 cast
+      >>u ConstValue .int new opType #swap e1 e2 | return
+    I16 case
+      a err pos constAsInt =:: e1 0xffff &
+      b err pos constAsInt =:: e2 i16 cast
+      >>u ConstValue .int new opType #swap e1 e2 | return
+    I32 case
+      a err pos constAsInt =:: e1 0xffff_ffff &
+      b err pos constAsInt =:: e2 i32 cast
+      >>u ConstValue .int new opType #swap e1 e2 | return
+    I64 case
+      a err pos constAsInt =:: e1
+      b err pos constAsInt =:: e2
+      >>u ConstValue .int new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 BOOL TYPE case
+      "unsupported type for unsigned operator<<" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
