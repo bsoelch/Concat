@@ -1,15 +1,15 @@
 #!/bin/sh
-baseCompiler="../concat"
-compilerSrc="./compiler.concat"
-codeCTarget="../build/concat2.c"
-codeTarget="../build/concat2"
-codeCTarget2="../build/concat3.c"
-codeTarget2="../build/concat3"
-codeCTarget3="../build/concat3_2.c"
-libPath="../lib/"
-externCFiles=( "../extern.c" )
+baseCompiler="./concat"
+compilerSrc="./concat.concat/compiler.concat"
+codeCTarget="./build/concat2.c"
+codeTarget="./build/concat2"
+codeCTarget2="./build/concat3.c"
+codeTarget2="./build/concat3"
+codeCTarget3="./build/concat3_2.c"
+libPath="./lib/"
+externCFiles=( "./extern.c" )
 cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
-bootstrapC="../bootstrap/latest.c"
+bootstrapC="./bootstrap/latest.c"
 
 # clear console
 clear
