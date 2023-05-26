@@ -394,18 +394,20 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
   code start fileState state 0 readLabelAddFlags
 end
 enum( NONE STRUCT ENUM PROC_IN ) =:: LabelType
-proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId arrayView optional Type arrayView bool ) =: readCompositeType
+proc( string : code LabelType : labelType string : endString string : nextEnd FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId arrayView optional Type arrayView bool ) =: readCompositeType
   state offsetConstants =:: prevConstants
   state [] .constants .length =:: constOffset
   state [] .labelBuffer .length =:: labelOffset
   code
     while fileState nextToken
-      fileState state tryParseConstant if #drop continue end
+      fileState state tryParseConstant if #drop
+        #dup .length 0 > if continue else break end
+      end
       #dup endString string.eq if #drop
         labelType LabelType .NONE == if
           LabelId arrayView optional.empty
         else labelType LabelType .PROC_IN == state [] .labelBuffer .length labelOffset == & _if
-          LabelId arrayView optional.empty ## procedure with no lables
+          LabelId arrayView optional.empty ## procedure with no labels
         else
           state [] .constants .length constOffset -
           state [] .labelBuffer .length labelOffset - - #dup 0 > if
@@ -428,6 +430,11 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         prevConstants state resetConstants
         labelOffset state [] .labelBuffer .length =
         state [] .constants .length constOffset - fileState state popTypeConstants return
+      else #dup nextEnd string.eq _if #drop ## XXX? allow procedures without arrow
+        "unexpected \"" sb.wrap nextEnd sb.appendStr '"' sb.appendC fileState [] .wordStart state appendError2
+        prevConstants state resetConstants
+        labelOffset state [] .labelBuffer .length =
+        LabelId arrayView optional.empty Type array.empty true return
       else #dup ":" string.wrap string.eq _if #drop
         labelType LabelType .NONE == if
           "unexpected ':' operator" sb.wrap fileState [] .wordStart state appendError2
@@ -694,9 +701,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       true return
     else #dup "(" string.wrap string.eq  #over "tuple(" string.wrap string.eq | #over "struct(" string.wrap string.eq | _if
       "struct(" string.wrap string.eq if
-        LabelType .STRUCT ")" string.wrap fileState state readCompositeType
+        LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
       else
-        LabelType .NONE ")" string.wrap fileState state readCompositeType
+        LabelType .NONE ")" string.wrap #dup fileState state readCompositeType
       end
       if
         "error while parsing tuple type" sb.wrap fileState [] .wordStart state appendError2
@@ -707,7 +714,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     else #dup "union(" string.wrap string.eq _if #drop
-      LabelType .STRUCT ")" string.wrap fileState state readCompositeType
+      LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing union type" sb.wrap fileState [] .wordStart state appendError2
       end
@@ -717,7 +724,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     else #dup "enum(" string.wrap string.eq _if #drop
-      LabelType .ENUM ")" string.wrap fileState state readCompositeType
+      LabelType .ENUM ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing enum type" sb.wrap fileState [] .wordStart state appendError2
       end
@@ -728,13 +735,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "" string.wrap true return
     else #dup "proc(" string.wrap string.eq _if #drop
       state offsetStaticArgs =:: prevArgs
-      LabelType .PROC_IN "=>" string.wrap fileState state readCompositeType ## FIXME procedure without => hangs compiler
+      LabelType .PROC_IN "=>" string.wrap ")" string.wrap fileState state readCompositeType
       if
         "error while parsing procedure arguments" sb.wrap fileState [] .wordStart state appendError2
       end
       #swap false state [] .idContext .typeContext addrOf types.newProcArgs
       =:: in
-      LabelType .NONE ")" string.wrap fileState state readCompositeType
+      LabelType .NONE ")" string.wrap #dup  fileState state readCompositeType
       prevArgs state resetStaticArgs
       if
         "error while parsing procedure return values" sb.wrap fileState [] .wordStart state appendError2
@@ -917,7 +924,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
           else #drop end
-          LabelType .STRUCT "#end" string.wrap fileState state readCompositeType if
+          LabelType .STRUCT "#end" string.wrap #dup fileState state readCompositeType if
             "error while parsing template arguments" sb.wrap fileState [] .wordStart state appendError2
           end
           #swap false state [] .idContext .typeContext addrOf types.newProcArgs
