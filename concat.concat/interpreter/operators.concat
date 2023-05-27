@@ -2,20 +2,20 @@
 
 #namespace interpreter
 
-proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => bool bool ) =: constAsBool
+proc( ConstValue : a => bool bool ) =: constAsBool
   a switch
     boolean case a .boolean false return
     none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg case false true return
   end
 end
-proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => i64 bool ) =: constAsInt ## all integer calculations are done in 64 bits
+proc( ConstValue : a => i64 bool ) =: constAsInt ## all integer calculations are done in 64 bits
   a switch
     chr case a .chr i64 cast false return
     int case a .int i64 cast false return
     none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float case 0i64 true return
   end
 end
-proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => float bool ) =: constAsF32
+proc( ConstValue : a => float bool ) =: constAsF32
   a switch
     chr case a .chr float cast false return
     int case a .int float cast false return
@@ -23,7 +23,7 @@ proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => floa
     none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg case 0 float cast true return
   end
 end
-proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => double bool ) =: constAsF64
+proc( ConstValue : a => double bool ) =: constAsF64
   a switch
     chr case a .chr double cast false return
     int case a .int double cast false return
@@ -31,305 +31,346 @@ proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => doub
     none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg case 0 double cast true return
   end
 end
-proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => i32 bool ) =: constAsEnumLabel
+proc( ConstValue : a => i32 bool ) =: constAsEnumLabel
   a switch
     enumLabel case a .enumLabel false return
     none boolean chr int Float str arrayConstant typeId wildCard genericArg templateArg case 0 true return
   end
 end
-proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => Type bool ) =: constAsType
+proc( ConstValue : a => Type bool ) =: constAsType
   a switch
     typeId case a .typeId false return
     none boolean chr int enumLabel Float str arrayConstant  wildCard genericArg templateArg case Type .undefined true return
   end
 end
 
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator+
+
+proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator-_
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      -_ ConstValue .int new opType #swap e1 return
+    FLOAT32 case
+      a constAsF32 =:: e1
+      -_ ConstValue .Float new opType #swap e1 return
+    FLOAT64 case
+      a constAsF64 =:: e1
+      -_ ConstValue .Float new opType #swap e1 return
+    BOOL TYPE case
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator!
+  opType Type .primitiveType != if ## unsupported type for constant evaluation
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    BOOL case
+      a constAsBool =:: e1
+      ! ConstValue .boolean new opType #swap e1 return
+    I8 I16 I32 I64 FLOAT32 FLOAT64 TYPE case
+      Type .undefined ConstValue .none true return
+  end
+end
+proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator~
+  opType Type .primitiveType != if ## unsupported type for constant evaluation
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 case
+      a constAsInt =:: e1 i8 cast
+      ~ ConstValue .int new opType #swap e1 return
+    I16 case
+      a constAsInt =:: e1 i16 cast
+      ~ ConstValue .int new opType #swap e1 return
+    I32 case
+      a constAsInt =:: e1 i32 cast
+      ~ ConstValue .int new opType #swap e1 return
+    I64 case
+      a constAsInt =:: e1
+      ~ ConstValue .int new opType #swap e1 return
+    BOOL FLOAT32 FLOAT64 TYPE case
+      Type .undefined ConstValue .none true return
+  end
+end
+
+
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator+
+  opType Type .primitiveType != if ## unsupported type for constant evaluation
+    Type .undefined ConstValue .none true return
+  end
+  opType .primitiveType switch
+    I8 I16 I32 I64 case
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       + ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       + ConstValue .Float new opType #swap e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       + ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for operator+" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator-
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator-
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       - ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       - ConstValue .Float new opType #swap e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       - ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for operator-" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator*
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator*
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       * ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       * ConstValue .Float new opType #swap e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       * ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for operator*" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator/
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator/
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       / ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       / ConstValue .Float new opType #swap e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       / ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for operator/" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned/
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned/
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 case
-      a err pos constAsInt =:: e1 0xff &
-      b err pos constAsInt =:: e2 0xff &
+      a constAsInt =:: e1 0xff &
+      b constAsInt =:: e2 0xff &
       /u ConstValue .int new opType #swap e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 0xffff &
-      b err pos constAsInt =:: e2 0xffff &
+      a constAsInt =:: e1 0xffff &
+      b constAsInt =:: e2 0xffff &
       /u ConstValue .int new opType #swap e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 0xffff_ffff &
-      b err pos constAsInt =:: e2 0xffff_ffff &
+      a constAsInt =:: e1 0xffff_ffff &
+      b constAsInt =:: e2 0xffff_ffff &
       /u ConstValue .int new opType #swap e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       /u ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for unsigned operator/" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator%
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator%
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       % ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       % ConstValue .Float new opType #swap e1 e2 | return ##XXX? float32 constants
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       % ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
-      "unsupported type for operator%" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned%
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned%
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 case
-      a err pos constAsInt =:: e1 0xff &
-      b err pos constAsInt =:: e2 0xff &
+      a constAsInt =:: e1 0xff &
+      b constAsInt =:: e2 0xff &
       %u ConstValue .int new opType #swap e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 0xffff &
-      b err pos constAsInt =:: e2 0xffff &
+      a constAsInt =:: e1 0xffff &
+      b constAsInt =:: e2 0xffff &
       %u ConstValue .int new opType #swap e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 0xffff_ffff &
-      b err pos constAsInt =:: e2 0xffff_ffff &
+      a constAsInt =:: e1 0xffff_ffff &
+      b constAsInt =:: e2 0xffff_ffff &
       %u ConstValue .int new opType #swap e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       %u ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for unsigned operator%" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator&
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator&
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       & ConstValue .int new opType #swap e1 e2 | return
     BOOL case
-      a err pos constAsBool =:: e1
-      b err pos constAsBool =:: e2
+      a constAsBool =:: e1
+      b constAsBool =:: e2
       & ConstValue .boolean new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 TYPE case
-      "unsupported type for operator&" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator|
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator|
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       | ConstValue .int new opType #swap e1 e2 | return
     BOOL case
-      a err pos constAsBool =:: e1
-      b err pos constAsBool =:: e2
+      a constAsBool =:: e1
+      b constAsBool =:: e2
       | ConstValue .boolean new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 TYPE case
-      "unsupported type for operator|" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator^
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator^
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       ^ ConstValue .int new opType #swap e1 e2 | return
     BOOL case
-      a err pos constAsBool =:: e1
-      b err pos constAsBool =:: e2
+      a constAsBool =:: e1
+      b constAsBool =:: e2
       ^ ConstValue .boolean new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 TYPE case
-      "unsupported type for operator^" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator<<
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator<<
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 I16 I32 I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       << ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for operator<<" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator>>
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator>>
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 case
-      a err pos constAsInt =:: e1 i8 cast
-      b err pos constAsInt =:: e2 i8 cast
+      a constAsInt =:: e1 i8 cast
+      b constAsInt =:: e2 i8 cast
       >> ConstValue .int new opType #swap e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 i16 cast
-      b err pos constAsInt =:: e2 i16 cast
+      a constAsInt =:: e1 i16 cast
+      b constAsInt =:: e2 i16 cast
       >> ConstValue .int new opType #swap e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 i32 cast
-      b err pos constAsInt =:: e2 i32 cast
+      a constAsInt =:: e1 i32 cast
+      b constAsInt =:: e2 i32 cast
       >> ConstValue .int new opType #swap e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       >> ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for operator<<" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned>>
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned>>
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
     I8 case
-      a err pos constAsInt =:: e1 0xff &
-      b err pos constAsInt =:: e2 i8 cast
+      a constAsInt =:: e1 0xff &
+      b constAsInt =:: e2 i8 cast
       >>u ConstValue .int new opType #swap e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 0xffff &
-      b err pos constAsInt =:: e2 i16 cast
+      a constAsInt =:: e1 0xffff &
+      b constAsInt =:: e2 i16 cast
       >>u ConstValue .int new opType #swap e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 0xffff_ffff &
-      b err pos constAsInt =:: e2 i32 cast
+      a constAsInt =:: e1 0xffff_ffff &
+      b constAsInt =:: e2 i32 cast
       >>u ConstValue .int new opType #swap e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       >>u ConstValue .int new opType #swap e1 e2 | return
     FLOAT32 FLOAT64 BOOL TYPE case
-      "unsupported type for unsigned operator<<" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator==
+proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type ConstValue bool ) =: public operator==
   opType tc types.isEnum if
-    a err pos constAsEnumLabel =:: e1
-    b err pos constAsEnumLabel =:: e2
+    a constAsEnumLabel =:: e1
+    b constAsEnumLabel =:: e2
     == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
   end
   opType Type .primitiveType != if ## unsupported type for constant evaluation
@@ -337,43 +378,43 @@ proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc CompilerE
   end
   opType .primitiveType switch
     BOOL case
-      a err pos constAsBool =:: e1
-      b err pos constAsBool =:: e2
+      a constAsBool =:: e1
+      b constAsBool =:: e2
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I8 case
-      a err pos constAsInt =:: e1 i8 cast
-      b err pos constAsInt =:: e2 i8 cast
+      a constAsInt =:: e1 i8 cast
+      b constAsInt =:: e2 i8 cast
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 i16 cast
-      b err pos constAsInt =:: e2 i16 cast
+      a constAsInt =:: e1 i16 cast
+      b constAsInt =:: e2 i16 cast
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 i32 cast
-      b err pos constAsInt =:: e2 i32 cast
+      a constAsInt =:: e1 i32 cast
+      b constAsInt =:: e2 i32 cast
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     TYPE case
-      a err pos constAsType =:: e1
-      b err pos constAsType =:: e2
+      a constAsType =:: e1
+      b constAsType =:: e2
       types.typeEquals ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator!=
+proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type ConstValue bool ) =: public operator!=
   opType tc types.isEnum if
-    a err pos constAsEnumLabel =:: e1
-    b err pos constAsEnumLabel =:: e2
+    a constAsEnumLabel =:: e1
+    b constAsEnumLabel =:: e2
     != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
   end
   opType Type .primitiveType != if ## unsupported type for constant evaluation
@@ -381,144 +422,142 @@ proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc CompilerE
   end
   opType .primitiveType switch
     BOOL case
-      a err pos constAsBool =:: e1
-      b err pos constAsBool =:: e2
+      a constAsBool =:: e1
+      b constAsBool =:: e2
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I8 case
-      a err pos constAsInt =:: e1 i8 cast
-      b err pos constAsInt =:: e2 i8 cast
+      a constAsInt =:: e1 i8 cast
+      b constAsInt =:: e2 i8 cast
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 i16 cast
-      b err pos constAsInt =:: e2 i16 cast
+      a constAsInt =:: e1 i16 cast
+      b constAsInt =:: e2 i16 cast
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 i32 cast
-      b err pos constAsInt =:: e2 i32 cast
+      a constAsInt =:: e1 i32 cast
+      b constAsInt =:: e2 i32 cast
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1
-      b err pos constAsInt =:: e2
+      a constAsInt =:: e1
+      b constAsInt =:: e2
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1
-      b err pos constAsF32 =:: e2
+      a constAsF32 =:: e1
+      b constAsF32 =:: e2
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1
-      b err pos constAsF64 =:: e2
+      a constAsF64 =:: e1
+      b constAsF64 =:: e2
       != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     TYPE case
-      a err pos constAsType =:: e1
-      b err pos constAsType =:: e2
+      a constAsType =:: e1
+      b constAsType =:: e2
       types.typeEquals ! ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => i8 bool ) =: operator_compare
+proc( Type : opType ConstValue : a ConstValue : b => i8 bool ) =: operator_compare
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     0i8 true return
   end
   opType .primitiveType switch
     I8 case
-      a err pos constAsInt =:: e1 i8 cast =:: x
-      b err pos constAsInt =:: e2 i8 cast =:: y
+      a constAsInt =:: e1 i8 cast =:: x
+      b constAsInt =:: e2 i8 cast =:: y
       x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 i16 cast =:: x
-      b err pos constAsInt =:: e2 i16 cast =:: y
+      a constAsInt =:: e1 i16 cast =:: x
+      b constAsInt =:: e2 i16 cast =:: y
       x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 i32 cast =:: x
-      b err pos constAsInt =:: e2 i32 cast =:: y
+      a constAsInt =:: e1 i32 cast =:: x
+      b constAsInt =:: e2 i32 cast =:: y
       x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1 =:: x
-      b err pos constAsInt =:: e2 =:: y
+      a constAsInt =:: e1 =:: x
+      b constAsInt =:: e2 =:: y
       x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
     FLOAT32 case
-      a err pos constAsF32 =:: e1 =:: x
-      b err pos constAsF32 =:: e2 =:: y
+      a constAsF32 =:: e1 =:: x
+      b constAsF32 =:: e2 =:: y
       x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
     FLOAT64 case
-      a err pos constAsF64 =:: e1 =:: x
-      b err pos constAsF64 =:: e2 =:: y
+      a constAsF64 =:: e1 =:: x
+      b constAsF64 =:: e2 =:: y
       x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
     BOOL TYPE case
-      "unsupported type for operator*" sb.wrap pos err appendError
       0i8 true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator<
-  opType a b err pos operator_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator<
+  opType a b operator_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 < ConstValue .boolean new types.primitive.BOOL #swap false return
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator<=
-  opType a b err pos operator_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator<=
+  opType a b operator_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 <= ConstValue .boolean new types.primitive.BOOL #swap false return
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator>
-  opType a b err pos operator_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator>
+  opType a b operator_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 > ConstValue .boolean new types.primitive.BOOL #swap false return
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator>=
-  opType a b err pos operator_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator>=
+  opType a b operator_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 >= ConstValue .boolean new types.primitive.BOOL #swap false return
 end
 
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => i8 bool ) =: operator_unsigned_compare
+proc( Type : opType ConstValue : a ConstValue : b => i8 bool ) =: operator_unsigned_compare
   opType Type .primitiveType != if ## unsupported type for constant evaluation
     0i8 true return
   end
   opType .primitiveType switch
     I8 case
-      a err pos constAsInt =:: e1 i8 cast =:: x
-      b err pos constAsInt =:: e2 i8 cast =:: y
+      a constAsInt =:: e1 i8 cast =:: x
+      b constAsInt =:: e2 i8 cast =:: y
       x y == if 0i8 else x y >u _if 1i8 else -1i8 end e1 e2 | return
     I16 case
-      a err pos constAsInt =:: e1 i16 cast =:: x
-      b err pos constAsInt =:: e2 i16 cast =:: y
+      a constAsInt =:: e1 i16 cast =:: x
+      b constAsInt =:: e2 i16 cast =:: y
       x y == if 0i8 else x y >u _if 1i8 else -1i8 end e1 e2 | return
     I32 case
-      a err pos constAsInt =:: e1 i32 cast =:: x
-      b err pos constAsInt =:: e2 i32 cast =:: y
+      a constAsInt =:: e1 i32 cast =:: x
+      b constAsInt =:: e2 i32 cast =:: y
       x y == if 0i8 else x y >u _if 1i8 else -1i8 end e1 e2 | return
     I64 case
-      a err pos constAsInt =:: e1 =:: x
-      b err pos constAsInt =:: e2 =:: y
+      a constAsInt =:: e1 =:: x
+      b constAsInt =:: e2 =:: y
       x y == if 0i8 else x y >u _if 1i8 else -1i8 end e1 e2 | return
     BOOL FLOAT32 FLOAT64 TYPE case
-      "unsupported type for operator*" sb.wrap pos err appendError
       0i8 true return
   end
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned<
-  opType a b err pos operator_unsigned_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned<
+  opType a b operator_unsigned_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 < ConstValue .boolean new types.primitive.BOOL #swap false return
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned<=
-  opType a b err pos operator_unsigned_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned<=
+  opType a b operator_unsigned_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 <= ConstValue .boolean new types.primitive.BOOL #swap false return
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned>
-  opType a b err pos operator_unsigned_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned>
+  opType a b operator_unsigned_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 > ConstValue .boolean new types.primitive.BOOL #swap false return
 end
-proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : err FilePosition : pos => Type ConstValue bool ) =: public operator_unsigned>=
-  opType a b err pos operator_unsigned_compare if #drop
+proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned>=
+  opType a b operator_unsigned_compare if #drop
     Type .undefined ConstValue .none true return
   end
   0i8 >= ConstValue .boolean new types.primitive.BOOL #swap false return

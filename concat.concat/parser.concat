@@ -1456,13 +1456,43 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state appendOp
       return
     else #dup "-_" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state hasConst if
+          state popConst =:: a
+          a .valueType a .val interpreter.operator-_ ! if
+            IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+            return
+          end #drop:2
+          a state pushConst
+        end
+      end
       UnaryOperator .NEGATE fileState [] .wordStart opUnaryOp state appendOp
       return
     else #dup "!" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state hasConst if
+          state popConst =:: a
+          a .valueType a .val interpreter.operator! ! if
+            IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+            return
+          end #drop:2
+          a state pushConst
+        end
+      end
       UnaryOperator .NOT fileState [] .wordStart opUnaryOp state appendOp
       return
     else #dup "~" string.wrap string.eq _if #drop
       UnaryOperator .FLIP fileState [] .wordStart opUnaryOp state appendOp
+      _FOLD_CONSTANTS_ if
+        state hasConst if
+          state popConst =:: a
+          a .valueType a .val interpreter.operator~ ! if
+            IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+            return
+          end #drop:2
+          a state pushConst
+        end
+      end
       return
     else #dup "+" string.wrap string.eq _if #drop
       _FOLD_CONSTANTS_ if
@@ -1471,7 +1501,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator+ ! if
+            t a .val b .val interpreter.operator+ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1489,7 +1519,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator- ! if
+            t a .val b .val interpreter.operator- ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1507,7 +1537,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator* ! if
+            t a .val b .val interpreter.operator* ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1525,7 +1555,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator/ ! if
+            t a .val b .val interpreter.operator/ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1543,7 +1573,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonIntType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned/ ! if
+            t a .val b .val interpreter.operator_unsigned/ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1561,7 +1591,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator% ! if
+            t a .val b .val interpreter.operator% ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1579,7 +1609,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonIntType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned% ! if
+            t a .val b .val interpreter.operator_unsigned% ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1601,7 +1631,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             a .valueType b .valueType typeContext types.commonIntType
           end =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator& ! if
+            t a .val b .val interpreter.operator& ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1623,7 +1653,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             a .valueType b .valueType typeContext types.commonIntType
           end =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator| ! if
+            t a .val b .val interpreter.operator| ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1645,7 +1675,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             a .valueType b .valueType typeContext types.commonIntType
           end =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator^ ! if
+            t a .val b .val interpreter.operator^ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1663,7 +1693,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonIntType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator<< ! if
+            t a .val b .val interpreter.operator<< ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1681,7 +1711,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonIntType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator>> ! if
+            t a .val b .val interpreter.operator>> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1699,7 +1729,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonIntType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned>> ! if
+            t a .val b .val interpreter.operator_unsigned>> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1721,7 +1751,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             a .valueType b .valueType typeContext types.commonNumberType
           end =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val typeContext state [] .errors @ fileState [] .wordStart interpreter.operator== ! if
+            t a .val b .val typeContext interpreter.operator== ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1752,7 +1782,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             a .valueType b .valueType typeContext types.commonNumberType
           end =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val typeContext state [] .errors @ fileState [] .wordStart interpreter.operator!= ! if
+            t a .val b .val typeContext interpreter.operator!= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1779,7 +1809,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator< ! if
+            t a .val b .val interpreter.operator< ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1797,7 +1827,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator<= ! if
+            t a .val b .val interpreter.operator<= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1815,7 +1845,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator>= ! if
+            t a .val b .val interpreter.operator>= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1833,7 +1863,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator> ! if
+            t a .val b .val interpreter.operator> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1851,7 +1881,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned< ! if
+            t a .val b .val interpreter.operator_unsigned< ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1869,7 +1899,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned<= ! if
+            t a .val b .val interpreter.operator_unsigned<= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1887,7 +1917,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned>= ! if
+            t a .val b .val interpreter.operator_unsigned>= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
@@ -1905,7 +1935,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst =:: a
           a .valueType b .valueType typeContext types.commonNumberType =:: t
           t Type .undefined types.typeEquals ! if
-            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned> ! if
+            t a .val b .val interpreter.operator_unsigned> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
