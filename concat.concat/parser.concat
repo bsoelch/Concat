@@ -1476,6 +1476,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp
@@ -1492,6 +1494,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .SUBTRACT fileState [] .wordStart opBinOp state appendOp
@@ -1508,6 +1512,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .MULTIPLY fileState [] .wordStart opBinOp state appendOp
@@ -1524,6 +1530,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .DIVIDE fileState [] .wordStart opBinOp state appendOp
@@ -1540,6 +1548,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .UDIVIDE fileState [] .wordStart opBinOp state appendOp
@@ -1556,6 +1566,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .MOD fileState [] .wordStart opBinOp state appendOp
@@ -1572,6 +1584,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .UMOD fileState [] .wordStart opBinOp state appendOp
@@ -1581,13 +1595,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
+          a .valueType b .valueType types.typeEquals if
+            a .valueType
+          else
+            a .valueType b .valueType typeContext types.commonIntType
+          end =:: t
           t Type .undefined types.typeEquals ! if
             t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator& ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .AND fileState [] .wordStart opBinOp state appendOp
@@ -1597,13 +1617,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
+          a .valueType b .valueType types.typeEquals if
+            a .valueType
+          else
+            a .valueType b .valueType typeContext types.commonIntType
+          end =:: t
           t Type .undefined types.typeEquals ! if
             t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator| ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .OR fileState [] .wordStart opBinOp state appendOp
@@ -1613,13 +1639,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
+          a .valueType b .valueType types.typeEquals if
+            a .valueType
+          else
+            a .valueType b .valueType typeContext types.commonIntType
+          end =:: t
           t Type .undefined types.typeEquals ! if
             t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator^ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .XOR fileState [] .wordStart opBinOp state appendOp
@@ -1636,6 +1668,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .LSHIFT fileState [] .wordStart opBinOp state appendOp
@@ -1652,6 +1686,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .RSHIFT fileState [] .wordStart opBinOp state appendOp
@@ -1668,11 +1704,32 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               return
             end #drop:2
           end
+          a state pushConst
+          b state pushConst
         end
       end
       BinaryOperator .URSHIFT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "==" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType types.typeEquals if
+            a .valueType
+          else
+            a .valueType b .valueType typeContext types.commonNumberType
+          end =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val typeContext state [] .errors @ fileState [] .wordStart interpreter.operator== ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       state hasConst if
         state peekConst .data =:: const
         const [] .val ConstValue .enumLabel == if
@@ -1685,6 +1742,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .EQ fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "!=" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType types.typeEquals if
+            a .valueType
+          else
+            a .valueType b .valueType typeContext types.commonNumberType
+          end =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val typeContext state [] .errors @ fileState [] .wordStart interpreter.operator!= ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       state hasConst if
         state peekConst .data =:: const
         const [] .val ConstValue .enumLabel == if
@@ -1697,27 +1773,147 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .NE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator< ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .LT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<=" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator<= ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .LE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">=" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator>= ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .GE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator> ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<u" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned< ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .ULT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<=u" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned<= ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .ULE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">=u" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned>= ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .UGE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">u" string.wrap string.eq _if #drop
+      _FOLD_CONSTANTS_ if
+        state [] .constants .length 2 >= if
+          state popConst =:: b
+          state popConst =:: a
+          a .valueType b .valueType typeContext types.commonNumberType =:: t
+          t Type .undefined types.typeEquals ! if
+            t a .val b .val state [] .errors @ fileState [] .wordStart interpreter.operator_unsigned> ! if
+              IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+              return
+            end #drop:2
+          end
+          a state pushConst
+          b state pushConst
+        end
+      end
       BinaryOperator .UGT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "..argc" string.wrap string.eq _if #drop
