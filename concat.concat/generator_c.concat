@@ -20,7 +20,7 @@ proc( io.FILE : target => ) =: printHeader
     #dup "#include <inttypes.h>\n" io.fputs #drop
     #dup "#include <string.h>\n" io.fputs #drop
     #dup "#include <stdbool.h>\n" io.fputs #drop
-    #dup "#include <math.h> // INFINITY and NAN macros\n" io.fputs #drop ## XXX? include only if there are non-finite float constants
+    #dup "#include <math.h>\n" io.fputs #drop ## fmod, NAN, infinity XXX? don't include when not needed
   #drop
 end
 
@@ -776,6 +776,19 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       target ")" io.fputs #drop
       return
     binaryOperator case
+      op [] .val .binaryOperator BinaryOperator .MOD == op [] .dataType typeContext types.isFloat & if ## float mod
+        op [] .dataType typeContext types.unwrapNamed .primitiveType switch
+          FLOAT32 case target "fmodf" io.fputs #drop break
+          FLOAT64 case target "fmod" io.fputs #drop break
+          BOOL I8 I16 I32 I64 TYPE case ..unreachable
+        end
+        target "(" io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target "," io.fputs #drop
+        operations index isGlobal target prog compileOp
+        target ")" io.fputs #drop
+        return
+      end
       target "(" io.fputs #drop
       op [] .val .binaryOperator isArithimeticOp if ## ensure number operations have right type
         ## compensates for automatic conversion of shorts to int in C
@@ -795,7 +808,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       op [] .dataType typeContext types.isEnum if
         target ".label" io.fputs #drop
       end
-      op [] .val .binaryOperator switch ## FIXME use fmod for float remainder operator
+      op [] .val .binaryOperator switch
         ADD case target "+" io.fputs #drop break
         SUBTRACT case target "-" io.fputs #drop break
         MULTIPLY case target "*" io.fputs #drop break

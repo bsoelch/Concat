@@ -855,7 +855,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         else "include" string.wrap #over string.eq _if #drop:2
           fileState nextToken
-          #dup Token .STRING == if .STRING ## local file
+          #dup Token .STRING == if .STRING ## local file TODO? resolve paths relative to current file instead of relative to basePath/allow ignoring name of current folder
             state [] .basePath .length #over .length + sb.create
               state [] .basePath sb.appendStr
               #swap sb.appendStr

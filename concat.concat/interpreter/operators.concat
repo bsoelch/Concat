@@ -155,9 +155,14 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       a err pos constAsInt =:: e1
       b err pos constAsInt =:: e2
       % ConstValue .int new opType #swap e1 e2 | return
-    FLOAT32  FLOAT64 case ## XXX float mod support
-      "float modulo currently unsupported" sb.wrap pos err appendError
-      Type .undefined ConstValue .none true return
+    FLOAT32 case
+      a err pos constAsF32 =:: e1
+      b err pos constAsF32 =:: e2
+      % ConstValue .Float new opType #swap e1 e2 | return ##XXX? float32 constants
+    FLOAT64 case
+      a err pos constAsF64 =:: e1
+      b err pos constAsF64 =:: e2
+      % ConstValue .Float new opType #swap e1 e2 | return
     BOOL TYPE case
       "unsupported type for operator%" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return

@@ -165,6 +165,18 @@ proc( Type TypeContext ptr => bool ) =: public isInt
         true return
     end
 end
+proc( Type TypeContext ptr => bool ) =: public isFloat
+  unwrapNamed
+    #dup isPrimitive ! if #drop
+      false return
+    end .primitiveType
+    switch
+      BOOL I8 I16 I32 I64 TYPE case
+        false return
+      FLOAT32 FLOAT64 case
+        true return
+    end
+end
 proc( Type TypeContext ptr => bool ) =: public isNumber
   unwrapNamed
     #dup isPrimitive ! if #drop
