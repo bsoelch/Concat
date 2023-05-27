@@ -2,6 +2,12 @@
 
 #namespace interpreter
 
+proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => bool bool ) =: constAsBool
+  a switch
+    boolean case a .boolean false return
+    none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg case false true return
+  end
+end
 proc( ConstValue : a CompilerError list ptr mut : err FilePosition : pos => i64 bool ) =: constAsInt ## all integer calculations are done in 64 bits
   a switch
     chr case a .chr i64 cast false return
@@ -205,7 +211,11 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       a err pos constAsInt =:: e1
       b err pos constAsInt =:: e2
       & ConstValue .int new opType #swap e1 e2 | return
-    FLOAT32 FLOAT64 BOOL TYPE case
+    BOOL case
+      a err pos constAsBool =:: e1
+      b err pos constAsBool =:: e2
+      & ConstValue .boolean new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 TYPE case
       "unsupported type for operator&" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
@@ -220,7 +230,11 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       a err pos constAsInt =:: e1
       b err pos constAsInt =:: e2
       | ConstValue .int new opType #swap e1 e2 | return
-    FLOAT32 FLOAT64 BOOL TYPE case
+    BOOL case
+      a err pos constAsBool =:: e1
+      b err pos constAsBool =:: e2
+      | ConstValue .boolean new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 TYPE case
       "unsupported type for operator|" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end
@@ -235,7 +249,11 @@ proc( Type : opType ConstValue : a ConstValue : b CompilerError list ptr mut : e
       a err pos constAsInt =:: e1
       b err pos constAsInt =:: e2
       ^ ConstValue .int new opType #swap e1 e2 | return
-    FLOAT32 FLOAT64 BOOL TYPE case
+    BOOL case
+      a err pos constAsBool =:: e1
+      b err pos constAsBool =:: e2
+      ^ ConstValue .boolean new opType #swap e1 e2 | return
+    FLOAT32 FLOAT64 TYPE case
       "unsupported type for operator^" sb.wrap pos err appendError
       Type .undefined ConstValue .none true return
   end

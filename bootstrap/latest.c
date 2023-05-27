@@ -19378,13 +19378,27 @@ bool const l1_e2 = tmp13;
 concat_ConstValue tmp14 = ((concat_ConstValue){.label=4,.data={.e4_int = ((int64_t)(tmp8|tmp12))}});
 concat_Type tmp15 = arg0/*opType*/;
 return ((concat_tuple510){.e0 = tmp15,.e1 = tmp14,.e2 = ((bool)(l0_e1|l1_e2))});
-case 5:case 6:case 0:case 7:;
-concat_list_I1 tmp16 = concat_sb_dwrap(((int64_t)30),((int8_t const*)"unsupported type for operator|"));
-concat_FilePosition tmp17 = arg4/*pos*/;
-concat_appendError(tmp16,tmp17,arg3/*err*/);
-concat_Type tmp18 = ((concat_Type){.label=0});
-concat_ConstValue tmp19 = ((concat_ConstValue){.label=0});
-return ((concat_tuple510){.e0 = tmp18,.e1 = tmp19,.e2 = true});
+case 0:;
+concat_ConstValue tmp16 = arg1/*a*/;
+concat_tuple302 const tmp17 = concat_27_Finterpreter_dconstAsBool(tmp16,arg3/*err*/,arg4/*pos*/);
+bool const tmp18 = (tmp17.e0);
+bool const tmp19 = (tmp17.e1);
+bool const l2_e1 = tmp19;
+concat_ConstValue tmp20 = arg2/*b*/;
+concat_tuple302 const tmp21 = concat_27_Finterpreter_dconstAsBool(tmp20,arg3/*err*/,arg4/*pos*/);
+bool const tmp22 = (tmp21.e0);
+bool const tmp23 = (tmp21.e1);
+bool const l3_e2 = tmp23;
+concat_ConstValue tmp24 = ((concat_ConstValue){.label=1,.data={.e1_boolean = ((bool)(tmp18|tmp22))}});
+concat_Type tmp25 = arg0/*opType*/;
+return ((concat_tuple510){.e0 = tmp25,.e1 = tmp24,.e2 = ((bool)(l2_e1|l3_e2))});
+case 5:case 6:case 7:;
+concat_list_I1 tmp26 = concat_sb_dwrap(((int64_t)30),((int8_t const*)"unsupported type for operator|"));
+concat_FilePosition tmp27 = arg4/*pos*/;
+concat_appendError(tmp26,tmp27,arg3/*err*/);
+concat_Type tmp28 = ((concat_Type){.label=0});
+concat_ConstValue tmp29 = ((concat_ConstValue){.label=0});
+return ((concat_tuple510){.e0 = tmp28,.e1 = tmp29,.e2 = true});
 }
 exit(EXIT_FAILURE);//unreachable
 }
@@ -19398,7 +19412,7 @@ concat_Type tmp3 = ((concat_Type){.label=0});
 concat_ConstValue tmp4 = ((concat_ConstValue){.label=0});
 return ((concat_tuple510){.e0 = tmp3,.e1 = tmp4,.e2 = true});
 }
-concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:243:10");
+concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:247:10");
 concat_23_Ftypes_dPrimitiveType const tmp5 = (arg0/*opType*/.data.e1_primitiveType);
 switch(tmp5.label){
 case 1:case 2:case 3:case 4:;
@@ -19415,13 +19429,27 @@ bool const l1_e2 = tmp13;
 concat_ConstValue tmp14 = ((concat_ConstValue){.label=4,.data={.e4_int = ((int64_t)(tmp8^tmp12))}});
 concat_Type tmp15 = arg0/*opType*/;
 return ((concat_tuple510){.e0 = tmp15,.e1 = tmp14,.e2 = ((bool)(l0_e1|l1_e2))});
-case 5:case 6:case 0:case 7:;
-concat_list_I1 tmp16 = concat_sb_dwrap(((int64_t)30),((int8_t const*)"unsupported type for operator^"));
-concat_FilePosition tmp17 = arg4/*pos*/;
-concat_appendError(tmp16,tmp17,arg3/*err*/);
-concat_Type tmp18 = ((concat_Type){.label=0});
-concat_ConstValue tmp19 = ((concat_ConstValue){.label=0});
-return ((concat_tuple510){.e0 = tmp18,.e1 = tmp19,.e2 = true});
+case 0:;
+concat_ConstValue tmp16 = arg1/*a*/;
+concat_tuple302 const tmp17 = concat_27_Finterpreter_dconstAsBool(tmp16,arg3/*err*/,arg4/*pos*/);
+bool const tmp18 = (tmp17.e0);
+bool const tmp19 = (tmp17.e1);
+bool const l2_e1 = tmp19;
+concat_ConstValue tmp20 = arg2/*b*/;
+concat_tuple302 const tmp21 = concat_27_Finterpreter_dconstAsBool(tmp20,arg3/*err*/,arg4/*pos*/);
+bool const tmp22 = (tmp21.e0);
+bool const tmp23 = (tmp21.e1);
+bool const l3_e2 = tmp23;
+concat_ConstValue tmp24 = ((concat_ConstValue){.label=1,.data={.e1_boolean = ((bool)(tmp18^tmp22))}});
+concat_Type tmp25 = arg0/*opType*/;
+return ((concat_tuple510){.e0 = tmp25,.e1 = tmp24,.e2 = ((bool)(l2_e1|l3_e2))});
+case 5:case 6:case 7:;
+concat_list_I1 tmp26 = concat_sb_dwrap(((int64_t)30),((int8_t const*)"unsupported type for operator^"));
+concat_FilePosition tmp27 = arg4/*pos*/;
+concat_appendError(tmp26,tmp27,arg3/*err*/);
+concat_Type tmp28 = ((concat_Type){.label=0});
+concat_ConstValue tmp29 = ((concat_ConstValue){.label=0});
+return ((concat_tuple510){.e0 = tmp28,.e1 = tmp29,.e2 = true});
 }
 exit(EXIT_FAILURE);//unreachable
 }
@@ -19435,7 +19463,7 @@ concat_Type tmp3 = ((concat_Type){.label=0});
 concat_ConstValue tmp4 = ((concat_ConstValue){.label=0});
 return ((concat_tuple510){.e0 = tmp3,.e1 = tmp4,.e2 = true});
 }
-concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:258:10");
+concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:266:10");
 concat_23_Ftypes_dPrimitiveType const tmp5 = (arg0/*opType*/.data.e1_primitiveType);
 switch(tmp5.label){
 case 1:case 2:case 3:case 4:;
@@ -19472,7 +19500,7 @@ concat_Type tmp3 = ((concat_Type){.label=0});
 concat_ConstValue tmp4 = ((concat_ConstValue){.label=0});
 return ((concat_tuple510){.e0 = tmp3,.e1 = tmp4,.e2 = true});
 }
-concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:273:10");
+concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:281:10");
 concat_23_Ftypes_dPrimitiveType const tmp5 = (arg0/*opType*/.data.e1_primitiveType);
 switch(tmp5.label){
 case 1:;
@@ -19551,7 +19579,7 @@ concat_Type tmp3 = ((concat_Type){.label=0});
 concat_ConstValue tmp4 = ((concat_ConstValue){.label=0});
 return ((concat_tuple510){.e0 = tmp3,.e1 = tmp4,.e2 = true});
 }
-concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:300:10");
+concat_internal_checkEnumIndex(arg0/*opType*/.label,1,"./concat.concat/interpreter/operators.concat:308:10");
 concat_23_Ftypes_dPrimitiveType const tmp5 = (arg0/*opType*/.data.e1_primitiveType);
 switch(tmp5.label){
 case 1:;
