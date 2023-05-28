@@ -14,6 +14,7 @@ string optional : mut errorFile
 false =:: mut wError
 ## enable constant-folding
 true =:: mut public _FOLD_CONSTANTS_
+false =:: mut public _EXPERIMENTAL_
 
 proc( string : path => ) =: printUsage
   "usage: " sb.wrap
@@ -79,6 +80,7 @@ proc( => ) =: parseArgs
           true wError =
           break
         'X' case ## experimental features
+          true _EXPERIMENTAL_ =
           break
         'q' case
           break

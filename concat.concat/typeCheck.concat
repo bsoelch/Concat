@@ -501,6 +501,18 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state => i64 ) 
   =:: count
   0 while #dup count < do
     state [] .typeStack #over list.at .data =:: typeInfo
+    typeInfo [] .opCount 1 == typeInfo [] .writable & if
+      state [] .opStack opOffset list.at .data =:: op
+      op [] .val OpValue .getId == if
+        op [] .val .getId .idType IdentifierType .TMP_VAR == op [] .val .getId .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != & if
+          ## stack element is already mutable temporary variable
+          op [] state [] .opStack .data #over:2 [] =
+          opOffset typeInfo [] .opCount + opOffset =
+          1 +
+          continue
+        end
+      end
+    end
     true pos state newTmpVar =:: tmpId
     state [] .compiledOps
       ## opDeclare
@@ -577,6 +589,7 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
   blockStart =:: mut newBlockStart
   0 while #dup nTypes < do
     state [] .typeStack #over list.at .data =:: typeInfo
+    state [] .opStack opOffset list.at .data =:: op
     create #over outTypes [] .opStack .length >= & if
       true pos state newTmpVar tmpId =
       ## opPredeclare
@@ -605,9 +618,9 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
           pos state appendError2
       end
     end
-    typeInfo [] .opCount 1 == state [] .opStack opOffset list.at .data [] .val #swap #over OpValue .getId == & if
+    typeInfo [] .opCount 1 == op [] .val #swap #over OpValue .getId == & if
       .getId #dup .idType IdentifierType .TMP_VAR == #swap .id tmpId .id == & if ## assignment of tmp-var to itself
-        state [] .opStack opOffset list.at .data [] state [] .opStack #over:2 list.set
+        op [] state [] .opStack #over:2 list.set
         opOffset 1 + opOffset =
         1 + continue
       end
