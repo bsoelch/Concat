@@ -36,13 +36,15 @@
     a .name b .name string.eq return
   end
 
+  1 =:: public SCOPE_FLAG_AUTO_CLOSE
+  2 =:: public SCOPE_FLAG_NO_CONST_FOLD
   struct(
     IdentifierName IdentifierData hashMap : mut identifiers
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
     BlockType : mut blockType
     Type : currentProc
     NamespaceImportId : prevImports
-    bool : mut autoClose
+    i32 : mut flags
   ) =:: Scope
 
   proc( BlockType : blockType Type : procType NamespaceImportId : imports => Scope ) =: newScope
@@ -53,7 +55,7 @@
     blockType
     procType
     imports
-    false
+    0
     Scope new return
   end
 #end
@@ -122,13 +124,41 @@
        list.append
     context [] .openScopes =
   end
-  proc( BlockType : blockType  bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
+  proc( BlockType : blockType bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
     context [] .openScopes .length 0 == if
       true return
     end
     blockType context [] .openScopes list.peek .data [] .blockType =
-    autoClose context [] .openScopes list.peek .data [] .autoClose =
+    autoClose if
+      context [] .openScopes list.peek .data #dup [] .flags SCOPE_FLAG_AUTO_CLOSE | #swap [] .flags =
+    else
+      context [] .openScopes list.peek .data #dup [] .flags SCOPE_FLAG_AUTO_CLOSE ~ & #swap [] .flags =
+    end
     false return
+  end
+  proc( i32 : flag bool : value IdentifierContext ptr mut : context => ) =: public setScopeFlag
+    context [] .openScopes .length 0 == if
+      context [] .globalScope @
+    else
+      context [] .openScopes list.peek .data
+    end
+    value if
+      #dup [] .flags flag | #swap [] .flags =
+    else
+      #dup [] .flags flag ~ & #swap [] .flags =
+    end
+  end
+  proc( IdentifierContext ptr mut : context => i32 ) =: public scopeFlags
+    context [] .openScopes .length 0 == if
+      context [] .globalScope .flags return
+    end
+    context [] .openScopes list.peek .data [] .flags return
+  end
+  proc( IdentifierContext ptr mut : context => bool ) =: public foldConsts
+    _FOLD_CONSTANTS_ if
+      context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 == return
+    end
+    context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 != return
   end
   proc( IdentifierContext ptr mut : context => BlockType ) =: public currentScopeType
     context [] .openScopes .length 0 == if
@@ -160,8 +190,9 @@
       #dup .blockType BlockType .PROCEDURE == if
         0 context [] .localVarCount = ## XXX handle nested procedures
       end
-    #dup .autoClose #swap .blockType false return
+    #dup .flags SCOPE_FLAG_AUTO_CLOSE & 0 != #swap .blockType false return
   end
+
 
   proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr bool ) =: public searchIdentifier
     context [] .labelContext .namespaceInfo .current =:: mut mNamespace

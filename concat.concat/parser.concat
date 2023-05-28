@@ -824,7 +824,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     end
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
-      #dup ":" string.wrap string.startsWith if #drop
+      #dup ":" string.wrap string.startsWith if 1 string.tail
+        "opt:!fold" string.wrap #over string.eq if
+          id.SCOPE_FLAG_NO_CONST_FOLD true idContext id.setScopeFlag
+        else "opt:fold" string.wrap #over string.eq _if
+          id.SCOPE_FLAG_NO_CONST_FOLD false idContext id.setScopeFlag
+        end
+        #drop
         return ## ignore elements starting with #:
       end
       ':' string.split ## XXX? rename stack ops to ..drop ..dup ..over ..swap ..rot
@@ -1429,7 +1435,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
+        #swap .val state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError2
       return
     else #dup "cast" string.wrap string.eq #over "cast!" string.wrap string.eq | _if =:: opName
@@ -1443,12 +1449,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
+        #swap .val state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
         " expected type" sb.appendS fileState [] .wordStart state appendError2
         return
+      end =:: target
+      opName "cast!" string.wrap string.eq =:: forceCast
+      state hasConst if
+        state peekConst .data =:: c
+        c [] .valueType  target .val .typeId forceCast typeContext types.canCast if
+          target .val .typeId
+          c [] .val
+          IdentifierInfo optional.empty
+          fileState [] .wordStart
+          Constant new c []  =
+          return
+        end
       end
-      .val .typeId fileState [] .wordStart
-      opName "cast!" string.wrap string.eq if
+      target .val .typeId fileState [] .wordStart
+      forceCast if
         opCast!
       else
         opCast
@@ -1456,7 +1474,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state appendOp
       return
     else #dup "-_" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state hasConst if
           state popConst =:: a
           a .valueType a .val interpreter.operator-_ ! if
@@ -1469,7 +1487,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       UnaryOperator .NEGATE fileState [] .wordStart opUnaryOp state appendOp
       return
     else #dup "!" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state hasConst if
           state popConst =:: a
           a .valueType a .val interpreter.operator! ! if
@@ -1483,7 +1501,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "~" string.wrap string.eq _if #drop
       UnaryOperator .FLIP fileState [] .wordStart opUnaryOp state appendOp
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state hasConst if
           state popConst =:: a
           a .valueType a .val interpreter.operator~ ! if
@@ -1495,7 +1513,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       return
     else #dup "+" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1513,7 +1531,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .ADD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "-" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1531,7 +1549,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .SUBTRACT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "*" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1549,7 +1567,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .MULTIPLY fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "/" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1567,7 +1585,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .DIVIDE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "/u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1585,7 +1603,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .UDIVIDE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "%" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1603,7 +1621,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .MOD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "%u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1621,7 +1639,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .UMOD fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "&" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1643,7 +1661,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .AND fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "|" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1665,7 +1683,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .OR fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "^" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1687,7 +1705,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .XOR fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<<" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1705,7 +1723,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .LSHIFT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">>" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1723,7 +1741,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .RSHIFT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">>u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1741,7 +1759,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .URSHIFT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "==" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1772,7 +1790,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .EQ fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "!=" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1803,7 +1821,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .NE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1821,7 +1839,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .LT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<=" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1839,7 +1857,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .LE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">=" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1857,7 +1875,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .GE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1875,7 +1893,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1893,7 +1911,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .ULT fileState [] .wordStart opBinOp state appendOp
       return
     else #dup "<=u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1911,7 +1929,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .ULE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">=u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
@@ -1929,7 +1947,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BinaryOperator .UGE fileState [] .wordStart opBinOp state appendOp
       return
     else #dup ">u" string.wrap string.eq _if #drop
-      _FOLD_CONSTANTS_ if
+      idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a

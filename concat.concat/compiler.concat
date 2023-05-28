@@ -24,7 +24,7 @@ proc( string : path => ) =: printUsage
     "  -o \"fileName\": set output file  (default: \"./out.c\")\n" sb.appendS
     "  -p \"fileName\": dump the parsed tokens to the given file\n" sb.appendS
     "  -t \"fileName\": dump the compiled tokens to the given file\n" sb.appendS
-    "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS
+    "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS ## XXX allow more than one library path
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
     "  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\n" sb.appendS
@@ -79,7 +79,6 @@ proc( => ) =: parseArgs
           true wError =
           break
         'X' case ## experimental features
-          true _FOLD_CONSTANTS_ =
           break
         'q' case
           break
