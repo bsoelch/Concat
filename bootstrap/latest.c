@@ -2303,7 +2303,7 @@ concat_tuple259 concat_types_dnewArrayType(concat_Type,bool,concat_arrayView_I2,
 // ./concat.concat/compiler.concat
 //global
 bool concat_0_FwError = false;
-bool concat___FOLD__CONSTANTS__ = false;
+bool concat___FOLD__CONSTANTS__ = true;
 //local
 void concat_0_FprintUsage(concat_arrayView_I1 arg0/*path*/){
 concat_list_I1 tmp0 = concat_sb_dwrap(((int64_t)7),((int8_t const*)"usage: "));
@@ -2720,7 +2720,7 @@ bool const tmp2 = (arg0/*value*/<((int64_t)0));
 if(tmp2){
 return true;
 }
-bool const tmp3 = (arg2/*preferedSize*/==((int32_t)(((int32_t)64)-((int32_t)1))));
+bool const tmp3 = (arg2/*preferedSize*/==((int32_t)63));
 if(tmp3){
 return false;
 }
@@ -15318,46 +15318,46 @@ int32_t const tmp0 = concat_23_Ftypes_dprimitiveId((arg0/*a*/.data.e1_primitiveT
 return ((int32_t)(((int32_t)1011001)+tmp0));
 case 2:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,2,"./concat.concat/types.concat:94:22");
-return ((concat_types_dArrayId)(((int32_t)(((int32_t)1011001)*((int32_t)2)))+(arg0/*a*/.data.e2_pointer)));
+return ((concat_types_dArrayId)(((concat_types_dArrayId)2022002)+(arg0/*a*/.data.e2_pointer)));
 case 3:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,3,"./concat.concat/types.concat:96:22");
-return ((concat_types_dArrayId)(((int32_t)(((int32_t)1011001)*((int32_t)3)))+(arg0/*a*/.data.e3_arrayType)));
+return ((concat_types_dArrayId)(((concat_types_dArrayId)3033003)+(arg0/*a*/.data.e3_arrayType)));
 case 4:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,4,"./concat.concat/types.concat:98:22");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)4)))+(arg0/*a*/.data.e4_tuple)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)4044004)+(arg0/*a*/.data.e4_tuple)));
 case 5:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,5,"./concat.concat/types.concat:100:22");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)5)))+(arg0/*a*/.data.e5_struct)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)5055005)+(arg0/*a*/.data.e5_struct)));
 case 6:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,6,"./concat.concat/types.concat:102:22");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)6)))+(arg0/*a*/.data.e6_union)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)6066006)+(arg0/*a*/.data.e6_union)));
 case 7:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,7,"./concat.concat/types.concat:104:22");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)7)))+(arg0/*a*/.data.e7_labeledProcIn)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)7077007)+(arg0/*a*/.data.e7_labeledProcIn)));
 case 8:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,8,"./concat.concat/types.concat:106:22");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)8)))+(arg0/*a*/.data.e8_procIn)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)8088008)+(arg0/*a*/.data.e8_procIn)));
 case 9:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,9,"./concat.concat/types.concat:108:22");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)9)))+(arg0/*a*/.data.e9_procOut)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)9099009)+(arg0/*a*/.data.e9_procOut)));
 case 10:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,10,"./concat.concat/types.concat:110:23");
-return ((concat_types_dCompositeId)(((int32_t)(((int32_t)1011001)*((int32_t)10)))+(arg0/*a*/.data.e10_enum)));
+return ((concat_types_dCompositeId)(((concat_types_dCompositeId)10110010)+(arg0/*a*/.data.e10_enum)));
 case 11:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,11,"./concat.concat/types.concat:112:23");
-return ((concat_types_dProcId)(((int32_t)(((int32_t)1011001)*((int32_t)11)))+(arg0/*a*/.data.e11_procedure)));
+return ((concat_types_dProcId)(((concat_types_dProcId)11121011)+(arg0/*a*/.data.e11_procedure)));
 case 12:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,12,"./concat.concat/types.concat:114:23");
-return ((concat_types_dNamedTypeId)(((int32_t)(((int32_t)1011001)*((int32_t)12)))+(arg0/*a*/.data.e12_namedType)));
+return ((concat_types_dNamedTypeId)(((concat_types_dNamedTypeId)12132012)+(arg0/*a*/.data.e12_namedType)));
 case 13:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,13,"./concat.concat/types.concat:116:23");
-return ((int32_t)(((int32_t)(((int32_t)1011001)*((int32_t)13)))+(arg0/*a*/.data.e13_autoType)));
+return ((int32_t)(((int32_t)13143013)+(arg0/*a*/.data.e13_autoType)));
 case 14:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,14,"./concat.concat/types.concat:118:23");
-return ((int32_t)(((int32_t)(((int32_t)1011001)*((int32_t)14)))+(arg0/*a*/.data.e14_genericType)));
+return ((int32_t)(((int32_t)14154014)+(arg0/*a*/.data.e14_genericType)));
 case 15:;
 concat_internal_checkEnumIndex(arg0/*a*/.label,15,"./concat.concat/types.concat:120:23");
-return ((int32_t)(((int32_t)(((int32_t)1011001)*((int32_t)15)))+(arg0/*a*/.data.e15_templateType)));
+return ((int32_t)(((int32_t)15165015)+(arg0/*a*/.data.e15_templateType)));
 }
 exit(EXIT_FAILURE);//unreachable
 }

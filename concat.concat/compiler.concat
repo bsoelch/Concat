@@ -13,7 +13,7 @@ string optional : mut compilerTokensFile
 string optional : mut errorFile
 false =:: mut wError
 ## enable constant-folding
-false =:: mut public _FOLD_CONSTANTS_
+true =:: mut public _FOLD_CONSTANTS_
 
 proc( string : path => ) =: printUsage
   "usage: " sb.wrap
