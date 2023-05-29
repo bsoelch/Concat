@@ -70,6 +70,8 @@ end
 proc( Operation ptr : op Program ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: addOpType
   op [] .val OpValue .declareId == op [] .val OpValue .predeclareId == | if
     op [] .dataType 0 prog visited types declaredType
+  else op [] .val OpValue .Cast == op [] .val OpValue .Cast! == | _if
+    op [] .dataType 0 prog visited types declaredType
   end
 end
 
