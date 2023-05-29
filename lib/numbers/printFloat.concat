@@ -27,8 +27,12 @@ proc( stringBuilder : sb double : f => stringBuilder ) =: public appendIeeeDoubl
       else
         "-INFINITY" sb.appendS return
       end
-    else value 0.0 == value -0.0 == | _if
-      "0" sb.appendS return
+    else value 0.0 == _if
+      1 value / 0 < if ## distinguish positive and negative zero
+        "-0.0" sb.appendS return
+      else
+        "0.0" sb.appendS return
+      end
     end
     value 0 < if
       '-' sb.appendC
