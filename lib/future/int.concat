@@ -1316,7 +1316,9 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     aData bData resData karatsubaMultiply =:: resSize
     resData resSize resCap sign int new return
   end
-  ## XXX separate procedure for squaring
+  proc( int : #:consume x => int ) =: public squared
+    x x multiplyWith return
+  end
 
   #+ writes the result of the division into target and its size into rSize, returns the remainder of the division+#
   proc( i32 arrayView : a i32 : val bool : computeDivision i32 _ ptr mut : #:update target i64 ptr mut : #:update tSize => i32 #+remainder+# ) =: divideU32
@@ -1526,7 +1528,28 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
   ## XXX lcm
 
-  ## pow
-  ## modPow
+  proc( int : #:consume a i64 : pow => int ) =: public #:alloc:int powBy
+    a =:: mut x
+    pow 0 < if
+      x free
+      ZERO return
+    end
+    pow 0 == if
+      x free
+      ONE return
+    end
+    ONE =:: mut p
+    pow while #dup 0 != do
+      #dup 1 & 1 == if
+        p x multiplyWith p =
+      end
+      x squared x =
+      1 >>u
+    end #drop
+    x free
+    p return
+  end
+
   ## modInv
+  ## modPow
 #end
