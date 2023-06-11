@@ -138,7 +138,8 @@
             types(\:[0-9]+)?   |
             stack(\:[0-9]+)?   |
             ops(\:[0-9]+)?     |
-            find          
+            find               |
+            assert          
           )
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>

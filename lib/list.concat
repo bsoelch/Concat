@@ -153,7 +153,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     append return
   end
   #template type : T #end
-  proc( T list : elts => T list T ) =: public pop
+  proc( T list : elts => T list T ) =: public pop ##FIXME!! list.pop has no error handling
     elts .length 0 <= if
       ## TODO error handling
     end

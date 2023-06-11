@@ -632,6 +632,19 @@ entryPoint:
 end
 ```
 
+## Assertions
+
+* static assertions 
+
+Syntax: `<bool> #assert "message"`
+
+Evaluate the constant on the top of the stack, if it is not true the given error message is printed and the compilation is terminated.
+
+* run-time assertions
+
+currently unimplemented
+<!-- TODO runtime assertion -->
+
 ## Memory guarantees
 These are the only guarantees about internal memory layout:
 
