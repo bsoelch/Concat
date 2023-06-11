@@ -249,6 +249,16 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     newData src .data .p src .size mem.copy #drop
     newData src .size src .cap src .sign int new return
   end
+  proc( int : #:const src i32 _ ptr mut : target => ) =: copyData
+    src .cap 0 == if
+      src .data .i u32.MASK & i32 cast target 0 [] =
+      src .size 1 > if
+        src .data .i 32 >>u u32.MASK & i32 cast target 1 [] =
+      end
+      return
+    end
+    target src .data .p src .size mem.copy #drop
+  end
 
   proc( int => ) =: public #:free:int free
     #dup .cap 0 == if #drop
@@ -1168,6 +1178,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     data i 1 + return
   end
+  ## TODO reuse temporary memory in recursive calls
   proc( i32 arrayView : a i32 _ ptr mut : target => i64 ) =: karatsubaSquare
     a .length 4 <= if
       a target simpleSquare return
@@ -1528,18 +1539,25 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
   ## XXX lcm
 
-  proc( int : #:consume a i64 : pow => int ) =: public #:alloc:int powBy
-    a =:: mut x
-    pow 0 < if
-      x free
+  proc( int : #:const a i64 : n => int ) =: public #:alloc:int pow
+    n 0 < if
       ZERO return
     end
-    pow 0 == if
-      x free
+    n 0 == if
       ONE return
     end
-    ONE =:: mut p
-    pow while #dup 0 != do
+    a .sign 0 == a .size 0 == | if
+      ZERO return
+    end
+    a .size n * =:: cap
+    ## pre-allocate arrays
+    cap i32 mem.alloc =:: dataX
+    cap i32 mem.alloc =:: dataP
+    a dataX int.copyData
+    dataX a .size cap a .sign int new =:: mut x
+    1 dataP 0 [] =
+    dataP 1 cap 1i8 int new =:: mut p
+    n while #dup 0 != do
       #dup 1 & 1 == if
         p x multiplyWith p =
       end
@@ -1549,7 +1567,64 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     x free
     p return
   end
+  proc( int : #:consume a i64 : n => int ) =: public #:alloc:int powBy
+    a n pow
+      a free
+    return
+  end
 
   ## modInv
   ## modPow
+#end
+
+#namespace sb
+  proc( stringBuilder : sb int : #:const i i32 : base => stringBuilder ) =: public appendInt?
+    ## TODO check base
+    ## XXX efficient int to string algorithm for large bases
+    int.maxSafeI32Digits @ base [] =:: n
+    int.maxSafeI32Pow @ base [] u32.MASK & i32 cast =:: B
+    sb
+      i .sign 0 < if
+        '-' sb.appendC
+      end
+      i .cap 0 == if
+        i .data .i base false sb.appendI??
+      end
+      i .size i32 mem.alloc =:: data
+      i .size i32 list.create =:: mut digits
+      64 sb.create =:: mut buff
+      i .size =:: mut size
+      data i .data .p i .size mem.copy #drop
+      while size 0 > do
+        digits
+          data size array.create B true data size @ int.divideU32 list.push
+        digits =
+      end
+      true =:: mut first
+      while digits .length 0 > do
+        digits list.pop =:: d digits =
+        first if
+          d base false sb.appendI??
+          false first =
+        else
+          buff
+            sb.clear
+            d base false sb.appendI??
+          buff =
+          buff .length while #dup n < do
+            #swap
+              '0' sb.appendC
+            #swap 1 +
+          end #drop
+          buff sb.appendSb
+        end
+      end
+      data mem.free
+      digits list.free #drop
+      buff sb.free #drop
+    return
+  end
+  proc( stringBuilder : sb int : #:const i => stringBuilder ) =: public appendInt
+    sb i 10 appendInt?
+  end
 #end

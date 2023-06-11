@@ -152,7 +152,7 @@ proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci => str
       end
       base 10 <= if 'E' else base 30 <= _if 'X' else '#' end sb.appendC
       e_max 0 >= if '+' sb.appendC end
-      e_max  base appendInt?
+      e_max  base appendI?
     else e_max 0 >= _if
       0 while #dup n < do
         #swap

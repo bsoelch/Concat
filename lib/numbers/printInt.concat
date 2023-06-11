@@ -3,7 +3,7 @@
 #namespace sb
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
 
-  proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendInt??
+  proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: public appendI??
     base 2 < base 62 > | if
       ## TODO error handling
       buffer return
@@ -34,25 +34,25 @@
       #drop
     return
   end
-  proc( stringBuilder i64 #+value+# i32 #+base+# => stringBuilder ) =: public appendInt?
-    true appendInt??
+  proc( stringBuilder i64 #+value+# i32 #+base+# => stringBuilder ) =: public appendI?
+    true appendI??
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendBin
-    2  appendInt?
+    2  appendI?
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendI
-    10 appendInt?
+    10 appendI?
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendX
-    16 appendInt?
+    16 appendI?
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUBin
-    2 false appendInt??
+    2 false appendI??
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendU
-    10 false appendInt??
+    10 false appendI??
   end
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: public appendUHex
-    16 false appendInt??
+    16 false appendI??
   end
 #end

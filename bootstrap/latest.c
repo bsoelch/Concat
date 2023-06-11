@@ -1450,6 +1450,7 @@ concat_arrayView_I3 concat_array_dempty_I1(void);
 concat_arrayView_I5 concat_array_dempty_I2(void);
 concat_arrayView_I1 concat_array_dempty_I3(void);
 concat_arrayView_I4 concat_array_dempty_I4(void);
+concat_list_I1 concat_sb_dappendI_X63(concat_list_I1,int64_t,int32_t);
 concat_Operation concat_opDeclare(concat_Type,concat_IdentifierInfo,concat_FilePosition);
 void concat_28_FtypeCheckCall(concat_Operation*,concat_TemplateId,concat_optional_I16,bool,concat_28_FTypeCheckState*);
 concat_arrayView_I1 concat_string_dtail(concat_arrayView_I1,int64_t);
@@ -1706,6 +1707,7 @@ concat_list_I33 concat_list_dclear_I6(concat_list_I33);
 concat_list_I34 concat_list_dclear_I7(concat_list_I34);
 concat_io_dIOError const concat_io_dFILE__ERR__FILE__NOT__FOUND;
 extern concat_tuple140 concat_io_dfopen(int8_t const*,int64_t,concat_io_dOpenMode);
+concat_list_I1 concat_sb_dappendI_X63_X63(concat_list_I1,int64_t,int32_t,bool);
 concat_tuple175 concat_number_dtryParseInt(concat_arrayView_I1,int32_t);
 concat_Operation concat_opPredeclare(concat_Type,concat_IdentifierInfo,concat_FilePosition);
 int8_t const* const concat_29_FARGV__NAME;
@@ -1739,7 +1741,6 @@ bool concat_id_dhasOpenTemplate(concat_IdentifierContext*);
 concat_tuple515 concat_interpreter_doperator_X62_X62(concat_Type,concat_ConstValue,concat_ConstValue);
 void concat_28_FinsertStackOp(concat_Operation const*,int64_t,concat_28_FTypeCheckState*);
 void concat_28_FstoreLoopOutTypes(concat_28_FBlockInfo*,bool,concat_FilePosition,concat_28_FTypeCheckState*);
-concat_list_I1 concat_sb_dappendInt_X63_X63(concat_list_I1,int64_t,int32_t,bool);
 double concat_double_dNaN(void);
 concat_Type concat_types_dgetBaseType(concat_Type,concat_TypeContext const*);
 concat_types_dCompositeId concat_types_dnewCompositeType(concat_23_Ftypes_dCompositeFlag,concat_arrayView_I3,concat_optional_I6,concat_TypeContext*);
@@ -1906,7 +1907,6 @@ extern double concat_math_dsinh(double);
 concat_LabelFlag concat_id_dlabelFlags(concat_LabelId,concat_LabelContext const*);
 int32_t concat_types_dnumberPrecision(concat_Type,concat_TypeContext const*);
 int64_t concat_string_dindexOf(concat_arrayView_I1,int8_t);
-concat_list_I1 concat_sb_dappendInt_X63(concat_list_I1,int64_t,int32_t);
 concat_LabelId concat_id_dnewLabel(concat_arrayView_I1,concat_LabelFlag,concat_FilePosition,concat_FileId,concat_LabelContext*);
 bool concat_constantEquals(concat_ConstValue,concat_ConstValue,concat_LabelContext const*);
 concat_list_I18 concat_25_Fid_dfreeScopeStrings(concat_list_I18);
@@ -11303,7 +11303,7 @@ concat_list_I1 tmp89 = concat_sb_dappendC(tmp86,((int8_t)43));
 tmp86 = tmp89;
 }
 int64_t tmp90 = l2_e__max;
-concat_list_I1 tmp91 = concat_sb_dappendInt_X63(tmp86,tmp90,arg3/*base*/);
+concat_list_I1 tmp91 = concat_sb_dappendI_X63(tmp86,tmp90,arg3/*base*/);
 tmp1 = tmp91;
 }else{
 int64_t tmp92 = l2_e__max;
@@ -11418,7 +11418,7 @@ return tmp1;
 //global
 int8_t const* const concat_13_Fsb_dstringChars = ((int8_t const*)"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 //local
-concat_list_I1 concat_sb_dappendInt_X63_X63(concat_list_I1 arg0/*buffer*/,int64_t arg1/*i*/,int32_t arg2/*base*/,bool arg3/*signed*/){
+concat_list_I1 concat_sb_dappendI_X63_X63(concat_list_I1 arg0/*buffer*/,int64_t arg1/*i*/,int32_t arg2/*base*/,bool arg3/*signed*/){
 bool const tmp0 = ((bool)((arg2/*base*/<((int32_t)2))|(arg2/*base*/>((int32_t)62))));
 if(tmp0){
 return arg0/*buffer*/;
@@ -11463,39 +11463,39 @@ tmp1 = tmp13;
 }while(1);
 return tmp1;
 }
-concat_list_I1 concat_sb_dappendInt_X63(concat_list_I1 arg0,int64_t arg1,int32_t arg2){
+concat_list_I1 concat_sb_dappendI_X63(concat_list_I1 arg0,int64_t arg1,int32_t arg2){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63_X63(tmp0,arg1,arg2,true);
+concat_list_I1 tmp1 = concat_sb_dappendI_X63_X63(tmp0,arg1,arg2,true);
 return tmp1;
 }
 concat_list_I1 concat_sb_dappendBin(concat_list_I1 arg0,int64_t arg1){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63(tmp0,arg1,((int32_t)2));
+concat_list_I1 tmp1 = concat_sb_dappendI_X63(tmp0,arg1,((int32_t)2));
 return tmp1;
 }
 concat_list_I1 concat_sb_dappendI(concat_list_I1 arg0,int64_t arg1){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63(tmp0,arg1,((int32_t)10));
+concat_list_I1 tmp1 = concat_sb_dappendI_X63(tmp0,arg1,((int32_t)10));
 return tmp1;
 }
 concat_list_I1 concat_sb_dappendX(concat_list_I1 arg0,int64_t arg1){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63(tmp0,arg1,((int32_t)16));
+concat_list_I1 tmp1 = concat_sb_dappendI_X63(tmp0,arg1,((int32_t)16));
 return tmp1;
 }
 concat_list_I1 concat_sb_dappendUBin(concat_list_I1 arg0,int64_t arg1){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63_X63(tmp0,arg1,((int32_t)2),false);
+concat_list_I1 tmp1 = concat_sb_dappendI_X63_X63(tmp0,arg1,((int32_t)2),false);
 return tmp1;
 }
 concat_list_I1 concat_sb_dappendU(concat_list_I1 arg0,int64_t arg1){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63_X63(tmp0,arg1,((int32_t)10),false);
+concat_list_I1 tmp1 = concat_sb_dappendI_X63_X63(tmp0,arg1,((int32_t)10),false);
 return tmp1;
 }
 concat_list_I1 concat_sb_dappendUHex(concat_list_I1 arg0,int64_t arg1){
 concat_list_I1 tmp0 = arg0;
-concat_list_I1 tmp1 = concat_sb_dappendInt_X63_X63(tmp0,arg1,((int32_t)16),false);
+concat_list_I1 tmp1 = concat_sb_dappendI_X63_X63(tmp0,arg1,((int32_t)16),false);
 return tmp1;
 }
 // ./lib/numbers/limits.concat
