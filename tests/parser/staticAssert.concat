@@ -1,0 +1,10 @@
+1 1 + 2 == #assert "1+1=2"
+"Hello" ..length 5 == #assert "string length"
+1 0 > #assert "ordering"
+
+enum( A B C D E ) =:: anEnum
+
+anEnum ..length 5 == #assert "enum length"
+i32 2 3 array ..length 6 == #assert "multi-dim. array length"
+
+entryPoint: end

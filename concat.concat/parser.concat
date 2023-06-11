@@ -831,7 +831,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           id.SCOPE_FLAG_NO_CONST_FOLD false idContext id.setScopeFlag
         end
         #drop
-        return ## ignore elements starting with #:
+        return ## ignore unknown annotations
       end
       ':' string.split ## XXX? rename stack ops to ..drop ..dup ..over ..swap ..rot
         "dup" string.wrap #over string.eq if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
@@ -861,7 +861,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         else "include" string.wrap #over string.eq _if #drop:2
           fileState nextToken
-          #dup Token .STRING == if .STRING ## local file TODO? resolve paths relative to current file instead of relative to basePath/allow ignoring name of current folder
+          #dup Token .STRING == if .STRING ## local file TODO? allow ignoring name of current folder (search base-path, then current folder)
             state [] .basePath .length #over .length + sb.create
               state [] .basePath sb.appendStr
               #swap sb.appendStr
@@ -1006,6 +1006,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           sb.free #drop
           matches list.free #drop
           idName id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel fileState [] .wordStart opPrintIdentifierMatches state appendOp
+          return
+        else "assert" string.wrap #over string.eq _if #drop:2
+          fileState nextToken
+          #dup Token .STRING == if .STRING
+          else #drop
+            "expected string" sb.wrap fileState [] .wordStart state [] .errors @ appendWarning
+            return
+          end  =:: message
+          state popConst
+            #dup .val ConstValue .boolean == if
+              .val .boolean
+            else
+              "expected boolean got " sb.wrap #swap .val state [] .idContext .constContext @ labelContext typeContext sb.appendConstant fileState [] .wordStart state [] .errors @ appendWarning
+              false
+            end
+            ! if
+              "assertion failed \"" sb.wrap message sb.appendStr "\" " sb.appendS fileState [] .wordStart state [] .errors @ appendError
+            end
           return
         end
       64 sb.create
@@ -1976,6 +1994,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #dup .val ConstValue .str == if
             .val .str .length true 0 fileState [] .wordStart state newIntConstant state pushConst
             return
+          else #dup .val ConstValue .typeId == _if
+            #dup .val .typeId
+              #dup typeContext types.isComposite if
+                typeContext types.compositeEltCount true 0 fileState [] .wordStart state newIntConstant state pushConst
+                #drop return
+              else #dup typeContext types.isFixedSize _if
+                typeContext types.getArraySize =:: dims
+                1i64 0 while #dup dims .length < do
+                  #swap
+                    dims #over:2 array.get .value *
+                  #swap 1 +
+                end #drop true 0 fileState [] .wordStart state newIntConstant state pushConst
+                #drop return
+              end
+            #drop
           end
         "cannot determine the length of constant " sb.wrap
           #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
@@ -1984,7 +2017,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart opLength state appendOp
       return
-    else #dup "..size" string.wrap string.eq _if #drop
+    else #dup "..size" string.wrap string.eq _if #drop ##XXX compute size of constants at compile time
       fileState [] .wordStart opSize state appendOp
       return
     else #dup "..unreachable" string.wrap string.eq _if #drop
