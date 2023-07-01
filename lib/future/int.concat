@@ -1570,7 +1570,39 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     return
   end
 
-  ## modInv
+
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int modBy
+    b .sign 0 == if
+      a return
+    end
+    a b remainderBy =:: mut x
+    x .sign 0 < if
+       x b addTo x =
+    end
+    x return
+  end
+  #+inverts a modulo b, returns integer k s.t.  a*k=gcd(a,b) mod b for some integer n +#
+  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int modInvert
+    b abs =:: mut y
+    a b modBy =:: mut x
+    ZERO =:: mut s
+    ONE =:: mut t
+    int : q
+    ## x y compare 0 > assert  (x<=y)
+    while x .sign 0 != do ## extended euclidean algorithm
+      x
+        y x divideAndRemainderBy q = x =
+      y =
+      t
+        s  q t multiplyWith subtractFrom t = ## s-qt
+      s =
+      q free
+    end
+    x free
+    y free
+    t free
+    s b modBy return
+  end
   ## modPow
 #end
 
@@ -1585,7 +1617,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
         '-' sb.appendC
       end
       i .cap 0 == if
-        i .data .i base false sb.appendI??
+        i .data .i base false sb.appendI?? return
       end
       i .size i32 mem.alloc =:: data
       i .size i32 list.create =:: mut digits
