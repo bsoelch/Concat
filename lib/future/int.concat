@@ -1041,7 +1041,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     carry u32.MASK & i32 cast target a .length [] =
     a .length 1 + return
   end
-  proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi => ) =: simpleSqrtOverflow
+  proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi => ) =: inplaceSquareOverflow
     resLow =:: mut buffer
     resHi 32 << =:: mut overflow
     i =:: mut pos
@@ -1064,7 +1064,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
   end
   #+assumes a and target are either the same pointer or non intersecting, assumes target has capacity >= 2* a .size-1+#
-  proc( i32 arrayView : a i32 _ ptr mut : target => i64 ) =: simpleSquare
+  proc( i32 arrayView : a i32 _ ptr mut : target => i64 ) =: inplaceSquare
     a .length 0 <= if
       0 return ## length 0 -> length 0
     end
@@ -1092,7 +1092,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
         end
         i 1 + i =
       end
-      target N 2 * s - buffer overflow simpleSqrtOverflow
+      target N 2 * s - buffer overflow inplaceSquareOverflow
       s 1 + s =
     end
     N s =
@@ -1112,7 +1112,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
         end
         i 1 + i =
       end
-      target s buffer overflow simpleSqrtOverflow
+      target s buffer overflow inplaceSquareOverflow
       s 1 - s =
     end
     a .length 2 * 1 -
@@ -1128,13 +1128,9 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     3) a .data b .data and target don't intersect
     additionally assumes, that target has capacity >= a.length + b .length-1
   +#
-  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: simpleMultiply
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: simpleMultiply ## XXX split in fast and in-place version
     a .length 0 <= b .length 0 <= | if
       0 return ## multiply with length 0 -> length 0
-    end
-    a .data b .data == if
-      ## a .length b .length == assert
-      a target simpleSquare return
     end
     0 target a .length b .length + 1 - [] =
     ## b .data target != assert
@@ -1167,7 +1163,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       1 + ## length == maxIndex + 1
     return
   end
-  4 =:: KARATSUBA_THRESHOLD ## XXX set to higher value once algorithm is stable
+  128 =:: KARATSUBA_THRESHOLD ## XXX find good value
   proc( i32 _ ptr : data i64 : index => i32 _ ptr i64 ) =: stripLeadingZeros
     index 1 - =:: mut i
     while i 0 >= do
@@ -1178,10 +1174,10 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     data i 1 + return
   end
-  ## TODO reuse temporary memory in recursive calls
+  ## XXX? reuse temporary memory in recursive calls
   proc( i32 arrayView : a i32 _ ptr mut : target => i64 ) =: karatsubaSquare
-    a .length 4 <= if
-      a target simpleSquare return
+    a .length KARATSUBA_THRESHOLD <= if
+      a a target simpleMultiply return
     end
     a .length 2 / =:: B
     a .data B stripLeadingZeros array.create =:: a0
@@ -1227,7 +1223,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
   #+assumes a and b do not intersect target, target.length >= a.length+b.length-1+#
   proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target => i64 ) =: karatsubaMultiply
-    a .length 4 <= b .length 4 <= | if
+    a .length KARATSUBA_THRESHOLD <= b .length KARATSUBA_THRESHOLD <= | if
       a b target simpleMultiply return
     end
     a .length b .length i64.max 2 / =:: B
@@ -1307,7 +1303,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     square if
       simpleMult if
-        aData resData simpleSquare =:: resSize
+        aData resData inplaceSquare =:: resSize
         resData resSize resCap sign int new return
       end
       aData resData karatsubaSquare =:: resSize
@@ -1557,6 +1553,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     dataX a .size cap a .sign int new =:: mut x
     1 dataP 0 [] =
     dataP 1 cap 1i8 int new =:: mut p
+    ## XXX? calculate on arrays for higher efficiency
     n while #dup 0 != do
       #dup 1 & 1 == if
         p x multiplyWith p =
