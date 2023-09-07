@@ -51,6 +51,22 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
         declared list.append
       types [] =
       break
+    interface case
+      declared typeContext types.compositeElts =:: elts
+      0 while #dup elts .length < do
+        elts #over array.get #dup typeContext types.isProcedure if
+          ## treat procedures as procedure pointers
+          false typeContext types.getAddressType ptrLevel prog visited types declaredType
+        else #drop
+          ## only procedures can be elements of interface-types
+          ..unreachable
+        end
+        1 +
+      end #drop
+      types []
+        declared list.append
+      types [] =
+      break
     procedure case
       declared typeContext types.getProcIn #drop ptrLevel prog visited types declaredType
       declared typeContext types.getProcOut #drop ptrLevel prog visited types declaredType
@@ -72,6 +88,8 @@ proc( Operation ptr : op Program ptr mut : prog Type i32 hashMap ptr mut : visit
     op [] .dataType 0 prog visited types declaredType
   else op [] .val OpValue .Cast == op [] .val OpValue .Cast! == | _if
     op [] .dataType 0 prog visited types declaredType
+  else op [] .val OpValue .callInterface == _if
+    op [] .val .callInterface .baseType 0 prog visited types declaredType
   end
 end
 

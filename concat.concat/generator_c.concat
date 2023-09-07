@@ -197,6 +197,9 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
     enum case
       "enum" string.wrap t .enum target printCompositeName
       break
+    interface case
+      "interface" string.wrap t .interface target printCompositeName
+      break
     procedure case
       "proc" string.wrap t .procedure target printCompositeName
       break
@@ -333,6 +336,9 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
       enum case
         "enum" string.wrap t .enum "struct" string.wrap target printCompositeDeclaration
         break
+      interface case
+        "interface" string.wrap t .interface "struct" string.wrap target printCompositeDeclaration
+        break
       namedType case
         target "typedef " io.fputs #drop
         t typeContext types.unwrapNamed target prog printTypeName
@@ -413,6 +419,13 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         "union" string.wrap t .union target printCompositeName
         target "{\n" io.fputs #drop
         t target prog printCompositeElements
+        target "};\n" io.fputs #drop
+        break
+      interface case
+        target "struct " io.fputs #drop
+        "interface" string.wrap t .interface target printCompositeName
+        target "{\n" io.fputs #drop
+        t target prog printCompositeElements ## TODO update for interface (add void* to proc-signatures)
         target "};\n" io.fputs #drop
         break
     end
@@ -1082,6 +1095,9 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       end
       target ")" io.fputs #drop
       return
+    callInterface case
+      ## TODO implement interface call
+      break
     block case
       op [] .val .block .blockType switch
         UNKNOWN PROCEDURE INITIALIZER case
@@ -1284,7 +1300,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       target "))\n" io.fputs #drop
       return
     unreachable case
-      ## XXX? printf-statement for error message
+      "fprintf(stderr,\"reached unreachable statement at " sb.wrap
+        op [] .pos sb.appendPos
+        "\\n\");//unreachable\n" sb.appendS
+        target #over io.fputSb #drop
+      sb.free #drop
       target "exit(EXIT_FAILURE);//unreachable\n" io.fputs #drop
       return
     compilerInfo case

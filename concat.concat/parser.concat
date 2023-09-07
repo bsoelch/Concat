@@ -735,6 +735,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
+    else #dup "interface(" string.wrap string.eq _if #drop
+      LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
+      if
+        "error while parsing interface type" sb.wrap fileState [] .wordStart state appendError2
+      end
+      ## TODO ensure that elements of interface are procedures
+      #swap state [] .idContext .typeContext addrOf types.newInterface if
+        "error while creating interface type" sb.wrap fileState [] .wordStart state appendError2
+      end
+      fileState [] .wordStart newTypeConst  state pushConst
+      "" string.wrap true return
     else #dup "proc(" string.wrap string.eq _if #drop
       state offsetStaticArgs =:: prevArgs
       LabelType .PROC_IN "=>" string.wrap ")" string.wrap fileState state readCompositeType

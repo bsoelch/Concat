@@ -10,6 +10,7 @@ enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URS
 enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
 struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
+struct( Type : baseType i32 : index ) =:: public InterfaceInfo
 enum(
                       NOP
                       entryPoint
@@ -27,6 +28,7 @@ enum(
                 i32 : mut getElement
                 i32 : mut setElement
                 i32 : mut @Element
+      InterfaceInfo : mut callInterface
                 i32 : mut getArrayElement
                 i32 : mut setArrayElement
                 i32 : mut @ArrayElement
@@ -402,6 +404,14 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .@Element sb.appendI
+          break
+        callInterface case
+          "call interface ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .callInterface .baseType labelContext typeContext sb.appendType
+          " @ " sb.appendS
+          #over .val .callInterface .index sb.appendI
           break
         getArrayElement case
           "get array element ( " sb.appendS

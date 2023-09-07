@@ -25,6 +25,7 @@ enum(
     types.CompositeId : procIn
     types.CompositeId : procOut
     types.CompositeId : enum
+    types.CompositeId : interface
          types.ProcId : procedure
     types.NamedTypeId : namedType
                   i32 : autoType
@@ -59,6 +60,8 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .procOut b .procOut == return
     enum case
       a .enum b .enum == return
+    interface case
+      a .interface b .interface == return
     procedure case
       a .procedure b .procedure == return
     namedType case
@@ -108,16 +111,18 @@ proc( Type : a => i32 ) =: public typeHash
       bigPrime 9 * a .procOut + return
     enum case
       bigPrime 10 * a .enum + return
+    interface case
+      bigPrime 11 * a .interface + return
     procedure case
-      bigPrime 11 * a .procedure + return
+      bigPrime 12 * a .procedure + return
     namedType case
-      bigPrime 12 * a .namedType + return
+      bigPrime 13 * a .namedType + return
     autoType case
-      bigPrime 13 * a .autoType + return
+      bigPrime 14 * a .autoType + return
     genericType case
-      bigPrime 14 * a .genericType + return
+      bigPrime 15 * a .genericType + return
     templateType case
-      bigPrime 15 * a .templateType + return
+      bigPrime 16 * a .templateType + return
   end
 end
 
@@ -448,17 +453,18 @@ i32 =:: CompositeFlag
 4   CompositeFlag =: COMP_FLAG_UNION
 8   CompositeFlag =: COMP_FLAG_PROC_IN
 16  CompositeFlag =: COMP_FLAG_PROC_OUT
-31  CompositeFlag =: public COMP_CLASS_MASK
-32  CompositeFlag =: public COMP_FLAG_VOID_ONLY
-64  CompositeFlag =: public COMP_FLAG_STATIC_ARGS
-128 CompositeFlag =: public COMP_FLAG_TEMPLATE
-192 CompositeFlag =: public COMP_GENERIC_MASK
+32  CompositeFlag =: COMP_FLAG_INTERFACE
+63  CompositeFlag =: public COMP_CLASS_MASK
+64  CompositeFlag =: public COMP_FLAG_VOID_ONLY
+128 CompositeFlag =: public COMP_FLAG_STATIC_ARGS
+256 CompositeFlag =: public COMP_FLAG_TEMPLATE
+384 CompositeFlag =: public COMP_GENERIC_MASK
 struct( i64 : eltsOffset LabelOffset : _labelOffset i64 : eltCount CompositeFlag : mut flags ) =:: CompositeType
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
   switch
-    tuple struct union labeledProcIn procIn procOut enum case
+    tuple struct union labeledProcIn procIn procOut enum interface case
       true return
     undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
       false return
@@ -475,6 +481,10 @@ end
 proc( Type TypeContext ptr => bool ) =: public isUnion
   unwrapNamed
   Type .union == return
+end
+proc( Type TypeContext ptr => bool ) =: public isInterface
+  unwrapNamed
+  Type .interface == return
 end
 proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
   composite context unwrapNamed
@@ -500,6 +510,9 @@ proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut op
       enum case
         .enum
         break
+      interface case
+        .interface
+        break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType case
         #drop CompositeType ptr mut optional.empty return
     end
@@ -515,7 +528,7 @@ end
 proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
-      struct union labeledProcIn enum case
+      struct union labeledProcIn enum interface case
         break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop id.LABEL_ID_NONE return
@@ -533,7 +546,7 @@ end
 proc( Type : composite string : name LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
-      struct union labeledProcIn enum case
+      struct union labeledProcIn enum interface case
         break
       undefined primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
         #drop -1 return
@@ -710,6 +723,12 @@ proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr 
     Type .undefined true return
   end
   COMP_FLAG_UNION elts labels context newCompositeType Type .union new false return
+end
+proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newInterface
+  elts .length 0 == labels optional.isEmpty | if
+    Type .undefined true return
+  end
+  COMP_FLAG_INTERFACE elts labels context newCompositeType Type .interface new false return
 end
 #end
 #namespace sb
@@ -914,6 +933,7 @@ proc( Type => i32 ) =: public getTypeId
     procIn case .procIn return
     procOut case .procOut return
     enum case .enum return
+    interface case .interface return
     procedure case .procedure return
     namedType case .namedType return
     undefined primitiveType case #drop -1 return
@@ -955,7 +975,7 @@ proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+ha
         1 +
       end #drop
       isTemplate isStatic return
-    tuple struct union labeledProcIn procIn procOut enum case
+    tuple struct union labeledProcIn procIn procOut enum interface case
       t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
     procedure case
       context [] .procTypes t .procedure list.get
@@ -1235,6 +1255,20 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       .enum
       #swap
         "enum[" appendS
+        #over    appendI
+        "]( "    appendS
+      #swap
+        allowRecurse if
+          context [] .compositeTypes #swap list.get labelContext context appendComposite
+        else #drop
+          "... " appendS
+        end
+       ")" appendS
+       return
+    interface case
+      .interface
+      #swap
+        "interface[" appendS
         #over    appendI
         "]( "    appendS
       #swap

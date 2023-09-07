@@ -1404,6 +1404,38 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       return
     end
   end
+  targetType typeContext isInterface if
+    targetType typeContext unwrapNamed =:: interfaceType
+    interfaceType labelName labelContext typeContext compositeFindLabel =:: index
+    index 0 >= if
+      op [] .val switch
+        getLabel case
+          interfaceType index InterfaceInfo new op [] .val .callInterface =
+          interfaceType index typeContext compositeGetElement op [] .dataType =
+          break
+        setLabel case
+          "interface labels cannot be modified" sb.wrap
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] .pos state appendError2
+          return
+        @Label case
+          "cannot get the address of an interface label" sb.wrap
+          op [] .pos state appendError2
+          return
+        default
+          "unexpected operation for get label: " sb.wrap
+            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] .pos state appendError2
+          return
+      end
+      ## remove top stack value (value of interface)
+      state [] .opStack .length typeInfo [] .opCount - state [] .opStack .length =
+      state [] .typeStack .length 1 - state [] .typeStack .length =
+      ## TODO mark type as called
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty false state typeCheckCall
+      return
+    end
+  end
   0 sb.create
     typeInfo [] .valType labelContext typeContext sb.appendType
     " does not have a label " sb.appendS
@@ -2649,7 +2681,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return ## TODO find
       end
       break
-    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case
+    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen callInterface case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
