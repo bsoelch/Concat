@@ -683,14 +683,16 @@ proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut 
   inTypes outTypes create switchBlock [] .blockType switchBlock [] .blockStart false pos state storeOutTypes
 end
 
-proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl bool : isPtr TypeCheckState ptr mut : state => ) =: typeCheckCall
+enum( PROC POINTER INTERFACE ) =:: CallType
+
+proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state => ) =: typeCheckCall
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
 
   op [] .dataType =:: mut calledType
-  isPtr if
+  callType CallType .POINTER == if
     state [] .typeStack list.peek #dup optional.isEmpty if #drop
       "missing argument for operation" sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
@@ -891,7 +893,16 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
-  isPtr if
+  callType CallType .INTERFACE == if
+    state [] .typeStack list.peek #dup optional.isEmpty if #drop
+      "type-stack underflow" sb.wrap op [] .pos state appendError2
+      return
+    end .data [] .opCount =:: opCount
+    state [] .compiledOps
+      state [] .opStack .data state [] .opStack .length opCount - + opCount array.create list.appendArray
+    state [] .compiledOps =
+  end
+  callType CallType .PROC != if
     1 op [] .pos state addCompiledStackOps
   end
   inType typeContext types.compositeElts "procedure call" string.wrap op [] .pos state requireTypes
@@ -983,7 +994,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       return
     PROCEDURE case
       op [] .val OpValue .getId == if
-        op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap false state typeCheckCall
+        op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap CallType .PROC state typeCheckCall
         return
       end
       op [] .val OpValue .@Id == if
@@ -1428,11 +1439,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           op [] .pos state appendError2
           return
       end
-      ## remove top stack value (value of interface)
-      state [] .opStack .length typeInfo [] .opCount - state [] .opStack .length =
-      state [] .typeStack .length 1 - state [] .typeStack .length =
-      ## TODO mark type as called
-      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty false state typeCheckCall
+      1 false op [] .pos state extractCompositeOps
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .INTERFACE state typeCheckCall
       return
     end
   end
@@ -2347,7 +2355,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     callPtr case
       op state checkReachable
       op state checkLocal
-      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty true state typeCheckCall
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER state typeCheckCall
       return
     argc case
       op state checkReachable

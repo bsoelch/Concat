@@ -54,13 +54,11 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
     interface case
       declared typeContext types.compositeElts =:: elts
       0 while #dup elts .length < do
-        elts #over array.get #dup typeContext types.isProcedure if
-          ## treat procedures as procedure pointers
-          false typeContext types.getAddressType ptrLevel prog visited types declaredType
-        else #drop
+        elts #over array.get typeContext types.isProcedure ! if
           ## only procedures can be elements of interface-types
           ..unreachable
         end
+        ## ignore procedures in interface, they will be declared with the interface
         1 +
       end #drop
       types []
