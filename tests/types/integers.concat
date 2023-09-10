@@ -8,22 +8,22 @@ entryPoint:
   A 1 - 3 *  i32 =: mut B
   i32 : mut C 
     
-  11_00'10'01 print      
-  anInt print
+  11_00'10'01 ..debug.print      
+  anInt ..debug.print
   
-  A print
-  B print
-  A B == print
+  A ..debug.print
+  B ..debug.print
+  A B == ..debug.print
   
-  A i8 cast 1000000000000000000 + print
+  A i8 cast 1000000000000000000 + ..debug.print
   A 1 + B 1 - A = B =
   
-  A print
-  B print
+  A ..debug.print
+  B ..debug.print
   
   2 C =
 
   0x7fff i16 cast =:: short1
   1 i16 cast =:: short2
-  short1 short2 + print
+  short1 short2 + ..debug.print
 end

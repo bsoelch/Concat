@@ -6,6 +6,6 @@ end
 
 entryPoint:
   0 i64 =: mut val
-  val addrOf set2 print
-  val print
+  val addrOf set2 ..debug.print
+  val ..debug.print
 end

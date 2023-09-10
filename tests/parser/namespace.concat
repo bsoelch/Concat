@@ -10,10 +10,10 @@
 #end
 proc( => ) =: spaceTest
   #using mut
-  spaceVar print
+  spaceVar ..debug.print
   #using mut.subspace
-  spaceVar print
-  subspace.subspaceVar print
+  spaceVar ..debug.print
+  subspace.subspaceVar ..debug.print
 end
 #namespace mut
   #namespace subspace

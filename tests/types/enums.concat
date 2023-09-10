@@ -10,9 +10,9 @@ anEnum .B new =:: e2
 entryPoint:
   -32141 anEnum .C new =:: mut e
   anEnum .A anEnum =: f
-  e anEnum .A == print
-  e anEnum .C == print
-  e .C print
+  e anEnum .A == ..debug.print
+  e anEnum .C == ..debug.print
+  e .C ..debug.print
   
   labelEnum .A =:: mut l1
   l1 labelEnum .B == if
@@ -22,6 +22,6 @@ entryPoint:
   2 'A' ( i32 i8 ) new e .D =
   e .D 
     241 #over .0 =
-    #dup .1 print
- .0 print
+    #dup .1 ..debug.print
+ .0 ..debug.print
 end

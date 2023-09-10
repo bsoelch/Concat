@@ -2,12 +2,12 @@
 #include io
 
 entryPoint:
-  "Hello World!" io.puts print
+  "Hello World!" io.puts ..debug.print
 
   
-  "Hello World!" string.wrap "World" string.wrap  string.indexOfStr print
-  "Hello World!" string.wrap "substring" string.wrap string.indexOfStr print
-  "Hello World!" string.wrap 'o' string.contains print
+  "Hello World!" string.wrap "World" string.wrap  string.indexOfStr ..debug.print
+  "Hello World!" string.wrap "substring" string.wrap string.indexOfStr ..debug.print
+  "Hello World!" string.wrap 'o' string.contains ..debug.print
   "This sentence will be split into Worlds!" string.wrap ' ' printSplit
 end
 

@@ -4,10 +4,10 @@ struct( i32 : id pos : mut p i8 4 ptr : name ) type =: aStruct
 
 entryPoint:
   -2143124  42 -115 pos new  "Name" aStruct new =:: struct
-  struct .id print
-  struct .p .x print
+  struct .id ..debug.print
+  struct .p .x ..debug.print
   struct =:: mut mutStruct
   4141 -53231 pos new mutStruct .p =
-  mutStruct .id print
-  mutStruct .p .y print
+  mutStruct .id ..debug.print
+  mutStruct .p .y ..debug.print
 end

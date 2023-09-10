@@ -18,6 +18,6 @@ end
 
 entryPoint:
   "Hello" startItr while nextChar do
-    #+char+# print
+    #+char+# ..debug.print
   end endItr
 end

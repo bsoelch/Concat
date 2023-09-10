@@ -2,24 +2,24 @@
 #using io
 entryPoint:
   i8 64 array new =:: mut buff
-  stdIn buff addrOf  0 16 fread print print
-  stdIn buff addrOf 16 32 fread print print
+  stdIn buff addrOf  0 16 fread ..debug.print ..debug.print
+  stdIn buff addrOf 16 32 fread ..debug.print ..debug.print
   
-  stdOut "Hello World!" 0 5 fwrite print print
-  stdOut "Hello World!" 6 5 fwrite print print
-  "!" puts print
-  stdOut buff addrOf 0 45 fwrite print print
-  stdOut '\n' fputc print
-  "../lib" OPEN_WRITE fopenS print =:: empty
-  empty print
-  empty fclose print
-  "./.io.out" OPEN_READ OPEN_WRITE | fopenS print =:: file
-  file "Written directly to file!\n" fputs print
-  file fflush print
-  file fclose print
+  stdOut "Hello World!" 0 5 fwrite ..debug.print ..debug.print
+  stdOut "Hello World!" 6 5 fwrite ..debug.print ..debug.print
+  "!" puts ..debug.print
+  stdOut buff addrOf 0 45 fwrite ..debug.print ..debug.print
+  stdOut '\n' fputc ..debug.print
+  "../lib" OPEN_WRITE fopenS ..debug.print =:: empty
+  empty ..debug.print
+  empty fclose ..debug.print
+  "./.io.out" OPEN_READ OPEN_WRITE | fopenS ..debug.print =:: file
+  file "Written directly to file!\n" fputs ..debug.print
+  file fflush ..debug.print
+  file fclose ..debug.print
   stdErr fstart
     "printing to stderr" fappendS
     '\n' fappendC
     "non ASCII string: ä×√φ\U0001F4BB□\n" fappendS
-  print #drop
+  ..debug.print #drop
 end

@@ -18,10 +18,10 @@ proc( i32 : i anEnum : e i8 : c => ) =: switchTest
     A B case
       break
     C case
-      e .C print
+      e .C ..debug.print
       break
     D case
-      e .D print
+      e .D ..debug.print
       break
   end
   c switch ## switch character
@@ -31,7 +31,7 @@ proc( i32 : i anEnum : e i8 : c => ) =: switchTest
   default
     false
   end =:: isSpace
-  isSpace print
+  isSpace ..debug.print
 end
 
 entryPoint:

@@ -3,7 +3,7 @@
 #template type : T #end
 proc( T list : l => ) =: printList
   0 while #dup l .length < do
-    l .data #over [] print
+    l .data #over [] ..debug.print
     1 +
   end #drop
 end
@@ -25,7 +25,7 @@ entryPoint:
     l       list.appendAll
   printList
  
-  l 0 list.get print
+  l 0 list.get ..debug.print
   '\x2a' l 3 list.set
-  l 3 list.get print
+  l 3 list.get ..debug.print
 end

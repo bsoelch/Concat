@@ -1,15 +1,15 @@
 entryPoint:
   0 0 ( i32 i32 ) new =:: mut tuple
   1 tuple .0 =
-  tuple .0 print
+  tuple .0 ..debug.print
   tuple #dup
     2 #over .1 =
-  .1 print
-  .1 print
-  tuple .1 print
+  .1 ..debug.print
+  .1 ..debug.print
+  tuple .1 ..debug.print
   tuple tuple
     5 #over .1 =
-  .1 print
-  .1 print
-  tuple .1 print
+  .1 ..debug.print
+  .1 ..debug.print
+  tuple .1 ..debug.print
 end

@@ -844,7 +844,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #drop
         return ## ignore unknown annotations
       end
-      ':' string.split ## XXX? rename stack ops to ..drop ..dup ..over ..swap ..rot
+      ':' string.split
         "dup" string.wrap #over string.eq if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
           0 #swap
           opName fileState [] .wordStart state getCompilerOpParam ## :count
@@ -1436,7 +1436,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext addrOf id.newLabel
       fileState [] .wordStart opGetLabel state appendOp
       return
-    else #dup "print" string.wrap string.eq _if #drop
+    else #dup "..debug.print" string.wrap string.eq _if #drop
       fileState [] .wordStart opPrint state appendOp
       return
     else #dup "[]" string.wrap string.eq _if #drop
@@ -1617,7 +1617,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .DIVIDE fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup "/u" string.wrap string.eq _if #drop
+    else #dup "..udiv" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
@@ -1653,7 +1653,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .MOD fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup "%u" string.wrap string.eq _if #drop
+    else #dup "..umod" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
@@ -1773,7 +1773,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .RSHIFT fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup ">>u" string.wrap string.eq _if #drop
+    else #dup "..lshr" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
@@ -1925,7 +1925,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .GT fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup "<u" string.wrap string.eq _if #drop
+    else #dup "..u<" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
@@ -1943,7 +1943,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .ULT fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup "<=u" string.wrap string.eq _if #drop
+    else #dup "..u<=" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
@@ -1961,7 +1961,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .ULE fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup ">=u" string.wrap string.eq _if #drop
+    else #dup "..u>=" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b
@@ -1979,7 +1979,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .UGE fileState [] .wordStart opBinOp state appendOp
       return
-    else #dup ">u" string.wrap string.eq _if #drop
+    else #dup "..u>" string.wrap string.eq _if #drop
       idContext id.foldConsts if
         state [] .constants .length 2 >= if
           state popConst =:: b

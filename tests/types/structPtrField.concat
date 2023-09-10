@@ -10,5 +10,5 @@ end
 entryPoint:
  0 anEnum .x new 0 aStruct new =:: mut s
  1 s @ test [] =
- s .a .x print
+ s .a .x ..debug.print
 end

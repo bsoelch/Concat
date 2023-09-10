@@ -4,9 +4,9 @@ entryPoint:
   "ACBÄÖÜ°?ℂ💻!0\xc2\x80\xc1\xbf\xec\x3a\xf0" string.wrap =:: str
   str .length sb.create =:: mut copy
   str 0 i64 cast while #dup str .length < do
-    utf8.nextCodepoint #dup print
+    utf8.nextCodepoint #dup ..debug.print
     copy #swap sb.appendCodepoint copy =
   end #drop:2
-  str copy sb.asStr string.eq print
+  str copy sb.asStr string.eq ..debug.print
   copy sb.free #drop
 end

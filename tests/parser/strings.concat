@@ -3,15 +3,15 @@
 
 entryPoint:
   #find s2
-  s3 ..length print
-  specialString ..length print
+  s3 ..length ..debug.print
+  specialString ..length ..debug.print
   0 while #dup specialString ..length < do
-    specialString #over [] print
+    specialString #over [] ..debug.print
     1 +
   end #drop
-  multiLine ..length print
+  multiLine ..length ..debug.print
   0 while #dup multiLine ..length < do
-    multiLine #over [] print
+    multiLine #over [] ..debug.print
     1 +
   end #drop
 end

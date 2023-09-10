@@ -2,28 +2,28 @@
 #using number
 
 entryPoint:
-  5 2 powI print
-  2 float cast 100 powI print
-  "1.25" string.wrap 10 tryParseFloat #drop print
+  5 2 powI ..debug.print
+  2 float cast 100 powI ..debug.print
+  "1.25" string.wrap 10 tryParseFloat #drop ..debug.print
 
-  "f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat ParserError .NONE == print print
-  "-f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat ParserError .NONE == print print
-  "0.00000000000004X-ff" string.wrap 16 tryParseFloat ParserError .NONE == print print
-  "-0.00000000000004X-ff" string.wrap 16 tryParseFloat ParserError .NONE == print print
+  "f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat ParserError .NONE == ..debug.print ..debug.print
+  "-f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat ParserError .NONE == ..debug.print ..debug.print
+  "0.00000000000004X-ff" string.wrap 16 tryParseFloat ParserError .NONE == ..debug.print ..debug.print
+  "-0.00000000000004X-ff" string.wrap 16 tryParseFloat ParserError .NONE == ..debug.print ..debug.print
 
-  "0x1000p-10"  string.wrap 0 tryParseFloat ParserError .NONE == print print
+  "0x1000p-10"  string.wrap 0 tryParseFloat ParserError .NONE == ..debug.print ..debug.print
 
-  "123456789"  string.wrap 0 tryParseFloat ParserError .NONE == print print
+  "123456789"  string.wrap 0 tryParseFloat ParserError .NONE == ..debug.print ..debug.print
 
-  "0x7fff_ffff_ffff_ffff" string.wrap 0 tryParseInt ParserError .NONE == print print
-  "0x8000_0000_0000_0000" string.wrap 0 tryParseInt ParserError .NONE == print print
-  "-0x8000_0000_0000_0000" string.wrap 0 tryParseInt ParserError .NONE == print print
-  "0x8000_0000_0000_0000" string.wrap 0 tryParseUInt ParserError .NONE == print print
-  "-1" string.wrap 0 tryParseUInt ParserError .NONE == print print
+  "0x7fff_ffff_ffff_ffff" string.wrap 0 tryParseInt ParserError .NONE == ..debug.print ..debug.print
+  "0x8000_0000_0000_0000" string.wrap 0 tryParseInt ParserError .NONE == ..debug.print ..debug.print
+  "-0x8000_0000_0000_0000" string.wrap 0 tryParseInt ParserError .NONE == ..debug.print ..debug.print
+  "0x8000_0000_0000_0000" string.wrap 0 tryParseUInt ParserError .NONE == ..debug.print ..debug.print
+  "-1" string.wrap 0 tryParseUInt ParserError .NONE == ..debug.print ..debug.print
 
-  "0b11'00'10'01" string.wrap 0 tryParseInt ParserError .NONE == print print
-  "12345678987654321" string.wrap 0 tryParseInt ParserError .NONE == print print
+  "0b11'00'10'01" string.wrap 0 tryParseInt ParserError .NONE == ..debug.print ..debug.print
+  "12345678987654321" string.wrap 0 tryParseInt ParserError .NONE == ..debug.print ..debug.print
 
-  "9223372036854775808" string.wrap 10 number.tryParseInt number.ParserError .NONE == print print
-  "9223372036854775807" string.wrap 10 number.tryParseInt number.ParserError .NONE == print print
+  "9223372036854775808" string.wrap 10 number.tryParseInt number.ParserError .NONE == ..debug.print ..debug.print
+  "9223372036854775807" string.wrap 10 number.tryParseInt number.ParserError .NONE == ..debug.print ..debug.print
 end

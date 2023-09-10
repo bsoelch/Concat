@@ -76,7 +76,7 @@ proc( string : str  i32 : base bool : unsigned => i64 ParserError ) =: tryParseI
       resolveBase mBase =
     end
     unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxVal
-    maxVal mBase /u =:: maxSafe
+    maxVal mBase ..udiv =:: maxSafe
     0 while #dup #over:2 .length < do
       #over #over string.charAt
         #over 0 > #over '_' == #over:2 '\'' == | & if

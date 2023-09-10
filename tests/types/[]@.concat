@@ -2,8 +2,8 @@ entryPoint:
   i32 5 array new =:: mut a
   a @ 3 [] @ =:: p
   3 p [] =
-  a @ 0 [] print
-  a @ 3 [] print
+  a @ 0 [] ..debug.print
+  a @ 3 [] ..debug.print
   i32 2 array 2 array new =:: a2
-  a2 @ 1 [] @ 1 [] print
+  a2 @ 1 [] @ 1 [] ..debug.print
 end

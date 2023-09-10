@@ -6,30 +6,30 @@ entryPoint:
   s .b addrOf
   #types
   #drop:2
-  s .a print
-  s .b print
+  s .a ..debug.print
+  s .b ..debug.print
 
   0 0 struct new =:: mut mutS
   mutS .a addrOf
   mutS .b addrOf
   #types
   #drop 1 #swap [] =
-  mutS .a print
-  mutS .b print
+  mutS .a ..debug.print
+  mutS .b ..debug.print
 
   s addrOf =:: sP
   sP [] .a addrOf
   sP [] .b addrOf
   #types
   #drop:2
-  sP [] .a print
-  sP [] .b print
+  sP [] .a ..debug.print
+  sP [] .b ..debug.print
 
   mutS addrOf =:: mutSP
   mutSP [] .a addrOf
   mutSP [] .b addrOf
   #types
   #drop 2 #swap [] =
-  mutSP [] .a print
-  mutSP [] .b print
+  mutSP [] .a ..debug.print
+  mutSP [] .b ..debug.print
 end

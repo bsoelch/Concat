@@ -1,7 +1,7 @@
 entryPoint:
   5
     true while do
-      #dup print 
+      #dup ..debug.print 
       
       1 -  
       #dup 0 > 

@@ -9,5 +9,5 @@ entryPoint:
     4 5 aStruct new list.append
   =:: l
   0 l 2 list.get .b  =
-  l 2 list.get .b print
+  l 2 list.get .b ..debug.print
 end

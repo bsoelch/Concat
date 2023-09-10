@@ -6,21 +6,21 @@ proc( => ( ( i32 i32 _ ptr ) _ ptr i32 ) ) =: ptrTest
 end
 
 entryPoint:
-  ptrTest .0 [] .1 [] print
+  ptrTest .0 [] .1 [] ..debug.print
   
   1 2 ( i64 i64 ) new =:: mut tmp
   
-  tmp .0 addrOf [] print
+  tmp .0 addrOf [] ..debug.print
   tmp addrOf ( i64 i64 ) _ ptr =: tmpPtr
-  tmpPtr [] .1 print
+  tmpPtr [] .1 ..debug.print
   
-  "Hello World!" 1 [] print
-  "World" ..length print
+  "Hello World!" 1 [] ..debug.print
+  "World" ..length ..debug.print
   
   0 =:: mut A
   A addrOf  i32 _ ptr mut =: mut aPtr
   -312512  aPtr [] =
   #find aPtr
-  aPtr [] print
-  A print
+  aPtr [] ..debug.print
+  A ..debug.print
 end

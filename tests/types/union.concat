@@ -3,7 +3,7 @@ union( i32 : mut a i32 : mut b ) =:: anUnion
 entryPoint:
   anUnion : u
   1 u .a =
-  u .b print
+  u .b ..debug.print
   2 u .b =
-  u .a print
+  u .a ..debug.print
 end

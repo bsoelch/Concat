@@ -3,6 +3,6 @@ proc( => i32 ) =: getInt
 end
 
 entryPoint:
-  false if 0 else getInt true _if end print
+  false if 0 else getInt true _if end ..debug.print
   true if else false _if else end
 end

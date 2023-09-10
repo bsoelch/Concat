@@ -1,9 +1,9 @@
 entryPoint:
-  s1 ..length print
-  s1 12 [] print
-  c0 print
+  s1 ..length ..debug.print
+  s1 12 [] ..debug.print
+  c0 ..debug.print
   'B' c0 =  
-  c0 print
+  c0 ..debug.print
   #find y
 end
 

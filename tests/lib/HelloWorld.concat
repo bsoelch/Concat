@@ -1,5 +1,5 @@
 #include io
 
 entryPoint:
-  "Hello World!" io.puts print
+  "Hello World!" io.puts ..debug.print
 end

@@ -79,7 +79,7 @@
     0x80 =:: mut mask
     0 =:: mut count
     while c mask & 0 != do
-      mask 1 >>u mask =
+      mask 1 ..lshr mask =
       count 1 + count =
     end
     c mask 1 - & =:: mut cp

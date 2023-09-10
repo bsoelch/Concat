@@ -5921,7 +5921,7 @@ concat_Operation tmp812 = concat_opGetLabel(tmp811,((*arg2/*fileState*/).e1_word
 concat_2_FappendOp(tmp812,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp813 = concat_string_dwrap(((int64_t)5),((int8_t const*)"print"));
+concat_arrayView_I1 tmp813 = concat_string_dwrap(((int64_t)13),((int8_t const*)"..debug.print"));
 bool const tmp814 = concat_string_deq(tmp4,tmp813);
 if(tmp814){
 concat_Operation tmp815 = concat_opPrint(((*arg2/*fileState*/).e1_wordStart));
@@ -6332,7 +6332,7 @@ concat_Operation tmp1040 = concat_opBinOp(tmp1039,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1040,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1041 = concat_string_dwrap(((int64_t)2),((int8_t const*)"/u"));
+concat_arrayView_I1 tmp1041 = concat_string_dwrap(((int64_t)6),((int8_t const*)"..udiv"));
 bool const tmp1042 = concat_string_deq(tmp4,tmp1041);
 if(tmp1042){
 bool const tmp1043 = concat_id_dfoldConsts(l0_idContext);
@@ -6422,7 +6422,7 @@ concat_Operation tmp1092 = concat_opBinOp(tmp1091,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1092,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1093 = concat_string_dwrap(((int64_t)2),((int8_t const*)"%u"));
+concat_arrayView_I1 tmp1093 = concat_string_dwrap(((int64_t)6),((int8_t const*)"..umod"));
 bool const tmp1094 = concat_string_deq(tmp4,tmp1093);
 if(tmp1094){
 bool const tmp1095 = concat_id_dfoldConsts(l0_idContext);
@@ -6716,7 +6716,7 @@ concat_Operation tmp1257 = concat_opBinOp(tmp1256,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1257,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1258 = concat_string_dwrap(((int64_t)3),((int8_t const*)">>u"));
+concat_arrayView_I1 tmp1258 = concat_string_dwrap(((int64_t)6),((int8_t const*)"..lshr"));
 bool const tmp1259 = concat_string_deq(tmp4,tmp1258);
 if(tmp1259){
 bool const tmp1260 = concat_id_dfoldConsts(l0_idContext);
@@ -7081,7 +7081,7 @@ concat_Operation tmp1461 = concat_opBinOp(tmp1460,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1461,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1462 = concat_string_dwrap(((int64_t)2),((int8_t const*)"<u"));
+concat_arrayView_I1 tmp1462 = concat_string_dwrap(((int64_t)4),((int8_t const*)"..u<"));
 bool const tmp1463 = concat_string_deq(tmp4,tmp1462);
 if(tmp1463){
 bool const tmp1464 = concat_id_dfoldConsts(l0_idContext);
@@ -7126,7 +7126,7 @@ concat_Operation tmp1487 = concat_opBinOp(tmp1486,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1487,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1488 = concat_string_dwrap(((int64_t)3),((int8_t const*)"<=u"));
+concat_arrayView_I1 tmp1488 = concat_string_dwrap(((int64_t)5),((int8_t const*)"..u<="));
 bool const tmp1489 = concat_string_deq(tmp4,tmp1488);
 if(tmp1489){
 bool const tmp1490 = concat_id_dfoldConsts(l0_idContext);
@@ -7171,7 +7171,7 @@ concat_Operation tmp1513 = concat_opBinOp(tmp1512,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1513,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1514 = concat_string_dwrap(((int64_t)3),((int8_t const*)">=u"));
+concat_arrayView_I1 tmp1514 = concat_string_dwrap(((int64_t)5),((int8_t const*)"..u>="));
 bool const tmp1515 = concat_string_deq(tmp4,tmp1514);
 if(tmp1515){
 bool const tmp1516 = concat_id_dfoldConsts(l0_idContext);
@@ -7216,7 +7216,7 @@ concat_Operation tmp1539 = concat_opBinOp(tmp1538,((*arg2/*fileState*/).e1_wordS
 concat_2_FappendOp(tmp1539,arg3/*state*/);
 return tmp3;
 }else{
-concat_arrayView_I1 tmp1540 = concat_string_dwrap(((int64_t)2),((int8_t const*)">u"));
+concat_arrayView_I1 tmp1540 = concat_string_dwrap(((int64_t)4),((int8_t const*)"..u>"));
 bool const tmp1541 = concat_string_deq(tmp4,tmp1540);
 if(tmp1541){
 bool const tmp1542 = concat_id_dfoldConsts(l0_idContext);
@@ -11516,7 +11516,7 @@ bool const tmp8 = (tmp3!=((int64_t)0));
 if(!tmp8)
   break;
 int64_t const tmp9 = ((int64_t)(((uint64_t)tmp3)%((uint64_t)((int64_t)arg2/*base*/))));
-concat_internal_checkArrayIndex(62,tmp9,"./lib/numbers/printInt.concat:23:45");
+concat_internal_checkArrayIndex(62,tmp9,"./lib/numbers/printInt.concat:23:49");
 int8_t const tmp10 = (((int8_t const*)"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")[tmp9]);
 concat_internal_checkArrayIndex(64,tmp7,"./lib/numbers/printInt.concat:24:38");
 ((&(l0_chrBuff.data[0]))[tmp7]) = tmp10;

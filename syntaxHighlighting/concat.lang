@@ -86,8 +86,8 @@
           \*                  |
           /                   |
           %                   |
-          /u                  |
-          %u                  |
+          \.\.udiv            |
+          \.\.umod            |
           \&amp;              |
           \|                  |
           \^                  |
@@ -96,6 +96,10 @@
           &gt;=?              |
           ==                  |
           \!=                 |
+          \.\.u&lt;           |
+          \.\.u&lt;=          |
+          \.\.u&gt;=          |
+          \.\.u&gt;           |
           \+\+                |
           --                  |
           \!                  |
@@ -106,7 +110,7 @@
           @                   |
           &lt;&lt;            |
           &gt;&gt;            |
-          &gt;&gt;u           |
+          \.\.lshr            |
           addrOf              |
           new                 |
           cast                |
@@ -117,7 +121,7 @@
           \.\.size            |
           \.\.alloca          |
           \.\.unreachable     |
-          print          
+          \.\.debug\.print          
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
