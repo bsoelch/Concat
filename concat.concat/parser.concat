@@ -740,7 +740,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       if
         "error while parsing interface type" sb.wrap fileState [] .wordStart state appendError2
       end
-      ## TODO ensure that elements of interface are procedures
+      ## ensure elements of interface are procedures
+      0 while #dup #over:2 .length < do
+        #over #over array.get state [] .idContext .typeContext @ types.isProcedure ! if
+          "elements of interface have to be procedures" sb.wrap
+          #over:3 optional.hasData if
+            #over:3 .data #over:2 array.at .data [] state [] .idContext .labelContext @ id.labelPos .data
+          else
+            fileState [] .wordStart
+          end
+          state appendError2
+        end
+        1 +
+      end #drop
       #swap state [] .idContext .typeContext addrOf types.newInterface if
         "error while creating interface type" sb.wrap fileState [] .wordStart state appendError2
       end
