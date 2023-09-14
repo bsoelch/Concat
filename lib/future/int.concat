@@ -324,8 +324,6 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     sb.free #drop
   end
 
-  ## TODO toString
-
   ## TODO sign, bit-count ...
   proc( i32 arrayView : #:const a i32 arrayView : #:const b => i32 ) =: cmpInternal
     a .length b .length != if
