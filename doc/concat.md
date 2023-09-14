@@ -15,9 +15,9 @@ i32 =: x                    ## assigns the result of the previous calculation to
 x x * x =                   ## replaces x with its square
 y                           ## push the value y onto the stack
 x y .0 < if                 ## check if x is less than the first element of y
-  .1 print                  ## prints the second element of y (still on stack)
+  .1 ..debug.print          ## prints the second element of y (still on stack)
 else .1 x < _if             ## checks if the seconds element of y (still on stack) is less than x
-  x  print                  ## print the value of x 
+  x  ..debug.print          ## print the value of x
 end                         ## end the if-statement
 ```
 
@@ -88,9 +88,9 @@ Examples:
 1 tuple .0 = ## sets element 0 in tuple
 tuple #dup
   2 #over .1 = ## sets element 1 of the tuple on the stack, but does not modify the variable tuple
-.1 print ## prints 2
-.1 print ## prints 2
-tuple .1 print ## prints 0
+.1 ..debug.print  ## prints 2
+.1 ..debug.print  ## prints 2
+tuple .1 ..debug.print  ## prints 0
 ```
 
 
@@ -123,7 +123,7 @@ entryPoint: ## the program entry point is marked with entry point, internally en
   1 2 add ## prints 3
   max addrOf =:: f ## addrOf can be used to obtain a procedure pointer
   1 2 f () ## () can be used to call procedure pointers
-  #drop print ## return values are pushed onto the type stack and have to be used or discarded before the end of the procedure
+  #drop ..debug.print  ## return values are pushed onto the type stack and have to be used or discarded before the end of the procedure
 ## return statements are not allowed in the main code section
 end ## main code section ends with end
 ```
@@ -150,7 +150,7 @@ proc( type : static T  T _ ptr : a T _ ptr : b i64 : k => ) : extern memcpy  ## 
 proc( type : static T  T _ ptr : p => ) : extern free
 
 entryPoint:
-  "Hello World" strLen print  ## the value of k is determined by the compiler
+  "Hello World" strLen ..debug.print   ## the value of k is determined by the compiler
   16 i8 malloc =:: p        
   p "Test" 4 memcpy           ## generic argument determined by type of constant string ( in current parser by type of p ) 
   p free
@@ -240,7 +240,7 @@ else
  3
 end 
 ## after the if-statement the type-stack will contain the types at the end of any of the if-blocks (they all have to end with the same types)
-print
+..debug.print
 ```
 
 ### while-blocks
@@ -265,14 +265,14 @@ Examples:
 ## anonymous for-loop
 0 ## it is possible to use stack values inside the loop
   while 1 + #dup 5 < do ## increment top stack value and check if it is <5 without consuming that value
-    #dup print ## will print 1 2 3 4
+    #dup ..debug.print  ## will print 1 2 3 4
   end
 #drop ## cleanup stack
 
 ## do-while loop
 0 =:: I
 while 
-  I print ## prints 0 1 2 3 4
+  I ..debug.print  ## prints 0 1 2 3 4
 ## condition
 I ++ 5 <
 do end
@@ -300,7 +300,7 @@ while I ++ s .length < do
     #dup ' ' == if ## ignore spaces
       continue
     end
-  print
+  ..debug.print
 end
 
 ```
@@ -360,10 +360,10 @@ A B case
   ## A or B 
   break
 C case
-  e .C print
+  e .C ..debug.print
   break
 D case 
-  e .D print
+  e .D ..debug.print
   break
 end 
 ```
@@ -470,9 +470,9 @@ To access the value stored in the enum use `.<elementName>` on a matching instan
 anEnum .A  =:: e1              ## set e1 anEnum .A
 3 number? .asInt new =:: n     ## set n to an enum of type number? with value 3
 n number? .asFloat == if
-  n .asFloat print ## n is a float
+  n .asFloat ..debug.print  ## n is a float
 else n number? .asInt == if
-  n .asInt print   ## n is an int  
+  n .asInt ..debug.print    ## n is an int
 end ## n is empty
 ```
 
@@ -534,11 +534,11 @@ imports are valid until the end of the namespace (including in subnamespaces) or
    2 i32 := anInt 
   #end
 #end
-anInt print ## prints global variable anInt
-base.anInt print ## print base.anInt
+anInt ..debug.print  ## prints global variable anInt
+base.anInt ..debug.print  ## print base.anInt
 #using base ## imports namespace base
-anInt print ## still prints anInt in current namespace 
-subspace.anInt print ## addreses with . are resolved relative to the current namespace
+anInt ..debug.print  ## still prints anInt in current namespace
+subspace.anInt ..debug.print  ## addreses with . are resolved relative to the current namespace
 #namespace base
  #using base.subspace ## namespace imports allways have to include the full name
 #end
@@ -589,7 +589,7 @@ end
 ```
 #include "subDir/subInclude.concat"
 proc( i32 => ) =: public f  ## the procedure f in the included file is not visible
-  print
+  ..debug.print
 end
 
 proc( i32 i32 => i32 ) =: externProc ## it is allowed to shaddow extern procedures with local procedures 
@@ -604,7 +604,7 @@ end
 #include "../main.concat" ## files in subdirectorys have to used .. to reference files in superdirectories
 0 i32 =: subIncludeConstant
 proc( => ) =: f ## private procedure f
-  mainConstant print ## main constant is accessible but not constant
+  mainConstant ..debug.print  ## main constant is accessible but not constant
 end
 proc( => i32 ) : extern externProc ## local extern procedure
 ```
