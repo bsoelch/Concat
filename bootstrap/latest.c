@@ -12983,11 +12983,16 @@ return;
 concat_arrayView_I1 concat_18_FskipSpaces(concat_arrayView_I1 arg0/*code*/,concat_FileState* arg1/*fileState*/){
 int32_t tmp0 = ((int32_t)0);
 do{
-concat_arrayView_I1 tmp1 = arg0/*code*/;
-bool const tmp2 = (((int64_t)tmp0)<(arg0/*code*/.e1_length));
-int8_t const tmp3 = concat_string_dcharAt(tmp1,((int64_t)tmp0));
+bool const tmp1 = (((int64_t)tmp0)<(arg0/*code*/.e1_length));
+bool tmp5;
+if(tmp1){
+concat_arrayView_I1 tmp2 = arg0/*code*/;
+int8_t const tmp3 = concat_string_dcharAt(tmp2,((int64_t)tmp0));
 bool const tmp4 = concat_char_disWhitespace(tmp3);
-bool const tmp5 = ((bool)(tmp2&tmp4));
+tmp5 = tmp4;
+}else{
+tmp5 = false;
+}
 if(!tmp5)
   break;
 concat_arrayView_I1 tmp6 = arg0/*code*/;
@@ -13052,125 +13057,143 @@ int8_t const tmp20 = concat_string_dcharAt(tmp3,((int64_t)0));
 bool const tmp21 = (tmp20==((int8_t)35));
 int8_t const tmp22 = concat_string_dcharAt(tmp3,((int64_t)1));
 bool const tmp23 = ((bool)(tmp21&(tmp22==((int8_t)43))));
-concat_arrayView_I1 tmp34;
-bool tmp35;
+concat_arrayView_I1 tmp37;
+bool tmp38;
 if(tmp23){
 concat_updateFilePos(((int8_t)35),(&((*arg1/*fileState*/).e0_currentPos)));
 concat_updateFilePos(((int8_t)43),(&((*arg1/*fileState*/).e0_currentPos)));
+int32_t l0_k = ((int32_t)1);
 int32_t tmp24 = ((int32_t)2);
 do{
-bool const tmp25 = (((int64_t)tmp24)<(tmp3.e1_length));
-int8_t const tmp26 = concat_string_dcharAt(tmp3,((int64_t)((int32_t)(tmp24-((int32_t)1)))));
-bool const tmp27 = (tmp26!=((int8_t)43));
-int8_t const tmp28 = concat_string_dcharAt(tmp3,((int64_t)tmp24));
-bool const tmp29 = ((bool)(tmp25&((bool)(tmp27|(tmp28!=((int8_t)35))))));
-if(!tmp29)
+int32_t tmp25 = l0_k;
+bool const tmp26 = ((bool)((((int64_t)tmp24)<(tmp3.e1_length))&(tmp25>((int32_t)0))));
+if(!tmp26)
   break;
-int8_t const tmp30 = concat_string_dcharAt(tmp3,((int64_t)tmp24));
-concat_updateFilePos(tmp30,(&((*arg1/*fileState*/).e0_currentPos)));
+concat_arrayView_I1 tmp27 = concat_string_dtail(tmp3,((int64_t)tmp24));
+concat_arrayView_I1 tmp28 = concat_string_dwrap(((int64_t)2),((int8_t const*)"+#"));
+bool const tmp29 = concat_string_dstartsWith(tmp27,tmp28);
+if(tmp29){
+int32_t tmp30 = l0_k;
+l0_k = ((int32_t)(tmp30-((int32_t)1)));
+concat_updateFilePos(((int8_t)43),(&((*arg1/*fileState*/).e0_currentPos)));
+concat_updateFilePos(((int8_t)35),(&((*arg1/*fileState*/).e0_currentPos)));
+tmp24 = ((int32_t)(tmp24+((int32_t)2)));
+continue;
+}else{
+concat_arrayView_I1 tmp31 = concat_string_dwrap(((int64_t)2),((int8_t const*)"#+"));
+bool const tmp32 = concat_string_dstartsWith(tmp27,tmp31);
+if(tmp32){
+int32_t tmp33 = l0_k;
+l0_k = ((int32_t)(tmp33+((int32_t)1)));
+concat_updateFilePos(((int8_t)35),(&((*arg1/*fileState*/).e0_currentPos)));
+concat_updateFilePos(((int8_t)43),(&((*arg1/*fileState*/).e0_currentPos)));
+tmp24 = ((int32_t)(tmp24+((int32_t)2)));
+continue;
+}
+}
+int8_t const tmp34 = concat_string_dcharAt(tmp3,((int64_t)tmp24));
+concat_updateFilePos(tmp34,(&((*arg1/*fileState*/).e0_currentPos)));
 tmp24 = ((int32_t)(tmp24+((int32_t)1)));
 }while(1);
-int8_t const tmp31 = concat_string_dcharAt(tmp3,((int64_t)tmp24));
-concat_updateFilePos(tmp31,(&((*arg1/*fileState*/).e0_currentPos)));
-concat_arrayView_I1 tmp32 = concat_string_dtail(tmp3,((int64_t)((int32_t)(tmp24+((int32_t)1)))));
-concat_arrayView_I1 tmp33 = concat_18_FskipSpaces(tmp32,arg1/*fileState*/);
-tmp34 = tmp33;
-tmp35 = true;
+concat_arrayView_I1 tmp35 = concat_string_dtail(tmp3,((int64_t)tmp24));
+concat_arrayView_I1 tmp36 = concat_18_FskipSpaces(tmp35,arg1/*fileState*/);
+tmp37 = tmp36;
+tmp38 = true;
 }else{
-tmp34 = tmp3;
-tmp35 = tmp19;
+tmp37 = tmp3;
+tmp38 = tmp19;
 }
-tmp3 = tmp34;
-if(!tmp35)
+tmp3 = tmp37;
+if(!tmp38)
   break;
 }while(1);
-bool const tmp36 = ((tmp3.e1_length)<=((int64_t)0));
-if(tmp36){
-concat_arrayView_I1 tmp37 = concat_string_dempty();
-return ((concat_tuple196){.e0 = tmp37,.e1 = ((concat_Token){.label=0})});
+bool const tmp39 = ((tmp3.e1_length)<=((int64_t)0));
+if(tmp39){
+concat_arrayView_I1 tmp40 = concat_string_dempty();
+return ((concat_tuple196){.e0 = tmp40,.e1 = ((concat_Token){.label=0})});
 }
-concat_FilePosition tmp38 = ((*arg1/*fileState*/).e0_currentPos);
-((*arg1/*fileState*/).e1_wordStart) = tmp38;
-int8_t const tmp39 = concat_string_dcharAt(tmp3,((int64_t)0));
-concat_updateFilePos(tmp39,(&((*arg1/*fileState*/).e0_currentPos)));
-int8_t const tmp40 = concat_string_dcharAt(tmp3,((int64_t)0));
-bool const tmp41 = (tmp40==((int8_t)34));
-if(tmp41){
-concat_arrayView_I1 tmp42 = concat_string_dtail(tmp3,((int64_t)1));
-int32_t tmp43 = ((int32_t)0);
+concat_FilePosition tmp41 = ((*arg1/*fileState*/).e0_currentPos);
+((*arg1/*fileState*/).e1_wordStart) = tmp41;
+int8_t const tmp42 = concat_string_dcharAt(tmp3,((int64_t)0));
+concat_updateFilePos(tmp42,(&((*arg1/*fileState*/).e0_currentPos)));
+int8_t const tmp43 = concat_string_dcharAt(tmp3,((int64_t)0));
+bool const tmp44 = (tmp43==((int8_t)34));
+if(tmp44){
+concat_arrayView_I1 tmp45 = concat_string_dtail(tmp3,((int64_t)1));
+int32_t tmp46 = ((int32_t)0);
 do{
-bool const tmp44 = (((int64_t)tmp43)<(tmp42.e1_length));
-int8_t const tmp45 = concat_string_dcharAt(tmp42,((int64_t)tmp43));
-bool const tmp46 = ((bool)(tmp44&(tmp45!=((int8_t)34))));
-if(!tmp46)
+bool const tmp47 = (((int64_t)tmp46)<(tmp45.e1_length));
+int8_t const tmp48 = concat_string_dcharAt(tmp45,((int64_t)tmp46));
+bool const tmp49 = ((bool)(tmp47&(tmp48!=((int8_t)34))));
+if(!tmp49)
   break;
-int8_t const tmp47 = concat_string_dcharAt(tmp42,((int64_t)tmp43));
-bool const tmp48 = (tmp47==((int8_t)92));
-if(tmp48){
-int8_t const tmp49 = concat_string_dcharAt(tmp42,((int64_t)tmp43));
-concat_updateFilePos(tmp49,(&((*arg1/*fileState*/).e0_currentPos)));
-tmp43 = ((int32_t)(tmp43+((int32_t)1)));
+int8_t const tmp50 = concat_string_dcharAt(tmp45,((int64_t)tmp46));
+bool const tmp51 = (tmp50==((int8_t)92));
+if(tmp51){
+int8_t const tmp52 = concat_string_dcharAt(tmp45,((int64_t)tmp46));
+concat_updateFilePos(tmp52,(&((*arg1/*fileState*/).e0_currentPos)));
+tmp46 = ((int32_t)(tmp46+((int32_t)1)));
 }
-int8_t const tmp50 = concat_string_dcharAt(tmp42,((int64_t)tmp43));
-concat_updateFilePos(tmp50,(&((*arg1/*fileState*/).e0_currentPos)));
-tmp43 = ((int32_t)(tmp43+((int32_t)1)));
+int8_t const tmp53 = concat_string_dcharAt(tmp45,((int64_t)tmp46));
+concat_updateFilePos(tmp53,(&((*arg1/*fileState*/).e0_currentPos)));
+tmp46 = ((int32_t)(tmp46+((int32_t)1)));
 }while(1);
-int8_t const tmp51 = concat_string_dcharAt(tmp42,((int64_t)tmp43));
-concat_updateFilePos(tmp51,(&((*arg1/*fileState*/).e0_currentPos)));
-concat_tuple109 const tmp52 = concat_string_dsplitIndex(tmp42,((int64_t)tmp43));
-concat_arrayView_I1 tmp53 = (tmp52.e0);
-concat_arrayView_I1 tmp54 = (tmp52.e1);
-return ((concat_tuple196){.e0 = tmp53,.e1 = ((concat_Token){.label=2,.data={.e2_STRING = tmp54}})});
+int8_t const tmp54 = concat_string_dcharAt(tmp45,((int64_t)tmp46));
+concat_updateFilePos(tmp54,(&((*arg1/*fileState*/).e0_currentPos)));
+concat_tuple109 const tmp55 = concat_string_dsplitIndex(tmp45,((int64_t)tmp46));
+concat_arrayView_I1 tmp56 = (tmp55.e0);
+concat_arrayView_I1 tmp57 = (tmp55.e1);
+return ((concat_tuple196){.e0 = tmp56,.e1 = ((concat_Token){.label=2,.data={.e2_STRING = tmp57}})});
 }
-int8_t const tmp55 = concat_string_dcharAt(tmp3,((int64_t)0));
-bool const tmp56 = (tmp55==((int8_t)39));
-if(tmp56){
-concat_arrayView_I1 tmp57 = concat_string_dtail(tmp3,((int64_t)1));
-int32_t tmp58 = ((int32_t)0);
+int8_t const tmp58 = concat_string_dcharAt(tmp3,((int64_t)0));
+bool const tmp59 = (tmp58==((int8_t)39));
+if(tmp59){
+concat_arrayView_I1 tmp60 = concat_string_dtail(tmp3,((int64_t)1));
+int32_t tmp61 = ((int32_t)0);
 do{
-bool const tmp59 = (((int64_t)tmp58)<(tmp57.e1_length));
-int8_t const tmp60 = concat_string_dcharAt(tmp57,((int64_t)tmp58));
-bool const tmp61 = ((bool)(tmp59&(tmp60!=((int8_t)39))));
-if(!tmp61)
+bool const tmp62 = (((int64_t)tmp61)<(tmp60.e1_length));
+int8_t const tmp63 = concat_string_dcharAt(tmp60,((int64_t)tmp61));
+bool const tmp64 = ((bool)(tmp62&(tmp63!=((int8_t)39))));
+if(!tmp64)
   break;
-int8_t const tmp62 = concat_string_dcharAt(tmp57,((int64_t)tmp58));
-bool const tmp63 = (tmp62==((int8_t)92));
-if(tmp63){
-int8_t const tmp64 = concat_string_dcharAt(tmp57,((int64_t)tmp58));
-concat_updateFilePos(tmp64,(&((*arg1/*fileState*/).e0_currentPos)));
-tmp58 = ((int32_t)(tmp58+((int32_t)1)));
+int8_t const tmp65 = concat_string_dcharAt(tmp60,((int64_t)tmp61));
+bool const tmp66 = (tmp65==((int8_t)92));
+if(tmp66){
+int8_t const tmp67 = concat_string_dcharAt(tmp60,((int64_t)tmp61));
+concat_updateFilePos(tmp67,(&((*arg1/*fileState*/).e0_currentPos)));
+tmp61 = ((int32_t)(tmp61+((int32_t)1)));
 }
-int8_t const tmp65 = concat_string_dcharAt(tmp57,((int64_t)tmp58));
-concat_updateFilePos(tmp65,(&((*arg1/*fileState*/).e0_currentPos)));
-tmp58 = ((int32_t)(tmp58+((int32_t)1)));
+int8_t const tmp68 = concat_string_dcharAt(tmp60,((int64_t)tmp61));
+concat_updateFilePos(tmp68,(&((*arg1/*fileState*/).e0_currentPos)));
+tmp61 = ((int32_t)(tmp61+((int32_t)1)));
 }while(1);
-int8_t const tmp66 = concat_string_dcharAt(tmp57,((int64_t)tmp58));
-concat_updateFilePos(tmp66,(&((*arg1/*fileState*/).e0_currentPos)));
-concat_tuple109 const tmp67 = concat_string_dsplitIndex(tmp57,((int64_t)tmp58));
-concat_arrayView_I1 tmp68 = (tmp67.e0);
-concat_arrayView_I1 tmp69 = (tmp67.e1);
-return ((concat_tuple196){.e0 = tmp68,.e1 = ((concat_Token){.label=3,.data={.e3_CHAR = tmp69}})});
+int8_t const tmp69 = concat_string_dcharAt(tmp60,((int64_t)tmp61));
+concat_updateFilePos(tmp69,(&((*arg1/*fileState*/).e0_currentPos)));
+concat_tuple109 const tmp70 = concat_string_dsplitIndex(tmp60,((int64_t)tmp61));
+concat_arrayView_I1 tmp71 = (tmp70.e0);
+concat_arrayView_I1 tmp72 = (tmp70.e1);
+return ((concat_tuple196){.e0 = tmp71,.e1 = ((concat_Token){.label=3,.data={.e3_CHAR = tmp72}})});
 }
-int32_t tmp70 = ((int32_t)1);
+int32_t tmp73 = ((int32_t)1);
 do{
-bool const tmp71 = (((int64_t)tmp70)<(tmp3.e1_length));
-int8_t const tmp72 = concat_string_dcharAt(tmp3,((int64_t)tmp70));
-bool const tmp73 = concat_char_disWhitespace(tmp72);
-bool const tmp74 = ((bool)(tmp71&(!tmp73)));
-if(!tmp74)
+bool const tmp74 = (((int64_t)tmp73)<(tmp3.e1_length));
+int8_t const tmp75 = concat_string_dcharAt(tmp3,((int64_t)tmp73));
+bool const tmp76 = concat_char_disWhitespace(tmp75);
+bool const tmp77 = ((bool)(tmp74&(!tmp76)));
+if(!tmp77)
   break;
-int8_t const tmp75 = concat_string_dcharAt(tmp3,((int64_t)tmp70));
-concat_updateFilePos(tmp75,(&((*arg1/*fileState*/).e0_currentPos)));
-tmp70 = ((int32_t)(tmp70+((int32_t)1)));
+int8_t const tmp78 = concat_string_dcharAt(tmp3,((int64_t)tmp73));
+concat_updateFilePos(tmp78,(&((*arg1/*fileState*/).e0_currentPos)));
+tmp73 = ((int32_t)(tmp73+((int32_t)1)));
 }while(1);
-concat_tuple109 const tmp76 = concat_string_dcutIndex(tmp3,((int64_t)tmp70));
-concat_arrayView_I1 tmp77 = (tmp76.e0);
-concat_arrayView_I1 tmp78 = (tmp76.e1);
-bool const tmp79 = ((tmp78.e1_length)==((int64_t)0));
-if(tmp79){
-return ((concat_tuple196){.e0 = tmp77,.e1 = ((concat_Token){.label=0})});
+concat_tuple109 const tmp79 = concat_string_dcutIndex(tmp3,((int64_t)tmp73));
+concat_arrayView_I1 tmp80 = (tmp79.e0);
+concat_arrayView_I1 tmp81 = (tmp79.e1);
+bool const tmp82 = ((tmp81.e1_length)==((int64_t)0));
+if(tmp82){
+return ((concat_tuple196){.e0 = tmp80,.e1 = ((concat_Token){.label=0})});
 }
-return ((concat_tuple196){.e0 = tmp77,.e1 = ((concat_Token){.label=1,.data={.e1_IDENTIFER = tmp78}})});
+return ((concat_tuple196){.e0 = tmp80,.e1 = ((concat_Token){.label=1,.data={.e1_IDENTIFER = tmp81}})});
 }
 // ./lib/chars.concat
 //local

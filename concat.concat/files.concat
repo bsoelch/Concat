@@ -66,7 +66,7 @@ proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: public updateFilePos
   end
 end
 proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
-  0 while #dup code .length < code #over:2 string.charAt char.isWhitespace & do
+  0 while #dup code .length < if code #over string.charAt char.isWhitespace else false end do
     code #over string.charAt fileState [] .currentPos @ updateFilePos
     1 +
   end
@@ -96,12 +96,26 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
       #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
         '#' fileState [] .currentPos @ updateFilePos
         '+' fileState [] .currentPos @ updateFilePos
-        2 while #dup #over:2 .length <  #over:2 #over:2 1 - string.charAt '+' !=  #over:3 #over:3 string.charAt '#' != |  & do
+        1 =:: mut k
+        2 while #dup #over:2 .length < k 0 > & do
+          #over #over string.tail
+            #dup "+#" string.wrap string.startsWith if #drop
+              k 1 - k =
+              '+' fileState [] .currentPos @ updateFilePos
+              '#' fileState [] .currentPos @ updateFilePos
+              2 +
+              continue
+            else "#+" string.wrap string.startsWith _if
+              k 1 + k =
+              '#' fileState [] .currentPos @ updateFilePos
+              '+' fileState [] .currentPos @ updateFilePos
+              2 +
+              continue
+            end
           #over #over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
-        #over #over string.charAt fileState [] .currentPos @ updateFilePos
-        1 +
+        ## TODO error for unfinished comment at end of file
         string.tail fileState skipSpaces ## length will be checked at start of next loop
         #swap #drop true
       else #swap end

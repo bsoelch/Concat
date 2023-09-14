@@ -1,0 +1,14 @@
+entryPoint:
+## end
+## this is a comment
+1 #+ inline comment +# 1 + 2 == #assert "1+1==2"
+#+
+  comments
+  #+ can #+ be #+nested +#
+  +#
++#
++#
+
+#+# still in the comment +#
+#+#+#+ +#+# end +#
+end
