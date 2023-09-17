@@ -681,6 +681,11 @@
           #dup .in templateArgs genericArgs implPos context replaceGenericsType
           #swap .out templateArgs genericArgs implPos context replaceGenericsType
         context [] .typeContext @ newProcedure #drop return
+      closure case
+        context [] .typeContext .procTypes src .closure list.get
+          #dup .in templateArgs genericArgs implPos context replaceGenericsType
+          #swap .out templateArgs genericArgs implPos context replaceGenericsType
+        context [] .typeContext @ newClosure #drop return
       namedType case
         context [] .typeContext .namedTypes
           src .namedType
@@ -827,7 +832,7 @@
     expected switch
       undefined primitiveType autoType case
         break
-      procedure case
+      procedure closure case
         ## resolveGenericsType
           src typeContext getProcIn #drop
           expected typeContext getProcIn #drop

@@ -699,6 +699,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
       op [] .pos state appendError2
       return
     end .data [] .valType calledType =
+    calledType op [] .dataType =
   end
   calledType typeContext isCallable ! if
     "cannot call values of type " sb.wrap
@@ -831,7 +832,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     end
     inType templateIndices genericIndices op [] .pos idContext replaceGenericsType inType =
     outType templateIndices genericIndices op [] .pos idContext replaceGenericsType outType =
-    inType outType typeContext newProcedure #drop calledType =
+    inType outType typeContext
+      calledType typeContext isClosure if newClosure else newProcedure end
+    #drop calledType =
     calledType op [] .dataType =
     templateInfo optional.hasData if templateInfo .data =:: templateData
       -1 =:: mut mImpl
@@ -890,10 +893,13 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
       opDeclare list.append
     state [] .compiledOps =
   end
+  callType CallType .INTERFACE != calledType typeContext types.isClosure & if
+    calledType 0 InterfaceInfo new op [] .val .callInterface =
+  end
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
-  callType CallType .INTERFACE == if
+  callType CallType .INTERFACE == calledType typeContext types.isClosure | if
     state [] .typeStack list.peek #dup optional.isEmpty if #drop
       "type-stack underflow" sb.wrap op [] .pos state appendError2
       return

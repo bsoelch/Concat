@@ -777,6 +777,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
+    else #dup "closure(" string.wrap string.eq _if #drop
+      state offsetStaticArgs =:: prevArgs
+      LabelType .NONE "=>" string.wrap ")" string.wrap fileState state readCompositeType
+      if
+        "error while parsing procedure arguments" sb.wrap fileState [] .wordStart state appendError2
+      end
+      #swap false state [] .idContext .typeContext addrOf types.newProcArgs
+      =:: in
+      LabelType .NONE ")" string.wrap #dup  fileState state readCompositeType
+      prevArgs state resetStaticArgs
+      if
+        "error while parsing procedure return values" sb.wrap fileState [] .wordStart state appendError2
+      end
+      #swap true state [] .idContext .typeContext addrOf types.newProcArgs
+      in #swap state [] .idContext .typeContext addrOf  types.newClosure if ## TODO closure type
+        "error while creating procedure type" sb.wrap fileState [] .wordStart state appendError2
+      end
+      fileState [] .wordStart newTypeConst  state pushConst
+      "" string.wrap true return
     end
     #dup state getStaticArg #dup optional.hasData if .data
         #dup .argType

@@ -203,6 +203,9 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
     procedure case
       "proc" string.wrap t .procedure target printCompositeName
       break
+    closure case
+      "closure" string.wrap t .closure target printCompositeName
+      break
     namedType case
       t typeContext types.namedTypeName  t typeContext types.getImplId  target prog printGlobalName
       break
@@ -291,6 +294,18 @@ proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printComp
     1 +
   end #drop
 end
+proc( Type : eltType io.FILE : target Program ptr mut : prog => ) =: printInterfaceElementArgs
+  prog [] .idContext .typeContext @ =:: typeContext
+  target "(void*" io.fputs #drop
+  eltType typeContext types.getProcIn #drop =:: inType
+  inType typeContext types.compositeElts =:: args
+  0 while #dup args .length < do
+    target "," io.fputs #drop
+    args #over array.get target prog printTypeName
+    1 +
+  end #drop
+  target ");\n" io.fputs #drop
+end
 proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printInterfaceElements
   prog [] .idContext .typeContext @ =:: typeContext
   composite typeContext types.compositeElts =:: elts
@@ -301,15 +316,8 @@ proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printInte
     eltType typeContext types.getProcOut #drop target prog printTypeName
     target " (*" io.fputs #drop
     composite #over target prog printEltName
-    target ")(void*" io.fputs #drop
-    eltType typeContext types.getProcIn #drop =:: inType
-    inType typeContext types.compositeElts =:: args
-    0 while #dup args .length < do
-      target "," io.fputs #drop
-      args #over array.get target prog printTypeName
-      1 +
-    end #drop
-    target ");\n" io.fputs #drop
+    target ")" io.fputs #drop
+    eltType target prog printInterfaceElementArgs
     1 +
   end #drop
   target "void* data;\n" io.fputs #drop
@@ -361,6 +369,9 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         break
       interface case
         "interface" string.wrap t .interface "struct" string.wrap target printCompositeDeclaration
+        break
+      closure case
+        "closure" string.wrap t .closure "struct" string.wrap target printCompositeDeclaration
         break
       namedType case
         target "typedef " io.fputs #drop
@@ -450,6 +461,15 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         target "{\n" io.fputs #drop
         t target prog printInterfaceElements
         target "};\n" io.fputs #drop
+        break
+      closure case ## treat closure as anonymous interface
+        target "struct " io.fputs #drop
+        "closure" string.wrap t .closure target printCompositeName
+        target "{\n" io.fputs #drop
+        t typeContext types.getProcOut #drop target prog printTypeName
+        target " (*e0)" io.fputs #drop
+        t target prog printInterfaceElementArgs
+        target "void* data;\n};\n" io.fputs #drop
         break
     end
     1 +

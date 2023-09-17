@@ -65,6 +65,13 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
         declared list.append
       types [] =
       break
+    closure case
+      declared typeContext types.getProcIn #drop ptrLevel prog visited types declaredType
+      declared typeContext types.getProcOut #drop ptrLevel prog visited types declaredType
+      types []
+        declared list.append
+      types [] =
+      break
     procedure case
       declared typeContext types.getProcIn #drop ptrLevel prog visited types declaredType
       declared typeContext types.getProcOut #drop ptrLevel prog visited types declaredType
