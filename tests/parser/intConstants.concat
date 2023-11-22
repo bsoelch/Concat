@@ -6,4 +6,7 @@ entryPoint:
   -0x8000_0000_0000_0000 ..debug.print
   1_000_000_000 ..debug.print
   -412974129741247194 ..debug.print
+  3b100 ..debug.print
+  10b42 ..debug.print
+  62bTest ..debug.print
 end

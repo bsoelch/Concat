@@ -39,6 +39,10 @@ proc( i8 : chr i32 : base => i32 ) =: public parseDigit
   -1 return
 end
 proc( string => string i32 ) =: public resolveBase
+  #dup .length 2 < if
+    10 return
+  end
+  ## XXX? support #... for hex numbers
   #dup 0 string.charAt '0' == if
     #dup 1 string.charAt 'x' == if
       2 string.tail 16 return
@@ -48,6 +52,26 @@ proc( string => string i32 ) =: public resolveBase
       2 string.tail 2 return
     end
   end
+  ## arbitrary base numbers <BASE>b<NUMBER>
+  #dup 1 string.charAt 'b' == if
+    #dup 0 string.charAt '0' - i32 =: mut b
+    b 2 < b 9 > | if
+      10 return ## invalid base -> return unmodified string
+    end
+    2 string.tail b return
+  end
+  #dup .length 3 > if #dup 2 string.charAt 'b' == if ## two digits before b
+    #dup 0 string.charAt '0' - =:: mut b1
+    #dup 1 string.charAt '0' - =:: mut b2
+    b1 0 < b1 9 > | b2 0 < b2 9 > | | if
+      10 return ## invalid base -> return unmodified string
+    end
+    b1 10 * b2 + =:: b
+    b MAX_BASE > if
+      10 return ## invalid base -> return unmodified string
+    end
+    3 string.tail b return
+  end end
   10 return
 end
 enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR OVERFLOW ) =:: public ParserError

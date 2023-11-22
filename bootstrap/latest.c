@@ -10811,28 +10811,73 @@ return ((int32_t)-1);
 }
 concat_tuple172 concat_number_dresolveBase(concat_arrayView_I1 arg0){
 concat_arrayView_I1 tmp0 = arg0;
-int8_t const tmp1 = concat_string_dcharAt(tmp0,((int64_t)0));
-bool const tmp2 = (tmp1==((int8_t)48));
-if(tmp2){
-int8_t const tmp3 = concat_string_dcharAt(tmp0,((int64_t)1));
-bool const tmp4 = (tmp3==((int8_t)120));
-if(tmp4){
-concat_arrayView_I1 tmp5 = concat_string_dtail(tmp0,((int64_t)2));
-return ((concat_tuple172){.e0 = tmp5,.e1 = ((int32_t)16)});
+bool const tmp1 = ((tmp0.e1_length)<((int64_t)2));
+if(tmp1){
+return ((concat_tuple172){.e0 = tmp0,.e1 = ((int32_t)10)});
+}
+int8_t const tmp2 = concat_string_dcharAt(tmp0,((int64_t)0));
+bool const tmp3 = (tmp2==((int8_t)48));
+if(tmp3){
+int8_t const tmp4 = concat_string_dcharAt(tmp0,((int64_t)1));
+bool const tmp5 = (tmp4==((int8_t)120));
+if(tmp5){
+concat_arrayView_I1 tmp6 = concat_string_dtail(tmp0,((int64_t)2));
+return ((concat_tuple172){.e0 = tmp6,.e1 = ((int32_t)16)});
 }else{
-int8_t const tmp6 = concat_string_dcharAt(tmp0,((int64_t)1));
-bool const tmp7 = (tmp6==((int8_t)111));
-if(tmp7){
-concat_arrayView_I1 tmp8 = concat_string_dtail(tmp0,((int64_t)2));
-return ((concat_tuple172){.e0 = tmp8,.e1 = ((int32_t)8)});
+int8_t const tmp7 = concat_string_dcharAt(tmp0,((int64_t)1));
+bool const tmp8 = (tmp7==((int8_t)111));
+if(tmp8){
+concat_arrayView_I1 tmp9 = concat_string_dtail(tmp0,((int64_t)2));
+return ((concat_tuple172){.e0 = tmp9,.e1 = ((int32_t)8)});
 }else{
-int8_t const tmp9 = concat_string_dcharAt(tmp0,((int64_t)1));
-bool const tmp10 = (tmp9==((int8_t)98));
-if(tmp10){
-concat_arrayView_I1 tmp11 = concat_string_dtail(tmp0,((int64_t)2));
-return ((concat_tuple172){.e0 = tmp11,.e1 = ((int32_t)2)});
+int8_t const tmp10 = concat_string_dcharAt(tmp0,((int64_t)1));
+bool const tmp11 = (tmp10==((int8_t)98));
+if(tmp11){
+concat_arrayView_I1 tmp12 = concat_string_dtail(tmp0,((int64_t)2));
+return ((concat_tuple172){.e0 = tmp12,.e1 = ((int32_t)2)});
 }
 }
+}
+}
+int8_t const tmp13 = concat_string_dcharAt(tmp0,((int64_t)1));
+bool const tmp14 = (tmp13==((int8_t)98));
+if(tmp14){
+int8_t const tmp15 = concat_string_dcharAt(tmp0,((int64_t)0));
+int32_t l0_b = ((int32_t)((int8_t)(tmp15-((int8_t)48))));
+int32_t tmp16 = l0_b;
+int32_t tmp17 = l0_b;
+bool const tmp18 = ((bool)((tmp16<((int32_t)2))|(tmp17>((int32_t)9))));
+if(tmp18){
+return ((concat_tuple172){.e0 = tmp0,.e1 = ((int32_t)10)});
+}
+concat_arrayView_I1 tmp19 = concat_string_dtail(tmp0,((int64_t)2));
+return ((concat_tuple172){.e0 = tmp19,.e1 = l0_b});
+}
+bool const tmp20 = ((tmp0.e1_length)>((int64_t)3));
+if(tmp20){
+int8_t const tmp21 = concat_string_dcharAt(tmp0,((int64_t)2));
+bool const tmp22 = (tmp21==((int8_t)98));
+if(tmp22){
+int8_t const tmp23 = concat_string_dcharAt(tmp0,((int64_t)0));
+int8_t l1_b1 = ((int8_t)(tmp23-((int8_t)48)));
+int8_t const tmp24 = concat_string_dcharAt(tmp0,((int64_t)1));
+int8_t l2_b2 = ((int8_t)(tmp24-((int8_t)48)));
+int8_t tmp25 = l1_b1;
+int8_t tmp26 = l1_b1;
+int8_t tmp27 = l2_b2;
+int8_t tmp28 = l2_b2;
+bool const tmp29 = ((bool)(((bool)((((int32_t)tmp25)<((int32_t)0))|(((int32_t)tmp26)>((int32_t)9))))|((bool)((((int32_t)tmp27)<((int32_t)0))|(((int32_t)tmp28)>((int32_t)9))))));
+if(tmp29){
+return ((concat_tuple172){.e0 = tmp0,.e1 = ((int32_t)10)});
+}
+int8_t tmp30 = l1_b1;
+int32_t const l3_b = ((int32_t)(((int32_t)(((int32_t)tmp30)*((int32_t)10)))+((int32_t)l2_b2)));
+bool const tmp31 = (l3_b>((int32_t)62));
+if(tmp31){
+return ((concat_tuple172){.e0 = tmp0,.e1 = ((int32_t)10)});
+}
+concat_arrayView_I1 tmp32 = concat_string_dtail(tmp0,((int64_t)3));
+return ((concat_tuple172){.e0 = tmp32,.e1 = l3_b});
 }
 }
 return ((concat_tuple172){.e0 = tmp0,.e1 = ((int32_t)10)});
@@ -10971,7 +11016,7 @@ return true;
 default:;
 return false;
 }
-fprintf(stderr,"reached unreachable statement at ./lib/numbers.concat:127:3\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./lib/numbers.concat:151:3\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 }
 concat_tuple180 concat_number_dtryParseFloat(concat_arrayView_I1 arg0/*str*/,int32_t arg1/*base*/){
@@ -11133,7 +11178,7 @@ return ((concat_tuple180){.e0 = tmp53,.e1 = ((concat_number_dParserError){.label
 }else{
 return ((concat_tuple180){.e0 = tmp53,.e1 = ((concat_number_dParserError){.label=1})});
 }
-fprintf(stderr,"reached unreachable statement at ./lib/numbers.concat:214:71\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./lib/numbers.concat:238:71\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 }
 //templates

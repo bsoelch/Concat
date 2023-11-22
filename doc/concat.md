@@ -37,7 +37,7 @@ Examples:
 ```
 "Hello World!" i8 12 ptr =: hello   ## create a new string saying Hello World
 "Multi-line
-string \" "                   
+string \" "
 'A' i8 =: aChar 
 ```
 
@@ -45,8 +45,10 @@ string \" "
 ### numbers constants
 
 Integer literals are a sequence of digits optionally prefixed with a `-`
-after the sign you can use he prefixes `0b` for binary and `0x` for hexadecimal numbers
-within an integer literal `_` and `'` can be used as digit separators.
+After the sign you can use he prefixes `0b` for binary, `0o` for octal and `0x` for hexadecimal numbers.
+Alternatively you can specify a arbitrary base between `2` to `62` by using the base (in decimal) followed by a `b` as a prefix to the number literal.
+
+Within an integer literal `_` and `'` can be used as digit separators.
 
 The type of an integer literal is `i32` if it first in a 32-bit integer otherwise `i64`.
 
@@ -56,6 +58,7 @@ Examples:
 0b11'00'10'01         ## binary 11001001 (decimal 201)
 -0b11                 ## binary negative 3
 0x1234_5678_9abc_def0 ## a large hexadecimal number, will be interpreted as 64-bit integer
+3b121                 ## 16 in base 3
 ```
   
 ### named constants
