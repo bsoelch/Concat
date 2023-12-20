@@ -28,7 +28,6 @@ enum(
                 i32 : mut getElement
                 i32 : mut setElement
                 i32 : mut @Element
-      InterfaceInfo : mut callInterface
                 i32 : mut getArrayElement
                 i32 : mut setArrayElement
                 i32 : mut @ArrayElement
@@ -404,14 +403,6 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .@Element sb.appendI
-          break
-        callInterface case
-          "call interface ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .callInterface .baseType labelContext typeContext sb.appendType
-          " @ " sb.appendS
-          #over .val .callInterface .index sb.appendI
           break
         getArrayElement case
           "get array element ( " sb.appendS

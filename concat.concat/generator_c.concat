@@ -197,14 +197,8 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
     enum case
       "enum" string.wrap t .enum target printCompositeName
       break
-    interface case
-      "interface" string.wrap t .interface target printCompositeName
-      break
     procedure case
       "proc" string.wrap t .procedure target printCompositeName
-      break
-    closure case
-      "closure" string.wrap t .closure target printCompositeName
       break
     namedType case
       t typeContext types.namedTypeName  t typeContext types.getImplId  target prog printGlobalName
@@ -294,34 +288,6 @@ proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printComp
     1 +
   end #drop
 end
-proc( Type : eltType io.FILE : target Program ptr mut : prog => ) =: printInterfaceElementArgs
-  prog [] .idContext .typeContext @ =:: typeContext
-  target "(void*" io.fputs #drop
-  eltType typeContext types.getProcIn #drop =:: inType
-  inType typeContext types.compositeElts =:: args
-  0 while #dup args .length < do
-    target "," io.fputs #drop
-    args #over array.get target prog printTypeName
-    1 +
-  end #drop
-  target ");\n" io.fputs #drop
-end
-proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printInterfaceElements
-  prog [] .idContext .typeContext @ =:: typeContext
-  composite typeContext types.compositeElts =:: elts
-  0 while #dup elts .length < do
-    elts #over array.get #dup typeContext types.isEmpty if ## skip empty types
-      #drop 1 + continue
-    end =:: eltType
-    eltType typeContext types.getProcOut #drop target prog printTypeName
-    target " (*" io.fputs #drop
-    composite #over target prog printEltName
-    target ")" io.fputs #drop
-    eltType target prog printInterfaceElementArgs
-    1 +
-  end #drop
-  target "void* data;\n" io.fputs #drop
-end
 proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   prog [] .idContext .typeContext @ =:: typeContext
   prog getDeclaredTypes =:: types
@@ -366,12 +332,6 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         break
       enum case
         "enum" string.wrap t .enum "struct" string.wrap target printCompositeDeclaration
-        break
-      interface case
-        "interface" string.wrap t .interface "struct" string.wrap target printCompositeDeclaration
-        break
-      closure case
-        "closure" string.wrap t .closure "struct" string.wrap target printCompositeDeclaration
         break
       namedType case
         target "typedef " io.fputs #drop
@@ -455,22 +415,6 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         t target prog printCompositeElements
         target "};\n" io.fputs #drop
         break
-      interface case
-        target "struct " io.fputs #drop
-        "interface" string.wrap t .interface target printCompositeName
-        target "{\n" io.fputs #drop
-        t target prog printInterfaceElements
-        target "};\n" io.fputs #drop
-        break
-      closure case ## treat closure as anonymous interface
-        target "struct " io.fputs #drop
-        "closure" string.wrap t .closure target printCompositeName
-        target "{\n" io.fputs #drop
-        t typeContext types.getProcOut #drop target prog printTypeName
-        target " (*e0)" io.fputs #drop
-        t target prog printInterfaceElementArgs
-        target "void* data;\n};\n" io.fputs #drop
-        break
     end
     1 +
   end #drop
@@ -496,18 +440,13 @@ proc( BinaryOperator => bool ) =: isArithimeticOp
   end
 end
 ## XXX? compiler context
-proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isInterface bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
+proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t typeContext types.getProcIn #drop typeContext types.compositeEltCount =:: argCount
   target "(" io.fputs #drop
-  isInterface if
-    target "(" io.fputs #drop
-    operations index isGlobal target prog compileOp
-    target ").data" io.fputs #drop
-  end
   0 while #dup argCount < do
-    #dup 0 > isInterface | if
+    #dup 0 > if
       target "," io.fputs #drop
     end
     operations index isGlobal target prog compileOp
@@ -982,7 +921,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     callPtr case
       operations index isGlobal target prog compileOp
-      op [] .dataType operations index false isGlobal target prog compileCall
+      op [] .dataType operations index isGlobal target prog compileCall
       return
     getId case
       op [] .val .getId =:: idInfo
@@ -992,7 +931,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
         PROCEDURE case
           idInfo target prog printIdName
-          op [] .dataType operations index false isGlobal target prog compileCall
+          op [] .dataType operations index isGlobal target prog compileCall
           return
         TYPE TEMPLATE_ARG case
           break ## XXX error message
@@ -1156,10 +1095,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target ".data[0])" io.fputs #drop
       end
       target ")" io.fputs #drop
-      return
-    callInterface case
-      op [] .val .callInterface .baseType op [] .val .callInterface .index false operations index isGlobal target prog compileGetElt
-      op [] .dataType operations index true isGlobal target prog compileCall
       return
     block case
       op [] .val .block .blockType switch

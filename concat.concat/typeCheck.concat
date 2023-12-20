@@ -683,7 +683,7 @@ proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut 
   inTypes outTypes create switchBlock [] .blockType switchBlock [] .blockStart false pos state storeOutTypes
 end
 
-enum( PROC POINTER INTERFACE ) =:: CallType
+enum( PROC POINTER ) =:: CallType
 
 proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state => ) =: typeCheckCall
   #using types
@@ -832,9 +832,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     end
     inType templateIndices genericIndices op [] .pos idContext replaceGenericsType inType =
     outType templateIndices genericIndices op [] .pos idContext replaceGenericsType outType =
-    inType outType typeContext
-      calledType typeContext isClosure if newClosure else newProcedure end
-    #drop calledType =
+    inType outType typeContext newProcedure #drop calledType =
     calledType op [] .dataType =
     templateInfo optional.hasData if templateInfo .data =:: templateData
       -1 =:: mut mImpl
@@ -893,21 +891,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
       opDeclare list.append
     state [] .compiledOps =
   end
-  callType CallType .INTERFACE != calledType typeContext types.isClosure & if
-    calledType 0 InterfaceInfo new op [] .val .callInterface =
-  end
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
-  callType CallType .INTERFACE == calledType typeContext types.isClosure | if
-    state [] .typeStack list.peek #dup optional.isEmpty if #drop
-      "type-stack underflow" sb.wrap op [] .pos state appendError2
-      return
-    end .data [] .opCount =:: opCount
-    state [] .compiledOps
-      state [] .opStack .data state [] .opStack .length opCount - + opCount array.create list.appendArray
-    state [] .compiledOps =
-  end
   callType CallType .PROC != if
     1 op [] .pos state addCompiledStackOps
   end
@@ -1418,35 +1404,6 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
           return
       end
       op index state typeCheckGetElement
-      return
-    end
-  end
-  targetType typeContext isInterface if
-    targetType typeContext unwrapNamed =:: interfaceType
-    interfaceType labelName labelContext typeContext compositeFindLabel =:: index
-    index 0 >= if
-      op [] .val switch
-        getLabel case
-          interfaceType index InterfaceInfo new op [] .val .callInterface =
-          interfaceType index typeContext compositeGetElement op [] .dataType =
-          break
-        setLabel case
-          "interface labels cannot be modified" sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
-          op [] .pos state appendError2
-          return
-        @Label case
-          "cannot get the address of an interface label" sb.wrap
-          op [] .pos state appendError2
-          return
-        default
-          "unexpected operation for get label: " sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
-          op [] .pos state appendError2
-          return
-      end
-      1 false op [] .pos state extractCompositeOps
-      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .INTERFACE state typeCheckCall
       return
     end
   end
@@ -2695,7 +2652,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return ## TODO find
       end
       break
-    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen callInterface case
+    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS

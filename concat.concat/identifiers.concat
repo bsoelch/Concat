@@ -674,18 +674,11 @@
         src .procOut templateArgs genericArgs implPos context replaceGenericsComposite Type .procOut new return
       enum case
         src .enum templateArgs genericArgs implPos context replaceGenericsComposite Type .enum new return
-      interface case
-        src .interface templateArgs genericArgs implPos context replaceGenericsComposite Type .interface new return
       procedure case
         context [] .typeContext .procTypes src .procedure list.get
           #dup .in templateArgs genericArgs implPos context replaceGenericsType
           #swap .out templateArgs genericArgs implPos context replaceGenericsType
         context [] .typeContext @ newProcedure #drop return
-      closure case
-        context [] .typeContext .procTypes src .closure list.get
-          #dup .in templateArgs genericArgs implPos context replaceGenericsType
-          #swap .out templateArgs genericArgs implPos context replaceGenericsType
-        context [] .typeContext @ newClosure #drop return
       namedType case
         context [] .typeContext .namedTypes
           src .namedType
@@ -832,7 +825,7 @@
     expected switch
       undefined primitiveType autoType case
         break
-      procedure closure case
+      procedure case
         ## resolveGenericsType
           src typeContext getProcIn #drop
           expected typeContext getProcIn #drop
@@ -907,7 +900,7 @@
           expected typeContext unwrapNamed
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
-      tuple struct union labeledProcIn procIn procOut enum interface genericType templateType case
+      tuple struct union labeledProcIn procIn procOut enum genericType templateType case
         io.stdErr "unreachable\n" io.fputs #drop
         ..unreachable
         break
