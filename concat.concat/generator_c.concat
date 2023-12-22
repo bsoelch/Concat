@@ -259,9 +259,9 @@ proc( Type : t CallingConvention : callConvention bool : argNames io.FILE : targ
   end #drop
   callConvention CallingConvention .POINTER == if
     outTypes .length =:: mut N
-    outTypes N 1 - array.get typeContext types.isSmallType if
+    N 0 > if outTypes N 1 - array.get typeContext types.isSmallType if
       N 1 - N =
-    end
+    end end
     0 while #dup N < do
       hasArgs if
         target "," io.fputs #drop
@@ -475,10 +475,25 @@ proc( BinaryOperator => bool ) =: isArithimeticOp
   end
 end
 ## XXX? compiler context
-proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
+proc( Type : t CallingConvention : callConvention Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
-  t typeContext types.getProcIn #drop typeContext types.compositeEltCount =:: argCount
+  t typeContext types.getProcOut #drop typeContext types.compositeEltCount =:: mut retCount
+  t typeContext types.getProcIn #drop typeContext types.compositeEltCount
+  callConvention switch
+    STRUCT case break
+    POINTER case
+     t typeContext types.getProcOut #drop =:: outType
+     outType typeContext types.compositeEltCount =:: N
+     0 retCount =
+     N +
+     N 0 > if outType N 1 - typeContext types.compositeGetElement typeContext types.isSmallType if
+       1 -
+       1 retCount =
+     end end
+    break
+  end
+  =:: argCount
   target "(" io.fputs #drop
   0 while #dup argCount < do
     #dup 0 > if
@@ -486,9 +501,9 @@ proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlo
     end
     operations index isGlobal target prog compileOp
     1 +
-  end #drop
+  end #drop  
   target ")" io.fputs #drop
-  t typeContext types.getProcOut #drop typeContext types.compositeEltCount 0 == if
+  retCount 0 == if
     target ";\n" io.fputs #drop
   end
 end
@@ -956,7 +971,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     callPtr case
       operations index isGlobal target prog compileOp
-      op [] .dataType operations index isGlobal target prog compileCall
+      op [] .dataType CallingConvention .STRUCT operations index isGlobal target prog compileCall ## TODO pick correct calling convention
       return
     getId case
       op [] .val .getId =:: idInfo
@@ -966,7 +981,18 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
         PROCEDURE case
           idInfo target prog printIdName
-          op [] .dataType operations index isGlobal target prog compileCall
+          ## compileCall
+            op [] .dataType
+            idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
+              CallingConvention .POINTER
+            else
+              CallingConvention .STRUCT
+            end
+            operations
+            index
+            isGlobal
+            target
+          prog compileCall
           return
         TYPE TEMPLATE_ARG case
           break ## XXX error message
@@ -1225,8 +1251,40 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       end
       break
     Return case
-      op [] .dataType typeContext types.getProcOut #drop =:: retType
-      retType typeContext types.compositeEltCount =:: retCount
+      op [] .dataType op [] .val .Return typeContext types.getProcRet #drop =:: retType
+      op [] .val .Return switch
+        STRUCT case break ## no changes needed
+        POINTER case
+          op [] .dataType typeContext types.getProcOut #drop =:: outType
+          outType typeContext types.compositeEltCount
+            retType Type .undefined != if 1 - end 
+          =:: N
+          N 0 == if break end
+          outType typeContext types.compositeElts =:: outTypes
+          0 while #dup N < do
+            outTypes #over array.get typeContext types.isArray if
+              target "memcpy(" io.fputs #drop
+              #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
+              target ",(" io.fputs #drop
+              operations index isGlobal target prog compileOp
+              target ").data," io.fputs #drop
+              target "sizeof(((" io.fputs #drop
+              outTypes #over array.get target prog printTypeName
+              target "*)0)->data));\n" io.fputs #drop
+            else
+              target "*(" io.fputs #drop
+              #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
+              target ")= " io.fputs #drop
+              operations index isGlobal target prog compileOp
+              target ";\n" io.fputs #drop
+            end
+            1 +
+          end #drop
+          break
+      end
+      retType typeContext types.isComposite if
+       retType typeContext types.compositeEltCount
+      else retType Type .undefined != _if 1i64 else 0i64 end =:: retCount
       retCount 0 == if
         target "return;\n" io.fputs #drop
         return

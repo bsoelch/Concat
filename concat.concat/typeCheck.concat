@@ -685,7 +685,7 @@ end
 
 enum( PROC POINTER ) =:: CallType
 
-proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state => ) =: typeCheckCall
+proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType CallingConvention : callConvention TypeCheckState ptr mut : state => ) =: typeCheckCall
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -874,70 +874,137 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     end
     argBufferOffset state [] .idContext [] .templateArgBuffer .length = ## reset argument buffer
   end
-  resCount 1 == if
-    outType 0 typeContext compositeGetElement
-  else
-    outType
-  end =:: retType
+  Type .undefined =:: mut retType
   IdentifierInfo : mut retId
-  resCount 0 != if
-    resCount 1 == if
-      retType typeContext types.isMultiValueType
-    else false end op [] .pos state newTmpVar retId =
-    state [] .compiledOps
-        retType
-        retId
-        op [] .pos
-      opDeclare list.append
-    state [] .compiledOps =
+  IdentifierInfo list : mut retIds
+  resCount 0 == if 0i64 else
+    resCount outType resCount 1 - typeContext compositeGetElement typeContext types.isSmallType if 1 - end
+  end =:: outArgCount
+  callConvention switch
+    STRUCT case
+      resCount 1 == if
+        outType 0 typeContext compositeGetElement
+      else
+        outType
+      end retType =
+      resCount 0 != if
+        resCount 1 == if
+          retType typeContext types.isMultiValueType
+        else false end op [] .pos state newTmpVar retId =
+        state [] .compiledOps
+            retType
+            retId
+            op [] .pos
+          opDeclare list.append
+        state [] .compiledOps =
+      end
+    break
+    POINTER case
+      resCount IdentifierInfo list.create retIds =
+      0 while #dup outArgCount < do
+        outType #over typeContext compositeGetElement =:: eltType
+          true
+          op [] .pos
+          state
+        newTmpVar =:: eltId
+        state [] .compiledOps
+            eltType
+            eltId
+            op [] .pos
+          opPredeclare list.append
+        state [] .compiledOps =
+        retIds
+          eltId list.append
+        retIds =
+        1 +
+      end #drop
+      outArgCount resCount < if
+        outType outArgCount typeContext compositeGetElement retType =
+          retType typeContext types.isMultiValueType
+          op [] .pos
+          state
+        newTmpVar retId =
+        state [] .compiledOps
+            retType
+            retId
+            op [] .pos
+          opDeclare list.append
+        state [] .compiledOps =
+        retIds retId list.append retIds =
+      end
+    break
   end
   state [] .compiledOps
-    op list.appendP
+    op list.appendP ## TODO? store calling convention in operation
   state [] .compiledOps =
-  callType CallType .PROC != if
+  callType CallType .POINTER == if
     1 op [] .pos state addCompiledStackOps
   end
   inType typeContext types.compositeElts "procedure call" string.wrap op [] .pos state requireTypes
   ## XXX? check for unresolved generic arguments
   argCount op [] .pos state addCompiledStackOps
-  resCount 0 == if
-    return
+  callConvention switch
+    STRUCT case
+      resCount 0 == if
+        return
+      end
+      resCount 1 == if
+          retType
+          retId
+          op [] .pos
+        opGet =:: tmp tmp @ state pushValue
+        retType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
+        return
+      end
+      state ensureStackHeadIsValue
+      0 while #dup resCount < do
+        retType #over typeContext compositeGetElement =:: eltType
+          eltType typeContext types.isMultiValueType
+          op [] .pos
+          state
+        newTmpVar =:: eltId
+        state [] .compiledOps
+            eltType
+            eltId
+            op [] .pos
+          opDeclare list.append
+          #over op [] .pos opTupleGet
+            retType #over .dataType =
+          list.append
+            retType
+            retId
+            op [] .pos
+          opGet list.append
+        state [] .compiledOps =
+          eltType
+          eltId
+          op [] .pos
+        opGet =:: tmp tmp @ state pushValue
+        eltType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
+        1 +
+      end #drop
+    break
+    POINTER case
+      0 while #dup resCount < do
+        outType #over typeContext compositeGetElement =:: eltType
+        retIds  #over list.get =:: eltId
+        #dup outArgCount < if
+          state [] .compiledOps
+              eltType
+              eltId
+              op [] .pos
+            op@Id list.append
+          state [] .compiledOps =
+        end
+          eltType
+          eltId
+          op [] .pos
+        opGet =:: tmp tmp @ state pushValue
+        1 +
+      end #drop
+      retIds list.free #drop
+    break
   end
-  resCount 1 == if
-      retType
-      retId
-      op [] .pos
-    opGet =:: tmp tmp @ state pushValue
-    retType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
-    return
-  end
-  state ensureStackHeadIsValue
-  0 while #dup resCount < do
-    retType #over typeContext compositeGetElement =:: eltType
-      eltType typeContext types.isMultiValueType
-      op [] .pos
-      state
-    newTmpVar =:: eltId
-    state [] .compiledOps
-        eltType
-        eltId
-        op [] .pos
-      opDeclare list.append
-      #over op [] .pos opTupleGet
-        retType #over .dataType =
-      list.append
-        retType
-        retId
-        op [] .pos
-      opGet list.append
-    state [] .compiledOps =
-      eltType
-      eltId
-      op [] .pos
-    opGet =:: tmp tmp @ state pushValue
-    eltType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
-    1 +
-  end #drop
 end
 
 proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state => ) =: typeCheckGetId
@@ -986,7 +1053,17 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       return
     PROCEDURE case
       op [] .val OpValue .getId == if
-        op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap CallType .PROC state typeCheckCall
+        ## typeCheckCall
+          op
+          op [] .val .getId .templateId
+          op [] .val .getId .id @ optional.wrap
+          CallType .PROC
+          idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
+            CallingConvention .POINTER
+          else
+            CallingConvention .STRUCT
+          end
+        state typeCheckCall
         return
       end
       op [] .val OpValue .@Id == if ## TODO? store calling convention in procedure (pointer) type
@@ -2327,7 +2404,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     callPtr case
       op state checkReachable
       op state checkLocal
-      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER state typeCheckCall
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER CallingConvention .STRUCT state typeCheckCall ## TODO determine calling convention
       return
     argc case
       op state checkReachable
