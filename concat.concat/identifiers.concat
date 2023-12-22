@@ -43,17 +43,19 @@
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
     BlockType : mut blockType
     Type : currentProc
+    bool : experimental
     NamespaceImportId : prevImports
     i32 : mut flags
   ) =:: Scope
 
-  proc( BlockType : blockType Type : procType NamespaceImportId : imports => Scope ) =: newScope
+  proc( BlockType : blockType Type : procType bool : experimental NamespaceImportId : imports => Scope ) =: newScope
     idHash @
     idEq @
     128 IdentifierData map.create
     128 i8 _ ptr mut list.create
     blockType
     procType
+    experimental
     imports
     0
     Scope new return
@@ -78,7 +80,7 @@
     newConstContext
     newLabelContext
     types.newTypeContext
-    BlockType .UNKNOWN Type .undefined NAMESPACE_IMPORT_NONE newScope
+    BlockType .UNKNOWN Type .undefined false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     128 TemplateInfo      list.create
     32  ConstValue        list.create
@@ -107,20 +109,20 @@
     end
     context [] .openScopes list.peek .data [] .currentProc Type .undefined types.typeEquals return
   end
-  proc( BlockType : blockType Type : procType  IdentifierContext ptr mut : context => ) =: public openProcScope
+  proc( BlockType : blockType Type : procType bool : experimental IdentifierContext ptr mut : context => ) =: public openProcScope
     context [] .openScopes
-       blockType procType context [] .labelContext .namespaceInfo .imports newScope
+       blockType procType experimental context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
   end
   proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
     context [] .openScopes .length 0 == if
-      Type .undefined
+      Type .undefined false
     else
-      context [] .openScopes list.peek .data [] .currentProc
-    end =:: currentProc
+      context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental
+    end =:: experimental =:: currentProc
     context [] .openScopes
-       blockType currentProc context [] .labelContext .namespaceInfo .imports newScope
+       blockType currentProc experimental context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
   end
@@ -166,11 +168,11 @@
     end
     context [] .openScopes list.peek .data [] .blockType return
   end
-  proc( IdentifierContext ptr mut : context => Type ) =: public currentScopeProc
+  proc( IdentifierContext ptr mut : context => Type bool ) =: public currentScopeProc
     context [] .openScopes .length 0 == if
-      Type .undefined return
+      Type .undefined false return
     end
-    context [] .openScopes list.peek .data [] .currentProc return
+    context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental return
   end
   proc( i8 _ ptr mut list => i8 _ ptr mut list ) =: freeScopeStrings
     0 while #dup #over:2 .length < do

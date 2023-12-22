@@ -5,7 +5,7 @@
 
 "concat_" =:: CONCAT_PREFIX ## TODO? shorten to cct_ (current name for compatibility with old library C code)
 ## XXX? use separate prefix for extern procedures
-"internal_argc"            =:: ARGC_NAME
+"internal_argc"            =:: ARGC_NAME ## FIXME use different prefix for internal operations
 "internal_argv"            =:: ARGV_NAME
 "internal_main"            =:: MAIN_NAME
 "internal_checkArrayIndex" =:: CHECK_INDEX_NAME
@@ -88,6 +88,20 @@ proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => )
   labelId labelContext id.labelName =:: labelName
   64 sb.create
     "arg" sb.appendS
+    index sb.appendI
+    labelName optional.hasData if
+      "/*" sb.appendS
+      labelName .data sb.appendAsciified
+      "*/" sb.appendS
+    end
+    target #over io.fputSb #drop
+  sb.free #drop
+end
+proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => ) =: printOutArgName
+  prog [] .idContext .labelContext @ =:: labelContext
+  labelId labelContext id.labelName =:: labelName
+  64 sb.create
+    "out" sb.appendS
     index sb.appendI
     labelName optional.hasData if
       "/*" sb.appendS
@@ -222,20 +236,20 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printUnsignedType
     FLOAT64 case target "double"   io.fputs #drop break
   end
 end
-proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
+proc( Type : t CallingConvention : callConvention bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t typeContext types.getProcIn #drop =:: inType
   inType typeContext types.compositeElts =:: args
-  args .length 0 == if
-    target "(void)" io.fputs #drop
-    return
-  end
+  t typeContext types.getProcOut #drop =:: outType
+  outType typeContext types.compositeElts =:: outTypes
+  false =:: mut hasArgs
   target "(" io.fputs #drop
   0 while #dup args .length < do
-    #dup 0 > if
+    hasArgs if
       target "," io.fputs #drop
     end
+    true hasArgs =
     args #over array.get target prog printTypeName
     argNames if
       target " " io.fputs #drop
@@ -243,6 +257,27 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
     end
     1 +
   end #drop
+  callConvention CallingConvention .POINTER == if
+    outTypes .length =:: mut N
+    outTypes N 1 - array.get typeContext types.isSmallType if
+      N 1 - N =
+    end
+    0 while #dup N < do
+      hasArgs if
+        target "," io.fputs #drop
+      end
+      true hasArgs =
+      outTypes #over array.get true typeContext types.getAddressType target prog printTypeName
+      argNames if
+        target " " io.fputs #drop
+        #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
+      end
+      1 +
+    end #drop  
+  end
+  hasArgs ! if
+    target "void" io.fputs #drop
+  end
   target ")" io.fputs #drop
 end
 proc( string : name i32 : id string : cName io.FILE : target => ) =: printCompositeDeclaration
@@ -302,7 +337,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         t typeContext types.isCallable if ## procedure pointer
           t typeContext types.getBaseType =:: base
           target "typedef " io.fputs #drop
-          base typeContext types.getProcOut #drop target prog printTypeName
+          base CallingConvention .STRUCT typeContext types.getProcRet #drop target prog printTypeName
           32 sb.create
             " (*" sb.appendS
             CONCAT_PREFIX sb.appendS
@@ -311,7 +346,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
             ") " sb.appendS
             target #over io.fputSb #drop
           sb.free #drop
-          base false target prog printProcArgs
+          base CallingConvention .STRUCT false target prog printProcArgs ## XXX get call convention from type?
           target ";\n" io.fputs #drop
         end
         break
@@ -977,10 +1012,16 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           labelFlags id.FLAG_PUBLIC & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
             target "static " io.fputs #drop ## mark all non-public values as static
           end
-          op [] .dataType typeContext types.getProcOut #drop target prog printTypeName
+          labelFlags id.FLAG_EXPERIMENTAL & 0 != if CallingConvention .POINTER else CallingConvention .STRUCT end =:: callConvention
+          op [] .dataType callConvention typeContext types.getProcRet #drop target prog printTypeName
           target " " io.fputs #drop
           idInfo .labelId  idInfo .id  target prog printGlobalName
-          op [] .dataType true target prog printProcArgs
+          ## printProcArgs
+            op [] .dataType
+            callConvention
+            true
+            target
+          prog printProcArgs
           target "{\n" io.fputs #drop
           return
         LOCAL_VAR GLOBAL_VAR TMP_VAR case
@@ -1011,10 +1052,16 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           labelFlags id.FLAG_PUBLIC & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
             target "static " io.fputs #drop ## mark all non-public values as static
           end
-          op [] .dataType typeContext types.getProcOut #drop target prog printTypeName
+          labelFlags id.FLAG_EXPERIMENTAL & 0 != if CallingConvention .POINTER else CallingConvention .STRUCT end =:: callConvention
+          op [] .dataType callConvention typeContext types.getProcRet #drop target prog printTypeName
           target " " io.fputs #drop
           idInfo .labelId  idInfo .id  target prog printGlobalName
-          op [] .dataType false target prog printProcArgs
+          ## printProcArgs
+            op [] .dataType
+            callConvention
+            false
+            target
+          prog printProcArgs
           target ";\n" io.fputs #drop
           return
         LOCAL_VAR GLOBAL_VAR TMP_VAR case
@@ -1098,7 +1145,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     block case
       op [] .val .block .blockType switch
-        UNKNOWN PROCEDURE INITIALIZER case
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER case
           ## XXX error message
           break
         IF case
@@ -1169,7 +1216,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         UNKNOWN BREAK CONTINUE SWITCH INITIALIZER case
           ## XXX error message
           break
-        PROCEDURE IF ELSE WHILE CASE DEFAULT case
+        PROCEDURE EXPERIMENTAL_PROCEDURE IF ELSE WHILE CASE DEFAULT case
           target "}\n" io.fputs #drop
           return
         DO case
@@ -1398,10 +1445,16 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
       0 while #dup templateInfo [] .implementations .length < do
         target "static " io.fputs #drop ## mark all template implementations as static
         templateInfo [] .implementations #over list.at .data [] .implType mType =
-        mType typeContext types.getProcOut #drop target prog printTypeName
+        labelFlags id.FLAG_EXPERIMENTAL & 0 != if CallingConvention .POINTER else CallingConvention .STRUCT end =:: callConvention
+        mType callConvention typeContext types.getProcRet #drop target prog printTypeName
         target " " io.fputs #drop
         declaration .1 [] .labelId #over target prog printGlobalName
-        mType false target prog printProcArgs
+        ## printProcArgs
+          mType
+          callConvention
+          false
+          target
+        prog printProcArgs
         target ";\n" io.fputs #drop
         1 +
       end #drop
@@ -1415,10 +1468,16 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
       target "extern " io.fputs #drop
     end
     mType typeContext types.isProcedure if
-      mType typeContext types.getProcOut #drop target prog printTypeName
+      labelFlags id.FLAG_EXPERIMENTAL & 0 != if CallingConvention .POINTER else CallingConvention .STRUCT end =:: callConvention
+      mType callConvention typeContext types.getProcRet #drop target prog printTypeName
       target " " io.fputs #drop
       declaration .1 [] .labelId -1 target prog printGlobalName
-      mType false target prog printProcArgs
+      ## printProcArgs
+        mType
+        callConvention
+        false
+        target
+      prog printProcArgs
       target ";\n" io.fputs #drop
       continue
     end

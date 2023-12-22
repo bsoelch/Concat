@@ -989,7 +989,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         op op [] .val .getId .templateId op [] .val .getId .id @ optional.wrap CallType .PROC state typeCheckCall
         return
       end
-      op [] .val OpValue .@Id == if
+      op [] .val OpValue .@Id == if ## TODO? store calling convention in procedure (pointer) type
         ## getAddressType
           op [] .dataType
           false
@@ -1059,7 +1059,11 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
           op [] .pos
           state [] .compiledOps .length
           -1
-          BlockType .PROCEDURE
+          idInfo .labelId idContext [] .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
+           BlockType .EXPERIMENTAL_PROCEDURE
+          else
+           BlockType .PROCEDURE
+          end
         BlockInfo new list.append
       state [] .openBlocks =
       0 state [] .tmpCount =
@@ -2055,7 +2059,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             op list.appendP
           state [] .compiledOps =
           return
-        UNKNOWN PROCEDURE INITIALIZER case
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER case
           "blocks of type " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
           " are not supported" sb.appendS
@@ -2182,9 +2186,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           closed [] .blockData .switchBlock .inTypes @ freeStackState
           closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
-        PROCEDURE case
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
           closed [] .blockData .procBlock
-          op [] .pos
+            closed [] .blockType BlockType .EXPERIMENTAL_PROCEDURE == if
+              CallingConvention .POINTER
+            else
+              CallingConvention .STRUCT
+            end
+            op [] .pos
           opReturn =:: tmp
           state [] .reachable if
             tmp @ state typeCheckReturn

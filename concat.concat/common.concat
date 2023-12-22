@@ -34,3 +34,5 @@ i32 =:: public TemplateId
   -1 NamespaceImportId =: public NAMESPACE_IMPORT_NONE
   -1 TemplateId =: public TEMPLATE_ID_NONE
 #end
+
+enum( STRUCT POINTER ) =:: public CallingConvention

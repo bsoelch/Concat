@@ -375,6 +375,9 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       else #dup "private" string.wrap string.eq _if
         id.FLAG_PRIVATE flags | flags =
         true isModifer =
+      else #dup "#:experimental" string.wrap string.eq _if
+        id.FLAG_EXPERIMENTAL flags | flags =
+        true isModifer =
       else #dup "#:" string.wrap string.startsWith _if
         true isModifer =
       end
@@ -1089,6 +1092,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
       end
+      #dup [] .labelId state [] .idContext .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != =:: experimental
       state [] .idContext @ id.isTopLevel if
         #dup [] .idType IdentifierType .PROCEDURE != isInit ! | if
           state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
@@ -1105,7 +1109,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state hasConst if
           "unexpected constant at global level" sb.wrap state popConst .pos state appendError2
         end
-        BlockType .PROCEDURE valType state [] .idContext @ id.openProcScope
+        ## openProcScope
+          experimental if
+            BlockType .EXPERIMENTAL_PROCEDURE
+          else
+            BlockType .PROCEDURE
+          end
+          valType
+          experimental
+        state [] .idContext @ id.openProcScope
         #dup [] .valueType typeContext types.getProcIn if
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
         end =:: inType
@@ -1304,6 +1316,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
           Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
         typeContext types.newProcedure #drop
+        false
       state [] .idContext @ id.openProcScope
       fileState [] .wordStart opEntryPoint  state appendOp
       return
@@ -1370,10 +1383,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .DEFAULT  state [] .idContext @ id.openScope
       return
     else #dup "return" string.wrap string.eq _if #drop
-      state [] .idContext @ id.currentScopeProc
+      state [] .idContext @ id.currentScopeProc =:: experimental
         #dup Type .undefined types.typeEquals if
           "return outside procedure" sb.wrap fileState [] .wordStart state appendError2
         end
+        experimental if CallingConvention .POINTER else CallingConvention .STRUCT end
       fileState [] .wordStart opReturn state appendOp
       return
     else #dup "end" string.wrap string.eq _if #drop
