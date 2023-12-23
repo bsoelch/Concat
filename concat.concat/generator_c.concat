@@ -1282,7 +1282,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           end #drop
           break
       end
-      retType typeContext types.isComposite if
+      retType typeContext types.isProcOut if
        retType typeContext types.compositeEltCount
       else retType Type .undefined != _if 1i64 else 0i64 end =:: retCount
       retCount 0 == if

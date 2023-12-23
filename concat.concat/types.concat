@@ -192,7 +192,7 @@ end
 proc( Type TypeContext ptr => bool ) =: public isSmallType
   unwrapNamed
   switch
-    primitiveType pointer enum case true return
+    primitiveType enum pointer case true return ## XXX enum is only small if it has no values
     arrayType tuple struct union labeledProcIn procIn procOut procedure ## TODO? count tuples with size < 128 as small types
     undefined namedType autoType genericType templateType case false return
   end
@@ -483,6 +483,10 @@ end
 proc( Type TypeContext ptr => bool ) =: public isUnion
   unwrapNamed
   Type .union == return
+end
+proc( Type TypeContext ptr => bool ) =: public isProcOut
+  unwrapNamed
+  Type .procOut == return
 end
 proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
   composite context unwrapNamed
