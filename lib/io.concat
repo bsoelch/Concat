@@ -24,15 +24,28 @@
   proc( => FILE ) : extern public stdIn
   proc( => FILE ) : extern public stdOut
   proc( => FILE ) : extern public stdErr
-  
-  proc( i8 _ ptr : fileName i64 : nameLength OpenMode : mode => FILE IOError ) : extern public fopen
+
+  proc( i8 _ ptr : fileName i64 : nameLength OpenMode : mode FILE ptr mut : #:out file => IOError ) : extern public _fopen
+  proc( i8 _ ptr : fileName i64 : nameLength OpenMode : mode => FILE IOError ) =: public fopen
+    FILE : f
+    fileName nameLength mode f @ _fopen f #swap return
+  end
+
   proc( i64 : static k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) =: public fopenS
     fileName k mode fopen return
   end
   ## file buffer off count -> nRead errCode
-  proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count => i64 IOError ) : extern public fread
+  proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count i64 ptr mut : #:out N => IOError ) : extern public _fread
+  proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count => i64 IOError ) =: public fread
+    i64 : N
+    file buffer off count N @ _fread N #swap return
+  end
   ## file buffer off count -> nWritten errCode
-  proc( FILE : file i8 _ ptr     : buffer i64 : off i64 : count => i64 IOError ) : extern public fwrite
+  proc( FILE : file i8 _ ptr : buffer i64 : off i64 : count i64 ptr mut : #:out N =>  IOError ) : extern public _fwrite
+  proc( FILE : file i8 _ ptr : buffer i64 : off i64 : count => i64 IOError ) =: public fwrite
+    i64 : N
+    file buffer off count N @ _fwrite N #swap return
+  end
   proc( FILE => IOError ) : extern public fflush
   proc( FILE => IOError ) : extern public fclose
   ## XXX fseek

@@ -24,16 +24,6 @@ static const OpenMode OPEN_READ=1;
 static const OpenMode OPEN_WRITE=2;
 static const OpenMode OPEN_APPEND=4;
 
-typedef struct{
-  concat_File* e0;
-  IOError e1;
-}fileAndErr;
-typedef struct{
-  int64_t e0;
-  IOError e1;
-}i64AndErr;
-
-
 concat_File* concat_io_dstdIn(void){
   return stdin;
 }
@@ -67,11 +57,12 @@ static IOError getErrorId(int errnoVal){
 #define MAX_PATH 4096
 #endif
 static char fopenBuffer[MAX_PATH+1];//XXX make buffer thread safe
-fileAndErr concat_io_dfopen(int8_t const* nameChars,int64_t nameLength,OpenMode mode){
+IOError concat_io_d__fopen(int8_t const* nameChars,int64_t nameLength,OpenMode mode,FILE** file){
+  *file=NULL;
   char const* path=(char const*)nameChars;
   if(nameChars[nameLength-1]!='\0'){
     if(nameLength>MAX_PATH){
-      return (fileAndErr){.e0=NULL,.e1=FILE_ERR_PATH_OVERFLOW};
+      return FILE_ERR_PATH_OVERFLOW;
     }
     memcpy(fopenBuffer,nameChars,nameLength*sizeof(int8_t));
     fopenBuffer[nameLength]='\0';
@@ -92,35 +83,37 @@ fileAndErr concat_io_dfopen(int8_t const* nameChars,int64_t nameLength,OpenMode 
     }
   }
   errno=0;//reset errno
-  FILE* file=fopen(path,openMode);
-  if(file==NULL){
-    return (fileAndErr){.e0=NULL,.e1=getErrorId(errno)};
+  *file=fopen(path,openMode);
+  if(*file==NULL){
+    return getErrorId(errno);
   }
-  return (fileAndErr){.e0=file,.e1=FILE_ERR_NONE};
+  return FILE_ERR_NONE;
 }
-i64AndErr concat_io_dfread(concat_File* file,int8_t* buffer,int64_t off,int64_t count){
+IOError concat_io_d__fread(concat_File* file,int8_t* buffer,int64_t off,int64_t count,int64_t* N){
+  *N=0;
   if(file==NULL)
-    return (i64AndErr){.e0=0,.e1=FILE_ERR_INVALID_FILE};
+    return FILE_ERR_INVALID_FILE;
   clearerr(file);//reset error flags
   errno=0;//reset errno
-  int64_t n=fread(buffer+off,sizeof(int8_t),count,file);
+  *N=fread(buffer+off,sizeof(int8_t),count,file);
   if(feof(file))
-    return (i64AndErr){.e0=n,.e1=FILE_ERR_END_OF_FILE};
+    return FILE_ERR_END_OF_FILE;
   if(ferror(file))
-    return (i64AndErr){.e0=n,.e1=getErrorId(errno)};
-  return (i64AndErr){.e0=n,.e1=FILE_ERR_NONE};
+    return getErrorId(errno);
+  return FILE_ERR_NONE;
 }
-i64AndErr concat_io_dfwrite(concat_File* file,int8_t* buffer,int64_t off,int64_t count){
+IOError concat_io_d__fwrite(concat_File* file,int8_t* buffer,int64_t off,int64_t count,int64_t* N){
+  *N=0;
   if(file==NULL)
-    return (i64AndErr){.e0=0,.e1=FILE_ERR_INVALID_FILE};
+    return FILE_ERR_INVALID_FILE;
   clearerr(file);//reset error flags
   errno=0;//reset errno
-  int64_t n=fwrite(buffer+off,sizeof(int8_t),count,file);
+  *N=fwrite(buffer+off,sizeof(int8_t),count,file);
   if(feof(file))
-    return (i64AndErr){.e0=n,.e1=FILE_ERR_END_OF_FILE};
+    return FILE_ERR_END_OF_FILE;
   if(ferror(file))
-    return (i64AndErr){.e0=n,.e1=getErrorId(errno)};
-  return (i64AndErr){.e0=n,.e1=FILE_ERR_NONE};
+    return getErrorId(errno);
+  return FILE_ERR_NONE;
 }
 IOError concat_io_dfflush(concat_File* file){
   if(file==NULL)
