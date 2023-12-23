@@ -36,3 +36,6 @@ i32 =:: public TemplateId
 #end
 
 enum( STRUCT POINTER ) =:: public CallingConvention
+#namespace CallingConvention
+  CallingConvention .STRUCT =:: public DEFAULT
+#end

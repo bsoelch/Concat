@@ -1387,7 +1387,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         #dup Type .undefined types.typeEquals if
           "return outside procedure" sb.wrap fileState [] .wordStart state appendError2
         end
-        experimental if CallingConvention .POINTER else CallingConvention .STRUCT end
+        experimental if CallingConvention .POINTER else CallingConvention.DEFAULT end
       fileState [] .wordStart opReturn state appendOp
       return
     else #dup "end" string.wrap string.eq _if #drop

@@ -996,6 +996,13 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
             op@Id list.append
           state [] .compiledOps =
         end
+        1 +
+      end #drop
+      ## push values to compile time stack after adding all arguments to compiled code
+      ##  this ensures that internal stack updates do not interfere with the procedure arguments
+      0 while #dup resCount < do
+        outType #over typeContext compositeGetElement =:: eltType
+        retIds  #over list.get =:: eltId
           eltType
           eltId
           op [] .pos
@@ -1061,7 +1068,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
           idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
             CallingConvention .POINTER
           else
-            CallingConvention .STRUCT
+            CallingConvention.DEFAULT
           end
         state typeCheckCall
         return
@@ -2268,7 +2275,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             closed [] .blockType BlockType .EXPERIMENTAL_PROCEDURE == if
               CallingConvention .POINTER
             else
-              CallingConvention .STRUCT
+              CallingConvention.DEFAULT
             end
             op [] .pos
           opReturn =:: tmp
@@ -2404,7 +2411,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     callPtr case
       op state checkReachable
       op state checkLocal
-      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER CallingConvention .STRUCT state typeCheckCall ## TODO determine calling convention
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER CallingConvention.DEFAULT state typeCheckCall ## TODO determine calling convention
       return
     argc case
       op state checkReachable
