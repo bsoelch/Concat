@@ -1480,7 +1480,7 @@ concat_list_I1 concat_sb_dappendI_X63(concat_list_I1,int64_t,int32_t);
 bool concat_types_disPrimitive(concat_Type);
 static concat_23_Ftypes_dCompositeFlag const concat_23_Ftypes_dCOMP__FLAG__TUPLE;
 concat_Operation concat_opDeclare(concat_Type,concat_IdentifierInfo,concat_FilePosition);
-static void concat_28_FtypeCheckCall(concat_Operation*,concat_TemplateId,concat_optional_I16,concat_28_FCallType,concat_CallingConvention,concat_28_FTypeCheckState*);
+static void concat_28_FtypeCheckCall(concat_Operation*,concat_TemplateId,concat_optional_I16,concat_28_FCallType,concat_28_FTypeCheckState*);
 concat_arrayView_I1 concat_string_dtail(concat_arrayView_I1,int64_t);
 concat_tuple111 concat_string_dsplitLast(concat_arrayView_I1,int8_t);
 extern double concat_math_dpow(double,double);
@@ -20810,24 +20810,24 @@ concat_FilePosition tmp4 = arg1/*pos*/;
 concat_28_FstoreOutTypes(l1_inTypes,l2_outTypes,l0_create,tmp3,((*arg0/*switchBlock*/).e2_blockStart),false,tmp4,arg2/*state*/);
 return;
 }
-static void concat_28_FtypeCheckCall(concat_Operation* arg0/*op*/,concat_TemplateId arg1/*templateId*/,concat_optional_I16 arg2/*templateImpl*/,concat_28_FCallType arg3/*callType*/,concat_CallingConvention arg4/*callConvention*/,concat_28_FTypeCheckState* arg5/*state*/){
-concat_IdentifierContext* const l0_idContext = ((*arg5/*state*/).e0_idContext);
+static void concat_28_FtypeCheckCall(concat_Operation* arg0/*op*/,concat_TemplateId arg1/*templateId*/,concat_optional_I16 arg2/*templateImpl*/,concat_28_FCallType arg3/*callType*/,concat_28_FTypeCheckState* arg4/*state*/){
+concat_IdentifierContext* const l0_idContext = ((*arg4/*state*/).e0_idContext);
 concat_LabelContext* const l1_labelContext = (&((*l0_idContext).e1_labelContext));
 concat_TypeContext* const l2_typeContext = (&((*l0_idContext).e2_typeContext));
 concat_Type l3_calledType = ((*arg0/*op*/).e1_dataType);
 bool const tmp0 = (arg3/*callType*/.label==1);
 if(tmp0){
-concat_optional_I31 tmp1 = concat_list_dpeek_I3(((*arg5/*state*/).e3_typeStack));
+concat_optional_I31 tmp1 = concat_list_dpeek_I3(((*arg4/*state*/).e3_typeStack));
 bool const tmp2 = concat_optional_disEmpty_I5(tmp1);
 if(tmp2){
 concat_list_I1 tmp3 = concat_sb_dwrap(((int64_t)30),((int8_t const*)"missing argument for operation"));
 concat_Operation tmp4 = (*arg0/*op*/);
 concat_list_I1 tmp5 = concat_sb_dappendOp(tmp3,tmp4,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
 concat_FilePosition tmp6 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp5,tmp6,arg5/*state*/);
+concat_28_FappendError2(tmp5,tmp6,arg4/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp1.label,1,"./concat.concat/typeCheck.concat:701:9");
+concat_internal_checkEnumIndex(tmp1.label,1,"./concat.concat/typeCheck.concat:700:9");
 concat_28_FTypeInfo* const tmp7 = (tmp1.data.e1_data);
 l3_calledType = ((*tmp7).e0_valType);
 concat_Type tmp8 = l3_calledType;
@@ -20841,7 +20841,7 @@ concat_list_I1 tmp12 = concat_sb_dwrap(((int64_t)27),((int8_t const*)"cannot cal
 concat_Type tmp13 = l3_calledType;
 concat_list_I1 tmp14 = concat_sb_dappendType(tmp12,tmp13,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
 concat_FilePosition tmp15 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp14,tmp15,arg5/*state*/);
+concat_28_FappendError2(tmp14,tmp15,arg4/*state*/);
 return;
 }
 concat_Type tmp16 = l3_calledType;
@@ -20862,573 +20862,584 @@ concat_tuple265 const tmp25 = concat_types_dgetProcOut(tmp24,((concat_TypeContex
 concat_Type tmp26 = (tmp25.e0);
 bool const tmp27 = (tmp25.e1);
 concat_Type l5_outType = tmp26;
-concat_Type tmp28 = l4_inType;
-int64_t const tmp29 = concat_types_dcompositeEltCount(tmp28,l2_typeContext);
-int64_t const l6_argCount = tmp29;
-concat_Type tmp30 = l5_outType;
-int64_t const tmp31 = concat_types_dcompositeEltCount(tmp30,l2_typeContext);
-int64_t const l7_resCount = tmp31;
-concat_Type tmp32 = l3_calledType;
-bool const tmp33 = concat_types_dhasStaticArgs(tmp32,l2_typeContext);
-bool const tmp34 = ((bool)((arg1/*templateId*/!=((concat_TemplateId)-1))|tmp33));
-if(tmp34){
-bool const tmp35 = (arg1/*templateId*/!=((concat_TemplateId)-1));
-concat_optional_I10 tmp38;
-if(tmp35){
-concat_list_I20 tmp36 = ((*l0_idContext).e5_templateInfos);
-concat_optional_I10 tmp37 = concat_list_dat_I12(tmp36,((int64_t)arg1/*templateId*/));
-tmp38 = tmp37;
+concat_Type tmp28 = l3_calledType;
+concat_tuple297 const tmp29 = concat_types_dgetCallConvention(tmp28,((concat_TypeContext const*)l2_typeContext));
+concat_CallingConvention tmp30 = (tmp29.e0);
+bool const tmp31 = (tmp29.e1);
+concat_CallingConvention l6_callConvention = tmp30;
+concat_Type tmp32 = l4_inType;
+int64_t const tmp33 = concat_types_dcompositeEltCount(tmp32,l2_typeContext);
+int64_t const l7_argCount = tmp33;
+concat_Type tmp34 = l5_outType;
+int64_t const tmp35 = concat_types_dcompositeEltCount(tmp34,l2_typeContext);
+int64_t const l8_resCount = tmp35;
+concat_Type tmp36 = l3_calledType;
+bool const tmp37 = concat_types_dhasStaticArgs(tmp36,l2_typeContext);
+bool const tmp38 = ((bool)((arg1/*templateId*/!=((concat_TemplateId)-1))|tmp37));
+if(tmp38){
+bool const tmp39 = (arg1/*templateId*/!=((concat_TemplateId)-1));
+concat_optional_I10 tmp42;
+if(tmp39){
+concat_list_I20 tmp40 = ((*l0_idContext).e5_templateInfos);
+concat_optional_I10 tmp41 = concat_list_dat_I12(tmp40,((int64_t)arg1/*templateId*/));
+tmp42 = tmp41;
 }else{
-concat_optional_I10 tmp39 = concat_optional_dempty_I8();
-tmp38 = tmp39;
+concat_optional_I10 tmp43 = concat_optional_dempty_I8();
+tmp42 = tmp43;
 }
-concat_optional_I10 const l8_templateInfo = tmp38;
-bool const tmp40 = concat_optional_dhasData_I7(l8_templateInfo);
-int32_t tmp44;
-if(tmp40){
-concat_internal_checkEnumIndex(l8_templateInfo.label,1,"./concat.concat/typeCheck.concat:725:20");
-concat_TemplateInfo* const tmp41 = (l8_templateInfo.data.e1_data);
-concat_Type tmp42 = ((*tmp41).e0_templateType);
-int64_t const tmp43 = concat_types_dcompositeEltCount(tmp42,l2_typeContext);
-tmp44 = ((int32_t)tmp43);
+concat_optional_I10 const l9_templateInfo = tmp42;
+bool const tmp44 = concat_optional_dhasData_I7(l9_templateInfo);
+int32_t tmp48;
+if(tmp44){
+concat_internal_checkEnumIndex(l9_templateInfo.label,1,"./concat.concat/typeCheck.concat:724:20");
+concat_TemplateInfo* const tmp45 = (l9_templateInfo.data.e1_data);
+concat_Type tmp46 = ((*tmp45).e0_templateType);
+int64_t const tmp47 = concat_types_dcompositeEltCount(tmp46,l2_typeContext);
+tmp48 = ((int32_t)tmp47);
 }else{
-tmp44 = ((int32_t)0);
+tmp48 = ((int32_t)0);
 }
-int32_t const l9_templateCount = tmp44;
-concat_Type tmp45 = l3_calledType;
-bool const tmp46 = concat_types_dhasStaticArgs(tmp45,l2_typeContext);
-int32_t tmp47;
-if(tmp46){
-tmp47 = ((int32_t)l6_argCount);
+int32_t const l10_templateCount = tmp48;
+concat_Type tmp49 = l3_calledType;
+bool const tmp50 = concat_types_dhasStaticArgs(tmp49,l2_typeContext);
+int32_t tmp51;
+if(tmp50){
+tmp51 = ((int32_t)l7_argCount);
 }else{
-tmp47 = ((int32_t)0);
+tmp51 = ((int32_t)0);
 }
-int32_t const l10_staticArgCount = tmp47;
-concat_IdentifierContext* const tmp48 = ((*arg5/*state*/).e0_idContext);
-int64_t const l11_argBufferOffset = (((*tmp48).e6_templateArgBuffer).e1_length);
-concat_IdentifierContext* const tmp49 = ((*arg5/*state*/).e0_idContext);
-concat_list_I14* const l12_argValues = (&((*tmp49).e6_templateArgBuffer));
-concat_list_I14 tmp50 = (*l12_argValues);
-concat_list_I14 tmp51 = concat_list_densureCap_I2(tmp50,((int64_t)(l11_argBufferOffset+((int64_t)((int32_t)(l9_templateCount+l10_staticArgCount))))));
-(*l12_argValues) = tmp51;
-concat_ConstValue* tmp52 = ((*l12_argValues).e0_data);
-concat_ConstValue* const tmp53 = concat_mem_dclear(((size_t)sizeof(concat_ConstValue)),((concat_ConstValue*)(tmp52+l11_argBufferOffset)),((int64_t)((int32_t)(l9_templateCount+l10_staticArgCount))));
-int64_t tmp54 = ((*l12_argValues).e1_length);
-((*l12_argValues).e1_length) = ((int64_t)(tmp54+((int64_t)((int32_t)(l9_templateCount+l10_staticArgCount)))));
-concat_Type tmp55 = l4_inType;
-concat_Type tmp56 = l4_inType;
-concat_types_dresolveGenericsType(tmp55,tmp56,l9_templateCount,l10_staticArgCount,l12_argValues,l11_argBufferOffset,l0_idContext);
-bool const tmp57 = (l9_templateCount>((int32_t)0));
-if(tmp57){
-concat_internal_checkEnumIndex(l8_templateInfo.label,1,"./concat.concat/typeCheck.concat:740:20");
-concat_TemplateInfo* const tmp58 = (l8_templateInfo.data.e1_data);
-concat_Type tmp59 = ((*tmp58).e0_templateType);
-concat_arrayView_I3 tmp60 = concat_types_dcompositeElts(tmp59,l2_typeContext);
-concat_arrayView_I3 const l13_templateArgs = tmp60;
-int32_t tmp61 = ((int32_t)(l9_templateCount-((int32_t)1)));
+int32_t const l11_staticArgCount = tmp51;
+concat_IdentifierContext* const tmp52 = ((*arg4/*state*/).e0_idContext);
+int64_t const l12_argBufferOffset = (((*tmp52).e6_templateArgBuffer).e1_length);
+concat_IdentifierContext* const tmp53 = ((*arg4/*state*/).e0_idContext);
+concat_list_I14* const l13_argValues = (&((*tmp53).e6_templateArgBuffer));
+concat_list_I14 tmp54 = (*l13_argValues);
+concat_list_I14 tmp55 = concat_list_densureCap_I2(tmp54,((int64_t)(l12_argBufferOffset+((int64_t)((int32_t)(l10_templateCount+l11_staticArgCount))))));
+(*l13_argValues) = tmp55;
+concat_ConstValue* tmp56 = ((*l13_argValues).e0_data);
+concat_ConstValue* const tmp57 = concat_mem_dclear(((size_t)sizeof(concat_ConstValue)),((concat_ConstValue*)(tmp56+l12_argBufferOffset)),((int64_t)((int32_t)(l10_templateCount+l11_staticArgCount))));
+int64_t tmp58 = ((*l13_argValues).e1_length);
+((*l13_argValues).e1_length) = ((int64_t)(tmp58+((int64_t)((int32_t)(l10_templateCount+l11_staticArgCount)))));
+concat_Type tmp59 = l4_inType;
+concat_Type tmp60 = l4_inType;
+concat_types_dresolveGenericsType(tmp59,tmp60,l10_templateCount,l11_staticArgCount,l13_argValues,l12_argBufferOffset,l0_idContext);
+bool const tmp61 = (l10_templateCount>((int32_t)0));
+if(tmp61){
+concat_internal_checkEnumIndex(l9_templateInfo.label,1,"./concat.concat/typeCheck.concat:739:20");
+concat_TemplateInfo* const tmp62 = (l9_templateInfo.data.e1_data);
+concat_Type tmp63 = ((*tmp62).e0_templateType);
+concat_arrayView_I3 tmp64 = concat_types_dcompositeElts(tmp63,l2_typeContext);
+concat_arrayView_I3 const l14_templateArgs = tmp64;
+int32_t tmp65 = ((int32_t)(l10_templateCount-((int32_t)1)));
 do{
-bool const tmp62 = (tmp61>=((int32_t)0));
-if(!tmp62)
+bool const tmp66 = (tmp65>=((int32_t)0));
+if(!tmp66)
   break;
-concat_list_I14 tmp63 = (*l12_argValues);
-concat_ConstValue tmp64 = concat_list_dget_I6(tmp63,((int64_t)(((int64_t)tmp61)+l11_argBufferOffset)));
-bool const tmp65 = (tmp64.label==0);
-if(tmp65){
-concat_optional_I31 tmp66 = concat_list_dpeek_I3(((*arg5/*state*/).e3_typeStack));
-bool const tmp67 = concat_optional_disEmpty_I5(tmp66);
-if(tmp67){
-concat_list_I1 tmp68 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
-concat_FilePosition tmp69 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp68,tmp69,arg5/*state*/);
+concat_list_I14 tmp67 = (*l13_argValues);
+concat_ConstValue tmp68 = concat_list_dget_I6(tmp67,((int64_t)(((int64_t)tmp65)+l12_argBufferOffset)));
+bool const tmp69 = (tmp68.label==0);
+if(tmp69){
+concat_optional_I31 tmp70 = concat_list_dpeek_I3(((*arg4/*state*/).e3_typeStack));
+bool const tmp71 = concat_optional_disEmpty_I5(tmp70);
+if(tmp71){
+concat_list_I1 tmp72 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
+concat_FilePosition tmp73 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp72,tmp73,arg4/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp66.label,1,"./concat.concat/typeCheck.concat:746:15");
-concat_28_FTypeInfo* const l14_typeInfo = (tmp66.data.e1_data);
-concat_optional_I12 tmp70 = concat_list_dpeek_I0(((*arg5/*state*/).e2_opStack));
-concat_internal_checkEnumIndex(tmp70.label,1,"./concat.concat/typeCheck.concat:747:39");
-concat_Operation* const l15_argValue = (tmp70.data.e1_data);
-int32_t tmp71 = ((*l14_typeInfo).e1_opCount);
-bool const tmp72 = ((bool)((tmp71!=((int32_t)1))|(((*l15_argValue).e0_val).label!=2)));
-if(tmp72){
-concat_list_I1 tmp73 = concat_sb_dwrap(((int64_t)39),((int8_t const*)"template arguments have to be constants"));
-concat_FilePosition tmp74 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp73,tmp74,arg5/*state*/);
+concat_internal_checkEnumIndex(tmp70.label,1,"./concat.concat/typeCheck.concat:745:15");
+concat_28_FTypeInfo* const l15_typeInfo = (tmp70.data.e1_data);
+concat_optional_I12 tmp74 = concat_list_dpeek_I0(((*arg4/*state*/).e2_opStack));
+concat_internal_checkEnumIndex(tmp74.label,1,"./concat.concat/typeCheck.concat:746:39");
+concat_Operation* const l16_argValue = (tmp74.data.e1_data);
+int32_t tmp75 = ((*l15_typeInfo).e1_opCount);
+bool const tmp76 = ((bool)((tmp75!=((int32_t)1))|(((*l16_argValue).e0_val).label!=2)));
+if(tmp76){
+concat_list_I1 tmp77 = concat_sb_dwrap(((int64_t)39),((int8_t const*)"template arguments have to be constants"));
+concat_FilePosition tmp78 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp77,tmp78,arg4/*state*/);
 return;
 }
-int64_t tmp75 = (((*arg5/*state*/).e2_opStack).e1_length);
-(((*arg5/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp75-((int64_t)((*l14_typeInfo).e1_opCount))));
-int64_t tmp76 = (((*arg5/*state*/).e3_typeStack).e1_length);
-(((*arg5/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp76-((int64_t)1)));
-concat_Type tmp77 = ((*l15_argValue).e1_dataType);
-concat_arrayView_I3 tmp78 = l13_templateArgs;
-concat_Type tmp79 = concat_array_dget_I2(tmp78,((int64_t)tmp61));
-bool const tmp80 = concat_types_dcanCast(tmp77,tmp79,false,l2_typeContext);
-bool const tmp81 = (!tmp80);
-if(tmp81){
-concat_list_I1 tmp82 = concat_sb_dwrap(((int64_t)11),((int8_t const*)"cannot cast"));
-concat_Type tmp83 = ((*l15_argValue).e1_dataType);
-concat_list_I1 tmp84 = concat_sb_dappendType(tmp82,tmp83,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp85 = concat_sb_dappendS(tmp84,((int64_t)4),((int8_t const*)" to "));
-concat_arrayView_I3 tmp86 = l13_templateArgs;
-concat_Type tmp87 = concat_array_dget_I2(tmp86,((int64_t)tmp61));
-concat_list_I1 tmp88 = concat_sb_dappendType(tmp85,tmp87,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp89 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp88,tmp89,arg5/*state*/);
-tmp61 = ((int32_t)(tmp61-((int32_t)1)));
+int64_t tmp79 = (((*arg4/*state*/).e2_opStack).e1_length);
+(((*arg4/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp79-((int64_t)((*l15_typeInfo).e1_opCount))));
+int64_t tmp80 = (((*arg4/*state*/).e3_typeStack).e1_length);
+(((*arg4/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp80-((int64_t)1)));
+concat_Type tmp81 = ((*l16_argValue).e1_dataType);
+concat_arrayView_I3 tmp82 = l14_templateArgs;
+concat_Type tmp83 = concat_array_dget_I2(tmp82,((int64_t)tmp65));
+bool const tmp84 = concat_types_dcanCast(tmp81,tmp83,false,l2_typeContext);
+bool const tmp85 = (!tmp84);
+if(tmp85){
+concat_list_I1 tmp86 = concat_sb_dwrap(((int64_t)11),((int8_t const*)"cannot cast"));
+concat_Type tmp87 = ((*l16_argValue).e1_dataType);
+concat_list_I1 tmp88 = concat_sb_dappendType(tmp86,tmp87,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp89 = concat_sb_dappendS(tmp88,((int64_t)4),((int8_t const*)" to "));
+concat_arrayView_I3 tmp90 = l14_templateArgs;
+concat_Type tmp91 = concat_array_dget_I2(tmp90,((int64_t)tmp65));
+concat_list_I1 tmp92 = concat_sb_dappendType(tmp89,tmp91,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp93 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp92,tmp93,arg4/*state*/);
+tmp65 = ((int32_t)(tmp65-((int32_t)1)));
 continue;
 }
-concat_OpValue* const tmp90 = (&((*l15_argValue).e0_val));
-concat_internal_checkEnumIndex((*tmp90).label,2,"./concat.concat/typeCheck.concat:763:28");
-concat_ConstValue tmp91 = ((*tmp90).data.e2_Constant);
-concat_list_I14 tmp92 = (*l12_argValues);
-concat_list_dset_I1(tmp91,tmp92,((int64_t)(((int64_t)tmp61)+l11_argBufferOffset)));
+concat_OpValue* const tmp94 = (&((*l16_argValue).e0_val));
+concat_internal_checkEnumIndex((*tmp94).label,2,"./concat.concat/typeCheck.concat:762:28");
+concat_ConstValue tmp95 = ((*tmp94).data.e2_Constant);
+concat_list_I14 tmp96 = (*l13_argValues);
+concat_list_dset_I1(tmp95,tmp96,((int64_t)(((int64_t)tmp65)+l12_argBufferOffset)));
 }
-tmp61 = ((int32_t)(tmp61-((int32_t)1)));
+tmp65 = ((int32_t)(tmp65-((int32_t)1)));
 }while(1);
 }
-int64_t l16_typeOffset = (((*arg5/*state*/).e3_typeStack).e1_length);
-int64_t l17_opOffset = (((*arg5/*state*/).e2_opStack).e1_length);
-concat_Type tmp93 = l4_inType;
-concat_arrayView_I3 tmp94 = concat_types_dcompositeElts(tmp93,l2_typeContext);
-concat_arrayView_I3 const l18_inTypes = tmp94;
-int32_t tmp95 = ((int32_t)(((int32_t)l6_argCount)-((int32_t)1)));
+int64_t l17_typeOffset = (((*arg4/*state*/).e3_typeStack).e1_length);
+int64_t l18_opOffset = (((*arg4/*state*/).e2_opStack).e1_length);
+concat_Type tmp97 = l4_inType;
+concat_arrayView_I3 tmp98 = concat_types_dcompositeElts(tmp97,l2_typeContext);
+concat_arrayView_I3 const l19_inTypes = tmp98;
+int32_t tmp99 = ((int32_t)(((int32_t)l7_argCount)-((int32_t)1)));
 do{
-bool const tmp96 = (tmp95>=((int32_t)0));
-if(!tmp96)
+bool const tmp100 = (tmp99>=((int32_t)0));
+if(!tmp100)
   break;
-concat_arrayView_I3 tmp97 = l18_inTypes;
-concat_Type tmp98 = concat_array_dget_I2(tmp97,((int64_t)tmp95));
-concat_Type const l19_argType = tmp98;
-concat_Type tmp99 = l4_inType;
-concat_LabelId const tmp100 = concat_types_dcompositeGetLabel(tmp99,tmp95,l2_typeContext);
-concat_LabelFlag const tmp101 = concat_id_dlabelFlags(tmp100,((concat_LabelContext const*)l1_labelContext));
-bool const tmp102 = (((concat_LabelFlag)(tmp101&((concat_LabelFlag)2)))!=((int32_t)0));
-if(tmp102){
-concat_list_I14 tmp103 = (*l12_argValues);
-concat_ConstValue tmp104 = concat_list_dget_I6(tmp103,((int64_t)(((int64_t)((int32_t)(l9_templateCount+tmp95)))+l11_argBufferOffset)));
-concat_ConstValue const l20_constVal = tmp104;
-bool const tmp105 = (l20_constVal.label!=0);
-if(tmp105){
-concat_list_I33 tmp106 = ((*arg5/*state*/).e3_typeStack);
-concat_28_FTypeInfo tmp107 = concat_28_FnewTypeInfo(l19_argType);
-concat_list_I33 tmp108 = concat_list_dinsert_I0(tmp106,tmp107,l16_typeOffset);
-((*arg5/*state*/).e3_typeStack) = tmp108;
-concat_list_I24 tmp109 = ((*arg5/*state*/).e2_opStack);
-concat_ConstValue tmp110 = l20_constVal;
-concat_Type tmp111 = l19_argType;
-concat_Operation tmp112 = concat_opConst(tmp110,tmp111,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp113 = concat_list_dinsert_I1(tmp109,tmp112,l17_opOffset);
-((*arg5/*state*/).e2_opStack) = tmp113;
-tmp95 = ((int32_t)(tmp95-((int32_t)1)));
+concat_arrayView_I3 tmp101 = l19_inTypes;
+concat_Type tmp102 = concat_array_dget_I2(tmp101,((int64_t)tmp99));
+concat_Type const l20_argType = tmp102;
+concat_Type tmp103 = l4_inType;
+concat_LabelId const tmp104 = concat_types_dcompositeGetLabel(tmp103,tmp99,l2_typeContext);
+concat_LabelFlag const tmp105 = concat_id_dlabelFlags(tmp104,((concat_LabelContext const*)l1_labelContext));
+bool const tmp106 = (((concat_LabelFlag)(tmp105&((concat_LabelFlag)2)))!=((int32_t)0));
+if(tmp106){
+concat_list_I14 tmp107 = (*l13_argValues);
+concat_ConstValue tmp108 = concat_list_dget_I6(tmp107,((int64_t)(((int64_t)((int32_t)(l10_templateCount+tmp99)))+l12_argBufferOffset)));
+concat_ConstValue const l21_constVal = tmp108;
+bool const tmp109 = (l21_constVal.label!=0);
+if(tmp109){
+concat_list_I33 tmp110 = ((*arg4/*state*/).e3_typeStack);
+concat_28_FTypeInfo tmp111 = concat_28_FnewTypeInfo(l20_argType);
+concat_list_I33 tmp112 = concat_list_dinsert_I0(tmp110,tmp111,l17_typeOffset);
+((*arg4/*state*/).e3_typeStack) = tmp112;
+concat_list_I24 tmp113 = ((*arg4/*state*/).e2_opStack);
+concat_ConstValue tmp114 = l21_constVal;
+concat_Type tmp115 = l20_argType;
+concat_Operation tmp116 = concat_opConst(tmp114,tmp115,((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp117 = concat_list_dinsert_I1(tmp113,tmp116,l18_opOffset);
+((*arg4/*state*/).e2_opStack) = tmp117;
+tmp99 = ((int32_t)(tmp99-((int32_t)1)));
 continue;
 }
-int64_t tmp114 = l16_typeOffset;
-l16_typeOffset = ((int64_t)(tmp114-((int64_t)1)));
-concat_list_I33 tmp115 = ((*arg5/*state*/).e3_typeStack);
-concat_optional_I31 tmp116 = concat_list_dat_I13(tmp115,l16_typeOffset);
-bool const tmp117 = concat_optional_disEmpty_I5(tmp116);
-if(tmp117){
-concat_list_I1 tmp118 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
-concat_FilePosition tmp119 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp118,tmp119,arg5/*state*/);
+int64_t tmp118 = l17_typeOffset;
+l17_typeOffset = ((int64_t)(tmp118-((int64_t)1)));
+concat_list_I33 tmp119 = ((*arg4/*state*/).e3_typeStack);
+concat_optional_I31 tmp120 = concat_list_dat_I13(tmp119,l17_typeOffset);
+bool const tmp121 = concat_optional_disEmpty_I5(tmp120);
+if(tmp121){
+concat_list_I1 tmp122 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
+concat_FilePosition tmp123 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp122,tmp123,arg4/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp116.label,1,"./concat.concat/typeCheck.concat:794:13");
-concat_28_FTypeInfo* const l21_typeInfo = (tmp116.data.e1_data);
-int64_t tmp120 = l17_opOffset;
-l17_opOffset = ((int64_t)(tmp120-((int64_t)((*l21_typeInfo).e1_opCount))));
-int32_t tmp121 = ((*l21_typeInfo).e1_opCount);
-concat_list_I24 tmp122 = ((*arg5/*state*/).e2_opStack);
-concat_optional_I12 tmp123 = concat_list_dat_I14(tmp122,l17_opOffset);
-concat_internal_checkEnumIndex(tmp123.label,1,"./concat.concat/typeCheck.concat:796:70");
-concat_Operation* const tmp124 = (tmp123.data.e1_data);
-bool const tmp125 = ((bool)((tmp121!=((int32_t)1))|(((*tmp124).e0_val).label!=2)));
-if(tmp125){
-concat_list_I1 tmp126 = concat_sb_dwrap(((int64_t)37),((int8_t const*)"static arguments have to be constants"));
-concat_FilePosition tmp127 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp126,tmp127,arg5/*state*/);
+concat_internal_checkEnumIndex(tmp120.label,1,"./concat.concat/typeCheck.concat:793:13");
+concat_28_FTypeInfo* const l22_typeInfo = (tmp120.data.e1_data);
+int64_t tmp124 = l18_opOffset;
+l18_opOffset = ((int64_t)(tmp124-((int64_t)((*l22_typeInfo).e1_opCount))));
+int32_t tmp125 = ((*l22_typeInfo).e1_opCount);
+concat_list_I24 tmp126 = ((*arg4/*state*/).e2_opStack);
+concat_optional_I12 tmp127 = concat_list_dat_I14(tmp126,l18_opOffset);
+concat_internal_checkEnumIndex(tmp127.label,1,"./concat.concat/typeCheck.concat:795:70");
+concat_Operation* const tmp128 = (tmp127.data.e1_data);
+bool const tmp129 = ((bool)((tmp125!=((int32_t)1))|(((*tmp128).e0_val).label!=2)));
+if(tmp129){
+concat_list_I1 tmp130 = concat_sb_dwrap(((int64_t)37),((int8_t const*)"static arguments have to be constants"));
+concat_FilePosition tmp131 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp130,tmp131,arg4/*state*/);
 return;
 }
-concat_list_I24 tmp128 = ((*arg5/*state*/).e2_opStack);
-concat_optional_I12 tmp129 = concat_list_dat_I14(tmp128,l17_opOffset);
-concat_internal_checkEnumIndex(tmp129.label,1,"./concat.concat/typeCheck.concat:800:44");
-concat_Operation* const l22_argValue = (tmp129.data.e1_data);
-concat_Type tmp130 = ((*l22_argValue).e1_dataType);
-concat_arrayView_I3 tmp131 = l18_inTypes;
-concat_Type tmp132 = concat_array_dget_I2(tmp131,((int64_t)tmp95));
-bool const tmp133 = concat_types_dcanCast(tmp130,tmp132,false,l2_typeContext);
-bool const tmp134 = (!tmp133);
-if(tmp134){
-concat_list_I1 tmp135 = concat_sb_dwrap(((int64_t)11),((int8_t const*)"cannot cast"));
-concat_Type tmp136 = ((*l22_argValue).e1_dataType);
-concat_list_I1 tmp137 = concat_sb_dappendType(tmp135,tmp136,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp138 = concat_sb_dappendS(tmp137,((int64_t)4),((int8_t const*)" to "));
-concat_arrayView_I3 tmp139 = l18_inTypes;
-concat_Type tmp140 = concat_array_dget_I2(tmp139,((int64_t)tmp95));
-concat_list_I1 tmp141 = concat_sb_dappendType(tmp138,tmp140,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp142 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp141,tmp142,arg5/*state*/);
-tmp95 = ((int32_t)(tmp95-((int32_t)1)));
+concat_list_I24 tmp132 = ((*arg4/*state*/).e2_opStack);
+concat_optional_I12 tmp133 = concat_list_dat_I14(tmp132,l18_opOffset);
+concat_internal_checkEnumIndex(tmp133.label,1,"./concat.concat/typeCheck.concat:799:44");
+concat_Operation* const l23_argValue = (tmp133.data.e1_data);
+concat_Type tmp134 = ((*l23_argValue).e1_dataType);
+concat_arrayView_I3 tmp135 = l19_inTypes;
+concat_Type tmp136 = concat_array_dget_I2(tmp135,((int64_t)tmp99));
+bool const tmp137 = concat_types_dcanCast(tmp134,tmp136,false,l2_typeContext);
+bool const tmp138 = (!tmp137);
+if(tmp138){
+concat_list_I1 tmp139 = concat_sb_dwrap(((int64_t)11),((int8_t const*)"cannot cast"));
+concat_Type tmp140 = ((*l23_argValue).e1_dataType);
+concat_list_I1 tmp141 = concat_sb_dappendType(tmp139,tmp140,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp142 = concat_sb_dappendS(tmp141,((int64_t)4),((int8_t const*)" to "));
+concat_arrayView_I3 tmp143 = l19_inTypes;
+concat_Type tmp144 = concat_array_dget_I2(tmp143,((int64_t)tmp99));
+concat_list_I1 tmp145 = concat_sb_dappendType(tmp142,tmp144,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp146 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp145,tmp146,arg4/*state*/);
+tmp99 = ((int32_t)(tmp99-((int32_t)1)));
 continue;
 }
-concat_OpValue* const tmp143 = (&((*l22_argValue).e0_val));
-concat_internal_checkEnumIndex((*tmp143).label,2,"./concat.concat/typeCheck.concat:809:26");
-concat_ConstValue tmp144 = ((*tmp143).data.e2_Constant);
-concat_list_I14 tmp145 = (*l12_argValues);
-concat_list_dset_I1(tmp144,tmp145,((int64_t)(((int64_t)((int32_t)(l9_templateCount+tmp95)))+l11_argBufferOffset)));
-tmp95 = ((int32_t)(tmp95-((int32_t)1)));
+concat_OpValue* const tmp147 = (&((*l23_argValue).e0_val));
+concat_internal_checkEnumIndex((*tmp147).label,2,"./concat.concat/typeCheck.concat:808:26");
+concat_ConstValue tmp148 = ((*tmp147).data.e2_Constant);
+concat_list_I14 tmp149 = (*l13_argValues);
+concat_list_dset_I1(tmp148,tmp149,((int64_t)(((int64_t)((int32_t)(l10_templateCount+tmp99)))+l12_argBufferOffset)));
+tmp99 = ((int32_t)(tmp99-((int32_t)1)));
 continue;
 }
-int64_t tmp146 = l16_typeOffset;
-l16_typeOffset = ((int64_t)(tmp146-((int64_t)1)));
-concat_list_I33 tmp147 = ((*arg5/*state*/).e3_typeStack);
-concat_optional_I31 tmp148 = concat_list_dat_I13(tmp147,l16_typeOffset);
-bool const tmp149 = concat_optional_disEmpty_I5(tmp148);
-if(tmp149){
-concat_list_I1 tmp150 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
-concat_FilePosition tmp151 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp150,tmp151,arg5/*state*/);
+int64_t tmp150 = l17_typeOffset;
+l17_typeOffset = ((int64_t)(tmp150-((int64_t)1)));
+concat_list_I33 tmp151 = ((*arg4/*state*/).e3_typeStack);
+concat_optional_I31 tmp152 = concat_list_dat_I13(tmp151,l17_typeOffset);
+bool const tmp153 = concat_optional_disEmpty_I5(tmp152);
+if(tmp153){
+concat_list_I1 tmp154 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
+concat_FilePosition tmp155 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp154,tmp155,arg4/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp148.label,1,"./concat.concat/typeCheck.concat:816:11");
-concat_28_FTypeInfo* const l23_typeInfo = (tmp148.data.e1_data);
-int64_t tmp152 = l17_opOffset;
-l17_opOffset = ((int64_t)(tmp152-((int64_t)((*l23_typeInfo).e1_opCount))));
-concat_Type tmp153 = ((*l23_typeInfo).e0_valType);
-concat_Type tmp154 = l19_argType;
-concat_types_dresolveGenericsType(tmp153,tmp154,l9_templateCount,l10_staticArgCount,l12_argValues,l11_argBufferOffset,l0_idContext);
-tmp95 = ((int32_t)(tmp95-((int32_t)1)));
+concat_internal_checkEnumIndex(tmp152.label,1,"./concat.concat/typeCheck.concat:815:11");
+concat_28_FTypeInfo* const l24_typeInfo = (tmp152.data.e1_data);
+int64_t tmp156 = l18_opOffset;
+l18_opOffset = ((int64_t)(tmp156-((int64_t)((*l24_typeInfo).e1_opCount))));
+concat_Type tmp157 = ((*l24_typeInfo).e0_valType);
+concat_Type tmp158 = l20_argType;
+concat_types_dresolveGenericsType(tmp157,tmp158,l10_templateCount,l11_staticArgCount,l13_argValues,l12_argBufferOffset,l0_idContext);
+tmp99 = ((int32_t)(tmp99-((int32_t)1)));
 }while(1);
-concat_ConstantArray const l24_templateIndices = ((concat_ConstantArray){.e0_offset = l11_argBufferOffset,.e1_length = ((int64_t)l9_templateCount)});
-concat_ConstantArray const l25_genericIndices = ((concat_ConstantArray){.e0_offset = ((int64_t)(l11_argBufferOffset+((int64_t)l9_templateCount))),.e1_length = ((int64_t)l10_staticArgCount)});
+concat_ConstantArray const l25_templateIndices = ((concat_ConstantArray){.e0_offset = l12_argBufferOffset,.e1_length = ((int64_t)l10_templateCount)});
+concat_ConstantArray const l26_genericIndices = ((concat_ConstantArray){.e0_offset = ((int64_t)(l12_argBufferOffset+((int64_t)l10_templateCount))),.e1_length = ((int64_t)l11_staticArgCount)});
 if(false){
-concat_list_I1 tmp155 = concat_sb_dwrap(((int64_t)18),((int8_t const*)"-----------------\x0A"));
-concat_Operation tmp156 = (*arg0/*op*/);
-concat_list_I1 tmp157 = concat_sb_dappendOp(tmp155,tmp156,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-int32_t tmp158 = ((int32_t)0);
+concat_list_I1 tmp159 = concat_sb_dwrap(((int64_t)18),((int8_t const*)"-----------------\x0A"));
+concat_Operation tmp160 = (*arg0/*op*/);
+concat_list_I1 tmp161 = concat_sb_dappendOp(tmp159,tmp160,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+int32_t tmp162 = ((int32_t)0);
 do{
-bool const tmp159 = (tmp158<l9_templateCount);
-if(!tmp159)
+bool const tmp163 = (tmp162<l10_templateCount);
+if(!tmp163)
   break;
-concat_list_I14 tmp160 = (*l12_argValues);
-concat_ConstValue tmp161 = concat_list_dget_I6(tmp160,((int64_t)(((int64_t)tmp158)+l11_argBufferOffset)));
-concat_list_I1 tmp162 = concat_sb_dappendConstant(tmp157,tmp161,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp163 = concat_sb_dappendC(tmp162,((int8_t)10));
-tmp157 = tmp163;
-tmp158 = ((int32_t)(tmp158+((int32_t)1)));
+concat_list_I14 tmp164 = (*l13_argValues);
+concat_ConstValue tmp165 = concat_list_dget_I6(tmp164,((int64_t)(((int64_t)tmp162)+l12_argBufferOffset)));
+concat_list_I1 tmp166 = concat_sb_dappendConstant(tmp161,tmp165,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp167 = concat_sb_dappendC(tmp166,((int8_t)10));
+tmp161 = tmp167;
+tmp162 = ((int32_t)(tmp162+((int32_t)1)));
 }while(1);
-concat_io_dFILE const tmp164 = concat_io_dstdOut();
-concat_io_dIOError const tmp165 = concat_io_dfputSb(tmp164,tmp157);
+concat_io_dFILE const tmp168 = concat_io_dstdOut();
+concat_io_dIOError const tmp169 = concat_io_dfputSb(tmp168,tmp161);
 }
-concat_Type tmp166 = l4_inType;
-concat_ConstantArray tmp167 = l24_templateIndices;
-concat_ConstantArray tmp168 = l25_genericIndices;
-concat_FilePosition tmp169 = ((*arg0/*op*/).e2_pos);
-concat_Type tmp170 = concat_types_dreplaceGenericsType(tmp166,tmp167,tmp168,tmp169,l0_idContext);
-l4_inType = tmp170;
-concat_Type tmp171 = l5_outType;
-concat_ConstantArray tmp172 = l24_templateIndices;
-concat_ConstantArray tmp173 = l25_genericIndices;
-concat_FilePosition tmp174 = ((*arg0/*op*/).e2_pos);
-concat_Type tmp175 = concat_types_dreplaceGenericsType(tmp171,tmp172,tmp173,tmp174,l0_idContext);
-l5_outType = tmp175;
-concat_Type tmp176 = l4_inType;
-concat_Type tmp177 = l5_outType;
-concat_CallingConvention tmp178 = arg4/*callConvention*/;
-concat_tuple265 const tmp179 = concat_types_dnewProcedure(tmp176,tmp177,tmp178,l2_typeContext);
-concat_Type tmp180 = (tmp179.e0);
-bool const tmp181 = (tmp179.e1);
-l3_calledType = tmp180;
-concat_Type tmp182 = l3_calledType;
-((*arg0/*op*/).e1_dataType) = tmp182;
-bool const tmp183 = concat_optional_dhasData_I7(l8_templateInfo);
-if(tmp183){
-concat_internal_checkEnumIndex(l8_templateInfo.label,1,"./concat.concat/typeCheck.concat:838:51");
-concat_TemplateInfo* const l26_templateData = (l8_templateInfo.data.e1_data);
-int32_t l27_mImpl = ((int32_t)-1);
-bool l28_match = false;
-int32_t tmp184 = ((int32_t)0);
+concat_Type tmp170 = l4_inType;
+concat_ConstantArray tmp171 = l25_templateIndices;
+concat_ConstantArray tmp172 = l26_genericIndices;
+concat_FilePosition tmp173 = ((*arg0/*op*/).e2_pos);
+concat_Type tmp174 = concat_types_dreplaceGenericsType(tmp170,tmp171,tmp172,tmp173,l0_idContext);
+l4_inType = tmp174;
+concat_Type tmp175 = l5_outType;
+concat_ConstantArray tmp176 = l25_templateIndices;
+concat_ConstantArray tmp177 = l26_genericIndices;
+concat_FilePosition tmp178 = ((*arg0/*op*/).e2_pos);
+concat_Type tmp179 = concat_types_dreplaceGenericsType(tmp175,tmp176,tmp177,tmp178,l0_idContext);
+l5_outType = tmp179;
+concat_Type tmp180 = l4_inType;
+concat_Type tmp181 = l5_outType;
+concat_CallingConvention tmp182 = l6_callConvention;
+concat_tuple265 const tmp183 = concat_types_dnewProcedure(tmp180,tmp181,tmp182,l2_typeContext);
+concat_Type tmp184 = (tmp183.e0);
+bool const tmp185 = (tmp183.e1);
+l3_calledType = tmp184;
+concat_Type tmp186 = l3_calledType;
+((*arg0/*op*/).e1_dataType) = tmp186;
+bool const tmp187 = concat_optional_dhasData_I7(l9_templateInfo);
+if(tmp187){
+concat_internal_checkEnumIndex(l9_templateInfo.label,1,"./concat.concat/typeCheck.concat:837:51");
+concat_TemplateInfo* const l27_templateData = (l9_templateInfo.data.e1_data);
+int32_t l28_mImpl = ((int32_t)-1);
+bool l29_match = false;
+int32_t tmp188 = ((int32_t)0);
 do{
-bool const tmp185 = (((int64_t)tmp184)<(((*l26_templateData).e5_implementations).e1_length));
-if(!tmp185)
+bool const tmp189 = (((int64_t)tmp188)<(((*l27_templateData).e5_implementations).e1_length));
+if(!tmp189)
   break;
-concat_list_I16 tmp186 = ((*l26_templateData).e5_implementations);
-concat_optional_I32 tmp187 = concat_list_dat_I16(tmp186,((int64_t)tmp184));
-concat_internal_checkEnumIndex(tmp187.label,1,"./concat.concat/typeCheck.concat:842:56");
-concat_TemplateImplementation* const tmp188 = (tmp187.data.e1_data);
-concat_ConstantArray tmp189 = ((*tmp188).e1_argValues);
-concat_arrayView_I5 tmp190 = concat_constArrayAsArray(tmp189,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))));
-concat_arrayView_I5 const l29_implArgs = tmp190;
-l28_match = true;
-int32_t tmp191 = ((int32_t)0);
+concat_list_I16 tmp190 = ((*l27_templateData).e5_implementations);
+concat_optional_I32 tmp191 = concat_list_dat_I16(tmp190,((int64_t)tmp188));
+concat_internal_checkEnumIndex(tmp191.label,1,"./concat.concat/typeCheck.concat:841:56");
+concat_TemplateImplementation* const tmp192 = (tmp191.data.e1_data);
+concat_ConstantArray tmp193 = ((*tmp192).e1_argValues);
+concat_arrayView_I5 tmp194 = concat_constArrayAsArray(tmp193,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))));
+concat_arrayView_I5 const l30_implArgs = tmp194;
+l29_match = true;
+int32_t tmp195 = ((int32_t)0);
 do{
-bool const tmp192 = (((int64_t)tmp191)<(l29_implArgs.e1_length));
-if(!tmp192)
+bool const tmp196 = (((int64_t)tmp195)<(l30_implArgs.e1_length));
+if(!tmp196)
   break;
-concat_arrayView_I5 tmp193 = l29_implArgs;
-concat_ConstValue tmp194 = concat_array_dget_I4(tmp193,((int64_t)tmp191));
-concat_list_I14 tmp195 = (*l12_argValues);
-concat_ConstValue tmp196 = concat_list_dget_I6(tmp195,((int64_t)(l11_argBufferOffset+((int64_t)tmp191))));
-bool const tmp197 = concat_constantEquals(tmp194,tmp196,((concat_LabelContext const*)l1_labelContext));
-bool const tmp198 = (!tmp197);
-if(tmp198){
-l28_match = false;
+concat_arrayView_I5 tmp197 = l30_implArgs;
+concat_ConstValue tmp198 = concat_array_dget_I4(tmp197,((int64_t)tmp195));
+concat_list_I14 tmp199 = (*l13_argValues);
+concat_ConstValue tmp200 = concat_list_dget_I6(tmp199,((int64_t)(l12_argBufferOffset+((int64_t)tmp195))));
+bool const tmp201 = concat_constantEquals(tmp198,tmp200,((concat_LabelContext const*)l1_labelContext));
+bool const tmp202 = (!tmp201);
+if(tmp202){
+l29_match = false;
 break;
 }
-tmp191 = ((int32_t)(tmp191+((int32_t)1)));
+tmp195 = ((int32_t)(tmp195+((int32_t)1)));
 }while(1);
-if(l28_match){
-l27_mImpl = tmp184;
+if(l29_match){
+l28_mImpl = tmp188;
 break;
 }
-tmp184 = ((int32_t)(tmp184+((int32_t)1)));
+tmp188 = ((int32_t)(tmp188+((int32_t)1)));
 }while(1);
-int32_t tmp199 = l27_mImpl;
-bool const tmp200 = (tmp199==((int32_t)-1));
-if(tmp200){
-l27_mImpl = ((int32_t)(((*l26_templateData).e5_implementations).e1_length));
-concat_list_I16 tmp201 = ((*l26_templateData).e5_implementations);
-concat_Type tmp202 = l3_calledType;
-concat_ConstValue* tmp203 = ((*l12_argValues).e0_data);
-concat_arrayView_I5 tmp204 = concat_array_dcreate_I1(((concat_ConstValue const*)((concat_ConstValue*)(tmp203+l11_argBufferOffset))),((int64_t)l9_templateCount));
-concat_ConstantArray tmp205 = concat_constArray(tmp204,(&((*l0_idContext).e0_constContext)));
-concat_list_I16 tmp206 = concat_list_dappend_I25(tmp201,((concat_TemplateImplementation){.e0_implType = tmp202,.e1_argValues = tmp205,.e2_implPos = ((*arg0/*op*/).e2_pos)}));
-((*l26_templateData).e5_implementations) = tmp206;
+int32_t tmp203 = l28_mImpl;
+bool const tmp204 = (tmp203==((int32_t)-1));
+if(tmp204){
+l28_mImpl = ((int32_t)(((*l27_templateData).e5_implementations).e1_length));
+concat_list_I16 tmp205 = ((*l27_templateData).e5_implementations);
+concat_Type tmp206 = l3_calledType;
+concat_ConstValue* tmp207 = ((*l13_argValues).e0_data);
+concat_arrayView_I5 tmp208 = concat_array_dcreate_I1(((concat_ConstValue const*)((concat_ConstValue*)(tmp207+l12_argBufferOffset))),((int64_t)l10_templateCount));
+concat_ConstantArray tmp209 = concat_constArray(tmp208,(&((*l0_idContext).e0_constContext)));
+concat_list_I16 tmp210 = concat_list_dappend_I25(tmp205,((concat_TemplateImplementation){.e0_implType = tmp206,.e1_argValues = tmp209,.e2_implPos = ((*arg0/*op*/).e2_pos)}));
+((*l27_templateData).e5_implementations) = tmp210;
 }
-bool const tmp207 = concat_optional_dhasData_I8(arg2/*templateImpl*/);
-if(tmp207){
-int32_t tmp208 = l27_mImpl;
-concat_internal_checkEnumIndex(arg2/*templateImpl*/.label,1,"./concat.concat/typeCheck.concat:871:28");
-int32_t* const tmp209 = (arg2/*templateImpl*/.data.e1_data);
-(*tmp209) = tmp208;
+bool const tmp211 = concat_optional_dhasData_I8(arg2/*templateImpl*/);
+if(tmp211){
+int32_t tmp212 = l28_mImpl;
+concat_internal_checkEnumIndex(arg2/*templateImpl*/.label,1,"./concat.concat/typeCheck.concat:870:28");
+int32_t* const tmp213 = (arg2/*templateImpl*/.data.e1_data);
+(*tmp213) = tmp212;
 }else{
-concat_list_I1 tmp210 = concat_sb_dwrap(((int64_t)38),((int8_t const*)"could not store template info for call"));
-concat_FilePosition tmp211 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp210,tmp211,arg5/*state*/);
+concat_list_I1 tmp214 = concat_sb_dwrap(((int64_t)38),((int8_t const*)"could not store template info for call"));
+concat_FilePosition tmp215 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp214,tmp215,arg4/*state*/);
 }
 }
-concat_IdentifierContext* const tmp212 = ((*arg5/*state*/).e0_idContext);
-(((*tmp212).e6_templateArgBuffer).e1_length) = l11_argBufferOffset;
+concat_IdentifierContext* const tmp216 = ((*arg4/*state*/).e0_idContext);
+(((*tmp216).e6_templateArgBuffer).e1_length) = l12_argBufferOffset;
 }
-concat_Type l30_retType = ((concat_Type){.label=0});
-concat_IdentifierInfo l31_retId;
-concat_list_I35 l32_retIds;
-bool const tmp213 = (l7_resCount==((int64_t)0));
-int64_t tmp214;
-if(tmp213){
-tmp214 = ((int64_t)0);
-}else{
-concat_Type tmp215 = l5_outType;
-concat_Type tmp216 = concat_types_dcompositeGetElement(tmp215,((int64_t)(l7_resCount-((int64_t)1))),l2_typeContext);
-bool const tmp217 = concat_types_disSmallType(tmp216,((concat_TypeContext const*)l2_typeContext));
-int64_t tmp218 = l7_resCount;
+concat_Type l31_retType = ((concat_Type){.label=0});
+concat_IdentifierInfo l32_retId;
+concat_list_I35 l33_retIds;
+bool const tmp217 = (l8_resCount==((int64_t)0));
+int64_t tmp218;
 if(tmp217){
-tmp218 = ((int64_t)(tmp218-((int64_t)1)));
-}
-tmp214 = tmp218;
-}
-int64_t const l33_outArgCount = tmp214;
-switch(arg4/*callConvention*/.label){
-case 0:;
-bool const tmp219 = (l7_resCount==((int64_t)1));
-concat_Type tmp222;
-if(tmp219){
-concat_Type tmp220 = l5_outType;
-concat_Type tmp221 = concat_types_dcompositeGetElement(tmp220,((int64_t)0),l2_typeContext);
-tmp222 = tmp221;
+tmp218 = ((int64_t)0);
 }else{
-tmp222 = l5_outType;
+concat_Type tmp219 = l5_outType;
+concat_Type tmp220 = concat_types_dcompositeGetElement(tmp219,((int64_t)(l8_resCount-((int64_t)1))),l2_typeContext);
+bool const tmp221 = concat_types_disSmallType(tmp220,((concat_TypeContext const*)l2_typeContext));
+int64_t tmp222 = l8_resCount;
+if(tmp221){
+tmp222 = ((int64_t)(tmp222-((int64_t)1)));
 }
-l30_retType = tmp222;
-bool const tmp223 = (l7_resCount!=((int64_t)0));
+tmp218 = tmp222;
+}
+int64_t const l34_outArgCount = tmp218;
+switch(l6_callConvention.label){
+case 0:;
+bool const tmp223 = (l8_resCount==((int64_t)1));
+concat_Type tmp226;
 if(tmp223){
-bool const tmp224 = (l7_resCount==((int64_t)1));
-bool tmp227;
-if(tmp224){
-concat_Type tmp225 = l30_retType;
-bool const tmp226 = concat_types_disMultiValueType(tmp225,l2_typeContext);
-tmp227 = tmp226;
+concat_Type tmp224 = l5_outType;
+concat_Type tmp225 = concat_types_dcompositeGetElement(tmp224,((int64_t)0),l2_typeContext);
+tmp226 = tmp225;
 }else{
-tmp227 = false;
+tmp226 = l5_outType;
 }
-concat_FilePosition tmp228 = ((*arg0/*op*/).e2_pos);
-concat_IdentifierInfo tmp229 = concat_28_FnewTmpVar(tmp227,tmp228,arg5/*state*/);
-l31_retId = tmp229;
-concat_list_I24 tmp230 = ((*arg5/*state*/).e1_compiledOps);
-concat_Type tmp231 = l30_retType;
-concat_IdentifierInfo tmp232 = l31_retId;
-concat_Operation tmp233 = concat_opDeclare(tmp231,tmp232,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp234 = concat_list_dappend_I0(tmp230,tmp233);
-((*arg5/*state*/).e1_compiledOps) = tmp234;
+l31_retType = tmp226;
+bool const tmp227 = (l8_resCount!=((int64_t)0));
+if(tmp227){
+bool const tmp228 = (l8_resCount==((int64_t)1));
+bool tmp231;
+if(tmp228){
+concat_Type tmp229 = l31_retType;
+bool const tmp230 = concat_types_disMultiValueType(tmp229,l2_typeContext);
+tmp231 = tmp230;
+}else{
+tmp231 = false;
+}
+concat_FilePosition tmp232 = ((*arg0/*op*/).e2_pos);
+concat_IdentifierInfo tmp233 = concat_28_FnewTmpVar(tmp231,tmp232,arg4/*state*/);
+l32_retId = tmp233;
+concat_list_I24 tmp234 = ((*arg4/*state*/).e1_compiledOps);
+concat_Type tmp235 = l31_retType;
+concat_IdentifierInfo tmp236 = l32_retId;
+concat_Operation tmp237 = concat_opDeclare(tmp235,tmp236,((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp238 = concat_list_dappend_I0(tmp234,tmp237);
+((*arg4/*state*/).e1_compiledOps) = tmp238;
 }
 break;
 case 1:;
-concat_list_I35 tmp235 = concat_list_dcreate_I29(l7_resCount);
-l32_retIds = tmp235;
-int32_t tmp236 = ((int32_t)0);
+concat_list_I35 tmp239 = concat_list_dcreate_I29(l8_resCount);
+l33_retIds = tmp239;
+int32_t tmp240 = ((int32_t)0);
 do{
-bool const tmp237 = (((int64_t)tmp236)<l33_outArgCount);
-if(!tmp237)
+bool const tmp241 = (((int64_t)tmp240)<l34_outArgCount);
+if(!tmp241)
   break;
-concat_Type tmp238 = l5_outType;
-concat_Type tmp239 = concat_types_dcompositeGetElement(tmp238,((int64_t)tmp236),l2_typeContext);
-concat_Type const l34_eltType = tmp239;
-concat_FilePosition tmp240 = ((*arg0/*op*/).e2_pos);
-concat_IdentifierInfo tmp241 = concat_28_FnewTmpVar(true,tmp240,arg5/*state*/);
-concat_IdentifierInfo const l35_eltId = tmp241;
-concat_list_I24 tmp242 = ((*arg5/*state*/).e1_compiledOps);
-concat_Type tmp243 = l34_eltType;
-concat_IdentifierInfo tmp244 = l35_eltId;
-concat_Operation tmp245 = concat_opPredeclare(tmp243,tmp244,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp246 = concat_list_dappend_I0(tmp242,tmp245);
-((*arg5/*state*/).e1_compiledOps) = tmp246;
-concat_list_I35 tmp247 = l32_retIds;
-concat_list_I35 tmp248 = concat_list_dappend_I28(tmp247,l35_eltId);
-l32_retIds = tmp248;
-tmp236 = ((int32_t)(tmp236+((int32_t)1)));
+concat_Type tmp242 = l5_outType;
+concat_Type tmp243 = concat_types_dcompositeGetElement(tmp242,((int64_t)tmp240),l2_typeContext);
+concat_Type const l35_eltType = tmp243;
+concat_FilePosition tmp244 = ((*arg0/*op*/).e2_pos);
+concat_IdentifierInfo tmp245 = concat_28_FnewTmpVar(true,tmp244,arg4/*state*/);
+concat_IdentifierInfo const l36_eltId = tmp245;
+concat_list_I24 tmp246 = ((*arg4/*state*/).e1_compiledOps);
+concat_Type tmp247 = l35_eltType;
+concat_IdentifierInfo tmp248 = l36_eltId;
+concat_Operation tmp249 = concat_opPredeclare(tmp247,tmp248,((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp250 = concat_list_dappend_I0(tmp246,tmp249);
+((*arg4/*state*/).e1_compiledOps) = tmp250;
+concat_list_I35 tmp251 = l33_retIds;
+concat_list_I35 tmp252 = concat_list_dappend_I28(tmp251,l36_eltId);
+l33_retIds = tmp252;
+tmp240 = ((int32_t)(tmp240+((int32_t)1)));
 }while(1);
-bool const tmp249 = (l33_outArgCount<l7_resCount);
-if(tmp249){
-concat_Type tmp250 = l5_outType;
-concat_Type tmp251 = concat_types_dcompositeGetElement(tmp250,l33_outArgCount,l2_typeContext);
-l30_retType = tmp251;
-concat_Type tmp252 = l30_retType;
-bool const tmp253 = concat_types_disMultiValueType(tmp252,l2_typeContext);
-concat_FilePosition tmp254 = ((*arg0/*op*/).e2_pos);
-concat_IdentifierInfo tmp255 = concat_28_FnewTmpVar(tmp253,tmp254,arg5/*state*/);
-l31_retId = tmp255;
-concat_list_I24 tmp256 = ((*arg5/*state*/).e1_compiledOps);
-concat_Type tmp257 = l30_retType;
-concat_IdentifierInfo tmp258 = l31_retId;
-concat_Operation tmp259 = concat_opDeclare(tmp257,tmp258,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp260 = concat_list_dappend_I0(tmp256,tmp259);
-((*arg5/*state*/).e1_compiledOps) = tmp260;
-concat_list_I35 tmp261 = l32_retIds;
-concat_list_I35 tmp262 = concat_list_dappend_I28(tmp261,l31_retId);
-l32_retIds = tmp262;
+bool const tmp253 = (l34_outArgCount<l8_resCount);
+if(tmp253){
+concat_Type tmp254 = l5_outType;
+concat_Type tmp255 = concat_types_dcompositeGetElement(tmp254,l34_outArgCount,l2_typeContext);
+l31_retType = tmp255;
+concat_Type tmp256 = l31_retType;
+bool const tmp257 = concat_types_disMultiValueType(tmp256,l2_typeContext);
+concat_FilePosition tmp258 = ((*arg0/*op*/).e2_pos);
+concat_IdentifierInfo tmp259 = concat_28_FnewTmpVar(tmp257,tmp258,arg4/*state*/);
+l32_retId = tmp259;
+concat_list_I24 tmp260 = ((*arg4/*state*/).e1_compiledOps);
+concat_Type tmp261 = l31_retType;
+concat_IdentifierInfo tmp262 = l32_retId;
+concat_Operation tmp263 = concat_opDeclare(tmp261,tmp262,((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp264 = concat_list_dappend_I0(tmp260,tmp263);
+((*arg4/*state*/).e1_compiledOps) = tmp264;
+concat_list_I35 tmp265 = l33_retIds;
+concat_list_I35 tmp266 = concat_list_dappend_I28(tmp265,l32_retId);
+l33_retIds = tmp266;
 }
 break;
 }
-concat_list_I24 tmp263 = ((*arg5/*state*/).e1_compiledOps);
-concat_list_I24 tmp264 = concat_list_dappendP_I1(tmp263,((int64_t)1),((concat_Operation const*)arg0/*op*/));
-((*arg5/*state*/).e1_compiledOps) = tmp264;
-bool const tmp265 = (arg3/*callType*/.label==1);
-if(tmp265){
-concat_FilePosition tmp266 = ((*arg0/*op*/).e2_pos);
-concat_28_FaddCompiledStackOps(((int64_t)1),tmp266,arg5/*state*/);
-}
-concat_Type tmp267 = l4_inType;
-concat_arrayView_I3 tmp268 = concat_types_dcompositeElts(tmp267,l2_typeContext);
-concat_arrayView_I1 tmp269 = concat_string_dwrap(((int64_t)14),((int8_t const*)"procedure call"));
+concat_list_I24 tmp267 = ((*arg4/*state*/).e1_compiledOps);
+concat_list_I24 tmp268 = concat_list_dappendP_I1(tmp267,((int64_t)1),((concat_Operation const*)arg0/*op*/));
+((*arg4/*state*/).e1_compiledOps) = tmp268;
+bool const tmp269 = (arg3/*callType*/.label==1);
+if(tmp269){
 concat_FilePosition tmp270 = ((*arg0/*op*/).e2_pos);
-concat_28_FrequireTypes(tmp268,tmp269,tmp270,arg5/*state*/);
-concat_FilePosition tmp271 = ((*arg0/*op*/).e2_pos);
-concat_28_FaddCompiledStackOps(l6_argCount,tmp271,arg5/*state*/);
-switch(arg4/*callConvention*/.label){
+concat_28_FaddCompiledStackOps(((int64_t)1),tmp270,arg4/*state*/);
+}
+concat_Type tmp271 = l4_inType;
+concat_arrayView_I3 tmp272 = concat_types_dcompositeElts(tmp271,l2_typeContext);
+concat_arrayView_I1 tmp273 = concat_string_dwrap(((int64_t)14),((int8_t const*)"procedure call"));
+concat_FilePosition tmp274 = ((*arg0/*op*/).e2_pos);
+concat_28_FrequireTypes(tmp272,tmp273,tmp274,arg4/*state*/);
+concat_FilePosition tmp275 = ((*arg0/*op*/).e2_pos);
+concat_28_FaddCompiledStackOps(l7_argCount,tmp275,arg4/*state*/);
+switch(l6_callConvention.label){
 case 0:;
-bool const tmp272 = (l7_resCount==((int64_t)0));
-if(tmp272){
+bool const tmp276 = (l8_resCount==((int64_t)0));
+if(tmp276){
 return;
 }
-bool const tmp273 = (l7_resCount==((int64_t)1));
-if(tmp273){
-concat_Type tmp274 = l30_retType;
-concat_IdentifierInfo tmp275 = l31_retId;
-concat_Operation tmp276 = concat_opGet(tmp274,tmp275,((*arg0/*op*/).e2_pos));
-concat_Operation const l36_tmp = tmp276;
-concat_28_FpushValue((&l36_tmp),arg5/*state*/);
-concat_Type tmp277 = l30_retType;
-bool const tmp278 = concat_types_disMultiValueType(tmp277,l2_typeContext);
-concat_optional_I31 tmp279 = concat_list_dpeek_I3(((*arg5/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp279.label,1,"./concat.concat/typeCheck.concat:957:82");
-concat_28_FTypeInfo* const tmp280 = (tmp279.data.e1_data);
-((*tmp280).e2_writable) = tmp278;
+bool const tmp277 = (l8_resCount==((int64_t)1));
+if(tmp277){
+concat_Type tmp278 = l31_retType;
+concat_IdentifierInfo tmp279 = l32_retId;
+concat_Operation tmp280 = concat_opGet(tmp278,tmp279,((*arg0/*op*/).e2_pos));
+concat_Operation const l37_tmp = tmp280;
+concat_28_FpushValue((&l37_tmp),arg4/*state*/);
+concat_Type tmp281 = l31_retType;
+bool const tmp282 = concat_types_disMultiValueType(tmp281,l2_typeContext);
+concat_optional_I31 tmp283 = concat_list_dpeek_I3(((*arg4/*state*/).e3_typeStack));
+concat_internal_checkEnumIndex(tmp283.label,1,"./concat.concat/typeCheck.concat:956:82");
+concat_28_FTypeInfo* const tmp284 = (tmp283.data.e1_data);
+((*tmp284).e2_writable) = tmp282;
 return;
 }
-concat_28_FensureStackHeadIsValue(arg5/*state*/);
-int32_t tmp281 = ((int32_t)0);
+concat_28_FensureStackHeadIsValue(arg4/*state*/);
+int32_t tmp285 = ((int32_t)0);
 do{
-bool const tmp282 = (((int64_t)tmp281)<l7_resCount);
-if(!tmp282)
+bool const tmp286 = (((int64_t)tmp285)<l8_resCount);
+if(!tmp286)
   break;
-concat_Type tmp283 = l30_retType;
-concat_Type tmp284 = concat_types_dcompositeGetElement(tmp283,((int64_t)tmp281),l2_typeContext);
-concat_Type const l37_eltType = tmp284;
-concat_Type tmp285 = l37_eltType;
-bool const tmp286 = concat_types_disMultiValueType(tmp285,l2_typeContext);
-concat_FilePosition tmp287 = ((*arg0/*op*/).e2_pos);
-concat_IdentifierInfo tmp288 = concat_28_FnewTmpVar(tmp286,tmp287,arg5/*state*/);
-concat_IdentifierInfo const l38_eltId = tmp288;
-concat_list_I24 tmp289 = ((*arg5/*state*/).e1_compiledOps);
-concat_Type tmp290 = l37_eltType;
-concat_IdentifierInfo tmp291 = l38_eltId;
-concat_Operation tmp292 = concat_opDeclare(tmp290,tmp291,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp293 = concat_list_dappend_I0(tmp289,tmp292);
-concat_Operation tmp294 = concat_opTupleGet(tmp281,((*arg0/*op*/).e2_pos));
-concat_Type tmp295 = l30_retType;
-(tmp294.e1_dataType) = tmp295;
-concat_list_I24 tmp296 = concat_list_dappend_I0(tmp293,tmp294);
-concat_Type tmp297 = l30_retType;
-concat_IdentifierInfo tmp298 = l31_retId;
-concat_Operation tmp299 = concat_opGet(tmp297,tmp298,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp300 = concat_list_dappend_I0(tmp296,tmp299);
-((*arg5/*state*/).e1_compiledOps) = tmp300;
-concat_Type tmp301 = l37_eltType;
-concat_IdentifierInfo tmp302 = l38_eltId;
+concat_Type tmp287 = l31_retType;
+concat_Type tmp288 = concat_types_dcompositeGetElement(tmp287,((int64_t)tmp285),l2_typeContext);
+concat_Type const l38_eltType = tmp288;
+concat_Type tmp289 = l38_eltType;
+bool const tmp290 = concat_types_disMultiValueType(tmp289,l2_typeContext);
+concat_FilePosition tmp291 = ((*arg0/*op*/).e2_pos);
+concat_IdentifierInfo tmp292 = concat_28_FnewTmpVar(tmp290,tmp291,arg4/*state*/);
+concat_IdentifierInfo const l39_eltId = tmp292;
+concat_list_I24 tmp293 = ((*arg4/*state*/).e1_compiledOps);
+concat_Type tmp294 = l38_eltType;
+concat_IdentifierInfo tmp295 = l39_eltId;
+concat_Operation tmp296 = concat_opDeclare(tmp294,tmp295,((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp297 = concat_list_dappend_I0(tmp293,tmp296);
+concat_Operation tmp298 = concat_opTupleGet(tmp285,((*arg0/*op*/).e2_pos));
+concat_Type tmp299 = l31_retType;
+(tmp298.e1_dataType) = tmp299;
+concat_list_I24 tmp300 = concat_list_dappend_I0(tmp297,tmp298);
+concat_Type tmp301 = l31_retType;
+concat_IdentifierInfo tmp302 = l32_retId;
 concat_Operation tmp303 = concat_opGet(tmp301,tmp302,((*arg0/*op*/).e2_pos));
-concat_Operation const l39_tmp = tmp303;
-concat_28_FpushValue((&l39_tmp),arg5/*state*/);
-concat_Type tmp304 = l37_eltType;
-bool const tmp305 = concat_types_disMultiValueType(tmp304,l2_typeContext);
-concat_optional_I31 tmp306 = concat_list_dpeek_I3(((*arg5/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp306.label,1,"./concat.concat/typeCheck.concat:984:82");
-concat_28_FTypeInfo* const tmp307 = (tmp306.data.e1_data);
-((*tmp307).e2_writable) = tmp305;
-tmp281 = ((int32_t)(tmp281+((int32_t)1)));
+concat_list_I24 tmp304 = concat_list_dappend_I0(tmp300,tmp303);
+((*arg4/*state*/).e1_compiledOps) = tmp304;
+concat_Type tmp305 = l38_eltType;
+concat_IdentifierInfo tmp306 = l39_eltId;
+concat_Operation tmp307 = concat_opGet(tmp305,tmp306,((*arg0/*op*/).e2_pos));
+concat_Operation const l40_tmp = tmp307;
+concat_28_FpushValue((&l40_tmp),arg4/*state*/);
+concat_Type tmp308 = l38_eltType;
+bool const tmp309 = concat_types_disMultiValueType(tmp308,l2_typeContext);
+concat_optional_I31 tmp310 = concat_list_dpeek_I3(((*arg4/*state*/).e3_typeStack));
+concat_internal_checkEnumIndex(tmp310.label,1,"./concat.concat/typeCheck.concat:983:82");
+concat_28_FTypeInfo* const tmp311 = (tmp310.data.e1_data);
+((*tmp311).e2_writable) = tmp309;
+tmp285 = ((int32_t)(tmp285+((int32_t)1)));
 }while(1);
 break;
 case 1:;
-int32_t tmp308 = ((int32_t)0);
+int32_t tmp312 = ((int32_t)0);
 do{
-bool const tmp309 = (((int64_t)tmp308)<l7_resCount);
-if(!tmp309)
+bool const tmp313 = (((int64_t)tmp312)<l8_resCount);
+if(!tmp313)
   break;
-concat_Type tmp310 = l5_outType;
-concat_Type tmp311 = concat_types_dcompositeGetElement(tmp310,((int64_t)tmp308),l2_typeContext);
-concat_Type const l40_eltType = tmp311;
-concat_list_I35 tmp312 = l32_retIds;
-concat_IdentifierInfo tmp313 = concat_list_dget_I22(tmp312,((int64_t)tmp308));
-concat_IdentifierInfo const l41_eltId = tmp313;
-bool const tmp314 = (((int64_t)tmp308)<l33_outArgCount);
-if(tmp314){
-concat_list_I24 tmp315 = ((*arg5/*state*/).e1_compiledOps);
-concat_Type tmp316 = l40_eltType;
-concat_IdentifierInfo tmp317 = l41_eltId;
-concat_Operation tmp318 = concat_op_X64Id(tmp316,tmp317,((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp319 = concat_list_dappend_I0(tmp315,tmp318);
-((*arg5/*state*/).e1_compiledOps) = tmp319;
+concat_Type tmp314 = l5_outType;
+concat_Type tmp315 = concat_types_dcompositeGetElement(tmp314,((int64_t)tmp312),l2_typeContext);
+concat_Type const l41_eltType = tmp315;
+concat_list_I35 tmp316 = l33_retIds;
+concat_IdentifierInfo tmp317 = concat_list_dget_I22(tmp316,((int64_t)tmp312));
+concat_IdentifierInfo const l42_eltId = tmp317;
+bool const tmp318 = (((int64_t)tmp312)<l34_outArgCount);
+if(tmp318){
+concat_list_I24 tmp319 = ((*arg4/*state*/).e1_compiledOps);
+concat_Type tmp320 = l41_eltType;
+concat_IdentifierInfo tmp321 = l42_eltId;
+concat_Operation tmp322 = concat_op_X64Id(tmp320,tmp321,((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp323 = concat_list_dappend_I0(tmp319,tmp322);
+((*arg4/*state*/).e1_compiledOps) = tmp323;
 }
-tmp308 = ((int32_t)(tmp308+((int32_t)1)));
+tmp312 = ((int32_t)(tmp312+((int32_t)1)));
 }while(1);
-int32_t tmp320 = ((int32_t)0);
+int32_t tmp324 = ((int32_t)0);
 do{
-bool const tmp321 = (((int64_t)tmp320)<l7_resCount);
-if(!tmp321)
+bool const tmp325 = (((int64_t)tmp324)<l8_resCount);
+if(!tmp325)
   break;
-concat_Type tmp322 = l5_outType;
-concat_Type tmp323 = concat_types_dcompositeGetElement(tmp322,((int64_t)tmp320),l2_typeContext);
-concat_Type const l42_eltType = tmp323;
-concat_list_I35 tmp324 = l32_retIds;
-concat_IdentifierInfo tmp325 = concat_list_dget_I22(tmp324,((int64_t)tmp320));
-concat_IdentifierInfo const l43_eltId = tmp325;
-concat_Type tmp326 = l42_eltType;
-concat_IdentifierInfo tmp327 = l43_eltId;
-concat_Operation tmp328 = concat_opGet(tmp326,tmp327,((*arg0/*op*/).e2_pos));
-concat_Operation const l44_tmp = tmp328;
-concat_28_FpushValue((&l44_tmp),arg5/*state*/);
-tmp320 = ((int32_t)(tmp320+((int32_t)1)));
+concat_Type tmp326 = l5_outType;
+concat_Type tmp327 = concat_types_dcompositeGetElement(tmp326,((int64_t)tmp324),l2_typeContext);
+concat_Type const l43_eltType = tmp327;
+concat_list_I35 tmp328 = l33_retIds;
+concat_IdentifierInfo tmp329 = concat_list_dget_I22(tmp328,((int64_t)tmp324));
+concat_IdentifierInfo const l44_eltId = tmp329;
+concat_Type tmp330 = l43_eltType;
+concat_IdentifierInfo tmp331 = l44_eltId;
+concat_Operation tmp332 = concat_opGet(tmp330,tmp331,((*arg0/*op*/).e2_pos));
+concat_Operation const l45_tmp = tmp332;
+concat_28_FpushValue((&l45_tmp),arg4/*state*/);
+concat_Type tmp333 = l43_eltType;
+bool const tmp334 = concat_types_disComposite(tmp333,((concat_TypeContext const*)l2_typeContext));
+concat_optional_I31 tmp335 = concat_list_dpeek_I3(((*arg4/*state*/).e3_typeStack));
+concat_internal_checkEnumIndex(tmp335.label,1,"./concat.concat/typeCheck.concat:1010:77");
+concat_28_FTypeInfo* const tmp336 = (tmp335.data.e1_data);
+((*tmp336).e2_writable) = tmp334;
+tmp324 = ((int32_t)(tmp324+((int32_t)1)));
 }while(1);
-concat_list_I35 tmp329 = concat_list_dfree_I15(l32_retIds);
+concat_list_I35 tmp337 = concat_list_dfree_I15(l33_retIds);
 break;
 }
 return;
@@ -21510,42 +21521,32 @@ concat_OpValue* const tmp38 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp38).label,5,"./concat.concat/typeCheck.concat:1067:22");
 concat_optional_I16 tmp39 = concat_optional_dwrap_I7((&(((*tmp38).data.e5_getId).e3_id)));
 concat_28_FCallType tmp40 = ((concat_28_FCallType){.label=0});
-concat_LabelFlag const tmp41 = concat_id_dlabelFlags((arg1/*idInfo*/.e1_labelId),((concat_LabelContext const*)l1_labelContext));
-bool const tmp42 = (((concat_LabelFlag)(tmp41&((concat_LabelFlag)1073741824)))!=((int32_t)0));
-concat_Operation* tmp43 = arg0/*op*/;
-concat_TemplateId tmp44 = (((*tmp37).data.e5_getId).e2_templateId);
-concat_CallingConvention tmp45;
-if(tmp42){
-tmp45 = ((concat_CallingConvention){.label=1});
-}else{
-tmp45 = ((concat_CallingConvention){.label=0});
-}
-concat_28_FtypeCheckCall(tmp43,tmp44,tmp39,tmp40,tmp45,arg2/*state*/);
+concat_28_FtypeCheckCall(arg0/*op*/,(((*tmp37).data.e5_getId).e2_templateId),tmp39,tmp40,arg2/*state*/);
 return;
 }
-bool const tmp46 = (((*arg0/*op*/).e0_val).label==7);
-if(tmp46){
-concat_Type tmp47 = ((*arg0/*op*/).e1_dataType);
-concat_Type tmp48 = concat_types_dgetAddressType(tmp47,false,l2_typeContext);
-((*arg0/*op*/).e1_dataType) = tmp48;
+bool const tmp41 = (((*arg0/*op*/).e0_val).label==7);
+if(tmp41){
+concat_Type tmp42 = ((*arg0/*op*/).e1_dataType);
+concat_Type tmp43 = concat_types_dgetAddressType(tmp42,false,l2_typeContext);
+((*arg0/*op*/).e1_dataType) = tmp43;
 concat_28_FpushValue(((concat_Operation const*)arg0/*op*/),arg2/*state*/);
 return;
 }
-bool const tmp49 = (((*arg0/*op*/).e0_val).label==6);
-if(tmp49){
-concat_list_I1 tmp50 = concat_sb_dwrap(((int64_t)35),((int8_t const*)"cannot set the value of a procedure"));
-concat_FilePosition tmp51 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp50,tmp51,arg2/*state*/);
+bool const tmp44 = (((*arg0/*op*/).e0_val).label==6);
+if(tmp44){
+concat_list_I1 tmp45 = concat_sb_dwrap(((int64_t)35),((int8_t const*)"cannot set the value of a procedure"));
+concat_FilePosition tmp46 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp45,tmp46,arg2/*state*/);
 return;
 }
 break;
 case 3:case 0:;
-concat_list_I1 tmp52 = concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "));
-concat_Operation tmp53 = (*arg0/*op*/);
-concat_list_I1 tmp54 = concat_sb_dappendOp(tmp52,tmp53,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp55 = concat_sb_dappendS(tmp54,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"));
-concat_FilePosition tmp56 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp55,tmp56,arg2/*state*/);
+concat_list_I1 tmp47 = concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "));
+concat_Operation tmp48 = (*arg0/*op*/);
+concat_list_I1 tmp49 = concat_sb_dappendOp(tmp47,tmp48,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp50 = concat_sb_dappendS(tmp49,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"));
+concat_FilePosition tmp51 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp50,tmp51,arg2/*state*/);
 break;
 }
 return;
@@ -21576,7 +21577,7 @@ concat_28_FappendError2(tmp9,tmp10,arg2/*state*/);
 concat_optional_I31 tmp11 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
 bool const tmp12 = concat_optional_dhasData_I6(tmp11);
 if(tmp12){
-concat_internal_checkEnumIndex(tmp11.label,1,"./concat.concat/typeCheck.concat:1115:13");
+concat_internal_checkEnumIndex(tmp11.label,1,"./concat.concat/typeCheck.concat:1110:13");
 concat_28_FTypeInfo* const tmp13 = (tmp11.data.e1_data);
 concat_Type tmp14 = ((*tmp13).e0_valType);
 concat_list_I10 tmp15 = ((*arg2/*state*/).e5_autoTypes);
@@ -21699,7 +21700,7 @@ break;
 }
 concat_list_I33 tmp13 = ((*arg2/*state*/).e3_typeStack);
 concat_optional_I31 tmp14 = concat_list_dat_I13(tmp13,l3_offset);
-concat_internal_checkEnumIndex(tmp14.label,1,"./concat.concat/typeCheck.concat:1204:40");
+concat_internal_checkEnumIndex(tmp14.label,1,"./concat.concat/typeCheck.concat:1199:40");
 concat_28_FTypeInfo* const tmp15 = (tmp14.data.e1_data);
 concat_Type tmp16 = ((*tmp15).e0_valType);
 bool const tmp17 = concat_types_disInt(tmp16,((concat_TypeContext const*)l2_typeContext));
@@ -21711,7 +21712,7 @@ concat_list_I1 tmp21 = concat_sb_dappendOp(tmp19,tmp20,((concat_ConstantContext 
 concat_list_I1 tmp22 = concat_sb_dappendS(tmp21,((int64_t)1),((int8_t const*)" "));
 concat_list_I33 tmp23 = ((*arg2/*state*/).e3_typeStack);
 concat_optional_I31 tmp24 = concat_list_dat_I13(tmp23,l3_offset);
-concat_internal_checkEnumIndex(tmp24.label,1,"./concat.concat/typeCheck.concat:1208:44");
+concat_internal_checkEnumIndex(tmp24.label,1,"./concat.concat/typeCheck.concat:1203:44");
 concat_28_FTypeInfo* const tmp25 = (tmp24.data.e1_data);
 concat_Type tmp26 = ((*tmp25).e0_valType);
 concat_list_I1 tmp27 = concat_sb_dappendType(tmp22,tmp26,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
@@ -21735,7 +21736,7 @@ concat_list_I1 tmp38 = concat_sb_dappendOp(tmp36,tmp37,((concat_ConstantContext 
 concat_list_I1 tmp39 = concat_sb_dappendS(tmp38,((int64_t)1),((int8_t const*)" "));
 concat_list_I33 tmp40 = ((*arg2/*state*/).e3_typeStack);
 concat_optional_I31 tmp41 = concat_list_dat_I13(tmp40,l3_offset);
-concat_internal_checkEnumIndex(tmp41.label,1,"./concat.concat/typeCheck.concat:1219:42");
+concat_internal_checkEnumIndex(tmp41.label,1,"./concat.concat/typeCheck.concat:1214:42");
 concat_28_FTypeInfo* const tmp42 = (tmp41.data.e1_data);
 concat_Type tmp43 = ((*tmp42).e0_valType);
 concat_list_I1 tmp44 = concat_sb_dappendType(tmp39,tmp43,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
@@ -21748,7 +21749,7 @@ int32_t tmp47 = l4_indexCount;
 (*arg1/*sizeCount*/) = tmp47;
 concat_list_I33 tmp48 = ((*arg2/*state*/).e3_typeStack);
 concat_optional_I31 tmp49 = concat_list_dat_I13(tmp48,l3_offset);
-concat_internal_checkEnumIndex(tmp49.label,1,"./concat.concat/typeCheck.concat:1225:38");
+concat_internal_checkEnumIndex(tmp49.label,1,"./concat.concat/typeCheck.concat:1220:38");
 concat_28_FTypeInfo* const tmp50 = (tmp49.data.e1_data);
 concat_Type const l5_pointerType = ((*tmp50).e0_valType);
 concat_Type tmp51 = l5_pointerType;
@@ -21805,7 +21806,7 @@ l8_typeOffset = ((int64_t)(tmp80-((int64_t)1)));
 concat_list_I33 tmp81 = ((*arg2/*state*/).e3_typeStack);
 int64_t tmp82 = l8_typeOffset;
 concat_optional_I31 tmp83 = concat_list_dat_I13(tmp81,((int64_t)(tmp82+((int64_t)tmp78))));
-concat_internal_checkEnumIndex(tmp83.label,1,"./concat.concat/typeCheck.concat:1250:56");
+concat_internal_checkEnumIndex(tmp83.label,1,"./concat.concat/typeCheck.concat:1245:56");
 concat_28_FTypeInfo* const l10_typeInfo = (tmp83.data.e1_data);
 int64_t tmp84 = l9_opOffset;
 l9_opOffset = ((int64_t)(tmp84-((int64_t)((*l10_typeInfo).e1_opCount))));
@@ -21873,7 +21874,7 @@ int32_t tmp121 = l4_indexCount;
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)((int32_t)(tmp121+((int32_t)1)))),arg2/*state*/);
 concat_Type tmp122 = l11_valType;
 concat_optional_I31 tmp123 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp123.label,1,"./concat.concat/typeCheck.concat:1289:41");
+concat_internal_checkEnumIndex(tmp123.label,1,"./concat.concat/typeCheck.concat:1284:41");
 concat_28_FTypeInfo* const tmp124 = (tmp123.data.e1_data);
 ((*tmp124).e0_valType) = tmp122;
 bool const tmp125 = (((*arg0/*op*/).e0_val).label==16);
@@ -21881,7 +21882,7 @@ if(tmp125){
 concat_Type tmp126 = l5_pointerType;
 bool const tmp127 = concat_types_disMutable(tmp126,((concat_TypeContext const*)l2_typeContext));
 concat_optional_I31 tmp128 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp128.label,1,"./concat.concat/typeCheck.concat:1291:69");
+concat_internal_checkEnumIndex(tmp128.label,1,"./concat.concat/typeCheck.concat:1286:69");
 concat_28_FTypeInfo* const tmp129 = (tmp128.data.e1_data);
 ((*tmp129).e2_writable) = tmp127;
 }
@@ -21903,7 +21904,7 @@ concat_FilePosition tmp7 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp6,tmp7,arg2/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp0.label,1,"./concat.concat/typeCheck.concat:1306:7");
+concat_internal_checkEnumIndex(tmp0.label,1,"./concat.concat/typeCheck.concat:1301:7");
 concat_28_FTypeInfo* const l3_typeInfo = (tmp0.data.e1_data);
 concat_Type tmp8 = ((*l3_typeInfo).e0_valType);
 bool const tmp9 = concat_types_disTuple(tmp8,((concat_TypeContext const*)l2_typeContext));
@@ -21964,7 +21965,7 @@ concat_list_I1 tmp44 = concat_sb_dappendI(tmp42,((int64_t)arg1/*eltIndex*/));
 tmp42 = tmp44;
 }else{
 concat_optional_I3 tmp45 = concat_id_dlabelName(l6_elementLabel,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp45.label,1,"./concat.concat/typeCheck.concat:1336:50");
+concat_internal_checkEnumIndex(tmp45.label,1,"./concat.concat/typeCheck.concat:1331:50");
 concat_list_I1 tmp46 = concat_sb_dappendStr(tmp42,(tmp45.data.e1_data));
 tmp42 = tmp46;
 }
@@ -21991,13 +21992,13 @@ return;
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg2/*state*/);
 concat_Type tmp59 = l5_elementType;
 concat_optional_I31 tmp60 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp60.label,1,"./concat.concat/typeCheck.concat:1354:45");
+concat_internal_checkEnumIndex(tmp60.label,1,"./concat.concat/typeCheck.concat:1349:45");
 concat_28_FTypeInfo* const tmp61 = (tmp60.data.e1_data);
 ((*tmp61).e0_valType) = tmp59;
 bool const tmp62 = (((*arg0/*op*/).e0_val).label==13);
 if(tmp62){
 concat_optional_I31 tmp63 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp63.label,1,"./concat.concat/typeCheck.concat:1356:43");
+concat_internal_checkEnumIndex(tmp63.label,1,"./concat.concat/typeCheck.concat:1351:43");
 concat_28_FTypeInfo* const tmp64 = (tmp63.data.e1_data);
 ((*tmp64).e2_writable) = l7_mutable;
 }
@@ -22015,7 +22016,7 @@ concat_28_FappendError2(tmp1,tmp2,arg2/*state*/);
 return;
 }
 concat_optional_I3 tmp3 = concat_id_dlabelName(arg1/*label*/,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp3.label,1,"./concat.concat/typeCheck.concat:1368:35");
+concat_internal_checkEnumIndex(tmp3.label,1,"./concat.concat/typeCheck.concat:1363:35");
 concat_arrayView_I1 const l3_labelName = (tmp3.data.e1_data);
 concat_optional_I31 tmp4 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
 bool const tmp5 = concat_optional_disEmpty_I5(tmp4);
@@ -22029,7 +22030,7 @@ concat_FilePosition tmp11 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp10,tmp11,arg2/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp4.label,1,"./concat.concat/typeCheck.concat:1376:7");
+concat_internal_checkEnumIndex(tmp4.label,1,"./concat.concat/typeCheck.concat:1371:7");
 concat_28_FTypeInfo* const l4_typeInfo = (tmp4.data.e1_data);
 concat_Type l5_targetType = ((*l4_typeInfo).e0_valType);
 concat_Type tmp12 = l5_targetType;
@@ -22193,13 +22194,13 @@ concat_list_I24 tmp97 = concat_list_dappendArray_I5(tmp93,tmp96);
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg2/*state*/);
 concat_Type tmp98 = l10_eltType;
 concat_optional_I31 tmp99 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp99.label,1,"./concat.concat/typeCheck.concat:1468:45");
+concat_internal_checkEnumIndex(tmp99.label,1,"./concat.concat/typeCheck.concat:1463:45");
 concat_28_FTypeInfo* const tmp100 = (tmp99.data.e1_data);
 ((*tmp100).e0_valType) = tmp98;
 bool const tmp101 = (((*arg0/*op*/).e0_val).label==19);
 if(tmp101){
 concat_optional_I31 tmp102 = concat_list_dpeek_I3(((*arg2/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp102.label,1,"./concat.concat/typeCheck.concat:1470:47");
+concat_internal_checkEnumIndex(tmp102.label,1,"./concat.concat/typeCheck.concat:1465:47");
 concat_28_FTypeInfo* const tmp103 = (tmp102.data.e1_data);
 ((*tmp103).e2_writable) = l11_mutable;
 }
@@ -22349,17 +22350,17 @@ concat_LabelId tmp2;
 switch(tmp0.label){
 case 42:;
 concat_OpValue* const tmp1 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp1).label,42,"./concat.concat/typeCheck.concat:1561:18");
+concat_internal_checkEnumIndex((*tmp1).label,42,"./concat.concat/typeCheck.concat:1556:18");
 tmp2 = ((*tmp1).data.e42_getName);
 break;
 case 43:;
 concat_OpValue* const tmp3 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp3).label,43,"./concat.concat/typeCheck.concat:1564:18");
+concat_internal_checkEnumIndex((*tmp3).label,43,"./concat.concat/typeCheck.concat:1559:18");
 tmp2 = ((*tmp3).data.e43_setName);
 break;
 case 44:;
 concat_OpValue* const tmp4 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp4).label,44,"./concat.concat/typeCheck.concat:1567:18");
+concat_internal_checkEnumIndex((*tmp4).label,44,"./concat.concat/typeCheck.concat:1562:18");
 tmp2 = ((*tmp4).data.e44__X64Name);
 break;
 default:;
@@ -22371,19 +22372,19 @@ bool const tmp6 = concat_optional_disEmpty_I6(tmp5);
 if(tmp6){
 return;
 }
-concat_internal_checkEnumIndex(tmp5.label,1,"./concat.concat/typeCheck.concat:1574:7");
+concat_internal_checkEnumIndex(tmp5.label,1,"./concat.concat/typeCheck.concat:1569:7");
 concat_arrayView_I1 const l4_name = (tmp5.data.e1_data);
 concat_optional_I15 tmp7 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
 bool const tmp8 = concat_optional_dhasData_I9(tmp7);
 bool const tmp9 = ((bool)(tmp8&(!((*arg1/*state*/).e12_reachable))));
 if(tmp9){
-concat_internal_checkEnumIndex(tmp7.label,1,"./concat.concat/typeCheck.concat:1575:83");
+concat_internal_checkEnumIndex(tmp7.label,1,"./concat.concat/typeCheck.concat:1570:83");
 concat_28_FBlockInfo* const l5_block = (tmp7.data.e1_data);
 concat_BlockType tmp10 = ((*l5_block).e4_blockType);
 bool const tmp11 = ((bool)((tmp10.label==9)|(tmp10.label==10)));
 if(tmp11){
 concat_28_FBlockData* const tmp12 = (&((*l5_block).e0_blockData));
-concat_internal_checkEnumIndex((*tmp12).label,3,"./concat.concat/typeCheck.concat:1577:23");
+concat_internal_checkEnumIndex((*tmp12).label,3,"./concat.concat/typeCheck.concat:1572:23");
 concat_Type const l6_switchType = (((*tmp12).data.e3_switchBlock).e2_switchType);
 concat_Type tmp13 = l6_switchType;
 bool const tmp14 = concat_types_disEnum(tmp13,((concat_TypeContext const*)l2_typeContext));
@@ -22404,7 +22405,7 @@ if(tmp22){
 tmp17 = ((int32_t)(tmp17+((int32_t)1)));
 continue;
 }
-concat_internal_checkEnumIndex(tmp21.label,1,"./concat.concat/typeCheck.concat:1583:11");
+concat_internal_checkEnumIndex(tmp21.label,1,"./concat.concat/typeCheck.concat:1578:11");
 concat_arrayView_I1 tmp23 = (tmp21.data.e1_data);
 bool const tmp24 = concat_string_deq(tmp23,l4_name);
 if(tmp24){
@@ -22485,13 +22486,13 @@ case 2:;
 bool const tmp12 = ((*arg1/*state*/).e12_reachable);
 if(tmp12){
 concat_OpValue* const tmp13 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp13).label,2,"./concat.concat/typeCheck.concat:1632:20");
+concat_internal_checkEnumIndex((*tmp13).label,2,"./concat.concat/typeCheck.concat:1627:20");
 bool const tmp14 = (((*tmp13).data.e2_Constant).label==2);
 if(tmp14){
 concat_Type tmp15 = ((*arg0/*op*/).e1_dataType);
 concat_OpValue* const tmp16 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp16).label,2,"./concat.concat/typeCheck.concat:1633:38");
-concat_internal_checkEnumIndex(((*tmp16).data.e2_Constant).label,2,"./concat.concat/typeCheck.concat:1633:48");
+concat_internal_checkEnumIndex((*tmp16).label,2,"./concat.concat/typeCheck.concat:1628:38");
+concat_internal_checkEnumIndex(((*tmp16).data.e2_Constant).label,2,"./concat.concat/typeCheck.concat:1628:48");
 concat_Type tmp17 = concat_types_dcompositeGetElement(tmp15,((int64_t)(((*tmp16).data.e2_Constant).data.e2_enumLabel)),l2_typeContext);
 bool const tmp18 = concat_types_disEmpty(tmp17,((concat_TypeContext const*)l2_typeContext));
 bool const tmp19 = (!tmp18);
@@ -22499,11 +22500,11 @@ if(tmp19){
 concat_list_I1 tmp20 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"cannot directly use enum label \""));
 concat_Type tmp21 = ((*arg0/*op*/).e1_dataType);
 concat_OpValue* const tmp22 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp22).label,2,"./concat.concat/typeCheck.concat:1636:46");
-concat_internal_checkEnumIndex(((*tmp22).data.e2_Constant).label,2,"./concat.concat/typeCheck.concat:1636:56");
+concat_internal_checkEnumIndex((*tmp22).label,2,"./concat.concat/typeCheck.concat:1631:46");
+concat_internal_checkEnumIndex(((*tmp22).data.e2_Constant).label,2,"./concat.concat/typeCheck.concat:1631:56");
 concat_LabelId const tmp23 = concat_types_dcompositeGetLabel(tmp21,(((*tmp22).data.e2_Constant).data.e2_enumLabel),l2_typeContext);
 concat_optional_I3 tmp24 = concat_id_dlabelName(tmp23,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp24.label,1,"./concat.concat/typeCheck.concat:1637:43");
+concat_internal_checkEnumIndex(tmp24.label,1,"./concat.concat/typeCheck.concat:1632:43");
 concat_list_I1 tmp25 = concat_sb_dappendStr(tmp20,(tmp24.data.e1_data));
 concat_list_I1 tmp26 = concat_sb_dappendS(tmp25,((int64_t)5),((int8_t const*)"\" in "));
 concat_Type tmp27 = ((*arg0/*op*/).e1_dataType);
@@ -22519,21 +22520,21 @@ return;
 concat_optional_I15 tmp31 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
 bool const tmp32 = concat_optional_dhasData_I9(tmp31);
 if(tmp32){
-concat_internal_checkEnumIndex(tmp31.label,1,"./concat.concat/typeCheck.concat:1647:63");
+concat_internal_checkEnumIndex(tmp31.label,1,"./concat.concat/typeCheck.concat:1642:63");
 concat_28_FBlockInfo* const l3_block = (tmp31.data.e1_data);
 concat_BlockType tmp33 = ((*l3_block).e4_blockType);
 bool const tmp34 = ((bool)((tmp33.label==9)|(tmp33.label==10)));
 if(tmp34){
 concat_list_I29 tmp35 = ((*arg1/*state*/).e6_switchData);
 concat_optional_I33 tmp36 = concat_list_dat_I17(tmp35,((int64_t)((*l3_block).e3_blockId)));
-concat_internal_checkEnumIndex(tmp36.label,1,"./concat.concat/typeCheck.concat:1649:58");
+concat_internal_checkEnumIndex(tmp36.label,1,"./concat.concat/typeCheck.concat:1644:58");
 concat_SwitchData* const tmp37 = (tmp36.data.e1_data);
 concat_list_I26* const l4_labels = (&((*tmp37).e0_labels));
 concat_28_FBlockData* const tmp38 = (&((*l3_block).e0_blockData));
-concat_internal_checkEnumIndex((*tmp38).label,3,"./concat.concat/typeCheck.concat:1650:31");
+concat_internal_checkEnumIndex((*tmp38).label,3,"./concat.concat/typeCheck.concat:1645:31");
 concat_Type const l5_switchType = (((*tmp38).data.e3_switchBlock).e2_switchType);
 concat_OpValue* const tmp39 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp39).label,2,"./concat.concat/typeCheck.concat:1651:22");
+concat_internal_checkEnumIndex((*tmp39).label,2,"./concat.concat/typeCheck.concat:1646:22");
 concat_ConstValue const l6_constant = ((*tmp39).data.e2_Constant);
 concat_Type tmp40 = ((*arg0/*op*/).e1_dataType);
 concat_Type tmp41 = l5_switchType;
@@ -22556,7 +22557,7 @@ if(!tmp52)
   break;
 concat_list_I26 tmp53 = (*l4_labels);
 concat_optional_I34 tmp54 = concat_list_dat_I18(tmp53,((int64_t)tmp51));
-concat_internal_checkEnumIndex(tmp54.label,1,"./concat.concat/typeCheck.concat:1660:37");
+concat_internal_checkEnumIndex(tmp54.label,1,"./concat.concat/typeCheck.concat:1655:37");
 concat_LabelData* const tmp55 = (tmp54.data.e1_data);
 concat_ConstValue tmp56 = ((*tmp55).e0_value);
 concat_ConstValue tmp57 = l6_constant;
@@ -22567,10 +22568,10 @@ concat_Type tmp60 = l5_switchType;
 bool const tmp61 = concat_types_disEnum(tmp60,((concat_TypeContext const*)l2_typeContext));
 if(tmp61){
 concat_Type tmp62 = l5_switchType;
-concat_internal_checkEnumIndex(l6_constant.label,2,"./concat.concat/typeCheck.concat:1663:39");
+concat_internal_checkEnumIndex(l6_constant.label,2,"./concat.concat/typeCheck.concat:1658:39");
 concat_LabelId const tmp63 = concat_types_dcompositeGetLabel(tmp62,(l6_constant.data.e2_enumLabel),l2_typeContext);
 concat_optional_I3 tmp64 = concat_id_dlabelName(tmp63,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp64.label,1,"./concat.concat/typeCheck.concat:1663:112");
+concat_internal_checkEnumIndex(tmp64.label,1,"./concat.concat/typeCheck.concat:1658:112");
 concat_list_I1 tmp65 = concat_sb_dappendStr(tmp59,(tmp64.data.e1_data));
 tmp59 = tmp65;
 }else{
@@ -22590,10 +22591,10 @@ concat_list_I26 tmp72 = concat_list_dappend_I30(tmp70,((concat_LabelData){.e0_va
 (*l4_labels) = tmp72;
 concat_list_I29 tmp73 = ((*arg1/*state*/).e6_switchData);
 concat_optional_I33 tmp74 = concat_list_dat_I17(tmp73,((int64_t)((*l3_block).e3_blockId)));
-concat_internal_checkEnumIndex(tmp74.label,1,"./concat.concat/typeCheck.concat:1678:58");
+concat_internal_checkEnumIndex(tmp74.label,1,"./concat.concat/typeCheck.concat:1673:58");
 concat_SwitchData* const tmp75 = (tmp74.data.e1_data);
 concat_optional_I35 tmp76 = concat_list_dpeek_I5(((*tmp75).e1_cases));
-concat_internal_checkEnumIndex(tmp76.label,1,"./concat.concat/typeCheck.concat:1678:84");
+concat_internal_checkEnumIndex(tmp76.label,1,"./concat.concat/typeCheck.concat:1673:84");
 concat_CaseInfo* const tmp77 = (tmp76.data.e1_data);
 int64_t tmp78 = ((*tmp77).e1_count);
 ((*tmp77).e1_count) = ((int64_t)(tmp78+((int64_t)1)));
@@ -22617,13 +22618,13 @@ concat_FilePosition tmp86 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp85,tmp86,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp79.label,1,"./concat.concat/typeCheck.concat:1696:11");
+concat_internal_checkEnumIndex(tmp79.label,1,"./concat.concat/typeCheck.concat:1691:11");
 concat_28_FTypeInfo* const l7_src = (tmp79.data.e1_data);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_Type tmp87 = ((*l7_src).e0_valType);
 ((*arg0/*op*/).e1_dataType) = tmp87;
 concat_OpValue* const tmp88 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp88).label,34,"./concat.concat/typeCheck.concat:1699:18");
+concat_internal_checkEnumIndex((*tmp88).label,34,"./concat.concat/typeCheck.concat:1694:18");
 concat_UnaryOperator const tmp89 = ((*tmp88).data.e34_unaryOperator);
 switch(tmp89.label){
 case 0:;
@@ -22633,7 +22634,7 @@ bool const tmp92 = (!tmp91);
 if(tmp92){
 concat_list_I1 tmp93 = concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "));
 concat_OpValue* const tmp94 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp94).label,34,"./concat.concat/typeCheck.concat:1704:26");
+concat_internal_checkEnumIndex((*tmp94).label,34,"./concat.concat/typeCheck.concat:1699:26");
 concat_list_I1 tmp95 = concat_sb_dappendUnaryOperator(tmp93,((*tmp94).data.e34_unaryOperator));
 concat_list_I1 tmp96 = concat_sb_dappendS(tmp95,((int64_t)21),((int8_t const*)" expected number got "));
 concat_list_I1 tmp97 = concat_sb_dappendType(tmp96,tmp90,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
@@ -22649,7 +22650,7 @@ bool const tmp101 = (!tmp100);
 if(tmp101){
 concat_list_I1 tmp102 = concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "));
 concat_OpValue* const tmp103 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp103).label,34,"./concat.concat/typeCheck.concat:1714:26");
+concat_internal_checkEnumIndex((*tmp103).label,34,"./concat.concat/typeCheck.concat:1709:26");
 concat_list_I1 tmp104 = concat_sb_dappendUnaryOperator(tmp102,((*tmp103).data.e34_unaryOperator));
 concat_list_I1 tmp105 = concat_sb_dappendS(tmp104,((int64_t)22),((int8_t const*)" expected integer got "));
 concat_list_I1 tmp106 = concat_sb_dappendType(tmp105,tmp99,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
@@ -22665,7 +22666,7 @@ bool const tmp110 = (!tmp109);
 if(tmp110){
 concat_list_I1 tmp111 = concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "));
 concat_OpValue* const tmp112 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp112).label,34,"./concat.concat/typeCheck.concat:1724:26");
+concat_internal_checkEnumIndex((*tmp112).label,34,"./concat.concat/typeCheck.concat:1719:26");
 concat_list_I1 tmp113 = concat_sb_dappendUnaryOperator(tmp111,((*tmp112).data.e34_unaryOperator));
 concat_list_I1 tmp114 = concat_sb_dappendS(tmp113,((int64_t)22),((int8_t const*)" expected boolean got "));
 concat_list_I1 tmp115 = concat_sb_dappendType(tmp114,tmp108,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
@@ -22694,24 +22695,24 @@ return;
 concat_list_I33 tmp125 = ((*arg1/*state*/).e3_typeStack);
 int64_t tmp126 = (tmp125.e1_length);
 concat_optional_I31 tmp127 = concat_list_dat_I13(tmp125,((int64_t)(tmp126-((int64_t)1))));
-concat_internal_checkEnumIndex(tmp127.label,1,"./concat.concat/typeCheck.concat:1743:52");
+concat_internal_checkEnumIndex(tmp127.label,1,"./concat.concat/typeCheck.concat:1738:52");
 concat_28_FTypeInfo* const l8_right = (tmp127.data.e1_data);
 concat_list_I33 tmp128 = ((*arg1/*state*/).e3_typeStack);
 int64_t tmp129 = (tmp128.e1_length);
 concat_optional_I31 tmp130 = concat_list_dat_I13(tmp128,((int64_t)(tmp129-((int64_t)2))));
-concat_internal_checkEnumIndex(tmp130.label,1,"./concat.concat/typeCheck.concat:1744:52");
+concat_internal_checkEnumIndex(tmp130.label,1,"./concat.concat/typeCheck.concat:1739:52");
 concat_28_FTypeInfo* const l9_left = (tmp130.data.e1_data);
 concat_array163 l10_inTypes = (concat_array163){0,};
 concat_Type l11_outType = ((concat_Type){.label=0});
 concat_Type tmp131 = ((*l9_left).e0_valType);
-concat_internal_checkArrayIndex(2,((int32_t)0),"./concat.concat/typeCheck.concat:1747:40");
+concat_internal_checkArrayIndex(2,((int32_t)0),"./concat.concat/typeCheck.concat:1742:40");
 ((&(l10_inTypes.data[0]))[((int32_t)0)]) = tmp131;
 concat_Type tmp132 = ((*l8_right).e0_valType);
-concat_internal_checkArrayIndex(2,((int32_t)1),"./concat.concat/typeCheck.concat:1748:40");
+concat_internal_checkArrayIndex(2,((int32_t)1),"./concat.concat/typeCheck.concat:1743:40");
 ((&(l10_inTypes.data[0]))[((int32_t)1)]) = tmp132;
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp133 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp133).label,35,"./concat.concat/typeCheck.concat:1750:18");
+concat_internal_checkEnumIndex((*tmp133).label,35,"./concat.concat/typeCheck.concat:1745:18");
 concat_BinaryOperator const tmp134 = ((*tmp133).data.e35_binaryOperator);
 switch(tmp134.label){
 case 0:;
@@ -22734,7 +22735,7 @@ concat_Type tmp144 = ((*l9_left).e0_valType);
 ((*arg0/*op*/).e1_dataType) = tmp144;
 l11_outType = tmp144;
 concat_Type tmp145 = concat_primitive_dtypes_dI__PTR;
-concat_internal_checkArrayIndex(2,((int32_t)1),"./concat.concat/typeCheck.concat:1762:50");
+concat_internal_checkArrayIndex(2,((int32_t)1),"./concat.concat/typeCheck.concat:1757:50");
 ((&(l10_inTypes.data[0]))[((int32_t)1)]) = tmp145;
 }
 break;
@@ -22758,7 +22759,7 @@ concat_Type tmp155 = ((*l9_left).e0_valType);
 ((*arg0/*op*/).e1_dataType) = tmp155;
 l11_outType = tmp155;
 concat_Type tmp156 = concat_primitive_dtypes_dI__PTR;
-concat_internal_checkArrayIndex(2,((int32_t)1),"./concat.concat/typeCheck.concat:1776:50");
+concat_internal_checkArrayIndex(2,((int32_t)1),"./concat.concat/typeCheck.concat:1771:50");
 ((&(l10_inTypes.data[0]))[((int32_t)1)]) = tmp156;
 }
 concat_Type tmp157 = ((*l9_left).e0_valType);
@@ -22876,7 +22877,7 @@ bool const tmp211 = (l11_outType.label==0);
 if(tmp211){
 concat_list_I1 tmp212 = concat_sb_dwrap(((int64_t)30),((int8_t const*)"no version of binary operator "));
 concat_OpValue* const tmp213 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp213).label,35,"./concat.concat/typeCheck.concat:1847:22");
+concat_internal_checkEnumIndex((*tmp213).label,35,"./concat.concat/typeCheck.concat:1842:22");
 concat_list_I1 tmp214 = concat_sb_dappendBinaryOperator(tmp212,((*tmp213).data.e35_binaryOperator));
 concat_list_I1 tmp215 = concat_sb_dappendS(tmp214,((int64_t)15),((int8_t const*)" accepts types "));
 concat_Type tmp216 = ((*l9_left).e0_valType);
@@ -22889,7 +22890,7 @@ concat_28_FappendError2(tmp220,tmp221,arg1/*state*/);
 }
 concat_list_I1 tmp222 = concat_sb_dwrap(((int64_t)16),((int8_t const*)"binary operator "));
 concat_OpValue* const tmp223 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp223).label,35,"./concat.concat/typeCheck.concat:1854:45");
+concat_internal_checkEnumIndex((*tmp223).label,35,"./concat.concat/typeCheck.concat:1849:45");
 concat_list_I1 tmp224 = concat_sb_dappendBinaryOperator(tmp222,((*tmp223).data.e35_binaryOperator));
 concat_arrayView_I3 tmp225 = concat_array_dwrap_I1(((int64_t)2),((concat_Type const*)(&(l10_inTypes.data[0]))));
 concat_arrayView_I1 tmp226 = concat_sb_dasStr(tmp224);
@@ -22899,14 +22900,14 @@ concat_list_I1 tmp228 = concat_sb_dfree(tmp224);
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)2),arg1/*state*/);
 concat_Type tmp229 = l11_outType;
 concat_optional_I31 tmp230 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp230.label,1,"./concat.concat/typeCheck.concat:1858:45");
+concat_internal_checkEnumIndex(tmp230.label,1,"./concat.concat/typeCheck.concat:1853:45");
 concat_28_FTypeInfo* const tmp231 = (tmp230.data.e1_data);
 ((*tmp231).e0_valType) = tmp229;
 return;
 case 3:;
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp232 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp232).label,3,"./concat.concat/typeCheck.concat:1862:18");
+concat_internal_checkEnumIndex((*tmp232).label,3,"./concat.concat/typeCheck.concat:1857:18");
 concat_BlockType const tmp233 = (((*tmp232).data.e3_block).e0_blockType);
 switch(tmp233.label){
 case 3:;
@@ -22915,7 +22916,7 @@ int32_t const l12_blockId = ((*arg1/*state*/).e10_ifCount);
 int32_t tmp234 = ((*arg1/*state*/).e10_ifCount);
 ((*arg1/*state*/).e10_ifCount) = ((int32_t)(tmp234+((int32_t)1)));
 concat_OpValue* const tmp235 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp235).label,3,"./concat.concat/typeCheck.concat:1867:30");
+concat_internal_checkEnumIndex((*tmp235).label,3,"./concat.concat/typeCheck.concat:1862:30");
 (((*tmp235).data.e3_block).e1_blockId) = l12_blockId;
 concat_Type tmp236 = concat_primitive_dtypes_dBOOL;
 ((*arg0/*op*/).e1_dataType) = tmp236;
@@ -22954,7 +22955,7 @@ concat_28_FappendError2(tmp254,tmp255,arg1/*state*/);
 return;
 }
 concat_optional_I15 tmp256 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
-concat_internal_checkEnumIndex(tmp256.label,1,"./concat.concat/typeCheck.concat:1899:42");
+concat_internal_checkEnumIndex(tmp256.label,1,"./concat.concat/typeCheck.concat:1894:42");
 concat_28_FBlockInfo* const l16_ifBlock = (tmp256.data.e1_data);
 bool const tmp257 = (((*l16_ifBlock).e4_blockType).label!=3);
 if(tmp257){
@@ -22970,19 +22971,19 @@ concat_28_FstoreIfOutTypes(l16_ifBlock,false,tmp261,arg1/*state*/);
 }
 bool tmp262 = ((*arg1/*state*/).e12_reachable);
 concat_28_FBlockData* const tmp263 = (&((*l16_ifBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp263).label,1,"./concat.concat/typeCheck.concat:1907:53");
+concat_internal_checkEnumIndex((*tmp263).label,1,"./concat.concat/typeCheck.concat:1902:53");
 (((*tmp263).data.e1_ifBlock).e3_elseReachable) = tmp262;
 concat_28_FBlockData* const tmp264 = (&((*l16_ifBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp264).label,1,"./concat.concat/typeCheck.concat:1908:33");
+concat_internal_checkEnumIndex((*tmp264).label,1,"./concat.concat/typeCheck.concat:1903:33");
 concat_28_FresetStack(((concat_28_FStackState const*)(&(((*tmp264).data.e1_ifBlock).e0_inTypes))),arg1/*state*/);
 int64_t tmp265 = (((*arg1/*state*/).e1_compiledOps).e1_length);
 concat_28_FBlockData* const tmp266 = (&((*l16_ifBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp266).label,1,"./concat.concat/typeCheck.concat:1909:63");
+concat_internal_checkEnumIndex((*tmp266).label,1,"./concat.concat/typeCheck.concat:1904:63");
 (((*tmp266).data.e1_ifBlock).e2_elsePos) = tmp265;
 concat_BlockType tmp267 = ((concat_BlockType){.label=4});
 ((*l16_ifBlock).e4_blockType) = tmp267;
 concat_OpValue* const tmp268 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp268).label,3,"./concat.concat/typeCheck.concat:1911:42");
+concat_internal_checkEnumIndex((*tmp268).label,3,"./concat.concat/typeCheck.concat:1906:42");
 (((*tmp268).data.e3_block).e1_blockId) = ((*l16_ifBlock).e3_blockId);
 concat_list_I24 tmp269 = ((*arg1/*state*/).e1_compiledOps);
 concat_list_I24 tmp270 = concat_list_dappendP_I1(tmp269,((int64_t)1),((concat_Operation const*)arg0/*op*/));
@@ -22995,7 +22996,7 @@ int32_t const l17_blockId = ((*arg1/*state*/).e11_whileCount);
 int32_t tmp271 = ((*arg1/*state*/).e11_whileCount);
 ((*arg1/*state*/).e11_whileCount) = ((int32_t)(tmp271+((int32_t)1)));
 concat_OpValue* const tmp272 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp272).label,3,"./concat.concat/typeCheck.concat:1921:30");
+concat_internal_checkEnumIndex((*tmp272).label,3,"./concat.concat/typeCheck.concat:1916:30");
 (((*tmp272).data.e3_block).e1_blockId) = l17_blockId;
 concat_FilePosition tmp273 = ((*arg0/*op*/).e2_pos);
 int64_t const tmp274 = concat_28_FstoreStack(false,tmp273,arg1/*state*/);
@@ -23024,7 +23025,7 @@ concat_28_FappendError2(tmp286,tmp287,arg1/*state*/);
 return;
 }
 concat_optional_I15 tmp288 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
-concat_internal_checkEnumIndex(tmp288.label,1,"./concat.concat/typeCheck.concat:1947:42");
+concat_internal_checkEnumIndex(tmp288.label,1,"./concat.concat/typeCheck.concat:1942:42");
 concat_28_FBlockInfo* const l19_whileBlock = (tmp288.data.e1_data);
 bool const tmp289 = (((*l19_whileBlock).e4_blockType).label!=5);
 if(tmp289){
@@ -23034,7 +23035,7 @@ concat_28_FappendError2(tmp290,tmp291,arg1/*state*/);
 return;
 }
 concat_OpValue* const tmp292 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp292).label,3,"./concat.concat/typeCheck.concat:1953:45");
+concat_internal_checkEnumIndex((*tmp292).label,3,"./concat.concat/typeCheck.concat:1948:45");
 (((*tmp292).data.e3_block).e1_blockId) = ((*l19_whileBlock).e3_blockId);
 concat_FilePosition tmp293 = ((*arg0/*op*/).e2_pos);
 concat_28_FextractCompositeOps(((int64_t)1),false,tmp293,arg1/*state*/);
@@ -23055,7 +23056,7 @@ concat_BlockType tmp302 = ((concat_BlockType){.label=6});
 ((*l19_whileBlock).e4_blockType) = tmp302;
 concat_28_FStackState tmp303 = concat_28_FcopyStack(arg1/*state*/);
 concat_28_FBlockData* const tmp304 = (&((*l19_whileBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp304).label,2,"./concat.concat/typeCheck.concat:1964:52");
+concat_internal_checkEnumIndex((*tmp304).label,2,"./concat.concat/typeCheck.concat:1959:52");
 (((*tmp304).data.e2_whileBlock).e1_outTypes) = tmp303;
 return;
 case 7:;
@@ -23069,10 +23070,10 @@ concat_FilePosition tmp310 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp309,tmp310,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp305.label,1,"./concat.concat/typeCheck.concat:1973:15");
+concat_internal_checkEnumIndex(tmp305.label,1,"./concat.concat/typeCheck.concat:1968:15");
 concat_28_FBlockInfo* const l20_breakBlock = (tmp305.data.e1_data);
 concat_OpValue* const tmp311 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp311).label,3,"./concat.concat/typeCheck.concat:1974:45");
+concat_internal_checkEnumIndex((*tmp311).label,3,"./concat.concat/typeCheck.concat:1969:45");
 (((*tmp311).data.e3_block).e1_blockId) = ((*l20_breakBlock).e3_blockId);
 bool l21_match = false;
 concat_BlockType tmp312 = ((*l20_breakBlock).e4_blockType);
@@ -23087,7 +23088,7 @@ concat_BlockType tmp315 = ((*l20_breakBlock).e4_blockType);
 bool const tmp316 = ((bool)((tmp315.label==10)|(tmp315.label==11)));
 if(tmp316){
 concat_28_FBlockData* const tmp317 = (&((*l20_breakBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp317).label,3,"./concat.concat/typeCheck.concat:1982:38");
+concat_internal_checkEnumIndex((*tmp317).label,3,"./concat.concat/typeCheck.concat:1977:38");
 bool const tmp318 = (((*tmp317).data.e3_switchBlock).e4_explicitBreak);
 if(tmp318){
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
@@ -23095,19 +23096,19 @@ concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_FilePosition tmp319 = ((*arg0/*op*/).e2_pos);
 concat_28_FstoreSwitchOutTypes(l20_breakBlock,tmp319,arg1/*state*/);
 concat_optional_I15 tmp320 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
-concat_internal_checkEnumIndex(tmp320.label,1,"./concat.concat/typeCheck.concat:1986:44");
+concat_internal_checkEnumIndex(tmp320.label,1,"./concat.concat/typeCheck.concat:1981:44");
 concat_28_FBlockInfo* const tmp321 = (tmp320.data.e1_data);
 concat_BlockType tmp322 = ((*tmp321).e4_blockType);
 bool const tmp323 = ((bool)((tmp322.label==10)|(tmp322.label==11)));
 if(tmp323){
 concat_28_FBlockData* const tmp324 = (&((*l20_breakBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp324).label,3,"./concat.concat/typeCheck.concat:1987:45");
+concat_internal_checkEnumIndex((*tmp324).label,3,"./concat.concat/typeCheck.concat:1982:45");
 (((*tmp324).data.e3_switchBlock).e4_explicitBreak) = true;
 }
 bool const tmp325 = ((*arg1/*state*/).e12_reachable);
 if(tmp325){
 concat_28_FBlockData* const tmp326 = (&((*l20_breakBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp326).label,3,"./concat.concat/typeCheck.concat:1990:45");
+concat_internal_checkEnumIndex((*tmp326).label,3,"./concat.concat/typeCheck.concat:1985:45");
 (((*tmp326).data.e3_switchBlock).e3_endReachable) = true;
 }
 l21_match = true;
@@ -23136,10 +23137,10 @@ concat_FilePosition tmp336 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp335,tmp336,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp331.label,1,"./concat.concat/typeCheck.concat:2010:15");
+concat_internal_checkEnumIndex(tmp331.label,1,"./concat.concat/typeCheck.concat:2005:15");
 concat_28_FBlockInfo* const l22_breakBlock = (tmp331.data.e1_data);
 concat_OpValue* const tmp337 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp337).label,3,"./concat.concat/typeCheck.concat:2011:45");
+concat_internal_checkEnumIndex((*tmp337).label,3,"./concat.concat/typeCheck.concat:2006:45");
 (((*tmp337).data.e3_block).e1_blockId) = ((*l22_breakBlock).e3_blockId);
 ((*arg1/*state*/).e12_reachable) = false;
 concat_BlockType tmp338 = ((*l22_breakBlock).e4_blockType);
@@ -23148,7 +23149,7 @@ if(tmp339){
 bool const tmp340 = (((*l22_breakBlock).e4_blockType).label==6);
 if(tmp340){
 concat_28_FBlockData* const tmp341 = (&((*l22_breakBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp341).label,2,"./concat.concat/typeCheck.concat:2015:46");
+concat_internal_checkEnumIndex((*tmp341).label,2,"./concat.concat/typeCheck.concat:2010:46");
 (((*tmp341).data.e2_whileBlock).e3_doesLoop) = true;
 }
 concat_FilePosition tmp342 = ((*arg0/*op*/).e2_pos);
@@ -23168,7 +23169,7 @@ concat_list_I27 tmp348 = concat_list_dappend_I31(tmp347,((concat_CaseInfo){.e0_o
 concat_list_I29 tmp349 = concat_list_dappend_I32(tmp345,((concat_SwitchData){.e0_labels = tmp346,.e1_cases = tmp348}));
 ((*arg1/*state*/).e6_switchData) = tmp349;
 concat_OpValue* const tmp350 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp350).label,3,"./concat.concat/typeCheck.concat:2032:30");
+concat_internal_checkEnumIndex((*tmp350).label,3,"./concat.concat/typeCheck.concat:2027:30");
 (((*tmp350).data.e3_block).e1_blockId) = l23_blockId;
 concat_optional_I31 tmp351 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
 bool const tmp352 = concat_optional_disEmpty_I5(tmp351);
@@ -23179,7 +23180,7 @@ concat_FilePosition tmp354 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp353,tmp354,arg1/*state*/);
 tmp355 = ((concat_Type){.label=0});
 }else{
-concat_internal_checkEnumIndex(tmp351.label,1,"./concat.concat/typeCheck.concat:2036:16");
+concat_internal_checkEnumIndex(tmp351.label,1,"./concat.concat/typeCheck.concat:2031:16");
 concat_28_FTypeInfo* const tmp356 = (tmp351.data.e1_data);
 tmp355 = ((*tmp356).e0_valType);
 }
@@ -23238,7 +23239,7 @@ concat_28_FappendError2(tmp384,tmp385,arg1/*state*/);
 return;
 }
 concat_optional_I15 tmp386 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
-concat_internal_checkEnumIndex(tmp386.label,1,"./concat.concat/typeCheck.concat:2079:42");
+concat_internal_checkEnumIndex(tmp386.label,1,"./concat.concat/typeCheck.concat:2074:42");
 concat_28_FBlockInfo* const l28_switchBlock = (tmp386.data.e1_data);
 concat_BlockType tmp387 = ((*l28_switchBlock).e4_blockType);
 bool const tmp388 = ((bool)((tmp387.label!=9)&(tmp387.label!=10)));
@@ -23260,11 +23261,11 @@ concat_28_FappendError2(tmp396,tmp397,arg1/*state*/);
 }
 concat_list_I29 tmp398 = ((*arg1/*state*/).e6_switchData);
 concat_optional_I33 tmp399 = concat_list_dat_I17(tmp398,((int64_t)((*l28_switchBlock).e3_blockId)));
-concat_internal_checkEnumIndex(tmp399.label,1,"./concat.concat/typeCheck.concat:2092:64");
+concat_internal_checkEnumIndex(tmp399.label,1,"./concat.concat/typeCheck.concat:2087:64");
 concat_SwitchData* const tmp400 = (tmp399.data.e1_data);
 concat_list_I27* const l29_cases = (&((*tmp400).e1_cases));
 concat_optional_I35 tmp401 = concat_list_dpeek_I5((*l29_cases));
-concat_internal_checkEnumIndex(tmp401.label,1,"./concat.concat/typeCheck.concat:2093:30");
+concat_internal_checkEnumIndex(tmp401.label,1,"./concat.concat/typeCheck.concat:2088:30");
 concat_CaseInfo* const tmp402 = (tmp401.data.e1_data);
 int64_t tmp403 = ((*tmp402).e1_count);
 bool const tmp404 = (tmp403==((int64_t)0));
@@ -23276,31 +23277,31 @@ concat_FilePosition tmp408 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp407,tmp408,arg1/*state*/);
 }
 concat_OpValue* const tmp409 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp409).label,3,"./concat.concat/typeCheck.concat:2098:46");
+concat_internal_checkEnumIndex((*tmp409).label,3,"./concat.concat/typeCheck.concat:2093:46");
 (((*tmp409).data.e3_block).e1_blockId) = ((*l28_switchBlock).e3_blockId);
 int64_t tmp410 = ((*l29_cases).e1_length);
 concat_OpValue* const tmp411 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp411).label,3,"./concat.concat/typeCheck.concat:2099:52");
+concat_internal_checkEnumIndex((*tmp411).label,3,"./concat.concat/typeCheck.concat:2094:52");
 (((*tmp411).data.e3_block).e2_subId) = ((int32_t)((int64_t)(tmp410-((int64_t)1))));
 concat_list_I27 tmp412 = (*l29_cases);
 concat_list_I29 tmp413 = ((*arg1/*state*/).e6_switchData);
 concat_optional_I33 tmp414 = concat_list_dat_I17(tmp413,((int64_t)((*l28_switchBlock).e3_blockId)));
-concat_internal_checkEnumIndex(tmp414.label,1,"./concat.concat/typeCheck.concat:2101:66");
+concat_internal_checkEnumIndex(tmp414.label,1,"./concat.concat/typeCheck.concat:2096:66");
 concat_SwitchData* const tmp415 = (tmp414.data.e1_data);
 int64_t tmp416 = (((*tmp415).e0_labels).e1_length);
 concat_list_I27 tmp417 = concat_list_dappend_I31(tmp412,((concat_CaseInfo){.e0_offset = tmp416,.e1_count = ((int64_t)0)}));
 (*l29_cases) = tmp417;
 ((*arg1/*state*/).e12_reachable) = true;
 concat_28_FBlockData* const tmp418 = (&((*l28_switchBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp418).label,3,"./concat.concat/typeCheck.concat:2104:37");
+concat_internal_checkEnumIndex((*tmp418).label,3,"./concat.concat/typeCheck.concat:2099:37");
 concat_28_FresetStack((&(((*tmp418).data.e3_switchBlock).e0_inTypes)),arg1/*state*/);
 concat_BlockType tmp419 = ((concat_BlockType){.label=10});
 ((*l28_switchBlock).e4_blockType) = tmp419;
 concat_28_FBlockData* const tmp420 = (&((*l28_switchBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp420).label,3,"./concat.concat/typeCheck.concat:2106:43");
+concat_internal_checkEnumIndex((*tmp420).label,3,"./concat.concat/typeCheck.concat:2101:43");
 (((*tmp420).data.e3_switchBlock).e4_explicitBreak) = false;
 concat_28_FBlockData* const tmp421 = (&((*l28_switchBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp421).label,3,"./concat.concat/typeCheck.concat:2107:37");
+concat_internal_checkEnumIndex((*tmp421).label,3,"./concat.concat/typeCheck.concat:2102:37");
 concat_Type tmp422 = (((*tmp421).data.e3_switchBlock).e2_switchType);
 ((*arg0/*op*/).e1_dataType) = tmp422;
 concat_list_I24 tmp423 = ((*arg1/*state*/).e1_compiledOps);
@@ -23319,7 +23320,7 @@ concat_28_FappendError2(tmp429,tmp430,arg1/*state*/);
 return;
 }
 concat_optional_I15 tmp431 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
-concat_internal_checkEnumIndex(tmp431.label,1,"./concat.concat/typeCheck.concat:2119:42");
+concat_internal_checkEnumIndex(tmp431.label,1,"./concat.concat/typeCheck.concat:2114:42");
 concat_28_FBlockInfo* const l30_switchBlock = (tmp431.data.e1_data);
 bool const tmp432 = (((*l30_switchBlock).e4_blockType).label!=10);
 if(tmp432){
@@ -23340,10 +23341,10 @@ concat_28_FappendError2(tmp440,tmp441,arg1/*state*/);
 }
 concat_list_I29 tmp442 = ((*arg1/*state*/).e6_switchData);
 concat_optional_I33 tmp443 = concat_list_dat_I17(tmp442,((int64_t)((*l30_switchBlock).e3_blockId)));
-concat_internal_checkEnumIndex(tmp443.label,1,"./concat.concat/typeCheck.concat:2132:64");
+concat_internal_checkEnumIndex(tmp443.label,1,"./concat.concat/typeCheck.concat:2127:64");
 concat_SwitchData* const tmp444 = (tmp443.data.e1_data);
 concat_optional_I35 tmp445 = concat_list_dpeek_I5(((*tmp444).e1_cases));
-concat_internal_checkEnumIndex(tmp445.label,1,"./concat.concat/typeCheck.concat:2132:90");
+concat_internal_checkEnumIndex(tmp445.label,1,"./concat.concat/typeCheck.concat:2127:90");
 concat_CaseInfo* const tmp446 = (tmp445.data.e1_data);
 int64_t tmp447 = ((*tmp446).e1_count);
 bool const tmp448 = (tmp447!=((int64_t)0));
@@ -23356,19 +23357,19 @@ concat_28_FappendError2(tmp451,tmp452,arg1/*state*/);
 }
 ((*arg1/*state*/).e12_reachable) = true;
 concat_28_FBlockData* const tmp453 = (&((*l30_switchBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp453).label,3,"./concat.concat/typeCheck.concat:2138:37");
+concat_internal_checkEnumIndex((*tmp453).label,3,"./concat.concat/typeCheck.concat:2133:37");
 concat_28_FresetStack((&(((*tmp453).data.e3_switchBlock).e0_inTypes)),arg1/*state*/);
 concat_BlockType tmp454 = ((concat_BlockType){.label=11});
 ((*l30_switchBlock).e4_blockType) = tmp454;
 concat_28_FBlockData* const tmp455 = (&((*l30_switchBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp455).label,3,"./concat.concat/typeCheck.concat:2140:43");
+concat_internal_checkEnumIndex((*tmp455).label,3,"./concat.concat/typeCheck.concat:2135:43");
 (((*tmp455).data.e3_switchBlock).e4_explicitBreak) = false;
 concat_28_FBlockData* const tmp456 = (&((*l30_switchBlock).e0_blockData));
-concat_internal_checkEnumIndex((*tmp456).label,3,"./concat.concat/typeCheck.concat:2141:37");
+concat_internal_checkEnumIndex((*tmp456).label,3,"./concat.concat/typeCheck.concat:2136:37");
 concat_Type tmp457 = (((*tmp456).data.e3_switchBlock).e2_switchType);
 ((*arg0/*op*/).e1_dataType) = tmp457;
 concat_OpValue* const tmp458 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp458).label,3,"./concat.concat/typeCheck.concat:2142:46");
+concat_internal_checkEnumIndex((*tmp458).label,3,"./concat.concat/typeCheck.concat:2137:46");
 (((*tmp458).data.e3_block).e1_blockId) = ((*l30_switchBlock).e3_blockId);
 concat_list_I24 tmp459 = ((*arg1/*state*/).e1_compiledOps);
 concat_list_I24 tmp460 = concat_list_dappendP_I1(tmp459,((int64_t)1),((concat_Operation const*)arg0/*op*/));
@@ -23377,14 +23378,14 @@ return;
 case 0:case 1:case 2:case 12:;
 concat_list_I1 tmp461 = concat_sb_dwrap(((int64_t)15),((int8_t const*)"blocks of type "));
 concat_OpValue* const tmp462 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp462).label,3,"./concat.concat/typeCheck.concat:2149:24");
+concat_internal_checkEnumIndex((*tmp462).label,3,"./concat.concat/typeCheck.concat:2144:24");
 concat_list_I1 tmp463 = concat_sb_dappendBlockType(tmp461,(((*tmp462).data.e3_block).e0_blockType));
 concat_list_I1 tmp464 = concat_sb_dappendS(tmp463,((int64_t)18),((int8_t const*)" are not supported"));
 concat_FilePosition tmp465 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp464,tmp465,arg1/*state*/);
 return;
 }
-fprintf(stderr,"reached unreachable statement at ./concat.concat/typeCheck.concat:2153:7\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./concat.concat/typeCheck.concat:2148:7\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 break;
 case 4:;
@@ -23393,23 +23394,23 @@ bool const tmp467 = (tmp466==((int64_t)0));
 if(tmp467){
 concat_list_I1 tmp468 = concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "));
 concat_OpValue* const tmp469 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp469).label,4,"./concat.concat/typeCheck.concat:2158:22");
+concat_internal_checkEnumIndex((*tmp469).label,4,"./concat.concat/typeCheck.concat:2153:22");
 concat_list_I1 tmp470 = concat_sb_dappendBlockType(tmp468,(((*tmp469).data.e4_blockEnd).e0_blockType));
 concat_FilePosition tmp471 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp470,tmp471,arg1/*state*/);
 return;
 }
 concat_optional_I15 tmp472 = concat_list_dpeek_I4(((*arg1/*state*/).e4_openBlocks));
-concat_internal_checkEnumIndex(tmp472.label,1,"./concat.concat/typeCheck.concat:2162:38");
+concat_internal_checkEnumIndex(tmp472.label,1,"./concat.concat/typeCheck.concat:2157:38");
 concat_28_FBlockInfo* const l31_closed = (tmp472.data.e1_data);
 concat_OpValue* const tmp473 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp473).label,4,"./concat.concat/typeCheck.concat:2163:18");
+concat_internal_checkEnumIndex((*tmp473).label,4,"./concat.concat/typeCheck.concat:2158:18");
 concat_BlockType tmp474 = (((*tmp473).data.e4_blockEnd).e0_blockType);
 bool const tmp475 = (tmp474.label!=((*l31_closed).e4_blockType).label);
 if(tmp475){
 concat_list_I1 tmp476 = concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "));
 concat_OpValue* const tmp477 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp477).label,4,"./concat.concat/typeCheck.concat:2165:22");
+concat_internal_checkEnumIndex((*tmp477).label,4,"./concat.concat/typeCheck.concat:2160:22");
 concat_list_I1 tmp478 = concat_sb_dappendBlockType(tmp476,(((*tmp477).data.e4_blockEnd).e0_blockType));
 concat_list_I1 tmp479 = concat_sb_dappendS(tmp478,((int64_t)20),((int8_t const*)" block expected end "));
 concat_list_I1 tmp480 = concat_sb_dappendBlockType(tmp479,((*l31_closed).e4_blockType));
@@ -23427,26 +23428,26 @@ concat_28_FstoreIfOutTypes(l31_closed,(((*l31_closed).e4_blockType).label==3),tm
 bool const tmp485 = (((*l31_closed).e4_blockType).label==3);
 if(tmp485){
 concat_28_FBlockData* const tmp486 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp486).label,1,"./concat.concat/typeCheck.concat:2175:34");
+concat_internal_checkEnumIndex((*tmp486).label,1,"./concat.concat/typeCheck.concat:2170:34");
 concat_28_FresetStack(((concat_28_FStackState const*)(&(((*tmp486).data.e1_ifBlock).e0_inTypes))),arg1/*state*/);
 }else{
 concat_28_FBlockData* const tmp487 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp487).label,1,"./concat.concat/typeCheck.concat:2177:34");
+concat_internal_checkEnumIndex((*tmp487).label,1,"./concat.concat/typeCheck.concat:2172:34");
 concat_28_FresetStack(((concat_28_FStackState const*)(&(((*tmp487).data.e1_ifBlock).e1_outTypes))),arg1/*state*/);
 }
 }
 bool tmp488 = ((*arg1/*state*/).e12_reachable);
 concat_28_FBlockData* const tmp489 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp489).label,1,"./concat.concat/typeCheck.concat:2180:34");
+concat_internal_checkEnumIndex((*tmp489).label,1,"./concat.concat/typeCheck.concat:2175:34");
 concat_28_FBlockData* const tmp490 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp490).label,1,"./concat.concat/typeCheck.concat:2181:34");
+concat_internal_checkEnumIndex((*tmp490).label,1,"./concat.concat/typeCheck.concat:2176:34");
 int64_t tmp491 = (((*tmp490).data.e1_ifBlock).e2_elsePos);
 ((*arg1/*state*/).e12_reachable) = ((bool)(((bool)(tmp488|(((*tmp489).data.e1_ifBlock).e3_elseReachable)))|(tmp491==((int64_t)-1))));
 concat_28_FBlockData* const tmp492 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp492).label,1,"./concat.concat/typeCheck.concat:2183:32");
+concat_internal_checkEnumIndex((*tmp492).label,1,"./concat.concat/typeCheck.concat:2178:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp492).data.e1_ifBlock).e0_inTypes))));
 concat_28_FBlockData* const tmp493 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp493).label,1,"./concat.concat/typeCheck.concat:2184:32");
+concat_internal_checkEnumIndex((*tmp493).label,1,"./concat.concat/typeCheck.concat:2179:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp493).data.e1_ifBlock).e1_outTypes))));
 break;
 case 5:;
@@ -23457,16 +23458,16 @@ concat_list_I1 tmp497 = concat_sb_dappendBlockType(tmp496,((concat_BlockType){.l
 concat_FilePosition tmp498 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp497,tmp498,arg1/*state*/);
 concat_28_FBlockData* const tmp499 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp499).label,2,"./concat.concat/typeCheck.concat:2192:32");
+concat_internal_checkEnumIndex((*tmp499).label,2,"./concat.concat/typeCheck.concat:2187:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp499).data.e2_whileBlock).e0_inTypes))));
 concat_28_FBlockData* const tmp500 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp500).label,2,"./concat.concat/typeCheck.concat:2193:32");
+concat_internal_checkEnumIndex((*tmp500).label,2,"./concat.concat/typeCheck.concat:2188:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp500).data.e2_whileBlock).e1_outTypes))));
 break;
 case 6:;
 bool tmp501 = ((*arg1/*state*/).e12_reachable);
 concat_28_FBlockData* const tmp502 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp502).label,2,"./concat.concat/typeCheck.concat:2196:52");
+concat_internal_checkEnumIndex((*tmp502).label,2,"./concat.concat/typeCheck.concat:2191:52");
 bool const tmp503 = (!((bool)(tmp501|(((*tmp502).data.e2_whileBlock).e3_doesLoop))));
 if(tmp503){
 concat_list_I1 tmp504 = concat_sb_dwrap(((int64_t)35),((int8_t const*)"while block cannot complete a loop "));
@@ -23479,14 +23480,14 @@ concat_FilePosition tmp507 = ((*arg0/*op*/).e2_pos);
 concat_28_FstoreLoopInTypes(l31_closed,tmp507,arg1/*state*/);
 }
 concat_28_FBlockData* const tmp508 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp508).label,2,"./concat.concat/typeCheck.concat:2202:32");
+concat_internal_checkEnumIndex((*tmp508).label,2,"./concat.concat/typeCheck.concat:2197:32");
 concat_28_FresetStack(((concat_28_FStackState const*)(&(((*tmp508).data.e2_whileBlock).e1_outTypes))),arg1/*state*/);
 ((*arg1/*state*/).e12_reachable) = true;
 concat_28_FBlockData* const tmp509 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp509).label,2,"./concat.concat/typeCheck.concat:2204:32");
+concat_internal_checkEnumIndex((*tmp509).label,2,"./concat.concat/typeCheck.concat:2199:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp509).data.e2_whileBlock).e0_inTypes))));
 concat_28_FBlockData* const tmp510 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp510).label,2,"./concat.concat/typeCheck.concat:2205:32");
+concat_internal_checkEnumIndex((*tmp510).label,2,"./concat.concat/typeCheck.concat:2200:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp510).data.e2_whileBlock).e1_outTypes))));
 break;
 case 9:;
@@ -23497,10 +23498,10 @@ concat_list_I1 tmp514 = concat_sb_dappendBlockType(tmp513,((concat_BlockType){.l
 concat_FilePosition tmp515 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp514,tmp515,arg1/*state*/);
 concat_28_FBlockData* const tmp516 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp516).label,3,"./concat.concat/typeCheck.concat:2213:32");
+concat_internal_checkEnumIndex((*tmp516).label,3,"./concat.concat/typeCheck.concat:2208:32");
 concat_28_FfreeStackState((&(((*tmp516).data.e3_switchBlock).e0_inTypes)));
 concat_28_FBlockData* const tmp517 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp517).label,3,"./concat.concat/typeCheck.concat:2214:32");
+concat_internal_checkEnumIndex((*tmp517).label,3,"./concat.concat/typeCheck.concat:2209:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp517).data.e3_switchBlock).e1_outTypes))));
 break;
 case 10:;
@@ -23511,11 +23512,11 @@ concat_FilePosition tmp520 = ((*arg0/*op*/).e2_pos);
 concat_28_FappendError2(tmp519,tmp520,arg1/*state*/);
 }
 concat_28_FBlockData* const tmp521 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp521).label,3,"./concat.concat/typeCheck.concat:2220:45");
+concat_internal_checkEnumIndex((*tmp521).label,3,"./concat.concat/typeCheck.concat:2215:45");
 concat_28_FSwitchBlockData* const l32_switchBlock = (&((*tmp521).data.e3_switchBlock));
 concat_list_I29 tmp522 = ((*arg1/*state*/).e6_switchData);
 concat_optional_I33 tmp523 = concat_list_dat_I17(tmp522,((int64_t)((*l31_closed).e3_blockId)));
-concat_internal_checkEnumIndex(tmp523.label,1,"./concat.concat/typeCheck.concat:2221:59");
+concat_internal_checkEnumIndex(tmp523.label,1,"./concat.concat/typeCheck.concat:2216:59");
 concat_SwitchData* const tmp524 = (tmp523.data.e1_data);
 concat_list_I26 const l33_labels = ((*tmp524).e0_labels);
 concat_Type tmp525 = ((*l32_switchBlock).e2_switchType);
@@ -23544,7 +23545,7 @@ if(!tmp537)
 concat_list_I26 tmp538 = l33_labels;
 concat_LabelData tmp539 = concat_list_dget_I23(tmp538,((int64_t)tmp536));
 concat_ConstValue const tmp540 = (tmp539.e0_value);
-concat_internal_checkEnumIndex(tmp540.label,2,"./concat.concat/typeCheck.concat:2232:50");
+concat_internal_checkEnumIndex(tmp540.label,2,"./concat.concat/typeCheck.concat:2227:50");
 int32_t const tmp541 = (tmp540.data.e2_enumLabel);
 bool const tmp542 = (tmp541==tmp534);
 if(tmp542){
@@ -23560,11 +23561,11 @@ concat_LabelId const tmp545 = concat_types_dcompositeGetLabel(tmp544,tmp534,l2_t
 concat_LabelId const l36_label = tmp545;
 concat_list_I1 tmp546 = concat_sb_dappendS(tmp533,((int64_t)4),((int8_t const*)" - \""));
 concat_optional_I3 tmp547 = concat_id_dlabelName(l36_label,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp547.label,1,"./concat.concat/typeCheck.concat:2241:53");
+concat_internal_checkEnumIndex(tmp547.label,1,"./concat.concat/typeCheck.concat:2236:53");
 concat_list_I1 tmp548 = concat_sb_dappendStr(tmp546,(tmp547.data.e1_data));
 concat_list_I1 tmp549 = concat_sb_dappendS(tmp548,((int64_t)12),((int8_t const*)"\" declaredAt"));
 concat_optional_I4 tmp550 = concat_id_dlabelPos(l36_label,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp550.label,1,"./concat.concat/typeCheck.concat:2243:52");
+concat_internal_checkEnumIndex(tmp550.label,1,"./concat.concat/typeCheck.concat:2238:52");
 concat_list_I1 tmp551 = concat_sb_dappendPos(tmp549,(tmp550.data.e1_data));
 concat_list_I1 tmp552 = concat_sb_dappendC(tmp551,((int8_t)10));
 tmp533 = tmp552;
@@ -23581,15 +23582,15 @@ bool tmp554 = ((*l32_switchBlock).e3_endReachable);
 }
 concat_28_FresetStack(((concat_28_FStackState const*)(&((*l32_switchBlock).e1_outTypes))),arg1/*state*/);
 concat_28_FBlockData* const tmp555 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp555).label,3,"./concat.concat/typeCheck.concat:2255:32");
+concat_internal_checkEnumIndex((*tmp555).label,3,"./concat.concat/typeCheck.concat:2250:32");
 concat_28_FfreeStackState((&(((*tmp555).data.e3_switchBlock).e0_inTypes)));
 concat_28_FBlockData* const tmp556 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp556).label,3,"./concat.concat/typeCheck.concat:2256:32");
+concat_internal_checkEnumIndex((*tmp556).label,3,"./concat.concat/typeCheck.concat:2251:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp556).data.e3_switchBlock).e1_outTypes))));
 break;
 case 11:;
 concat_28_FBlockData* const tmp557 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp557).label,3,"./concat.concat/typeCheck.concat:2259:45");
+concat_internal_checkEnumIndex((*tmp557).label,3,"./concat.concat/typeCheck.concat:2254:45");
 concat_28_FSwitchBlockData* const l37_switchBlock = (&((*tmp557).data.e3_switchBlock));
 bool const tmp558 = ((*arg1/*state*/).e12_reachable);
 if(tmp558){
@@ -23605,15 +23606,15 @@ concat_28_FresetStack(((concat_28_FStackState const*)(&((*l37_switchBlock).e1_ou
 bool tmp564 = ((*l37_switchBlock).e3_endReachable);
 ((*arg1/*state*/).e12_reachable) = tmp564;
 concat_28_FBlockData* const tmp565 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp565).label,3,"./concat.concat/typeCheck.concat:2271:32");
+concat_internal_checkEnumIndex((*tmp565).label,3,"./concat.concat/typeCheck.concat:2266:32");
 concat_28_FfreeStackState((&(((*tmp565).data.e3_switchBlock).e0_inTypes)));
 concat_28_FBlockData* const tmp566 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp566).label,3,"./concat.concat/typeCheck.concat:2272:32");
+concat_internal_checkEnumIndex((*tmp566).label,3,"./concat.concat/typeCheck.concat:2267:32");
 concat_28_FfreeStackState(((concat_28_FStackState const*)(&(((*tmp566).data.e3_switchBlock).e1_outTypes))));
 break;
 case 1:case 2:;
 concat_28_FBlockData* const tmp567 = (&((*l31_closed).e0_blockData));
-concat_internal_checkEnumIndex((*tmp567).label,4,"./concat.concat/typeCheck.concat:2275:32");
+concat_internal_checkEnumIndex((*tmp567).label,4,"./concat.concat/typeCheck.concat:2270:32");
 concat_Type tmp568 = ((*tmp567).data.e4_procBlock);
 concat_Operation tmp569 = concat_opReturn(tmp568,((*arg0/*op*/).e2_pos));
 concat_Operation const l38_tmp = tmp569;
@@ -23626,7 +23627,7 @@ break;
 case 7:case 8:case 0:case 12:;
 concat_list_I1 tmp571 = concat_sb_dwrap(((int64_t)23),((int8_t const*)"closing blocks of type "));
 concat_OpValue* const tmp572 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp572).label,4,"./concat.concat/typeCheck.concat:2283:24");
+concat_internal_checkEnumIndex((*tmp572).label,4,"./concat.concat/typeCheck.concat:2278:24");
 concat_list_I1 tmp573 = concat_sb_dappendBlockType(tmp571,(((*tmp572).data.e4_blockEnd).e0_blockType));
 concat_list_I1 tmp574 = concat_sb_dappendS(tmp573,((int64_t)17),((int8_t const*)" is not supported"));
 concat_FilePosition tmp575 = ((*arg0/*op*/).e2_pos);
@@ -23650,95 +23651,95 @@ return;
 case 5:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp584 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp584).label,5,"./concat.concat/typeCheck.concat:2300:21");
+concat_internal_checkEnumIndex((*tmp584).label,5,"./concat.concat/typeCheck.concat:2295:21");
 concat_IdentifierInfo tmp585 = ((*tmp584).data.e5_getId);
 concat_28_FtypeCheckGetId(arg0/*op*/,tmp585,arg1/*state*/);
 return;
 case 6:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp586 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp586).label,6,"./concat.concat/typeCheck.concat:2304:21");
+concat_internal_checkEnumIndex((*tmp586).label,6,"./concat.concat/typeCheck.concat:2299:21");
 concat_IdentifierInfo tmp587 = ((*tmp586).data.e6_setId);
 concat_28_FtypeCheckGetId(arg0/*op*/,tmp587,arg1/*state*/);
 return;
 case 7:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp588 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp588).label,7,"./concat.concat/typeCheck.concat:2308:21");
+concat_internal_checkEnumIndex((*tmp588).label,7,"./concat.concat/typeCheck.concat:2303:21");
 concat_IdentifierInfo tmp589 = ((*tmp588).data.e7__X64Id);
 concat_28_FtypeCheckGetId(arg0/*op*/,tmp589,arg1/*state*/);
 return;
 case 8:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp590 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp590).label,8,"./concat.concat/typeCheck.concat:2312:21");
+concat_internal_checkEnumIndex((*tmp590).label,8,"./concat.concat/typeCheck.concat:2307:21");
 concat_IdentifierInfo tmp591 = ((*tmp590).data.e8_declareId);
 concat_28_FtypeCheckDeclareId(arg0/*op*/,tmp591,arg1/*state*/);
 return;
 case 9:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp592 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp592).label,9,"./concat.concat/typeCheck.concat:2316:21");
+concat_internal_checkEnumIndex((*tmp592).label,9,"./concat.concat/typeCheck.concat:2311:21");
 concat_IdentifierInfo tmp593 = ((*tmp592).data.e9_predeclareId);
 concat_28_FtypeCheckDeclareId(arg0/*op*/,tmp593,arg1/*state*/);
 return;
 case 10:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp594 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp594).label,10,"./concat.concat/typeCheck.concat:2320:21");
+concat_internal_checkEnumIndex((*tmp594).label,10,"./concat.concat/typeCheck.concat:2315:21");
 concat_28_FtypeCheckGetLabel(arg0/*op*/,((*tmp594).data.e10_getLabel),arg1/*state*/);
 return;
 case 11:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp595 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp595).label,11,"./concat.concat/typeCheck.concat:2324:21");
+concat_internal_checkEnumIndex((*tmp595).label,11,"./concat.concat/typeCheck.concat:2319:21");
 concat_LabelId tmp596 = ((*tmp595).data.e11_setLabel);
 concat_28_FtypeCheckGetLabel(arg0/*op*/,tmp596,arg1/*state*/);
 return;
 case 12:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp597 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp597).label,12,"./concat.concat/typeCheck.concat:2328:21");
+concat_internal_checkEnumIndex((*tmp597).label,12,"./concat.concat/typeCheck.concat:2323:21");
 concat_LabelId tmp598 = ((*tmp597).data.e12__X64Label);
 concat_28_FtypeCheckGetLabel(arg0/*op*/,tmp598,arg1/*state*/);
 return;
 case 13:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp599 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp599).label,13,"./concat.concat/typeCheck.concat:2332:21");
+concat_internal_checkEnumIndex((*tmp599).label,13,"./concat.concat/typeCheck.concat:2327:21");
 int32_t tmp600 = ((*tmp599).data.e13_getElement);
 concat_28_FtypeCheckGetElement(arg0/*op*/,tmp600,arg1/*state*/);
 return;
 case 14:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp601 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp601).label,14,"./concat.concat/typeCheck.concat:2336:21");
+concat_internal_checkEnumIndex((*tmp601).label,14,"./concat.concat/typeCheck.concat:2331:21");
 int32_t tmp602 = ((*tmp601).data.e14_setElement);
 concat_28_FtypeCheckGetElement(arg0/*op*/,tmp602,arg1/*state*/);
 return;
 case 15:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp603 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp603).label,15,"./concat.concat/typeCheck.concat:2340:21");
+concat_internal_checkEnumIndex((*tmp603).label,15,"./concat.concat/typeCheck.concat:2335:21");
 int32_t tmp604 = ((*tmp603).data.e15__X64Element);
 concat_28_FtypeCheckGetElement(arg0/*op*/,tmp604,arg1/*state*/);
 return;
 case 16:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp605 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp605).label,16,"./concat.concat/typeCheck.concat:2344:38");
+concat_internal_checkEnumIndex((*tmp605).label,16,"./concat.concat/typeCheck.concat:2339:38");
 concat_28_FtypeCheckGetArrayElement(arg0/*op*/,(&((*tmp605).data.e16_getArrayElement)),arg1/*state*/);
 return;
 case 17:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp606 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp606).label,17,"./concat.concat/typeCheck.concat:2348:38");
+concat_internal_checkEnumIndex((*tmp606).label,17,"./concat.concat/typeCheck.concat:2343:38");
 concat_28_FtypeCheckGetArrayElement(arg0/*op*/,(&((*tmp606).data.e17_setArrayElement)),arg1/*state*/);
 return;
 case 18:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_OpValue* const tmp607 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp607).label,18,"./concat.concat/typeCheck.concat:2352:36");
+concat_internal_checkEnumIndex((*tmp607).label,18,"./concat.concat/typeCheck.concat:2347:36");
 concat_28_FtypeCheckGetArrayElement(arg0/*op*/,(&((*tmp607).data.e18__X64ArrayElement)),arg1/*state*/);
 return;
 case 22:;
@@ -23757,7 +23758,7 @@ concat_28_FappendError2(tmp614,tmp615,arg1/*state*/);
 return;
 }
 concat_optional_I31 tmp616 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp616.label,1,"./concat.concat/typeCheck.concat:2365:37");
+concat_internal_checkEnumIndex(tmp616.label,1,"./concat.concat/typeCheck.concat:2360:37");
 concat_28_FTypeInfo* const tmp617 = (tmp616.data.e1_data);
 concat_Type tmp618 = ((*tmp617).e0_valType);
 ((*arg0/*op*/).e1_dataType) = tmp618;
@@ -23816,7 +23817,7 @@ return;
 }
 concat_Type tmp644 = ((*arg0/*op*/).e1_dataType);
 concat_OpValue* const tmp645 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp645).label,25,"./concat.concat/typeCheck.concat:2397:34");
+concat_internal_checkEnumIndex((*tmp645).label,25,"./concat.concat/typeCheck.concat:2392:34");
 concat_Type tmp646 = concat_types_dcompositeGetElement(tmp644,((int64_t)((*tmp645).data.e25_newEnum)),l2_typeContext);
 concat_Type const l40_labelType = tmp646;
 concat_Type tmp647 = l40_labelType;
@@ -23836,8 +23837,7 @@ concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_optional_I16 tmp652 = concat_optional_dempty_I10();
 concat_28_FCallType tmp653 = ((concat_28_FCallType){.label=1});
-concat_CallingConvention tmp654 = ((concat_CallingConvention){.label=0});
-concat_28_FtypeCheckCall(arg0/*op*/,((concat_TemplateId)-1),tmp652,tmp653,tmp654,arg1/*state*/);
+concat_28_FtypeCheckCall(arg0/*op*/,((concat_TemplateId)-1),tmp652,tmp653,arg1/*state*/);
 return;
 case 27:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
@@ -23847,167 +23847,167 @@ return;
 case 28:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_optional_I31 tmp655 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-bool const tmp656 = concat_optional_disEmpty_I5(tmp655);
-if(tmp656){
-concat_list_I1 tmp657 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
-concat_Operation tmp658 = (*arg0/*op*/);
-concat_list_I1 tmp659 = concat_sb_dappendOp(tmp657,tmp658,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp660 = concat_sb_dappendS(tmp659,((int64_t)12),((int8_t const*)" need 1 got "));
-concat_list_I1 tmp661 = concat_sb_dappendI(tmp660,(((*arg1/*state*/).e3_typeStack).e1_length));
+concat_optional_I31 tmp654 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+bool const tmp655 = concat_optional_disEmpty_I5(tmp654);
+if(tmp655){
+concat_list_I1 tmp656 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
+concat_Operation tmp657 = (*arg0/*op*/);
+concat_list_I1 tmp658 = concat_sb_dappendOp(tmp656,tmp657,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp659 = concat_sb_dappendS(tmp658,((int64_t)12),((int8_t const*)" need 1 got "));
+concat_list_I1 tmp660 = concat_sb_dappendI(tmp659,(((*arg1/*state*/).e3_typeStack).e1_length));
+concat_FilePosition tmp661 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp660,tmp661,arg1/*state*/);
+return;
+}
+concat_internal_checkEnumIndex(tmp654.label,1,"./concat.concat/typeCheck.concat:2420:11");
+concat_28_FTypeInfo* l41_argIndex = (tmp654.data.e1_data);
 concat_FilePosition tmp662 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp661,tmp662,arg1/*state*/);
+concat_28_FextractCompositeOps(((int64_t)1),false,tmp662,arg1/*state*/);
+concat_Type tmp663 = ((*l41_argIndex).e0_valType);
+bool const tmp664 = concat_types_disInt(tmp663,((concat_TypeContext const*)l2_typeContext));
+bool const tmp665 = (!tmp664);
+if(tmp665){
+concat_list_I1 tmp666 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"wrong type for argument index : "));
+concat_Type tmp667 = ((*l41_argIndex).e0_valType);
+concat_list_I1 tmp668 = concat_sb_dappendType(tmp666,tmp667,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp669 = concat_sb_dappendS(tmp668,((int64_t)17),((int8_t const*)" expected integer"));
+concat_FilePosition tmp670 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp669,tmp670,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp655.label,1,"./concat.concat/typeCheck.concat:2425:11");
-concat_28_FTypeInfo* l41_argIndex = (tmp655.data.e1_data);
-concat_FilePosition tmp663 = ((*arg0/*op*/).e2_pos);
-concat_28_FextractCompositeOps(((int64_t)1),false,tmp663,arg1/*state*/);
-concat_Type tmp664 = ((*l41_argIndex).e0_valType);
-bool const tmp665 = concat_types_disInt(tmp664,((concat_TypeContext const*)l2_typeContext));
-bool const tmp666 = (!tmp665);
-if(tmp666){
-concat_list_I1 tmp667 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"wrong type for argument index : "));
-concat_Type tmp668 = ((*l41_argIndex).e0_valType);
-concat_list_I1 tmp669 = concat_sb_dappendType(tmp667,tmp668,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp670 = concat_sb_dappendS(tmp669,((int64_t)17),((int8_t const*)" expected integer"));
-concat_FilePosition tmp671 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp670,tmp671,arg1/*state*/);
-return;
-}
-concat_Type tmp672 = concat_primitive_dtypes_dI8;
-concat_arrayView_I2 tmp673 = concat_array_dempty_I0();
-concat_tuple265 const tmp674 = concat_types_dnewArrayType(tmp672,true,tmp673,false,false,l2_typeContext);
-concat_Type tmp675 = (tmp674.e0);
-bool const tmp676 = (tmp674.e1);
-((*arg0/*op*/).e1_dataType) = tmp675;
-concat_list_I24 tmp677 = ((*arg1/*state*/).e1_compiledOps);
-concat_Type tmp678 = ((*arg0/*op*/).e1_dataType);
-concat_Operation tmp679 = concat_opCheckIndex(tmp678,((int64_t)-1),((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp680 = concat_list_dappend_I0(tmp677,tmp679);
-concat_Operation tmp681 = concat_opArgc(((*arg0/*op*/).e2_pos));
-concat_list_I24 tmp682 = concat_list_dappend_I0(tmp680,tmp681);
-concat_Operation* tmp683 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_arrayView_I6 tmp684 = concat_array_dcreate_I5(((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(tmp683+(((*arg1/*state*/).e2_opStack).e1_length)))-((int64_t)((*l41_argIndex).e1_opCount))))),((int64_t)((*l41_argIndex).e1_opCount)));
-concat_list_I24 tmp685 = concat_list_dappendArray_I5(tmp682,tmp684);
-((*arg1/*state*/).e1_compiledOps) = tmp685;
+concat_Type tmp671 = concat_primitive_dtypes_dI8;
+concat_arrayView_I2 tmp672 = concat_array_dempty_I0();
+concat_tuple265 const tmp673 = concat_types_dnewArrayType(tmp671,true,tmp672,false,false,l2_typeContext);
+concat_Type tmp674 = (tmp673.e0);
+bool const tmp675 = (tmp673.e1);
+((*arg0/*op*/).e1_dataType) = tmp674;
+concat_list_I24 tmp676 = ((*arg1/*state*/).e1_compiledOps);
+concat_Type tmp677 = ((*arg0/*op*/).e1_dataType);
+concat_Operation tmp678 = concat_opCheckIndex(tmp677,((int64_t)-1),((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp679 = concat_list_dappend_I0(tmp676,tmp678);
+concat_Operation tmp680 = concat_opArgc(((*arg0/*op*/).e2_pos));
+concat_list_I24 tmp681 = concat_list_dappend_I0(tmp679,tmp680);
+concat_Operation* tmp682 = (((*arg1/*state*/).e2_opStack).e0_data);
+concat_arrayView_I6 tmp683 = concat_array_dcreate_I5(((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(tmp682+(((*arg1/*state*/).e2_opStack).e1_length)))-((int64_t)((*l41_argIndex).e1_opCount))))),((int64_t)((*l41_argIndex).e1_opCount)));
+concat_list_I24 tmp684 = concat_list_dappendArray_I5(tmp681,tmp683);
+((*arg1/*state*/).e1_compiledOps) = tmp684;
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg1/*state*/);
-concat_OpValue tmp686 = ((concat_OpValue){.label=29});
-((*arg0/*op*/).e0_val) = tmp686;
-concat_Type tmp687 = concat_primitive_dtypes_dI__SIZE;
-((*arg0/*op*/).e1_dataType) = tmp687;
+concat_OpValue tmp685 = ((concat_OpValue){.label=29});
+((*arg0/*op*/).e0_val) = tmp685;
+concat_Type tmp686 = concat_primitive_dtypes_dI__SIZE;
+((*arg0/*op*/).e1_dataType) = tmp686;
 concat_28_FpushValue(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_list_I33 tmp688 = ((*arg1/*state*/).e3_typeStack);
-int64_t tmp689 = (((*arg1/*state*/).e3_typeStack).e1_length);
-concat_optional_I31 tmp690 = concat_list_dat_I13(tmp688,((int64_t)(tmp689-((int64_t)2))));
-concat_internal_checkEnumIndex(tmp690.label,1,"./concat.concat/typeCheck.concat:2450:67");
-l41_argIndex = (tmp690.data.e1_data);
-concat_list_I24 tmp691 = ((*arg1/*state*/).e2_opStack);
-int64_t tmp692 = (tmp691.e1_length);
-concat_list_I24 tmp693 = concat_list_densureCap_I3(tmp691,((int64_t)(tmp692+((int64_t)((*l41_argIndex).e1_opCount)))));
-((*arg1/*state*/).e2_opStack) = tmp693;
-concat_Operation* tmp694 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* const tmp695 = ((concat_Operation*)(tmp694+(((*arg1/*state*/).e2_opStack).e1_length)));
-int32_t tmp696 = ((*l41_argIndex).e1_opCount);
-concat_Operation* const tmp697 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),tmp695,((concat_Operation const*)((concat_Operation*)(tmp695-((int64_t)((*l41_argIndex).e1_opCount))))),((int64_t)((int32_t)(tmp696-((int32_t)1)))));
-int64_t tmp698 = (((*arg1/*state*/).e2_opStack).e1_length);
-int32_t tmp699 = ((*l41_argIndex).e1_opCount);
-(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp698+((int64_t)((int32_t)(tmp699-((int32_t)1))))));
-concat_optional_I31 tmp700 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp700.label,1,"./concat.concat/typeCheck.concat:2454:37");
-concat_28_FTypeInfo* const tmp701 = (tmp700.data.e1_data);
-int32_t tmp702 = ((*tmp701).e1_opCount);
-int32_t tmp703 = ((*l41_argIndex).e1_opCount);
-concat_optional_I31 tmp704 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp704.label,1,"./concat.concat/typeCheck.concat:2454:114");
-concat_28_FTypeInfo* const tmp705 = (tmp704.data.e1_data);
-((*tmp705).e1_opCount) = ((int32_t)(tmp702+((int32_t)(tmp703-((int32_t)1)))));
+concat_list_I33 tmp687 = ((*arg1/*state*/).e3_typeStack);
+int64_t tmp688 = (((*arg1/*state*/).e3_typeStack).e1_length);
+concat_optional_I31 tmp689 = concat_list_dat_I13(tmp687,((int64_t)(tmp688-((int64_t)2))));
+concat_internal_checkEnumIndex(tmp689.label,1,"./concat.concat/typeCheck.concat:2445:67");
+l41_argIndex = (tmp689.data.e1_data);
+concat_list_I24 tmp690 = ((*arg1/*state*/).e2_opStack);
+int64_t tmp691 = (tmp690.e1_length);
+concat_list_I24 tmp692 = concat_list_densureCap_I3(tmp690,((int64_t)(tmp691+((int64_t)((*l41_argIndex).e1_opCount)))));
+((*arg1/*state*/).e2_opStack) = tmp692;
+concat_Operation* tmp693 = (((*arg1/*state*/).e2_opStack).e0_data);
+concat_Operation* const tmp694 = ((concat_Operation*)(tmp693+(((*arg1/*state*/).e2_opStack).e1_length)));
+int32_t tmp695 = ((*l41_argIndex).e1_opCount);
+concat_Operation* const tmp696 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),tmp694,((concat_Operation const*)((concat_Operation*)(tmp694-((int64_t)((*l41_argIndex).e1_opCount))))),((int64_t)((int32_t)(tmp695-((int32_t)1)))));
+int64_t tmp697 = (((*arg1/*state*/).e2_opStack).e1_length);
+int32_t tmp698 = ((*l41_argIndex).e1_opCount);
+(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp697+((int64_t)((int32_t)(tmp698-((int32_t)1))))));
+concat_optional_I31 tmp699 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+concat_internal_checkEnumIndex(tmp699.label,1,"./concat.concat/typeCheck.concat:2449:37");
+concat_28_FTypeInfo* const tmp700 = (tmp699.data.e1_data);
+int32_t tmp701 = ((*tmp700).e1_opCount);
+int32_t tmp702 = ((*l41_argIndex).e1_opCount);
+concat_optional_I31 tmp703 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+concat_internal_checkEnumIndex(tmp703.label,1,"./concat.concat/typeCheck.concat:2449:114");
+concat_28_FTypeInfo* const tmp704 = (tmp703.data.e1_data);
+((*tmp704).e1_opCount) = ((int32_t)(tmp701+((int32_t)(tmp702-((int32_t)1)))));
 ((*arg1/*state*/).e15_hasGetArgs) = true;
 ((*arg1/*state*/).e13_hasCheckIndex) = true;
 return;
 case 30:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_optional_I31 tmp706 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-bool const tmp707 = concat_optional_disEmpty_I5(tmp706);
-if(tmp707){
-concat_list_I1 tmp708 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
-concat_Operation tmp709 = (*arg0/*op*/);
-concat_list_I1 tmp710 = concat_sb_dappendOp(tmp708,tmp709,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp711 = concat_sb_dappendS(tmp710,((int64_t)12),((int8_t const*)" need 1 got "));
-concat_list_I1 tmp712 = concat_sb_dappendI(tmp711,(((*arg1/*state*/).e3_typeStack).e1_length));
-concat_FilePosition tmp713 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp712,tmp713,arg1/*state*/);
+concat_optional_I31 tmp705 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+bool const tmp706 = concat_optional_disEmpty_I5(tmp705);
+if(tmp706){
+concat_list_I1 tmp707 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
+concat_Operation tmp708 = (*arg0/*op*/);
+concat_list_I1 tmp709 = concat_sb_dappendOp(tmp707,tmp708,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp710 = concat_sb_dappendS(tmp709,((int64_t)12),((int8_t const*)" need 1 got "));
+concat_list_I1 tmp711 = concat_sb_dappendI(tmp710,(((*arg1/*state*/).e3_typeStack).e1_length));
+concat_FilePosition tmp712 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp711,tmp712,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp706.label,1,"./concat.concat/typeCheck.concat:2469:11");
-concat_28_FTypeInfo* const l42_src = (tmp706.data.e1_data);
-concat_Type tmp714 = ((*l42_src).e0_valType);
-bool const tmp715 = concat_types_disPointer(tmp714,((concat_TypeContext const*)l2_typeContext));
-concat_Type tmp716 = ((*l42_src).e0_valType);
-bool const tmp717 = concat_types_disArray(tmp716,((concat_TypeContext const*)l2_typeContext));
-bool const tmp718 = ((bool)(tmp715|tmp717));
-if(tmp718){
-concat_Type tmp719 = ((*l42_src).e0_valType);
-bool const tmp720 = concat_types_disFixedSize(tmp719,((concat_TypeContext const*)l2_typeContext));
-bool const tmp721 = (!tmp720);
-if(tmp721){
-concat_list_I1 tmp722 = concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "));
-concat_Operation tmp723 = (*arg0/*op*/);
-concat_list_I1 tmp724 = concat_sb_dappendOp(tmp722,tmp723,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp725 = concat_sb_dappendS(tmp724,((int64_t)26),((int8_t const*)" cannot get the length of "));
-concat_Type tmp726 = ((*l42_src).e0_valType);
-concat_list_I1 tmp727 = concat_sb_dappendType(tmp725,tmp726,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp728 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp727,tmp728,arg1/*state*/);
+concat_internal_checkEnumIndex(tmp705.label,1,"./concat.concat/typeCheck.concat:2464:11");
+concat_28_FTypeInfo* const l42_src = (tmp705.data.e1_data);
+concat_Type tmp713 = ((*l42_src).e0_valType);
+bool const tmp714 = concat_types_disPointer(tmp713,((concat_TypeContext const*)l2_typeContext));
+concat_Type tmp715 = ((*l42_src).e0_valType);
+bool const tmp716 = concat_types_disArray(tmp715,((concat_TypeContext const*)l2_typeContext));
+bool const tmp717 = ((bool)(tmp714|tmp716));
+if(tmp717){
+concat_Type tmp718 = ((*l42_src).e0_valType);
+bool const tmp719 = concat_types_disFixedSize(tmp718,((concat_TypeContext const*)l2_typeContext));
+bool const tmp720 = (!tmp719);
+if(tmp720){
+concat_list_I1 tmp721 = concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "));
+concat_Operation tmp722 = (*arg0/*op*/);
+concat_list_I1 tmp723 = concat_sb_dappendOp(tmp721,tmp722,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp724 = concat_sb_dappendS(tmp723,((int64_t)26),((int8_t const*)" cannot get the length of "));
+concat_Type tmp725 = ((*l42_src).e0_valType);
+concat_list_I1 tmp726 = concat_sb_dappendType(tmp724,tmp725,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp727 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp726,tmp727,arg1/*state*/);
 return;
 }
-concat_Type tmp729 = ((*l42_src).e0_valType);
-concat_arrayView_I2 tmp730 = concat_types_dgetArraySize(tmp729,((concat_TypeContext const*)l2_typeContext));
-concat_arrayView_I2 const l43_sizes = tmp730;
-bool const tmp731 = (((*arg0/*op*/).e0_val).label==30);
+concat_Type tmp728 = ((*l42_src).e0_valType);
+concat_arrayView_I2 tmp729 = concat_types_dgetArraySize(tmp728,((concat_TypeContext const*)l2_typeContext));
+concat_arrayView_I2 const l43_sizes = tmp729;
+bool const tmp730 = (((*arg0/*op*/).e0_val).label==30);
+if(tmp730){
+bool const tmp731 = ((l43_sizes.e1_length)==((int64_t)0));
 if(tmp731){
-bool const tmp732 = ((l43_sizes.e1_length)==((int64_t)0));
-if(tmp732){
-concat_ConstValue tmp733 = ((concat_ConstValue){.label=4,.data={.e4_int = ((int64_t)1)}});
-concat_Type tmp734 = concat_primitive_dtypes_dI__SIZE;
-concat_Operation tmp735 = concat_opConst(tmp733,tmp734,((*arg0/*op*/).e2_pos));
-(*arg0/*op*/) = tmp735;
+concat_ConstValue tmp732 = ((concat_ConstValue){.label=4,.data={.e4_int = ((int64_t)1)}});
+concat_Type tmp733 = concat_primitive_dtypes_dI__SIZE;
+concat_Operation tmp734 = concat_opConst(tmp732,tmp733,((*arg0/*op*/).e2_pos));
+(*arg0/*op*/) = tmp734;
 }
-concat_arrayView_I2 tmp736 = l43_sizes;
-concat_types_dArraySize tmp737 = concat_array_dget_I0(tmp736,((int64_t)0));
-bool const tmp738 = ((tmp737.e1_sizeType).label==0);
-if(tmp738){
-concat_arrayView_I2 tmp739 = l43_sizes;
-concat_types_dArraySize tmp740 = concat_array_dget_I0(tmp739,((int64_t)0));
-concat_ConstValue tmp741 = ((concat_ConstValue){.label=4,.data={.e4_int = (tmp740.e0_value)}});
-concat_Type tmp742 = concat_primitive_dtypes_dI__SIZE;
-concat_Operation tmp743 = concat_opConst(tmp741,tmp742,((*arg0/*op*/).e2_pos));
-(*arg0/*op*/) = tmp743;
+concat_arrayView_I2 tmp735 = l43_sizes;
+concat_types_dArraySize tmp736 = concat_array_dget_I0(tmp735,((int64_t)0));
+bool const tmp737 = ((tmp736.e1_sizeType).label==0);
+if(tmp737){
+concat_arrayView_I2 tmp738 = l43_sizes;
+concat_types_dArraySize tmp739 = concat_array_dget_I0(tmp738,((int64_t)0));
+concat_ConstValue tmp740 = ((concat_ConstValue){.label=4,.data={.e4_int = (tmp739.e0_value)}});
+concat_Type tmp741 = concat_primitive_dtypes_dI__SIZE;
+concat_Operation tmp742 = concat_opConst(tmp740,tmp741,((*arg0/*op*/).e2_pos));
+(*arg0/*op*/) = tmp742;
 }else{
-concat_arrayView_I2 tmp744 = l43_sizes;
-concat_types_dArraySize tmp745 = concat_array_dget_I0(tmp744,((int64_t)0));
-bool const tmp746 = ((tmp745.e1_sizeType).label==2);
-if(tmp746){
-concat_arrayView_I2 tmp747 = l43_sizes;
-concat_types_dArraySize tmp748 = concat_array_dget_I0(tmp747,((int64_t)0));
-concat_ConstValue tmp749 = ((concat_ConstValue){.label=10,.data={.e10_genericArg = ((int32_t)(tmp748.e0_value))}});
-concat_Type tmp750 = concat_primitive_dtypes_dI__SIZE;
-concat_Operation tmp751 = concat_opConst(tmp749,tmp750,((*arg0/*op*/).e2_pos));
-(*arg0/*op*/) = tmp751;
+concat_arrayView_I2 tmp743 = l43_sizes;
+concat_types_dArraySize tmp744 = concat_array_dget_I0(tmp743,((int64_t)0));
+bool const tmp745 = ((tmp744.e1_sizeType).label==2);
+if(tmp745){
+concat_arrayView_I2 tmp746 = l43_sizes;
+concat_types_dArraySize tmp747 = concat_array_dget_I0(tmp746,((int64_t)0));
+concat_ConstValue tmp748 = ((concat_ConstValue){.label=10,.data={.e10_genericArg = ((int32_t)(tmp747.e0_value))}});
+concat_Type tmp749 = concat_primitive_dtypes_dI__SIZE;
+concat_Operation tmp750 = concat_opConst(tmp748,tmp749,((*arg0/*op*/).e2_pos));
+(*arg0/*op*/) = tmp750;
 }else{
-concat_list_I1 tmp752 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "));
-concat_Operation tmp753 = (*arg0/*op*/);
-concat_list_I1 tmp754 = concat_sb_dappendOp(tmp752,tmp753,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp755 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp754,tmp755,arg1/*state*/);
+concat_list_I1 tmp751 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "));
+concat_Operation tmp752 = (*arg0/*op*/);
+concat_list_I1 tmp753 = concat_sb_dappendOp(tmp751,tmp752,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp754 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp753,tmp754,arg1/*state*/);
 return;
 }
 }
-int64_t tmp756 = (((*arg1/*state*/).e2_opStack).e1_length);
-(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp756-((int64_t)((*l42_src).e1_opCount))));
-int64_t tmp757 = (((*arg1/*state*/).e3_typeStack).e1_length);
-(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp757-((int64_t)1)));
+int64_t tmp755 = (((*arg1/*state*/).e2_opStack).e1_length);
+(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp755-((int64_t)((*l42_src).e1_opCount))));
+int64_t tmp756 = (((*arg1/*state*/).e3_typeStack).e1_length);
+(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp756-((int64_t)1)));
 concat_28_FpushValue(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 return;
 }
@@ -24016,148 +24016,148 @@ break;
 case 31:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_optional_I31 tmp758 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-bool const tmp759 = concat_optional_disEmpty_I5(tmp758);
-if(tmp759){
-concat_list_I1 tmp760 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
-concat_Operation tmp761 = (*arg0/*op*/);
-concat_list_I1 tmp762 = concat_sb_dappendOp(tmp760,tmp761,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp763 = concat_sb_dappendS(tmp762,((int64_t)12),((int8_t const*)" need 1 got "));
-concat_list_I1 tmp764 = concat_sb_dappendI(tmp763,(((*arg1/*state*/).e3_typeStack).e1_length));
-concat_FilePosition tmp765 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp764,tmp765,arg1/*state*/);
+concat_optional_I31 tmp757 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+bool const tmp758 = concat_optional_disEmpty_I5(tmp757);
+if(tmp758){
+concat_list_I1 tmp759 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
+concat_Operation tmp760 = (*arg0/*op*/);
+concat_list_I1 tmp761 = concat_sb_dappendOp(tmp759,tmp760,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp762 = concat_sb_dappendS(tmp761,((int64_t)12),((int8_t const*)" need 1 got "));
+concat_list_I1 tmp763 = concat_sb_dappendI(tmp762,(((*arg1/*state*/).e3_typeStack).e1_length));
+concat_FilePosition tmp764 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp763,tmp764,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp758.label,1,"./concat.concat/typeCheck.concat:2525:11");
-concat_28_FTypeInfo* const l44_src = (tmp758.data.e1_data);
-concat_Type tmp766 = ((*l44_src).e0_valType);
-bool const tmp767 = concat_types_disPointer(tmp766,((concat_TypeContext const*)l2_typeContext));
-concat_Type tmp768 = ((*l44_src).e0_valType);
-bool const tmp769 = concat_types_disArray(tmp768,((concat_TypeContext const*)l2_typeContext));
-bool const tmp770 = ((bool)(tmp767|tmp769));
-if(tmp770){
-concat_Type tmp771 = ((*l44_src).e0_valType);
-bool const tmp772 = concat_types_disFixedSize(tmp771,((concat_TypeContext const*)l2_typeContext));
-bool const tmp773 = (!tmp772);
-if(tmp773){
-concat_list_I1 tmp774 = concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "));
-concat_Operation tmp775 = (*arg0/*op*/);
-concat_list_I1 tmp776 = concat_sb_dappendOp(tmp774,tmp775,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp777 = concat_sb_dappendS(tmp776,((int64_t)26),((int8_t const*)" cannot get the length of "));
-concat_Type tmp778 = ((*l44_src).e0_valType);
-concat_list_I1 tmp779 = concat_sb_dappendType(tmp777,tmp778,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp780 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp779,tmp780,arg1/*state*/);
+concat_internal_checkEnumIndex(tmp757.label,1,"./concat.concat/typeCheck.concat:2520:11");
+concat_28_FTypeInfo* const l44_src = (tmp757.data.e1_data);
+concat_Type tmp765 = ((*l44_src).e0_valType);
+bool const tmp766 = concat_types_disPointer(tmp765,((concat_TypeContext const*)l2_typeContext));
+concat_Type tmp767 = ((*l44_src).e0_valType);
+bool const tmp768 = concat_types_disArray(tmp767,((concat_TypeContext const*)l2_typeContext));
+bool const tmp769 = ((bool)(tmp766|tmp768));
+if(tmp769){
+concat_Type tmp770 = ((*l44_src).e0_valType);
+bool const tmp771 = concat_types_disFixedSize(tmp770,((concat_TypeContext const*)l2_typeContext));
+bool const tmp772 = (!tmp771);
+if(tmp772){
+concat_list_I1 tmp773 = concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "));
+concat_Operation tmp774 = (*arg0/*op*/);
+concat_list_I1 tmp775 = concat_sb_dappendOp(tmp773,tmp774,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp776 = concat_sb_dappendS(tmp775,((int64_t)26),((int8_t const*)" cannot get the length of "));
+concat_Type tmp777 = ((*l44_src).e0_valType);
+concat_list_I1 tmp778 = concat_sb_dappendType(tmp776,tmp777,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp779 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp778,tmp779,arg1/*state*/);
 return;
 }
-concat_Type tmp781 = ((*l44_src).e0_valType);
-concat_arrayView_I2 tmp782 = concat_types_dgetArraySize(tmp781,((concat_TypeContext const*)l2_typeContext));
-concat_arrayView_I2 const l45_sizes = tmp782;
+concat_Type tmp780 = ((*l44_src).e0_valType);
+concat_arrayView_I2 tmp781 = concat_types_dgetArraySize(tmp780,((concat_TypeContext const*)l2_typeContext));
+concat_arrayView_I2 const l45_sizes = tmp781;
 int64_t const l46_offset = (((*l0_idContext).e6_templateArgBuffer).e1_length);
-int32_t tmp783 = ((int32_t)0);
+int32_t tmp782 = ((int32_t)0);
 do{
-bool const tmp784 = (((int64_t)tmp783)<(l45_sizes.e1_length));
-if(!tmp784)
+bool const tmp783 = (((int64_t)tmp782)<(l45_sizes.e1_length));
+if(!tmp783)
   break;
-concat_arrayView_I2 tmp785 = l45_sizes;
-concat_types_dArraySize tmp786 = concat_array_dget_I0(tmp785,((int64_t)tmp783));
-concat_types_dArraySize const l47_current = tmp786;
-concat_list_I14 tmp787 = ((*l0_idContext).e6_templateArgBuffer);
-bool const tmp788 = ((l47_current.e1_sizeType).label==0);
-if(tmp788){
-concat_list_I14 tmp789 = concat_list_dappend_I4(tmp787,((concat_ConstValue){.label=4,.data={.e4_int = (l47_current.e0_value)}}));
-tmp787 = tmp789;
+concat_arrayView_I2 tmp784 = l45_sizes;
+concat_types_dArraySize tmp785 = concat_array_dget_I0(tmp784,((int64_t)tmp782));
+concat_types_dArraySize const l47_current = tmp785;
+concat_list_I14 tmp786 = ((*l0_idContext).e6_templateArgBuffer);
+bool const tmp787 = ((l47_current.e1_sizeType).label==0);
+if(tmp787){
+concat_list_I14 tmp788 = concat_list_dappend_I4(tmp786,((concat_ConstValue){.label=4,.data={.e4_int = (l47_current.e0_value)}}));
+tmp786 = tmp788;
 }else{
-bool const tmp790 = ((l47_current.e1_sizeType).label==2);
-if(tmp790){
-concat_list_I14 tmp791 = concat_list_dappend_I4(tmp787,((concat_ConstValue){.label=10,.data={.e10_genericArg = ((int32_t)(l47_current.e0_value))}}));
-tmp787 = tmp791;
+bool const tmp789 = ((l47_current.e1_sizeType).label==2);
+if(tmp789){
+concat_list_I14 tmp790 = concat_list_dappend_I4(tmp786,((concat_ConstValue){.label=10,.data={.e10_genericArg = ((int32_t)(l47_current.e0_value))}}));
+tmp786 = tmp790;
 }else{
-concat_list_I1 tmp792 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "));
-concat_Operation tmp793 = (*arg0/*op*/);
-concat_list_I1 tmp794 = concat_sb_dappendOp(tmp792,tmp793,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp795 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp794,tmp795,arg1/*state*/);
+concat_list_I1 tmp791 = concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "));
+concat_Operation tmp792 = (*arg0/*op*/);
+concat_list_I1 tmp793 = concat_sb_dappendOp(tmp791,tmp792,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp794 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp793,tmp794,arg1/*state*/);
 return;
 }
 }
-((*l0_idContext).e6_templateArgBuffer) = tmp787;
-tmp783 = ((int32_t)(tmp783+((int32_t)1)));
+((*l0_idContext).e6_templateArgBuffer) = tmp786;
+tmp782 = ((int32_t)(tmp782+((int32_t)1)));
 }while(1);
 concat_types_dArraySize const l48_mSize = ((concat_types_dArraySize){.e0_value = (l45_sizes.e1_length),.e1_sizeType = ((concat_types_dArraySizeType){.label=0})});
-concat_ConstValue* tmp796 = (((*l0_idContext).e6_templateArgBuffer).e0_data);
-int64_t tmp797 = (((*l0_idContext).e6_templateArgBuffer).e1_length);
-concat_arrayView_I5 tmp798 = concat_array_dcreate_I1(((concat_ConstValue const*)((concat_ConstValue*)(tmp796+l46_offset))),((int64_t)(tmp797-l46_offset)));
-concat_ConstValue tmp799 = concat_newArrayConst(tmp798,(&((*l0_idContext).e0_constContext)));
-concat_Type tmp800 = concat_primitive_dtypes_dI__SIZE;
-concat_arrayView_I2 tmp801 = concat_array_dwrap_I0(((int64_t)1),((concat_types_dArraySize const*)(&l48_mSize)));
-concat_tuple265 const tmp802 = concat_types_dnewArrayType(tmp800,false,tmp801,true,false,l2_typeContext);
-concat_Type tmp803 = (tmp802.e0);
-bool const tmp804 = (tmp802.e1);
-concat_Operation tmp805 = concat_opConst(tmp799,tmp803,((*arg0/*op*/).e2_pos));
-(*arg0/*op*/) = tmp805;
+concat_ConstValue* tmp795 = (((*l0_idContext).e6_templateArgBuffer).e0_data);
+int64_t tmp796 = (((*l0_idContext).e6_templateArgBuffer).e1_length);
+concat_arrayView_I5 tmp797 = concat_array_dcreate_I1(((concat_ConstValue const*)((concat_ConstValue*)(tmp795+l46_offset))),((int64_t)(tmp796-l46_offset)));
+concat_ConstValue tmp798 = concat_newArrayConst(tmp797,(&((*l0_idContext).e0_constContext)));
+concat_Type tmp799 = concat_primitive_dtypes_dI__SIZE;
+concat_arrayView_I2 tmp800 = concat_array_dwrap_I0(((int64_t)1),((concat_types_dArraySize const*)(&l48_mSize)));
+concat_tuple265 const tmp801 = concat_types_dnewArrayType(tmp799,false,tmp800,true,false,l2_typeContext);
+concat_Type tmp802 = (tmp801.e0);
+bool const tmp803 = (tmp801.e1);
+concat_Operation tmp804 = concat_opConst(tmp798,tmp802,((*arg0/*op*/).e2_pos));
+(*arg0/*op*/) = tmp804;
 (((*l0_idContext).e6_templateArgBuffer).e1_length) = l46_offset;
-int64_t tmp806 = (((*arg1/*state*/).e2_opStack).e1_length);
-(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp806-((int64_t)((*l44_src).e1_opCount))));
-int64_t tmp807 = (((*arg1/*state*/).e3_typeStack).e1_length);
-(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp807-((int64_t)1)));
+int64_t tmp805 = (((*arg1/*state*/).e2_opStack).e1_length);
+(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp805-((int64_t)((*l44_src).e1_opCount))));
+int64_t tmp806 = (((*arg1/*state*/).e3_typeStack).e1_length);
+(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp806-((int64_t)1)));
 concat_28_FpushValue(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 return;
 }
 break;
 case 36:case 37:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_arrayView_I3 tmp808 = concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))));
-concat_arrayView_I1 tmp809 = concat_string_dwrap(((int64_t)16),((int8_t const*)"check enum label"));
-concat_FilePosition tmp810 = ((*arg0/*op*/).e2_pos);
-concat_28_FrequireTypes(tmp808,tmp809,tmp810,arg1/*state*/);
-concat_Type tmp811 = concat_primitive_dtypes_dBOOL;
-((*arg0/*op*/).e1_dataType) = tmp811;
+concat_arrayView_I3 tmp807 = concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))));
+concat_arrayView_I1 tmp808 = concat_string_dwrap(((int64_t)16),((int8_t const*)"check enum label"));
+concat_FilePosition tmp809 = ((*arg0/*op*/).e2_pos);
+concat_28_FrequireTypes(tmp807,tmp808,tmp809,arg1/*state*/);
+concat_Type tmp810 = concat_primitive_dtypes_dBOOL;
+((*arg0/*op*/).e1_dataType) = tmp810;
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg1/*state*/);
 return;
 case 32:case 33:;
-concat_optional_I31 tmp812 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-bool const tmp813 = concat_optional_disEmpty_I5(tmp812);
-if(tmp813){
-concat_list_I1 tmp814 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
-concat_Operation tmp815 = (*arg0/*op*/);
-concat_list_I1 tmp816 = concat_sb_dappendOp(tmp814,tmp815,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp817 = concat_sb_dappendS(tmp816,((int64_t)12),((int8_t const*)" need 1 got "));
-concat_list_I1 tmp818 = concat_sb_dappendI(tmp817,(((*arg1/*state*/).e3_typeStack).e1_length));
-concat_FilePosition tmp819 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp818,tmp819,arg1/*state*/);
+concat_optional_I31 tmp811 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+bool const tmp812 = concat_optional_disEmpty_I5(tmp811);
+if(tmp812){
+concat_list_I1 tmp813 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
+concat_Operation tmp814 = (*arg0/*op*/);
+concat_list_I1 tmp815 = concat_sb_dappendOp(tmp813,tmp814,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp816 = concat_sb_dappendS(tmp815,((int64_t)12),((int8_t const*)" need 1 got "));
+concat_list_I1 tmp817 = concat_sb_dappendI(tmp816,(((*arg1/*state*/).e3_typeStack).e1_length));
+concat_FilePosition tmp818 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp817,tmp818,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp812.label,1,"./concat.concat/typeCheck.concat:2584:11");
-concat_28_FTypeInfo* const l49_src = (tmp812.data.e1_data);
-concat_Type tmp820 = ((*l49_src).e0_valType);
-bool const tmp821 = (((*arg0/*op*/).e0_val).label==33);
-bool tmp823;
-if(tmp821){
-concat_OpValue* const tmp822 = (&((*arg0/*op*/).e0_val));
-(*tmp822).label = 33;
-((*tmp822).data.e33_Cast_X33) = tmp820;
-tmp823 = true;
+concat_internal_checkEnumIndex(tmp811.label,1,"./concat.concat/typeCheck.concat:2579:11");
+concat_28_FTypeInfo* const l49_src = (tmp811.data.e1_data);
+concat_Type tmp819 = ((*l49_src).e0_valType);
+bool const tmp820 = (((*arg0/*op*/).e0_val).label==33);
+bool tmp822;
+if(tmp820){
+concat_OpValue* const tmp821 = (&((*arg0/*op*/).e0_val));
+(*tmp821).label = 33;
+((*tmp821).data.e33_Cast_X33) = tmp819;
+tmp822 = true;
 }else{
-concat_OpValue* const tmp824 = (&((*arg0/*op*/).e0_val));
-(*tmp824).label = 32;
-((*tmp824).data.e32_Cast) = tmp820;
-tmp823 = false;
+concat_OpValue* const tmp823 = (&((*arg0/*op*/).e0_val));
+(*tmp823).label = 32;
+((*tmp823).data.e32_Cast) = tmp819;
+tmp822 = false;
 }
-bool const l50_forceCast = tmp823;
-concat_Type tmp825 = ((*l49_src).e0_valType);
-concat_Type tmp826 = ((*arg0/*op*/).e1_dataType);
-bool const tmp827 = concat_types_dcanCast(tmp825,tmp826,l50_forceCast,l2_typeContext);
-bool const tmp828 = (!tmp827);
-if(tmp828){
-concat_list_I1 tmp829 = concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "));
-concat_Type tmp830 = ((*l49_src).e0_valType);
-concat_list_I1 tmp831 = concat_sb_dappendType(tmp829,tmp830,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp832 = concat_sb_dappendS(tmp831,((int64_t)4),((int8_t const*)" to "));
-concat_Type tmp833 = ((*arg0/*op*/).e1_dataType);
-concat_list_I1 tmp834 = concat_sb_dappendType(tmp832,tmp833,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_FilePosition tmp835 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp834,tmp835,arg1/*state*/);
+bool const l50_forceCast = tmp822;
+concat_Type tmp824 = ((*l49_src).e0_valType);
+concat_Type tmp825 = ((*arg0/*op*/).e1_dataType);
+bool const tmp826 = concat_types_dcanCast(tmp824,tmp825,l50_forceCast,l2_typeContext);
+bool const tmp827 = (!tmp826);
+if(tmp827){
+concat_list_I1 tmp828 = concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "));
+concat_Type tmp829 = ((*l49_src).e0_valType);
+concat_list_I1 tmp830 = concat_sb_dappendType(tmp828,tmp829,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp831 = concat_sb_dappendS(tmp830,((int64_t)4),((int8_t const*)" to "));
+concat_Type tmp832 = ((*arg0/*op*/).e1_dataType);
+concat_list_I1 tmp833 = concat_sb_dappendType(tmp831,tmp832,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_FilePosition tmp834 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp833,tmp834,arg1/*state*/);
 }
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
@@ -24165,156 +24165,156 @@ concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg1
 return;
 case 1:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_list_I34 tmp836 = ((*arg1/*state*/).e4_openBlocks);
-concat_arrayView_I3 tmp837 = concat_array_dempty_I1();
-concat_optional_I6 tmp838 = concat_optional_dempty_I3();
-concat_Type tmp839 = concat_types_dnewProcArgs(tmp837,tmp838,false,l2_typeContext);
-concat_arrayView_I3 tmp840 = concat_array_dempty_I1();
-concat_optional_I6 tmp841 = concat_optional_dempty_I3();
-concat_Type tmp842 = concat_types_dnewProcArgs(tmp840,tmp841,true,l2_typeContext);
-concat_CallingConvention tmp843 = ((concat_CallingConvention){.label=0});
-concat_tuple265 const tmp844 = concat_types_dnewProcedure(tmp839,tmp842,tmp843,l2_typeContext);
-concat_Type tmp845 = (tmp844.e0);
-bool const tmp846 = (tmp844.e1);
-concat_28_FBlockData tmp847 = ((concat_28_FBlockData){.label=4,.data={.e4_procBlock = tmp845}});
-concat_FilePosition tmp848 = ((*arg0/*op*/).e2_pos);
-int64_t tmp849 = (((*arg1/*state*/).e1_compiledOps).e1_length);
-concat_list_I34 tmp850 = concat_list_dappend_I29(tmp836,((concat_28_FBlockInfo){.e0_blockData = tmp847,.e1_startPos = tmp848,.e2_blockStart = tmp849,.e3_blockId = ((int32_t)-1),.e4_blockType = ((concat_BlockType){.label=1})}));
-((*arg1/*state*/).e4_openBlocks) = tmp850;
+concat_list_I34 tmp835 = ((*arg1/*state*/).e4_openBlocks);
+concat_arrayView_I3 tmp836 = concat_array_dempty_I1();
+concat_optional_I6 tmp837 = concat_optional_dempty_I3();
+concat_Type tmp838 = concat_types_dnewProcArgs(tmp836,tmp837,false,l2_typeContext);
+concat_arrayView_I3 tmp839 = concat_array_dempty_I1();
+concat_optional_I6 tmp840 = concat_optional_dempty_I3();
+concat_Type tmp841 = concat_types_dnewProcArgs(tmp839,tmp840,true,l2_typeContext);
+concat_CallingConvention tmp842 = ((concat_CallingConvention){.label=0});
+concat_tuple265 const tmp843 = concat_types_dnewProcedure(tmp838,tmp841,tmp842,l2_typeContext);
+concat_Type tmp844 = (tmp843.e0);
+bool const tmp845 = (tmp843.e1);
+concat_28_FBlockData tmp846 = ((concat_28_FBlockData){.label=4,.data={.e4_procBlock = tmp844}});
+concat_FilePosition tmp847 = ((*arg0/*op*/).e2_pos);
+int64_t tmp848 = (((*arg1/*state*/).e1_compiledOps).e1_length);
+concat_list_I34 tmp849 = concat_list_dappend_I29(tmp835,((concat_28_FBlockInfo){.e0_blockData = tmp846,.e1_startPos = tmp847,.e2_blockStart = tmp848,.e3_blockId = ((int32_t)-1),.e4_blockType = ((concat_BlockType){.label=1})}));
+((*arg1/*state*/).e4_openBlocks) = tmp849;
 ((*arg1/*state*/).e9_tmpCount) = ((int32_t)0);
-concat_list_I24 tmp851 = ((*arg1/*state*/).e1_compiledOps);
-concat_list_I24 tmp852 = concat_list_dappendP_I1(tmp851,((int64_t)1),((concat_Operation const*)arg0/*op*/));
-((*arg1/*state*/).e1_compiledOps) = tmp852;
+concat_list_I24 tmp850 = ((*arg1/*state*/).e1_compiledOps);
+concat_list_I24 tmp851 = concat_list_dappendP_I1(tmp850,((int64_t)1),((concat_Operation const*)arg0/*op*/));
+((*arg1/*state*/).e1_compiledOps) = tmp851;
 return;
 case 41:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
+concat_OpValue* const tmp852 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp852).label,41,"./concat.concat/typeCheck.concat:2620:18");
+int32_t const l51_count = (((*tmp852).data.e41_stackMod).e1_count);
 concat_OpValue* const tmp853 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp853).label,41,"./concat.concat/typeCheck.concat:2625:18");
-int32_t const l51_count = (((*tmp853).data.e41_stackMod).e1_count);
-concat_OpValue* const tmp854 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp854).label,41,"./concat.concat/typeCheck.concat:2626:18");
-int32_t const l52_offset = (((*tmp854).data.e41_stackMod).e0_offset);
-bool const tmp855 = ((bool)((l51_count<((int32_t)0))|(l52_offset<((int32_t)0))));
-if(tmp855){
-concat_list_I1 tmp856 = concat_sb_dwrap(((int64_t)58),((int8_t const*)"stack modification parameters have to be non-negative got:"));
-concat_list_I1 tmp857 = concat_sb_dappendI(tmp856,((int64_t)l52_offset));
-concat_list_I1 tmp858 = concat_sb_dappendS(tmp857,((int64_t)5),((int8_t const*)" and "));
-concat_list_I1 tmp859 = concat_sb_dappendI(tmp858,((int64_t)l51_count));
-concat_FilePosition tmp860 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp859,tmp860,arg1/*state*/);
+concat_internal_checkEnumIndex((*tmp853).label,41,"./concat.concat/typeCheck.concat:2621:18");
+int32_t const l52_offset = (((*tmp853).data.e41_stackMod).e0_offset);
+bool const tmp854 = ((bool)((l51_count<((int32_t)0))|(l52_offset<((int32_t)0))));
+if(tmp854){
+concat_list_I1 tmp855 = concat_sb_dwrap(((int64_t)58),((int8_t const*)"stack modification parameters have to be non-negative got:"));
+concat_list_I1 tmp856 = concat_sb_dappendI(tmp855,((int64_t)l52_offset));
+concat_list_I1 tmp857 = concat_sb_dappendS(tmp856,((int64_t)5),((int8_t const*)" and "));
+concat_list_I1 tmp858 = concat_sb_dappendI(tmp857,((int64_t)l51_count));
+concat_FilePosition tmp859 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp858,tmp859,arg1/*state*/);
 return;
 }
-concat_OpValue* const tmp861 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp861).label,41,"./concat.concat/typeCheck.concat:2635:18");
-concat_StackModType const tmp862 = (((*tmp861).data.e41_stackMod).e2_modType);
-switch(tmp862.label){
+concat_OpValue* const tmp860 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp860).label,41,"./concat.concat/typeCheck.concat:2630:18");
+concat_StackModType const tmp861 = (((*tmp860).data.e41_stackMod).e2_modType);
+switch(tmp861.label){
 case 4:;
-bool const tmp863 = (((int64_t)((int32_t)(l52_offset+l51_count)))>(((*arg1/*state*/).e3_typeStack).e1_length));
-if(tmp863){
-concat_list_I1 tmp864 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
-concat_FilePosition tmp865 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp864,tmp865,arg1/*state*/);
+bool const tmp862 = (((int64_t)((int32_t)(l52_offset+l51_count)))>(((*arg1/*state*/).e3_typeStack).e1_length));
+if(tmp862){
+concat_list_I1 tmp863 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
+concat_FilePosition tmp864 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp863,tmp864,arg1/*state*/);
 (((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)0);
 (((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)0);
 return;
 }
-int64_t const tmp866 = concat_28_FcountStackOps(((int64_t)0),((int64_t)l52_offset),arg1/*state*/);
-int64_t const l53_opOffset = tmp866;
-int64_t const tmp867 = concat_28_FcountStackOps(((int64_t)l52_offset),((int64_t)l51_count),arg1/*state*/);
-int64_t const l54_removed = tmp867;
-bool const tmp868 = (l52_offset>((int32_t)0));
-if(tmp868){
+int64_t const tmp865 = concat_28_FcountStackOps(((int64_t)0),((int64_t)l52_offset),arg1/*state*/);
+int64_t const l53_opOffset = tmp865;
+int64_t const tmp866 = concat_28_FcountStackOps(((int64_t)l52_offset),((int64_t)l51_count),arg1/*state*/);
+int64_t const l54_removed = tmp866;
+bool const tmp867 = (l52_offset>((int32_t)0));
+if(tmp867){
+concat_28_FTypeInfo* tmp868 = (((*arg1/*state*/).e3_typeStack).e0_data);
 concat_28_FTypeInfo* tmp869 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* tmp870 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* const tmp871 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp869+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp870+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))),((int64_t)l52_offset));
+concat_28_FTypeInfo* const tmp870 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp868+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp869+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))),((int64_t)l52_offset));
+concat_Operation* tmp871 = (((*arg1/*state*/).e2_opStack).e0_data);
 concat_Operation* tmp872 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* tmp873 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* const tmp874 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp872+(((*arg1/*state*/).e2_opStack).e1_length)))-l53_opOffset))-l54_removed)),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(tmp873+(((*arg1/*state*/).e2_opStack).e1_length)))-l53_opOffset))),l53_opOffset);
+concat_Operation* const tmp873 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp871+(((*arg1/*state*/).e2_opStack).e1_length)))-l53_opOffset))-l54_removed)),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(tmp872+(((*arg1/*state*/).e2_opStack).e1_length)))-l53_opOffset))),l53_opOffset);
 }
-int64_t tmp875 = (((*arg1/*state*/).e3_typeStack).e1_length);
-(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp875-((int64_t)l51_count)));
-int64_t tmp876 = (((*arg1/*state*/).e2_opStack).e1_length);
-(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp876-l54_removed));
+int64_t tmp874 = (((*arg1/*state*/).e3_typeStack).e1_length);
+(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp874-((int64_t)l51_count)));
+int64_t tmp875 = (((*arg1/*state*/).e2_opStack).e1_length);
+(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp875-l54_removed));
 return;
 case 0:case 1:;
-bool const tmp877 = (((int64_t)((int32_t)(l52_offset+l51_count)))>(((*arg1/*state*/).e3_typeStack).e1_length));
-if(tmp877){
-concat_list_I1 tmp878 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
-concat_FilePosition tmp879 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp878,tmp879,arg1/*state*/);
+bool const tmp876 = (((int64_t)((int32_t)(l52_offset+l51_count)))>(((*arg1/*state*/).e3_typeStack).e1_length));
+if(tmp876){
+concat_list_I1 tmp877 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
+concat_FilePosition tmp878 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp877,tmp878,arg1/*state*/);
 return;
 }
 concat_28_FensureStackHeadIsValue(arg1/*state*/);
-concat_FilePosition tmp880 = ((*arg0/*op*/).e2_pos);
-concat_28_FextractCompositeOps(((int64_t)((int32_t)(l52_offset+l51_count))),true,tmp880,arg1/*state*/);
-int64_t const tmp881 = concat_28_FcountStackOps(((int64_t)0),((int64_t)l52_offset),arg1/*state*/);
-int64_t const l55_opOffset = tmp881;
-int64_t const tmp882 = concat_28_FcountStackOps(((int64_t)l52_offset),((int64_t)l51_count),arg1/*state*/);
-int64_t const l56_copied = tmp882;
-bool const tmp883 = (l51_count>((int32_t)0));
-if(tmp883){
-concat_list_I33 tmp884 = ((*arg1/*state*/).e3_typeStack);
-int64_t tmp885 = (tmp884.e1_length);
-concat_list_I33 tmp886 = concat_list_densureCap_I4(tmp884,((int64_t)(tmp885+((int64_t)l51_count))));
-((*arg1/*state*/).e3_typeStack) = tmp886;
-concat_list_I24 tmp887 = ((*arg1/*state*/).e2_opStack);
-int64_t tmp888 = (tmp887.e1_length);
-concat_list_I24 tmp889 = concat_list_densureCap_I3(tmp887,((int64_t)(tmp888+l56_copied)));
-((*arg1/*state*/).e2_opStack) = tmp889;
+concat_FilePosition tmp879 = ((*arg0/*op*/).e2_pos);
+concat_28_FextractCompositeOps(((int64_t)((int32_t)(l52_offset+l51_count))),true,tmp879,arg1/*state*/);
+int64_t const tmp880 = concat_28_FcountStackOps(((int64_t)0),((int64_t)l52_offset),arg1/*state*/);
+int64_t const l55_opOffset = tmp880;
+int64_t const tmp881 = concat_28_FcountStackOps(((int64_t)l52_offset),((int64_t)l51_count),arg1/*state*/);
+int64_t const l56_copied = tmp881;
+bool const tmp882 = (l51_count>((int32_t)0));
+if(tmp882){
+concat_list_I33 tmp883 = ((*arg1/*state*/).e3_typeStack);
+int64_t tmp884 = (tmp883.e1_length);
+concat_list_I33 tmp885 = concat_list_densureCap_I4(tmp883,((int64_t)(tmp884+((int64_t)l51_count))));
+((*arg1/*state*/).e3_typeStack) = tmp885;
+concat_list_I24 tmp886 = ((*arg1/*state*/).e2_opStack);
+int64_t tmp887 = (tmp886.e1_length);
+concat_list_I24 tmp888 = concat_list_densureCap_I3(tmp886,((int64_t)(tmp887+l56_copied)));
+((*arg1/*state*/).e2_opStack) = tmp888;
+concat_28_FTypeInfo* tmp889 = (((*arg1/*state*/).e3_typeStack).e0_data);
 concat_28_FTypeInfo* tmp890 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* tmp891 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* const tmp892 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(tmp890+(((*arg1/*state*/).e3_typeStack).e1_length))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp891+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count)))),((int64_t)l51_count));
+concat_28_FTypeInfo* const tmp891 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(tmp889+(((*arg1/*state*/).e3_typeStack).e1_length))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp890+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count)))),((int64_t)l51_count));
+concat_Operation* tmp892 = (((*arg1/*state*/).e2_opStack).e0_data);
 concat_Operation* tmp893 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* tmp894 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* const tmp895 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(tmp893+(((*arg1/*state*/).e2_opStack).e1_length))),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp894+(((*arg1/*state*/).e2_opStack).e1_length)))-l55_opOffset))-l56_copied))),l56_copied);
-int64_t tmp896 = (((*arg1/*state*/).e3_typeStack).e1_length);
-(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp896+((int64_t)l51_count)));
-int64_t tmp897 = (((*arg1/*state*/).e2_opStack).e1_length);
-(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp897+l56_copied));
+concat_Operation* const tmp894 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(tmp892+(((*arg1/*state*/).e2_opStack).e1_length))),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp893+(((*arg1/*state*/).e2_opStack).e1_length)))-l55_opOffset))-l56_copied))),l56_copied);
+int64_t tmp895 = (((*arg1/*state*/).e3_typeStack).e1_length);
+(((*arg1/*state*/).e3_typeStack).e1_length) = ((int64_t)(tmp895+((int64_t)l51_count)));
+int64_t tmp896 = (((*arg1/*state*/).e2_opStack).e1_length);
+(((*arg1/*state*/).e2_opStack).e1_length) = ((int64_t)(tmp896+l56_copied));
 }
 return;
 case 2:;
-bool const tmp898 = (((int64_t)((int32_t)(l52_offset+l51_count)))>(((*arg1/*state*/).e3_typeStack).e1_length));
-if(tmp898){
-concat_list_I1 tmp899 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
-concat_FilePosition tmp900 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp899,tmp900,arg1/*state*/);
+bool const tmp897 = (((int64_t)((int32_t)(l52_offset+l51_count)))>(((*arg1/*state*/).e3_typeStack).e1_length));
+if(tmp897){
+concat_list_I1 tmp898 = concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"));
+concat_FilePosition tmp899 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp898,tmp899,arg1/*state*/);
 return;
 }
-bool const tmp901 = (l52_offset<l51_count);
-if(tmp901){
-concat_list_I1 tmp902 = concat_sb_dwrap(((int64_t)48),((int8_t const*)"swap: offset has to be greater or equal to count"));
-concat_FilePosition tmp903 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp902,tmp903,arg1/*state*/);
+bool const tmp900 = (l52_offset<l51_count);
+if(tmp900){
+concat_list_I1 tmp901 = concat_sb_dwrap(((int64_t)48),((int8_t const*)"swap: offset has to be greater or equal to count"));
+concat_FilePosition tmp902 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp901,tmp902,arg1/*state*/);
 return;
 }
 concat_28_FensureStackHeadIsValue(arg1/*state*/);
-int64_t const tmp904 = concat_28_FcountStackOps(((int64_t)0),((int64_t)l52_offset),arg1/*state*/);
-int64_t const l57_opOffset = tmp904;
-int64_t const tmp905 = concat_28_FcountStackOps(((int64_t)l52_offset),((int64_t)l51_count),arg1/*state*/);
-int64_t const l58_copied = tmp905;
-bool const tmp906 = (l51_count>((int32_t)0));
-if(tmp906){
-concat_list_I33 tmp907 = ((*arg1/*state*/).e3_typeStack);
-int64_t tmp908 = (tmp907.e1_length);
-concat_list_I33 tmp909 = concat_list_densureCap_I4(tmp907,((int64_t)(tmp908+((int64_t)l51_count))));
-((*arg1/*state*/).e3_typeStack) = tmp909;
-concat_list_I24 tmp910 = ((*arg1/*state*/).e2_opStack);
-int64_t tmp911 = (tmp910.e1_length);
-concat_list_I24 tmp912 = concat_list_densureCap_I3(tmp910,((int64_t)(tmp911+l58_copied)));
-((*arg1/*state*/).e2_opStack) = tmp912;
+int64_t const tmp903 = concat_28_FcountStackOps(((int64_t)0),((int64_t)l52_offset),arg1/*state*/);
+int64_t const l57_opOffset = tmp903;
+int64_t const tmp904 = concat_28_FcountStackOps(((int64_t)l52_offset),((int64_t)l51_count),arg1/*state*/);
+int64_t const l58_copied = tmp904;
+bool const tmp905 = (l51_count>((int32_t)0));
+if(tmp905){
+concat_list_I33 tmp906 = ((*arg1/*state*/).e3_typeStack);
+int64_t tmp907 = (tmp906.e1_length);
+concat_list_I33 tmp908 = concat_list_densureCap_I4(tmp906,((int64_t)(tmp907+((int64_t)l51_count))));
+((*arg1/*state*/).e3_typeStack) = tmp908;
+concat_list_I24 tmp909 = ((*arg1/*state*/).e2_opStack);
+int64_t tmp910 = (tmp909.e1_length);
+concat_list_I24 tmp911 = concat_list_densureCap_I3(tmp909,((int64_t)(tmp910+l58_copied)));
+((*arg1/*state*/).e2_opStack) = tmp911;
+concat_28_FTypeInfo* tmp912 = (((*arg1/*state*/).e3_typeStack).e0_data);
 concat_28_FTypeInfo* tmp913 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* tmp914 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* const tmp915 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(tmp913+(((*arg1/*state*/).e3_typeStack).e1_length))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp914+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count)))),((int64_t)l51_count));
+concat_28_FTypeInfo* const tmp914 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(tmp912+(((*arg1/*state*/).e3_typeStack).e1_length))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp913+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count)))),((int64_t)l51_count));
+concat_Operation* tmp915 = (((*arg1/*state*/).e2_opStack).e0_data);
 concat_Operation* tmp916 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* tmp917 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* const tmp918 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(tmp916+(((*arg1/*state*/).e2_opStack).e1_length))),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp917+(((*arg1/*state*/).e2_opStack).e1_length)))-l57_opOffset))-l58_copied))),l58_copied);
+concat_Operation* const tmp917 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(tmp915+(((*arg1/*state*/).e2_opStack).e1_length))),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp916+(((*arg1/*state*/).e2_opStack).e1_length)))-l57_opOffset))-l58_copied))),l58_copied);
+concat_28_FTypeInfo* tmp918 = (((*arg1/*state*/).e3_typeStack).e0_data);
 concat_28_FTypeInfo* tmp919 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* tmp920 = (((*arg1/*state*/).e3_typeStack).e0_data);
-concat_28_FTypeInfo* const tmp921 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp919+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp920+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))),((int64_t)((int32_t)(l52_offset+l51_count))));
+concat_28_FTypeInfo* const tmp920 = concat_mem_dmove(((size_t)sizeof(concat_28_FTypeInfo)),((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp918+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))-((int64_t)l51_count))),((concat_28_FTypeInfo const*)((concat_28_FTypeInfo*)(((concat_28_FTypeInfo*)(tmp919+(((*arg1/*state*/).e3_typeStack).e1_length)))-((int64_t)l52_offset)))),((int64_t)((int32_t)(l52_offset+l51_count))));
+concat_Operation* tmp921 = (((*arg1/*state*/).e2_opStack).e0_data);
 concat_Operation* tmp922 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* tmp923 = (((*arg1/*state*/).e2_opStack).e0_data);
-concat_Operation* const tmp924 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp922+(((*arg1/*state*/).e2_opStack).e1_length)))-l57_opOffset))-l58_copied)),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(tmp923+(((*arg1/*state*/).e2_opStack).e1_length)))-l57_opOffset))),((int64_t)(l57_opOffset+l58_copied)));
+concat_Operation* const tmp923 = concat_mem_dmove(((size_t)sizeof(concat_Operation)),((concat_Operation*)(((concat_Operation*)(((concat_Operation*)(tmp921+(((*arg1/*state*/).e2_opStack).e1_length)))-l57_opOffset))-l58_copied)),((concat_Operation const*)((concat_Operation*)(((concat_Operation*)(tmp922+(((*arg1/*state*/).e2_opStack).e1_length)))-l57_opOffset))),((int64_t)(l57_opOffset+l58_copied)));
 }
 return;
 case 3:;
@@ -24323,134 +24323,134 @@ break;
 }
 break;
 case 47:;
-concat_OpValue* const tmp925 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp925).label,47,"./concat.concat/typeCheck.concat:2730:18");
-concat_CompilerInfo const tmp926 = ((*tmp925).data.e47_compilerInfo);
-switch(tmp926.label){
+concat_OpValue* const tmp924 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp924).label,47,"./concat.concat/typeCheck.concat:2725:18");
+concat_CompilerInfo const tmp925 = ((*tmp924).data.e47_compilerInfo);
+switch(tmp925.label){
 case 0:;
-concat_OpValue* const tmp927 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp927).label,47,"./concat.concat/typeCheck.concat:2732:28");
-concat_CompilerInfo const tmp928 = ((*tmp927).data.e47_compilerInfo);
-concat_internal_checkEnumIndex(tmp928.label,0,"./concat.concat/typeCheck.concat:2732:42");
-concat_28_FprintTypes(false,(tmp928.data.e0_typeInfo),arg1/*state*/);
+concat_OpValue* const tmp926 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp926).label,47,"./concat.concat/typeCheck.concat:2727:28");
+concat_CompilerInfo const tmp927 = ((*tmp926).data.e47_compilerInfo);
+concat_internal_checkEnumIndex(tmp927.label,0,"./concat.concat/typeCheck.concat:2727:42");
+concat_28_FprintTypes(false,(tmp927.data.e0_typeInfo),arg1/*state*/);
 return;
 case 1:;
-concat_OpValue* const tmp929 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp929).label,47,"./concat.concat/typeCheck.concat:2735:27");
-concat_CompilerInfo const tmp930 = ((*tmp929).data.e47_compilerInfo);
-concat_internal_checkEnumIndex(tmp930.label,1,"./concat.concat/typeCheck.concat:2735:41");
-concat_28_FprintTypes(true,(tmp930.data.e1_stackInfo),arg1/*state*/);
+concat_OpValue* const tmp928 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp928).label,47,"./concat.concat/typeCheck.concat:2730:27");
+concat_CompilerInfo const tmp929 = ((*tmp928).data.e47_compilerInfo);
+concat_internal_checkEnumIndex(tmp929.label,1,"./concat.concat/typeCheck.concat:2730:41");
+concat_28_FprintTypes(true,(tmp929.data.e1_stackInfo),arg1/*state*/);
 return;
 case 2:;
 return;
 case 3:;
 return;
 }
-fprintf(stderr,"reached unreachable statement at ./concat.concat/typeCheck.concat:2741:7\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./concat.concat/typeCheck.concat:2736:7\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 break;
 case 38:case 40:case 39:case 19:case 20:case 21:case 29:;
-concat_list_I1 tmp931 = concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "));
-concat_Operation tmp932 = (*arg0/*op*/);
-concat_list_I1 tmp933 = concat_sb_dappendOp(tmp931,tmp932,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp934 = concat_sb_dappendS(tmp933,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"));
-concat_FilePosition tmp935 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp934,tmp935,arg1/*state*/);
+concat_list_I1 tmp930 = concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "));
+concat_Operation tmp931 = (*arg0/*op*/);
+concat_list_I1 tmp932 = concat_sb_dappendOp(tmp930,tmp931,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp933 = concat_sb_dappendS(tmp932,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"));
+concat_FilePosition tmp934 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp933,tmp934,arg1/*state*/);
 return;
 case 42:;
-concat_list_I1 tmp936 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""));
-concat_OpValue* const tmp937 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp937).label,42,"./concat.concat/typeCheck.concat:2751:20");
-concat_optional_I3 tmp938 = concat_id_dlabelName(((*tmp937).data.e42_getName),((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp938.label,1,"./concat.concat/typeCheck.concat:2751:55");
-concat_list_I1 tmp939 = concat_sb_dappendStr(tmp936,(tmp938.data.e1_data));
-concat_list_I1 tmp940 = concat_sb_dappendC(tmp939,((int8_t)34));
-concat_FilePosition tmp941 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp940,tmp941,arg1/*state*/);
+concat_list_I1 tmp935 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""));
+concat_OpValue* const tmp936 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp936).label,42,"./concat.concat/typeCheck.concat:2746:20");
+concat_optional_I3 tmp937 = concat_id_dlabelName(((*tmp936).data.e42_getName),((concat_LabelContext const*)l1_labelContext));
+concat_internal_checkEnumIndex(tmp937.label,1,"./concat.concat/typeCheck.concat:2746:55");
+concat_list_I1 tmp938 = concat_sb_dappendStr(tmp935,(tmp937.data.e1_data));
+concat_list_I1 tmp939 = concat_sb_dappendC(tmp938,((int8_t)34));
+concat_FilePosition tmp940 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp939,tmp940,arg1/*state*/);
 return;
 case 43:;
-concat_list_I1 tmp942 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""));
-concat_OpValue* const tmp943 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp943).label,43,"./concat.concat/typeCheck.concat:2757:20");
-concat_LabelId tmp944 = ((*tmp943).data.e43_setName);
-concat_optional_I3 tmp945 = concat_id_dlabelName(tmp944,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp945.label,1,"./concat.concat/typeCheck.concat:2757:55");
-concat_list_I1 tmp946 = concat_sb_dappendStr(tmp942,(tmp945.data.e1_data));
-concat_list_I1 tmp947 = concat_sb_dappendC(tmp946,((int8_t)34));
-concat_FilePosition tmp948 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp947,tmp948,arg1/*state*/);
+concat_list_I1 tmp941 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""));
+concat_OpValue* const tmp942 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp942).label,43,"./concat.concat/typeCheck.concat:2752:20");
+concat_LabelId tmp943 = ((*tmp942).data.e43_setName);
+concat_optional_I3 tmp944 = concat_id_dlabelName(tmp943,((concat_LabelContext const*)l1_labelContext));
+concat_internal_checkEnumIndex(tmp944.label,1,"./concat.concat/typeCheck.concat:2752:55");
+concat_list_I1 tmp945 = concat_sb_dappendStr(tmp941,(tmp944.data.e1_data));
+concat_list_I1 tmp946 = concat_sb_dappendC(tmp945,((int8_t)34));
+concat_FilePosition tmp947 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp946,tmp947,arg1/*state*/);
 return;
 case 44:;
-concat_list_I1 tmp949 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""));
-concat_OpValue* const tmp950 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp950).label,44,"./concat.concat/typeCheck.concat:2763:20");
-concat_LabelId tmp951 = ((*tmp950).data.e44__X64Name);
-concat_optional_I3 tmp952 = concat_id_dlabelName(tmp951,((concat_LabelContext const*)l1_labelContext));
-concat_internal_checkEnumIndex(tmp952.label,1,"./concat.concat/typeCheck.concat:2763:53");
-concat_list_I1 tmp953 = concat_sb_dappendStr(tmp949,(tmp952.data.e1_data));
-concat_list_I1 tmp954 = concat_sb_dappendC(tmp953,((int8_t)34));
-concat_FilePosition tmp955 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp954,tmp955,arg1/*state*/);
+concat_list_I1 tmp948 = concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""));
+concat_OpValue* const tmp949 = (&((*arg0/*op*/).e0_val));
+concat_internal_checkEnumIndex((*tmp949).label,44,"./concat.concat/typeCheck.concat:2758:20");
+concat_LabelId tmp950 = ((*tmp949).data.e44__X64Name);
+concat_optional_I3 tmp951 = concat_id_dlabelName(tmp950,((concat_LabelContext const*)l1_labelContext));
+concat_internal_checkEnumIndex(tmp951.label,1,"./concat.concat/typeCheck.concat:2758:53");
+concat_list_I1 tmp952 = concat_sb_dappendStr(tmp948,(tmp951.data.e1_data));
+concat_list_I1 tmp953 = concat_sb_dappendC(tmp952,((int8_t)34));
+concat_FilePosition tmp954 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp953,tmp954,arg1/*state*/);
 return;
 case 45:;
 concat_28_FcheckReachable(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
 concat_28_FcheckLocal(((concat_Operation const*)arg0/*op*/),arg1/*state*/);
-concat_optional_I31 tmp956 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-bool const tmp957 = concat_optional_disEmpty_I5(tmp956);
-if(tmp957){
-concat_list_I1 tmp958 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
-concat_Operation tmp959 = (*arg0/*op*/);
-concat_list_I1 tmp960 = concat_sb_dappendOp(tmp958,tmp959,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp961 = concat_sb_dappendS(tmp960,((int64_t)12),((int8_t const*)" need 1 got "));
-concat_list_I1 tmp962 = concat_sb_dappendI(tmp961,(((*arg1/*state*/).e3_typeStack).e1_length));
-concat_FilePosition tmp963 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp962,tmp963,arg1/*state*/);
+concat_optional_I31 tmp955 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+bool const tmp956 = concat_optional_disEmpty_I5(tmp955);
+if(tmp956){
+concat_list_I1 tmp957 = concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "));
+concat_Operation tmp958 = (*arg0/*op*/);
+concat_list_I1 tmp959 = concat_sb_dappendOp(tmp957,tmp958,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp960 = concat_sb_dappendS(tmp959,((int64_t)12),((int8_t const*)" need 1 got "));
+concat_list_I1 tmp961 = concat_sb_dappendI(tmp960,(((*arg1/*state*/).e3_typeStack).e1_length));
+concat_FilePosition tmp962 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp961,tmp962,arg1/*state*/);
 return;
 }
-concat_internal_checkEnumIndex(tmp956.label,1,"./concat.concat/typeCheck.concat:2777:11");
-concat_28_FTypeInfo* const l59_typeInfo = (tmp956.data.e1_data);
-concat_Type tmp964 = ((*l59_typeInfo).e0_valType);
-bool const tmp965 = concat_types_disInt(tmp964,((concat_TypeContext const*)l2_typeContext));
-bool const tmp966 = (!tmp965);
-if(tmp966){
-concat_list_I1 tmp967 = concat_sb_dcreate(((int64_t)0));
-concat_Type tmp968 = ((*l59_typeInfo).e0_valType);
-concat_list_I1 tmp969 = concat_sb_dappendType(tmp967,tmp968,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp970 = concat_sb_dappendS(tmp969,((int64_t)18),((int8_t const*)" is not an integer"));
-concat_FilePosition tmp971 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp970,tmp971,arg1/*state*/);
+concat_internal_checkEnumIndex(tmp955.label,1,"./concat.concat/typeCheck.concat:2772:11");
+concat_28_FTypeInfo* const l59_typeInfo = (tmp955.data.e1_data);
+concat_Type tmp963 = ((*l59_typeInfo).e0_valType);
+bool const tmp964 = concat_types_disInt(tmp963,((concat_TypeContext const*)l2_typeContext));
+bool const tmp965 = (!tmp964);
+if(tmp965){
+concat_list_I1 tmp966 = concat_sb_dcreate(((int64_t)0));
+concat_Type tmp967 = ((*l59_typeInfo).e0_valType);
+concat_list_I1 tmp968 = concat_sb_dappendType(tmp966,tmp967,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp969 = concat_sb_dappendS(tmp968,((int64_t)18),((int8_t const*)" is not an integer"));
+concat_FilePosition tmp970 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp969,tmp970,arg1/*state*/);
 return;
 }
 concat_28_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg1/*state*/);
-concat_Type tmp972 = ((*arg0/*op*/).e1_dataType);
-concat_arrayView_I2 tmp973 = concat_array_dempty_I0();
-concat_tuple265 const tmp974 = concat_types_dnewArrayType(tmp972,true,tmp973,false,true,l2_typeContext);
-concat_Type tmp975 = (tmp974.e0);
-bool const tmp976 = (tmp974.e1);
-concat_optional_I31 tmp977 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
-concat_internal_checkEnumIndex(tmp977.label,1,"./concat.concat/typeCheck.concat:2786:134");
-concat_28_FTypeInfo* const tmp978 = (tmp977.data.e1_data);
-((*tmp978).e0_valType) = tmp975;
+concat_Type tmp971 = ((*arg0/*op*/).e1_dataType);
+concat_arrayView_I2 tmp972 = concat_array_dempty_I0();
+concat_tuple265 const tmp973 = concat_types_dnewArrayType(tmp971,true,tmp972,false,true,l2_typeContext);
+concat_Type tmp974 = (tmp973.e0);
+bool const tmp975 = (tmp973.e1);
+concat_optional_I31 tmp976 = concat_list_dpeek_I3(((*arg1/*state*/).e3_typeStack));
+concat_internal_checkEnumIndex(tmp976.label,1,"./concat.concat/typeCheck.concat:2781:134");
+concat_28_FTypeInfo* const tmp977 = (tmp976.data.e1_data);
+((*tmp977).e0_valType) = tmp974;
 return;
 case 46:;
-concat_list_I24 tmp979 = concat_list_dclear_I5(((*arg1/*state*/).e2_opStack));
-((*arg1/*state*/).e2_opStack) = tmp979;
-concat_list_I33 tmp980 = concat_list_dclear_I6(((*arg1/*state*/).e3_typeStack));
-((*arg1/*state*/).e3_typeStack) = tmp980;
-concat_list_I24 tmp981 = ((*arg1/*state*/).e1_compiledOps);
-concat_list_I24 tmp982 = concat_list_dappend_I0(tmp981,(*arg0/*op*/));
-((*arg1/*state*/).e1_compiledOps) = tmp982;
+concat_list_I24 tmp978 = concat_list_dclear_I5(((*arg1/*state*/).e2_opStack));
+((*arg1/*state*/).e2_opStack) = tmp978;
+concat_list_I33 tmp979 = concat_list_dclear_I6(((*arg1/*state*/).e3_typeStack));
+((*arg1/*state*/).e3_typeStack) = tmp979;
+concat_list_I24 tmp980 = ((*arg1/*state*/).e1_compiledOps);
+concat_list_I24 tmp981 = concat_list_dappend_I0(tmp980,(*arg0/*op*/));
+((*arg1/*state*/).e1_compiledOps) = tmp981;
 ((*arg1/*state*/).e12_reachable) = false;
 return;
 case 0:;
 return;
 }
-concat_list_I1 tmp983 = concat_sb_dwrap(((int64_t)28),((int8_t const*)"type-checking for operation "));
-concat_Operation tmp984 = (*arg0/*op*/);
-concat_list_I1 tmp985 = concat_sb_dappendOp(tmp983,tmp984,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
-concat_list_I1 tmp986 = concat_sb_dappendS(tmp985,((int64_t)19),((int8_t const*)" is not implemented"));
-concat_FilePosition tmp987 = ((*arg0/*op*/).e2_pos);
-concat_28_FappendError2(tmp986,tmp987,arg1/*state*/);
+concat_list_I1 tmp982 = concat_sb_dwrap(((int64_t)28),((int8_t const*)"type-checking for operation "));
+concat_Operation tmp983 = (*arg0/*op*/);
+concat_list_I1 tmp984 = concat_sb_dappendOp(tmp982,tmp983,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext));
+concat_list_I1 tmp985 = concat_sb_dappendS(tmp984,((int64_t)19),((int8_t const*)" is not implemented"));
+concat_FilePosition tmp986 = ((*arg0/*op*/).e2_pos);
+concat_28_FappendError2(tmp985,tmp986,arg1/*state*/);
 return;
 }
 static void concat_28_FresolveTemplateGetIdentifer(concat_Operation* arg0/*op*/,concat_IdentifierInfo arg1/*idInfo*/,concat_TemplateInfo const* arg2/*template*/,concat_TemplateImplementation const* arg3/*impl*/,int32_t arg4/*implId*/,concat_ConstantArray arg5/*argsIndices*/,concat_28_FTypeCheckState* arg6/*state*/){
@@ -24484,7 +24484,7 @@ concat_FilePosition tmp17 = ((*arg0/*op*/).e2_pos);
 concat_Type tmp18 = concat_types_dreplaceGenericsType(tmp14,tmp15,tmp16,tmp17,((*arg6/*state*/).e0_idContext));
 ((*arg0/*op*/).e1_dataType) = tmp18;
 concat_OpValue* const tmp19 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp19).label,8,"./concat.concat/typeCheck.concat:2828:27");
+concat_internal_checkEnumIndex((*tmp19).label,8,"./concat.concat/typeCheck.concat:2823:27");
 (((*tmp19).data.e8_declareId).e3_id) = arg4/*implId*/;
 }
 bool const tmp20 = (((*arg0/*op*/).e0_val).label==9);
@@ -24496,7 +24496,7 @@ concat_FilePosition tmp24 = ((*arg0/*op*/).e2_pos);
 concat_Type tmp25 = concat_types_dreplaceGenericsType(tmp21,tmp22,tmp23,tmp24,((*arg6/*state*/).e0_idContext));
 ((*arg0/*op*/).e1_dataType) = tmp25;
 concat_OpValue* const tmp26 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp26).label,9,"./concat.concat/typeCheck.concat:2832:27");
+concat_internal_checkEnumIndex((*tmp26).label,9,"./concat.concat/typeCheck.concat:2827:27");
 (((*tmp26).data.e9_predeclareId).e3_id) = arg4/*implId*/;
 }
 break;
@@ -24507,7 +24507,7 @@ static void concat_28_FresolveTemplateOp(concat_Operation* arg0/*op*/,concat_Tem
 bool const tmp0 = (((*arg0/*op*/).e0_val).label==5);
 if(tmp0){
 concat_OpValue* const tmp1 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp1).label,5,"./concat.concat/typeCheck.concat:2846:19");
+concat_internal_checkEnumIndex((*tmp1).label,5,"./concat.concat/typeCheck.concat:2841:19");
 concat_IdentifierInfo tmp2 = ((*tmp1).data.e5_getId);
 concat_ConstantArray tmp3 = arg4/*argsIndices*/;
 concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp2,arg1/*template*/,arg2/*impl*/,arg3/*implId*/,tmp3,arg5/*state*/);
@@ -24515,7 +24515,7 @@ concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp2,arg1/*template*/,arg2/*im
 bool const tmp4 = (((*arg0/*op*/).e0_val).label==6);
 if(tmp4){
 concat_OpValue* const tmp5 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp5).label,6,"./concat.concat/typeCheck.concat:2848:19");
+concat_internal_checkEnumIndex((*tmp5).label,6,"./concat.concat/typeCheck.concat:2843:19");
 concat_IdentifierInfo tmp6 = ((*tmp5).data.e6_setId);
 concat_ConstantArray tmp7 = arg4/*argsIndices*/;
 concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp6,arg1/*template*/,arg2/*impl*/,arg3/*implId*/,tmp7,arg5/*state*/);
@@ -24523,7 +24523,7 @@ concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp6,arg1/*template*/,arg2/*im
 bool const tmp8 = (((*arg0/*op*/).e0_val).label==7);
 if(tmp8){
 concat_OpValue* const tmp9 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp9).label,7,"./concat.concat/typeCheck.concat:2850:19");
+concat_internal_checkEnumIndex((*tmp9).label,7,"./concat.concat/typeCheck.concat:2845:19");
 concat_IdentifierInfo tmp10 = ((*tmp9).data.e7__X64Id);
 concat_ConstantArray tmp11 = arg4/*argsIndices*/;
 concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp10,arg1/*template*/,arg2/*impl*/,arg3/*implId*/,tmp11,arg5/*state*/);
@@ -24531,7 +24531,7 @@ concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp10,arg1/*template*/,arg2/*i
 bool const tmp12 = (((*arg0/*op*/).e0_val).label==8);
 if(tmp12){
 concat_OpValue* const tmp13 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp13).label,8,"./concat.concat/typeCheck.concat:2852:19");
+concat_internal_checkEnumIndex((*tmp13).label,8,"./concat.concat/typeCheck.concat:2847:19");
 concat_IdentifierInfo tmp14 = ((*tmp13).data.e8_declareId);
 concat_ConstantArray tmp15 = arg4/*argsIndices*/;
 concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp14,arg1/*template*/,arg2/*impl*/,arg3/*implId*/,tmp15,arg5/*state*/);
@@ -24539,7 +24539,7 @@ concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp14,arg1/*template*/,arg2/*i
 bool const tmp16 = (((*arg0/*op*/).e0_val).label==9);
 if(tmp16){
 concat_OpValue* const tmp17 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp17).label,9,"./concat.concat/typeCheck.concat:2854:19");
+concat_internal_checkEnumIndex((*tmp17).label,9,"./concat.concat/typeCheck.concat:2849:19");
 concat_IdentifierInfo tmp18 = ((*tmp17).data.e9_predeclareId);
 concat_ConstantArray tmp19 = arg4/*argsIndices*/;
 concat_28_FresolveTemplateGetIdentifer(arg0/*op*/,tmp18,arg1/*template*/,arg2/*impl*/,arg3/*implId*/,tmp19,arg5/*state*/);
@@ -24553,7 +24553,7 @@ concat_Type tmp24 = concat_types_dreplaceGenericsType(tmp20,tmp21,tmp22,tmp23,((
 bool const tmp25 = (((*arg0/*op*/).e0_val).label==32);
 if(tmp25){
 concat_OpValue* const tmp26 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp26).label,32,"./concat.concat/typeCheck.concat:2858:18");
+concat_internal_checkEnumIndex((*tmp26).label,32,"./concat.concat/typeCheck.concat:2853:18");
 concat_Type tmp27 = ((*tmp26).data.e32_Cast);
 concat_ConstantArray tmp28 = arg4/*argsIndices*/;
 concat_ConstantArray tmp29 = ((concat_ConstantArray){.e0_offset = ((int64_t)0),.e1_length = ((int64_t)0)});
@@ -24566,7 +24566,7 @@ concat_OpValue* const tmp32 = (&((*arg0/*op*/).e0_val));
 bool const tmp33 = (((*arg0/*op*/).e0_val).label==33);
 if(tmp33){
 concat_OpValue* const tmp34 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp34).label,33,"./concat.concat/typeCheck.concat:2860:18");
+concat_internal_checkEnumIndex((*tmp34).label,33,"./concat.concat/typeCheck.concat:2855:18");
 concat_Type tmp35 = ((*tmp34).data.e33_Cast_X33);
 concat_ConstantArray tmp36 = arg4/*argsIndices*/;
 concat_ConstantArray tmp37 = ((concat_ConstantArray){.e0_offset = ((int64_t)0),.e1_length = ((int64_t)0)});
@@ -24579,7 +24579,7 @@ concat_OpValue* const tmp40 = (&((*arg0/*op*/).e0_val));
 bool const tmp41 = (((*arg0/*op*/).e0_val).label==2);
 if(tmp41){
 concat_OpValue* const tmp42 = (&((*arg0/*op*/).e0_val));
-concat_internal_checkEnumIndex((*tmp42).label,2,"./concat.concat/typeCheck.concat:2862:18");
+concat_internal_checkEnumIndex((*tmp42).label,2,"./concat.concat/typeCheck.concat:2857:18");
 concat_ConstValue tmp43 = ((*tmp42).data.e2_Constant);
 concat_ConstantArray tmp44 = arg4/*argsIndices*/;
 concat_ConstantArray tmp45 = ((concat_ConstantArray){.e0_offset = ((int64_t)0),.e1_length = ((int64_t)0)});
@@ -24619,7 +24619,7 @@ if(!tmp10)
 (l1_state.e8_fileId) = tmp9;
 concat_list_I28 tmp11 = ((*l0_prog).e1_progFiles);
 concat_optional_I18 tmp12 = concat_list_dat_I1(tmp11,((int64_t)tmp9));
-concat_internal_checkEnumIndex(tmp12.label,1,"./concat.concat/typeCheck.concat:2891:38");
+concat_internal_checkEnumIndex(tmp12.label,1,"./concat.concat/typeCheck.concat:2886:38");
 int32_t tmp13 = l2_globalTmpCount;
 (l1_state.e9_tmpCount) = tmp13;
 concat_list_I24 tmp14 = concat_list_dclear_I5((l1_state.e1_compiledOps));
@@ -24636,7 +24636,7 @@ if(!tmp19)
   break;
 concat_list_I24 tmp20 = ((*tmp17).e0_globalOps);
 concat_optional_I12 tmp21 = concat_list_dat_I14(tmp20,((int64_t)tmp18));
-concat_internal_checkEnumIndex(tmp21.label,1,"./concat.concat/typeCheck.concat:2898:46");
+concat_internal_checkEnumIndex(tmp21.label,1,"./concat.concat/typeCheck.concat:2893:46");
 concat_28_FtypeCheckOp((tmp21.data.e1_data),(&l1_state));
 tmp18 = ((int32_t)(tmp18+((int32_t)1)));
 }while(1);
@@ -24645,7 +24645,7 @@ bool const tmp23 = (tmp22>((int64_t)0));
 if(tmp23){
 concat_list_I1 tmp24 = concat_sb_dwrap(((int64_t)21),((int8_t const*)"unfinished code block"));
 concat_optional_I15 tmp25 = concat_list_dpeek_I4((l1_state.e4_openBlocks));
-concat_internal_checkEnumIndex(tmp25.label,1,"./concat.concat/typeCheck.concat:2902:69");
+concat_internal_checkEnumIndex(tmp25.label,1,"./concat.concat/typeCheck.concat:2897:69");
 concat_28_FBlockInfo* const tmp26 = (tmp25.data.e1_data);
 concat_FilePosition tmp27 = ((*tmp26).e1_startPos);
 concat_28_FappendError2(tmp24,tmp27,(&l1_state));
@@ -24670,7 +24670,7 @@ if(!tmp35)
   break;
 concat_list_I24 tmp36 = ((*tmp17).e1_localOps);
 concat_optional_I12 tmp37 = concat_list_dat_I14(tmp36,((int64_t)tmp34));
-concat_internal_checkEnumIndex(tmp37.label,1,"./concat.concat/typeCheck.concat:2915:45");
+concat_internal_checkEnumIndex(tmp37.label,1,"./concat.concat/typeCheck.concat:2910:45");
 concat_28_FtypeCheckOp((tmp37.data.e1_data),(&l1_state));
 tmp34 = ((int32_t)(tmp34+((int32_t)1)));
 }while(1);
@@ -24679,7 +24679,7 @@ bool const tmp39 = (tmp38>((int64_t)0));
 if(tmp39){
 concat_list_I1 tmp40 = concat_sb_dwrap(((int64_t)21),((int8_t const*)"unfinished code block"));
 concat_optional_I15 tmp41 = concat_list_dpeek_I4((l1_state.e4_openBlocks));
-concat_internal_checkEnumIndex(tmp41.label,1,"./concat.concat/typeCheck.concat:2919:69");
+concat_internal_checkEnumIndex(tmp41.label,1,"./concat.concat/typeCheck.concat:2914:69");
 concat_28_FBlockInfo* const tmp42 = (tmp41.data.e1_data);
 concat_FilePosition tmp43 = ((*tmp42).e1_startPos);
 concat_28_FappendError2(tmp40,tmp43,(&l1_state));
@@ -24711,7 +24711,7 @@ if(!tmp53)
 concat_IdentifierContext* const tmp54 = (l1_state.e0_idContext);
 concat_list_I20 tmp55 = ((*tmp54).e5_templateInfos);
 concat_optional_I10 tmp56 = concat_list_dat_I12(tmp55,((int64_t)tmp51));
-concat_internal_checkEnumIndex(tmp56.label,1,"./concat.concat/typeCheck.concat:2937:58");
+concat_internal_checkEnumIndex(tmp56.label,1,"./concat.concat/typeCheck.concat:2932:58");
 concat_TemplateInfo* l5_template = (tmp56.data.e1_data);
 int64_t tmp57 = ((*l5_template).e3_codeLength);
 int64_t tmp58 = (((*l5_template).e5_implementations).e1_length);
@@ -24722,7 +24722,7 @@ int64_t l6_prevImpl = (((*l5_template).e5_implementations).e1_length);
 (l1_state.e8_fileId) = ((*l5_template).e4_srcFile);
 concat_list_I28 tmp60 = ((*l0_prog).e1_progFiles);
 concat_optional_I18 tmp61 = concat_list_dat_I1(tmp60,((int64_t)((*l5_template).e4_srcFile)));
-concat_internal_checkEnumIndex(tmp61.label,1,"./concat.concat/typeCheck.concat:2942:59");
+concat_internal_checkEnumIndex(tmp61.label,1,"./concat.concat/typeCheck.concat:2937:59");
 concat_ProgramFile* const tmp62 = (tmp61.data.e1_data);
 concat_list_I24 tmp63 = ((*tmp62).e2_templateOps);
 (l1_state.e1_compiledOps) = tmp63;
@@ -24738,7 +24738,7 @@ concat_list_I24 tmp67 = concat_list_dclear_I5((l1_state.e2_opStack));
 (l1_state.e2_opStack) = tmp67;
 concat_list_I16 tmp68 = ((*l5_template).e5_implementations);
 concat_optional_I32 tmp69 = concat_list_dat_I16(tmp68,((int64_t)tmp64));
-concat_internal_checkEnumIndex(tmp69.label,1,"./concat.concat/typeCheck.concat:2947:56");
+concat_internal_checkEnumIndex(tmp69.label,1,"./concat.concat/typeCheck.concat:2942:56");
 concat_TemplateImplementation* const l7_impl = (tmp69.data.e1_data);
 concat_IdentifierContext* const tmp70 = (l1_state.e0_idContext);
 int64_t const l8_argBufferOffset = (((*tmp70).e6_templateArgBuffer).e1_length);
@@ -24769,7 +24769,7 @@ concat_28_FtypeCheckOp((&l10_op),(&l1_state));
 concat_IdentifierContext* const tmp87 = (l1_state.e0_idContext);
 concat_list_I20 tmp88 = ((*tmp87).e5_templateInfos);
 concat_optional_I10 tmp89 = concat_list_dat_I12(tmp88,((int64_t)tmp51));
-concat_internal_checkEnumIndex(tmp89.label,1,"./concat.concat/typeCheck.concat:2957:66");
+concat_internal_checkEnumIndex(tmp89.label,1,"./concat.concat/typeCheck.concat:2952:66");
 l5_template = (tmp89.data.e1_data);
 tmp80 = ((int32_t)(tmp80+((int32_t)1)));
 }while(1);
@@ -24780,7 +24780,7 @@ bool const tmp92 = (tmp91>((int64_t)0));
 if(tmp92){
 concat_list_I1 tmp93 = concat_sb_dwrap(((int64_t)21),((int8_t const*)"unfinished code block"));
 concat_optional_I15 tmp94 = concat_list_dpeek_I4((l1_state.e4_openBlocks));
-concat_internal_checkEnumIndex(tmp94.label,1,"./concat.concat/typeCheck.concat:2962:75");
+concat_internal_checkEnumIndex(tmp94.label,1,"./concat.concat/typeCheck.concat:2957:75");
 concat_28_FBlockInfo* const tmp95 = (tmp94.data.e1_data);
 concat_FilePosition tmp96 = ((*tmp95).e1_startPos);
 concat_28_FappendError2(tmp93,tmp96,(&l1_state));
@@ -24801,7 +24801,7 @@ tmp64 = ((int32_t)(tmp64+((int32_t)1)));
 concat_list_I24 tmp102 = (l1_state.e1_compiledOps);
 concat_list_I28 tmp103 = ((*l0_prog).e1_progFiles);
 concat_optional_I18 tmp104 = concat_list_dat_I1(tmp103,((int64_t)((*l5_template).e4_srcFile)));
-concat_internal_checkEnumIndex(tmp104.label,1,"./concat.concat/typeCheck.concat:2972:78");
+concat_internal_checkEnumIndex(tmp104.label,1,"./concat.concat/typeCheck.concat:2967:78");
 concat_ProgramFile* const tmp105 = (tmp104.data.e1_data);
 ((*tmp105).e2_templateOps) = tmp102;
 }

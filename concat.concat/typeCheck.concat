@@ -685,12 +685,11 @@ end
 
 enum( PROC POINTER ) =:: CallType
 
-proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType CallingConvention : callConvention TypeCheckState ptr mut : state => ) =: typeCheckCall
+proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state => ) =: typeCheckCall
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
-
   op [] .dataType =:: mut calledType
   callType CallType .POINTER == if
     state [] .typeStack list.peek #dup optional.isEmpty if #drop
@@ -712,7 +711,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   end typeContext unwrapNamed calledType =
   calledType typeContext getProcIn #drop =:: mut inType
   calledType typeContext getProcOut #drop =:: mut outType
-  ## TODO guess calling convention for called type
+  calledType typeContext getCallConvention #drop =:: mut callConvention
   inType typeContext compositeEltCount =:: argCount
   outType typeContext compositeEltCount =:: resCount
   templateId id.TEMPLATE_ID_NONE != calledType typeContext hasStaticArgs | if
@@ -1008,6 +1007,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           eltId
           op [] .pos
         opGet =:: tmp tmp @ state pushValue
+        eltType typeContext types.isComposite state [] .typeStack list.peek .data [] .writable =
         1 +
       end #drop
       retIds list.free #drop
@@ -1066,11 +1066,6 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
           op [] .val .getId .templateId
           op [] .val .getId .id @ optional.wrap
           CallType .PROC
-          idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
-            CallingConvention .POINTER
-          else
-            CallingConvention.DEFAULT
-          end
         state typeCheckCall
         return
       end
@@ -2405,7 +2400,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     callPtr case
       op state checkReachable
       op state checkLocal
-      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER CallingConvention.DEFAULT state typeCheckCall ## TODO determine calling convention
+      op id.TEMPLATE_ID_NONE i32 ptr mut optional.empty CallType .POINTER state typeCheckCall
       return
     argc case
       op state checkReachable
