@@ -2,8 +2,8 @@
 #!/bin/sh
 baseCompiler="./concat"
 compilerSrc="./concat.concat/compiler.concat"
-compilerCTarget="./build/concat2.c"
-compilerTarget="./build/concat2"
+compilerCTarget="./build/concatX.c"
+compilerTarget="./concatX"
 codeSrc="./code.concat"
 codeCTarget="./code.c"
 codeTarget="./code"
@@ -25,7 +25,7 @@ echo "-----------------------------------------" && {
 } && {
   echo "compile code with experimental compiler"
   echo "-----------------------------------------"
-  $compilerTarget "$codeSrc" -o "$codeCTarget" -W -p "./parser.out" -t "./typeCheck.out" -X
+  $compilerTarget "$codeSrc" -o "$codeCTarget" -X -W -p "./parser.out" -t "./typeCheck.out"
 } && {
   echo "compile generated C-code"
   echo "-----------------------------------------"

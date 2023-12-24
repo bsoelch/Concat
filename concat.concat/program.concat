@@ -35,7 +35,7 @@ enum(
                 i32 : mut setEnumElement
                 i32 : mut @EnumElement
                       Print
-  CallingConvention : Return
+                      Return
                       New
                 i32 : newEnum
                       callPtr
@@ -111,9 +111,9 @@ end
 proc( FilePosition : pos => Operation ) =: public opEntryPoint
   OpValue .entryPoint Type .undefined pos Operation new return
 end
-proc( Type CallingConvention FilePosition => Operation ) =: public opReturn
+proc( Type FilePosition => Operation ) =: public opReturn
   =:: pos
-  OpValue .Return new #swap pos Operation new return
+  OpValue .Return #swap pos Operation new return
 end
 proc( BinaryOperator FilePosition => Operation ) =: public opBinOp
   =:: pos
@@ -442,12 +442,8 @@ end
           break
         Return case
           "Return( " sb.appendS
-          #over .val .Return switch
-            STRUCT case "struct" sb.appendS break
-            POINTER case "pointer" sb.appendS break
-          end
-          " ): " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
+          " ) " sb.appendS
           break
         binaryOperator case
           "binary Operator ( " sb.appendS

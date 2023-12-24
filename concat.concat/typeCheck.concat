@@ -712,6 +712,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   end typeContext unwrapNamed calledType =
   calledType typeContext getProcIn #drop =:: mut inType
   calledType typeContext getProcOut #drop =:: mut outType
+  ## TODO guess calling convention for called type
   inType typeContext compositeEltCount =:: argCount
   outType typeContext compositeEltCount =:: resCount
   templateId id.TEMPLATE_ID_NONE != calledType typeContext hasStaticArgs | if
@@ -832,7 +833,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     end
     inType templateIndices genericIndices op [] .pos idContext replaceGenericsType inType =
     outType templateIndices genericIndices op [] .pos idContext replaceGenericsType outType =
-    inType outType typeContext newProcedure #drop calledType =
+    inType outType callConvention typeContext newProcedure #drop calledType =
     calledType op [] .dataType =
     templateInfo optional.hasData if templateInfo .data =:: templateData
       -1 =:: mut mImpl
@@ -2271,14 +2272,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           closed [] .blockData .switchBlock .outTypes @ freeStackState
           break
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          closed [] .blockData .procBlock
-            closed [] .blockType BlockType .EXPERIMENTAL_PROCEDURE == if
-              CallingConvention .POINTER
-            else
-              CallingConvention.DEFAULT
-            end
-            op [] .pos
-          opReturn =:: tmp
+          closed [] .blockData .procBlock op [] .pos opReturn =:: tmp
           state [] .reachable if
             tmp @ state typeCheckReturn
           end
@@ -2611,6 +2605,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         ## BlockInfo
             Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
             Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
+            CallingConvention.DEFAULT
             typeContext
             types.newProcedure #drop
           BlockData .procBlock new

@@ -677,9 +677,10 @@
       enum case
         src .enum templateArgs genericArgs implPos context replaceGenericsComposite Type .enum new return
       procedure case
-        context [] .typeContext .procTypes src .procedure list.get
-          #dup .in templateArgs genericArgs implPos context replaceGenericsType
-          #swap .out templateArgs genericArgs implPos context replaceGenericsType
+        context [] .typeContext .procTypes src .procedure list.get =:: procData
+          procData .in templateArgs genericArgs implPos context replaceGenericsType
+          procData .out templateArgs genericArgs implPos context replaceGenericsType
+          procData .callingConvention
         context [] .typeContext @ newProcedure #drop return
       namedType case
         context [] .typeContext .namedTypes

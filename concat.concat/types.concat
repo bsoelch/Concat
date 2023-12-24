@@ -764,7 +764,7 @@ end
 #namespace types
 
 ## procedure types
-struct( Type : in Type : out ) =:: ProcType
+struct( Type : in Type : out CallingConvention : callingConvention ) =:: ProcType
 
 proc( Type TypeContext ptr => bool ) =: public isProcedure
   unwrapNamed
@@ -791,8 +791,16 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcOut
     end
   context [] .procTypes #swap .procedure list.get .out false return
 end
-proc( Type : proc CallingConvention : callConvention TypeContext ptr mut : context => Type bool ) =: public getProcRet
+proc( Type : proc TypeContext ptr : context => CallingConvention bool ) =: public getCallConvention
+  proc context unwrapNamed
+    #dup context isProcedure ! if #drop
+      CallingConvention.DEFAULT true return
+    end
+  context [] .procTypes #swap .procedure list.get .callingConvention false return
+end
+proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public getProcRet
   proc context getProcOut if true return end =:: outType
+  proc context getCallConvention if #drop Type .undefined true return end =:: callConvention
   callConvention switch
     STRUCT case outType false return
     POINTER case
@@ -804,20 +812,21 @@ proc( Type : proc CallingConvention : callConvention TypeContext ptr mut : conte
       lastArg context isSmallType if lastArg else Type .undefined end false return
   end
 end
-proc( Type : in Type : out TypeContext ptr mut : context => Type bool ) =: public newProcedure
+proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mut : context => Type bool ) =: public newProcedure
   in Type .undefined == out Type .undefined == | if
     Type .undefined true return
   end
   context [] .procTypes addrOf =:: procs
   0 while #dup procs [] .length < do
     procs [] #over list.get .in in typeEquals
-    procs [] #over:2 list.get .out out typeEquals & if
+    procs [] #over:2 list.get .out out typeEquals & 
+    procs [] #over:2 list.get .callingConvention callConvention == & if
       ProcId cast Type .procedure new false return
     end
     1 +
   end #drop
   procs []
-    in out ProcType new list.append
+    in out callConvention ProcType new list.append
   procs [] =
   procs [] .length 1 - ProcId cast Type .procedure new
   false return
@@ -833,16 +842,37 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
       true isPtr =
     end
   =:: mProc
-  context [] .procTypes mProc .procedure list.get
-    #dup .in Type .procIn == if #drop
-      proc false return
+  context [] .procTypes mProc .procedure list.get =:: procData
+  procData .in Type .procIn == if
+    proc false return
+  end
+  context [] .compositeTypes procData .in .labeledProcIn list.get =:: mut inType
+  context [] .compositeData inType .eltsOffset inType .eltCount list.slice LabelId arrayView optional.empty false context newProcArgs
+  procData .out procData .callingConvention context newProcedure if #drop proc true return end
+  isPtr if
+    true ArraySize array.empty true false context newArrayType return
+  end
+  false return
+end
+proc( Type : proc CallingConvention : callConvention TypeContext ptr mut : context => Type bool ) =: public withCallConvention
+  proc context unwrapNamed
+    #dup context isCallable ! if #drop
+      proc true return
     end
-    context [] .compositeTypes #over .in .labeledProcIn list.get =:: mut inType
-    context [] .compositeData inType .eltsOffset inType .eltCount list.slice LabelId arrayView optional.empty false context newProcArgs
-  #swap .out context newProcedure if #drop proc true return end
-    isPtr if
-      true ArraySize array.empty true false context newArrayType return
+    false =:: mut isPtr
+    #dup context isPointer if
+      context getBaseType
+      true isPtr =
     end
+  =:: mProc
+  context [] .procTypes mProc .procedure list.get =:: procData
+  procData .callingConvention callConvention == if
+    proc false return
+  end
+  procData .in procData .out callConvention context newProcedure if #drop proc true return end
+  isPtr if
+    true ArraySize array.empty true false context newArrayType return
+  end
   false return
 end
 proc( Type : proc TypeContext ptr mut : context => bool ) =: public hasStaticArgs
