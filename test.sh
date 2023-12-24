@@ -4,7 +4,14 @@ nTested=0
 nPassed=0
 nFailed=0
 
+if [[ "$@" == *"-X"* ]]; then ## if X in arguments
+    concatPath="../../concatX"
+else
+    concatPath="../../concat"
+fi
+
 clear
+echo "running tests in experimental mode"
 ## TODO? recompile compiler
 cd "./tests/"
 for d in */; do ## go through all directories in tests folder 
@@ -24,7 +31,7 @@ for f in *.concat; do ## go through all concat files in the test directory
     mapfile -t args < "${f%.*}.args"
   fi
   
-  ../../concat "$f" -o "${f%.*}.c" -l "../../lib/" -q > ".${f%.*}.out" 2> ".${f%.*}.err" &&
+  $concatPath "$f" -o "${f%.*}.c" -l "../../lib/" -q > ".${f%.*}.out" 2> ".${f%.*}.err" &&
   gcc ${cArgs[@]} -Wno-unused "${f%.*}.c" "../../extern.c" -o "${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
   ( [ -f "${f%.*}.in" ] && cat "${f%.*}.in" || echo "" ) | # use ${f%.*}.in as input if it exists otherwise use empty stdin
     "./${f%.*}" "${args[@]}" >> ".${f%.*}.out" 2>> ".${f%.*}.err"
