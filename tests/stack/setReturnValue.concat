@@ -1,13 +1,14 @@
-#include list
-
 struct( i32 : a i32 : mut b ) =:: aStruct
 
+proc( aStruct ptr => aStruct ) =: get
+  []
+end
+
 entryPoint:
-  16 aStruct list.create
-    0 1 aStruct new list.append
-    2 3 aStruct new list.append
-    4 5 aStruct new list.append
-  =:: l
-  0 l 2 list.get .b  =
-  l 2 list.get .b ..debug.print
+  37 42 aStruct new =:: X
+  X @ get
+    0 #over .b  =
+  .b ..debug.print
+  -115 X @ get .b =
+  X @ get .b ..debug.print
 end
