@@ -21,7 +21,7 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
   else #drop end
   visited declared ptrLevel map.put #drop
   declared switch
-    undefined primitiveType autoType templateType genericType case
+    undefined empty primitiveType autoType templateType genericType case
       break
     pointer case
       declared typeContext types.getBaseType ptrLevel 1 + prog visited types declaredType
@@ -48,7 +48,7 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
         break ## don't add single element proc-out to list of declared types
       end
       types []
-        declared list.append
+        declared list.append ## TODO don't add tuple&union types containing only empty types
       types [] =
       break
     procedure case

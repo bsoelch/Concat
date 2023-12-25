@@ -154,7 +154,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t switch
-    undefined templateType genericType case ## no global type necessary
+    undefined empty templateType genericType case ## no global type necessary
       target "void" io.fputs #drop
       break
     primitiveType case
@@ -247,6 +247,9 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
   false =:: mut hasArgs
   target "(" io.fputs #drop
   0 while #dup args .length < do
+    args #over array.get typeContext types.isEmpty if ## skip empty arguments
+      1 + continue
+    end
     hasArgs if
       target "," io.fputs #drop
     end
@@ -332,7 +335,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   0 while #dup types .length < do
     types #over list.get =:: t
     t switch
-      undefined primitiveType autoType templateType genericType procedure labeledProcIn procIn case ## no global type necessary
+      undefined empty primitiveType autoType templateType genericType procedure labeledProcIn procIn case ## no global type necessary
         break
       pointer case
         t typeContext types.isCallable if ## procedure pointer
@@ -383,7 +386,7 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   0 while #dup types .length < do
     types #over list.get =:: t
     t switch
-      undefined primitiveType autoType templateType genericType procedure labeledProcIn procIn pointer namedType case ## no initialization necessary
+      undefined empty primitiveType autoType templateType genericType procedure labeledProcIn procIn pointer namedType case ## no initialization necessary
         break
       arrayType case
         t typeContext types.isFixedSize ! if

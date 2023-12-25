@@ -634,7 +634,7 @@
       src return ## no generics to replace
     end
     src switch
-      undefined primitiveType autoType case
+      undefined empty primitiveType autoType case
         src return ## no generic info
       pointer arrayType case
         src Type .pointer == =:: isPtr
@@ -826,7 +826,7 @@
       return
     end
     expected switch
-      undefined primitiveType autoType case
+      undefined empty primitiveType autoType case
         break
       procedure case
         ## resolveGenericsType

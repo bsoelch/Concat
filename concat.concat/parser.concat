@@ -510,7 +510,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
       id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
         state [] .labelBuffer #swap list.append
       state [] .labelBuffer =
-      Type .undefined fileState [] .wordStart newTypeConst  state pushConst
+      Type .empty fileState [] .wordStart newTypeConst  state pushConst
       #dup .length 0 >
     do end
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError2
