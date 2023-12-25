@@ -1,0 +1,66 @@
+proc( i32 i32 => i32 i32 ) =: #:experimental divMod
+  #over #over % =:: mod / mod return
+end
+
+proc( i32 i32 => i32 2 array ) =: #:experimental array2
+  i32 2 array new =:: mut data
+    data @ 1 [] =
+    data @ 0 [] =
+  data return
+end
+
+proc( i64 i64 i64 i64 => i64 4 array ) =: #:experimental array4
+  i64 4 array new =:: mut data
+    data @ 3 [] =
+    data @ 2 [] =
+    data @ 1 [] =
+    data @ 0 [] =
+  data return
+end
+
+proc( i32 : a i32 : b => i32 ) =: #:experimental cmp
+  a b > if 1 else a b < _if -1 else 0 end
+end
+
+proc( i32 : ignore => ) =: #:experimental consume end
+
+
+struct( i64 : length i8 _ ptr : data ) =:: String
+proc( i64 : static k i8 k ptr : str => String i64 ) =: #:experimental startItr
+  k str String new 0
+end
+proc( String i64 => String i64 i8 bool ) =: #:experimental nextChar
+  =:: i
+  =:: s
+  s
+    i s .length >= if
+      i '\x00'  false return
+    end
+    i 1 +  s .data i [] true return
+end
+proc( String i64 i8 => ) =: #:experimental endItr
+  #drop #drop #drop
+end
+
+enum( i32 : a i32 : b ) =:: E
+proc( i32 => E ) =: #:experimental enumCreate
+  E .a new return
+end
+
+entryPoint:
+  1234 consume
+  43 17 divMod #swap ..debug.print ..debug.print
+  5 7 cmp ..debug.print
+  1 2 array2 =:: A
+  A @ 0 [] ..debug.print
+  A @ 1 [] ..debug.print
+  1 2 3 4 array4 =:: B
+  B @ 0 [] ..debug.print
+  B @ 1 [] ..debug.print
+  B @ 2 [] ..debug.print
+  B @ 3 [] ..debug.print
+  "Hello" startItr while nextChar do
+    #+char+# ..debug.print
+  end endItr
+  42 enumCreate .a ..debug.print
+end
