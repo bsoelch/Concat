@@ -47,8 +47,13 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
       declared Type .procOut == elts .length 2 < & if
         break ## don't add single element proc-out to list of declared types
       end
+      declared Type .tuple == declared Type .struct == | declared Type .union == | if
+        declared typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & 0 != if
+          break ## don't add tuple&union types containing only empty types
+        end
+      end
       types []
-        declared list.append ## TODO don't add tuple&union types containing only empty types
+        declared list.append
       types [] =
       break
     procedure case
@@ -76,7 +81,7 @@ proc( Operation ptr : op Program ptr mut : prog Type i32 hashMap ptr mut : visit
 end
 
 proc( Program ptr mut : prog => Type list ) =: public getDeclaredTypes
-  types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut visited ## XXX start with power of two closest to total type count as capacity 
+  types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut visited ## XXX start with power of two closest to total type count as capacity
   128 Type list.create =:: mut types
   0 while #dup prog [] .progFiles .length < do
     prog [] .progFiles #over list.at .data

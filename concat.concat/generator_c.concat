@@ -267,6 +267,9 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
       N 1 - N =
     end end
     0 while #dup N < do
+      outTypes #over array.get typeContext types.isEmpty if ## skip empty arguments
+        1 + continue
+      end
       hasArgs if
         target "," io.fputs #drop
       end

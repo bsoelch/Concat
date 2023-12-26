@@ -145,9 +145,14 @@ type : public TypeContext
 proc( Type => bool ) =: public isPrimitive
   Type .primitiveType == return
 end
-proc( Type TypeContext ptr => bool ) =: public isEmpty
-  unwrapNamed
-  #dup Type .undefined == #swap Type .empty == | return ## TODO separate undefined and empty once implementation is stable
+proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty
+  t0 context unwrapNamed =:: t
+  t switch
+     undefined empty case true return ## TODO don't consider undefined to be empty once implementation is stable
+     primitiveType pointer arrayType enum procedure
+       namedType autoType genericType templateType case false return
+     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
+  end
 end
 proc( Type TypeContext ptr => bool ) =: public isBoolean
   unwrapNamed
@@ -246,7 +251,7 @@ proc( Type TypeContext ptr => i32 ) =: public numberSize
         1023 return ## IEEE float-64
     end
 end
-proc( Type : a Type : b TypeContext ptr mut : context => Type ) =: public commonIntType
+proc( Type : a Type : b TypeContext ptr : context => Type ) =: public commonIntType
   a context types.isInt ! b context types.isInt ! | if
     Type .undefined return
   end
@@ -256,7 +261,7 @@ proc( Type : a Type : b TypeContext ptr mut : context => Type ) =: public common
     a return
   end
 end
-proc( Type : a Type : b TypeContext ptr mut : context => Type ) =: public commonNumberType
+proc( Type : a Type : b TypeContext ptr : context => Type ) =: public commonNumberType
   a context types.isNumber ! b context types.isNumber ! | if
     Type .undefined return
   end
@@ -491,7 +496,7 @@ proc( Type TypeContext ptr => bool ) =: public isProcOut
   unwrapNamed
   Type .procOut == return
 end
-proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut optional ) =: compositeData
+proc( Type : composite TypeContext ptr : context => CompositeType ptr optional ) =: compositeData
   composite context unwrapNamed
     #dup switch
       tuple case
@@ -516,18 +521,20 @@ proc( Type : composite TypeContext ptr mut : context => CompositeType ptr mut op
         .enum
         break
       undefined empty primitiveType pointer arrayType procedure namedType autoType genericType templateType case
-        #drop CompositeType ptr mut optional.empty return
+        #drop CompositeType ptr optional.empty return
     end
-  context [] .compositeTypes #swap list.at return
+  context [] .compositeTypes #swap list.at #dup optional.isEmpty if #drop
+    CompositeType ptr optional.empty return
+  end .data CompositeType ptr cast optional.wrap return
 end
-proc( Type : composite TypeContext ptr mut : context => i64 ) =: public compositeEltCount
+proc( Type : composite TypeContext ptr : context => i64 ) =: public compositeEltCount
   composite context compositeData
     #dup optional.isEmpty if #drop
       0 return
     end
   .data [] .eltCount return
 end
-proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =: public compositeGetLabel
+proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
       struct union labeledProcIn enum case
@@ -545,7 +552,7 @@ proc( Type : composite i32 : index TypeContext ptr mut : context => LabelId ) =:
   end
   context [] .elementLabels offset index + list.get return
 end
-proc( Type : composite string : name LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 ) =: public compositeFindLabel
+proc( Type : composite string : name LabelContext ptr : labelContext TypeContext ptr : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
       struct union labeledProcIn enum case
@@ -566,7 +573,7 @@ proc( Type : composite string : name LabelContext ptr mut : labelContext TypeCon
   end #drop
   -1 return
 end
-proc( Type : union Type : elt LabelContext ptr mut : labelContext TypeContext ptr mut : context => i32 bool ) =: public findUnionTypeIndex
+proc( Type : union Type : elt LabelContext ptr : labelContext TypeContext ptr : context => i32 bool ) =: public findUnionTypeIndex
   union context compositeElts =:: elts
   0 while #dup elts .length < do
     elt elts #over:2 array.get typeEquals if
@@ -582,14 +589,14 @@ proc( Type : union Type : elt LabelContext ptr mut : labelContext TypeContext pt
   end #drop
   -1 true return
 end
-proc( Type : composite i64 : index TypeContext ptr mut : context => Type ) =: public compositeGetElement
+proc( Type : composite i64 : index TypeContext ptr : context => Type ) =: public compositeGetElement
   composite context compositeData
     #dup optional.isEmpty if #drop
       Type .undefined return
     end
   .data [] .eltsOffset index + context [] .compositeData #swap list.get return
 end
-proc( Type : composite TypeContext ptr mut : context => Type arrayView ) =: public compositeElts
+proc( Type : composite TypeContext ptr : context => Type arrayView ) =: public compositeElts
   composite context compositeData
     #dup optional.isEmpty if #drop
       Type array.empty return
@@ -597,7 +604,7 @@ proc( Type : composite TypeContext ptr mut : context => Type arrayView ) =: publ
   .data =:: data
   context [] .compositeData .data data [] .eltsOffset + data [] .eltCount array.create return
 end
-proc( Type : composite TypeContext ptr mut : context => CompositeFlag ) =: public compositeFlags
+proc( Type : composite TypeContext ptr : context => CompositeFlag ) =: public compositeFlags
   composite context compositeData
     #dup optional.isEmpty if #drop
       0 return
@@ -625,7 +632,7 @@ proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
   end #drop
   -1 return
 end
-proc( LabelOffset : offset LabelId arrayView optional : labels TypeContext ptr mut : context => bool ) =: labelsEqual
+proc( LabelOffset : offset LabelId arrayView optional : labels TypeContext ptr : context => bool ) =: labelsEqual
   offset UNLABELED == if ## unlabeled -> on labels
     labels optional.isEmpty return
   end
@@ -801,7 +808,7 @@ proc( Type : proc TypeContext ptr : context => CallingConvention bool ) =: publi
     end
   context [] .procTypes #swap .procedure list.get .callingConvention false return
 end
-proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public getProcRet
+proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcRet
   proc context getProcOut if true return end =:: outType
   proc context getCallConvention if #drop Type .undefined true return end =:: callConvention
   callConvention switch
@@ -822,7 +829,7 @@ proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mu
   context [] .procTypes addrOf =:: procs
   0 while #dup procs [] .length < do
     procs [] #over list.get .in in typeEquals
-    procs [] #over:2 list.get .out out typeEquals & 
+    procs [] #over:2 list.get .out out typeEquals &
     procs [] #over:2 list.get .callingConvention callConvention == & if
       ProcId cast Type .procedure new false return
     end
@@ -878,7 +885,7 @@ proc( Type : proc CallingConvention : callConvention TypeContext ptr mut : conte
   end
   false return
 end
-proc( Type : proc TypeContext ptr mut : context => bool ) =: public hasStaticArgs
+proc( Type : proc TypeContext ptr : context => bool ) =: public hasStaticArgs
  true return ## TODO implement hasStaticArgs
 end
 
@@ -978,7 +985,7 @@ proc( Type => i32 ) =: public getTypeId
   end
 end
 
-proc( Type : src TypeContext ptr mut : context => bool ) =: public isMultiValueType
+proc( Type : src TypeContext ptr : context => bool ) =: public isMultiValueType
   src context unwrapNamed
     #dup context isComposite if #drop
       true return
@@ -991,7 +998,7 @@ proc( Type : src TypeContext ptr mut : context => bool ) =: public isMultiValueT
   false return
 end
 
-proc( Type : t0 TypeContext ptr mut : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
+proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
   t0 context unwrapNamed =:: t
   t switch
     undefined empty primitiveType autoType case
@@ -1083,7 +1090,7 @@ proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool 
   end #drop
   true return
 end
-proc( Type : src Type : to TypeContext ptr mut : context => bool ) =: public canAutoCast
+proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAutoCast
   to =:: mut target
   src types.isNamedType ! target types.isNamedType & if
     target context types.unwrapNamed target =
@@ -1113,7 +1120,7 @@ proc( Type : src Type : to TypeContext ptr mut : context => bool ) =: public can
   end
   false return
 end
-proc( Type : a Type : b bool : forceCast TypeContext ptr mut : context => bool ) =: public canCast
+proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: public canCast
   a context types.unwrapNamed =:: mut src
   b context types.unwrapNamed =:: mut target
   src target context canAutoCast if
