@@ -10,7 +10,7 @@ enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URS
 enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
 struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
-struct( Type : baseType i32 : index ) =:: public InterfaceInfo
+struct( IdentifierInfo : idInfo i64 : argCount ) =:: public CallInfo
 enum(
                       NOP
                       entryPoint
@@ -38,7 +38,8 @@ enum(
                       Return
                       New
                 i32 : newEnum
-                      callPtr
+           CallInfo : call
+                i64 : mut callPtr
                       argc
                       getArg
                       getArgLen
@@ -151,7 +152,7 @@ proc( i32 i32 StackModType FilePosition => Operation ) =: public opStackMod
   StackModification new OpValue .stackMod new Type .undefined pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opCallPtr
-  OpValue .callPtr Type .undefined pos Operation new return
+  -1 OpValue .callPtr new Type .undefined pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opArgc
   OpValue .argc types.primitive.I_SIZE pos Operation new return
@@ -343,6 +344,12 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .getId labelContext sb.appendIdInfo
+          break
+        call case
+          "call ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .call .idInfo labelContext sb.appendIdInfo
           break
         setId case
           "set ( " sb.appendS

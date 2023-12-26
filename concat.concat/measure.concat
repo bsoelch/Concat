@@ -47,9 +47,9 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
       declared Type .procOut == elts .length 2 < & if
         break ## don't add single element proc-out to list of declared types
       end
-      declared Type .tuple == declared Type .struct == | declared Type .union == | if
+      declared Type .enum != if
         declared typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & 0 != if
-          break ## don't add tuple&union types containing only empty types
+          break ## don't add tuple/union/procedure-IO types containing only empty types
         end
       end
       types []

@@ -280,7 +280,7 @@ proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: p
         #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
       end
       1 +
-    end #drop  
+    end #drop
   end
   hasArgs ! if
     target "void" io.fputs #drop
@@ -482,26 +482,13 @@ proc( BinaryOperator => bool ) =: isArithimeticOp
   end
 end
 ## XXX? compiler context
-proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
+proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
-  t typeContext types.getProcOut #drop typeContext types.compositeEltCount =:: mut retCount
-  t typeContext types.getProcIn #drop typeContext types.compositeEltCount
-  t typeContext types.getCallConvention #drop =:: callConvention
-  callConvention switch
-    STRUCT case break
-    POINTER case
-     t typeContext types.getProcOut #drop =:: outType
-     outType typeContext types.compositeEltCount =:: N
-     0 retCount =
-     N +
-     N 0 > if outType N 1 - typeContext types.compositeGetElement typeContext types.isSmallType if
-       1 -
-       1 retCount =
-     end end
-    break
-  end
-  =:: argCount
+  t typeContext types.getProcRet #drop =:: retType
+  retType typeContext types.isProcOut if
+   retType typeContext types.compositeEltCount
+  else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
   target "(" io.fputs #drop
   0 while #dup argCount < do
     #dup 0 > if
@@ -509,7 +496,7 @@ proc( Type : t Operation arrayView : operations i32 ptr mut : index bool : isGlo
     end
     operations index isGlobal target prog compileOp
     1 +
-  end #drop  
+  end #drop
   target ")" io.fputs #drop
   retCount 0 == if
     target ";\n" io.fputs #drop
@@ -700,6 +687,7 @@ end
 
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   Operation ptr : mut op
@@ -977,30 +965,40 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
-    callPtr case
-      operations index isGlobal target prog compileOp
-      op [] .dataType operations index isGlobal target prog compileCall ## TODO pick correct calling convention
-      return
     getId case
       op [] .val .getId =:: idInfo
       idInfo .idType switch
         LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT case
-          idInfo target prog printIdName
+          op [] .dataType typeContext types.isEmpty ! if
+            idInfo target prog printIdName
+          end
           return
         PROCEDURE case
-          idInfo target prog printIdName
-          ## compileCall
-            op [] .dataType
-            operations
-            index
-            isGlobal
-            target
-          prog compileCall
+          "unexpected operation " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+            " should not exist at this stage of compilation" sb.appendS
+          op [] .pos prog [] .errors @ appendError
           return
         TYPE TEMPLATE_ARG case
           break ## XXX error message
       end
       break
+    call case
+      op [] .val .call =:: callData
+      callData .idInfo target prog printIdName
+      ## compileCall
+        op [] .dataType
+        callData .argCount
+        operations
+        index
+        isGlobal
+        target
+      prog compileCall
+      return
+    callPtr case
+      operations index isGlobal target prog compileOp
+      op [] .dataType op [] .val .callPtr operations index isGlobal target prog compileCall
+      return
     @Id case
       op [] .val .@Id =:: idInfo
       idInfo .idType switch
@@ -1034,7 +1032,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     declareId case
       op [] .val .declareId =:: idInfo
-      idInfo .labelId labelContext id.labelFlags =:: labelFlags 
+      idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch
         PROCEDURE case
@@ -1072,7 +1070,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     predeclareId case
       op [] .val .predeclareId =:: idInfo
-      idInfo .labelId labelContext id.labelFlags =:: labelFlags 
+      idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch
         PROCEDURE case
@@ -1256,11 +1254,14 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         POINTER case
           op [] .dataType typeContext types.getProcOut #drop =:: outType
           outType typeContext types.compositeEltCount
-            retType Type .undefined != if 1 - end 
+            retType typeContext types.isEmpty ! if 1 - end
           =:: N
           N 0 == if break end
           outType typeContext types.compositeElts =:: outTypes
           0 while #dup N < do
+            outTypes #over array.get typeContext types.isEmpty if
+              1 + continue
+            end
             outTypes #over array.get typeContext types.isArray if
               target "memcpy(" io.fputs #drop
               #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
@@ -1283,7 +1284,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       end
       retType typeContext types.isProcOut if
        retType typeContext types.compositeEltCount
-      else retType Type .undefined != _if 1i64 else 0i64 end =:: retCount
+      else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
       retCount 0 == if
         target "return;\n" io.fputs #drop
         return

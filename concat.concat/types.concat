@@ -148,8 +148,10 @@ end
 proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty
   t0 context unwrapNamed =:: t
   t switch
-     undefined empty case true return ## TODO don't consider undefined to be empty once implementation is stable
-     primitiveType pointer arrayType enum procedure
+     empty case true return ## TODO don't consider undefined to be empty once implementation is stable
+     pointer arrayType case ## arrays of / pointers to empty values are empty
+       t context getBaseType context isEmpty return
+     undefined primitiveType enum procedure
        namedType autoType genericType templateType case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
@@ -710,7 +712,11 @@ end
 ## creates struct or tuple
 proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
-    Type .empty false return ## TODO only temporary for debug purposes, change to " Type .undefined true " once empty types are stable
+    labels optional.isEmpty if
+      Type .empty false return ## 0 element tuple -> empty type
+    else
+      Type .undefined true return
+    end
   end
   COMP_FLAG_TUPLE elts labels context newCompositeType
   labels optional.isEmpty if Type .tuple new else Type .struct new end
@@ -816,10 +822,10 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcRet
     POINTER case
       outType context compositeElts =:: elts
       elts .length 0 == if
-        Type .undefined false return
+        Type .empty false return
       end
       elts elts .length 1 - array.get =:: lastArg
-      lastArg context isSmallType if lastArg else Type .undefined end false return
+      lastArg context isSmallType if lastArg else Type .empty end false return
   end
 end
 proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mut : context => Type bool ) =: public newProcedure

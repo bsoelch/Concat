@@ -193,16 +193,18 @@ proc( TypeCheckState ptr mut : state => ) =: ensureStackHeadIsValue
   end
   ## immutable mult-val type or writable multi-value that does not lie on the stack
   true opHead [] .pos state newTmpVar =:: tmpId
-  state [] .compiledOps
-    ## opDeclare
-      head [] .valType
-      tmpId
-      opHead [] .pos
-    opDeclare list.append
-  state [] .compiledOps =
-  state [] .compiledOps
-    state [] .opStack .data state [] .opStack .length + head [] .opCount - head [] .opCount array.create list.appendArray
-  state [] .compiledOps =
+  opHead [] .dataType typeContext types.isEmpty ! if
+    state [] .compiledOps
+      ## opDeclare
+        head [] .valType
+        tmpId
+        opHead [] .pos
+      opDeclare list.append
+    state [] .compiledOps =
+    state [] .compiledOps
+      state [] .opStack .data state [] .opStack .length + head [] .opCount - head [] .opCount array.create list.appendArray
+    state [] .compiledOps =
+  end
   state [] .opStack .length head [] .opCount - state [] .opStack .length =
   state [] .opStack
     ## opGet
@@ -251,7 +253,10 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
   op [] .dataType state pushType
   totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
 end
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addCompiledStackOps
+enum( ALL NON_EMPTY NONE ) =:: CompileType
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state CompileType : compileOps => ) =: processStackOps
+  state [] .idContext =:: idContext
+  idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length count -
   #dup 0 < if #drop
     "type stack underflow" sb.wrap pos state appendError2
@@ -265,14 +270,37 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addC
     end #drop
   =:: opCount
   state [] .opStack .length opCount - =:: opOffset
-  ## add operations to compiled code
-  state [] .compiledOps #dup .length opCount + list.ensureCap state [] .compiledOps =
-  state [] .compiledOps
-    state [] .opStack .data opOffset + opCount array.create list.appendArray
-  state [] .compiledOps =
+  compileOps switch
+    NONE case break
+    ALL case ## add operations to compiled code
+      state [] .compiledOps #dup .length opCount + list.ensureCap state [] .compiledOps =
+      state [] .compiledOps
+        state [] .opStack .data opOffset + opCount array.create list.appendArray
+      state [] .compiledOps =
+    break
+    NON_EMPTY case ## add operations to compiled code
+      state [] .compiledOps #dup .length opCount + list.ensureCap state [] .compiledOps =
+      state [] .opStack .data opOffset + opCount array.create =:: ops
+      state [] .compiledOps
+        0 while #dup ops .length < do
+          #swap
+            ops #over:2 array.at .data #dup [] .dataType typeContext types.isEmpty ! if
+              list.appendP
+            else #drop end
+          #swap 1 +
+        end #drop
+      state [] .compiledOps =
+    break
+  end
   ## remove operations from stack
   opOffset state [] .opStack .length =
   typeOffset state [] .typeStack .length =
+end
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addCompiledStackOps
+  count pos state CompileType .ALL processStackOps
+end
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardStackOps
+  count pos state CompileType .NONE processStackOps
 end
 proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut : state => ) =: extractCompositeOps
   state [] .idContext =:: idContext
@@ -688,6 +716,7 @@ enum( PROC POINTER ) =:: CallType
 proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state => ) =: typeCheckCall
   #using types
   state [] .idContext =:: idContext
+  idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   op [] .dataType =:: mut calledType
@@ -880,6 +909,14 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   resCount 0 == if 0i64 else
     resCount outType resCount 1 - typeContext compositeGetElement typeContext types.isSmallType if 1 - end
   end =:: outArgCount
+  inType typeContext types.compositeElts =:: inTypes
+  argCount
+   0 while #dup inTypes .length < do
+    #swap
+     inTypes #over:2 array.get typeContext types.isEmpty if 1 - end
+    #swap 1 +
+   end #drop
+  =:: mut totalArgs ## only count non-empty arguments
   callConvention switch
     STRUCT case
       resCount 1 == if
@@ -891,28 +928,35 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         resCount 1 == if
           retType typeContext types.isMultiValueType
         else false end op [] .pos state newTmpVar retId =
-        state [] .compiledOps
-            retType
-            retId
-            op [] .pos
-          opDeclare list.append
-        state [] .compiledOps =
+        retType typeContext types.isEmpty ! if
+          state [] .compiledOps
+              retType
+              retId
+              op [] .pos
+            opDeclare list.append
+          state [] .compiledOps =
+        end
       end
     break
     POINTER case
       resCount IdentifierInfo list.create retIds =
+      totalArgs outArgCount + totalArgs =
       0 while #dup outArgCount < do
         outType #over typeContext compositeGetElement =:: eltType
           true
           op [] .pos
           state
         newTmpVar =:: eltId
-        state [] .compiledOps
-            eltType
-            eltId
-            op [] .pos
-          opPredeclare list.append
-        state [] .compiledOps =
+        eltType typeContext types.isEmpty ! if ## only create tmp variables for non-empty out-arguments
+          state [] .compiledOps
+              eltType
+              eltId
+              op [] .pos
+            opPredeclare list.append
+          state [] .compiledOps =
+        else
+          totalArgs 1 - totalArgs =
+        end
         retIds
           eltId list.append
         retIds =
@@ -924,15 +968,24 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           op [] .pos
           state
         newTmpVar retId =
-        state [] .compiledOps
-            retType
-            retId
-            op [] .pos
-          opDeclare list.append
-        state [] .compiledOps =
+        retType typeContext types.isEmpty ! if
+          state [] .compiledOps
+              retType
+              retId
+              op [] .pos
+            opDeclare list.append
+          state [] .compiledOps =
+        end
         retIds retId list.append retIds =
       end
     break
+  end
+  op [] .val OpValue .callPtr == if
+    totalArgs op [] .val .callPtr =
+  else op [] .val OpValue .getId == _if
+    op [] .val .getId totalArgs CallInfo new OpValue .call new op [] .val = ## XXX extract opValue creation to  to program.concat
+  else
+    "unexpected type for call operation" sb.wrap op [] constContext labelContext typeContext sb.appendOp op [] .pos state appendError2
   end
   state [] .compiledOps
     op list.appendP ## TODO? store calling convention in operation
@@ -942,7 +995,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   end
   inType typeContext types.compositeElts "procedure call" string.wrap op [] .pos state requireTypes
   ## XXX? check for unresolved generic arguments
-  argCount op [] .pos state addCompiledStackOps
+  argCount op [] .pos state CompileType .NON_EMPTY processStackOps
   callConvention switch
     STRUCT case
       resCount 0 == if
@@ -1041,12 +1094,17 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
           op [] .pos state appendError2
         end
         op [] .dataType @ array.wrap "variable assignment" string.wrap op [] .pos state requireTypes
+        op [] .dataType typeContext types.isEmpty if ## skip setting of empty variables
+          1 op [] .pos state discardStackOps
+          return
+        end
         state [] .compiledOps
           op list.appendP
         state [] .compiledOps =
         1 op [] .pos state addCompiledStackOps
         return
       end
+      ## keep empty values to preserve code structure
       op [] .val OpValue .@Id == if
         ## getAddressType
           op [] .dataType
@@ -1113,6 +1171,10 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
           else #drop end
         end
         op [] .dataType @ array.wrap "variable declaration" string.wrap op [] .pos  state requireTypes
+      end
+      op [] .dataType typeContext types.isEmpty if ## skip declarations of empty variables
+        1 op [] .pos state discardStackOps
+        return
       end
       ## XXX check if type is undefined
       state [] .compiledOps
@@ -1335,12 +1397,20 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state => )
         " is not mutable" sb.appendS
       op [] .pos state appendError2
     end
-    state [] .compiledOps
-      op list.appendP
-    state [] .compiledOps =
-    1 op [] .pos state addCompiledStackOps
+    elementType typeContext types.isEmpty if ## skip setting of empty elements
+      1 op [] .pos state discardStackOps
+    else
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      1 op [] .pos state addCompiledStackOps
+    end
     elementType @ array.wrap "tuple assignment" string.wrap op [] .pos state requireTypes
-    1 op [] .pos state addCompiledStackOps
+    elementType typeContext types.isEmpty if ## skip setting of empty elements
+      1 op [] .pos state discardStackOps
+    else
+      1 op [] .pos state addCompiledStackOps
+    end
     return
   end
   ## GET_TUPLE_ELEMENT(index) <tuple>
@@ -1525,7 +1595,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckReturn
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
-  state [] .typeStack .length op [] .pos state addCompiledStackOps
+  state [] .typeStack .length op [] .pos state CompileType .NON_EMPTY processStackOps
   false state [] .reachable =
 end
 
@@ -2735,7 +2805,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return ## TODO find
       end
       break
-    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen case
+    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen call case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
