@@ -376,6 +376,9 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
         "enum" string.wrap t .enum "struct" string.wrap target printCompositeDeclaration
         break
       namedType case
+        t typeContext types.isProcedure if
+          break ## do not generate typedefs for named procedures
+        end
         target "typedef " io.fputs #drop
         t typeContext types.unwrapNamed target prog printTypeName
         target " " io.fputs #drop
@@ -747,17 +750,17 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             return
         end
       end
-      printType typeContext types.isPointer if
+      printType typeContext types.isPointer if ## XXX print values of fixed sized pointer
         target "printf(\"%p\\n\",(void const*)" io.fputs #drop
         operations index isGlobal target prog compileOp
         target ");\n" io.fputs #drop
         return
       end
+      ## XXX print array/tuple types
       ## remove printed element
       target "(void)" io.fputs #drop
       operations index isGlobal target prog compileOp
       target ";\n" io.fputs #drop
-      ## XXX print array/tuple types
       break
     New case
       op [] .dataType typeContext types.isTuple if
