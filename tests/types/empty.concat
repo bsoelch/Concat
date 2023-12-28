@@ -1,0 +1,24 @@
+#template type : L type : R type : O #end
+proc( L : x proc( L R => O ) ptr : f R : data => O ) =: test
+  x data f ()
+end
+
+proc( i32 i32 => i32 ) =: f1
+  +
+end
+proc( i32 ( ) => ( ) ) =: f2 #swap #drop end
+
+struct( ( ) : mut empty i32 : nonEmpty ) =:: testStruct 
+
+proc( ( ) : v testStruct ptr mut : S => ( ( ) ) ( ) ) =: assignEmpty
+  S [] .empty =:: p
+    v S [] .empty =
+  p ( ( ) ) new 0 f2 @ p test return
+end
+
+entryPoint:
+  5 f1 @ 3 test ..debug.print
+  testStruct : mut aStruct
+  ( ) : X
+  X aStruct @ assignEmpty #drop:2
+end

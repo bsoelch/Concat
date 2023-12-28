@@ -1040,6 +1040,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     POINTER case
       0 while #dup resCount < do
         outType #over typeContext compositeGetElement =:: eltType
+        eltType typeContext types.isEmpty if
+          1 + continue
+        end
         retIds  #over list.get =:: eltId
         #dup outArgCount < if
           state [] .compiledOps
@@ -1173,7 +1176,9 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         op [] .dataType @ array.wrap "variable declaration" string.wrap op [] .pos  state requireTypes
       end
       op [] .dataType typeContext types.isEmpty if ## skip declarations of empty variables
-        1 op [] .pos state discardStackOps
+        op [] .val OpValue .declareId == if
+          1 op [] .pos state discardStackOps
+        end
         return
       end
       ## XXX check if type is undefined
