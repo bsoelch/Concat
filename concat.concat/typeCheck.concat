@@ -424,6 +424,18 @@ proc( bool : breakSwitch TypeCheckState ptr mut : state => BlockInfo ptr mut opt
   end #drop
   BlockInfo ptr mut optional.empty return
 end
+proc( TypeCheckState ptr mut : state => i32 ) =: findEnclosingIfId
+  state [] .openBlocks .length 1 - while #dup 0 >= do
+    state [] .openBlocks #over list.at
+      #dup .data [] .blockType BlockType .IF == if
+        #swap #drop
+        .data [] .blockId return
+      end
+    #drop
+    1 -
+  end #drop
+  -1 return
+end
 
 proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context => Type ) =: checkBinOpNumber
   a b context types.commonNumberType
@@ -1930,7 +1942,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     block case
       op state checkLocal
       op [] .val .block .blockType switch
-        IF case
+        IF IFIF case
           op state checkReachable
           state [] .ifCount =:: blockId
           state [] .ifCount 1 + state [] .ifCount =
@@ -1955,7 +1967,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             op [] .pos
             blockStart
             blockId
-            BlockType .IF
+            op [] .val .block .blockType
           BlockInfo new =:: ifBlock
           state [] .openBlocks
             ifBlock list.append
@@ -2238,8 +2250,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos state appendError2
       end
       closed [] .blockType switch
-        IF ELSE case
-          state [] .reachable if
+        IF IFIF ELSE case
+          state [] .reachable if ## XXX? is the type-checking rule for if_if correct
             closed closed [] .blockType BlockType .IF == op [] .pos state storeIfOutTypes
           else closed [] .blockType BlockType .IF == _if
             closed [] .blockData .ifBlock .inTypes @ state resetStack
@@ -2250,6 +2262,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             closed [] .blockData .ifBlock .elseReachable |
             closed [] .blockData .ifBlock .elsePos -1 == |
           state [] .reachable =
+          closed [] .blockType BlockType .IFIF == if
+            state findEnclosingIfId op [] .val .blockEnd .blockId =
+          end
           closed [] .blockData .ifBlock .inTypes @ freeStackState
           closed [] .blockData .ifBlock .outTypes @ freeStackState
           break

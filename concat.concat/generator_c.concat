@@ -1174,13 +1174,18 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER case
           ## XXX error message
           break
-        IF case
+        IF IFIF case
           target "if(" io.fputs #drop
           operations index isGlobal target prog compileOp
           target "){\n" io.fputs #drop
           return
         ELSE case
-          target "}else{\n" io.fputs #drop
+          "}else{\n" sb.wrap
+            "else_label" sb.appendS
+            op [] .val .block .blockId sb.appendI
+            ":;\n" sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
           return
         WHILE case
           target "do{\n" io.fputs #drop
@@ -1244,6 +1249,13 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           break
         PROCEDURE EXPERIMENTAL_PROCEDURE IF ELSE WHILE CASE DEFAULT case
           target "}\n" io.fputs #drop
+          return
+        IFIF case
+          "}else{goto else_label" sb.wrap
+            op [] .val .blockEnd .blockId sb.appendI
+            ";}\n" sb.appendS
+            target #over io.fputSb #drop
+          sb.free #drop
           return
         DO case
           target "}while(1);\n" io.fputs #drop

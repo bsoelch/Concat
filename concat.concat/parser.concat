@@ -1331,22 +1331,37 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .IF  state [] .idContext @ id.openScope
       return
     else #dup "_if" string.wrap string.eq _if #drop
-      state [] .idContext @ id.currentScopeType BlockType .ELSE != if
-        "'_if' is only allowed in else-blocks" sb.wrap fileState [] .wordStart state appendError2
+      state [] .idContext @ id.currentScopeType #dup BlockType .IF != #swap BlockType .ELSE != & if
+        "'_if' is only allowed in if-else-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      BlockType .IF fileState [] .wordStart opBlock  state appendOp
-      BlockType .IF state [] .idContext @ id.openScope
-      BlockType .IF true state [] .idContext @ id.updateScopeType #drop
+      state [] .idContext @ id.currentScopeType BlockType .IF == if
+        BlockType .IFIF
+      else
+        BlockType .IF
+      end =:: blockType
+      blockType fileState [] .wordStart opBlock  state appendOp
+      blockType state [] .idContext @ id.openScope
+      blockType true state [] .idContext @ id.updateScopeType #drop
       return
     else #dup "else" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap BlockType .IF != | if #+autoClose+# #drop
+      BlockType : blockType
+      bool : autoClose
+      while
+        state [] .idContext @ id.closeScope if #drop:2
+          "'else' statements can not appear at top level" sb.wrap fileState [] .wordStart state appendError2
+          return
+        end blockType = autoClose =
+      blockType BlockType .IFIF == do
+        BlockType .IFIF  fileState [] .wordStart opEndBlock  state appendOp
+      end
+      blockType BlockType .IF != if
         "'else' is only allowed in if-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
       BlockType .ELSE  fileState [] .wordStart opBlock  state appendOp
       BlockType .ELSE  state [] .idContext @ id.openScope
-      #+auto-close+# if
+      autoClose if
         BlockType .ELSE true state [] .idContext @ id.updateScopeType #drop
       end
       return

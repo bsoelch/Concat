@@ -1,6 +1,6 @@
 #include stringBuilder
 
-enum( UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE IF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT INITIALIZER ) =:: public BlockType
+enum( UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE IF IFIF ELSE WHILE DO BREAK CONTINUE SWITCH CASE DEFAULT INITIALIZER ) =:: public BlockType
 struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: public BlockId
 #namespace sb
   proc( stringBuilder BlockType => stringBuilder ) =: public appendBlockType
@@ -16,6 +16,9 @@ struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: public Blo
         return
       IF case
         "if" sb.appendS
+        return
+      IFIF case
+        "if _if" sb.appendS
         return
       ELSE case
         "else" sb.appendS
