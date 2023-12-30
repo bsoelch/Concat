@@ -10,6 +10,7 @@
 "internal_main"            =:: MAIN_NAME
 "internal_checkArrayIndex" =:: CHECK_INDEX_NAME
 "internal_checkEnumIndex"  =:: CHECK_ENUM_NAME
+"internal_charNames"       =:: CHARNAMES_NAME
 1 =:: EXIT_CODE_ARRAY_INDEX
 2 =:: EXIT_CODE_ENUM_INDEX
 
@@ -711,56 +712,51 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     Print case
       op [] .dataType typeContext types.unwrapNamed =:: printType
+      target "{//..debug.print\n" io.fputs #drop
+      printType target prog printTypeName
+      target " tmpPrint = " io.fputs #drop
+      operations index isGlobal target prog compileOp
+      target ";\n" io.fputs #drop
+
       printType types.isPrimitive if
         printType .primitiveType switch
           BOOL case
-            target "printf(\"%s\\n\"," io.fputs #drop
-            operations index isGlobal target prog compileOp
-            target "?\"true\":\"false\");\n" io.fputs #drop
-            return
-          I8 case
-            target "printf(\"%\"PRIi8\"\\n\"," io.fputs #drop ## XXX? also print char value
-            operations index isGlobal target prog compileOp
-            target ");\n" io.fputs #drop
-            return
+            target "printf(\"%s\\n\",tmpPrint?\"true\":\"false\");\n" io.fputs #drop
+            break
+          I8 case ## XXX use stringBuilder instead of multiple writes
+            target "printf(\"%\"PRIi8\" ('%.4s')\\n\",tmpPrint,&" io.fputs #drop
+            target CONCAT_PREFIX io.fputs #drop
+            target CHARNAMES_NAME io.fputs #drop
+            target "[4*(tmpPrint&0xff)]);\n" io.fputs #drop
+            break
           I16 case
-            target "printf(\"%\"PRIi16\"\\n\"," io.fputs #drop
-            operations index isGlobal target prog compileOp
-            target ");\n" io.fputs #drop
-            return
+            target "printf(\"%\"PRIi16\"\\n\",tmpPrint);\n" io.fputs #drop
+            break
           I32 case
-            target "printf(\"%\"PRIi32\"\\n\"," io.fputs #drop
-            operations index isGlobal target prog compileOp
-            target ");\n" io.fputs #drop
-            return
+            target "printf(\"%\"PRIi32\"\\n\",tmpPrint);\n" io.fputs #drop
+            break
           I64 case
-            target "printf(\"%\"PRIi64\"\\n\"," io.fputs #drop
-            operations index isGlobal target prog compileOp
-            target ");\n" io.fputs #drop
-            return
+            target "printf(\"%\"PRIi64\"\\n\",tmpPrint);\n" io.fputs #drop
+            break
           FLOAT32 FLOAT64 case
-            target "printf(\"%g\\n\"," io.fputs #drop
-            operations index isGlobal target prog compileOp
-            target ");\n" io.fputs #drop
-            return
+            target "printf(\"%g\\n\",tmpPrint);\n" io.fputs #drop
+            break
           TYPE case ## at run-time only size of types is known
-            target "printf(\"%zu\\n\"," io.fputs #drop
-            operations index isGlobal target prog compileOp
-            target ");\n" io.fputs #drop
-            return
+            target "printf(\"%zu\\n\",tmpPrint);\n" io.fputs #drop
+            break
         end
+        target "}\n" io.fputs #drop
+        return
       end
-      printType typeContext types.isPointer if ## XXX print values of fixed sized pointer
-        target "printf(\"%p\\n\",(void const*)" io.fputs #drop
-        operations index isGlobal target prog compileOp
-        target ");\n" io.fputs #drop
+      printType typeContext types.isPointer if
+        target "printf(\"%p\\n\",(void const*)tmpPrint);\n" io.fputs #drop
+        ## XXX print values of fixed sized pointer
+        target "}\n" io.fputs #drop
         return
       end
       ## XXX print array/tuple types
       ## remove printed element
-      target "(void)" io.fputs #drop
-      operations index isGlobal target prog compileOp
-      target ";\n" io.fputs #drop
+      target "}\n" io.fputs #drop
       break
     New case
       op [] .dataType typeContext types.isTuple if
@@ -1435,6 +1431,44 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
   op [] .pos prog [] .errors @ appendError
 end
 
+proc( stringBuilder => stringBuilder ) =: appendCharNames
+  "\"" sb.appendS
+  0 while #dup 0x100 < do
+    #swap ## character names padded to with 4 with zero bytes ( using \000 to prevent continuation of hex sequences )
+      #over i8 cast switch
+        '\'' '\"' case
+            "\\\\\\"      sb.appendS
+            #over i8 cast sb.appendC
+            "\\000\\000"  sb.appendS
+          break
+        '\\' case "\\\\\\\\\\000\\000" sb.appendS break
+        '\n' case "\\\\n\\000\\000" sb.appendS break
+        '\t' case "\\\\t\\000\\000" sb.appendS break
+        '\b' case "\\\\b\\000\\000" sb.appendS break
+        '\r' case "\\\\r\\000\\000" sb.appendS break
+        '\v' case "\\\\v\\000\\000" sb.appendS break
+        '\f' case "\\\\f\\000\\000" sb.appendS break
+        default
+            #over 0x7e > #over:2 0x20 < | if
+              "\\\\x" sb.appendS
+              #over 0x10 < if
+                '0'   sb.appendC
+              end
+              #over   sb.appendX
+            else
+              #over i8 cast     sb.appendC
+              "\\000\\000\\000" sb.appendS
+            end
+          break
+      end
+      #over 0x7 & 0x7 == if
+        "\"\n\"" sb.appendS ## split into lines for readability
+      end
+    #swap 1 +
+  end #drop
+  "\";\n"          sb.appendS
+end
+
 proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -1494,6 +1528,14 @@ proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
       target #over io.fputSb #drop
     sb.free #drop
   end
+  64 sb.create ## XXX? only add when needed
+    "static char " sb.appendS
+    CONCAT_PREFIX  sb.appendS
+    CHARNAMES_NAME sb.appendS
+    "[]="          sb.appendS
+    appendCharNames
+    target #over io.fputSb #drop
+  sb.free #drop
   target "//declarations\n" io.fputs #drop
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used

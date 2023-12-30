@@ -2251,7 +2251,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       closed [] .blockType switch
         IF IFIF ELSE case
-          state [] .reachable if ## XXX? is the type-checking rule for if_if correct
+          state [] .reachable if ## TODO fix type-checking rule for if_if correct
             closed closed [] .blockType BlockType .IF == op [] .pos state storeIfOutTypes
           else closed [] .blockType BlockType .IF == _if
             closed [] .blockData .ifBlock .inTypes @ state resetStack
