@@ -582,9 +582,6 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
   state [] .typeStack .length
     ignoreLast if 1 - end
   =:: nTypes
-  nTypes 0 <= if ## nothing to create
-    return
-  end
   create if
     nTypes =:: mut newTypes
     outTypes [] .opStack
@@ -614,7 +611,12 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
     end
   else
     nTypes outTypes [] .typeStack .length != if
-      "wrong number of types at the end of " sb.wrap
+      "wrong number of types at the " sb.wrap
+        blockName BlockType .IFIF == if
+          "beginning of " sb.appendS
+        else
+          "end of " sb.appendS
+        end
         blockName sb.appendBlockType
         "-statement expected " sb.appendS
         outTypes [] .typeStack .length sb.appendI
@@ -649,7 +651,12 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
       outTypes [] .opStack #over list.at .data =:: out
       out [] .val .getId tmpId =
       typeInfo [] .valType out [] .dataType types.typeEquals ! if
-          "incompatible types at the end of " sb.wrap
+          "incompatible types at the " sb.wrap
+            blockName BlockType .IFIF == if
+              "beginning of " sb.appendS
+            else
+              "end of " sb.appendS
+            end
             blockName sb.appendBlockType
             "-statement expected " sb.appendS
             out [] .dataType labelContext typeContext sb.appendType
@@ -715,6 +722,11 @@ proc( BlockInfo ptr mut : ifBlock bool : noElse FilePosition : pos TypeCheckStat
   ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
   noElse if inTypes else ifBlock [] .blockData .ifBlock .outTypes @ end =:: outTypes
   inTypes outTypes create ifBlock [] .blockType ifBlock [] .blockStart false pos state storeOutTypes
+end
+proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: checkIfIfTypes
+  ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
+  ifBlock [] .blockData .ifBlock .inTypes @ =:: outTypes
+  inTypes outTypes false BlockType .IFIF ifBlock [] .blockStart false pos state storeOutTypes
 end
 proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeSwitchOutTypes
   switchBlock [] .blockData .switchBlock .endReachable ! =:: create
@@ -1944,8 +1956,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .val .block .blockType switch
         IF IFIF case
           op state checkReachable
-          state [] .ifCount =:: blockId
-          state [] .ifCount 1 + state [] .ifCount =
+          state [] .ifCount =:: mut blockId
+          op [] .val .block .blockType BlockType .IF == if
+            state [] .ifCount 1 + state [] .ifCount =
+          end
           blockId op [] .val .block .blockId =
           types.primitive.BOOL op [] .dataType =
           1 false op [] .pos state extractCompositeOps
@@ -1958,6 +1972,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ## write if condition
           1 op [] .pos state addCompiledStackOps
           newLength state [] .opStack .length =
+          op [] .val .block .blockType BlockType .IFIF == if
+            state [] .openBlocks list.peek =:: enclosingIf?
+            enclosingIf? optional.hasData ! if
+              "_if cannot appear at to level" sb.wrap op [] .pos state appendError2
+              return
+            else enclosingIf? .data [] .blockType #dup BlockType .IF != #swap BlockType .IFIF != & _if
+              ## parser and type-checker out of sync
+              "unexpected _if statement" sb.wrap op [] .pos state appendError2
+              return
+            end
+            enclosingIf? .data [] .blockId blockId =
+            ## ensure types are the same as at the beginning of branch
+            enclosingIf? .data op [] .pos state checkIfIfTypes
+          end
           ## BlockInfo
               state copyStack
               emptyStackState
@@ -1985,8 +2013,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           state [] .reachable if
             ifBlock false op [] .pos state storeIfOutTypes
+            true ifBlock [] .blockData .ifBlock .elseReachable =
           end
-          state [] .reachable ifBlock [] .blockData .ifBlock .elseReachable =
           ifBlock [] .blockData .ifBlock .inTypes @ state resetStack
           state [] .compiledOps .length ifBlock [] .blockData .ifBlock .elsePos =
           BlockType .ELSE ifBlock [] .blockType =
@@ -2249,9 +2277,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           closed [] .blockType sb.appendBlockType
         op [] .pos state appendError2
       end
+      closed [] .blockId op [] .val .blockEnd .blockId =
       closed [] .blockType switch
-        IF IFIF ELSE case
-          state [] .reachable if ## TODO fix type-checking rule for if_if correct
+        IF ELSE case
+          state [] .reachable if
             closed closed [] .blockType BlockType .IF == op [] .pos state storeIfOutTypes
           else closed [] .blockType BlockType .IF == _if
             closed [] .blockData .ifBlock .inTypes @ state resetStack
@@ -2262,9 +2291,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             closed [] .blockData .ifBlock .elseReachable |
             closed [] .blockData .ifBlock .elsePos -1 == |
           state [] .reachable =
-          closed [] .blockType BlockType .IFIF == if
-            state findEnclosingIfId op [] .val .blockEnd .blockId =
-          end
+          closed [] .blockData .ifBlock .inTypes @ freeStackState
+          closed [] .blockData .ifBlock .outTypes @ freeStackState
+          closed [] .blockData .ifBlock .elsePos
+            -1 == if 0 else 1 end
+          op [] .val .blockEnd .subId =
+          break
+        IFIF case
+          state findEnclosingIfId op [] .val .blockEnd .blockId =
           closed [] .blockData .ifBlock .inTypes @ freeStackState
           closed [] .blockData .ifBlock .outTypes @ freeStackState
           break

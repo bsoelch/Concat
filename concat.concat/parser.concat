@@ -1331,14 +1331,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .IF  state [] .idContext @ id.openScope
       return
     else #dup "_if" string.wrap string.eq _if #drop
-      state [] .idContext @ id.currentScopeType #dup BlockType .IF != #swap BlockType .ELSE != & if
+      state [] .idContext @ id.currentScopeType =:: currentType
+      currentType BlockType .IF != currentType BlockType .ELSE != & currentType BlockType .IFIF != & if
         "'_if' is only allowed in if-else-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      state [] .idContext @ id.currentScopeType BlockType .IF == if
-        BlockType .IFIF
-      else
+      state [] .idContext @ id.currentScopeType BlockType .ELSE == if
         BlockType .IF
+      else
+        BlockType .IFIF
       end =:: blockType
       blockType fileState [] .wordStart opBlock  state appendOp
       blockType state [] .idContext @ id.openScope
