@@ -1,5 +1,7 @@
 # Concat Language
 
+!!! This documentation is not up to date !!!
+
 Concat is a concatenative programming language 
 
 ## Syntax
