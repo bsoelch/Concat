@@ -735,6 +735,62 @@ proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut 
   inTypes outTypes create switchBlock [] .blockType switchBlock [] .blockStart false pos state storeOutTypes
 end
 
+struct( LabelId : procId TemplateId : templateId Type : procType ) =:: ProcData
+struct( ProcData : procData i32 : matchedArgs i32 : nCasts i32 : templateArgCount i64 : emptyTemplatesOffset i64 : templateInfoOffset i64 : autoArgsOffset ) =:: SignatureInfo
+## signature data: -> emptyTemplateVars(EMPTY,UNUSED,NON_EMPTY), #matched arguments, autoArguments, template data, #casts
+
+proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state => ProcData optional ) =: resolveProcedureSignature
+  state [] .idContext =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  0i64 =:: mut totalArgCount
+  0 while #dup possibleSignatures .length < do
+    possibleSignatures #over array.at .data [] .procType
+      typeContext types.getProcIn #drop typeContext types.compositeEltCount totalArgCount +
+    totalArgCount =
+    ## XXX store maxArgCount/maxTempArgCount (reserve space for intermediate template values)
+    1 +
+  end #drop
+  totalArgCount i8 list.create =:: mut emptyTemplateBuffer
+  totalArgCount ConstValue list.create =:: mut genericArgBuffer
+  possibleSignatures .length SignatureInfo list.create =:: mut signatures
+  0 while #dup possibleSignatures .length < do
+    signatures
+      possibleSignatures #over:2 array.at .data []
+        0 0 -1 -1 -1 -1 ## TODO reserve and initialize buffer spaces
+      SignatureInfo new
+    list.append signatures =
+    1 +
+  end #drop
+  0 while #dup signatures .length < do
+    signatures #over list.at .data [] =:: mut signature
+    signature .procData .procType typeContext types.getProcIn #drop typeContext types.compositeElts =:: args
+    1 while #dup args .length <= do
+      args args .length #over:2 - array.at .data [] =:: argType
+      ## TODO compare argType with type of i-th argument from top of stack
+      1 +
+    end #drop
+    signature signatures #over:2 list.set
+    1 +
+  end #drop
+  ## TODO resolve procedure signature
+  ## 1. check arguments right to left
+  ##   -  resolve automatic arguments
+  ##   -  find potentially empty arguments, add corresponding signatures to list of possible variants
+  ##   -  check template types for each argument separately
+  ## 2. go through possible signatures from left to right
+  ##  - check if template arguments are consistent among signatures
+  ## 3. pick best among the matching signatures
+  ##  (- number of valid arguments )
+  ##  (- number of matching generics )
+  ##  - lowest number of necessary casts
+  ##  - least template arguments
+  ##  - lowest number of empty template arguments
+  ##  - highest number of arguments
+  ProcData optional.empty return
+end
+
 enum( PROC POINTER ) =:: CallType
 
 proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state => ) =: typeCheckCall
