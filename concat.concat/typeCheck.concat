@@ -736,7 +736,8 @@ proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut 
 end
 
 struct( LabelId : procId TemplateId : templateId Type : procType ) =:: ProcData
-struct( ProcData : procData i32 : matchedArgs i32 : nCasts i32 : templateArgCount i64 : emptyTemplatesOffset i64 : templateInfoOffset i64 : autoArgsOffset ) =:: SignatureInfo
+struct( ProcData : procData i32 : mut matchedArgs i32 : mut nCasts i64 : templateArgCount i64 : emptyTemplatesOffset i64 : templateInfoOffset i64 : autoArgsOffset ) =:: SignatureInfo
+enum( UNUSED EMPTY NON_EMPTY ) =:: TemplateState
 ## signature data: -> emptyTemplateVars(EMPTY,UNUSED,NON_EMPTY), #matched arguments, autoArguments, template data, #casts
 
 proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state => ProcData optional ) =: resolveProcedureSignature
@@ -749,16 +750,35 @@ proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state => 
     possibleSignatures #over array.at .data [] .procType
       typeContext types.getProcIn #drop typeContext types.compositeEltCount totalArgCount +
     totalArgCount =
-    ## XXX store maxArgCount/maxTempArgCount (reserve space for intermediate template values)
     1 +
   end #drop
-  totalArgCount i8 list.create =:: mut emptyTemplateBuffer
+  totalArgCount TemplateState list.create =:: mut emptyTemplateBuffer
   totalArgCount ConstValue list.create =:: mut genericArgBuffer
   possibleSignatures .length SignatureInfo list.create =:: mut signatures
   0 while #dup possibleSignatures .length < do
+    possibleSignatures #over array.at .data [] =:: procData
+    ## initialize buffers for arguments
+    procData .procType typeContext types.getProcIn #drop typeContext types.compositeEltCount =:: nArgs
+    procData .templateId idContext id.getTemplateInfo =:: templateInfo?
+    templateInfo? optional.hasData if templateInfo? .data [] .templateType typeContext types.compositeEltCount else 0i64 end =:: tArgs
+    emptyTemplateBuffer .length =:: emptyTemplatesOffset
+    emptyTemplateBuffer .length tArgs + emptyTemplateBuffer .length =
+    emptyTemplateBuffer .data tArgs mem.clear #drop
+    genericArgBuffer .length =:: templatesOffset
+    genericArgBuffer .length tArgs + genericArgBuffer .length =
+    genericArgBuffer .data tArgs mem.clear #drop
+    genericArgBuffer .length =:: autoArgsOffset
+    genericArgBuffer .length nArgs + genericArgBuffer .length =
+    genericArgBuffer .data nArgs mem.clear #drop
     signatures
-      possibleSignatures #over:2 array.at .data []
-        0 0 -1 -1 -1 -1 ## TODO reserve and initialize buffer spaces
+      ## SignatureInfo
+        procData
+        0
+        0
+        tArgs
+        emptyTemplatesOffset
+        templatesOffset
+        autoArgsOffset
       SignatureInfo new
     list.append signatures =
     1 +
@@ -766,11 +786,27 @@ proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state => 
   0 while #dup signatures .length < do
     signatures #over list.at .data [] =:: mut signature
     signature .procData .procType typeContext types.getProcIn #drop typeContext types.compositeElts =:: args
-    1 while #dup args .length <= do
+    args .length 1 - =:: mut argIndex
+    state [] .typeStack .length 1 - =:: mut stackIndex
+    while argIndex 0 >= stackIndex 0 >= & do
       args args .length #over:2 - array.at .data [] =:: argType
-      ## TODO compare argType with type of i-th argument from top of stack
-      1 +
-    end #drop
+      state [] .typeStack #dup .length #over:2 - list.at .data [] .valType =:: stackType
+      ## TODO handle autoArgs
+      stackType typeContext types.isEmpty ! if
+        argType typeContext types.isEmpty if
+          argIndex 1 - argIndex =
+          signature .matchedArgs 1 + signature .matchedArgs =
+          continue ## skip current argument if argType is empty and stack-type is non-empty
+        else argType typeContext types.maybeEmpty _if
+          ## TODO add alternative signature with templates used in current argument set to empty
+          ##   don't add new signature if templates already used as non-empty in previous argument
+        end
+      end
+      ## XXX clear template-buffer
+      ## TODO compare argType with stackType
+      argIndex 1 - argIndex =
+      stackIndex 1 - stackIndex =
+    end
     signature signatures #over:2 list.set
     1 +
   end #drop

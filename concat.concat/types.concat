@@ -145,14 +145,26 @@ type : public TypeContext
 proc( Type => bool ) =: public isPrimitive
   Type .primitiveType == return
 end
-proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty
+proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? should pointer to empty be empty
   t0 context unwrapNamed =:: t
   t switch
-     empty case true return ## TODO don't consider undefined to be empty once implementation is stable
+     empty case true return
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure
        namedType autoType genericType templateType case false return
+     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
+  end
+end
+## type is empty if all generics used in type are set to empty
+proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
+  t0 context unwrapNamed =:: t
+  t switch
+     empty genericType templateType case true return
+     pointer arrayType case ## arrays of / pointers to empty values are empty
+       t context getBaseType context isEmpty return
+     undefined primitiveType enum procedure
+       namedType autoType case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
 end
