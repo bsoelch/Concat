@@ -26,7 +26,7 @@ proc( i32 : ignore => ) =: #:experimental consume end
 
 
 struct( i64 : length i8 _ ptr : data ) =:: String
-proc( i64 : static k i8 k ptr : str => String i64 ) =: #:experimental startItr
+proc( i64 : auto k i8 k ptr : str => String i64 ) =: #:experimental startItr
   k str String new 0
 end
 proc( String i64 => String i64 i8 bool ) =: #:experimental nextChar

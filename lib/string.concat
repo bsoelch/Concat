@@ -12,7 +12,7 @@ i8 arrayView #typedef public string
   proc( i8 _ ptr  i64 => string ) =: public create
     string new return
   end
-  proc( i64 : static k  i8 k ptr : str => string ) =: public wrap
+  proc( i64 : auto k  i8 k ptr : str => string ) =: public wrap
     str k create return
   end
 

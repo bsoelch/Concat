@@ -133,30 +133,33 @@ entryPoint: ## the program entry point is marked with entry point, internally en
 end ## main code section ends with end
 ```
 
-### static arguments
+### static & automatic arguments
 
-procedure arguments can be marked as static, static procedure arguments are resolved at compile time and can be used to declare other types appearing later in the procedure signature
+procedure arguments can be marked as `auto` or `static`, both static and automatic procedure arguments are resolved at compile time and can be used to declare other types appearing later in the procedure signature
 
-the type of a static procedure arguments has to be of type `type` or an integer type
+the type of a automatic procedure arguments has to be of type `type` or an integer type
+static arguments can have any type
 
-resolving of static arguments:
-If a static argument appears in the input signature of a procedure, the compiler will automatically resolve the correct value and will ignore the corresponding parameter,
+when a procedure is called first all static arguments are read from the stack (in the order they were declared) and a version of the function depending on the static arguments is selected, afterwards the remaining arguments will be taken from the stack and passed to that function.
+
+resolving of automatic arguments:
+If an automatic argument appears in the input signature of a procedure, the compiler will automatically resolve the correct value and will ignore the corresponding parameter,
 otherwise the argument has to be given as a constant value at the correct position in the signature
 
 Examples:
 
 ```
-proc( i64 : static k  i8 k ptr : str => i64 ) =: strLen ## split the compile-type length parameter from a sized-pointer
+proc( i64 : auto k  i8 k ptr : str => i64 ) =: strLen ## split the compile-type length parameter from a sized-pointer
   k return
 end
 
-proc( i64 : k type : static T => T _ ptr ) : extern malloc   ## return pointers of type given by parameter
-proc( type : static T  T _ ptr : a T _ ptr : b i64 : k => ) : extern memcpy  ## multiple uses of the same generic argument
-proc( type : static T  T _ ptr : p => ) : extern free
+proc( type : static T i64 : length => T _ ptr : p ) : extern malloc
+proc( type : auto T  T _ ptr : a T _ ptr : b i64 : k => ) : extern memcpy  ## multiple uses of the same generic argument
+proc( type : auto T  T _ ptr : p => ) : extern free
 
 entryPoint:
   "Hello World" strLen ..debug.print   ## the value of k is determined by the compiler
-  16 i8 malloc =:: p        
+  16 i8 malloc =:: p          ## static arguments will be resolved before all other arguments independent of the order in the function declaration
   p "Test" 4 memcpy           ## generic argument determined by type of constant string ( in current parser by type of p ) 
   p free
 end

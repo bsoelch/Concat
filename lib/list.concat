@@ -77,7 +77,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     return
   end
   #template type : T #end
-  proc( T list : a i64 : static k  T k ptr : b => T list ) =: public appendP
+  proc( T list : a i64 : auto k  T k ptr : b => T list ) =: public appendP
     a
       #dup .length k + ensureCap
       #dup .data #over .length + b T _ ptr cast k mem.copy #drop
@@ -113,7 +113,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     elts return
   end
   #template type : T #end
-  proc( T list : a i64 : static k  T k ptr : b i64 : index => T list ) =: public insertP
+  proc( T list : a i64 : auto k  T k ptr : b i64 : index => T list ) =: public insertP
     a =:: mut elts
     elts
       elts .length k + ensureCap

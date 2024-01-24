@@ -31,7 +31,7 @@
     fileName nameLength mode f @ _fopen f #swap return
   end
 
-  proc( i64 : static k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) =: public fopenS
+  proc( i64 : auto k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) =: public fopenS
     fileName k mode fopen return
   end
   ## file buffer off count -> nRead errCode
@@ -53,7 +53,7 @@
   proc( FILE : file i8 : chr => IOError ) =: public fputc
     file chr addrOf 0 1 fwrite #swap #drop return
   end
-  proc( FILE : file  i64 : static k  i8 k ptr : str => IOError ) =: public fputs
+  proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: public fputs
     0 i64 =: mut off
     k =:: mut count
     str i8 _ ptr cast =:: data
@@ -71,7 +71,7 @@
   proc( FILE : file => FILE IOError ) =: public fstart
     file FILE_ERROR_NONE return
   end
-  proc( FILE : file IOError : err  i64 : static k  i8 k ptr : str => FILE  IOError ) =: public fappendS
+  proc( FILE : file IOError : err  i64 : auto k  i8 k ptr : str => FILE  IOError ) =: public fappendS
     err FILE_ERROR_NONE != if
       file err return
     end
@@ -84,7 +84,7 @@
     file #dup c fputc return
   end
   
-  proc( i64 : static k  i8 k ptr : str => IOError ) =: public puts
+  proc( i64 : auto k  i8 k ptr : str => IOError ) =: public puts
     stdOut fstart 
       str  fappendS 
       "\n" fappendS

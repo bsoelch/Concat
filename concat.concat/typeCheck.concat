@@ -914,10 +914,10 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     inType typeContext compositeElts =:: inTypes
     argCount i32 cast 1 - while #dup 0 >= do
       inTypes #over array.get =:: argType
-      inType #over typeContext compositeGetLabel labelContext id.labelFlags id.FLAG_STATIC & 0 != if
+      inType #over typeContext compositeGetLabel labelContext id.labelFlags id.FLAG_AUTO & 0 != if
         argValues [] templateCount #over:2 + argBufferOffset + list.get =:: constVal
         constVal ConstValue .none != if
-          ## static arguments can only appear after their declaration -> value cannot be changed by remaining arguments
+          ## automatic arguments can only appear after their declaration -> value cannot be changed by remaining arguments
           ## insert constant into stack
           state [] .typeStack
             argType newTypeInfo typeOffset list.insert

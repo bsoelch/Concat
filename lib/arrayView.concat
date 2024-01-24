@@ -16,7 +16,7 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
     T arrayView new return
   end
   #template type : T #end
-  proc( i64 : static k  T k ptr : elts => T arrayView ) =: public wrap
+  proc( i64 : auto k  T k ptr : elts => T arrayView ) =: public wrap
     elts k create return
   end
   #template type : T #end

@@ -17,7 +17,8 @@ i32 =:: public LabelFlag
 #namespace id
   0  LabelFlag =: public FLAG_NONE
   1  LabelFlag =: public FLAG_MUTABLE
-  2  LabelFlag =: public FLAG_STATIC
+  2  LabelFlag =: public FLAG_AUTO
+  2  LabelFlag =: public FLAG_STATIC  ## TODO change id of flag static once auto-args and static args are different
   4  LabelFlag =: public FLAG_EXTERN
   8  LabelFlag =: public FLAG_PUBLIC
   16 LabelFlag =: public FLAG_PRIVATE

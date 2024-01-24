@@ -105,7 +105,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     6049 6074 6098
   } =:: bitsPerDigit
   bitsPerDigit ..length number.MAX_BASE 1 + == #assert "bitsPerDigit.length==maxBase+1"
-  proc( i64 : static k i8 k ptr : data => int ) =: public fromStr ## XXX better name
+  proc( i64 : auto k i8 k ptr : data => int ) =: public fromStr ## XXX better name
     data string.wrap 0 fromString #drop return ## TODO error handling
   end
   #+
@@ -199,7 +199,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     mStr sb.free #drop
     data size cap sign int new ParserError .NONE return
   end
-  proc( i32 : static k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray
+  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray
     data k sgn fromPtr return
   end
   proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: public fromPtr
@@ -207,7 +207,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     mData data length mem.copy #drop
     mData length length sgn int new return
   end
-  proc( i32 : static k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray_BE
+  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray_BE
     data k sgn fromPtr_BE return
   end
   proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: public fromPtr_BE

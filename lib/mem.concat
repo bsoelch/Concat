@@ -2,15 +2,15 @@
  proc( i64 : k  type : static T => T _ ptr mut ) : extern public alloc
  proc( i64 : k  type : static T => T _ ptr mut ) : extern public calloc
  ## XXX mem.callocPtr
- proc( type : static T   T _ ptr mut : prev i64 : k => T _ ptr mut ) : extern public realloc
+ proc( type : auto T   T _ ptr mut : prev i64 : k => T _ ptr mut ) : extern public realloc
  ## set memory to zero
- proc( type : static T   T _ ptr mut : src  i64 : k => T _ ptr mut ) : extern public clear
+ proc( type : auto T   T _ ptr mut : src  i64 : k => T _ ptr mut ) : extern public clear
  ## XXX mem.clearPtr
- proc( type : static T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public copy
- proc( type : static T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public move
- proc( type : static T   T _ ptr mut : data => ) : extern public free
+ proc( type : auto T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public copy
+ proc( type : auto T   T _ ptr mut : target T _ ptr : src i64 : k => T _ ptr mut ) : extern public move
+ proc( type : auto T   T _ ptr mut : data => ) : extern public free
  
- proc( type : static T  T _ ptr : a  T _ ptr : b  i64 : k   => i32 ) : extern public compare
+ proc( type : auto T  T _ ptr : a  T _ ptr : b  i64 : k   => i32 ) : extern public compare
  
   #template type : T #end
   proc( T _ ptr mut : data i64 : count T : elt => ) =: public fill

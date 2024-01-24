@@ -363,6 +363,9 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       #dup "mut" string.wrap string.eq if
         id.FLAG_MUTABLE flags | flags =
         true isModifer =
+      else #dup "auto" string.wrap string.eq _if
+        id.FLAG_AUTO flags | flags =
+        true isModifer =
       else #dup "static" string.wrap string.eq _if
         id.FLAG_STATIC flags | flags =
         true isModifer =
@@ -469,10 +472,18 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
           state [] .labelBuffer #over list.append state [] .labelBuffer =
           #dup state [] .idContext .labelContext @ id.labelFlags  id.FLAG_STATIC & 0 != if
             labelType LabelType .PROC_IN != if
-              "unexpected static label" sb.wrap fileState [] .wordStart state appendError2
+              "unexpected label: static" sb.wrap fileState [] .wordStart state appendError2
             end
             fileState state peekTypeConstant if
-              "missing type for static label" sb.wrap fileState [] .wordStart state appendError2
+              "missing type for label: static" sb.wrap fileState [] .wordStart state appendError2
+            end
+           state [] .constants .length constOffset - 1 - state newStaticArg
+          else #dup state [] .idContext .labelContext @ id.labelFlags  id.FLAG_AUTO & 0 != _if
+            labelType LabelType .PROC_IN != if
+              "unexpected label: auto" sb.wrap fileState [] .wordStart state appendError2
+            end
+            fileState state peekTypeConstant if
+              "missing type for label: auto" sb.wrap fileState [] .wordStart state appendError2
             end
            state [] .constants .length constOffset - 1 - state newStaticArg
           else #drop end
@@ -1137,7 +1148,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   argType
                   IdentifierType .ARGUMENT
                   #over:3
-                  argLabel labelContext id.labelFlags id.FLAG_STATIC & 0 != if
+                  argLabel labelContext id.labelFlags id.FLAG_AUTO & 0 != if
                     argType types.primitive.TYPE types.typeEquals if
                       #over:4 types.newGenericType ConstValue .typeId new
                     else
