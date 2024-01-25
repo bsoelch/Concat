@@ -1,6 +1,6 @@
 #namespace mem
- proc( i64 : k  type : static T => T _ ptr mut ) : extern public alloc
- proc( i64 : k  type : static T => T _ ptr mut ) : extern public calloc
+ proc( i64 : k  type : auto T => T _ ptr mut ) : extern public alloc
+ proc( i64 : k  type : auto T => T _ ptr mut ) : extern public calloc
  ## XXX mem.callocPtr
  proc( type : auto T   T _ ptr mut : prev i64 : k => T _ ptr mut ) : extern public realloc
  ## set memory to zero

@@ -401,8 +401,8 @@ end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId ) =: readLabel
   code start fileState state 0 readLabelAddFlags
 end
-enum( NONE STRUCT ENUM PROC_IN ) =:: LabelType
-proc( string : code LabelType : labelType string : endString string : nextEnd FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId arrayView optional Type arrayView bool ) =: readCompositeType
+enum( NONE TUPLE STRUCT ENUM PROC_IN TEMPLATE ) =:: LabelType
+proc( string : code LabelType : labelType string : endString string : nextEnd FileState ptr mut : fileState  ParserState ptr mut : state => string Type arrayView LabelId arrayView optional LabelType bool ) =: readCompositeType
   state offsetConstants =:: prevConstants
   state [] .constants .length =:: constOffset
   state [] .labelBuffer .length =:: labelOffset
@@ -411,10 +411,12 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
       fileState state tryParseConstant if #drop
         #dup .length 0 > if continue else break end
       end
-      #dup endString string.eq if #drop
-        labelType LabelType .NONE == if
+      #dup endString string.eq  #over nextEnd string.eq labelType LabelType .NONE == &  | if
+        endString string.eq =:: isEnd
+        labelType LabelType .TUPLE == if
           LabelId arrayView optional.empty
-        else labelType LabelType .PROC_IN == state [] .labelBuffer .length labelOffset == & _if
+        else labelType LabelType .PROC_IN == labelType LabelType .NONE == |
+               state [] .labelBuffer .length labelOffset == & _if
           LabelId arrayView optional.empty ## procedure with no labels
         else
           state [] .constants .length constOffset -
@@ -437,14 +439,18 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
         end
         prevConstants state resetConstants
         labelOffset state [] .labelBuffer .length =
-        state [] .constants .length constOffset - fileState state popTypeConstants return
-      else #dup nextEnd string.eq _if #drop ## XXX? allow procedures without arrow
+        state [] .constants .length constOffset - fileState state popTypeConstants =:: isError
+        #swap
+        isEnd if labelType else LabelType .PROC_IN end
+        isError
+        return
+      else #dup nextEnd string.eq _if #drop
         "unexpected \"" sb.wrap nextEnd sb.appendStr '"' sb.appendC fileState [] .wordStart state appendError2
         prevConstants state resetConstants
         labelOffset state [] .labelBuffer .length =
-        LabelId arrayView optional.empty Type array.empty true return
+        Type array.empty LabelId arrayView optional.empty labelType true return
       else #dup ":" string.wrap string.eq _if #drop
-        labelType LabelType .NONE == if
+        labelType LabelType .TUPLE == if
           "unexpected ':' operator" sb.wrap fileState [] .wordStart state appendError2
         end
         state [] .constants .length constOffset - 1 -
@@ -468,23 +474,21 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
           "expected identifier" sb.wrap fileState [] .wordStart state appendError2
         end
         .IDENTIFER
-        fileState state readLabel
+        fileState
+        state
+        fileState state peekTypeConstant if
+          "missing type for label" sb.wrap fileState [] .wordStart state appendError2
+        end =:: argType
+        labelType LabelType .TEMPLATE != argType types.primitive.TYPE types.typeEquals & if
+          id.FLAG_STATIC else 0 LabelFlag cast
+        end
+        readLabelAddFlags
           state [] .labelBuffer #over list.append state [] .labelBuffer =
-          #dup state [] .idContext .labelContext @ id.labelFlags  id.FLAG_STATIC & 0 != if
-            labelType LabelType .PROC_IN != if
-              "unexpected label: static" sb.wrap fileState [] .wordStart state appendError2
-            end
-            fileState state peekTypeConstant if
-              "missing type for label: static" sb.wrap fileState [] .wordStart state appendError2
-            end
-           state [] .constants .length constOffset - 1 - state newStaticArg
-          else #dup state [] .idContext .labelContext @ id.labelFlags  id.FLAG_AUTO & 0 != _if
-            labelType LabelType .PROC_IN != if
-              "unexpected label: auto" sb.wrap fileState [] .wordStart state appendError2
-            end
-            fileState state peekTypeConstant if
-              "missing type for label: auto" sb.wrap fileState [] .wordStart state appendError2
-            end
+          #dup state [] .idContext .labelContext @ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC |  & 0 != if
+             labelType LabelType .PROC_IN != labelType LabelType .NONE != & if
+               "unexpected label: `static` and `auto` can only be used in procedure arguments\n  values of type `type` are labeled `static` by default" sb.wrap fileState [] .wordStart state appendError2
+             end
+             argType
            state [] .constants .length constOffset - 1 - state newStaticArg
           else #drop end
         continue
@@ -525,7 +529,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
       #dup .length 0 >
     do end
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError2
-  LabelId arrayView optional.empty Type array.empty true return
+  Type array.empty LabelId arrayView optional.empty labelType true return
 end
 proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state => bool ) =: tryParseNumberLiteral
   str .length 0 == if
@@ -715,17 +719,49 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       t fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else #dup "(" string.wrap string.eq  #over "tuple(" string.wrap string.eq | #over "struct(" string.wrap string.eq | _if
-      "struct(" string.wrap string.eq if
-        LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
-      else
-        LabelType .NONE ")" string.wrap #dup fileState state readCompositeType
+    else #dup "(" string.wrap string.eq _if #drop
+      state offsetStaticArgs =:: prevArgs
+      LabelType .NONE ")" string.wrap "=>" string.wrap fileState state readCompositeType
+      if
+        "error while parsing composite type" sb.wrap fileState [] .wordStart state appendError2
       end
+      LabelType .PROC_IN == =:: isProc
+      isProc if
+        false state [] .idContext .typeContext addrOf types.newProcArgs
+        =:: in
+        LabelType .TUPLE ")" string.wrap #dup  fileState state readCompositeType
+        prevArgs state resetStaticArgs ## TODO allow using static arguments in procedure body
+        if
+          "error while parsing procedure return values" sb.wrap fileState [] .wordStart state appendError2
+        end #drop ## labelType
+        true state [] .idContext .typeContext addrOf types.newProcArgs
+        in #swap CallingConvention.DEFAULT state [] .idContext .typeContext addrOf  types.newProcedure if
+          "error while creating procedure type" sb.wrap fileState [] .wordStart state appendError2
+        end
+      else
+        state [] .idContext .typeContext addrOf types.newTuple if
+          "error while creating composite type" sb.wrap fileState [] .wordStart state appendError2
+        end
+      end
+      fileState [] .wordStart newTypeConst  state pushConst
+      "" string.wrap true return
+    else #dup "tuple(" string.wrap string.eq _if #drop
+      LabelType .TUPLE ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing tuple type" sb.wrap fileState [] .wordStart state appendError2
-      end
-      #swap state [] .idContext .typeContext addrOf types.newTuple if
+      end #drop ## labelType
+      state [] .idContext .typeContext addrOf types.newTuple if
         "error while creating tuple type" sb.wrap fileState [] .wordStart state appendError2
+      end
+      fileState [] .wordStart newTypeConst  state pushConst
+      "" string.wrap true return
+    else #dup "struct(" string.wrap string.eq _if #drop
+      LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
+      if
+        "error while parsing structure type" sb.wrap fileState [] .wordStart state appendError2
+      end #drop ## labelType
+      state [] .idContext .typeContext addrOf types.newTuple if
+        "error while creating structure type" sb.wrap fileState [] .wordStart state appendError2
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
@@ -733,8 +769,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing union type" sb.wrap fileState [] .wordStart state appendError2
-      end
-      #swap state [] .idContext .typeContext addrOf types.newUnion if
+      end #drop ## labelType
+      state [] .idContext .typeContext addrOf types.newUnion if
         "error while creating union type" sb.wrap fileState [] .wordStart state appendError2
       end
       fileState [] .wordStart newTypeConst  state pushConst
@@ -743,8 +779,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       LabelType .ENUM ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing enum type" sb.wrap fileState [] .wordStart state appendError2
-      end
-      #swap state [] .idContext .typeContext addrOf types.newEnum if
+      end #drop ## labelType
+      state [] .idContext .typeContext addrOf types.newEnum if
         "error while creating enum type" sb.wrap fileState [] .wordStart state appendError2
       end
       fileState [] .wordStart newTypeConst  state pushConst
@@ -754,15 +790,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       LabelType .PROC_IN "=>" string.wrap ")" string.wrap fileState state readCompositeType
       if
         "error while parsing procedure arguments" sb.wrap fileState [] .wordStart state appendError2
-      end
-      #swap false state [] .idContext .typeContext addrOf types.newProcArgs
+      end #drop ## labelType
+      false state [] .idContext .typeContext addrOf types.newProcArgs
       =:: in
-      LabelType .NONE ")" string.wrap #dup  fileState state readCompositeType
+      LabelType .TUPLE ")" string.wrap #dup  fileState state readCompositeType
       prevArgs state resetStaticArgs
       if
         "error while parsing procedure return values" sb.wrap fileState [] .wordStart state appendError2
-      end
-      #swap true state [] .idContext .typeContext addrOf types.newProcArgs
+      end #drop ## labelType
+      true state [] .idContext .typeContext addrOf types.newProcArgs
       in #swap CallingConvention.DEFAULT state [] .idContext .typeContext addrOf  types.newProcedure if
         "error while creating procedure type" sb.wrap fileState [] .wordStart state appendError2
       end
@@ -946,10 +982,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
           else #drop end
-          LabelType .STRUCT "#end" string.wrap #dup fileState state readCompositeType if
+          LabelType .TEMPLATE "#end" string.wrap #dup fileState state readCompositeType if
             "error while parsing template arguments" sb.wrap fileState [] .wordStart state appendError2
-          end
-          #swap false state [] .idContext .typeContext addrOf types.newProcArgs
+          end #drop ## labelType
+          false state [] .idContext .typeContext addrOf types.newProcArgs
           state [] .templateOps .length state [] .currentFile fileState [] .wordStart state [] .idContext @ id.beginTemplate if
             "could not create template" sb.wrap fileState [] .wordStart state appendError2
           end

@@ -1,0 +1,18 @@
+( i32 => i64 ) =: procedure
+
+end
+
+( i32 : a => i64 ) =: labledPrcoedure
+  a
+end
+
+( i32 ) =:: tuple
+
+( i32 : x ) =:: struct
+
+entryPoint:
+  0 procedure ..debug.print
+  1 labledPrcoedure ..debug.print
+  2 tuple new .0 ..debug.print
+  3 struct new .x ..debug.print
+end
