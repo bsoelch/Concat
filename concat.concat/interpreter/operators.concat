@@ -5,14 +5,14 @@
 proc( ConstValue : a => bool bool ) =: constAsBool
   a switch
     boolean case a .boolean false return
-    none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg case false true return
+    none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case false true return
   end
 end
 proc( ConstValue : a => i64 bool ) =: constAsInt ## all integer calculations are done in 64 bits
   a switch
     chr case a .chr i64 cast false return
     int case a .int i64 cast false return
-    none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float case 0i64 true return
+    none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure case 0i64 true return
   end
 end
 proc( ConstValue : a => float bool ) =: constAsF32
@@ -20,7 +20,7 @@ proc( ConstValue : a => float bool ) =: constAsF32
     chr case a .chr float cast false return
     int case a .int float cast false return
     Float case a .Float float cast false return
-    none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg case 0 float cast true return
+    none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 float cast true return
   end
 end
 proc( ConstValue : a => double bool ) =: constAsF64
@@ -28,19 +28,19 @@ proc( ConstValue : a => double bool ) =: constAsF64
     chr case a .chr double cast false return
     int case a .int double cast false return
     Float case a .Float double cast false return
-    none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg case 0 double cast true return
+    none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 double cast true return
   end
 end
 proc( ConstValue : a => i32 bool ) =: constAsEnumLabel
   a switch
     enumLabel case a .enumLabel false return
-    none boolean chr int Float str arrayConstant typeId wildCard genericArg templateArg case 0 true return
+    none boolean chr int Float str arrayConstant typeId wildCard genericArg templateArg procedure case 0 true return
   end
 end
 proc( ConstValue : a => Type bool ) =: constAsType
   a switch
     typeId case a .typeId false return
-    none boolean chr int enumLabel Float str arrayConstant  wildCard genericArg templateArg case Type .undefined true return
+    none boolean chr int enumLabel Float str arrayConstant  wildCard genericArg templateArg procedure case Type .undefined true return
   end
 end
 

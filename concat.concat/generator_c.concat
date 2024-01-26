@@ -684,7 +684,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
     genericArg case ## XXX find correct label
       const .genericArg id.LABEL_ID_NONE target prog printArgName
       return
-    none wildCard templateArg case
+    none wildCard templateArg procedure case
       break ## XXX error message
   end
 end
@@ -1222,7 +1222,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
                   int case caseVal .int sb.appendI break
                   chr case caseVal .chr sb.appendI break
                   enumLabel case caseVal .enumLabel sb.appendI break
-                  none wildCard boolean genericArg templateArg str typeId arrayConstant Float case
+                  none wildCard boolean genericArg templateArg str typeId arrayConstant Float procedure case
                     ## TODO error message
                     break
                 end

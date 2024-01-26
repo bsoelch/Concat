@@ -18,6 +18,7 @@ enum(
   wildCard
   i32 : genericArg
   i32 : templateArg
+  i64 : procedure
 ) =:: public ConstValue
 
 struct( ConstValue list : mut arrayValues ) =:: public ConstantContext
@@ -86,6 +87,8 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext => bool ) =:
       false return
     typeId case
       a .typeId b .typeId types.typeEquals return
+    procedure case
+      a .procedure b .procedure == return
     templateArg case
       a .templateArg b .templateArg == return
     genericArg case
@@ -171,13 +174,17 @@ proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext 
         end #drop
         "}" sb.appendS
         break
+      procedure case
+        "procedure: "  sb.appendS
+        #over .procedure sb.appendI
+        break
       genericArg case
         "generic argument: "  sb.appendS
         #over .genericArg sb.appendI
         break
       templateArg case
         "template argument: "  sb.appendS
-        #over .genericArg sb.appendI
+        #over .templateArg sb.appendI
         break
     end
    #swap #drop return

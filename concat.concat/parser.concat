@@ -15,6 +15,7 @@
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
+struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: ProcedureInfo
 struct( i64 : codeOffset i64 : constOffset ) =:: InitializerOffset
 struct(
   string : mut basePath
@@ -27,6 +28,8 @@ struct(
   i64 : mut staticArgsOffset
   ProgramFile list : mut progFiles
   FileId : mut currentFile
+  ProcedureInfo list : mut procedures
+  ProcedureInfo optional : mut currentProc
   Operation list : mut templateOps
   InitializerOffset list : mut openInitializers
   LabelId list : mut labelBuffer
@@ -97,6 +100,7 @@ proc( Type FilePosition => Constant ) =: newTypeConst
   =:: pos
   types.primitive.TYPE #swap ConstValue .typeId new IdentifierInfo optional.empty pos Constant new return
 end
+
 proc( Type i32 FilePosition => Constant ) =: newEnumLabelConstant
   =:: pos
   ConstValue .enumLabel new IdentifierInfo optional.empty pos Constant new return
@@ -816,14 +820,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Constant new state pushConst
       true return
     else #drop end
-    #dup state [] .currentFile idContext id.getIdentifier if ## read named constants
-      #dup [] .valueType typeContext types.isProcedure if
-        42 ..debug.print
-      end
-      #drop:2 false return
+    #dup state [] .currentFile idContext id.getIdentifier if
+      #drop:2 false return ## unknown identifier
     end
     #dup [] .constValue ConstValue .none == if
-      #drop:2 false return
+      #drop:2 false return ## not a constant
+    end
+    #dup [] .constValue ConstValue .procedure == if
+      #dup [] .valueType typeContext types.getProcOut #drop typeContext types.compositeElts =:: outTypes
+      ## XXX less restrictive condition for constant evaluation
+      outTypes .length 1 == if outTypes 0 array.get types.primitive.TYPE types.typeEquals _if
+        ## TODO evaluate function
+        ## 1. get arguments
+        ## 2. create type container for given argument combination (with empty initialization)
+        ## 3. replace arguments in body
+        ## 4. evaluate body
+        ## 5. store resulting type in created type container
+      end
+      #drop:2 false return ## procedure constant
     end
     #dup [] .constValue =:: mut constVal
     #dup [] .templateId -1 != #over [] .idType IdentifierType .TEMPLATE_ARG != & if
@@ -1118,11 +1132,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState state nextWord fileState state id.FLAG_MUTABLE readLabelAddFlags
       end
       #dup state [] .idContext .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != =:: experimental
-      experimental if
-        valType CallingConvention .POINTER typeContext types.withCallConvention if
-          "could not update calling convention" sb.wrap state popConst .pos state appendError2
-        end valType =
-      end
         valType
         idType
         -1 ## id
@@ -1133,7 +1142,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             Type .undefined
           end
           #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType fileState [] .wordStart newTypeConst .val
-        else idType IdentifierType .PROCEDURE != isInit state hasConst & & _if
+        else isInit ! _if
+          ConstValue .none
+        else idType IdentifierType .PROCEDURE == _if
+          state [] .procedures .length ConstValue .procedure new
+        else state hasConst _if
           state popConst
             #dup .valueType valType false typeContext types.canCast ! if
               "cannot cast " sb.wrap
@@ -1161,8 +1174,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
       #dup [] .idType IdentifierType .PROCEDURE == isInit & if
-        state [] .idContext @ id.isTopLevel ! if
-          "procedures have to be declared at global level" sb.wrap fileState [] .wordStart state appendError2
+        state [] .currentProc optional.hasData if
+          "procedures cannot be nested" sb.wrap fileState [] .wordStart state appendError2
         end
         state hasConst if
           "unexpected constant at global level" sb.wrap state popConst .pos state appendError2
@@ -1177,6 +1190,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state offsetStaticArgs
           experimental
         state [] .idContext @ id.openProcScope
+        ## ProcedureInfo
+          state [] .currentFile
+          valType
+          state [] .progFiles state [] .currentFile list.get .localOps .length
+          -1
+        ProcedureInfo new optional.wrap state [] .currentProc =
         #dup [] .valueType typeContext types.getProcIn if
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
         end =:: inType
@@ -1377,16 +1396,23 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "program already has an entry point" sb.wrap fileState [] .wordStart state appendError2
       end
       true state [] .hasEntryPoint =
+      ## newProcedure
+        Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
+        Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
+        CallingConvention.DEFAULT
+      typeContext types.newProcedure #drop =:: procType
       ## openProcScope
         BlockType .PROCEDURE
-        ## newProcedure
-          Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
-          Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
-          CallingConvention.DEFAULT
-        typeContext types.newProcedure #drop
+        procType
         state [] .staticArgsOffset
         false
       state [] .idContext @ id.openProcScope
+      ## ProcedureInfo
+        state [] .currentFile
+        procType
+        state [] .progFiles state [] .currentFile list.get .localOps .length
+        -1
+      ProcedureInfo new optional.wrap state [] .currentProc =
       fileState [] .wordStart opEntryPoint  state appendOp
       return
     else #dup "if" string.wrap string.eq _if #drop
@@ -1482,7 +1508,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError2
           return
         end
-        #+closeType+# BlockType .PROCEDURE == if
+        #+closeType+# #dup BlockType .PROCEDURE == #swap BlockType .EXPERIMENTAL_PROCEDURE == | if
+          state [] .currentProc optional.isEmpty if #drop:2
+            "unexpected end of procedure" sb.wrap fileState [] .wordStart state appendError2
+            return
+          end
+          state [] .currentProc .data =:: mut currentProc
+          ProcedureInfo optional.empty state [] .currentProc =
+          state [] .progFiles state [] .currentFile list.get .localOps .length
+            currentProc .codeStart -
+          currentProc .codeLength =
+          state [] .procedures
+            currentProc list.append
+          state [] .procedures =
           state resetStaticArgs
         else #drop end
       do end
@@ -2255,15 +2293,19 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
     basePath
     libPath
     id.newIdentifierContext
-    128 Constant        list.create 0
-    128 Type      list.create
-    32 StaticArgument   list.create 0
-    16 ProgramFile      list.create
+    128 Constant          list.create
+    0
+    128 Type              list.create
+    32  StaticArgument    list.create
+    0
+    16  ProgramFile       list.create
     FILE_ID_NONE
-    128 Operation       list.create
+    64  ProcedureInfo     list.create
+    ProcedureInfo         optional.empty
+    128 Operation         list.create
     128 InitializerOffset list.create
-    128 LabelId         list.create
-    32 CompilerError    list.create
+    128 LabelId           list.create
+    32  CompilerError     list.create
     0
     false
   ParserState new =:: mut state

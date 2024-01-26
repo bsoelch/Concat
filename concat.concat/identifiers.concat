@@ -783,6 +783,8 @@
         src return
       arrayConstant case
         src return ## TODO array constants
+      procedure case
+        src return
       typeId case
         src .typeId templateArgs genericArgs implPos context replaceGenericsType ConstValue .typeId new return
       genericArg case
