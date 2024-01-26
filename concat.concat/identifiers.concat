@@ -43,21 +43,24 @@
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
     BlockType : mut blockType
     Type : currentProc
+    i64 : staticArgsOffset
     bool : experimental
     NamespaceImportId : prevImports
     i32 : mut flags
   ) =:: Scope
 
-  proc( BlockType : blockType Type : procType bool : experimental NamespaceImportId : imports => Scope ) =: newScope
-    idHash @
-    idEq @
-    128 IdentifierData map.create
-    128 i8 _ ptr mut list.create
-    blockType
-    procType
-    experimental
-    imports
-    0
+  proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports => Scope ) =: newScope
+     ## Scope
+      idHash @
+      idEq @
+      128 IdentifierData map.create
+      128 i8 _ ptr mut list.create
+      blockType
+      procType
+      staticArgsOffset
+      experimental
+      imports
+      0
     Scope new return
   end
 #end
@@ -80,7 +83,7 @@
     newConstContext
     newLabelContext
     types.newTypeContext
-    BlockType .UNKNOWN Type .undefined false NAMESPACE_IMPORT_NONE newScope
+    BlockType .UNKNOWN Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     128 TemplateInfo      list.create
     32  ConstValue        list.create
@@ -109,10 +112,15 @@
     end
     context [] .openScopes list.peek .data [] .currentProc Type .undefined types.typeEquals return
   end
-  proc( BlockType : blockType Type : procType bool : experimental IdentifierContext ptr mut : context => ) =: public openProcScope
+  proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context => ) =: public openProcScope
     context [] .openScopes
-       blockType procType experimental context [] .labelContext .namespaceInfo .imports newScope
-       list.append
+       ## newScope
+         blockType
+         procType
+         staticArgsOffset
+         experimental
+         context [] .labelContext .namespaceInfo .imports
+       newScope list.append
     context [] .openScopes =
   end
   proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
@@ -122,7 +130,7 @@
       context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental
     end =:: experimental =:: currentProc
     context [] .openScopes
-       blockType currentProc experimental context [] .labelContext .namespaceInfo .imports newScope
+       blockType currentProc -1 experimental context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
   end
@@ -181,18 +189,27 @@
     end #drop
     list.free
   end
-  proc( IdentifierContext ptr mut : context => bool BlockType bool ) =: public closeScope
+  proc(
+    IdentifierContext ptr mut : context
+  =>
+    bool #+autoClose+#
+    i64 #+staticArgsOffset+#
+    BlockType
+    bool #+isError+#
+  ) =: public closeScope
     context [] .openScopes .length 0 == if
-      false BlockType .UNKNOWN true return
+      false -1 BlockType .UNKNOWN true return
     end
-    context [] .openScopes list.pop #swap context [] .openScopes =
-      #dup .scopeStrings freeScopeStrings #over .scopeStrings =
-      #dup .identifiers @ map.free
-      #dup .prevImports context [] .labelContext .namespaceInfo .imports =
-      #dup .blockType BlockType .PROCEDURE == if
-        0 context [] .localVarCount = ## XXX handle nested procedures
-      end
-    #dup .flags SCOPE_FLAG_AUTO_CLOSE & 0 != #swap .blockType false return
+    context [] .openScopes
+      list.pop =:: mut closed
+    context [] .openScopes =
+    closed .scopeStrings freeScopeStrings closed .scopeStrings =
+    closed .identifiers @ map.free
+    closed .prevImports context [] .labelContext .namespaceInfo .imports =
+    closed .blockType BlockType .PROCEDURE == if
+      0 context [] .localVarCount = ## XXX handle nested procedures
+    end
+    closed .flags SCOPE_FLAG_AUTO_CLOSE & 0 != closed .staticArgsOffset closed .blockType false return
   end
 
 
@@ -209,12 +226,12 @@
     =:: path
     =:: name
     ## 1. search in local scopes
-    mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
+    mNamespace path  context [] .labelContext @ findNamespace relSpace =
     name relSpace fileId IdentifierName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .openScopes .length 1 -
       while #dup 0 >= do
-        context [] .openScopes #over list.at .data [] .identifiers addrOf idName map.at
+        context [] .openScopes #over list.at .data [] .identifiers @ idName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if #swap #drop
             idName #swap false return
@@ -230,11 +247,11 @@
     ## 2. search global variable in current&parent namespaces
     name relSpace FILE_ID_NONE IdentifierName new =:: mut globalName
     while mNamespace NAMESPACE_ID_NONE != do
-      mNamespace path  context [] .labelContext addrOf findNamespace relSpace =
+      mNamespace path  context [] .labelContext @ findNamespace relSpace =
       relSpace idName .namespace =
       relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
-        context [] .globalScope .identifiers addrOf idName map.at
+        context [] .globalScope .identifiers @ idName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if
             idName #swap false return
@@ -244,7 +261,7 @@
           matches .data [] =
           #drop
         else #drop end
-        context [] .globalScope .identifiers addrOf globalName map.at
+        context [] .globalScope .identifiers @ globalName map.at
         #dup optional.hasData if .data
           matches optional.isEmpty if
             globalName #swap false return
@@ -263,11 +280,11 @@
     false =:: mut matchGlobal
     context [] .labelContext .namespaceInfo .imports while #dup NAMESPACE_IMPORT_NONE != do
       context [] .labelContext .namespaceImports #swap list.get
-        #dup .imported path  context [] .labelContext addrOf findNamespace relSpace =
+        #dup .imported path  context [] .labelContext @ findNamespace relSpace =
         relSpace idName .namespace =
         relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
-          context [] .globalScope .identifiers addrOf idName map.at
+          context [] .globalScope .identifiers @ idName map.at
           #dup optional.hasData if .data
             matches optional.hasData if
               matches .data []
@@ -282,7 +299,7 @@
               true multiMatch =
             end
           else #drop end
-          context [] .globalScope .identifiers addrOf globalName map.at
+          context [] .globalScope .identifiers @ globalName map.at
           #dup optional.hasData if .data
             matches optional.hasData if
               matches .data []
@@ -341,7 +358,7 @@
       "invalid label id" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA @ true return
     end
-    label  context [] .labelContext addrOf
+    label  context [] .labelContext @
       #over #over labelFlags =:: flags
     labelName .data =:: name
     context id.isTopLevel flags FLAG_PUBLIC & 0 != & if ## public global -> ignore fileId
@@ -382,7 +399,7 @@
       mScope [] .scopeStrings =
     sb.asStr
     context [] .labelContext .namespaceInfo .current fileId IdentifierName new =:: mut idName
-    mScope [] .identifiers addrOf idName map.at #dup optional.hasData if .data =:: prevDec
+    mScope [] .identifiers @ idName map.at #dup optional.hasData if .data =:: prevDec
       "re declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt errors appendWarning
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
       ID_NONE ID_NONE_DATA @ true return
@@ -391,7 +408,7 @@
       "declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt errors appendWarning
       "shadows previous declaration " sb.wrap #over [] .declaredAt errors appendInfo
     end #drop:2
-    mScope [] .identifiers addrOf
+    mScope [] .identifiers @
       idName
       valType
       flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
@@ -411,7 +428,7 @@
       idType
       IdentifierData new
     map.put #drop ## previous entry is always empty
-    idName mScope [] .identifiers addrOf idName map.at .data false return
+    idName mScope [] .identifiers @ idName map.at .data false return
   end
 #end
 #namespace sb
