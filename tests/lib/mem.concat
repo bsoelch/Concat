@@ -28,7 +28,7 @@ entryPoint:
   "World" "World" 5 mem.compare 0 == ..debug.print
   
   i32 16 array new =:: mut a
-  a addrOf 10 42 mem.fill
+  a @ 10 42 mem.fill
   0 while #dup a ..length < do
     a @ #over [] ..debug.print
     1 +

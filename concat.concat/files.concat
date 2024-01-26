@@ -46,7 +46,7 @@ enum( EMPTY string : IDENTIFER string : STRING string : CHAR ) =:: public Token
 proc( string => ) =: public printTokens
   "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
-    state addrOf nextToken
+    state @ nextToken
     128 sb.create
       #swap sb.appendToken
       " at " sb.appendS

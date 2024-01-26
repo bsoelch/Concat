@@ -126,7 +126,7 @@ end
 entryPoint: ## the program entry point is marked with entry point, internally entryPoint declares a procedure with return type void
   ## using a procedure name implicitly calls that procedure
   1 2 add ## prints 3
-  max addrOf =:: f ## addrOf can be used to obtain a procedure pointer
+  max @ =:: f ## @ can be used to obtain a procedure pointer
   1 2 f () ## () can be used to call procedure pointers
   #drop ..debug.print  ## return values are pushed onto the type stack and have to be used or discarded before the end of the procedure
 ## return statements are not allowed in the main code section
@@ -194,7 +194,7 @@ struct( T _ ptr mut : data i64 : len ) =: arrayView
 entryPoint:
   "Hello" #dup .length i8 arrayView new =:: str
   16 i32 array new =:: a
-  a addrOf a .length -1 fill  ## fill array with -1
+  a @ a .length -1 fill  ## fill array with -1
 end
 
 ```
@@ -410,12 +410,12 @@ All pointers can be assigned to a raw-pointers of the matching base type.
 
 Examples:
 ```
-0 =:: mut x                    ## declare a mutable integer x 
-x addrOf =:: xAddr             ## the address of x  (will have type  i32 ptr mut)
-x addrOf i32 _ ptr =: xPtr     ## get the address of x as (immutable) raw i32 pointer
-"Hello" i8 5 ptr =: str        ## strings are i8 array-pointers with the length as argument
-str i8 _ ptr cast  =: str2     ## fixed size pointers can be assigned to raw pointers
-str2 .length                   ## the length in the most significant dimension of array&pointer types can be read through the '.length' field
+0 =:: mut x                 ## declare a mutable integer x 
+x @ =:: xAddr               ## the address of x  (will have type  i32 ptr mut)
+x @ i32 _ ptr =: xPtr       ## get the address of x as (immutable) raw i32 pointer
+"Hello" i8 5 ptr =: str     ## strings are i8 array-pointers with the length as argument
+str i8 _ ptr cast  =: str2  ## fixed size pointers can be assigned to raw pointers
+str2 .length                ## the length in the most significant dimension of array&pointer types can be read through the '.length' field
 ```
 
 ### arrays

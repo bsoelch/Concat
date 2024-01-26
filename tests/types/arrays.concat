@@ -11,7 +11,7 @@ end
   
 entryPoint:
   i32 3 array new =:: anArray
-  anArray addrOf  i64 2 3 array new arrayTest
+  anArray @  i64 2 3 array new arrayTest
   
   ( i32 i64 ) 2 array new =:: mut tupleArray
   1 tupleArray @ 0 [] .0 =

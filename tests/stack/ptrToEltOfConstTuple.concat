@@ -2,32 +2,32 @@ struct( i32 : mut a i32 : b ) =:: struct
 
 entryPoint:
   0 0 struct new =:: s
-  s .a addrOf
-  s .b addrOf
+  s .a @
+  s .b @
   #types
   #drop:2
   s .a ..debug.print
   s .b ..debug.print
 
   0 0 struct new =:: mut mutS
-  mutS .a addrOf
-  mutS .b addrOf
+  mutS .a @
+  mutS .b @
   #types
   #drop 1 #swap [] =
   mutS .a ..debug.print
   mutS .b ..debug.print
 
-  s addrOf =:: sP
-  sP [] .a addrOf
-  sP [] .b addrOf
+  s @ =:: sP
+  sP [] .a @
+  sP [] .b @
   #types
   #drop:2
   sP [] .a ..debug.print
   sP [] .b ..debug.print
 
-  mutS addrOf =:: mutSP
-  mutSP [] .a addrOf
-  mutSP [] .b addrOf
+  mutS @ =:: mutSP
+  mutSP [] .a @
+  mutSP [] .b @
   #types
   #drop 2 #swap [] =
   mutSP [] .a ..debug.print

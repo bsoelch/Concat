@@ -4,6 +4,6 @@ type : selfPtr
 entryPoint:
   #find selfPtr
   selfPtr : mut X
-  1 X addrOf selfPtr new X =
+  1 X @ selfPtr new X =
   X .1  X .1 [] .1 == ..debug.print
 end

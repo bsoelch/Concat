@@ -51,7 +51,7 @@
   ## XXX fseek
   
   proc( FILE : file i8 : chr => IOError ) =: public fputc
-    file chr addrOf 0 1 fwrite #swap #drop return
+    file chr @ 0 1 fwrite #swap #drop return
   end
   proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: public fputs
     0 i64 =: mut off

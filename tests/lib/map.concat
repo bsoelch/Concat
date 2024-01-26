@@ -23,7 +23,7 @@ end
 
 entryPoint:
   i32Hash @ i32Eq @ 16 i64 map.create =:: mut myMap
-  myMap addrOf
+  myMap @
     #dup 0   1 map.put printOpt
     #dup -5  2 map.put printOpt
     #dup 2   3 map.put printOpt

@@ -22,7 +22,7 @@ entryPoint:
     #dup #dup * a @ #over:2 [] =
     1 +
   end #drop
-  a addrOf 8 array.create
+  a @ 8 array.create
     #dup 3 head printArray
     -141516511 ..debug.print
     #dup 5 tail printArray

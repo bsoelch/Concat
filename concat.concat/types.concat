@@ -436,7 +436,7 @@ proc( Type : target bool : isPtr ArraySize arrayView : sizes bool : fixedSize bo
       end
     base =
   end
-  context [] .arrayTypes addrOf =:: arrays
+  context [] .arrayTypes @ =:: arrays
   0 while #dup arrays [] .length < do
     arrays [] #over list.get
       #dup .mutable   mutable   != if #drop
@@ -686,7 +686,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional
   isVoid if
     flags COMP_FLAG_VOID_ONLY | flags =
   end
-  context [] .compositeTypes addrOf =:: composites
+  context [] .compositeTypes @ =:: composites
   0 while #dup composites [] .length < do
     composites [] #over list.get
       #dup .eltCount elts .length != if #drop
@@ -844,7 +844,7 @@ proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mu
   in Type .undefined == out Type .undefined == | if
     Type .undefined true return
   end
-  context [] .procTypes addrOf =:: procs
+  context [] .procTypes @ =:: procs
   0 while #dup procs [] .length < do
     procs [] #over list.get .in in typeEquals
     procs [] #over:2 list.get .out out typeEquals &
