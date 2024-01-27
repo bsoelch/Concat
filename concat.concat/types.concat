@@ -4,6 +4,8 @@
 #include stringBuilder
 
 #include "labels.concat"
+#include "constants.concat"
+
 
 #namespace types
 enum( BOOL I8 I16 I32 I64 FLOAT32 FLOAT64 TYPE ) =:: PrimitiveType
@@ -11,6 +13,7 @@ i32 =:: public ArrayId
 i32 =:: public CompositeId
 i32 =:: public ProcId
 i32 =:: public NamedTypeId
+i32 =:: public GeneratedId
 #end
 
 enum(
@@ -31,7 +34,9 @@ enum(
                   i32 : autoType
                   i32 : genericType
                   i32 : templateType
-) =:: public Type
+    types.GeneratedId : generatedType
+) Type =
+
 #namespace types
 proc( Type : a Type : b => bool ) =: public typeEquals
   a b != if
@@ -70,6 +75,8 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .genericType b .genericType == return
     templateType case
       a .templateType b .templateType == return
+    generatedType case
+      a .generatedType b .generatedType == return
   end
 end
 1011001 =:: bigPrime
@@ -98,29 +105,31 @@ proc( Type : a => i32 ) =: public typeHash
     arrayType case
       bigPrime 3 * a .arrayType + return
     tuple case
-      bigPrime 4 * a .tuple + return
+      bigPrime 6 * a .tuple + return
     struct case
-      bigPrime 5 * a .struct + return
+      bigPrime 7 * a .struct + return
     union case
-      bigPrime 6 * a .union + return
+      bigPrime 11 * a .union + return
     labeledProcIn case
-      bigPrime 7 * a .labeledProcIn + return
+      bigPrime 13 * a .labeledProcIn + return
     procIn case
-      bigPrime 8 * a .procIn + return
+      bigPrime 17 * a .procIn + return
     procOut case
-      bigPrime 9 * a .procOut + return
+      bigPrime 19 * a .procOut + return
     enum case
-      bigPrime 10 * a .enum + return
+      bigPrime 23 * a .enum + return
     procedure case
-      bigPrime 12 * a .procedure + return
+      bigPrime 29 * a .procedure + return
     namedType case
-      bigPrime 14 * a .namedType + return
+      bigPrime 31 * a .namedType + return
     autoType case
-      bigPrime 15 * a .autoType + return
+      bigPrime 37 * a .autoType + return
     genericType case
-      bigPrime 16 * a .genericType + return
+      bigPrime 41 * a .genericType + return
     templateType case
-      bigPrime 17 * a .templateType + return
+      bigPrime 43 * a .templateType + return
+    generatedType case
+      bigPrime 47 * a .generatedType + return
   end
 end
 
@@ -152,7 +161,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? s
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure
-       namedType autoType genericType templateType case false return
+       namedType autoType genericType templateType generatedType case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
 end
@@ -164,7 +173,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure
-       namedType autoType case false return
+       namedType autoType generatedType case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
 end
@@ -216,7 +225,7 @@ proc( Type TypeContext ptr => bool ) =: public isSmallType
   switch
     primitiveType enum pointer empty case true return ## XXX enum is only small if it has no values
     arrayType tuple struct union labeledProcIn procIn procOut procedure ## TODO? count tuples with size < 128 as small types
-    undefined namedType autoType genericType templateType case false return
+    undefined namedType autoType genericType templateType generatedType case false return
   end
 end
 proc( Type TypeContext ptr => i32 ) =: public numberPrecision
@@ -490,7 +499,8 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
   switch
     tuple struct union labeledProcIn procIn procOut enum case
       true return
-    undefined empty primitiveType pointer arrayType procedure namedType autoType genericType templateType case
+    undefined empty primitiveType pointer arrayType procedure namedType autoType
+        genericType templateType generatedType case
       false return
   end
 end
@@ -534,7 +544,8 @@ proc( Type : composite TypeContext ptr : context => CompositeType ptr optional )
       enum case
         .enum
         break
-      undefined empty primitiveType pointer arrayType procedure namedType autoType genericType templateType case
+      undefined empty primitiveType pointer arrayType procedure namedType autoType
+          genericType templateType generatedType case
         #drop CompositeType ptr optional.empty return
     end
   context [] .compositeTypes #swap list.at #dup optional.isEmpty if #drop
@@ -553,7 +564,8 @@ proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: pub
     #dup switch
       struct union labeledProcIn enum case
         break
-      undefined empty primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
+      undefined empty primitiveType pointer arrayType procedure namedType autoType
+        genericType templateType generatedType tuple procIn procOut case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -571,7 +583,8 @@ proc( Type : composite string : name LabelContext ptr : labelContext TypeContext
     #dup switch
       struct union labeledProcIn enum case
         break
-      undefined empty primitiveType pointer arrayType procedure namedType autoType genericType templateType tuple procIn procOut case
+      undefined empty primitiveType pointer arrayType procedure namedType autoType
+        genericType templateType generatedType tuple procIn procOut case
         #drop -1 return
     end
   context compositeData
@@ -919,9 +932,19 @@ proc( Type => bool ) =: public isNamedType
 end
 proc( Type TypeContext ptr => Type ) =: public unwrapNamed
   =:: context
-  while #dup Type .namedType == do
-    context [] .namedTypes #swap .namedType list.at .data [] .data
-  end
+  while
+    #dup Type .namedType == if
+      context [] .namedTypes
+        #swap .namedType
+      list.at .data [] .data
+      continue
+    else #dup Type .generatedType == _if
+      context [] .generatedTypes
+        #swap .generatedType
+      list.at .data [] .generated
+      continue
+    end
+  false do end
   return
 end
 proc( Type TypeContext ptr => LabelId ) =: public namedTypeName
@@ -969,6 +992,91 @@ end
 #end
 #namespace types
 
+## generated types
+
+struct( LabelId : generator ConstantArray : arguments Type : mut generated ) =:: GeneratedType
+
+#+ finds the generated type for the given type generator and arguments
+   returns the type and a boolean that is true if a new GeneratedType was created +#
+proc(
+  LabelId : generator
+  ConstValue arrayView : arguments
+  TypeContext ptr mut : typeContext
+  LabelContext ptr : labelContext
+  ConstantContext ptr mut : constContext
+=> Type bool ) =: public findGeneratedType
+  typeContext [] .generatedTypes =:: genTypes
+  0 while #dup genTypes .length < do
+    genTypes #over list.at .data =:: candidate
+    candidate [] .generator generator != if
+      1 + continue
+    end
+    candidate [] .arguments constContext constArrayAsArray =:: candArgs
+    candArgs .length arguments .length != if
+      1 + continue
+    end
+    true =:: mut match
+    0 while #dup arguments .length < do
+      ## constantEquals
+        candArgs #over array.get
+        arguments #over:2 array.get
+        labelContext
+      constantEquals ! if
+        false match =
+        break
+      end
+      1 +
+    end #drop
+    match if
+      #+index+# Type .generatedType new false return
+    end
+    1 +
+  end #drop
+  ## TODO check if combination of base and arguments already exists
+  typeContext [] .generatedTypes
+    #dup .length GeneratedId cast =:: newId
+    ## GeneratedType
+      generator
+      arguments constContext constArray
+      Type .undefined
+    GeneratedType new list.append
+  typeContext [] .generatedTypes =
+  newId Type .generatedType new true return
+end
+
+proc(
+  LabelId : base
+  ConstValue arrayView : arguments
+  Type : value
+  TypeContext ptr mut : typeContext
+  LabelContext ptr : labelContext
+  ConstantContext ptr mut : constContext
+=> bool ) =: public initializeGeneratedType
+  ## findGeneratedType
+    base
+    arguments
+    typeContext
+    labelContext
+    constContext
+  findGeneratedType #drop .generatedType =:: id
+  typeContext [] .generatedTypes id list.at .data =:: prevType
+  prevType [] .generated Type .undefined != if
+    true return
+  end
+  value prevType [] .generated =
+  false return
+end
+
+proc( Type : generator TypeContext ptr mut : context => Type ) =: public getGeneratedType
+  generator context unwrapNamed =:: mut t
+  t Type .generatedType != if
+    generator return
+  end
+  context [] .generatedTypes t .generatedType list.at .data =:: genData
+  genData [] .generated return
+end
+
+
 ## generic,template & auto-types
 proc( i32 : id => Type ) =: public newAutoType
   id Type .autoType new return
@@ -988,6 +1096,7 @@ proc( Type => i32 ) =: public getTypeId
     autoType case .autoType return
     genericType case .genericType return
     templateType case .templateType return
+    generatedType case .generatedType return
     pointer case .pointer return
     arrayType case .arrayType return
     tuple case .tuple return
@@ -1040,6 +1149,8 @@ proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has st
       isTemplate isStatic return
     tuple struct union labeledProcIn procIn procOut enum case
       t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
+    generatedType case
+      false false return ## TODO check if type contains generic
     procedure case
       context [] .procTypes t .procedure list.get
         #dup .in context containsGeneric =:: isStatic =:: isTemplate
@@ -1176,6 +1287,7 @@ struct(
   Type                list : mut compositeData
   types.ProcType      list : mut procTypes
   types.NamedType     list : mut namedTypes
+  types.GeneratedType list : mut generatedTypes
   LabelId             list : mut elementLabels
 ) TypeContext =
 #namespace types
@@ -1186,6 +1298,7 @@ proc( => TypeContext ) =: public newTypeContext
   128 Type          list.create ## compositeData
   128 ProcType      list.create ## procTypes
   128 NamedType     list.create ## namedTypes
+  128 GeneratedType list.create ## generatedTypes
   128 LabelId       list.create ## elementLabels
   TypeContext new return
 end
@@ -1377,6 +1490,15 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       #swap "template["     appendS
         #swap .templateType appendI
                     "]"     appendS
+      return
+    generatedType case
+      .generatedType
+      context [] .generatedTypes #swap list.at .data =:: typeData
+      "? " appendS ## TODO append arguments
+      typeData [] .generator labelContext id.labelName .data sb.appendStr
+      " ("     appendS
+        typeData [] .generated labelContext context allowRecurse appendTypeRecursive
+      ")"     appendS
       return
   end
 end

@@ -68,6 +68,12 @@ proc( Type : declared i32 : ptrLevel Program ptr mut : prog Type i32 hashMap ptr
         declared list.append
       types [] =
       break
+    generatedType case
+      declared typeContext types.getGeneratedType ptrLevel prog visited types declaredType
+      types []
+        declared list.append
+      types [] =
+      break
   end
   -1 visited declared map.at .data [] = ## finished declaration
 end

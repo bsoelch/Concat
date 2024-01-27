@@ -775,6 +775,8 @@
             ## error message if argument is not typeId
         else #drop end
         src return
+     generatedType case
+        src return ## TODO
     end
   end
   proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => ConstValue ) =: public replaceGenerics
@@ -922,6 +924,8 @@
           expected typeContext unwrapNamed
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
+     generatedType case
+        break ## TODO
       tuple struct union labeledProcIn procIn procOut enum genericType templateType case
         io.stdErr "unreachable\n" io.fputs #drop
         ..unreachable

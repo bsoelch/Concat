@@ -737,7 +737,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         false typeContext types.newProcArgs
         =:: in
         LabelType .TUPLE ")" string.wrap #dup  fileState state readCompositeType
-        prevArgs state resetStaticArgs ## TODO allow using static arguments in procedure body
+        prevArgs state resetStaticArgs
         if
           "error while parsing procedure return values" sb.wrap fileState [] .wordStart state appendError2
         end #drop ## labelType
@@ -827,15 +827,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #drop:2 false return ## not a constant
     end
     #dup [] .constValue ConstValue .procedure == if
+      #dup [] .valueType typeContext types.getProcIn #drop typeContext types.compositeElts =:: inTypes
       #dup [] .valueType typeContext types.getProcOut #drop typeContext types.compositeElts =:: outTypes
       ## XXX less restrictive condition for constant evaluation
       outTypes .length 1 == if outTypes 0 array.get types.primitive.TYPE types.typeEquals _if
-        ## TODO evaluate function
-        ## 1. get arguments
-        ## 2. create type container for given argument combination (with empty initialization)
-        ## 3. replace arguments in body
-        ## 4. evaluate body
-        ## 5. store resulting type in created type container
+        inTypes .length fileState state popConstantArray
+          #drop ## common type
+          =:: args
+        =:: argTypes
+        ## TODO check if argument types are correct
+        ## findGeneratedType
+          #dup [] .labelId
+          args
+          typeContext
+          labelContext
+          idContext [] .constContext @
+        types.findGeneratedType if ## first occurrence of type
+          ## TODO evaluate function
+        end fileState [] .wordStart newTypeConst state pushConst
+        #drop:2 true return
       end
       #drop:2 false return ## procedure constant
     end

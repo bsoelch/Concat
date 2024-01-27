@@ -4,7 +4,7 @@
 #include "labels.concat"
 #include "types.concat"
 
-struct( i64 : offset i64 : length ) =:: public ConstantArray
+struct( i64 : offset i64 : length ) ConstantArray =
 enum(
   none
   bool : boolean
@@ -19,9 +19,9 @@ enum(
   i32 : genericArg
   i32 : templateArg
   i64 : procedure
-) =:: public ConstValue
+) ConstValue =
 
-struct( ConstValue list : mut arrayValues ) =:: public ConstantContext
+struct( ConstValue list : mut arrayValues ) ConstantContext =
 
 proc( => ConstantContext ) =: public newConstContext
  128 ConstValue list.create

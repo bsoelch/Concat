@@ -218,6 +218,9 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
     namedType case
       t typeContext types.namedTypeName  t typeContext types.getImplId  target prog printGlobalName
       break
+    generatedType case
+      t typeContext types.getGeneratedType target prog printTypeName
+      break
   end
 end
 proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printUnsignedTypeName
@@ -339,7 +342,8 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   0 while #dup types .length < do
     types #over list.get =:: t
     t switch
-      undefined empty primitiveType autoType templateType genericType procedure labeledProcIn procIn case ## no global type necessary
+      undefined empty primitiveType autoType templateType genericType generatedType
+        procedure labeledProcIn procIn case ## no global type necessary
         break
       pointer case
         t typeContext types.isCallable if ## procedure pointer
@@ -393,7 +397,8 @@ proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
   0 while #dup types .length < do
     types #over list.get =:: t
     t switch
-      undefined empty primitiveType autoType templateType genericType procedure labeledProcIn procIn pointer namedType case ## no initialization necessary
+      undefined empty primitiveType autoType templateType genericType generatedType procedure
+          labeledProcIn procIn pointer namedType case ## no initialization necessary
         break
       arrayType case
         t typeContext types.isFixedSize ! if
