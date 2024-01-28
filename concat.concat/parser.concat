@@ -727,7 +727,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       t fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else #dup "(" string.wrap string.eq _if #drop
+    else #dup "(" string.wrap string.eq _EXPERIMENTAL_ ! & _if #drop
       state offsetStaticArgs =:: prevArgs
       LabelType .NONE ")" string.wrap "=>" string.wrap fileState state readCompositeType
       if
@@ -753,7 +753,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
-    else #dup "tuple(" string.wrap string.eq _if #drop
+    else #dup "tuple(" string.wrap string.eq _EXPERIMENTAL_ ! & _if #drop
       LabelType .TUPLE ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing tuple type" sb.wrap fileState [] .wordStart state appendError2
@@ -763,7 +763,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
-    else #dup "struct(" string.wrap string.eq _if #drop
+    else #dup "struct(" string.wrap string.eq _EXPERIMENTAL_ ! & _if #drop
       LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing structure type" sb.wrap fileState [] .wordStart state appendError2
@@ -773,7 +773,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
-    else #dup "union(" string.wrap string.eq _if #drop
+    else #dup "union(" string.wrap string.eq _EXPERIMENTAL_ ! & _if #drop
       LabelType .STRUCT ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing union type" sb.wrap fileState [] .wordStart state appendError2
@@ -783,7 +783,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
-    else #dup "enum(" string.wrap string.eq _if #drop
+    else #dup "enum(" string.wrap string.eq _EXPERIMENTAL_ ! & _if #drop
       LabelType .ENUM ")" string.wrap #dup fileState state readCompositeType
       if
         "error while parsing enum type" sb.wrap fileState [] .wordStart state appendError2
@@ -793,7 +793,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
-    else #dup "proc(" string.wrap string.eq _if #drop
+    else #dup "proc(" string.wrap string.eq _EXPERIMENTAL_ ! & _if #drop
       state offsetStaticArgs =:: prevArgs
       LabelType .PROC_IN "=>" string.wrap ")" string.wrap fileState state readCompositeType
       if
@@ -2256,6 +2256,87 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "mut" string.wrap string.eq _if #drop
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError2
       return
+    else #dup "(" string.wrap string.eq _if #drop
+      BlockType .TYPE_COMPOSITE state [] .idContext @ id.openScope
+      BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup "tuple(" string.wrap string.eq _if #drop
+      BlockType .TYPE_TUPLE state [] .idContext @ id.openScope
+      BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup "struct(" string.wrap string.eq _if #drop
+      BlockType .TYPE_STRUCT state [] .idContext @ id.openScope
+      BlockType .TYPE_STRUCT fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup "union(" string.wrap string.eq _if #drop
+      BlockType .TYPE_UNION state [] .idContext @ id.openScope
+      BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup "enum(" string.wrap string.eq _if #drop
+      BlockType .TYPE_ENUM state [] .idContext @ id.openScope
+      BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup "proc(" string.wrap string.eq _if #drop
+      BlockType .TYPE_PROC_IN state [] .idContext @ id.openScope
+      BlockType .TYPE_PROC_IN fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup "=>" string.wrap string.eq _if =:: opName
+      state [] .idContext @ id.currentScopeType =:: blockType
+      blockType BlockType .TYPE_COMPOSITE != blockType BlockType .TYPE_PROC_IN != & if
+        "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
+      end
+      BlockType .TYPE_PROC_OUT state [] .idContext @ id.openScope
+      BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
+      return
+    else #dup ")" string.wrap string.eq _if =:: opName
+      ## TODO compute type if on global level
+      state [] .idContext @ id.closeScope if
+        "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
+        #drop:3
+        return
+      end =:: blockType
+      blockType fileState [] .wordStart opEndBlock state appendOp
+      blockType switch
+        TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
+          break
+        TYPE_PROC_OUT case
+          state [] .idContext @ id.closeScope if ## close procedure scope
+            "expected " sb.wrap
+              BlockType .TYPE_PROC_IN sb.appendBlockType
+              " or " sb.appendS
+              BlockType .TYPE_COMPOSITE sb.appendBlockType
+              " block" sb.appendS
+            fileState [] .wordStart state appendError2
+            #drop:5
+            return
+          else =:: container
+            container BlockType .TYPE_COMPOSITE != container BlockType .TYPE_PROC_IN != & _if
+            "expected " sb.wrap
+              BlockType .TYPE_PROC_IN sb.appendBlockType
+              " or " sb.appendS
+              BlockType .TYPE_COMPOSITE sb.appendBlockType
+              " block got " sb.appendS
+              container sb.appendBlockType
+            fileState [] .wordStart state appendError2
+            #drop:4
+            return
+          else
+            container fileState [] .wordStart opEndBlock state appendOp
+          end #drop:2
+          break
+        TYPE_PROC_IN case
+         "unexpected " sb.wrap
+            opName sb.appendStr
+            " in procedure block, expected => followed by return types" sb.appendS
+          fileState [] .wordStart state appendError2
+          break
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
+        IF IFIF ELSE WHILE DO BREAK CONTINUE
+        SWITCH CASE DEFAULT INITIALIZER case
+          "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
+          #drop:2 return
+      end
+      #drop:2 return
     end
   #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp

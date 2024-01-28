@@ -69,26 +69,26 @@ struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: public Blo
       INITIALIZER case
         "{initializer}" sb.appendS
         return
+      TYPE_COMPOSITE case
+        "( )" sb.appendS
+        return
       TYPE_TUPLE case
-        "tuple()" sb.appendS
+        "tuple( )" sb.appendS
         return
       TYPE_STRUCT case
-        "struct()" sb.appendS
+        "struct( )" sb.appendS
         return
       TYPE_ENUM case
-        "enum()" sb.appendS
+        "enum( )" sb.appendS
         return
       TYPE_UNION case
-        "union()" sb.appendS
+        "union( )" sb.appendS
         return
       TYPE_PROC_IN case
-        "proc()" sb.appendS
+        "proc( )" sb.appendS
         return
       TYPE_PROC_OUT case
-        "proc(=>)" sb.appendS
-        return
-      TYPE_COMPOSITE case
-        "()" sb.appendS
+        "proc( => )" sb.appendS
         return
     end
   end
