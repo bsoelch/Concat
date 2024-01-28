@@ -2346,7 +2346,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             op list.appendP
           state [] .compiledOps =
           return
-        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER case
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
+        case
           "blocks of type " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
           " are not supported" sb.appendS
@@ -2489,7 +2491,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           true state [] .reachable =
           break
-        BREAK CONTINUE UNKNOWN INITIALIZER case
+        BREAK CONTINUE UNKNOWN INITIALIZER
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           "closing blocks of type " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType
           " is not supported" sb.appendS

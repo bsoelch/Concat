@@ -1172,7 +1172,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     block case
       op [] .val .block .blockType switch
-        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER case
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
         IF IFIF case
@@ -1245,7 +1246,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     blockEnd case
       op [] .val .blockEnd .blockType switch
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER case
+        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
         PROCEDURE EXPERIMENTAL_PROCEDURE ELSE WHILE CASE DEFAULT case
