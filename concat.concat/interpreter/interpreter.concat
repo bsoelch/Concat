@@ -1,0 +1,89 @@
+#include map
+
+#include "interpreter/operators.concat"
+#include "identifiers.concat"
+#include "program.concat"
+
+proc(
+  ConstValue list : initStack
+  Operation arrayView : ops
+  string ConstValue hashMap ptr mut : variables
+  ## TODO program context for global variables
+  IdentifierContext ptr mut : context
+  CompilerError list ptr mut : errors
+=>
+  ConstValue list
+  bool
+) =: public evaluateOperations
+  context [] .constContext @ =:: constContext
+  context [] .typeContext @ =:: typeContext
+  context [] .labelContext @ =:: labelContext
+  initStack =:: mut stack
+  0 =:: mut offset
+  while offset ops .length < do
+    ops offset array.at .data =:: op
+      ## TODO replace generics
+      op [] .val switch
+        NOP case break
+        Constant case
+          stack
+            op [] .val .Constant list.append
+          stack =
+          break
+        Return case
+          stack false return
+        blockEnd case
+           op [] .val .blockEnd .blockType BlockType .PROCEDURE == if
+             stack false return ## end of procedure
+           end
+           "unsupported operation in constant evaluation: " sb.wrap
+             op [] constContext labelContext typeContext sb.appendOp
+           op [] .pos errors appendError 
+           stack true return ## unsupported block
+           break
+        entryPoint block
+        getId setId @Id declareId predeclareId
+        getLabel setLabel @Label
+        getElement setElement @Element
+        getArrayElement setArrayElement @ArrayElement
+        getEnumElement setEnumElement @EnumElement
+        Print New newEnum call callPtr
+        argc getArg getArgLen
+        length size Cast Cast!
+        unaryOperator binaryOperator
+        enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
+        stackMod getName setName @Name
+        stackAlloc compilerInfo
+        unreachable case
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+          op [] .pos errors appendError 
+          stack true return
+      end
+    offset 1 + offset =
+  end
+  stack false return
+end
+
+proc(
+  Type : procType
+  ConstValue arrayView : arguments
+  Operation arrayView : code
+  ## TODO program context for global variables
+  IdentifierContext ptr mut : context
+  CompilerError list ptr mut : errors
+=>
+  ConstValue list
+  bool
+) =: public interpretFunction
+  arguments .length ConstValue list.create =:: mut stack
+  string.hash @ string.eq @ 32 ConstValue map.create =:: mut variables
+  ## TODO initialize stack
+  ## evaluateOperations
+    stack
+    code 1 array.tail ## first operation declares procedure
+    variables @
+    context
+    errors
+  evaluateOperations return
+end

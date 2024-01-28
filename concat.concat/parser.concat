@@ -12,6 +12,7 @@
 #include "identifiers.concat"
 
 #include "interpreter/operators.concat"
+#include "interpreter/interpreter.concat"
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
@@ -843,7 +844,29 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           labelContext
           idContext [] .constContext @
         types.findGeneratedType if ## first occurrence of type
-          ## TODO evaluate function
+          #over [] .constValue .procedure =:: procId
+          state [] .procedures procId list.get =:: procData
+          state [] .progFiles procData .fileId list.at .data [] .localOps
+            procData .codeStart
+            procData .codeLength
+          list.slice =:: ops
+          #over [] .valueType args ops idContext state [] .errors @ interpretFunction if #drop
+            "could not evaluate function" sb.wrap
+              #over:2 [] .labelId labelContext id.labelName .data sb.appendStr
+            fileState [] .wordStart state appendError2
+            #drop:3 false return ## error -> no constant
+          end =:: res
+          ## initializeGeneratedType
+            #over [] .labelId
+            args
+            res 0 list.at .data [] .typeId
+            typeContext
+            labelContext
+            idContext [] .constContext @
+          types.initializeGeneratedType if
+            "could not evaluate function" sb.wrap fileState [] .wordStart state appendError2
+          end
+          res list.free #drop
         end fileState [] .wordStart newTypeConst state pushConst
         #drop:2 true return
       end
