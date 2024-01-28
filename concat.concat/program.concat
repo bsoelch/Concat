@@ -58,7 +58,6 @@ enum(
             LabelId : getName
             LabelId : mut setName
             LabelId : mut @Name
-                      stackAlloc
                       unreachable
        CompilerInfo : compilerInfo
 ) =:: public OpValue
@@ -192,9 +191,6 @@ end
 proc( LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
   OpValue .getName new Type .undefined pos Operation new return
-end
-proc( Type : mType FilePosition : pos => Operation ) =: public opStackAlloc
-  OpValue .stackAlloc mType pos Operation new return
 end
 proc( FilePosition : pos => Operation ) =: public opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
@@ -565,11 +561,6 @@ end
         @Name case
           "address of: " sb.appendS
           #over .val .@Name labelContext id.labelName .data sb.appendStr
-          break
-        stackAlloc case
-          "stackAlloc ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " )" sb.appendS
           break
         unreachable case
           "unreachable " sb.appendS

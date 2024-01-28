@@ -2975,27 +2975,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         '"' sb.appendC
       op [] .pos state appendError2
       return
-    stackAlloc case
-      op state checkReachable
-      op state checkLocal
-      state [] .typeStack list.peek #dup optional.isEmpty if #drop
-        "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
-          " need 1 got " sb.appendS
-          state [] .typeStack .length sb.appendI
-        op [] .pos state appendError2
-        return
-      end .data =:: typeInfo
-      typeInfo [] .valType typeContext types.isInt ! if
-        0 sb.create
-          typeInfo [] .valType labelContext typeContext sb.appendType
-          " is not an integer" sb.appendS
-        op [] .pos state appendError2
-        return
-      end
-      op 1 state insertStackOp
-      op [] .dataType true types.ArraySize array.empty false true typeContext types.newArrayType #drop state [] .typeStack list.peek .data [] .valType =
-      return
     unreachable case
       state [] .opStack list.clear state [] .opStack =
       state [] .typeStack list.clear state [] .typeStack =

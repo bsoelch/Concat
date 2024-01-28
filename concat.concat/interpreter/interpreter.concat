@@ -53,8 +53,7 @@ proc(
         unaryOperator binaryOperator
         enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
         stackMod getName setName @Name
-        stackAlloc compilerInfo
-        unreachable case
+        compilerInfo unreachable case
           "unsupported operation in constant evaluation: " sb.wrap
             op [] constContext labelContext typeContext sb.appendOp
           op [] .pos errors appendError 

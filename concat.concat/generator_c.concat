@@ -1421,15 +1421,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
-    stackAlloc case
-      target "((" io.fputs #drop
-      op [] .dataType target prog printTypeName
-      target "*)alloca(sizeof(" io.fputs #drop
-      op [] .dataType target prog printTypeName
-      target ")*" io.fputs #drop
-      operations index isGlobal target prog compileOp
-      target "))\n" io.fputs #drop
-      return
     unreachable case
       "fprintf(stderr,\"reached unreachable statement at " sb.wrap
         op [] .pos sb.appendPos

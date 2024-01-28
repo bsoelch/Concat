@@ -2202,29 +2202,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "..unreachable" string.wrap string.eq _if #drop
       fileState [] .wordStart opUnreachable state appendOp
       return
-    else #dup "..alloca" string.wrap string.eq _if =:: opName
-      state hasConst ! if
-        "missing parameter for \"" sb.wrap
-          opName sb.appendStr
-        "\" expected type" sb.appendS fileState [] .wordStart state appendError2
-        return
-      end
-      state popConst #dup .val ConstValue .typeId != if
-        "wrong constant parameter for \"" sb.wrap
-          opName sb.appendStr
-          "\": " sb.appendS
-          #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
-        " expected type" sb.appendS fileState [] .wordStart state appendError2
-        return
-      end
-      #dup .val .typeId typeContext types.isProcedure if
-        "cannot allocate arrays of type " sb.wrap
-          #swap .val .typeId state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendType
-        fileState [] .wordStart state appendError2
-        return
-      end
-      .val .typeId fileState [] .wordStart opStackAlloc state appendOp
-      return
     else #dup "{" string.wrap string.eq _if #drop
       BlockType .INITIALIZER  state [] .idContext @ id.openScope
       state [] .openInitializers

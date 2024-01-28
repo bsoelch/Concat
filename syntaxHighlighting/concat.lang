@@ -119,7 +119,6 @@
           \.\.getArg          |
           \.\.length          |
           \.\.size            |
-          \.\.alloca          |
           \.\.unreachable     |
           \.\.debug\.print          
         )(\Z|(?=[[:space:]])) # end of file or white-space
