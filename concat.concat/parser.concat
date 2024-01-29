@@ -17,7 +17,7 @@
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
 struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: ProcedureInfo
-struct( i64 : codeOffset i64 : constOffset ) =:: InitializerOffset
+struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
 struct(
   string : mut basePath
   string : mut libPath
@@ -32,7 +32,7 @@ struct(
   ProcedureInfo list : mut procedures
   ProcedureInfo optional : mut currentProc
   Operation list : mut templateOps
-  InitializerOffset list : mut openInitializers
+  CompositeConstantOffset list : mut constantBlocks
   LabelId list : mut labelBuffer
   CompilerError list : mut errors
   i32 : mut autoTypeCount
@@ -1146,6 +1146,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
       "=:" string.wrap string.eq =:: isInit
+      state [] .constantBlocks .length 0 > if ## ":" in constantBlock -> declare field operation
+        fileState state nextWord fileState state readLabel fileState [] .wordStart
+          isInit if
+            opInitializeField
+          else
+            opDeclareField
+          end
+        state appendOp
+        return
+      end
+      ## TODO only consume type if on global level
+      ##  type assignment within procedures should be done in type-check phase
       fileState state popTypeConstant #drop =:: mut valType
       false =:: mut forceConst
       valType typeContext types.isProcedure if
@@ -2204,24 +2216,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "{" string.wrap string.eq _if #drop
       BlockType .INITIALIZER  state [] .idContext @ id.openScope
-      state [] .openInitializers
-        ## InitializerOffset
+      state [] .constantBlocks
+        ## CompositeConstantOffset
           state opCount
           state [] .constants .length
-        InitializerOffset new list.append
-      state [] .openInitializers =
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       ##  remember start position, constant offset
       return
     else #dup "}" string.wrap string.eq _if =:: opName
       state [] .idContext @ id.closeScope if #drop true else BlockType .INITIALIZER != end if
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
       end #drop:2 ## XXX remember declared variables
-      state [] .openInitializers .length 0 == if
+      state [] .constantBlocks .length 0 == if
         return
       end
-      state [] .openInitializers
+      state [] .constantBlocks
         list.pop =:: offset
-      state [] .openInitializers =
+      state [] .constantBlocks =
       offset .codeOffset state opCount == if
         ## push array constant (using const-buffer)
         state [] .constants .length offset .constOffset - fileState state popConstantArray =:: arrayType =:: values =:: types
@@ -2259,26 +2271,62 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "(" string.wrap string.eq _if #drop
       BlockType .TYPE_COMPOSITE state [] .idContext @ id.openScope
       BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup "tuple(" string.wrap string.eq _if #drop
       BlockType .TYPE_TUPLE state [] .idContext @ id.openScope
       BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup "struct(" string.wrap string.eq _if #drop
       BlockType .TYPE_STRUCT state [] .idContext @ id.openScope
       BlockType .TYPE_STRUCT fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup "union(" string.wrap string.eq _if #drop
       BlockType .TYPE_UNION state [] .idContext @ id.openScope
       BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup "enum(" string.wrap string.eq _if #drop
       BlockType .TYPE_ENUM state [] .idContext @ id.openScope
       BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup "proc(" string.wrap string.eq _if #drop
       BlockType .TYPE_PROC_IN state [] .idContext @ id.openScope
       BlockType .TYPE_PROC_IN fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup "=>" string.wrap string.eq _if =:: opName
       state [] .idContext @ id.currentScopeType =:: blockType
@@ -2287,17 +2335,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BlockType .TYPE_PROC_OUT state [] .idContext @ id.openScope
       BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
       return
     else #dup ")" string.wrap string.eq _if =:: opName
-      ## TODO compute type if on global level
       state [] .idContext @ id.closeScope if
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
         #drop:3
         return
       end =:: blockType
+      state [] .constantBlocks
+        list.pop =:: offset
+      state [] .constantBlocks =
       blockType fileState [] .wordStart opEndBlock state appendOp
       blockType switch
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
+          ## TODO compute type if on global level
           break
         TYPE_PROC_OUT case
           state [] .idContext @ id.closeScope if ## close procedure scope
@@ -2322,6 +2379,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             return
           else
             container fileState [] .wordStart opEndBlock state appendOp
+            state [] .constantBlocks
+              list.pop =:: containerOffset
+            state [] .constantBlocks =
           end #drop:2
           break
         TYPE_PROC_IN case
@@ -2384,19 +2444,19 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
     basePath
     libPath
     id.newIdentifierContext
-    128 Constant          list.create
+    128 Constant                list.create
     0
-    128 Type              list.create
-    32  StaticArgument    list.create
+    128 Type                    list.create
+    32  StaticArgument          list.create
     0
-    16  ProgramFile       list.create
+    16  ProgramFile             list.create
     FILE_ID_NONE
-    64  ProcedureInfo     list.create
-    ProcedureInfo         optional.empty
-    128 Operation         list.create
-    128 InitializerOffset list.create
-    128 LabelId           list.create
-    32  CompilerError     list.create
+    64  ProcedureInfo           list.create
+    ProcedureInfo               optional.empty
+    128 Operation               list.create
+    128 CompositeConstantOffset list.create
+    128 LabelId                 list.create
+    32  CompilerError           list.create
     0
     false
   ParserState new =:: mut state

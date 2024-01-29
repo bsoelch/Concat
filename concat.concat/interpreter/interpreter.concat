@@ -43,7 +43,7 @@ proc(
            break
         entryPoint block
         getId setId @Id declareId predeclareId
-        getLabel setLabel @Label
+        getLabel setLabel @Label declareField initializeField
         getElement setElement @Element
         getArrayElement setArrayElement @ArrayElement
         getEnumElement setEnumElement @EnumElement
