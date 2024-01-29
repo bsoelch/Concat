@@ -16,25 +16,22 @@
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
-struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: ProcedureInfo
+
 struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
 struct(
   string : mut basePath
   string : mut libPath
-  IdentifierContext : mut idContext
+  ProgramContext : mut progContext
   Constant list : mut constants
   i64 : mut constOffset
   Type list : mut typeBuffer
   StaticArgument list : mut staticArgs
   i64 : mut staticArgsOffset
-  ProgramFile list : mut progFiles
   FileId : mut currentFile
-  ProcedureInfo list : mut procedures
   ProcedureInfo optional : mut currentProc
   Operation list : mut templateOps
   CompositeConstantOffset list : mut constantBlocks
   LabelId list : mut labelBuffer
-  CompilerError list : mut errors
   i32 : mut autoTypeCount
   bool : mut hasEntryPoint
 ) =:: ParserState
@@ -84,7 +81,7 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
       value unsigned if sb.appendU else sb.appendI end
       unsigned if 'u' else 'i' end sb.appendC
       preferedSize sb.appendU
-    pos state [] .errors @ appendWarning
+    pos state appendWarning2
   end
   value ConstValue .int new IdentifierInfo optional.empty pos Constant new return
 end
@@ -116,21 +113,21 @@ proc( Constant : const => Operation ) =: constantToOp
 end
 
 proc( ParserState ptr mut : state => i64 ) =: opCount
-  state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+  state [] .progContext .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     state [] .templateOps .length return
   end
-  state [] .idContext @ id.isGlobal if
-    state [] .progFiles state [] .currentFile list.at .data [] .globalOps .length return
+  state [] .progContext .idContext @ id.isGlobal if
+    state [] .progContext .progFiles state [] .currentFile list.at .data [] .globalOps .length return
   end
-  state [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
+  state [] .progContext .progFiles state [] .currentFile list.at .data [] .localOps .length return
 end
 proc( Operation : op ParserState ptr mut : state => ) =: appendOp
-  state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+  state [] .progContext .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     state [] .templateOps @
-  else state [] .idContext @ id.isGlobal _if
-    state [] .progFiles state [] .currentFile list.at .data [] .globalOps @
+  else state [] .progContext .idContext @ id.isGlobal _if
+    state [] .progContext .progFiles state [] .currentFile list.at .data [] .globalOps @
   else
-    state [] .progFiles state [] .currentFile list.at .data [] .localOps @
+    state [] .progContext .progFiles state [] .currentFile list.at .data [] .localOps @
   end
   #dup []
     0 while #dup state [] .constants .length < do
@@ -144,15 +141,18 @@ proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   #swap [] =
 end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendError2
-  msg pos state [] .errors @ appendError
+  msg pos state [] .progContext .errors @ appendError
+end
+proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendWarning2
+  msg pos state [] .progContext .errors @ appendWarning
 end
 proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
-  state [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+  state [] .progContext .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     state [] .templateOps
-  else state [] .idContext @ id.isGlobal _if
-    state [] .progFiles state [] .currentFile list.get .globalOps
+  else state [] .progContext .idContext @ id.isGlobal _if
+    state [] .progContext .progFiles state [] .currentFile list.get .globalOps
   else
-    state [] .progFiles state [] .currentFile list.get .localOps
+    state [] .progContext .progFiles state [] .currentFile list.get .localOps
   end list.peek
 end
 
@@ -195,6 +195,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => Type bool ) =
     .val .typeId false return
 end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySize arrayView bool #+fixed-size+# ) =: popArraySize
+  state [] .progContext .idContext @ =:: idContext
   state [] .constants .length state [] .constOffset <= if
     types.ArraySize array.empty true return
   end
@@ -203,14 +204,14 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
     types.ArraySize array.empty false return
   end
   state [] .constants .length 1 - while #dup state [] .constOffset >= do
-    state [] .constants #over list.get .valueType state [] .idContext .typeContext @ types.isInt ! if
+    state [] .constants #over list.get .valueType idContext [] .typeContext @ types.isInt ! if
       break
     end
     1 -
   end
   1 + ##revert last decrement
   #dup
-  state [] .idContext .arraySizeBuffer
+  idContext [] .arraySizeBuffer
     list.clear
     #over state [] .constOffset - list.ensureCap
     #swap while #dup state [] .constants .length < do
@@ -224,15 +225,15 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
             .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
-              #swap state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
+              #swap idContext [] .constContext @ idContext [] .labelContext @ idContext [] .typeContext @ sb.appendConstant
             state [] .constants #over:4 list.get .pos state appendError2
           end
       #swap
       1 +
     end #drop
-  state [] .idContext .arraySizeBuffer =
+  idContext [] .arraySizeBuffer =
   state [] .constants .length =
-  state [] .idContext .arraySizeBuffer list.asArray true return
+  idContext [] .arraySizeBuffer list.asArray true return
 end
 proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => Type arrayView bool ) =: popTypeConstants
   state [] .constants .length state [] .constOffset n + < if
@@ -253,27 +254,29 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => Type 
   state [] .typeBuffer list.asArray false return
 end
 proc( Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state => ConstantArray bool ) =: popTemplateArguments
-  argTypes state [] .idContext .typeContext @ types.compositeEltCount =:: count
+  state [] .progContext .idContext @ =:: idContext
+  argTypes idContext [] .typeContext @ types.compositeEltCount =:: count
   count state [] .constants .length > if
     "not enough arguments for template" sb.wrap fileState [] .wordStart state appendError2
      0 0 ConstantArray new true return
   end
-  state [] .idContext .templateArgBuffer .length =:: offset
+  idContext [] .templateArgBuffer .length =:: offset
   state [] .constants .length count - state [] .constants .length =
   0 while #dup count < do
     state [] .constants .data #over state [] .constants .length + []
-      #dup .valueType argTypes #over:3 state [] .idContext .typeContext @ types.compositeGetElement types.typeEquals ! if
+      #dup .valueType argTypes #over:3 idContext [] .typeContext @ types.compositeGetElement types.typeEquals ! if
         "incompatible type for template argument" sb.wrap fileState [] .wordStart state appendError2 ## XXX print types in error message
         #drop:2 0 0 ConstantArray new true return
       end
-    state [] .idContext .templateArgBuffer
+    idContext [] .templateArgBuffer
       #swap .val list.append
-    state [] .idContext .templateArgBuffer =
+    idContext [] .templateArgBuffer =
     1 +
   end #drop
-  offset state [] .idContext .templateArgBuffer .length offset - ConstantArray new false return
+  offset idContext [] .templateArgBuffer .length offset - ConstantArray new false return
 end
 proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state => Type arrayView ConstValue arrayView Type ) =: popConstantArray
+  state [] .progContext .idContext @ =:: idContext
   state [] .constants .length state [] .constOffset len + < if ## XXX compare size with expected size
     "no enough constants for array" sb.wrap fileState [] .wordStart state appendError2
      Type array.empty ConstValue array.empty Type .undefined return
@@ -281,13 +284,13 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state => Typ
   Type .undefined =:: mut arrayType
   true =:: mut hasArrayType
   state [] .typeBuffer list.clear state [] .typeBuffer =
-  state [] .idContext .templateArgBuffer .length =:: offset
+  idContext [] .templateArgBuffer .length =:: offset
   state [] .constants .length len -
     #dup while #dup state [] .constants .length < do
       state [] .constants #over list.at .data =:: const
-      state [] .idContext .templateArgBuffer
+      idContext [] .templateArgBuffer
         const [] .val list.append
-      state [] .idContext .templateArgBuffer =
+      idContext [] .templateArgBuffer =
       state [] .typeBuffer const [] .valueType list.append state [] .typeBuffer =
       hasArrayType if
         arrayType Type .undefined types.typeEquals if
@@ -299,10 +302,10 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state => Typ
       1 +
     end #drop
   state [] .constants .length =
-  offset state [] .idContext .templateArgBuffer .length =
+  offset idContext [] .templateArgBuffer .length =
   ## return
     state [] .typeBuffer list.asArray
-    state [] .idContext .templateArgBuffer .data offset + len array.create
+    idContext [] .templateArgBuffer .data offset + len array.create
     hasArrayType if arrayType else Type .undefined end
   return
 end
@@ -321,7 +324,7 @@ end
 proc( string : name ParserState ptr mut : state => StaticArgument optional ) =: getStaticArg
   0 while #dup state [] .staticArgs .length < do
     state [] .staticArgs #over list.get
-      #dup .labelId state [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
+      #dup .labelId state [] .progContext .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
         #swap #drop optional.wrap return
       end
     #drop
@@ -401,7 +404,7 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
         .IDENTIFER
       end
     end
-  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel return
+  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext .idContext .labelContext @ id.newLabel return
 end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId ) =: readLabel
   code start fileState state 0 readLabelAddFlags
@@ -411,6 +414,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
   state offsetConstants =:: prevConstants
   state [] .constants .length =:: constOffset
   state [] .labelBuffer .length =:: labelOffset
+  state [] .progContext .idContext @ =:: idContext
   code
     while fileState nextToken
       fileState state tryParseConstant if #drop
@@ -428,7 +432,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
           state [] .labelBuffer .length labelOffset - - #dup 0 > if
             "too many types for label" sb.wrap fileState [] .wordStart state appendError2
             while #dup 0 > do
-              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
                 state [] .labelBuffer #swap list.append
               state [] .labelBuffer =
               1 -
@@ -462,7 +466,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
         state [] .labelBuffer .length labelOffset - - #dup 0 > if
           "too many types for label" sb.wrap fileState [] .wordStart state appendError2
           while #dup 0 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
               state [] .labelBuffer #swap list.append
             state [] .labelBuffer =
             1 -
@@ -489,7 +493,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
         end
         readLabelAddFlags
           state [] .labelBuffer #over list.append state [] .labelBuffer =
-          #dup state [] .idContext .labelContext @ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC |  & 0 != if
+          #dup idContext [] .labelContext @ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC |  & 0 != if
              labelType LabelType .PROC_IN != labelType LabelType .NONE != & if
                "unexpected label: `static` and `auto` can only be used in procedure arguments\n  values of type `type` are labeled `static` by default" sb.wrap fileState [] .wordStart state appendError2
              end
@@ -511,7 +515,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
         state [] .labelBuffer .length labelOffset - - #dup 0 > if
           "unexpected label in enum, expected ':' " sb.wrap fileState [] .wordStart state appendError2
           while #dup 1 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
               state [] .labelBuffer #swap list.append
             state [] .labelBuffer =
             1 -
@@ -527,7 +531,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
             1 +
           end
         end #drop
-      id.FLAG_NONE fileState [] .wordStart state [] .currentFile state [] .idContext .labelContext @ id.newLabel
+      id.FLAG_NONE fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
         state [] .labelBuffer #swap list.append
       state [] .labelBuffer =
       Type .empty fileState [] .wordStart newTypeConst  state pushConst
@@ -558,7 +562,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
                 ") exceeds maximum integer size (" sb.appendS
                 types.MAX_INT_WIDTH sb.appendI
                 ")" sb.appendS
-              fileState [] .wordStart state [] .errors @ appendWarning
+              fileState [] .wordStart state appendWarning2
               64 size =
             else
               i32 cast size =
@@ -573,7 +577,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
                 ") exceeds maximum integer size (" sb.appendS
                 types.MAX_INT_WIDTH sb.appendI
                 ")" sb.appendS
-              fileState [] .wordStart state [] .errors @ appendWarning
+              fileState [] .wordStart state appendWarning2
               64 size =
             else
               i32 cast size =
@@ -595,7 +599,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
     else #dup number.ParserError .SIGN == _if #drop:2
       "unsigned value is marked as negative: " sb.wrap
         str sb.appendStr
-      fileState [] .wordStart state [] .errors @ appendError
+      fileState [] .wordStart state appendError2
       true return
     else #dup number.ParserError .OVERFLOW == _if #drop:2
       "integer value outside allowed range: " sb.wrap
@@ -618,7 +622,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
   false return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string string bool ) =: tryParseConstant
-  state [] .idContext @ =:: idContext
+  state [] .progContext .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   code
@@ -630,7 +634,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ## parseStringConstant
             token .STRING
             fileState [] .wordStart
-            state [] .errors @
+            state [] .progContext .errors @
             labelContext
           id.parseStringConstant
           fileState [] .wordStart
@@ -639,7 +643,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "" string.wrap true return
       CHAR case
         token .CHAR
-          fileState [] .wordStart state [] .errors @  labelContext id.parseStringConstant ## escape character
+          fileState [] .wordStart state [] .progContext .errors @  labelContext id.parseStringConstant ## escape character
           #dup .length 1 != if
             "A character literal has to contain exactly one character" sb.wrap fileState [] .wordStart state appendError2
           end
@@ -845,12 +849,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           idContext [] .constContext @
         types.findGeneratedType if ## first occurrence of type
           #over [] .constValue .procedure =:: procId
-          state [] .procedures procId list.get =:: procData
-          state [] .progFiles procData .fileId list.at .data [] .localOps
+          state [] .progContext .procedures procId list.get =:: procData
+          state [] .progContext .progFiles procData .fileId list.at .data [] .localOps
             procData .codeStart
             procData .codeLength
           list.slice =:: ops
-          #over [] .valueType args ops idContext state [] .errors @ interpretFunction if #drop
+          state [] .progContext @ interpreter.wrapProgram =:: mut interpreterContext
+          #over [] .valueType args ops interpreterContext @ interpretFunction
+            interpreterContext interpreter.unwrapProgram #drop
+            if #drop
             "could not evaluate function" sb.wrap
               #over:2 [] .labelId labelContext id.labelName .data sb.appendStr
             fileState [] .wordStart state appendError2
@@ -918,7 +925,7 @@ proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 
   return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
-  state [] .idContext @ =:: idContext
+  state [] .progContext .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   code
@@ -983,7 +990,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
           return
         else "namespace" string.wrap #over string.eq _if #drop
-          state [] .idContext @ id.isTopLevel ! if
+          idContext id.isTopLevel ! if
             "#" sb.wrap
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
@@ -999,12 +1006,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "\" is not a valid namespace name" sb.appendS
             fileState [] .wordStart state appendError2 return
           end
-          state [] .idContext @ id.hasOpenTemplate if #drop
+          idContext id.hasOpenTemplate if #drop
             "cannot open namespace inside template" sb.wrap fileState [] .wordStart state appendError2
             return
           end
           id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-          state [] .idContext @ id.beginNamespace
+          idContext id.beginNamespace
           return
         else "using" string.wrap #over string.eq _if #drop:2
           fileState nextToken
@@ -1013,24 +1020,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             return
           end .IDENTIFER
           #dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-          state [] .idContext @ id.importNamespace if
+          idContext id.importNamespace if
             "namespace \"" sb.wrap
               #swap sb.appendStr
             "\" does not exist" sb.appendS fileState [] .wordStart state appendError2
           else #drop end
           return
         else "end" string.wrap #over string.eq _if #drop
-          state [] .idContext @ id.isTopLevel ! if
+          idContext id.isTopLevel ! if
             "#" sb.wrap
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
           else #drop end
-          state [] .idContext @ id.endNamespace if
+          idContext id.endNamespace if
             "no open namespaces" sb.wrap fileState [] .wordStart state appendError2
           end
           return
         else "template" string.wrap #over string.eq _if #drop
-          state [] .idContext @ id.isTopLevel ! if
+          idContext id.isTopLevel ! if
             "#" sb.wrap
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
@@ -1039,7 +1046,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "error while parsing template arguments" sb.wrap fileState [] .wordStart state appendError2
           end #drop ## labelType
           false typeContext types.newProcArgs
-          state [] .templateOps .length state [] .currentFile fileState [] .wordStart state [] .idContext @ id.beginTemplate if
+          state [] .templateOps .length state [] .currentFile fileState [] .wordStart idContext id.beginTemplate if
             "could not create template" sb.wrap fileState [] .wordStart state appendError2
           end
           return
@@ -1050,12 +1057,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             IdentifierType .TYPE
             -1 ## id
             fileState state popTypeConstant #drop ConstValue .typeId new
-          fileState [] .wordStart state [] .currentFile state [] .idContext @ state [] .errors @ id.declareIdentifier if #drop
+          fileState [] .wordStart state [] .currentFile idContext state [] .progContext .errors @ id.declareIdentifier if #drop
             .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
             return
           end
-          state [] .idContext @ id.isTopLevel if
-            state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+          idContext id.isTopLevel if
+            state [] .templateOps .length idContext  id.endOpenTemplate
           end
           #drop:2 return
         else "types" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
@@ -1080,11 +1087,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else "find" string.wrap #over string.eq _if #drop:2
           fileState nextToken
           #dup Token .IDENTIFER != if #drop
-            "expected identifier" sb.wrap fileState [] .wordStart state [] .errors @ appendWarning
+            "expected identifier" sb.wrap fileState [] .wordStart state appendWarning2
             return
           end .IDENTIFER =:: idName
           16 IdentifierMatch list.create =:: mut matches
-          idName state [] .currentFile state [] .idContext @ matches @ optional.wrap id.searchIdentifier #drop:3
+          idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier #drop:3
           "-----------------\n" sb.wrap
             "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
             0 while #dup matches .length < do
@@ -1096,7 +1103,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 match [] .data [] .valueType labelContext typeContext sb.appendType
                 match [] .data [] .constValue ConstValue .none != if
                   " [ " sb.appendS
-                  match [] .data [] .constValue state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
+                  match [] .data [] .constValue idContext [] .constContext @ labelContext typeContext sb.appendConstant
                   " ]" sb.appendS
                 end
                 " ) declared at " sb.appendS
@@ -1114,22 +1121,22 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState nextToken
           #dup Token .STRING == if .STRING
           else #drop
-            "expected string" sb.wrap fileState [] .wordStart state [] .errors @ appendWarning
+            "expected string" sb.wrap fileState [] .wordStart state appendWarning2
             return
           end  =:: message
           state hasConst ! if
-            "need boolean constant for static assertion" sb.wrap fileState [] .wordStart state [] .errors @ appendError
+            "need boolean constant for static assertion" sb.wrap fileState [] .wordStart state appendError2
             return
           end
           state popConst
             #dup .val ConstValue .boolean == if
               .val .boolean
             else
-              "expected boolean got " sb.wrap #swap .val state [] .idContext .constContext @ labelContext typeContext sb.appendConstant fileState [] .wordStart state [] .errors @ appendWarning
+              "expected boolean got " sb.wrap #swap .val idContext [] .constContext @ labelContext typeContext sb.appendConstant fileState [] .wordStart state appendWarning2
               false
             end
             ! if
-              "assertion failed \"" sb.wrap message sb.appendStr "\" " sb.appendS fileState [] .wordStart state [] .errors @ appendError
+              "assertion failed \"" sb.wrap message sb.appendStr "\" " sb.appendS fileState [] .wordStart state appendError2
             end
           return
         end
@@ -1166,7 +1173,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else valType types.primitive.TYPE types.typeEquals _if
         IdentifierType .TYPE
         true forceConst =
-      else state [] .idContext @ id.isTopLevel _if
+      else idContext id.isTopLevel _if
         IdentifierType .GLOBAL_VAR
       else
         IdentifierType .LOCAL_VAR
@@ -1176,7 +1183,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else ## make pre-declared variables mutable by default
         fileState state nextWord fileState state id.FLAG_MUTABLE readLabelAddFlags
       end
-      #dup state [] .idContext .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != =:: experimental
+      #dup idContext [] .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != =:: experimental
         valType
         idType
         -1 ## id
@@ -1186,11 +1193,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else
             Type .undefined
           end
-          #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType fileState [] .wordStart newTypeConst .val
+          #over:4 idContext [] .currentTemplate typeContext types.newNamedType fileState [] .wordStart newTypeConst .val
         else isInit ! _if
           ConstValue .none
         else idType IdentifierType .PROCEDURE == _if
-          state [] .procedures .length ConstValue .procedure new
+          state [] .progContext .procedures .length ConstValue .procedure new
         else state hasConst _if
           state popConst
             #dup .valueType valType false typeContext types.canCast ! if
@@ -1205,13 +1212,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else
           ConstValue .none
         end
-      fileState [] .wordStart state [] .currentFile state [] .idContext @ state [] .errors @ id.declareIdentifier if #drop
+      fileState [] .wordStart state [] .currentFile idContext state [] .progContext .errors @ id.declareIdentifier if #drop
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
       end
-      state [] .idContext @ id.isTopLevel if
+      idContext id.isTopLevel if
         #dup [] .idType IdentifierType .PROCEDURE != isInit ! | if
-          state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+          state [] .templateOps .length idContext  id.endOpenTemplate
         end
       end
       #dup [] .idType IdentifierType .TYPE == if
@@ -1234,11 +1241,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           valType
           state offsetStaticArgs
           experimental
-        state [] .idContext @ id.openProcScope
+        idContext id.openProcScope
         ## ProcedureInfo
           state [] .currentFile
           valType
-          state [] .progFiles state [] .currentFile list.get .localOps .length
+          state [] .progContext .progFiles state [] .currentFile list.get .localOps .length
           -1
         ProcedureInfo new optional.wrap state [] .currentProc =
         #dup [] .valueType typeContext types.getProcIn if
@@ -1266,8 +1273,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   end
                   fileState [] .wordStart
                   state [] .currentFile
-                  state [] .idContext @
-                  state [] .errors @
+                  idContext
+                  state [] .progContext .errors @
                 id.declareIdentifier if #drop
                   .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
                   #drop:3 return
@@ -1280,7 +1287,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end #drop
         end
       end
-      isInit ! state [] .idContext @ id.isGlobal & if #drop:2
+      isInit ! idContext id.isGlobal & if #drop:2
         return ## no operation for global pre-declaration
       end
       #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart isInit if
@@ -1300,7 +1307,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #drop:2 return
             else #dup types.primitive.TYPE types.typeEquals _if
               IdentifierType .TYPE
-            else state [] .idContext @ id.isTopLevel _if
+            else idContext id.isTopLevel _if
               IdentifierType .GLOBAL_VAR
             else
               IdentifierType .LOCAL_VAR
@@ -1311,14 +1318,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             #dup typeContext types.isProcedure if
               "Declaration of a procedure type as constant\n Use '=:' to declare procedures" sb.wrap fileState [] .wordStart state appendError2
             end
-            #over:4 state [] .idContext .currentTemplate typeContext types.newNamedType ConstValue .typeId new
+            #over:4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId new
           else
             const constantToOp state appendOp
           end
         else
           state [] .autoTypeCount types.newAutoType
           state [] .autoTypeCount 1 + state [] .autoTypeCount =
-          state [] .idContext @ id.isTopLevel if
+          idContext id.isTopLevel if
             IdentifierType .GLOBAL_VAR
           else
             IdentifierType .LOCAL_VAR
@@ -1326,12 +1333,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           -1
           ConstValue .none
         end
-        fileState [] .wordStart state [] .currentFile state [] .idContext @ state [] .errors @ id.declareIdentifier if #drop
+        fileState [] .wordStart state [] .currentFile idContext state [] .progContext .errors @ id.declareIdentifier if #drop
           .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
           return
         end
-        state [] .idContext @ id.isTopLevel if
-          state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+        idContext id.isTopLevel if
+          state [] .templateOps .length idContext  id.endOpenTemplate
         end
         #dup [] .idType IdentifierType .TYPE == if
           #drop:2
@@ -1345,8 +1352,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #dup types.isNamedType if
             fileState state popTypeConstant ! if
               -1 typeContext types.setNamedType ! if
-                state [] .idContext @ id.isTopLevel if
-                  state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+                idContext id.isTopLevel if
+                  state [] .templateOps .length idContext  id.endOpenTemplate
                 end
                 return
               end
@@ -1400,7 +1407,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       opName "addrOf" string.wrap string.eq if
         "addrOf is deprecated use @ instead" sb.wrap
           fileState [] .wordStart
-         state [] .errors @ appendWarning
+         state appendWarning2
       end
       state peekOp #dup optional.isEmpty if #drop
         "unexpected \"" sb.wrap
@@ -1451,39 +1458,39 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         procType
         state [] .staticArgsOffset
         false
-      state [] .idContext @ id.openProcScope
+      idContext id.openProcScope
       ## ProcedureInfo
         state [] .currentFile
         procType
-        state [] .progFiles state [] .currentFile list.get .localOps .length
+        state [] .progContext .progFiles state [] .currentFile list.get .localOps .length
         -1
       ProcedureInfo new optional.wrap state [] .currentProc =
       fileState [] .wordStart opEntryPoint  state appendOp
       return
     else #dup "if" string.wrap string.eq _if #drop
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
-      BlockType .IF  state [] .idContext @ id.openScope
+      BlockType .IF  idContext id.openScope
       return
     else #dup "_if" string.wrap string.eq _if #drop
-      state [] .idContext @ id.currentScopeType =:: currentType
+      idContext id.currentScopeType =:: currentType
       currentType BlockType .IF != currentType BlockType .ELSE != & currentType BlockType .IFIF != & if
         "'_if' is only allowed in if-else-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      state [] .idContext @ id.currentScopeType BlockType .ELSE == if
+      idContext id.currentScopeType BlockType .ELSE == if
         BlockType .IF
       else
         BlockType .IFIF
       end =:: blockType
       blockType fileState [] .wordStart opBlock  state appendOp
-      blockType state [] .idContext @ id.openScope
-      blockType true state [] .idContext @ id.updateScopeType #drop
+      blockType idContext id.openScope
+      blockType true idContext id.updateScopeType #drop
       return
     else #dup "else" string.wrap string.eq _if #drop
       BlockType : blockType
       bool : autoClose
       while
-        state [] .idContext @ id.closeScope if #drop:3
+        idContext id.closeScope if #drop:3
           "'else' statements can not appear at top level" sb.wrap fileState [] .wordStart state appendError2
           return
         end blockType = #+argOffset+# #drop autoClose =
@@ -1495,22 +1502,22 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
       BlockType .ELSE  fileState [] .wordStart opBlock  state appendOp
-      BlockType .ELSE  state [] .idContext @ id.openScope
+      BlockType .ELSE  idContext id.openScope
       autoClose if
-        BlockType .ELSE true state [] .idContext @ id.updateScopeType #drop
+        BlockType .ELSE true idContext id.updateScopeType #drop
       end
       return
     else #dup "while" string.wrap string.eq _if #drop
       BlockType .WHILE  fileState [] .wordStart opBlock  state appendOp
-      BlockType .WHILE  state [] .idContext @ id.openScope
+      BlockType .WHILE  idContext id.openScope
       return
     else #dup "do" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap BlockType .WHILE != | if #+scope data+# #drop:2
+      idContext id.closeScope #swap BlockType .WHILE != | if #+scope data+# #drop:2
         "'do' is only allowed in while-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end #drop:2 ## ignore argOffset and auto-close
       BlockType .DO  fileState [] .wordStart opBlock  state appendOp
-      BlockType .DO  state [] .idContext @ id.openScope
+      BlockType .DO  idContext id.openScope
       return
     else #dup "break" string.wrap string.eq _if #drop
       BlockType .BREAK  fileState [] .wordStart opBlock  state appendOp
@@ -1520,26 +1527,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "switch" string.wrap string.eq _if #drop
       BlockType .SWITCH  fileState [] .wordStart opBlock  state appendOp
-      BlockType .SWITCH  state [] .idContext @ id.openScope
+      BlockType .SWITCH  idContext id.openScope
       return
     else #dup "case" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap #dup BlockType .SWITCH != #swap BlockType .CASE != & | if #+scope data+# #drop:2
+      idContext id.closeScope #swap #dup BlockType .SWITCH != #swap BlockType .CASE != & | if #+scope data+# #drop:2
         "'case' is only allowed in switch-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end #drop:2 ## ignore argOffset and auto-close
       BlockType .CASE  fileState [] .wordStart opBlock  state appendOp
-      BlockType .CASE  state [] .idContext @ id.openScope
+      BlockType .CASE  idContext id.openScope
       return
     else #dup "default" string.wrap string.eq _if #drop
-      state [] .idContext @ id.closeScope #swap BlockType .CASE != | if #+scope data+# #drop:2
+      idContext id.closeScope #swap BlockType .CASE != | if #+scope data+# #drop:2
         "'default' is only allowed in switch-case-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end #drop:2 ## ignore argOffset and auto-close
       BlockType .DEFAULT  fileState [] .wordStart opBlock  state appendOp
-      BlockType .DEFAULT  state [] .idContext @ id.openScope
+      BlockType .DEFAULT  idContext id.openScope
       return
     else #dup "return" string.wrap string.eq _if #drop
-      state [] .idContext @ id.currentScopeProc =:: experimental
+      idContext id.currentScopeProc =:: experimental
         #dup Type .undefined types.typeEquals if
           "return outside procedure" sb.wrap fileState [] .wordStart state appendError2
         end
@@ -1547,9 +1554,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "end" string.wrap string.eq _if #drop
       while
-        state [] .idContext @ id.currentScopeType
+        idContext id.currentScopeType
         fileState [] .wordStart opEndBlock  state appendOp
-        state [] .idContext @ id.closeScope if #+scope data+# #drop:3
+        idContext id.closeScope if #+scope data+# #drop:3
           "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError2
           return
         end
@@ -1560,17 +1567,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           state [] .currentProc .data =:: mut currentProc
           ProcedureInfo optional.empty state [] .currentProc =
-          state [] .progFiles state [] .currentFile list.get .localOps .length
+          state [] .progContext .progFiles state [] .currentFile list.get .localOps .length
             currentProc .codeStart -
           currentProc .codeLength =
-          state [] .procedures
+          state [] .progContext .procedures
             currentProc list.append
-          state [] .procedures =
+          state [] .progContext .procedures =
           state resetStaticArgs
         else #drop end
       do end
-      state [] .idContext @ id.isTopLevel if
-        state [] .templateOps .length state [] .idContext @  id.endOpenTemplate
+      idContext id.isTopLevel if
+        state [] .templateOps .length idContext  id.endOpenTemplate
       end
       return
     else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
@@ -1590,7 +1597,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #drop
             end
           "constant "                    sb.wrap
-            #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
+            #swap .val idContext [] .constContext @ idContext [] .labelContext @ idContext [] .typeContext @ sb.appendConstant
             " does not have a field: \"" sb.appendS
             #swap                        sb.appendStr
           '"' sb.appendC fileState [] .wordStart state appendError2
@@ -1641,7 +1648,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
+        #swap .val idContext [] .constContext @ labelContext typeContext sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError2
       return
     else #dup "cast" string.wrap string.eq #over "cast!" string.wrap string.eq | _if =:: opName
@@ -1655,7 +1662,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        #swap .val state [] .idContext .constContext @ labelContext typeContext sb.appendConstant
+        #swap .val idContext [] .constContext @ labelContext typeContext sb.appendConstant
         " expected type" sb.appendS fileState [] .wordStart state appendError2
         return
       end =:: target
@@ -2202,7 +2209,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             #drop
           end
         "cannot determine the length of constant " sb.wrap
-          #swap .val state [] .idContext .constContext @ state [] .idContext .labelContext @ state [] .idContext .typeContext @ sb.appendConstant
+          #swap .val idContext [] .constContext @ idContext [] .labelContext @ idContext [] .typeContext @ sb.appendConstant
         fileState [] .wordStart state appendError2
         return
       end
@@ -2215,7 +2222,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart opUnreachable state appendOp
       return
     else #dup "{" string.wrap string.eq _if #drop
-      BlockType .INITIALIZER  state [] .idContext @ id.openScope
+      BlockType .INITIALIZER  idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
@@ -2225,7 +2232,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ##  remember start position, constant offset
       return
     else #dup "}" string.wrap string.eq _if =:: opName
-      state [] .idContext @ id.closeScope if #drop true else BlockType .INITIALIZER != end if
+      idContext id.closeScope if #drop true else BlockType .INITIALIZER != end if
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
       end #drop:2 ## XXX remember declared variables
       state [] .constantBlocks .length 0 == if
@@ -2269,81 +2276,81 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError2
       return
     else #dup "(" string.wrap string.eq _if #drop
-      BlockType .TYPE_COMPOSITE state [] .idContext @ id.openScope
-      BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_COMPOSITE idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
       return
     else #dup "tuple(" string.wrap string.eq _if #drop
-      BlockType .TYPE_TUPLE state [] .idContext @ id.openScope
-      BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_TUPLE idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
       return
     else #dup "struct(" string.wrap string.eq _if #drop
-      BlockType .TYPE_STRUCT state [] .idContext @ id.openScope
-      BlockType .TYPE_STRUCT fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_STRUCT idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_STRUCT fileState [] .wordStart opBlock state appendOp
       return
     else #dup "union(" string.wrap string.eq _if #drop
-      BlockType .TYPE_UNION state [] .idContext @ id.openScope
-      BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_UNION idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
       return
     else #dup "enum(" string.wrap string.eq _if #drop
-      BlockType .TYPE_ENUM state [] .idContext @ id.openScope
-      BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_ENUM idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
       return
     else #dup "proc(" string.wrap string.eq _if #drop
-      BlockType .TYPE_PROC_IN state [] .idContext @ id.openScope
-      BlockType .TYPE_PROC_IN fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_PROC_IN idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_PROC_IN fileState [] .wordStart opBlock state appendOp
       return
     else #dup "=>" string.wrap string.eq _if =:: opName
-      state [] .idContext @ id.currentScopeType =:: blockType
+      idContext id.currentScopeType =:: blockType
       blockType BlockType .TYPE_COMPOSITE != blockType BlockType .TYPE_PROC_IN != & if
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
       end
-      BlockType .TYPE_PROC_OUT state [] .idContext @ id.openScope
-      BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_PROC_OUT idContext id.openScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
       return
     else #dup ")" string.wrap string.eq _if =:: opName
-      state [] .idContext @ id.closeScope if
+      idContext id.closeScope if
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
         #drop:3
         return
@@ -2352,12 +2359,31 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         list.pop =:: offset
       state [] .constantBlocks =
       blockType fileState [] .wordStart opEndBlock state appendOp
+      string.hash @ string.eq @ 32 ConstValue map.create =:: mut vars
+      state [] .currentProc optional.hasData ! if ## evaluate types at global level
+      state [] .progContext @ interpreter.wrapProgram =:: mut interpreterContext
+        ## evaluateOperations
+          32 ConstValue list.create
+          state [] .progContext .progFiles state [] .currentFile list.at .data [] .globalOps
+            list.asArray
+            offset .codeOffset
+          array.tail
+          vars @
+          interpreterContext @
+        evaluateOperations
+          interpreterContext interpreter.unwrapProgram #drop
+          if
+          "could not evaluate type-constant" sb.wrap fileState [] .wordStart state appendError2
+        end list.free #drop
+        "unimplemented" sb.wrap fileState [] .wordStart state appendError2
+        ## TODO replace code with result
+      end
       blockType switch
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
           ## TODO compute type if on global level
           break
         TYPE_PROC_OUT case
-          state [] .idContext @ id.closeScope if ## close procedure scope
+          idContext id.closeScope if ## close procedure scope
             "expected " sb.wrap
               BlockType .TYPE_PROC_IN sb.appendBlockType
               " or " sb.appendS
@@ -2398,7 +2424,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       #drop:2 return
     end
-  #dup state [] .currentFile state [] .idContext @ id.getIdentifier ! if ## try parsing as identifier
+  #dup state [] .currentFile idContext id.getIdentifier ! if ## try parsing as identifier
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
     #drop:2
     return
@@ -2421,8 +2447,8 @@ proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState p
 end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile
   FILE_ID_NONE =:: mut included
-  0 while #dup state [] .progFiles .length < do
-    state [] .progFiles #over list.get .fileName sb.asStr fileName sb.asStr string.eq if
+  0 while #dup state [] .progContext .progFiles .length < do
+    state [] .progContext .progFiles #over list.get .fileName sb.asStr fileName sb.asStr string.eq if
       #dup included =
       break
     end
@@ -2431,7 +2457,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   included FILE_ID_NONE == if ## file has not yet been included
     fileName state parseFile fileName pos state checkIOError included =
   end
-  state [] .progFiles state [] .currentFile list.at .data
+  state [] .progContext .progFiles state [] .currentFile list.at .data
   #dup [] .includedFiles
       included
       pos
@@ -2443,20 +2469,22 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
   ## ParserState
     basePath
     libPath
-    id.newIdentifierContext
+    ## ProgramContext
+      id.newIdentifierContext
+      16  ProgramFile           list.create
+      64  ProcedureInfo         list.create
+      32  CompilerError         list.create
+    ProgramContext new
     128 Constant                list.create
     0
     128 Type                    list.create
     32  StaticArgument          list.create
     0
-    16  ProgramFile             list.create
     FILE_ID_NONE
-    64  ProcedureInfo           list.create
     ProcedureInfo               optional.empty
     128 Operation               list.create
     128 CompositeConstantOffset list.create
     128 LabelId                 list.create
-    32  CompilerError           list.create
     0
     false
   ParserState new =:: mut state
@@ -2466,12 +2494,12 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
   state .typeBuffer list.free #drop
   state .staticArgs list.free #drop
   ## Program
-    state .idContext
-    state .progFiles
+    state .progContext .idContext ## TODO make ProgramContext part of/equal to Program
+    state .progContext .progFiles
     state .autoTypeCount Type list.createZeroInit ## ! assumes Type .undefined has all zero memory representation
     state .templateOps
     0 SwitchData list.create
-    state .errors
+    state .progContext .errors
     state .hasEntryPoint
     false false ## helper function flags, set in type-check phase
     false ## has getArgs
@@ -2484,11 +2512,11 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError 
       #dup .length 1 - #over .length = ## ensure there is a zero-terminator after the last character
     end
     #dup sb.asStr 0 1 FilePosition new #dup FileState new =:: mut fileState
-    state [] .progFiles
-      #over state [] .progFiles .length FileId cast state [] .idContext @ newProgFile list.append
-    state [] .progFiles =
+    state [] .progContext .progFiles
+      #over state [] .progContext .progFiles .length FileId cast state [] .progContext .idContext @ newProgFile list.append
+    state [] .progContext .progFiles =
   state [] .currentFile
-    state [] .progFiles .length 1 - FileId cast state [] .currentFile =
+    state [] .progContext .progFiles .length 1 - FileId cast state [] .currentFile =
     #swap #dup .data #swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
       #dup io.FILE_ERROR_NONE != if
         #swap #drop ## discard code file

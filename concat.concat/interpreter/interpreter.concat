@@ -4,25 +4,47 @@
 #include "identifiers.concat"
 #include "program.concat"
 
+struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: public ProcedureInfo
+struct(
+  IdentifierContext : mut idContext
+  ProgramFile list : mut progFiles
+  ProcedureInfo list : mut procedures
+  CompilerError list : mut errors
+) =:: public ProgramContext
+
+struct(
+  ProgramContext ptr mut : program
+  BlockType list : mut openBlocks ## XXX store more detailed block info
+) =:: public InterpreterContext
+
+#namespace interpreter
+proc( ProgramContext ptr mut => InterpreterContext ) =: public wrapProgram
+  64 BlockType list.create InterpreterContext new
+end
+proc( InterpreterContext : context => ProgramContext ptr mut ) =: public unwrapProgram
+  context .openBlocks list.free #drop
+  context .program return
+end
+#end
+
 proc(
   ConstValue list : initStack
   Operation arrayView : ops
   string ConstValue hashMap ptr mut : variables
-  ## TODO program context for global variables
-  IdentifierContext ptr mut : context
-  CompilerError list ptr mut : errors
+  InterpreterContext ptr mut : context
 =>
   ConstValue list
   bool
 ) =: public evaluateOperations
-  context [] .constContext @ =:: constContext
-  context [] .typeContext @ =:: typeContext
-  context [] .labelContext @ =:: labelContext
+  context [] .program [] .errors @ =:: errors
+  context [] .program [] .idContext =:: idContext
+  context [] .program [] .idContext .constContext @ =:: constContext
+  context [] .program [] .idContext .typeContext @ =:: typeContext
+  context [] .program [] .idContext .labelContext @ =:: labelContext
   initStack =:: mut stack
   0 =:: mut offset
   while offset ops .length < do
     ops offset array.at .data =:: op
-      ## TODO replace generics
       op [] .val switch
         NOP case break
         Constant case
@@ -32,16 +54,49 @@ proc(
           break
         Return case
           stack false return
+        block case
+          op [] .val .block .blockType switch
+            TYPE_TUPLE
+            TYPE_STRUCT
+            TYPE_ENUM
+            TYPE_UNION
+            TYPE_PROC_IN
+            TYPE_PROC_OUT
+            TYPE_COMPOSITE case
+                context [] .openBlocks
+                  op [] .val .block .blockType list.append
+                context [] .openBlocks =
+               break
+            PROCEDURE
+            EXPERIMENTAL_PROCEDURE
+            IF
+            IFIF
+            ELSE
+            WHILE
+            DO
+            BREAK
+            CONTINUE
+            SWITCH
+            CASE
+            DEFAULT
+            INITIALIZER
+            UNKNOWN case
+              "unsupported block-type in constant evaluation: " sb.wrap
+               op [] .val .block .blockType sb.appendBlockType
+              op [] .pos errors appendError
+              stack true return ## unsupported block
+          end
+          break
         blockEnd case
-           op [] .val .blockEnd .blockType BlockType .PROCEDURE == if
-             stack false return ## end of procedure
-           end
-           "unsupported operation in constant evaluation: " sb.wrap
-             op [] constContext labelContext typeContext sb.appendOp
-           op [] .pos errors appendError 
-           stack true return ## unsupported block
-           break
-        entryPoint block
+          op [] .val .blockEnd .blockType BlockType .PROCEDURE == if
+            stack false return ## end of procedure
+          end
+          "unsupported block-end in constant evaluation: " sb.wrap
+            op [] .val .blockEnd .blockType sb.appendBlockType
+          op [] .pos errors appendError
+          stack true return ## unsupported block
+          break
+        entryPoint
         getId setId @Id declareId predeclareId
         getLabel setLabel @Label declareField initializeField
         getElement setElement @Element
@@ -56,7 +111,7 @@ proc(
         compilerInfo unreachable case
           "unsupported operation in constant evaluation: " sb.wrap
             op [] constContext labelContext typeContext sb.appendOp
-          op [] .pos errors appendError 
+          op [] .pos errors appendError
           stack true return
       end
     offset 1 + offset =
@@ -68,9 +123,7 @@ proc(
   Type : procType
   ConstValue arrayView : arguments
   Operation arrayView : code
-  ## TODO program context for global variables
-  IdentifierContext ptr mut : context
-  CompilerError list ptr mut : errors
+  InterpreterContext ptr mut : context
 =>
   ConstValue list
   bool
@@ -83,6 +136,5 @@ proc(
     code 1 array.tail ## first operation declares procedure
     variables @
     context
-    errors
   evaluateOperations return
 end
