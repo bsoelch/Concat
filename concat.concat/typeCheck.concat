@@ -897,7 +897,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           state [] .opStack .length typeInfo [] .opCount - state [] .opStack .length =
           state [] .typeStack .length 1 - state [] .typeStack .length =
           argValue [] .dataType templateArgs #over:2 array.get false typeContext canCast ! if
-            "cannot cast" sb.wrap
+            "cannot cast " sb.wrap
                 argValue [] .dataType labelContext typeContext sb.appendType
                 " to " sb.appendS
                 templateArgs #over:2 array.get labelContext typeContext sb.appendType
@@ -943,7 +943,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         end
         state [] .opStack opOffset list.at .data =:: argValue
         argValue [] .dataType inTypes #over:2 array.get false typeContext types.canCast ! if
-          "cannot cast" sb.wrap
+          "cannot cast " sb.wrap
               argValue [] .dataType labelContext typeContext sb.appendType
               " to " sb.appendS
               inTypes #over:2 array.get labelContext typeContext sb.appendType
