@@ -1034,8 +1034,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           break ## XXX error message
       end
       break
-    declareId case
-      op [] .val .declareId =:: idInfo
+    initializeId case
+      op [] .val .initializeId =:: idInfo
       idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch
@@ -1072,8 +1072,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           break ## XXX error message
       end
       break
-    predeclareId case
-      op [] .val .predeclareId =:: idInfo
+    declareId case
+      op [] .val .declareId =:: idInfo
       idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch

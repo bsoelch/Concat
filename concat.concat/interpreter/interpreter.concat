@@ -97,7 +97,7 @@ proc(
           stack true return ## unsupported block
           break
         entryPoint
-        getId setId @Id declareId predeclareId
+        getId setId @Id initializeId declareId
         getLabel setLabel @Label declareField initializeField
         getElement setElement @Element
         getArrayElement setArrayElement @ArrayElement

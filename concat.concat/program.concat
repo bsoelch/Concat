@@ -20,8 +20,8 @@ enum(
      IdentifierInfo : mut getId
      IdentifierInfo : mut setId
      IdentifierInfo : mut @Id
-     IdentifierInfo : mut declareId  ## FIXME rename declare -> initialize , predeclare -> declare
-     IdentifierInfo : mut predeclareId
+     IdentifierInfo : mut initializeId
+     IdentifierInfo : mut declareId
             LabelId : getLabel
             LabelId : mut setLabel
             LabelId : mut @Label
@@ -90,13 +90,13 @@ proc( Type IdentifierInfo FilePosition  => Operation ) =: public op@Id
   =:: pos
   OpValue .@Id new #swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  => Operation ) =: public opDeclare
+proc( Type IdentifierInfo FilePosition  => Operation ) =: public opInitializeId
+  =:: pos
+  OpValue .initializeId new #swap pos Operation new return
+end
+proc( Type IdentifierInfo FilePosition  => Operation ) =: public opDeclareId
   =:: pos
   OpValue .declareId new #swap pos Operation new return
-end
-proc( Type IdentifierInfo FilePosition  => Operation ) =: public opPredeclare
-  =:: pos
-  OpValue .predeclareId new #swap pos Operation new return
 end
 proc( i32 FilePosition  => Operation ) =: public opArrayGet
   =:: pos
@@ -369,17 +369,17 @@ end
           " ) : " sb.appendS
           #over .val .@Id labelContext sb.appendIdInfo
           break
+        initializeId case
+          "initialize ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .initializeId labelContext sb.appendIdInfo
+          break
         declareId case
           "declare ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .declareId labelContext sb.appendIdInfo
-          break
-        predeclareId case
-          "predeclare ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .predeclareId labelContext sb.appendIdInfo
           break
         getLabel case
           "get label ( " sb.appendS

@@ -1291,9 +1291,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return ## no operation for global pre-declaration
       end
       #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart isInit if
-        opDeclare
+        opInitializeId
       else
-        opPredeclare
+        opDeclareId
       end
       state appendOp
       #drop return
@@ -1344,7 +1344,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #drop:2
           return
         end
-        #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opDeclare state appendOp
+        #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opInitializeId state appendOp
         #drop return
     else #dup "=" string.wrap string.eq _if #drop
       state hasConst if state popConst

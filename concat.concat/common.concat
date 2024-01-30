@@ -40,7 +40,7 @@ enum( STRUCT POINTER ) =:: public CallingConvention
   CallingConvention .POINTER =:: public DEFAULT
 #end
 
-## predeclare Type and ConstValue to allow mutual inclusion of types.concat and constants.concat
+## declare Type and ConstValue to allow mutual inclusion of types.concat and constants.concat
 type : public Type
 type : public ConstValue
 type : public ConstantArray

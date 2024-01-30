@@ -195,11 +195,11 @@ proc( TypeCheckState ptr mut : state => ) =: ensureStackHeadIsValue
   true opHead [] .pos state newTmpVar =:: tmpId
   opHead [] .dataType typeContext types.isEmpty ! if
     state [] .compiledOps
-      ## opDeclare
+      ## opInitializeId
         head [] .valType
         tmpId
         opHead [] .pos
-      opDeclare list.append
+      opInitializeId list.append
     state [] .compiledOps =
     state [] .compiledOps
       state [] .opStack .data state [] .opStack .length + head [] .opCount - head [] .opCount array.create list.appendArray
@@ -361,11 +361,11 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       end
       false pos state newTmpVar =:: tmpId
       state [] .compiledOps
-        ## opDeclare
+        ## opInitializeId
           stackHead [] .valType
           tmpId
           pos
-        opDeclare list.append
+        opInitializeId list.append
         state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
       state [] .compiledOps =
       opOffset typeInfo [] .opCount + opOffset =
@@ -388,11 +388,11 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
     end
     false pos state newTmpVar =:: tmpId
     state [] .compiledOps
-      ## opDeclare
+      ## opInitializeId
         typeInfo [] .valType
         tmpId
         pos
-      opDeclare list.append
+      opInitializeId list.append
       state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
     state [] .compiledOps =
     opOffset typeInfo [] .opCount + opOffset =
@@ -555,11 +555,11 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state => i64 ) 
     end
     true pos state newTmpVar =:: tmpId
     state [] .compiledOps
-      ## opDeclare
+      ## opInitializeId
         typeInfo [] .valType
         tmpId
         pos
-      opDeclare list.append
+      opInitializeId list.append
     state [] .compiledOps =
     state [] .compiledOps
       state [] .opStack .data opOffset + typeInfo [] .opCount array.create list.appendArray
@@ -634,11 +634,11 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
     state [] .opStack opOffset list.at .data =:: op
     create #over outTypes [] .opStack .length >= & if
       true pos state newTmpVar tmpId =
-      ## opPredeclare
+      ## opDeclareId
         typeInfo [] .valType
         tmpId
         pos
-      opPredeclare state [] .compiledOps .data newBlockStart [] =
+      opDeclareId state [] .compiledOps .data newBlockStart [] =
       newBlockStart 1 + newBlockStart =
       outTypes [] .opStack
         ## opGet
@@ -1049,7 +1049,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
               retType
               retId
               op [] .pos
-            opDeclare list.append
+            opInitializeId list.append
           state [] .compiledOps =
         end
       end
@@ -1068,7 +1068,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
               eltType
               eltId
               op [] .pos
-            opPredeclare list.append
+            opDeclareId list.append
           state [] .compiledOps =
         else
           totalArgs 1 - totalArgs =
@@ -1089,7 +1089,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
               retType
               retId
               op [] .pos
-            opDeclare list.append
+            opInitializeId list.append
           state [] .compiledOps =
         end
         retIds retId list.append retIds =
@@ -1136,7 +1136,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
             eltType
             eltId
             op [] .pos
-          opDeclare list.append
+          opInitializeId list.append
           #over op [] .pos opTupleGet
             retType #over .dataType =
           list.append
@@ -1274,7 +1274,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
   idContext [] .typeContext @ =:: typeContext
   idInfo .idType switch
     LOCAL_VAR GLOBAL_VAR TMP_VAR case
-      op [] .val OpValue .declareId == if
+      op [] .val OpValue .initializeId == if
         op [] .dataType types.isAutoType if
           op [] .dataType types.getTypeId =:: autoTypeId
           autoTypeId 0 < autoTypeId state [] .autoTypes .length >= | if
@@ -1292,7 +1292,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         op [] .dataType @ array.wrap "variable declaration" string.wrap op [] .pos  state requireTypes
       end
       op [] .dataType typeContext types.isEmpty if ## skip declarations of empty variables
-        op [] .val OpValue .declareId == if
+        op [] .val OpValue .initializeId == if
           1 op [] .pos state discardStackOps
         end
         return
@@ -1301,13 +1301,13 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       state [] .compiledOps
         op list.appendP
       state [] .compiledOps =
-      op [] .val OpValue .declareId == if
+      op [] .val OpValue .initializeId == if
         1 op [] .pos state addCompiledStackOps
       end
       return
     PROCEDURE case
       ## XXX check if type is procedure
-      op [] .val OpValue .predeclareId == if
+      op [] .val OpValue .declareId == if
         state [] .compiledOps
           op list.appendP
         state [] .compiledOps =
@@ -2521,13 +2521,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       op op [] .val .@Id state typeCheckGetId
       return
+    initializeId case
+      op state checkReachable
+      op op [] .val .initializeId state typeCheckDeclareId
+      return
     declareId case
       op state checkReachable
       op op [] .val .declareId state typeCheckDeclareId
-      return
-    predeclareId case
-      op state checkReachable
-      op op [] .val .predeclareId state typeCheckDeclareId
       return
     getLabel case
       op state checkReachable
@@ -3017,13 +3017,13 @@ proc(
       op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
       break
     GLOBAL_VAR PROCEDURE TYPE case
+      op [] .val OpValue .initializeId == if
+        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+        implId op [] .val .initializeId .id =
+      end
       op [] .val OpValue .declareId == if
         op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
         implId op [] .val .declareId .id =
-      end
-      op [] .val OpValue .predeclareId == if
-        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
-        implId op [] .val .predeclareId .id =
       end
       break
   end
@@ -3042,10 +3042,10 @@ proc(
     op op [] .val .setId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val OpValue .@Id == _if
     op op [] .val .@Id template impl implId argsIndices state resolveTemplateGetIdentifer
+  else op [] .val OpValue .initializeId == _if
+    op op [] .val .initializeId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val OpValue .declareId == _if
     op op [] .val .declareId template impl implId argsIndices state resolveTemplateGetIdentifer
-  else op [] .val OpValue .predeclareId == _if
-    op op [] .val .predeclareId template impl implId argsIndices state resolveTemplateGetIdentifer
   else
     op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
     op [] .val OpValue .Cast == if
