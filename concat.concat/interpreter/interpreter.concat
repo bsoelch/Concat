@@ -5,27 +5,33 @@
 #include "program.concat"
 
 struct(
+  BlockType : blockType
+  i64 : stackOffset
+  string ConstValue hashMap : mut variables
+) =:: BlockInfo
+
+struct(
   ProgramContext ptr mut : program
-  BlockType list : mut openBlocks ## XXX store more detailed block info
+  ConstValue list : mut stack
+  ## XXX store types of stack elements
+  BlockInfo  list : mut openBlocks
 ) =:: public InterpreterContext
 
-#namespace interpreter
-proc( ProgramContext ptr mut => InterpreterContext ) =: public wrapProgram
-  64 BlockType list.create InterpreterContext new
+
+proc( BlockType : blockType InterpreterContext ptr mut : context => ) =: openBlock
+  context [] .openBlocks
+    ## BlockInfo
+      blockType
+      context [] .stack .length
+      string.hash @ string.eq @ 32 ConstValue map.create
+    BlockInfo new list.append
+  context [] .openBlocks =
 end
-proc( InterpreterContext : context => ProgramContext ptr mut ) =: public unwrapProgram
-  context .openBlocks list.free #drop
-  context .program return
-end
-#end
 
 proc(
-  ConstValue list : initStack
   Operation arrayView : ops
-  string ConstValue hashMap ptr mut : variables
   InterpreterContext ptr mut : context
 =>
-  ConstValue list
   bool
 ) =: public evaluateOperations
   context [] .program [] .errors @ =:: errors
@@ -33,19 +39,18 @@ proc(
   context [] .program [] .idContext .constContext @ =:: constContext
   context [] .program [] .idContext .typeContext @ =:: typeContext
   context [] .program [] .idContext .labelContext @ =:: labelContext
-  initStack =:: mut stack
   0 =:: mut offset
   while offset ops .length < do
     ops offset array.at .data =:: op
       op [] .val switch
         NOP case break
         Constant case
-          stack
+          context [] .stack
             op [] .val .Constant list.append
-          stack =
+          context [] .stack =
           break
         Return case
-          stack false return
+          false return
         block case
           op [] .val .block .blockType switch
             TYPE_TUPLE
@@ -55,9 +60,7 @@ proc(
             TYPE_PROC_IN
             TYPE_PROC_OUT
             TYPE_COMPOSITE case
-                context [] .openBlocks
-                  op [] .val .block .blockType list.append
-                context [] .openBlocks =
+                op [] .val .block .blockType context openBlock
                break
             PROCEDURE
             EXPERIMENTAL_PROCEDURE
@@ -76,17 +79,14 @@ proc(
               "unsupported block-type in constant evaluation: " sb.wrap
                op [] .val .block .blockType sb.appendBlockType
               op [] .pos errors appendError
-              stack true return ## unsupported block
+              true return ## unsupported block
           end
           break
         blockEnd case
-          op [] .val .blockEnd .blockType BlockType .PROCEDURE == if
-            stack false return ## end of procedure
-          end
           "unsupported block-end in constant evaluation: " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType
           op [] .pos errors appendError
-          stack true return ## unsupported block
+          true return ## unsupported block
           break
         entryPoint
         getId setId @Id initializeId declareId
@@ -104,29 +104,63 @@ proc(
           "unsupported operation in constant evaluation: " sb.wrap
             op [] constContext labelContext typeContext sb.appendOp
           op [] .pos errors appendError
-          stack true return
+          true return
       end
     offset 1 + offset =
   end
-  stack false return
+  ## XXX error if unwanted open blocks
+  false return
 end
-
+#+evaluate procedure body with the given arguments+#
 proc(
   Type : procType
   ConstValue arrayView : arguments
   Operation arrayView : code
   InterpreterContext ptr mut : context
 =>
-  ConstValue list
   bool
-) =: public interpretFunction
-  arguments .length ConstValue list.create =:: mut stack
-  string.hash @ string.eq @ 32 ConstValue map.create =:: mut variables
-  ## TODO initialize stack
+) =: public evaluateCall
+  context [] .program [] .idContext @ =:: idContext
+  code 0 array.at .data =:: op
+  op [] .val OpValue .initializeId != if
+    op [] .val .initializeId .idType IdentifierType .PROCEDURE !=
+  else false end if
+    "expected procedure initialization got " sb.wrap
+      op []
+        idContext [] .constContext @
+        idContext [] .labelContext @
+        idContext [] .typeContext @
+      sb.appendOp
+    op [] .pos context [] .program [] .errors @ appendError
+    true return ## not a call
+  end
+  ## TODO store previous open blocks, reset blocks after processing call
+  BlockType .PROCEDURE context openBlock
+  ## TODO process procedure arguments
   ## evaluateOperations
-    stack
     code 1 array.tail ## first operation declares procedure
-    variables @
     context
   evaluateOperations return
+end
+
+#+ interpret code-section at global level ignoring local stack+#
+proc(
+  Operation arrayView : code
+  ProgramContext ptr mut : progContext
+=>
+  ConstValue list
+  bool
+) =: public globalInterpret
+  ## InterpreterContext
+    progContext
+    64 ConstValue list.create
+    64 BlockInfo list.create
+  InterpreterContext new =:: mut context
+  ## evaluateOperations
+    code
+    context @
+  evaluateOperations =:: res
+  ## cleanup
+  context .openBlocks list.free #drop
+  context .stack res return
 end

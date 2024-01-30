@@ -833,52 +833,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       #drop:2 false return ## not a constant
     end
     #dup [] .constValue ConstValue .procedure == if
-      #dup [] .valueType typeContext types.getProcIn #drop typeContext types.compositeElts =:: inTypes
-      #dup [] .valueType typeContext types.getProcOut #drop typeContext types.compositeElts =:: outTypes
-      ## XXX less restrictive condition for constant evaluation
-      outTypes .length 1 == if outTypes 0 array.get types.primitive.TYPE types.typeEquals _if
-        inTypes .length fileState state popConstantArray
-          #drop ## common type
-          =:: args
-        =:: argTypes
-        ## TODO check if argument types are correct
-        ## findGeneratedType
-          #dup [] .labelId
-          args
-          typeContext
-          labelContext
-          idContext [] .constContext @
-        types.findGeneratedType if ## first occurrence of type
-          #over [] .constValue .procedure =:: procId
-          progContext [] .procedures procId list.get =:: procData
-          progContext [] .progFiles procData .fileId list.at .data [] .localOps
-            procData .codeStart
-            procData .codeLength
-          list.slice =:: ops
-          progContext interpreter.wrapProgram =:: mut interpreterContext
-          #over [] .valueType args ops interpreterContext @ interpretFunction
-            interpreterContext interpreter.unwrapProgram #drop
-            if #drop
-            "could not evaluate function" sb.wrap
-              #over:2 [] .labelId labelContext id.labelName .data sb.appendStr
-            fileState [] .wordStart state appendError2
-            #drop:3 false return ## error -> no constant
-          end =:: res
-          ## initializeGeneratedType
-            #over [] .labelId
-            args
-            res 0 list.at .data [] .typeId
-            typeContext
-            labelContext
-            idContext [] .constContext @
-          types.initializeGeneratedType if
-            "could not evaluate function" sb.wrap fileState [] .wordStart state appendError2
-          end
-          res list.free #drop
-        end fileState [] .wordStart newTypeConst state pushConst
-        #drop:2 true return
-      end
-      #drop:2 false return ## procedure constant
+      #drop:2 false return ## ignore procedure constants
     end
     #dup [] .constValue =:: mut constVal
     #dup [] .templateId -1 != #over [] .idType IdentifierType .TEMPLATE_ARG != & if
@@ -2363,20 +2318,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         list.pop =:: offset
       state [] .constantBlocks =
       blockType fileState [] .wordStart opEndBlock state appendOp
-      string.hash @ string.eq @ 32 ConstValue map.create =:: mut vars
       state [] .currentProc optional.hasData ! if ## evaluate types at global level
-      progContext interpreter.wrapProgram =:: mut interpreterContext
         ## evaluateOperations
-          32 ConstValue list.create
           progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps
             list.asArray
             offset .codeOffset
           array.tail
-          vars @
-          interpreterContext @
-        evaluateOperations
-          interpreterContext interpreter.unwrapProgram #drop
-          if
+          progContext
+        globalInterpret if
           "could not evaluate type-constant" sb.wrap fileState [] .wordStart state appendError2
         end list.free #drop
         "unimplemented" sb.wrap fileState [] .wordStart state appendError2
