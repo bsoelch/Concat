@@ -4,14 +4,6 @@
 #include "identifiers.concat"
 #include "program.concat"
 
-struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: public ProcedureInfo
-struct(
-  IdentifierContext : mut idContext
-  ProgramFile list : mut progFiles
-  ProcedureInfo list : mut procedures
-  CompilerError list : mut errors
-) =:: public ProgramContext
-
 struct(
   ProgramContext ptr mut : program
   BlockType list : mut openBlocks ## XXX store more detailed block info

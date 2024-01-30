@@ -3059,7 +3059,7 @@ proc(
 end
 
 128 =:: MAX_TEMPLATE_DEPTH
-proc( Program ptr mut => ) =: public typeCheckProgram
+proc( ProgramContext ptr mut => ) =: public typeCheckProgram
   =:: mut prog
   ## TypeCheckState
     prog [] .idContext @

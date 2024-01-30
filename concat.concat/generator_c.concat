@@ -60,7 +60,7 @@ proc( stringBuilder string => stringBuilder ) =: appendAsciified
   end #drop
 end
 #end
-proc( LabelId : label i32 : implId io.FILE : target Program ptr mut : prog => ) =: printGlobalName
+proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog => ) =: printGlobalName
   prog [] .idContext .labelContext @ =:: labelContext
   128 sb.create
     CONCAT_PREFIX sb.appendS
@@ -84,7 +84,7 @@ proc( LabelId : label i32 : implId io.FILE : target Program ptr mut : prog => ) 
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => ) =: printArgName
+proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : prog => ) =: printArgName
   prog [] .idContext .labelContext @ =:: labelContext
   labelId labelContext id.labelName =:: labelName
   64 sb.create
@@ -98,7 +98,7 @@ proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => )
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => ) =: printOutArgName
+proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : prog => ) =: printOutArgName
   prog [] .idContext .labelContext @ =:: labelContext
   labelId labelContext id.labelName =:: labelName
   64 sb.create
@@ -112,7 +112,7 @@ proc( i32 : index LabelId : labelId io.FILE : target Program ptr mut : prog => )
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( IdentifierInfo : idInfo io.FILE : target Program ptr mut : prog => ) =: printIdName
+proc( IdentifierInfo : idInfo io.FILE : target ProgramContext ptr mut : prog => ) =: printIdName
   prog [] .idContext .labelContext @ =:: labelContext
   idInfo .idType switch
     PROCEDURE GLOBAL_VAR case
@@ -151,7 +151,7 @@ proc( string : name i32 : id io.FILE : target => ) =: printCompositeName
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
+proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeName
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t switch
@@ -223,7 +223,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printTypeName
       break
   end
 end
-proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printUnsignedTypeName
+proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printUnsignedTypeName
   prog [] .idContext .typeContext @ =:: typeContext
   t typeContext types.isInt ! if
     t target prog printTypeName
@@ -240,7 +240,7 @@ proc( Type : t io.FILE : target Program ptr mut : prog => ) =: printUnsignedType
     FLOAT64 case target "double"   io.fputs #drop break
   end
 end
-proc( Type : t bool : argNames io.FILE : target Program ptr mut : prog => ) =: printProcArgs
+proc( Type : t bool : argNames io.FILE : target ProgramContext ptr mut : prog => ) =: printProcArgs
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t typeContext types.getCallConvention #drop =:: callConvention
@@ -307,7 +307,7 @@ proc( string : name i32 : id string : cName io.FILE : target => ) =: printCompos
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( Type : composite i32 : index io.FILE : target Program ptr mut : prog => ) =: printEltName
+proc( Type : composite i32 : index io.FILE : target ProgramContext ptr mut : prog => ) =: printEltName
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   64 sb.create
@@ -321,7 +321,7 @@ proc( Type : composite i32 : index io.FILE : target Program ptr mut : prog => ) 
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printCompositeElements
+proc( Type : composite io.FILE : target ProgramContext ptr mut : prog => ) =: printCompositeElements
   prog [] .idContext .typeContext @ =:: typeContext
   composite typeContext types.compositeElts =:: elts
   0 while #dup elts .length < do
@@ -334,7 +334,7 @@ proc( Type : composite io.FILE : target Program ptr mut : prog => ) =: printComp
     1 +
   end #drop
 end
-proc( io.FILE : target Program ptr mut : prog => ) =: printTypes
+proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
   prog [] .idContext .typeContext @ =:: typeContext
   prog getDeclaredTypes =:: types
   target "//type declarations\n" io.fputs #drop
@@ -491,7 +491,7 @@ proc( BinaryOperator => bool ) =: isArithimeticOp
   end
 end
 ## XXX? compiler context
-proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileCall
+proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =:  compileCall
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t typeContext types.getProcRet #drop =:: retType
@@ -511,7 +511,7 @@ proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : ind
     target ";\n" io.fputs #drop
   end
 end
-proc( Type : base i32 : eltIndex bool : isEnum Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileGetElt
+proc( Type : base i32 : eltIndex bool : isEnum Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =:  compileGetElt
   target "(" io.fputs #drop
   operations index isGlobal target prog compileOp
   isEnum if
@@ -522,7 +522,7 @@ proc( Type : base i32 : eltIndex bool : isEnum Operation arrayView : operations 
   base eltIndex target prog printEltName
   target ")" io.fputs #drop
 end
-proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =:  compileGetIndex
+proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =:  compileGetIndex
   prog [] .idContext .typeContext @ =:: typeContext
   dims 0 == if
     target "(*" io.fputs #drop
@@ -565,7 +565,7 @@ proc( Type : base i32 : dims Operation arrayView : operations i32 ptr mut : inde
     target #over io.fputSb #drop
   sb.free #drop
 end
-proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileCreateTuple
+proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =: compileCreateTuple
   prog [] .idContext .typeContext @ =:: typeContext
   composite typeContext types.compositeElts =:: elts
   isGlobal ! if
@@ -593,7 +593,7 @@ proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool
     target "})" io.fputs #drop
   end
 end
-proc( Type : constType bool : isGlobal io.FILE : target Program ptr mut : prog => stringBuilder ) =: constStart
+proc( Type : constType bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => stringBuilder ) =: constStart
   64 sb.create
     isGlobal ! if
       "((" sb.appendS
@@ -604,7 +604,7 @@ proc( Type : constType bool : isGlobal io.FILE : target Program ptr mut : prog =
     end
   return
 end
-proc( stringBuilder : sb bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: constEnd
+proc( stringBuilder : sb bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =: constEnd
   sb
     isGlobal ! if
       ")" sb.appendS
@@ -613,7 +613,7 @@ proc( stringBuilder : sb bool : isGlobal io.FILE : target Program ptr mut : prog
   sb.free #drop
 end
 
-proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileConstant
+proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =: compileConstant
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -694,7 +694,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
   end
 end
 
-proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target Program ptr mut : prog => ) =: compileOp
+proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =: compileOp
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
@@ -1480,7 +1480,7 @@ proc( stringBuilder => stringBuilder ) =: appendCharNames
   "\";\n"          sb.appendS
 end
 
-proc( io.FILE : target Program ptr mut : prog => ) =: public compileToC
+proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext

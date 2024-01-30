@@ -21,7 +21,7 @@ struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
 struct(
   string : mut basePath
   string : mut libPath
-  ProgramContext : mut progContext
+  ProgramContext ptr mut : progContext
   Constant list : mut constants
   i64 : mut constOffset
   Type list : mut typeBuffer
@@ -29,11 +29,8 @@ struct(
   i64 : mut staticArgsOffset
   FileId : mut currentFile
   ProcedureInfo optional : mut currentProc
-  Operation list : mut templateOps
   CompositeConstantOffset list : mut constantBlocks
   LabelId list : mut labelBuffer
-  i32 : mut autoTypeCount
-  bool : mut hasEntryPoint
 ) =:: ParserState
 
 proc( FilePosition : pos => Constant ) =: newWildcardConst
@@ -113,21 +110,23 @@ proc( Constant : const => Operation ) =: constantToOp
 end
 
 proc( ParserState ptr mut : state => i64 ) =: opCount
-  state [] .progContext .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    state [] .templateOps .length return
+  state [] .progContext =:: progContext
+  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+    progContext [] .templateOps .length return
   end
-  state [] .progContext .idContext @ id.isGlobal if
-    state [] .progContext .progFiles state [] .currentFile list.at .data [] .globalOps .length return
+  progContext [] .idContext @ id.isGlobal if
+    progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps .length return
   end
-  state [] .progContext .progFiles state [] .currentFile list.at .data [] .localOps .length return
+  progContext [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
 end
 proc( Operation : op ParserState ptr mut : state => ) =: appendOp
-  state [] .progContext .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    state [] .templateOps @
-  else state [] .progContext .idContext @ id.isGlobal _if
-    state [] .progContext .progFiles state [] .currentFile list.at .data [] .globalOps @
+  state [] .progContext =:: progContext
+  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+    progContext [] .templateOps @
+  else progContext [] .idContext @ id.isGlobal _if
+    progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @
   else
-    state [] .progContext .progFiles state [] .currentFile list.at .data [] .localOps @
+    progContext [] .progFiles state [] .currentFile list.at .data [] .localOps @
   end
   #dup []
     0 while #dup state [] .constants .length < do
@@ -141,18 +140,19 @@ proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   #swap [] =
 end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendError2
-  msg pos state [] .progContext .errors @ appendError
+  msg pos state [] .progContext [] .errors @ appendError
 end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendWarning2
-  msg pos state [] .progContext .errors @ appendWarning
+  msg pos state [] .progContext [] .errors @ appendWarning
 end
 proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
-  state [] .progContext .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    state [] .templateOps
-  else state [] .progContext .idContext @ id.isGlobal _if
-    state [] .progContext .progFiles state [] .currentFile list.get .globalOps
+  state [] .progContext =:: progContext
+  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+    progContext [] .templateOps
+  else progContext [] .idContext @ id.isGlobal _if
+    progContext [] .progFiles state [] .currentFile list.get .globalOps
   else
-    state [] .progContext .progFiles state [] .currentFile list.get .localOps
+    progContext [] .progFiles state [] .currentFile list.get .localOps
   end list.peek
 end
 
@@ -195,7 +195,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => Type bool ) =
     .val .typeId false return
 end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySize arrayView bool #+fixed-size+# ) =: popArraySize
-  state [] .progContext .idContext @ =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   state [] .constants .length state [] .constOffset <= if
     types.ArraySize array.empty true return
   end
@@ -254,7 +254,7 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => Type 
   state [] .typeBuffer list.asArray false return
 end
 proc( Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state => ConstantArray bool ) =: popTemplateArguments
-  state [] .progContext .idContext @ =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   argTypes idContext [] .typeContext @ types.compositeEltCount =:: count
   count state [] .constants .length > if
     "not enough arguments for template" sb.wrap fileState [] .wordStart state appendError2
@@ -276,7 +276,7 @@ proc( Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state 
   offset idContext [] .templateArgBuffer .length offset - ConstantArray new false return
 end
 proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state => Type arrayView ConstValue arrayView Type ) =: popConstantArray
-  state [] .progContext .idContext @ =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   state [] .constants .length state [] .constOffset len + < if ## XXX compare size with expected size
     "no enough constants for array" sb.wrap fileState [] .wordStart state appendError2
      Type array.empty ConstValue array.empty Type .undefined return
@@ -324,7 +324,7 @@ end
 proc( string : name ParserState ptr mut : state => StaticArgument optional ) =: getStaticArg
   0 while #dup state [] .staticArgs .length < do
     state [] .staticArgs #over list.get
-      #dup .labelId state [] .progContext .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
+      #dup .labelId state [] .progContext [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
         #swap #drop optional.wrap return
       end
     #drop
@@ -404,7 +404,7 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
         .IDENTIFER
       end
     end
-  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext .idContext .labelContext @ id.newLabel return
+  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .labelContext @ id.newLabel return
 end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state => string LabelId ) =: readLabel
   code start fileState state 0 readLabelAddFlags
@@ -414,7 +414,7 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
   state offsetConstants =:: prevConstants
   state [] .constants .length =:: constOffset
   state [] .labelBuffer .length =:: labelOffset
-  state [] .progContext .idContext @ =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   code
     while fileState nextToken
       fileState state tryParseConstant if #drop
@@ -622,7 +622,8 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state =>
   false return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string string bool ) =: tryParseConstant
-  state [] .progContext .idContext @ =:: idContext
+  state [] .progContext =:: progContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   code
@@ -634,7 +635,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ## parseStringConstant
             token .STRING
             fileState [] .wordStart
-            state [] .progContext .errors @
+            progContext [] .errors @
             labelContext
           id.parseStringConstant
           fileState [] .wordStart
@@ -643,7 +644,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "" string.wrap true return
       CHAR case
         token .CHAR
-          fileState [] .wordStart state [] .progContext .errors @  labelContext id.parseStringConstant ## escape character
+          fileState [] .wordStart progContext [] .errors @  labelContext id.parseStringConstant ## escape character
           #dup .length 1 != if
             "A character literal has to contain exactly one character" sb.wrap fileState [] .wordStart state appendError2
           end
@@ -849,12 +850,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           idContext [] .constContext @
         types.findGeneratedType if ## first occurrence of type
           #over [] .constValue .procedure =:: procId
-          state [] .progContext .procedures procId list.get =:: procData
-          state [] .progContext .progFiles procData .fileId list.at .data [] .localOps
+          progContext [] .procedures procId list.get =:: procData
+          progContext [] .progFiles procData .fileId list.at .data [] .localOps
             procData .codeStart
             procData .codeLength
           list.slice =:: ops
-          state [] .progContext @ interpreter.wrapProgram =:: mut interpreterContext
+          progContext interpreter.wrapProgram =:: mut interpreterContext
           #over [] .valueType args ops interpreterContext @ interpretFunction
             interpreterContext interpreter.unwrapProgram #drop
             if #drop
@@ -925,7 +926,8 @@ proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 
   return
 end
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
-  state [] .progContext .idContext @ =:: idContext
+  state [] .progContext =:: progContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   code
@@ -1046,7 +1048,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "error while parsing template arguments" sb.wrap fileState [] .wordStart state appendError2
           end #drop ## labelType
           false typeContext types.newProcArgs
-          state [] .templateOps .length state [] .currentFile fileState [] .wordStart idContext id.beginTemplate if
+          progContext [] .templateOps .length state [] .currentFile fileState [] .wordStart idContext id.beginTemplate if
             "could not create template" sb.wrap fileState [] .wordStart state appendError2
           end
           return
@@ -1057,12 +1059,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             IdentifierType .TYPE
             -1 ## id
             fileState state popTypeConstant #drop ConstValue .typeId new
-          fileState [] .wordStart state [] .currentFile idContext state [] .progContext .errors @ id.declareIdentifier if #drop
+          fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if #drop
             .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
             return
           end
           idContext id.isTopLevel if
-            state [] .templateOps .length idContext  id.endOpenTemplate
+            progContext [] .templateOps .length idContext  id.endOpenTemplate
           end
           #drop:2 return
         else "types" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
@@ -1197,7 +1199,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else isInit ! _if
           ConstValue .none
         else idType IdentifierType .PROCEDURE == _if
-          state [] .progContext .procedures .length ConstValue .procedure new
+          progContext [] .procedures .length ConstValue .procedure new
         else state hasConst _if
           state popConst
             #dup .valueType valType false typeContext types.canCast ! if
@@ -1212,13 +1214,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else
           ConstValue .none
         end
-      fileState [] .wordStart state [] .currentFile idContext state [] .progContext .errors @ id.declareIdentifier if #drop
+      fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if #drop
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
       end
       idContext id.isTopLevel if
         #dup [] .idType IdentifierType .PROCEDURE != isInit ! | if
-          state [] .templateOps .length idContext  id.endOpenTemplate
+          progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
       end
       #dup [] .idType IdentifierType .TYPE == if
@@ -1245,7 +1247,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## ProcedureInfo
           state [] .currentFile
           valType
-          state [] .progContext .progFiles state [] .currentFile list.get .localOps .length
+          progContext [] .progFiles state [] .currentFile list.get .localOps .length
           -1
         ProcedureInfo new optional.wrap state [] .currentProc =
         #dup [] .valueType typeContext types.getProcIn if
@@ -1274,7 +1276,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   fileState [] .wordStart
                   state [] .currentFile
                   idContext
-                  state [] .progContext .errors @
+                  progContext [] .errors @
                 id.declareIdentifier if #drop
                   .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
                   #drop:3 return
@@ -1323,8 +1325,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             const constantToOp state appendOp
           end
         else
-          state [] .autoTypeCount types.newAutoType
-          state [] .autoTypeCount 1 + state [] .autoTypeCount =
+          progContext [] .autoTypes .length i32 cast types.newAutoType
+          progContext [] .autoTypes
+            Type .undefined list.append
+          progContext [] .autoTypes =
           idContext id.isTopLevel if
             IdentifierType .GLOBAL_VAR
           else
@@ -1333,12 +1337,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           -1
           ConstValue .none
         end
-        fileState [] .wordStart state [] .currentFile idContext state [] .progContext .errors @ id.declareIdentifier if #drop
+        fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if #drop
           .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
           return
         end
         idContext id.isTopLevel if
-          state [] .templateOps .length idContext  id.endOpenTemplate
+          progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
         #dup [] .idType IdentifierType .TYPE == if
           #drop:2
@@ -1353,7 +1357,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             fileState state popTypeConstant ! if
               -1 typeContext types.setNamedType ! if
                 idContext id.isTopLevel if
-                  state [] .templateOps .length idContext  id.endOpenTemplate
+                  progContext [] .templateOps .length idContext  id.endOpenTemplate
                 end
                 return
               end
@@ -1444,10 +1448,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
     else #dup "entryPoint:" string.wrap string.eq _if #drop
-      state [] .hasEntryPoint if ## TODO print position of previous entry point
+      progContext [] .hasEntryPoint if ## TODO print position of previous entry point
         "program already has an entry point" sb.wrap fileState [] .wordStart state appendError2
       end
-      true state [] .hasEntryPoint =
+      true progContext [] .hasEntryPoint =
       ## newProcedure
         Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
         Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
@@ -1462,7 +1466,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ## ProcedureInfo
         state [] .currentFile
         procType
-        state [] .progContext .progFiles state [] .currentFile list.get .localOps .length
+        progContext [] .progFiles state [] .currentFile list.get .localOps .length
         -1
       ProcedureInfo new optional.wrap state [] .currentProc =
       fileState [] .wordStart opEntryPoint  state appendOp
@@ -1567,17 +1571,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           state [] .currentProc .data =:: mut currentProc
           ProcedureInfo optional.empty state [] .currentProc =
-          state [] .progContext .progFiles state [] .currentFile list.get .localOps .length
+          progContext [] .progFiles state [] .currentFile list.get .localOps .length
             currentProc .codeStart -
           currentProc .codeLength =
-          state [] .progContext .procedures
+          progContext [] .procedures
             currentProc list.append
-          state [] .progContext .procedures =
+          progContext [] .procedures =
           state resetStaticArgs
         else #drop end
       do end
       idContext id.isTopLevel if
-        state [] .templateOps .length idContext  id.endOpenTemplate
+        progContext [] .templateOps .length idContext  id.endOpenTemplate
       end
       return
     else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
@@ -2361,10 +2365,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       blockType fileState [] .wordStart opEndBlock state appendOp
       string.hash @ string.eq @ 32 ConstValue map.create =:: mut vars
       state [] .currentProc optional.hasData ! if ## evaluate types at global level
-      state [] .progContext @ interpreter.wrapProgram =:: mut interpreterContext
+      progContext interpreter.wrapProgram =:: mut interpreterContext
         ## evaluateOperations
           32 ConstValue list.create
-          state [] .progContext .progFiles state [] .currentFile list.at .data [] .globalOps
+          progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps
             list.asArray
             offset .codeOffset
           array.tail
@@ -2446,9 +2450,10 @@ proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState p
   end
 end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile
+  state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut included
-  0 while #dup state [] .progContext .progFiles .length < do
-    state [] .progContext .progFiles #over list.get .fileName sb.asStr fileName sb.asStr string.eq if
+  0 while #dup progContext [] .progFiles .length < do
+    progContext [] .progFiles #over list.get .fileName sb.asStr fileName sb.asStr string.eq if
       #dup included =
       break
     end
@@ -2457,7 +2462,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   included FILE_ID_NONE == if ## file has not yet been included
     fileName state parseFile fileName pos state checkIOError included =
   end
-  state [] .progContext .progFiles state [] .currentFile list.at .data
+  progContext [] .progFiles state [] .currentFile list.at .data
   #dup [] .includedFiles
       included
       pos
@@ -2465,16 +2470,24 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   #swap [] .includedFiles =
 end
 
-proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =: public parseProgram
+proc( stringBuilder : rootFile string : libPath string : basePath => ProgramContext ) =: public parseProgram
+  ## ProgramContext
+    id.newIdentifierContext
+    16  ProgramFile           list.create
+    64  ProcedureInfo         list.create
+    0   Type                  list.create ## autoTypes, not used in parser
+    128 Operation             list.create
+    0   SwitchData            list.create
+    32  CompilerError         list.create
+    false ## hasEntryPoint
+    false ## hasCheckIndex
+    false ## hasCheckEnum
+    false ## has getArgs
+  ProgramContext new =:: mut programContext
   ## ParserState
     basePath
     libPath
-    ## ProgramContext
-      id.newIdentifierContext
-      16  ProgramFile           list.create
-      64  ProcedureInfo         list.create
-      32  CompilerError         list.create
-    ProgramContext new
+    programContext @
     128 Constant                list.create
     0
     128 Type                    list.create
@@ -2482,41 +2495,29 @@ proc( stringBuilder : rootFile string : libPath string : basePath => Program ) =
     0
     FILE_ID_NONE
     ProcedureInfo               optional.empty
-    128 Operation               list.create
     128 CompositeConstantOffset list.create
     128 LabelId                 list.create
-    0
-    false
   ParserState new =:: mut state
   rootFile state @ parseFile rootFile rootFile sb.asStr 0 0 FilePosition new state @ checkIOError #drop
   ## cleanup parser memory
   state .constants list.free #drop
   state .typeBuffer list.free #drop
   state .staticArgs list.free #drop
-  ## Program
-    state .progContext .idContext ## TODO make ProgramContext part of/equal to Program
-    state .progContext .progFiles
-    state .autoTypeCount Type list.createZeroInit ## ! assumes Type .undefined has all zero memory representation
-    state .templateOps
-    0 SwitchData list.create
-    state .progContext .errors
-    state .hasEntryPoint
-    false false ## helper function flags, set in type-check phase
-    false ## has getArgs
-  Program new return
+  programContext return
 end
 proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError ) =: parseFile
   fileName
+    state [] .progContext =:: progContext
     #dup #over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
       #dup .length 1 - #over .length = ## ensure there is a zero-terminator after the last character
     end
     #dup sb.asStr 0 1 FilePosition new #dup FileState new =:: mut fileState
-    state [] .progContext .progFiles
-      #over state [] .progContext .progFiles .length FileId cast state [] .progContext .idContext @ newProgFile list.append
-    state [] .progContext .progFiles =
+    progContext [] .progFiles
+      #over progContext [] .progFiles .length FileId cast progContext [] .idContext @ newProgFile list.append
+    progContext [] .progFiles =
   state [] .currentFile
-    state [] .progContext .progFiles .length 1 - FileId cast state [] .currentFile =
+    progContext [] .progFiles .length 1 - FileId cast state [] .currentFile =
     #swap #dup .data #swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
       #dup io.FILE_ERROR_NONE != if
         #swap #drop ## discard code file

@@ -233,9 +233,11 @@ struct(
 struct( ConstValue : value FilePosition : pos ) =:: public LabelData
 struct( i64 : offset i64 : mut count ) =:: public CaseInfo
 struct( LabelData list : mut labels CaseInfo list : mut cases ) =:: public SwitchData
+struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: public ProcedureInfo
 struct(
   IdentifierContext : mut idContext
    ProgramFile list : mut progFiles
+ ProcedureInfo list : mut procedures
           Type list : mut autoTypes
      Operation list : mut templateOps
     SwitchData list : mut switchData
@@ -244,7 +246,7 @@ struct(
                bool : mut hasCheckIndex
                bool : mut hasCheckEnum
                bool : mut hasGetArgs
-) =:: public Program
+) =:: public ProgramContext
 
 proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext => ProgramFile ) =: public newProgFile
   128 Operation list.create
@@ -634,7 +636,7 @@ end
         break
     end
   end
-  proc( stringBuilder Program => stringBuilder ) =: public appendProgram
+  proc( stringBuilder ProgramContext => stringBuilder ) =: public appendProgram
     =:: prog
       "## errors:\n" sb.appendS
       0 while #dup prog .errors .length < do
