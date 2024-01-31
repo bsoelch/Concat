@@ -51,6 +51,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
   proc( T list : elts i64 : index => T ) =: public get
     index 0 < index elts .length >= | if
       ## TODO error handling
+      ..unreachable
     end
     elts .data index [] return
   end
@@ -65,6 +66,7 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
   proc( T : elt T list : elts i64 : index => ) =: public set
     index 0 < index elts .length >= | if
       ## TODO error handling
+      ..unreachable
     end
     elt elts .data index [] =
   end
@@ -159,9 +161,10 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
     append return
   end
   #template type : T #end
-  proc( T list : elts => T list T ) =: public pop ##FIXME!! list.pop has no error handling
+  proc( T list : elts => T list T ) =: public pop
     elts .length 0 <= if
       ## TODO error handling
+      ..unreachable
     end
     elts
       #dup .length 1 - #over .length =
