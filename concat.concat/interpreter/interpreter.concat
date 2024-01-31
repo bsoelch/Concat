@@ -9,12 +9,20 @@ struct(
   i64 : stackOffset
   string ConstValue hashMap : mut variables
 ) =:: BlockInfo
+struct(
+  Type : valueType
+  LabelId : valueId
+  LabelId : mut valueName
+) =:: ValueInfo
 
 struct(
   ProgramContext ptr mut : program
   ConstValue list : mut stack
+  ValueInfo  list : mut stackInfo
   ## XXX store types of stack elements
   BlockInfo  list : mut openBlocks
+  Type list : mut typeBuffer
+  LabelId list : mut labelBuffer
 ) =:: public InterpreterContext
 
 
@@ -29,82 +37,291 @@ proc( BlockType : blockType InterpreterContext ptr mut : context => ) =: openBlo
 end
 
 proc(
-  Operation arrayView : ops
+  Operation ptr : op
+  BlockInfo ptr : closedBlock
   InterpreterContext ptr mut : context
-=>
-  bool
-) =: public evaluateOperations
+=> bool ) =: closedTypeBlock
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext =:: idContext
   context [] .program [] .idContext .constContext @ =:: constContext
   context [] .program [] .idContext .typeContext @ =:: typeContext
   context [] .program [] .idContext .labelContext @ =:: labelContext
-  0 =:: mut offset
-  while offset ops .length < do
-    ops offset array.at .data =:: op
-      op [] .val switch
-        NOP case break
-        Constant case
-          context [] .stack
-            op [] .val .Constant list.append
-          context [] .stack =
-          break
-        Return case
+  closedBlock [] .stackOffset =:: offset
+  context [] .stack .length offset - =:: elementCount
+  context [] .typeBuffer
+    list.clear
+    elementCount list.ensureCap
+  context [] .typeBuffer =
+  context [] .labelBuffer
+    list.clear
+    elementCount list.ensureCap
+  context [] .labelBuffer =
+  false =:: mut error
+  0 while #dup elementCount < do
+    context [] .stack
+      #over offset +
+    list.at .data =:: stackValue
+    context [] .stackInfo
+      #over offset +
+    list.at .data =:: stackInfo
+    stackInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
+      "unsupported type in composite type, expected type got " sb.wrap
+        stackInfo [] .valueType labelContext typeContext sb.appendType
+      op [] .pos errors appendError
+      true error =
+      1 + continue
+    end
+    context [] .typeBuffer
+      stackValue [] .typeId list.append
+    context [] .typeBuffer =
+    context [] .labelBuffer
+      stackInfo [] .valueName list.append
+    context [] .labelBuffer =
+    1 +
+  end #drop
+  offset context [] .stack .length =
+  offset context [] .stackInfo .length =
+  error return
+end
+
+proc(
+  ConstValue : value
+  Type : valType
+  LabelId : id
+  InterpreterContext ptr mut : context
+=> ) =: pushValue
+  context [] .stack
+    value list.append
+  context [] .stack =
+  context [] .stackInfo
+    ## ValueInfo
+      valType
+      id
+      -1
+    ValueInfo new list.append
+  context [] .stackInfo =
+end
+
+proc(
+  Operation ptr : op
+  InterpreterContext ptr mut : context
+=>
+  bool
+) =: public evaluateOperation
+  context [] .program [] .errors @ =:: errors
+  context [] .program [] .idContext =:: idContext
+  context [] .program [] .idContext .constContext @ =:: constContext
+  context [] .program [] .idContext .typeContext @ =:: typeContext
+  context [] .program [] .idContext .labelContext @ =:: labelContext
+  op [] .val switch
+    NOP case
+      false return
+    Constant case
+      ## pushValue
+        op [] .val .Constant
+        op [] .dataType
+        -1 ## XXX? remember id in op-type
+      context pushValue
+      false return
+    Return case
+      false return
+    block case
+      op [] .val .block .blockType switch
+        TYPE_TUPLE
+        TYPE_STRUCT
+        TYPE_ENUM
+        TYPE_UNION
+        TYPE_PROC_IN
+        TYPE_PROC_OUT
+        TYPE_COMPOSITE case
+          op [] .val .block .blockType context openBlock
           false return
-        block case
-          op [] .val .block .blockType switch
-            TYPE_TUPLE
-            TYPE_STRUCT
-            TYPE_ENUM
-            TYPE_UNION
-            TYPE_PROC_IN
-            TYPE_PROC_OUT
-            TYPE_COMPOSITE case
-                op [] .val .block .blockType context openBlock
-               break
-            PROCEDURE
-            EXPERIMENTAL_PROCEDURE
-            IF
-            IFIF
-            ELSE
-            WHILE
-            DO
-            BREAK
-            CONTINUE
-            SWITCH
-            CASE
-            DEFAULT
-            INITIALIZER
-            UNKNOWN case
-              "unsupported block-type in constant evaluation: " sb.wrap
-               op [] .val .block .blockType sb.appendBlockType
-              op [] .pos errors appendError
-              true return ## unsupported block
+        PROCEDURE
+        EXPERIMENTAL_PROCEDURE
+        IF
+        IFIF
+        ELSE
+        WHILE
+        DO
+        BREAK
+        CONTINUE
+        SWITCH
+        CASE
+        DEFAULT
+        INITIALIZER
+        UNKNOWN case
+          "unsupported block-type in constant evaluation: " sb.wrap
+            op [] .val .block .blockType sb.appendBlockType
+          op [] .pos errors appendError
+          true return
+      end
+      break
+    blockEnd case
+      op [] .val .blockEnd .blockType =:: blockType
+      context [] .openBlocks
+        list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
+      context [] .openBlocks =
+      closedBlock .blockType blockType != if
+        "unexpected end of " sb.wrap
+         blockType sb.appendBlockType
+         "-Block expected " sb.appendS
+         closedBlock .blockType sb.appendBlockType
+        op [] .pos errors appendError
+      end
+      blockType switch
+        TYPE_TUPLE TYPE_STRUCT case
+          op closedBlock @ context closedTypeBlock if true return end
+          ## newProcArgs
+            context [] .typeBuffer list.asArray
+            context [] .labelBuffer list.asArray optional.wrap
+          typeContext types.newTuple if #drop
+            "could not create tuple" sb.wrap op [] .pos errors appendError
+            true return
+          end =:: tupleType
+          ## pushValue
+            tupleType ConstValue .typeId new
+              types.primitive.TYPE
+              -1
+          context pushValue
+          false return
+        TYPE_ENUM case
+          op closedBlock @ context closedTypeBlock if true return end
+          ## newProcArgs
+            context [] .typeBuffer list.asArray
+            context [] .labelBuffer list.asArray optional.wrap
+          typeContext types.newEnum if #drop
+            "could not create enum" sb.wrap op [] .pos errors appendError
+            true return
+          end =:: enumType
+          ## pushValue
+            enumType ConstValue .typeId new
+              types.primitive.TYPE
+              -1
+          context pushValue
+          false return
+        TYPE_UNION case
+          op closedBlock @ context closedTypeBlock if true return end
+          ## newProcArgs
+            context [] .typeBuffer list.asArray
+            context [] .labelBuffer list.asArray optional.wrap
+          typeContext types.newUnion if #drop
+            "could not create union" sb.wrap op [] .pos errors appendError
+            true return
+          end =:: unionType
+          ## pushValue
+            unionType ConstValue .typeId new
+              types.primitive.TYPE
+              -1
+          context pushValue
+          false return
+        TYPE_PROC_IN
+        TYPE_COMPOSITE case
+          op closedBlock @ context closedTypeBlock if true return end
+          context [] .typeBuffer .length 1 - =:: nArgs ## last value is return type
+          nArgs 0 < if
+            "missing return type for procedure" sb.wrap op [] .pos errors appendError
+            true return
           end
-          break
-        blockEnd case
+          ## newProcArgs
+            context [] .typeBuffer list.asArray nArgs array.head
+            context [] .labelBuffer list.asArray nArgs array.head optional.wrap
+            false
+          typeContext types.newProcArgs =:: procIn
+          context [] .typeBuffer nArgs list.get =:: procOut
+          procOut Type .procOut != if
+            "unexpected procedure return type: " sb.wrap
+              procOut labelContext typeContext sb.appendType
+            op [] .pos errors appendError
+            true return
+          end
+          procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if
+            "could not create procedure" sb.wrap op [] .pos errors appendError
+          end =:: proc
+          ## pushValue
+            proc ConstValue .typeId new
+              types.primitive.TYPE
+              -1
+          context pushValue
+          false return
+        TYPE_PROC_OUT case
+          op closedBlock @ context closedTypeBlock if true return end
+          ## newProcArgs
+            context [] .typeBuffer list.asArray
+            context [] .labelBuffer list.asArray optional.wrap
+            true
+          typeContext types.newProcArgs =:: procOut
+          ## pushValue
+            procOut ConstValue .typeId new
+              types.primitive.TYPE
+              -1
+          context pushValue
+          false return
+        PROCEDURE
+        EXPERIMENTAL_PROCEDURE
+        IF
+        IFIF
+        ELSE
+        WHILE
+        DO
+        BREAK
+        CONTINUE
+        SWITCH
+        CASE
+        DEFAULT
+        INITIALIZER
+        UNKNOWN case
           "unsupported block-end in constant evaluation: " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType
           op [] .pos errors appendError
-          true return ## unsupported block
-          break
-        entryPoint
-        getId setId @Id initializeId declareId
-        getLabel setLabel @Label declareField initializeField
-        getElement setElement @Element
-        getArrayElement setArrayElement @ArrayElement
-        getEnumElement setEnumElement @EnumElement
-        Print New newEnum call callPtr
-        argc getArg getArgLen
-        length size Cast Cast!
-        unaryOperator binaryOperator
-        enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
-        stackMod getName setName @Name
-        compilerInfo unreachable case
-          "unsupported operation in constant evaluation: " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
-          op [] .pos errors appendError
           true return
+      end
+    declareField case
+      context [] .stack .length 0 == if
+        "not enough arguments for declare field, expected 1 got 0" sb.wrap
+        op [] .pos errors appendError
+        true return
+      end
+      ## TODO declare field as local variable
+      context [] .stackInfo list.peek .data =:: valInfo
+      valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
+        "wrong argument type for declare field expected type got " sb.wrap
+          valInfo [] .valueType labelContext typeContext sb.appendType
+        op [] .pos errors appendError
+        true return
+      end
+      op [] .val .declareField valInfo [] .valueName =
+      false return
+    entryPoint
+    getId setId @Id initializeId declareId
+    getLabel setLabel @Label initializeField
+    getElement setElement @Element
+    getArrayElement setArrayElement @ArrayElement
+    getEnumElement setEnumElement @EnumElement
+    Print New newEnum call callPtr
+    argc getArg getArgLen
+    length size Cast Cast!
+    unaryOperator binaryOperator
+    enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
+    stackMod getName setName @Name
+    compilerInfo unreachable case
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+      op [] .pos errors appendError
+      true return
+  end
+end
+
+proc(
+  Operation arrayView : ops
+  InterpreterContext ptr mut : context
+=>
+  bool
+) =: public evaluateOperations
+  0 =:: mut offset
+  while offset ops .length < do
+    ops offset array.at .data =:: op
+      op context evaluateOperation if
+        true return
       end
     offset 1 + offset =
   end
@@ -154,13 +371,20 @@ proc(
   ## InterpreterContext
     progContext
     64 ConstValue list.create
-    64 BlockInfo list.create
+    64 ValueInfo  list.create
+    64 BlockInfo  list.create
+    64 Type       list.create
+    64 LabelId    list.create
   InterpreterContext new =:: mut context
   ## evaluateOperations
     code
     context @
   evaluateOperations =:: res
   ## cleanup
-  context .openBlocks list.free #drop
+  ## FIXME free memory in open blocks
+  context .stackInfo   list.free #drop
+  context .openBlocks  list.free #drop
+  context .typeBuffer  list.free #drop
+  context .labelBuffer list.free #drop
   context .stack res return
 end

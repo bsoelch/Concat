@@ -2297,15 +2297,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "=>" string.wrap string.eq _if =:: opName
       idContext id.currentScopeType =:: blockType
       blockType BlockType .TYPE_COMPOSITE != blockType BlockType .TYPE_PROC_IN != & if
-        "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
+        "unexpected " sb.wrap
+          opName sb.appendStr
+          " in " sb.appendS
+          blockType sb.appendBlockType
+          "-block" sb.appendS
+        fileState [] .wordStart state appendError2
+        return
       end
       BlockType .TYPE_PROC_OUT idContext id.openScope
-      state [] .constantBlocks
-        ## CompositeConstantOffset
-          state opCount
-          state [] .constants .length
-        CompositeConstantOffset new list.append
-      state [] .constantBlocks =
+      ## don't update constant blocks, procedure-type is a single constant
       BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
       return
     else #dup ")" string.wrap string.eq _if =:: opName
@@ -2313,27 +2314,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
         #drop:3
         return
-      end =:: blockType
+      end =:: blockType #drop:2
       state [] .constantBlocks
         list.pop =:: offset
       state [] .constantBlocks =
       blockType fileState [] .wordStart opEndBlock state appendOp
-      state [] .currentProc optional.hasData ! if ## evaluate types at global level
-        ## evaluateOperations
-          progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps
-            list.asArray
-            offset .codeOffset
-          array.tail
-          progContext
-        globalInterpret if
-          "could not evaluate type-constant" sb.wrap fileState [] .wordStart state appendError2
-        end list.free #drop
-        "unimplemented" sb.wrap fileState [] .wordStart state appendError2
-        ## TODO replace code with result
-      end
       blockType switch
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
-          ## TODO compute type if on global level
           break
         TYPE_PROC_OUT case
           idContext id.closeScope if ## close procedure scope
@@ -2343,9 +2330,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               BlockType .TYPE_COMPOSITE sb.appendBlockType
               " block" sb.appendS
             fileState [] .wordStart state appendError2
-            #drop:5
+            #drop:3
             return
-          else =:: container
+          else =:: container #drop:2
             container BlockType .TYPE_COMPOSITE != container BlockType .TYPE_PROC_IN != & _if
             "expected " sb.wrap
               BlockType .TYPE_PROC_IN sb.appendBlockType
@@ -2354,28 +2341,58 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               " block got " sb.appendS
               container sb.appendBlockType
             fileState [] .wordStart state appendError2
-            #drop:4
             return
           else
             container fileState [] .wordStart opEndBlock state appendOp
-            state [] .constantBlocks
-              list.pop =:: containerOffset
-            state [] .constantBlocks =
-          end #drop:2
+          end
           break
         TYPE_PROC_IN case
          "unexpected " sb.wrap
             opName sb.appendStr
             " in procedure block, expected => followed by return types" sb.appendS
           fileState [] .wordStart state appendError2
-          break
+          return
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
         IF IFIF ELSE WHILE DO BREAK CONTINUE
         SWITCH CASE DEFAULT INITIALIZER case
-          "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
-          #drop:2 return
+          "unexpected " sb.wrap
+            opName sb.appendStr
+            " in " sb.appendS
+            blockType sb.appendBlockType
+            "-block" sb.appendS
+          fileState [] .wordStart state appendError2
+          return
       end
-      #drop:2 return
+      state [] .currentProc optional.hasData ! if ## evaluate types at global level
+        progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @ =:: ops
+        ## evaluateOperations
+          ops []
+            list.asArray
+            offset .codeOffset
+          array.tail
+          progContext
+        globalInterpret if list.free #drop
+          "could not evaluate type-constant" sb.wrap fileState [] .wordStart state appendError2
+          return
+        end =:: results
+        results .length 1 != if results list.free #drop
+          "wrong number of results for type evaluation expected 1 got " sb.wrap
+             results .length sb.appendI
+          fileState [] .wordStart state appendError2
+          return
+        end
+        results 0 list.get =:: result
+        results list.free #drop
+        result ConstValue .typeId != if
+          "wrong result for type evaluation expected `type` got " sb.wrap
+             result idContext [] .constContext @ labelContext typeContext sb.appendConstant
+          fileState [] .wordStart state appendError2
+          return
+        end
+        offset .codeOffset ops [] .length = ## remove operations
+        result .typeId fileState [] .wordStart newTypeConst state pushConst
+      end
+      return
     end
   #dup state [] .currentFile idContext id.getIdentifier ! if ## try parsing as identifier
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
