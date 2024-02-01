@@ -23,6 +23,7 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
   proc( T arrayView : elts i64 : index => T ) =: public get
     index 0 < index elts .length >= | if
       ## TODO error handling
+      ..unreachable
     end
     elts .data index [] return
   end
