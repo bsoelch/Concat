@@ -291,7 +291,7 @@ proc(
       end
       op [] .val .declareField valInfo [] .valueName =
       false return
-    entryPoint
+    entryPoint typeModifier
     getId setId @Id initializeId declareId
     getLabel setLabel @Label initializeField
     getElement setElement @Element

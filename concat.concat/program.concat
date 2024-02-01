@@ -11,6 +11,7 @@ enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
 struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
 struct( IdentifierInfo : idInfo i64 : argCount ) =:: public CallInfo
+enum( PTR ARRAY PTR_MUT ) =:: public TypeModifier
 enum(
                       NOP
                       entryPoint
@@ -60,6 +61,7 @@ enum(
             LabelId : mut @Name
             LabelId : declareField
             LabelId : initializeField
+       TypeModifier : mut typeModifier
                       unreachable
        CompilerInfo : compilerInfo
 ) =:: public OpValue
@@ -202,6 +204,10 @@ proc( LabelId FilePosition  => Operation ) =: public opInitializeField
   =:: pos
   OpValue .initializeField new Type .undefined pos Operation new return
 end
+proc( TypeModifier FilePosition  => Operation ) =: public opTypeModifier
+  =:: pos
+  OpValue .typeModifier new Type .undefined pos Operation new return
+end
 proc( FilePosition : pos => Operation ) =: public opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
 end
@@ -320,7 +326,20 @@ end
         #swap .count  sb.appendI
         break
     end
+  end
+  proc( stringBuilder TypeModifier => stringBuilder ) =: public appendTypeModifier
+    switch
+      PTR case
+        "ptr" sb.appendS
+        break
+      ARRAY case
+        "array" sb.appendS
+        break
+      PTR_MUT case
+        "ptr mut" sb.appendS
+        break
     end
+  end
   proc( stringBuilder Operation ConstantContext ptr LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendOp
     =:: typeContext
     =:: labelContext
@@ -412,6 +431,11 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .initializeField labelContext id.labelName .data sb.appendStr
+          break
+        typeModifier case
+          "typeModifier \"" sb.appendS
+          #over .val .typeModifier sb.appendTypeModifier
+          "\"" sb.appendS
           break
         getElement case
           "get element ( " sb.appendS

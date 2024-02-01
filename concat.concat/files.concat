@@ -6,17 +6,17 @@
 
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public FileState
 
-enum( EMPTY string : IDENTIFER string : STRING string : CHAR ) =:: public Token
+enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: public Token
 
 #namespace sb
   proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
     token switch
       EMPTY case
         sb "empty" sb.appendS return
-      IDENTIFER case
+      IDENTIFIER case
         sb
           "identifier \"" sb.appendS
-          token .IDENTIFER sb.appendStr
+          token .IDENTIFIER sb.appendStr
           '\"' sb.appendC
         return
       STRING case
@@ -159,5 +159,5 @@ proc( string : code FileState ptr mut : fileState => string Token ) =: public ne
     #dup .length 0 == if
       #drop Token .EMPTY return
     end
-  Token .IDENTIFER new return
+  Token .IDENTIFIER new return
 end

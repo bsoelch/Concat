@@ -353,6 +353,21 @@
   proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
     id fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
+  proc( string : id FilePosition : pos CompilerError list ptr mut : errors => bool ) =: public checkIdentifier
+    id .length 0 == if
+      "identifier names have to be non-empty" sb.wrap pos errors appendError
+      true return
+    end
+    id 0 string.charAt '#' == if
+      "identifier names cannot start with '#'" sb.wrap pos errors appendError
+      true return
+    end
+    id '.' string.contains if
+      "identifier names cannot contain '.'" sb.wrap pos errors appendError
+      true return
+    end
+    false return
+  end
   proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
@@ -380,12 +395,7 @@
         ID_NONE ID_NONE_DATA @ true return
       end
     end
-    name 0 string.charAt '#' == if
-      "identifier names cannot start with '#'" sb.wrap declaredAt errors appendError
-      ID_NONE ID_NONE_DATA @ true return
-    end
-    name '.' string.contains if
-      "identifier names cannot contain '.'" sb.wrap declaredAt errors appendError
+    name declaredAt errors checkIdentifier if
       ID_NONE ID_NONE_DATA @ true return
     end
     context [] .openScopes .length 0 > if

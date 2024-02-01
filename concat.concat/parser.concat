@@ -356,52 +356,52 @@ end
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state => string string ) =: nextWord
   code
     fileState nextToken
-    #dup Token .IDENTIFER != if
+    #dup Token .IDENTIFIER != if
       "expected identifier" sb.wrap fileState [] .wordStart state appendError2
     end
-    .IDENTIFER
+    .IDENTIFIER
   return
 end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state LabelFlag : initFlags => string LabelId ) =: readLabelAddFlags
   0 LabelFlag =: mut flags
-  false =:: mut isModifer
+  false =:: mut isModifier
   code start
     while
-      false isModifer =
+      false isModifier =
       #dup "mut" string.wrap string.eq if
         id.FLAG_MUTABLE flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "auto" string.wrap string.eq _if
         id.FLAG_AUTO flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "static" string.wrap string.eq _if
         id.FLAG_STATIC flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "extern" string.wrap string.eq _if
         id.FLAG_EXTERN flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "public" string.wrap string.eq _if
         id.FLAG_PUBLIC flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "private" string.wrap string.eq _if
         id.FLAG_PRIVATE flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "#:experimental" string.wrap string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags =
-        true isModifer =
+        true isModifier =
       else #dup "#:" string.wrap string.startsWith _if
-        true isModifer =
+        true isModifier =
       end
-      isModifer ! if
+      isModifier ! if
         break
       end
-    isModifer do #drop
+    isModifier do #drop
       fileState nextToken
-      #dup Token .IDENTIFER != if #drop
+      #dup Token .IDENTIFIER != if #drop
         "expected identifier" sb.wrap state [] .constants list.peek .data [] .pos state appendError2
         "" string.wrap
       else
-        .IDENTIFER
+        .IDENTIFIER
       end
     end
   flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .labelContext @ id.newLabel return
@@ -479,10 +479,10 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
           end
         end #drop
         fileState nextToken
-        #dup Token .IDENTIFER != if
+        #dup Token .IDENTIFIER != if
           "expected identifier" sb.wrap fileState [] .wordStart state appendError2
         end
-        .IDENTIFER
+        .IDENTIFIER
         fileState
         state
         fileState state peekTypeConstant if
@@ -652,11 +652,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           0 string.charAt
         fileState [] .wordStart newCharConstant state pushConst
         "" string.wrap true return
-      IDENTIFER case
-        token .IDENTIFER fileState state tryParseNumberLiteral if
+      IDENTIFIER case
+        token .IDENTIFIER fileState state tryParseNumberLiteral if
           "" string.wrap true return
         end
-        token .IDENTIFER
+        token .IDENTIFIER
         break
     end
     #dup "_" string.wrap string.eq if
@@ -692,7 +692,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "type" string.wrap string.eq _if
       types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else #dup "ptr" string.wrap string.eq _if
+    else #dup "ptr" string.wrap string.eq _EXPERIMENTAL_ ! & _if
       fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
         Type .undefined fileState [] .wordStart newTypeConst  state pushConst
@@ -705,7 +705,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
         fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else #dup "array" string.wrap string.eq _if
+    else #dup "array" string.wrap string.eq _EXPERIMENTAL_ ! & _if
       fileState state popArraySize =:: fixedSize =:: sizes
       fileState state popTypeConstant if #drop
         Type .undefined fileState [] .wordStart newTypeConst  state pushConst
@@ -718,7 +718,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
         fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else #dup "mut" string.wrap string.eq _if
+    else #dup "mut" string.wrap string.eq _EXPERIMENTAL_ ! & _if
       fileState state popTypeConstant if #drop
         Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         true return
@@ -846,7 +846,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       constVal args 0 0 ConstantArray new fileState [] .wordStart idContext types.replaceGenerics constVal =
       offset idContext [] .templateArgBuffer .length =
     end
-    ## newIdentiferConstant
+    ## newIdentifierConstant
       #dup [] .valueType
       constVal
       #over:2 id.asIdInfo optional.wrap
@@ -880,6 +880,7 @@ proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut => i32 
   end
   return
 end
+
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state => string ) =: parseOperation
   state [] .progContext =:: progContext
   state [] .progContext [] .idContext @ =:: idContext
@@ -888,6 +889,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   code
     token fileState state tryParseConstant if
       #drop return
+    end
+    #dup .length 0 == if #drop
+      return ## skip empty tokens
     end
     #dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
@@ -934,7 +938,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #swap sb.appendStr
             fileState [] .wordStart state includeFile
             return
-          else #dup Token .IDENTIFER == _if .IDENTIFER ## library file
+          else #dup Token .IDENTIFIER == _if .IDENTIFIER ## library file
             state [] .libPath .length #over .length + ".concat" ..length + sb.create
               state [] .libPath sb.appendStr
               #swap sb.appendStr ".concat" sb.appendS
@@ -953,11 +957,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
           else #drop end
           fileState nextToken
-          #dup Token .IDENTIFER != if #drop
+          #dup Token .IDENTIFIER != if #drop
             "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError2
             return
-          end .IDENTIFER
-          #dup .length 0 == #over 0 string.charAt '#' == | #over '.' string.contains | if
+          end .IDENTIFIER
+          #dup fileState [] .wordStart progContext [] .errors @ id.checkIdentifier if
             "\"" sb.wrap
               #swap sb.appendStr
             "\" is not a valid namespace name" sb.appendS
@@ -972,10 +976,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         else "using" string.wrap #over string.eq _if #drop:2
           fileState nextToken
-          #dup Token .IDENTIFER != if #drop
+          #dup Token .IDENTIFIER != if #drop
             "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError2
             return
-          end .IDENTIFER
+          end .IDENTIFIER
           #dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
           idContext id.importNamespace if
             "namespace \"" sb.wrap
@@ -1043,10 +1047,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         else "find" string.wrap #over string.eq _if #drop:2
           fileState nextToken
-          #dup Token .IDENTIFER != if #drop
+          #dup Token .IDENTIFIER != if #drop
             "expected identifier" sb.wrap fileState [] .wordStart state appendWarning2
             return
-          end .IDENTIFER =:: idName
+          end .IDENTIFIER =:: idName
           16 IdentifierMatch list.create =:: mut matches
           idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier #drop:3
           "-----------------\n" sb.wrap
@@ -1539,7 +1543,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         progContext [] .templateOps .length idContext  id.endOpenTemplate
       end
       return
-    else #dup .length 1 > #over 0 string.charAt '.' == #over:2 1 string.charAt '.' != & & _if
+    else #dup .length 1 > _if #dup 0 string.charAt '.' == _if #dup 1 string.charAt '.' != _if
       1 string.tail
         state hasConst if
           state popConst
@@ -2231,8 +2235,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unimplemented" sb.wrap fileState [] .wordStart state appendError2
       end
       return
-    else #dup "mut" string.wrap string.eq _if #drop
-      "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.wrap fileState [] .wordStart state appendError2
+    else #dup "ptr" string.wrap string.eq _if #drop
+      TypeModifier .PTR fileState [] .wordStart opTypeModifier state appendOp
+      ## TODO constant evaluation on global level
+      return
+    else #dup "array" string.wrap string.eq _if #drop
+      TypeModifier .ARRAY fileState [] .wordStart opTypeModifier state appendOp
+      ## TODO constant evaluation on global level
+      return
+    else #dup "mut" string.wrap string.eq _if =:: opName
+      state peekOp =:: prev
+      prev optional.hasData if
+        prev .data [] .val OpValue .typeModifier == _if
+        prev .data [] .val .typeModifier TypeModifier .PTR == _if
+          TypeModifier .PTR_MUT prev .data [] .val .typeModifier =
+          return
+      end
+      opName sb.fromStr
+        "mut can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.appendS
+      fileState [] .wordStart state appendError2
       return
     else #dup "(" string.wrap string.eq _if #drop
       BlockType .TYPE_COMPOSITE idContext id.openScope
