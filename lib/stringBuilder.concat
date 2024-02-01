@@ -19,6 +19,11 @@ i8 list #typedef public stringBuilder
       str appendS
     return
   end
+  proc( string : str => stringBuilder ) =: public fromStr
+    str .length create
+      str appendStr
+    return
+  end
   proc( stringBuilder : str i64 : index => i8 ) =: public charAt
     str index list.get return
   end
