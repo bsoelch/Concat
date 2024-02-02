@@ -7,12 +7,13 @@
 struct(
   BlockType : blockType
   i64 : stackOffset
-  string ConstValue hashMap : mut variables
+  string ConstValue hashMap : mut variables ## XXX change keys to LabelId
 ) =:: BlockInfo
 struct(
   Type : valueType
   LabelId : valueId
   LabelId : mut valueName
+  FilePosition : pushedAt
 ) =:: ValueInfo
 
 struct(
@@ -42,7 +43,7 @@ proc(
   InterpreterContext ptr mut : context
 => bool ) =: closedTypeBlock
   context [] .program [] .errors @ =:: errors
-  context [] .program [] .idContext =:: idContext
+  context [] .program [] .idContext @ =:: idContext
   context [] .program [] .idContext .constContext @ =:: constContext
   context [] .program [] .idContext .typeContext @ =:: typeContext
   context [] .program [] .idContext .labelContext @ =:: labelContext
@@ -88,6 +89,7 @@ proc(
   ConstValue : value
   Type : valType
   LabelId : id
+  FilePosition : pos
   InterpreterContext ptr mut : context
 => ) =: pushValue
   context [] .stack
@@ -98,6 +100,7 @@ proc(
       valType
       id
       -1
+      pos
     ValueInfo new list.append
   context [] .stackInfo =
 end
@@ -105,11 +108,13 @@ end
 proc(
   Operation ptr : op
   InterpreterContext ptr mut : context
+  bool : showErrorMessages ## TODO distinguish non-interpretable operations and errors
 =>
   bool
 ) =: public evaluateOperation
   context [] .program [] .errors @ =:: errors
-  context [] .program [] .idContext =:: idContext
+  context [] .program =:: program
+  context [] .program [] .idContext @ =:: idContext
   context [] .program [] .idContext .constContext @ =:: constContext
   context [] .program [] .idContext .typeContext @ =:: typeContext
   context [] .program [] .idContext .labelContext @ =:: labelContext
@@ -121,6 +126,7 @@ proc(
         op [] .val .Constant
         op [] .dataType
         -1 ## XXX? remember id in op-type
+        op [] .pos
       context pushValue
       false return
     Return case
@@ -150,9 +156,11 @@ proc(
         DEFAULT
         INITIALIZER
         UNKNOWN case
-          "unsupported block-type in constant evaluation: " sb.wrap
-            op [] .val .block .blockType sb.appendBlockType
-          op [] .pos errors appendError
+          showErrorMessages if
+            "unsupported block-type in constant evaluation: " sb.wrap
+              op [] .val .block .blockType sb.appendBlockType
+            op [] .pos errors appendError
+          end
           true return
       end
       break
@@ -162,11 +170,14 @@ proc(
         list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
       context [] .openBlocks =
       closedBlock .blockType blockType != if
-        "unexpected end of " sb.wrap
-         blockType sb.appendBlockType
-         "-Block expected " sb.appendS
-         closedBlock .blockType sb.appendBlockType
-        op [] .pos errors appendError
+        showErrorMessages if
+          "unexpected end of " sb.wrap
+           blockType sb.appendBlockType
+           "-Block expected " sb.appendS
+           closedBlock .blockType sb.appendBlockType
+          op [] .pos errors appendError
+        end
+        true return
       end
       blockType switch
         TYPE_TUPLE TYPE_STRUCT case
@@ -175,13 +186,16 @@ proc(
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newTuple if #drop
-            "could not create tuple" sb.wrap op [] .pos errors appendError
+            showErrorMessages if
+              "could not create tuple" sb.wrap op [] .pos errors appendError
+            end
             true return
           end =:: tupleType
           ## pushValue
             tupleType ConstValue .typeId new
-              types.primitive.TYPE
-              -1
+            types.primitive.TYPE
+            -1
+            op [] .pos
           context pushValue
           false return
         TYPE_ENUM case
@@ -190,13 +204,16 @@ proc(
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newEnum if #drop
-            "could not create enum" sb.wrap op [] .pos errors appendError
+            showErrorMessages if
+              "could not create enum" sb.wrap op [] .pos errors appendError
+            end
             true return
           end =:: enumType
           ## pushValue
             enumType ConstValue .typeId new
-              types.primitive.TYPE
-              -1
+            types.primitive.TYPE
+            -1
+            op [] .pos
           context pushValue
           false return
         TYPE_UNION case
@@ -205,13 +222,16 @@ proc(
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newUnion if #drop
-            "could not create union" sb.wrap op [] .pos errors appendError
+            showErrorMessages if
+              "could not create union" sb.wrap op [] .pos errors appendError
+            end
             true return
           end =:: unionType
           ## pushValue
             unionType ConstValue .typeId new
-              types.primitive.TYPE
-              -1
+            types.primitive.TYPE
+            -1
+            op [] .pos
           context pushValue
           false return
         TYPE_PROC_IN
@@ -219,7 +239,9 @@ proc(
           op closedBlock @ context closedTypeBlock if true return end
           context [] .typeBuffer .length 1 - =:: nArgs ## last value is return type
           nArgs 0 < if
-            "missing return type for procedure" sb.wrap op [] .pos errors appendError
+            showErrorMessages if
+              "missing return type for procedure" sb.wrap op [] .pos errors appendError
+            end
             true return
           end
           ## newProcArgs
@@ -229,18 +251,24 @@ proc(
           typeContext types.newProcArgs =:: procIn
           context [] .typeBuffer nArgs list.get =:: procOut
           procOut Type .procOut != if
-            "unexpected procedure return type: " sb.wrap
-              procOut labelContext typeContext sb.appendType
-            op [] .pos errors appendError
+            showErrorMessages if
+              "unexpected procedure return type: " sb.wrap
+                procOut labelContext typeContext sb.appendType
+              op [] .pos errors appendError
+            end
             true return
           end
-          procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if
-            "could not create procedure" sb.wrap op [] .pos errors appendError
+          procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if #drop
+            showErrorMessages if
+              "could not create procedure" sb.wrap op [] .pos errors appendError
+            end
+            true return
           end =:: proc
           ## pushValue
             proc ConstValue .typeId new
-              types.primitive.TYPE
-              -1
+            types.primitive.TYPE
+            -1
+            op [] .pos
           context pushValue
           false return
         TYPE_PROC_OUT case
@@ -252,8 +280,9 @@ proc(
           typeContext types.newProcArgs =:: procOut
           ## pushValue
             procOut ConstValue .typeId new
-              types.primitive.TYPE
-              -1
+            types.primitive.TYPE
+            -1
+            op [] .pos
           context pushValue
           false return
         PROCEDURE
@@ -270,29 +299,58 @@ proc(
         DEFAULT
         INITIALIZER
         UNKNOWN case
-          "unsupported block-end in constant evaluation: " sb.wrap
-            op [] .val .blockEnd .blockType sb.appendBlockType
-          op [] .pos errors appendError
+          showErrorMessages if
+            "unsupported block-end in constant evaluation: " sb.wrap
+              op [] .val .blockEnd .blockType sb.appendBlockType
+            op [] .pos errors appendError
+          end
           true return
       end
     declareField case
       context [] .stack .length 0 == if
-        "not enough arguments for declare field, expected 1 got 0" sb.wrap
-        op [] .pos errors appendError
+        showErrorMessages if
+          "not enough arguments for declare field, expected 1 got 0" sb.wrap
+          op [] .pos errors appendError
+        end
         true return
       end
       ## TODO declare field as local variable
       context [] .stackInfo list.peek .data =:: valInfo
       valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
-        "wrong argument type for declare field expected type got " sb.wrap
-          valInfo [] .valueType labelContext typeContext sb.appendType
-        op [] .pos errors appendError
+        showErrorMessages if
+          "wrong argument type for declare field expected type got " sb.wrap
+            valInfo [] .valueType labelContext typeContext sb.appendType
+          op [] .pos errors appendError
+        end
         true return
       end
       op [] .val .declareField valInfo [] .valueName =
       false return
+    getId case
+      op [] .val .getId .idType switch
+        PROCEDURE case
+          op [] .val .getId =:: idInfo
+          idInfo .constValue ConstValue .procedure != if
+            "unexpected value for procedure constant: " sb.wrap
+              idInfo .constValue constContext labelContext typeContext sb.appendConstant
+            op [] .pos errors appendError
+            true return
+          end
+          idInfo .constValue .procedure context evaluateCall if
+            true return
+          end
+          "unimplemented" sb.wrap op [] .pos errors appendError
+          true return
+        TYPE TEMPLATE_ARG GLOBAL_VAR LOCAL_VAR ARGUMENT TMP_VAR case
+        showErrorMessages if
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+          op [] .pos errors appendError
+        end
+        true return
+      end
     entryPoint typeModifier
-    getId setId @Id initializeId declareId
+    setId @Id initializeId declareId
     getLabel setLabel @Label initializeField
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
@@ -304,9 +362,11 @@ proc(
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
     stackMod getName setName @Name
     compilerInfo unreachable case
-      "unsupported operation in constant evaluation: " sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
-      op [] .pos errors appendError
+      showErrorMessages if
+        "unsupported operation in constant evaluation: " sb.wrap
+          op [] constContext labelContext typeContext sb.appendOp
+        op [] .pos errors appendError
+      end
       true return
   end
 end
@@ -320,7 +380,7 @@ proc(
   0 =:: mut offset
   while offset ops .length < do
     ops offset array.at .data =:: op
-      op context evaluateOperation if
+      op context true evaluateOperation if
         true return
       end
     offset 1 + offset =
@@ -330,14 +390,21 @@ proc(
 end
 #+evaluate procedure body with the given arguments+#
 proc(
-  Type : procType
-  ConstValue arrayView : arguments
-  Operation arrayView : code
+  i64 : procId
   InterpreterContext ptr mut : context
 =>
   bool
 ) =: public evaluateCall
+  context [] .program [] .errors @ =:: errors
+  context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
+  program [] .procedures procId list.at .data =:: procData
+  procData [] .procType =:: procType
+  ## TODO get arguments
+  program [] .progFiles procData [] .fileId list.at .data [] .localOps
+    procData [] .codeStart
+    procData [] .codeLength
+  list.slice =:: code
   code 0 array.at .data =:: op
   op [] .val OpValue .initializeId != if
     op [] .val .initializeId .idType IdentifierType .PROCEDURE !=
@@ -348,7 +415,7 @@ proc(
         idContext [] .labelContext @
         idContext [] .typeContext @
       sb.appendOp
-    op [] .pos context [] .program [] .errors @ appendError
+    op [] .pos errors appendError
     true return ## not a call
   end
   ## TODO store previous open blocks, reset blocks after processing call
@@ -360,6 +427,45 @@ proc(
   evaluateOperations return
 end
 
+proc(
+  ProgramContext ptr mut : progContext
+=>
+  InterpreterContext
+) =: public wrapProgram
+  ## InterpreterContext
+    progContext
+    64 ConstValue list.create
+    64 ValueInfo  list.create
+    64 BlockInfo  list.create
+    64 Type       list.create
+    64 LabelId    list.create
+  InterpreterContext new
+end
+
+proc(
+  InterpreterContext ptr mut : context
+=> ) =: public resetContext
+  ## FIXME free memory in open blocks
+  context [] .stackInfo   list.clear context [] .stackInfo =
+  context [] .openBlocks  list.clear context [] .openBlocks =
+  context [] .typeBuffer  list.clear context [] .typeBuffer =
+  context [] .labelBuffer list.clear context [] .labelBuffer =
+  context [] .stack       list.clear context [] .stack =
+end
+
+proc(
+  InterpreterContext ptr mut : context
+=>
+  ConstValue list
+) =: public cleanupContext
+  ## FIXME free memory in open blocks
+  context [] .stackInfo   list.free context [] .stackInfo =
+  context [] .openBlocks  list.free context [] .openBlocks =
+  context [] .typeBuffer  list.free context [] .typeBuffer =
+  context [] .labelBuffer list.free context [] .labelBuffer =
+  context [] .stack return
+end
+
 #+ interpret code-section at global level ignoring local stack+#
 proc(
   Operation arrayView : code
@@ -368,23 +474,10 @@ proc(
   ConstValue list
   bool
 ) =: public globalInterpret
-  ## InterpreterContext
-    progContext
-    64 ConstValue list.create
-    64 ValueInfo  list.create
-    64 BlockInfo  list.create
-    64 Type       list.create
-    64 LabelId    list.create
-  InterpreterContext new =:: mut context
-  ## evaluateOperations
-    code
-    context @
-  evaluateOperations =:: res
-  ## cleanup
-  ## FIXME free memory in open blocks
-  context .stackInfo   list.free #drop
-  context .openBlocks  list.free #drop
-  context .typeBuffer  list.free #drop
-  context .labelBuffer list.free #drop
-  context .stack res return
+  progContext wrapProgram =:: mut context
+    ## evaluateOperations
+      code
+      context @
+    evaluateOperations
+  context @ cleanupContext #swap return
 end

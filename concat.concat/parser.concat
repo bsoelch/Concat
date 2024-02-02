@@ -30,6 +30,7 @@ struct(
   FileId : mut currentFile
   ProcedureInfo optional : mut currentProc
   CompositeConstantOffset list : mut constantBlocks
+  i64 list : mut globalInterpreterOffsets
   LabelId list : mut labelBuffer
 ) =:: ParserState
 
@@ -144,6 +145,64 @@ proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =:
 end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendWarning2
   msg pos state [] .progContext [] .errors @ appendWarning
+end
+proc( ParserState ptr mut : state => ) =: tryInterpretGlobal
+  state [] .progContext =:: progContext
+  state [] .currentProc optional.hasData if
+    return ## don't interpret inside procedure
+  end
+  state [] .constantBlocks .length 0 > if
+    return ## don't interpret inside constant blocks
+  end
+  state [] .globalInterpreterOffsets state [] .currentFile list.get =:: offset
+  progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @ =:: ops
+  ## use template as  operation buffer
+  progContext [] .templateOps .length =:: mut bufferOffset
+  progContext wrapProgram =:: mut interpreterContext
+    offset while #dup ops [] .length < do
+      ops [] #over list.at .data =:: op
+      op interpreterContext @ true evaluateOperation if ## XXX change to false once constant evaluation of necessary operations is implemented
+        ## interpreter failed
+        ##  -> store computed constants
+        0 while #dup interpreterContext .stack .length < do
+          interpreterContext .stack #over list.at .data =:: constant
+          interpreterContext .stackInfo #over list.at .data =:: constInfo
+          progContext [] .templateOps
+            constant [] constInfo [] .valueType constInfo [] .pushedAt opConst list.append
+          progContext [] .templateOps =
+          1 +
+        end #drop
+        ## -> store current operation
+        progContext [] .templateOps
+          op list.appendP
+        progContext [] .templateOps =
+        ##  -> reset interpreter
+        interpreterContext @ resetContext
+      end
+      1 +
+    end #drop
+    ## push remaining constants
+    0 while #dup interpreterContext .stack .length < do
+      interpreterContext .stack #over list.at .data =:: constant
+      interpreterContext .stackInfo #over list.at .data =:: constInfo
+      progContext [] .templateOps
+        constant [] constInfo [] .valueType constInfo [] .pushedAt opConst list.append
+      progContext [] .templateOps =
+      1 +
+    end #drop
+  interpreterContext @ cleanupContext list.free #drop
+  progContext [] .templateOps .length bufferOffset - =:: nOps
+  ## copy operations from templateBuffer to globalOps
+  ops []
+    offset nOps + list.ensureCap
+    #dup .data
+      progContext [] .templateOps .data bufferOffset +
+      nOps
+    mem.copy #drop
+    offset nOps + #over .length =
+  ops [] =
+  bufferOffset progContext [] .templateOps .length =
+  ops [] .length state [] .globalInterpreterOffsets state [] .currentFile list.set
 end
 proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
   state [] .progContext =:: progContext
@@ -1113,6 +1172,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
+      _EXPERIMENTAL_ if
+        state tryInterpretGlobal ## try to interpret global operations before each declaration
+      end
       "=:" string.wrap string.eq =:: isInit
       state [] .constantBlocks .length 0 > if ## ":" in constantBlock -> declare field operation
         fileState state nextWord fileState state readLabel fileState [] .wordStart
@@ -1259,6 +1321,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state appendOp
       #drop return
     else #dup "=::" string.wrap string.eq _if #drop
+      _EXPERIMENTAL_ if
+        state tryInterpretGlobal ## try to interpret global operations before each declaration
+      end
       fileState state nextWord fileState state readLabel
         state hasConst if
           state popConst =:: const
@@ -1407,6 +1472,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
     else #dup "entryPoint:" string.wrap string.eq _if #drop
+      _EXPERIMENTAL_ if
+        state tryInterpretGlobal ## try to interpret global operations before each declaration
+      end
       progContext [] .hasEntryPoint if ## TODO print position of previous entry point
         "program already has an entry point" sb.wrap fileState [] .wordStart state appendError2
       end
@@ -2483,6 +2551,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath => ProgramCont
     FILE_ID_NONE
     ProcedureInfo               optional.empty
     128 CompositeConstantOffset list.create
+    0   i64                     list.create
     128 LabelId                 list.create
   ParserState new =:: mut state
   rootFile state @ parseFile rootFile rootFile sb.asStr 0 0 FilePosition new state @ checkIOError #drop
@@ -2490,6 +2559,8 @@ proc( stringBuilder : rootFile string : libPath string : basePath => ProgramCont
   state .constants list.free #drop
   state .typeBuffer list.free #drop
   state .staticArgs list.free #drop
+  state .constantBlocks list.free #drop
+  state .globalInterpreterOffsets list.free #drop
   programContext return
 end
 proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError ) =: parseFile
@@ -2503,6 +2574,9 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError 
     progContext [] .progFiles
       #over progContext [] .progFiles .length FileId cast progContext [] .idContext @ newProgFile list.append
     progContext [] .progFiles =
+    state [] .globalInterpreterOffsets
+      0 list.append
+    state [] .globalInterpreterOffsets =
   state [] .currentFile
     progContext [] .progFiles .length 1 - FileId cast state [] .currentFile =
     #swap #dup .data #swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen

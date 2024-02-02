@@ -15,7 +15,7 @@
   struct( Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: public TemplateInfo
 
   struct( Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
-  struct( IdentifierType : idType LabelId : labelId TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
+  struct( IdentifierType : idType LabelId : labelId ConstValue : constValue TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: public IdentifierMatch
@@ -98,6 +98,7 @@
   proc( IdentifierData ptr : idData => IdentifierInfo ) =: public asIdInfo
     idData [] .idType
     idData [] .labelId
+    idData [] .constValue
     idData [] .templateId
     idData [] .id
     IdentifierInfo new return

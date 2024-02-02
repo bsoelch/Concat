@@ -155,6 +155,7 @@ proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state => Identi
       state [] .fileId
       labelContext
     id.newLabel
+    ConstValue .none
     -1
     state [] .tmpCount
       #dup 1 + state [] .tmpCount =
@@ -1343,8 +1344,9 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
             ## IdInfo
               IdentifierType .ARGUMENT
               label
+              ConstValue .none
               -1
-              #over:4
+              #over:5
             IdentifierInfo new
             op [] .pos
           opGet tmp =
