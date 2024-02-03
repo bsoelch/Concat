@@ -5,11 +5,6 @@
 #include "program.concat"
 
 struct(
-  BlockType : blockType
-  i64 : stackOffset
-  string ConstValue hashMap : mut variables ## XXX change keys to LabelId
-) =:: BlockInfo
-struct(
   Type : valueType
   LabelId : valueId
   LabelId : mut valueName
@@ -17,7 +12,18 @@ struct(
 ) =:: ValueInfo
 
 struct(
+  ConstValue : value
+  ValueInfo  : info
+) =:: Constant
+
+struct(
+  BlockType : blockType
+  i64 : stackOffset
+) =:: BlockInfo
+
+struct(
   ProgramContext ptr mut : program
+  LabelId Constant hashMap : mut variables
   ConstValue list : mut stack
   ValueInfo  list : mut stackInfo
   ## XXX store types of stack elements
@@ -26,13 +32,14 @@ struct(
   LabelId list : mut labelBuffer
 ) =:: public InterpreterContext
 
+proc( LabelId => i32 ) =: labelHash end
+proc( LabelId LabelId => bool ) =: labelEq == end
 
 proc( BlockType : blockType InterpreterContext ptr mut : context => ) =: openBlock
   context [] .openBlocks
     ## BlockInfo
       blockType
       context [] .stack .length
-      string.hash @ string.eq @ 32 ConstValue map.create
     BlockInfo new list.append
   context [] .openBlocks =
 end
@@ -99,7 +106,7 @@ proc(
     ## ValueInfo
       valType
       id
-      -1
+      id.LABEL_ID_NONE
       pos
     ValueInfo new list.append
   context [] .stackInfo =
@@ -121,11 +128,11 @@ proc(
   op [] .val switch
     NOP case
       false return
-    Constant case
+    OpValue .Constant case
       ## pushValue
         op [] .val .Constant
         op [] .dataType
-        -1 ## XXX? remember id in op-type
+        id.LABEL_ID_NONE ## XXX? remember id in op-type
         op [] .pos
       context pushValue
       false return
@@ -194,7 +201,7 @@ proc(
           ## pushValue
             tupleType ConstValue .typeId new
             types.primitive.TYPE
-            -1
+            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
           false return
@@ -212,7 +219,7 @@ proc(
           ## pushValue
             enumType ConstValue .typeId new
             types.primitive.TYPE
-            -1
+            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
           false return
@@ -230,7 +237,7 @@ proc(
           ## pushValue
             unionType ConstValue .typeId new
             types.primitive.TYPE
-            -1
+            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
           false return
@@ -267,7 +274,7 @@ proc(
           ## pushValue
             proc ConstValue .typeId new
             types.primitive.TYPE
-            -1
+            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
           false return
@@ -281,7 +288,7 @@ proc(
           ## pushValue
             procOut ConstValue .typeId new
             types.primitive.TYPE
-            -1
+            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
           false return
@@ -327,6 +334,7 @@ proc(
       op [] .val .declareField valInfo [] .valueName =
       false return
     getId case
+      op [] .val .getId .labelId =:: label
       op [] .val .getId .idType switch
         PROCEDURE case
           op [] .val .getId =:: idInfo
@@ -336,12 +344,25 @@ proc(
             op [] .pos errors appendError
             true return
           end
-          idInfo .constValue .procedure context evaluateCall if
+          idInfo .constValue .procedure op [] .pos context evaluateCall if
             true return
           end
           "unimplemented" sb.wrap op [] .pos errors appendError
           true return
-        TYPE TEMPLATE_ARG GLOBAL_VAR LOCAL_VAR ARGUMENT TMP_VAR case
+        LOCAL_VAR ARGUMENT case
+          context [] .variables @ label map.get =:: value?
+          value? optional.isEmpty if
+            showErrorMessages if
+              "missing value for " sb.wrap
+                op [] .val .getId labelContext sb.appendIdInfo
+              op [] .pos errors appendError
+            end
+            true return
+          end
+          value? .data =:: value
+          value .value value .info .valueType label op [] .pos context pushValue
+          false return
+        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR case
         showErrorMessages if
           "unsupported operation in constant evaluation: " sb.wrap
             op [] constContext labelContext typeContext sb.appendOp
@@ -349,7 +370,23 @@ proc(
         end
         true return
       end
-    entryPoint typeModifier
+      break
+    typeModifier case
+        ## TODO read sizes
+        op [] .val .typeModifier switch
+          PTR case
+            break
+          PTR_MUT case
+            break
+          ARRAY case
+            break
+        end
+        "unimplemented: " sb.wrap
+          op [] constContext labelContext typeContext sb.appendOp
+        op [] .pos errors appendError
+        true return
+      break
+    entryPoint
     setId @Id initializeId declareId
     getLabel setLabel @Label initializeField
     getElement setElement @Element
@@ -391,6 +428,7 @@ end
 #+evaluate procedure body with the given arguments+#
 proc(
   i64 : procId
+  FilePosition : pos
   InterpreterContext ptr mut : context
 =>
   bool
@@ -398,9 +436,16 @@ proc(
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
+  context [] .program [] .idContext .typeContext @ =:: typeContext
   program [] .procedures procId list.at .data =:: procData
   procData [] .procType =:: procType
-  ## TODO get arguments
+  procType typeContext types.getProcIn #drop =:: inType
+  inType typeContext types.compositeElts =:: args
+  ## TODO resolve signature
+  context [] .stack .length args .length - =:: argsOffset
+  argsOffset 0 < if
+    true return ## not enough arguments
+  end
   program [] .progFiles procData [] .fileId list.at .data [] .localOps
     procData [] .codeStart
     procData [] .codeLength
@@ -419,8 +464,36 @@ proc(
     true return ## not a call
   end
   ## TODO store previous open blocks, reset blocks after processing call
+  ## TODO store stack offset
+  ## process procedure arguments
+  0 while #dup args .length < do
+    context [] .stack #over argsOffset + list.at .data =:: value
+    context [] .stackInfo #over argsOffset + list.at .data =:: valueInfo
+    inType #over typeContext types.compositeGetLabel =:: label
+    label id.LABEL_ID_NONE != if ## store argument as value
+      context [] .variables @
+        label
+        ## Constant
+          value []
+          valueInfo []
+        Constant new
+      map.put #drop
+    else ## push argument
+      context [] .stack
+        value list.appendP
+      context [] .stack =
+      context [] .stackInfo
+        ## ValueInfo
+          valueInfo [] .valueType
+          id.LABEL_ID_NONE
+          id.LABEL_ID_NONE
+          pos
+        ValueInfo new list.append
+      context [] .stackInfo =
+    end
+    1 +
+  end #drop
   BlockType .PROCEDURE context openBlock
-  ## TODO process procedure arguments
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
@@ -434,6 +507,7 @@ proc(
 ) =: public wrapProgram
   ## InterpreterContext
     progContext
+    labelHash @ labelEq @ 32 Constant map.create
     64 ConstValue list.create
     64 ValueInfo  list.create
     64 BlockInfo  list.create
@@ -445,7 +519,7 @@ end
 proc(
   InterpreterContext ptr mut : context
 => ) =: public resetContext
-  ## FIXME free memory in open blocks
+  context [] .variables @ map.free
   context [] .stackInfo   list.clear context [] .stackInfo =
   context [] .openBlocks  list.clear context [] .openBlocks =
   context [] .typeBuffer  list.clear context [] .typeBuffer =
