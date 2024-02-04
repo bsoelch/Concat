@@ -195,7 +195,7 @@ proc( ParserState ptr mut : state => ) =: tryInterpretGlobal
   ## copy operations from templateBuffer to globalOps
   ops []
     offset nOps + list.ensureCap
-    #dup .data
+    #dup .data offset +
       progContext [] .templateOps .data bufferOffset +
       nOps
     mem.copy #drop

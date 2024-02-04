@@ -8,7 +8,7 @@ struct(
   Type : valueType
   LabelId : valueId
   LabelId : mut valueName
-  FilePosition : pushedAt
+  FilePosition : mut pushedAt
 ) =:: ValueInfo
 
 struct(
@@ -26,7 +26,6 @@ struct(
   LabelId Constant hashMap : mut variables
   ConstValue list : mut stack
   ValueInfo  list : mut stackInfo
-  ## XXX store types of stack elements
   BlockInfo  list : mut openBlocks
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
@@ -137,6 +136,7 @@ proc(
       context pushValue
       false return
     Return case
+      ## TODO close procedure block
       false return
     block case
       op [] .val .block .blockType switch
@@ -292,8 +292,9 @@ proc(
             op [] .pos
           context pushValue
           false return
-        PROCEDURE
-        EXPERIMENTAL_PROCEDURE
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          ## end procedure
+          false return
         IF
         IFIF
         ELSE
@@ -344,11 +345,12 @@ proc(
             op [] .pos errors appendError
             true return
           end
-          idInfo .constValue .procedure op [] .pos context evaluateCall if
-            true return
-          end
-          "unimplemented" sb.wrap op [] .pos errors appendError
-          true return
+          #+ TODO special case for type-generators (procedures returning type)
+            1. push constant for type depending on arguments
+            2. check if there is a value for the given arguments
+            3. if yes evaluate type generator and store the given value
+          +#
+          idInfo .constValue .procedure op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if
@@ -372,20 +374,64 @@ proc(
       end
       break
     typeModifier case
-        ## TODO read sizes
-        op [] .val .typeModifier switch
-          PTR case
+        0 =:: mut wildcards
+        context [] .stack .length 1 - while #dup 0 >= do
+          context [] .stack #over list.get ConstValue .wildCard != if
             break
-          PTR_MUT case
-            break
-          ARRAY case
-            break
+          end
+          wildcards 1 + wildcards =
+          1 -
+        end =:: offset
+        idContext [] .arraySizeBuffer .length =:: sizeOffset
+        ## TODO read int sizes
+        offset 0 < if
+          "missing type parameter for type-modifier " sb.wrap
+            op [] .val .typeModifier sb.appendTypeModifier
+          op [] .pos errors appendError
+          true return
         end
-        "unimplemented: " sb.wrap
-          op [] constContext labelContext typeContext sb.appendOp
+        context [] .stack offset list.get =:: typeConstant
+        typeConstant ConstValue .typeId != if
+          "unexpected constant parameter for type-modifier " sb.wrap
+            op [] .val .typeModifier sb.appendTypeModifier
+            " expected type got " sb.appendS
+            typeConstant constContext labelContext typeContext sb.appendConstant
+          op [] .pos errors appendError
+          true return
+        end
+      op [] .val .typeModifier TypeModifier .ARRAY != =:: isPtr
+      wildcards 0 > if isPtr ! _if
+        "array types can have not have wildcard parameters" sb.wrap op [] .pos errors appendError
+      else isPtr _if wildcards 1 > _if
+        "pointer types can have at most one wildcard parameter got " sb.wrap
+          wildcards sb.appendI
         op [] .pos errors appendError
+      end
+      ## newArrayType
+        typeConstant .typeId
+        isPtr
+        idContext [] .arraySizeBuffer list.asArray sizeOffset array.tail
+        wildcards 0 ==
+        op [] .val .typeModifier TypeModifier .PTR_MUT ==
+        typeContext
+      types.newArrayType if #drop
+        isPtr if
+          "could not create pointer type" sb.wrap op [] .pos errors appendError
+        else
+          "could not create array type" sb.wrap op [] .pos errors appendError
+        end
         true return
-      break
+      end =:: ptrType
+      offset context [] .stack .length =
+      offset context [] .stackInfo .length =
+      ## pushValue
+        ptrType ConstValue .typeId new
+        types.primitive.TYPE
+        id.LABEL_ID_NONE
+        op [] .pos
+        context
+      pushValue
+      false return
     entryPoint
     setId @Id initializeId declareId
     getLabel setLabel @Label initializeField
@@ -420,6 +466,7 @@ proc(
       op context true evaluateOperation if
         true return
       end
+      ## TODO add option to break evaluation when exiting procedure block
     offset 1 + offset =
   end
   ## XXX error if unwanted open blocks
@@ -464,7 +511,8 @@ proc(
     true return ## not a call
   end
   ## TODO store previous open blocks, reset blocks after processing call
-  ## TODO store stack offset
+  ## TODO store stack offset in context
+  context [] .stack .length =:: stackOffset
   ## process procedure arguments
   0 while #dup args .length < do
     context [] .stack #over argsOffset + list.at .data =:: value
@@ -497,7 +545,31 @@ proc(
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
-  evaluateOperations return
+  evaluateOperations if
+    stackOffset context [] .stack .length =
+    stackOffset context [] .stackInfo .length =
+    true return
+  else
+    context [] .stack .length stackOffset - =:: nReturn
+    ## mem.copy
+      context [] .stack .data argsOffset +
+      context [] .stack .data stackOffset +
+      nReturn
+    mem.copy #drop
+    ## mem.copy
+      context [] .stackInfo .data argsOffset +
+      context [] .stackInfo .data stackOffset +
+      nReturn
+    mem.copy #drop
+    argsOffset nReturn + context [] .stack .length =
+    argsOffset nReturn + context [] .stackInfo .length =
+    argsOffset while #dup context [] .stackInfo .length < do
+      ## update push position of return values
+      pos context [] .stackInfo #over:2 list.at .data [] .pushedAt =
+      1 +
+    end #drop
+    false return
+  end
 end
 
 proc(
@@ -519,7 +591,7 @@ end
 proc(
   InterpreterContext ptr mut : context
 => ) =: public resetContext
-  context [] .variables @ map.free
+  ## TODO? clear local variables in map
   context [] .stackInfo   list.clear context [] .stackInfo =
   context [] .openBlocks  list.clear context [] .openBlocks =
   context [] .typeBuffer  list.clear context [] .typeBuffer =
@@ -532,7 +604,7 @@ proc(
 =>
   ConstValue list
 ) =: public cleanupContext
-  ## FIXME free memory in open blocks
+  context [] .variables @ map.free
   context [] .stackInfo   list.free context [] .stackInfo =
   context [] .openBlocks  list.free context [] .openBlocks =
   context [] .typeBuffer  list.free context [] .typeBuffer =
