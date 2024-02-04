@@ -146,6 +146,17 @@ end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state => ) =: appendWarning2
   msg pos state [] .progContext [] .errors @ appendWarning
 end
+
+proc( ParserState ptr mut : state => ) =: skipGlobalInterpreter
+  state [] .progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @ =:: ops
+  state [] .currentProc optional.hasData if
+    return ## don't skip if inside procedure
+  end
+  state [] .constantBlocks .length 0 > if
+    return ## don't skip if inside constant block
+  end
+  ops [] .length state [] .globalInterpreterOffsets state [] .currentFile list.set
+end
 proc( ParserState ptr mut : state => ) =: tryInterpretGlobal
   state [] .progContext =:: progContext
   state [] .currentProc optional.hasData if
@@ -1172,9 +1183,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
-      _EXPERIMENTAL_ if
-        state tryInterpretGlobal ## try to interpret global operations before each declaration
-      end
       "=:" string.wrap string.eq =:: isInit
       state [] .constantBlocks .length 0 > if ## ":" in constantBlock -> declare field operation
         fileState state nextWord fileState state readLabel fileState [] .wordStart
@@ -1184,7 +1192,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             opDeclareField
           end
         state appendOp
+        ## don't skip global interpreter for field declarations
         return
+      end
+      _EXPERIMENTAL_ if
+        state tryInterpretGlobal ## try to interpret global operations before each declaration
+        ## TODO remember constants on stack
       end
       ## TODO only consume type if on global level
       ##  type assignment within procedures should be done in type-check phase
@@ -1319,6 +1332,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         opDeclareId
       end
       state appendOp
+      state skipGlobalInterpreter
       #drop return
     else #dup "=::" string.wrap string.eq _if #drop
       _EXPERIMENTAL_ if
@@ -1373,6 +1387,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         end
         #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opInitializeId state appendOp
+        state skipGlobalInterpreter
         #drop return
     else #dup "=" string.wrap string.eq _if #drop
       state hasConst if state popConst
