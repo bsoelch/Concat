@@ -374,16 +374,54 @@ proc(
       end
       break
     typeModifier case
-        0 =:: mut wildcards
-        context [] .stack .length 1 - while #dup 0 >= do
-          context [] .stack #over list.get ConstValue .wildCard != if
+        true =:: mut fixedSize
+        context [] .stack .length 1 - =:: mut offset
+        offset 0 > if context [] .stack offset list.get ConstValue .wildCard == _if
+          false fixedSize =
+          offset 1 - offset =
+        end
+        0 =:: mut intArgs
+        offset while #dup 0 >= do
+          context [] .stackInfo #over list.at .data [] .valueType typeContext types.isInt ! if
             break
           end
-          wildcards 1 + wildcards =
+          intArgs 1 + intArgs =
           1 -
-        end =:: offset
-        idContext [] .arraySizeBuffer .length =:: sizeOffset
-        ## TODO read int sizes
+        end offset =
+        idContext [] .arraySizeBuffer
+          list.clear
+          intArgs list.ensureCap
+        idContext [] .arraySizeBuffer =
+        1 while #dup intArgs <= do
+          context [] .stack offset #over:2 + list.get =:: intArg
+          intArg ConstValue .int == if
+            idContext [] .arraySizeBuffer
+              ## ArraySize
+                intArg .int
+                types.ArraySizeType .int
+              types.ArraySize new list.append
+            idContext [] .arraySizeBuffer =
+          else intArg ConstValue .genericArg == _if
+            idContext [] .arraySizeBuffer
+              ## ArraySize
+                intArg .genericArg
+                types.ArraySizeType .staticArg
+              types.ArraySize new list.append
+            idContext [] .arraySizeBuffer =
+          else intArg ConstValue .templateArg == _if
+            idContext [] .arraySizeBuffer
+              ## ArraySize
+                intArg .templateArg
+                types.ArraySizeType .templateArg
+              types.ArraySize new list.append
+            idContext [] .arraySizeBuffer =
+          else
+            "unexpected constant for array size: " sb.wrap
+              intArg constContext labelContext typeContext sb.appendConstant
+            context [] .stackInfo #over:2 list.at .data [] .pushedAt errors appendError
+          end
+          1 +
+        end #drop
         offset 0 < if
           "missing type parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
@@ -400,18 +438,14 @@ proc(
           true return
         end
       op [] .val .typeModifier TypeModifier .ARRAY != =:: isPtr
-      wildcards 0 > if isPtr ! _if
-        "array types can have not have wildcard parameters" sb.wrap op [] .pos errors appendError
-      else isPtr _if wildcards 1 > _if
-        "pointer types can have at most one wildcard parameter got " sb.wrap
-          wildcards sb.appendI
-        op [] .pos errors appendError
+      fixedSize ! isPtr ! & if
+        "array types must have a fixed size" sb.wrap op [] .pos errors appendError
       end
       ## newArrayType
         typeConstant .typeId
         isPtr
-        idContext [] .arraySizeBuffer list.asArray sizeOffset array.tail
-        wildcards 0 ==
+        idContext [] .arraySizeBuffer list.asArray
+        fixedSize
         op [] .val .typeModifier TypeModifier .PTR_MUT ==
         typeContext
       types.newArrayType if #drop
