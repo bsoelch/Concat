@@ -91,6 +91,71 @@ proc(
   error return
 end
 
+
+proc(
+  Operation ptr : op
+  BlockInfo ptr : closedBlock
+  InterpreterContext ptr mut : context
+=>
+  ConstValue arrayView
+  Type
+  bool
+) =: closedInitializer
+  context [] .program [] .errors @ =:: errors
+  context [] .program [] .idContext @ =:: idContext
+  context [] .program [] .idContext .constContext @ =:: constContext
+  context [] .program [] .idContext .typeContext @ =:: typeContext
+  context [] .program [] .idContext .labelContext @ =:: labelContext
+  closedBlock [] .stackOffset =:: offset
+  context [] .stack .length offset - =:: elementCount
+  context [] .typeBuffer
+    list.clear
+    elementCount list.ensureCap
+  context [] .typeBuffer =
+  context [] .labelBuffer
+    list.clear
+    elementCount list.ensureCap
+  context [] .labelBuffer =
+  Type .undefined =:: mut arrayType
+  true =:: mut hasArrayType
+  false =:: mut hasName
+  false =:: mut error
+  0 while #dup elementCount < do
+    context [] .stack
+      #over offset +
+    list.at .data =:: stackValue
+    context [] .stackInfo
+      #over offset +
+    list.at .data =:: stackInfo
+    ## TODO compute common type
+    context [] .typeBuffer
+      stackInfo [] .valueType list.append
+    context [] .typeBuffer =
+    context [] .labelBuffer
+      stackInfo [] .valueName list.append
+    context [] .labelBuffer =
+    stackInfo [] .valueName id.LABEL_ID_NONE != if
+      true hasName =
+      ## if there is a labeled element the initializer is not an array
+      false hasArrayType =
+      Type .undefined arrayType =
+    end
+    hasArrayType if
+      arrayType Type .undefined types.typeEquals if
+       stackInfo [] .valueType arrayType =
+      else arrayType stackInfo [] .valueType types.typeEquals ! _if
+        false hasArrayType =
+        Type .undefined arrayType =
+      end
+    end
+    1 +
+  end #drop
+  context [] .stack list.asArray offset array.tail =:: values
+  offset context [] .stack .length =
+  offset context [] .stackInfo .length =
+  values arrayType error return
+end
+
 proc(
   ConstValue : value
   Type : valType
@@ -146,7 +211,8 @@ proc(
         TYPE_UNION
         TYPE_PROC_IN
         TYPE_PROC_OUT
-        TYPE_COMPOSITE case
+        TYPE_COMPOSITE
+        INITIALIZER case
           op [] .val .block .blockType context openBlock
           false return
         PROCEDURE
@@ -161,7 +227,6 @@ proc(
         SWITCH
         CASE
         DEFAULT
-        INITIALIZER
         UNKNOWN case
           showErrorMessages if
             "unsupported block-type in constant evaluation: " sb.wrap
@@ -302,6 +367,45 @@ proc(
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           ## end procedure
           false return
+        INITIALIZER case
+          op closedBlock @ context closedInitializer if
+            #drop:2 true return
+          end =:: arrayType =:: values
+          ## newArrayConst
+            values
+            idContext [] .constContext @
+          newArrayConst =:: value
+          arrayType Type .undefined types.typeEquals if
+            ## newTuple
+              context [] .typeBuffer list.asArray
+              context [] .labelBuffer list.asArray optional.wrap
+              typeContext
+            types.newTuple if ## TODO handle empty array
+              "could not create structure-constant type" sb.wrap
+              op [] .pos errors appendError
+            end
+          else ## TODO array of arrays -> 2D array
+            ## ArraySize
+              values .length
+              types.ArraySizeType .int
+            types.ArraySize new =:: mSize
+            arrayType
+             false
+             mSize @ array.wrap
+             true
+             false
+            typeContext types.newArrayType if
+              "could not create array-constant type" sb.wrap
+              op [] .pos errors appendError
+            end
+          end =:: mType
+          ## pushValue
+            value
+            mType
+            id.LABEL_ID_NONE
+            op [] .pos
+          context pushValue
+          false return
         IF
         IFIF
         ELSE
@@ -312,7 +416,6 @@ proc(
         SWITCH
         CASE
         DEFAULT
-        INITIALIZER
         UNKNOWN case
           showErrorMessages if
             "unsupported block-end in constant evaluation: " sb.wrap

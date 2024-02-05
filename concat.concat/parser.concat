@@ -1474,6 +1474,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #drop:2
           return
         end
+        Operation ptr optional.empty state resetGlobalInterpreter
         #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opInitializeId state appendOp
         state skipGlobalInterpreter
         #drop return
@@ -2396,13 +2397,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "{" string.wrap string.eq _if #drop
       BlockType .INITIALIZER  idContext id.openScope
+      ##  remember start position, constant offset
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
-      ##  remember start position, constant offset
+      _EXPERIMENTAL_ if
+        BlockType .INITIALIZER fileState [] .wordStart opBlock state appendOp
+      end
       return
     else #dup "}" string.wrap string.eq _if =:: opName
       idContext id.closeScope if #drop true else BlockType .INITIALIZER != end if
@@ -2414,6 +2418,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state [] .constantBlocks
         list.pop =:: offset
       state [] .constantBlocks =
+      _EXPERIMENTAL_ if
+        BlockType .INITIALIZER fileState [] .wordStart opEndBlock state appendOp
+        return
+      end
       offset .codeOffset state opCount == if
         ## push array constant (using const-buffer)
         state [] .constants .length offset .constOffset - fileState state popConstantArray =:: arrayType =:: values =:: types
