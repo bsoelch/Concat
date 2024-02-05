@@ -9,7 +9,7 @@ struct(
   LabelId : valueId
   LabelId : mut valueName
   FilePosition : mut pushedAt
-) =:: ValueInfo
+) =:: public ValueInfo
 
 struct(
   ConstValue : value
@@ -173,6 +173,13 @@ proc(
       break
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
+      context [] .openBlocks .length 0 == if
+        "unexpected end of " sb.wrap
+         blockType sb.appendBlockType
+         "-Block" sb.appendS
+        op [] .pos errors appendError
+        true return
+      end
       context [] .openBlocks
         list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
       context [] .openBlocks =
@@ -532,9 +539,9 @@ proc(
     procData [] .codeLength
   list.slice =:: code
   code 0 array.at .data =:: op
-  op [] .val OpValue .initializeId != if
+  op [] .val OpValue .initializeId != if true else
     op [] .val .initializeId .idType IdentifierType .PROCEDURE !=
-  else false end if
+  end if
     "expected procedure initialization got " sb.wrap
       op []
         idContext [] .constContext @
