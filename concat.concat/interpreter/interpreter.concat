@@ -30,9 +30,20 @@ struct(
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
 ) =:: public InterpreterContext
-
 proc( LabelId => i32 ) =: labelHash end
 proc( LabelId LabelId => bool ) =: labelEq == end
+
+
+proc( InterpreterContext ptr mut : context => bool ) =: inEnum
+  ## XXX cache number of open enum blocks
+  context [] .openBlocks .length 1 - while #dup 0 >= do
+    context [] .openBlocks #over list.at .data [] .blockType BlockType .TYPE_ENUM == if #drop
+      true return
+    end
+    1 -
+  end #drop
+  false return
+end
 
 proc( BlockType : blockType InterpreterContext ptr mut : context => ) =: openBlock
   context [] .openBlocks
@@ -46,6 +57,7 @@ end
 proc(
   Operation ptr : op
   BlockInfo ptr : closedBlock
+  bool : forceLabel
   InterpreterContext ptr mut : context
 => bool ) =: closedTypeBlock
   context [] .program [] .errors @ =:: errors
@@ -74,13 +86,18 @@ proc(
     stackInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
       "unsupported type in composite type, expected type got " sb.wrap
         stackInfo [] .valueType labelContext typeContext sb.appendType
-      op [] .pos errors appendError
+      stackInfo [] .pushedAt errors appendError
       true error =
       1 + continue
     end
     context [] .typeBuffer
       stackValue [] .typeId list.append
     context [] .typeBuffer =
+    forceLabel if stackInfo [] .valueName id.LABEL_ID_NONE == _if
+      "missing label for composite element" sb.wrap
+      stackInfo [] .pushedAt errors appendError
+      true error =
+    end
     context [] .labelBuffer
       stackInfo [] .valueName list.append
     context [] .labelBuffer =
@@ -260,7 +277,7 @@ proc(
       end
       blockType switch
         TYPE_TUPLE TYPE_STRUCT case
-          op closedBlock @ context closedTypeBlock if true return end
+          op closedBlock @ false context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -278,7 +295,7 @@ proc(
           context pushValue
           false return
         TYPE_ENUM case
-          op closedBlock @ context closedTypeBlock if true return end
+          op closedBlock @ true context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -296,7 +313,7 @@ proc(
           context pushValue
           false return
         TYPE_UNION case
-          op closedBlock @ context closedTypeBlock if true return end
+          op closedBlock @ true context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -315,7 +332,7 @@ proc(
           false return
         TYPE_PROC_IN
         TYPE_COMPOSITE case
-          op closedBlock @ context closedTypeBlock if true return end
+          op closedBlock @ false context closedTypeBlock if true return end
           context [] .typeBuffer .length 1 - =:: nArgs ## last value is return type
           nArgs 0 < if
             showErrorMessages if
@@ -351,7 +368,7 @@ proc(
           context pushValue
           false return
         TYPE_PROC_OUT case
-          op closedBlock @ context closedTypeBlock if true return end
+          op closedBlock @ false context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -444,6 +461,27 @@ proc(
       end
       op [] .val .declareField valInfo [] .valueName =
       false return
+    getName case
+      context inEnum if
+        context [] .stack
+          Type .empty ConstValue .typeId new list.append
+        context [] .stack =
+        context [] .stackInfo
+          ## ValueInfo
+            types.primitive.TYPE
+            id.LABEL_ID_NONE
+            op [] .val .getName
+            op [] .pos
+          ValueInfo new list.append
+        context [] .stackInfo =
+        false return
+      end
+      showErrorMessages if
+        "unsupported operation in constant evaluation: " sb.wrap
+          op [] constContext labelContext typeContext sb.appendOp
+        op [] .pos errors appendError
+      end
+      true return
     getId case
       op [] .val .getId .labelId =:: label
       op [] .val .getId .idType switch
@@ -587,7 +625,7 @@ proc(
     length size Cast Cast!
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
-    stackMod getName setName @Name
+    stackMod setName @Name
     compilerInfo unreachable case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap
