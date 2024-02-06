@@ -161,7 +161,6 @@ proc(
     context [] .stackInfo
       #over offset +
     list.at .data =:: stackInfo
-    ## TODO compute common type
     context [] .typeBuffer
       stackInfo [] .valueType list.append
     context [] .typeBuffer =
@@ -175,7 +174,7 @@ proc(
       Type .undefined arrayType =
     end
     hasArrayType if
-      arrayType Type .undefined types.typeEquals if
+      arrayType Type .undefined types.typeEquals if ## XXX compute common super-type if possible
        stackInfo [] .valueType arrayType =
       else arrayType stackInfo [] .valueType types.typeEquals ! _if
         false hasArrayType =
@@ -300,7 +299,7 @@ proc(
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newTuple if #drop
             showErrorMessages if
-              "could not create tuple" sb.wrap op [] .pos errors appendError
+              "could not create structure-type" sb.wrap op [] .pos errors appendError
             end
             true return
           end =:: tupleType
@@ -336,7 +335,7 @@ proc(
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newUnion if #drop
             showErrorMessages if
-              "could not create union" sb.wrap op [] .pos errors appendError
+              "could not create union-type" sb.wrap op [] .pos errors appendError
             end
             true return
           end =:: unionType
@@ -350,35 +349,50 @@ proc(
         TYPE_PROC_IN
         TYPE_COMPOSITE case
           op closedBlock @ false context closedTypeBlock if true return end
-          context [] .typeBuffer .length 1 - =:: nArgs ## last value is return type
-          nArgs 0 < if
+          context [] .typeBuffer .length 1 >= if
+            ## last argument is procedure output
+            context [] .typeBuffer context [] .typeBuffer .length 1 - list.get Type .procOut == _if
+              true
+          else false end =:: isProc
+          context [] .typeBuffer .length
+            isProc if 1 else 0 end - ## last value is return type
+          =:: nArgs
+          blockType BlockType .TYPE_PROC_IN == isProc ! & if
             showErrorMessages if
               "missing return type for procedure" sb.wrap op [] .pos errors appendError
             end
             true return
           end
-          ## newProcArgs
-            context [] .typeBuffer list.asArray nArgs array.head
-            context [] .labelBuffer list.asArray nArgs array.head optional.wrap
-            false
-          typeContext types.newProcArgs =:: procIn
-          context [] .typeBuffer nArgs list.get =:: procOut
-          procOut Type .procOut != if
-            showErrorMessages if
-              "unexpected procedure return type: " sb.wrap
-                procOut labelContext typeContext sb.appendType
-              op [] .pos errors appendError
+          isProc if
+            ## newProcArgs
+              context [] .typeBuffer list.asArray nArgs array.head
+              context [] .labelBuffer list.asArray nArgs array.head optional.wrap
+              false
+            typeContext types.newProcArgs =:: procIn
+            context [] .typeBuffer nArgs list.get =:: procOut
+            procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if #drop
+              showErrorMessages if
+                "could not create procedure-type" sb.wrap op [] .pos errors appendError
+              end
+              true return
             end
-            true return
-          end
-          procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if #drop
-            showErrorMessages if
-              "could not create procedure" sb.wrap op [] .pos errors appendError
+          else
+            nArgs 0 == if
+              Type .empty
+            else
+              ## newProcArgs
+                context [] .typeBuffer list.asArray nArgs array.head
+                context [] .labelBuffer list.asArray nArgs array.head optional.wrap
+              typeContext types.newTuple if #drop
+                showErrorMessages if
+                  "could not create structure-type" sb.wrap op [] .pos errors appendError
+                end
+                true return
+              end
             end
-            true return
-          end =:: proc
+          end =:: newType
           ## pushValue
-            proc ConstValue .typeId new
+            newType ConstValue .typeId new
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -410,13 +424,17 @@ proc(
             idContext [] .constContext @
           newArrayConst =:: value
           arrayType Type .undefined types.typeEquals if
-            ## newTuple
-              context [] .typeBuffer list.asArray
-              context [] .labelBuffer list.asArray optional.wrap
-              typeContext
-            types.newTuple if ## TODO handle empty array
-              "could not create structure-constant type" sb.wrap
-              op [] .pos errors appendError
+            context [] .typeBuffer .length 0 == if
+              Type .empty
+            else
+              ## newTuple
+                context [] .typeBuffer list.asArray
+                context [] .labelBuffer list.asArray optional.wrap
+                typeContext
+              types.newTuple if ## TODO handle empty array
+                "could not create type of structure-constant" sb.wrap
+                op [] .pos errors appendError
+              end
             end
           else ## TODO array of arrays -> 2D array
             ## ArraySize
@@ -429,7 +447,7 @@ proc(
              true
              false
             typeContext types.newArrayType if
-              "could not create array-constant type" sb.wrap
+              "could not create type of array-constant " sb.wrap
               op [] .pos errors appendError
             end
           end =:: mType
@@ -562,6 +580,7 @@ proc(
         1 while #dup intArgs <= do
           context [] .stack offset #over:2 + list.get =:: intArg
           intArg ConstValue .int == if
+            ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
               ## ArraySize
                 intArg .int

@@ -737,7 +737,7 @@ end
 ## creates struct or tuple
 proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
-    labels optional.isEmpty if
+    labels optional.isEmpty _EXPERIMENTAL_ ! & if ## new version detects empty types in parser
       Type .empty false return ## 0 element tuple -> empty type
     else
       Type .undefined true return
