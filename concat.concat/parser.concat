@@ -1322,7 +1322,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end
         _EXPERIMENTAL_ if
           state hasConst2 if
-            "unexpected constant at global level" sb.wrap state popConst .pos state appendError2
+            state popConst2 =:: info #drop
+            "unexpected constant at global level" sb.wrap info .pushedAt state appendError2
           end
         else
           state hasConst if
