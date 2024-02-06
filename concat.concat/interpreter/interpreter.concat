@@ -44,6 +44,23 @@ proc( InterpreterContext ptr mut : context => bool ) =: inEnum
   end #drop
   false return
 end
+proc( InterpreterContext ptr mut : context => bool ) =: inInitializer
+  ## XXX cache/precompute result
+  context [] .openBlocks .length 1 - while #dup 0 >= do
+    context [] .openBlocks #over list.at .data [] .blockType switch
+      INITIALIZER case
+         #drop true return
+      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+       TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+         #drop false return
+      UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
+       IF IFIF ELSE WHILE DO BREAK CONTINUE
+       SWITCH CASE DEFAULT case break
+    end
+    1 -
+  end #drop
+  false return
+end
 
 proc( BlockType : blockType InterpreterContext ptr mut : context => ) =: openBlock
   context [] .openBlocks
@@ -451,13 +468,15 @@ proc(
       end
       ## TODO declare field as local variable
       context [] .stackInfo list.peek .data =:: valInfo
-      valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
-        showErrorMessages if
-          "wrong argument type for declare field expected type got " sb.wrap
-            valInfo [] .valueType labelContext typeContext sb.appendType
-          op [] .pos errors appendError
+      context inInitializer ! if
+        valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
+          showErrorMessages if
+            "wrong argument type for declare field expected type got " sb.wrap
+              valInfo [] .valueType labelContext typeContext sb.appendType
+            op [] .pos errors appendError
+          end
+          true return
         end
-        true return
       end
       op [] .val .declareField valInfo [] .valueName =
       false return
