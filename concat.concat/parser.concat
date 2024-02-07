@@ -2727,7 +2727,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath => ProgramCont
   state .staticArgs list.free #drop
   state .constantBlocks list.free #drop
   0 while #dup state .globalInterpreters .length < do
-    state .globalInterpreters #over list.at .data [] .context @ cleanupContext list.free #drop
+    state .globalInterpreters #over list.at .data [] .context @ cleanupContext
     1 +
   end #drop
   state .globalInterpreters list.free #drop

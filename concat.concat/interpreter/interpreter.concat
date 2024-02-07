@@ -914,29 +914,11 @@ end
 
 proc(
   InterpreterContext ptr mut : context
-=>
-  ConstValue list
-) =: public cleanupContext
+=> ) =: public cleanupContext
   context [] .variables @ map.free
   context [] .stackInfo   list.free context [] .stackInfo =
   context [] .openBlocks  list.free context [] .openBlocks =
   context [] .typeBuffer  list.free context [] .typeBuffer =
   context [] .labelBuffer list.free context [] .labelBuffer =
-  context [] .stack return
-end
-
-#+ interpret code-section at global level ignoring local stack+#
-proc(
-  Operation arrayView : code
-  ProgramContext ptr mut : progContext
-=>
-  ConstValue list
-  bool
-) =: public globalInterpret
-  progContext wrapProgram =:: mut context
-    ## evaluateOperations
-      code
-      context @
-    evaluateOperations
-  context @ cleanupContext #swap return
+  context [] .stack list.free context [] .stack =
 end
