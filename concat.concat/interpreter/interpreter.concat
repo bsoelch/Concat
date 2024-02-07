@@ -234,8 +234,17 @@ proc(
       context pushValue
       false return
     Return case
-      ## TODO close procedure block
-      false return
+      context [] .openBlocks .length 1 - while #dup 0 >= do
+        context [] .openBlocks #over list.at .data [] .blockType
+         #dup BlockType .PROCEDURE == #swap BlockType .EXPERIMENTAL_PROCEDURE == | if
+          ## close procedure block
+          context [] .openBlocks .length =
+          false return
+        end
+        1 -
+      end #drop
+      "return outside procedure" sb.wrap op [] .pos errors appendError
+      true return
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE
@@ -734,12 +743,21 @@ proc(
   bool
 ) =: public evaluateOperations
   0 =:: mut offset
+  context [] .openBlocks .length 1 - while #dup 0 >= do
+    context [] .openBlocks #over list.at .data [] .blockType
+     #dup BlockType .PROCEDURE == #swap BlockType .EXPERIMENTAL_PROCEDURE == | if
+      break
+    end
+    1 -
+  end =:: procBlockIndex
   while offset ops .length < do
     ops offset array.at .data =:: op
       op context true evaluateOperation if
         true return
       end
-      ## TODO add option to break evaluation when exiting procedure block
+      context [] .openBlocks .length procBlockIndex < if
+        false return ## break evaluation when leaving procedure block
+      end
     offset 1 + offset =
   end
   ## XXX error if unwanted open blocks
@@ -783,8 +801,6 @@ proc(
     op [] .pos errors appendError
     true return ## not a call
   end
-  ## TODO store previous open blocks, reset blocks after processing call
-  ## TODO store stack offset in context
   context [] .stack .length =:: stackOffset
   ## process procedure arguments
   0 while #dup args .length < do
