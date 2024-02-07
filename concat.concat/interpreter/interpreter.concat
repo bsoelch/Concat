@@ -431,7 +431,7 @@ proc(
                 context [] .typeBuffer list.asArray
                 context [] .labelBuffer list.asArray optional.wrap
                 typeContext
-              types.newTuple if ## TODO handle empty array
+              types.newTuple if
                 "could not create type of structure-constant" sb.wrap
                 op [] .pos errors appendError
               end
@@ -530,11 +530,64 @@ proc(
             op [] .pos errors appendError
             true return
           end
-          #+ TODO special case for type-generators (procedures returning type)
-            1. push constant for type depending on arguments
-            2. check if there is a value for the given arguments
-            3. if yes evaluate type generator and store the given value
-          +#
+          op [] .dataType typeContext types.getProcOut #drop =:: procOut
+          procOut typeContext types.compositeElts =:: outTypes
+          outTypes .length 1 == if outTypes 0 array.get types.primitive.TYPE types.typeEquals _if
+            ## type-generator (procedure returning type)
+            op [] .dataType typeContext types.getProcIn #drop =:: procIn
+            procOut typeContext types.compositeElts =:: inTypes
+            ## XXX resolve arguments
+            context [] .stack .length inTypes .length - =:: offset
+            offset 0 < if
+              "not enough arguments for type-generator " sb.wrap
+                label labelContext id.labelName .data sb.appendStr
+                op [] .pos errors appendError
+              true return
+            end
+            ## findGeneratedType
+              label
+              context [] .stack list.asArray offset array.tail
+              typeContext
+              labelContext
+              constContext
+            types.findGeneratedType if ## newType
+              idContext [] .templateArgBuffer .length =:: argOffset
+              idContext [] .templateArgBuffer ## remember procedure arguments
+                context [] .stack list.asArray offset array.tail list.appendArray
+              idContext [] .templateArgBuffer =
+              idInfo .constValue .procedure op [] .pos context evaluateCall if #drop
+                "could not initialize type-generator " sb.wrap
+                  label labelContext id.labelName .data sb.appendStr
+                op [] .pos errors appendError
+                argOffset idContext [] .templateArgBuffer .length =
+                true return
+              end
+              ## initializeGeneratedType
+                label
+                idContext [] .templateArgBuffer list.asArray argOffset array.tail
+                  argOffset idContext [] .templateArgBuffer .length =
+                context [] .stack offset list.get .typeId ## return value of call
+                typeContext
+                labelContext
+                constContext
+              types.initializeGeneratedType if #drop
+                "could not initialize type-generator " sb.wrap
+                  label labelContext id.labelName .data sb.appendStr
+                op [] .pos errors appendError
+                true return
+              end
+            end =:: generated
+            offset context [] .stack .length =
+            offset context [] .stackInfo .length =
+            ## pushValue
+              generated ConstValue .typeId new
+              types.primitive.TYPE
+              id.LABEL_ID_NONE
+              op [] .pos
+              context
+            pushValue
+            false return
+          end
           idInfo .constValue .procedure op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT case
           context [] .variables @ label map.get =:: value?

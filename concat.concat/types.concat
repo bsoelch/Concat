@@ -1011,14 +1011,14 @@ proc(
     candidate [] .generator generator != if
       1 + continue
     end
-    candidate [] .arguments constContext constArrayAsArray =:: candArgs
-    candArgs .length arguments .length != if
+    candidate [] .arguments constContext constArrayAsArray =:: candidateArgs
+    candidateArgs .length arguments .length != if
       1 + continue
     end
     true =:: mut match
     0 while #dup arguments .length < do
       ## constantEquals
-        candArgs #over array.get
+        candidateArgs #over array.get
         arguments #over:2 array.get
         labelContext
       constantEquals ! if
@@ -1496,9 +1496,9 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       context [] .generatedTypes #swap list.at .data =:: typeData
       "? " appendS ## TODO append arguments
       typeData [] .generator labelContext id.labelName .data sb.appendStr
-      " ("     appendS
+      " [ "     appendS
         typeData [] .generated labelContext context allowRecurse appendTypeRecursive
-      ")"     appendS
+      " ]"     appendS
       return
   end
 end
