@@ -2,6 +2,7 @@
 
 #include "parser.concat"
 #include "typeCheck.concat"
+#include "typeCheck2.concat"
 #include "generator_c.concat"
 
 stringBuilder : mut srcFile
@@ -214,6 +215,10 @@ entryPoint: ## TODO check return value of fopen
     parsedOps sb.free #drop
   end
   prog .errors @ checkErrors
+  _EXPERIMENTAL_ if
+    prog @ typeCheckProgram2
+    prog .errors @ checkErrors
+  end
   prog @ typeCheckProgram
   compilerTokensFile optional.hasData if
     1024 sb.create

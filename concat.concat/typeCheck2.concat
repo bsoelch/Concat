@@ -1,0 +1,119 @@
+#+
+The old type-checker does two separate transformations on the source code
+ 1) type-checking the code
+ 2) converting the code to prefix notation
+the new type-checking code in this file will only perform the first operation outputting
+type-checked code in post-fix notation.
++#
+#include "program.concat"
+#include "types.concat"
+#include "labels.concat"
+#include "interpreter/interpreter.concat"
+
+struct( 
+  ProgramContext ptr mut : program
+  InterpreterContext : mut interpreter
+  FileId : mut currentFile
+  Operation list : mut compiledOps
+) =:: TypeCheckState
+
+proc( TypeCheckState ptr mut : state => ) =: storeConstants
+  state [] .program =:: progContext
+  state [] .interpreter @ =:: interpreter
+  ##  -> store computed constants
+  0 while #dup interpreter [] .stack .length < do
+    interpreter [] .stack #over list.at .data =:: constant
+    interpreter [] .stackInfo #over list.at .data =:: constInfo
+    state [] .compiledOps
+      ## opConst
+        constant []
+        constInfo [] .valueType
+        constInfo [] .pushedAt
+      opConst list.append
+    state [] .compiledOps =
+    1 +
+  end #drop
+  ##  -> reset interpreter
+  interpreter resetContext
+end
+## TODO popConstant
+
+proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
+  state [] .program =:: program
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .constContext @ =:: constContext
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
+  op state [] .interpreter @ false evaluateOperation ! if
+    return ## evaluate constants
+  end
+  op [] .val switch
+    NOP case return
+    initializeName case
+      "type-checking for operation: " sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+        " has not been implemented" sb.appendS
+      op [] .pos errors appendError
+      return
+    Return block blockEnd declareName getName
+    entryPoint
+    getId setId @Id initializeId declareId
+    getLabel setLabel @Label
+    getElement setElement @Element
+    getArrayElement setArrayElement @ArrayElement
+    getEnumElement setEnumElement @EnumElement
+    Print New newEnum call callPtr
+    argc getArg getArgLen
+    length size Cast Cast!
+    unaryOperator binaryOperator
+    enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
+    checkArrayIndex stackMod setName @Name
+    compilerInfo unreachable case
+      "type-checking for operation: " sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+        " has not been implemented" sb.appendS
+      op [] .pos errors appendError
+      return
+    OpValue .Constant typeModifier case ## will be handled by interpreter
+      "unexpected operation in type-check phase " sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+      op [] .pos errors appendError
+      return
+  end
+end
+
+proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
+  ## TypeCheckState
+    program
+    program wrapProgram
+    FILE_ID_NONE
+    128 Operation list.create
+  TypeCheckState new =:: mut state
+  ## global code
+  0 while #dup program [] .progFiles .length < do
+    #dup state .currentFile =
+    program [] .progFiles #over list.at .data =:: progFile
+    state .compiledOps
+      list.clear
+    state .compiledOps =
+    0 while #dup progFile [] .globalOps .length < do
+      progFile [] .globalOps #over list.at .data state @ typeCheckOp
+      1 +
+    end #drop
+    state .interpreter @ resetContext
+    1 +
+  end #drop
+  ## procedures
+  0 while #dup program [] .procedures .length < do
+    program [] .procedures #over list.at .data =:: currentProc
+    ## TODO handle procedures with static arguments
+    currentProc [] .fileId state .currentFile =
+    ## TODO type-check procedure
+    state .interpreter @ resetContext
+    1 +
+  end #drop
+  ## static procedures
+  ## TODO
+  state .interpreter @ cleanupContext
+end
