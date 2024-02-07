@@ -59,8 +59,8 @@ enum(
             LabelId : getName
             LabelId : mut setName
             LabelId : mut @Name
-            LabelId : declareField
-            LabelId : initializeField
+            LabelId : declareName
+            LabelId : initializeName
        TypeModifier : mut typeModifier
                       unreachable
        CompilerInfo : compilerInfo
@@ -196,13 +196,13 @@ proc( LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
   OpValue .getName new Type .undefined pos Operation new return
 end
-proc( LabelId FilePosition  => Operation ) =: public opDeclareField
+proc( LabelId FilePosition  => Operation ) =: public opDeclareName
   =:: pos
-  OpValue .declareField new Type .undefined pos Operation new return
+  OpValue .declareName new Type .undefined pos Operation new return
 end
-proc( LabelId FilePosition  => Operation ) =: public opInitializeField
+proc( LabelId FilePosition  => Operation ) =: public opInitializeName
   =:: pos
-  OpValue .initializeField new Type .undefined pos Operation new return
+  OpValue .initializeName new Type .undefined pos Operation new return
 end
 proc( TypeModifier FilePosition  => Operation ) =: public opTypeModifier
   =:: pos
@@ -420,17 +420,17 @@ end
           " ) : " sb.appendS
           #over .val .@Label labelContext id.labelName .data sb.appendStr
           break
-        declareField case
-          "declare field ( " sb.appendS
+        declareName case
+          "declare name ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .declareField labelContext id.labelName .data sb.appendStr
+          #over .val .declareName labelContext id.labelName .data sb.appendStr
           break
-        initializeField case
-          "initialize field ( " sb.appendS
+        initializeName case
+          "initialize name ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .initializeField labelContext id.labelName .data sb.appendStr
+          #over .val .initializeName labelContext id.labelName .data sb.appendStr
           break
         typeModifier case
           "typeModifier \"" sb.appendS

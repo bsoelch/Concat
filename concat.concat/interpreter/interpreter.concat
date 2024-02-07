@@ -44,6 +44,22 @@ proc( InterpreterContext ptr mut : context => bool ) =: inEnum
   end #drop
   false return
 end
+proc( InterpreterContext ptr mut : context => bool ) =: inTypeOrInitializer
+  ## XXX cache/precompute result
+  context [] .openBlocks .length 1 - while #dup 0 >= do
+    context [] .openBlocks #over list.at .data [] .blockType switch
+      INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+       TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+         #drop true return
+      PROCEDURE EXPERIMENTAL_PROCEDURE case
+        #drop false return
+      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
+       SWITCH CASE DEFAULT case break
+    end
+    1 -
+  end #drop
+  false return
+end
 proc( InterpreterContext ptr mut : context => bool ) =: inInitializer
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while #dup 0 >= do
@@ -51,10 +67,10 @@ proc( InterpreterContext ptr mut : context => bool ) =: inInitializer
       INITIALIZER case
          #drop true return
       TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
-       TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+       TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
+       PROCEDURE EXPERIMENTAL_PROCEDURE case
          #drop false return
-      UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
-       IF IFIF ELSE WHILE DO BREAK CONTINUE
+      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
        SWITCH CASE DEFAULT case break
     end
     1 -
@@ -485,27 +501,35 @@ proc(
           end
           true return
       end
-    declareField case
-      context [] .stack .length 0 == if
+    declareName case
+      context inTypeOrInitializer ! if
         showErrorMessages if
-          "not enough arguments for declare field, expected 1 got 0" sb.wrap
+          "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
           op [] .pos errors appendError
         end
         true return
       end
-      ## TODO declare field as local variable
+      ## TODO error if not in type or initializer block
+      context [] .stack .length 0 == if
+        showErrorMessages if
+          "not enough arguments for declaration, expected 1 got 0" sb.wrap
+          op [] .pos errors appendError
+        end
+        true return
+      end
+      ## TODO declare name as local variable
       context [] .stackInfo list.peek .data =:: valInfo
       context inInitializer ! if
         valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
           showErrorMessages if
-            "wrong argument type for declare field expected type got " sb.wrap
+            "wrong argument type for declartion expected type got " sb.wrap
               valInfo [] .valueType labelContext typeContext sb.appendType
             op [] .pos errors appendError
           end
           true return
         end
       end
-      op [] .val .declareField valInfo [] .valueName =
+      op [] .val .declareName valInfo [] .valueName =
       false return
     getName case
       context inEnum if
@@ -716,7 +740,7 @@ proc(
       false return
     entryPoint
     setId @Id initializeId declareId
-    getLabel setLabel @Label initializeField
+    getLabel setLabel @Label initializeName
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
     getEnumElement setEnumElement @EnumElement

@@ -254,6 +254,9 @@ proc( ParserState ptr mut : state => ConstValue ValueInfo ) =: popConst2
   value info return
 end
 proc( ParserState ptr mut : state => bool ) =: hasConst2
+  state [] .currentProc optional.hasData if
+    false return ## constants only exists at global level
+  end
   state [] .globalInterpreters state [] .currentFile list.at .data [] .context @ =:: interpreter
   interpreter [] .stack .length 0 > return
 end
@@ -1201,6 +1204,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "expected string" sb.wrap fileState [] .wordStart state appendWarning2
             return
           end  =:: message
+          ## TODO handle asserts in local code
           state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
             "need boolean constant for static assertion" sb.wrap fileState [] .wordStart state appendError2
             return
@@ -1230,21 +1234,22 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
       "=:" string.wrap string.eq =:: isInit
-      state [] .constantBlocks .length 0 > if ## ":" in constantBlock -> declare field operation
+      state [] .constantBlocks .length 0 >
+       _EXPERIMENTAL_ state [] .currentProc optional.hasData & | if
+        ## declaration in procedure/composite-block -> determine types later
         fileState state nextWord fileState state readLabel fileState [] .wordStart
           isInit if
-            opInitializeField
+            opInitializeName
           else
-            opDeclareField
+            opDeclareName
           end
         state appendOp
-        ## don't skip global interpreter for field declarations
+        ## don't skip global interpreter for local-variables/ field declarations
         return
       end
       _EXPERIMENTAL_ if
         state tryInterpretGlobal ## try to interpret global operations before each declaration
       end
-      ## TODO only consume type if on global level
       ##  type assignment within procedures should be done in type-check phase
       fileState state popTypeConstant #drop =:: mut valType
       false =:: mut forceConst
@@ -1259,12 +1264,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else
         IdentifierType .LOCAL_VAR
       end =:: idType
-      isInit forceConst | if
-        fileState state nextWord fileState state readLabel
-      else ## make pre-declared variables mutable by default
-        fileState state nextWord fileState state id.FLAG_MUTABLE readLabelAddFlags
-      end
-      #dup idContext [] .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != =:: experimental
+      fileState state nextWord fileState state
+        ## make pre-declared variables mutable by default
+        isInit forceConst | if id.FLAG_NONE else id.FLAG_MUTABLE end
+      readLabelAddFlags =:: label
+      label idContext [] .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & 0 != =:: experimental
+      label
         valType
         idType
         -1 ## id
@@ -1768,6 +1773,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart opCallPtr state appendOp
       return
     else #dup "new" string.wrap string.eq _if =:: opName
+      _EXPERIMENTAL_ if state [] .currentProc optional.hasData  _if
+        ## new in procedure -> determine type in type-check phase
+        Type .undefined fileState [] .wordStart opNew state appendOp
+        return
+      end
       state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
         "missing parameter for \"" sb.wrap
           opName sb.appendStr
@@ -1798,6 +1808,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError2
       return
     else #dup "cast" string.wrap string.eq #over "cast!" string.wrap string.eq | _if =:: opName
+      opName "cast!" string.wrap string.eq =:: forceCast
+      _EXPERIMENTAL_ if state [] .currentProc optional.hasData _if
+        Type .undefined ## correct type will be determined in type-check phase
+          fileState [] .wordStart
+          forceCast if
+            opCast!
+          else
+            opCast
+          end
+        state appendOp
+        return
+      end
       state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
         "missing parameter for \"" sb.wrap
           opName sb.appendStr
@@ -1817,7 +1839,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         " expected type" sb.appendS fileState [] .wordStart state appendError2
         return
       end
-      opName "cast!" string.wrap string.eq =:: forceCast
       state hasConst if
         state peekConst .data =:: c
         c [] .valueType  target .typeId forceCast typeContext types.canCast if
@@ -2601,6 +2622,30 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
           return
       end
+      return
+    else #dup "assert" string.wrap string.eq _EXPERIMENTAL_ & _if =:: opName
+      fileState nextToken
+      #dup Token .STRING != if #drop
+        "expected string" sb.wrap fileState [] .wordStart state appendWarning2
+        return
+      end .STRING =:: message
+      state hasConst2 ! if
+        ## TODO local assertions
+        "unimplemented: dynamic assertions" sb.wrap fileState [] .wordStart state appendError2
+        return
+      end
+      state popConst2 #drop
+        #dup ConstValue .boolean != if
+          "expected boolean got " sb.wrap
+            #swap idContext [] .constContext @ labelContext typeContext sb.appendConstant
+          fileState [] .wordStart state appendWarning2
+          false
+        else .boolean end ! if
+          "assertion failed \"" sb.wrap
+            message sb.appendStr
+            "\" " sb.appendS
+          fileState [] .wordStart state appendError2
+        end
       return
     end
   #dup state [] .currentFile idContext id.getIdentifier ! if ## try parsing as identifier
