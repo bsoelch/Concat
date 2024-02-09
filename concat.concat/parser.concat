@@ -1234,32 +1234,28 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
       "=:" string.wrap string.eq =:: isInit
-      state [] .constantBlocks .length 0 >
-       _EXPERIMENTAL_ state [] .currentProc optional.hasData & | if
-        ## declaration in procedure/composite-block -> determine types later
-        fileState state nextWord fileState state readLabel fileState [] .wordStart
-          isInit if
-            opInitializeName
-          else
-            opDeclareName
-          end
-        state appendOp
-        ## don't skip global interpreter for local-variables/ field declarations
-        return
-      end
-      _EXPERIMENTAL_ if
+      _EXPERIMENTAL_ ! if
+        fileState state popTypeConstant #drop ## comparability with old parser
+      else state [] .constantBlocks .length 0 == state [] .currentProc optional.hasData ! & _if
         state tryInterpretGlobal ## try to interpret global operations before each declaration
-      end
-      ##  type assignment within procedures should be done in type-check phase
-      fileState state popTypeConstant #drop =:: mut valType
+        fileState state popTypeConstant #drop
+      else
+        ## type assignment within procedures should be done in type-check phase
+        Type .undefined
+      end =:: mut valType
       false =:: mut forceConst
-      valType typeContext types.isProcedure if
+      state [] .constantBlocks .length 0 > if
+        IdentifierType .LABEL
+        true forceConst =
+      else state [] .currentProc optional.hasData _EXPERIMENTAL_ & _if
+        IdentifierType .LOCAL_VAR
+      else valType typeContext types.isProcedure _if
         IdentifierType .PROCEDURE
         true forceConst =
       else valType types.primitive.TYPE types.typeEquals _if
         IdentifierType .TYPE
         true forceConst =
-      else idContext id.isTopLevel _if
+      else state [] .currentProc optional.isEmpty _if ## for comparability with old parser
         IdentifierType .GLOBAL_VAR
       else
         IdentifierType .LOCAL_VAR
@@ -1311,17 +1307,29 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if #drop
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
+      end =:: idData =:: idName
+      state [] .constantBlocks .length 0 >
+       _EXPERIMENTAL_ state [] .currentProc optional.hasData & | if
+        ## declaration in procedure/composite-block -> determine types later
+        label fileState [] .wordStart
+          isInit if
+            opInitializeName
+          else
+            opDeclareName
+          end
+        state appendOp
+        ## don't skip global interpreter for local-variables/ field declarations
+        return
       end
       idContext id.isTopLevel if
-        #dup [] .idType IdentifierType .PROCEDURE != isInit ! | if
+        idData [] .idType IdentifierType .PROCEDURE != isInit ! | if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
       end
-      #dup [] .idType IdentifierType .TYPE == if
-        #drop:2
+      idData [] .idType IdentifierType .TYPE == if
         return
       end
-      #dup [] .idType IdentifierType .PROCEDURE == isInit & if
+      idData [] .idType IdentifierType .PROCEDURE == isInit & if
         state [] .currentProc optional.hasData if
           "procedures cannot be nested" sb.wrap fileState [] .wordStart state appendError2
         end
@@ -1351,7 +1359,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           progContext [] .progFiles state [] .currentFile list.get .localOps .length
           -1
         ProcedureInfo new optional.wrap state [] .currentProc =
-        #dup [] .valueType typeContext types.getProcIn if
+        idData [] .valueType typeContext types.getProcIn if
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
         end =:: inType
         inType Type .labeledProcIn == if
@@ -1378,8 +1386,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   state [] .currentFile
                   idContext
                   progContext [] .errors @
-                id.declareIdentifier if #drop
-                  .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
+                id.declareIdentifier if
+                  idName .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
                   #drop:3 return
                 end #drop:2
               end
@@ -1390,10 +1398,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end #drop
         end
       end
-      isInit ! idContext id.isGlobal & if #drop:2
+      isInit ! idContext id.isGlobal & if
         return ## no operation for global pre-declaration
       end
-      #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart isInit if
+      idData [] .valueType idData id.asIdInfo fileState [] .wordStart isInit if
         opInitializeId
       else
         opDeclareId
@@ -1401,7 +1409,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Operation ptr optional.empty state resetGlobalInterpreter
       state appendOp
       state skipGlobalInterpreter
-      #drop return
+      return
     else #dup "=::" string.wrap string.eq _if #drop
       _EXPERIMENTAL_ if
         state tryInterpretGlobal ## try to interpret global operations before each declaration

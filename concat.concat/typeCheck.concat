@@ -1261,7 +1261,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         return
       end
       break
-    TEMPLATE_ARG TYPE case
+    TEMPLATE_ARG TYPE LABEL case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
@@ -1355,7 +1355,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         1 +
       end #drop
       break
-    ARGUMENT TEMPLATE_ARG TYPE case
+    ARGUMENT TEMPLATE_ARG TYPE LABEL case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
@@ -3015,7 +3015,7 @@ proc(
         template [] .declaredAt
       opConst op [] =
       break
-    TMP_VAR LOCAL_VAR ARGUMENT case
+    TMP_VAR LOCAL_VAR ARGUMENT LABEL case
       op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
       break
     GLOBAL_VAR PROCEDURE TYPE case

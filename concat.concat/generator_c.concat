@@ -139,7 +139,7 @@ proc( IdentifierInfo : idInfo io.FILE : target ProgramContext ptr mut : prog => 
     ARGUMENT case
       idInfo .id idInfo .labelId target prog printArgName
       return
-    TYPE TEMPLATE_ARG case
+    TYPE TEMPLATE_ARG LABEL case
       break ## XXX? error message
   end
 end
@@ -983,7 +983,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             " should not exist at this stage of compilation" sb.appendS
           op [] .pos prog [] .errors @ appendError
           return
-        TYPE TEMPLATE_ARG case
+        TYPE TEMPLATE_ARG LABEL case
           break ## XXX error message
       end
       break
@@ -1017,7 +1017,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           end
           target ")" io.fputs #drop
           return
-        TYPE TEMPLATE_ARG case
+        TYPE TEMPLATE_ARG LABEL case
           break ## XXX error message
       end
       break
@@ -1030,7 +1030,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           operations index isGlobal target prog compileOp
           target ";\n" io.fputs #drop
           return
-        TYPE ARGUMENT TEMPLATE_ARG PROCEDURE case
+        TYPE ARGUMENT TEMPLATE_ARG PROCEDURE LABEL case
           break ## XXX error message
       end
       break
@@ -1068,7 +1068,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           operations index isGlobal target prog compileOp
           target ";\n" io.fputs #drop
           return
-        TYPE ARGUMENT TEMPLATE_ARG case
+        TYPE ARGUMENT TEMPLATE_ARG LABEL case
           break ## XXX error message
       end
       break
@@ -1104,7 +1104,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           idInfo target prog printIdName
           target ";\n" io.fputs #drop
           return
-        TYPE ARGUMENT TEMPLATE_ARG case
+        TYPE ARGUMENT TEMPLATE_ARG LABEL case
           break ## XXX error message
       end
       break

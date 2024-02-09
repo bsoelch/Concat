@@ -8,13 +8,13 @@
 #include "codeBlocks.concat"
 #include "common.concat"
 
-  enum( TYPE PROCEDURE GLOBAL_VAR  TEMPLATE_ARG  LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
+  enum( TYPE PROCEDURE GLOBAL_VAR TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
 
   struct( Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
   struct( Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: public TemplateInfo
 
-  struct( Type : valueType ConstValue : constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
+  struct( Type : mut valueType ConstValue : mut constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
   struct( IdentifierType : idType LabelId : labelId ConstValue : constValue TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
@@ -214,14 +214,14 @@
   end
 
 
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr bool ) =: public searchIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr mut bool ) =: public searchIdentifier
     context [] .labelContext .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
-      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
+      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
     end
     id 0 string.charAt '.' == if
-      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
+      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
     end
     id '.' string.splitLast
     =:: path
@@ -277,7 +277,7 @@
     end
     ## 3. search imports
     false =:: mut multiMatch
-    IdentifierData ptr optional.empty =:: mut match
+    IdentifierData ptr mut optional.empty =:: mut match
     false =:: mut matchGlobal
     context [] .labelContext .namespaceInfo .imports while #dup NAMESPACE_IMPORT_NONE != do
       context [] .labelContext .namespaceImports #swap list.get
@@ -293,7 +293,7 @@
               matches .data [] =
             end
             mNamespace NAMESPACE_ID_NONE == if
-              IdentifierData ptr cast optional.wrap match =
+              optional.wrap match =
               false matchGlobal =
               #dup .imported mNamespace =
             else #drop
@@ -308,7 +308,7 @@
               matches .data [] =
             end
             mNamespace NAMESPACE_ID_NONE == if
-              IdentifierData ptr cast optional.wrap match =
+              optional.wrap match =
               true matchGlobal =
               #dup .imported mNamespace =
             else #drop
@@ -349,9 +349,9 @@
         end #drop
       #drop
     end
-    "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_NONE_DATA @ true return
+    "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
   end
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr bool ) =: public getIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: public getIdentifier
     id fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
   proc( string : id FilePosition : pos CompilerError list ptr mut : errors => bool ) =: public checkIdentifier
@@ -480,6 +480,11 @@
           return
         GLOBAL_VAR case
           "global variable \"" sb.appendS
+          id .labelId labelContext id.labelName .data sb.appendStr
+          "\"" sb.appendS
+          return
+        LABEL case
+          "label \"" sb.appendS
           id .labelId labelContext id.labelName .data sb.appendStr
           "\"" sb.appendS
           return

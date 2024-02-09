@@ -635,7 +635,7 @@ proc(
           value? .data =:: value
           value .value value .info .valueType label op [] .pos context pushValue
           false return
-        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR case
+        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR LABEL case
         showErrorMessages if
           "unsupported operation in constant evaluation: " sb.wrap
             op [] constContext labelContext typeContext sb.appendOp
