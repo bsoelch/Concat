@@ -473,6 +473,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .pos errors appendError
       return
       break
+    Return declareName getName
+    entryPoint
+    getLabel setLabel @Label
+    getElement setElement @Element
+    getArrayElement setArrayElement @ArrayElement
+    getEnumElement setEnumElement @EnumElement
+    Print New newEnum call callPtr
+    argc getArg getArgLen
+    Cast Cast!
+    unaryOperator binaryOperator
+    enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
+    checkArrayIndex setName @Name
+    compilerInfo unreachable case
+      break
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
@@ -524,20 +538,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           mem.move state [] .stack .data =
           break
       end
-      break
-    Return declareName getName
-    entryPoint
-    getLabel setLabel @Label
-    getElement setElement @Element
-    getArrayElement setArrayElement @ArrayElement
-    getEnumElement setEnumElement @EnumElement
-    Print New newEnum call callPtr
-    argc getArg getArgLen
-    Cast Cast!
-    unaryOperator binaryOperator
-    enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
-    checkArrayIndex setName @Name
-    compilerInfo unreachable case
       break
     typeModifier case
       state unfreezeInterpreter
