@@ -123,6 +123,31 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: stor
     count -
   state [] .stack .length =
 end
+proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
+  state [] .stack .length count < if
+    "stack underflow: need " sb.wrap
+      count sb.appendI
+      " values got " sb.appendS
+      state [] .stack .length sb.appendI
+    pos state [] .program [] .errors @ appendError
+  end
+  0 =:: mut toDrop
+  state [] .stack .length count - while #dup state [] .stack .length < do
+    state [] .stack #over list.at .data =:: typeInfo
+    typeInfo [] .stored if
+      toDrop 1 + toDrop =
+    end
+    1 +
+  end #drop
+  toDrop 0 > if
+    ## TODO remove operations from code instead of dropping value
+    0 toDrop StackModType .DROP pos opStackMod =:: tmpOp
+    tmpOp @ state appendOp
+  end
+  state [] .stack .length
+    count -
+  state [] .stack .length =
+end
 
 
 proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushConstant
@@ -159,7 +184,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => BlockType ) =: closeB
   closed return
 end
 
-proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: appendOp
+proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: appendOp
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
@@ -364,6 +389,88 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
       end
       break
+    length size case
+      state [] .stack list.peek =:: value?
+      value? optional.isEmpty if
+        "missing argument for " sb.wrap
+          op [] constContext labelContext typeContext sb.appendOp
+          " expected pointer or array" sb.appendS
+        op [] .pos errors appendError
+        return
+      end
+      value? .data [] .valueType =:: valType
+      valType typeContext types.isPointer valType typeContext types.isArray | if
+        valType typeContext types.isFixedSize ! if
+          "invalid operand for : " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+            " cannot get the length of " sb.appendS
+            valType labelContext typeContext sb.appendType
+          op [] .pos errors appendError
+          return
+        end
+        1 op [] .pos state discardValues ## remove value from stack
+        valType typeContext types.getArraySize =:: sizes
+        op [] .val OpValue .length == if
+          sizes .length 0 == if
+            1 ConstValue .int new types.primitive.I_SIZE op [] .pos state pushConstant
+            return
+          else sizes 0 array.get .sizeType types.ArraySizeType .int == _if
+            ## pushConstant
+              sizes 0 array.get .value ConstValue .int new
+              types.primitive.I_SIZE
+              op [] .pos
+            state pushConstant
+            return
+          else sizes 0 array.get .sizeType types.ArraySizeType .staticArg == _if
+            ## pushConstant
+              sizes 0 array.get .value i32 cast ConstValue .genericArg new
+              types.primitive.I_SIZE
+              op [] .pos
+            state pushConstant
+            return
+          else
+            "unsupported array-size type for " sb.wrap
+              op [] constContext labelContext typeContext sb.appendOp
+            op [] .pos errors appendError
+            return
+          end
+        else
+          idContext [] .templateArgBuffer .length =:: offset
+          0 while #dup sizes .length < do
+            sizes #over array.get =:: current
+            idContext [] .templateArgBuffer
+              current .sizeType types.ArraySizeType .int == if
+                current .value ConstValue .int new list.append
+              else current .sizeType types.ArraySizeType .staticArg == _if
+                current .value i32 cast ConstValue .genericArg new list.append
+              else #drop:2
+                "unsupported array-size type for " sb.wrap
+                  op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+                op [] .pos errors appendError
+                return
+              end
+            idContext [] .templateArgBuffer =
+            1 +
+          end #drop
+          sizes .length types.ArraySizeType .int types.ArraySize new =:: sizeLength
+          ## pushConstant
+            ## newArrayConst
+              idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
+              idContext [] .constContext @
+            newArrayConst
+            types.primitive.I_SIZE false sizeLength @ array.wrap true false typeContext types.newArrayType #drop
+            op [] .pos
+          state pushConstant
+          offset idContext [] .templateArgBuffer .length =
+          return
+        end
+      end ## XXX? support length on structs/tuples/enums
+      "unsupported argument type for " sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+        valType labelContext typeContext sb.appendType
+      op [] .pos errors appendError
+      return
+      break
     Return declareName getName
     entryPoint
     getLabel setLabel @Label
@@ -372,7 +479,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getEnumElement setEnumElement @EnumElement
     Print New newEnum call callPtr
     argc getArg getArgLen
-    length size Cast Cast!
+    Cast Cast!
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
     checkArrayIndex stackMod setName @Name

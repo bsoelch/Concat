@@ -209,7 +209,7 @@ proc( ParserState ptr mut : state => ) =: tryInterpretGlobal
   interpreter [] .offset =:: offset
   offset while #dup state [] .globalOpBuffer .length < do
     state [] .globalOpBuffer #over list.at .data =:: op
-    op interpreter [] .context @ true evaluateOperation if ## XXX change to false once constant evaluation of necessary operations is implemented
+    op interpreter [] .context @ false evaluateOperation if
       ## interpreter failed
       op Operation ptr cast optional.wrap state resetGlobalInterpreter
     end
