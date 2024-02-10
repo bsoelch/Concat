@@ -98,7 +98,7 @@ proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
   true state [] .interpreterActive =
 end
 
-proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: popConstants
+proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
   state [] .stack .length count < if
     "stack underflow: need " sb.wrap
       count sb.appendI
@@ -165,6 +165,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: appendOp
   state [] .compiledOps =
 end
 
+proc( Type : valType i64 : id FilePosition : pos TypeCheckState ptr mut : state => ) =: storeAutoType
+  state [] .program [] .autoTypes @ =:: autoTypes
+  state [] .program [] .errors @ =:: errors
+  id 0 < id autoTypes [] .length >= | if
+    "auto-type id outside allowed range:" sb.wrap
+      id sb.appendI
+      " maximum:" sb.appendS
+      autoTypes [] .length 1 - sb.appendI
+    pos errors appendError
+  end
+  ## XXX? check for redefinition of auto-type
+  valType autoTypes [] id list.set
+end
+
 proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
@@ -172,6 +186,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .program [] .idContext .constContext @ =:: constContext
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
+  op [] .dataType Type .autoType == if ## try resolving auto-types
+    op [] .dataType types.getTypeId =:: id
+    id 0 >= id program [] .autoTypes .length < & if
+      program [] .autoTypes id list.get =:: autoType
+      autoType Type .undefined != if
+        autoType op [] .dataType =
+      end
+    end
+  end
   state [] .interpreterActive if op state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
   end
@@ -190,12 +213,68 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       op [] .val .Constant op [] .dataType op [] .pos state pushConstant
       return
+    getId case
+      op [] .val .getId .idType switch
+        GLOBAL_VAR LOCAL_VAR case
+          state [] .stack
+            ## TypeInfo
+              op [] .dataType
+              ConstValue .none ## XXX get constant value if present and variable immutable
+              op [] .val .getId .labelId
+              op [] .pos
+              true
+            TypeInfo new list.append
+          state [] .stack =
+          op state appendOp
+          return
+        PROCEDURE case
+          break
+        TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
+          break
+      end
+      break
+    @Id case
+      op [] .val .@Id .idType switch
+        GLOBAL_VAR LOCAL_VAR case
+          op [] .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
+          op [] .dataType mutable typeContext types.getAddressType =:: addrType
+          state [] .stack
+            ## TypeInfo
+              addrType
+              ConstValue .none
+              op [] .val .@Id .labelId
+              op [] .pos
+              true
+            TypeInfo new list.append
+          state [] .stack =
+          op state appendOp
+          return
+        PROCEDURE case
+          break
+        TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
+          break
+      end
+      break
+    setId declareId case
+      break
     initializeName case
       break
     initializeId case
       op [] .val .initializeId .idType switch
-        GLOBAL_VAR case
-          1 op [] .pos state popConstants
+        GLOBAL_VAR LOCAL_VAR case
+          op [] .dataType Type .undefined == if
+            break ## XXX? resolve constant type
+          end
+          op [] .dataType Type .autoType == if
+            op [] .dataType types.getTypeId =:: id
+            state [] .stack list.peek =:: value?
+            value? optional.hasData if
+              value? .data [] .valueType =:: valueType
+                valueType op [] .dataType =
+              valueType id op [] .pos state storeAutoType
+            end
+          end
+          1 op [] .pos state storeConstants
           op state appendOp
           return
         PROCEDURE case
@@ -206,7 +285,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             BlockType .PROCEDURE
           end state openBlock
           return
-        TYPE TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR case
+        TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
           break
       end
       break
@@ -287,7 +366,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     Return declareName getName
     entryPoint
-    getId setId @Id declareId
     getLabel setLabel @Label
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
