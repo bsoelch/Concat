@@ -19,10 +19,15 @@ struct(
 ) =:: TypeInfo
 
 struct(
+  BlockType : blockType
+) =:: BlockInfo
+
+struct(
   ProgramContext ptr mut : program
   InterpreterContext : mut interpreter
   bool : mut interpreterActive
   TypeInfo list : mut stack
+  BlockInfo list : mut openBlocks
   Operation list : mut compiledOps
   FileId : mut currentFile
 ) =:: TypeCheckState
@@ -132,6 +137,34 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
     state [] .stack =
 end
 
+proc( BlockType : blockType TypeCheckState ptr mut : state => ) =: openBlock
+  state [] .openBlocks
+    ## BlockInfo
+      blockType
+    BlockInfo new list.append
+  state [] .openBlocks =
+end
+
+proc( TypeCheckState ptr mut : state => BlockInfo ptr mut optional ) =: peekBlock
+  state [] .openBlocks list.peek
+end
+proc( FilePosition : pos TypeCheckState ptr mut : state => BlockType ) =: closeBlock
+  state [] .program [] .errors @ =:: errors
+  state [] .openBlocks .length 0 == if
+    BlockType .UNKNOWN return
+  end
+  state [] .openBlocks .length 1 - =:: newLength
+  state [] .openBlocks newLength list.at .data [] .blockType =:: closed
+  newLength state [] .openBlocks .length =
+  closed return
+end
+
+proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: appendOp
+  state [] .compiledOps
+    op list.appendP
+  state [] .compiledOps =
+end
+
 proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
@@ -163,15 +196,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .val .initializeId .idType switch
         GLOBAL_VAR case
           1 op [] .pos state popConstants
-          state [] .compiledOps
-            op list.appendP
-          state [] .compiledOps =
+          op state appendOp
           return
         PROCEDURE case
-          state [] .compiledOps
-            op list.appendP
-          state [] .compiledOps =
-          ## TODO open procedure block
+          op state appendOp
+          op [] .val .initializeId .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
+            BlockType .EXPERIMENTAL_PROCEDURE
+          else
+            BlockType .PROCEDURE
+          end state openBlock
           return
         TYPE TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR case
           break
@@ -212,7 +245,47 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
       end
       break
-    Return blockEnd declareName getName
+    blockEnd case
+      op [] .val .blockEnd .blockType switch
+        TYPE_TUPLE
+        TYPE_STRUCT
+        TYPE_ENUM
+        TYPE_UNION
+        TYPE_PROC_IN
+        TYPE_PROC_OUT
+        TYPE_COMPOSITE
+        INITIALIZER case ## XXX allow dynamic interpreter blocks
+          "could not evaluate " sb.wrap
+            op [] .val .blockEnd .blockType sb.appendBlockType
+            " block" sb.appendS
+          op [] .pos errors appendError
+          return
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          op [] .pos state closeBlock =:: closed
+          closed op [] .val .blockEnd .blockType != if
+            "unexpected end of " sb.wrap
+              closed sb.appendBlockType
+              " block expected " sb.appendS
+              op [] .val .blockEnd .blockType sb.appendBlockType
+            op [] .pos errors appendError
+          end
+          op state appendOp
+          return
+        IF
+        IFIF
+        ELSE
+        WHILE
+        DO
+        BREAK
+        CONTINUE
+        SWITCH
+        CASE
+        DEFAULT
+        UNKNOWN case
+          break
+      end
+      break
+    Return declareName getName
     entryPoint
     getId setId @Id declareId
     getLabel setLabel @Label
@@ -248,7 +321,8 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     program
     program wrapProgram
     true
-    32 TypeInfo list.create
+    32  TypeInfo  list.create
+    32  BlockInfo list.create
     128 Operation list.create
     FILE_ID_NONE
   TypeCheckState new =:: mut state
