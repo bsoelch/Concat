@@ -98,7 +98,7 @@ proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
   true state [] .interpreterActive =
 end
 
-proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
+proc( i32 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
   state [] .stack .length count < if
     "stack underflow: need " sb.wrap
       count sb.appendI
@@ -119,9 +119,11 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: stor
     end
     1 +
   end #drop
-  state [] .stack .length
-    count -
-  state [] .stack .length =
+  popValues if
+    state [] .stack .length
+      count -
+    state [] .stack .length =
+  end
 end
 proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
   state [] .stack .length count < if
@@ -299,7 +301,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               valueType id op [] .pos state storeAutoType
             end
           end
-          1 op [] .pos state storeConstants
+          1 true op [] .pos state storeConstants
           op state appendOp
           return
         PROCEDURE case
@@ -471,6 +473,58 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .pos errors appendError
       return
       break
+    stackMod case
+      op [] .val .stackMod .modType switch
+        DROP case
+          op [] .val .stackMod .n op [] .pos state discardValues
+          return
+        COPY case
+          op [] .val .stackMod .n =:: offset
+          state [] .stack .length offset < if
+            "not enough arguments for " sb.wrap
+              op [] .val .stackMod sb.appendStackMod
+              " got " sb.appendS
+              state [] .stack .length sb.appendI
+              " need " sb.appendS
+              offset sb.appendI
+            op [] .pos errors appendError
+          end
+          state [] .stack state [] .stack .length 1 - offset - list.at .data =:: copied
+          state [] .stack
+            copied list.appendP
+          state [] .stack =
+          copied [] .stored if
+            op state appendOp
+          end
+          return
+        SWAP case
+          state [] .stack .length 2 < if
+            "not enough arguments for " sb.wrap
+              op [] .val .stackMod sb.appendStackMod
+              " got " sb.appendS
+              state [] .stack .length sb.appendI
+              " need 2" sb.appendS
+            op [] .pos errors appendError
+          end
+          state [] .stack .length 2 - =:: offset
+          state [] .stack offset list.at .data =:: lower
+          state [] .stack offset 1 + list.at .data =:: upper
+          lower [] .stored upper [] .stored | if
+            2 false op [] .pos state storeConstants ## ensure both values are stored
+            op state appendOp
+          end
+          ## update stack
+          state [] .stack
+            lower list.appendP
+          state [] .stack =
+          ## mem.move
+            state [] .stack .data offset +
+            state [] .stack .data offset 1 + +
+            2
+          mem.move state [] .stack .data =
+          break
+      end
+      break
     Return declareName getName
     entryPoint
     getLabel setLabel @Label
@@ -482,7 +536,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     Cast Cast!
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
-    checkArrayIndex stackMod setName @Name
+    checkArrayIndex setName @Name
     compilerInfo unreachable case
       break
     typeModifier case
