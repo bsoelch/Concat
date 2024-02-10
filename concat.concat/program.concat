@@ -522,7 +522,7 @@ end
           #over .val .Cast  labelContext typeContext sb.appendType
           break
         Cast! case
-          "cast ( " sb.appendS
+          "cast! ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) src: " sb.appendS
           #over .val .Cast!  labelContext typeContext sb.appendType
