@@ -33,6 +33,20 @@ struct(
 proc( LabelId => i32 ) =: labelHash end
 proc( LabelId LabelId => bool ) =: labelEq == end
 
+proc( i64 : count InterpreterContext ptr mut : context => bool ) =: checkStack
+  context [] .openBlocks .length 0 > if
+    context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
+  else 0i64 end =:: offset
+  context [] .stack .length offset - count <
+end
+proc( InterpreterContext ptr mut : context => i64 ) =: minStackOffset
+  context [] .openBlocks .length 0 > if
+    context [] .openBlocks
+      context [] .openBlocks .length 1 - list.at .data []
+    .stackOffset return
+  end
+  0 return
+end
 
 proc( InterpreterContext ptr mut : context => bool ) =: inEnum
   ## XXX cache number of open enum blocks
@@ -82,7 +96,7 @@ proc( BlockType : blockType InterpreterContext ptr mut : context => ) =: openBlo
   context [] .openBlocks
     ## BlockInfo
       blockType
-      context [] .stack .length
+      context [] .stack .length ## XXX add possibility to inherit offset from outer block
     BlockInfo new list.append
   context [] .openBlocks =
 end
@@ -224,6 +238,8 @@ proc(
     ValueInfo new list.append
   context [] .stackInfo =
 end
+
+## TODO use wrapper procedures for stack access
 
 proc(
   Operation ptr : op
@@ -510,7 +526,7 @@ proc(
         true return
       end
       ## TODO error if not in type or initializer block
-      context [] .stack .length 0 == if
+      1 context checkStack if
         showErrorMessages if
           "not enough arguments for declaration, expected 1 got 0" sb.wrap
           op [] .pos errors appendError
@@ -569,14 +585,14 @@ proc(
             ## type-generator (procedure returning type)
             op [] .dataType typeContext types.getProcIn #drop =:: procIn
             procOut typeContext types.compositeElts =:: inTypes
-            ## XXX resolve arguments
-            context [] .stack .length inTypes .length - =:: offset
-            offset 0 < if
+            inTypes .length context checkStack if
               "not enough arguments for type-generator " sb.wrap
                 label labelContext id.labelName .data sb.appendStr
-                op [] .pos errors appendError
+              op [] .pos errors appendError
               true return
             end
+            ## XXX resolve arguments
+            context [] .stack .length inTypes .length - =:: offset
             ## findGeneratedType
               label
               context [] .stack list.asArray offset array.tail
@@ -646,13 +662,14 @@ proc(
       break
     typeModifier case
         true =:: mut fixedSize
+        context minStackOffset =:: minOffset
         context [] .stack .length 1 - =:: mut offset
-        offset 0 > if context [] .stack offset list.get ConstValue .wildCard == _if
+        offset minOffset > if context [] .stack offset list.get ConstValue .wildCard == _if
           false fixedSize =
           offset 1 - offset =
         end
         0 =:: mut intArgs
-        offset while #dup 0 >= do
+        offset while #dup minOffset >= do
           context [] .stackInfo #over list.at .data [] .valueType typeContext types.isInt ! if
             break
           end
@@ -694,7 +711,7 @@ proc(
           end
           1 +
         end #drop
-        offset 0 < if
+        offset minOffset < if
           "missing type parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
           op [] .pos errors appendError
@@ -803,12 +820,18 @@ proc(
   procData [] .procType =:: procType
   procType typeContext types.getProcIn #drop =:: inType
   inType typeContext types.compositeElts =:: args
-  ## TODO resolve signature
-  context [] .stack .length args .length - =:: argsOffset
-  argsOffset 0 < if
-    true return ## not enough arguments
+  args .length context checkStack if
+    "not enough arguments for procedure " sb.wrap
+      ## TODO print procedure label
+    pos errors appendError
+    true return
   end
-  program [] .progFiles procData [] .fileId list.at .data [] .localOps
+  context [] .stack .length args .length - =:: argsOffset
+  ## XXX resolve signature
+  ## TODO check argument types
+  ## TODO interpreter modes depending on program state
+  program [] .templateOps ## -> procedures are stored in template ops until they are type-checked
+  ## program [] .progFiles procData [] .fileId list.at .data [] .localOps
     procData [] .codeStart
     procData [] .codeLength
   list.slice =:: code
