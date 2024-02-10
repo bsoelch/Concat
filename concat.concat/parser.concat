@@ -1033,28 +1033,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return ## ignore unknown annotations
       end
       ':' string.split
-        "dup" string.wrap #over string.eq if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
-          0 #swap
-          opName fileState [] .wordStart state getCompilerOpParam ## :count
-          StackModType .DUP fileState [] .wordStart opStackMod state appendOp
+        "dup" string.wrap #over string.eq if =:: opName
+          #drop ## ignore additional parameters
+          0 StackModType .COPY fileState [] .wordStart opStackMod state appendOp
           return
-        else "over" string.wrap #over string.eq _if =:: opName ':' string.split
-          opName fileState [] .wordStart state getCompilerOpParam #swap ':' string.split #swap #drop
-          opName fileState [] .wordStart state getCompilerOpParam ## :offset:count
-          StackModType .OVER fileState [] .wordStart opStackMod state appendOp
+        else "over" string.wrap #over string.eq _if =:: opName
+          ':' string.split #swap #drop ## ignore additional parameters
+          opName fileState [] .wordStart state getCompilerOpParam ## :offset
+          StackModType .COPY fileState [] .wordStart opStackMod state appendOp
           return
-        else "swap" string.wrap #over string.eq _if =:: opName ':' string.split
-          opName fileState [] .wordStart state getCompilerOpParam #swap ':' string.split #swap #drop
-          opName fileState [] .wordStart state getCompilerOpParam ## :offset:count
-          StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
-          return
-        else "rot" string.wrap #over string.eq "rotate" string.wrap #over:2 string.eq | _if =:: opName ':' string.split
-          opName fileState [] .wordStart state getCompilerOpParam #swap ':' string.split #swap #drop
-          opName fileState [] .wordStart state getCompilerOpParam #swap ## :count:amount
-          StackModType .ROT fileState [] .wordStart opStackMod state appendOp
+        else "swap" string.wrap #over string.eq _if =:: opName
+          #drop ## ignore additional parameters
+          1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
           return
         else "drop" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop
-          0 #swap
+          ':' string.split #swap #drop ## ignore additional parameters
           opName fileState [] .wordStart state getCompilerOpParam ## :count
           StackModType .DROP fileState [] .wordStart opStackMod state appendOp
           return

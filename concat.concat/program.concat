@@ -7,8 +7,8 @@
 
 enum( NEGATE NOT FLIP ) =:: public UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: public BinaryOperator
-enum( DUP OVER SWAP ROT DROP ) =:: public StackModType
-struct( i32 : offset i32 : count StackModType : modType ) =:: public StackModification
+enum( COPY SWAP DROP ) =:: public StackModType
+struct( i32 : n StackModType : modType ) =:: public StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
 struct( IdentifierInfo : idInfo i64 : argCount ) =:: public CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: public TypeModifier
@@ -150,7 +150,7 @@ end
 proc( Type : src Type : target FilePosition : pos => Operation ) =: public opCast!From
    src OpValue .Cast! new target pos Operation new return
 end
-proc( i32 i32 StackModType FilePosition => Operation ) =: public opStackMod
+proc( i32 StackModType FilePosition => Operation ) =: public opStackMod
   =:: pos
   StackModification new OpValue .stackMod new Type .undefined pos Operation new return
 end
@@ -299,33 +299,26 @@ end
       URSHIFT case "URSHIFT" sb.appendS return
     end
   end
-  proc( stringBuilder StackModification => stringBuilder ) =: public appendStackMod
-    #dup .modType switch
-      DUP case
-        #swap "DUP " sb.appendS
-        #swap .count sb.appendI
-        break
-      OVER case
-        #swap "OVER " sb.appendS
-        #over .offset sb.appendI
-                  ' ' sb.appendC
-        #swap .count  sb.appendI
-        break
-      SWAP case
-        #swap "SWAP " sb.appendS
-        #swap .offset sb.appendI
-        break
-      ROT case
-        #swap "ROTATE " sb.appendS
-        #over .count    sb.appendI
-                  ' '   sb.appendC
-        #swap .offset   sb.appendI
-        break
-      DROP case
-        #swap "DROP " sb.appendS
-        #swap .count  sb.appendI
-        break
-    end
+  proc( stringBuilder : sb StackModification : mod => stringBuilder ) =: public appendStackMod
+    sb
+      mod .modType switch
+        COPY case
+          mod .n 0 == if
+            "DUP " sb.appendS
+          else
+            "OVER " sb.appendS
+            mod .n sb.appendI
+          end
+          break
+        SWAP case
+          "SWAP " sb.appendS
+          break
+        DROP case
+          "DROP " sb.appendS
+          mod .n  sb.appendI
+          break
+      end
+    return
   end
   proc( stringBuilder TypeModifier => stringBuilder ) =: public appendTypeModifier
     switch

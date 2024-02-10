@@ -2838,43 +2838,29 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     stackMod case
       op state checkReachable
-      op [] .val .stackMod .count =:: count
-      op [] .val .stackMod .offset =:: offset
-      count 0 < offset 0 < | if
-        "stack modification parameters have to be non-negative got:" sb.wrap
-          offset sb.appendI
-          " and " sb.appendS
-          count sb.appendI
+      op [] .val .stackMod .n =:: param
+      param 0 < if
+        "stack modification parameter has to be non-negative got:" sb.wrap
+          param sb.appendI
         op [] .pos state appendError2
         return
       end
       op [] .val .stackMod .modType switch
         DROP case
-          offset count + state [] .typeStack .length > if
+          param state [] .typeStack .length > if
             "type-stack underflow" sb.wrap op [] .pos state appendError2
             0 state [] .typeStack .length =
             0 state [] .opStack .length =
             return
           end
-          0 offset state countStackOps =:: opOffset
-          offset count state countStackOps =:: removed
-          offset 0 > if
-            ## mem.move
-              state [] .typeStack .data state [] .typeStack .length + offset - count -
-              state [] .typeStack .data state [] .typeStack .length + offset -
-              offset
-            mem.move #drop
-            ## mem.move
-              state [] .opStack .data state [] .opStack .length + opOffset - removed -
-              state [] .opStack .data state [] .opStack .length + opOffset -
-              opOffset
-            mem.move #drop
-          end
-          state [] .typeStack .length count - state [] .typeStack .length =
+          0 param state countStackOps =:: removed
+          state [] .typeStack .length param - state [] .typeStack .length =
           state [] .opStack .length removed - state [] .opStack .length =
           return
-        DUP OVER case
-          offset count + state [] .typeStack .length > if
+        COPY case
+          param =:: offset
+          1 =:: count
+          count offset + state [] .typeStack .length > if
             "type-stack underflow" sb.wrap op [] .pos state appendError2
             return
           end
@@ -2900,14 +2886,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           return
         SWAP case
-          offset count + state [] .typeStack .length > if
+          2 state [] .typeStack .length > if
             "type-stack underflow" sb.wrap op [] .pos state appendError2
             return
           end
-          offset count < if
-            "swap: offset has to be greater or equal to count" sb.wrap op [] .pos state appendError2
-            return
-          end
+          1 =:: offset
+          1 =:: count
           state ensureStackHeadIsValue
           0 offset state countStackOps =:: opOffset
           offset count state countStackOps =:: copied
@@ -2936,10 +2920,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             mem.move #drop
           end
           return
-        ROT case
-          state ensureStackHeadIsValue
-          ## TODO rotate
-          break
       end
       break
     compilerInfo case

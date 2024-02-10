@@ -127,7 +127,7 @@
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           \#(
-            dup(\:[0-9]+)?     |
+            dup                |
             drop(\:[0-9]+)?    |
             swap               |
             over(\:[0-9]+)?    |

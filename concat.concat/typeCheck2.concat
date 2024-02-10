@@ -141,7 +141,7 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
   end #drop
   toDrop 0 > if
     ## TODO remove operations from code instead of dropping value
-    0 toDrop StackModType .DROP pos opStackMod =:: tmpOp
+    toDrop StackModType .DROP pos opStackMod =:: tmpOp
     tmpOp @ state appendOp
   end
   state [] .stack .length
