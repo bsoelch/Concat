@@ -120,6 +120,9 @@ proc( ParserState ptr mut : state => i64 ) =: opCount
   progContext [] .idContext @ id.isGlobal if
     progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps .length return
   end
+  _EXPERIMENTAL_ if
+    progContext [] .templateOps .length return
+  end
   progContext [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
 end
 proc( Operation : op ParserState ptr mut : state => ) =: appendOp
@@ -133,7 +136,11 @@ proc( Operation : op ParserState ptr mut : state => ) =: appendOp
       progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @
     end
   else
-    progContext [] .progFiles state [] .currentFile list.at .data [] .localOps @
+    _EXPERIMENTAL_ if
+      progContext [] .templateOps @
+    else
+      progContext [] .progFiles state [] .currentFile list.at .data [] .localOps @
+    end
   end
   #dup []
     0 while #dup state [] .constants .length < do
@@ -218,6 +225,8 @@ proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
     progContext [] .templateOps
   else progContext [] .idContext @ id.isGlobal _if
     progContext [] .progFiles state [] .currentFile list.get .globalOps
+  else _EXPERIMENTAL_ _if
+    progContext [] .templateOps
   else
     progContext [] .progFiles state [] .currentFile list.get .localOps
   end list.peek
@@ -1356,7 +1365,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## ProcedureInfo
           state [] .currentFile
           valType
-          progContext [] .progFiles state [] .currentFile list.get .localOps .length
+          _EXPERIMENTAL_ if
+            progContext [] .templateOps .length
+          else
+            progContext [] .progFiles state [] .currentFile list.get .localOps .length
+          end
           -1
         ProcedureInfo new optional.wrap state [] .currentProc =
         idData [] .valueType typeContext types.getProcIn if
@@ -1720,7 +1733,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           state [] .currentProc .data =:: mut currentProc
           ProcedureInfo optional.empty state [] .currentProc =
-          progContext [] .progFiles state [] .currentFile list.get .localOps .length
+          _EXPERIMENTAL_ if
+            progContext [] .templateOps .length
+          else
+            progContext [] .progFiles state [] .currentFile list.get .localOps .length
+          end
             currentProc .codeStart -
           currentProc .codeLength =
           progContext [] .procedures

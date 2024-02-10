@@ -10,33 +10,127 @@ type-checked code in post-fix notation.
 #include "labels.concat"
 #include "interpreter/interpreter.concat"
 
-struct( 
+struct(
+  Type         : valueType
+  ConstValue   : value
+  LabelId      : valueId
+  FilePosition : pushedAt
+  bool         : stored
+) =:: TypeInfo
+
+struct(
   ProgramContext ptr mut : program
   InterpreterContext : mut interpreter
-  FileId : mut currentFile
+  bool : mut interpreterActive
+  TypeInfo list : mut stack
   Operation list : mut compiledOps
+  FileId : mut currentFile
 ) =:: TypeCheckState
 
-proc( TypeCheckState ptr mut : state => ) =: storeConstants
+proc( TypeCheckState ptr mut : state => ) =: freezeInterpreter
+  state [] .interpreterActive ! if
+    return
+  end
   state [] .program =:: progContext
   state [] .interpreter @ =:: interpreter
   ##  -> store computed constants
   0 while #dup interpreter [] .stack .length < do
     interpreter [] .stack #over list.at .data =:: constant
     interpreter [] .stackInfo #over list.at .data =:: constInfo
-    state [] .compiledOps
-      ## opConst
-        constant []
+    state [] .stack
+      ## TypeInfo
         constInfo [] .valueType
+        constant  []
+        constInfo [] .valueId
         constInfo [] .pushedAt
-      opConst list.append
-    state [] .compiledOps =
+        false
+      TypeInfo new list.append
+    state [] .stack =
     1 +
   end #drop
+  ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initilizer)
   ##  -> reset interpreter
   interpreter resetContext
+  false state [] .interpreterActive =
 end
-## TODO popConstant
+proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
+  state [] .interpreterActive if
+    return
+  end
+  state [] .program =:: progContext
+  state [] .interpreter @ =:: interpreter
+  state [] .stack .length 1 - while #dup 0 >= do
+    state [] .stack #over list.at .data [] .stored if
+      break
+    end
+    1 -
+  end 1 + =:: offset
+  ##  -> reset interpreter
+  interpreter resetContext
+  ##  -> store computed constants
+  offset while #dup state [] .stack .length < do
+    state [] .stack #over list.at .data =:: typeInfo
+    interpreter [] .stack
+      typeInfo [] .value list.append
+    interpreter [] .stack =
+    interpreter [] .stackInfo
+      ## ValueInfo
+        typeInfo [] .valueType
+        typeInfo [] .valueId
+        id.LABEL_ID_NONE
+        typeInfo [] .pushedAt
+      ValueInfo new list.append
+    interpreter [] .stackInfo =
+    1 +
+  end #drop
+  true state [] .interpreterActive =
+end
+
+
+proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
+  state [] .interpreter @ =:: interpreter
+  interpreter resetContext
+  true state [] .interpreterActive =
+end
+
+proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: popConstants
+  state [] .stack .length count < if
+    "stack underflow: need " sb.wrap
+      count sb.appendI
+      " values got " sb.appendS
+      state [] .stack .length sb.appendI
+    pos state [] .program [] .errors @ appendError
+  end
+  state [] .stack .length count - while #dup state [] .stack .length < do
+    state [] .stack #over list.at .data =:: typeInfo
+    typeInfo [] .stored ! if
+      state [] .compiledOps
+        ## opConstant
+          typeInfo [] .value
+          typeInfo [] .valueType
+          typeInfo [] .pushedAt
+        opConst list.append
+      state [] .compiledOps =
+    end
+    1 +
+  end #drop
+  state [] .stack .length
+    count -
+  state [] .stack .length =
+end
+
+
+proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushConstant
+    state [] .stack
+      ## TypeInfo
+        valType
+        value
+        id.LABEL_ID_NONE
+        pos
+        false
+      TypeInfo new list.append
+    state [] .stack =
+end
 
 proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .program =:: program
@@ -45,20 +139,82 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .program [] .idContext .constContext @ =:: constContext
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
-  op state [] .interpreter @ false evaluateOperation ! if
+  state [] .interpreterActive if op state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
   end
+  state freezeInterpreter
   op [] .val switch
     NOP case return
-    initializeName case
-      "type-checking for operation: " sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
-        " has not been implemented" sb.appendS
-      op [] .pos errors appendError
+    OpValue .Constant case
+      op [] .dataType types.primitive.TYPE types.typeEquals if
+        state unfreezeInterpreter
+        op state [] .interpreter @ true evaluateOperation if
+          "could not evaluate " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+          op [] .pos errors appendError
+        end
+        return
+      end
+      op [] .val .Constant op [] .dataType op [] .pos state pushConstant
       return
-    Return block blockEnd declareName getName
+    initializeName case
+      break
+    initializeId case
+      op [] .val .initializeId .idType switch
+        GLOBAL_VAR case
+          1 op [] .pos state popConstants
+          state [] .compiledOps
+            op list.appendP
+          state [] .compiledOps =
+          return
+        PROCEDURE case
+          state [] .compiledOps
+            op list.appendP
+          state [] .compiledOps =
+          ## TODO open procedure block
+          return
+        TYPE TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR case
+          break
+      end
+      break
+    block case
+      op [] .val .block .blockType switch
+        TYPE_TUPLE
+        TYPE_STRUCT
+        TYPE_ENUM
+        TYPE_UNION
+        TYPE_PROC_IN
+        TYPE_PROC_OUT
+        TYPE_COMPOSITE
+        INITIALIZER case
+          state unfreezeInterpreter
+          ## type-blocks and initializers are handled by the interpreter
+          op state [] .interpreter @ true evaluateOperation if
+            "could not evaluate " sb.wrap
+              op [] .val .block .blockType sb.appendBlockType
+              " block" sb.appendS
+            op [] .pos errors appendError
+          end
+          return
+        PROCEDURE
+        EXPERIMENTAL_PROCEDURE
+        IF
+        IFIF
+        ELSE
+        WHILE
+        DO
+        BREAK
+        CONTINUE
+        SWITCH
+        CASE
+        DEFAULT
+        UNKNOWN case
+          break
+      end
+      break
+    Return blockEnd declareName getName
     entryPoint
-    getId setId @Id initializeId declareId
+    getId setId @Id declareId
     getLabel setLabel @Label
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
@@ -70,26 +226,37 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
     checkArrayIndex stackMod setName @Name
     compilerInfo unreachable case
-      "type-checking for operation: " sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
-        " has not been implemented" sb.appendS
-      op [] .pos errors appendError
-      return
-    OpValue .Constant typeModifier case ## will be handled by interpreter
-      "unexpected operation in type-check phase " sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
-      op [] .pos errors appendError
+      break
+    typeModifier case
+      state unfreezeInterpreter
+      ## type-modifiers are handled by the interpreter
+      op state [] .interpreter @ true evaluateOperation if
+        "could not evaluate type modifier" sb.wrap
+          op [] .val .typeModifier sb.appendTypeModifier
+        op [] .pos errors appendError
+      end
       return
   end
+  "type-checking for operation: " sb.wrap
+    op [] constContext labelContext typeContext sb.appendOp
+    " has not been implemented" sb.appendS
+  op [] .pos errors appendError
 end
 
 proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
   ## TypeCheckState
     program
     program wrapProgram
-    FILE_ID_NONE
+    true
+    32 TypeInfo list.create
     128 Operation list.create
+    FILE_ID_NONE
   TypeCheckState new =:: mut state
+  program [] .errors @ =:: errors
+  program [] .idContext @ =:: idContext
+  program [] .idContext .constContext @ =:: constContext
+  program [] .idContext .typeContext @ =:: typeContext
+  program [] .idContext .labelContext @ =:: labelContext
   ## global code
   0 while #dup program [] .progFiles .length < do
     #dup state .currentFile =
@@ -101,19 +268,49 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
       progFile [] .globalOps #over list.at .data state @ typeCheckOp
       1 +
     end #drop
-    state .interpreter @ resetContext
+    progFile [] .globalOps list.clear
+      state .compiledOps progFile [] .globalOps =
+    state .compiledOps =
+    state @ resetInterpreter
+    state .stack list.clear state .stack = ## TODO error on unhandled values
     1 +
   end #drop
+  state .compiledOps list.free state .compiledOps =
   ## procedures
   0 while #dup program [] .procedures .length < do
     program [] .procedures #over list.at .data =:: currentProc
-    ## TODO handle procedures with static arguments
-    currentProc [] .fileId state .currentFile =
-    ## TODO type-check procedure
-    state .interpreter @ resetContext
+    currentProc [] .procType typeContext types.getProcIn #drop =:: procIn
+    procIn typeContext types.compositeElts =:: inTypes
+    false =:: mut hasStaticArg ## TODO store info about static args in procedure
+    0 while #dup inTypes .length < do
+      procIn #over typeContext types.compositeGetLabel
+       labelContext id.labelFlags id.FLAG_STATIC & 0 != if
+        true hasStaticArg =
+        break
+      end
+      inTypes #over array.get types.primitive.TYPE types.typeEquals if
+        true hasStaticArg =
+        break
+      end
+      1 +
+    end #drop
+    hasStaticArg if
+      1 + continue
+    end
+    currentProc [] .fileId state .currentFile = ## compile procedures to local code of given file
+    program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
+    procFile [] .localOps state .compiledOps =
+    0 while #dup currentProc [] .codeLength < do
+      program [] .templateOps
+        #over currentProc [] .codeStart + list.at .data
+      state @ typeCheckOp
+      1 +
+    end #drop
+    state @ resetInterpreter
+    state .stack list.clear state .stack = ## TODO error on wrong return types
     1 +
   end #drop
   ## static procedures
-  ## TODO
+  ## TODO type-check static procedures
   state .interpreter @ cleanupContext
 end
