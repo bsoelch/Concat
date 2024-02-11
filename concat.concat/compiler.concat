@@ -217,6 +217,15 @@ entryPoint: ## TODO check return value of fopen
   prog .errors @ checkErrors
   _EXPERIMENTAL_ if
     prog @ typeCheckProgram2
+    compilerTokensFile optional.hasData if ## XXX separate file for each compilation step
+      1024 sb.create
+        prog sb.appendProgram
+      =:: parsedOps
+      compilerTokensFile .data io.OPEN_WRITE io.fopenStr #drop
+        #dup parsedOps io.fputSb #drop
+      io.fclose #drop
+      parsedOps sb.free #drop
+    end
     prog .errors @ checkErrors
   end
   prog @ typeCheckProgram

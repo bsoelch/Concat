@@ -88,6 +88,7 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
     interpreter [] .stackInfo =
     1 +
   end #drop
+  offset state [] .stack .length =
   true state [] .interpreterActive =
 end
 
@@ -588,7 +589,8 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     state .stack list.clear state .stack = ## TODO error on unhandled values
     1 +
   end #drop
-  state .compiledOps list.free state .compiledOps =
+  state .compiledOps list.clear state .compiledOps =
+  state .compiledOps =:: originalOps
   ## procedures
   0 while #dup program [] .procedures .length < do
     program [] .procedures #over list.at .data =:: currentProc
@@ -619,11 +621,14 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
       state @ typeCheckOp
       1 +
     end #drop
+    state .compiledOps procFile [] .localOps =
+    originalOps state .compiledOps =
     state @ resetInterpreter
     state .stack list.clear state .stack = ## TODO error on wrong return types
     1 +
   end #drop
   ## static procedures
   ## TODO type-check static procedures
+  state .compiledOps list.free #drop
   state .interpreter @ cleanupContext
 end
