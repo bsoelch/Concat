@@ -99,18 +99,20 @@ proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
   true state [] .interpreterActive =
 end
 
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: checkStackCap
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => bool ) =: checkStackSize
   state [] .stack .length count < if
     "stack underflow: need " sb.wrap
       count sb.appendI
       " values got " sb.appendS
       state [] .stack .length sb.appendI
     pos state [] .program [] .errors @ appendError
+    true return
   end
+  false return
 end
 proc( i64 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
   ## FIXME ensure values are stored in correct order ? temporary store constant, overwrite with nop when transferring constant back to stack
-  count pos state checkStackCap
+  count pos state checkStackSize if return end
   state [] .stack .length count - while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
     typeInfo [] .stored ! if
@@ -130,8 +132,46 @@ proc( i64 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : s
     state [] .stack .length =
   end
 end
+proc(
+  Type arrayView : types
+  string : name
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+=> ) =: requireTypes
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .constContext @ =:: constContext
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
+  types .length false pos state storeConstants
+  1 while #dup types .length <= do
+    state [] .stack state [] .stack .length #over:2 - list.at .data =:: typeInfo
+    types types .length #over:2 - array.get =:: expectedType
+    typeInfo [] .valueType expectedType types.typeEquals if
+      1 + continue
+    end
+    ## canAutoCast
+      typeInfo [] .valueType
+      expectedType
+    typeContext types.canAutoCast if
+      ## TODO add operation to cast value
+      1 + continue
+    end
+    "wrong type for " sb.wrap
+      name sb.appendStr
+      " expected " sb.appendS
+      expectedType labelContext typeContext sb.appendType
+      " got " sb.appendS
+      typeInfo [] .valueType labelContext typeContext sb.appendType
+    pos errors appendError
+    1 +
+  end #drop
+  state [] .stack .length
+    types .length -
+  state [] .stack .length =
+end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
-  count pos state checkStackCap
+  count pos state checkStackSize if return end
   0 =:: mut toDrop
   state [] .stack .length count - while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
@@ -157,7 +197,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   state [] .program [] .idContext .constContext @ =:: constContext
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
-  1 pos state checkStackCap
+  1 pos state checkStackSize if Type .undefined return end
   state [] .stack .length 1 - =:: offset
   state [] .stack offset list.at .data =:: typeInfo
   offset state [] .stack .length =
@@ -365,10 +405,36 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         ## resolve data type
         op [] .pos state popType op [] .dataType =
       end
-      ## TODO check if cast is possible
-      ## TODO change type on stack
+      1 op [] .pos state checkStackSize if
+        return
+      end
+      state [] .stack
+        list.pop =:: value
+      state [] .stack =
+      op [] .val OpValue .Cast == if
+        value .valueType op [] .val .Cast =
+      else
+        value .valueType op [] .val .Cast! =
+      end
+      ## canCast
+        value .valueType
+        op [] .dataType
+        op [] .val
+        OpValue .Cast! ==
+      typeContext types.canCast ! if
+        "cannot cast " sb.wrap
+          value .valueType labelContext typeContext sb.appendType
+          " to " sb.appendS
+          op [] .dataType labelContext typeContext sb.appendType
+        op [] .pos errors appendError
+      end
+      ## pushValue
+        value .value ## XXX update constant value with cast
+        op [] .dataType
+        op [] .pos
+      state pushValue
       op state appendOp
-      break
+      return
     New case
       op [] .dataType Type .undefined == if
         ## resolve data type
@@ -379,7 +445,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           "variable size arrays are not supported" sb.wrap op [] .pos errors appendError
         end
         ## pushValue
-          ConstValue .none ## XXX? compute constant value if possible
+          ConstValue .none
           op [] .dataType
           op [] .pos
         state pushValue
@@ -388,15 +454,21 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       op [] .dataType typeContext types.isTuple if
         op [] .dataType typeContext types.compositeEltCount =:: count
-        ## TODO ensure types are correct
-        count true op [] .pos state storeConstants
+        ## requireTypes
+          op [] .dataType
+          typeContext
+          types.compositeElts
+          "tuple element"
+          string.wrap
+          op [] .pos
+        state requireTypes
         ## pushValue
-          ConstValue .none
+          ConstValue .none ## XXX? compute constant value if possible
           op [] .dataType
           op [] .pos
         state pushValue
         op state appendOp
-        break ## change to return when implementation is complete
+        return
       end
       break
     block case
