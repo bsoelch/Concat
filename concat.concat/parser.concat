@@ -1621,7 +1621,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ## ProcedureInfo
         state [] .currentFile
         procType
-        progContext [] .progFiles state [] .currentFile list.get .localOps .length
+        progContext [] .templateOps .length
         -1
       ProcedureInfo new optional.wrap state [] .currentProc =
       fileState [] .wordStart opEntryPoint  state appendOp
