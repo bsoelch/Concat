@@ -1034,8 +1034,12 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           break ## XXX error message
       end
       break
-    initializeId case
-      op [] .val .initializeId =:: idInfo
+    initializeId autoTypedInitializeId case
+      op [] .val OpValue .initializeId == if
+        op [] .val .initializeId
+      else
+        op [] .val .autoTypedInitializeId
+      end =:: idInfo
       idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch
@@ -1434,7 +1438,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     compilerInfo case
       break
     getName setName @Name getLabel setLabel @Label length size stackMod
-    declareName initializeName typeModifier case
+    typeModifier case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap

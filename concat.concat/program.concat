@@ -22,6 +22,7 @@ enum(
      IdentifierInfo : mut setId
      IdentifierInfo : mut @Id
      IdentifierInfo : mut initializeId
+     IdentifierInfo : mut autoTypedInitializeId
      IdentifierInfo : mut declareId
             LabelId : getLabel
             LabelId : mut setLabel
@@ -59,8 +60,6 @@ enum(
             LabelId : getName
             LabelId : mut setName
             LabelId : mut @Name
-            LabelId : declareName
-            LabelId : initializeName
        TypeModifier : mut typeModifier
                       unreachable
        CompilerInfo : compilerInfo
@@ -95,6 +94,10 @@ end
 proc( Type IdentifierInfo FilePosition  => Operation ) =: public opInitializeId
   =:: pos
   OpValue .initializeId new #swap pos Operation new return
+end
+proc( Type IdentifierInfo FilePosition  => Operation ) =: public opAutoTypedInitializeId
+  =:: pos
+  OpValue .autoTypedInitializeId new #swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  => Operation ) =: public opDeclareId
   =:: pos
@@ -195,12 +198,6 @@ end
 proc( LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
   OpValue .getName new Type .undefined pos Operation new return
-end
-proc( Type : valType LabelId : label FilePosition : pos => Operation ) =: public opDeclareName
-  label OpValue .declareName new valType pos Operation new return
-end
-proc( Type : valType LabelId : label FilePosition : pos => Operation ) =: public opInitializeName
-  label OpValue .initializeName new valType pos Operation new return
 end
 proc( TypeModifier FilePosition  => Operation ) =: public opTypeModifier
   =:: pos
@@ -387,6 +384,12 @@ end
           " ) : " sb.appendS
           #over .val .initializeId labelContext sb.appendIdInfo
           break
+        autoTypedInitializeId case
+          "auto-typed initialize ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .autoTypedInitializeId labelContext sb.appendIdInfo
+          break
         declareId case
           "declare ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
@@ -410,18 +413,6 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .@Label labelContext id.labelName .data sb.appendStr
-          break
-        declareName case
-          "declare name ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .declareName labelContext id.labelName .data sb.appendStr
-          break
-        initializeName case
-          "initialize name ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .initializeName labelContext id.labelName .data sb.appendStr
           break
         typeModifier case
           "typeModifier \"" sb.appendS

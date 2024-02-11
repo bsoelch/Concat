@@ -319,37 +319,38 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       break
     setId declareId case
       break
-    initializeName case
-      op [] .dataType Type .undefined == if
-        break ## missing type
-      end
+    initializeId autoTypedInitializeId case
+      op [] .val OpValue .initializeId == if
+        op [] .val .initializeId false
+      else
+        op [] .val .autoTypedInitializeId true
+      end =:: autoTyped =:: idInfo
       op [] .dataType Type .autoType == if
         op [] .dataType types.getTypeId =:: id
-        op [] .pos state popType op [] .dataType =
-        op [] .dataType id op [] .pos state storeAutoType
+        autoTyped if
+          state [] .stack list.peek =:: value?
+          value? optional.hasData if
+            value? .data [] .valueType =:: valueType
+              valueType op [] .dataType =
+            valueType id op [] .pos state storeAutoType
+          end
+        else
+          op [] .pos state popType op [] .dataType =
+          op [] .dataType id op [] .pos state storeAutoType
+        end
       end
-      break
-    initializeId case
-      op [] .val .initializeId .idType switch
+      idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
+      idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
           op [] .dataType Type .undefined == if
             break ## missing type
-          end
-          op [] .dataType Type .autoType == if
-            op [] .dataType types.getTypeId =:: id
-            state [] .stack list.peek =:: value?
-            value? optional.hasData if
-              value? .data [] .valueType =:: valueType
-                valueType op [] .dataType =
-              valueType id op [] .pos state storeAutoType
-            end
           end
           1 true op [] .pos state storeConstants
           op state appendOp
           return
         PROCEDURE case
           op state appendOp
-          op [] .val .initializeId .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
+          idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
             BlockType .EXPERIMENTAL_PROCEDURE
           else
             BlockType .PROCEDURE
@@ -555,7 +556,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .pos errors appendError
       return
       break
-    Return declareName getName
+    Return getName
     entryPoint
     getLabel setLabel @Label
     getElement setElement @Element

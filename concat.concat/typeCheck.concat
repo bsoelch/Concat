@@ -2523,6 +2523,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       op op [] .val .@Id state typeCheckGetId
       return
+    autoTypedInitializeId case
+      _EXPERIMENTAL_ if
+        break ## will be resolved in first type-check phase
+      end
+      op state checkReachable
+      op [] .val .autoTypedInitializeId op [] .val .initializeId =
+      op op [] .val .initializeId state typeCheckDeclareId
+      return
     initializeId case
       op state checkReachable
       op op [] .val .initializeId state typeCheckDeclareId
@@ -2936,7 +2944,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return ## TODO find
       end
       break
-    declareName initializeName typeModifier
+    typeModifier
     checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen call case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp

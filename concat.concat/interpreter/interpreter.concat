@@ -517,7 +517,7 @@ proc(
           end
           true return
       end
-    declareName case
+    declareId case
       context inTypeOrInitializer ! if
         showErrorMessages if
           "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
@@ -525,7 +525,6 @@ proc(
         end
         true return
       end
-      ## TODO error if not in type or initializer block
       1 context checkStack if
         showErrorMessages if
           "not enough arguments for declaration, expected 1 got 0" sb.wrap
@@ -545,7 +544,7 @@ proc(
           true return
         end
       end
-      op [] .val .declareName valInfo [] .valueName =
+      op [] .val .declareId .labelId valInfo [] .valueName =
       false return
     getName case
       context inEnum if
@@ -756,8 +755,8 @@ proc(
       pushValue
       false return
     entryPoint
-    setId @Id initializeId declareId
-    getLabel setLabel @Label initializeName
+    setId @Id initializeId autoTypedInitializeId
+    getLabel setLabel @Label
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
     getEnumElement setEnumElement @EnumElement

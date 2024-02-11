@@ -1236,9 +1236,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup ":" string.wrap string.eq
        #over "=:" string.wrap string.eq | _if
       "=:" string.wrap string.eq =:: isInit
+      false =:: mut localDeclaration
       _EXPERIMENTAL_ ! if
         fileState state popTypeConstant #drop ## comparability with old parser
-      else state [] .constantBlocks .length 0 == state [] .currentProc optional.hasData ! & _if
+      else state [] .constantBlocks .length 0 == state [] .currentProc optional.isEmpty & _if
         state tryInterpretGlobal ## try to interpret global operations before each declaration
         fileState state popTypeConstant #drop
       else
@@ -1247,12 +1248,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         progContext [] .autoTypes
           Type .undefined list.append
         progContext [] .autoTypes =
+        true localDeclaration =
       end =:: mut valType
       false =:: mut forceConst
       state [] .constantBlocks .length 0 > if
         IdentifierType .LABEL
         true forceConst =
-      else state [] .currentProc optional.hasData _EXPERIMENTAL_ & _if
+      else localDeclaration _EXPERIMENTAL_ & _if
         IdentifierType .LOCAL_VAR
       else valType typeContext types.isProcedure _if
         IdentifierType .PROCEDURE
@@ -1313,19 +1315,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
       end =:: idData =:: idName
-      _EXPERIMENTAL_ if state [] .constantBlocks .length 0 >
-       state [] .currentProc optional.hasData | _if
-        ## declaration in procedure/composite-block -> determine types later
-        valType label fileState [] .wordStart
-          isInit if
-            opInitializeName
-          else
-            opDeclareName
-          end
-        state appendOp
-        ## don't skip global interpreter for local-variables/ field declarations
-        return
-      end
       idContext id.isTopLevel if
         idData [] .idType IdentifierType .PROCEDURE != isInit ! | if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
@@ -1407,13 +1396,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end #drop
         end
       end
-      isInit ! idContext id.isGlobal & if
+      isInit ! _EXPERIMENTAL_ if localDeclaration ! else idContext id.isGlobal end & if
         return ## no operation for global pre-declaration
       end
       idData [] .valueType idData id.asIdInfo fileState [] .wordStart isInit if
         opInitializeId
       else
         opDeclareId
+      end
+      _EXPERIMENTAL_ if localDeclaration _if
+        state appendOp
+        return
       end
       Operation ptr optional.empty state resetGlobalInterpreter
       state appendOp
@@ -1498,7 +1491,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         end
         Operation ptr optional.empty state resetGlobalInterpreter
-        #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opInitializeId state appendOp
+        #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
         state skipGlobalInterpreter
         #drop return
     else #dup "=" string.wrap string.eq _if #drop
