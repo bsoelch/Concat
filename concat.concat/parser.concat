@@ -1242,8 +1242,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state tryInterpretGlobal ## try to interpret global operations before each declaration
         fileState state popTypeConstant #drop
       else
-        ## type assignment within procedures should be done in type-check phase
-        Type .undefined
+        ## correct type will be resolved in type-check phase
+        progContext [] .autoTypes .length i32 cast types.newAutoType
+        progContext [] .autoTypes
+          Type .undefined list.append
+        progContext [] .autoTypes =
       end =:: mut valType
       false =:: mut forceConst
       state [] .constantBlocks .length 0 > if
@@ -1310,10 +1313,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
       end =:: idData =:: idName
-      state [] .constantBlocks .length 0 >
-       _EXPERIMENTAL_ state [] .currentProc optional.hasData & | if
+      _EXPERIMENTAL_ if state [] .constantBlocks .length 0 >
+       state [] .currentProc optional.hasData | _if
         ## declaration in procedure/composite-block -> determine types later
-        label fileState [] .wordStart
+        valType label fileState [] .wordStart
           isInit if
             opInitializeName
           else

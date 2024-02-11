@@ -196,13 +196,11 @@ proc( LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
   OpValue .getName new Type .undefined pos Operation new return
 end
-proc( LabelId FilePosition  => Operation ) =: public opDeclareName
-  =:: pos
-  OpValue .declareName new Type .undefined pos Operation new return
+proc( Type : valType LabelId : label FilePosition : pos => Operation ) =: public opDeclareName
+  label OpValue .declareName new valType pos Operation new return
 end
-proc( LabelId FilePosition  => Operation ) =: public opInitializeName
-  =:: pos
-  OpValue .initializeName new Type .undefined pos Operation new return
+proc( Type : valType LabelId : label FilePosition : pos => Operation ) =: public opInitializeName
+  label OpValue .initializeName new valType pos Operation new return
 end
 proc( TypeModifier FilePosition  => Operation ) =: public opTypeModifier
   =:: pos

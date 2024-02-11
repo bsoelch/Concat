@@ -99,7 +99,7 @@ proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
   true state [] .interpreterActive =
 end
 
-proc( i32 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: checkStackCap
   state [] .stack .length count < if
     "stack underflow: need " sb.wrap
       count sb.appendI
@@ -107,6 +107,10 @@ proc( i32 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : s
       state [] .stack .length sb.appendI
     pos state [] .program [] .errors @ appendError
   end
+end
+proc( i64 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
+  ## FIXME ensure values are stored in correct order ? temporary store constant, overwrite with nop when transferring constant back to stack
+  count pos state checkStackCap
   state [] .stack .length count - while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
     typeInfo [] .stored ! if
@@ -126,14 +130,8 @@ proc( i32 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : s
     state [] .stack .length =
   end
 end
-proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
-  state [] .stack .length count < if
-    "stack underflow: need " sb.wrap
-      count sb.appendI
-      " values got " sb.appendS
-      state [] .stack .length sb.appendI
-    pos state [] .program [] .errors @ appendError
-  end
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
+  count pos state checkStackCap
   0 =:: mut toDrop
   state [] .stack .length count - while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
@@ -152,6 +150,31 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
   state [] .stack .length =
 end
 
+proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
+  state [] .program =:: program
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .constContext @ =:: constContext
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
+  1 pos state checkStackCap
+  state [] .stack .length 1 - =:: offset
+  state [] .stack offset list.at .data =:: typeInfo
+  offset state [] .stack .length =
+  typeInfo [] .valueType types.primitive.TYPE != if
+    "expected type got " sb.wrap
+      typeInfo [] .valueType labelContext typeContext sb.appendType
+    pos errors appendError
+    Type .undefined return
+  end
+  typeInfo [] .value ConstValue .typeId != if
+    "expected type-constant got " sb.wrap
+      typeInfo [] .value constContext labelContext typeContext sb.appendConstant
+    pos errors appendError
+    Type .undefined return
+  end
+  typeInfo [] .value .typeId return
+end
 
 proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushConstant
     state [] .stack
@@ -161,6 +184,17 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
         id.LABEL_ID_NONE
         pos
         false
+      TypeInfo new list.append
+    state [] .stack =
+end
+proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushValue
+    state [] .stack
+      ## TypeInfo
+        valType
+        value
+        id.LABEL_ID_NONE
+        pos
+        true
       TypeInfo new list.append
     state [] .stack =
 end
@@ -286,12 +320,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     setId declareId case
       break
     initializeName case
+      op [] .dataType Type .undefined == if
+        break ## missing type
+      end
+      op [] .dataType Type .autoType == if
+        op [] .dataType types.getTypeId =:: id
+        op [] .pos state popType op [] .dataType =
+        op [] .dataType id op [] .pos state storeAutoType
+      end
       break
     initializeId case
       op [] .val .initializeId .idType switch
         GLOBAL_VAR LOCAL_VAR case
           op [] .dataType Type .undefined == if
-            break ## XXX? resolve constant type
+            break ## missing type
           end
           op [] .dataType Type .autoType == if
             op [] .dataType types.getTypeId =:: id
@@ -315,6 +357,45 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
         TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
           break
+      end
+      break
+    Cast Cast! case
+      op [] .dataType Type .undefined == if
+        ## resolve data type
+        op [] .pos state popType op [] .dataType =
+      end
+      ## TODO check if cast is possible
+      ## TODO change type on stack
+      op state appendOp
+      break
+    New case
+      op [] .dataType Type .undefined == if
+        ## resolve data type
+        op [] .pos state popType op [] .dataType =
+      end
+      op [] .dataType typeContext types.isArray if
+        op [] .dataType typeContext types.isFixedSize ! if
+          "variable size arrays are not supported" sb.wrap op [] .pos errors appendError
+        end
+        ## pushValue
+          ConstValue .none ## XXX? compute constant value if possible
+          op [] .dataType
+          op [] .pos
+        state pushValue
+        op state appendOp
+        return
+      end
+      op [] .dataType typeContext types.isTuple if
+        op [] .dataType typeContext types.compositeEltCount =:: count
+        ## TODO ensure types are correct
+        count true op [] .pos state storeConstants
+        ## pushValue
+          ConstValue .none
+          op [] .dataType
+          op [] .pos
+        state pushValue
+        op state appendOp
+        break ## change to return when implementation is complete
       end
       break
     block case
@@ -480,9 +561,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
     getEnumElement setEnumElement @EnumElement
-    Print New newEnum call callPtr
+    Print newEnum call callPtr
     argc getArg getArgLen
-    Cast Cast!
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
