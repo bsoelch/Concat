@@ -224,11 +224,17 @@ proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
   progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     progContext [] .templateOps
   else progContext [] .idContext @ id.isGlobal _if
-    progContext [] .progFiles state [] .currentFile list.get .globalOps
-  else _EXPERIMENTAL_ _if
-    progContext [] .templateOps
+    _EXPERIMENTAL_ if
+      state [] .globalOpBuffer
+    else
+      progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps
+    end
   else
-    progContext [] .progFiles state [] .currentFile list.get .localOps
+    _EXPERIMENTAL_ if
+      progContext [] .templateOps
+    else
+      progContext [] .progFiles state [] .currentFile list.at .data [] .localOps
+    end
   end list.peek
 end
 
@@ -1517,23 +1523,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state skipGlobalInterpreter
         #drop return
     else #dup "=" string.wrap string.eq _if #drop
-      _EXPERIMENTAL_ ! if
-        state hasConst if state popConst
-          .val #dup ConstValue .typeId == if .typeId
-            #dup types.isNamedType if
-              fileState state popTypeConstant ! if
-                -1 typeContext types.setNamedType ! if
-                  idContext id.isTopLevel if
-                    progContext [] .templateOps .length idContext  id.endOpenTemplate
-                  end
-                  return
+      _EXPERIMENTAL_ if
+        fileState [] .wordStart opSetValue state appendOp
+        return
+      end
+      state hasConst if state popConst
+        .val #dup ConstValue .typeId == if .typeId
+          #dup types.isNamedType if
+            fileState state popTypeConstant ! if
+              -1 typeContext types.setNamedType ! if
+                idContext id.isTopLevel if
+                  progContext [] .templateOps .length idContext  id.endOpenTemplate
                 end
-              else #drop:2 end
-            else #drop end
+                return
+              end
+            else #drop:2 end
           else #drop end
-          "cannot assign value to constant" sb.wrap fileState [] .wordStart state appendError2
-          return
-        end
+        else #drop end
+        "cannot assign value to constant" sb.wrap fileState [] .wordStart state appendError2
+        return
       end
       state peekOp #dup optional.isEmpty if #drop
         "unexpected \"=\"" sb.wrap fileState [] .wordStart state appendError2

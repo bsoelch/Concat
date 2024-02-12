@@ -1174,6 +1174,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       end
       target ")" io.fputs #drop
       return
+    setValue case
+      break ## TODO implement set value
     block case
       op [] .val .block .blockType switch
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER

@@ -2559,6 +2559,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkReachable
       op op [] .val .@Id state typeCheckGetId
       return
+   setValue case
+     break ## TODO implement type-checking for setId
     autoTypedInitializeId case
       _EXPERIMENTAL_ if
         break ## will be resolved in first type-check phase

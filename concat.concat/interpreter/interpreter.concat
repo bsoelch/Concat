@@ -665,7 +665,7 @@ proc(
             end
             true return
           end
-          value? .data =:: value
+          value? .data =:: value ## TODO? wrap local variable in reference?
           value .value value .info .valueType label op [] .pos context pushValue
           false return
         TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR LABEL case
@@ -781,7 +781,7 @@ proc(
     getLabel setLabel @Label
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement
-    getEnumElement setEnumElement @EnumElement
+    getEnumElement setEnumElement @EnumElement setValue
     Print New newEnum call callPtr
     argc getArg getArgLen
     length size Cast Cast!

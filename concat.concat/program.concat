@@ -36,6 +36,7 @@ enum(
                 i32 : mut getEnumElement
                 i32 : mut setEnumElement
                 i32 : mut @EnumElement
+                      setValue
                       Print
                       Return
                       New
@@ -102,6 +103,9 @@ end
 proc( Type IdentifierInfo FilePosition  => Operation ) =: public opDeclareId
   =:: pos
   OpValue .declareId new #swap pos Operation new return
+end
+proc( FilePosition : pos  => Operation ) =: public opSetValue
+  OpValue .setValue Type .undefined pos Operation new return
 end
 proc( i32 FilePosition  => Operation ) =: public opArrayGet
   =:: pos
@@ -472,6 +476,11 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .@EnumElement sb.appendI
+          break
+        setValue case
+          "set value ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
           break
         Return case
           "Return( " sb.appendS

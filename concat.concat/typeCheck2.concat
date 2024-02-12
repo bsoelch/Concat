@@ -15,7 +15,7 @@ struct(
   ConstValue   : value
   LabelId      : valueId
   FilePosition : pushedAt
-  bool         : stored
+  bool         : mut stored
 ) =:: TypeInfo
 
 struct(
@@ -125,6 +125,7 @@ proc( i64 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : s
           typeInfo [] .pushedAt
         opConst list.append
       state [] .compiledOps =
+      true typeInfo [] .stored =
     end
     1 +
   end #drop
@@ -414,6 +415,22 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           break
       end
       break
+    setValue case
+      2 false op [] .pos state storeConstants
+      state [] .stack
+        list.pop =:: target
+      state [] .stack =
+      target .valueType typeContext types.isReference target .valueType typeContext types.isPointer | ! if
+        "can only assign to references or pointers got: " sb.wrap
+          target .valueType labelContext typeContext sb.appendType
+        op [] .pos errors appendError
+        return
+      end
+      target .valueType typeContext types.getBaseType =:: base
+      base op [] .dataType =
+      base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes
+      op state appendOp
+      return
     Cast Cast! case
       op [] .dataType Type .undefined == if
         ## resolve data type
