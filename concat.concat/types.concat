@@ -14,6 +14,7 @@ i32 =:: public CompositeId
 i32 =:: public ProcId
 i32 =:: public NamedTypeId
 i32 =:: public GeneratedId
+i32 =:: public ReferenceId
 #end
 
 enum(
@@ -31,6 +32,8 @@ enum(
     types.CompositeId : enum
          types.ProcId : procedure
     types.NamedTypeId : namedType
+    types.ReferenceId : reference
+    types.ReferenceId : mutableReference
                   i32 : autoType
                   i32 : genericType
                   i32 : templateType
@@ -77,6 +80,10 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .templateType b .templateType == return
     generatedType case
       a .generatedType b .generatedType == return
+    reference case
+      a .reference b .reference == return
+    mutableReference case
+      a .mutableReference b .mutableReference == return
   end
 end
 1011001 =:: bigPrime
@@ -99,37 +106,41 @@ proc( Type : a => i32 ) =: public typeHash
     empty case
       1 return ## there is only one empty type
     primitiveType case
-      bigPrime a .primitiveType primitiveId + return
+      bigPrime 2 * a .primitiveType primitiveId + return
     pointer case
-      bigPrime 2 * a .pointer + return
+      bigPrime 3 * a .pointer + return
     arrayType case
-      bigPrime 3 * a .arrayType + return
+      bigPrime 5 * a .arrayType + return
     tuple case
-      bigPrime 6 * a .tuple + return
+      bigPrime 7 * a .tuple + return
     struct case
-      bigPrime 7 * a .struct + return
+      bigPrime 11 * a .struct + return
     union case
-      bigPrime 11 * a .union + return
+      bigPrime 13 * a .union + return
     labeledProcIn case
-      bigPrime 13 * a .labeledProcIn + return
+      bigPrime 17 * a .labeledProcIn + return
     procIn case
-      bigPrime 17 * a .procIn + return
+      bigPrime 19 * a .procIn + return
     procOut case
-      bigPrime 19 * a .procOut + return
+      bigPrime 23 * a .procOut + return
     enum case
-      bigPrime 23 * a .enum + return
+      bigPrime 29 * a .enum + return
     procedure case
-      bigPrime 29 * a .procedure + return
+      bigPrime 31 * a .procedure + return
     namedType case
-      bigPrime 31 * a .namedType + return
+      bigPrime 37 * a .namedType + return
     autoType case
-      bigPrime 37 * a .autoType + return
+      bigPrime 41 * a .autoType + return
     genericType case
-      bigPrime 41 * a .genericType + return
+      bigPrime 43 * a .genericType + return
     templateType case
-      bigPrime 43 * a .templateType + return
+      bigPrime 47 * a .templateType + return
     generatedType case
-      bigPrime 47 * a .generatedType + return
+      bigPrime 53 * a .generatedType + return
+    reference case
+      bigPrime 59 * a .reference + return
+    mutableReference case
+      bigPrime 61 * a .mutableReference + return
   end
 end
 
@@ -160,7 +171,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? s
      empty case true return
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
-     undefined primitiveType enum procedure
+     undefined primitiveType enum procedure reference mutableReference
        namedType autoType genericType templateType generatedType case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
@@ -170,7 +181,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
   t0 context unwrapNamed =:: t
   t switch
      empty genericType templateType case true return
-     pointer arrayType case ## arrays of / pointers to empty values are empty
+     pointer arrayType reference mutableReference case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure
        namedType autoType generatedType case false return
@@ -223,7 +234,7 @@ end
 proc( Type TypeContext ptr => bool ) =: public isSmallType
   unwrapNamed
   switch
-    primitiveType enum pointer empty case true return ## XXX enum is only small if it has no values
+    primitiveType enum pointer empty reference mutableReference case true return ## XXX enum is only small if it has no values
     arrayType tuple struct union labeledProcIn procIn procOut procedure ## TODO? count tuples with size < 128 as small types
     undefined namedType autoType genericType templateType generatedType case false return
   end
@@ -312,6 +323,10 @@ proc( Type TypeContext ptr => bool ) =: public isArray
   unwrapNamed
   Type .arrayType == return
 end
+proc( Type TypeContext ptr => bool ) =: public isReference
+  unwrapNamed
+  #dup Type .reference == #swap Type .mutableReference == | return
+end
 proc( Type TypeContext ptr => bool ) =: public isFixedSize
   =:: context
   context unwrapNamed
@@ -346,6 +361,12 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
     end
     #dup context isArray if
       context [] .arrayTypes #swap .arrayType list.get .base return
+    end
+    #dup Type .reference == if
+      context [] .compositeData #swap .reference list.get return
+    end
+    #dup Type .mutableReference == if
+      context [] .compositeData #swap .mutableReference list.get return
     end
   #drop
   Type .undefined return
@@ -384,7 +405,7 @@ proc( Type TypeContext ptr => bool ) =: public isMutable
     #dup context isPointer if
       context [] .arrayTypes #swap .pointer list.get .mutable return
     end
-  #drop false return
+  Type .mutableReference == return
 end
 proc( Type ptr mut : t bool : mutable TypeContext ptr mut : context => bool ) =: public setMutability
   t [] context isMutable  mutable == if
@@ -500,7 +521,7 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
     tuple struct union labeledProcIn procIn procOut enum case
       true return
     undefined empty primitiveType pointer arrayType procedure namedType autoType
-        genericType templateType generatedType case
+        genericType templateType generatedType  reference mutableReference case
       false return
   end
 end
@@ -545,7 +566,7 @@ proc( Type : composite TypeContext ptr : context => CompositeType ptr optional )
         .enum
         break
       undefined empty primitiveType pointer arrayType procedure namedType autoType
-          genericType templateType generatedType case
+          genericType templateType generatedType reference mutableReference case
         #drop CompositeType ptr optional.empty return
     end
   context [] .compositeTypes #swap list.at #dup optional.isEmpty if #drop
@@ -565,7 +586,7 @@ proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: pub
       struct union labeledProcIn enum case
         break
       undefined empty primitiveType pointer arrayType procedure namedType autoType
-        genericType templateType generatedType tuple procIn procOut case
+        genericType templateType generatedType tuple procIn procOut reference mutableReference case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -584,7 +605,7 @@ proc( Type : composite string : name LabelContext ptr : labelContext TypeContext
       struct union labeledProcIn enum case
         break
       undefined empty primitiveType pointer arrayType procedure namedType autoType
-        genericType templateType generatedType tuple procIn procOut case
+        genericType templateType generatedType tuple procIn procOut reference mutableReference case
         #drop -1 return
     end
   context compositeData
@@ -1076,6 +1097,22 @@ proc( Type : generator TypeContext ptr mut : context => Type ) =: public getGene
   genData [] .generated return
 end
 
+proc( Type : base bool : mutable TypeContext ptr mut : context => Type ) =: public newReferenceType
+  0 while #dup context [] .compositeData .length < do
+    context [] .compositeData #over list.get =:: typeData
+    base typeData typeEquals if
+      break
+    end
+    1 +
+  end =:: id
+  id context [] .compositeData .length == if
+    context [] .compositeData
+      base list.append
+    context [] .compositeData =
+  end
+  id mutable if Type .reference new else Type .mutableReference new end return
+end
+
 
 ## generic,template & auto-types
 proc( i32 : id => Type ) =: public newAutoType
@@ -1108,6 +1145,8 @@ proc( Type => i32 ) =: public getTypeId
     enum case .enum return
     procedure case .procedure return
     namedType case .namedType return
+    reference case .reference return
+    mutableReference case .mutableReference return
     undefined empty primitiveType case #drop -1 return
   end
 end
@@ -1130,6 +1169,8 @@ proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has st
   t switch
     undefined empty primitiveType autoType case
       false false return
+    reference mutableReference case
+      t context getBaseType context containsGeneric return
     pointer arrayType case
       context [] .arrayTypes t #dup Type .pointer == if .pointer else .arrayType end list.get =:: arrayType
       arrayType .base context containsGeneric =:: mut isStatic =:: mut isTemplate
@@ -1243,6 +1284,9 @@ proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAuto
       end
       1 +
     end #drop
+  end
+  src context types.isReference if src context getBaseType target context canAutoCast _if
+    true return
   end
   src types.isPrimitive ! target types.isPrimitive ! | if
     false return
@@ -1499,6 +1543,14 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       " [ "     appendS
         typeData [] .generated labelContext context allowRecurse appendTypeRecursive
       " ]"     appendS
+      return
+    reference case
+      context [] .compositeData #swap .reference list.get labelContext context allowRecurse appendTypeRecursive
+      " reference" appendS
+      return
+    mutableReference case
+      context [] .compositeData #swap .mutableReference list.get labelContext context allowRecurse appendTypeRecursive
+      " reference mut" appendS
       return
   end
 end

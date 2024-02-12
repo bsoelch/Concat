@@ -172,7 +172,7 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
       break
     autoType case
       break ## XXX? resolve auto-types
-    pointer case
+    pointer reference mutableReference case
       t typeContext types.getBaseType target prog printTypeName
       t typeContext types.isCallable if
         break
@@ -343,7 +343,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType
-        procedure labeledProcIn procIn case ## no global type necessary
+        procedure labeledProcIn procIn reference mutableReference case ## no global type necessary
         break
       pointer case
         t typeContext types.isCallable if ## procedure pointer
@@ -398,7 +398,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType procedure
-          labeledProcIn procIn pointer namedType case ## no initialization necessary
+          labeledProcIn procIn pointer namedType reference mutableReference case ## no initialization necessary
         break
       arrayType case
         t typeContext types.isFixedSize ! if

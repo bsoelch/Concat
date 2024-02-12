@@ -205,9 +205,13 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   state [] .stack
     offset list.setLength
   state [] .stack =
-  typeInfo [] .valueType types.primitive.TYPE != if
+  typeInfo [] .valueType =:: mut valType
+  valType typeContext types.isReference if ## unwrap references
+    valType typeContext types.getBaseType valType =
+  end
+  valType types.primitive.TYPE != if
     "expected type got " sb.wrap
-      typeInfo [] .valueType labelContext typeContext sb.appendType
+      valType labelContext typeContext sb.appendType
     pos errors appendError
     Type .undefined return
   end
@@ -322,11 +326,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .val .Constant op [] .dataType op [] .pos state pushConstant
       return
     getId case
-      op [] .val .getId .idType switch
+      op [] .val .getId =:: idInfo
+      idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
+      idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
           state [] .stack
             ## TypeInfo
-              op [] .dataType
+              op [] .dataType mutable typeContext types.newReferenceType
               ConstValue .none ## XXX get constant value if present and variable immutable
               op [] .val .getId .labelId
               op [] .pos
@@ -376,22 +382,24 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         autoTyped if
           state [] .stack list.peek =:: value?
           value? optional.hasData if
-            value? .data [] .valueType =:: valueType
-              valueType op [] .dataType =
-            valueType id op [] .pos state storeAutoType
+            value? .data [] .valueType
+            #dup typeContext types.isReference if
+              typeContext types.getBaseType ## unwrap reference
+            end
+          else
+            "missing type for declaration" sb.wrap op [] .pos errors appendError
+            return
           end
         else
-          op [] .pos state popType op [] .dataType =
-          op [] .dataType id op [] .pos state storeAutoType
-        end
+          op [] .pos state popType
+        end =:: valueType
+        valueType op [] .dataType =
+        op [] .dataType id op [] .pos state storeAutoType
       end
       idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
-          op [] .dataType Type .undefined == if
-            break ## missing type
-          end
-          1 true op [] .pos state storeConstants
+          op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes
           op state appendOp
           return
         PROCEDURE case
@@ -561,7 +569,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
         return
       end
-      value? .data [] .valueType =:: valType
+      value? .data [] .valueType =:: mut valType
+      valType typeContext types.isReference if ## unwrap references
+        valType typeContext types.getBaseType valType =
+      end
       valType typeContext types.isPointer valType typeContext types.isArray | if
         valType typeContext types.isFixedSize ! if
           "invalid operand for : " sb.wrap

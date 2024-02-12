@@ -29,7 +29,7 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
         declared list.append
       types [] =
       break
-    arrayType case
+    arrayType reference mutableReference case
       declared typeContext types.getBaseType ptrLevel prog visited types declaredType
       types []
         declared list.append

@@ -669,6 +669,18 @@
     src switch
       undefined empty primitiveType autoType case
         src return ## no generic info
+      reference mutableReference case
+        context [] .typeContext .compositeData src types.getTypeId list.get =:: base
+        ## types.newReference
+          ## replaceGenericsType
+            base
+            templateArgs
+            genericArgs
+            implPos
+            context
+          replaceGenericsType
+        src Type .mutableReference == context [] .typeContext @ types.newReferenceType
+        return
       pointer arrayType case
         src Type .pointer == =:: isPtr
         src isPtr if .pointer else .arrayType end
@@ -879,6 +891,12 @@
           expected typeContext getProcOut #drop
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
+      reference mutableReference case
+        ## resolveGenericsType
+          src typeContext getBaseType
+          expected typeContext getBaseType
+        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
+        return
       pointer arrayType case
         ## resolveGenericsType
           src typeContext getBaseType
