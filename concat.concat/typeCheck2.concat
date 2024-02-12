@@ -12,10 +12,11 @@ type-checked code in post-fix notation.
 
 struct(
   Type         : valueType
-  ConstValue   : value
+  ConstValue   : mut value
   LabelId      : valueId
-  FilePosition : pushedAt
-  bool         : mut stored
+  FilePosition : mut pushedAt
+  i64          : mut opIndex
+  bool         : canMove
 ) =:: TypeInfo
 
 struct(
@@ -29,6 +30,7 @@ struct(
   TypeInfo list : mut stack
   BlockInfo list : mut openBlocks
   Operation list : mut compiledOps
+  ## TODO add OpInfo -> for each operation remember the positions of all child operations
   FileId : mut currentFile
 ) =:: TypeCheckState
 
@@ -48,9 +50,13 @@ proc( TypeCheckState ptr mut : state => ) =: freezeInterpreter
         constant  []
         constInfo [] .valueId
         constInfo [] .pushedAt
-        false
+        state [] .compiledOps .length
+        true
       TypeInfo new list.append
     state [] .stack =
+    state [] .compiledOps
+      constant [] constInfo [] .valueType constInfo [] .pushedAt opConst list.append
+    state [] .compiledOps =
     1 +
   end #drop
   ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initilizer)
@@ -65,7 +71,7 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
   state [] .program =:: progContext
   state [] .interpreter @ =:: interpreter
   state [] .stack .length 1 - while #dup 0 >= do
-    state [] .stack #over list.at .data [] .stored if
+    state [] .stack #over list.at .data #dup [] .opIndex -1 == #swap [] .canMove ! | if
       break
     end
     1 -
@@ -75,6 +81,7 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
   ##  -> store computed constants
   offset while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
+    OpValue .NOP state [] .compiledOps typeInfo [] .opIndex list.at .data [] .val = ## clear previous location of operation
     interpreter [] .stack
       typeInfo [] .value list.append
     interpreter [] .stack =
@@ -112,28 +119,11 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => bool ) =:
   end
   false return
 end
-proc( i64 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : state => ) =: storeConstants
-  ## FIXME ensure values are stored in correct order ? temporary store constant, overwrite with nop when transferring constant back to stack
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: popValues
   count pos state checkStackSize if return end
-  state [] .stack .length count - while #dup state [] .stack .length < do
-    state [] .stack #over list.at .data =:: typeInfo
-    typeInfo [] .stored ! if
-      state [] .compiledOps
-        ## opConstant
-          typeInfo [] .value
-          typeInfo [] .valueType
-          typeInfo [] .pushedAt
-        opConst list.append
-      state [] .compiledOps =
-      true typeInfo [] .stored =
-    end
-    1 +
-  end #drop
-  popValues if
-    state [] .stack
-      #dup .length count - list.setLength
-    state [] .stack =
-  end
+  state [] .stack
+    #dup .length count - list.setLength
+  state [] .stack =
 end
 proc(
   Type arrayView : types
@@ -146,7 +136,6 @@ proc(
   state [] .program [] .idContext .constContext @ =:: constContext
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
-  types .length false pos state storeConstants
   1 while #dup types .length <= do
     state [] .stack state [] .stack .length #over:2 - list.at .data =:: typeInfo
     types types .length #over:2 - array.get =:: expectedType
@@ -178,8 +167,10 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
   0 =:: mut toDrop
   state [] .stack .length count - while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
-    typeInfo [] .stored if
+    typeInfo [] .opIndex -1 == if
       toDrop 1 + toDrop =
+    else
+      OpValue .NOP state [] .compiledOps typeInfo [] .opIndex list.at .data [] .val =
     end
     1 +
   end #drop
@@ -203,6 +194,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   1 pos state checkStackSize if Type .undefined return end
   state [] .stack .length 1 - =:: offset
   state [] .stack offset list.at .data =:: typeInfo
+  OpValue .NOP state [] .compiledOps typeInfo [] .opIndex list.at .data [] .val =
   state [] .stack
     offset list.setLength
   state [] .stack =
@@ -232,20 +224,28 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
         value
         id.LABEL_ID_NONE
         pos
-        false
-      TypeInfo new list.append
-    state [] .stack =
-end
-proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushValue
-    state [] .stack
-      ## TypeInfo
-        valType
-        value
-        id.LABEL_ID_NONE
-        pos
+        state [] .compiledOps .length
         true
       TypeInfo new list.append
     state [] .stack =
+    state [] .compiledOps
+      value valType pos opConst list.append
+    state [] .compiledOps =
+end
+proc( ConstValue : value Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
+    state [] .stack
+      ## TypeInfo
+        op [] .dataType
+        value
+        id.LABEL_ID_NONE
+        op [] .pos
+        state [] .compiledOps .length
+        false ## TODO allow moving constant variables, variables that have not been modified since push
+      TypeInfo new list.append
+    state [] .stack =
+    state [] .compiledOps
+      op list.appendP
+    state [] .compiledOps =
 end
 
 proc( BlockType : blockType TypeCheckState ptr mut : state => ) =: openBlock
@@ -337,7 +337,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               ConstValue .none ## XXX get constant value if present and variable immutable
               op [] .val .getId .labelId
               op [] .pos
-              true
+              -1
+              false
             TypeInfo new list.append
           state [] .stack =
           op state appendOp
@@ -359,7 +360,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               ConstValue .none
               op [] .val .@Id .labelId
               op [] .pos
-              true
+              -1
+              false
             TypeInfo new list.append
           state [] .stack =
           op state appendOp
@@ -416,7 +418,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       break
     setValue case
-      2 false op [] .pos state storeConstants
       state [] .stack
         list.pop =:: target
       state [] .stack =
@@ -459,12 +460,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .dataType labelContext typeContext sb.appendType
         op [] .pos errors appendError
       end
-      ## pushValue
-        value .value ## XXX update constant value with cast
-        op [] .dataType
-        op [] .pos
-      state pushValue
-      op state appendOp
+      value .value op state pushValue
       return
     New case
       op [] .dataType Type .undefined == if
@@ -475,12 +471,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .dataType typeContext types.isFixedSize ! if
           "variable size arrays are not supported" sb.wrap op [] .pos errors appendError
         end
-        ## pushValue
-          ConstValue .none
-          op [] .dataType
-          op [] .pos
-        state pushValue
-        op state appendOp
+        ConstValue .none op state pushValue
         return
       end
       op [] .dataType typeContext types.isTuple if
@@ -493,12 +484,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           string.wrap
           op [] .pos
         state requireTypes
-        ## pushValue
-          ConstValue .none ## XXX? compute constant value if possible
-          op [] .dataType
-          op [] .pos
-        state pushValue
-        op state appendOp
+        ConstValue .none op state pushValue
         return
       end
       break
@@ -697,9 +683,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .stack
             copied list.appendP
           state [] .stack =
-          copied [] .stored if
-            op state appendOp
-          end
+          state [] .stack list.peek .data =:: newOp
+          op [] .pos newOp [] .pushedAt =
+          state [] .compiledOps .length newOp [] .opIndex =
+          op state appendOp
           return
         SWAP case
           state [] .stack .length 2 < if
@@ -713,10 +700,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .stack .length 2 - =:: offset
           state [] .stack offset list.at .data =:: lower
           state [] .stack offset 1 + list.at .data =:: upper
-          lower [] .stored upper [] .stored | if
-            2 false op [] .pos state storeConstants ## ensure both values are stored
-            op state appendOp
-          end
+          op state appendOp
           ## update stack
           state [] .stack
             lower list.appendP
