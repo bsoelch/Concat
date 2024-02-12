@@ -749,7 +749,9 @@
               #swap 1 +
             end #drop
             if ## already implemented
-              offset context [] .templateArgBuffer .length = ## reset template buffer
+              context [] .templateArgBuffer
+                offset list.setLength
+              context [] .templateArgBuffer = ## reset template buffer
               .implType
               #swap #drop return
             end
@@ -771,7 +773,9 @@
           newId
           context [] .typeContext @
         setNamedType #drop
-        offset context [] .templateArgBuffer .length = ## reset template buffer
+        context [] .templateArgBuffer
+          offset list.setLength
+        context [] .templateArgBuffer = ## reset template buffer
         newType return
       genericType case
         src .genericType

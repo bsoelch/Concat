@@ -46,6 +46,17 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: public list
       0 #over .length =
     return
   end
+  #template type : T #end
+  proc( T list : src i64 : newLength => T list ) =: public setLength
+    newLength 0 < if
+      ## TODO error handling
+      ..unreachable
+    end
+    src =:: mut l
+    l newLength ensureCap l =
+    newLength l .length =
+    l return
+  end
 
   #template type : T #end
   proc( T list : elts i64 : index => T ) =: public get

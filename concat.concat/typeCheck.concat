@@ -206,7 +206,9 @@ proc( TypeCheckState ptr mut : state => ) =: ensureStackHeadIsValue
       state [] .opStack .data state [] .opStack .length + head [] .opCount - head [] .opCount array.create list.appendArray
     state [] .compiledOps =
   end
-  state [] .opStack .length head [] .opCount - state [] .opStack .length =
+  state [] .opStack
+    #dup .length head [] .opCount - list.setLength
+  state [] .opStack =
   state [] .opStack
     ## opGet
       head [] .valType
@@ -248,9 +250,9 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state => ) =: 
   state [] .opStack
     op offset list.insertP
   state [] .opStack  =
-  state [] .typeStack .length
-    typeCount -
-  state [] .typeStack .length =
+  state [] .typeStack
+    #dup .length typeCount - list.setLength
+  state [] .typeStack =
   op [] .dataType state pushType
   totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
 end
@@ -294,8 +296,12 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state CompileType 
     break
   end
   ## remove operations from stack
-  opOffset state [] .opStack .length =
-  typeOffset state [] .typeStack .length =
+  state [] .opStack
+    opOffset list.setLength
+  state [] .opStack =
+  state [] .typeStack
+    typeOffset list.setLength
+  state [] .typeStack =
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: addCompiledStackOps
   count pos state CompileType .ALL processStackOps
@@ -406,7 +412,9 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
     1 typeInfo [] .opCount =
     1 +
   end #drop
-  newOffset state [] .opStack .length =
+  state [] .opStack
+    newOffset list.setLength
+  state [] .opStack =
 end
 
 proc( bool : breakSwitch TypeCheckState ptr mut : state => BlockInfo ptr mut optional ) =: findBreakableBlock
@@ -506,7 +514,9 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
   state [] .opStack .length =:: mut offset
   0 =:: mut shiftCount
   state [] .opStack #dup .length nCasts + list.ensureCap state [] .opStack =
-  state [] .opStack .length nCasts + state [] .opStack .length =
+  state [] .opStack
+    #dup .length nCasts + list.setLength
+  state [] .opStack =
   1 while #dup types .length <= do
     state [] .typeStack #dup .length #over:2 - list.at .data =:: op
     types #dup .length #over:2 - array.get =:: expected
@@ -608,7 +618,9 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
         codeStart
         state [] .compiledOps .length blockStart -
       mem.move #drop
-      state [] .compiledOps .length newTypes + state [] .compiledOps .length =
+      state [] .compiledOps
+        #dup .length newTypes + list.setLength
+      state [] .compiledOps =
     end
   else
     nTypes outTypes [] .typeStack .length != if
@@ -694,16 +706,22 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
   ignoreLast if
     state [] .typeStack list.peek .data [] .opCount =:: stackHeadOps
     state [] .opStack .data nTypes + state [] .opStack .data opOffset + stackHeadOps mem.move #drop
-    nTypes stackHeadOps + state [] .opStack .length =
+    state [] .opStack
+      nTypes stackHeadOps + list.setLength
+    state [] .opStack =
   else
-    nTypes state [] .opStack .length =
+    state [] .opStack
+      nTypes list.setLength
+    state [] .opStack =
   end
   create if
     outTypes [] .typeStack
       state [] .typeStack list.appendAll
     outTypes [] .typeStack =
     ignoreLast if ## don't store last element
-      outTypes [] .typeStack .length 1 - outTypes [] .typeStack .length =
+      outTypes [] .typeStack
+        #dup .length 1 - list.setLength
+      outTypes [] .typeStack =
     end
   end
 end
@@ -763,13 +781,19 @@ proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state => 
     procData .templateId idContext id.getTemplateInfo =:: templateInfo?
     templateInfo? optional.hasData if templateInfo? .data [] .templateType typeContext types.compositeEltCount else 0i64 end =:: tArgs
     emptyTemplateBuffer .length =:: emptyTemplatesOffset
-    emptyTemplateBuffer .length tArgs + emptyTemplateBuffer .length =
+    emptyTemplateBuffer
+      #dup .length tArgs + list.setLength
+    emptyTemplateBuffer =
     emptyTemplateBuffer .data tArgs mem.clear #drop
     genericArgBuffer .length =:: templatesOffset
-    genericArgBuffer .length tArgs + genericArgBuffer .length =
+    genericArgBuffer
+      #dup .length tArgs + list.setLength
+    genericArgBuffer =
     genericArgBuffer .data tArgs mem.clear #drop
     genericArgBuffer .length =:: autoArgsOffset
-    genericArgBuffer .length nArgs + genericArgBuffer .length =
+    genericArgBuffer
+      #dup .length nArgs + list.setLength
+    genericArgBuffer =
     genericArgBuffer .data nArgs mem.clear #drop
     signatures
       ## SignatureInfo
@@ -876,9 +900,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     state [] .idContext [] .templateArgBuffer @ =:: argValues
     argValues []
       argBufferOffset templateCount staticArgCount + + list.ensureCap
+     #dup .length templateCount staticArgCount + + list.setLength
     argValues [] =
     argValues [] .data argBufferOffset + templateCount staticArgCount + mem.clear #drop
-    argValues [] .length templateCount staticArgCount + + argValues [] .length =
     inType inType templateCount staticArgCount argValues argBufferOffset idContext resolveGenericsType ## check which arguments appear in the input signature
     ## get values for template arguments not appearing in signature
     templateCount 0 > if
@@ -895,8 +919,12 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
             return
           end
           ## remove operation from stack (call template never uses on procedure pointer -> type arguments are at top of stack)
-          state [] .opStack .length typeInfo [] .opCount - state [] .opStack .length =
-          state [] .typeStack .length 1 - state [] .typeStack .length =
+          state [] .opStack
+            #dup .length typeInfo [] .opCount - list.setLength
+          state [] .opStack =
+          state [] .typeStack
+            #dup .length 1 - list.setLength
+          state [] .typeStack =
           argValue [] .dataType templateArgs #over:2 array.get false typeContext canCast ! if
             "cannot cast " sb.wrap
                 argValue [] .dataType labelContext typeContext sb.appendType
@@ -1018,7 +1046,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         "could not store template info for call" sb.wrap op [] .pos state appendError2
       end
     end
-    argBufferOffset state [] .idContext [] .templateArgBuffer .length = ## reset argument buffer
+    state [] .idContext [] .templateArgBuffer
+      argBufferOffset list.setLength
+    state [] .idContext [] .templateArgBuffer = ## reset argument buffer
   end
   Type .undefined =:: mut retType
   IdentifierInfo : mut retId
@@ -2065,7 +2095,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .compiledOps =
           ## write if condition
           1 op [] .pos state addCompiledStackOps
-          newLength state [] .opStack .length =
+          state [] .opStack
+            newLength list.setLength
+          state [] .opStack =
           op [] .val .block .blockType BlockType .IFIF == if
             state [] .openBlocks list.peek =:: enclosingIf?
             enclosingIf? optional.hasData ! if
@@ -2123,7 +2155,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .whileCount =:: blockId
           state [] .whileCount 1 + state [] .whileCount =
           blockId op [] .val .block .blockId =
-          false op [] .pos state storeStack state [] .opStack .length =
+          state [] .opStack
+            false op [] .pos state storeStack list.setLength
+          state [] .opStack =
           ## BlockInfo
               state copyStack
               emptyStackState
@@ -2255,7 +2289,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .compiledOps =
           ## write switch value
           1 op [] .pos state addCompiledStackOps
-          newLength state [] .opStack .length =
+          state [] .opStack
+            newLength list.setLength
+          state [] .opStack =
           ## BlockInfo
               state copyStack
               emptyStackState
@@ -2674,7 +2710,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .typeStack state [] .typeStack .length 2 - list.at .data argIndex = ## old argIndex may no-longer be valid
       state [] .opStack #dup .length argIndex [] .opCount + list.ensureCap state [] .opStack =
       state [] .opStack .data state [] .opStack .length +  #dup argIndex [] .opCount -  argIndex [] .opCount 1 - mem.move #drop
-      state [] .opStack .length argIndex [] .opCount 1 - + state [] .opStack .length =
+      state [] .opStack
+        #dup .length argIndex [] .opCount 1 - + list.setLength
+      state [] .opStack =
       state [] .typeStack list.peek .data [] .opCount  argIndex [] .opCount 1 - +  state [] .typeStack list.peek .data [] .opCount =
       ## ... | ARG INDEX | ARG_LEN INDEX |
       true state [] .hasGetArgs =
@@ -2728,8 +2766,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             return
           end
           ## remove top stack value
-          state [] .opStack .length src [] .opCount - state [] .opStack .length =
-          state [] .typeStack .length 1 - state [] .typeStack .length =
+          state [] .opStack
+            #dup .length src [] .opCount - list.setLength
+          state [] .opStack =
+          state [] .typeStack
+            #dup .length 1 - list.setLength
+          state [] .typeStack =
           op state pushValue
           return
         end
@@ -2783,10 +2825,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           types.primitive.I_SIZE false mSize @ array.wrap true false typeContext types.newArrayType #drop
           op [] .pos
         opConst op [] =
-        offset idContext [] .templateArgBuffer .length =
+        idContext [] .templateArgBuffer
+          offset list.setLength
+        idContext [] .templateArgBuffer =
         ## remove top stack value
-        state [] .opStack .length src [] .opCount - state [] .opStack .length =
-        state [] .typeStack .length 1 - state [] .typeStack .length =
+        state [] .opStack
+          #dup .length src [] .opCount - list.setLength
+        state [] .opStack =
+        state [] .typeStack
+          #dup .length 1 - list.setLength
+        state [] .typeStack =
         op state pushValue
         return
       end
@@ -2857,13 +2905,21 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         DROP case
           param state [] .typeStack .length > if
             "type-stack underflow" sb.wrap op [] .pos state appendError2
-            0 state [] .typeStack .length =
-            0 state [] .opStack .length =
+            state [] .typeStack
+              list.clear
+            state [] .typeStack =
+            state [] .opStack
+              list.clear
+            state [] .opStack =
             return
           end
           0 param state countStackOps =:: removed
-          state [] .typeStack .length param - state [] .typeStack .length =
-          state [] .opStack .length removed - state [] .opStack .length =
+          state [] .typeStack
+            #dup .length param - list.setLength
+          state [] .typeStack =
+          state [] .opStack
+            #dup .length removed - list.setLength
+          state [] .opStack =
           return
         COPY case
           param =:: offset
@@ -2889,8 +2945,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               state [] .opStack .data state [] .opStack .length + opOffset - copied -
               copied
             mem.move #drop
-            state [] .typeStack .length count + state [] .typeStack .length =
-            state [] .opStack .length copied + state [] .opStack .length =
+            state [] .typeStack
+              #dup .length count + list.setLength
+            state [] .typeStack =
+            state [] .opStack
+              #dup .length copied + list.setLength
+            state [] .opStack =
           end
           return
         SWAP case
@@ -3141,7 +3201,9 @@ proc( ProgramContext ptr mut => ) =: public typeCheckProgram
               state .idContext [] .templateInfos #over:3 list.at .data template = ## compiling operation can change template list
               1 +
             end #drop
-            argBufferOffset state .idContext [] .templateArgBuffer .length = ## reset template argument buffer
+            state .idContext [] .templateArgBuffer
+              argBufferOffset list.setLength
+            state .idContext [] .templateArgBuffer = ## reset template argument buffer
             state .openBlocks .length 0 > if
               "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError2
               state .openBlocks list.clear state .openBlocks =

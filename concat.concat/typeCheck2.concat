@@ -88,7 +88,9 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
     interpreter [] .stackInfo =
     1 +
   end #drop
-  offset state [] .stack .length =
+  state [] .stack
+    offset list.setLength
+  state [] .stack =
   true state [] .interpreterActive =
 end
 
@@ -127,9 +129,9 @@ proc( i64 : count bool : popValues FilePosition : pos TypeCheckState ptr mut : s
     1 +
   end #drop
   popValues if
-    state [] .stack .length
-      count -
-    state [] .stack .length =
+    state [] .stack
+      #dup .length count - list.setLength
+    state [] .stack =
   end
 end
 proc(
@@ -166,9 +168,9 @@ proc(
     pos errors appendError
     1 +
   end #drop
-  state [] .stack .length
-    types .length -
-  state [] .stack .length =
+  state [] .stack
+    #dup .length types .length - list.setLength
+  state [] .stack =
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
   count pos state checkStackSize if return end
@@ -185,9 +187,9 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
     toDrop StackModType .DROP pos opStackMod =:: tmpOp
     tmpOp @ state appendOp
   end
-  state [] .stack .length
-    count -
-  state [] .stack .length =
+  state [] .stack
+    #dup .length count - list.setLength
+  state [] .stack =
 end
 
 proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
@@ -200,7 +202,9 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   1 pos state checkStackSize if Type .undefined return end
   state [] .stack .length 1 - =:: offset
   state [] .stack offset list.at .data =:: typeInfo
-  offset state [] .stack .length =
+  state [] .stack
+    offset list.setLength
+  state [] .stack =
   typeInfo [] .valueType types.primitive.TYPE != if
     "expected type got " sb.wrap
       typeInfo [] .valueType labelContext typeContext sb.appendType
@@ -257,7 +261,9 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => BlockType ) =: closeB
   end
   state [] .openBlocks .length 1 - =:: newLength
   state [] .openBlocks newLength list.at .data [] .blockType =:: closed
-  newLength state [] .openBlocks .length =
+  state [] .openBlocks
+    newLength list.setLength
+  state [] .openBlocks =
   closed return
 end
 
@@ -618,7 +624,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             types.primitive.I_SIZE false sizeLength @ array.wrap true false typeContext types.newArrayType #drop
             op [] .pos
           state pushConstant
-          offset idContext [] .templateArgBuffer .length =
+          idContext [] .templateArgBuffer
+            offset list.setLength
+          idContext [] .templateArgBuffer =
           return
         end
       end ## XXX? support length on structs/tuples/enums

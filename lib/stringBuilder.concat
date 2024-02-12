@@ -11,6 +11,9 @@ i8 list #typedef public stringBuilder
   proc( stringBuilder => stringBuilder ) =: public clear
     list.clear return
   end
+  proc( stringBuilder i64 => stringBuilder ) =: public setLength
+    list.setLength return
+  end
   proc( stringBuilder => stringBuilder ) =: public free
     list.free return
   end

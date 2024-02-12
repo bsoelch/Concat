@@ -150,8 +150,12 @@ proc(
     context [] .labelBuffer =
     1 +
   end #drop
-  offset context [] .stack .length =
-  offset context [] .stackInfo .length =
+  context [] .stack
+    offset list.setLength
+  context [] .stack =
+  context [] .stackInfo
+    offset list.setLength
+  context [] .stackInfo =
   error return
 end
 
@@ -214,8 +218,12 @@ proc(
     1 +
   end #drop
   context [] .stack list.asArray offset array.tail =:: values
-  offset context [] .stack .length =
-  offset context [] .stackInfo .length =
+  context [] .stack
+    offset list.setLength
+  context [] .stack =
+  context [] .stackInfo
+    offset list.setLength
+  context [] .stackInfo =
   values arrayType error return
 end
 
@@ -270,7 +278,9 @@ proc(
         context [] .openBlocks #over list.at .data [] .blockType
          #dup BlockType .PROCEDURE == #swap BlockType .EXPERIMENTAL_PROCEDURE == | if
           ## close procedure block
-          context [] .openBlocks .length =
+          context [] .openBlocks
+            #swap list.setLength
+          context [] .openBlocks =
           false return
         end
         1 -
@@ -607,13 +617,17 @@ proc(
                 "could not initialize type-generator " sb.wrap
                   label labelContext id.labelName .data sb.appendStr
                 op [] .pos errors appendError
-                argOffset idContext [] .templateArgBuffer .length =
+                idContext [] .templateArgBuffer
+                  argOffset list.setLength
+                idContext [] .templateArgBuffer =
                 true return
               end
               ## initializeGeneratedType
                 label
                 idContext [] .templateArgBuffer list.asArray argOffset array.tail
-                  argOffset idContext [] .templateArgBuffer .length =
+                  idContext [] .templateArgBuffer
+                    argOffset list.setLength
+                  idContext [] .templateArgBuffer =
                 context [] .stack offset list.get .typeId ## return value of call
                 typeContext
                 labelContext
@@ -625,8 +639,12 @@ proc(
                 true return
               end
             end =:: generated
-            offset context [] .stack .length =
-            offset context [] .stackInfo .length =
+            context [] .stack
+              offset list.setLength
+            context [] .stack =
+            context [] .stackInfo
+              offset list.setLength
+            context [] .stackInfo =
             ## pushValue
               generated ConstValue .typeId new
               types.primitive.TYPE
@@ -744,8 +762,12 @@ proc(
         end
         true return
       end =:: ptrType
-      offset context [] .stack .length =
-      offset context [] .stackInfo .length =
+      context [] .stack
+        offset list.setLength
+      context [] .stack =
+      context [] .stackInfo
+        offset list.setLength
+      context [] .stackInfo =
       ## pushValue
         ptrType ConstValue .typeId new
         types.primitive.TYPE
@@ -881,8 +903,12 @@ proc(
     code 1 array.tail ## first operation declares procedure
     context
   evaluateOperations if
-    stackOffset context [] .stack .length =
-    stackOffset context [] .stackInfo .length =
+    context [] .stack
+      stackOffset list.setLength
+    context [] .stack =
+    context [] .stackInfo
+      stackOffset list.setLength
+    context [] .stackInfo =
     true return
   else
     context [] .stack .length stackOffset - =:: nReturn
@@ -896,8 +922,12 @@ proc(
       context [] .stackInfo .data stackOffset +
       nReturn
     mem.copy #drop
-    argsOffset nReturn + context [] .stack .length =
-    argsOffset nReturn + context [] .stackInfo .length =
+    context [] .stack
+      argsOffset nReturn + list.setLength
+    context [] .stack =
+    context [] .stackInfo
+      argsOffset nReturn + list.setLength
+    context [] .stackInfo =
     argsOffset while #dup context [] .stackInfo .length < do
       ## update push position of return values
       pos context [] .stackInfo #over:2 list.at .data [] .pushedAt =

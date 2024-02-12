@@ -155,7 +155,9 @@ proc( => ) =: parseArgs
       srcFile sb.appendSb
     outFile =
     iDot 0 > if
-      iDot outFile .length =
+      outFile
+        iDot sb.setLength
+      outFile =
     end
     outFile
       ".c\x00" sb.appendS

@@ -10,7 +10,7 @@
     str .length i64 =: mut count
     str .data =:: data
     while count 0 > do
-      file data off count fwrite 
+      file data off count fwrite
         #dup FILE_ERROR_NONE != if ## error
             #swap #drop return
           end
@@ -44,15 +44,17 @@
     sb
       while err FILE_ERROR_NONE == do
         #dup .length delta + ensureCap
-        file #over .data #over:2 .length delta fread err =
-        #over .length #over + #over:2 .length =
-        delta ==  delta 8192 <= & if 
+        file #over .data #over:2 .length delta fread
+          err =
+        =:: count
+        #dup .length count + sb.setLength
+        count delta ==  delta 8192 <= & if
           delta 2 * delta =
         end
       end
-      err FILE_ERR_END_OF_FILE == if 
+      err FILE_ERR_END_OF_FILE == if
         FILE_ERROR_NONE
-      else 
+      else
         err
       end
     return

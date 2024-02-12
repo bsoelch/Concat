@@ -324,6 +324,9 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => Type bool ) =
 end
 proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySize arrayView bool #+fixed-size+# ) =: popArraySize
   state [] .progContext [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
   state [] .constants .length state [] .constOffset <= if
     types.ArraySize array.empty true return
   end
@@ -332,35 +335,36 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state => types.ArraySi
     types.ArraySize array.empty false return
   end
   state [] .constants .length 1 - while #dup state [] .constOffset >= do
-    state [] .constants #over list.get .valueType idContext [] .typeContext @ types.isInt ! if
+    state [] .constants #over list.get .valueType typeContext types.isInt ! if
       break
     end
     1 -
-  end
-  1 + ##revert last decrement
-  #dup
+  end 1 + =:: sizesOffset ##revert last decrement
   idContext [] .arraySizeBuffer
     list.clear
-    #over state [] .constOffset - list.ensureCap
-    #swap while #dup state [] .constants .length < do
+    sizesOffset state [] .constOffset - list.ensureCap
+    sizesOffset while #dup state [] .constants .length < do
       #swap
-        state [] .constants #over:2 list.get .val
-          #dup ConstValue .int == if
-            .int types.ArraySizeType .int types.ArraySize new list.append
-          else #dup ConstValue .genericArg == _if
-            .genericArg types.ArraySizeType .staticArg types.ArraySize new list.append
-          else #dup ConstValue .templateArg == _if
-            .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
+        state [] .constants #over:2 list.at .data =:: constant
+        constant []  .val =:: constVal
+          constVal ConstValue .int == if
+            constVal .int types.ArraySizeType .int types.ArraySize new list.append
+          else constVal ConstValue .genericArg == _if
+            constVal .genericArg types.ArraySizeType .staticArg types.ArraySize new list.append
+          else constVal ConstValue .templateArg == _if
+            constVal .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
-              #swap idContext [] .constContext @ idContext [] .labelContext @ idContext [] .typeContext @ sb.appendConstant
-            state [] .constants #over:4 list.get .pos state appendError2
+              constVal constContext labelContext typeContext sb.appendConstant
+            constant [] .pos state appendError2
           end
       #swap
       1 +
     end #drop
   idContext [] .arraySizeBuffer =
-  state [] .constants .length =
+  state [] .constants
+    sizesOffset list.setLength
+  state [] .constants =
   idContext [] .arraySizeBuffer list.asArray true return
 end
 proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => Type arrayView bool ) =: popTypeConstants
@@ -369,16 +373,20 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state => Type 
      Type array.empty true return
   end
   state [] .typeBuffer list.clear state [] .typeBuffer =
-  state [] .constants .length n -
-    #dup while #dup state [] .constants .length < do
-      state [] .constants #over list.get .val ConstValue .typeId != if #drop:2
-        "wrong type for constant, expected type" sb.wrap state [] .constants list.peek .data [] .pos state appendError2
-         Type array.empty true return
-      end
-      state [] .typeBuffer state [] .constants #over:2 list.get .val .typeId list.append state [] .typeBuffer =
-      1 +
-    end #drop
-  state [] .constants .length =
+  state [] .constants .length n - =:: newLength
+  newLength while #dup state [] .constants .length < do
+    state [] .constants #over list.at .data =:: constant
+    constant [] .val =:: constVal
+    constVal ConstValue .typeId != if #drop
+      "wrong type for constant, expected type" sb.wrap state [] .constants list.peek .data [] .pos state appendError2
+       Type array.empty true return
+    end
+    state [] .typeBuffer constVal .typeId list.append state [] .typeBuffer =
+    1 +
+  end #drop
+  state [] .constants
+    newLength list.setLength
+  state [] .constants =
   state [] .typeBuffer list.asArray false return
 end
 proc( Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state => ConstantArray bool ) =: popTemplateArguments
@@ -389,7 +397,9 @@ proc( Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state 
      0 0 ConstantArray new true return
   end
   idContext [] .templateArgBuffer .length =:: offset
-  state [] .constants .length count - state [] .constants .length =
+  state [] .constants
+    #dup .length count - list.setLength
+  state [] .constants =
   0 while #dup count < do
     state [] .constants .data #over state [] .constants .length + []
       #dup .valueType argTypes #over:3 idContext [] .typeContext @ types.compositeGetElement types.typeEquals ! if
@@ -413,24 +423,28 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state => Typ
   true =:: mut hasArrayType
   state [] .typeBuffer list.clear state [] .typeBuffer =
   idContext [] .templateArgBuffer .length =:: offset
-  state [] .constants .length len -
-    #dup while #dup state [] .constants .length < do
-      state [] .constants #over list.at .data =:: const
-      idContext [] .templateArgBuffer
-        const [] .val list.append
-      idContext [] .templateArgBuffer =
-      state [] .typeBuffer const [] .valueType list.append state [] .typeBuffer =
-      hasArrayType if
-        arrayType Type .undefined types.typeEquals if
-         const [] .valueType arrayType =
-        else arrayType const [] .valueType types.typeEquals ! _if
-          false hasArrayType =
-        end
+  state [] .constants .length len - =:: newLength
+  newLength while #dup state [] .constants .length < do
+    state [] .constants #over list.at .data =:: const
+    idContext [] .templateArgBuffer
+      const [] .val list.append
+    idContext [] .templateArgBuffer =
+    state [] .typeBuffer const [] .valueType list.append state [] .typeBuffer =
+    hasArrayType if
+      arrayType Type .undefined types.typeEquals if
+       const [] .valueType arrayType =
+      else arrayType const [] .valueType types.typeEquals ! _if
+        false hasArrayType =
       end
-      1 +
-    end #drop
-  state [] .constants .length =
-  offset idContext [] .templateArgBuffer .length =
+    end
+    1 +
+  end #drop
+  state [] .constants
+    newLength list.setLength
+  state [] .constants =
+  idContext [] .templateArgBuffer
+    offset list.setLength
+  idContext [] .templateArgBuffer =
   ## return
     state [] .typeBuffer list.asArray
     idContext [] .templateArgBuffer .data offset + len array.create
@@ -474,11 +488,11 @@ proc( ParserState ptr mut : state => i64 ) =: offsetStaticArgs
     state [] .staticArgs .length state [] .staticArgsOffset =
   return
 end
-proc( i64 ParserState ptr mut =>  ) =: resetStaticArgs
-  =:: state
-  #dup
-    state [] .staticArgsOffset =
-  state [] .staticArgs .length =
+proc( i64 : length ParserState ptr mut : state =>  ) =: resetStaticArgs
+  length state [] .staticArgsOffset =
+  state [] .staticArgs
+    length list.setLength
+  state [] .staticArgs =
 end
 
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state => string string ) =: nextWord
@@ -575,7 +589,9 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
           state [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
         end
         prevConstants state resetConstants
-        labelOffset state [] .labelBuffer .length =
+        state [] .labelBuffer
+          labelOffset list.setLength
+        state [] .labelBuffer  =
         state [] .constants .length constOffset - fileState state popTypeConstants =:: isError
         #swap
         isEnd if labelType else LabelType .PROC_IN end
@@ -584,7 +600,9 @@ proc( string : code LabelType : labelType string : endString string : nextEnd Fi
       else #dup nextEnd string.eq _if #drop
         "unexpected \"" sb.wrap nextEnd sb.appendStr '"' sb.appendC fileState [] .wordStart state appendError2
         prevConstants state resetConstants
-        labelOffset state [] .labelBuffer .length =
+        state [] .labelBuffer
+          labelOffset list.setLength
+        state [] .labelBuffer  =
         Type array.empty LabelId arrayView optional.empty labelType true return
       else #dup ":" string.wrap string.eq _if #drop
         labelType LabelType .TUPLE == if
@@ -968,11 +986,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       idContext [] .templateArgBuffer .length =:: offset
       #dup [] .templateId idContext id.templateArgs fileState state popTemplateArguments if
         "could not get template arguments" sb.wrap fileState [] .wordStart state appendError2
-        offset idContext [] .templateArgBuffer .length = ## reset template arguments
+        idContext [] .templateArgBuffer
+          offset list.setLength
+        idContext [] .templateArgBuffer = ## reset template arguments
         #drop:3 true return
       end =:: args
       constVal args 0 0 ConstantArray new fileState [] .wordStart idContext types.replaceGenerics constVal =
-      offset idContext [] .templateArgBuffer .length =
+      idContext [] .templateArgBuffer
+        offset list.setLength
+      idContext [] .templateArgBuffer = ## reset template arguments
     end
     ## newIdentifierConstant
       #dup [] .valueType
@@ -2752,7 +2774,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError 
     state [] .progContext =:: progContext
     #dup #over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
-      #dup .length 1 - #over .length = ## ensure there is a zero-terminator after the last character
+      #dup .length 1 - list.setLength ## ensure there is a zero-terminator after the last character
     end
     #dup sb.asStr 0 1 FilePosition new #dup FileState new =:: mut fileState
     progContext [] .progFiles
