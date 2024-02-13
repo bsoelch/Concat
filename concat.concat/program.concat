@@ -33,9 +33,6 @@ enum(
                 i32 : mut getArrayElement
                 i32 : mut setArrayElement
                 i32 : mut @ArrayElement
-                i32 : mut getEnumElement
-                i32 : mut setEnumElement
-                i32 : mut @EnumElement
                       setValue
                       Print
                       Return
@@ -464,24 +461,6 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .@ArrayElement sb.appendI
-          break
-        getEnumElement case
-          "get enum element ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .getEnumElement sb.appendI
-          break
-        setEnumElement case
-          "set enum element ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .setEnumElement sb.appendI
-          break
-        @EnumElement case
-          "enum element address ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .@EnumElement sb.appendI
           break
         setValue case
           "set value ( " sb.appendS

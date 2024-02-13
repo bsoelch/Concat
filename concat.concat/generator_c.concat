@@ -511,10 +511,11 @@ proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : ind
     target ";\n" io.fputs #drop
   end
 end
-proc( Type : base i32 : eltIndex bool : isEnum Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =:  compileGetElt
+proc( Type : base i32 : eltIndex Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog => ) =:  compileGetElt
+  prog [] .idContext .typeContext @ =:: typeContext
   target "(" io.fputs #drop
   operations index isGlobal target prog compileOp
-  isEnum if
+  base typeContext types.isEnum if
     target ".data." io.fputs #drop
   else
     target "." io.fputs #drop
@@ -1134,10 +1135,10 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       target ")" io.fputs #drop
       return
     getElement case
-      op [] .dataType op [] .val .getElement false operations index isGlobal target prog compileGetElt
+      op [] .dataType op [] .val .getElement operations index isGlobal target prog compileGetElt
       return
     setElement case
-      op [] .dataType op [] .val .setElement false operations index isGlobal target prog compileGetElt
+      op [] .dataType op [] .val .setElement operations index isGlobal target prog compileGetElt
       target " = " io.fputs #drop
       operations index isGlobal target prog compileOp
       target ";\n" io.fputs #drop
@@ -1148,28 +1149,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       eltType typeContext types.getArrayDims 0 > if
         target "(" io.fputs #drop
       end
-      op [] .dataType op [] .val .@Element false operations index isGlobal target prog compileGetElt
+      op [] .dataType op [] .val .@Element operations index isGlobal target prog compileGetElt
       eltType typeContext types.getArrayDims 0 > if
-        target ".data[0])" io.fputs #drop
-      end
-      target ")" io.fputs #drop
-      return
-    getEnumElement case
-      op [] .dataType op [] .val .getEnumElement true operations index isGlobal target prog compileGetElt
-      return
-    setEnumElement case
-      op [] .dataType op [] .val .setEnumElement true operations index isGlobal target prog compileGetElt
-      target " = " io.fputs #drop
-      operations index isGlobal target prog compileOp
-      target ";\n" io.fputs #drop
-      return
-    @EnumElement case
-      target "(&" io.fputs #drop
-      op [] .dataType typeContext types.getArrayDims 0 > if
-        target "(" io.fputs #drop
-      end
-      op [] .dataType op [] .val .@EnumElement true operations index isGlobal target prog compileGetElt
-      op [] .dataType typeContext types.getArrayDims 0 > if
         target ".data[0])" io.fputs #drop
       end
       target ")" io.fputs #drop

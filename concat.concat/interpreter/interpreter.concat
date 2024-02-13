@@ -780,8 +780,7 @@ proc(
     setId @Id initializeId autoTypedInitializeId
     getLabel setLabel @Label
     getElement setElement @Element
-    getArrayElement setArrayElement @ArrayElement
-    getEnumElement setEnumElement @EnumElement setValue
+    getArrayElement setArrayElement @ArrayElement setValue
     Print New newEnum call callPtr
     argc getArg getArgLen
     length size Cast Cast!

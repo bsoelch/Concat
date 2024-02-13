@@ -183,8 +183,7 @@ proc( TypeCheckState ptr mut : state => ) =: ensureStackHeadIsValue
   head [] .writable head [] .valType typeContext types.isMultiValueType ! | if
     opHead [] .val OpValue .getId != if
       opHead [] .val OpValue .getElement !=
-      opHead [] .val OpValue .getArrayElement != &
-      opHead [] .val OpValue .getEnumElement != & if
+      opHead [] .val OpValue .getArrayElement != & if
         return
       end
       ## TODO keep access to pointer to stack-values intact
@@ -1640,13 +1639,13 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       enumType op [] .dataType =
       op [] .val switch
         getLabel case
-          index op [] .val .getEnumElement =
+          index op [] .val .getElement =
           break
         setLabel case
-          index op [] .val .setEnumElement =
+          index op [] .val .setElement =
           break
         @Label case
-          index op [] .val .@EnumElement =
+          index op [] .val .@Element =
           break
         default
           "unexpected operation for get label: " sb.wrap
@@ -1656,7 +1655,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       end
       1 true op [] .pos state extractCompositeOps
       typeInfo [] .opCount =:: opCount ## extractCompositeOps does not modify type-stack -> typeInfo still valid
-      op [] .val OpValue .setEnumElement == if
+      op [] .val OpValue .setElement == if
         mutable ! if
           "element " sb.wrap
             labelName sb.appendStr
@@ -1684,7 +1683,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       ## get value
       op 1 state insertStackOp
       eltType state [] .typeStack list.peek .data [] .valType = ## change type on stack
-      op [] .val OpValue .getEnumElement == if
+      op [] .val OpValue .getElement == if
         mutable state [] .typeStack list.peek .data [] .writable =
       end
       return
@@ -3007,7 +3006,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       break
     typeModifier
-    checkEnumLabel checkArrayIndex setEnumLabel getEnumElement setEnumElement @EnumElement getArgLen call case
+    checkEnumLabel checkArrayIndex setEnumLabel getArgLen call case
       "operation " sb.wrap
         op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS

@@ -661,8 +661,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       mutable ! true 1 childOffset state updateOpInfo
       return
     getArrayElement @ArrayElement
-    getElement @Element
-    getEnumElement @EnumElement case
+    getElement @Element case
       break    
     Cast Cast! case
       op [] .dataType Type .undefined == if
@@ -960,7 +959,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
       end
       return
-    setId setLabel setElement setArrayElement setEnumElement case
+    setId setLabel setElement setArrayElement case
       "unsupported operation" sb.wrap
         op [] constContext labelContext typeContext sb.appendOp
       op [] .pos errors appendError
