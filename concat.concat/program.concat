@@ -12,6 +12,8 @@ struct( i32 : n StackModType : modType ) =:: public StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: public CompilerInfo
 struct( IdentifierInfo : idInfo i64 : argCount ) =:: public CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: public TypeModifier
+struct( Type : src i32 : mut offset ) =:: public CastInfo
+
 enum(
                       NOP
                       entryPoint
@@ -45,6 +47,7 @@ enum(
                       getArgLen
                       length
                       size
+           CastInfo : mut autoCast
                Type : mut Cast
                Type : mut Cast!
       UnaryOperator : unaryOperator
@@ -159,6 +162,9 @@ proc( Type : src Type : target FilePosition : pos => Operation ) =: public opCas
 end
 proc( Type : src Type : target FilePosition : pos => Operation ) =: public opCast!From
    src OpValue .Cast! new target pos Operation new return
+end
+proc( Type : src i32 : offset Type : target FilePosition : pos => Operation ) =: public opAutoCast
+   src offset CastInfo new OpValue .autoCast new target pos Operation new return
 end
 proc( i32 StackModType FilePosition => Operation ) =: public opStackMod
   =:: pos
@@ -497,6 +503,14 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .newEnum sb.appendI
+          break
+        autoCast case
+          "autoCast ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) src: " sb.appendS
+          #over .val .autoCast .src labelContext typeContext sb.appendType
+          " at " sb.appendS
+          #over .val .autoCast .offset sb.appendI
           break
         Cast case
           "cast ( " sb.appendS

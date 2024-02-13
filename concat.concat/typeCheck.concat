@@ -2872,6 +2872,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkLocal
       op 1 state insertStackOp
       return
+    autoCast case
+      break ## TODO support autoCast
     entryPoint case
       op state checkReachable
       state [] .openBlocks

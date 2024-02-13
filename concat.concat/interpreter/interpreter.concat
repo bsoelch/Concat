@@ -783,7 +783,7 @@ proc(
     getArrayElement setArrayElement @ArrayElement setValue
     Print New newEnum call callPtr
     argc getArg getArgLen
-    length size Cast Cast!
+    length size Cast Cast! autoCast
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
     stackMod setName @Name

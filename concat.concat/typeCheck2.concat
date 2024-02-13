@@ -132,6 +132,48 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => bool ) =:
 end
 
 proc(
+  TypeInfo ptr mut : src
+  Type : target
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+=> bool ) =: tryCastConstant
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  src [] .value ConstValue .none == if
+    true return
+  end
+  state [] .compiledOps src [] .opIndex list.at .data =:: srcOp
+  srcOp [] .val OpValue .Constant != if
+    true return
+  end
+  ## casting between integer constants
+  src [] .value ConstValue .int == if target typeContext types.isInt _if
+    target Type .arrayIndex == if
+      src [] .value .int 0 < if
+        "array indices cannot be less than 0 got: " sb.wrap
+        src [] .value .int sb.appendI
+        pos errors appendError
+        false return
+      end
+      target typeContext types.getArraySize 0 array.get =:: index
+      index .sizeType types.ArraySizeType .int != if
+        true return
+      end
+      src [] .value .int 0 < src [] .value .int index .value >= | if
+        "array index outside allowed range: " sb.wrap
+        src [] .value .int sb.appendI
+        " size: " sb.appendS
+        index .value sb.appendI
+        pos errors appendError
+      end
+    end
+    target srcOp [] .dataType =
+    target src [] .valueType =
+    false return
+  end
+  true return
+end
+proc(
   Type arrayView : types
   string : name
   FilePosition : pos
@@ -156,7 +198,23 @@ proc(
       typeInfo [] .valueType
       expectedType
     typeContext types.canAutoCast if
-      ## TODO add operation to cast value
+      typeInfo expectedType pos state tryCastConstant ! if
+        1 + continue
+      end
+      state [] .childIds
+        #dup .length =:: argId
+        typeInfo [] .opIndex list.append
+      state [] .childIds =
+      ## opAutoCast
+        typeInfo [] .valueType
+        #over
+        expectedType
+        pos
+      opAutoCast =:: tmp
+      tmp @ state appendOp typeInfo [] .opIndex =
+      expectedType typeInfo [] .valueType =
+      pos typeInfo [] .pushedAt =
+      true true 1 argId state updateOpInfo
       1 + continue
     end
     "wrong type for " sb.wrap
@@ -377,6 +435,10 @@ proc( i64 : index TypeCheckState ptr mut : state => i64 ) =: copyOp
   state [] .compiledOps
     #dup index list.at .data list.appendP
   state [] .compiledOps =
+  state [] .compiledOps list.peek .data =:: newOp
+  newOp [] .val OpValue .autoCast == if
+    1 newOp [] .val .autoCast .offset = ## update to head of stack moving operation and arguments
+  end
   state [] .opInfo
     #dup index list.at .data list.appendP
   state [] .opInfo =
@@ -660,9 +722,116 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .childIds =
       mutable ! true 1 childOffset state updateOpInfo
       return
-    getArrayElement @ArrayElement
     getElement @Element case
-      break    
+      break
+    getArrayElement @ArrayElement case ## TODO? extract to procedure
+      op [] .val OpValue .@ArrayElement == =:: isAddr
+      0 =:: mut indexCount
+      state [] .stack .length while #dup 0 > do 1 -
+        state [] .stack #over list.at .data =:: typeInfo
+        typeInfo [] .valueType typeContext types.isReference if
+          ## unwrap references
+          typeInfo [] .valueType typeContext types.getBaseType
+        else
+          typeInfo [] .valueType
+        end =:: baseType
+        baseType typeContext types.isPointer if
+          break
+        end
+        baseType typeContext types.isArray if
+          break
+        end
+        baseType typeContext types.isInt ! if #drop
+          "invalid type for operation " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+            " " sb.appendS
+            typeInfo [] .valueType labelContext typeContext sb.appendType
+            " is not a pointer or integer" sb.appendS
+          op [] .pos errors appendError
+          return
+        end
+        indexCount 1 + indexCount =
+      end =:: offset
+      offset 0 < if
+        "missing type for operation " sb.wrap
+          op [] constContext labelContext typeContext sb.appendOp
+          " expected pointer" sb.appendS
+        op [] .pos errors appendError
+      end
+      state [] .stack offset list.at .data [] .valueType =:: srcType
+      srcType op [] .dataType =
+      srcType
+        #dup typeContext types.isReference if
+          typeContext types.getBaseType
+        end
+      =:: arrayType
+      arrayType typeContext types.getArrayDims =:: dimensions
+      indexCount dimensions > if
+        "too much indices for pointer access " sb.wrap
+          indexCount sb.appendI
+          " dimensions:" sb.appendS
+          dimensions sb.appendI
+        op [] .pos errors appendError
+        return
+      end
+      arrayType typeContext types.isFixedSize =:: fixedSize
+      arrayType typeContext types.getArraySize =:: size
+      indexCount fixedSize ! if 1 - end =:: checkedIndices
+      isAddr if
+        indexCount op [] .val .@ArrayElement =
+      else
+        indexCount op [] .val .getArrayElement =
+      end
+      indexCount Type list.create =:: mut typeBuffer ## XXX? store type-buffer in context
+      typeBuffer
+        srcType list.append
+        #dup .length =:: bufferOffset
+        indexCount 1 - while #dup 0 >= do ## push index types in reverse order (0th index last)
+          #swap
+            arrayType #over:2 typeContext types.getIndexType if
+              "could not find index type for index " sb.wrap
+                #over:3 sb.appendI
+              op [] .pos errors appendError
+            end list.append
+          #swap 1 -
+        end #drop
+      typeBuffer =
+      ## requireTypes
+        typeBuffer list.asArray
+        "index" string.wrap
+        op [] .pos
+      state requireTypes =:: opOffset
+      typeBuffer list.free #drop
+      ConstValue .none op state pushValue
+      indexCount 0 == if
+        dimensions 1 -
+      else
+        dimensions indexCount -
+      end =:: freeDimensions
+      arrayType typeContext types.isArray if
+        srcType
+      else
+        arrayType
+      end typeContext types.isMutable =:: mutable
+      arrayType typeContext types.getBaseType
+        freeDimensions 0 > if
+          ## newArrayType
+            #+baseType+#
+            isAddr
+            size freeDimensions array.head
+            true ## remaining dimensions always fixed size
+            mutable
+          typeContext types.newArrayType if
+            "could not create array type" sb.wrap
+            op [] .pos errors appendError
+          end
+        end
+        isAddr ! if
+          #+eltType+# mutable typeContext types.newReferenceType
+        end
+      state replaceType
+      fixedSize isAddr | #dup indexCount 1 + opOffset state updateOpInfo
+      return
     Cast Cast! case
       op [] .dataType Type .undefined == if
         ## resolve data type
@@ -714,11 +883,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .dataType typeContext types.isTuple if
         op [] .dataType typeContext types.compositeEltCount =:: count
         ## requireTypes
-          op [] .dataType
-          typeContext
-          types.compositeElts
-          "tuple element"
-          string.wrap
+          op [] .dataType typeContext types.compositeElts
+          "tuple element" string.wrap
           op [] .pos
         state requireTypes =:: opOffset
         ConstValue .none op state pushValue
@@ -959,7 +1125,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
       end
       return
-    setId setLabel setElement setArrayElement case
+    setId setLabel setElement setArrayElement autoCast case
       "unsupported operation" sb.wrap
         op [] constContext labelContext typeContext sb.appendOp
       op [] .pos errors appendError

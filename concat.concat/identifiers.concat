@@ -681,6 +681,8 @@
           replaceGenericsType
         src Type .mutableReference == context [] .typeContext @ types.newReferenceType
         return
+      arrayIndex case
+        src return ## TODO replace arrayIndex
       pointer arrayType case
         src Type .pointer == =:: isPtr
         src isPtr if .pointer else .arrayType end
@@ -897,6 +899,8 @@
           expected typeContext getBaseType
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         return
+      arrayIndex case
+        return ## TODO resolve arrayIndex
       pointer arrayType case
         ## resolveGenericsType
           src typeContext getBaseType

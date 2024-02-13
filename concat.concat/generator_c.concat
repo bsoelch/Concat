@@ -170,6 +170,8 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
         FLOAT64 case target "double"  io.fputs #drop break
       end
       break
+    arrayIndex case
+      target "int64_t" io.fputs #drop break
     autoType case
       break ## XXX? resolve auto-types
     pointer reference mutableReference case
@@ -343,7 +345,8 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType
-        procedure labeledProcIn procIn reference mutableReference case ## no global type necessary
+        procedure labeledProcIn procIn reference mutableReference arrayIndex case
+        ## no global type necessary
         break
       pointer case
         t typeContext types.isCallable if ## procedure pointer
@@ -398,7 +401,8 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType procedure
-          labeledProcIn procIn pointer namedType reference mutableReference case ## no initialization necessary
+          labeledProcIn procIn pointer namedType reference mutableReference arrayIndex case
+        ## no initialization necessary
         break
       arrayType case
         t typeContext types.isFixedSize ! if
@@ -1421,7 +1425,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     compilerInfo case
       break
     getName setName @Name getLabel setLabel @Label length size stackMod
-    typeModifier case
+    typeModifier autoCast case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap

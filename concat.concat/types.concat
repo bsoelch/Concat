@@ -15,6 +15,7 @@ i32 =:: public ProcId
 i32 =:: public NamedTypeId
 i32 =:: public GeneratedId
 i32 =:: public ReferenceId
+i32 =:: public SizeId
 #end
 
 enum(
@@ -38,6 +39,7 @@ enum(
                   i32 : genericType
                   i32 : templateType
     types.GeneratedId : generatedType
+         types.SizeId : arrayIndex
 ) Type =
 
 #namespace types
@@ -84,6 +86,8 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .reference b .reference == return
     mutableReference case
       a .mutableReference b .mutableReference == return
+    arrayIndex case
+      a .arrayIndex b .arrayIndex == return
   end
 end
 1011001 =:: bigPrime
@@ -141,6 +145,8 @@ proc( Type : a => i32 ) =: public typeHash
       bigPrime 59 * a .reference + return
     mutableReference case
       bigPrime 61 * a .mutableReference + return
+    arrayIndex case
+      bigPrime 67 * a .arrayIndex + return
   end
 end
 
@@ -172,7 +178,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? s
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure reference mutableReference
-       namedType autoType genericType templateType generatedType case false return
+       namedType autoType genericType templateType generatedType arrayIndex case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
 end
@@ -184,7 +190,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
      pointer arrayType reference mutableReference case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure
-       namedType autoType generatedType case false return
+       namedType autoType generatedType arrayIndex case false return
      labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
   end
 end
@@ -197,6 +203,9 @@ proc( Type TypeContext ptr => bool ) =: public isBoolean
 end
 proc( Type TypeContext ptr => bool ) =: public isInt
   unwrapNamed
+    #dup Type .arrayIndex == if #drop
+      true return
+    end
     #dup isPrimitive ! if #drop
       false return
     end .primitiveType
@@ -221,6 +230,9 @@ proc( Type TypeContext ptr => bool ) =: public isFloat
 end
 proc( Type TypeContext ptr => bool ) =: public isNumber
   unwrapNamed
+    #dup Type .arrayIndex == if #drop
+      true return
+    end
     #dup isPrimitive ! if #drop
       false return
     end .primitiveType
@@ -234,14 +246,16 @@ end
 proc( Type TypeContext ptr => bool ) =: public isSmallType
   unwrapNamed
   switch
-    primitiveType enum pointer empty reference mutableReference case true return ## XXX enum is only small if it has no values
+    primitiveType enum pointer empty reference mutableReference arrayIndex case true return ## XXX enum is only small if it has no values
     arrayType tuple struct union labeledProcIn procIn procOut procedure ## TODO? count tuples with size < 128 as small types
     undefined namedType autoType genericType templateType generatedType case false return
   end
 end
 proc( Type TypeContext ptr => i32 ) =: public numberPrecision
   unwrapNamed
-    #dup isPrimitive ! if #drop
+    #dup Type .arrayIndex == if #drop
+      primitive.I_SIZE
+    else #dup isPrimitive ! _if #drop
       -1 return
     end .primitiveType
     switch
@@ -265,7 +279,9 @@ end
 #+largest integer n s.t. 2^n-1 fits in the type+#
 proc( Type TypeContext ptr => i32 ) =: public numberSize
   unwrapNamed
-    #dup isPrimitive ! if #drop
+    #dup Type .arrayIndex == if #drop
+      primitive.I_SIZE
+    else #dup isPrimitive ! _if #drop
       -1 return
     end .primitiveType
     switch
@@ -375,13 +391,15 @@ proc( Type : box TypeContext ptr : context => i64 ) =: public getArrayDims
   box context unwrapNamed
     #dup context isPointer if
       context [] .arrayTypes #swap .pointer list.get =:: arrayType
-      arrayType .fixedSize ! if 1 return end
-      arrayType .dims return
+      arrayType .dims
+        arrayType .fixedSize ! if 1 + end
+      return
     end
     #dup context isArray if
       context [] .arrayTypes #swap .arrayType list.get =:: arrayType
-      arrayType .fixedSize ! if 1 return end
-      arrayType .dims return
+      arrayType .dims
+        arrayType .fixedSize ! if 1 + end
+      return
     end
   #drop
   0 return
@@ -396,9 +414,41 @@ proc( Type : box TypeContext ptr : context => ArraySize arrayView ) =: public ge
       context [] .arrayTypes #swap .arrayType list.get =:: arrayType
       context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice return
     end
+    #dup Type .arrayIndex == if
+      context [] .arraySizes #swap .arrayIndex list.at .data array.wrap return
+    end
   #drop
   ArraySize array.empty return
 end
+## type of the n-th array index (counted from left to right, zero indexed)
+## the returned bool is true if no index has been found
+proc( Type : box i32 : n TypeContext ptr : context => Type bool ) =: public getIndexType
+  n 0 < if
+    Type .undefined true return
+  end
+  box context unwrapNamed
+    #dup context isPointer if
+      context [] .arrayTypes #swap .pointer list.get
+    else #dup context isArray _if
+      context [] .arrayTypes #swap .arrayType list.get
+    else #drop
+     Type .undefined true return
+    end
+  =:: arrayType
+  arrayType .fixedSize ! if
+    n 0 == if
+      primitive.I_SIZE false return
+    end
+    n
+  else
+    n 1 +
+  end =:: delta
+  delta arrayType .dims > if
+     Type .undefined true return
+  end
+  arrayType .sizeOffset arrayType .dims + delta - types.SizeId cast Type .arrayIndex new false return
+end
+
 proc( Type TypeContext ptr => bool ) =: public isMutable
   =:: context
   context unwrapNamed
@@ -520,8 +570,9 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
   switch
     tuple struct union labeledProcIn procIn procOut enum case
       true return
-    undefined empty primitiveType pointer arrayType procedure namedType autoType
-        genericType templateType generatedType  reference mutableReference case
+    undefined empty primitiveType pointer arrayType procedure
+      namedType autoType genericType templateType generatedType
+      reference mutableReference arrayIndex case
       false return
   end
 end
@@ -565,8 +616,9 @@ proc( Type : composite TypeContext ptr : context => CompositeType ptr optional )
       enum case
         .enum
         break
-      undefined empty primitiveType pointer arrayType procedure namedType autoType
-          genericType templateType generatedType reference mutableReference case
+      undefined empty primitiveType pointer arrayType procedure
+       namedType autoType genericType templateType generatedType
+       reference mutableReference arrayIndex case
         #drop CompositeType ptr optional.empty return
     end
   context [] .compositeTypes #swap list.at #dup optional.isEmpty if #drop
@@ -585,8 +637,9 @@ proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: pub
     #dup switch
       struct union labeledProcIn enum case
         break
-      undefined empty primitiveType pointer arrayType procedure namedType autoType
-        genericType templateType generatedType tuple procIn procOut reference mutableReference case
+      undefined empty primitiveType pointer arrayType procedure
+       namedType autoType genericType templateType generatedType tuple
+       procIn procOut reference mutableReference arrayIndex case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -604,8 +657,9 @@ proc( Type : composite string : name LabelContext ptr : labelContext TypeContext
     #dup switch
       struct union labeledProcIn enum case
         break
-      undefined empty primitiveType pointer arrayType procedure namedType autoType
-        genericType templateType generatedType tuple procIn procOut reference mutableReference case
+      undefined empty primitiveType pointer arrayType procedure
+       namedType autoType genericType templateType generatedType
+       tuple procIn procOut reference mutableReference arrayIndex case
         #drop -1 return
     end
   context compositeData
@@ -1147,6 +1201,7 @@ proc( Type => i32 ) =: public getTypeId
     namedType case .namedType return
     reference case .reference return
     mutableReference case .mutableReference return
+    arrayIndex case .arrayIndex return
     undefined empty primitiveType case #drop -1 return
   end
 end
@@ -1167,7 +1222,7 @@ end
 proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
   t0 context unwrapNamed =:: t
   t switch
-    undefined empty primitiveType autoType case
+    undefined empty primitiveType autoType arrayIndex case
       false false return
     reference mutableReference case
       t context getBaseType context containsGeneric return
@@ -1299,6 +1354,9 @@ proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: 
   src target context canAutoCast if
     true return
   end
+  target Type .arrayIndex == if src context types.isInt ! _if
+    false return ## can only cast integers to index
+  end
   src context types.isNumber target context types.isNumber & if
     true return
   end
@@ -1308,6 +1366,9 @@ proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: 
       true return
     end
   end end
+  src context types.isReference if src context getBaseType target forceCast context canCast _if
+    true return
+  end
   forceCast ! if
     false return
   end
@@ -1415,10 +1476,15 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       "empty" appendS return
     primitiveType case
       .primitiveType appendPrimitiveType return
+    arrayIndex case .arrayIndex =:: sizeIndex
+      "index(" appendS
+      context [] .arraySizes sizeIndex list.at .data array.wrap appendArraySize
+      " )" appendS
+      return
     pointer case =:: t
       t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
+      t context types.getArraySize appendArraySize
       t context types.isFixedSize if
-        t context types.getArraySize appendArraySize
         " ptr" appendS
       else
         " _ ptr" appendS
