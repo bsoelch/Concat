@@ -11,13 +11,19 @@ type-checked code in post-fix notation.
 #include "interpreter/interpreter.concat"
 
 struct(
-  Type         : valueType
+  Type         : mut valueType
   ConstValue   : mut value
-  LabelId      : valueId
+  LabelId      : mut valueId
   FilePosition : mut pushedAt
-  i64          : mut opIndex
-  bool         : canMove
+  i64          : mut opIndex  ## FIXME how will values that are merge from different branches handle operation indices
 ) =:: TypeInfo
+
+struct(
+  i32  : mut childCount
+  i64  : mut childOffset
+  bool : mut canMove
+  bool : mut canDelete ## XXX flags are not independent -> combine to single modifier
+) =:: OpInfo
 
 struct(
   BlockType : blockType
@@ -30,8 +36,13 @@ struct(
   TypeInfo list : mut stack
   BlockInfo list : mut openBlocks
   Operation list : mut compiledOps
-  ## TODO add OpInfo -> for each operation remember the positions of all child operations
+  OpInfo list : mut opInfo
+  i64 list : mut childIds
   FileId : mut currentFile
+  ## TODO flags:
+  ## * disable reorganizing of operations (excluding types)
+  ## * is it allowed to optimize out reading from variables
+  ## * is folding (non-type) constants allowed
 ) =:: TypeCheckState
 
 proc( TypeCheckState ptr mut : state => ) =: freezeInterpreter
@@ -44,19 +55,12 @@ proc( TypeCheckState ptr mut : state => ) =: freezeInterpreter
   0 while #dup interpreter [] .stack .length < do
     interpreter [] .stack #over list.at .data =:: constant
     interpreter [] .stackInfo #over list.at .data =:: constInfo
-    state [] .stack
-      ## TypeInfo
-        constInfo [] .valueType
-        constant  []
-        constInfo [] .valueId
-        constInfo [] .pushedAt
-        state [] .compiledOps .length
-        true
-      TypeInfo new list.append
-    state [] .stack =
-    state [] .compiledOps
-      constant [] constInfo [] .valueType constInfo [] .pushedAt opConst list.append
-    state [] .compiledOps =
+    ## pushConstant
+      constant  []
+      constInfo [] .valueType
+      constInfo [] .pushedAt
+    state pushConstant
+    constInfo [] .valueId state replaceLabel
     1 +
   end #drop
   ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initilizer)
@@ -71,17 +75,23 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
   state [] .program =:: progContext
   state [] .interpreter @ =:: interpreter
   state [] .stack .length 1 - while #dup 0 >= do
-    state [] .stack #over list.at .data #dup [] .opIndex -1 == #swap [] .canMove ! | if
+    state [] .stack #over list.at .data =:: typeInfo
+    typeInfo [] .value ConstValue .none == if
+      break
+    else
+      state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
+      opInfo [] .canMove ! opInfo [] .childCount 0 != |
+    _if
       break
     end
     1 -
   end 1 + =:: offset
   ##  -> reset interpreter
   interpreter resetContext
-  ##  -> store computed constants
+  ##  -> copy values to interpreter
   offset while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
-    OpValue .NOP state [] .compiledOps typeInfo [] .opIndex list.at .data [] .val = ## clear previous location of operation
+    typeInfo [] .opIndex state deleteOp ## clear previous location of operation
     interpreter [] .stack
       typeInfo [] .value list.append
     interpreter [] .stack =
@@ -95,6 +105,7 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
     interpreter [] .stackInfo =
     1 +
   end #drop
+  state removeTrailingNOPs
   state [] .stack
     offset list.setLength
   state [] .stack =
@@ -119,25 +130,24 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => bool ) =:
   end
   false return
 end
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: popValues
-  count pos state checkStackSize if return end
-  state [] .stack
-    #dup .length count - list.setLength
-  state [] .stack =
-end
+
 proc(
   Type arrayView : types
   string : name
   FilePosition : pos
   TypeCheckState ptr mut : state
-=> ) =: requireTypes
+=> i64 #+argOffset+# ) =: requireTypes
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
   state [] .program [] .idContext .constContext @ =:: constContext
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
+  state [] .childIds .length =:: argOffset
   1 while #dup types .length <= do
     state [] .stack state [] .stack .length #over:2 - list.at .data =:: typeInfo
+    state [] .childIds
+      typeInfo [] .opIndex list.append
+    state [] .childIds =
     types types .length #over:2 - array.get =:: expectedType
     typeInfo [] .valueType expectedType types.typeEquals if
       1 + continue
@@ -161,23 +171,22 @@ proc(
   state [] .stack
     #dup .length types .length - list.setLength
   state [] .stack =
+  argOffset return
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
   count pos state checkStackSize if return end
   0 =:: mut toDrop
   state [] .stack .length count - while #dup state [] .stack .length < do
     state [] .stack #over list.at .data =:: typeInfo
-    typeInfo [] .opIndex -1 == if
+    typeInfo [] .opIndex state tryDeleteOp if
       toDrop 1 + toDrop =
-    else
-      OpValue .NOP state [] .compiledOps typeInfo [] .opIndex list.at .data [] .val =
     end
     1 +
   end #drop
+  state removeTrailingNOPs
   toDrop 0 > if
-    ## TODO remove operations from code instead of dropping value
     toDrop StackModType .DROP pos opStackMod =:: tmpOp
-    tmpOp @ state appendOp
+    tmpOp @ state appendOp #drop
   end
   state [] .stack
     #dup .length count - list.setLength
@@ -194,7 +203,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   1 pos state checkStackSize if Type .undefined return end
   state [] .stack .length 1 - =:: offset
   state [] .stack offset list.at .data =:: typeInfo
-  OpValue .NOP state [] .compiledOps typeInfo [] .opIndex list.at .data [] .val =
+  typeInfo [] .opIndex state deleteOp ## remove stored operation
   state [] .stack
     offset list.setLength
   state [] .stack =
@@ -225,12 +234,19 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
         id.LABEL_ID_NONE
         pos
         state [] .compiledOps .length
-        true
       TypeInfo new list.append
     state [] .stack =
     state [] .compiledOps
       value valType pos opConst list.append
     state [] .compiledOps =
+    state [] .opInfo
+      ## OpInfo
+        0
+        0
+        true
+        true
+      OpInfo new list.append
+    state [] .opInfo =
 end
 proc( ConstValue : value Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
     state [] .stack
@@ -240,12 +256,46 @@ proc( ConstValue : value Operation ptr : op TypeCheckState ptr mut : state => ) 
         id.LABEL_ID_NONE
         op [] .pos
         state [] .compiledOps .length
-        false ## TODO allow moving constant variables, variables that have not been modified since push
       TypeInfo new list.append
     state [] .stack =
     state [] .compiledOps
       op list.appendP
     state [] .compiledOps =
+    state [] .opInfo
+      ## OpInfo
+        0
+        0
+        false
+        false
+      OpInfo new list.append
+    state [] .opInfo =
+end
+proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state => ) =: updateOpInfo
+  state [] .stack list.peek .data [] .opIndex =:: opIndex
+  state [] .opInfo opIndex list.at .data =:: opInfo
+  argCount i32.MAX > if
+    ..unreachable ## XXX handle case of too many arguments
+  end
+  argCount i32 cast opInfo [] .childCount =
+  argOffset opInfo [] .childOffset =
+  true =:: mut canMoveChildren
+  0 while #dup argCount < do
+    state [] .childIds #over argOffset + list.get =:: childId
+    state [] .opInfo childId list.at .data [] .canMove ! if
+      false canMoveChildren =
+    end
+    1 +
+  end #drop
+  canMove canMoveChildren & opInfo [] .canMove =
+  canDelete opInfo [] .canDelete =
+end
+proc( LabelId : label TypeCheckState ptr mut : state => ) =: replaceLabel
+  state [] .stack list.peek .data =:: top
+  label top [] .valueId =
+end
+proc( Type : newType TypeCheckState ptr mut : state => ) =: replaceType
+  state [] .stack list.peek .data =:: top
+  newType top [] .valueType =
 end
 
 proc( BlockType : blockType TypeCheckState ptr mut : state => ) =: openBlock
@@ -272,10 +322,105 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => BlockType ) =: closeB
   closed return
 end
 
-proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: appendOp
+proc( Operation ptr : op TypeCheckState ptr mut : state => i64 #+opIndex+# ) =: appendOp
+  state [] .compiledOps .length =:: index
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
+  state [] .opInfo
+    ## OpInfo
+      0
+      0
+      false
+      false
+    OpInfo new list.append
+  state [] .opInfo =
+  index return
+end
+proc( i64 : index TypeCheckState ptr mut : state => bool ) =: tryDeleteOp
+  state [] .opInfo index list.at .data [] .canDelete if
+    index state deleteOp
+    false return
+  else
+    true return
+  end
+end
+proc( i64 : index TypeCheckState ptr mut : state => ) =: deleteOp
+  state [] .opInfo index list.at .data =:: opInfo
+  0 =:: mut toDrop
+  0 while #dup opInfo [] .childCount < do
+    state [] .childIds #over opInfo [] .childOffset + list.get state tryDeleteOp if
+      toDrop 1 + toDrop =
+    end
+    1 +
+  end #drop
+  toDrop 0 == if
+    OpValue .NOP state [] .compiledOps index list.at .data [] .val =
+  else
+    state [] .compiledOps index list.at .data =:: prev
+    toDrop StackModType .DROP prev [] .pos opStackMod prev [] =
+  end
+  false opInfo [] .canMove =
+  false opInfo [] .canDelete =
+end
+proc( i64 : index TypeCheckState ptr mut : state => i64 ) =: copyOp
+  state [] .opInfo index list.at .data =:: opInfo
+  state [] .childIds .length =:: argOffset
+  0 while #dup opInfo [] .childCount < do ## copy child operations
+    state [] .childIds #over opInfo [] .childOffset + list.get =:: childId
+    state [] .childIds
+      childId state copyOp list.append
+    state [] .childIds =
+    1 +
+  end #drop
+  state [] .compiledOps .length =:: copyIndex
+  state [] .compiledOps
+    #dup index list.at .data list.appendP
+  state [] .compiledOps =
+  state [] .opInfo
+    #dup index list.at .data list.appendP
+  state [] .opInfo =
+  ## update internal data
+  state [] .opInfo list.peek .data =:: newOpInfo
+  argOffset newOpInfo [] .childOffset =
+  copyIndex return
+end
+proc( i64 : opIndex FilePosition : pos TypeCheckState ptr mut : state => i64 bool ) =: tryCopyOp
+  state [] .opInfo opIndex list.at .data =:: opInfo
+  opInfo [] .canMove ! if
+    0 true return
+  end
+  opIndex state copyOp false return
+end
+proc( TypeCheckState ptr mut : state => ) =: removeTrailingNOPs
+  state [] .compiledOps .length 1 - while #dup 0 >= do
+    state [] .compiledOps #over list.at .data [] .val OpValue .NOP != if
+      break
+    end
+    1 -
+  end 1 + =:: offset
+  state [] .compiledOps
+    offset list.setLength
+  state [] .compiledOps =
+  state [] .opInfo
+    offset list.setLength
+  state [] .opInfo =
+end
+proc( TypeCheckState ptr mut : state => ) =: clearOps
+  state [] .compiledOps
+    list.clear
+  state [] .compiledOps =
+  state [] .opInfo
+    list.clear
+  state [] .opInfo =
+end
+proc( TypeCheckState ptr mut : state => ) =: freeOps
+  state [] .compiledOps
+    list.free
+  state [] .compiledOps =
+  state [] .opInfo
+    list.free
+  state [] .opInfo =
 end
 
 proc( Type : valType i64 : id FilePosition : pos TypeCheckState ptr mut : state => ) =: storeAutoType
@@ -331,17 +476,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
-          state [] .stack
-            ## TypeInfo
-              op [] .dataType mutable typeContext types.newReferenceType
-              ConstValue .none ## XXX get constant value if present and variable immutable
-              op [] .val .getId .labelId
-              op [] .pos
-              -1
-              false
-            TypeInfo new list.append
-          state [] .stack =
-          op state appendOp
+          ## XXX get constant value if present and variable immutable
+          ConstValue .none op state pushValue
+          op [] .dataType mutable typeContext types.newReferenceType state replaceType
+          op [] .val .getId .labelId state replaceLabel
+          mutable ! true 0 0 state updateOpInfo ## XXX make get mutable Id  movable until first @Id or setId to same variable
           return
         PROCEDURE case
           break
@@ -354,17 +493,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         GLOBAL_VAR LOCAL_VAR case
           op [] .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
           op [] .dataType mutable typeContext types.getAddressType =:: addrType
-          state [] .stack
-            ## TypeInfo
-              addrType
-              ConstValue .none
-              op [] .val .@Id .labelId
-              op [] .pos
-              -1
-              false
-            TypeInfo new list.append
-          state [] .stack =
-          op state appendOp
+          ConstValue .none op state pushValue
+          addrType state replaceType
+          op [] .val .@Id .labelId state replaceLabel
+          mutable !  true 0 0 state updateOpInfo
           return
         PROCEDURE case
           break
@@ -402,11 +534,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
-          op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes
-          op state appendOp
+          op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes #drop
+          op state appendOp #drop
           return
         PROCEDURE case
-          op state appendOp
+          op state appendOp #drop
           idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
             BlockType .EXPERIMENTAL_PROCEDURE
           else
@@ -429,8 +561,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       target .valueType typeContext types.getBaseType =:: base
       base op [] .dataType =
-      base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes
-      op state appendOp
+      base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes #drop
+      op state appendOp #drop
       return
     Cast Cast! case
       op [] .dataType Type .undefined == if
@@ -461,6 +593,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
       end
       value .value op state pushValue
+      state [] .childIds
+        #dup .length =:: offset
+        value .opIndex list.append
+      state [] .childIds =
+      true true 1 offset state updateOpInfo
       return
     New case
       op [] .dataType Type .undefined == if
@@ -472,6 +609,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           "variable size arrays are not supported" sb.wrap op [] .pos errors appendError
         end
         ConstValue .none op state pushValue
+        true true 0 0 state updateOpInfo
         return
       end
       op [] .dataType typeContext types.isTuple if
@@ -483,8 +621,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           "tuple element"
           string.wrap
           op [] .pos
-        state requireTypes
+        state requireTypes =:: opOffset
         ConstValue .none op state pushValue
+        false true count opOffset state updateOpInfo
         return
       end
       break
@@ -547,7 +686,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               op [] .val .blockEnd .blockType sb.appendBlockType
             op [] .pos errors appendError
           end
-          op state appendOp
+          op state appendOp #drop
           return
         IF
         IFIF
@@ -670,38 +809,39 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
         COPY case
           op [] .val .stackMod .n =:: offset
-          state [] .stack .length offset < if
-            "not enough arguments for " sb.wrap
-              op [] .val .stackMod sb.appendStackMod
-              " got " sb.appendS
-              state [] .stack .length sb.appendI
-              " need " sb.appendS
-              offset sb.appendI
-            op [] .pos errors appendError
+          offset op [] .pos state checkStackSize if
+            return
           end
+          ## copy value on stack
           state [] .stack state [] .stack .length 1 - offset - list.at .data =:: copied
           state [] .stack
             copied list.appendP
           state [] .stack =
           state [] .stack list.peek .data =:: newOp
           op [] .pos newOp [] .pushedAt =
-          state [] .compiledOps .length newOp [] .opIndex =
-          op state appendOp
+          ## copy value in code
+          copied [] .opIndex op [] .pos state tryCopyOp if #drop
+            op state appendOp
+          end newOp [] .opIndex =
           return
         SWAP case
-          state [] .stack .length 2 < if
-            "not enough arguments for " sb.wrap
-              op [] .val .stackMod sb.appendStackMod
-              " got " sb.appendS
-              state [] .stack .length sb.appendI
-              " need 2" sb.appendS
-            op [] .pos errors appendError
+          2 op [] .pos state checkStackSize if
+            return
           end
           state [] .stack .length 2 - =:: offset
           state [] .stack offset list.at .data =:: lower
-          state [] .stack offset 1 + list.at .data =:: upper
-          op state appendOp
-          ## update stack
+          ## swap values in code
+          lower [] .opIndex op [] .pos state tryCopyOp if #drop
+            op state appendOp #drop
+          else =:: newIndex
+            ## discard old operations for lower value
+            lower [] .opIndex state tryDeleteOp if
+              "internal compiler error: could not move operation" sb.wrap
+              op [] .pos errors appendError
+            end
+            newIndex lower [] .opIndex =
+          end
+          ## swap values on stack
           state [] .stack
             lower list.appendP
           state [] .stack =
@@ -709,8 +849,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             state [] .stack .data offset +
             state [] .stack .data offset 1 + +
             2
-          mem.move state [] .stack .data =
-          break
+          mem.move #drop
+          state [] .stack
+            #dup .length 1 - list.setLength
+          state [] .stack =
+          return
       end
       break
     typeModifier case
@@ -737,6 +880,8 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     32  TypeInfo  list.create
     32  BlockInfo list.create
     128 Operation list.create
+    128 OpInfo    list.create
+    128 i64       list.create
     FILE_ID_NONE
   TypeCheckState new =:: mut state
   program [] .errors @ =:: errors
@@ -748,9 +893,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
   0 while #dup program [] .progFiles .length < do
     #dup state .currentFile =
     program [] .progFiles #over list.at .data =:: progFile
-    state .compiledOps
-      list.clear
-    state .compiledOps =
+    state @ clearOps
     0 while #dup progFile [] .globalOps .length < do
       progFile [] .globalOps #over list.at .data state @ typeCheckOp
       1 +
@@ -762,7 +905,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     state .stack list.clear state .stack = ## TODO error on unhandled values
     1 +
   end #drop
-  state .compiledOps list.clear state .compiledOps =
+  state @ clearOps
   state .compiledOps =:: originalOps
   ## procedures
   0 while #dup program [] .procedures .length < do
@@ -787,6 +930,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     end
     currentProc [] .fileId state .currentFile = ## compile procedures to local code of given file
     program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
+    state @ clearOps
     procFile [] .localOps state .compiledOps =
     0 while #dup currentProc [] .codeLength < do
       program [] .templateOps
@@ -802,6 +946,6 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
   end #drop
   ## static procedures
   ## TODO type-check static procedures
-  state .compiledOps list.free #drop
+  state @ freeOps
   state .interpreter @ cleanupContext
 end
