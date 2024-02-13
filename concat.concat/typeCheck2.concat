@@ -7,7 +7,7 @@ type-checked code in post-fix notation.
 +#
 #include "program.concat"
 #include "types.concat"
-#include "labels.concat"
+#include "identifiers.concat"
 #include "interpreter/interpreter.concat"
 
 struct(
@@ -15,7 +15,7 @@ struct(
   ConstValue   : mut value
   LabelId      : mut valueId
   FilePosition : mut pushedAt
-  i64          : mut opIndex  ## FIXME how will values that are merge from different branches handle operation indices
+  i64          : mut opIndex  ## FIXME how will values that are merged from different branches handle operation indices
 ) =:: TypeInfo
 
 struct(
@@ -423,18 +423,37 @@ proc( TypeCheckState ptr mut : state => ) =: freeOps
   state [] .opInfo =
 end
 
-proc( Type : valType i64 : id FilePosition : pos TypeCheckState ptr mut : state => ) =: storeAutoType
-  state [] .program [] .autoTypes @ =:: autoTypes
+proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state => ) =: resolveAutoType
   state [] .program [] .errors @ =:: errors
-  id 0 < id autoTypes [] .length >= | if
-    "auto-type id outside allowed range:" sb.wrap
-      id sb.appendI
-      " maximum:" sb.appendS
-      autoTypes [] .length 1 - sb.appendI
-    pos errors appendError
-  end
-  ## XXX? check for redefinition of auto-type
-  valType autoTypes [] id list.set
+  state [] .program [] .autoTypes @ =:: autoTypes
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  op [] .dataType Type .autoType == if
+    op [] .dataType types.getTypeId =:: id
+    autoTyped if
+      state [] .stack list.peek =:: value?
+      value? optional.hasData if
+        value? .data [] .valueType
+        #dup typeContext types.isReference if
+          typeContext types.getBaseType ## unwrap reference
+        end
+      else
+        "missing type for declaration" sb.wrap op [] .pos errors appendError
+        return
+      end
+    else
+      op [] .pos state popType
+    end =:: valType
+    valType op [] .dataType =
+    id 0 < id autoTypes [] .length >= | if
+      "auto-type id outside allowed range:" sb.wrap
+        id sb.appendI
+        " maximum:" sb.appendS
+        autoTypes [] .length 1 - sb.appendI
+      op [] .pos errors appendError
+    end
+    ## XXX? check for redefinition of auto-type
+    valType autoTypes [] id list.set
+    end
 end
 
 proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
@@ -474,63 +493,71 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getId case
       op [] .val .getId =:: idInfo
       idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
+      mutable if
+        idInfo .constValue
+      else
+        ConstValue .none
+      end =:: constValue
       idInfo .idType switch
-        GLOBAL_VAR LOCAL_VAR case
-          ## XXX get constant value if present and variable immutable
-          ConstValue .none op state pushValue
+        GLOBAL_VAR LOCAL_VAR TMP_VAR case
+          constValue op state pushValue
           op [] .dataType mutable typeContext types.newReferenceType state replaceType
           op [] .val .getId .labelId state replaceLabel
-          mutable ! true 0 0 state updateOpInfo ## XXX make get mutable Id  movable until first @Id or setId to same variable
+          mutable ! true 0 0 state updateOpInfo
+          return
+        TYPE ARGUMENT TEMPLATE_ARG case
+          constValue op state pushValue
+          op [] .val .getId .labelId state replaceLabel
+          true true 0 0 state updateOpInfo
           return
         PROCEDURE case
-          break
-        TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
+          break ## TODO call procedure
+        LABEL case
           break
       end
       break
     @Id case
       op [] .val .@Id .idType switch
-        GLOBAL_VAR LOCAL_VAR case
+        GLOBAL_VAR LOCAL_VAR PROCEDURE TMP_VAR case
           op [] .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
-          op [] .dataType mutable typeContext types.getAddressType =:: addrType
           ConstValue .none op state pushValue
-          addrType state replaceType
+          op [] .dataType mutable typeContext types.getAddressType state replaceType
           op [] .val .@Id .labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
           return
-        PROCEDURE case
-          break
-        TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
-          break
+        TYPE ARGUMENT LABEL TEMPLATE_ARG case
+          "taking the address of identifier " sb.wrap
+            op [] .val .@Id labelContext sb.appendIdInfo
+            " is not supported" sb.appendS
+          op [] .pos errors appendError
+          return
       end
       break
-    setId declareId case
+    declareId case
+      op false state resolveAutoType
+      op [] .val .declareId .idType switch
+        GLOBAL_VAR LOCAL_VAR TMP_VAR case
+          op state appendOp #drop
+          return
+        PROCEDURE TYPE TEMPLATE_ARG LABEL case
+          "unexpected declaration of identifier " sb.wrap
+            op [] .val .@Id labelContext sb.appendIdInfo
+          op [] .pos errors appendError
+          return
+        ARGUMENT case
+          "cannot declare identifier " sb.wrap
+            op [] .val .@Id labelContext sb.appendIdInfo
+          op [] .pos errors appendError
+          return
+      end
       break
     initializeId autoTypedInitializeId case
-      op [] .val OpValue .initializeId == if
-        op [] .val .initializeId false
-      else
-        op [] .val .autoTypedInitializeId true
-      end =:: autoTyped =:: idInfo
-      op [] .dataType Type .autoType == if
-        op [] .dataType types.getTypeId =:: id
-        autoTyped if
-          state [] .stack list.peek =:: value?
-          value? optional.hasData if
-            value? .data [] .valueType
-            #dup typeContext types.isReference if
-              typeContext types.getBaseType ## unwrap reference
-            end
-          else
-            "missing type for declaration" sb.wrap op [] .pos errors appendError
-            return
-          end
-        else
-          op [] .pos state popType
-        end =:: valueType
-        valueType op [] .dataType =
-        op [] .dataType id op [] .pos state storeAutoType
-      end
+      op [] .val OpValue .autoTypedInitializeId == if
+        op [] .val .autoTypedInitializeId op [] .val .initializeId =
+        true
+      else false end =:: autoTyped
+      op [] .val .initializeId =:: idInfo
+      op autoTyped state resolveAutoType
       idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
@@ -546,9 +573,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end state openBlock
           return
         TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
-          break
+          "unexpected initialization of identifier " sb.wrap
+            op [] .val .@Id labelContext sb.appendIdInfo
+          op [] .pos errors appendError
+          return
       end
       break
+    entryPoint case
+      op state appendOp #drop
+      BlockType .PROCEDURE state openBlock
+      return
     setValue case
       state [] .stack
         list.pop =:: target
@@ -559,11 +593,77 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
         return
       end
+      target .valueType typeContext types.isMutable ! if
+        target .valueId id.LABEL_ID_NONE != if
+          ## TODO? resolve reference path from operation
+          "cannot assign to immutable value of type " sb.wrap
+            target .valueType labelContext typeContext sb.appendType
+            " in \"" sb.appendS
+            target .valueId labelContext id.labelName .data sb.appendStr
+            '"' sb.appendC
+          op [] .pos errors appendError
+        else
+          "cannot assign to immutable type: " sb.wrap
+            target .valueType labelContext typeContext sb.appendType
+          op [] .pos errors appendError
+        end
+        return
+      end
       target .valueType typeContext types.getBaseType =:: base
       base op [] .dataType =
       base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes #drop
       op state appendOp #drop
       return
+    getLabel @Label case
+      op [] .val OpValue .getLabel == if
+        op [] .val .getLabel false
+      else
+        op [] .val .setLabel true
+      end =:: isAddr =:: labelId
+      state [] .stack
+        list.pop =:: container
+      state [] .stack =
+      container .valueType =:: srcType
+      false =:: mut mutable
+      srcType typeContext types.isPointer srcType typeContext types.isReference | if
+         srcType typeContext types.isMutable mutable =
+         srcType typeContext types.getBaseType
+      else
+         srcType
+      end =:: containerType
+      ## compositeFindLabel
+        containerType
+        labelId labelContext id.labelName .data
+        labelContext
+        typeContext
+      types.compositeFindLabel =:: elementIndex
+      containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
+      containerType elementIndex typeContext types.compositeGetElement =:: eltType
+      elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
+        false mutable =
+      end
+      srcType elementIndex op [] .pos isAddr if opGetElement else op@Element end =:: tmp
+      ## XXX compute constant value
+      ConstValue .none tmp @ state pushValue
+      isAddr srcType typeContext types.isPointer | if
+        eltType mutable typeContext types.getAddressType
+      else srcType typeContext types.isReference _if
+        eltType mutable typeContext types.newReferenceType
+      else
+        eltType
+      end =:: targetType
+      targetType state replaceType
+      elementLabel state replaceLabel
+      state [] .childIds
+        #dup .length =:: childOffset
+        container .opIndex list.append
+      state [] .childIds =
+      mutable ! true 1 childOffset state updateOpInfo
+      return
+    getArrayElement @ArrayElement
+    getElement @Element
+    getEnumElement @EnumElement case
+      break    
     Cast Cast! case
       op [] .dataType Type .undefined == if
         ## resolve data type
@@ -790,11 +890,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
       break
     Return getName
-    entryPoint
-    getLabel setLabel @Label
-    getElement setElement @Element
-    getArrayElement setArrayElement @ArrayElement
-    getEnumElement setEnumElement @EnumElement
     Print newEnum call callPtr
     argc getArg getArgLen
     unaryOperator binaryOperator
@@ -864,6 +959,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .val .typeModifier sb.appendTypeModifier
         op [] .pos errors appendError
       end
+      return
+    setId setLabel setElement setArrayElement setEnumElement case
+      "unsupported operation" sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+      op [] .pos errors appendError
       return
   end
   "type-checking for operation: " sb.wrap
