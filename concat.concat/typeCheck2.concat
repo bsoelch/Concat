@@ -860,6 +860,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .dataType labelContext typeContext sb.appendType
         op [] .pos errors appendError
       end
+      ## XXX try cast constant on stack
       value .value op state pushValue
       state [] .childIds
         #dup .length =:: offset
@@ -1055,13 +1056,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
       break
     Return getName
-    Print newEnum call callPtr
+    newEnum call callPtr
     argc getArg getArgLen
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
     compilerInfo unreachable case
       break
+    Print case
+      state [] .stack
+        list.pop =:: value
+      state [] .stack =
+      value .valueType op [] .dataType =
+      op state appendOp #drop
+      return
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
