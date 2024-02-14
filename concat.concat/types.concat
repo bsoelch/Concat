@@ -1164,7 +1164,7 @@ proc( Type : base bool : mutable TypeContext ptr mut : context => Type ) =: publ
       base list.append
     context [] .compositeData =
   end
-  id mutable if Type .reference new else Type .mutableReference new end return
+  id mutable if Type .mutableReference new else Type .reference new end return
 end
 
 
