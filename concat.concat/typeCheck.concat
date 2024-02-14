@@ -6,7 +6,7 @@
 
 struct( Type : mut valType i32 : mut opCount bool : mut writable ) =:: TypeInfo
 struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
-struct( StackState : mut inTypes StackState : mut outTypes i64 : mut elsePos bool : mut elseReachable ) =:: IfBlockData
+struct( StackState : mut inTypes StackState : mut outTypes i64 : mut elsePos i32 : mut openIfIfs bool : mut elseReachable ) =:: IfBlockData
 struct( StackState : inTypes StackState : mut outTypes Type : switchType bool : mut endReachable bool : mut explicitBreak ) =:: SwitchBlockData
 struct( StackState : mut inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
 enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock SwitchBlockData : mut switchBlock Type : procBlock ) =:: BlockData
@@ -432,17 +432,17 @@ proc( bool : breakSwitch TypeCheckState ptr mut : state => BlockInfo ptr mut opt
   end #drop
   BlockInfo ptr mut optional.empty return
 end
-proc( TypeCheckState ptr mut : state => i32 ) =: findEnclosingIfId
+proc( TypeCheckState ptr mut : state => IfBlockData ptr mut optional ) =: findEnclosingIf
   state [] .openBlocks .length 1 - while #dup 0 >= do
     state [] .openBlocks #over list.at
       #dup .data [] .blockType BlockType .IF == if
         #swap #drop
-        .data [] .blockId return
+        .data [] .blockData .ifBlock @ optional.wrap return
       end
     #drop
     1 -
   end #drop
-  -1 return
+  IfBlockData ptr mut optional.empty return
 end
 
 proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context => Type ) =: checkBinOpNumber
@@ -2115,6 +2115,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               state copyStack
               emptyStackState
               -1
+              0
               false
             IfBlockData new BlockData .ifBlock new
             op [] .pos
@@ -2140,6 +2141,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             ifBlock false op [] .pos state storeIfOutTypes
             true ifBlock [] .blockData .ifBlock .elseReachable =
           end
+          BlockType .IFIF op [] .pos opEndBlock =:: mut closeIfIf
+          ifBlock [] .blockData .ifBlock .openIfIfs while #dup 0 > do
+            ifBlock [] .blockId closeIfIf .val .blockEnd .blockId =
+            state [] .compiledOps
+              closeIfIf list.append
+            state [] .compiledOps =
+            1 -
+          end #drop
+          0 ifBlock [] .blockData .ifBlock .openIfIfs =
           ifBlock [] .blockData .ifBlock .inTypes @ state resetStack
           state [] .compiledOps .length ifBlock [] .blockData .ifBlock .elsePos =
           BlockType .ELSE ifBlock [] .blockType =
@@ -2418,6 +2428,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           else
             closed [] .blockData .ifBlock .outTypes @ state resetStack
           end
+          BlockType .IFIF op [] .pos opEndBlock =:: mut closeIfIf
+          closed [] .blockData .ifBlock .openIfIfs while #dup 0 > do
+            closed [] .blockId closeIfIf .val .blockEnd .blockId =
+            state [] .compiledOps
+              closeIfIf list.append
+            state [] .compiledOps =
+            1 -
+          end #drop
           state [] .reachable
             closed [] .blockData .ifBlock .elseReachable |
             closed [] .blockData .ifBlock .elsePos -1 == |
@@ -2429,10 +2447,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .val .blockEnd .subId =
           break
         IFIF case
-          state findEnclosingIfId op [] .val .blockEnd .blockId =
+          state findEnclosingIf .data =:: ifBlock
+          ifBlock [] .openIfIfs
+            1 + ## remember that if-if has been closed
+          ifBlock [] .openIfIfs =
           closed [] .blockData .ifBlock .inTypes @ freeStackState
           closed [] .blockData .ifBlock .outTypes @ freeStackState
-          break
+          state [] .openBlocks
+            list.pop #drop ## remove closed block
+          state [] .openBlocks =
+          return ## dont append operation
         WHILE case
           "unexpected end of " sb.wrap
             closed [] .blockType sb.appendBlockType
