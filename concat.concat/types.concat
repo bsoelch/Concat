@@ -497,7 +497,15 @@ proc( ArraySize arrayView : a ArraySize arrayView : b => bool ) =: arraySizeEqua
   end #drop
   true return
 end
-proc( Type : target bool : isPtr ArraySize arrayView : sizes bool : fixedSize bool : mutable  TypeContext ptr mut : context => Type bool ) =: public newArrayType
+proc(
+  Type : target
+  bool : isPtr
+  ArraySize arrayView : sizes
+  bool : fixedSize
+  bool : makeMutable
+  TypeContext ptr mut : context
+=> Type bool ) =: public newArrayType
+  isPtr if makeMutable else false end =:: mutable
   isPtr ! sizes .length 0 == & if
     Type .undefined true return
   end
