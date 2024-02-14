@@ -16,6 +16,7 @@ struct(
   LabelId      : mut valueId
   FilePosition : mut pushedAt
   i64          : mut opIndex  ## FIXME how will values that are merged from different branches handle operation indices
+  i64          : mut readCheckIndex
 ) =:: TypeInfo
 
 struct(
@@ -178,7 +179,7 @@ proc(
   string : name
   FilePosition : pos
   TypeCheckState ptr mut : state
-=> i64 #+argOffset+# ) =: requireTypes
+=> i64 #+argOffset+# bool ) =: requireTypes
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
   state [] .program [] .idContext .constContext @ =:: constContext
@@ -186,6 +187,12 @@ proc(
   state [] .program [] .idContext .labelContext @ =:: labelContext
   state [] .childIds .length =:: argOffset
   1 while #dup types .length <= do
+    #dup state [] .stack .length > if #drop
+      "not enough types for " sb.wrap
+        name sb.appendStr
+      pos errors appendError
+      argOffset true return
+    end
     state [] .stack state [] .stack .length #over:2 - list.at .data =:: typeInfo
     state [] .childIds
       typeInfo [] .opIndex list.append
@@ -193,6 +200,9 @@ proc(
     types types .length #over:2 - array.get =:: expectedType
     typeInfo [] .valueType expectedType types.typeEquals if
       1 + continue
+    end
+    expectedType Type .empty == if
+      1 + continue ## TODO proper support for empty values
     end
     ## canAutoCast
       typeInfo [] .valueType
@@ -229,7 +239,7 @@ proc(
   state [] .stack
     #dup .length types .length - list.setLength
   state [] .stack =
-  argOffset return
+  argOffset false return
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
   count pos state checkStackSize if return end
@@ -292,6 +302,7 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
         id.LABEL_ID_NONE
         pos
         state [] .compiledOps .length
+        -1
       TypeInfo new list.append
     state [] .stack =
     state [] .compiledOps
@@ -314,6 +325,7 @@ proc( ConstValue : value Operation ptr : op TypeCheckState ptr mut : state => ) 
         id.LABEL_ID_NONE
         op [] .pos
         state [] .compiledOps .length
+        -1
       TypeInfo new list.append
     state [] .stack =
     state [] .compiledOps
@@ -623,7 +635,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
-          op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes #drop
+          op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes if
+            #drop return
+          end #drop
           op state appendOp #drop
           return
         PROCEDURE case
@@ -646,9 +660,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       BlockType .PROCEDURE state openBlock
       return
     setValue case
+      1 op [] .pos state checkStackSize if
+        return
+      end
       state [] .stack
         list.pop =:: target
       state [] .stack =
+      target .readCheckIndex -1 != if
+        target .readCheckIndex state deleteOp ## no read check when writing to value
+      end
       target .valueType typeContext types.isReference target .valueType typeContext types.isPointer | ! if
         "can only assign to references or pointers got: " sb.wrap
           target .valueType labelContext typeContext sb.appendType
@@ -673,38 +693,96 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       target .valueType typeContext types.getBaseType =:: base
       base op [] .dataType =
-      base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes #drop
+      base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes if
+        #drop return
+      end #drop
       op state appendOp #drop
       return
     getLabel @Label case
       op [] .val OpValue .getLabel == if
         op [] .val .getLabel false
       else
-        op [] .val .setLabel true
+        op [] .val .@Label true
       end =:: isAddr =:: labelId
+      1 op [] .pos state checkStackSize if
+        return
+      end
       state [] .stack
         list.pop =:: container
       state [] .stack =
       container .valueType =:: srcType
       false =:: mut mutable
-      srcType typeContext types.isPointer srcType typeContext types.isReference | if
-         srcType typeContext types.isMutable mutable =
-         srcType typeContext types.getBaseType
+      false =:: mut isType
+      srcType types.primitive.TYPE types.typeEquals if container .value ConstValue .typeId == _if
+        true isType =
+        container .value .typeId
       else
-         srcType
-      end =:: containerType
+        srcType typeContext types.isPointer srcType typeContext types.isReference | if
+           srcType typeContext types.isMutable mutable =
+           srcType typeContext types.getBaseType
+        else
+           srcType
+        end
+      end =:: mut containerType
+      labelId labelContext id.labelName .data =:: labelName
       ## compositeFindLabel
         containerType
-        labelId labelContext id.labelName .data
+        labelName
         labelContext
         typeContext
       types.compositeFindLabel =:: elementIndex
+      elementIndex 0 < if
+        "type " sb.wrap
+          containerType labelContext typeContext sb.appendType
+          " does not have a label \"" sb.appendS
+          labelName sb.appendStr
+          '"' sb.appendC
+        op [] .pos errors appendError
+        return
+      end
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
+      isType if
+        container .opIndex state tryDeleteOp if
+          "internal compiler error: could not remove type" sb.wrap
+          op [] .pos errors appendError
+        end ## remove type
+        isAddr if
+          "cannot take address of enum-creator \"" sb.wrap
+          labelName sb.appendStr
+          "\" in " sb.appendS
+          containerType labelContext typeContext sb.appendType
+          op [] .pos errors appendError
+          return
+        end
+        eltType @ array.wrap "enum-creation" string.wrap op [] .pos state requireTypes if
+          #drop return
+        end =:: argOffset
+        containerType elementIndex op [] .pos opNewEnum =:: newOp
+        ## XXX compute constant value
+        ConstValue .none newOp @ state pushValue
+        true true eltType Type .empty == if 0 else 1 end argOffset state updateOpInfo
+        elementLabel state replaceLabel
+        return
+      end
       elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
         false mutable =
       end
-      srcType elementIndex op [] .pos isAddr if opGetElement else op@Element end =:: tmp
+      Operation : tmp
+      1 =:: mut childCount
+      -1i64 =:: mut onRead
+      state [] .childIds
+        #dup .length =:: childOffset
+        container .opIndex list.append
+        containerType typeContext types.isEnum if
+          containerType elementIndex op [] .pos opCheckEnum tmp =
+          tmp @ state appendOp onRead =
+          true true 0 0 state updateOpInfo
+          onRead list.append
+          childCount 1 + childCount =
+        end
+      state [] .childIds =
+      srcType elementIndex op [] .pos isAddr if op@Element else opGetElement end tmp =
       ## XXX compute constant value
       ConstValue .none tmp @ state pushValue
       isAddr srcType typeContext types.isPointer | if
@@ -716,11 +794,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end =:: targetType
       targetType state replaceType
       elementLabel state replaceLabel
-      state [] .childIds
-        #dup .length =:: childOffset
-        container .opIndex list.append
-      state [] .childIds =
-      mutable ! true 1 childOffset state updateOpInfo
+      onRead state [] .stack list.peek .data [] .readCheckIndex =
+      mutable ! true childCount childOffset state updateOpInfo
       return
     getElement @Element case
       break
@@ -800,7 +875,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         typeBuffer list.asArray
         "index" string.wrap
         op [] .pos
-      state requireTypes =:: opOffset
+      state requireTypes if
+        #drop return
+      end =:: opOffset
       typeBuffer list.free #drop
       ConstValue .none op state pushValue
       indexCount 0 == if
@@ -887,7 +964,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .dataType typeContext types.compositeElts
           "tuple element" string.wrap
           op [] .pos
-        state requireTypes =:: opOffset
+        state requireTypes if
+          #drop return
+        end =:: opOffset
         ConstValue .none op state pushValue
         false true count opOffset state updateOpInfo
         return
@@ -1064,6 +1143,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     compilerInfo unreachable case
       break
     Print case
+      1 op [] .pos state checkStackSize if
+        return
+      end
       state [] .stack
         list.pop =:: value
       state [] .stack =
