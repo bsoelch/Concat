@@ -1625,6 +1625,37 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state appendError2
         return
       end
+    else #dup "??" string.wrap string.eq _if =:: opName
+      state peekOp #dup optional.isEmpty if #drop
+        "unexpected \"" sb.wrap
+          opName sb.appendStr
+        '"' sb.appendC fileState [] .wordStart state appendError2
+        return
+      end .data =:: prevOp
+      prevOp [] .val OpValue .getId == if
+        ## identifier for getId always exists
+        ## opConst
+          true ConstValue .boolean new
+          types.primitive.BOOL
+          fileState [] .wordStart
+        opConst prevOp [] =
+        return
+      else prevOp [] .val OpValue .getLabel == _if
+        prevOp [] .val .getLabel prevOp [] .val .hasLabel =
+        fileState [] .wordStart prevOp [] .pos =
+        return
+      else prevOp [] .val OpValue .getName == _if
+        prevOp [] .val .getName prevOp [] .val .hasName =
+        fileState [] .wordStart prevOp [] .pos =
+        return
+      else
+        "unexpected operation for \"" sb.wrap
+        opName sb.appendStr
+        "\"\n" sb.appendS
+        prevOp [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        fileState [] .wordStart state appendError2
+        return
+      end
     else #dup "entryPoint:" string.wrap string.eq _if #drop
       _EXPERIMENTAL_ if
         state tryInterpretGlobal ## try to interpret global operations before each declaration

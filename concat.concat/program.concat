@@ -29,9 +29,11 @@ enum(
             LabelId : getLabel
             LabelId : mut setLabel
             LabelId : mut @Label
+            LabelId : mut hasLabel
                 i32 : mut getElement
                 i32 : mut setElement
                 i32 : mut @Element
+                i32 : mut hasElement
                 i32 : mut getArrayElement
                 i32 : mut setArrayElement
                 i32 : mut @ArrayElement
@@ -61,6 +63,7 @@ enum(
             LabelId : getName
             LabelId : mut setName
             LabelId : mut @Name
+            LabelId : mut hasName
        TypeModifier : mut typeModifier
                       unreachable
        CompilerInfo : compilerInfo
@@ -120,6 +123,9 @@ proc( Type : base i32 : index FilePosition : pos => Operation ) =: public opGetE
 end
 proc( Type : base i32 : index FilePosition : pos => Operation ) =: public op@Element
   index OpValue .@Element new base pos Operation new return
+end
+proc( Type : base i32 : index FilePosition : pos => Operation ) =: public opHasElement
+  index OpValue .hasElement new base pos Operation new return
 end
 proc( LabelId FilePosition  => Operation ) =: public opGetLabel
   =:: pos
@@ -427,6 +433,12 @@ end
           " ) : " sb.appendS
           #over .val .@Label labelContext id.labelName .data sb.appendStr
           break
+        hasLabel case
+          "has label ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .hasLabel labelContext id.labelName .data sb.appendStr
+          break
         typeModifier case
           "typeModifier \"" sb.appendS
           #over .val .typeModifier sb.appendTypeModifier
@@ -449,6 +461,12 @@ end
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           #over .val .@Element sb.appendI
+          break
+        hasElement case
+          "has element ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          #over .val .hasElement sb.appendI
           break
         getArrayElement case
           "get array element ( " sb.appendS
@@ -599,6 +617,10 @@ end
         @Name case
           "address of: " sb.appendS
           #over .val .@Name labelContext id.labelName .data sb.appendStr
+          break
+        hasName case
+          "has name: " sb.appendS
+          #over .val .hasName labelContext id.labelName .data sb.appendStr
           break
         unreachable case
           "unreachable " sb.appendS

@@ -786,6 +786,7 @@ proc(
     length size Cast Cast! autoCast
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
+    hasLabel hasName hasElement
     stackMod setName @Name
     compilerInfo unreachable case
       showErrorMessages if

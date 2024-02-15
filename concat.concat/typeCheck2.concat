@@ -220,8 +220,7 @@ proc(
         #over
         expectedType
         pos
-      opAutoCast =:: tmp
-      tmp @ state appendOp typeInfo [] .opIndex =
+      opAutoCast state appendOp typeInfo [] .opIndex =
       expectedType typeInfo [] .valueType =
       pos typeInfo [] .pushedAt =
       true true 1 argId state updateOpInfo
@@ -253,8 +252,7 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
   end #drop
   state removeTrailingNOPs
   toDrop 0 > if
-    toDrop StackModType .DROP pos opStackMod =:: tmpOp
-    tmpOp @ state appendOp #drop
+    toDrop StackModType .DROP pos opStackMod state appendOp #drop
   end
   state [] .stack
     #dup .length count - list.setLength
@@ -317,19 +315,19 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
       OpInfo new list.append
     state [] .opInfo =
 end
-proc( ConstValue : value Operation ptr : op TypeCheckState ptr mut : state => ) =: pushValue
+proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: pushValue
     state [] .stack
       ## TypeInfo
-        op [] .dataType
+        op .dataType
         value
         id.LABEL_ID_NONE
-        op [] .pos
+        op .pos
         state [] .compiledOps .length
         -1
       TypeInfo new list.append
     state [] .stack =
     state [] .compiledOps
-      op list.appendP
+      op list.append
     state [] .compiledOps =
     state [] .opInfo
       ## OpInfo
@@ -392,10 +390,10 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => BlockType ) =: closeB
   closed return
 end
 
-proc( Operation ptr : op TypeCheckState ptr mut : state => i64 #+opIndex+# ) =: appendOp
+proc( Operation : op TypeCheckState ptr mut : state => i64 #+opIndex+# ) =: appendOp
   state [] .compiledOps .length =:: index
   state [] .compiledOps
-    op list.appendP
+    op list.append
   state [] .compiledOps =
   state [] .opInfo
     ## OpInfo
@@ -574,13 +572,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end =:: constValue
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR case
-          constValue op state pushValue
+          constValue op [] state pushValue
           op [] .dataType mutable typeContext types.newReferenceType state replaceType
           op [] .val .getId .labelId state replaceLabel
           mutable ! true 0 0 state updateOpInfo
           return
         TYPE ARGUMENT TEMPLATE_ARG case
-          constValue op state pushValue
+          constValue op [] state pushValue
           op [] .val .getId .labelId state replaceLabel
           true true 0 0 state updateOpInfo
           return
@@ -594,7 +592,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .val .@Id .idType switch
         GLOBAL_VAR LOCAL_VAR PROCEDURE TMP_VAR case
           op [] .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
-          ConstValue .none op state pushValue
+          ConstValue .none op [] state pushValue
           op [] .dataType mutable typeContext types.getAddressType state replaceType
           op [] .val .@Id .labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
@@ -611,7 +609,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op false state resolveAutoType
       op [] .val .declareId .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR case
-          op state appendOp #drop
+          op [] state appendOp #drop
           return
         PROCEDURE TYPE TEMPLATE_ARG LABEL case
           "unexpected declaration of identifier " sb.wrap
@@ -638,10 +636,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes if
             #drop return
           end #drop
-          op state appendOp #drop
+          op [] state appendOp #drop
           return
         PROCEDURE case
-          op state appendOp #drop
+          op [] state appendOp #drop
           idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
             BlockType .EXPERIMENTAL_PROCEDURE
           else
@@ -656,7 +654,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       break
     entryPoint case
-      op state appendOp #drop
+      op [] state appendOp #drop
       BlockType .PROCEDURE state openBlock
       return
     setValue case
@@ -696,10 +694,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       base @ array.wrap "assignment" string.wrap op [] .pos state requireTypes if
         #drop return
       end #drop
-      op state appendOp #drop
+      op [] state appendOp #drop
       return
-    getLabel @Label case
-      op [] .val OpValue .getLabel == if
+    getLabel @Label hasLabel case
+      false =:: mut checkOnly
+      op [] .val OpValue .hasLabel == if
+        true checkOnly =
+        op [] .val .hasLabel false
+      else op [] .val OpValue .getLabel == _if
         op [] .val .getLabel false
       else
         op [] .val .@Label true
@@ -732,6 +734,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         typeContext
       types.compositeFindLabel =:: elementIndex
       elementIndex 0 < if
+        checkOnly if
+          ## label does not exists
+          container .opIndex state tryDeleteOp if
+            "internal compiler error: could not remove value" sb.wrap
+            op [] .pos errors appendError
+          end ## remove type
+          false ConstValue .boolean new types.primitive.BOOL op [] .pos state pushConstant
+          return
+        end
         "type " sb.wrap
           containerType labelContext typeContext sb.appendType
           " does not have a label \"" sb.appendS
@@ -742,6 +753,28 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
+      checkOnly if
+        isType containerType typeContext types.isEnum ! | if
+          ## label always exists
+          container .opIndex state tryDeleteOp if
+            "internal compiler error: could not remove value" sb.wrap
+            op [] .pos errors appendError
+          end ## remove type
+          true ConstValue .boolean new types.primitive.BOOL op [] .pos state pushConstant
+          return
+        end
+        ## check enum label
+        state [] .childIds
+          #dup .length =:: childOffset
+          container .opIndex list.append
+        state [] .childIds =
+        ## XXX? compute constant value
+        ConstValue .none srcType elementIndex op [] .pos opHasElement state pushValue
+        types.primitive.BOOL state replaceType
+        elementLabel state replaceLabel
+        mutable ! true 1 childOffset state updateOpInfo
+        return
+      end
       isType if
         container .opIndex state tryDeleteOp if
           "internal compiler error: could not remove type" sb.wrap
@@ -758,9 +791,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         eltType @ array.wrap "enum-creation" string.wrap op [] .pos state requireTypes if
           #drop return
         end =:: argOffset
-        containerType elementIndex op [] .pos opNewEnum =:: newOp
-        ## XXX compute constant value
-        ConstValue .none newOp @ state pushValue
+        ## pushValue
+          ConstValue .none ## XXX compute constant value
+          containerType elementIndex op [] .pos opNewEnum
+        state pushValue
         true true eltType Type .empty == if 0 else 1 end argOffset state updateOpInfo
         elementLabel state replaceLabel
         return
@@ -768,23 +802,22 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
         false mutable =
       end
-      Operation : tmp
       1 =:: mut childCount
       -1i64 =:: mut onRead
       state [] .childIds
         #dup .length =:: childOffset
         container .opIndex list.append
         containerType typeContext types.isEnum if
-          containerType elementIndex op [] .pos opCheckEnum tmp =
-          tmp @ state appendOp onRead =
+          containerType elementIndex op [] .pos opCheckEnum state appendOp onRead =
           true true 0 0 state updateOpInfo
           onRead list.append
           childCount 1 + childCount =
         end
       state [] .childIds =
-      srcType elementIndex op [] .pos isAddr if op@Element else opGetElement end tmp =
-      ## XXX compute constant value
-      ConstValue .none tmp @ state pushValue
+      ## pushValue
+        ConstValue .none ## XXX compute constant value
+        srcType elementIndex op [] .pos isAddr if op@Element else opGetElement end
+      state pushValue
       isAddr srcType typeContext types.isPointer | if
         eltType mutable typeContext types.getAddressType
       else srcType typeContext types.isReference _if
@@ -879,7 +912,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         #drop return
       end =:: opOffset
       typeBuffer list.free #drop
-      ConstValue .none op state pushValue
+      ConstValue .none op [] state pushValue
       indexCount 0 == if
         dimensions 1 -
       else
@@ -938,7 +971,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
       end
       ## XXX try cast constant on stack
-      value .value op state pushValue
+      value .value op [] state pushValue
       state [] .childIds
         #dup .length =:: offset
         value .opIndex list.append
@@ -954,7 +987,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .dataType typeContext types.isFixedSize ! if
           "variable size arrays are not supported" sb.wrap op [] .pos errors appendError
         end
-        ConstValue .none op state pushValue
+        ConstValue .none op [] state pushValue
         true true 0 0 state updateOpInfo
         return
       end
@@ -967,7 +1000,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         state requireTypes if
           #drop return
         end =:: opOffset
-        ConstValue .none op state pushValue
+        ConstValue .none op [] state pushValue
         false true count opOffset state updateOpInfo
         return
       end
@@ -1031,7 +1064,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
               op [] .val .blockEnd .blockType sb.appendBlockType
             op [] .pos errors appendError
           end
-          op state appendOp #drop
+          op [] state appendOp #drop
           return
         IF
         IFIF
@@ -1140,6 +1173,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     unaryOperator binaryOperator
     enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
+    hasName hasElement
     compilerInfo unreachable case
       break
     Print case
@@ -1150,7 +1184,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         list.pop =:: value
       state [] .stack =
       value .valueType op [] .dataType =
-      op state appendOp #drop
+      op [] state appendOp #drop
       return
     stackMod case
       op [] .val .stackMod .modType switch
@@ -1171,7 +1205,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .pos newOp [] .pushedAt =
           ## copy value in code
           copied [] .opIndex op [] .pos state tryCopyOp if #drop
-            op state appendOp
+            op [] state appendOp
           end newOp [] .opIndex =
           return
         SWAP case
@@ -1182,7 +1216,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           state [] .stack offset list.at .data =:: lower
           ## swap values in code
           lower [] .opIndex op [] .pos state tryCopyOp if #drop
-            op state appendOp #drop
+            op [] state appendOp #drop
           else =:: newIndex
             ## discard old operations for lower value
             lower [] .opIndex state tryDeleteOp if
