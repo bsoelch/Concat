@@ -5,7 +5,7 @@
 #include "identifiers.concat"
 #include "common.concat"
 
-enum( NEGATE NOT FLIP ) =:: public UnaryOperator
+enum( NEGATE TO_BOOL NOT FLIP ) =:: public UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: public BinaryOperator
 enum( COPY SWAP DROP ) =:: public StackModType
 struct( i32 : n StackModType : modType ) =:: public StackModification
@@ -283,6 +283,7 @@ end
     switch
       NEGATE case "NEGATE" sb.appendS return
       NOT case "NOT" sb.appendS return
+      TO_BOOL case "TO_BOOL" sb.appendS return
       FLIP case "FLIP" sb.appendS return
     end
   end

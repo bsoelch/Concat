@@ -827,6 +827,10 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target "~" io.fputs #drop
           operations index isGlobal target prog compileOp
           break
+        TO_BOOL case
+          target "!!" io.fputs #drop
+          operations index isGlobal target prog compileOp
+          break
       end
       target ")" io.fputs #drop
       return

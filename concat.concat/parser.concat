@@ -1959,6 +1959,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       UnaryOperator .NOT fileState [] .wordStart opUnaryOp state appendOp
       return
+    else #dup "?" string.wrap string.eq _if #drop
+      idContext id.foldConsts _EXPERIMENTAL_ ! & if
+        state hasConst if
+          state popConst =:: a
+          a .valueType a .val interpreter.operator! ! if
+            IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
+            return
+          end #drop:2
+          a state pushConst
+        end
+      end
+      UnaryOperator .TO_BOOL fileState [] .wordStart opUnaryOp state appendOp
+      return
     else #dup "~" string.wrap string.eq _if #drop
       UnaryOperator .FLIP fileState [] .wordStart opUnaryOp state appendOp
       idContext id.foldConsts _EXPERIMENTAL_ ! & if

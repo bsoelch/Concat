@@ -1944,6 +1944,17 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             op [] .pos state appendError2
           else #drop end
           break
+        TO_BOOL case
+          src [] .valType
+          #dup typeContext types.isInt ! if
+            "wrong operand for unary operator " sb.wrap
+              op [] .val .unaryOperator sb.appendUnaryOperator
+              " expected integer got " sb.appendS
+              #swap labelContext typeContext sb.appendType
+            op [] .pos state appendError2
+          else #drop end
+          types.primitive.BOOL op [] .dataType =
+          break
       end
       op 1 state insertStackOp
       return
