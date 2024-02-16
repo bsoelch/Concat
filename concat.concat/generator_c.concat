@@ -7,7 +7,6 @@
 ## XXX? use separate prefix for extern procedures
 "internal_argc"            =:: ARGC_NAME ## FIXME use different prefix for internal operations
 "internal_argv"            =:: ARGV_NAME
-"internal_main"            =:: MAIN_NAME
 "internal_checkArrayIndex" =:: CHECK_INDEX_NAME
 "internal_checkEnumIndex"  =:: CHECK_ENUM_NAME
 "internal_charNames"       =:: CHARNAMES_NAME
@@ -1482,6 +1481,14 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   target printHeader
   target prog printTypes
   ## TODO initialize string data
+  id.LABEL_ID_NONE =:: mut mainId
+  MAIN_NAME string.wrap 0 idContext id.getIdentifier ! if =:: data =:: name
+    name .namespace 0 != if
+      ..unreachable ## assert that namespace is always top level
+    end
+    data [] .labelId mainId =
+    true prog [] .hasEntryPoint = ## has main procedure
+  else #drop:2 end
   prog [] .hasEntryPoint if
     64 sb.create
       "static void " sb.appendS
@@ -1656,8 +1663,12 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
     target "int main(void){\n" io.fputs #drop
   end
   64 sb.create
-    CONCAT_PREFIX sb.appendS
-    MAIN_NAME     sb.appendS
+    mainId id.LABEL_ID_NONE != if
+      mainId -1 target prog printGlobalName
+    else
+      CONCAT_PREFIX sb.appendS
+      MAIN_NAME     sb.appendS
+    end
     "();\n"       sb.appendS
     "return EXIT_SUCCESS;\n}\n" sb.appendS
     target #over io.fputSb #drop

@@ -1,0 +1,3 @@
+proc( => ) =: public main
+  42 ..debug.print
+end

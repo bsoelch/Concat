@@ -1348,6 +1348,38 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
       end
+      localDeclaration ! if idName .name MAIN_NAME string.wrap string.eq _if ## main
+        idType IdentifierType .PROCEDURE != if
+          "main has to be a procedure got: " sb.wrap
+            idData id.asIdInfo labelContext sb.appendIdInfo
+          fileState [] .wordStart state appendError2
+        end
+        true =:: mut validMain
+        idName .fileId 0 != if idData [] .labelId labelContext id.labelFlags id.FLAG_PUBLIC & ? ! _if
+          "main procedure is not visible from root file" sb.wrap
+          fileState [] .wordStart state appendWarning2
+          false validMain =
+        end
+        idName .namespace 0 != if
+          "main procedure not in global namespace" sb.wrap
+          fileState [] .wordStart state appendWarning2
+          false validMain =
+        end
+        idData [] .valueType typeContext types.getProcIn #swap =:: inTypes
+        idData [] .valueType typeContext types.getProcOut #swap =:: outTypes
+        #+no inTypes+# #+no outTypes+# | if
+          "could not resolve signature of main" sb.wrap
+          fileState [] .wordStart state appendError2
+        end
+        inTypes typeContext types.compositeEltCount 0 > if
+          "main procedure should not take arguments" sb.wrap
+           fileState [] .wordStart state validMain if appendError2 else appendWarning2 end
+        end
+        outTypes typeContext types.compositeEltCount 0 > if
+          "main procedure should not return a value" sb.wrap
+           fileState [] .wordStart state appendWarning2
+        end
+      end
       idData [] .idType IdentifierType .TYPE == if
         return
       end

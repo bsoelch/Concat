@@ -2,6 +2,8 @@
 #include stringBuilder
 #include list
 
+"main" =:: public MAIN_NAME ## name of main procedure
+
 i32 =:: public FileId
 -1 FileId =: public FILE_ID_NONE
 
