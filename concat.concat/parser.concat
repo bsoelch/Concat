@@ -2735,6 +2735,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
         end
       return
+    else #dup  "begin"     string.wrap string.eq
+         #over "defer"     string.wrap string.eq |
+         #over "and"       string.wrap string.eq |
+         #over "and*"      string.wrap string.startsWith |
+         #over "or"        string.wrap string.eq |
+         #over "or*"       string.wrap string.startsWith |
+         #over "namespace" string.wrap string.eq |
+         #over "using"     string.wrap string.eq |
+         #over "include"   string.wrap string.eq |
+      _if =:: opName
+      "`" sb.wrap
+        opName sb.appendStr
+        "` is a reserved keyword for a future language version" sb.appendS
+      fileState [] .wordStart state appendError2
+      return
     end
   #dup state [] .currentFile idContext id.getIdentifier ! if ## try parsing as identifier
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
