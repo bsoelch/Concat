@@ -653,10 +653,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
       end
       break
-    entryPoint case
-      op [] state appendOp #drop
-      BlockType .PROCEDURE state openBlock
-      return
     setValue case
       1 op [] .pos state checkStackSize if
         return

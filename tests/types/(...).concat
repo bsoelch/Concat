@@ -10,7 +10,7 @@ end
 
 ( i32 : x ) =:: struct
 
-entryPoint:
+proc( => ) =: main
   0 procedure ..debug.print
   1 labledPrcoedure ..debug.print
   2 tuple new .0 ..debug.print

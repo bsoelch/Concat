@@ -776,7 +776,6 @@ proc(
         context
       pushValue
       false return
-    entryPoint
     setId @Id initializeId autoTypedInitializeId
     getLabel setLabel @Label
     getElement setElement @Element

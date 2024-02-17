@@ -1,6 +1,6 @@
 struct( i32 : mut a i32 : b ) =:: struct
 
-entryPoint:
+proc( => ) =: main
   0 0 struct new =:: s
   s .a @
   s .b @

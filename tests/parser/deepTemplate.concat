@@ -3,6 +3,6 @@ proc( => ) =: infiniteExpand
   ( T T ) infiniteExpand
 end
 
-entryPoint:
+proc( => ) =: main
   i32 infiniteExpand
 end

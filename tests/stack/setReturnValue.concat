@@ -4,7 +4,7 @@ proc( aStruct ptr => aStruct ) =: get
   []
 end
 
-entryPoint:
+proc( => ) =: main
   37 42 aStruct new =:: X
   X @ get
     0 #over .b  =

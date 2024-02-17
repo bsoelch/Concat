@@ -47,7 +47,7 @@ proc( i32 => E ) =: #:experimental enumCreate
   E .a new return
 end
 
-entryPoint:
+proc( => ) =: main
   1234 consume
   43 17 divMod #swap ..debug.print ..debug.print
   5 7 cmp ..debug.print

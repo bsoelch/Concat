@@ -1,4 +1,4 @@
-entryPoint:
+proc( => ) =: main
   0
     while true do
       1 + 

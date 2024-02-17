@@ -30,7 +30,7 @@ proc( bool : x bool : a bool : b => bool ) =: INVIF
   return
 end
 
-entryPoint:
+proc( => ) =: main
   false false AND ..debug.print
   false true  AND ..debug.print
   true  false AND ..debug.print

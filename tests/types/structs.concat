@@ -2,7 +2,7 @@
 struct( i32 : x i64 : y ) =:: pos
 struct( i32 : id pos : mut p i8 4 ptr : name ) type =: aStruct
 
-entryPoint:
+proc( => ) =: main
   -2143124  42 -115 pos new  "Name" aStruct new =:: struct
   struct .id ..debug.print
   struct .p .x ..debug.print

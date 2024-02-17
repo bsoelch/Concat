@@ -1,7 +1,7 @@
 #include numbers/printInt
 #include stringIO
 
-entryPoint:
+proc( => ) =: main
   16 sb.create
     -12345678             sb.appendI    '\n' sb.appendC
     "0x"                  sb.appendS

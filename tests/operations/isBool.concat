@@ -1,4 +1,4 @@
-entryPoint:
+proc( => ) =: main
     42 ? ..debug.print
      0 ? ..debug.print
   -117 ? ..debug.print

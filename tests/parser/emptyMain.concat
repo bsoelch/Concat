@@ -1,2 +1,2 @@
-entryPoint:
+proc( => ) =: main
 end

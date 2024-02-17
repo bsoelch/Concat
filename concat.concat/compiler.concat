@@ -204,7 +204,7 @@ proc( CompilerError list ptr mut : errors => ) =: checkErrors
   errors [] list.clear errors [] =
 end
 
-entryPoint: ## TODO check return value of fopen
+proc( => ) =: main ## TODO check return value of fopen
   parseArgs
   srcFile libPath basePath parseProgram =:: mut prog
   parserTokensFile optional.hasData if

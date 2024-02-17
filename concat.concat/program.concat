@@ -16,7 +16,6 @@ struct( Type : src i32 : mut offset ) =:: public CastInfo
 
 enum(
                       NOP
-                      entryPoint
          ConstValue : mut Constant
             BlockId : mut block
             BlockId : mut blockEnd
@@ -130,9 +129,6 @@ end
 proc( LabelId FilePosition  => Operation ) =: public opGetLabel
   =:: pos
   OpValue .getLabel new Type .undefined pos Operation new return
-end
-proc( FilePosition : pos => Operation ) =: public opEntryPoint
-  OpValue .entryPoint Type .undefined pos Operation new return
 end
 proc( Type FilePosition => Operation ) =: public opReturn
   =:: pos
@@ -262,7 +258,6 @@ struct(
      Operation list : mut templateOps
     SwitchData list : mut switchData
  CompilerError list : mut errors
-               bool : mut hasEntryPoint
                bool : mut hasCheckIndex
                bool : mut hasCheckEnum
                bool : mut hasGetArgs
@@ -356,9 +351,6 @@ end
       #over .val switch
         NOP case
           "NOP" sb.appendS
-          break
-        entryPoint case
-          "entryPoint" sb.appendS
           break
         OpValue .Constant case
           "constant ( " sb.appendS

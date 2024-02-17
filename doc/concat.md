@@ -123,7 +123,7 @@ proc( i32 : x i32 : y => i32 ) =: max
   y return 
 end
 
-entryPoint: ## the program entry point is marked with entry point, internally entryPoint declares a procedure with return type void
+proc( => ) =: main ## the program entry point is the main procedure, main has to be visible in the global namespace of the root file
   ## using a procedure name implicitly calls that procedure
   1 2 add ## prints 3
   max @ =:: f ## @ can be used to obtain a procedure pointer
@@ -157,7 +157,7 @@ proc( type : static T i64 : length => T _ ptr : p ) : extern malloc
 proc( type : auto T  T _ ptr : a T _ ptr : b i64 : k => ) : extern memcpy  ## multiple uses of the same generic argument
 proc( type : auto T  T _ ptr : p => ) : extern free
 
-entryPoint:
+proc( => ) =: main
   "Hello World" strLen ..debug.print   ## the value of k is determined by the compiler
   16 i8 malloc =:: p          ## static arguments will be resolved before all other arguments independent of the order in the function declaration
   p "Test" 4 memcpy           ## generic argument determined by type of constant string ( in current parser by type of p ) 
@@ -191,7 +191,7 @@ end
 #template type : T #end
 struct( T _ ptr mut : data i64 : len ) =: arrayView
 
-entryPoint:
+proc( => ) =: main
   "Hello" #dup .length i8 arrayView new =:: str
   16 i32 array new =:: a
   a @ a .length -1 fill  ## fill array with -1
@@ -578,7 +578,7 @@ Example:
 `src/main.concat`:
 
 ```
-entryPoint:
+proc( => ) =: main
   42 f ## calls f in 'anotherFile'
 end
 #include "anotherFile.concat"  ## includes 'anotherFile.concat' located in the same directory as the current file
@@ -631,7 +631,7 @@ The following program prints its program arguments, separated by newlines
 ```
 #include stringIO
 
-entryPoint:
+proc( => ) =: main
   0 while #dup ..argc < do
     #dup ..getArg string.create io.stdOut #swap io.fputStr #drop
     io.stdOut '\n' io.fputc #drop

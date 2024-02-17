@@ -1,6 +1,6 @@
 #include mem
 
-entryPoint:
+proc( => ) =: main
   1024 i32 mem.alloc i32 _ ptr mut =: mut dynamicArray
   1 dynamicArray 0 [] =
   2 dynamicArray 1023 [] =

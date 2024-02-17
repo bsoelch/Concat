@@ -1408,15 +1408,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
-    entryPoint case
-      64 sb.create
-        "static void " sb.appendS
-        CONCAT_PREFIX  sb.appendS
-        MAIN_NAME      sb.appendS
-        "(void){\n"    sb.appendS
-        target #over io.fputSb #drop
-      sb.free #drop
-      return
     unreachable case
       "fprintf(stderr,\"reached unreachable statement at " sb.wrap
         op [] .pos sb.appendPos
@@ -1487,17 +1478,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
       ..unreachable ## assert that namespace is always top level
     end
     data [] .labelId mainId =
-    true prog [] .hasEntryPoint = ## has main procedure
   else #drop:2 end
-  prog [] .hasEntryPoint if
-    64 sb.create
-      "static void " sb.appendS
-      CONCAT_PREFIX  sb.appendS
-      MAIN_NAME      sb.appendS
-      "(void);\n"    sb.appendS
-      target #over io.fputSb #drop
-    sb.free #drop
-  end
   prog [] .hasGetArgs if
     64 sb.create
       "static int " sb.appendS
@@ -1645,7 +1626,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
     end
     1 +
   end #drop
-  prog [] .hasEntryPoint ! if
+  mainId id.LABEL_ID_NONE == if ## no main
     return
   end
   prog [] .hasGetArgs if
@@ -1662,15 +1643,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   else
     target "int main(void){\n" io.fputs #drop
   end
-  64 sb.create
-    mainId id.LABEL_ID_NONE != if
-      mainId -1 target prog printGlobalName
-    else
-      CONCAT_PREFIX sb.appendS
-      MAIN_NAME     sb.appendS
-    end
-    "();\n"       sb.appendS
-    "return EXIT_SUCCESS;\n}\n" sb.appendS
-    target #over io.fputSb #drop
-  sb.free #drop
+  mainId -1 target prog printGlobalName
+  target "();\nreturn EXIT_SUCCESS;\n}\n" io.fputs #drop
 end

@@ -1,6 +1,6 @@
 union( i32 : mut a i32 : mut b ) =:: anUnion
 
-entryPoint:
+proc( => ) =: main
   anUnion : u
   1 u .a =
   u .b ..debug.print

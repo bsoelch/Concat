@@ -2,7 +2,7 @@ proc( => i32 ) =: getInt
   1 return
 end
 
-entryPoint:
+proc( => ) =: main
   false if 0 else getInt true _if end ..debug.print
   true if else false _if else end
 end

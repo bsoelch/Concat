@@ -7,7 +7,7 @@ anEnum .A =:: e1
 anEnum .B new =:: e2
 2 anEnum .C new =:: e3
 
-entryPoint:
+proc( => ) =: main
   -32141 anEnum .C new =:: mut e
   anEnum .A anEnum =: f
   e anEnum .A == ..debug.print

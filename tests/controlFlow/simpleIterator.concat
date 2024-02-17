@@ -16,7 +16,7 @@ proc( string i64 i8 => ) =: endItr
   #drop #drop #drop
 end
 
-entryPoint:
+proc( => ) =: main
   "Hello" startItr while nextChar do
     #+char+# ..debug.print
   end endItr

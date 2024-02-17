@@ -1,7 +1,7 @@
 #include stringIO
 #include stringBuilder
 
-entryPoint: 
+proc( => ) =: main 
   16 sb.create
     "Hello" sb.appendS
     ' '     sb.appendC

@@ -1,4 +1,4 @@
-entryPoint:
+proc( => ) =: main
   0 0 ( i32 i32 ) new =:: mut tuple
   1 tuple .0 =
   tuple .0 ..debug.print

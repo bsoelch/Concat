@@ -16,7 +16,7 @@ proc( ( ) : v testStruct ptr mut : S => ( ( ) ) ( ) ) =: assignEmpty
   p ( ( ) ) new 0 f2 @ p test return
 end
 
-entryPoint:
+proc( => ) =: main
   5 f1 @ 3 test ..debug.print
   testStruct : mut aStruct
   ( ) : X

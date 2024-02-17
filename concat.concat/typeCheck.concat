@@ -2909,27 +2909,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     autoCast case
       break ## TODO support autoCast
-    entryPoint case
-      op state checkReachable
-      state [] .openBlocks
-        ## BlockInfo
-            Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
-            Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
-            CallingConvention.DEFAULT
-            typeContext
-            types.newProcedure #drop
-          BlockData .procBlock new
-          op [] .pos
-          state [] .compiledOps .length
-          -1
-          BlockType .PROCEDURE
-        BlockInfo new list.append
-      state [] .openBlocks =
-      0 state [] .tmpCount =
-      state [] .compiledOps
-        op list.appendP
-      state [] .compiledOps =
-      return
     stackMod case
       op state checkReachable
       op [] .val .stackMod .n =:: param

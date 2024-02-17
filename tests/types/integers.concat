@@ -3,7 +3,7 @@ proc( => i64 ) =: anInt
   12345678987654321 return
 end
 
-entryPoint:
+proc( => ) =: main
   1 1 +  i32 =: mut A
   A 1 - 3 *  i32 =: mut B
   i32 : mut C 

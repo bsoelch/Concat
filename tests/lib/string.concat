@@ -1,7 +1,7 @@
 #include string
 #include io
 
-entryPoint:
+proc( => ) =: main
   "Hello World!" io.puts ..debug.print
 
   

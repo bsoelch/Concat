@@ -1,6 +1,6 @@
 enum( A B i32 : C ) =:: anEnum
 
-entryPoint:
+proc( => ) =: main
   false if
     anEnum .A
   else

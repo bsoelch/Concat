@@ -8,7 +8,7 @@ proc( => ) =: doNothing
   return
 end 
 
-entryPoint:
+proc( => ) =: main
   proc0 @ =:: fct
   1 2 fct () ..debug.print ..debug.print
   1 2 proc0 doNothing proc0 ..debug.print ..debug.print

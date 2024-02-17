@@ -1,4 +1,4 @@
-entryPoint:
+proc( => ) =: main
   s1 ..length ..debug.print
   s1 12 [] ..debug.print
   c0 ..debug.print

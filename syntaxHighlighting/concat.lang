@@ -72,8 +72,7 @@
     <context id="declaration" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          (=?: | =:: | \#typedef ) ([[:space:]]+(mut|auto|static|extern|public|private))*  |
-          entryPoint:
+          (=?: | =:: | \#typedef ) ([[:space:]]+(mut|auto|static|extern|public|private))*
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>

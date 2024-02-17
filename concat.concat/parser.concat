@@ -1688,33 +1688,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state appendError2
         return
       end
-    else #dup "entryPoint:" string.wrap string.eq _if #drop
-      _EXPERIMENTAL_ if
-        state tryInterpretGlobal ## try to interpret global operations before each declaration
-      end
-      progContext [] .hasEntryPoint if ## TODO print position of previous entry point
-        "program already has an entry point" sb.wrap fileState [] .wordStart state appendError2
-      end
-      true progContext [] .hasEntryPoint =
-      ## newProcedure
-        Type array.empty LabelId arrayView optional.empty false typeContext types.newProcArgs
-        Type array.empty LabelId arrayView optional.empty true typeContext types.newProcArgs
-        CallingConvention.DEFAULT
-      typeContext types.newProcedure #drop =:: procType
-      ## openProcScope
-        BlockType .PROCEDURE
-        procType
-        state [] .staticArgsOffset
-        false
-      idContext id.openProcScope
-      ## ProcedureInfo
-        state [] .currentFile
-        procType
-        progContext [] .templateOps .length
-        -1
-      ProcedureInfo new optional.wrap state [] .currentProc =
-      fileState [] .wordStart opEntryPoint  state appendOp
-      return
     else #dup "if" string.wrap string.eq _if #drop
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
       BlockType .IF  idContext id.openScope
@@ -2834,7 +2807,6 @@ proc( stringBuilder : rootFile string : libPath string : basePath => ProgramCont
     128 Operation             list.create
     0   SwitchData            list.create
     32  CompilerError         list.create
-    false ## hasEntryPoint
     false ## hasCheckIndex
     false ## hasCheckEnum
     false ## has getArgs

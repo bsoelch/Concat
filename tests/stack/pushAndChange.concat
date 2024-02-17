@@ -4,7 +4,7 @@ proc( i64 ptr mut : arg => i64 ) =: set2
   return
 end
 
-entryPoint:
+proc( => ) =: main
   0 i64 =: mut val
   val @ set2 ..debug.print
   val ..debug.print
