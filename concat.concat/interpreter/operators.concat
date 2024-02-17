@@ -46,7 +46,7 @@ end
 
 
 proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator-_
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -64,7 +64,7 @@ proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator-
   end
 end
 proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator!
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -76,7 +76,7 @@ proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator!
   end
 end
 proc( Type : opType ConstValue : a => Type ConstValue bool ) =: public operator~
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -99,7 +99,7 @@ end
 
 
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator+
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -120,7 +120,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator-
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -141,7 +141,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator*
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -162,7 +162,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator/
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -183,7 +183,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned/
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -208,7 +208,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator%
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -229,7 +229,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned%
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -254,7 +254,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator&
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -271,7 +271,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator|
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -288,7 +288,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator^
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -305,7 +305,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator<<
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -318,7 +318,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator>>
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -343,7 +343,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: public operator_unsigned>>
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -373,7 +373,7 @@ proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type C
     b constAsEnumLabel =:: e2
     == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
   end
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -417,7 +417,7 @@ proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type C
     b constAsEnumLabel =:: e2
     != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
   end
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     Type .undefined ConstValue .none true return
   end
   opType .primitiveType switch
@@ -456,7 +456,7 @@ proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type C
   end
 end
 proc( Type : opType ConstValue : a ConstValue : b => i8 bool ) =: operator_compare
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     0i8 true return
   end
   opType .primitiveType switch
@@ -514,7 +514,7 @@ proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: p
 end
 
 proc( Type : opType ConstValue : a ConstValue : b => i8 bool ) =: operator_unsigned_compare
-  opType Type .primitiveType != if ## unsupported type for constant evaluation
+  opType .primitiveType ?? ! if ## unsupported type for constant evaluation
     0i8 true return
   end
   opType .primitiveType switch

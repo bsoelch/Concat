@@ -216,7 +216,7 @@ proc( string : str i32 : base => double ParserError ) =: public tryParseFloat
     end #drop
     e 0 > if
       #dup e string.tail mBase tryParseInt
-        #dup ParserError .NONE != if =:: err
+        #dup .NONE ?? ! if =:: err
           #drop:2 double.NaN err return
         end #drop
       c + c =

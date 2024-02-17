@@ -41,14 +41,14 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
         elts #over array.get ptrLevel prog visited types declaredType
         1 +
       end #drop
-      declared Type .labeledProcIn == declared Type .procIn == | if
+      declared .labeledProcIn ?? declared .procIn ?? | if
         break ## don't add proc-in to list of declared types
       end
-      declared Type .procOut == elts .length 2 < & if
+      declared .procOut ?? elts .length 2 < & if
         break ## don't add single element proc-out to list of declared types
       end
-      declared Type .enum != if
-        declared typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & 0 != if
+      declared .enum  ?? ! if
+        declared typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & ? if
           break ## don't add tuple/union/procedure-IO types containing only empty types
         end
       end
@@ -79,11 +79,11 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
 end
 
 proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: addOpType
-  op [] .val OpValue .initializeId == op [] .val OpValue .declareId == | if
+  op [] .val .initializeId ?? op [] .val .declareId ?? | if
     op [] .dataType 0 prog visited types declaredType
-  else op [] .val OpValue .Cast == op [] .val OpValue .Cast! == | _if
+  else op [] .val .Cast ?? op [] .val .Cast! ?? | _if
     op [] .dataType 0 prog visited types declaredType
-  else op [] .val OpValue .New == _if
+  else op [] .val .New ?? _if
     op [] .dataType 0 prog visited types declaredType
   end
 end

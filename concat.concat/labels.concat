@@ -192,7 +192,7 @@ struct(
               #swap
               1 +
               #swap
-                str .data #over:2 + nChars string.create 16 number.tryParseInt number.ParserError .NONE == if
+                str .data #over:2 + nChars string.create 16 number.tryParseInt .NONE ?? if
                   #dup 0 < if #drop
                     "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                   else

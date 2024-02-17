@@ -10,12 +10,12 @@ anEnum .B new =:: e2
 proc( => ) =: main
   -32141 anEnum .C new =:: mut e
   anEnum .A anEnum =: f
-  e anEnum .A == ..debug.print
-  e anEnum .C == ..debug.print
+  e .A ?? ..debug.print
+  e .C ?? ..debug.print
   e .C ..debug.print
   
   labelEnum .A =:: mut l1
-  l1 labelEnum .B == if
+  l1 .B ?? if
     labelEnum .C new l1 =
   end
   

@@ -53,8 +53,6 @@ enum(
                Type : mut Cast!
       UnaryOperator : unaryOperator
      BinaryOperator : binaryOperator
-                i32 : enumLabelEq
-                i32 : enumLabelNe
                 i32 : checkEnumLabel
                 i32 : setEnumLabel
                 i64 : checkArrayIndex
@@ -189,14 +187,6 @@ proc( FilePosition : pos => Operation ) =: public opLength
 end
 proc( FilePosition : pos => Operation ) =: public opSize
   OpValue .size Type .undefined pos Operation new return
-end
-proc( Type i32 FilePosition => Operation ) =: public opLabelEQ
-  =:: pos
-  OpValue .enumLabelEq new #swap pos Operation new return
-end
-proc( Type i32 FilePosition => Operation ) =: public opLabelNE
-  =:: pos
-  OpValue .enumLabelNe new #swap pos Operation new return
 end
 proc( Type i32 FilePosition => Operation ) =: public opCheckEnum
   =:: pos
@@ -564,18 +554,6 @@ end
           "size ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
-          break
-        enumLabelEq case
-          "enum label equal ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .enumLabelEq sb.appendI
-          break
-        enumLabelNe case
-          "enum label not equal ( " sb.appendS
-          #over .dataType  labelContext typeContext sb.appendType
-          " ) : " sb.appendS
-          #over .val .enumLabelNe sb.appendI
           break
         checkEnumLabel case
           "check enum label ( " sb.appendS

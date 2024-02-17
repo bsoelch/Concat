@@ -169,7 +169,7 @@ type : public TypeContext
   PrimitiveType .I64       Type .primitiveType new Type =: public I_PTR  ## integer that can hold a pointer
 #end
 proc( Type => bool ) =: public isPrimitive
-  Type .primitiveType == return
+  .primitiveType ?? return
 end
 proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? should pointer to empty be empty
   t0 context unwrapNamed =:: t
@@ -179,7 +179,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? s
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure reference mutableReference
        namedType autoType genericType templateType generatedType arrayIndex case false return
-     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
+     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & ? return
   end
 end
 ## type is empty if all generics used in type are set to empty
@@ -191,7 +191,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
        t context getBaseType context isEmpty return
      undefined primitiveType enum procedure
        namedType autoType generatedType arrayIndex case false return
-     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & 0 != return
+     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & ? return
   end
 end
 proc( Type TypeContext ptr => bool ) =: public isBoolean
@@ -199,11 +199,11 @@ proc( Type TypeContext ptr => bool ) =: public isBoolean
     #dup isPrimitive ! if #drop
       false return
     end .primitiveType
-    PrimitiveType .BOOL == return
+    .BOOL ?? return
 end
 proc( Type TypeContext ptr => bool ) =: public isInt
   unwrapNamed
-    #dup Type .arrayIndex == if #drop
+    #dup .arrayIndex ?? if #drop
       true return
     end
     #dup isPrimitive ! if #drop
@@ -230,7 +230,7 @@ proc( Type TypeContext ptr => bool ) =: public isFloat
 end
 proc( Type TypeContext ptr => bool ) =: public isNumber
   unwrapNamed
-    #dup Type .arrayIndex == if #drop
+    #dup .arrayIndex ?? if #drop
       true return
     end
     #dup isPrimitive ! if #drop
@@ -253,7 +253,7 @@ proc( Type TypeContext ptr => bool ) =: public isSmallType
 end
 proc( Type TypeContext ptr => i32 ) =: public numberPrecision
   unwrapNamed
-    #dup Type .arrayIndex == if #drop
+    #dup .arrayIndex ?? if #drop
       primitive.I_SIZE
     else #dup isPrimitive ! _if #drop
       -1 return
@@ -279,7 +279,7 @@ end
 #+largest integer n s.t. 2^n-1 fits in the type+#
 proc( Type TypeContext ptr => i32 ) =: public numberSize
   unwrapNamed
-    #dup Type .arrayIndex == if #drop
+    #dup .arrayIndex ?? if #drop
       primitive.I_SIZE
     else #dup isPrimitive ! _if #drop
       -1 return
@@ -332,24 +332,22 @@ struct( i64 : value ArraySizeType : sizeType ) =:: public ArraySize
 struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut ptrOnly bool : mutable ) =:: ArrayType
 
 proc( Type TypeContext ptr => bool ) =: public isPointer
-  unwrapNamed
-  Type .pointer == return
+  unwrapNamed .pointer ?? return
 end
 proc( Type TypeContext ptr => bool ) =: public isArray
-  unwrapNamed
-  Type .arrayType == return
+  unwrapNamed .arrayType ?? return
 end
 proc( Type TypeContext ptr => bool ) =: public isReference
   unwrapNamed
-  #dup Type .reference == #swap Type .mutableReference == | return
+  #dup .reference ?? #swap .mutableReference ?? | return
 end
 proc( Type TypeContext ptr => bool ) =: public isFixedSize
   =:: context
   context unwrapNamed
-  #dup Type .pointer == if
+  #dup .pointer ?? if
     context [] .arrayTypes #swap .pointer list.get .fixedSize return
   end
-  #dup Type .arrayType == if
+  #dup .arrayType ?? if
     context [] .arrayTypes #swap .arrayType list.get .fixedSize return
   end #drop
   false return
@@ -357,7 +355,7 @@ end
 proc( Type TypeContext ptr => bool ) =: public isFixedSizePtr
   =:: context
   context unwrapNamed
-  #dup Type .pointer == if
+  #dup .pointer ?? if
     context [] .arrayTypes #swap .pointer list.get .fixedSize return
   end #drop
   false return
@@ -365,7 +363,7 @@ end
 proc( Type TypeContext ptr => bool ) =: public isRawPointer
   =:: context
   context unwrapNamed
-  #dup Type .pointer == if
+  #dup .pointer ?? if
     context [] .arrayTypes #swap .pointer list.get .fixedSize ! return
   end #drop
   false return
@@ -378,10 +376,10 @@ proc( Type : box TypeContext ptr : context => Type ) =: public getBaseType
     #dup context isArray if
       context [] .arrayTypes #swap .arrayType list.get .base return
     end
-    #dup Type .reference == if
+    #dup .reference ?? if
       context [] .compositeData #swap .reference list.get return
     end
-    #dup Type .mutableReference == if
+    #dup .mutableReference ?? if
       context [] .compositeData #swap .mutableReference list.get return
     end
   #drop
@@ -414,7 +412,7 @@ proc( Type : box TypeContext ptr : context => ArraySize arrayView ) =: public ge
       context [] .arrayTypes #swap .arrayType list.get =:: arrayType
       context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice return
     end
-    #dup Type .arrayIndex == if
+    #dup .arrayIndex ?? if
       context [] .arraySizes #swap .arrayIndex list.at .data array.wrap return
     end
   #drop
@@ -455,13 +453,13 @@ proc( Type TypeContext ptr => bool ) =: public isMutable
     #dup context isPointer if
       context [] .arrayTypes #swap .pointer list.get .mutable return
     end
-  Type .mutableReference == return
+  .mutableReference ?? return
 end
 proc( Type ptr mut : t bool : mutable TypeContext ptr mut : context => bool ) =: public setMutability
   t [] context isMutable  mutable == if
     false return
   end
-  t [] Type .pointer == if
+  t [] .pointer ?? if
     context [] .arrayTypes t [] .pointer list.get =:: arrayType
     ## newArrayType
       t [] context getBaseType
@@ -510,7 +508,7 @@ proc(
     Type .undefined true return
   end
   target =:: mut base
-  base Type .undefined  == if
+  base .undefined ?? if
     Type .undefined true return
   end
   ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
@@ -586,19 +584,16 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
 end
 proc( Type TypeContext ptr => bool ) =: public isTuple
   unwrapNamed
-  #dup Type .tuple == #swap Type .struct == | return
+  #dup .tuple ?? #swap .struct ?? | return
 end
 proc( Type TypeContext ptr => bool ) =: public isEnum
-  unwrapNamed
-  Type .enum == return
+  unwrapNamed .enum ?? return
 end
 proc( Type TypeContext ptr => bool ) =: public isUnion
-  unwrapNamed
-  Type .union == return
+  unwrapNamed .union ?? return
 end
 proc( Type TypeContext ptr => bool ) =: public isProcOut
-  unwrapNamed
-  Type .procOut == return
+  unwrapNamed .procOut ?? return
 end
 proc( Type : composite TypeContext ptr : context => CompositeType ptr optional ) =: compositeData
   composite context unwrapNamed
@@ -873,7 +868,7 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
         end
       end
       labelName optional.hasData if
-        label labelContext id.labelFlags id.FLAG_MUTABLE & 0 != if
+        label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
           "mut " appendS
         end
         labelName .data appendStr
@@ -891,15 +886,14 @@ end
 struct( Type : in Type : out CallingConvention : callingConvention ) =:: ProcType
 
 proc( Type TypeContext ptr => bool ) =: public isProcedure
-  unwrapNamed
-  Type .procedure == return
+  unwrapNamed .procedure ?? return
 end
 proc( Type : mType TypeContext ptr : context => bool ) =: public isCallable
   mType context unwrapNamed
     #dup context isPointer if
       context getBaseType
     end
-  Type .procedure == return
+  .procedure ?? return
 end
 proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcIn
   proc context unwrapNamed
@@ -937,7 +931,7 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcRet
   end
 end
 proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mut : context => Type bool ) =: public newProcedure
-  in Type .undefined == out Type .undefined == | if
+  in .undefined ?? out .undefined ?? | if
     Type .undefined true return
   end
   context [] .procTypes @ =:: procs
@@ -967,7 +961,7 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
     end
   =:: mProc
   context [] .procTypes mProc .procedure list.get =:: procData
-  procData .in Type .procIn == if
+  procData .in .procIn ?? if
     proc false return
   end
   context [] .compositeTypes procData .in .labeledProcIn list.get =:: mut inType
@@ -1011,17 +1005,17 @@ proc( Type LabelId TemplateId TypeContext ptr mut => Type ) =: public newNamedTy
   context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType new return
 end
 proc( Type => bool ) =: public isNamedType
-  Type .namedType == return
+  .namedType ?? return
 end
 proc( Type TypeContext ptr => Type ) =: public unwrapNamed
   =:: context
   while
-    #dup Type .namedType == if
+    #dup .namedType ?? if
       context [] .namedTypes
         #swap .namedType
       list.at .data [] .data
       continue
-    else #dup Type .generatedType == _if
+    else #dup .generatedType ?? _if
       context [] .generatedTypes
         #swap .generatedType
       list.at .data [] .generated
@@ -1032,20 +1026,20 @@ proc( Type TypeContext ptr => Type ) =: public unwrapNamed
 end
 proc( Type TypeContext ptr => LabelId ) =: public namedTypeName
   =:: context
-  #dup Type .namedType == if
+  #dup .namedType ?? if
     context [] .namedTypes #swap .namedType list.get .name return
   end
   #drop id.LABEL_ID_NONE return
 end
 proc( Type TypeContext ptr => LabelId ) =: public getImplId
   =:: context
-  #dup Type .namedType == if
+  #dup .namedType ?? if
     context [] .namedTypes #swap .namedType list.get .implId return
   end
   #drop -1 return
 end
 proc( Type : named Type : value i32 : implId TypeContext ptr mut : context => bool ) =: public setNamedType
-  named Type .namedType == if
+  named .namedType ?? if
     context [] .namedTypes named .namedType list.at .data
       #dup [] .data Type .undefined typeEquals if
         value #over [] .data =
@@ -1143,7 +1137,7 @@ proc(
     constContext
   findGeneratedType #drop .generatedType =:: id
   typeContext [] .generatedTypes id list.at .data =:: prevType
-  prevType [] .generated Type .undefined != if
+  prevType [] .generated .undefined ?? ! if
     true return
   end
   value prevType [] .generated =
@@ -1152,7 +1146,7 @@ end
 
 proc( Type : generator TypeContext ptr mut : context => Type ) =: public getGeneratedType
   generator context unwrapNamed =:: mut t
-  t Type .generatedType != if
+  t .generatedType ?? ! if
     generator return
   end
   context [] .generatedTypes t .generatedType list.at .data =:: genData
@@ -1181,7 +1175,7 @@ proc( i32 : id => Type ) =: public newAutoType
   id Type .autoType new return
 end
 proc( Type => bool ) =: public isAutoType
-  Type .autoType == return
+  .autoType ?? return
 end
 proc( i32 : id => Type ) =: public newGenericType
   id Type .genericType new return
@@ -1235,24 +1229,24 @@ proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has st
     reference mutableReference case
       t context getBaseType context containsGeneric return
     pointer arrayType case
-      context [] .arrayTypes t #dup Type .pointer == if .pointer else .arrayType end list.get =:: arrayType
+      context [] .arrayTypes t #dup .pointer ?? if .pointer else .arrayType end list.get =:: arrayType
       arrayType .base context containsGeneric =:: mut isStatic =:: mut isTemplate
       isTemplate isStatic & arrayType .fixedSize ! | if
         isTemplate isStatic return
       end
       0 while #dup arrayType .dims < do
         context [] .arraySizes arrayType .sizeOffset #over:2 + list.get .sizeType
-          #dup ArraySizeType .staticArg == if
+          #dup .staticArg ?? if
             true isStatic =
           end
-        ArraySizeType .templateArg == if
+        .templateArg ?? if
             true isTemplate =
         end
         1 +
       end #drop
       isTemplate isStatic return
     tuple struct union labeledProcIn procIn procOut enum case
-      t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & 0 != #swap COMP_FLAG_STATIC_ARGS & 0 != return
+      t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & ? #swap COMP_FLAG_STATIC_ARGS & ? return
     generatedType case
       false false return ## TODO check if type contains generic
     procedure case
@@ -1299,7 +1293,7 @@ proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool 
       false return
     end
     reshape if
-      srcSize #over array.get .sizeType ArraySizeType .int == if
+      srcSize #over array.get .sizeType .int ?? if
         srcTotal srcSize #over array.get .value * srcTotal =
         targetTotal targetSize #over array.get .value * targetTotal =
       else srcTotal targetTotal != _if #drop
@@ -1316,7 +1310,7 @@ proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool 
     srcTotal targetTotal == return
   end
   srcSize .length while #dup targetSize .length < do
-    targetSize #over array.get .sizeType ArraySizeType .int != targetSize #over:2 array.get .value 1 != | if #drop
+    targetSize #over array.get .sizeType .int ?? ! targetSize #over:2 array.get .value 1 != | if #drop
       false return
     end
     1 +
@@ -1362,7 +1356,7 @@ proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: 
   src target context canAutoCast if
     true return
   end
-  target Type .arrayIndex == if src context types.isInt ! _if
+  target .arrayIndex ?? if src context types.isInt ! _if
     false return ## can only cast integers to index
   end
   src context types.isNumber target context types.isNumber & if

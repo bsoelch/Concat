@@ -77,7 +77,7 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
   state [] .interpreter @ =:: interpreter
   state [] .stack .length 1 - while #dup 0 >= do
     state [] .stack #over list.at .data =:: typeInfo
-    typeInfo [] .value ConstValue .none == if
+    typeInfo [] .value .none ?? if
       break
     else
       state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
@@ -140,16 +140,16 @@ proc(
 => bool ) =: tryCastConstant
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext .typeContext @ =:: typeContext
-  src [] .value ConstValue .none == if
+  src [] .value .none ?? if
     true return
   end
   state [] .compiledOps src [] .opIndex list.at .data =:: srcOp
-  srcOp [] .val OpValue .Constant != if
+  srcOp [] .val .Constant ?? ! if
     true return
   end
   ## casting between integer constants
-  src [] .value ConstValue .int == if target typeContext types.isInt _if
-    target Type .arrayIndex == if
+  src [] .value .int ?? if target typeContext types.isInt _if
+    target .arrayIndex ?? if
       src [] .value .int 0 < if
         "array indices cannot be less than 0 got: " sb.wrap
         src [] .value .int sb.appendI
@@ -157,7 +157,7 @@ proc(
         false return
       end
       target typeContext types.getArraySize 0 array.get =:: index
-      index .sizeType types.ArraySizeType .int != if
+      index .sizeType .int ?? ! if
         true return
       end
       src [] .value .int 0 < src [] .value .int index .value >= | if
@@ -201,7 +201,7 @@ proc(
     typeInfo [] .valueType expectedType types.typeEquals if
       1 + continue
     end
-    expectedType Type .empty == if
+    expectedType .empty ?? if
       1 + continue ## TODO proper support for empty values
     end
     ## canAutoCast
@@ -283,7 +283,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
     pos errors appendError
     Type .undefined return
   end
-  typeInfo [] .value ConstValue .typeId != if
+  typeInfo [] .value .typeId ?? ! if
     "expected type-constant got " sb.wrap
       typeInfo [] .value constContext labelContext typeContext sb.appendConstant
     pos errors appendError
@@ -446,7 +446,7 @@ proc( i64 : index TypeCheckState ptr mut : state => i64 ) =: copyOp
     #dup index list.at .data list.appendP
   state [] .compiledOps =
   state [] .compiledOps list.peek .data =:: newOp
-  newOp [] .val OpValue .autoCast == if
+  newOp [] .val .autoCast ?? if
     1 newOp [] .val .autoCast .offset = ## update to head of stack moving operation and arguments
   end
   state [] .opInfo
@@ -466,7 +466,7 @@ proc( i64 : opIndex FilePosition : pos TypeCheckState ptr mut : state => i64 boo
 end
 proc( TypeCheckState ptr mut : state => ) =: removeTrailingNOPs
   state [] .compiledOps .length 1 - while #dup 0 >= do
-    state [] .compiledOps #over list.at .data [] .val OpValue .NOP != if
+    state [] .compiledOps #over list.at .data [] .val .NOP ?? ! if
       break
     end
     1 -
@@ -499,7 +499,7 @@ proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state => 
   state [] .program [] .errors @ =:: errors
   state [] .program [] .autoTypes @ =:: autoTypes
   state [] .program [] .idContext .typeContext @ =:: typeContext
-  op [] .dataType Type .autoType == if
+  op [] .dataType .autoType ?? if
     op [] .dataType types.getTypeId =:: id
     autoTyped if
       state [] .stack list.peek =:: value?
@@ -535,11 +535,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   state [] .program [] .idContext .constContext @ =:: constContext
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
-  op [] .dataType Type .autoType == if ## try resolving auto-types
+  op [] .dataType .autoType ?? if ## try resolving auto-types
     op [] .dataType types.getTypeId =:: id
     id 0 >= id program [] .autoTypes .length < & if
       program [] .autoTypes id list.get =:: autoType
-      autoType Type .undefined != if
+      autoType .undefined ?? ! if
         autoType op [] .dataType =
       end
     end
@@ -564,7 +564,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     getId case
       op [] .val .getId =:: idInfo
-      idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
+      idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: mutable
       mutable if
         idInfo .constValue
       else
@@ -591,7 +591,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     @Id case
       op [] .val .@Id .idType switch
         GLOBAL_VAR LOCAL_VAR PROCEDURE TMP_VAR case
-          op [] .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 != =:: mutable
+          op [] .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: mutable
           ConstValue .none op [] state pushValue
           op [] .dataType mutable typeContext types.getAddressType state replaceType
           op [] .val .@Id .labelId state replaceLabel
@@ -624,7 +624,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       break
     initializeId autoTypedInitializeId case
-      op [] .val OpValue .autoTypedInitializeId == if
+      op [] .val .autoTypedInitializeId ?? if
         op [] .val .autoTypedInitializeId op [] .val .initializeId =
         true
       else false end =:: autoTyped
@@ -640,7 +640,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
         PROCEDURE case
           op [] state appendOp #drop
-          idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & 0 != if
+          idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? if
             BlockType .EXPERIMENTAL_PROCEDURE
           else
             BlockType .PROCEDURE
@@ -694,10 +694,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     getLabel @Label hasLabel case
       false =:: mut checkOnly
-      op [] .val OpValue .hasLabel == if
+      op [] .val .hasLabel ?? if
         true checkOnly =
         op [] .val .hasLabel false
-      else op [] .val OpValue .getLabel == _if
+      else op [] .val .getLabel ?? _if
         op [] .val .getLabel false
       else
         op [] .val .@Label true
@@ -711,7 +711,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       container .valueType =:: srcType
       false =:: mut mutable
       false =:: mut isType
-      srcType types.primitive.TYPE types.typeEquals if container .value ConstValue .typeId == _if
+      srcType types.primitive.TYPE types.typeEquals if container .value .typeId ?? _if
         true isType =
         container .value .typeId
       else
@@ -791,7 +791,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           ConstValue .none ## XXX compute constant value
           containerType elementIndex op [] .pos opNewEnum
         state pushValue
-        true true eltType Type .empty == if 0 else 1 end argOffset state updateOpInfo
+        true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo
         elementLabel state replaceLabel
         return
       end
@@ -829,7 +829,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getElement @Element case
       break
     getArrayElement @ArrayElement case ## TODO? extract to procedure
-      op [] .val OpValue .@ArrayElement == =:: isAddr
+      op [] .val .@ArrayElement ?? =:: isAddr
       0 =:: mut indexCount
       state [] .stack .length while #dup 0 > do 1 -
         state [] .stack #over list.at .data =:: typeInfo
@@ -939,7 +939,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       fixedSize isAddr | #dup indexCount 1 + opOffset state updateOpInfo
       return
     Cast Cast! case
-      op [] .dataType Type .undefined == if
+      op [] .dataType .undefined ?? if
         ## resolve data type
         op [] .pos state popType op [] .dataType =
       end
@@ -949,7 +949,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       state [] .stack
         list.pop =:: value
       state [] .stack =
-      op [] .val OpValue .Cast == if
+      op [] .val .Cast ?? if
         value .valueType op [] .val .Cast =
       else
         value .valueType op [] .val .Cast! =
@@ -958,7 +958,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         value .valueType
         op [] .dataType
         op [] .val
-        OpValue .Cast! ==
+        .Cast! ??
       typeContext types.canCast ! if
         "cannot cast " sb.wrap
           value .valueType labelContext typeContext sb.appendType
@@ -975,7 +975,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       true true 1 offset state updateOpInfo
       return
     New case
-      op [] .dataType Type .undefined == if
+      op [] .dataType .undefined ?? if
         ## resolve data type
         op [] .pos state popType op [] .dataType =
       end
@@ -1100,18 +1100,18 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         end
         1 op [] .pos state discardValues ## remove value from stack
         valType typeContext types.getArraySize =:: sizes
-        op [] .val OpValue .length == if
+        op [] .val .length ?? if
           sizes .length 0 == if
             1 ConstValue .int new types.primitive.I_SIZE op [] .pos state pushConstant
             return
-          else sizes 0 array.get .sizeType types.ArraySizeType .int == _if
+          else sizes 0 array.get .sizeType .int ?? _if
             ## pushConstant
               sizes 0 array.get .value ConstValue .int new
               types.primitive.I_SIZE
               op [] .pos
             state pushConstant
             return
-          else sizes 0 array.get .sizeType types.ArraySizeType .staticArg == _if
+          else sizes 0 array.get .sizeType .staticArg ?? _if
             ## pushConstant
               sizes 0 array.get .value i32 cast ConstValue .genericArg new
               types.primitive.I_SIZE
@@ -1129,9 +1129,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           0 while #dup sizes .length < do
             sizes #over array.get =:: current
             idContext [] .templateArgBuffer
-              current .sizeType types.ArraySizeType .int == if
+              current .sizeType .int ?? if
                 current .value ConstValue .int new list.append
-              else current .sizeType types.ArraySizeType .staticArg == _if
+              else current .sizeType .staticArg ?? _if
                 current .value i32 cast ConstValue .genericArg new list.append
               else #drop:2
                 "unsupported array-size type for " sb.wrap
@@ -1167,7 +1167,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     newEnum call callPtr
     argc getArg getArgLen
     unaryOperator binaryOperator
-    enumLabelEq enumLabelNe checkEnumLabel setEnumLabel
+    checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
     hasName hasElement
     compilerInfo unreachable case
@@ -1300,7 +1300,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     false =:: mut hasStaticArg ## TODO store info about static args in procedure
     0 while #dup inTypes .length < do
       procIn #over typeContext types.compositeGetLabel
-       labelContext id.labelFlags id.FLAG_STATIC & 0 != if
+       labelContext id.labelFlags id.FLAG_STATIC & ? if
         true hasStaticArg =
         break
       end

@@ -51,7 +51,7 @@ end
 proc( InterpreterContext ptr mut : context => bool ) =: inEnum
   ## XXX cache number of open enum blocks
   context [] .openBlocks .length 1 - while #dup 0 >= do
-    context [] .openBlocks #over list.at .data [] .blockType BlockType .TYPE_ENUM == if #drop
+    context [] .openBlocks #over list.at .data [] .blockType .TYPE_ENUM ?? if #drop
       true return
     end
     1 -
@@ -276,7 +276,7 @@ proc(
     Return case
       context [] .openBlocks .length 1 - while #dup 0 >= do
         context [] .openBlocks #over list.at .data [] .blockType
-         #dup BlockType .PROCEDURE == #swap BlockType .EXPERIMENTAL_PROCEDURE == | if
+         #dup .PROCEDURE ?? #swap .EXPERIMENTAL_PROCEDURE ?? | if
           ## close procedure block
           context [] .openBlocks
             #swap list.setLength
@@ -402,13 +402,13 @@ proc(
           op closedBlock @ false context closedTypeBlock if true return end
           context [] .typeBuffer .length 1 >= if
             ## last argument is procedure output
-            context [] .typeBuffer context [] .typeBuffer .length 1 - list.get Type .procOut == _if
+            context [] .typeBuffer context [] .typeBuffer .length 1 - list.get .procOut ?? _if
               true
           else false end =:: isProc
           context [] .typeBuffer .length
             isProc if 1 else 0 end - ## last value is return type
           =:: nArgs
-          blockType BlockType .TYPE_PROC_IN == isProc ! & if
+          blockType .TYPE_PROC_IN ?? isProc ! & if
             showErrorMessages if
               "missing return type for procedure" sb.wrap op [] .pos errors appendError
             end
@@ -582,7 +582,7 @@ proc(
       op [] .val .getId .idType switch
         PROCEDURE case
           op [] .val .getId =:: idInfo
-          idInfo .constValue ConstValue .procedure != if
+          idInfo .constValue .procedure ?? ! if
             "unexpected value for procedure constant: " sb.wrap
               idInfo .constValue constContext labelContext typeContext sb.appendConstant
             op [] .pos errors appendError
@@ -681,7 +681,7 @@ proc(
         true =:: mut fixedSize
         context minStackOffset =:: minOffset
         context [] .stack .length 1 - =:: mut offset
-        offset minOffset > if context [] .stack offset list.get ConstValue .wildCard == _if
+        offset minOffset > if context [] .stack offset list.get .wildCard ?? _if
           false fixedSize =
           offset 1 - offset =
         end
@@ -699,7 +699,7 @@ proc(
         idContext [] .arraySizeBuffer =
         1 while #dup intArgs <= do
           context [] .stack offset #over:2 + list.get =:: intArg
-          intArg ConstValue .int == if
+          intArg .int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
               ## ArraySize
@@ -707,14 +707,14 @@ proc(
                 types.ArraySizeType .int
               types.ArraySize new list.append
             idContext [] .arraySizeBuffer =
-          else intArg ConstValue .genericArg == _if
+          else intArg .genericArg ?? _if
             idContext [] .arraySizeBuffer
               ## ArraySize
                 intArg .genericArg
                 types.ArraySizeType .staticArg
               types.ArraySize new list.append
             idContext [] .arraySizeBuffer =
-          else intArg ConstValue .templateArg == _if
+          else intArg .templateArg ?? _if
             idContext [] .arraySizeBuffer
               ## ArraySize
                 intArg .templateArg
@@ -735,7 +735,7 @@ proc(
           true return
         end
         context [] .stack offset list.get =:: typeConstant
-        typeConstant ConstValue .typeId != if
+        typeConstant .typeId ?? ! if
           "unexpected constant parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
             " expected type got " sb.appendS
@@ -743,7 +743,7 @@ proc(
           op [] .pos errors appendError
           true return
         end
-      op [] .val .typeModifier TypeModifier .ARRAY != =:: isPtr
+      op [] .val .typeModifier .ARRAY ?? ! =:: isPtr
       fixedSize ! isPtr ! & if
         "array types must have a fixed size" sb.wrap op [] .pos errors appendError
       end
@@ -752,7 +752,7 @@ proc(
         isPtr
         idContext [] .arraySizeBuffer list.asArray
         fixedSize
-        op [] .val .typeModifier TypeModifier .PTR_MUT ==
+        op [] .val .typeModifier .PTR_MUT ??
         typeContext
       types.newArrayType if #drop
         isPtr if
@@ -784,7 +784,7 @@ proc(
     argc getArg getArgLen
     length size Cast Cast! autoCast
     unaryOperator binaryOperator
-    enumLabelEq enumLabelNe checkEnumLabel setEnumLabel checkArrayIndex
+    checkEnumLabel setEnumLabel checkArrayIndex
     hasLabel hasName hasElement
     stackMod setName @Name
     compilerInfo unreachable case
@@ -806,7 +806,7 @@ proc(
   0 =:: mut offset
   context [] .openBlocks .length 1 - while #dup 0 >= do
     context [] .openBlocks #over list.at .data [] .blockType
-     #dup BlockType .PROCEDURE == #swap BlockType .EXPERIMENTAL_PROCEDURE == | if
+     #dup .PROCEDURE ?? #swap .EXPERIMENTAL_PROCEDURE ?? | if
       break
     end
     1 -
@@ -856,8 +856,8 @@ proc(
     procData [] .codeLength
   list.slice =:: code
   code 0 array.at .data =:: op
-  op [] .val OpValue .initializeId != if true else
-    op [] .val .initializeId .idType IdentifierType .PROCEDURE !=
+  op [] .val .initializeId ?? ! if true else
+    op [] .val .initializeId .idType .PROCEDURE ?? !
   end if
     "expected procedure initialization got " sb.wrap
       op []

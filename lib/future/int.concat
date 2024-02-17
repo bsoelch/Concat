@@ -165,7 +165,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     1 i64 =: mut size
     firstBlock 0 > if
       mStr sb.asStr firstBlock string.head mBase tryParseUInt
-        #dup ParserError .NONE != if #swap #drop
+        #dup .NONE ?? ! if #swap #drop
           mStr sb.free #drop
           ZERO #swap return
         end #drop
@@ -187,7 +187,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       ## addU32
         data size array.create
         mStr sb.asStr offset blockSize string.slice mBase tryParseUInt
-          #dup ParserError .NONE != if #swap #drop #swap #drop
+          #dup .NONE ?? ! if #swap #drop #swap #drop
             mStr sb.free #drop
             ZERO #swap return
           end #drop

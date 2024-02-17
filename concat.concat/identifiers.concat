@@ -169,7 +169,7 @@
     _FOLD_CONSTANTS_ if
       context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 == return
     end
-    context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 != return
+    context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & ? return
   end
   proc( IdentifierContext ptr mut : context => BlockType ) =: public currentScopeType
     context [] .openScopes .length 0 == if
@@ -207,10 +207,10 @@
     closed .scopeStrings freeScopeStrings closed .scopeStrings =
     closed .identifiers @ map.free
     closed .prevImports context [] .labelContext .namespaceInfo .imports =
-    closed .blockType BlockType .PROCEDURE == if
+    closed .blockType .PROCEDURE ?? if
       0 context [] .localVarCount = ## XXX handle nested procedures
     end
-    closed .flags SCOPE_FLAG_AUTO_CLOSE & 0 != closed .staticArgsOffset closed .blockType false return
+    closed .flags SCOPE_FLAG_AUTO_CLOSE & ? closed .staticArgsOffset closed .blockType false return
   end
 
 
@@ -377,21 +377,21 @@
     label  context [] .labelContext @
       #over #over labelFlags =:: flags
     labelName .data =:: name
-    context id.isTopLevel flags FLAG_PUBLIC & 0 != & if ## public global -> ignore fileId
+    context id.isTopLevel flags FLAG_PUBLIC & ? & if ## public global -> ignore fileId
       FILE_ID_NONE
     else
       currentFile
     end =:: fileId
-    flags FLAG_MUTABLE & 0 != if
-      idType IdentifierType .TYPE == if
+    flags FLAG_MUTABLE & ? if
+      idType .TYPE ?? if
         "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
-      idType IdentifierType .PROCEDURE == if
+      idType .PROCEDURE ?? if
         "procedures cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
-      idType IdentifierType .ARGUMENT ==  if
+      idType .ARGUMENT ??  if
         "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
@@ -422,15 +422,15 @@
     mScope [] .identifiers @
       idName
       valType
-      flags FLAG_MUTABLE & 0 != if ConstValue .none new else constVal end
+      flags FLAG_MUTABLE & ? if ConstValue .none new else constVal end
       declaredAt
       label
-      idType IdentifierType .LOCAL_VAR == idType IdentifierType .ARGUMENT == | idType IdentifierType .TMP_VAR == | if
+      idType .LOCAL_VAR ?? idType .ARGUMENT ?? | idType .TMP_VAR ?? | if
         TEMPLATE_ID_NONE
       else
         context [] .currentTemplate
       end
-      id -1 == idType IdentifierType .LOCAL_VAR == & if
+      id -1 == idType .LOCAL_VAR ?? & if
         context [] .localVarCount
           #dup 1 + context [] .localVarCount =
       else
@@ -446,13 +446,13 @@
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
     sb
       id .labelId labelContext id.labelFlags #swap
-        #over id.FLAG_PUBLIC & 0 != if
+        #over id.FLAG_PUBLIC & ? if
           "public " sb.appendS
         end
-        #over id.FLAG_EXTERN & 0 != if
+        #over id.FLAG_EXTERN & ? if
           "extern " sb.appendS
         end
-        #over id.FLAG_MUTABLE & 0 != if
+        #over id.FLAG_MUTABLE & ? if
           "mutable " sb.appendS
         end
       #swap #drop
@@ -604,7 +604,7 @@
   end
   proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => CompositeId ) =: replaceGenericsComposite
     context [] .typeContext .compositeTypes src list.get =:: composite
-    composite .flags COMP_FLAG_VOID_ONLY & 0 != composite .flags COMP_GENERIC_MASK & 0 == | if
+    composite .flags COMP_FLAG_VOID_ONLY & ? composite .flags COMP_GENERIC_MASK & 0 == | if
       src return ## no generic elements
     end
     composite .eltCount Type list.create
@@ -627,13 +627,13 @@
     return
   end
   proc( ConstValue => ArraySize bool ) =: constToSize
-    #dup ConstValue .int == if
+    #dup .int ?? if
       .int ArraySizeType .int ArraySize new false return
     end
-    #dup ConstValue .genericArg == if
+    #dup .genericArg ?? if
       .genericArg ArraySizeType .staticArg ArraySize new false return
     end
-    #dup ConstValue .templateArg == if
+    #dup .templateArg ?? if
       .templateArg ArraySizeType .templateArg ArraySize new false return
     end
     #drop
@@ -679,12 +679,12 @@
             implPos
             context
           replaceGenericsType
-        src Type .mutableReference == context [] .typeContext @ types.newReferenceType
+        src .mutableReference ?? context [] .typeContext @ types.newReferenceType
         return
       arrayIndex case
         src return ## TODO replace arrayIndex
       pointer arrayType case
-        src Type .pointer == =:: isPtr
+        src .pointer ?? =:: isPtr
         src isPtr if .pointer else .arrayType end
         context [] .typeContext .arrayTypes #swap list.get =:: arrayType
           arrayType .base templateArgs genericArgs implPos context replaceGenericsType
@@ -794,7 +794,7 @@
       genericType case
         src .genericType
           #dup 0 >= #over genericArgs .length < & if
-            genericArgs #swap context argBufferGet #dup ConstValue .typeId == if
+            genericArgs #swap context argBufferGet #dup .typeId ?? if
               .typeId return
             end #drop
             ## TODO error message if argument is not typeId
@@ -803,7 +803,7 @@
       templateType case
         src .templateType
           #dup 0 >= #over templateArgs .length < & if
-            templateArgs #swap context argBufferGet #dup ConstValue .typeId == if
+            templateArgs #swap context argBufferGet #dup .typeId ?? if
               .typeId return
             end #drop
             ## error message if argument is not typeId
@@ -841,7 +841,7 @@
   proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes IdentifierContext ptr mut : context => ) =: resolveGenericsTypeInternal
     #using types
     context [] .typeContext @ =:: typeContext
-    expected Type .templateType == if
+    expected .templateType ?? if
       expected .templateType 0 < expected .templateType templateCount >= | if
         return
       end
@@ -851,7 +851,7 @@
       true visitedValues expected .templateType [] =
       return
     end
-    expected Type .genericType == if
+    expected .genericType ?? if
       expected .genericType 0 < expected .genericType genericCount >= | if
         return
       end

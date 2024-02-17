@@ -10,7 +10,7 @@ proc( i32 => i32 ) =: i32Hash end
 proc( i32 i32 => bool ) =: i32Eq  == end
 
 proc( i64 optional => ) =: printOpt
-  #dup i64 optional .empty == if #drop
+  #dup optional.isEmpty if #drop
     "empty" io.puts #drop
     return
   end
