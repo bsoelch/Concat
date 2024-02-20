@@ -1,0 +1,52 @@
+struct( i32 : mut x ) =:: s
+
+proc( => ) =: main
+  0 s new =:: mut A
+  A .x ..debug.print
+  ## direct edit
+  1 A .x =
+  A .x ..debug.print ## 1
+  ## edit stack tuple
+  A
+    2 #over .x =
+  .x ..debug.print   ## 2
+  A .x ..debug.print ## 1
+  ## edit value while tuple is on stack
+  A
+    3 A .x =
+  .x ..debug.print   ## 1
+  A .x ..debug.print ## 3
+  ## edit value while value is on stack
+  A .x
+    4 A .x =
+  ..debug.print      ## 3
+  A .x ..debug.print ## 4
+  #+
+  ## replace tuple on stack
+  A
+    5 s new #over =
+  .x ..debug.print   ## 5
+  A .x ..debug.print ## 4
+  +#
+  ## multiple values on stack
+  A
+    A
+      6 #over .x =
+    .x ..debug.print ## 6
+  .x ..debug.print   ## 4
+  A .x ..debug.print ## 4
+  ## duplicated value on stack
+  A
+    #dup
+      7 #over .x =
+    .x ..debug.print  ## 7
+  .x ..debug.print    ## 7
+  A .x ..debug.print  ## 4
+  ## duplicated value on stack
+  A
+    #dup .x
+      8 #over:2 .x =
+    ..debug.print     ## 4
+  .x ..debug.print    ## 8
+  A .x ..debug.print  ## 4
+end
