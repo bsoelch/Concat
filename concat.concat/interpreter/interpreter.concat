@@ -140,10 +140,19 @@ proc(
     context [] .typeBuffer
       stackValue [] .typeId list.append
     context [] .typeBuffer =
-    forceLabel if stackInfo [] .valueName id.LABEL_ID_NONE == _if
-      "missing label for composite element" sb.wrap
-      stackInfo [] .pushedAt errors appendError
-      true error =
+    stackInfo [] .valueName id.LABEL_ID_NONE == if
+      forceLabel if
+        "missing label for composite element" sb.wrap
+        stackInfo [] .pushedAt errors appendError
+        true error =
+      end
+      ## newDummyLabel
+        #dup
+        id.FLAG_DUMMY ## TODO? flags
+        stackInfo [] .pushedAt
+        -1 ## TODO resolve current file
+        labelContext
+      id.newDummyLabel stackInfo [] .valueName =
     end
     context [] .labelBuffer
       stackInfo [] .valueName list.append
@@ -542,7 +551,6 @@ proc(
         end
         true return
       end
-      ## TODO declare name as local variable
       context [] .stackInfo list.peek .data =:: valInfo
       context inInitializer ! if
         valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
@@ -555,6 +563,14 @@ proc(
         end
       end
       op [] .val .declareId .labelId valInfo [] .valueName =
+      ## map.put
+        context [] .variables @
+        op [] .val .declareId .labelId
+        ## Constant
+          op [] .val .declareId .labelId types.newGenericType ConstValue .typeId new
+          valInfo []
+        Constant new
+      map.put #drop
       false return
     getName case
       context inEnum if
@@ -655,7 +671,7 @@ proc(
             false return
           end
           idInfo .constValue .procedure op [] .pos context evaluateCall return
-        LOCAL_VAR ARGUMENT case
+        LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if
             showErrorMessages if
@@ -668,7 +684,7 @@ proc(
           value? .data =:: value ## TODO? wrap local variable in reference?
           value .value value .info .valueType label op [] .pos context pushValue
           false return
-        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR LABEL case
+        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR case
         showErrorMessages if
           "unsupported operation in constant evaluation: " sb.wrap
             op [] constContext labelContext typeContext sb.appendOp
@@ -835,6 +851,7 @@ proc(
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
+  context [] .program [] .idContext .labelContext @ =:: labelContext
   context [] .program [] .idContext .typeContext @ =:: typeContext
   program [] .procedures procId list.at .data =:: procData
   procData [] .procType =:: procType
@@ -862,8 +879,8 @@ proc(
     "expected procedure initialization got " sb.wrap
       op []
         idContext [] .constContext @
-        idContext [] .labelContext @
-        idContext [] .typeContext @
+        labelContext
+        typeContext
       sb.appendOp
     op [] .pos errors appendError
     true return ## not a call
@@ -875,6 +892,7 @@ proc(
     context [] .stackInfo #over argsOffset + list.at .data =:: valueInfo
     inType #over typeContext types.compositeGetLabel =:: label
     label id.LABEL_ID_NONE != if ## store argument as value
+     label labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
       context [] .variables @
         label
         ## Constant

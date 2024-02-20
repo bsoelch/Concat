@@ -457,13 +457,13 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state => Typ
     hasArrayType if arrayType else Type .undefined end
   return
 end
-proc( LabelId : label Type : valType i64 : index ParserState ptr mut : state => ) =: newStaticArg
+proc( LabelId : label Type : valType i64 : argId ParserState ptr mut : state => ) =: newStaticArg
   state [] .staticArgs
     valType
       #dup types.primitive.TYPE types.typeEquals if
-        index i32 cast types.newGenericType ConstValue .typeId new
+        argId i32 cast types.newGenericType ConstValue .typeId new
       else
-        index i32 cast ConstValue .genericArg new
+        argId i32 cast ConstValue .genericArg new
       end
     label
     StaticArgument new
@@ -1422,20 +1422,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end =:: inType
         inType .labeledProcIn ?? if
           inType typeContext types.compositeEltCount =:: count
-          0 while #dup count < do
-            inType #over typeContext types.compositeGetLabel =:: argLabel
-            inType #over typeContext types.compositeGetElement =:: argType
+          0 while #dup count < do =:: index
+            inType index typeContext types.compositeGetLabel =:: argLabel
+            inType index typeContext types.compositeGetElement =:: argType
+            _EXPERIMENTAL_ if
+              argLabel i32 cast
+            else
+              index
+            end =:: argId
               argLabel labelContext id.isLabelEmpty ! if
+               argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
                 ## declareIdentifier
                   argLabel
                   argType
                   IdentifierType .ARGUMENT
-                  #over:3
+                  index
                   argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
                     argType types.primitive.TYPE types.typeEquals if
-                      #over:4 types.newGenericType ConstValue .typeId new
+                      argId types.newGenericType ConstValue .typeId new
                     else
-                      #over:4 ConstValue .genericArg new
+                      argId ConstValue .genericArg new
                     end
                   else
                     ConstValue .none
@@ -1446,13 +1452,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   progContext [] .errors @
                 id.declareIdentifier if
                   idName .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
-                  #drop:3 return
+                  #drop:2 return
                 end #drop:2
               end
               argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-                argLabel argType #over:2 state newStaticArg
+                argLabel argType argId state newStaticArg
               end
-            1 +
+            index 1 +
           end #drop
         end
       end
@@ -1830,16 +1836,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             return
           end
         end
-      #dup 10 number.tryParseInt .NONE ?? if i32 cast #swap #drop
-        #dup 0 < if
-          "tuple index has to be non-negative got: " sb.wrap
-            #swap sb.appendI
-          fileState [] .wordStart state appendError2
-          0
+        _EXPERIMENTAL_ ! if
+          #dup 10 number.tryParseInt .NONE ?? if i32 cast #swap #drop
+            #dup 0 < if
+              "tuple index has to be non-negative got: " sb.wrap
+                #swap sb.appendI
+              fileState [] .wordStart state appendError2
+              0
+            end
+            fileState [] .wordStart opTupleGet state appendOp
+            return
+          else #drop end
         end
-        fileState [] .wordStart opTupleGet state appendOp
-        return
-      else #drop end
         id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
       fileState [] .wordStart opGetLabel state appendOp
       return

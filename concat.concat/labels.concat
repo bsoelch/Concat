@@ -1,5 +1,6 @@
 #include numbers
 #include string
+#include stringBuilder
 #include list
 #include optional
 #include utf8
@@ -15,14 +16,15 @@ struct( i64 : offset i64 : length ) =:: public StringConstant
 
 i32 =:: public LabelFlag
 #namespace id
-  0  LabelFlag =: public FLAG_NONE
-  1  LabelFlag =: public FLAG_MUTABLE
-  2  LabelFlag =: public FLAG_AUTO
-  4  LabelFlag =: public FLAG_EXTERN
-  8  LabelFlag =: public FLAG_PUBLIC
-  16 LabelFlag =: public FLAG_PRIVATE
-  32 LabelFlag =: public FLAG_STATIC
-  64 LabelFlag =: public FLAG_EMPTY
+  0   LabelFlag =: public FLAG_NONE
+  1   LabelFlag =: public FLAG_MUTABLE
+  2   LabelFlag =: public FLAG_AUTO
+  4   LabelFlag =: public FLAG_EXTERN
+  8   LabelFlag =: public FLAG_PUBLIC
+  16  LabelFlag =: public FLAG_PRIVATE
+  32  LabelFlag =: public FLAG_STATIC
+  64  LabelFlag =: public FLAG_EMPTY
+  128 LabelFlag =: public FLAG_DUMMY
 
   0x40000000u32 LabelFlag =: public FLAG_EXPERIMENTAL
 #end
@@ -108,6 +110,23 @@ struct(
     context [] .labels
       ## Label
         offset str .length StringConstant new
+        pos
+        context [] .namespaceInfo
+        srcFile
+        flags
+      Label new list.append
+    context [] .labels =
+    context [] .labels .length 1 - LabelId cast return
+  end
+  proc( i64 : id LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context => LabelId ) =: public newDummyLabel
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer
+      id sb.appendI
+    context [] .nameBuffer =
+    context [] .nameBuffer .length offset - =:: length
+    context [] .labels
+      ## Label
+        offset length StringConstant new
         pos
         context [] .namespaceInfo
         srcFile
