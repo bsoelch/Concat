@@ -9,6 +9,7 @@ type-checked code in post-fix notation.
 #include "types.concat"
 #include "identifiers.concat"
 #include "interpreter/interpreter.concat"
+#include "branchTree.concat"
 
 struct(
   Type         : mut valueType
@@ -34,7 +35,7 @@ struct(
   ProgramContext ptr mut : program
   InterpreterContext : mut interpreter
   bool : mut interpreterActive
-  TypeInfo list : mut stack
+  TypeInfo BranchTree : mut stack
   BlockInfo list : mut openBlocks
   Operation list : mut compiledOps
   OpInfo list : mut opInfo
@@ -75,8 +76,13 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
   end
   state [] .program =:: progContext
   state [] .interpreter @ =:: interpreter
-  state [] .stack .length 1 - while #dup 0 >= do
-    state [] .stack #over list.at .data =:: typeInfo
+  ## XXX? make buffer part of state
+  state [] .stack branchTree.depth TypeInfo list.create =:: mut buffer
+  TypeInfo ptr mut optional : typeInfo?
+  while
+    state [] .stack @ branchTree.peek typeInfo? =
+  typeInfo? optional.hasData do
+    typeInfo? .data =:: typeInfo
     typeInfo [] .value .none ?? if
       break
     else
@@ -85,13 +91,16 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
     _if
       break
     end
-    1 -
-  end 1 + =:: offset
+    buffer
+      typeInfo list.appendP
+    buffer =
+    state [] .stack @ branchTree.pop #drop
+  end
   ##  -> reset interpreter
   interpreter resetContext
   ##  -> copy values to interpreter
-  offset while #dup state [] .stack .length < do
-    state [] .stack #over list.at .data =:: typeInfo
+  buffer .length 1 - while #dup 0 >= do
+    buffer #over list.at .data =:: typeInfo
     typeInfo [] .opIndex state deleteOp ## clear previous location of operation
     interpreter [] .stack
       typeInfo [] .value list.append
@@ -104,12 +113,10 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
         typeInfo [] .pushedAt
       ValueInfo new list.append
     interpreter [] .stackInfo =
-    1 +
+    1 -
   end #drop
+  buffer list.free #drop
   state removeTrailingNOPs
-  state [] .stack
-    offset list.setLength
-  state [] .stack =
   true state [] .interpreterActive =
 end
 
@@ -121,11 +128,11 @@ proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
 end
 
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => bool ) =: checkStackSize
-  state [] .stack .length count < if
+  state [] .stack branchTree.depth count < if
     "stack underflow: need " sb.wrap
       count sb.appendI
       " values got " sb.appendS
-      state [] .stack .length sb.appendI
+      state [] .stack branchTree.depth sb.appendI
     pos state [] .program [] .errors @ appendError
     true return
   end
@@ -187,13 +194,13 @@ proc(
   state [] .program [] .idContext .labelContext @ =:: labelContext
   state [] .childIds .length =:: argOffset
   1 while #dup types .length <= do
-    #dup state [] .stack .length > if #drop
+    state [] .stack branchTree.depth 0 <= if #drop
       "not enough types for " sb.wrap
         name sb.appendStr
       pos errors appendError
       argOffset true return
     end
-    state [] .stack state [] .stack .length #over:2 - list.at .data =:: typeInfo
+    state [] .stack @ branchTree.pop .data =:: typeInfo
     state [] .childIds
       typeInfo [] .opIndex list.append
     state [] .childIds =
@@ -220,10 +227,7 @@ proc(
         #over
         expectedType
         pos
-      opAutoCast state appendOp typeInfo [] .opIndex =
-      expectedType typeInfo [] .valueType =
-      pos typeInfo [] .pushedAt =
-      true true 1 argId state updateOpInfo
+      opAutoCast state appendOp #drop
       1 + continue
     end
     "wrong type for " sb.wrap
@@ -235,16 +239,13 @@ proc(
     pos errors appendError
     1 +
   end #drop
-  state [] .stack
-    #dup .length types .length - list.setLength
-  state [] .stack =
   argOffset false return
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
   count pos state checkStackSize if return end
   0 =:: mut toDrop
-  state [] .stack .length count - while #dup state [] .stack .length < do
-    state [] .stack #over list.at .data =:: typeInfo
+  0 while #dup count < do
+    state [] .stack @ branchTree.pop .data =:: typeInfo
     typeInfo [] .opIndex state tryDeleteOp if
       toDrop 1 + toDrop =
     end
@@ -254,9 +255,6 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
   toDrop 0 > if
     toDrop StackModType .DROP pos opStackMod state appendOp #drop
   end
-  state [] .stack
-    #dup .length count - list.setLength
-  state [] .stack =
 end
 
 proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
@@ -267,12 +265,8 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
   1 pos state checkStackSize if Type .undefined return end
-  state [] .stack .length 1 - =:: offset
-  state [] .stack offset list.at .data =:: typeInfo
+  state [] .stack @ branchTree.pop .data =:: typeInfo
   typeInfo [] .opIndex state deleteOp ## remove stored operation
-  state [] .stack
-    offset list.setLength
-  state [] .stack =
   typeInfo [] .valueType =:: mut valType
   valType typeContext types.isReference if ## unwrap references
     valType typeContext types.getBaseType valType =
@@ -293,7 +287,8 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
 end
 
 proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushConstant
-    state [] .stack
+    ## branchTree.push
+      state [] .stack @
       ## TypeInfo
         valType
         value
@@ -301,8 +296,8 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
         pos
         state [] .compiledOps .length
         -1
-      TypeInfo new list.append
-    state [] .stack =
+      TypeInfo new
+    branchTree.push
     state [] .compiledOps
       value valType pos opConst list.append
     state [] .compiledOps =
@@ -316,7 +311,8 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
     state [] .opInfo =
 end
 proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: pushValue
-    state [] .stack
+    ## branchTree.push
+      state [] .stack @
       ## TypeInfo
         op .dataType
         value
@@ -324,8 +320,8 @@ proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: p
         op .pos
         state [] .compiledOps .length
         -1
-      TypeInfo new list.append
-    state [] .stack =
+      TypeInfo new
+    branchTree.push
     state [] .compiledOps
       op list.append
     state [] .compiledOps =
@@ -339,7 +335,7 @@ proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: p
     state [] .opInfo =
 end
 proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state => ) =: updateOpInfo
-  state [] .stack list.peek .data [] .opIndex =:: opIndex
+  state [] .stack @ branchTree.peek .data [] .opIndex =:: opIndex
   state [] .opInfo opIndex list.at .data =:: opInfo
   argCount i32.MAX > if
     ..unreachable ## XXX handle case of too many arguments
@@ -358,11 +354,11 @@ proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckSt
   canDelete opInfo [] .canDelete =
 end
 proc( LabelId : label TypeCheckState ptr mut : state => ) =: replaceLabel
-  state [] .stack list.peek .data =:: top
+  state [] .stack @ branchTree.peek .data =:: top
   label top [] .valueId =
 end
 proc( Type : newType TypeCheckState ptr mut : state => ) =: replaceType
-  state [] .stack list.peek .data =:: top
+  state [] .stack @ branchTree.peek .data =:: top
   newType top [] .valueType =
 end
 
@@ -502,7 +498,7 @@ proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state => 
   op [] .dataType .autoType ?? if
     op [] .dataType types.getTypeId =:: id
     autoTyped if
-      state [] .stack list.peek =:: value?
+      state [] .stack @ branchTree.peek =:: value?
       value? optional.hasData if
         value? .data [] .valueType
         #dup typeContext types.isReference if
@@ -657,9 +653,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       1 op [] .pos state checkStackSize if
         return
       end
-      state [] .stack
-        list.pop =:: target
-      state [] .stack =
+      state [] .stack @ branchTree.pop .data [] =:: target
       target .readCheckIndex -1 != if
         target .readCheckIndex state deleteOp ## no read check when writing to value
       end
@@ -705,9 +699,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       1 op [] .pos state checkStackSize if
         return
       end
-      state [] .stack
-        list.pop =:: container
-      state [] .stack =
+      state [] .stack @ branchTree.pop .data [] =:: container
       container .valueType =:: srcType
       false =:: mut mutable
       false =:: mut isType
@@ -823,7 +815,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end =:: targetType
       targetType state replaceType
       elementLabel state replaceLabel
-      onRead state [] .stack list.peek .data [] .readCheckIndex =
+      onRead
+        state [] .stack @ branchTree.peek .data
+      [] .readCheckIndex =
       mutable ! true childCount childOffset state updateOpInfo
       return
     getElement @Element case
@@ -831,8 +825,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
     getArrayElement @ArrayElement case ## TODO? extract to procedure
       op [] .val .@ArrayElement ?? =:: isAddr
       0 =:: mut indexCount
-      state [] .stack .length while #dup 0 > do 1 -
-        state [] .stack #over list.at .data =:: typeInfo
+      state [] .stack @ branchTree.itr.start while
+        branchTree.itr.hasNext
+      do branchTree.itr.peekNext =:: typeInfo ## don't consume value
         typeInfo [] .valueType typeContext types.isReference if
           ## unwrap references
           typeInfo [] .valueType typeContext types.getBaseType
@@ -855,14 +850,17 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           return
         end
         indexCount 1 + indexCount =
-      end =:: offset
-      offset 0 < if
-        "missing type for operation " sb.wrap
-          op [] constContext labelContext typeContext sb.appendOp
-          " expected pointer" sb.appendS
-        op [] .pos errors appendError
+        branchTree.itr.skipNext ## go to next value
       end
-      state [] .stack offset list.at .data [] .valueType =:: srcType
+        branchTree.itr.hasNext ! if #drop
+          "missing type for operation " sb.wrap
+            op [] constContext labelContext typeContext sb.appendOp
+            " expected pointer" sb.appendS
+          op [] .pos errors appendError
+          return
+        end
+        branchTree.itr.next [] .valueType =:: srcType
+      #drop
       srcType op [] .dataType =
       srcType
         #dup typeContext types.isReference if
@@ -946,9 +944,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       1 op [] .pos state checkStackSize if
         return
       end
-      state [] .stack
-        list.pop =:: value
-      state [] .stack =
+      state [] .stack @ branchTree.pop .data [] =:: value
       op [] .val .Cast ?? if
         value .valueType op [] .val .Cast =
       else
@@ -1077,7 +1073,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       break
     length size case
-      state [] .stack list.peek =:: value?
+      state [] .stack @ branchTree.peek =:: value?
       value? optional.isEmpty if
         "missing argument for " sb.wrap
           op [] constContext labelContext typeContext sb.appendOp
@@ -1176,9 +1172,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       1 op [] .pos state checkStackSize if
         return
       end
-      state [] .stack
-        list.pop =:: value
-      state [] .stack =
+      state [] .stack @ branchTree.pop .data [] =:: value
       value .valueType op [] .dataType =
       op [] state appendOp #drop
       return
@@ -1193,11 +1187,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             return
           end
           ## copy value on stack
-          state [] .stack state [] .stack .length 1 - offset - list.at .data =:: copied
-          state [] .stack
-            copied list.appendP
-          state [] .stack =
-          state [] .stack list.peek .data =:: newOp
+          state [] .stack @ offset branchTree.at .data =:: copied
+          state [] .stack @
+            copied []
+          branchTree.push
+          state [] .stack @ branchTree.peek .data =:: newOp
           op [] .pos newOp [] .pushedAt =
           ## copy value in code
           copied [] .opIndex op [] .pos state tryCopyOp if #drop
@@ -1208,8 +1202,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           2 op [] .pos state checkStackSize if
             return
           end
-          state [] .stack .length 2 - =:: offset
-          state [] .stack offset list.at .data =:: lower
+          state [] .stack @ 1 branchTree.at .data =:: lower
           ## swap values in code
           lower [] .opIndex op [] .pos state tryCopyOp if #drop
             op [] state appendOp #drop
@@ -1222,17 +1215,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             newIndex lower [] .opIndex =
           end
           ## swap values on stack
-          state [] .stack
-            lower list.appendP
-          state [] .stack =
-          ## mem.move
-            state [] .stack .data offset +
-            state [] .stack .data offset 1 + +
-            2
-          mem.move #drop
-          state [] .stack
-            #dup .length 1 - list.setLength
-          state [] .stack =
+          state [] .stack @ branchTree.swap
           return
       end
       break
@@ -1262,7 +1245,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     program
     program wrapProgram
     true
-    32  TypeInfo  list.create
+    TypeInfo branchTree.create
     32  BlockInfo list.create
     128 Operation list.create
     128 OpInfo    list.create
@@ -1287,7 +1270,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
       state .compiledOps progFile [] .globalOps =
     state .compiledOps =
     state @ resetInterpreter
-    state .stack list.clear state .stack = ## TODO error on unhandled values
+    state .stack @ branchTree.clear ## TODO error on unhandled values
     1 +
   end #drop
   state @ clearOps
@@ -1326,11 +1309,12 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     state .compiledOps procFile [] .localOps =
     originalOps state .compiledOps =
     state @ resetInterpreter
-    state .stack list.clear state .stack = ## TODO error on wrong return types
+    state .stack @ branchTree.clear ## TODO error on wrong return types
     1 +
   end #drop
   ## static procedures
   ## TODO type-check static procedures
   state @ freeOps
+  state .stack @ branchTree.free
   state .interpreter @ cleanupContext
 end

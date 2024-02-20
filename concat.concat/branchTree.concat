@@ -1,0 +1,265 @@
+#include mem
+#include arrayView
+#include list
+
+#namespace branchTree
+  i64 =:: public NodeId
+
+  #template type : T #end
+  struct(
+    T : mut data
+    NodeId : parent
+    i64 : level
+    bool : mut deleted
+  ) =:: public Node
+#end
+
+#template type : T #end
+struct(
+  branchTree.NodeId : mut branchHead
+  branchTree.NodeId list : mut branchPoints
+  T branchTree.Node list : mut nodes
+) =:: public BranchTree
+
+#namespace branchTree
+  #template type : T #end
+  proc( => T BranchTree ) =: public create
+    ## BranchTree
+      -1
+      32 branchTree.NodeId list.create
+      32 T branchTree.Node list.create
+    T BranchTree new
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => ) =: public clear
+    -1 tree [] .branchHead =
+    tree [] .branchPoints
+      list.clear
+    tree [] .branchPoints =
+    tree [] .nodes
+      list.clear
+    tree [] .nodes =
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => ) =: public free
+    -1 tree [] .branchHead =
+    tree [] .branchPoints
+      list.free
+    tree [] .branchPoints =
+    tree [] .nodes
+      list.free
+    tree [] .nodes =
+  end
+  
+  #template type : T #end
+  struct(
+   T BranchTree ptr mut : tree
+   NodeId : id
+  ) =:: public BranchItr
+  
+  #namespace itr
+    #template type : T #end
+    proc( T BranchTree ptr mut : tree => T BranchItr ) =: public start
+      tree tree [] .branchHead T BranchItr new
+    end
+    #template type : T #end
+    proc( T BranchItr : itr => T BranchItr bool ) =: public hasNext
+      itr .id 0 < itr .id itr .tree [] .nodes .length >= | if
+        itr false return
+      end
+      itr itr .tree [] .nodes itr .id list.at .data [] .deleted ! return
+    end
+    #template type : T #end
+    proc( T BranchItr : itr => T BranchItr T ptr ) =: public next
+      itr .tree [] .nodes itr .id list.at .data =:: node
+      ## return
+        itr .tree node [] .parent T BranchItr new
+      node [] .data @ return
+    end
+    #template type : T #end
+    proc( T BranchItr : itr => T BranchItr T ptr ) =: public peekNext
+      itr .tree [] .nodes itr .id list.at .data =:: node
+      itr node [] .data @ return
+    end
+    #template type : T #end
+    proc( T BranchItr : itr => T BranchItr ) =: public skipNext
+      itr .tree [] .nodes itr .id list.at .data =:: node
+      itr .tree node [] .parent T BranchItr new return
+    end
+  #end
+  
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree NodeId : id => ) =: public unlinkNode
+    tree [] .branchPoints .length 0 > if
+     id tree [] .branchPoints #dup .length 1 - list.get < _if
+      return ## node still on different branch
+    end
+    id tree [] .nodes .length 1 - != if
+      true tree [] .nodes id list.at .data [] .deleted =
+      return
+    end
+    id 1 - while #dup 0 >= do
+      tree [] .nodes #over list.at .data [] .deleted ! if
+        break
+      end
+      1 -
+    end 1 + =:: newLength
+    newLength tree [] .nodes .length =
+  end
+  #template type : T #end
+  proc( T BranchTree : tree => i64 ) =: public depth
+    tree .branchHead -1 == if
+      0 return
+    end
+    tree .nodes
+      tree .branchHead
+    list.at .data [] .level return
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => NodeId ) =: public startBranch
+    tree [] .branchPoints
+      tree [] .nodes .length NodeId cast list.append
+    tree [] .branchPoints =
+    tree [] .branchHead return
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => ) =: public endBranch
+    tree [] .branchPoints .length
+      1 -
+    tree [] .branchPoints .length =
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree NodeId : branchPoint => ) =: public reset
+    branchPoint tree [] .branchHead =
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree T : value => ) =: public push
+    tree [] .branchHead -1 == if
+      1i64
+    else
+      tree [] .nodes
+        tree [] .branchHead
+      list.at .data [] .level 1 +
+    end =:: level
+    value tree [] .branchHead level false T Node new =:: newNode
+    tree [] .nodes .length =:: newId
+    tree [] .nodes
+      newNode list.append
+    tree [] .nodes =
+    newId tree [] .branchHead =
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => T ptr mut optional ) =: public peek
+    tree [] .branchHead =:: nodeId
+    nodeId 0 < nodeId tree [] .nodes .length >= | if
+      T ptr mut optional.empty return
+    end
+    tree [] .nodes nodeId list.at
+      .data [] .data @
+    optional.wrap return
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree i32 : index => T ptr mut optional ) =: public at
+    tree [] .branchHead =:: mut nodeId
+    index while
+      nodeId 0 < nodeId tree [] .nodes .length >= | if #drop
+        T ptr mut optional.empty return
+      end
+    #dup 0 > do
+      tree [] .nodes nodeId list.at .data [] .parent nodeId =
+      1 -
+    end #drop
+    tree [] .nodes nodeId list.at
+      .data [] .data @
+    optional.wrap return
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => T ptr mut optional ) =: public pop
+    tree [] .branchHead =:: nodeId
+    nodeId 0 < nodeId tree [] .nodes .length >= | if
+      T ptr mut optional.empty return
+    end
+    tree [] .nodes nodeId list.at .data =:: popped
+    popped [] .parent tree [] .branchHead =
+    ## unlink node, node stays available until now node is added
+    tree nodeId unlinkNode
+    popped [] .data @ optional.wrap return
+  end
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree => ) =: public swap
+    tree pop .data [] =:: upper
+    tree pop .data [] =:: lower
+    tree upper push
+    tree lower push
+  end
+
+  #template type : T type : C #end
+  proc(
+    T BranchTree ptr mut : tree
+    NodeId arrayView : branchHeads
+    proc( T ptr arrayView C => T ) ptr : mergeValues
+    C : context
+  => bool ) =: public merge
+    branchHeads .length 1 <= if
+      false return ## nothing to merge
+    end
+    -1 =:: mut initDepth
+    -1 =:: mut parentId
+    false =:: mut needMerge
+    0 while #dup branchHeads .length < do
+      branchHeads #over array.get =:: nodeId
+      nodeId 0 < nodeId tree [] .nodes .length >= if
+        #drop
+        true return ## nodeId invalid
+      end
+      initDepth -1 == if
+        tree [] .nodes nodeId list.at .data .level initDepth =
+      else
+        tree [] .nodes nodeId list.at .data .level initDepth != _if
+          #drop
+          true return ## nodes on top level have different depths
+      end
+      parentId -1 == if
+        nodeId parentId =
+      else nodeId parentId != _if
+        ## not already merged
+        true needMerge =
+      end
+      1 +
+    end #drop
+    needMerge ! if
+      false return ## heads identical -> no merge necessary
+    end
+    ## create mutable copy of heads
+    branchHeads .length =:: headCount
+    headCount NodeId mem.alloc =:: heads
+    heads branchHeads .data headCount mem.copy #drop
+    headCount T ptr mem.alloc =:: buffer
+    while
+      tree [] .nodes heads 0 [] list.at .data =:: root
+      root [] .parent parentId =
+      root [] .data @ buffer 0 [] =
+      parentId heads 0 [] =
+      false needMerge =
+      1 =:: mut i while i headCount < do
+        tree [] .nodes heads i [] list.at .data =:: next
+        next [] .parent parentId != if
+          true needMerge =
+        end
+        next [] .data @ buffer i [] =
+        tree heads i [] unlinkNode
+        next [] .parent heads i [] =
+        i 1 + i =
+      end
+      ## mergeValues
+        buffer headCount array.create
+        context
+      mergeValues () root [] .data =
+    needMerge do end
+    branchHeads 0 array.get tree [] .branchHead =
+    ## cleanup
+    buffer mem.free
+    heads mem.free
+    false return
+  end
+#end
