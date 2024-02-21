@@ -18,6 +18,7 @@ struct(
   FilePosition : mut pushedAt
   i64          : mut opIndex  ## FIXME how will values that are merged from different branches handle operation indices
   i64          : mut readCheckIndex
+  i64          : mut copyMutableIndex
 ) =:: TypeInfo
 
 struct(
@@ -296,6 +297,7 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
         pos
         state [] .compiledOps .length
         -1
+        -1
       TypeInfo new
     branchTree.push
     state [] .compiledOps
@@ -319,6 +321,7 @@ proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: p
         id.LABEL_ID_NONE
         op .pos
         state [] .compiledOps .length
+        -1
         -1
       TypeInfo new
     branchTree.push
@@ -401,6 +404,34 @@ proc( Operation : op TypeCheckState ptr mut : state => i64 #+opIndex+# ) =: appe
   state [] .opInfo =
   index return
 end
+proc( TypeCheckState ptr mut : state => ) =: wrapCopy
+  state [] .stack @ branchTree.peek .data =:: topValue
+  state [] .childIds
+    topValue [] .opIndex list.append
+  state [] .childIds =
+  state [] .compiledOps .length =:: index
+  state [] .compiledOps
+    topValue [] .valueType topValue [] .pushedAt opCopy list.append
+  state [] .compiledOps =
+  state [] .opInfo list.peek .data =:: prev
+  state [] .opInfo
+    ## OpInfo
+      1
+      state [] .childIds .length 1 -
+      prev [] .canMove
+      prev [] .canDelete
+    OpInfo new list.append
+  state [] .opInfo =
+  index topValue [] .opIndex =
+  index topValue [] .copyMutableIndex =
+end
+proc( i64 : copyMutableIndex TypeCheckState ptr mut : state => ) =: removeCopy
+  copyMutableIndex -1 != if
+    ## no copy when writing to value
+    OpValue .NOP state [] .compiledOps copyMutableIndex list.at .data [] .val =
+  end
+end
+
 proc( i64 : index TypeCheckState ptr mut : state => bool ) =: tryDeleteOp
   state [] .opInfo index list.at .data [] .canDelete if
     index state deleteOp
@@ -572,6 +603,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .dataType mutable typeContext types.newReferenceType state replaceType
           op [] .val .getId .labelId state replaceLabel
           mutable ! true 0 0 state updateOpInfo
+          mutable if ## insert copy for mutable values
+            state wrapCopy
+          end
           return
         TYPE ARGUMENT TEMPLATE_ARG case
           constValue op [] state pushValue
@@ -657,8 +691,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       target .readCheckIndex -1 != if
         target .readCheckIndex state deleteOp ## no read check when writing to value
       end
+      target .copyMutableIndex state removeCopy
       target .valueType typeContext types.isReference target .valueType typeContext types.isPointer | ! if
-        "can only assign to references or pointers got: " sb.wrap
+        "can only assign to pointers or references got: " sb.wrap
           target .valueType labelContext typeContext sb.appendType
         op [] .pos errors appendError
         return
@@ -751,6 +786,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           true ConstValue .boolean new types.primitive.BOOL op [] .pos state pushConstant
           return
         end
+        container .copyMutableIndex state removeCopy
         ## check enum label
         state [] .childIds
           #dup .length =:: childOffset
@@ -790,6 +826,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
         false mutable =
       end
+      isAddr if srcType typeContext types.isPointer srcType typeContext types.isReference | ! _if
+        "can only take address of pointers or references got: \"" sb.wrap
+        srcType labelContext typeContext sb.appendType
+        op [] .pos errors appendError
+        return
+      end
       1 =:: mut childCount
       -1i64 =:: mut onRead
       state [] .childIds
@@ -806,6 +848,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         ConstValue .none ## XXX compute constant value
         srcType elementIndex op [] .pos isAddr if op@Element else opGetElement end
       state pushValue
+      ## TODO can only take address of reference or pointer
       isAddr srcType typeContext types.isPointer | if
         eltType mutable typeContext types.getAddressType
       else srcType typeContext types.isReference _if
@@ -819,6 +862,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         state [] .stack @ branchTree.peek .data
       [] .readCheckIndex =
       mutable ! true childCount childOffset state updateOpInfo
+      isAddr if
+        container .copyMutableIndex state removeCopy
+      else
+        container .copyMutableIndex state [] .stack @ branchTree.peek .data [] .copyMutableIndex =
+      end
       return
     getElement @Element case
       break
@@ -859,7 +907,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           op [] .pos errors appendError
           return
         end
-        branchTree.itr.next [] .valueType =:: srcType
+        branchTree.itr.next =:: srcArray
+        srcArray [] .valueType =:: srcType
+        srcArray [] .copyMutableIndex =:: srcCopyMutIndex
       #drop
       srcType op [] .dataType =
       srcType
@@ -935,6 +985,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         end
       state replaceType
       fixedSize isAddr | #dup indexCount 1 + opOffset state updateOpInfo
+      isAddr if
+        srcCopyMutIndex state removeCopy
+      else mutable _if
+        arrayType typeContext types.isPointer if
+          state wrapCopy
+        else
+          srcCopyMutIndex state [] .stack @ branchTree.peek .data [] .copyMutableIndex =
+        end
+      end
       return
     Cast Cast! case
       op [] .dataType .undefined ?? if
@@ -1188,6 +1247,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           ## copy value on stack
           state [] .stack @ offset branchTree.at .data =:: copied
+          copied [] .valueType typeContext types.isReference if
+            ## copying converts reference to value
+            copied [] .valueType
+              typeContext types.getBaseType
+            copied [] .valueType =
+            -1 copied [] .copyMutableIndex = ## remove possibility to overwrite copy
+          end
           state [] .stack @
             copied []
           branchTree.push
@@ -1228,7 +1294,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         op [] .pos errors appendError
       end
       return
-    setId setLabel setElement setArrayElement autoCast case
+    setId setLabel setElement setArrayElement autoCast copy case
       "unsupported operation" sb.wrap
         op [] constContext labelContext typeContext sb.appendOp
       op [] .pos errors appendError
