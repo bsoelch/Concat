@@ -802,7 +802,7 @@ proc(
     unaryOperator binaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
     hasLabel hasName hasElement
-    stackMod setName @Name
+    stackMod setName @Name copy
     compilerInfo unreachable case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap

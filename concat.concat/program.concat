@@ -56,6 +56,7 @@ enum(
                 i32 : checkEnumLabel
                 i32 : setEnumLabel
                 i64 : checkArrayIndex
+                      copy
   StackModification : stackMod
             LabelId : getName
             LabelId : mut setName
@@ -199,6 +200,9 @@ end
 proc( Type i64 FilePosition => Operation ) =: public opCheckIndex
   =:: pos
   OpValue .checkArrayIndex new #swap pos Operation new return
+end
+proc( Type : t FilePosition : pos => Operation ) =: public opCopy
+  OpValue .copy t pos Operation new return
 end
 proc( LabelId FilePosition  => Operation ) =: public opGetName
   =:: pos
@@ -576,6 +580,11 @@ end
         stackMod case
           "stack modification: " sb.appendS
           #over .val .stackMod sb.appendStackMod
+          break
+        copy case
+          "copy( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " )" sb.appendS
           break
         getName case
           "get: " sb.appendS

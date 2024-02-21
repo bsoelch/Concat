@@ -2913,8 +2913,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op state checkLocal
       op 1 state insertStackOp
       return
-    autoCast case
-      break ## TODO support autoCast
+    autoCast copy case
+      break ## TODO support autoCast/copy
     stackMod case
       op state checkReachable
       op [] .val .stackMod .n =:: param
