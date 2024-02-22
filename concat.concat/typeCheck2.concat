@@ -678,6 +678,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
+          ## TODO update constant value in identifier if stack-value is constant
           op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes if
             #drop return
           end #drop

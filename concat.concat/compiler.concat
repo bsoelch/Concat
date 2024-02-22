@@ -4,6 +4,7 @@
 #include "typeCheck.concat"
 #include "typeCheck2.concat"
 #include "generator_c.concat"
+#include "generator_qbe.concat"
 
 stringBuilder : mut srcFile
 stringBuilder : mut outFile
@@ -218,6 +219,7 @@ proc( => ) =: main ## TODO check return value of fopen
   end
   prog .errors @ checkErrors
   _EXPERIMENTAL_ if
+    ## new type-checker
     prog @ typeCheckProgram2
     compilerTokensFile optional.hasData if ## XXX separate file for each compilation step
       1024 sb.create
@@ -229,20 +231,27 @@ proc( => ) =: main ## TODO check return value of fopen
       parsedOps sb.free #drop
     end
     prog .errors @ checkErrors
-  end
-  prog @ typeCheckProgram
-  compilerTokensFile optional.hasData if
-    1024 sb.create
-      prog sb.appendProgram
-    =:: parsedOps
-    compilerTokensFile .data io.OPEN_WRITE io.fopenStr #drop
-      #dup parsedOps io.fputSb #drop
+    ## QBE backend
+    outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
+      #dup prog @ compileToQBE
     io.fclose #drop
-    parsedOps sb.free #drop
+    prog .errors @ checkErrors
+  else
+    ## C backend
+    prog @ typeCheckProgram
+    compilerTokensFile optional.hasData if
+      1024 sb.create
+        prog sb.appendProgram
+      =:: parsedOps
+      compilerTokensFile .data io.OPEN_WRITE io.fopenStr #drop
+        #dup parsedOps io.fputSb #drop
+      io.fclose #drop
+      parsedOps sb.free #drop
+    end
+    prog .errors @ checkErrors
+    outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
+      #dup prog @ compileToC
+    io.fclose #drop
+    prog .errors @ checkErrors
   end
-  prog .errors @ checkErrors
-  outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
-    #dup prog @ compileToC
-  io.fclose #drop
-  prog .errors @ checkErrors
 end

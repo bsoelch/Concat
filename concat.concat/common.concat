@@ -47,3 +47,40 @@ type : public Type
 type : public ConstValue
 type : public ConstantArray
 type : public ConstantContext
+
+
+#namespace sb
+proc( stringBuilder string => stringBuilder ) =: public appendAsciified
+  =:: str
+  0 while #dup str .length < do
+    #swap
+      str #over:2 string.charAt =:: c
+      c '0' >= c '9' <= & if
+        c sb.appendC
+        #swap 1 + continue
+      end
+      c 'A' >= c 'Z' <= & if
+        c sb.appendC
+        #swap 1 + continue
+      end
+      c 'a' >= c 'z' <= & if
+        c sb.appendC
+        #swap 1 + continue
+      end
+      c '_' == if
+        "__" sb.appendS
+        #swap 1 + continue
+      end
+      c '.' == if
+        "_d" sb.appendS
+        #swap 1 + continue
+      end
+      "_X" sb.appendS
+      c 0xff & 0x10 < if
+        '0' sb.appendC
+      end
+      c 0xff & sb.appendI
+    #swap 1 +
+  end #drop
+end
+#end
