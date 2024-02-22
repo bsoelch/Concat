@@ -39,6 +39,7 @@ struct(
   TypeInfo BranchTree : mut stack
   BlockInfo list : mut openBlocks
   Operation list : mut compiledOps
+  i64 list : mut blockStarts
   OpInfo list : mut opInfo
   i64 list : mut childIds
   FileId : mut currentFile
@@ -195,7 +196,11 @@ proc(
   state [] .program [] .idContext .labelContext @ =:: labelContext
   state [] .childIds .length =:: argOffset
   1 while #dup types .length <= do
-    state [] .stack branchTree.depth 0 <= if #drop
+    types types .length #over:2 - array.get =:: expectedType
+    state [] .stack branchTree.depth 0 <= if
+      expectedType .empty ?? if
+        1 + continue ## skip empty arguments if no values on stack
+      end #drop
       "not enough types for " sb.wrap
         name sb.appendStr
       pos errors appendError
@@ -205,7 +210,6 @@ proc(
     state [] .childIds
       typeInfo [] .opIndex list.append
     state [] .childIds =
-    types types .length #over:2 - array.get =:: expectedType
     typeInfo [] .valueType expectedType types.typeEquals if
       1 + continue
     end
@@ -339,6 +343,12 @@ proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: p
 end
 proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state => ) =: updateOpInfo
   state [] .stack @ branchTree.peek .data [] .opIndex =:: opIndex
+  canMove canDelete argCount argOffset state opIndex updateOpInfoIndex
+end
+proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state => ) =: updateOpInfo_noStack
+  canMove canDelete argCount argOffset state state [] .opInfo .length 1 - updateOpInfoIndex
+end
+proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state i64 : opIndex => ) =: updateOpInfoIndex
   state [] .opInfo opIndex list.at .data =:: opInfo
   argCount i32.MAX > if
     ..unreachable ## XXX handle case of too many arguments
@@ -432,7 +442,12 @@ proc( i64 : copyMutableIndex TypeCheckState ptr mut : state => ) =: removeCopy
   end
 end
 
+## FIXME prevent editing of operations outside current block
 proc( i64 : index TypeCheckState ptr mut : state => bool ) =: tryDeleteOp
+  state [] .blockStarts .length 0 > if
+   index state [] .blockStarts #dup .length 1 - list.get < _if
+    true return
+  end
   state [] .opInfo index list.at .data [] .canDelete if
     index state deleteOp
     false return
@@ -688,8 +703,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         return
       end
       state [] .stack @ branchTree.pop .data [] =:: target
+      ## TODO? prevent writing to value pushed in different branch
       target .readCheckIndex -1 != if
-        target .readCheckIndex state deleteOp ## no read check when writing to value
+        target .readCheckIndex state tryDeleteOp if ## no read check when writing to value
+          "cannot remove enum index check" sb.wrap
+          op [] .pos errors appendError
+          return
+        end
       end
       target .copyMutableIndex state removeCopy
       target .valueType typeContext types.isReference target .valueType typeContext types.isPointer | ! if
@@ -839,7 +859,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         container .opIndex list.append
         containerType typeContext types.isEnum if
           containerType elementIndex op [] .pos opCheckEnum state appendOp onRead =
-          true true 0 0 state updateOpInfo
+          true true 0 0 state updateOpInfo_noStack
           onRead list.append
           childCount 1 + childCount =
         end
@@ -1314,6 +1334,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
     TypeInfo branchTree.create
     32  BlockInfo list.create
     128 Operation list.create
+    128 i64       list.create
     128 OpInfo    list.create
     128 i64       list.create
     FILE_ID_NONE
