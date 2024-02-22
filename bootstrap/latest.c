@@ -3038,6 +3038,7 @@ bool concat_types_dnewTuple(concat_arrayView_I3,concat_optional_I6,concat_TypeCo
 void concat_opGetArgLen(concat_FilePosition,concat_Operation*);
 bool concat_interpreter_doperator__unsigned_X60(concat_Type,concat_ConstValue,concat_ConstValue,concat_Type*,concat_ConstValue*);
 static void concat_30_FresolveAutoType(concat_Operation*,bool,concat_30_FTypeCheckState*);
+void concat_sb_dappendEscapedStrC(concat_list_I1,concat_arrayView_I1,concat_list_I1*);
 concat_Type const concat_primitive_dtypes_dBOOL;
 bool concat_types_disProcedure(concat_Type,concat_TypeContext const*);
 concat_Type concat_types_dnewAutoType(int32_t);
@@ -3125,29 +3126,29 @@ bool concat___EXPERIMENTAL__ = false;
 //local
 static void concat_0_FprintUsage(concat_arrayView_I1 arg0/*path*/){
 concat_list_I1 tmp0;
-concat_sb_dwrap(((int64_t)7),((int8_t const*)"usage: "),(&tmp0));
+concat_sb_dwrap(((int64_t)7),((int8_t const*)"u""s""a""g""e"":"" """),(&tmp0));
 concat_list_I1 tmp1;
 concat_sb_dappendStr(tmp0,arg0/*path*/,(&tmp1));
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp1,((int64_t)31),((int8_t const*)" \"inputFile\" [-o \"outputFile\"]\x0A"),(&tmp2));
+concat_sb_dappendS(tmp1,((int64_t)31),((int8_t const*)" ""\"""i""n""p""u""t""F""i""l""e""\""" ""[""-""o"" ""\"""o""u""t""p""u""t""F""i""l""e""\"""]""\x0A"""),(&tmp2));
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp2,((int64_t)9),((int8_t const*)"options:\x0A"),(&tmp3));
+concat_sb_dappendS(tmp2,((int64_t)9),((int8_t const*)"o""p""t""i""o""n""s"":""\x0A"""),(&tmp3));
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp3,((int64_t)22),((int8_t const*)"  -h: print help text\x0A"),(&tmp4));
+concat_sb_dappendS(tmp3,((int64_t)22),((int8_t const*)" "" ""-""h"":"" ""p""r""i""n""t"" ""h""e""l""p"" ""t""e""x""t""\x0A"""),(&tmp4));
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp4,((int64_t)55),((int8_t const*)"  -o \"fileName\": set output file  (default: \"./out.c\")\x0A"),(&tmp5));
+concat_sb_dappendS(tmp4,((int64_t)55),((int8_t const*)" "" ""-""o"" ""\"""f""i""l""e""N""a""m""e""\""":"" ""s""e""t"" ""o""u""t""p""u""t"" ""f""i""l""e"" "" ""(""d""e""f""a""u""l""t"":"" ""\""".""/""o""u""t"".""c""\""")""\x0A"""),(&tmp5));
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp5,((int64_t)58),((int8_t const*)"  -p \"fileName\": dump the parsed tokens to the given file\x0A"),(&tmp6));
+concat_sb_dappendS(tmp5,((int64_t)58),((int8_t const*)" "" ""-""p"" ""\"""f""i""l""e""N""a""m""e""\""":"" ""d""u""m""p"" ""t""h""e"" ""p""a""r""s""e""d"" ""t""o""k""e""n""s"" ""t""o"" ""t""h""e"" ""g""i""v""e""n"" ""f""i""l""e""\x0A"""),(&tmp6));
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)60),((int8_t const*)"  -t \"fileName\": dump the compiled tokens to the given file\x0A"),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)60),((int8_t const*)" "" ""-""t"" ""\"""f""i""l""e""N""a""m""e""\""":"" ""d""u""m""p"" ""t""h""e"" ""c""o""m""p""i""l""e""d"" ""t""o""k""e""n""s"" ""t""o"" ""t""h""e"" ""g""i""v""e""n"" ""f""i""l""e""\x0A"""),(&tmp7));
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp7,((int64_t)66),((int8_t const*)"  -l \"fileName\": set path to standard library (default: \"./lib/\")\x0A"),(&tmp8));
+concat_sb_dappendS(tmp7,((int64_t)66),((int8_t const*)" "" ""-""l"" ""\"""f""i""l""e""N""a""m""e""\""":"" ""s""e""t"" ""p""a""t""h"" ""t""o"" ""s""t""a""n""d""a""r""d"" ""l""i""b""r""a""r""y"" ""(""d""e""f""a""u""l""t"":"" ""\""".""/""l""i""b""/""\""")""\x0A"""),(&tmp8));
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp8,((int64_t)61),((int8_t const*)"  -e \"fileName\": write all compiler errors to the given file\x0A"),(&tmp9));
+concat_sb_dappendS(tmp8,((int64_t)61),((int8_t const*)" "" ""-""e"" ""\"""f""i""l""e""N""a""m""e""\""":"" ""w""r""i""t""e"" ""a""l""l"" ""c""o""m""p""i""l""e""r"" ""e""r""r""o""r""s"" ""t""o"" ""t""h""e"" ""g""i""v""e""n"" ""f""i""l""e""\x0A"""),(&tmp9));
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp9,((int64_t)31),((int8_t const*)"  -W: treat warnings as errors\x0A"),(&tmp10));
+concat_sb_dappendS(tmp9,((int64_t)31),((int8_t const*)" "" ""-""W"":"" ""t""r""e""a""t"" ""w""a""r""n""i""n""g""s"" ""a""s"" ""e""r""r""o""r""s""\x0A"""),(&tmp10));
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)76),((int8_t const*)"  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\x0A"),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)76),((int8_t const*)" "" ""-""q"":"" ""\"""q""u""i""e""t"" ""m""o""d""e""\""" ""(""n""o"" ""e""f""f""e""c""t""s"","" ""e""x""i""s""t""s"" ""f""o""r"" ""c""o""m""p""a""r""a""b""i""l""i""t""y"" ""w""i""t""h"" ""o""l""d"" ""c""o""m""p""i""l""e""r"")""\x0A"""),(&tmp11));
 concat_io_dFILE const tmp12 = concat_io_dstdOut();
 concat_io_dIOError const tmp13 = concat_io_dfputSb(tmp12,tmp11);
 concat_list_I1 tmp14;
@@ -3199,7 +3200,7 @@ if(tmp12){
 bool const tmp13 = ((l6_arg.e1_length)<((int64_t)2));
 if(tmp13){
 concat_io_dFILE const tmp14 = concat_io_dstdErr();
-concat_io_dIOError const tmp15 = concat_io_dfputs(tmp14,((int64_t)20),((int8_t const*)"invalid argument \"-\""));
+concat_io_dIOError const tmp15 = concat_io_dfputs(tmp14,((int64_t)20),((int8_t const*)"i""n""v""a""l""i""d"" ""a""r""g""u""m""e""n""t"" ""\"""-""\""""));
 tmp6 = ((int32_t)(tmp6+((int32_t)1)));
 continue;
 }else{
@@ -3242,11 +3243,11 @@ case 113:;
 break;
 default:;
 concat_list_I1 tmp18;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"unknown compiler option: \""),(&tmp18));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"u""n""k""n""o""w""n"" ""c""o""m""p""i""l""e""r"" ""o""p""t""i""o""n"":"" ""\""""),(&tmp18));
 concat_list_I1 tmp19;
 concat_sb_dappendStr(tmp18,l6_arg,(&tmp19));
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp19,((int64_t)2),((int8_t const*)"\"\x0A"),(&tmp20));
+concat_sb_dappendS(tmp19,((int64_t)2),((int8_t const*)"\"""\x0A"""),(&tmp20));
 concat_io_dFILE const tmp21 = concat_io_dstdErr();
 concat_io_dIOError const tmp22 = concat_io_dfputSb(tmp21,tmp20);
 concat_list_I1 tmp23;
@@ -3261,11 +3262,11 @@ else_label1:;
 switch(l5_state.label){
 case 0:;
 concat_list_I1 tmp24;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"expected compiler option got \""),(&tmp24));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"e""x""p""e""c""t""e""d"" ""c""o""m""p""i""l""e""r"" ""o""p""t""i""o""n"" ""g""o""t"" ""\""""),(&tmp24));
 concat_list_I1 tmp25;
 concat_sb_dappendStr(tmp24,l6_arg,(&tmp25));
 concat_list_I1 tmp26;
-concat_sb_dappendS(tmp25,((int64_t)2),((int8_t const*)"\"\x0A"),(&tmp26));
+concat_sb_dappendS(tmp25,((int64_t)2),((int8_t const*)"\"""\x0A"""),(&tmp26));
 concat_io_dFILE const tmp27 = concat_io_dstdErr();
 concat_io_dIOError const tmp28 = concat_io_dfputSb(tmp27,tmp26);
 concat_list_I1 tmp29;
@@ -3357,7 +3358,7 @@ exit(EXIT_FAILURE);//unreachable
 else_label10:;
 }
 concat_io_dFILE const tmp43 = concat_io_dstdErr();
-concat_io_dIOError const tmp44 = concat_io_dfputs(tmp43,((int64_t)24),((int8_t const*)"no input file specified\x0A"));
+concat_io_dIOError const tmp44 = concat_io_dfputs(tmp43,((int64_t)24),((int8_t const*)"n""o"" ""i""n""p""u""t"" ""f""i""l""e"" ""s""p""e""c""i""f""i""e""d""\x0A"""));
 concat_0_FprintUsage(l4_path);
 concat_list_I1 tmp45;
 concat_sb_dfree(concat_0_FsrcFile,(&tmp45));
@@ -3403,7 +3404,7 @@ else_label13:;
 }
 concat_list_I1 tmp60 = concat_0_FoutFile;
 concat_list_I1 tmp61;
-concat_sb_dappendS(tmp60,((int64_t)3),((int8_t const*)".c\x00"),(&tmp61));
+concat_sb_dappendS(tmp60,((int64_t)3),((int8_t const*)".""c""\x00"""),(&tmp61));
 concat_0_FoutFile = tmp61;
 }else{
 else_label12:;
@@ -3412,7 +3413,7 @@ bool const tmp62 = (l8_iSlash<((int64_t)0));
 concat_arrayView_I1 tmp64;
 if(tmp62){
 concat_arrayView_I1 tmp63;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"./"),(&tmp63));
+concat_string_dwrap(((int64_t)2),((int8_t const*)".""/"""),(&tmp63));
 tmp64 = tmp63;
 }else{
 else_label14:;
@@ -3425,7 +3426,7 @@ concat_0_FbasePath = tmp64;
 bool const tmp67 = (!l3_hasLib);
 if(tmp67){
 concat_arrayView_I1 tmp68;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"./lib/"),(&tmp68));
+concat_string_dwrap(((int64_t)6),((int8_t const*)".""/""l""i""b""/"""),(&tmp68));
 concat_0_FlibPath = tmp68;
 }else{
 else_label15:;
@@ -3434,7 +3435,7 @@ int8_t const tmp70 = concat_string_dcharAt(tmp69,((int64_t)((tmp69.e1_length)-((
 bool const tmp71 = ((bool)((tmp70!=((int8_t)47))&(tmp70!=((int8_t)92))));
 if(tmp71){
 concat_io_dFILE const tmp72 = concat_io_dstdErr();
-concat_io_dIOError const tmp73 = concat_io_dfputs(tmp72,((int64_t)40),((int8_t const*)"library path has to end with \'/\' or \'\\\'\x0A"));
+concat_io_dIOError const tmp73 = concat_io_dfputs(tmp72,((int64_t)40),((int8_t const*)"l""i""b""r""a""r""y"" ""p""a""t""h"" ""h""a""s"" ""t""o"" ""e""n""d"" ""w""i""t""h"" ""\'""/""\'"" ""o""r"" ""\'""\\""\'""\x0A"""));
 concat_list_I1 tmp74;
 concat_sb_dfree(concat_0_FsrcFile,(&tmp74));
 concat_list_I1 tmp75;
@@ -3725,7 +3726,7 @@ concat_FilePosition tmp13 = arg3/*pos*/;
 bool const tmp14 = concat_2_FcheckIntSize(arg0/*value*/,arg1/*unsigned*/,arg2/*preferedSize*/,tmp13,arg4/*state*/);
 if(tmp14){
 concat_list_I1 tmp15;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"integer value overflows given size: "),(&tmp15));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"i""n""t""e""g""e""r"" ""v""a""l""u""e"" ""o""v""e""r""f""l""o""w""s"" ""g""i""v""e""n"" ""s""i""z""e"":"" """),(&tmp15));
 int64_t tmp16 = arg0/*value*/;
 if(arg1/*unsigned*/){
 concat_list_I1 tmp17;
@@ -4169,7 +4170,7 @@ concat_optional_I16 const l1_value_X63 = tmp0;
 bool const tmp2 = concat_optional_disEmpty_I0(l1_value_X63);
 if(tmp2){
 concat_list_I1 tmp3;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"missing type constant"),(&tmp3));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"""),(&tmp3));
 concat_FilePosition tmp4 = ((*arg0/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp3,tmp4,arg1/*state*/);
 concat_Type tmp5 = ((concat_Type){.label=0});
@@ -4184,7 +4185,7 @@ concat_ConstValue* const tmp7 = (&(*tmp6));
 bool const tmp8 = (!((*tmp7).label==8));
 if(tmp8){
 concat_list_I1 tmp9;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"wrong type for constant expected type"),(&tmp9));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""c""o""n""s""t""a""n""t"" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp9));
 concat_internal_checkEnumIndex(l0_info_X63.label,1,"./concat.concat/parser.concat:291:61");
 concat_ValueInfo* const tmp10 = (l0_info_X63.data.e1_data);
 concat_FilePosition tmp11 = ((*tmp10).e3_pushedAt);
@@ -4210,7 +4211,7 @@ concat_optional_I15 const l2_typeConst_X63 = tmp16;
 bool const tmp17 = concat_optional_disEmpty_I1(l2_typeConst_X63);
 if(tmp17){
 concat_list_I1 tmp18;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"missing type constant"),(&tmp18));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"""),(&tmp18));
 concat_FilePosition tmp19 = ((*arg0/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp18,tmp19,arg1/*state*/);
 concat_Type tmp20 = ((concat_Type){.label=0});
@@ -4225,7 +4226,7 @@ concat_ConstValue const tmp22 = ((*tmp21).e1_val);
 bool const tmp23 = (!(tmp22.label==8));
 if(tmp23){
 concat_list_I1 tmp24;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"wrong type for constant expected type"),(&tmp24));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""c""o""n""s""t""a""n""t"" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp24));
 concat_internal_checkEnumIndex(l2_typeConst_X63.label,1,"./concat.concat/parser.concat:302:64");
 concat_2_FConstant* const tmp25 = (l2_typeConst_X63.data.e1_data);
 concat_FilePosition tmp26 = ((*tmp25).e3_pos);
@@ -4253,7 +4254,7 @@ concat_optional_I16 const l1_value_X63 = tmp0;
 bool const tmp2 = concat_optional_disEmpty_I0(l1_value_X63);
 if(tmp2){
 concat_list_I1 tmp3;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"missing type constant"),(&tmp3));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"""),(&tmp3));
 concat_FilePosition tmp4 = ((*arg0/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp3,tmp4,arg1/*state*/);
 concat_Type tmp5 = ((concat_Type){.label=0});
@@ -4268,7 +4269,7 @@ concat_ConstValue* const tmp7 = (&(*tmp6));
 bool const tmp8 = (!((*tmp7).label==8));
 if(tmp8){
 concat_list_I1 tmp9;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"wrong type for constant expected type"),(&tmp9));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""c""o""n""s""t""a""n""t"" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp9));
 concat_internal_checkEnumIndex(l0_info_X63.label,1,"./concat.concat/parser.concat:315:61");
 concat_ValueInfo* const tmp10 = (l0_info_X63.data.e1_data);
 concat_FilePosition tmp11 = ((*tmp10).e3_pushedAt);
@@ -4294,7 +4295,7 @@ concat_optional_I15 const l2_typeConst_X63 = tmp16;
 bool const tmp17 = concat_optional_disEmpty_I1(l2_typeConst_X63);
 if(tmp17){
 concat_list_I1 tmp18;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"missing type constant"),(&tmp18));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"""),(&tmp18));
 concat_FilePosition tmp19 = ((*arg0/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp18,tmp19,arg1/*state*/);
 concat_Type tmp20 = ((concat_Type){.label=0});
@@ -4309,7 +4310,7 @@ concat_ConstValue const tmp22 = ((*tmp21).e1_val);
 bool const tmp23 = (!(tmp22.label==8));
 if(tmp23){
 concat_list_I1 tmp24;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"wrong type for constant expected type"),(&tmp24));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""c""o""n""s""t""a""n""t"" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp24));
 concat_internal_checkEnumIndex(l2_typeConst_X63.label,1,"./concat.concat/parser.concat:326:64");
 concat_2_FConstant* const tmp25 = (l2_typeConst_X63.data.e1_data);
 concat_FilePosition tmp26 = ((*tmp25).e3_pos);
@@ -4420,7 +4421,7 @@ tmp20 = tmp30;
 }else{
 else_label78:;
 concat_list_I1 tmp31;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"unexpected constant for array size: "),(&tmp31));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""c""o""n""s""t""a""n""t"" ""f""o""r"" ""a""r""r""a""y"" ""s""i""z""e"":"" """),(&tmp31));
 concat_ConstValue tmp32 = l6_constVal;
 concat_list_I1 tmp33;
 concat_sb_dappendConstant(tmp31,tmp32,((concat_ConstantContext const*)l1_constContext),((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp33));
@@ -4447,7 +4448,7 @@ int64_t tmp1 = ((*arg2/*state*/).e5_constOffset);
 bool const tmp2 = (tmp0<((int64_t)(tmp1+arg0/*n*/)));
 if(tmp2){
 concat_list_I1 tmp3;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"missing type constant"),(&tmp3));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"""),(&tmp3));
 concat_FilePosition tmp4 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp3,tmp4,arg2/*state*/);
 concat_arrayView_I3 tmp5;
@@ -4475,7 +4476,7 @@ concat_ConstValue const l2_constVal = ((*l1_constant).e1_val);
 bool const tmp12 = (!(l2_constVal.label==8));
 if(tmp12){
 concat_list_I1 tmp13;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"wrong type for constant, expected type"),(&tmp13));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""c""o""n""s""t""a""n""t"","" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp13));
 concat_optional_I15 tmp14 = concat_list_dpeek_I1(((*arg2/*state*/).e4_constants));
 concat_internal_checkEnumIndex(tmp14.label,1,"./concat.concat/parser.concat:387:86");
 concat_2_FConstant* const tmp15 = (tmp14.data.e1_data);
@@ -4513,7 +4514,7 @@ int64_t const l1_count = tmp2;
 bool const tmp3 = (l1_count>(((*arg2/*state*/).e4_constants).e1_length));
 if(tmp3){
 concat_list_I1 tmp4;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"not enough arguments for template"),(&tmp4));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""a""r""g""u""m""e""n""t""s"" ""f""o""r"" ""t""e""m""p""l""a""t""e"""),(&tmp4));
 concat_FilePosition tmp5 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp4,tmp5,arg2/*state*/);
 concat_ConstantArray tmp6 = ((concat_ConstantArray){.e0_offset = ((int64_t)0),.e1_length = ((int64_t)0)});
@@ -4542,7 +4543,7 @@ bool const tmp17 = concat_types_dtypeEquals(tmp14,tmp16);
 bool const tmp18 = (!tmp17);
 if(tmp18){
 concat_list_I1 tmp19;
-concat_sb_dwrap(((int64_t)39),((int8_t const*)"incompatible type for template argument"),(&tmp19));
+concat_sb_dwrap(((int64_t)39),((int8_t const*)"i""n""c""o""m""p""a""t""i""b""l""e"" ""t""y""p""e"" ""f""o""r"" ""t""e""m""p""l""a""t""e"" ""a""r""g""u""m""e""n""t"""),(&tmp19));
 concat_FilePosition tmp20 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp19,tmp20,arg2/*state*/);
 concat_ConstantArray tmp21 = ((concat_ConstantArray){.e0_offset = ((int64_t)0),.e1_length = ((int64_t)0)});
@@ -4570,7 +4571,7 @@ int64_t tmp2 = ((*arg2/*state*/).e5_constOffset);
 bool const tmp3 = (tmp1<((int64_t)(tmp2+arg0/*len*/)));
 if(tmp3){
 concat_list_I1 tmp4;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"no enough constants for array"),(&tmp4));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"n""o"" ""e""n""o""u""g""h"" ""c""o""n""s""t""a""n""t""s"" ""f""o""r"" ""a""r""r""a""y"""),(&tmp4));
 concat_FilePosition tmp5 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp4,tmp5,arg2/*state*/);
 concat_arrayView_I3 tmp6;
@@ -4734,7 +4735,7 @@ concat_Token tmp2 = concat_nextToken(tmp0,arg1/*fileState*/,(&tmp1));
 bool const tmp3 = (!(tmp2.label==1));
 if(tmp3){
 concat_list_I1 tmp4;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"expected identifier"),(&tmp4));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"e""x""p""e""c""t""e""d"" ""i""d""e""n""t""i""f""i""e""r"""),(&tmp4));
 concat_FilePosition tmp5 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp4,tmp5,arg2/*state*/);
 }else{
@@ -4753,7 +4754,7 @@ concat_arrayView_I1 tmp1 = arg1/*start*/;
 do{
 l1_isModifier = false;
 concat_arrayView_I1 tmp2;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"mut"),(&tmp2));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"m""u""t"""),(&tmp2));
 bool const tmp3 = concat_string_deq(tmp1,tmp2);
 if(tmp3){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)1)|l0_flags));
@@ -4761,7 +4762,7 @@ l1_isModifier = true;
 }else{
 else_label92:;
 concat_arrayView_I1 tmp4;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"auto"),(&tmp4));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"a""u""t""o"""),(&tmp4));
 bool const tmp5 = concat_string_deq(tmp1,tmp4);
 if(tmp5){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)2)|l0_flags));
@@ -4769,7 +4770,7 @@ l1_isModifier = true;
 }else{
 else_label93:;
 concat_arrayView_I1 tmp6;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"static"),(&tmp6));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""t""a""t""i""c"""),(&tmp6));
 bool const tmp7 = concat_string_deq(tmp1,tmp6);
 if(tmp7){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)32)|l0_flags));
@@ -4777,7 +4778,7 @@ l1_isModifier = true;
 }else{
 else_label94:;
 concat_arrayView_I1 tmp8;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"extern"),(&tmp8));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"e""x""t""e""r""n"""),(&tmp8));
 bool const tmp9 = concat_string_deq(tmp1,tmp8);
 if(tmp9){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)4)|l0_flags));
@@ -4785,7 +4786,7 @@ l1_isModifier = true;
 }else{
 else_label95:;
 concat_arrayView_I1 tmp10;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"public"),(&tmp10));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"p""u""b""l""i""c"""),(&tmp10));
 bool const tmp11 = concat_string_deq(tmp1,tmp10);
 if(tmp11){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)8)|l0_flags));
@@ -4793,7 +4794,7 @@ l1_isModifier = true;
 }else{
 else_label96:;
 concat_arrayView_I1 tmp12;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"private"),(&tmp12));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"p""r""i""v""a""t""e"""),(&tmp12));
 bool const tmp13 = concat_string_deq(tmp1,tmp12);
 if(tmp13){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)16)|l0_flags));
@@ -4801,7 +4802,7 @@ l1_isModifier = true;
 }else{
 else_label97:;
 concat_arrayView_I1 tmp14;
-concat_string_dwrap(((int64_t)14),((int8_t const*)"#:experimental"),(&tmp14));
+concat_string_dwrap(((int64_t)14),((int8_t const*)"#"":""e""x""p""e""r""i""m""e""n""t""a""l"""),(&tmp14));
 bool const tmp15 = concat_string_deq(tmp1,tmp14);
 if(tmp15){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)1073741824)|l0_flags));
@@ -4809,7 +4810,7 @@ l1_isModifier = true;
 }else{
 else_label98:;
 concat_arrayView_I1 tmp16;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"#:"),(&tmp16));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"#"":"""),(&tmp16));
 bool const tmp17 = concat_string_dstartsWith(tmp1,tmp16);
 if(tmp17){
 l1_isModifier = true;
@@ -4837,7 +4838,7 @@ bool const tmp21 = (!(tmp20.label==1));
 concat_arrayView_I1 tmp27;
 if(tmp21){
 concat_list_I1 tmp22;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"expected identifier"),(&tmp22));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"e""x""p""e""c""t""e""d"" ""i""d""e""n""t""i""f""i""e""r"""),(&tmp22));
 concat_optional_I15 tmp23 = concat_list_dpeek_I1(((*arg3/*state*/).e4_constants));
 concat_internal_checkEnumIndex(tmp23.label,1,"./concat.concat/parser.concat:549:69");
 concat_2_FConstant* const tmp24 = (tmp23.data.e1_data);
@@ -4927,7 +4928,7 @@ bool const tmp23 = (tmp22>((int64_t)0));
 int64_t tmp24 = tmp22;
 if(tmp23){
 concat_list_I1 tmp25;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"too many types for label"),(&tmp25));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"t""o""o"" ""m""a""n""y"" ""t""y""p""e""s"" ""f""o""r"" ""l""a""b""e""l"""),(&tmp25));
 concat_FilePosition tmp26 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp25,tmp26,arg5/*state*/);
 do{
@@ -4950,7 +4951,7 @@ else_label107:;
 bool const tmp34 = (tmp24<((int64_t)0));
 if(tmp34){
 concat_list_I1 tmp35;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough types for label"),(&tmp35));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""t""y""p""e""s"" ""f""o""r"" ""l""a""b""e""l"""),(&tmp35));
 concat_FilePosition tmp36 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp35,tmp36,arg5/*state*/);
 do{
@@ -5002,7 +5003,7 @@ else_label104:;
 bool const tmp49 = concat_string_deq(tmp6,arg3/*nextEnd*/);
 if(tmp49){
 concat_list_I1 tmp50;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"unexpected \""),(&tmp50));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""\""""),(&tmp50));
 concat_list_I1 tmp51;
 concat_sb_dappendStr(tmp50,arg3/*nextEnd*/,(&tmp51));
 concat_list_I1 tmp52;
@@ -5026,13 +5027,13 @@ return true;
 }else{
 else_label110:;
 concat_arrayView_I1 tmp59;
-concat_string_dwrap(((int64_t)1),((int8_t const*)":"),(&tmp59));
+concat_string_dwrap(((int64_t)1),((int8_t const*)":"""),(&tmp59));
 bool const tmp60 = concat_string_deq(tmp6,tmp59);
 if(tmp60){
 bool const tmp61 = (arg1/*labelType*/.label==1);
 if(tmp61){
 concat_list_I1 tmp62;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"unexpected \':\' operator"),(&tmp62));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""\'"":""\'"" ""o""p""e""r""a""t""o""r"""),(&tmp62));
 concat_FilePosition tmp63 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp62,tmp63,arg5/*state*/);
 }else{
@@ -5045,7 +5046,7 @@ bool const tmp67 = (tmp66>((int64_t)0));
 int64_t tmp68 = tmp66;
 if(tmp67){
 concat_list_I1 tmp69;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"too many types for label"),(&tmp69));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"t""o""o"" ""m""a""n""y"" ""t""y""p""e""s"" ""f""o""r"" ""l""a""b""e""l"""),(&tmp69));
 concat_FilePosition tmp70 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp69,tmp70,arg5/*state*/);
 do{
@@ -5068,7 +5069,7 @@ else_label113:;
 bool const tmp78 = (tmp68<((int64_t)0));
 if(tmp78){
 concat_list_I1 tmp79;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough types for label"),(&tmp79));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""t""y""p""e""s"" ""f""o""r"" ""l""a""b""e""l"""),(&tmp79));
 concat_FilePosition tmp80 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp79,tmp80,arg5/*state*/);
 do{
@@ -5090,7 +5091,7 @@ concat_Token tmp85 = concat_nextToken(tmp5,arg4/*fileState*/,(&tmp84));
 bool const tmp86 = (!(tmp85.label==1));
 if(tmp86){
 concat_list_I1 tmp87;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"expected identifier"),(&tmp87));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"e""x""p""e""c""t""e""d"" ""i""d""e""n""t""i""f""i""e""r"""),(&tmp87));
 concat_FilePosition tmp88 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp87,tmp88,arg5/*state*/);
 }else{
@@ -5104,7 +5105,7 @@ concat_FileState* tmp92 = arg4/*fileState*/;
 concat_2_FParserState* tmp93 = arg5/*state*/;
 if(tmp91){
 concat_list_I1 tmp94;
-concat_sb_dwrap(((int64_t)22),((int8_t const*)"missing type for label"),(&tmp94));
+concat_sb_dwrap(((int64_t)22),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""f""o""r"" ""l""a""b""e""l"""),(&tmp94));
 concat_FilePosition tmp95 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp94,tmp95,arg5/*state*/);
 }else{
@@ -5134,7 +5135,7 @@ if(tmp105){
 bool const tmp107 = ((bool)((!(arg1/*labelType*/.label==4))&(!(arg1/*labelType*/.label==0))));
 if(tmp107){
 concat_list_I1 tmp108;
-concat_sb_dwrap(((int64_t)133),((int8_t const*)"unexpected label: `static` and `auto` can only be used in procedure arguments\x0A  values of type `type` are labeled `static` by default"),(&tmp108));
+concat_sb_dwrap(((int64_t)133),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""l""a""b""e""l"":"" ""`""s""t""a""t""i""c""`"" ""a""n""d"" ""`""a""u""t""o""`"" ""c""a""n"" ""o""n""l""y"" ""b""e"" ""u""s""e""d"" ""i""n"" ""p""r""o""c""e""d""u""r""e"" ""a""r""g""u""m""e""n""t""s""\x0A"" "" ""v""a""l""u""e""s"" ""o""f"" ""t""y""p""e"" ""`""t""y""p""e""`"" ""a""r""e"" ""l""a""b""e""l""e""d"" ""`""s""t""a""t""i""c""`"" ""b""y"" ""d""e""f""a""u""l""t"""),(&tmp108));
 concat_FilePosition tmp109 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp108,tmp109,arg5/*state*/);
 }else{
@@ -5158,7 +5159,7 @@ if(tmp112){
 concat_list_I1 tmp113;
 concat_sb_dcreate(((int64_t)64),(&tmp113));
 concat_list_I1 tmp114;
-concat_sb_dappendS(tmp113,((int64_t)18),((int8_t const*)"unknown type name "),(&tmp114));
+concat_sb_dappendS(tmp113,((int64_t)18),((int8_t const*)"u""n""k""n""o""w""n"" ""t""y""p""e"" ""n""a""m""e"" """),(&tmp114));
 concat_list_I1 tmp115;
 concat_sb_dappendStr(tmp114,tmp6,(&tmp115));
 concat_FilePosition tmp116 = ((*arg4/*fileState*/).e1_wordStart);
@@ -5179,7 +5180,7 @@ bool const tmp122 = (tmp121>((int64_t)0));
 int64_t tmp123 = tmp121;
 if(tmp122){
 concat_list_I1 tmp124;
-concat_sb_dwrap(((int64_t)39),((int8_t const*)"unexpected label in enum, expected \':\' "),(&tmp124));
+concat_sb_dwrap(((int64_t)39),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""l""a""b""e""l"" ""i""n"" ""e""n""u""m"","" ""e""x""p""e""c""t""e""d"" ""\'"":""\'"" """),(&tmp124));
 concat_FilePosition tmp125 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp124,tmp125,arg5/*state*/);
 do{
@@ -5210,7 +5211,7 @@ else_label121:;
 bool const tmp137 = (tmp123<((int64_t)0));
 if(tmp137){
 concat_list_I1 tmp138;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough types for label"),(&tmp138));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""t""y""p""e""s"" ""f""o""r"" ""l""a""b""e""l"""),(&tmp138));
 concat_FilePosition tmp139 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp138,tmp139,arg5/*state*/);
 do{
@@ -5244,7 +5245,7 @@ if(!tmp150)
   break;
 }while(1);
 concat_list_I1 tmp151;
-concat_sb_dwrap(((int64_t)22),((int8_t const*)"unexpected end of file"),(&tmp151));
+concat_sb_dwrap(((int64_t)22),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" ""f""i""l""e"""),(&tmp151));
 concat_FilePosition tmp152 = ((*arg4/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp151,tmp152,arg5/*state*/);
 concat_arrayView_I3 tmp153;
@@ -5296,15 +5297,15 @@ else_label126:;
 bool const tmp15 = (tmp13>((int64_t)64));
 if(tmp15){
 concat_list_I1 tmp16;
-concat_sb_dwrap(((int64_t)25),((int8_t const*)"size of integer literal ("),(&tmp16));
+concat_sb_dwrap(((int64_t)25),((int8_t const*)"s""i""z""e"" ""o""f"" ""i""n""t""e""g""e""r"" ""l""i""t""e""r""a""l"" ""("""),(&tmp16));
 concat_list_I1 tmp17;
 concat_sb_dappendI(tmp16,tmp13,(&tmp17));
 concat_list_I1 tmp18;
-concat_sb_dappendS(tmp17,((int64_t)32),((int8_t const*)") exceeds maximum integer size ("),(&tmp18));
+concat_sb_dappendS(tmp17,((int64_t)32),((int8_t const*)")"" ""e""x""c""e""e""d""s"" ""m""a""x""i""m""u""m"" ""i""n""t""e""g""e""r"" ""s""i""z""e"" ""("""),(&tmp18));
 concat_list_I1 tmp19;
 concat_sb_dappendI(tmp18,((int64_t)64),(&tmp19));
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp19,((int64_t)1),((int8_t const*)")"),(&tmp20));
+concat_sb_dappendS(tmp19,((int64_t)1),((int8_t const*)")"""),(&tmp20));
 concat_FilePosition tmp21 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp20,tmp21,arg2/*state*/);
 l1_size = ((int32_t)64);
@@ -5335,15 +5336,15 @@ else_label129:;
 bool const tmp30 = (tmp29>((int64_t)64));
 if(tmp30){
 concat_list_I1 tmp31;
-concat_sb_dwrap(((int64_t)25),((int8_t const*)"size of integer literal ("),(&tmp31));
+concat_sb_dwrap(((int64_t)25),((int8_t const*)"s""i""z""e"" ""o""f"" ""i""n""t""e""g""e""r"" ""l""i""t""e""r""a""l"" ""("""),(&tmp31));
 concat_list_I1 tmp32;
 concat_sb_dappendI(tmp31,tmp29,(&tmp32));
 concat_list_I1 tmp33;
-concat_sb_dappendS(tmp32,((int64_t)32),((int8_t const*)") exceeds maximum integer size ("),(&tmp33));
+concat_sb_dappendS(tmp32,((int64_t)32),((int8_t const*)")"" ""e""x""c""e""e""d""s"" ""m""a""x""i""m""u""m"" ""i""n""t""e""g""e""r"" ""s""i""z""e"" ""("""),(&tmp33));
 concat_list_I1 tmp34;
 concat_sb_dappendI(tmp33,((int64_t)64),(&tmp34));
 concat_list_I1 tmp35;
-concat_sb_dappendS(tmp34,((int64_t)1),((int8_t const*)")"),(&tmp35));
+concat_sb_dappendS(tmp34,((int64_t)1),((int8_t const*)")"""),(&tmp35));
 concat_FilePosition tmp36 = ((*arg1/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp35,tmp36,arg2/*state*/);
 l1_size = ((int32_t)64);
@@ -5395,7 +5396,7 @@ else_label133:;
 bool const tmp50 = (tmp42.label==2);
 if(tmp50){
 concat_list_I1 tmp51;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"unsigned value is marked as negative: "),(&tmp51));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"u""n""s""i""g""n""e""d"" ""v""a""l""u""e"" ""i""s"" ""m""a""r""k""e""d"" ""a""s"" ""n""e""g""a""t""i""v""e"":"" """),(&tmp51));
 concat_list_I1 tmp52;
 concat_sb_dappendStr(tmp51,arg0/*str*/,(&tmp52));
 concat_FilePosition tmp53 = ((*arg1/*fileState*/).e1_wordStart);
@@ -5406,7 +5407,7 @@ else_label134:;
 bool const tmp54 = (tmp42.label==6);
 if(tmp54){
 concat_list_I1 tmp55;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"integer value outside allowed range: "),(&tmp55));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"i""n""t""e""g""e""r"" ""v""a""l""u""e"" ""o""u""t""s""i""d""e"" ""a""l""l""o""w""e""d"" ""r""a""n""g""e"":"" """),(&tmp55));
 concat_list_I1 tmp56;
 concat_sb_dappendStr(tmp55,arg0/*str*/,(&tmp56));
 concat_FilePosition tmp57 = ((*arg1/*fileState*/).e1_wordStart);
@@ -5432,7 +5433,7 @@ else_label136:;
 bool const tmp64 = (tmp60.label==1);
 if(tmp64){
 concat_list_I1 tmp65;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"integer value outside allowed range: "),(&tmp65));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"i""n""t""e""g""e""r"" ""v""a""l""u""e"" ""o""u""t""s""i""d""e"" ""a""l""l""o""w""e""d"" ""r""a""n""g""e"":"" """),(&tmp65));
 concat_list_I1 tmp66;
 concat_sb_dappendStr(tmp65,arg0/*str*/,(&tmp66));
 concat_FilePosition tmp67 = ((*arg1/*fileState*/).e1_wordStart);
@@ -5483,7 +5484,7 @@ concat_id_dparseStringConstant(tmp9,tmp10,(&((*l0_progContext).e6_errors)),l3_la
 bool const tmp12 = ((tmp11.e1_length)!=((int64_t)1));
 if(tmp12){
 concat_list_I1 tmp13;
-concat_sb_dwrap(((int64_t)56),((int8_t const*)"A character literal has to contain exactly one character"),(&tmp13));
+concat_sb_dwrap(((int64_t)56),((int8_t const*)"A"" ""c""h""a""r""a""c""t""e""r"" ""l""i""t""e""r""a""l"" ""h""a""s"" ""t""o"" ""c""o""n""t""a""i""n"" ""e""x""a""c""t""l""y"" ""o""n""e"" ""c""h""a""r""a""c""t""e""r"""),(&tmp13));
 concat_FilePosition tmp14 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp13,tmp14,arg3/*state*/);
 }else{
@@ -5518,7 +5519,7 @@ tmp22 = (arg1/*token*/.data.e1_IDENTIFIER);
 break;
 }
 concat_arrayView_I1 tmp23;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"_"),(&tmp23));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"_"""),(&tmp23));
 bool const tmp24 = concat_string_deq(tmp22,tmp23);
 if(tmp24){
 concat_2_FConstant tmp25;
@@ -5530,7 +5531,7 @@ return true;
 }else{
 else_label140:;
 concat_arrayView_I1 tmp26;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"true"),(&tmp26));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"t""r""u""e"""),(&tmp26));
 bool const tmp27 = concat_string_deq(tmp22,tmp26);
 if(tmp27){
 concat_2_FConstant tmp28;
@@ -5542,7 +5543,7 @@ return true;
 }else{
 else_label141:;
 concat_arrayView_I1 tmp29;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"false"),(&tmp29));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"f""a""l""s""e"""),(&tmp29));
 bool const tmp30 = concat_string_deq(tmp22,tmp29);
 if(tmp30){
 concat_2_FConstant tmp31;
@@ -5554,7 +5555,7 @@ return true;
 }else{
 else_label142:;
 concat_arrayView_I1 tmp32;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"bool"),(&tmp32));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"b""o""o""l"""),(&tmp32));
 bool const tmp33 = concat_string_deq(tmp22,tmp32);
 if(tmp33){
 concat_Type tmp34 = concat_primitive_dtypes_dBOOL;
@@ -5567,7 +5568,7 @@ return true;
 }else{
 else_label143:;
 concat_arrayView_I1 tmp36;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"i8"),(&tmp36));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"i""8"""),(&tmp36));
 bool const tmp37 = concat_string_deq(tmp22,tmp36);
 if(tmp37){
 concat_Type tmp38 = concat_primitive_dtypes_dI8;
@@ -5580,7 +5581,7 @@ return true;
 }else{
 else_label144:;
 concat_arrayView_I1 tmp40;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"i16"),(&tmp40));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"i""1""6"""),(&tmp40));
 bool const tmp41 = concat_string_deq(tmp22,tmp40);
 if(tmp41){
 concat_Type tmp42 = concat_primitive_dtypes_dI16;
@@ -5593,7 +5594,7 @@ return true;
 }else{
 else_label145:;
 concat_arrayView_I1 tmp44;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"i32"),(&tmp44));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"i""3""2"""),(&tmp44));
 bool const tmp45 = concat_string_deq(tmp22,tmp44);
 if(tmp45){
 concat_Type tmp46 = concat_primitive_dtypes_dI32;
@@ -5606,7 +5607,7 @@ return true;
 }else{
 else_label146:;
 concat_arrayView_I1 tmp48;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"i64"),(&tmp48));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"i""6""4"""),(&tmp48));
 bool const tmp49 = concat_string_deq(tmp22,tmp48);
 if(tmp49){
 concat_Type tmp50 = concat_primitive_dtypes_dI64;
@@ -5619,7 +5620,7 @@ return true;
 }else{
 else_label147:;
 concat_arrayView_I1 tmp52;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"float"),(&tmp52));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"f""l""o""a""t"""),(&tmp52));
 bool const tmp53 = concat_string_deq(tmp22,tmp52);
 if(tmp53){
 concat_Type tmp54 = concat_primitive_dtypes_dFLOAT32;
@@ -5632,7 +5633,7 @@ return true;
 }else{
 else_label148:;
 concat_arrayView_I1 tmp56;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"double"),(&tmp56));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"d""o""u""b""l""e"""),(&tmp56));
 bool const tmp57 = concat_string_deq(tmp22,tmp56);
 if(tmp57){
 concat_Type tmp58 = concat_primitive_dtypes_dFLOAT64;
@@ -5645,7 +5646,7 @@ return true;
 }else{
 else_label149:;
 concat_arrayView_I1 tmp60;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"type"),(&tmp60));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"t""y""p""e"""),(&tmp60));
 bool const tmp61 = concat_string_deq(tmp22,tmp60);
 if(tmp61){
 concat_Type tmp62 = concat_primitive_dtypes_dTYPE;
@@ -5658,7 +5659,7 @@ return true;
 }else{
 else_label150:;
 concat_arrayView_I1 tmp64;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"ptr"),(&tmp64));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"p""t""r"""),(&tmp64));
 bool const tmp65 = concat_string_deq(tmp22,tmp64);
 bool const tmp66 = ((bool)(tmp65&(!concat___EXPERIMENTAL__)));
 if(tmp66){
@@ -5688,7 +5689,7 @@ concat_2_FConstant tmp77;
 concat_2_FnewTypeConst(tmp76,((*arg2/*fileState*/).e1_wordStart),(&tmp77));
 concat_2_FpushConst(tmp77,arg3/*state*/);
 concat_list_I1 tmp78;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"could not create pointer type"),(&tmp78));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""p""o""i""n""t""e""r"" ""t""y""p""e"""),(&tmp78));
 concat_FilePosition tmp79 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp78,tmp79,arg3/*state*/);
 *(out0)= tmp1;
@@ -5706,7 +5707,7 @@ return true;
 }else{
 else_label151:;
 concat_arrayView_I1 tmp81;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"array"),(&tmp81));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"a""r""r""a""y"""),(&tmp81));
 bool const tmp82 = concat_string_deq(tmp22,tmp81);
 bool const tmp83 = ((bool)(tmp82&(!concat___EXPERIMENTAL__)));
 if(tmp83){
@@ -5736,7 +5737,7 @@ concat_2_FConstant tmp94;
 concat_2_FnewTypeConst(tmp93,((*arg2/*fileState*/).e1_wordStart),(&tmp94));
 concat_2_FpushConst(tmp94,arg3/*state*/);
 concat_list_I1 tmp95;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"could not create array type"),(&tmp95));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""a""r""r""a""y"" ""t""y""p""e"""),(&tmp95));
 concat_FilePosition tmp96 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp95,tmp96,arg3/*state*/);
 *(out0)= tmp1;
@@ -5754,7 +5755,7 @@ return true;
 }else{
 else_label154:;
 concat_arrayView_I1 tmp98;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"mut"),(&tmp98));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"m""u""t"""),(&tmp98));
 bool const tmp99 = concat_string_deq(tmp22,tmp98);
 bool const tmp100 = ((bool)(tmp99&(!concat___EXPERIMENTAL__)));
 if(tmp100){
@@ -5776,7 +5777,7 @@ concat_Type tmp105 = l8_t;
 bool const tmp106 = concat_types_disMutable(tmp105,((concat_TypeContext const*)l2_typeContext));
 if(tmp106){
 concat_list_I1 tmp107;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"type is already mutable"),(&tmp107));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"t""y""p""e"" ""i""s"" ""a""l""r""e""a""d""y"" ""m""u""t""a""b""l""e"""),(&tmp107));
 concat_FilePosition tmp108 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp107,tmp108,arg3/*state*/);
 }else{
@@ -5785,7 +5786,7 @@ else_label159:;
 bool const tmp109 = concat_types_dsetMutability((&l8_t),true,l2_typeContext);
 if(tmp109){
 concat_list_I1 tmp110;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"could not change mutability of type"),(&tmp110));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""h""a""n""g""e"" ""m""u""t""a""b""i""l""i""t""y"" ""o""f"" ""t""y""p""e"""),(&tmp110));
 concat_FilePosition tmp111 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp110,tmp111,arg3/*state*/);
 }else{
@@ -5801,7 +5802,7 @@ return true;
 }else{
 else_label157:;
 concat_arrayView_I1 tmp114;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"("),(&tmp114));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"("""),(&tmp114));
 bool const tmp115 = concat_string_deq(tmp22,tmp114);
 bool const tmp116 = ((bool)(tmp115&(!concat___EXPERIMENTAL__)));
 if(tmp116){
@@ -5809,9 +5810,9 @@ int64_t const tmp117 = concat_2_FoffsetStaticArgs(arg3/*state*/);
 int64_t const l9_prevArgs = tmp117;
 concat_2_FLabelType tmp118 = ((concat_2_FLabelType){.label=0});
 concat_arrayView_I1 tmp119;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp119));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp119));
 concat_arrayView_I1 tmp120;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"=>"),(&tmp120));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"="">"""),(&tmp120));
 concat_arrayView_I1 tmp121;
 concat_arrayView_I3 tmp122;
 concat_optional_I6 tmp123;
@@ -5819,7 +5820,7 @@ concat_2_FLabelType tmp124;
 bool const tmp125 = concat_2_FreadCompositeType(tmp1,tmp118,tmp119,tmp120,arg2/*fileState*/,arg3/*state*/,(&tmp121),(&tmp122),(&tmp123),(&tmp124));
 if(tmp125){
 concat_list_I1 tmp126;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"error while parsing composite type"),(&tmp126));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""c""o""m""p""o""s""i""t""e"" ""t""y""p""e"""),(&tmp126));
 concat_FilePosition tmp127 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp126,tmp127,arg3/*state*/);
 }else{
@@ -5832,7 +5833,7 @@ concat_Type tmp128 = concat_types_dnewProcArgs(tmp122,tmp123,false,l2_typeContex
 concat_Type const l11_in = tmp128;
 concat_2_FLabelType tmp129 = ((concat_2_FLabelType){.label=1});
 concat_arrayView_I1 tmp130;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp130));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp130));
 concat_arrayView_I1 tmp131;
 concat_arrayView_I3 tmp132;
 concat_optional_I6 tmp133;
@@ -5841,7 +5842,7 @@ bool const tmp135 = concat_2_FreadCompositeType(tmp121,tmp129,tmp130,tmp130,arg2
 concat_2_FresetStaticArgs(l9_prevArgs,arg3/*state*/);
 if(tmp135){
 concat_list_I1 tmp136;
-concat_sb_dwrap(((int64_t)43),((int8_t const*)"error while parsing procedure return values"),(&tmp136));
+concat_sb_dwrap(((int64_t)43),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""p""r""o""c""e""d""u""r""e"" ""r""e""t""u""r""n"" ""v""a""l""u""e""s"""),(&tmp136));
 concat_FilePosition tmp137 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp136,tmp137,arg3/*state*/);
 }else{
@@ -5854,7 +5855,7 @@ concat_Type tmp141;
 bool const tmp142 = concat_types_dnewProcedure(tmp139,tmp138,tmp140,l2_typeContext,(&tmp141));
 if(tmp142){
 concat_list_I1 tmp143;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"error while creating procedure type"),(&tmp143));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""p""r""o""c""e""d""u""r""e"" ""t""y""p""e"""),(&tmp143));
 concat_FilePosition tmp144 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp143,tmp144,arg3/*state*/);
 }else{
@@ -5868,7 +5869,7 @@ concat_Type tmp146;
 bool const tmp147 = concat_types_dnewTuple(tmp122,tmp123,l2_typeContext,(&tmp146));
 if(tmp147){
 concat_list_I1 tmp148;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"error while creating composite type"),(&tmp148));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""c""o""m""p""o""s""i""t""e"" ""t""y""p""e"""),(&tmp148));
 concat_FilePosition tmp149 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp148,tmp149,arg3/*state*/);
 }else{
@@ -5887,13 +5888,13 @@ return true;
 }else{
 else_label161:;
 concat_arrayView_I1 tmp152;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"tuple("),(&tmp152));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"t""u""p""l""e""("""),(&tmp152));
 bool const tmp153 = concat_string_deq(tmp22,tmp152);
 bool const tmp154 = ((bool)(tmp153&(!concat___EXPERIMENTAL__)));
 if(tmp154){
 concat_2_FLabelType tmp155 = ((concat_2_FLabelType){.label=1});
 concat_arrayView_I1 tmp156;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp156));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp156));
 concat_arrayView_I1 tmp157;
 concat_arrayView_I3 tmp158;
 concat_optional_I6 tmp159;
@@ -5901,7 +5902,7 @@ concat_2_FLabelType tmp160;
 bool const tmp161 = concat_2_FreadCompositeType(tmp1,tmp155,tmp156,tmp156,arg2/*fileState*/,arg3/*state*/,(&tmp157),(&tmp158),(&tmp159),(&tmp160));
 if(tmp161){
 concat_list_I1 tmp162;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"error while parsing tuple type"),(&tmp162));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""t""u""p""l""e"" ""t""y""p""e"""),(&tmp162));
 concat_FilePosition tmp163 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp162,tmp163,arg3/*state*/);
 }else{
@@ -5911,7 +5912,7 @@ concat_Type tmp164;
 bool const tmp165 = concat_types_dnewTuple(tmp158,tmp159,l2_typeContext,(&tmp164));
 if(tmp165){
 concat_list_I1 tmp166;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"error while creating tuple type"),(&tmp166));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""t""u""p""l""e"" ""t""y""p""e"""),(&tmp166));
 concat_FilePosition tmp167 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp166,tmp167,arg3/*state*/);
 }else{
@@ -5928,13 +5929,13 @@ return true;
 }else{
 else_label167:;
 concat_arrayView_I1 tmp170;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"struct("),(&tmp170));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"s""t""r""u""c""t""("""),(&tmp170));
 bool const tmp171 = concat_string_deq(tmp22,tmp170);
 bool const tmp172 = ((bool)(tmp171&(!concat___EXPERIMENTAL__)));
 if(tmp172){
 concat_2_FLabelType tmp173 = ((concat_2_FLabelType){.label=2});
 concat_arrayView_I1 tmp174;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp174));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp174));
 concat_arrayView_I1 tmp175;
 concat_arrayView_I3 tmp176;
 concat_optional_I6 tmp177;
@@ -5942,7 +5943,7 @@ concat_2_FLabelType tmp178;
 bool const tmp179 = concat_2_FreadCompositeType(tmp1,tmp173,tmp174,tmp174,arg2/*fileState*/,arg3/*state*/,(&tmp175),(&tmp176),(&tmp177),(&tmp178));
 if(tmp179){
 concat_list_I1 tmp180;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"error while parsing structure type"),(&tmp180));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""s""t""r""u""c""t""u""r""e"" ""t""y""p""e"""),(&tmp180));
 concat_FilePosition tmp181 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp180,tmp181,arg3/*state*/);
 }else{
@@ -5952,7 +5953,7 @@ concat_Type tmp182;
 bool const tmp183 = concat_types_dnewTuple(tmp176,tmp177,l2_typeContext,(&tmp182));
 if(tmp183){
 concat_list_I1 tmp184;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"error while creating structure type"),(&tmp184));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""s""t""r""u""c""t""u""r""e"" ""t""y""p""e"""),(&tmp184));
 concat_FilePosition tmp185 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp184,tmp185,arg3/*state*/);
 }else{
@@ -5969,13 +5970,13 @@ return true;
 }else{
 else_label170:;
 concat_arrayView_I1 tmp188;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"union("),(&tmp188));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"u""n""i""o""n""("""),(&tmp188));
 bool const tmp189 = concat_string_deq(tmp22,tmp188);
 bool const tmp190 = ((bool)(tmp189&(!concat___EXPERIMENTAL__)));
 if(tmp190){
 concat_2_FLabelType tmp191 = ((concat_2_FLabelType){.label=2});
 concat_arrayView_I1 tmp192;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp192));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp192));
 concat_arrayView_I1 tmp193;
 concat_arrayView_I3 tmp194;
 concat_optional_I6 tmp195;
@@ -5983,7 +5984,7 @@ concat_2_FLabelType tmp196;
 bool const tmp197 = concat_2_FreadCompositeType(tmp1,tmp191,tmp192,tmp192,arg2/*fileState*/,arg3/*state*/,(&tmp193),(&tmp194),(&tmp195),(&tmp196));
 if(tmp197){
 concat_list_I1 tmp198;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"error while parsing union type"),(&tmp198));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""u""n""i""o""n"" ""t""y""p""e"""),(&tmp198));
 concat_FilePosition tmp199 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp198,tmp199,arg3/*state*/);
 }else{
@@ -5993,7 +5994,7 @@ concat_Type tmp200;
 bool const tmp201 = concat_types_dnewUnion(tmp194,tmp195,l2_typeContext,(&tmp200));
 if(tmp201){
 concat_list_I1 tmp202;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"error while creating union type"),(&tmp202));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""u""n""i""o""n"" ""t""y""p""e"""),(&tmp202));
 concat_FilePosition tmp203 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp202,tmp203,arg3/*state*/);
 }else{
@@ -6010,13 +6011,13 @@ return true;
 }else{
 else_label173:;
 concat_arrayView_I1 tmp206;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"enum("),(&tmp206));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"e""n""u""m""("""),(&tmp206));
 bool const tmp207 = concat_string_deq(tmp22,tmp206);
 bool const tmp208 = ((bool)(tmp207&(!concat___EXPERIMENTAL__)));
 if(tmp208){
 concat_2_FLabelType tmp209 = ((concat_2_FLabelType){.label=3});
 concat_arrayView_I1 tmp210;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp210));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp210));
 concat_arrayView_I1 tmp211;
 concat_arrayView_I3 tmp212;
 concat_optional_I6 tmp213;
@@ -6024,7 +6025,7 @@ concat_2_FLabelType tmp214;
 bool const tmp215 = concat_2_FreadCompositeType(tmp1,tmp209,tmp210,tmp210,arg2/*fileState*/,arg3/*state*/,(&tmp211),(&tmp212),(&tmp213),(&tmp214));
 if(tmp215){
 concat_list_I1 tmp216;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"error while parsing enum type"),(&tmp216));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""e""n""u""m"" ""t""y""p""e"""),(&tmp216));
 concat_FilePosition tmp217 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp216,tmp217,arg3/*state*/);
 }else{
@@ -6034,7 +6035,7 @@ concat_Type tmp218;
 bool const tmp219 = concat_types_dnewEnum(tmp212,tmp213,l2_typeContext,(&tmp218));
 if(tmp219){
 concat_list_I1 tmp220;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"error while creating enum type"),(&tmp220));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""e""n""u""m"" ""t""y""p""e"""),(&tmp220));
 concat_FilePosition tmp221 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp220,tmp221,arg3/*state*/);
 }else{
@@ -6051,7 +6052,7 @@ return true;
 }else{
 else_label176:;
 concat_arrayView_I1 tmp224;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"proc("),(&tmp224));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"p""r""o""c""("""),(&tmp224));
 bool const tmp225 = concat_string_deq(tmp22,tmp224);
 bool const tmp226 = ((bool)(tmp225&(!concat___EXPERIMENTAL__)));
 if(tmp226){
@@ -6059,9 +6060,9 @@ int64_t const tmp227 = concat_2_FoffsetStaticArgs(arg3/*state*/);
 int64_t const l12_prevArgs = tmp227;
 concat_2_FLabelType tmp228 = ((concat_2_FLabelType){.label=4});
 concat_arrayView_I1 tmp229;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"=>"),(&tmp229));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"="">"""),(&tmp229));
 concat_arrayView_I1 tmp230;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp230));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp230));
 concat_arrayView_I1 tmp231;
 concat_arrayView_I3 tmp232;
 concat_optional_I6 tmp233;
@@ -6069,7 +6070,7 @@ concat_2_FLabelType tmp234;
 bool const tmp235 = concat_2_FreadCompositeType(tmp1,tmp228,tmp229,tmp230,arg2/*fileState*/,arg3/*state*/,(&tmp231),(&tmp232),(&tmp233),(&tmp234));
 if(tmp235){
 concat_list_I1 tmp236;
-concat_sb_dwrap(((int64_t)39),((int8_t const*)"error while parsing procedure arguments"),(&tmp236));
+concat_sb_dwrap(((int64_t)39),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""p""r""o""c""e""d""u""r""e"" ""a""r""g""u""m""e""n""t""s"""),(&tmp236));
 concat_FilePosition tmp237 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp236,tmp237,arg3/*state*/);
 }else{
@@ -6079,7 +6080,7 @@ concat_Type tmp238 = concat_types_dnewProcArgs(tmp232,tmp233,false,l2_typeContex
 concat_Type const l13_in = tmp238;
 concat_2_FLabelType tmp239 = ((concat_2_FLabelType){.label=1});
 concat_arrayView_I1 tmp240;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp240));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp240));
 concat_arrayView_I1 tmp241;
 concat_arrayView_I3 tmp242;
 concat_optional_I6 tmp243;
@@ -6088,7 +6089,7 @@ bool const tmp245 = concat_2_FreadCompositeType(tmp231,tmp239,tmp240,tmp240,arg2
 concat_2_FresetStaticArgs(l12_prevArgs,arg3/*state*/);
 if(tmp245){
 concat_list_I1 tmp246;
-concat_sb_dwrap(((int64_t)43),((int8_t const*)"error while parsing procedure return values"),(&tmp246));
+concat_sb_dwrap(((int64_t)43),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""p""r""o""c""e""d""u""r""e"" ""r""e""t""u""r""n"" ""v""a""l""u""e""s"""),(&tmp246));
 concat_FilePosition tmp247 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp246,tmp247,arg3/*state*/);
 }else{
@@ -6101,7 +6102,7 @@ concat_Type tmp251;
 bool const tmp252 = concat_types_dnewProcedure(tmp249,tmp248,tmp250,l2_typeContext,(&tmp251));
 if(tmp252){
 concat_list_I1 tmp253;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"error while creating procedure type"),(&tmp253));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""c""r""e""a""t""i""n""g"" ""p""r""o""c""e""d""u""r""e"" ""t""y""p""e"""),(&tmp253));
 concat_FilePosition tmp254 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp253,tmp254,arg3/*state*/);
 }else{
@@ -6194,7 +6195,7 @@ concat_ConstantArray tmp277;
 bool const tmp278 = concat_2_FpopTemplateArguments(tmp276,arg2/*fileState*/,arg3/*state*/,(&tmp277));
 if(tmp278){
 concat_list_I1 tmp279;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"could not get template arguments"),(&tmp279));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""g""e""t"" ""t""e""m""p""l""a""t""e"" ""a""r""g""u""m""e""n""t""s"""),(&tmp279));
 concat_FilePosition tmp280 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp279,tmp280,arg3/*state*/);
 concat_list_I15 tmp281 = ((*l1_idContext).e6_templateArgBuffer);
@@ -6250,11 +6251,11 @@ if(tmp7){
 concat_list_I1 tmp8;
 concat_sb_dcreate(((int64_t)64),(&tmp8));
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp8,((int64_t)24),((int8_t const*)"unexpected argument for "),(&tmp9));
+concat_sb_dappendS(tmp8,((int64_t)24),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""a""r""g""u""m""e""n""t"" ""f""o""r"" """),(&tmp9));
 concat_list_I1 tmp10;
 concat_sb_dappendStr(tmp9,l2_opName,(&tmp10));
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)33),((int8_t const*)" expected positive integer got: \""),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)33),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""p""o""s""i""t""i""v""e"" ""i""n""t""e""g""e""r"" ""g""o""t"":"" ""\""""),(&tmp11));
 concat_list_I1 tmp12;
 concat_sb_dappendStr(tmp11,tmp0,(&tmp12));
 concat_list_I1 tmp13;
@@ -6274,11 +6275,11 @@ if(tmp16){
 concat_list_I1 tmp18;
 concat_sb_dcreate(((int64_t)50),(&tmp18));
 concat_list_I1 tmp19;
-concat_sb_dappendS(tmp18,((int64_t)12),((int8_t const*)"argument of "),(&tmp19));
+concat_sb_dappendS(tmp18,((int64_t)12),((int8_t const*)"a""r""g""u""m""e""n""t"" ""o""f"" """),(&tmp19));
 concat_list_I1 tmp20;
 concat_sb_dappendStr(tmp19,l2_opName,(&tmp20));
 concat_list_I1 tmp21;
-concat_sb_dappendS(tmp20,((int64_t)25),((int8_t const*)" has to be positive got: "),(&tmp21));
+concat_sb_dappendS(tmp20,((int64_t)25),((int8_t const*)" ""h""a""s"" ""t""o"" ""b""e"" ""p""o""s""i""t""i""v""e"" ""g""o""t"":"" """),(&tmp21));
 concat_list_I1 tmp22;
 concat_sb_dappendI(tmp21,((int64_t)tmp17),(&tmp22));
 concat_FilePosition tmp23 = l1_pos;
@@ -6321,20 +6322,20 @@ if(tmp8){
 concat_arrayView_I1 tmp9;
 concat_string_dtail(tmp4,((int64_t)1),(&tmp9));
 concat_arrayView_I1 tmp10;
-concat_string_dwrap(((int64_t)1),((int8_t const*)":"),(&tmp10));
+concat_string_dwrap(((int64_t)1),((int8_t const*)":"""),(&tmp10));
 bool const tmp11 = concat_string_dstartsWith(tmp9,tmp10);
 if(tmp11){
 concat_arrayView_I1 tmp12;
 concat_string_dtail(tmp9,((int64_t)1),(&tmp12));
 concat_arrayView_I1 tmp13;
-concat_string_dwrap(((int64_t)9),((int8_t const*)"opt:!fold"),(&tmp13));
+concat_string_dwrap(((int64_t)9),((int8_t const*)"o""p""t"":""!""f""o""l""d"""),(&tmp13));
 bool const tmp14 = concat_string_deq(tmp13,tmp12);
 if(tmp14){
 concat_id_dsetScopeFlag(((int32_t)2),true,l1_idContext);
 }else{
 else_label196:;
 concat_arrayView_I1 tmp15;
-concat_string_dwrap(((int64_t)8),((int8_t const*)"opt:fold"),(&tmp15));
+concat_string_dwrap(((int64_t)8),((int8_t const*)"o""p""t"":""f""o""l""d"""),(&tmp15));
 bool const tmp16 = concat_string_deq(tmp15,tmp12);
 if(tmp16){
 concat_id_dsetScopeFlag(((int32_t)2),false,l1_idContext);
@@ -6351,7 +6352,7 @@ concat_arrayView_I1 tmp17;
 concat_arrayView_I1 tmp18;
 concat_string_dsplit(tmp9,((int8_t)58),(&tmp17),(&tmp18));
 concat_arrayView_I1 tmp19;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"dup"),(&tmp19));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"d""u""p"""),(&tmp19));
 bool const tmp20 = concat_string_deq(tmp19,tmp18);
 if(tmp20){
 concat_arrayView_I1 const l4_opName = tmp18;
@@ -6364,7 +6365,7 @@ return;
 }else{
 else_label198:;
 concat_arrayView_I1 tmp23;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"over"),(&tmp23));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"o""v""e""r"""),(&tmp23));
 bool const tmp24 = concat_string_deq(tmp23,tmp18);
 if(tmp24){
 concat_arrayView_I1 const l5_opName = tmp18;
@@ -6383,7 +6384,7 @@ return;
 }else{
 else_label199:;
 concat_arrayView_I1 tmp32;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"swap"),(&tmp32));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"s""w""a""p"""),(&tmp32));
 bool const tmp33 = concat_string_deq(tmp32,tmp18);
 if(tmp33){
 concat_arrayView_I1 const l6_opName = tmp18;
@@ -6396,7 +6397,7 @@ return;
 }else{
 else_label200:;
 concat_arrayView_I1 tmp36;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"drop"),(&tmp36));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"d""r""o""p"""),(&tmp36));
 bool const tmp37 = concat_string_deq(tmp36,tmp18);
 if(tmp37){
 concat_arrayView_I1 const l7_opName = tmp18;
@@ -6418,7 +6419,7 @@ return;
 }else{
 else_label201:;
 concat_arrayView_I1 tmp47;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"include"),(&tmp47));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"i""n""c""l""u""d""e"""),(&tmp47));
 bool const tmp48 = concat_string_deq(tmp47,tmp18);
 if(tmp48){
 concat_arrayView_I1 tmp49;
@@ -6452,7 +6453,7 @@ concat_sb_dappendStr(tmp61,((*arg3/*state*/).e1_libPath),(&tmp62));
 concat_list_I1 tmp63;
 concat_sb_dappendStr(tmp62,tmp59,(&tmp63));
 concat_list_I1 tmp64;
-concat_sb_dappendS(tmp63,((int64_t)7),((int8_t const*)".concat"),(&tmp64));
+concat_sb_dappendS(tmp63,((int64_t)7),((int8_t const*)".""c""o""n""c""a""t"""),(&tmp64));
 concat_FilePosition tmp65 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FincludeFile(tmp64,tmp65,arg3/*state*/);
 *(out0)= tmp49;
@@ -6464,7 +6465,7 @@ else_label204:;
 concat_list_I1 tmp66;
 concat_sb_dcreate(((int64_t)64),(&tmp66));
 concat_list_I1 tmp67;
-concat_sb_dappendS(tmp66,((int64_t)25),((int8_t const*)"invalid token for include"),(&tmp67));
+concat_sb_dappendS(tmp66,((int64_t)25),((int8_t const*)"i""n""v""a""l""i""d"" ""t""o""k""e""n"" ""f""o""r"" ""i""n""c""l""u""d""e"""),(&tmp67));
 concat_list_I1 tmp68;
 concat_sb_dappendToken(tmp67,tmp50,(&tmp68));
 concat_FilePosition tmp69 = ((*arg2/*fileState*/).e1_wordStart);
@@ -6474,18 +6475,18 @@ return;
 }else{
 else_label202:;
 concat_arrayView_I1 tmp70;
-concat_string_dwrap(((int64_t)9),((int8_t const*)"namespace"),(&tmp70));
+concat_string_dwrap(((int64_t)9),((int8_t const*)"n""a""m""e""s""p""a""c""e"""),(&tmp70));
 bool const tmp71 = concat_string_deq(tmp70,tmp18);
 if(tmp71){
 bool const tmp72 = concat_id_disTopLevel(l1_idContext);
 bool const tmp73 = (!tmp72);
 if(tmp73){
 concat_list_I1 tmp74;
-concat_sb_dwrap(((int64_t)1),((int8_t const*)"#"),(&tmp74));
+concat_sb_dwrap(((int64_t)1),((int8_t const*)"#"""),(&tmp74));
 concat_list_I1 tmp75;
 concat_sb_dappendStr(tmp74,tmp17,(&tmp75));
 concat_list_I1 tmp76;
-concat_sb_dappendS(tmp75,((int64_t)33),((int8_t const*)" can only be used at global level"),(&tmp76));
+concat_sb_dappendS(tmp75,((int64_t)33),((int8_t const*)" ""c""a""n"" ""o""n""l""y"" ""b""e"" ""u""s""e""d"" ""a""t"" ""g""l""o""b""a""l"" ""l""e""v""e""l"""),(&tmp76));
 concat_FilePosition tmp77 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp76,tmp77,arg3/*state*/);
 }else{
@@ -6496,7 +6497,7 @@ concat_Token tmp79 = concat_nextToken(tmp3,arg2/*fileState*/,(&tmp78));
 bool const tmp80 = (!(tmp79.label==1));
 if(tmp80){
 concat_list_I1 tmp81;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"namespace names have to be identifiers"),(&tmp81));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"n""a""m""e""s""p""a""c""e"" ""n""a""m""e""s"" ""h""a""v""e"" ""t""o"" ""b""e"" ""i""d""e""n""t""i""f""i""e""r""s"""),(&tmp81));
 concat_FilePosition tmp82 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp81,tmp82,arg3/*state*/);
 *(out0)= tmp78;
@@ -6510,11 +6511,11 @@ concat_FilePosition tmp84 = ((*arg2/*fileState*/).e1_wordStart);
 bool const tmp85 = concat_id_dcheckIdentifier(tmp83,tmp84,(&((*l0_progContext).e6_errors)));
 if(tmp85){
 concat_list_I1 tmp86;
-concat_sb_dwrap(((int64_t)1),((int8_t const*)"\""),(&tmp86));
+concat_sb_dwrap(((int64_t)1),((int8_t const*)"\""""),(&tmp86));
 concat_list_I1 tmp87;
 concat_sb_dappendStr(tmp86,tmp83,(&tmp87));
 concat_list_I1 tmp88;
-concat_sb_dappendS(tmp87,((int64_t)31),((int8_t const*)"\" is not a valid namespace name"),(&tmp88));
+concat_sb_dappendS(tmp87,((int64_t)31),((int8_t const*)"\""" ""i""s"" ""n""o""t"" ""a"" ""v""a""l""i""d"" ""n""a""m""e""s""p""a""c""e"" ""n""a""m""e"""),(&tmp88));
 concat_FilePosition tmp89 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp88,tmp89,arg3/*state*/);
 *(out0)= tmp78;
@@ -6525,7 +6526,7 @@ else_label208:;
 bool const tmp90 = concat_id_dhasOpenTemplate(l1_idContext);
 if(tmp90){
 concat_list_I1 tmp91;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"cannot open namespace inside template"),(&tmp91));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"c""a""n""n""o""t"" ""o""p""e""n"" ""n""a""m""e""s""p""a""c""e"" ""i""n""s""i""d""e"" ""t""e""m""p""l""a""t""e"""),(&tmp91));
 concat_FilePosition tmp92 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp91,tmp92,arg3/*state*/);
 *(out0)= tmp78;
@@ -6542,7 +6543,7 @@ return;
 }else{
 else_label205:;
 concat_arrayView_I1 tmp96;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"using"),(&tmp96));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"u""s""i""n""g"""),(&tmp96));
 bool const tmp97 = concat_string_deq(tmp96,tmp18);
 if(tmp97){
 concat_arrayView_I1 tmp98;
@@ -6550,7 +6551,7 @@ concat_Token tmp99 = concat_nextToken(tmp3,arg2/*fileState*/,(&tmp98));
 bool const tmp100 = (!(tmp99.label==1));
 if(tmp100){
 concat_list_I1 tmp101;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"namespace names have to be identifiers"),(&tmp101));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"n""a""m""e""s""p""a""c""e"" ""n""a""m""e""s"" ""h""a""v""e"" ""t""o"" ""b""e"" ""i""d""e""n""t""i""f""i""e""r""s"""),(&tmp101));
 concat_FilePosition tmp102 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp101,tmp102,arg3/*state*/);
 *(out0)= tmp98;
@@ -6566,11 +6567,11 @@ concat_LabelId const tmp106 = concat_id_dnewLabel(tmp103,((concat_LabelFlag)0),t
 bool const tmp107 = concat_id_dimportNamespace(tmp106,l1_idContext);
 if(tmp107){
 concat_list_I1 tmp108;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"namespace \""),(&tmp108));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"n""a""m""e""s""p""a""c""e"" ""\""""),(&tmp108));
 concat_list_I1 tmp109;
 concat_sb_dappendStr(tmp108,tmp103,(&tmp109));
 concat_list_I1 tmp110;
-concat_sb_dappendS(tmp109,((int64_t)16),((int8_t const*)"\" does not exist"),(&tmp110));
+concat_sb_dappendS(tmp109,((int64_t)16),((int8_t const*)"\""" ""d""o""e""s"" ""n""o""t"" ""e""x""i""s""t"""),(&tmp110));
 concat_FilePosition tmp111 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp110,tmp111,arg3/*state*/);
 }else{
@@ -6581,18 +6582,18 @@ return;
 }else{
 else_label210:;
 concat_arrayView_I1 tmp112;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"end"),(&tmp112));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"e""n""d"""),(&tmp112));
 bool const tmp113 = concat_string_deq(tmp112,tmp18);
 if(tmp113){
 bool const tmp114 = concat_id_disTopLevel(l1_idContext);
 bool const tmp115 = (!tmp114);
 if(tmp115){
 concat_list_I1 tmp116;
-concat_sb_dwrap(((int64_t)1),((int8_t const*)"#"),(&tmp116));
+concat_sb_dwrap(((int64_t)1),((int8_t const*)"#"""),(&tmp116));
 concat_list_I1 tmp117;
 concat_sb_dappendStr(tmp116,tmp17,(&tmp117));
 concat_list_I1 tmp118;
-concat_sb_dappendS(tmp117,((int64_t)33),((int8_t const*)" can only be used at global level"),(&tmp118));
+concat_sb_dappendS(tmp117,((int64_t)33),((int8_t const*)" ""c""a""n"" ""o""n""l""y"" ""b""e"" ""u""s""e""d"" ""a""t"" ""g""l""o""b""a""l"" ""l""e""v""e""l"""),(&tmp118));
 concat_FilePosition tmp119 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp118,tmp119,arg3/*state*/);
 }else{
@@ -6601,7 +6602,7 @@ else_label214:;
 bool const tmp120 = concat_id_dendNamespace(l1_idContext);
 if(tmp120){
 concat_list_I1 tmp121;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"no open namespaces"),(&tmp121));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"n""o"" ""o""p""e""n"" ""n""a""m""e""s""p""a""c""e""s"""),(&tmp121));
 concat_FilePosition tmp122 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp121,tmp122,arg3/*state*/);
 }else{
@@ -6612,18 +6613,18 @@ return;
 }else{
 else_label213:;
 concat_arrayView_I1 tmp123;
-concat_string_dwrap(((int64_t)8),((int8_t const*)"template"),(&tmp123));
+concat_string_dwrap(((int64_t)8),((int8_t const*)"t""e""m""p""l""a""t""e"""),(&tmp123));
 bool const tmp124 = concat_string_deq(tmp123,tmp18);
 if(tmp124){
 bool const tmp125 = concat_id_disTopLevel(l1_idContext);
 bool const tmp126 = (!tmp125);
 if(tmp126){
 concat_list_I1 tmp127;
-concat_sb_dwrap(((int64_t)1),((int8_t const*)"#"),(&tmp127));
+concat_sb_dwrap(((int64_t)1),((int8_t const*)"#"""),(&tmp127));
 concat_list_I1 tmp128;
 concat_sb_dappendStr(tmp127,tmp17,(&tmp128));
 concat_list_I1 tmp129;
-concat_sb_dappendS(tmp128,((int64_t)33),((int8_t const*)" can only be used at global level"),(&tmp129));
+concat_sb_dappendS(tmp128,((int64_t)33),((int8_t const*)" ""c""a""n"" ""o""n""l""y"" ""b""e"" ""u""s""e""d"" ""a""t"" ""g""l""o""b""a""l"" ""l""e""v""e""l"""),(&tmp129));
 concat_FilePosition tmp130 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp129,tmp130,arg3/*state*/);
 }else{
@@ -6631,7 +6632,7 @@ else_label217:;
 }
 concat_2_FLabelType tmp131 = ((concat_2_FLabelType){.label=5});
 concat_arrayView_I1 tmp132;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"#end"),(&tmp132));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"#""e""n""d"""),(&tmp132));
 concat_arrayView_I1 tmp133;
 concat_arrayView_I3 tmp134;
 concat_optional_I6 tmp135;
@@ -6639,7 +6640,7 @@ concat_2_FLabelType tmp136;
 bool const tmp137 = concat_2_FreadCompositeType(tmp3,tmp131,tmp132,tmp132,arg2/*fileState*/,arg3/*state*/,(&tmp133),(&tmp134),(&tmp135),(&tmp136));
 if(tmp137){
 concat_list_I1 tmp138;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"error while parsing template arguments"),(&tmp138));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""p""a""r""s""i""n""g"" ""t""e""m""p""l""a""t""e"" ""a""r""g""u""m""e""n""t""s"""),(&tmp138));
 concat_FilePosition tmp139 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp138,tmp139,arg3/*state*/);
 }else{
@@ -6652,7 +6653,7 @@ concat_FilePosition tmp143 = ((*arg2/*fileState*/).e1_wordStart);
 bool const tmp144 = concat_id_dbeginTemplate(tmp140,tmp141,tmp142,tmp143,l1_idContext);
 if(tmp144){
 concat_list_I1 tmp145;
-concat_sb_dwrap(((int64_t)25),((int8_t const*)"could not create template"),(&tmp145));
+concat_sb_dwrap(((int64_t)25),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""t""e""m""p""l""a""t""e"""),(&tmp145));
 concat_FilePosition tmp146 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp145,tmp146,arg3/*state*/);
 }else{
@@ -6663,7 +6664,7 @@ return;
 }else{
 else_label216:;
 concat_arrayView_I1 tmp147;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"typedef"),(&tmp147));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"t""y""p""e""d""e""f"""),(&tmp147));
 bool const tmp148 = concat_string_deq(tmp147,tmp18);
 if(tmp148){
 concat_arrayView_I1 tmp149;
@@ -6707,7 +6708,7 @@ return;
 }else{
 else_label220:;
 concat_arrayView_I1 tmp170;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"types"),(&tmp170));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""y""p""e""s"""),(&tmp170));
 bool const tmp171 = concat_string_deq(tmp170,tmp18);
 if(tmp171){
 concat_arrayView_I1 const l8_opName = tmp18;
@@ -6733,7 +6734,7 @@ return;
 }else{
 else_label223:;
 concat_arrayView_I1 tmp180;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"stack"),(&tmp180));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"s""t""a""c""k"""),(&tmp180));
 bool const tmp181 = concat_string_deq(tmp180,tmp18);
 if(tmp181){
 concat_arrayView_I1 const l9_opName = tmp18;
@@ -6759,7 +6760,7 @@ return;
 }else{
 else_label225:;
 concat_arrayView_I1 tmp190;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"ops"),(&tmp190));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"o""p""s"""),(&tmp190));
 bool const tmp191 = concat_string_deq(tmp190,tmp18);
 if(tmp191){
 concat_arrayView_I1 const l10_opName = tmp18;
@@ -6785,7 +6786,7 @@ return;
 }else{
 else_label227:;
 concat_arrayView_I1 tmp200;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"find"),(&tmp200));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"f""i""n""d"""),(&tmp200));
 bool const tmp201 = concat_string_deq(tmp200,tmp18);
 if(tmp201){
 concat_arrayView_I1 tmp202;
@@ -6793,7 +6794,7 @@ concat_Token tmp203 = concat_nextToken(tmp3,arg2/*fileState*/,(&tmp202));
 bool const tmp204 = (!(tmp203.label==1));
 if(tmp204){
 concat_list_I1 tmp205;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"expected identifier"),(&tmp205));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"e""x""p""e""c""t""e""d"" ""i""d""e""n""t""i""f""i""e""r"""),(&tmp205));
 concat_FilePosition tmp206 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp205,tmp206,arg3/*state*/);
 *(out0)= tmp202;
@@ -6813,13 +6814,13 @@ concat_25_FIdentifierName tmp211;
 concat_25_FIdentifierData* tmp212;
 bool const tmp213 = concat_id_dsearchIdentifier(tmp208,tmp209,l1_idContext,tmp210,(&tmp211),(&tmp212));
 concat_list_I1 tmp214;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"-----------------\x0A"),(&tmp214));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""\x0A"""),(&tmp214));
 concat_list_I1 tmp215;
-concat_sb_dappendS(tmp214,((int64_t)12),((int8_t const*)"identifier \""),(&tmp215));
+concat_sb_dappendS(tmp214,((int64_t)12),((int8_t const*)"i""d""e""n""t""i""f""i""e""r"" ""\""""),(&tmp215));
 concat_list_I1 tmp216;
 concat_sb_dappendStr(tmp215,l11_idName,(&tmp216));
 concat_list_I1 tmp217;
-concat_sb_dappendS(tmp216,((int64_t)3),((int8_t const*)"\":\x0A"),(&tmp217));
+concat_sb_dappendS(tmp216,((int64_t)3),((int8_t const*)"\""":""\x0A"""),(&tmp217));
 int32_t tmp218 = ((int32_t)0);
 do{
 bool const tmp219 = (((int64_t)tmp218)<(l12_matches.e1_length));
@@ -6830,13 +6831,13 @@ concat_optional_I28 tmp221 = concat_list_dat_I7(tmp220,((int64_t)tmp218));
 concat_internal_checkEnumIndex(tmp221.label,1,"./concat.concat/parser.concat:1208:37");
 concat_IdentifierMatch* const l13_match = (tmp221.data.e1_data);
 concat_list_I1 tmp222;
-concat_sb_dappendS(tmp217,((int64_t)3),((int8_t const*)" - "),(&tmp222));
+concat_sb_dappendS(tmp217,((int64_t)3),((int8_t const*)" ""-"" """),(&tmp222));
 concat_IdentifierInfo tmp223;
 concat_id_dasIdInfo(((*l13_match).e1_data),(&tmp223));
 concat_list_I1 tmp224;
 concat_sb_dappendIdInfo(tmp222,tmp223,((concat_LabelContext const*)l3_labelContext),(&tmp224));
 concat_list_I1 tmp225;
-concat_sb_dappendS(tmp224,((int64_t)3),((int8_t const*)" ( "),(&tmp225));
+concat_sb_dappendS(tmp224,((int64_t)3),((int8_t const*)" ""("" """),(&tmp225));
 concat_25_FIdentifierData const* const tmp226 = ((*l13_match).e1_data);
 concat_Type tmp227 = ((*tmp226).e0_valueType);
 concat_list_I1 tmp228;
@@ -6846,19 +6847,19 @@ concat_ConstValue const tmp230 = ((*tmp229).e1_constValue);
 bool const tmp231 = (!(tmp230.label==0));
 if(tmp231){
 concat_list_I1 tmp232;
-concat_sb_dappendS(tmp228,((int64_t)3),((int8_t const*)" [ "),(&tmp232));
+concat_sb_dappendS(tmp228,((int64_t)3),((int8_t const*)" ""["" """),(&tmp232));
 concat_25_FIdentifierData const* const tmp233 = ((*l13_match).e1_data);
 concat_ConstValue tmp234 = ((*tmp233).e1_constValue);
 concat_list_I1 tmp235;
 concat_sb_dappendConstant(tmp232,tmp234,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp235));
 concat_list_I1 tmp236;
-concat_sb_dappendS(tmp235,((int64_t)2),((int8_t const*)" ]"),(&tmp236));
+concat_sb_dappendS(tmp235,((int64_t)2),((int8_t const*)" ""]"""),(&tmp236));
 tmp228 = tmp236;
 }else{
 else_label231:;
 }
 concat_list_I1 tmp237;
-concat_sb_dappendS(tmp228,((int64_t)15),((int8_t const*)" ) declared at "),(&tmp237));
+concat_sb_dappendS(tmp228,((int64_t)15),((int8_t const*)" "")"" ""d""e""c""l""a""r""e""d"" ""a""t"" """),(&tmp237));
 concat_25_FIdentifierData const* const tmp238 = ((*l13_match).e1_data);
 concat_optional_I4 tmp239 = concat_id_dlabelPos(((*tmp238).e3_labelId),((concat_LabelContext const*)l3_labelContext));
 bool const tmp240 = concat_optional_dhasData_I4(tmp239);
@@ -6870,7 +6871,7 @@ tmp237 = tmp241;
 }else{
 else_label232:;
 concat_list_I1 tmp242;
-concat_sb_dappendS(tmp237,((int64_t)1),((int8_t const*)"?"),(&tmp242));
+concat_sb_dappendS(tmp237,((int64_t)1),((int8_t const*)"?"""),(&tmp242));
 tmp237 = tmp242;
 }
 concat_list_I1 tmp243;
@@ -6879,7 +6880,7 @@ tmp217 = tmp243;
 tmp218 = ((int32_t)(tmp218+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp244;
-concat_sb_dappendS(tmp217,((int64_t)18),((int8_t const*)"-----------------\x0A"),(&tmp244));
+concat_sb_dappendS(tmp217,((int64_t)18),((int8_t const*)"-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""\x0A"""),(&tmp244));
 concat_io_dFILE const tmp245 = concat_io_dstdOut();
 concat_io_dIOError const tmp246 = concat_io_dfputSb(tmp245,tmp244);
 concat_list_I1 tmp247;
@@ -6898,7 +6899,7 @@ return;
 }else{
 else_label229:;
 concat_arrayView_I1 tmp254;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"assert"),(&tmp254));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"a""s""s""e""r""t"""),(&tmp254));
 bool const tmp255 = concat_string_deq(tmp254,tmp18);
 if(tmp255){
 concat_arrayView_I1 tmp256;
@@ -6911,7 +6912,7 @@ tmp259 = (tmp257.data.e2_STRING);
 }else{
 else_label234:;
 concat_list_I1 tmp260;
-concat_sb_dwrap(((int64_t)15),((int8_t const*)"expected string"),(&tmp260));
+concat_sb_dwrap(((int64_t)15),((int8_t const*)"e""x""p""e""c""t""e""d"" ""s""t""r""i""n""g"""),(&tmp260));
 concat_FilePosition tmp261 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp260,tmp261,arg3/*state*/);
 *(out0)= tmp256;
@@ -6931,7 +6932,7 @@ tmp264 = tmp265;
 bool const tmp266 = (!tmp264);
 if(tmp266){
 concat_list_I1 tmp267;
-concat_sb_dwrap(((int64_t)42),((int8_t const*)"need boolean constant for static assertion"),(&tmp267));
+concat_sb_dwrap(((int64_t)42),((int8_t const*)"n""e""e""d"" ""b""o""o""l""e""a""n"" ""c""o""n""s""t""a""n""t"" ""f""o""r"" ""s""t""a""t""i""c"" ""a""s""s""e""r""t""i""o""n"""),(&tmp267));
 concat_FilePosition tmp268 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp267,tmp268,arg3/*state*/);
 *(out0)= tmp256;
@@ -6960,7 +6961,7 @@ tmp275 = (tmp272.data.e1_boolean);
 }else{
 else_label238:;
 concat_list_I1 tmp276;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"expected boolean got "),(&tmp276));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"e""x""p""e""c""t""e""d"" ""b""o""o""l""e""a""n"" ""g""o""t"" """),(&tmp276));
 concat_list_I1 tmp277;
 concat_sb_dappendConstant(tmp276,tmp272,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp277));
 concat_FilePosition tmp278 = ((*arg2/*fileState*/).e1_wordStart);
@@ -6970,11 +6971,11 @@ tmp275 = false;
 bool const tmp279 = (!tmp275);
 if(tmp279){
 concat_list_I1 tmp280;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"assertion failed \""),(&tmp280));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"a""s""s""e""r""t""i""o""n"" ""f""a""i""l""e""d"" ""\""""),(&tmp280));
 concat_list_I1 tmp281;
 concat_sb_dappendStr(tmp280,l14_message,(&tmp281));
 concat_list_I1 tmp282;
-concat_sb_dappendS(tmp281,((int64_t)2),((int8_t const*)"\" "),(&tmp282));
+concat_sb_dappendS(tmp281,((int64_t)2),((int8_t const*)"\""" """),(&tmp282));
 concat_FilePosition tmp283 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp282,tmp283,arg3/*state*/);
 }else{
@@ -7002,7 +7003,7 @@ else_label233:;
 concat_list_I1 tmp284;
 concat_sb_dcreate(((int64_t)64),(&tmp284));
 concat_list_I1 tmp285;
-concat_sb_dappendS(tmp284,((int64_t)26),((int8_t const*)"unknown compiler command \""),(&tmp285));
+concat_sb_dappendS(tmp284,((int64_t)26),((int8_t const*)"u""n""k""n""o""w""n"" ""c""o""m""p""i""l""e""r"" ""c""o""m""m""a""n""d"" ""\""""),(&tmp285));
 concat_list_I1 tmp286;
 concat_sb_dappendStr(tmp285,tmp18,(&tmp286));
 bool const tmp287 = ((tmp17.e1_length)>((int64_t)0));
@@ -7026,15 +7027,15 @@ return;
 }else{
 else_label194:;
 concat_arrayView_I1 tmp293;
-concat_string_dwrap(((int64_t)1),((int8_t const*)":"),(&tmp293));
+concat_string_dwrap(((int64_t)1),((int8_t const*)":"""),(&tmp293));
 bool const tmp294 = concat_string_deq(tmp4,tmp293);
 concat_arrayView_I1 tmp295;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"=:"),(&tmp295));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"="":"""),(&tmp295));
 bool const tmp296 = concat_string_deq(tmp4,tmp295);
 bool const tmp297 = ((bool)(tmp294|tmp296));
 if(tmp297){
 concat_arrayView_I1 tmp298;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"=:"),(&tmp298));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"="":"""),(&tmp298));
 bool const tmp299 = concat_string_deq(tmp4,tmp298);
 bool const l15_isInit = tmp299;
 bool l16_localDeclaration = false;
@@ -7185,12 +7186,12 @@ bool const tmp360 = concat_types_dcanCast(tmp358,tmp359,false,((concat_TypeConte
 bool const tmp361 = (!tmp360);
 if(tmp361){
 concat_list_I1 tmp362;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "),(&tmp362));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"c""a""n""n""o""t"" ""c""a""s""t"" """),(&tmp362));
 concat_Type tmp363 = (tmp357.e0_valueType);
 concat_list_I1 tmp364;
 concat_sb_dappendType(tmp362,tmp363,((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp364));
 concat_list_I1 tmp365;
-concat_sb_dappendS(tmp364,((int64_t)4),((int8_t const*)" to "),(&tmp365));
+concat_sb_dappendS(tmp364,((int64_t)4),((int8_t const*)" ""t""o"" """),(&tmp365));
 concat_Type tmp366 = l17_valType;
 concat_list_I1 tmp367;
 concat_sb_dappendType(tmp365,tmp366,((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp367));
@@ -7221,12 +7222,12 @@ bool const tmp377 = concat_types_dcanCast(tmp375,tmp376,false,((concat_TypeConte
 bool const tmp378 = (!tmp377);
 if(tmp378){
 concat_list_I1 tmp379;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "),(&tmp379));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"c""a""n""n""o""t"" ""c""a""s""t"" """),(&tmp379));
 concat_Type tmp380 = ((*l22_info).e0_valueType);
 concat_list_I1 tmp381;
 concat_sb_dappendType(tmp379,tmp380,((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp381));
 concat_list_I1 tmp382;
-concat_sb_dappendS(tmp381,((int64_t)4),((int8_t const*)" to "),(&tmp382));
+concat_sb_dappendS(tmp381,((int64_t)4),((int8_t const*)" ""t""o"" """),(&tmp382));
 concat_Type tmp383 = l17_valType;
 concat_list_I1 tmp384;
 concat_sb_dappendType(tmp382,tmp383,((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp384));
@@ -7286,13 +7287,13 @@ bool const tmp401 = (!l16_localDeclaration);
 if(tmp401){
 concat_arrayView_I1 tmp402 = (l25_idName.e0_name);
 concat_arrayView_I1 tmp403;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"main"),(&tmp403));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"m""a""i""n"""),(&tmp403));
 bool const tmp404 = concat_string_deq(tmp402,tmp403);
 if(tmp404){
 bool const tmp405 = (!(l19_idType.label==1));
 if(tmp405){
 concat_list_I1 tmp406;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"main has to be a procedure got: "),(&tmp406));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"m""a""i""n"" ""h""a""s"" ""t""o"" ""b""e"" ""a"" ""p""r""o""c""e""d""u""r""e"" ""g""o""t"":"" """),(&tmp406));
 concat_IdentifierInfo tmp407;
 concat_id_dasIdInfo(l24_idData,(&tmp407));
 concat_list_I1 tmp408;
@@ -7309,7 +7310,7 @@ concat_LabelFlag const tmp411 = concat_id_dlabelFlags(((*l24_idData).e3_labelId)
 bool const tmp412 = (!(!!((concat_LabelFlag)(tmp411&((concat_LabelFlag)8)))));
 if(tmp412){
 concat_list_I1 tmp413;
-concat_sb_dwrap(((int64_t)44),((int8_t const*)"main procedure is not visible from root file"),(&tmp413));
+concat_sb_dwrap(((int64_t)44),((int8_t const*)"m""a""i""n"" ""p""r""o""c""e""d""u""r""e"" ""i""s"" ""n""o""t"" ""v""i""s""i""b""l""e"" ""f""r""o""m"" ""r""o""o""t"" ""f""i""l""e"""),(&tmp413));
 concat_FilePosition tmp414 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp413,tmp414,arg3/*state*/);
 l26_validMain = false;
@@ -7320,7 +7321,7 @@ else_label263:;
 bool const tmp415 = ((l25_idName.e1_namespace)!=((int32_t)0));
 if(tmp415){
 concat_list_I1 tmp416;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"main procedure not in global namespace"),(&tmp416));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"m""a""i""n"" ""p""r""o""c""e""d""u""r""e"" ""n""o""t"" ""i""n"" ""g""l""o""b""a""l"" ""n""a""m""e""s""p""a""c""e"""),(&tmp416));
 concat_FilePosition tmp417 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp416,tmp417,arg3/*state*/);
 l26_validMain = false;
@@ -7338,7 +7339,7 @@ concat_Type const l28_outTypes = tmp422;
 bool const tmp424 = ((bool)(tmp420|tmp423));
 if(tmp424){
 concat_list_I1 tmp425;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"could not resolve signature of main"),(&tmp425));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""r""e""s""o""l""v""e"" ""s""i""g""n""a""t""u""r""e"" ""o""f"" ""m""a""i""n"""),(&tmp425));
 concat_FilePosition tmp426 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp425,tmp426,arg3/*state*/);
 }else{
@@ -7349,7 +7350,7 @@ int64_t const tmp428 = concat_types_dcompositeEltCount(tmp427,((concat_TypeConte
 bool const tmp429 = (tmp428>((int64_t)0));
 if(tmp429){
 concat_list_I1 tmp430;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"main procedure should not take arguments"),(&tmp430));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"m""a""i""n"" ""p""r""o""c""e""d""u""r""e"" ""s""h""o""u""l""d"" ""n""o""t"" ""t""a""k""e"" ""a""r""g""u""m""e""n""t""s"""),(&tmp430));
 concat_FilePosition tmp431 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FParserState* tmp432 = arg3/*state*/;
 if(l26_validMain){
@@ -7366,7 +7367,7 @@ int64_t const tmp434 = concat_types_dcompositeEltCount(tmp433,((concat_TypeConte
 bool const tmp435 = (tmp434>((int64_t)0));
 if(tmp435){
 concat_list_I1 tmp436;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"main procedure should not return a value"),(&tmp436));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"m""a""i""n"" ""p""r""o""c""e""d""u""r""e"" ""s""h""o""u""l""d"" ""n""o""t"" ""r""e""t""u""r""n"" ""a"" ""v""a""l""u""e"""),(&tmp436));
 concat_FilePosition tmp437 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp436,tmp437,arg3/*state*/);
 }else{
@@ -7390,7 +7391,7 @@ if(tmp441){
 bool const tmp442 = concat_optional_dhasData_I1(((*arg3/*state*/).e10_currentProc));
 if(tmp442){
 concat_list_I1 tmp443;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"procedures cannot be nested"),(&tmp443));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"p""r""o""c""e""d""u""r""e""s"" ""c""a""n""n""o""t"" ""b""e"" ""n""e""s""t""e""d"""),(&tmp443));
 concat_FilePosition tmp444 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp443,tmp444,arg3/*state*/);
 }else{
@@ -7404,7 +7405,7 @@ concat_ValueInfo tmp447;
 concat_2_FpopConst2(arg3/*state*/,(&tmp446),(&tmp447));
 concat_ValueInfo const l29_info = tmp447;
 concat_list_I1 tmp448;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"unexpected constant at global level"),(&tmp448));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""c""o""n""s""t""a""n""t"" ""a""t"" ""g""l""o""b""a""l"" ""l""e""v""e""l"""),(&tmp448));
 concat_FilePosition tmp449 = (l29_info.e3_pushedAt);
 concat_2_FappendError2(tmp448,tmp449,arg3/*state*/);
 }else{
@@ -7415,7 +7416,7 @@ else_label272:;
 bool const tmp450 = concat_2_FhasConst(arg3/*state*/);
 if(tmp450){
 concat_list_I1 tmp451;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"unexpected constant at global level"),(&tmp451));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""c""o""n""s""t""a""n""t"" ""a""t"" ""g""l""o""b""a""l"" ""l""e""v""e""l"""),(&tmp451));
 concat_2_FConstant tmp452;
 concat_2_FpopConst(arg3/*state*/,(&tmp452));
 concat_FilePosition tmp453 = (tmp452.e3_pos);
@@ -7453,7 +7454,7 @@ concat_Type tmp464;
 bool const tmp465 = concat_types_dgetProcIn(tmp463,((concat_TypeContext const*)l2_typeContext),(&tmp464));
 if(tmp465){
 concat_list_I1 tmp466;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"could not resolve procedure signature"),(&tmp466));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""r""e""s""o""l""v""e"" ""p""r""o""c""e""d""u""r""e"" ""s""i""g""n""a""t""u""r""e"""),(&tmp466));
 concat_FilePosition tmp467 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp466,tmp467,arg3/*state*/);
 }else{
@@ -7602,7 +7603,7 @@ return;
 }else{
 else_label241:;
 concat_arrayView_I1 tmp517;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"=::"),(&tmp517));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"="":"":"""),(&tmp517));
 bool const tmp518 = concat_string_deq(tmp4,tmp517);
 if(tmp518){
 if(concat___EXPERIMENTAL__){
@@ -7631,7 +7632,7 @@ bool const tmp528 = concat_types_disProcedure(tmp527,((concat_TypeContext const*
 concat_IdentifierType tmp535;
 if(tmp528){
 concat_list_I1 tmp529;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"unexpected procedure"),(&tmp529));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""p""r""o""c""e""d""u""r""e"""),(&tmp529));
 concat_FilePosition tmp530 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp529,tmp530,arg3/*state*/);
 *(out0)= tmp521;
@@ -7665,9 +7666,9 @@ concat_Type tmp539 = (tmp536.data.e8_typeId);
 bool const tmp540 = concat_types_disProcedure(tmp539,((concat_TypeContext const*)l2_typeContext));
 if(tmp540){
 concat_list_I1 tmp541;
-concat_sb_dwrap(((int64_t)76),((int8_t const*)"declaration of a procedure type as constant\x0A use \'=:\' to declare procedures\x0A"),(&tmp541));
+concat_sb_dwrap(((int64_t)76),((int8_t const*)"d""e""c""l""a""r""a""t""i""o""n"" ""o""f"" ""a"" ""p""r""o""c""e""d""u""r""e"" ""t""y""p""e"" ""a""s"" ""c""o""n""s""t""a""n""t""\x0A"" ""u""s""e"" ""\'""="":""\'"" ""t""o"" ""d""e""c""l""a""r""e"" ""p""r""o""c""e""d""u""r""e""s""\x0A"""),(&tmp541));
 concat_list_I1 tmp542;
-concat_sb_dappendS(tmp541,((int64_t)86),((int8_t const*)"for declaring a procedure type constant use a explicit type declaration ( `type =:` ) "),(&tmp542));
+concat_sb_dappendS(tmp541,((int64_t)86),((int8_t const*)"f""o""r"" ""d""e""c""l""a""r""i""n""g"" ""a"" ""p""r""o""c""e""d""u""r""e"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"" ""u""s""e"" ""a"" ""e""x""p""l""i""c""i""t"" ""t""y""p""e"" ""d""e""c""l""a""r""a""t""i""o""n"" ""("" ""`""t""y""p""e"" ""="":""`"" "")"" """),(&tmp542));
 concat_FilePosition tmp543 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp542,tmp543,arg3/*state*/);
 }else{
@@ -7706,7 +7707,7 @@ bool const tmp557 = concat_types_disProcedure(tmp556,((concat_TypeContext const*
 concat_IdentifierType tmp564;
 if(tmp557){
 concat_list_I1 tmp558;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"unexpected procedure"),(&tmp558));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""p""r""o""c""e""d""u""r""e"""),(&tmp558));
 concat_FilePosition tmp559 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp558,tmp559,arg3/*state*/);
 *(out0)= tmp521;
@@ -7745,9 +7746,9 @@ concat_2_FpopConst2(arg3/*state*/,(&tmp570),(&tmp571));
 bool const tmp572 = concat_types_disProcedure(tmp569,((concat_TypeContext const*)l2_typeContext));
 if(tmp572){
 concat_list_I1 tmp573;
-concat_sb_dwrap(((int64_t)76),((int8_t const*)"declaration of a procedure type as constant\x0A use \'=:\' to declare procedures\x0A"),(&tmp573));
+concat_sb_dwrap(((int64_t)76),((int8_t const*)"d""e""c""l""a""r""a""t""i""o""n"" ""o""f"" ""a"" ""p""r""o""c""e""d""u""r""e"" ""t""y""p""e"" ""a""s"" ""c""o""n""s""t""a""n""t""\x0A"" ""u""s""e"" ""\'""="":""\'"" ""t""o"" ""d""e""c""l""a""r""e"" ""p""r""o""c""e""d""u""r""e""s""\x0A"""),(&tmp573));
 concat_list_I1 tmp574;
-concat_sb_dappendS(tmp573,((int64_t)86),((int8_t const*)"for declaring a procedure type constant use a explicit type declaration ( `type =:` ) "),(&tmp574));
+concat_sb_dappendS(tmp573,((int64_t)86),((int8_t const*)"f""o""r"" ""d""e""c""l""a""r""i""n""g"" ""a"" ""p""r""o""c""e""d""u""r""e"" ""t""y""p""e"" ""c""o""n""s""t""a""n""t"" ""u""s""e"" ""a"" ""e""x""p""l""i""c""i""t"" ""t""y""p""e"" ""d""e""c""l""a""r""a""t""i""o""n"" ""("" ""`""t""y""p""e"" ""="":""`"" "")"" """),(&tmp574));
 concat_FilePosition tmp575 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp574,tmp575,arg3/*state*/);
 }else{
@@ -7836,7 +7837,7 @@ return;
 }else{
 else_label289:;
 concat_arrayView_I1 tmp605;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"="),(&tmp605));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"="""),(&tmp605));
 bool const tmp606 = concat_string_deq(tmp4,tmp605);
 if(tmp606){
 if(concat___EXPERIMENTAL__){
@@ -7888,7 +7889,7 @@ else_label311:;
 else_label310:;
 }
 concat_list_I1 tmp621;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"cannot assign value to constant"),(&tmp621));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"c""a""n""n""o""t"" ""a""s""s""i""g""n"" ""v""a""l""u""e"" ""t""o"" ""c""o""n""s""t""a""n""t"""),(&tmp621));
 concat_FilePosition tmp622 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp621,tmp622,arg3/*state*/);
 *(out0)= tmp3;
@@ -7900,7 +7901,7 @@ concat_optional_I14 tmp623 = concat_2_FpeekOp(arg3/*state*/);
 bool const tmp624 = concat_optional_disEmpty_I3(tmp623);
 if(tmp624){
 concat_list_I1 tmp625;
-concat_sb_dwrap(((int64_t)14),((int8_t const*)"unexpected \"=\""),(&tmp625));
+concat_sb_dwrap(((int64_t)14),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""\"""=""\""""),(&tmp625));
 concat_FilePosition tmp626 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp625,tmp626,arg3/*state*/);
 *(out0)= tmp3;
@@ -7987,7 +7988,7 @@ return;
 }else{
 else_label320:;
 concat_list_I1 tmp659;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"unexpected operation for \"=\" \x0A"),(&tmp659));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""f""o""r"" ""\"""=""\""" ""\x0A"""),(&tmp659));
 concat_Operation tmp660 = (*tmp630);
 concat_list_I1 tmp661;
 concat_sb_dappendOp(tmp659,tmp660,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp661));
@@ -8013,10 +8014,10 @@ exit(EXIT_FAILURE);//unreachable
 }else{
 else_label307:;
 concat_arrayView_I1 tmp663;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"@"),(&tmp663));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"@"""),(&tmp663));
 bool const tmp664 = concat_string_deq(tmp4,tmp663);
 concat_arrayView_I1 tmp665;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"addrOf"),(&tmp665));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"a""d""d""r""O""f"""),(&tmp665));
 bool const tmp666 = concat_string_deq(tmp4,tmp665);
 bool const tmp667 = ((bool)(tmp664|tmp666));
 if(tmp667){
@@ -8031,7 +8032,7 @@ concat_2_FConstant const l40_mConst = tmp670;
 bool const tmp671 = concat_optional_disEmpty_I4((l40_mConst.e2_idInfo));
 if(tmp671){
 concat_list_I1 tmp672;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"cannot get address of constant value"),(&tmp672));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"c""a""n""n""o""t"" ""g""e""t"" ""a""d""d""r""e""s""s"" ""o""f"" ""c""o""n""s""t""a""n""t"" ""v""a""l""u""e"""),(&tmp672));
 concat_FilePosition tmp673 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp672,tmp673,arg3/*state*/);
 *(out0)= tmp3;
@@ -8056,11 +8057,11 @@ else_label322:;
 }
 concat_arrayView_I1 tmp678 = l39_opName;
 concat_arrayView_I1 tmp679;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"addrOf"),(&tmp679));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"a""d""d""r""O""f"""),(&tmp679));
 bool const tmp680 = concat_string_deq(tmp678,tmp679);
 if(tmp680){
 concat_list_I1 tmp681;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"addrOf is deprecated use @ instead"),(&tmp681));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"a""d""d""r""O""f"" ""i""s"" ""d""e""p""r""e""c""a""t""e""d"" ""u""s""e"" ""@"" ""i""n""s""t""e""a""d"""),(&tmp681));
 concat_FilePosition tmp682 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp681,tmp682,arg3/*state*/);
 }else{
@@ -8070,7 +8071,7 @@ concat_optional_I14 tmp683 = concat_2_FpeekOp(arg3/*state*/);
 bool const tmp684 = concat_optional_disEmpty_I3(tmp683);
 if(tmp684){
 concat_list_I1 tmp685;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"unexpected \""),(&tmp685));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""\""""),(&tmp685));
 concat_list_I1 tmp686;
 concat_sb_dappendStr(tmp685,l39_opName,(&tmp686));
 concat_list_I1 tmp687;
@@ -8161,11 +8162,11 @@ return;
 }else{
 else_label331:;
 concat_list_I1 tmp721;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"unexpected operation for \""),(&tmp721));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""f""o""r"" ""\""""),(&tmp721));
 concat_list_I1 tmp722;
 concat_sb_dappendStr(tmp721,l39_opName,(&tmp722));
 concat_list_I1 tmp723;
-concat_sb_dappendS(tmp722,((int64_t)2),((int8_t const*)"\"\x0A"),(&tmp723));
+concat_sb_dappendS(tmp722,((int64_t)2),((int8_t const*)"\"""\x0A"""),(&tmp723));
 concat_Operation tmp724 = (*tmp692);
 concat_list_I1 tmp725;
 concat_sb_dappendOp(tmp723,tmp724,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp725));
@@ -8191,7 +8192,7 @@ exit(EXIT_FAILURE);//unreachable
 }else{
 else_label321:;
 concat_arrayView_I1 tmp727;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"??"),(&tmp727));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"?""?"""),(&tmp727));
 bool const tmp728 = concat_string_deq(tmp4,tmp727);
 if(tmp728){
 concat_arrayView_I1 const l41_opName = tmp4;
@@ -8199,7 +8200,7 @@ concat_optional_I14 tmp729 = concat_2_FpeekOp(arg3/*state*/);
 bool const tmp730 = concat_optional_disEmpty_I3(tmp729);
 if(tmp730){
 concat_list_I1 tmp731;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"unexpected \""),(&tmp731));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""\""""),(&tmp731));
 concat_list_I1 tmp732;
 concat_sb_dappendStr(tmp731,l41_opName,(&tmp732));
 concat_list_I1 tmp733;
@@ -8254,11 +8255,11 @@ return;
 }else{
 else_label336:;
 concat_list_I1 tmp750;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"unexpected operation for \""),(&tmp750));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""f""o""r"" ""\""""),(&tmp750));
 concat_list_I1 tmp751;
 concat_sb_dappendStr(tmp750,l41_opName,(&tmp751));
 concat_list_I1 tmp752;
-concat_sb_dappendS(tmp751,((int64_t)2),((int8_t const*)"\"\x0A"),(&tmp752));
+concat_sb_dappendS(tmp751,((int64_t)2),((int8_t const*)"\"""\x0A"""),(&tmp752));
 concat_Operation tmp753 = (*l42_prevOp);
 concat_list_I1 tmp754;
 concat_sb_dappendOp(tmp752,tmp753,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp754));
@@ -8278,7 +8279,7 @@ exit(EXIT_FAILURE);//unreachable
 }else{
 else_label332:;
 concat_arrayView_I1 tmp756;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"if"),(&tmp756));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"i""f"""),(&tmp756));
 bool const tmp757 = concat_string_deq(tmp4,tmp756);
 if(tmp757){
 concat_BlockType tmp758 = ((concat_BlockType){.label=3});
@@ -8292,7 +8293,7 @@ return;
 }else{
 else_label337:;
 concat_arrayView_I1 tmp761;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"_if"),(&tmp761));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"_""i""f"""),(&tmp761));
 bool const tmp762 = concat_string_deq(tmp4,tmp761);
 if(tmp762){
 concat_BlockType tmp763 = concat_id_dcurrentScopeType(l1_idContext);
@@ -8300,7 +8301,7 @@ concat_BlockType const l43_currentType = tmp763;
 bool const tmp764 = ((bool)(((bool)((!(l43_currentType.label==3))&(!(l43_currentType.label==5))))&(!(l43_currentType.label==4))));
 if(tmp764){
 concat_list_I1 tmp765;
-concat_sb_dwrap(((int64_t)39),((int8_t const*)"\'_if\' is only allowed in if-else-blocks"),(&tmp765));
+concat_sb_dwrap(((int64_t)39),((int8_t const*)"\'""_""i""f""\'"" ""i""s"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""i""f""-""e""l""s""e""-""b""l""o""c""k""s"""),(&tmp765));
 concat_FilePosition tmp766 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp765,tmp766,arg3/*state*/);
 *(out0)= tmp3;
@@ -8331,7 +8332,7 @@ return;
 }else{
 else_label338:;
 concat_arrayView_I1 tmp775;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"else"),(&tmp775));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"e""l""s""e"""),(&tmp775));
 bool const tmp776 = concat_string_deq(tmp4,tmp775);
 if(tmp776){
 concat_BlockType l45_blockType;
@@ -8345,7 +8346,7 @@ bool tmp781 = tmp777;
 int64_t tmp782 = tmp778;
 if(tmp780){
 concat_list_I1 tmp783;
-concat_sb_dwrap(((int64_t)45),((int8_t const*)"\'else\' statements can not appear at top level"),(&tmp783));
+concat_sb_dwrap(((int64_t)45),((int8_t const*)"\'""e""l""s""e""\'"" ""s""t""a""t""e""m""e""n""t""s"" ""c""a""n"" ""n""o""t"" ""a""p""p""e""a""r"" ""a""t"" ""t""o""p"" ""l""e""v""e""l"""),(&tmp783));
 concat_FilePosition tmp784 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp783,tmp784,arg3/*state*/);
 *(out0)= tmp3;
@@ -8366,7 +8367,7 @@ concat_2_FappendOp(tmp787,arg3/*state*/);
 bool const tmp788 = (!(l45_blockType.label==3));
 if(tmp788){
 concat_list_I1 tmp789;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"\'else\' is only allowed in if-blocks"),(&tmp789));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"\'""e""l""s""e""\'"" ""i""s"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""i""f""-""b""l""o""c""k""s"""),(&tmp789));
 concat_FilePosition tmp790 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp789,tmp790,arg3/*state*/);
 *(out0)= tmp3;
@@ -8391,7 +8392,7 @@ return;
 }else{
 else_label341:;
 concat_arrayView_I1 tmp796;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"while"),(&tmp796));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"w""h""i""l""e"""),(&tmp796));
 bool const tmp797 = concat_string_deq(tmp4,tmp796);
 if(tmp797){
 concat_BlockType tmp798 = ((concat_BlockType){.label=6});
@@ -8405,7 +8406,7 @@ return;
 }else{
 else_label345:;
 concat_arrayView_I1 tmp801;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"do"),(&tmp801));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"d""o"""),(&tmp801));
 bool const tmp802 = concat_string_deq(tmp4,tmp801);
 if(tmp802){
 bool tmp803;
@@ -8417,7 +8418,7 @@ bool tmp808 = tmp803;
 int64_t tmp809 = tmp804;
 if(tmp807){
 concat_list_I1 tmp810;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"\'do\' is only allowed in while-blocks"),(&tmp810));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"\'""d""o""\'"" ""i""s"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""w""h""i""l""e""-""b""l""o""c""k""s"""),(&tmp810));
 concat_FilePosition tmp811 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp810,tmp811,arg3/*state*/);
 *(out0)= tmp3;
@@ -8436,7 +8437,7 @@ return;
 }else{
 else_label346:;
 concat_arrayView_I1 tmp815;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"break"),(&tmp815));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"b""r""e""a""k"""),(&tmp815));
 bool const tmp816 = concat_string_deq(tmp4,tmp815);
 if(tmp816){
 concat_BlockType tmp817 = ((concat_BlockType){.label=8});
@@ -8448,7 +8449,7 @@ return;
 }else{
 else_label348:;
 concat_arrayView_I1 tmp819;
-concat_string_dwrap(((int64_t)8),((int8_t const*)"continue"),(&tmp819));
+concat_string_dwrap(((int64_t)8),((int8_t const*)"c""o""n""t""i""n""u""e"""),(&tmp819));
 bool const tmp820 = concat_string_deq(tmp4,tmp819);
 if(tmp820){
 concat_BlockType tmp821 = ((concat_BlockType){.label=9});
@@ -8460,7 +8461,7 @@ return;
 }else{
 else_label349:;
 concat_arrayView_I1 tmp823;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"switch"),(&tmp823));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""w""i""t""c""h"""),(&tmp823));
 bool const tmp824 = concat_string_deq(tmp4,tmp823);
 if(tmp824){
 concat_BlockType tmp825 = ((concat_BlockType){.label=10});
@@ -8474,7 +8475,7 @@ return;
 }else{
 else_label350:;
 concat_arrayView_I1 tmp828;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"case"),(&tmp828));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"c""a""s""e"""),(&tmp828));
 bool const tmp829 = concat_string_deq(tmp4,tmp828);
 if(tmp829){
 bool tmp830;
@@ -8486,7 +8487,7 @@ bool tmp835 = tmp830;
 int64_t tmp836 = tmp831;
 if(tmp834){
 concat_list_I1 tmp837;
-concat_sb_dwrap(((int64_t)39),((int8_t const*)"\'case\' is only allowed in switch-blocks"),(&tmp837));
+concat_sb_dwrap(((int64_t)39),((int8_t const*)"\'""c""a""s""e""\'"" ""i""s"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""s""w""i""t""c""h""-""b""l""o""c""k""s"""),(&tmp837));
 concat_FilePosition tmp838 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp837,tmp838,arg3/*state*/);
 *(out0)= tmp3;
@@ -8505,7 +8506,7 @@ return;
 }else{
 else_label351:;
 concat_arrayView_I1 tmp842;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"default"),(&tmp842));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"d""e""f""a""u""l""t"""),(&tmp842));
 bool const tmp843 = concat_string_deq(tmp4,tmp842);
 if(tmp843){
 bool tmp844;
@@ -8517,7 +8518,7 @@ bool tmp849 = tmp844;
 int64_t tmp850 = tmp845;
 if(tmp848){
 concat_list_I1 tmp851;
-concat_sb_dwrap(((int64_t)47),((int8_t const*)"\'default\' is only allowed in switch-case-blocks"),(&tmp851));
+concat_sb_dwrap(((int64_t)47),((int8_t const*)"\'""d""e""f""a""u""l""t""\'"" ""i""s"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""s""w""i""t""c""h""-""c""a""s""e""-""b""l""o""c""k""s"""),(&tmp851));
 concat_FilePosition tmp852 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp851,tmp852,arg3/*state*/);
 *(out0)= tmp3;
@@ -8536,7 +8537,7 @@ return;
 }else{
 else_label353:;
 concat_arrayView_I1 tmp856;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"return"),(&tmp856));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"r""e""t""u""r""n"""),(&tmp856));
 bool const tmp857 = concat_string_deq(tmp4,tmp856);
 if(tmp857){
 concat_Type tmp858;
@@ -8545,7 +8546,7 @@ bool const l47_experimental = tmp859;
 bool const tmp860 = concat_types_dtypeEquals(tmp858,((concat_Type){.label=0}));
 if(tmp860){
 concat_list_I1 tmp861;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"return outside procedure"),(&tmp861));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"r""e""t""u""r""n"" ""o""u""t""s""i""d""e"" ""p""r""o""c""e""d""u""r""e"""),(&tmp861));
 concat_FilePosition tmp862 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp861,tmp862,arg3/*state*/);
 }else{
@@ -8559,7 +8560,7 @@ return;
 }else{
 else_label355:;
 concat_arrayView_I1 tmp864;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"end"),(&tmp864));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"e""n""d"""),(&tmp864));
 bool const tmp865 = concat_string_deq(tmp4,tmp864);
 if(tmp865){
 do{
@@ -8591,7 +8592,7 @@ bool tmp879 = tmp875;
 int64_t tmp880 = tmp876;
 if(tmp878){
 concat_list_I1 tmp881;
-concat_sb_dwrap(((int64_t)16),((int8_t const*)"unexpected \'end\'"),(&tmp881));
+concat_sb_dwrap(((int64_t)16),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""\'""e""n""d""\'"""),(&tmp881));
 concat_FilePosition tmp882 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp881,tmp882,arg3/*state*/);
 *(out0)= tmp3;
@@ -8604,7 +8605,7 @@ if(tmp883){
 bool const tmp884 = concat_optional_disEmpty_I2(((*arg3/*state*/).e10_currentProc));
 if(tmp884){
 concat_list_I1 tmp885;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"unexpected end of procedure"),(&tmp885));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" ""p""r""o""c""e""d""u""r""e"""),(&tmp885));
 concat_FilePosition tmp886 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp885,tmp886,arg3/*state*/);
 *(out0)= tmp3;
@@ -8718,12 +8719,12 @@ tmp914 = ((int32_t)(tmp914+((int32_t)1)));
 else_label368:;
 }
 concat_list_I1 tmp923;
-concat_sb_dwrap(((int64_t)9),((int8_t const*)"constant "),(&tmp923));
+concat_sb_dwrap(((int64_t)9),((int8_t const*)"c""o""n""s""t""a""n""t"" """),(&tmp923));
 concat_ConstValue tmp924 = (tmp904.e1_val);
 concat_list_I1 tmp925;
 concat_sb_dappendConstant(tmp923,tmp924,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)(&((*l1_idContext).e1_labelContext))),((concat_TypeContext const*)(&((*l1_idContext).e2_typeContext))),(&tmp925));
 concat_list_I1 tmp926;
-concat_sb_dappendS(tmp925,((int64_t)25),((int8_t const*)" does not have a field: \""),(&tmp926));
+concat_sb_dappendS(tmp925,((int64_t)25),((int8_t const*)" ""d""o""e""s"" ""n""o""t"" ""h""a""v""e"" ""a"" ""f""i""e""l""d"":"" ""\""""),(&tmp926));
 concat_list_I1 tmp927;
 concat_sb_dappendStr(tmp926,tmp901,(&tmp927));
 concat_list_I1 tmp928;
@@ -8750,7 +8751,7 @@ bool const tmp936 = (tmp935<((int32_t)0));
 int32_t tmp937 = tmp935;
 if(tmp936){
 concat_list_I1 tmp938;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"tuple index has to be non-negative got: "),(&tmp938));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"t""u""p""l""e"" ""i""n""d""e""x"" ""h""a""s"" ""t""o"" ""b""e"" ""n""o""n""-""n""e""g""a""t""i""v""e"" ""g""o""t"":"" """),(&tmp938));
 concat_list_I1 tmp939;
 concat_sb_dappendI(tmp938,((int64_t)tmp937),(&tmp939));
 concat_FilePosition tmp940 = ((*arg2/*fileState*/).e1_wordStart);
@@ -8783,7 +8784,7 @@ return;
 }else{
 else_label364:;
 concat_arrayView_I1 tmp946;
-concat_string_dwrap(((int64_t)13),((int8_t const*)"..debug.print"),(&tmp946));
+concat_string_dwrap(((int64_t)13),((int8_t const*)"."".""d""e""b""u""g"".""p""r""i""n""t"""),(&tmp946));
 bool const tmp947 = concat_string_deq(tmp4,tmp946);
 if(tmp947){
 concat_Operation tmp948;
@@ -8794,7 +8795,7 @@ return;
 }else{
 else_label374:;
 concat_arrayView_I1 tmp949;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"[]"),(&tmp949));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"[""]"""),(&tmp949));
 bool const tmp950 = concat_string_deq(tmp4,tmp949);
 if(tmp950){
 concat_Operation tmp951;
@@ -8805,7 +8806,7 @@ return;
 }else{
 else_label375:;
 concat_arrayView_I1 tmp952;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"()"),(&tmp952));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"("")"""),(&tmp952));
 bool const tmp953 = concat_string_deq(tmp4,tmp952);
 if(tmp953){
 concat_Operation tmp954;
@@ -8816,7 +8817,7 @@ return;
 }else{
 else_label376:;
 concat_arrayView_I1 tmp955;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"new"),(&tmp955));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"n""e""w"""),(&tmp955));
 bool const tmp956 = concat_string_deq(tmp4,tmp955);
 if(tmp956){
 concat_arrayView_I1 const l51_opName = tmp4;
@@ -8846,11 +8847,11 @@ tmp962 = tmp963;
 bool const tmp964 = (!tmp962);
 if(tmp964){
 concat_list_I1 tmp965;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"missing parameter for \""),(&tmp965));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"m""i""s""s""i""n""g"" ""p""a""r""a""m""e""t""e""r"" ""f""o""r"" ""\""""),(&tmp965));
 concat_list_I1 tmp966;
 concat_sb_dappendStr(tmp965,l51_opName,(&tmp966));
 concat_list_I1 tmp967;
-concat_sb_dappendS(tmp966,((int64_t)29),((int8_t const*)"\" expected type or enum-label"),(&tmp967));
+concat_sb_dappendS(tmp966,((int64_t)29),((int8_t const*)"\""" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""o""r"" ""e""n""u""m""-""l""a""b""e""l"""),(&tmp967));
 concat_FilePosition tmp968 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp967,tmp968,arg3/*state*/);
 *(out0)= tmp3;
@@ -8910,16 +8911,16 @@ else_label384:;
 }
 }
 concat_list_I1 tmp985;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"wrong constant parameter for \""),(&tmp985));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"w""r""o""n""g"" ""c""o""n""s""t""a""n""t"" ""p""a""r""a""m""e""t""e""r"" ""f""o""r"" ""\""""),(&tmp985));
 concat_list_I1 tmp986;
 concat_sb_dappendStr(tmp985,l51_opName,(&tmp986));
 concat_list_I1 tmp987;
-concat_sb_dappendS(tmp986,((int64_t)3),((int8_t const*)"\": "),(&tmp987));
+concat_sb_dappendS(tmp986,((int64_t)3),((int8_t const*)"\""":"" """),(&tmp987));
 concat_ConstValue tmp988 = l54_value;
 concat_list_I1 tmp989;
 concat_sb_dappendConstant(tmp987,tmp988,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp989));
 concat_list_I1 tmp990;
-concat_sb_dappendS(tmp989,((int64_t)38),((int8_t const*)" expected composite-type or enum-label"),(&tmp990));
+concat_sb_dappendS(tmp989,((int64_t)38),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""c""o""m""p""o""s""i""t""e""-""t""y""p""e"" ""o""r"" ""e""n""u""m""-""l""a""b""e""l"""),(&tmp990));
 concat_FilePosition tmp991 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp990,tmp991,arg3/*state*/);
 *(out0)= tmp3;
@@ -8927,17 +8928,17 @@ return;
 }else{
 else_label377:;
 concat_arrayView_I1 tmp992;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"cast"),(&tmp992));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"c""a""s""t"""),(&tmp992));
 bool const tmp993 = concat_string_deq(tmp4,tmp992);
 concat_arrayView_I1 tmp994;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"cast!"),(&tmp994));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"c""a""s""t""!"""),(&tmp994));
 bool const tmp995 = concat_string_deq(tmp4,tmp994);
 bool const tmp996 = ((bool)(tmp993|tmp995));
 if(tmp996){
 concat_arrayView_I1 const l55_opName = tmp4;
 concat_arrayView_I1 tmp997 = l55_opName;
 concat_arrayView_I1 tmp998;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"cast!"),(&tmp998));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"c""a""s""t""!"""),(&tmp998));
 bool const tmp999 = concat_string_deq(tmp997,tmp998);
 bool const l56_forceCast = tmp999;
 if(concat___EXPERIMENTAL__){
@@ -8976,11 +8977,11 @@ tmp1008 = tmp1009;
 bool const tmp1010 = (!tmp1008);
 if(tmp1010){
 concat_list_I1 tmp1011;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"missing parameter for \""),(&tmp1011));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"m""i""s""s""i""n""g"" ""p""a""r""a""m""e""t""e""r"" ""f""o""r"" ""\""""),(&tmp1011));
 concat_list_I1 tmp1012;
 concat_sb_dappendStr(tmp1011,l55_opName,(&tmp1012));
 concat_list_I1 tmp1013;
-concat_sb_dappendS(tmp1012,((int64_t)15),((int8_t const*)"\" expected type"),(&tmp1013));
+concat_sb_dappendS(tmp1012,((int64_t)15),((int8_t const*)"\""" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp1013));
 concat_FilePosition tmp1014 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1013,tmp1014,arg3/*state*/);
 *(out0)= tmp3;
@@ -9004,16 +9005,16 @@ concat_ConstValue const l57_target = tmp1017;
 bool const tmp1019 = (!(l57_target.label==8));
 if(tmp1019){
 concat_list_I1 tmp1020;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"wrong constant parameter for \""),(&tmp1020));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"w""r""o""n""g"" ""c""o""n""s""t""a""n""t"" ""p""a""r""a""m""e""t""e""r"" ""f""o""r"" ""\""""),(&tmp1020));
 concat_list_I1 tmp1021;
 concat_sb_dappendStr(tmp1020,l55_opName,(&tmp1021));
 concat_list_I1 tmp1022;
-concat_sb_dappendS(tmp1021,((int64_t)3),((int8_t const*)"\": "),(&tmp1022));
+concat_sb_dappendS(tmp1021,((int64_t)3),((int8_t const*)"\""":"" """),(&tmp1022));
 concat_ConstValue tmp1023 = l57_target;
 concat_list_I1 tmp1024;
 concat_sb_dappendConstant(tmp1022,tmp1023,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp1024));
 concat_list_I1 tmp1025;
-concat_sb_dappendS(tmp1024,((int64_t)14),((int8_t const*)" expected type"),(&tmp1025));
+concat_sb_dappendS(tmp1024,((int64_t)14),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"""),(&tmp1025));
 concat_FilePosition tmp1026 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1025,tmp1026,arg3/*state*/);
 *(out0)= tmp3;
@@ -9065,7 +9066,7 @@ return;
 }else{
 else_label385:;
 concat_arrayView_I1 tmp1041;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"-_"),(&tmp1041));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"-""_"""),(&tmp1041));
 bool const tmp1042 = concat_string_deq(tmp4,tmp1041);
 if(tmp1042){
 bool const tmp1043 = concat_id_dfoldConsts(l1_idContext);
@@ -9107,7 +9108,7 @@ return;
 }else{
 else_label395:;
 concat_arrayView_I1 tmp1057;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"!"),(&tmp1057));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"!"""),(&tmp1057));
 bool const tmp1058 = concat_string_deq(tmp4,tmp1057);
 if(tmp1058){
 bool const tmp1059 = concat_id_dfoldConsts(l1_idContext);
@@ -9149,7 +9150,7 @@ return;
 }else{
 else_label399:;
 concat_arrayView_I1 tmp1073;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"?"),(&tmp1073));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"?"""),(&tmp1073));
 bool const tmp1074 = concat_string_deq(tmp4,tmp1073);
 if(tmp1074){
 bool const tmp1075 = concat_id_dfoldConsts(l1_idContext);
@@ -9191,7 +9192,7 @@ return;
 }else{
 else_label403:;
 concat_arrayView_I1 tmp1089;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"~"),(&tmp1089));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"~"""),(&tmp1089));
 bool const tmp1090 = concat_string_deq(tmp4,tmp1089);
 if(tmp1090){
 concat_UnaryOperator tmp1091 = ((concat_UnaryOperator){.label=3});
@@ -9233,7 +9234,7 @@ return;
 }else{
 else_label407:;
 concat_arrayView_I1 tmp1105;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"+"),(&tmp1105));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"+"""),(&tmp1105));
 bool const tmp1106 = concat_string_deq(tmp4,tmp1105);
 if(tmp1106){
 bool const tmp1107 = concat_id_dfoldConsts(l1_idContext);
@@ -9293,7 +9294,7 @@ return;
 }else{
 else_label411:;
 concat_arrayView_I1 tmp1131;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"-"),(&tmp1131));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"-"""),(&tmp1131));
 bool const tmp1132 = concat_string_deq(tmp4,tmp1131);
 if(tmp1132){
 bool const tmp1133 = concat_id_dfoldConsts(l1_idContext);
@@ -9353,7 +9354,7 @@ return;
 }else{
 else_label416:;
 concat_arrayView_I1 tmp1157;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"*"),(&tmp1157));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"*"""),(&tmp1157));
 bool const tmp1158 = concat_string_deq(tmp4,tmp1157);
 if(tmp1158){
 bool const tmp1159 = concat_id_dfoldConsts(l1_idContext);
@@ -9413,7 +9414,7 @@ return;
 }else{
 else_label421:;
 concat_arrayView_I1 tmp1183;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"/"),(&tmp1183));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"/"""),(&tmp1183));
 bool const tmp1184 = concat_string_deq(tmp4,tmp1183);
 if(tmp1184){
 bool const tmp1185 = concat_id_dfoldConsts(l1_idContext);
@@ -9473,7 +9474,7 @@ return;
 }else{
 else_label426:;
 concat_arrayView_I1 tmp1209;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..udiv"),(&tmp1209));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"."".""u""d""i""v"""),(&tmp1209));
 bool const tmp1210 = concat_string_deq(tmp4,tmp1209);
 if(tmp1210){
 bool const tmp1211 = concat_id_dfoldConsts(l1_idContext);
@@ -9533,7 +9534,7 @@ return;
 }else{
 else_label431:;
 concat_arrayView_I1 tmp1235;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"%"),(&tmp1235));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"%"""),(&tmp1235));
 bool const tmp1236 = concat_string_deq(tmp4,tmp1235);
 if(tmp1236){
 bool const tmp1237 = concat_id_dfoldConsts(l1_idContext);
@@ -9593,7 +9594,7 @@ return;
 }else{
 else_label436:;
 concat_arrayView_I1 tmp1261;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..umod"),(&tmp1261));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"."".""u""m""o""d"""),(&tmp1261));
 bool const tmp1262 = concat_string_deq(tmp4,tmp1261);
 if(tmp1262){
 bool const tmp1263 = concat_id_dfoldConsts(l1_idContext);
@@ -9653,7 +9654,7 @@ return;
 }else{
 else_label441:;
 concat_arrayView_I1 tmp1287;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"&"),(&tmp1287));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"&"""),(&tmp1287));
 bool const tmp1288 = concat_string_deq(tmp4,tmp1287);
 if(tmp1288){
 bool const tmp1289 = concat_id_dfoldConsts(l1_idContext);
@@ -9722,7 +9723,7 @@ return;
 }else{
 else_label446:;
 concat_arrayView_I1 tmp1316;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"|"),(&tmp1316));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"|"""),(&tmp1316));
 bool const tmp1317 = concat_string_deq(tmp4,tmp1316);
 if(tmp1317){
 bool const tmp1318 = concat_id_dfoldConsts(l1_idContext);
@@ -9791,7 +9792,7 @@ return;
 }else{
 else_label452:;
 concat_arrayView_I1 tmp1345;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"^"),(&tmp1345));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"^"""),(&tmp1345));
 bool const tmp1346 = concat_string_deq(tmp4,tmp1345);
 if(tmp1346){
 bool const tmp1347 = concat_id_dfoldConsts(l1_idContext);
@@ -9860,7 +9861,7 @@ return;
 }else{
 else_label458:;
 concat_arrayView_I1 tmp1374;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"<<"),(&tmp1374));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"<""<"""),(&tmp1374));
 bool const tmp1375 = concat_string_deq(tmp4,tmp1374);
 if(tmp1375){
 bool const tmp1376 = concat_id_dfoldConsts(l1_idContext);
@@ -9920,7 +9921,7 @@ return;
 }else{
 else_label464:;
 concat_arrayView_I1 tmp1400;
-concat_string_dwrap(((int64_t)2),((int8_t const*)">>"),(&tmp1400));
+concat_string_dwrap(((int64_t)2),((int8_t const*)">"">"""),(&tmp1400));
 bool const tmp1401 = concat_string_deq(tmp4,tmp1400);
 if(tmp1401){
 bool const tmp1402 = concat_id_dfoldConsts(l1_idContext);
@@ -9980,7 +9981,7 @@ return;
 }else{
 else_label469:;
 concat_arrayView_I1 tmp1426;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..lshr"),(&tmp1426));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"."".""l""s""h""r"""),(&tmp1426));
 bool const tmp1427 = concat_string_deq(tmp4,tmp1426);
 if(tmp1427){
 bool const tmp1428 = concat_id_dfoldConsts(l1_idContext);
@@ -10040,7 +10041,7 @@ return;
 }else{
 else_label474:;
 concat_arrayView_I1 tmp1452;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"=="),(&tmp1452));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"=""="""),(&tmp1452));
 bool const tmp1453 = concat_string_deq(tmp4,tmp1452);
 if(tmp1453){
 bool const tmp1454 = concat_id_dfoldConsts(l1_idContext);
@@ -10110,7 +10111,7 @@ return;
 }else{
 else_label479:;
 concat_arrayView_I1 tmp1482;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"!="),(&tmp1482));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"!""="""),(&tmp1482));
 bool const tmp1483 = concat_string_deq(tmp4,tmp1482);
 if(tmp1483){
 bool const tmp1484 = concat_id_dfoldConsts(l1_idContext);
@@ -10179,7 +10180,7 @@ return;
 }else{
 else_label485:;
 concat_arrayView_I1 tmp1511;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"<"),(&tmp1511));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"<"""),(&tmp1511));
 bool const tmp1512 = concat_string_deq(tmp4,tmp1511);
 if(tmp1512){
 bool const tmp1513 = concat_id_dfoldConsts(l1_idContext);
@@ -10238,7 +10239,7 @@ return;
 }else{
 else_label491:;
 concat_arrayView_I1 tmp1536;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"<="),(&tmp1536));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"<""="""),(&tmp1536));
 bool const tmp1537 = concat_string_deq(tmp4,tmp1536);
 if(tmp1537){
 bool const tmp1538 = concat_id_dfoldConsts(l1_idContext);
@@ -10297,7 +10298,7 @@ return;
 }else{
 else_label496:;
 concat_arrayView_I1 tmp1561;
-concat_string_dwrap(((int64_t)2),((int8_t const*)">="),(&tmp1561));
+concat_string_dwrap(((int64_t)2),((int8_t const*)">""="""),(&tmp1561));
 bool const tmp1562 = concat_string_deq(tmp4,tmp1561);
 if(tmp1562){
 bool const tmp1563 = concat_id_dfoldConsts(l1_idContext);
@@ -10356,7 +10357,7 @@ return;
 }else{
 else_label501:;
 concat_arrayView_I1 tmp1586;
-concat_string_dwrap(((int64_t)1),((int8_t const*)">"),(&tmp1586));
+concat_string_dwrap(((int64_t)1),((int8_t const*)">"""),(&tmp1586));
 bool const tmp1587 = concat_string_deq(tmp4,tmp1586);
 if(tmp1587){
 bool const tmp1588 = concat_id_dfoldConsts(l1_idContext);
@@ -10415,7 +10416,7 @@ return;
 }else{
 else_label506:;
 concat_arrayView_I1 tmp1611;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"..u<"),(&tmp1611));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"."".""u""<"""),(&tmp1611));
 bool const tmp1612 = concat_string_deq(tmp4,tmp1611);
 if(tmp1612){
 bool const tmp1613 = concat_id_dfoldConsts(l1_idContext);
@@ -10474,7 +10475,7 @@ return;
 }else{
 else_label511:;
 concat_arrayView_I1 tmp1636;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"..u<="),(&tmp1636));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"."".""u""<""="""),(&tmp1636));
 bool const tmp1637 = concat_string_deq(tmp4,tmp1636);
 if(tmp1637){
 bool const tmp1638 = concat_id_dfoldConsts(l1_idContext);
@@ -10533,7 +10534,7 @@ return;
 }else{
 else_label516:;
 concat_arrayView_I1 tmp1661;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"..u>="),(&tmp1661));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"."".""u"">""="""),(&tmp1661));
 bool const tmp1662 = concat_string_deq(tmp4,tmp1661);
 if(tmp1662){
 bool const tmp1663 = concat_id_dfoldConsts(l1_idContext);
@@ -10592,7 +10593,7 @@ return;
 }else{
 else_label521:;
 concat_arrayView_I1 tmp1686;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"..u>"),(&tmp1686));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"."".""u"">"""),(&tmp1686));
 bool const tmp1687 = concat_string_deq(tmp4,tmp1686);
 if(tmp1687){
 bool const tmp1688 = concat_id_dfoldConsts(l1_idContext);
@@ -10651,7 +10652,7 @@ return;
 }else{
 else_label526:;
 concat_arrayView_I1 tmp1711;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..argc"),(&tmp1711));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"."".""a""r""g""c"""),(&tmp1711));
 bool const tmp1712 = concat_string_deq(tmp4,tmp1711);
 if(tmp1712){
 concat_Operation tmp1713;
@@ -10662,7 +10663,7 @@ return;
 }else{
 else_label531:;
 concat_arrayView_I1 tmp1714;
-concat_string_dwrap(((int64_t)8),((int8_t const*)"..getArg"),(&tmp1714));
+concat_string_dwrap(((int64_t)8),((int8_t const*)"."".""g""e""t""A""r""g"""),(&tmp1714));
 bool const tmp1715 = concat_string_deq(tmp4,tmp1714);
 if(tmp1715){
 concat_Operation tmp1716;
@@ -10673,7 +10674,7 @@ return;
 }else{
 else_label532:;
 concat_arrayView_I1 tmp1717;
-concat_string_dwrap(((int64_t)8),((int8_t const*)"..length"),(&tmp1717));
+concat_string_dwrap(((int64_t)8),((int8_t const*)"."".""l""e""n""g""t""h"""),(&tmp1717));
 bool const tmp1718 = concat_string_deq(tmp4,tmp1717);
 if(tmp1718){
 bool const tmp1719 = concat_2_FhasConst(arg3/*state*/);
@@ -10757,7 +10758,7 @@ else_label537:;
 }
 }
 concat_list_I1 tmp1749;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"cannot determine the length of constant "),(&tmp1749));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"c""a""n""n""o""t"" ""d""e""t""e""r""m""i""n""e"" ""t""h""e"" ""l""e""n""g""t""h"" ""o""f"" ""c""o""n""s""t""a""n""t"" """),(&tmp1749));
 concat_ConstValue tmp1750 = (tmp1721.e1_val);
 concat_list_I1 tmp1751;
 concat_sb_dappendConstant(tmp1749,tmp1750,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)(&((*l1_idContext).e1_labelContext))),((concat_TypeContext const*)(&((*l1_idContext).e2_typeContext))),(&tmp1751));
@@ -10776,7 +10777,7 @@ return;
 }else{
 else_label533:;
 concat_arrayView_I1 tmp1754;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..size"),(&tmp1754));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"."".""s""i""z""e"""),(&tmp1754));
 bool const tmp1755 = concat_string_deq(tmp4,tmp1754);
 if(tmp1755){
 concat_Operation tmp1756;
@@ -10787,7 +10788,7 @@ return;
 }else{
 else_label540:;
 concat_arrayView_I1 tmp1757;
-concat_string_dwrap(((int64_t)13),((int8_t const*)"..unreachable"),(&tmp1757));
+concat_string_dwrap(((int64_t)13),((int8_t const*)"."".""u""n""r""e""a""c""h""a""b""l""e"""),(&tmp1757));
 bool const tmp1758 = concat_string_deq(tmp4,tmp1757);
 if(tmp1758){
 concat_Operation tmp1759;
@@ -10798,7 +10799,7 @@ return;
 }else{
 else_label541:;
 concat_arrayView_I1 tmp1760;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"{"),(&tmp1760));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"{"""),(&tmp1760));
 bool const tmp1761 = concat_string_deq(tmp4,tmp1760);
 if(tmp1761){
 concat_BlockType tmp1762 = ((concat_BlockType){.label=13});
@@ -10821,7 +10822,7 @@ return;
 }else{
 else_label542:;
 concat_arrayView_I1 tmp1768;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"}"),(&tmp1768));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"}"""),(&tmp1768));
 bool const tmp1769 = concat_string_deq(tmp4,tmp1768);
 if(tmp1769){
 concat_arrayView_I1 const l133_opName = tmp4;
@@ -10840,7 +10841,7 @@ tmp1776 = (!(tmp1772.label==13));
 }
 if(tmp1776){
 concat_list_I1 tmp1777;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp1777));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp1777));
 concat_list_I1 tmp1778;
 concat_sb_dappendStr(tmp1777,l133_opName,(&tmp1778));
 concat_FilePosition tmp1779 = ((*arg2/*fileState*/).e1_wordStart);
@@ -10894,7 +10895,7 @@ concat_Type tmp1798;
 bool const tmp1799 = concat_types_dnewTuple(tmp1796,tmp1797,l2_typeContext,(&tmp1798));
 if(tmp1799){
 concat_list_I1 tmp1800;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"could not create array-constant type"),(&tmp1800));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""a""r""r""a""y""-""c""o""n""s""t""a""n""t"" ""t""y""p""e"""),(&tmp1800));
 concat_FilePosition tmp1801 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1800,tmp1801,arg3/*state*/);
 }else{
@@ -10911,7 +10912,7 @@ concat_Type tmp1805;
 bool const tmp1806 = concat_types_dnewArrayType(tmp1803,false,tmp1804,true,false,l2_typeContext,(&tmp1805));
 if(tmp1806){
 concat_list_I1 tmp1807;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"could not create array-constant type"),(&tmp1807));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""a""r""r""a""y""-""c""o""n""s""t""a""n""t"" ""t""y""p""e"""),(&tmp1807));
 concat_FilePosition tmp1808 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1807,tmp1808,arg3/*state*/);
 }else{
@@ -10928,7 +10929,7 @@ concat_2_FpushConst(tmp1812,arg3/*state*/);
 }else{
 else_label549:;
 concat_list_I1 tmp1813;
-concat_sb_dwrap(((int64_t)13),((int8_t const*)"unimplemented"),(&tmp1813));
+concat_sb_dwrap(((int64_t)13),((int8_t const*)"u""n""i""m""p""l""e""m""e""n""t""e""d"""),(&tmp1813));
 concat_FilePosition tmp1814 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1813,tmp1814,arg3/*state*/);
 }
@@ -10937,7 +10938,7 @@ return;
 }else{
 else_label544:;
 concat_arrayView_I1 tmp1815;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"ptr"),(&tmp1815));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"p""t""r"""),(&tmp1815));
 bool const tmp1816 = concat_string_deq(tmp4,tmp1815);
 if(tmp1816){
 concat_TypeModifier tmp1817 = ((concat_TypeModifier){.label=0});
@@ -10949,7 +10950,7 @@ return;
 }else{
 else_label553:;
 concat_arrayView_I1 tmp1819;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"array"),(&tmp1819));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"a""r""r""a""y"""),(&tmp1819));
 bool const tmp1820 = concat_string_deq(tmp4,tmp1819);
 if(tmp1820){
 concat_TypeModifier tmp1821 = ((concat_TypeModifier){.label=1});
@@ -10961,7 +10962,7 @@ return;
 }else{
 else_label554:;
 concat_arrayView_I1 tmp1823;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"mut"),(&tmp1823));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"m""u""t"""),(&tmp1823));
 bool const tmp1824 = concat_string_deq(tmp4,tmp1823);
 if(tmp1824){
 concat_arrayView_I1 const l141_opName = tmp4;
@@ -10997,7 +10998,7 @@ else_label556:;
 concat_list_I1 tmp1837;
 concat_sb_dfromStr(l141_opName,(&tmp1837));
 concat_list_I1 tmp1838;
-concat_sb_dappendS(tmp1837,((int64_t)63),((int8_t const*)" can only be used after declaration ( \':\' \'=:\' \'=::\' ) or \'ptr\'"),(&tmp1838));
+concat_sb_dappendS(tmp1837,((int64_t)63),((int8_t const*)" ""c""a""n"" ""o""n""l""y"" ""b""e"" ""u""s""e""d"" ""a""f""t""e""r"" ""d""e""c""l""a""r""a""t""i""o""n"" ""("" ""\'"":""\'"" ""\'""="":""\'"" ""\'""="":"":""\'"" "")"" ""o""r"" ""\'""p""t""r""\'"""),(&tmp1838));
 concat_FilePosition tmp1839 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1838,tmp1839,arg3/*state*/);
 *(out0)= tmp3;
@@ -11005,7 +11006,7 @@ return;
 }else{
 else_label555:;
 concat_arrayView_I1 tmp1840;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"("),(&tmp1840));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"("""),(&tmp1840));
 bool const tmp1841 = concat_string_deq(tmp4,tmp1840);
 if(tmp1841){
 concat_BlockType tmp1842 = ((concat_BlockType){.label=20});
@@ -11024,7 +11025,7 @@ return;
 }else{
 else_label557:;
 concat_arrayView_I1 tmp1848;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"tuple("),(&tmp1848));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"t""u""p""l""e""("""),(&tmp1848));
 bool const tmp1849 = concat_string_deq(tmp4,tmp1848);
 if(tmp1849){
 concat_BlockType tmp1850 = ((concat_BlockType){.label=14});
@@ -11043,7 +11044,7 @@ return;
 }else{
 else_label558:;
 concat_arrayView_I1 tmp1856;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"struct("),(&tmp1856));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"s""t""r""u""c""t""("""),(&tmp1856));
 bool const tmp1857 = concat_string_deq(tmp4,tmp1856);
 if(tmp1857){
 concat_BlockType tmp1858 = ((concat_BlockType){.label=15});
@@ -11062,7 +11063,7 @@ return;
 }else{
 else_label559:;
 concat_arrayView_I1 tmp1864;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"union("),(&tmp1864));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"u""n""i""o""n""("""),(&tmp1864));
 bool const tmp1865 = concat_string_deq(tmp4,tmp1864);
 if(tmp1865){
 concat_BlockType tmp1866 = ((concat_BlockType){.label=17});
@@ -11081,7 +11082,7 @@ return;
 }else{
 else_label560:;
 concat_arrayView_I1 tmp1872;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"enum("),(&tmp1872));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"e""n""u""m""("""),(&tmp1872));
 bool const tmp1873 = concat_string_deq(tmp4,tmp1872);
 if(tmp1873){
 concat_BlockType tmp1874 = ((concat_BlockType){.label=16});
@@ -11100,7 +11101,7 @@ return;
 }else{
 else_label561:;
 concat_arrayView_I1 tmp1880;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"proc("),(&tmp1880));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"p""r""o""c""("""),(&tmp1880));
 bool const tmp1881 = concat_string_deq(tmp4,tmp1880);
 if(tmp1881){
 concat_BlockType tmp1882 = ((concat_BlockType){.label=18});
@@ -11119,7 +11120,7 @@ return;
 }else{
 else_label562:;
 concat_arrayView_I1 tmp1888;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"=>"),(&tmp1888));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"="">"""),(&tmp1888));
 bool const tmp1889 = concat_string_deq(tmp4,tmp1888);
 if(tmp1889){
 concat_arrayView_I1 const l143_opName = tmp4;
@@ -11128,15 +11129,15 @@ concat_BlockType const l144_blockType = tmp1890;
 bool const tmp1891 = ((bool)((!(l144_blockType.label==20))&(!(l144_blockType.label==18))));
 if(tmp1891){
 concat_list_I1 tmp1892;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp1892));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp1892));
 concat_list_I1 tmp1893;
 concat_sb_dappendStr(tmp1892,l143_opName,(&tmp1893));
 concat_list_I1 tmp1894;
-concat_sb_dappendS(tmp1893,((int64_t)4),((int8_t const*)" in "),(&tmp1894));
+concat_sb_dappendS(tmp1893,((int64_t)4),((int8_t const*)" ""i""n"" """),(&tmp1894));
 concat_list_I1 tmp1895;
 concat_sb_dappendBlockType(tmp1894,l144_blockType,(&tmp1895));
 concat_list_I1 tmp1896;
-concat_sb_dappendS(tmp1895,((int64_t)6),((int8_t const*)"-block"),(&tmp1896));
+concat_sb_dappendS(tmp1895,((int64_t)6),((int8_t const*)"-""b""l""o""c""k"""),(&tmp1896));
 concat_FilePosition tmp1897 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1896,tmp1897,arg3/*state*/);
 *(out0)= tmp3;
@@ -11155,7 +11156,7 @@ return;
 }else{
 else_label563:;
 concat_arrayView_I1 tmp1901;
-concat_string_dwrap(((int64_t)1),((int8_t const*)")"),(&tmp1901));
+concat_string_dwrap(((int64_t)1),((int8_t const*)")"""),(&tmp1901));
 bool const tmp1902 = concat_string_deq(tmp4,tmp1901);
 if(tmp1902){
 concat_arrayView_I1 const l145_opName = tmp4;
@@ -11167,7 +11168,7 @@ bool tmp1907 = tmp1903;
 int64_t tmp1908 = tmp1904;
 if(tmp1906){
 concat_list_I1 tmp1909;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp1909));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp1909));
 concat_list_I1 tmp1910;
 concat_sb_dappendStr(tmp1909,l145_opName,(&tmp1910));
 concat_FilePosition tmp1911 = ((*arg2/*fileState*/).e1_wordStart);
@@ -11199,15 +11200,15 @@ bool tmp1920 = tmp1916;
 int64_t tmp1921 = tmp1917;
 if(tmp1919){
 concat_list_I1 tmp1922;
-concat_sb_dwrap(((int64_t)9),((int8_t const*)"expected "),(&tmp1922));
+concat_sb_dwrap(((int64_t)9),((int8_t const*)"e""x""p""e""c""t""e""d"" """),(&tmp1922));
 concat_list_I1 tmp1923;
 concat_sb_dappendBlockType(tmp1922,((concat_BlockType){.label=18}),(&tmp1923));
 concat_list_I1 tmp1924;
-concat_sb_dappendS(tmp1923,((int64_t)4),((int8_t const*)" or "),(&tmp1924));
+concat_sb_dappendS(tmp1923,((int64_t)4),((int8_t const*)" ""o""r"" """),(&tmp1924));
 concat_list_I1 tmp1925;
 concat_sb_dappendBlockType(tmp1924,((concat_BlockType){.label=20}),(&tmp1925));
 concat_list_I1 tmp1926;
-concat_sb_dappendS(tmp1925,((int64_t)6),((int8_t const*)" block"),(&tmp1926));
+concat_sb_dappendS(tmp1925,((int64_t)6),((int8_t const*)" ""b""l""o""c""k"""),(&tmp1926));
 concat_FilePosition tmp1927 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1926,tmp1927,arg3/*state*/);
 *(out0)= tmp3;
@@ -11218,15 +11219,15 @@ concat_BlockType const l148_container = tmp1918;
 bool const tmp1928 = ((bool)((!(l148_container.label==20))&(!(l148_container.label==18))));
 if(tmp1928){
 concat_list_I1 tmp1929;
-concat_sb_dwrap(((int64_t)9),((int8_t const*)"expected "),(&tmp1929));
+concat_sb_dwrap(((int64_t)9),((int8_t const*)"e""x""p""e""c""t""e""d"" """),(&tmp1929));
 concat_list_I1 tmp1930;
 concat_sb_dappendBlockType(tmp1929,((concat_BlockType){.label=18}),(&tmp1930));
 concat_list_I1 tmp1931;
-concat_sb_dappendS(tmp1930,((int64_t)4),((int8_t const*)" or "),(&tmp1931));
+concat_sb_dappendS(tmp1930,((int64_t)4),((int8_t const*)" ""o""r"" """),(&tmp1931));
 concat_list_I1 tmp1932;
 concat_sb_dappendBlockType(tmp1931,((concat_BlockType){.label=20}),(&tmp1932));
 concat_list_I1 tmp1933;
-concat_sb_dappendS(tmp1932,((int64_t)11),((int8_t const*)" block got "),(&tmp1933));
+concat_sb_dappendS(tmp1932,((int64_t)11),((int8_t const*)" ""b""l""o""c""k"" ""g""o""t"" """),(&tmp1933));
 concat_list_I1 tmp1934;
 concat_sb_dappendBlockType(tmp1933,l148_container,(&tmp1934));
 concat_FilePosition tmp1935 = ((*arg2/*fileState*/).e1_wordStart);
@@ -11244,26 +11245,26 @@ concat_2_FappendOp(tmp1937,arg3/*state*/);
 break;
 case 18:;
 concat_list_I1 tmp1938;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp1938));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp1938));
 concat_list_I1 tmp1939;
 concat_sb_dappendStr(tmp1938,l145_opName,(&tmp1939));
 concat_list_I1 tmp1940;
-concat_sb_dappendS(tmp1939,((int64_t)57),((int8_t const*)" in procedure block, expected => followed by return types"),(&tmp1940));
+concat_sb_dappendS(tmp1939,((int64_t)57),((int8_t const*)" ""i""n"" ""p""r""o""c""e""d""u""r""e"" ""b""l""o""c""k"","" ""e""x""p""e""c""t""e""d"" ""="">"" ""f""o""l""l""o""w""e""d"" ""b""y"" ""r""e""t""u""r""n"" ""t""y""p""e""s"""),(&tmp1940));
 concat_FilePosition tmp1941 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1940,tmp1941,arg3/*state*/);
 *(out0)= tmp3;
 return;
 case 0:case 1:case 2:case 3:case 4:case 5:case 6:case 7:case 8:case 9:case 10:case 11:case 12:case 13:;
 concat_list_I1 tmp1942;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp1942));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp1942));
 concat_list_I1 tmp1943;
 concat_sb_dappendStr(tmp1942,l145_opName,(&tmp1943));
 concat_list_I1 tmp1944;
-concat_sb_dappendS(tmp1943,((int64_t)4),((int8_t const*)" in "),(&tmp1944));
+concat_sb_dappendS(tmp1943,((int64_t)4),((int8_t const*)" ""i""n"" """),(&tmp1944));
 concat_list_I1 tmp1945;
 concat_sb_dappendBlockType(tmp1944,l146_blockType,(&tmp1945));
 concat_list_I1 tmp1946;
-concat_sb_dappendS(tmp1945,((int64_t)6),((int8_t const*)"-block"),(&tmp1946));
+concat_sb_dappendS(tmp1945,((int64_t)6),((int8_t const*)"-""b""l""o""c""k"""),(&tmp1946));
 concat_FilePosition tmp1947 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1946,tmp1947,arg3/*state*/);
 *(out0)= tmp3;
@@ -11274,7 +11275,7 @@ return;
 }else{
 else_label565:;
 concat_arrayView_I1 tmp1948;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"assert"),(&tmp1948));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"a""s""s""e""r""t"""),(&tmp1948));
 bool const tmp1949 = concat_string_deq(tmp4,tmp1948);
 bool const tmp1950 = ((bool)(tmp1949&concat___EXPERIMENTAL__));
 if(tmp1950){
@@ -11284,7 +11285,7 @@ concat_Token tmp1952 = concat_nextToken(tmp3,arg2/*fileState*/,(&tmp1951));
 bool const tmp1953 = (!(tmp1952.label==2));
 if(tmp1953){
 concat_list_I1 tmp1954;
-concat_sb_dwrap(((int64_t)15),((int8_t const*)"expected string"),(&tmp1954));
+concat_sb_dwrap(((int64_t)15),((int8_t const*)"e""x""p""e""c""t""e""d"" ""s""t""r""i""n""g"""),(&tmp1954));
 concat_FilePosition tmp1955 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendWarning2(tmp1954,tmp1955,arg3/*state*/);
 *(out0)= tmp1951;
@@ -11298,7 +11299,7 @@ bool const tmp1956 = concat_2_FhasConst2(arg3/*state*/);
 bool const tmp1957 = (!tmp1956);
 if(tmp1957){
 concat_list_I1 tmp1958;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"unimplemented: dynamic assertions"),(&tmp1958));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"u""n""i""m""p""l""e""m""e""n""t""e""d"":"" ""d""y""n""a""m""i""c"" ""a""s""s""e""r""t""i""o""n""s"""),(&tmp1958));
 concat_FilePosition tmp1959 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1958,tmp1959,arg3/*state*/);
 *(out0)= tmp1951;
@@ -11313,7 +11314,7 @@ bool const tmp1962 = (!(tmp1960.label==1));
 bool tmp1966;
 if(tmp1962){
 concat_list_I1 tmp1963;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"expected boolean got "),(&tmp1963));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"e""x""p""e""c""t""e""d"" ""b""o""o""l""e""a""n"" ""g""o""t"" """),(&tmp1963));
 concat_list_I1 tmp1964;
 concat_sb_dappendConstant(tmp1963,tmp1960,((concat_ConstantContext const*)(&((*l1_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp1964));
 concat_FilePosition tmp1965 = ((*arg2/*fileState*/).e1_wordStart);
@@ -11327,11 +11328,11 @@ tmp1966 = (tmp1960.data.e1_boolean);
 bool const tmp1967 = (!tmp1966);
 if(tmp1967){
 concat_list_I1 tmp1968;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"assertion failed \""),(&tmp1968));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"a""s""s""e""r""t""i""o""n"" ""f""a""i""l""e""d"" ""\""""),(&tmp1968));
 concat_list_I1 tmp1969;
 concat_sb_dappendStr(tmp1968,l150_message,(&tmp1969));
 concat_list_I1 tmp1970;
-concat_sb_dappendS(tmp1969,((int64_t)2),((int8_t const*)"\" "),(&tmp1970));
+concat_sb_dappendS(tmp1969,((int64_t)2),((int8_t const*)"\""" """),(&tmp1970));
 concat_FilePosition tmp1971 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp1970,tmp1971,arg3/*state*/);
 }else{
@@ -11342,48 +11343,48 @@ return;
 }else{
 else_label569:;
 concat_arrayView_I1 tmp1972;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"begin"),(&tmp1972));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"b""e""g""i""n"""),(&tmp1972));
 bool const tmp1973 = concat_string_deq(tmp4,tmp1972);
 concat_arrayView_I1 tmp1974;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"defer"),(&tmp1974));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"d""e""f""e""r"""),(&tmp1974));
 bool const tmp1975 = concat_string_deq(tmp4,tmp1974);
 bool const tmp1976 = ((bool)(tmp1973|tmp1975));
 concat_arrayView_I1 tmp1977;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"and"),(&tmp1977));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"a""n""d"""),(&tmp1977));
 bool const tmp1978 = concat_string_deq(tmp4,tmp1977);
 bool const tmp1979 = ((bool)(tmp1976|tmp1978));
 concat_arrayView_I1 tmp1980;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"and*"),(&tmp1980));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"a""n""d""*"""),(&tmp1980));
 bool const tmp1981 = concat_string_dstartsWith(tmp4,tmp1980);
 bool const tmp1982 = ((bool)(tmp1979|tmp1981));
 concat_arrayView_I1 tmp1983;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"or"),(&tmp1983));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"o""r"""),(&tmp1983));
 bool const tmp1984 = concat_string_deq(tmp4,tmp1983);
 bool const tmp1985 = ((bool)(tmp1982|tmp1984));
 concat_arrayView_I1 tmp1986;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"or*"),(&tmp1986));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"o""r""*"""),(&tmp1986));
 bool const tmp1987 = concat_string_dstartsWith(tmp4,tmp1986);
 bool const tmp1988 = ((bool)(tmp1985|tmp1987));
 concat_arrayView_I1 tmp1989;
-concat_string_dwrap(((int64_t)9),((int8_t const*)"namespace"),(&tmp1989));
+concat_string_dwrap(((int64_t)9),((int8_t const*)"n""a""m""e""s""p""a""c""e"""),(&tmp1989));
 bool const tmp1990 = concat_string_deq(tmp4,tmp1989);
 bool const tmp1991 = ((bool)(tmp1988|tmp1990));
 concat_arrayView_I1 tmp1992;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"using"),(&tmp1992));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"u""s""i""n""g"""),(&tmp1992));
 bool const tmp1993 = concat_string_deq(tmp4,tmp1992);
 bool const tmp1994 = ((bool)(tmp1991|tmp1993));
 concat_arrayView_I1 tmp1995;
-concat_string_dwrap(((int64_t)7),((int8_t const*)"include"),(&tmp1995));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"i""n""c""l""u""d""e"""),(&tmp1995));
 bool const tmp1996 = concat_string_deq(tmp4,tmp1995);
 bool const tmp1997 = ((bool)(tmp1994|tmp1996));
 if(tmp1997){
 concat_arrayView_I1 const l151_opName = tmp4;
 concat_list_I1 tmp1998;
-concat_sb_dwrap(((int64_t)1),((int8_t const*)"`"),(&tmp1998));
+concat_sb_dwrap(((int64_t)1),((int8_t const*)"`"""),(&tmp1998));
 concat_list_I1 tmp1999;
 concat_sb_dappendStr(tmp1998,l151_opName,(&tmp1999));
 concat_list_I1 tmp2000;
-concat_sb_dappendS(tmp1999,((int64_t)53),((int8_t const*)"` is a reserved keyword for a future language version"),(&tmp2000));
+concat_sb_dappendS(tmp1999,((int64_t)53),((int8_t const*)"`"" ""i""s"" ""a"" ""r""e""s""e""r""v""e""d"" ""k""e""y""w""o""r""d"" ""f""o""r"" ""a"" ""f""u""t""u""r""e"" ""l""a""n""g""u""a""g""e"" ""v""e""r""s""i""o""n"""),(&tmp2000));
 concat_FilePosition tmp2001 = ((*arg2/*fileState*/).e1_wordStart);
 concat_2_FappendError2(tmp2000,tmp2001,arg3/*state*/);
 *(out0)= tmp3;
@@ -11494,7 +11495,7 @@ case 0:;
 return;
 case 2:case 3:case 4:case 5:case 7:case 8:;
 concat_list_I1 tmp0;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"cannot include file \""),(&tmp0));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"c""a""n""n""o""t"" ""i""n""c""l""u""d""e"" ""f""i""l""e"" ""\""""),(&tmp0));
 concat_list_I1 tmp1;
 concat_sb_dappendSb(tmp0,arg1/*fileName*/,(&tmp1));
 concat_list_I1 tmp2;
@@ -11504,7 +11505,7 @@ concat_2_FappendError2(tmp2,tmp3,arg3/*state*/);
 return;
 default:;
 concat_list_I1 tmp4;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"error while reading file \""),(&tmp4));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"e""r""r""o""r"" ""w""h""i""l""e"" ""r""e""a""d""i""n""g"" ""f""i""l""e"" ""\""""),(&tmp4));
 concat_list_I1 tmp5;
 concat_sb_dappendSb(tmp4,arg1/*fileName*/,(&tmp5));
 concat_list_I1 tmp6;
@@ -16905,7 +16906,7 @@ concat_io_dIOError const tmp2 = concat_io_dfstart(tmp0,(&tmp1));
 concat_io_dFILE tmp3;
 concat_io_dIOError const tmp4 = concat_io_dfappendS(tmp1,tmp2,arg0,arg1/*str*/,(&tmp3));
 concat_io_dFILE tmp5;
-concat_io_dIOError const tmp6 = concat_io_dfappendS(tmp3,tmp4,((int64_t)1),((int8_t const*)"\x0A"),(&tmp5));
+concat_io_dIOError const tmp6 = concat_io_dfappendS(tmp3,tmp4,((int64_t)1),((int8_t const*)"\x0A"""),(&tmp5));
 return tmp6;
 }
 // ./lib/numbers.concat
@@ -17475,7 +17476,7 @@ static double const concat_12_Fdouble_dMIN__POSITIVE = 0x0.0000000000001P-1022;
 //local
 static int8_t concat_12_FgetDigit(int32_t arg0){
 concat_internal_checkArrayIndex(62,arg0,"./lib/numbers/printFloat.concat:7:74");
-return (((int8_t const*)"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")[arg0]);
+return (((int8_t const*)"0""1""2""3""4""5""6""7""8""9""A""B""C""D""E""F""G""H""I""J""K""L""M""N""O""P""Q""R""S""T""U""V""W""X""Y""Z""a""b""c""d""e""f""g""h""i""j""k""l""m""n""o""p""q""r""s""t""u""v""w""x""y""z""")[arg0]);
 }
 void concat_sb_dappendIeeeDouble(concat_list_I1 arg0/*sb*/,double arg1/*f*/,concat_list_I1* out0){
 double l0_value = arg1/*f*/;
@@ -17489,7 +17490,7 @@ if(tmp2){
 bool const tmp3 = concat_double_disNaN(l0_value);
 if(tmp3){
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"NAN"),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"N""A""N"""),(&tmp4));
 *(out0)= tmp4;
 return;
 }else{
@@ -17498,13 +17499,13 @@ double tmp5 = l0_value;
 bool const tmp6 = (tmp5>((double)0));
 if(tmp6){
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"INFINITY"),(&tmp7));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"I""N""F""I""N""I""T""Y"""),(&tmp7));
 *(out0)= tmp7;
 return;
 }else{
 else_label655:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"-INFINITY"),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"-""I""N""F""I""N""I""T""Y"""),(&tmp8));
 *(out0)= tmp8;
 return;
 }
@@ -17521,13 +17522,13 @@ if(tmp10){
 bool const tmp11 = (((double)(((double)1)/l0_value))<((double)0));
 if(tmp11){
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"-0.0"),(&tmp12));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"-""0"".""0"""),(&tmp12));
 *(out0)= tmp12;
 return;
 }else{
 else_label657:;
 concat_list_I1 tmp13;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"0.0"),(&tmp13));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"0"".""0"""),(&tmp13));
 *(out0)= tmp13;
 return;
 }
@@ -17548,7 +17549,7 @@ tmp0 = tmp16;
 else_label658:;
 }
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"0x"),(&tmp17));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"0""x"""),(&tmp17));
 double const tmp18 = concat_math_dlog2(l0_value);
 double const tmp19 = concat_math_dfloor(tmp18);
 int64_t l4_e = ((int64_t)tmp19);
@@ -17615,7 +17616,7 @@ if(tmp3){
 bool const tmp4 = concat_double_disNaN(l0_value);
 if(tmp4){
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp1,((int64_t)5),((int8_t const*)"[NaN]"),(&tmp5));
+concat_sb_dappendS(tmp1,((int64_t)5),((int8_t const*)"[""N""a""N""]"""),(&tmp5));
 *(out0)= tmp5;
 return;
 }else{
@@ -17624,13 +17625,13 @@ double tmp6 = l0_value;
 bool const tmp7 = (tmp6>((double)0));
 if(tmp7){
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp1,((int64_t)10),((int8_t const*)"[Infinity]"),(&tmp8));
+concat_sb_dappendS(tmp1,((int64_t)10),((int8_t const*)"[""I""n""f""i""n""i""t""y""]"""),(&tmp8));
 *(out0)= tmp8;
 return;
 }else{
 else_label664:;
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"-[Infinity]"),(&tmp9));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"-""[""I""n""f""i""n""i""t""y""]"""),(&tmp9));
 *(out0)= tmp9;
 return;
 }
@@ -17646,7 +17647,7 @@ double tmp11 = l0_value;
 bool const tmp12 = ((bool)((tmp10==((double)0.0))|(tmp11==((double)-0.0))));
 if(tmp12){
 concat_list_I1 tmp13;
-concat_sb_dappendS(tmp1,((int64_t)1),((int8_t const*)"0"),(&tmp13));
+concat_sb_dappendS(tmp1,((int64_t)1),((int8_t const*)"0"""),(&tmp13));
 *(out0)= tmp13;
 return;
 }else{
@@ -17894,7 +17895,7 @@ tmp94 = ((int32_t)(tmp94+((int32_t)1)));
 }else{
 else_label679:;
 concat_list_I1 tmp102;
-concat_sb_dappendS(tmp1,((int64_t)2),((int8_t const*)"0."),(&tmp102));
+concat_sb_dappendS(tmp1,((int64_t)2),((int8_t const*)"0""."""),(&tmp102));
 int64_t tmp103 = ((int64_t)(((int64_t)1)-l2_e__max));
 do{
 bool const tmp104 = (tmp103>((int64_t)0));
@@ -18009,7 +18010,7 @@ return;
 }
 // ./lib/numbers/printInt.concat
 //global
-static int8_t const* const concat_13_Fsb_dstringChars = ((int8_t const*)"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+static int8_t const* const concat_13_Fsb_dstringChars = ((int8_t const*)"0""1""2""3""4""5""6""7""8""9""A""B""C""D""E""F""G""H""I""J""K""L""M""N""O""P""Q""R""S""T""U""V""W""X""Y""Z""a""b""c""d""e""f""g""h""i""j""k""l""m""n""o""p""q""r""s""t""u""v""w""x""y""z""");
 //local
 void concat_sb_dappendI_X63_X63(concat_list_I1 arg0/*buffer*/,int64_t arg1/*i*/,int32_t arg2/*base*/,bool arg3/*signed*/,concat_list_I1* out0){
 bool const tmp0 = ((bool)((arg2/*base*/<((int32_t)2))|(arg2/*base*/>((int32_t)62))));
@@ -18047,7 +18048,7 @@ if(!tmp8)
   break;
 int64_t const tmp9 = ((int64_t)(((uint64_t)tmp3)%((uint64_t)((int64_t)arg2/*base*/))));
 concat_internal_checkArrayIndex(62,tmp9,"./lib/numbers/printInt.concat:23:49");
-int8_t const tmp10 = (((int8_t const*)"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")[tmp9]);
+int8_t const tmp10 = (((int8_t const*)"0""1""2""3""4""5""6""7""8""9""A""B""C""D""E""F""G""H""I""J""K""L""M""N""O""P""Q""R""S""T""U""V""W""X""Y""Z""a""b""c""d""e""f""g""h""i""j""k""l""m""n""o""p""q""r""s""t""u""v""w""x""y""z""")[tmp9]);
 concat_internal_checkArrayIndex(64,tmp7,"./lib/numbers/printInt.concat:24:38");
 ((&(l0_chrBuff.data[0]))[tmp7]) = tmp10;
 tmp7 = ((int32_t)(tmp7-((int32_t)1)));
@@ -18475,22 +18476,22 @@ concat_list_I1 tmp0 = arg0;
 switch(arg1.label){
 case 0:;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"NEGATE"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"N""E""G""A""T""E"""),(&tmp1));
 *(out0)= tmp1;
 return;
 case 2:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"NOT"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"N""O""T"""),(&tmp2));
 *(out0)= tmp2;
 return;
 case 1:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"TO_BOOL"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"T""O""_""B""O""O""L"""),(&tmp3));
 *(out0)= tmp3;
 return;
 case 3:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"FLIP"),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"F""L""I""P"""),(&tmp4));
 *(out0)= tmp4;
 return;
 }
@@ -18502,117 +18503,117 @@ concat_list_I1 tmp0 = arg0;
 switch(arg1.label){
 case 0:;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"ADD"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"A""D""D"""),(&tmp1));
 *(out0)= tmp1;
 return;
 case 1:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"SUBTRACT"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"S""U""B""T""R""A""C""T"""),(&tmp2));
 *(out0)= tmp2;
 return;
 case 2:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"MULTIPLY"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"M""U""L""T""I""P""L""Y"""),(&tmp3));
 *(out0)= tmp3;
 return;
 case 3:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"DIVIDE"),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"D""I""V""I""D""E"""),(&tmp4));
 *(out0)= tmp4;
 return;
 case 5:;
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"MOD"),(&tmp5));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"M""O""D"""),(&tmp5));
 *(out0)= tmp5;
 return;
 case 4:;
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"UDIVIDE"),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"U""D""I""V""I""D""E"""),(&tmp6));
 *(out0)= tmp6;
 return;
 case 6:;
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"UMOD"),(&tmp7));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"U""M""O""D"""),(&tmp7));
 *(out0)= tmp7;
 return;
 case 7:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"AND"),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"A""N""D"""),(&tmp8));
 *(out0)= tmp8;
 return;
 case 8:;
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"OR"),(&tmp9));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"O""R"""),(&tmp9));
 *(out0)= tmp9;
 return;
 case 9:;
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"XOR"),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"X""O""R"""),(&tmp10));
 *(out0)= tmp10;
 return;
 case 13:;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"EQ"),(&tmp11));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"E""Q"""),(&tmp11));
 *(out0)= tmp11;
 return;
 case 14:;
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"NE"),(&tmp12));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"N""E"""),(&tmp12));
 *(out0)= tmp12;
 return;
 case 15:;
 concat_list_I1 tmp13;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"LT"),(&tmp13));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"L""T"""),(&tmp13));
 *(out0)= tmp13;
 return;
 case 16:;
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"LE"),(&tmp14));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"L""E"""),(&tmp14));
 *(out0)= tmp14;
 return;
 case 17:;
 concat_list_I1 tmp15;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"GE"),(&tmp15));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"G""E"""),(&tmp15));
 *(out0)= tmp15;
 return;
 case 18:;
 concat_list_I1 tmp16;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"GT"),(&tmp16));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"G""T"""),(&tmp16));
 *(out0)= tmp16;
 return;
 case 19:;
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"ULT"),(&tmp17));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"U""L""T"""),(&tmp17));
 *(out0)= tmp17;
 return;
 case 20:;
 concat_list_I1 tmp18;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"ULE"),(&tmp18));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"U""L""E"""),(&tmp18));
 *(out0)= tmp18;
 return;
 case 21:;
 concat_list_I1 tmp19;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"UGE"),(&tmp19));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"U""G""E"""),(&tmp19));
 *(out0)= tmp19;
 return;
 case 22:;
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"UGT"),(&tmp20));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"U""G""T"""),(&tmp20));
 *(out0)= tmp20;
 return;
 case 10:;
 concat_list_I1 tmp21;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"LSHIFT"),(&tmp21));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"L""S""H""I""F""T"""),(&tmp21));
 *(out0)= tmp21;
 return;
 case 11:;
 concat_list_I1 tmp22;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"RSHIFT"),(&tmp22));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"R""S""H""I""F""T"""),(&tmp22));
 *(out0)= tmp22;
 return;
 case 12:;
 concat_list_I1 tmp23;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"URSHIFT"),(&tmp23));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"U""R""S""H""I""F""T"""),(&tmp23));
 *(out0)= tmp23;
 return;
 }
@@ -18627,12 +18628,12 @@ case 0:;
 bool const tmp2 = ((arg1/*mod*/.e0_n)==((int32_t)0));
 if(tmp2){
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"DUP "),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"D""U""P"" """),(&tmp3));
 tmp0 = tmp3;
 }else{
 else_label684:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"OVER "),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"O""V""E""R"" """),(&tmp4));
 concat_list_I1 tmp5;
 concat_sb_dappendI(tmp4,((int64_t)(arg1/*mod*/.e0_n)),(&tmp5));
 tmp0 = tmp5;
@@ -18640,12 +18641,12 @@ tmp0 = tmp5;
 break;
 case 1:;
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"SWAP "),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"S""W""A""P"" """),(&tmp6));
 tmp0 = tmp6;
 break;
 case 2:;
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"DROP "),(&tmp7));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"D""R""O""P"" """),(&tmp7));
 concat_list_I1 tmp8;
 concat_sb_dappendI(tmp7,((int64_t)(arg1/*mod*/.e0_n)),(&tmp8));
 tmp0 = tmp8;
@@ -18659,17 +18660,17 @@ concat_list_I1 tmp0 = arg0;
 switch(arg1.label){
 case 0:;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"ptr"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"p""t""r"""),(&tmp1));
 tmp0 = tmp1;
 break;
 case 1:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"array"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"a""r""r""a""y"""),(&tmp2));
 tmp0 = tmp2;
 break;
 case 2:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"ptr mut"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"p""t""r"" ""m""u""t"""),(&tmp3));
 tmp0 = tmp3;
 break;
 }
@@ -18686,17 +18687,17 @@ concat_OpValue const tmp2 = (tmp1.e0_val);
 switch(tmp2.label){
 case 0:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"NOP"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"N""O""P"""),(&tmp3));
 tmp0 = tmp3;
 break;
 case 1:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"constant ( "),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"c""o""n""s""t""a""n""t"" ""("" """),(&tmp4));
 concat_Type tmp5 = (tmp1.e1_dataType);
 concat_list_I1 tmp6;
 concat_sb_dappendType(tmp4,tmp5,l1_labelContext,l0_typeContext,(&tmp6));
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)5),((int8_t const*)" ) : "),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp7));
 concat_OpValue* const tmp8 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp8).label,1,"./concat.concat/program.concat:353:22");
 concat_ConstValue tmp9 = ((*tmp8).data.e1_Constant);
@@ -18706,7 +18707,7 @@ tmp0 = tmp10;
 break;
 case 2:;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"Block: "),(&tmp11));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"B""l""o""c""k"":"" """),(&tmp11));
 concat_OpValue* const tmp12 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp12).label,2,"./concat.concat/program.concat:357:22");
 concat_list_I1 tmp13;
@@ -18715,7 +18716,7 @@ tmp0 = tmp13;
 break;
 case 3:;
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"End: "),(&tmp14));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"E""n""d"":"" """),(&tmp14));
 concat_OpValue* const tmp15 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp15).label,3,"./concat.concat/program.concat:361:22");
 concat_list_I1 tmp16;
@@ -18724,12 +18725,12 @@ tmp0 = tmp16;
 break;
 case 4:;
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"get ( "),(&tmp17));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"g""e""t"" ""("" """),(&tmp17));
 concat_Type tmp18 = (tmp1.e1_dataType);
 concat_list_I1 tmp19;
 concat_sb_dappendType(tmp17,tmp18,l1_labelContext,l0_typeContext,(&tmp19));
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp19,((int64_t)5),((int8_t const*)" ) : "),(&tmp20));
+concat_sb_dappendS(tmp19,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp20));
 concat_OpValue* const tmp21 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp21).label,4,"./concat.concat/program.concat:367:22");
 concat_IdentifierInfo tmp22 = ((*tmp21).data.e4_getId);
@@ -18739,12 +18740,12 @@ tmp0 = tmp23;
 break;
 case 26:;
 concat_list_I1 tmp24;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"call ( "),(&tmp24));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"c""a""l""l"" ""("" """),(&tmp24));
 concat_Type tmp25 = (tmp1.e1_dataType);
 concat_list_I1 tmp26;
 concat_sb_dappendType(tmp24,tmp25,l1_labelContext,l0_typeContext,(&tmp26));
 concat_list_I1 tmp27;
-concat_sb_dappendS(tmp26,((int64_t)5),((int8_t const*)" ) : "),(&tmp27));
+concat_sb_dappendS(tmp26,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp27));
 concat_OpValue* const tmp28 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp28).label,26,"./concat.concat/program.concat:373:22");
 concat_IdentifierInfo tmp29 = (((*tmp28).data.e26_call).e0_idInfo);
@@ -18754,12 +18755,12 @@ tmp0 = tmp30;
 break;
 case 5:;
 concat_list_I1 tmp31;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"set ( "),(&tmp31));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"s""e""t"" ""("" """),(&tmp31));
 concat_Type tmp32 = (tmp1.e1_dataType);
 concat_list_I1 tmp33;
 concat_sb_dappendType(tmp31,tmp32,l1_labelContext,l0_typeContext,(&tmp33));
 concat_list_I1 tmp34;
-concat_sb_dappendS(tmp33,((int64_t)5),((int8_t const*)" ) : "),(&tmp34));
+concat_sb_dappendS(tmp33,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp34));
 concat_OpValue* const tmp35 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp35).label,5,"./concat.concat/program.concat:379:22");
 concat_IdentifierInfo tmp36 = ((*tmp35).data.e5_setId);
@@ -18769,12 +18770,12 @@ tmp0 = tmp37;
 break;
 case 6:;
 concat_list_I1 tmp38;
-concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"address ( "),(&tmp38));
+concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"a""d""d""r""e""s""s"" ""("" """),(&tmp38));
 concat_Type tmp39 = (tmp1.e1_dataType);
 concat_list_I1 tmp40;
 concat_sb_dappendType(tmp38,tmp39,l1_labelContext,l0_typeContext,(&tmp40));
 concat_list_I1 tmp41;
-concat_sb_dappendS(tmp40,((int64_t)5),((int8_t const*)" ) : "),(&tmp41));
+concat_sb_dappendS(tmp40,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp41));
 concat_OpValue* const tmp42 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp42).label,6,"./concat.concat/program.concat:385:22");
 concat_IdentifierInfo tmp43 = ((*tmp42).data.e6__X64Id);
@@ -18784,12 +18785,12 @@ tmp0 = tmp44;
 break;
 case 7:;
 concat_list_I1 tmp45;
-concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)"initialize ( "),(&tmp45));
+concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)"i""n""i""t""i""a""l""i""z""e"" ""("" """),(&tmp45));
 concat_Type tmp46 = (tmp1.e1_dataType);
 concat_list_I1 tmp47;
 concat_sb_dappendType(tmp45,tmp46,l1_labelContext,l0_typeContext,(&tmp47));
 concat_list_I1 tmp48;
-concat_sb_dappendS(tmp47,((int64_t)5),((int8_t const*)" ) : "),(&tmp48));
+concat_sb_dappendS(tmp47,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp48));
 concat_OpValue* const tmp49 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp49).label,7,"./concat.concat/program.concat:391:22");
 concat_IdentifierInfo tmp50 = ((*tmp49).data.e7_initializeId);
@@ -18799,12 +18800,12 @@ tmp0 = tmp51;
 break;
 case 8:;
 concat_list_I1 tmp52;
-concat_sb_dappendS(tmp0,((int64_t)24),((int8_t const*)"auto-typed initialize ( "),(&tmp52));
+concat_sb_dappendS(tmp0,((int64_t)24),((int8_t const*)"a""u""t""o""-""t""y""p""e""d"" ""i""n""i""t""i""a""l""i""z""e"" ""("" """),(&tmp52));
 concat_Type tmp53 = (tmp1.e1_dataType);
 concat_list_I1 tmp54;
 concat_sb_dappendType(tmp52,tmp53,l1_labelContext,l0_typeContext,(&tmp54));
 concat_list_I1 tmp55;
-concat_sb_dappendS(tmp54,((int64_t)5),((int8_t const*)" ) : "),(&tmp55));
+concat_sb_dappendS(tmp54,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp55));
 concat_OpValue* const tmp56 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp56).label,8,"./concat.concat/program.concat:397:22");
 concat_IdentifierInfo tmp57 = ((*tmp56).data.e8_autoTypedInitializeId);
@@ -18814,12 +18815,12 @@ tmp0 = tmp58;
 break;
 case 9:;
 concat_list_I1 tmp59;
-concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"declare ( "),(&tmp59));
+concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"d""e""c""l""a""r""e"" ""("" """),(&tmp59));
 concat_Type tmp60 = (tmp1.e1_dataType);
 concat_list_I1 tmp61;
 concat_sb_dappendType(tmp59,tmp60,l1_labelContext,l0_typeContext,(&tmp61));
 concat_list_I1 tmp62;
-concat_sb_dappendS(tmp61,((int64_t)5),((int8_t const*)" ) : "),(&tmp62));
+concat_sb_dappendS(tmp61,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp62));
 concat_OpValue* const tmp63 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp63).label,9,"./concat.concat/program.concat:403:22");
 concat_IdentifierInfo tmp64 = ((*tmp63).data.e9_declareId);
@@ -18829,12 +18830,12 @@ tmp0 = tmp65;
 break;
 case 10:;
 concat_list_I1 tmp66;
-concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"get label ( "),(&tmp66));
+concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"g""e""t"" ""l""a""b""e""l"" ""("" """),(&tmp66));
 concat_Type tmp67 = (tmp1.e1_dataType);
 concat_list_I1 tmp68;
 concat_sb_dappendType(tmp66,tmp67,l1_labelContext,l0_typeContext,(&tmp68));
 concat_list_I1 tmp69;
-concat_sb_dappendS(tmp68,((int64_t)5),((int8_t const*)" ) : "),(&tmp69));
+concat_sb_dappendS(tmp68,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp69));
 concat_OpValue* const tmp70 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp70).label,10,"./concat.concat/program.concat:409:22");
 concat_optional_I3 tmp71 = concat_id_dlabelName(((*tmp70).data.e10_getLabel),l1_labelContext);
@@ -18845,12 +18846,12 @@ tmp0 = tmp72;
 break;
 case 11:;
 concat_list_I1 tmp73;
-concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"set label ( "),(&tmp73));
+concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"s""e""t"" ""l""a""b""e""l"" ""("" """),(&tmp73));
 concat_Type tmp74 = (tmp1.e1_dataType);
 concat_list_I1 tmp75;
 concat_sb_dappendType(tmp73,tmp74,l1_labelContext,l0_typeContext,(&tmp75));
 concat_list_I1 tmp76;
-concat_sb_dappendS(tmp75,((int64_t)5),((int8_t const*)" ) : "),(&tmp76));
+concat_sb_dappendS(tmp75,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp76));
 concat_OpValue* const tmp77 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp77).label,11,"./concat.concat/program.concat:415:22");
 concat_LabelId tmp78 = ((*tmp77).data.e11_setLabel);
@@ -18862,12 +18863,12 @@ tmp0 = tmp80;
 break;
 case 12:;
 concat_list_I1 tmp81;
-concat_sb_dappendS(tmp0,((int64_t)16),((int8_t const*)"label address ( "),(&tmp81));
+concat_sb_dappendS(tmp0,((int64_t)16),((int8_t const*)"l""a""b""e""l"" ""a""d""d""r""e""s""s"" ""("" """),(&tmp81));
 concat_Type tmp82 = (tmp1.e1_dataType);
 concat_list_I1 tmp83;
 concat_sb_dappendType(tmp81,tmp82,l1_labelContext,l0_typeContext,(&tmp83));
 concat_list_I1 tmp84;
-concat_sb_dappendS(tmp83,((int64_t)5),((int8_t const*)" ) : "),(&tmp84));
+concat_sb_dappendS(tmp83,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp84));
 concat_OpValue* const tmp85 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp85).label,12,"./concat.concat/program.concat:421:22");
 concat_LabelId tmp86 = ((*tmp85).data.e12__X64Label);
@@ -18879,12 +18880,12 @@ tmp0 = tmp88;
 break;
 case 13:;
 concat_list_I1 tmp89;
-concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"has label ( "),(&tmp89));
+concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"h""a""s"" ""l""a""b""e""l"" ""("" """),(&tmp89));
 concat_Type tmp90 = (tmp1.e1_dataType);
 concat_list_I1 tmp91;
 concat_sb_dappendType(tmp89,tmp90,l1_labelContext,l0_typeContext,(&tmp91));
 concat_list_I1 tmp92;
-concat_sb_dappendS(tmp91,((int64_t)5),((int8_t const*)" ) : "),(&tmp92));
+concat_sb_dappendS(tmp91,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp92));
 concat_OpValue* const tmp93 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp93).label,13,"./concat.concat/program.concat:427:22");
 concat_LabelId tmp94 = ((*tmp93).data.e13_hasLabel);
@@ -18896,23 +18897,23 @@ tmp0 = tmp96;
 break;
 case 47:;
 concat_list_I1 tmp97;
-concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"typeModifier \""),(&tmp97));
+concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"t""y""p""e""M""o""d""i""f""i""e""r"" ""\""""),(&tmp97));
 concat_OpValue* const tmp98 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp98).label,47,"./concat.concat/program.concat:431:22");
 concat_list_I1 tmp99;
 concat_sb_dappendTypeModifier(tmp97,((*tmp98).data.e47_typeModifier),(&tmp99));
 concat_list_I1 tmp100;
-concat_sb_dappendS(tmp99,((int64_t)1),((int8_t const*)"\""),(&tmp100));
+concat_sb_dappendS(tmp99,((int64_t)1),((int8_t const*)"\""""),(&tmp100));
 tmp0 = tmp100;
 break;
 case 14:;
 concat_list_I1 tmp101;
-concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"get element ( "),(&tmp101));
+concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"g""e""t"" ""e""l""e""m""e""n""t"" ""("" """),(&tmp101));
 concat_Type tmp102 = (tmp1.e1_dataType);
 concat_list_I1 tmp103;
 concat_sb_dappendType(tmp101,tmp102,l1_labelContext,l0_typeContext,(&tmp103));
 concat_list_I1 tmp104;
-concat_sb_dappendS(tmp103,((int64_t)5),((int8_t const*)" ) : "),(&tmp104));
+concat_sb_dappendS(tmp103,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp104));
 concat_OpValue* const tmp105 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp105).label,14,"./concat.concat/program.concat:438:22");
 concat_list_I1 tmp106;
@@ -18921,12 +18922,12 @@ tmp0 = tmp106;
 break;
 case 15:;
 concat_list_I1 tmp107;
-concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"set element ( "),(&tmp107));
+concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"s""e""t"" ""e""l""e""m""e""n""t"" ""("" """),(&tmp107));
 concat_Type tmp108 = (tmp1.e1_dataType);
 concat_list_I1 tmp109;
 concat_sb_dappendType(tmp107,tmp108,l1_labelContext,l0_typeContext,(&tmp109));
 concat_list_I1 tmp110;
-concat_sb_dappendS(tmp109,((int64_t)5),((int8_t const*)" ) : "),(&tmp110));
+concat_sb_dappendS(tmp109,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp110));
 concat_OpValue* const tmp111 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp111).label,15,"./concat.concat/program.concat:444:22");
 concat_list_I1 tmp112;
@@ -18935,12 +18936,12 @@ tmp0 = tmp112;
 break;
 case 16:;
 concat_list_I1 tmp113;
-concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"element address ( "),(&tmp113));
+concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"e""l""e""m""e""n""t"" ""a""d""d""r""e""s""s"" ""("" """),(&tmp113));
 concat_Type tmp114 = (tmp1.e1_dataType);
 concat_list_I1 tmp115;
 concat_sb_dappendType(tmp113,tmp114,l1_labelContext,l0_typeContext,(&tmp115));
 concat_list_I1 tmp116;
-concat_sb_dappendS(tmp115,((int64_t)5),((int8_t const*)" ) : "),(&tmp116));
+concat_sb_dappendS(tmp115,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp116));
 concat_OpValue* const tmp117 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp117).label,16,"./concat.concat/program.concat:450:22");
 concat_list_I1 tmp118;
@@ -18949,12 +18950,12 @@ tmp0 = tmp118;
 break;
 case 17:;
 concat_list_I1 tmp119;
-concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"has element ( "),(&tmp119));
+concat_sb_dappendS(tmp0,((int64_t)14),((int8_t const*)"h""a""s"" ""e""l""e""m""e""n""t"" ""("" """),(&tmp119));
 concat_Type tmp120 = (tmp1.e1_dataType);
 concat_list_I1 tmp121;
 concat_sb_dappendType(tmp119,tmp120,l1_labelContext,l0_typeContext,(&tmp121));
 concat_list_I1 tmp122;
-concat_sb_dappendS(tmp121,((int64_t)5),((int8_t const*)" ) : "),(&tmp122));
+concat_sb_dappendS(tmp121,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp122));
 concat_OpValue* const tmp123 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp123).label,17,"./concat.concat/program.concat:456:22");
 concat_list_I1 tmp124;
@@ -18963,12 +18964,12 @@ tmp0 = tmp124;
 break;
 case 18:;
 concat_list_I1 tmp125;
-concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"get array element ( "),(&tmp125));
+concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"g""e""t"" ""a""r""r""a""y"" ""e""l""e""m""e""n""t"" ""("" """),(&tmp125));
 concat_Type tmp126 = (tmp1.e1_dataType);
 concat_list_I1 tmp127;
 concat_sb_dappendType(tmp125,tmp126,l1_labelContext,l0_typeContext,(&tmp127));
 concat_list_I1 tmp128;
-concat_sb_dappendS(tmp127,((int64_t)5),((int8_t const*)" ) : "),(&tmp128));
+concat_sb_dappendS(tmp127,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp128));
 concat_OpValue* const tmp129 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp129).label,18,"./concat.concat/program.concat:462:22");
 concat_list_I1 tmp130;
@@ -18977,12 +18978,12 @@ tmp0 = tmp130;
 break;
 case 19:;
 concat_list_I1 tmp131;
-concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"set array element ( "),(&tmp131));
+concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"s""e""t"" ""a""r""r""a""y"" ""e""l""e""m""e""n""t"" ""("" """),(&tmp131));
 concat_Type tmp132 = (tmp1.e1_dataType);
 concat_list_I1 tmp133;
 concat_sb_dappendType(tmp131,tmp132,l1_labelContext,l0_typeContext,(&tmp133));
 concat_list_I1 tmp134;
-concat_sb_dappendS(tmp133,((int64_t)5),((int8_t const*)" ) : "),(&tmp134));
+concat_sb_dappendS(tmp133,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp134));
 concat_OpValue* const tmp135 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp135).label,19,"./concat.concat/program.concat:468:22");
 concat_list_I1 tmp136;
@@ -18991,12 +18992,12 @@ tmp0 = tmp136;
 break;
 case 20:;
 concat_list_I1 tmp137;
-concat_sb_dappendS(tmp0,((int64_t)24),((int8_t const*)"array element address ( "),(&tmp137));
+concat_sb_dappendS(tmp0,((int64_t)24),((int8_t const*)"a""r""r""a""y"" ""e""l""e""m""e""n""t"" ""a""d""d""r""e""s""s"" ""("" """),(&tmp137));
 concat_Type tmp138 = (tmp1.e1_dataType);
 concat_list_I1 tmp139;
 concat_sb_dappendType(tmp137,tmp138,l1_labelContext,l0_typeContext,(&tmp139));
 concat_list_I1 tmp140;
-concat_sb_dappendS(tmp139,((int64_t)5),((int8_t const*)" ) : "),(&tmp140));
+concat_sb_dappendS(tmp139,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp140));
 concat_OpValue* const tmp141 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp141).label,20,"./concat.concat/program.concat:474:22");
 concat_list_I1 tmp142;
@@ -19005,32 +19006,32 @@ tmp0 = tmp142;
 break;
 case 21:;
 concat_list_I1 tmp143;
-concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"set value ( "),(&tmp143));
+concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"s""e""t"" ""v""a""l""u""e"" ""("" """),(&tmp143));
 concat_Type tmp144 = (tmp1.e1_dataType);
 concat_list_I1 tmp145;
 concat_sb_dappendType(tmp143,tmp144,l1_labelContext,l0_typeContext,(&tmp145));
 concat_list_I1 tmp146;
-concat_sb_dappendS(tmp145,((int64_t)2),((int8_t const*)" )"),(&tmp146));
+concat_sb_dappendS(tmp145,((int64_t)2),((int8_t const*)" "")"""),(&tmp146));
 tmp0 = tmp146;
 break;
 case 23:;
 concat_list_I1 tmp147;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"Return( "),(&tmp147));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"R""e""t""u""r""n""("" """),(&tmp147));
 concat_Type tmp148 = (tmp1.e1_dataType);
 concat_list_I1 tmp149;
 concat_sb_dappendType(tmp147,tmp148,l1_labelContext,l0_typeContext,(&tmp149));
 concat_list_I1 tmp150;
-concat_sb_dappendS(tmp149,((int64_t)3),((int8_t const*)" ) "),(&tmp150));
+concat_sb_dappendS(tmp149,((int64_t)3),((int8_t const*)" "")"" """),(&tmp150));
 tmp0 = tmp150;
 break;
 case 37:;
 concat_list_I1 tmp151;
-concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"binary Operator ( "),(&tmp151));
+concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"b""i""n""a""r""y"" ""O""p""e""r""a""t""o""r"" ""("" """),(&tmp151));
 concat_Type tmp152 = (tmp1.e1_dataType);
 concat_list_I1 tmp153;
 concat_sb_dappendType(tmp151,tmp152,l1_labelContext,l0_typeContext,(&tmp153));
 concat_list_I1 tmp154;
-concat_sb_dappendS(tmp153,((int64_t)5),((int8_t const*)" ) : "),(&tmp154));
+concat_sb_dappendS(tmp153,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp154));
 concat_OpValue* const tmp155 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp155).label,37,"./concat.concat/program.concat:490:22");
 concat_list_I1 tmp156;
@@ -19039,12 +19040,12 @@ tmp0 = tmp156;
 break;
 case 36:;
 concat_list_I1 tmp157;
-concat_sb_dappendS(tmp0,((int64_t)17),((int8_t const*)"unary Operator ( "),(&tmp157));
+concat_sb_dappendS(tmp0,((int64_t)17),((int8_t const*)"u""n""a""r""y"" ""O""p""e""r""a""t""o""r"" ""("" """),(&tmp157));
 concat_Type tmp158 = (tmp1.e1_dataType);
 concat_list_I1 tmp159;
 concat_sb_dappendType(tmp157,tmp158,l1_labelContext,l0_typeContext,(&tmp159));
 concat_list_I1 tmp160;
-concat_sb_dappendS(tmp159,((int64_t)5),((int8_t const*)" ) : "),(&tmp160));
+concat_sb_dappendS(tmp159,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp160));
 concat_OpValue* const tmp161 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp161).label,36,"./concat.concat/program.concat:496:22");
 concat_list_I1 tmp162;
@@ -19053,7 +19054,7 @@ tmp0 = tmp162;
 break;
 case 22:;
 concat_list_I1 tmp163;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"print: "),(&tmp163));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"p""r""i""n""t"":"" """),(&tmp163));
 concat_Type tmp164 = (tmp1.e1_dataType);
 concat_list_I1 tmp165;
 concat_sb_dappendType(tmp163,tmp164,l1_labelContext,l0_typeContext,(&tmp165));
@@ -19061,7 +19062,7 @@ tmp0 = tmp165;
 break;
 case 24:;
 concat_list_I1 tmp166;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"new: "),(&tmp166));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"n""e""w"":"" """),(&tmp166));
 concat_Type tmp167 = (tmp1.e1_dataType);
 concat_list_I1 tmp168;
 concat_sb_dappendType(tmp166,tmp167,l1_labelContext,l0_typeContext,(&tmp168));
@@ -19069,12 +19070,12 @@ tmp0 = tmp168;
 break;
 case 25:;
 concat_list_I1 tmp169;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"new enum ( "),(&tmp169));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"n""e""w"" ""e""n""u""m"" ""("" """),(&tmp169));
 concat_Type tmp170 = (tmp1.e1_dataType);
 concat_list_I1 tmp171;
 concat_sb_dappendType(tmp169,tmp170,l1_labelContext,l0_typeContext,(&tmp171));
 concat_list_I1 tmp172;
-concat_sb_dappendS(tmp171,((int64_t)5),((int8_t const*)" ) : "),(&tmp172));
+concat_sb_dappendS(tmp171,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp172));
 concat_OpValue* const tmp173 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp173).label,25,"./concat.concat/program.concat:510:22");
 concat_list_I1 tmp174;
@@ -19083,19 +19084,19 @@ tmp0 = tmp174;
 break;
 case 33:;
 concat_list_I1 tmp175;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"autoCast ( "),(&tmp175));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"a""u""t""o""C""a""s""t"" ""("" """),(&tmp175));
 concat_Type tmp176 = (tmp1.e1_dataType);
 concat_list_I1 tmp177;
 concat_sb_dappendType(tmp175,tmp176,l1_labelContext,l0_typeContext,(&tmp177));
 concat_list_I1 tmp178;
-concat_sb_dappendS(tmp177,((int64_t)8),((int8_t const*)" ) src: "),(&tmp178));
+concat_sb_dappendS(tmp177,((int64_t)8),((int8_t const*)" "")"" ""s""r""c"":"" """),(&tmp178));
 concat_OpValue* const tmp179 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp179).label,33,"./concat.concat/program.concat:516:22");
 concat_Type tmp180 = (((*tmp179).data.e33_autoCast).e0_src);
 concat_list_I1 tmp181;
 concat_sb_dappendType(tmp178,tmp180,l1_labelContext,l0_typeContext,(&tmp181));
 concat_list_I1 tmp182;
-concat_sb_dappendS(tmp181,((int64_t)4),((int8_t const*)" at "),(&tmp182));
+concat_sb_dappendS(tmp181,((int64_t)4),((int8_t const*)" ""a""t"" """),(&tmp182));
 concat_OpValue* const tmp183 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp183).label,33,"./concat.concat/program.concat:518:22");
 concat_list_I1 tmp184;
@@ -19104,12 +19105,12 @@ tmp0 = tmp184;
 break;
 case 34:;
 concat_list_I1 tmp185;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"cast ( "),(&tmp185));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"c""a""s""t"" ""("" """),(&tmp185));
 concat_Type tmp186 = (tmp1.e1_dataType);
 concat_list_I1 tmp187;
 concat_sb_dappendType(tmp185,tmp186,l1_labelContext,l0_typeContext,(&tmp187));
 concat_list_I1 tmp188;
-concat_sb_dappendS(tmp187,((int64_t)8),((int8_t const*)" ) src: "),(&tmp188));
+concat_sb_dappendS(tmp187,((int64_t)8),((int8_t const*)" "")"" ""s""r""c"":"" """),(&tmp188));
 concat_OpValue* const tmp189 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp189).label,34,"./concat.concat/program.concat:524:22");
 concat_Type tmp190 = ((*tmp189).data.e34_Cast);
@@ -19119,12 +19120,12 @@ tmp0 = tmp191;
 break;
 case 35:;
 concat_list_I1 tmp192;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"cast! ( "),(&tmp192));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"c""a""s""t""!"" ""("" """),(&tmp192));
 concat_Type tmp193 = (tmp1.e1_dataType);
 concat_list_I1 tmp194;
 concat_sb_dappendType(tmp192,tmp193,l1_labelContext,l0_typeContext,(&tmp194));
 concat_list_I1 tmp195;
-concat_sb_dappendS(tmp194,((int64_t)8),((int8_t const*)" ) src: "),(&tmp195));
+concat_sb_dappendS(tmp194,((int64_t)8),((int8_t const*)" "")"" ""s""r""c"":"" """),(&tmp195));
 concat_OpValue* const tmp196 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp196).label,35,"./concat.concat/program.concat:530:22");
 concat_Type tmp197 = ((*tmp196).data.e35_Cast_X33);
@@ -19134,72 +19135,72 @@ tmp0 = tmp198;
 break;
 case 27:;
 concat_list_I1 tmp199;
-concat_sb_dappendS(tmp0,((int64_t)15),((int8_t const*)"call pointer ( "),(&tmp199));
+concat_sb_dappendS(tmp0,((int64_t)15),((int8_t const*)"c""a""l""l"" ""p""o""i""n""t""e""r"" ""("" """),(&tmp199));
 concat_Type tmp200 = (tmp1.e1_dataType);
 concat_list_I1 tmp201;
 concat_sb_dappendType(tmp199,tmp200,l1_labelContext,l0_typeContext,(&tmp201));
 concat_list_I1 tmp202;
-concat_sb_dappendS(tmp201,((int64_t)2),((int8_t const*)" )"),(&tmp202));
+concat_sb_dappendS(tmp201,((int64_t)2),((int8_t const*)" "")"""),(&tmp202));
 tmp0 = tmp202;
 break;
 case 28:;
 concat_list_I1 tmp203;
-concat_sb_dappendS(tmp0,((int64_t)29),((int8_t const*)"get program argument count ( "),(&tmp203));
+concat_sb_dappendS(tmp0,((int64_t)29),((int8_t const*)"g""e""t"" ""p""r""o""g""r""a""m"" ""a""r""g""u""m""e""n""t"" ""c""o""u""n""t"" ""("" """),(&tmp203));
 concat_Type tmp204 = (tmp1.e1_dataType);
 concat_list_I1 tmp205;
 concat_sb_dappendType(tmp203,tmp204,l1_labelContext,l0_typeContext,(&tmp205));
 concat_list_I1 tmp206;
-concat_sb_dappendS(tmp205,((int64_t)2),((int8_t const*)" )"),(&tmp206));
+concat_sb_dappendS(tmp205,((int64_t)2),((int8_t const*)" "")"""),(&tmp206));
 tmp0 = tmp206;
 break;
 case 29:;
 concat_list_I1 tmp207;
-concat_sb_dappendS(tmp0,((int64_t)23),((int8_t const*)"get program argument ( "),(&tmp207));
+concat_sb_dappendS(tmp0,((int64_t)23),((int8_t const*)"g""e""t"" ""p""r""o""g""r""a""m"" ""a""r""g""u""m""e""n""t"" ""("" """),(&tmp207));
 concat_Type tmp208 = (tmp1.e1_dataType);
 concat_list_I1 tmp209;
 concat_sb_dappendType(tmp207,tmp208,l1_labelContext,l0_typeContext,(&tmp209));
 concat_list_I1 tmp210;
-concat_sb_dappendS(tmp209,((int64_t)2),((int8_t const*)" )"),(&tmp210));
+concat_sb_dappendS(tmp209,((int64_t)2),((int8_t const*)" "")"""),(&tmp210));
 tmp0 = tmp210;
 break;
 case 30:;
 concat_list_I1 tmp211;
-concat_sb_dappendS(tmp0,((int64_t)30),((int8_t const*)"get program argument length ( "),(&tmp211));
+concat_sb_dappendS(tmp0,((int64_t)30),((int8_t const*)"g""e""t"" ""p""r""o""g""r""a""m"" ""a""r""g""u""m""e""n""t"" ""l""e""n""g""t""h"" ""("" """),(&tmp211));
 concat_Type tmp212 = (tmp1.e1_dataType);
 concat_list_I1 tmp213;
 concat_sb_dappendType(tmp211,tmp212,l1_labelContext,l0_typeContext,(&tmp213));
 concat_list_I1 tmp214;
-concat_sb_dappendS(tmp213,((int64_t)2),((int8_t const*)" )"),(&tmp214));
+concat_sb_dappendS(tmp213,((int64_t)2),((int8_t const*)" "")"""),(&tmp214));
 tmp0 = tmp214;
 break;
 case 31:;
 concat_list_I1 tmp215;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"length ( "),(&tmp215));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"l""e""n""g""t""h"" ""("" """),(&tmp215));
 concat_Type tmp216 = (tmp1.e1_dataType);
 concat_list_I1 tmp217;
 concat_sb_dappendType(tmp215,tmp216,l1_labelContext,l0_typeContext,(&tmp217));
 concat_list_I1 tmp218;
-concat_sb_dappendS(tmp217,((int64_t)2),((int8_t const*)" )"),(&tmp218));
+concat_sb_dappendS(tmp217,((int64_t)2),((int8_t const*)" "")"""),(&tmp218));
 tmp0 = tmp218;
 break;
 case 32:;
 concat_list_I1 tmp219;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"size ( "),(&tmp219));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"s""i""z""e"" ""("" """),(&tmp219));
 concat_Type tmp220 = (tmp1.e1_dataType);
 concat_list_I1 tmp221;
 concat_sb_dappendType(tmp219,tmp220,l1_labelContext,l0_typeContext,(&tmp221));
 concat_list_I1 tmp222;
-concat_sb_dappendS(tmp221,((int64_t)2),((int8_t const*)" )"),(&tmp222));
+concat_sb_dappendS(tmp221,((int64_t)2),((int8_t const*)" "")"""),(&tmp222));
 tmp0 = tmp222;
 break;
 case 38:;
 concat_list_I1 tmp223;
-concat_sb_dappendS(tmp0,((int64_t)19),((int8_t const*)"check enum label ( "),(&tmp223));
+concat_sb_dappendS(tmp0,((int64_t)19),((int8_t const*)"c""h""e""c""k"" ""e""n""u""m"" ""l""a""b""e""l"" ""("" """),(&tmp223));
 concat_Type tmp224 = (tmp1.e1_dataType);
 concat_list_I1 tmp225;
 concat_sb_dappendType(tmp223,tmp224,l1_labelContext,l0_typeContext,(&tmp225));
 concat_list_I1 tmp226;
-concat_sb_dappendS(tmp225,((int64_t)5),((int8_t const*)" ) : "),(&tmp226));
+concat_sb_dappendS(tmp225,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp226));
 concat_OpValue* const tmp227 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp227).label,38,"./concat.concat/program.concat:566:22");
 concat_list_I1 tmp228;
@@ -19208,12 +19209,12 @@ tmp0 = tmp228;
 break;
 case 39:;
 concat_list_I1 tmp229;
-concat_sb_dappendS(tmp0,((int64_t)17),((int8_t const*)"set enum label ( "),(&tmp229));
+concat_sb_dappendS(tmp0,((int64_t)17),((int8_t const*)"s""e""t"" ""e""n""u""m"" ""l""a""b""e""l"" ""("" """),(&tmp229));
 concat_Type tmp230 = (tmp1.e1_dataType);
 concat_list_I1 tmp231;
 concat_sb_dappendType(tmp229,tmp230,l1_labelContext,l0_typeContext,(&tmp231));
 concat_list_I1 tmp232;
-concat_sb_dappendS(tmp231,((int64_t)5),((int8_t const*)" ) : "),(&tmp232));
+concat_sb_dappendS(tmp231,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp232));
 concat_OpValue* const tmp233 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp233).label,39,"./concat.concat/program.concat:572:22");
 concat_list_I1 tmp234;
@@ -19222,12 +19223,12 @@ tmp0 = tmp234;
 break;
 case 40:;
 concat_list_I1 tmp235;
-concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"check array index ( "),(&tmp235));
+concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"c""h""e""c""k"" ""a""r""r""a""y"" ""i""n""d""e""x"" ""("" """),(&tmp235));
 concat_Type tmp236 = (tmp1.e1_dataType);
 concat_list_I1 tmp237;
 concat_sb_dappendType(tmp235,tmp236,l1_labelContext,l0_typeContext,(&tmp237));
 concat_list_I1 tmp238;
-concat_sb_dappendS(tmp237,((int64_t)5),((int8_t const*)" ) : "),(&tmp238));
+concat_sb_dappendS(tmp237,((int64_t)5),((int8_t const*)" "")"" "":"" """),(&tmp238));
 concat_OpValue* const tmp239 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp239).label,40,"./concat.concat/program.concat:578:22");
 concat_list_I1 tmp240;
@@ -19236,7 +19237,7 @@ tmp0 = tmp240;
 break;
 case 42:;
 concat_list_I1 tmp241;
-concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"stack modification: "),(&tmp241));
+concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"s""t""a""c""k"" ""m""o""d""i""f""i""c""a""t""i""o""n"":"" """),(&tmp241));
 concat_OpValue* const tmp242 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp242).label,42,"./concat.concat/program.concat:582:22");
 concat_list_I1 tmp243;
@@ -19245,17 +19246,17 @@ tmp0 = tmp243;
 break;
 case 41:;
 concat_list_I1 tmp244;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"copy( "),(&tmp244));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"c""o""p""y""("" """),(&tmp244));
 concat_Type tmp245 = (tmp1.e1_dataType);
 concat_list_I1 tmp246;
 concat_sb_dappendType(tmp244,tmp245,l1_labelContext,l0_typeContext,(&tmp246));
 concat_list_I1 tmp247;
-concat_sb_dappendS(tmp246,((int64_t)2),((int8_t const*)" )"),(&tmp247));
+concat_sb_dappendS(tmp246,((int64_t)2),((int8_t const*)" "")"""),(&tmp247));
 tmp0 = tmp247;
 break;
 case 43:;
 concat_list_I1 tmp248;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"get: "),(&tmp248));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"g""e""t"":"" """),(&tmp248));
 concat_OpValue* const tmp249 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp249).label,43,"./concat.concat/program.concat:591:22");
 concat_optional_I3 tmp250 = concat_id_dlabelName(((*tmp249).data.e43_getName),l1_labelContext);
@@ -19266,7 +19267,7 @@ tmp0 = tmp251;
 break;
 case 44:;
 concat_list_I1 tmp252;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"set: "),(&tmp252));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"s""e""t"":"" """),(&tmp252));
 concat_OpValue* const tmp253 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp253).label,44,"./concat.concat/program.concat:595:22");
 concat_LabelId tmp254 = ((*tmp253).data.e44_setName);
@@ -19278,7 +19279,7 @@ tmp0 = tmp256;
 break;
 case 45:;
 concat_list_I1 tmp257;
-concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"address of: "),(&tmp257));
+concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"a""d""d""r""e""s""s"" ""o""f"":"" """),(&tmp257));
 concat_OpValue* const tmp258 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp258).label,45,"./concat.concat/program.concat:599:22");
 concat_LabelId tmp259 = ((*tmp258).data.e45__X64Name);
@@ -19290,7 +19291,7 @@ tmp0 = tmp261;
 break;
 case 46:;
 concat_list_I1 tmp262;
-concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"has name: "),(&tmp262));
+concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"h""a""s"" ""n""a""m""e"":"" """),(&tmp262));
 concat_OpValue* const tmp263 = (&(tmp1.e0_val));
 concat_internal_checkEnumIndex((*tmp263).label,46,"./concat.concat/program.concat:603:22");
 concat_LabelId tmp264 = ((*tmp263).data.e46_hasName);
@@ -19302,7 +19303,7 @@ tmp0 = tmp266;
 break;
 case 48:;
 concat_list_I1 tmp267;
-concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"unreachable "),(&tmp267));
+concat_sb_dappendS(tmp0,((int64_t)12),((int8_t const*)"u""n""r""e""a""c""h""a""b""l""e"" """),(&tmp267));
 tmp0 = tmp267;
 break;
 case 49:;
@@ -19315,7 +19316,7 @@ tmp0 = tmp270;
 break;
 }
 concat_list_I1 tmp271;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)" at "),(&tmp271));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)" ""a""t"" """),(&tmp271));
 concat_list_I1 tmp272;
 concat_sb_dappendPos(tmp271,(tmp1.e2_pos),(&tmp272));
 concat_list_I1 tmp273;
@@ -19329,7 +19330,7 @@ concat_CompilerError const l0_err = arg1;
 concat_list_I1 tmp1;
 concat_sb_dappendSb(tmp0,(l0_err.e0_message),(&tmp1));
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp1,((int64_t)4),((int8_t const*)" at "),(&tmp2));
+concat_sb_dappendS(tmp1,((int64_t)4),((int8_t const*)" ""a""t"" """),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendPos(tmp2,(l0_err.e2_pos),(&tmp3));
 concat_list_I1 tmp4;
@@ -19345,7 +19346,7 @@ concat_CompilerInfo const l1_info = tmp1;
 switch(l1_info.label){
 case 0:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"#types"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"#""t""y""p""e""s"""),(&tmp2));
 concat_internal_checkEnumIndex(l1_info.label,0,"./concat.concat/program.concat:630:14");
 bool const tmp3 = ((l1_info.data.e0_typeInfo)>((int32_t)0));
 if(tmp3){
@@ -19362,7 +19363,7 @@ tmp0 = tmp2;
 break;
 case 1:;
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"#stack"),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"#""s""t""a""c""k"""),(&tmp6));
 concat_internal_checkEnumIndex(l1_info.label,1,"./concat.concat/program.concat:637:14");
 bool const tmp7 = ((l1_info.data.e1_stackInfo)>((int32_t)0));
 if(tmp7){
@@ -19379,7 +19380,7 @@ tmp0 = tmp6;
 break;
 case 2:;
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"#ops"),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"#""o""p""s"""),(&tmp10));
 concat_internal_checkEnumIndex(l1_info.label,2,"./concat.concat/program.concat:644:14");
 bool const tmp11 = ((l1_info.data.e2_compiledOps)>((int32_t)0));
 if(tmp11){
@@ -19396,7 +19397,7 @@ tmp0 = tmp10;
 break;
 case 3:;
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"#find "),(&tmp14));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"#""f""i""n""d"" """),(&tmp14));
 concat_internal_checkEnumIndex(l1_info.label,3,"./concat.concat/program.concat:651:14");
 concat_optional_I3 tmp15 = concat_id_dlabelName((l1_info.data.e3_find),l0_labelContext);
 concat_internal_checkEnumIndex(tmp15.label,1,"./concat.concat/program.concat:651:46");
@@ -19412,7 +19413,7 @@ void concat_sb_dappendProgram(concat_list_I1 arg0,concat_ProgramContext arg1,con
 concat_list_I1 tmp0 = arg0;
 concat_ProgramContext const l0_prog = arg1;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"## errors:\x0A"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"#""#"" ""e""r""r""o""r""s"":""\x0A"""),(&tmp1));
 int32_t tmp2 = ((int32_t)0);
 do{
 bool const tmp3 = (((int64_t)tmp2)<((l0_prog.e6_errors).e1_length));
@@ -19436,13 +19437,13 @@ concat_ProgramFile tmp10;
 concat_list_dget_I2(tmp9,((int64_t)tmp7),(&tmp10));
 concat_ProgramFile const l1_f = tmp10;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"## "),(&tmp11));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"#""#"" """),(&tmp11));
 concat_list_I1 tmp12;
 concat_sb_dappendSb(tmp11,(l1_f.e4_fileName),(&tmp12));
 concat_list_I1 tmp13;
 concat_sb_dappendC(tmp12,((int8_t)10),(&tmp13));
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp13,((int64_t)11),((int8_t const*)"## global:\x0A"),(&tmp14));
+concat_sb_dappendS(tmp13,((int64_t)11),((int8_t const*)"#""#"" ""g""l""o""b""a""l"":""\x0A"""),(&tmp14));
 int32_t tmp15 = ((int32_t)0);
 do{
 bool const tmp16 = (((int64_t)tmp15)<((l1_f.e0_globalOps).e1_length));
@@ -19457,7 +19458,7 @@ tmp14 = tmp19;
 tmp15 = ((int32_t)(tmp15+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp14,((int64_t)10),((int8_t const*)"## local:\x0A"),(&tmp20));
+concat_sb_dappendS(tmp14,((int64_t)10),((int8_t const*)"#""#"" ""l""o""c""a""l"":""\x0A"""),(&tmp20));
 int32_t tmp21 = ((int32_t)0);
 do{
 bool const tmp22 = (((int64_t)tmp21)<((l1_f.e1_localOps).e1_length));
@@ -19472,7 +19473,7 @@ tmp20 = tmp25;
 tmp21 = ((int32_t)(tmp21+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp26;
-concat_sb_dappendS(tmp20,((int64_t)14),((int8_t const*)"## templates:\x0A"),(&tmp26));
+concat_sb_dappendS(tmp20,((int64_t)14),((int8_t const*)"#""#"" ""t""e""m""p""l""a""t""e""s"":""\x0A"""),(&tmp26));
 int32_t tmp27 = ((int32_t)0);
 do{
 bool const tmp28 = (((int64_t)tmp27)<((l1_f.e2_templateOps).e1_length));
@@ -19490,7 +19491,7 @@ tmp1 = tmp26;
 tmp7 = ((int32_t)(tmp7+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp32;
-concat_sb_dappendS(tmp1,((int64_t)25),((int8_t const*)"## unresolved templates:\x0A"),(&tmp32));
+concat_sb_dappendS(tmp1,((int64_t)25),((int8_t const*)"#""#"" ""u""n""r""e""s""o""l""v""e""d"" ""t""e""m""p""l""a""t""e""s"":""\x0A"""),(&tmp32));
 int32_t tmp33 = ((int32_t)0);
 do{
 bool const tmp34 = (((int64_t)tmp33)<((l0_prog.e4_templateOps).e1_length));
@@ -19663,7 +19664,7 @@ int8_t const l0_chr = arg1;
 bool const tmp1 = ((bool)((((int32_t)l0_chr)<((int32_t)32))|(((int32_t)l0_chr)==((int32_t)127))));
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"\\x"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"\\""x"""),(&tmp2));
 int32_t const tmp3 = ((int32_t)(((int32_t)l0_chr)&((int32_t)255)));
 bool const tmp4 = (tmp3<((int32_t)16));
 int32_t tmp5 = tmp3;
@@ -19724,34 +19725,34 @@ concat_ConstantContext const* const l2_constContext = arg2;
 switch(tmp1.label){
 case 0:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"none"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"n""o""n""e"""),(&tmp2));
 tmp0 = tmp2;
 break;
 case 9:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)"_"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)"_"""),(&tmp3));
 tmp0 = tmp3;
 break;
 case 1:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"bool: "),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"b""o""o""l"":"" """),(&tmp4));
 concat_internal_checkEnumIndex(tmp1.label,1,"./concat.concat/constants.concat:138:15");
 bool const tmp5 = (tmp1.data.e1_boolean);
 if(tmp5){
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp4,((int64_t)4),((int8_t const*)"true"),(&tmp6));
+concat_sb_dappendS(tmp4,((int64_t)4),((int8_t const*)"t""r""u""e"""),(&tmp6));
 tmp4 = tmp6;
 }else{
 else_label698:;
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp4,((int64_t)5),((int8_t const*)"false"),(&tmp7));
+concat_sb_dappendS(tmp4,((int64_t)5),((int8_t const*)"f""a""l""s""e"""),(&tmp7));
 tmp4 = tmp7;
 }
 tmp0 = tmp4;
 break;
 case 4:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"integer: "),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"i""n""t""e""g""e""r"":"" """),(&tmp8));
 concat_internal_checkEnumIndex(tmp1.label,4,"./concat.concat/constants.concat:142:15");
 concat_list_I1 tmp9;
 concat_sb_dappendI(tmp8,(tmp1.data.e4_int),(&tmp9));
@@ -19759,7 +19760,7 @@ tmp0 = tmp9;
 break;
 case 5:;
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"float: "),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"f""l""o""a""t"":"" """),(&tmp10));
 concat_internal_checkEnumIndex(tmp1.label,5,"./concat.concat/constants.concat:146:15");
 concat_list_I1 tmp11;
 concat_sb_dappendF(tmp10,(tmp1.data.e5_Float),(&tmp11));
@@ -19767,7 +19768,7 @@ tmp0 = tmp11;
 break;
 case 6:;
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"string: \""),(&tmp12));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"s""t""r""i""n""g"":"" ""\""""),(&tmp12));
 concat_internal_checkEnumIndex(tmp1.label,6,"./concat.concat/constants.concat:150:15");
 concat_StringConstant tmp13 = (tmp1.data.e6_str);
 concat_arrayView_I1 tmp14;
@@ -19780,7 +19781,7 @@ tmp0 = tmp16;
 break;
 case 3:;
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"char: \'"),(&tmp17));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"c""h""a""r"":"" ""\'"""),(&tmp17));
 concat_internal_checkEnumIndex(tmp1.label,3,"./concat.concat/constants.concat:155:15");
 concat_list_I1 tmp18;
 concat_sb_dappendEscapedChr(tmp17,(tmp1.data.e3_chr),(&tmp18));
@@ -19790,7 +19791,7 @@ tmp0 = tmp19;
 break;
 case 8:;
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"type: "),(&tmp20));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"t""y""p""e"":"" """),(&tmp20));
 concat_internal_checkEnumIndex(tmp1.label,8,"./concat.concat/constants.concat:160:15");
 concat_Type tmp21 = (tmp1.data.e8_typeId);
 concat_list_I1 tmp22;
@@ -19799,7 +19800,7 @@ tmp0 = tmp22;
 break;
 case 2:;
 concat_list_I1 tmp23;
-concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)"enum label: ("),(&tmp23));
+concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)"e""n""u""m"" ""l""a""b""e""l"":"" ""("""),(&tmp23));
 concat_internal_checkEnumIndex(tmp1.label,2,"./concat.concat/constants.concat:164:15");
 concat_list_I1 tmp24;
 concat_sb_dappendI(tmp23,((int64_t)(tmp1.data.e2_enumLabel)),(&tmp24));
@@ -19811,7 +19812,7 @@ case 7:;
 concat_internal_checkEnumIndex(tmp1.label,7,"./concat.concat/constants.concat:167:32");
 concat_ConstantArray const l3_mArray = (tmp1.data.e7_arrayConstant);
 concat_list_I1 tmp26;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"{ "),(&tmp26));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"{"" """),(&tmp26));
 int32_t tmp27 = ((int32_t)0);
 do{
 bool const tmp28 = (((int64_t)tmp27)<(l3_mArray.e1_length));
@@ -19827,12 +19828,12 @@ tmp26 = tmp32;
 tmp27 = ((int32_t)(tmp27+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp33;
-concat_sb_dappendS(tmp26,((int64_t)1),((int8_t const*)"}"),(&tmp33));
+concat_sb_dappendS(tmp26,((int64_t)1),((int8_t const*)"}"""),(&tmp33));
 tmp0 = tmp33;
 break;
 case 12:;
 concat_list_I1 tmp34;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"procedure: "),(&tmp34));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"p""r""o""c""e""d""u""r""e"":"" """),(&tmp34));
 concat_internal_checkEnumIndex(tmp1.label,12,"./concat.concat/constants.concat:179:15");
 concat_list_I1 tmp35;
 concat_sb_dappendI(tmp34,(tmp1.data.e12_procedure),(&tmp35));
@@ -19840,7 +19841,7 @@ tmp0 = tmp35;
 break;
 case 10:;
 concat_list_I1 tmp36;
-concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"generic argument: "),(&tmp36));
+concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"g""e""n""e""r""i""c"" ""a""r""g""u""m""e""n""t"":"" """),(&tmp36));
 concat_internal_checkEnumIndex(tmp1.label,10,"./concat.concat/constants.concat:183:15");
 concat_list_I1 tmp37;
 concat_sb_dappendI(tmp36,((int64_t)(tmp1.data.e10_genericArg)),(&tmp37));
@@ -19848,7 +19849,7 @@ tmp0 = tmp37;
 break;
 case 11:;
 concat_list_I1 tmp38;
-concat_sb_dappendS(tmp0,((int64_t)19),((int8_t const*)"template argument: "),(&tmp38));
+concat_sb_dappendS(tmp0,((int64_t)19),((int8_t const*)"t""e""m""p""l""a""t""e"" ""a""r""g""u""m""e""n""t"":"" """),(&tmp38));
 concat_internal_checkEnumIndex(tmp1.label,11,"./concat.concat/constants.concat:187:15");
 concat_list_I1 tmp39;
 concat_sb_dappendI(tmp38,((int64_t)(tmp1.data.e11_templateArg)),(&tmp39));
@@ -19865,13 +19866,13 @@ switch(arg1/*token*/.label){
 case 0:;
 concat_list_I1 tmp0 = arg0/*sb*/;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"empty"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"e""m""p""t""y"""),(&tmp1));
 *(out0)= tmp1;
 return;
 case 1:;
 concat_list_I1 tmp2 = arg0/*sb*/;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp2,((int64_t)12),((int8_t const*)"identifier \""),(&tmp3));
+concat_sb_dappendS(tmp2,((int64_t)12),((int8_t const*)"i""d""e""n""t""i""f""i""e""r"" ""\""""),(&tmp3));
 concat_internal_checkEnumIndex(arg1/*token*/.label,1,"./concat.concat/files.concat:19:17");
 concat_list_I1 tmp4;
 concat_sb_dappendStr(tmp3,(arg1/*token*/.data.e1_IDENTIFIER),(&tmp4));
@@ -19882,7 +19883,7 @@ return;
 case 2:;
 concat_list_I1 tmp6 = arg0/*sb*/;
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)8),((int8_t const*)"string \""),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)8),((int8_t const*)"s""t""r""i""n""g"" ""\""""),(&tmp7));
 concat_internal_checkEnumIndex(arg1/*token*/.label,2,"./concat.concat/files.concat:25:17");
 concat_list_I1 tmp8;
 concat_sb_dappendStr(tmp7,(arg1/*token*/.data.e2_STRING),(&tmp8));
@@ -19893,7 +19894,7 @@ return;
 case 3:;
 concat_list_I1 tmp10 = arg0/*sb*/;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)6),((int8_t const*)"char \""),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)6),((int8_t const*)"c""h""a""r"" ""\""""),(&tmp11));
 concat_internal_checkEnumIndex(arg1/*token*/.label,3,"./concat.concat/files.concat:30:17");
 concat_list_I1 tmp12;
 concat_sb_dappendStr(tmp11,(arg1/*token*/.data.e3_CHAR),(&tmp12));
@@ -19923,7 +19924,7 @@ return;
 void concat_printTokens(concat_arrayView_I1 arg0){
 concat_arrayView_I1 tmp0 = arg0;
 concat_arrayView_I1 tmp1;
-concat_string_dcreate(((int8_t const*)"test"),((int64_t)4),(&tmp1));
+concat_string_dcreate(((int8_t const*)"t""e""s""t"""),((int64_t)4),(&tmp1));
 concat_FilePosition tmp2 = ((concat_FilePosition){.e0_fileName = tmp1,.e1_line = ((int64_t)0),.e2_posInLine = ((int64_t)1)});
 concat_FileState l0_state = ((concat_FileState){.e0_currentPos = tmp2,.e1_wordStart = tmp2});
 do{
@@ -19934,7 +19935,7 @@ concat_sb_dcreate(((int64_t)128),(&tmp5));
 concat_list_I1 tmp6;
 concat_sb_dappendToken(tmp5,tmp4,(&tmp6));
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)4),((int8_t const*)" at "),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)4),((int8_t const*)" ""a""t"" """),(&tmp7));
 concat_list_I1 tmp8;
 concat_sb_dappendPos(tmp7,(l0_state.e1_wordStart),(&tmp8));
 concat_list_I1 tmp9;
@@ -20072,7 +20073,7 @@ if(!tmp26)
 concat_arrayView_I1 tmp27;
 concat_string_dtail(tmp3,((int64_t)tmp24),(&tmp27));
 concat_arrayView_I1 tmp28;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"+#"),(&tmp28));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"+""#"""),(&tmp28));
 bool const tmp29 = concat_string_dstartsWith(tmp27,tmp28);
 if(tmp29){
 int32_t tmp30 = l0_k;
@@ -20084,7 +20085,7 @@ continue;
 }else{
 else_label707:;
 concat_arrayView_I1 tmp31;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"#+"),(&tmp31));
+concat_string_dwrap(((int64_t)2),((int8_t const*)"#""+"""),(&tmp31));
 bool const tmp32 = concat_string_dstartsWith(tmp27,tmp31);
 if(tmp32){
 int32_t tmp33 = l0_k;
@@ -20247,7 +20248,7 @@ return (arg0/*d*/<=((int8_t)57));
 }
 // ./concat.concat/common.concat
 //global
-int8_t const* const concat_MAIN__NAME = ((int8_t const*)"main");
+int8_t const* const concat_MAIN__NAME = ((int8_t const*)"m""a""i""n""");
 concat_FileId const concat_FILE__ID__NONE = -1;
 concat_LabelId const concat_id_dLABEL__ID__NONE = -1;
 concat_NamespaceId const concat_id_dNAMESPACE__ID__NONE = -1;
@@ -20560,15 +20561,15 @@ int32_t const l4_nChars = tmp24;
 bool const tmp27 = (((int64_t)((int32_t)(tmp14+l4_nChars)))>=(arg0/*str*/.e1_length));
 if(tmp27){
 concat_list_I1 tmp28;
-concat_sb_dwrap(((int64_t)44),((int8_t const*)"not enough characters for escape sequence \"\\"),(&tmp28));
+concat_sb_dwrap(((int64_t)44),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""c""h""a""r""a""c""t""e""r""s"" ""f""o""r"" ""e""s""c""a""p""e"" ""s""e""q""u""e""n""c""e"" ""\"""\\"""),(&tmp28));
 concat_list_I1 tmp29;
 concat_sb_dappendC(tmp28,l3_c,(&tmp29));
 concat_list_I1 tmp30;
-concat_sb_dappendS(tmp29,((int64_t)7),((int8_t const*)"\" need "),(&tmp30));
+concat_sb_dappendS(tmp29,((int64_t)7),((int8_t const*)"\""" ""n""e""e""d"" """),(&tmp30));
 concat_list_I1 tmp31;
 concat_sb_dappendI(tmp30,((int64_t)l4_nChars),(&tmp31));
 concat_list_I1 tmp32;
-concat_sb_dappendS(tmp31,((int64_t)5),((int8_t const*)" got "),(&tmp32));
+concat_sb_dappendS(tmp31,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp32));
 int64_t const tmp33 = (arg0/*str*/.e1_length);
 concat_list_I1 tmp34;
 concat_sb_dappendI(tmp32,((int64_t)(tmp33-((int64_t)tmp14))),(&tmp34));
@@ -20596,7 +20597,7 @@ if(tmp41){
 bool const tmp44 = (tmp43<((int64_t)0));
 if(tmp44){
 concat_list_I1 tmp45;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"invalid hex-code for escape sequence: \"\\"),(&tmp45));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"i""n""v""a""l""i""d"" ""h""e""x""-""c""o""d""e"" ""f""o""r"" ""e""s""c""a""p""e"" ""s""e""q""u""e""n""c""e"":"" ""\"""\\"""),(&tmp45));
 concat_list_I1 tmp46;
 concat_sb_dappendC(tmp45,l3_c,(&tmp46));
 int8_t const* const tmp47 = (arg0/*str*/.e0_data);
@@ -20636,14 +20637,14 @@ if(tmp59){
 bool const tmp60 = (tmp43>((int64_t)2147483647));
 if(tmp60){
 concat_list_I1 tmp61;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"hex-code for escape sequence: \"\\U"),(&tmp61));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"h""e""x""-""c""o""d""e"" ""f""o""r"" ""e""s""c""a""p""e"" ""s""e""q""u""e""n""c""e"":"" ""\"""\\""U"""),(&tmp61));
 int8_t const* const tmp62 = (arg0/*str*/.e0_data);
 concat_arrayView_I1 tmp63;
 concat_string_dcreate(((int8_t const*)(tmp62+((int64_t)tmp42))),((int64_t)l4_nChars),(&tmp63));
 concat_list_I1 tmp64;
 concat_sb_dappendStr(tmp61,tmp63,(&tmp64));
 concat_list_I1 tmp65;
-concat_sb_dappendS(tmp64,((int64_t)34),((int8_t const*)"\" does not fit in a signed integer"),(&tmp65));
+concat_sb_dappendS(tmp64,((int64_t)34),((int8_t const*)"\""" ""d""o""e""s"" ""n""o""t"" ""f""i""t"" ""i""n"" ""a"" ""s""i""g""n""e""d"" ""i""n""t""e""g""e""r"""),(&tmp65));
 concat_FilePosition tmp66 = l0_pos;
 concat_appendError(tmp65,tmp66,arg2/*errors*/);
 }else{
@@ -20651,18 +20652,18 @@ else_label732:;
 bool const tmp67 = (tmp43>((int64_t)1114111));
 if(tmp67){
 concat_list_I1 tmp68;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"code-point outside allowed range: \"\\U"),(&tmp68));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"c""o""d""e""-""p""o""i""n""t"" ""o""u""t""s""i""d""e"" ""a""l""l""o""w""e""d"" ""r""a""n""g""e"":"" ""\"""\\""U"""),(&tmp68));
 int8_t const* const tmp69 = (arg0/*str*/.e0_data);
 concat_arrayView_I1 tmp70;
 concat_string_dcreate(((int8_t const*)(tmp69+((int64_t)tmp42))),((int64_t)l4_nChars),(&tmp70));
 concat_list_I1 tmp71;
 concat_sb_dappendStr(tmp68,tmp70,(&tmp71));
 concat_list_I1 tmp72;
-concat_sb_dappendS(tmp71,((int64_t)12),((int8_t const*)"\" (maximum: "),(&tmp72));
+concat_sb_dappendS(tmp71,((int64_t)12),((int8_t const*)"\""" ""(""m""a""x""i""m""u""m"":"" """),(&tmp72));
 concat_list_I1 tmp73;
 concat_sb_dappendX(tmp72,((int64_t)1114111),(&tmp73));
 concat_list_I1 tmp74;
-concat_sb_dappendS(tmp73,((int64_t)1),((int8_t const*)")"),(&tmp74));
+concat_sb_dappendS(tmp73,((int64_t)1),((int8_t const*)")"""),(&tmp74));
 concat_FilePosition tmp75 = l0_pos;
 concat_appendWarning(tmp74,tmp75,arg2/*errors*/);
 }else{
@@ -20682,7 +20683,7 @@ tmp3 = tmp79;
 }else{
 else_label731:;
 concat_list_I1 tmp80;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"unknown hex-escape sequence: \"\\"),(&tmp80));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"u""n""k""n""o""w""n"" ""h""e""x""-""e""s""c""a""p""e"" ""s""e""q""u""e""n""c""e"":"" ""\"""\\"""),(&tmp80));
 concat_list_I1 tmp81;
 concat_sb_dappendC(tmp80,l3_c,(&tmp81));
 concat_list_I1 tmp82;
@@ -20696,7 +20697,7 @@ concat_appendError(tmp82,tmp83,arg2/*errors*/);
 }else{
 else_label727:;
 concat_list_I1 tmp84;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"invalid hex-code for escape sequence: \"\\"),(&tmp84));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"i""n""v""a""l""i""d"" ""h""e""x""-""c""o""d""e"" ""f""o""r"" ""e""s""c""a""p""e"" ""s""e""q""u""e""n""c""e"":"" ""\"""\\"""),(&tmp84));
 concat_list_I1 tmp85;
 concat_sb_dappendC(tmp84,l3_c,(&tmp85));
 int8_t const* const tmp86 = (arg0/*str*/.e0_data);
@@ -20724,7 +20725,7 @@ tmp4 = tmp42;
 continue;
 default:;
 concat_list_I1 tmp95;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"unknown escape sequence \"\\"),(&tmp95));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"u""n""k""n""o""w""n"" ""e""s""c""a""p""e"" ""s""e""q""u""e""n""c""e"" ""\"""\\"""),(&tmp95));
 concat_list_I1 tmp96;
 concat_sb_dappendC(tmp95,tmp15,(&tmp96));
 concat_list_I1 tmp97;
@@ -22826,7 +22827,7 @@ concat_sb_dappendTypeRecursive(tmp0,tmp16,l1_labelContext,l0_context,false,(&tmp
 bool const tmp18 = concat_optional_dhasData_I0(l6_labelName);
 if(tmp18){
 concat_list_I1 tmp19;
-concat_sb_dappendS(tmp17,((int64_t)3),((int8_t const*)" : "),(&tmp19));
+concat_sb_dappendS(tmp17,((int64_t)3),((int8_t const*)" "":"" """),(&tmp19));
 tmp17 = tmp19;
 }else{
 else_label859:;
@@ -22844,7 +22845,7 @@ concat_LabelFlag const tmp22 = concat_id_dlabelFlags(l5_label,l1_labelContext);
 bool const tmp23 = (!!((concat_LabelFlag)(tmp22&((concat_LabelFlag)1))));
 if(tmp23){
 concat_list_I1 tmp24;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"mut "),(&tmp24));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"m""u""t"" """),(&tmp24));
 tmp0 = tmp24;
 }else{
 else_label861:;
@@ -23300,13 +23301,13 @@ concat_sb_dappendStr(tmp2,(tmp3.data.e1_data),(&tmp4));
 concat_list_I1 tmp5;
 concat_sb_dappendC(tmp4,((int8_t)34),(&tmp5));
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp5,((int64_t)3),((int8_t const*)" [ "),(&tmp6));
+concat_sb_dappendS(tmp5,((int64_t)3),((int8_t const*)" ""["" """),(&tmp6));
 concat_Type tmp7 = (tmp1.e0_data);
 concat_Type tmp8 = concat_types_dunwrapNamed(tmp7,l1_context);
 concat_list_I1 tmp9;
 concat_sb_dappendTypeRecursive(tmp6,tmp8,l2_labelContext,l1_context,l0_allowRecurse,(&tmp9));
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp9,((int64_t)2),((int8_t const*)" ]"),(&tmp10));
+concat_sb_dappendS(tmp9,((int64_t)2),((int8_t const*)" ""]"""),(&tmp10));
 *(out0)= tmp10;
 return;
 }
@@ -24115,42 +24116,42 @@ concat_list_I1 tmp0 = arg0;
 switch(arg1.label){
 case 0:;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"bool"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"b""o""o""l"""),(&tmp1));
 *(out0)= tmp1;
 return;
 case 1:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"i8"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"i""8"""),(&tmp2));
 *(out0)= tmp2;
 return;
 case 2:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i16"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i""1""6"""),(&tmp3));
 *(out0)= tmp3;
 return;
 case 3:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i32"),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i""3""2"""),(&tmp4));
 *(out0)= tmp4;
 return;
 case 4:;
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i64"),(&tmp5));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i""6""4"""),(&tmp5));
 *(out0)= tmp5;
 return;
 case 5:;
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"float"),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"f""l""o""a""t"""),(&tmp6));
 *(out0)= tmp6;
 return;
 case 6:;
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"double"),(&tmp7));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"d""o""u""b""l""e"""),(&tmp7));
 *(out0)= tmp7;
 return;
 case 7:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"type"),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"t""y""p""e"""),(&tmp8));
 *(out0)= tmp8;
 return;
 }
@@ -24179,20 +24180,20 @@ tmp0 = tmp7;
 break;
 case 2:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)" staticArg("),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)" ""s""t""a""t""i""c""A""r""g""("""),(&tmp8));
 concat_list_I1 tmp9;
 concat_sb_dappendI(tmp8,((*l0_s).e0_value),(&tmp9));
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp9,((int64_t)1),((int8_t const*)")"),(&tmp10));
+concat_sb_dappendS(tmp9,((int64_t)1),((int8_t const*)")"""),(&tmp10));
 tmp0 = tmp10;
 break;
 case 1:;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)" templateArg("),(&tmp11));
+concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)" ""t""e""m""p""l""a""t""e""A""r""g""("""),(&tmp11));
 concat_list_I1 tmp12;
 concat_sb_dappendI(tmp11,((*l0_s).e0_value),(&tmp12));
 concat_list_I1 tmp13;
-concat_sb_dappendS(tmp12,((int64_t)1),((int8_t const*)")"),(&tmp13));
+concat_sb_dappendS(tmp12,((int64_t)1),((int8_t const*)")"""),(&tmp13));
 tmp0 = tmp13;
 break;
 }
@@ -24210,12 +24211,12 @@ concat_LabelContext const* const l2_labelContext = arg2;
 switch(tmp1.label){
 case 0:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"undefined"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"u""n""d""e""f""i""n""e""d"""),(&tmp2));
 *(out0)= tmp2;
 return;
 case 1:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"empty"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"e""m""p""t""y"""),(&tmp3));
 *(out0)= tmp3;
 return;
 case 2:;
@@ -24228,7 +24229,7 @@ case 20:;
 concat_internal_checkEnumIndex(tmp1.label,20,"./concat.concat/types.concat:1481:21");
 concat_types_dSizeId const l3_sizeIndex = (tmp1.data.e20_arrayIndex);
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"index("),(&tmp5));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"i""n""d""e""x""("""),(&tmp5));
 concat_list_I8 tmp6 = ((*l1_context).e1_arraySizes);
 concat_optional_I32 tmp7 = concat_list_dat_I11(tmp6,((int64_t)l3_sizeIndex));
 concat_internal_checkEnumIndex(tmp7.label,1,"./concat.concat/types.concat:1483:48");
@@ -24237,7 +24238,7 @@ concat_array_dwrap_I0(((int64_t)1),((concat_types_dArraySize const*)(tmp7.data.e
 concat_list_I1 tmp9;
 concat_sb_dappendArraySize(tmp5,tmp8,(&tmp9));
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp9,((int64_t)2),((int8_t const*)" )"),(&tmp10));
+concat_sb_dappendS(tmp9,((int64_t)2),((int8_t const*)" "")"""),(&tmp10));
 *(out0)= tmp10;
 return;
 case 3:;
@@ -24255,19 +24256,19 @@ concat_Type tmp17 = l4_t;
 bool const tmp18 = concat_types_disFixedSize(tmp17,l1_context);
 if(tmp18){
 concat_list_I1 tmp19;
-concat_sb_dappendS(tmp16,((int64_t)4),((int8_t const*)" ptr"),(&tmp19));
+concat_sb_dappendS(tmp16,((int64_t)4),((int8_t const*)" ""p""t""r"""),(&tmp19));
 tmp16 = tmp19;
 }else{
 else_label935:;
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp16,((int64_t)6),((int8_t const*)" _ ptr"),(&tmp20));
+concat_sb_dappendS(tmp16,((int64_t)6),((int8_t const*)" ""_"" ""p""t""r"""),(&tmp20));
 tmp16 = tmp20;
 }
 concat_Type tmp21 = l4_t;
 bool const tmp22 = concat_types_disMutable(tmp21,l1_context);
 if(tmp22){
 concat_list_I1 tmp23;
-concat_sb_dappendS(tmp16,((int64_t)4),((int8_t const*)" mut"),(&tmp23));
+concat_sb_dappendS(tmp16,((int64_t)4),((int8_t const*)" ""m""u""t"""),(&tmp23));
 tmp16 = tmp23;
 }else{
 else_label936:;
@@ -24286,18 +24287,18 @@ concat_types_dgetArraySize(tmp27,l1_context,(&tmp28));
 concat_list_I1 tmp29;
 concat_sb_dappendArraySize(tmp26,tmp28,(&tmp29));
 concat_list_I1 tmp30;
-concat_sb_dappendS(tmp29,((int64_t)6),((int8_t const*)" array"),(&tmp30));
+concat_sb_dappendS(tmp29,((int64_t)6),((int8_t const*)" ""a""r""r""a""y"""),(&tmp30));
 *(out0)= tmp30;
 return;
 case 5:;
 concat_internal_checkEnumIndex(tmp1.label,5,"./concat.concat/types.concat:1503:7");
 concat_list_I1 tmp31;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"tuple["),(&tmp31));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"t""u""p""l""e""["""),(&tmp31));
 concat_types_dCompositeId const tmp32 = (tmp1.data.e5_tuple);
 concat_list_I1 tmp33;
 concat_sb_dappendI(tmp31,((int64_t)tmp32),(&tmp33));
 concat_list_I1 tmp34;
-concat_sb_dappendS(tmp33,((int64_t)3),((int8_t const*)"]( "),(&tmp34));
+concat_sb_dappendS(tmp33,((int64_t)3),((int8_t const*)"]""("" """),(&tmp34));
 concat_types_dCompositeId tmp35 = tmp32;
 if(l0_allowRecurse){
 concat_list_I9 tmp36 = ((*l1_context).e2_compositeTypes);
@@ -24309,22 +24310,22 @@ tmp34 = tmp38;
 }else{
 else_label937:;
 concat_list_I1 tmp39;
-concat_sb_dappendS(tmp34,((int64_t)4),((int8_t const*)"... "),(&tmp39));
+concat_sb_dappendS(tmp34,((int64_t)4),((int8_t const*)"."".""."" """),(&tmp39));
 tmp34 = tmp39;
 }
 concat_list_I1 tmp40;
-concat_sb_dappendS(tmp34,((int64_t)1),((int8_t const*)")"),(&tmp40));
+concat_sb_dappendS(tmp34,((int64_t)1),((int8_t const*)")"""),(&tmp40));
 *(out0)= tmp40;
 return;
 case 6:;
 concat_internal_checkEnumIndex(tmp1.label,6,"./concat.concat/types.concat:1517:7");
 concat_list_I1 tmp41;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"struct["),(&tmp41));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"s""t""r""u""c""t""["""),(&tmp41));
 concat_types_dCompositeId const tmp42 = (tmp1.data.e6_struct);
 concat_list_I1 tmp43;
 concat_sb_dappendI(tmp41,((int64_t)tmp42),(&tmp43));
 concat_list_I1 tmp44;
-concat_sb_dappendS(tmp43,((int64_t)3),((int8_t const*)"]( "),(&tmp44));
+concat_sb_dappendS(tmp43,((int64_t)3),((int8_t const*)"]""("" """),(&tmp44));
 concat_types_dCompositeId tmp45 = tmp42;
 if(l0_allowRecurse){
 concat_list_I9 tmp46 = ((*l1_context).e2_compositeTypes);
@@ -24336,22 +24337,22 @@ tmp44 = tmp48;
 }else{
 else_label938:;
 concat_list_I1 tmp49;
-concat_sb_dappendS(tmp44,((int64_t)4),((int8_t const*)"... "),(&tmp49));
+concat_sb_dappendS(tmp44,((int64_t)4),((int8_t const*)"."".""."" """),(&tmp49));
 tmp44 = tmp49;
 }
 concat_list_I1 tmp50;
-concat_sb_dappendS(tmp44,((int64_t)1),((int8_t const*)")"),(&tmp50));
+concat_sb_dappendS(tmp44,((int64_t)1),((int8_t const*)")"""),(&tmp50));
 *(out0)= tmp50;
 return;
 case 7:;
 concat_internal_checkEnumIndex(tmp1.label,7,"./concat.concat/types.concat:1531:7");
 concat_list_I1 tmp51;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"union["),(&tmp51));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"u""n""i""o""n""["""),(&tmp51));
 concat_types_dCompositeId const tmp52 = (tmp1.data.e7_union);
 concat_list_I1 tmp53;
 concat_sb_dappendI(tmp51,((int64_t)tmp52),(&tmp53));
 concat_list_I1 tmp54;
-concat_sb_dappendS(tmp53,((int64_t)3),((int8_t const*)"]( "),(&tmp54));
+concat_sb_dappendS(tmp53,((int64_t)3),((int8_t const*)"]""("" """),(&tmp54));
 concat_types_dCompositeId tmp55 = tmp52;
 if(l0_allowRecurse){
 concat_list_I9 tmp56 = ((*l1_context).e2_compositeTypes);
@@ -24363,22 +24364,22 @@ tmp54 = tmp58;
 }else{
 else_label939:;
 concat_list_I1 tmp59;
-concat_sb_dappendS(tmp54,((int64_t)4),((int8_t const*)"... "),(&tmp59));
+concat_sb_dappendS(tmp54,((int64_t)4),((int8_t const*)"."".""."" """),(&tmp59));
 tmp54 = tmp59;
 }
 concat_list_I1 tmp60;
-concat_sb_dappendS(tmp54,((int64_t)1),((int8_t const*)")"),(&tmp60));
+concat_sb_dappendS(tmp54,((int64_t)1),((int8_t const*)")"""),(&tmp60));
 *(out0)= tmp60;
 return;
 case 11:;
 concat_internal_checkEnumIndex(tmp1.label,11,"./concat.concat/types.concat:1545:7");
 concat_list_I1 tmp61;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"enum["),(&tmp61));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"e""n""u""m""["""),(&tmp61));
 concat_types_dCompositeId const tmp62 = (tmp1.data.e11_enum);
 concat_list_I1 tmp63;
 concat_sb_dappendI(tmp61,((int64_t)tmp62),(&tmp63));
 concat_list_I1 tmp64;
-concat_sb_dappendS(tmp63,((int64_t)3),((int8_t const*)"]( "),(&tmp64));
+concat_sb_dappendS(tmp63,((int64_t)3),((int8_t const*)"]""("" """),(&tmp64));
 concat_types_dCompositeId tmp65 = tmp62;
 if(l0_allowRecurse){
 concat_list_I9 tmp66 = ((*l1_context).e2_compositeTypes);
@@ -24390,11 +24391,11 @@ tmp64 = tmp68;
 }else{
 else_label940:;
 concat_list_I1 tmp69;
-concat_sb_dappendS(tmp64,((int64_t)4),((int8_t const*)"... "),(&tmp69));
+concat_sb_dappendS(tmp64,((int64_t)4),((int8_t const*)"."".""."" """),(&tmp69));
 tmp64 = tmp69;
 }
 concat_list_I1 tmp70;
-concat_sb_dappendS(tmp64,((int64_t)1),((int8_t const*)")"),(&tmp70));
+concat_sb_dappendS(tmp64,((int64_t)1),((int8_t const*)")"""),(&tmp70));
 *(out0)= tmp70;
 return;
 case 8:;
@@ -24427,12 +24428,12 @@ return;
 case 12:;
 concat_internal_checkEnumIndex(tmp1.label,12,"./concat.concat/types.concat:1565:7");
 concat_list_I1 tmp80;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"proc["),(&tmp80));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"p""r""o""c""["""),(&tmp80));
 concat_types_dProcId const tmp81 = (tmp1.data.e12_procedure);
 concat_list_I1 tmp82;
 concat_sb_dappendI(tmp80,((int64_t)tmp81),(&tmp82));
 concat_list_I1 tmp83;
-concat_sb_dappendS(tmp82,((int64_t)3),((int8_t const*)"]( "),(&tmp83));
+concat_sb_dappendS(tmp82,((int64_t)3),((int8_t const*)"]""("" """),(&tmp83));
 concat_types_dProcId tmp84 = tmp81;
 if(l0_allowRecurse){
 concat_list_I11 tmp85 = ((*l1_context).e4_procTypes);
@@ -24442,7 +24443,7 @@ concat_Type tmp87 = (tmp86.e0_in);
 concat_list_I1 tmp88;
 concat_sb_dappendTypeRecursive(tmp83,tmp87,l2_labelContext,l1_context,l0_allowRecurse,(&tmp88));
 concat_list_I1 tmp89;
-concat_sb_dappendS(tmp88,((int64_t)3),((int8_t const*)"=> "),(&tmp89));
+concat_sb_dappendS(tmp88,((int64_t)3),((int8_t const*)"="">"" """),(&tmp89));
 concat_Type tmp90 = (tmp86.e1_out);
 concat_list_I1 tmp91;
 concat_sb_dappendTypeRecursive(tmp89,tmp90,l2_labelContext,l1_context,l0_allowRecurse,(&tmp91));
@@ -24450,59 +24451,59 @@ tmp83 = tmp91;
 }else{
 else_label941:;
 concat_list_I1 tmp92;
-concat_sb_dappendS(tmp83,((int64_t)4),((int8_t const*)"... "),(&tmp92));
+concat_sb_dappendS(tmp83,((int64_t)4),((int8_t const*)"."".""."" """),(&tmp92));
 tmp83 = tmp92;
 }
 concat_list_I1 tmp93;
-concat_sb_dappendS(tmp83,((int64_t)1),((int8_t const*)")"),(&tmp93));
+concat_sb_dappendS(tmp83,((int64_t)1),((int8_t const*)")"""),(&tmp93));
 *(out0)= tmp93;
 return;
 case 13:;
 concat_internal_checkEnumIndex(tmp1.label,13,"./concat.concat/types.concat:1582:7");
 concat_list_I1 tmp94;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"named["),(&tmp94));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"n""a""m""e""d""["""),(&tmp94));
 concat_types_dNamedTypeId const tmp95 = (tmp1.data.e13_namedType);
 concat_list_I1 tmp96;
 concat_sb_dappendI(tmp94,((int64_t)tmp95),(&tmp96));
 concat_list_I1 tmp97;
-concat_sb_dappendS(tmp96,((int64_t)3),((int8_t const*)"]( "),(&tmp97));
+concat_sb_dappendS(tmp96,((int64_t)3),((int8_t const*)"]""("" """),(&tmp97));
 concat_list_I12 tmp98 = ((*l1_context).e5_namedTypes);
 concat_23_Ftypes_dNamedType tmp99;
 concat_list_dget_I16(tmp98,((int64_t)tmp95),(&tmp99));
 concat_list_I1 tmp100;
 concat_23_Fsb_dappendNamedType(tmp97,tmp99,l2_labelContext,l1_context,l0_allowRecurse,(&tmp100));
 concat_list_I1 tmp101;
-concat_sb_dappendS(tmp100,((int64_t)2),((int8_t const*)" )"),(&tmp101));
+concat_sb_dappendS(tmp100,((int64_t)2),((int8_t const*)" "")"""),(&tmp101));
 *(out0)= tmp101;
 return;
 case 16:;
 concat_list_I1 tmp102;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"auto["),(&tmp102));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"a""u""t""o""["""),(&tmp102));
 concat_internal_checkEnumIndex(tmp1.label,16,"./concat.concat/types.concat:1593:15");
 concat_list_I1 tmp103;
 concat_sb_dappendI(tmp102,((int64_t)(tmp1.data.e16_autoType)),(&tmp103));
 concat_list_I1 tmp104;
-concat_sb_dappendS(tmp103,((int64_t)1),((int8_t const*)"]"),(&tmp104));
+concat_sb_dappendS(tmp103,((int64_t)1),((int8_t const*)"]"""),(&tmp104));
 *(out0)= tmp104;
 return;
 case 17:;
 concat_list_I1 tmp105;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"generic["),(&tmp105));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"g""e""n""e""r""i""c""["""),(&tmp105));
 concat_internal_checkEnumIndex(tmp1.label,17,"./concat.concat/types.concat:1598:15");
 concat_list_I1 tmp106;
 concat_sb_dappendI(tmp105,((int64_t)(tmp1.data.e17_genericType)),(&tmp106));
 concat_list_I1 tmp107;
-concat_sb_dappendS(tmp106,((int64_t)1),((int8_t const*)"]"),(&tmp107));
+concat_sb_dappendS(tmp106,((int64_t)1),((int8_t const*)"]"""),(&tmp107));
 *(out0)= tmp107;
 return;
 case 18:;
 concat_list_I1 tmp108;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"template["),(&tmp108));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"t""e""m""p""l""a""t""e""["""),(&tmp108));
 concat_internal_checkEnumIndex(tmp1.label,18,"./concat.concat/types.concat:1603:15");
 concat_list_I1 tmp109;
 concat_sb_dappendI(tmp108,((int64_t)(tmp1.data.e18_templateType)),(&tmp109));
 concat_list_I1 tmp110;
-concat_sb_dappendS(tmp109,((int64_t)1),((int8_t const*)"]"),(&tmp110));
+concat_sb_dappendS(tmp109,((int64_t)1),((int8_t const*)"]"""),(&tmp110));
 *(out0)= tmp110;
 return;
 case 19:;
@@ -24512,18 +24513,18 @@ concat_optional_I37 tmp112 = concat_list_dat_I16(tmp111,((int64_t)(tmp1.data.e19
 concat_internal_checkEnumIndex(tmp112.label,1,"./concat.concat/types.concat:1608:48");
 concat_23_Ftypes_dGeneratedType* const l6_typeData = (tmp112.data.e1_data);
 concat_list_I1 tmp113;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"? "),(&tmp113));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"?"" """),(&tmp113));
 concat_optional_I3 tmp114 = concat_id_dlabelName(((*l6_typeData).e0_generator),l2_labelContext);
 concat_internal_checkEnumIndex(tmp114.label,1,"./concat.concat/types.concat:1610:56");
 concat_list_I1 tmp115;
 concat_sb_dappendStr(tmp113,(tmp114.data.e1_data),(&tmp115));
 concat_list_I1 tmp116;
-concat_sb_dappendS(tmp115,((int64_t)3),((int8_t const*)" [ "),(&tmp116));
+concat_sb_dappendS(tmp115,((int64_t)3),((int8_t const*)" ""["" """),(&tmp116));
 concat_Type tmp117 = ((*l6_typeData).e2_generated);
 concat_list_I1 tmp118;
 concat_sb_dappendTypeRecursive(tmp116,tmp117,l2_labelContext,l1_context,l0_allowRecurse,(&tmp118));
 concat_list_I1 tmp119;
-concat_sb_dappendS(tmp118,((int64_t)2),((int8_t const*)" ]"),(&tmp119));
+concat_sb_dappendS(tmp118,((int64_t)2),((int8_t const*)" ""]"""),(&tmp119));
 *(out0)= tmp119;
 return;
 case 14:;
@@ -24533,7 +24534,7 @@ concat_Type tmp121 = concat_list_dget_I12(tmp120,((int64_t)(tmp1.data.e14_refere
 concat_list_I1 tmp122;
 concat_sb_dappendTypeRecursive(tmp0,tmp121,l2_labelContext,l1_context,l0_allowRecurse,(&tmp122));
 concat_list_I1 tmp123;
-concat_sb_dappendS(tmp122,((int64_t)10),((int8_t const*)" reference"),(&tmp123));
+concat_sb_dappendS(tmp122,((int64_t)10),((int8_t const*)" ""r""e""f""e""r""e""n""c""e"""),(&tmp123));
 *(out0)= tmp123;
 return;
 case 15:;
@@ -24543,7 +24544,7 @@ concat_Type tmp125 = concat_list_dget_I12(tmp124,((int64_t)(tmp1.data.e15_mutabl
 concat_list_I1 tmp126;
 concat_sb_dappendTypeRecursive(tmp0,tmp125,l2_labelContext,l1_context,l0_allowRecurse,(&tmp126));
 concat_list_I1 tmp127;
-concat_sb_dappendS(tmp126,((int64_t)14),((int8_t const*)" reference mut"),(&tmp127));
+concat_sb_dappendS(tmp126,((int64_t)14),((int8_t const*)" ""r""e""f""e""r""e""n""c""e"" ""m""u""t"""),(&tmp127));
 *(out0)= tmp127;
 return;
 }
@@ -24565,107 +24566,107 @@ concat_list_I1 tmp0 = arg0;
 switch(arg1.label){
 case 0:;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"unknown"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"u""n""k""n""o""w""n"""),(&tmp1));
 *(out0)= tmp1;
 return;
 case 1:;
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"procedure"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"p""r""o""c""e""d""u""r""e"""),(&tmp2));
 *(out0)= tmp2;
 return;
 case 2:;
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp0,((int64_t)23),((int8_t const*)"procedure(experimental)"),(&tmp3));
+concat_sb_dappendS(tmp0,((int64_t)23),((int8_t const*)"p""r""o""c""e""d""u""r""e""(""e""x""p""e""r""i""m""e""n""t""a""l"")"""),(&tmp3));
 *(out0)= tmp3;
 return;
 case 3:;
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"if"),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"i""f"""),(&tmp4));
 *(out0)= tmp4;
 return;
 case 4:;
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"if _if"),(&tmp5));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"i""f"" ""_""i""f"""),(&tmp5));
 *(out0)= tmp5;
 return;
 case 5:;
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"else"),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"e""l""s""e"""),(&tmp6));
 *(out0)= tmp6;
 return;
 case 6:;
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"while"),(&tmp7));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"w""h""i""l""e"""),(&tmp7));
 *(out0)= tmp7;
 return;
 case 7:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"do"),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"d""o"""),(&tmp8));
 *(out0)= tmp8;
 return;
 case 8:;
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"break"),(&tmp9));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"b""r""e""a""k"""),(&tmp9));
 *(out0)= tmp9;
 return;
 case 9:;
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"continue"),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"c""o""n""t""i""n""u""e"""),(&tmp10));
 *(out0)= tmp10;
 return;
 case 10:;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"switch"),(&tmp11));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"s""w""i""t""c""h"""),(&tmp11));
 *(out0)= tmp11;
 return;
 case 11:;
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"case"),(&tmp12));
+concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"c""a""s""e"""),(&tmp12));
 *(out0)= tmp12;
 return;
 case 12:;
 concat_list_I1 tmp13;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"default"),(&tmp13));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"d""e""f""a""u""l""t"""),(&tmp13));
 *(out0)= tmp13;
 return;
 case 13:;
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)"{initializer}"),(&tmp14));
+concat_sb_dappendS(tmp0,((int64_t)13),((int8_t const*)"{""i""n""i""t""i""a""l""i""z""e""r""}"""),(&tmp14));
 *(out0)= tmp14;
 return;
 case 20:;
 concat_list_I1 tmp15;
-concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"( )"),(&tmp15));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"("" "")"""),(&tmp15));
 *(out0)= tmp15;
 return;
 case 14:;
 concat_list_I1 tmp16;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"tuple( )"),(&tmp16));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"t""u""p""l""e""("" "")"""),(&tmp16));
 *(out0)= tmp16;
 return;
 case 15:;
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"struct( )"),(&tmp17));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"s""t""r""u""c""t""("" "")"""),(&tmp17));
 *(out0)= tmp17;
 return;
 case 16:;
 concat_list_I1 tmp18;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"enum( )"),(&tmp18));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"e""n""u""m""("" "")"""),(&tmp18));
 *(out0)= tmp18;
 return;
 case 17:;
 concat_list_I1 tmp19;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"union( )"),(&tmp19));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"u""n""i""o""n""("" "")"""),(&tmp19));
 *(out0)= tmp19;
 return;
 case 18:;
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"proc( )"),(&tmp20));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"p""r""o""c""("" "")"""),(&tmp20));
 *(out0)= tmp20;
 return;
 case 19:;
 concat_list_I1 tmp21;
-concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"proc( => )"),(&tmp21));
+concat_sb_dappendS(tmp0,((int64_t)10),((int8_t const*)"p""r""o""c""("" ""="">"" "")"""),(&tmp21));
 *(out0)= tmp21;
 return;
 }
@@ -24959,7 +24960,7 @@ concat_NamespaceId tmp0 = l0_mNamespace;
 bool const tmp1 = (tmp0==((concat_NamespaceId)-1));
 if(tmp1){
 concat_arrayView_I1 tmp2;
-concat_string_dwrap(((int64_t)28),((int8_t const*)"invalid current namespace id"),(&tmp2));
+concat_string_dwrap(((int64_t)28),((int8_t const*)"i""n""v""a""l""i""d"" ""c""u""r""r""e""n""t"" ""n""a""m""e""s""p""a""c""e"" ""i""d"""),(&tmp2));
 concat_25_FIdentifierName tmp3 = ((concat_25_FIdentifierName){.e0_name = tmp2,.e1_namespace = ((concat_NamespaceId)-1),.e2_fileId = arg1/*fileId*/});
 *(out0)= tmp3;
 *(out1)= (&concat_25_Fid_dID__TMP__DATA);
@@ -24972,7 +24973,7 @@ int8_t const tmp5 = concat_string_dcharAt(tmp4,((int64_t)0));
 bool const tmp6 = (tmp5==((int8_t)46));
 if(tmp6){
 concat_arrayView_I1 tmp7;
-concat_string_dwrap(((int64_t)31),((int8_t const*)"identifiers cannot start with ."),(&tmp7));
+concat_string_dwrap(((int64_t)31),((int8_t const*)"i""d""e""n""t""i""f""i""e""r""s"" ""c""a""n""n""o""t"" ""s""t""a""r""t"" ""w""i""t""h"" ""."""),(&tmp7));
 concat_25_FIdentifierName tmp8 = ((concat_25_FIdentifierName){.e0_name = tmp7,.e1_namespace = ((concat_NamespaceId)-1),.e2_fileId = arg1/*fileId*/});
 *(out0)= tmp8;
 *(out1)= (&concat_25_Fid_dID__TMP__DATA);
@@ -25282,7 +25283,7 @@ tmp111 = ((int32_t)(tmp111+((int32_t)1)));
 else_label974:;
 }
 concat_arrayView_I1 tmp132;
-concat_string_dwrap(((int64_t)25),((int8_t const*)"could not find identifier"),(&tmp132));
+concat_string_dwrap(((int64_t)25),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""f""i""n""d"" ""i""d""e""n""t""i""f""i""e""r"""),(&tmp132));
 concat_25_FIdentifierName tmp133 = ((concat_25_FIdentifierName){.e0_name = tmp132,.e1_namespace = ((concat_NamespaceId)-1),.e2_fileId = arg1/*fileId*/});
 *(out0)= tmp133;
 *(out1)= (&concat_25_Fid_dID__TMP__DATA);
@@ -25302,7 +25303,7 @@ bool concat_id_dcheckIdentifier(concat_arrayView_I1 arg0/*id*/,concat_FilePositi
 bool const tmp0 = ((arg0/*id*/.e1_length)==((int64_t)0));
 if(tmp0){
 concat_list_I1 tmp1;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"identifier names have to be non-empty"),(&tmp1));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"i""d""e""n""t""i""f""i""e""r"" ""n""a""m""e""s"" ""h""a""v""e"" ""t""o"" ""b""e"" ""n""o""n""-""e""m""p""t""y"""),(&tmp1));
 concat_FilePosition tmp2 = arg1/*pos*/;
 concat_appendError(tmp1,tmp2,arg2/*errors*/);
 return true;
@@ -25314,7 +25315,7 @@ int8_t const tmp4 = concat_string_dcharAt(tmp3,((int64_t)0));
 bool const tmp5 = (tmp4==((int8_t)35));
 if(tmp5){
 concat_list_I1 tmp6;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"identifier names cannot start with \'#\'"),(&tmp6));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"i""d""e""n""t""i""f""i""e""r"" ""n""a""m""e""s"" ""c""a""n""n""o""t"" ""s""t""a""r""t"" ""w""i""t""h"" ""\'""#""\'"""),(&tmp6));
 concat_FilePosition tmp7 = arg1/*pos*/;
 concat_appendError(tmp6,tmp7,arg2/*errors*/);
 return true;
@@ -25325,7 +25326,7 @@ concat_arrayView_I1 tmp8 = arg0/*id*/;
 bool const tmp9 = concat_string_dcontains(tmp8,((int8_t)46));
 if(tmp9){
 concat_list_I1 tmp10;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"identifier names cannot contain \'.\'"),(&tmp10));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"i""d""e""n""t""i""f""i""e""r"" ""n""a""m""e""s"" ""c""a""n""n""o""t"" ""c""o""n""t""a""i""n"" ""\'"".""\'"""),(&tmp10));
 concat_FilePosition tmp11 = arg1/*pos*/;
 concat_appendError(tmp10,tmp11,arg2/*errors*/);
 return true;
@@ -25338,7 +25339,7 @@ bool concat_id_ddeclareIdentifier(concat_LabelId arg0/*label*/,concat_Type arg1/
 bool const tmp0 = (arg0/*label*/==((concat_LabelId)-1));
 if(tmp0){
 concat_list_I1 tmp1;
-concat_sb_dwrap(((int64_t)16),((int8_t const*)"invalid label id"),(&tmp1));
+concat_sb_dwrap(((int64_t)16),((int8_t const*)"i""n""v""a""l""i""d"" ""l""a""b""e""l"" ""i""d"""),(&tmp1));
 concat_FilePosition tmp2 = arg5/*declaredAt*/;
 concat_appendError(tmp1,tmp2,arg8/*errors*/);
 concat_25_FIdentifierName tmp3 = concat_25_Fid_dID__NONE;
@@ -25369,7 +25370,7 @@ if(tmp10){
 bool const tmp11 = (arg2/*idType*/.label==0);
 if(tmp11){
 concat_list_I1 tmp12;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"type definitions cannot be mutable"),(&tmp12));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"t""y""p""e"" ""d""e""f""i""n""i""t""i""o""n""s"" ""c""a""n""n""o""t"" ""b""e"" ""m""u""t""a""b""l""e"""),(&tmp12));
 concat_FilePosition tmp13 = arg5/*declaredAt*/;
 concat_appendError(tmp12,tmp13,arg8/*errors*/);
 concat_25_FIdentifierName tmp14 = concat_25_Fid_dID__NONE;
@@ -25382,7 +25383,7 @@ else_label983:;
 bool const tmp15 = (arg2/*idType*/.label==1);
 if(tmp15){
 concat_list_I1 tmp16;
-concat_sb_dwrap(((int64_t)28),((int8_t const*)"procedures cannot be mutable"),(&tmp16));
+concat_sb_dwrap(((int64_t)28),((int8_t const*)"p""r""o""c""e""d""u""r""e""s"" ""c""a""n""n""o""t"" ""b""e"" ""m""u""t""a""b""l""e"""),(&tmp16));
 concat_FilePosition tmp17 = arg5/*declaredAt*/;
 concat_appendError(tmp16,tmp17,arg8/*errors*/);
 concat_25_FIdentifierName tmp18 = concat_25_Fid_dID__NONE;
@@ -25395,7 +25396,7 @@ else_label984:;
 bool const tmp19 = (arg2/*idType*/.label==6);
 if(tmp19){
 concat_list_I1 tmp20;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"procedure arguments cannot be mutable"),(&tmp20));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"p""r""o""c""e""d""u""r""e"" ""a""r""g""u""m""e""n""t""s"" ""c""a""n""n""o""t"" ""b""e"" ""m""u""t""a""b""l""e"""),(&tmp20));
 concat_FilePosition tmp21 = arg5/*declaredAt*/;
 concat_appendError(tmp20,tmp21,arg8/*errors*/);
 concat_25_FIdentifierName tmp22 = concat_25_Fid_dID__NONE;
@@ -25451,7 +25452,7 @@ if(tmp40){
 concat_internal_checkEnumIndex(tmp39.label,1,"./concat.concat/identifiers.concat:413:69");
 concat_25_FIdentifierData* const l5_prevDec = (tmp39.data.e1_data);
 concat_list_I1 tmp41;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"re declaration of identifier \""),(&tmp41));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"r""e"" ""d""e""c""l""a""r""a""t""i""o""n"" ""o""f"" ""i""d""e""n""t""i""f""i""e""r"" ""\""""),(&tmp41));
 concat_list_I1 tmp42;
 concat_sb_dappendStr(tmp41,l1_name,(&tmp42));
 concat_list_I1 tmp43;
@@ -25459,7 +25460,7 @@ concat_sb_dappendC(tmp42,((int8_t)34),(&tmp43));
 concat_FilePosition tmp44 = arg5/*declaredAt*/;
 concat_appendWarning(tmp43,tmp44,arg8/*errors*/);
 concat_list_I1 tmp45;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"previous declaration "),(&tmp45));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"p""r""e""v""i""o""u""s"" ""d""e""c""l""a""r""a""t""i""o""n"" """),(&tmp45));
 concat_FilePosition tmp46 = ((*l5_prevDec).e2_declaredAt);
 concat_appendInfo(tmp45,tmp46,arg8/*errors*/);
 concat_25_FIdentifierName tmp47 = concat_25_Fid_dID__NONE;
@@ -25477,7 +25478,7 @@ bool const tmp52 = (!tmp51);
 concat_25_FIdentifierData* tmp53 = tmp50;
 if(tmp52){
 concat_list_I1 tmp54;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"declaration of identifier \""),(&tmp54));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"d""e""c""l""a""r""a""t""i""o""n"" ""o""f"" ""i""d""e""n""t""i""f""i""e""r"" ""\""""),(&tmp54));
 concat_list_I1 tmp55;
 concat_sb_dappendStr(tmp54,l1_name,(&tmp55));
 concat_list_I1 tmp56;
@@ -25485,7 +25486,7 @@ concat_sb_dappendC(tmp55,((int8_t)34),(&tmp56));
 concat_FilePosition tmp57 = arg5/*declaredAt*/;
 concat_appendWarning(tmp56,tmp57,arg8/*errors*/);
 concat_list_I1 tmp58;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"shadows previous declaration "),(&tmp58));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"s""h""a""d""o""w""s"" ""p""r""e""v""i""o""u""s"" ""d""e""c""l""a""r""a""t""i""o""n"" """),(&tmp58));
 concat_FilePosition tmp59 = ((*tmp53).e2_declaredAt);
 concat_appendInfo(tmp58,tmp59,arg8/*errors*/);
 }else{
@@ -25537,7 +25538,7 @@ bool const tmp2 = (!!((concat_LabelFlag)(tmp1&((concat_LabelFlag)8))));
 concat_LabelFlag tmp3 = tmp1;
 if(tmp2){
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"public "),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"p""u""b""l""i""c"" """),(&tmp4));
 tmp0 = tmp4;
 }else{
 else_label993:;
@@ -25545,7 +25546,7 @@ else_label993:;
 bool const tmp5 = (!!((concat_LabelFlag)(tmp3&((concat_LabelFlag)4))));
 if(tmp5){
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"extern "),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"e""x""t""e""r""n"" """),(&tmp6));
 tmp0 = tmp6;
 }else{
 else_label994:;
@@ -25553,7 +25554,7 @@ else_label994:;
 bool const tmp7 = (!!((concat_LabelFlag)(tmp3&((concat_LabelFlag)1))));
 if(tmp7){
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"mutable "),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"m""u""t""a""b""l""e"" """),(&tmp8));
 tmp0 = tmp8;
 }else{
 else_label995:;
@@ -25561,7 +25562,7 @@ else_label995:;
 bool const tmp9 = ((arg1/*id*/.e3_templateId)!=((concat_TemplateId)-1));
 if(tmp9){
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"template "),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"t""e""m""p""l""a""t""e"" """),(&tmp10));
 concat_list_I1 tmp11;
 concat_sb_dappendI(tmp10,((int64_t)(arg1/*id*/.e3_templateId)),(&tmp11));
 bool const tmp12 = ((arg1/*id*/.e4_id)!=((int32_t)-1));
@@ -25584,55 +25585,55 @@ concat_IdentifierType const tmp16 = (arg1/*id*/.e0_idType);
 switch(tmp16.label){
 case 0:;
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"type \""),(&tmp17));
+concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"t""y""p""e"" ""\""""),(&tmp17));
 concat_optional_I3 tmp18 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 concat_internal_checkEnumIndex(tmp18.label,1,"./concat.concat/identifiers.concat:473:49");
 concat_list_I1 tmp19;
 concat_sb_dappendStr(tmp17,(tmp18.data.e1_data),(&tmp19));
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp19,((int64_t)1),((int8_t const*)"\""),(&tmp20));
+concat_sb_dappendS(tmp19,((int64_t)1),((int8_t const*)"\""""),(&tmp20));
 *(out0)= tmp20;
 return;
 case 1:;
 concat_list_I1 tmp21;
-concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"procedure \""),(&tmp21));
+concat_sb_dappendS(tmp0,((int64_t)11),((int8_t const*)"p""r""o""c""e""d""u""r""e"" ""\""""),(&tmp21));
 concat_optional_I3 tmp22 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 concat_internal_checkEnumIndex(tmp22.label,1,"./concat.concat/identifiers.concat:478:49");
 concat_list_I1 tmp23;
 concat_sb_dappendStr(tmp21,(tmp22.data.e1_data),(&tmp23));
 concat_list_I1 tmp24;
-concat_sb_dappendS(tmp23,((int64_t)1),((int8_t const*)"\""),(&tmp24));
+concat_sb_dappendS(tmp23,((int64_t)1),((int8_t const*)"\""""),(&tmp24));
 *(out0)= tmp24;
 return;
 case 2:;
 concat_list_I1 tmp25;
-concat_sb_dappendS(tmp0,((int64_t)17),((int8_t const*)"global variable \""),(&tmp25));
+concat_sb_dappendS(tmp0,((int64_t)17),((int8_t const*)"g""l""o""b""a""l"" ""v""a""r""i""a""b""l""e"" ""\""""),(&tmp25));
 concat_optional_I3 tmp26 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 concat_internal_checkEnumIndex(tmp26.label,1,"./concat.concat/identifiers.concat:483:49");
 concat_list_I1 tmp27;
 concat_sb_dappendStr(tmp25,(tmp26.data.e1_data),(&tmp27));
 concat_list_I1 tmp28;
-concat_sb_dappendS(tmp27,((int64_t)1),((int8_t const*)"\""),(&tmp28));
+concat_sb_dappendS(tmp27,((int64_t)1),((int8_t const*)"\""""),(&tmp28));
 *(out0)= tmp28;
 return;
 case 4:;
 concat_list_I1 tmp29;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"label \""),(&tmp29));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"l""a""b""e""l"" ""\""""),(&tmp29));
 concat_optional_I3 tmp30 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 concat_internal_checkEnumIndex(tmp30.label,1,"./concat.concat/identifiers.concat:488:49");
 concat_list_I1 tmp31;
 concat_sb_dappendStr(tmp29,(tmp30.data.e1_data),(&tmp31));
 concat_list_I1 tmp32;
-concat_sb_dappendS(tmp31,((int64_t)1),((int8_t const*)"\""),(&tmp32));
+concat_sb_dappendS(tmp31,((int64_t)1),((int8_t const*)"\""""),(&tmp32));
 *(out0)= tmp32;
 return;
 case 5:;
 concat_list_I1 tmp33;
-concat_sb_dappendS(tmp0,((int64_t)16),((int8_t const*)"local variable ("),(&tmp33));
+concat_sb_dappendS(tmp0,((int64_t)16),((int8_t const*)"l""o""c""a""l"" ""v""a""r""i""a""b""l""e"" ""("""),(&tmp33));
 concat_list_I1 tmp34;
 concat_sb_dappendI(tmp33,((int64_t)(arg1/*id*/.e4_id)),(&tmp34));
 concat_list_I1 tmp35;
-concat_sb_dappendS(tmp34,((int64_t)3),((int8_t const*)") \""),(&tmp35));
+concat_sb_dappendS(tmp34,((int64_t)3),((int8_t const*)")"" ""\""""),(&tmp35));
 concat_optional_I3 tmp36 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 bool const tmp37 = concat_optional_dhasData_I0(tmp36);
 if(tmp37){
@@ -25644,16 +25645,16 @@ tmp35 = tmp38;
 else_label998:;
 }
 concat_list_I1 tmp39;
-concat_sb_dappendS(tmp35,((int64_t)1),((int8_t const*)"\""),(&tmp39));
+concat_sb_dappendS(tmp35,((int64_t)1),((int8_t const*)"\""""),(&tmp39));
 *(out0)= tmp39;
 return;
 case 6:;
 concat_list_I1 tmp40;
-concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"procedure argument ("),(&tmp40));
+concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"p""r""o""c""e""d""u""r""e"" ""a""r""g""u""m""e""n""t"" ""("""),(&tmp40));
 concat_list_I1 tmp41;
 concat_sb_dappendI(tmp40,((int64_t)(arg1/*id*/.e4_id)),(&tmp41));
 concat_list_I1 tmp42;
-concat_sb_dappendS(tmp41,((int64_t)3),((int8_t const*)") \""),(&tmp42));
+concat_sb_dappendS(tmp41,((int64_t)3),((int8_t const*)")"" ""\""""),(&tmp42));
 concat_optional_I3 tmp43 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 bool const tmp44 = concat_optional_dhasData_I0(tmp43);
 if(tmp44){
@@ -25665,16 +25666,16 @@ tmp42 = tmp45;
 else_label999:;
 }
 concat_list_I1 tmp46;
-concat_sb_dappendS(tmp42,((int64_t)1),((int8_t const*)"\""),(&tmp46));
+concat_sb_dappendS(tmp42,((int64_t)1),((int8_t const*)"\""""),(&tmp46));
 *(out0)= tmp46;
 return;
 case 7:;
 concat_list_I1 tmp47;
-concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"temporary variable ("),(&tmp47));
+concat_sb_dappendS(tmp0,((int64_t)20),((int8_t const*)"t""e""m""p""o""r""a""r""y"" ""v""a""r""i""a""b""l""e"" ""("""),(&tmp47));
 concat_list_I1 tmp48;
 concat_sb_dappendI(tmp47,((int64_t)(arg1/*id*/.e4_id)),(&tmp48));
 concat_list_I1 tmp49;
-concat_sb_dappendS(tmp48,((int64_t)3),((int8_t const*)") \""),(&tmp49));
+concat_sb_dappendS(tmp48,((int64_t)3),((int8_t const*)")"" ""\""""),(&tmp49));
 concat_optional_I3 tmp50 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 bool const tmp51 = concat_optional_dhasData_I0(tmp50);
 if(tmp51){
@@ -25686,16 +25687,16 @@ tmp49 = tmp52;
 else_label1000:;
 }
 concat_list_I1 tmp53;
-concat_sb_dappendS(tmp49,((int64_t)1),((int8_t const*)"\""),(&tmp53));
+concat_sb_dappendS(tmp49,((int64_t)1),((int8_t const*)"\""""),(&tmp53));
 *(out0)= tmp53;
 return;
 case 3:;
 concat_list_I1 tmp54;
-concat_sb_dappendS(tmp0,((int64_t)19),((int8_t const*)"template argument ("),(&tmp54));
+concat_sb_dappendS(tmp0,((int64_t)19),((int8_t const*)"t""e""m""p""l""a""t""e"" ""a""r""g""u""m""e""n""t"" ""("""),(&tmp54));
 concat_list_I1 tmp55;
 concat_sb_dappendI(tmp54,((int64_t)(arg1/*id*/.e4_id)),(&tmp55));
 concat_list_I1 tmp56;
-concat_sb_dappendS(tmp55,((int64_t)3),((int8_t const*)") \""),(&tmp56));
+concat_sb_dappendS(tmp55,((int64_t)3),((int8_t const*)")"" ""\""""),(&tmp56));
 concat_optional_I3 tmp57 = concat_id_dlabelName((arg1/*id*/.e1_labelId),arg2/*labelContext*/);
 bool const tmp58 = concat_optional_dhasData_I0(tmp57);
 if(tmp58){
@@ -25707,7 +25708,7 @@ tmp56 = tmp59;
 else_label1001:;
 }
 concat_list_I1 tmp60;
-concat_sb_dappendS(tmp56,((int64_t)1),((int8_t const*)"\""),(&tmp60));
+concat_sb_dappendS(tmp56,((int64_t)1),((int8_t const*)"\""""),(&tmp60));
 *(out0)= tmp60;
 return;
 }
@@ -26604,7 +26605,7 @@ case 19:;
 break;
 case 5:case 6:case 7:case 8:case 9:case 10:case 11:case 17:case 18:;
 concat_io_dFILE const tmp85 = concat_io_dstdErr();
-concat_io_dIOError const tmp86 = concat_io_dfputs(tmp85,((int64_t)12),((int8_t const*)"unreachable\x0A"));
+concat_io_dIOError const tmp86 = concat_io_dfputs(tmp85,((int64_t)12),((int8_t const*)"u""n""r""e""a""c""h""a""b""l""e""\x0A"""));
 fprintf(stderr,"reached unreachable statement at ./concat.concat/identifiers.concat:973:9\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 break;
@@ -28987,7 +28988,7 @@ bool const tmp17 = concat_types_dtypeEquals(tmp16,concat_primitive_dtypes_dTYPE)
 bool const tmp18 = (!tmp17);
 if(tmp18){
 concat_list_I1 tmp19;
-concat_sb_dwrap(((int64_t)54),((int8_t const*)"unsupported type in composite type, expected type got "),(&tmp19));
+concat_sb_dwrap(((int64_t)54),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""t""y""p""e"" ""i""n"" ""c""o""m""p""o""s""i""t""e"" ""t""y""p""e"","" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""g""o""t"" """),(&tmp19));
 concat_Type tmp20 = ((*l9_stackInfo).e0_valueType);
 concat_list_I1 tmp21;
 concat_sb_dappendType(tmp19,tmp20,((concat_LabelContext const*)l4_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp21));
@@ -29010,7 +29011,7 @@ bool const tmp27 = (tmp26==((concat_LabelId)-1));
 if(tmp27){
 if(arg2/*forceLabel*/){
 concat_list_I1 tmp28;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"missing label for composite element"),(&tmp28));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"m""i""s""s""i""n""g"" ""l""a""b""e""l"" ""f""o""r"" ""c""o""m""p""o""s""i""t""e"" ""e""l""e""m""e""n""t"""),(&tmp28));
 concat_FilePosition tmp29 = ((*l9_stackInfo).e3_pushedAt);
 concat_appendError(tmp28,tmp29,l0_errors);
 l7_error = true;
@@ -29199,7 +29200,7 @@ else_label1107:;
 tmp11 = ((int64_t)(tmp11-((int64_t)1)));
 }while(1);
 concat_list_I1 tmp20;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"return outside procedure"),(&tmp20));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"r""e""t""u""r""n"" ""o""u""t""s""i""d""e"" ""p""r""o""c""e""d""u""r""e"""),(&tmp20));
 concat_FilePosition tmp21 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp20,tmp21,l0_errors);
 return true;
@@ -29217,7 +29218,7 @@ return false;
 case 1:case 2:case 3:case 4:case 5:case 6:case 7:case 8:case 9:case 10:case 11:case 12:case 0:;
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp26;
-concat_sb_dwrap(((int64_t)47),((int8_t const*)"unsupported block-type in constant evaluation: "),(&tmp26));
+concat_sb_dwrap(((int64_t)47),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""b""l""o""c""k""-""t""y""p""e"" ""i""n"" ""c""o""n""s""t""a""n""t"" ""e""v""a""l""u""a""t""i""o""n"":"" """),(&tmp26));
 concat_OpValue const tmp27 = ((*arg0/*op*/).e0_val);
 concat_internal_checkEnumIndex(tmp27.label,2,"./concat.concat/interpreter/interpreter.concat:326:26");
 concat_list_I1 tmp28;
@@ -29240,11 +29241,11 @@ int64_t tmp31 = (((*arg1/*context*/).e4_openBlocks).e1_length);
 bool const tmp32 = (tmp31==((int64_t)0));
 if(tmp32){
 concat_list_I1 tmp33;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp33));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp33));
 concat_list_I1 tmp34;
 concat_sb_dappendBlockType(tmp33,l6_blockType,(&tmp34));
 concat_list_I1 tmp35;
-concat_sb_dappendS(tmp34,((int64_t)6),((int8_t const*)"-Block"),(&tmp35));
+concat_sb_dappendS(tmp34,((int64_t)6),((int8_t const*)"-""B""l""o""c""k"""),(&tmp35));
 concat_FilePosition tmp36 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp35,tmp36,l0_errors);
 return true;
@@ -29261,11 +29262,11 @@ bool const tmp40 = (tmp39.label!=l6_blockType.label);
 if(tmp40){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp41;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp41));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp41));
 concat_list_I1 tmp42;
 concat_sb_dappendBlockType(tmp41,l6_blockType,(&tmp42));
 concat_list_I1 tmp43;
-concat_sb_dappendS(tmp42,((int64_t)16),((int8_t const*)"-Block expected "),(&tmp43));
+concat_sb_dappendS(tmp42,((int64_t)16),((int8_t const*)"-""B""l""o""c""k"" ""e""x""p""e""c""t""e""d"" """),(&tmp43));
 concat_list_I1 tmp44;
 concat_sb_dappendBlockType(tmp43,(l7_closedBlock.e0_blockType),(&tmp44));
 concat_FilePosition tmp45 = ((*arg0/*op*/).e2_pos);
@@ -29295,7 +29296,7 @@ bool const tmp51 = concat_types_dnewTuple(tmp47,tmp49,l4_typeContext,(&tmp50));
 if(tmp51){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp52;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"could not create structure-type"),(&tmp52));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""s""t""r""u""c""t""u""r""e""-""t""y""p""e"""),(&tmp52));
 concat_FilePosition tmp53 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp52,tmp53,l0_errors);
 }else{
@@ -29328,7 +29329,7 @@ bool const tmp62 = concat_types_dnewEnum(tmp58,tmp60,l4_typeContext,(&tmp61));
 if(tmp62){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp63;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"could not create enum"),(&tmp63));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""e""n""u""m"""),(&tmp63));
 concat_FilePosition tmp64 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp63,tmp64,l0_errors);
 }else{
@@ -29361,7 +29362,7 @@ bool const tmp73 = concat_types_dnewUnion(tmp69,tmp71,l4_typeContext,(&tmp72));
 if(tmp73){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp74;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"could not create union-type"),(&tmp74));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""u""n""i""o""n""-""t""y""p""e"""),(&tmp74));
 concat_FilePosition tmp75 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp74,tmp75,l0_errors);
 }else{
@@ -29413,7 +29414,7 @@ bool const tmp89 = ((bool)((l6_blockType.label==18)&(!l11_isProc)));
 if(tmp89){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp90;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"missing return type for procedure"),(&tmp90));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"m""i""s""s""i""n""g"" ""r""e""t""u""r""n"" ""t""y""p""e"" ""f""o""r"" ""p""r""o""c""e""d""u""r""e"""),(&tmp90));
 concat_FilePosition tmp91 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp90,tmp91,l0_errors);
 }else{
@@ -29447,7 +29448,7 @@ bool const tmp104 = concat_types_dnewProcedure(tmp100,tmp101,tmp102,l4_typeConte
 if(tmp104){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp105;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"could not create procedure-type"),(&tmp105));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""p""r""o""c""e""d""u""r""e""-""t""y""p""e"""),(&tmp105));
 concat_FilePosition tmp106 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp105,tmp106,l0_errors);
 }else{
@@ -29480,7 +29481,7 @@ bool const tmp116 = concat_types_dnewTuple(tmp111,tmp114,l4_typeContext,(&tmp115
 if(tmp116){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp117;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"could not create structure-type"),(&tmp117));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""s""t""r""u""c""t""u""r""e""-""t""y""p""e"""),(&tmp117));
 concat_FilePosition tmp118 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp117,tmp118,l0_errors);
 }else{
@@ -29555,7 +29556,7 @@ concat_Type tmp143;
 bool const tmp144 = concat_types_dnewTuple(tmp140,tmp142,l4_typeContext,(&tmp143));
 if(tmp144){
 concat_list_I1 tmp145;
-concat_sb_dwrap(((int64_t)43),((int8_t const*)"could not create type of structure-constant"),(&tmp145));
+concat_sb_dwrap(((int64_t)43),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""t""y""p""e"" ""o""f"" ""s""t""r""u""c""t""u""r""e""-""c""o""n""s""t""a""n""t"""),(&tmp145));
 concat_FilePosition tmp146 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp145,tmp146,l0_errors);
 }else{
@@ -29574,7 +29575,7 @@ concat_Type tmp150;
 bool const tmp151 = concat_types_dnewArrayType(tmp148,false,tmp149,true,false,l4_typeContext,(&tmp150));
 if(tmp151){
 concat_list_I1 tmp152;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"could not create type of array-constant "),(&tmp152));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""t""y""p""e"" ""o""f"" ""a""r""r""a""y""-""c""o""n""s""t""a""n""t"" """),(&tmp152));
 concat_FilePosition tmp153 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp152,tmp153,l0_errors);
 }else{
@@ -29591,7 +29592,7 @@ return false;
 case 3:case 4:case 5:case 6:case 7:case 8:case 9:case 10:case 11:case 12:case 0:;
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp157;
-concat_sb_dwrap(((int64_t)46),((int8_t const*)"unsupported block-end in constant evaluation: "),(&tmp157));
+concat_sb_dwrap(((int64_t)46),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""b""l""o""c""k""-""e""n""d"" ""i""n"" ""c""o""n""s""t""a""n""t"" ""e""v""a""l""u""a""t""i""o""n"":"" """),(&tmp157));
 concat_OpValue const tmp158 = ((*arg0/*op*/).e0_val);
 concat_internal_checkEnumIndex(tmp158.label,3,"./concat.concat/interpreter/interpreter.concat:534:26");
 concat_list_I1 tmp159;
@@ -29611,7 +29612,7 @@ bool const tmp162 = (!tmp161);
 if(tmp162){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp163;
-concat_sb_dwrap(((int64_t)86),((int8_t const*)"interpreting declarations is currently only supported in type-blocks and initializers "),(&tmp163));
+concat_sb_dwrap(((int64_t)86),((int8_t const*)"i""n""t""e""r""p""r""e""t""i""n""g"" ""d""e""c""l""a""r""a""t""i""o""n""s"" ""i""s"" ""c""u""r""r""e""n""t""l""y"" ""o""n""l""y"" ""s""u""p""p""o""r""t""e""d"" ""i""n"" ""t""y""p""e""-""b""l""o""c""k""s"" ""a""n""d"" ""i""n""i""t""i""a""l""i""z""e""r""s"" """),(&tmp163));
 concat_FilePosition tmp164 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp163,tmp164,l0_errors);
 }else{
@@ -29625,7 +29626,7 @@ bool const tmp165 = concat_28_FcheckStack(((int64_t)1),arg1/*context*/);
 if(tmp165){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp166;
-concat_sb_dwrap(((int64_t)54),((int8_t const*)"not enough arguments for declaration, expected 1 got 0"),(&tmp166));
+concat_sb_dwrap(((int64_t)54),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""a""r""g""u""m""e""n""t""s"" ""f""o""r"" ""d""e""c""l""a""r""a""t""i""o""n"","" ""e""x""p""e""c""t""e""d"" ""1"" ""g""o""t"" ""0"""),(&tmp166));
 concat_FilePosition tmp167 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp166,tmp167,l0_errors);
 }else{
@@ -29647,7 +29648,7 @@ bool const tmp173 = (!tmp172);
 if(tmp173){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp174;
-concat_sb_dwrap(((int64_t)53),((int8_t const*)"wrong argument type for declartion expected type got "),(&tmp174));
+concat_sb_dwrap(((int64_t)53),((int8_t const*)"w""r""o""n""g"" ""a""r""g""u""m""e""n""t"" ""t""y""p""e"" ""f""o""r"" ""d""e""c""l""a""r""t""i""o""n"" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""g""o""t"" """),(&tmp174));
 concat_Type tmp175 = ((*l22_valInfo).e0_valueType);
 concat_list_I1 tmp176;
 concat_sb_dappendType(tmp174,tmp175,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp176));
@@ -29694,7 +29695,7 @@ else_label1146:;
 }
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp191;
-concat_sb_dwrap(((int64_t)46),((int8_t const*)"unsupported operation in constant evaluation: "),(&tmp191));
+concat_sb_dwrap(((int64_t)46),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""i""n"" ""c""o""n""s""t""a""n""t"" ""e""v""a""l""u""a""t""i""o""n"":"" """),(&tmp191));
 concat_Operation tmp192 = (*arg0/*op*/);
 concat_list_I1 tmp193;
 concat_sb_dappendOp(tmp191,tmp192,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp193));
@@ -29720,7 +29721,7 @@ concat_ConstValue const tmp199 = (l24_idInfo.e2_constValue);
 bool const tmp200 = (!(tmp199.label==12));
 if(tmp200){
 concat_list_I1 tmp201;
-concat_sb_dwrap(((int64_t)41),((int8_t const*)"unexpected value for procedure constant: "),(&tmp201));
+concat_sb_dwrap(((int64_t)41),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""v""a""l""u""e"" ""f""o""r"" ""p""r""o""c""e""d""u""r""e"" ""c""o""n""s""t""a""n""t"":"" """),(&tmp201));
 concat_ConstValue tmp202 = (l24_idInfo.e2_constValue);
 concat_list_I1 tmp203;
 concat_sb_dappendConstant(tmp201,tmp202,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp203));
@@ -29755,7 +29756,7 @@ concat_arrayView_I3 const l28_inTypes = tmp218;
 bool const tmp219 = concat_28_FcheckStack((l28_inTypes.e1_length),arg1/*context*/);
 if(tmp219){
 concat_list_I1 tmp220;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"not enough arguments for type-generator "),(&tmp220));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""a""r""g""u""m""e""n""t""s"" ""f""o""r"" ""t""y""p""e""-""g""e""n""e""r""a""t""o""r"" """),(&tmp220));
 concat_optional_I3 tmp221 = concat_id_dlabelName(l23_label,((concat_LabelContext const*)l5_labelContext));
 concat_internal_checkEnumIndex(tmp221.label,1,"./concat.concat/interpreter/interpreter.concat:615:49");
 concat_list_I1 tmp222;
@@ -29790,7 +29791,7 @@ concat_FilePosition tmp234 = ((*arg0/*op*/).e2_pos);
 bool const tmp235 = concat_evaluateCall((tmp233.data.e12_procedure),tmp234,arg1/*context*/);
 if(tmp235){
 concat_list_I1 tmp236;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"could not initialize type-generator "),(&tmp236));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""i""n""i""t""i""a""l""i""z""e"" ""t""y""p""e""-""g""e""n""e""r""a""t""o""r"" """),(&tmp236));
 concat_optional_I3 tmp237 = concat_id_dlabelName(l23_label,((concat_LabelContext const*)l5_labelContext));
 concat_internal_checkEnumIndex(tmp237.label,1,"./concat.concat/interpreter/interpreter.concat:634:51");
 concat_list_I1 tmp238;
@@ -29820,7 +29821,7 @@ concat_Type tmp248 = (tmp247.data.e8_typeId);
 bool const tmp249 = concat_types_dinitializeGeneratedType(l23_label,tmp243,tmp248,l4_typeContext,((concat_LabelContext const*)l5_labelContext),l3_constContext);
 if(tmp249){
 concat_list_I1 tmp250;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"could not initialize type-generator "),(&tmp250));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""i""n""i""t""i""a""l""i""z""e"" ""t""y""p""e""-""g""e""n""e""r""a""t""o""r"" """),(&tmp250));
 concat_optional_I3 tmp251 = concat_id_dlabelName(l23_label,((concat_LabelContext const*)l5_labelContext));
 concat_internal_checkEnumIndex(tmp251.label,1,"./concat.concat/interpreter/interpreter.concat:653:51");
 concat_list_I1 tmp252;
@@ -29864,7 +29865,7 @@ bool const tmp265 = concat_optional_disEmpty_I9(l32_value_X63);
 if(tmp265){
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp266;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"missing value for "),(&tmp266));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"m""i""s""s""i""n""g"" ""v""a""l""u""e"" ""f""o""r"" """),(&tmp266));
 concat_OpValue const tmp267 = ((*arg0/*op*/).e0_val);
 concat_internal_checkEnumIndex(tmp267.label,4,"./concat.concat/interpreter/interpreter.concat:679:28");
 concat_IdentifierInfo tmp268 = (tmp267.data.e4_getId);
@@ -29889,7 +29890,7 @@ return false;
 case 0:case 3:case 2:case 7:;
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp274;
-concat_sb_dwrap(((int64_t)46),((int8_t const*)"unsupported operation in constant evaluation: "),(&tmp274));
+concat_sb_dwrap(((int64_t)46),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""i""n"" ""c""o""n""s""t""a""n""t"" ""e""v""a""l""u""a""t""i""o""n"":"" """),(&tmp274));
 concat_Operation tmp275 = (*arg0/*op*/);
 concat_list_I1 tmp276;
 concat_sb_dappendOp(tmp274,tmp275,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp276));
@@ -29988,7 +29989,7 @@ concat_list_dappend_I2(tmp309,((concat_types_dArraySize){.e0_value = ((int64_t)(
 }else{
 else_label1161:;
 concat_list_I1 tmp311;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"unexpected constant for array size: "),(&tmp311));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""c""o""n""s""t""a""n""t"" ""f""o""r"" ""a""r""r""a""y"" ""s""i""z""e"":"" """),(&tmp311));
 concat_ConstValue tmp312 = l38_intArg;
 concat_list_I1 tmp313;
 concat_sb_dappendConstant(tmp311,tmp312,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp313));
@@ -30007,7 +30008,7 @@ int64_t tmp318 = l36_offset;
 bool const tmp319 = (tmp318<l35_minOffset);
 if(tmp319){
 concat_list_I1 tmp320;
-concat_sb_dwrap(((int64_t)41),((int8_t const*)"missing type parameter for type-modifier "),(&tmp320));
+concat_sb_dwrap(((int64_t)41),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""p""a""r""a""m""e""t""e""r"" ""f""o""r"" ""t""y""p""e""-""m""o""d""i""f""i""e""r"" """),(&tmp320));
 concat_OpValue const tmp321 = ((*arg0/*op*/).e0_val);
 concat_internal_checkEnumIndex(tmp321.label,47,"./concat.concat/interpreter/interpreter.concat:749:24");
 concat_list_I1 tmp322;
@@ -30024,13 +30025,13 @@ concat_ConstValue const l39_typeConstant = tmp325;
 bool const tmp326 = (!(l39_typeConstant.label==8));
 if(tmp326){
 concat_list_I1 tmp327;
-concat_sb_dwrap(((int64_t)48),((int8_t const*)"unexpected constant parameter for type-modifier "),(&tmp327));
+concat_sb_dwrap(((int64_t)48),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""c""o""n""s""t""a""n""t"" ""p""a""r""a""m""e""t""e""r"" ""f""o""r"" ""t""y""p""e""-""m""o""d""i""f""i""e""r"" """),(&tmp327));
 concat_OpValue const tmp328 = ((*arg0/*op*/).e0_val);
 concat_internal_checkEnumIndex(tmp328.label,47,"./concat.concat/interpreter/interpreter.concat:756:24");
 concat_list_I1 tmp329;
 concat_sb_dappendTypeModifier(tmp327,(tmp328.data.e47_typeModifier),(&tmp329));
 concat_list_I1 tmp330;
-concat_sb_dappendS(tmp329,((int64_t)19),((int8_t const*)" expected type got "),(&tmp330));
+concat_sb_dappendS(tmp329,((int64_t)19),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""g""o""t"" """),(&tmp330));
 concat_ConstValue tmp331 = l39_typeConstant;
 concat_list_I1 tmp332;
 concat_sb_dappendConstant(tmp330,tmp331,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp332));
@@ -30047,7 +30048,7 @@ bool const l40_isPtr = (!(tmp335.label==1));
 bool const tmp336 = ((bool)((!l34_fixedSize)&(!l40_isPtr)));
 if(tmp336){
 concat_list_I1 tmp337;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"array types must have a fixed size"),(&tmp337));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"a""r""r""a""y"" ""t""y""p""e""s"" ""m""u""s""t"" ""h""a""v""e"" ""a"" ""f""i""x""e""d"" ""s""i""z""e"""),(&tmp337));
 concat_FilePosition tmp338 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp337,tmp338,l0_errors);
 }else{
@@ -30066,13 +30067,13 @@ bool const tmp345 = concat_types_dnewArrayType(tmp339,l40_isPtr,tmp340,tmp341,(t
 if(tmp345){
 if(l40_isPtr){
 concat_list_I1 tmp346;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"could not create pointer type"),(&tmp346));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""p""o""i""n""t""e""r"" ""t""y""p""e"""),(&tmp346));
 concat_FilePosition tmp347 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp346,tmp347,l0_errors);
 }else{
 else_label1166:;
 concat_list_I1 tmp348;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"could not create array type"),(&tmp348));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""a""r""r""a""y"" ""t""y""p""e"""),(&tmp348));
 concat_FilePosition tmp349 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp348,tmp349,l0_errors);
 }
@@ -30097,7 +30098,7 @@ return false;
 case 5:case 6:case 7:case 8:case 10:case 11:case 12:case 14:case 15:case 16:case 18:case 19:case 20:case 21:case 22:case 24:case 25:case 26:case 27:case 28:case 29:case 30:case 31:case 32:case 34:case 35:case 33:case 36:case 37:case 38:case 39:case 40:case 13:case 46:case 17:case 42:case 44:case 45:case 41:case 49:case 48:;
 if(arg2/*showErrorMessages*/){
 concat_list_I1 tmp357;
-concat_sb_dwrap(((int64_t)46),((int8_t const*)"unsupported operation in constant evaluation: "),(&tmp357));
+concat_sb_dwrap(((int64_t)46),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""i""n"" ""c""o""n""s""t""a""n""t"" ""e""v""a""l""u""a""t""i""o""n"":"" """),(&tmp357));
 concat_Operation tmp358 = (*arg0/*op*/);
 concat_list_I1 tmp359;
 concat_sb_dappendOp(tmp357,tmp358,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp359));
@@ -30186,7 +30187,7 @@ concat_arrayView_I3 const l8_args = tmp10;
 bool const tmp11 = concat_28_FcheckStack((l8_args.e1_length),arg2/*context*/);
 if(tmp11){
 concat_list_I1 tmp12;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"not enough arguments for procedure "),(&tmp12));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""a""r""g""u""m""e""n""t""s"" ""f""o""r"" ""p""r""o""c""e""d""u""r""e"" """),(&tmp12));
 concat_FilePosition tmp13 = arg1/*pos*/;
 concat_appendError(tmp12,tmp13,l0_errors);
 return true;
@@ -30217,7 +30218,7 @@ tmp21 = (!(tmp23.label==1));
 }
 if(tmp21){
 concat_list_I1 tmp24;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"expected procedure initialization got "),(&tmp24));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"e""x""p""e""c""t""e""d"" ""p""r""o""c""e""d""u""r""e"" ""i""n""i""t""i""a""l""i""z""a""t""i""o""n"" ""g""o""t"" """),(&tmp24));
 concat_Operation tmp25 = (*l11_op);
 concat_list_I1 tmp26;
 concat_sb_dappendOp(tmp24,tmp25,((concat_ConstantContext const*)(&((*l2_idContext).e0_constContext))),((concat_LabelContext const*)l3_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp26));
@@ -30405,7 +30406,7 @@ concat_29_FTypeInfo* const l5_elt = (tmp8.data.e1_data);
 bool const tmp9 = ((*l5_elt).e2_writable);
 if(tmp9){
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"writable "),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"w""r""i""t""a""b""l""e"" """),(&tmp10));
 tmp0 = tmp10;
 }else{
 else_label1177:;
@@ -30428,14 +30429,14 @@ concat_sb_dappendC(tmp12,((int8_t)32),(&tmp15));
 concat_list_I1 tmp16;
 concat_sb_dappendI(tmp15,((int64_t)((*l5_elt).e1_opCount)),(&tmp16));
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp16,((int64_t)2),((int8_t const*)":\x0A"),(&tmp17));
+concat_sb_dappendS(tmp16,((int64_t)2),((int8_t const*)":""\x0A"""),(&tmp17));
 int64_t tmp18 = l3_offset;
 l3_offset = ((int64_t)(tmp18-((int64_t)((*l5_elt).e1_opCount))));
 int64_t tmp19 = l3_offset;
 bool const tmp20 = (tmp19<((int64_t)0));
 if(tmp20){
 concat_list_I1 tmp21;
-concat_sb_dappendS(tmp17,((int64_t)12),((int8_t const*)"out of sync\x0A"),(&tmp21));
+concat_sb_dappendS(tmp17,((int64_t)12),((int8_t const*)"o""u""t"" ""o""f"" ""s""y""n""c""\x0A"""),(&tmp21));
 tmp17 = tmp21;
 }else{
 else_label1179:;
@@ -30446,7 +30447,7 @@ bool const tmp23 = (tmp22<((*l5_elt).e1_opCount));
 if(!tmp23)
   break;
 concat_list_I1 tmp24;
-concat_sb_dappendS(tmp17,((int64_t)3),((int8_t const*)"   "),(&tmp24));
+concat_sb_dappendS(tmp17,((int64_t)3),((int8_t const*)" "" "" """),(&tmp24));
 concat_list_I25 tmp25 = ((*arg3/*state*/).e2_opStack);
 int64_t tmp26 = l3_offset;
 concat_Operation tmp27;
@@ -30466,20 +30467,20 @@ static void concat_29_FprintTypes(bool arg0/*printOps*/,int32_t arg1/*maxTypes*/
 concat_list_I1 tmp1;
 if(arg0/*printOps*/){
 concat_list_I1 tmp0;
-concat_sb_dwrap(((int64_t)7),((int8_t const*)"stack:\x0A"),(&tmp0));
+concat_sb_dwrap(((int64_t)7),((int8_t const*)"s""t""a""c""k"":""\x0A"""),(&tmp0));
 tmp1 = tmp0;
 }else{
 else_label1180:;
 concat_list_I1 tmp2;
-concat_sb_dwrap(((int64_t)7),((int8_t const*)"types:\x0A"),(&tmp2));
+concat_sb_dwrap(((int64_t)7),((int8_t const*)"t""y""p""e""s"":""\x0A"""),(&tmp2));
 tmp1 = tmp2;
 }
 concat_list_I1 tmp3;
-concat_sb_dappendS(tmp1,((int64_t)18),((int8_t const*)"-----------------\x0A"),(&tmp3));
+concat_sb_dappendS(tmp1,((int64_t)18),((int8_t const*)"-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""\x0A"""),(&tmp3));
 concat_list_I1 tmp4;
 concat_29_Fsb_dappendTypeStack(tmp3,arg0/*printOps*/,((int64_t)arg1/*maxTypes*/),arg2/*state*/,(&tmp4));
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp4,((int64_t)18),((int8_t const*)"-----------------\x0A"),(&tmp5));
+concat_sb_dappendS(tmp4,((int64_t)18),((int8_t const*)"-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""\x0A"""),(&tmp5));
 concat_io_dFILE const tmp6 = concat_io_dstdOut();
 concat_io_dIOError const tmp7 = concat_io_dfputSb(tmp6,tmp5);
 return;
@@ -30488,7 +30489,7 @@ static void concat_29_FprintTypesDebug(concat_29_FTypeCheckState* arg0/*state*/)
 concat_list_I1 tmp0;
 concat_sb_dcreate(((int64_t)0),(&tmp0));
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"-----------------\x0A"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)18),((int8_t const*)"-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""\x0A"""),(&tmp1));
 concat_list_I1 tmp2;
 concat_29_Fsb_dappendTypeStack(tmp1,true,((int64_t)-1),arg0/*state*/,(&tmp2));
 concat_io_dFILE const tmp3 = concat_io_dstdOut();
@@ -30736,7 +30737,7 @@ static void concat_29_FinsertStackOp(concat_Operation const* arg0/*op*/,int64_t 
 bool const tmp0 = (arg1/*typeCount*/>(((*arg2/*state*/).e3_typeStack).e1_length));
 if(tmp0){
 concat_list_I1 tmp1;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type stack underflow"),(&tmp1));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e"" ""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp1));
 concat_FilePosition tmp2 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp1,tmp2,arg2/*state*/);
 return;
@@ -30790,7 +30791,7 @@ bool const tmp2 = (tmp1<((int64_t)0));
 int64_t tmp3 = tmp1;
 if(tmp2){
 concat_list_I1 tmp4;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type stack underflow"),(&tmp4));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e"" ""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp4));
 concat_FilePosition tmp5 = arg1/*pos*/;
 concat_29_FappendError2(tmp4,tmp5,arg2/*state*/);
 tmp3 = ((int64_t)0);
@@ -30902,7 +30903,7 @@ bool const tmp4 = (tmp3<((int64_t)0));
 int64_t tmp5 = tmp3;
 if(tmp4){
 concat_list_I1 tmp6;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type stack underflow"),(&tmp6));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e"" ""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp6));
 concat_FilePosition tmp7 = arg2/*pos*/;
 concat_29_FappendError2(tmp6,tmp7,arg3/*state*/);
 tmp5 = ((int64_t)0);
@@ -31206,15 +31207,15 @@ int64_t tmp0 = (((*arg3/*state*/).e3_typeStack).e1_length);
 bool const tmp1 = (tmp0<(arg0/*types*/.e1_length));
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"not enough types for "),(&tmp2));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""t""y""p""e""s"" ""f""o""r"" """),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendStr(tmp2,arg1/*opName*/,(&tmp3));
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp3,((int64_t)6),((int8_t const*)" need "),(&tmp4));
+concat_sb_dappendS(tmp3,((int64_t)6),((int8_t const*)" ""n""e""e""d"" """),(&tmp4));
 concat_list_I1 tmp5;
 concat_sb_dappendI(tmp4,(arg0/*types*/.e1_length),(&tmp5));
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp5,((int64_t)6),((int8_t const*)" have "),(&tmp6));
+concat_sb_dappendS(tmp5,((int64_t)6),((int8_t const*)" ""h""a""v""e"" """),(&tmp6));
 concat_list_I1 tmp7;
 concat_sb_dappendI(tmp6,(((*arg3/*state*/).e3_typeStack).e1_length),(&tmp7));
 concat_FilePosition tmp8 = arg2/*pos*/;
@@ -31288,16 +31289,16 @@ continue;
 else_label1209:;
 }
 concat_list_I1 tmp37;
-concat_sb_dwrap(((int64_t)15),((int8_t const*)"wrong type for "),(&tmp37));
+concat_sb_dwrap(((int64_t)15),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" """),(&tmp37));
 concat_list_I1 tmp38;
 concat_sb_dappendStr(tmp37,arg1/*opName*/,(&tmp38));
 concat_list_I1 tmp39;
-concat_sb_dappendS(tmp38,((int64_t)10),((int8_t const*)" expected "),(&tmp39));
+concat_sb_dappendS(tmp38,((int64_t)10),((int8_t const*)" ""e""x""p""e""c""t""e""d"" """),(&tmp39));
 concat_Type tmp40 = l7_expected;
 concat_list_I1 tmp41;
 concat_sb_dappendType(tmp39,tmp40,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp41));
 concat_list_I1 tmp42;
-concat_sb_dappendS(tmp41,((int64_t)5),((int8_t const*)" got "),(&tmp42));
+concat_sb_dappendS(tmp41,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp42));
 concat_Type tmp43 = ((*l6_src).e0_valType);
 concat_list_I1 tmp44;
 concat_sb_dappendType(tmp42,tmp43,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp44));
@@ -31363,7 +31364,7 @@ bool const tmp72 = concat_types_dcanAutoCast(tmp70,tmp71,((concat_TypeContext co
 bool const tmp73 = (!tmp72);
 if(tmp73){
 concat_list_I1 tmp74;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"unexpected type conversion"),(&tmp74));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""c""o""n""v""e""r""s""i""o""n"""),(&tmp74));
 concat_FilePosition tmp75 = arg2/*pos*/;
 concat_29_FappendError2(tmp74,tmp75,arg3/*state*/);
 }else{
@@ -31544,26 +31545,26 @@ else_label1220:;
 bool const tmp29 = (l3_nTypes!=(((*arg1/*outTypes*/).e1_typeStack).e1_length));
 if(tmp29){
 concat_list_I1 tmp30;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"wrong number of types at the "),(&tmp30));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"w""r""o""n""g"" ""n""u""m""b""e""r"" ""o""f"" ""t""y""p""e""s"" ""a""t"" ""t""h""e"" """),(&tmp30));
 bool const tmp31 = (arg3/*blockName*/.label==4);
 if(tmp31){
 concat_list_I1 tmp32;
-concat_sb_dappendS(tmp30,((int64_t)13),((int8_t const*)"beginning of "),(&tmp32));
+concat_sb_dappendS(tmp30,((int64_t)13),((int8_t const*)"b""e""g""i""n""n""i""n""g"" ""o""f"" """),(&tmp32));
 tmp30 = tmp32;
 }else{
 else_label1224:;
 concat_list_I1 tmp33;
-concat_sb_dappendS(tmp30,((int64_t)7),((int8_t const*)"end of "),(&tmp33));
+concat_sb_dappendS(tmp30,((int64_t)7),((int8_t const*)"e""n""d"" ""o""f"" """),(&tmp33));
 tmp30 = tmp33;
 }
 concat_list_I1 tmp34;
 concat_sb_dappendBlockType(tmp30,arg3/*blockName*/,(&tmp34));
 concat_list_I1 tmp35;
-concat_sb_dappendS(tmp34,((int64_t)20),((int8_t const*)"-statement expected "),(&tmp35));
+concat_sb_dappendS(tmp34,((int64_t)20),((int8_t const*)"-""s""t""a""t""e""m""e""n""t"" ""e""x""p""e""c""t""e""d"" """),(&tmp35));
 concat_list_I1 tmp36;
 concat_sb_dappendI(tmp35,(((*arg1/*outTypes*/).e1_typeStack).e1_length),(&tmp36));
 concat_list_I1 tmp37;
-concat_sb_dappendS(tmp36,((int64_t)5),((int8_t const*)" got "),(&tmp37));
+concat_sb_dappendS(tmp36,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp37));
 concat_list_I1 tmp38;
 concat_sb_dappendI(tmp37,l3_nTypes,(&tmp38));
 concat_FilePosition tmp39 = arg6/*pos*/;
@@ -31625,27 +31626,27 @@ bool const tmp63 = concat_types_dtypeEquals(tmp62,((*l11_out).e1_dataType));
 bool const tmp64 = (!tmp63);
 if(tmp64){
 concat_list_I1 tmp65;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"incompatible types at the "),(&tmp65));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"i""n""c""o""m""p""a""t""i""b""l""e"" ""t""y""p""e""s"" ""a""t"" ""t""h""e"" """),(&tmp65));
 bool const tmp66 = (arg3/*blockName*/.label==4);
 if(tmp66){
 concat_list_I1 tmp67;
-concat_sb_dappendS(tmp65,((int64_t)13),((int8_t const*)"beginning of "),(&tmp67));
+concat_sb_dappendS(tmp65,((int64_t)13),((int8_t const*)"b""e""g""i""n""n""i""n""g"" ""o""f"" """),(&tmp67));
 tmp65 = tmp67;
 }else{
 else_label1227:;
 concat_list_I1 tmp68;
-concat_sb_dappendS(tmp65,((int64_t)7),((int8_t const*)"end of "),(&tmp68));
+concat_sb_dappendS(tmp65,((int64_t)7),((int8_t const*)"e""n""d"" ""o""f"" """),(&tmp68));
 tmp65 = tmp68;
 }
 concat_list_I1 tmp69;
 concat_sb_dappendBlockType(tmp65,arg3/*blockName*/,(&tmp69));
 concat_list_I1 tmp70;
-concat_sb_dappendS(tmp69,((int64_t)20),((int8_t const*)"-statement expected "),(&tmp70));
+concat_sb_dappendS(tmp69,((int64_t)20),((int8_t const*)"-""s""t""a""t""e""m""e""n""t"" ""e""x""p""e""c""t""e""d"" """),(&tmp70));
 concat_Type tmp71 = ((*l11_out).e1_dataType);
 concat_list_I1 tmp72;
 concat_sb_dappendType(tmp70,tmp71,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp72));
 concat_list_I1 tmp73;
-concat_sb_dappendS(tmp72,((int64_t)5),((int8_t const*)" got "),(&tmp73));
+concat_sb_dappendS(tmp72,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp73));
 concat_Type tmp74 = ((*l9_typeInfo).e0_valType);
 concat_list_I1 tmp75;
 concat_sb_dappendType(tmp73,tmp74,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp75));
@@ -31992,7 +31993,7 @@ concat_optional_I45 tmp1 = concat_list_dpeek_I5(((*arg4/*state*/).e3_typeStack))
 bool const tmp2 = concat_optional_disEmpty_I10(tmp1);
 if(tmp2){
 concat_list_I1 tmp3;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"missing argument for operation"),(&tmp3));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"m""i""s""s""i""n""g"" ""a""r""g""u""m""e""n""t"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"""),(&tmp3));
 concat_Operation tmp4 = (*arg0/*op*/);
 concat_list_I1 tmp5;
 concat_sb_dappendOp(tmp3,tmp4,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp5));
@@ -32015,7 +32016,7 @@ bool const tmp10 = concat_types_disCallable(tmp9,((concat_TypeContext const*)l3_
 bool const tmp11 = (!tmp10);
 if(tmp11){
 concat_list_I1 tmp12;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"cannot call values of type "),(&tmp12));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"c""a""n""n""o""t"" ""c""a""l""l"" ""v""a""l""u""e""s"" ""o""f"" ""t""y""p""e"" """),(&tmp12));
 concat_Type tmp13 = l4_calledType;
 concat_list_I1 tmp14;
 concat_sb_dappendType(tmp12,tmp13,((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp14));
@@ -32129,7 +32130,7 @@ concat_optional_I45 tmp68 = concat_list_dpeek_I5(((*arg4/*state*/).e3_typeStack)
 bool const tmp69 = concat_optional_disEmpty_I10(tmp68);
 if(tmp69){
 concat_list_I1 tmp70;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"),(&tmp70));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp70));
 concat_FilePosition tmp71 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp70,tmp71,arg4/*state*/);
 return;
@@ -32146,7 +32147,7 @@ concat_OpValue* const tmp74 = (&((*l17_argValue).e0_val));
 bool const tmp75 = ((bool)((tmp73!=((int32_t)1))|(!((*tmp74).label==1))));
 if(tmp75){
 concat_list_I1 tmp76;
-concat_sb_dwrap(((int64_t)39),((int8_t const*)"template arguments have to be constants"),(&tmp76));
+concat_sb_dwrap(((int64_t)39),((int8_t const*)"t""e""m""p""l""a""t""e"" ""a""r""g""u""m""e""n""t""s"" ""h""a""v""e"" ""t""o"" ""b""e"" ""c""o""n""s""t""a""n""t""s"""),(&tmp76));
 concat_FilePosition tmp77 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp76,tmp77,arg4/*state*/);
 return;
@@ -32170,12 +32171,12 @@ bool const tmp87 = concat_types_dcanCast(tmp84,tmp86,false,((concat_TypeContext 
 bool const tmp88 = (!tmp87);
 if(tmp88){
 concat_list_I1 tmp89;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "),(&tmp89));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"c""a""n""n""o""t"" ""c""a""s""t"" """),(&tmp89));
 concat_Type tmp90 = ((*l17_argValue).e1_dataType);
 concat_list_I1 tmp91;
 concat_sb_dappendType(tmp89,tmp90,((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp91));
 concat_list_I1 tmp92;
-concat_sb_dappendS(tmp91,((int64_t)4),((int8_t const*)" to "),(&tmp92));
+concat_sb_dappendS(tmp91,((int64_t)4),((int8_t const*)" ""t""o"" """),(&tmp92));
 concat_arrayView_I3 tmp93 = l15_templateArgs;
 concat_Type tmp94 = concat_array_dget_I2(tmp93,((int64_t)tmp63));
 concat_list_I1 tmp95;
@@ -32250,7 +32251,7 @@ concat_optional_I45 tmp123 = concat_list_dat_I21(tmp122,l18_typeOffset);
 bool const tmp124 = concat_optional_disEmpty_I10(tmp123);
 if(tmp124){
 concat_list_I1 tmp125;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"),(&tmp125));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp125));
 concat_FilePosition tmp126 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp125,tmp126,arg4/*state*/);
 return;
@@ -32270,7 +32271,7 @@ concat_OpValue* const tmp132 = (&((*tmp131).e0_val));
 bool const tmp133 = ((bool)((tmp128!=((int32_t)1))|(!((*tmp132).label==1))));
 if(tmp133){
 concat_list_I1 tmp134;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"static arguments have to be constants"),(&tmp134));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"s""t""a""t""i""c"" ""a""r""g""u""m""e""n""t""s"" ""h""a""v""e"" ""t""o"" ""b""e"" ""c""o""n""s""t""a""n""t""s"""),(&tmp134));
 concat_FilePosition tmp135 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp134,tmp135,arg4/*state*/);
 return;
@@ -32288,12 +32289,12 @@ bool const tmp141 = concat_types_dcanCast(tmp138,tmp140,false,((concat_TypeConte
 bool const tmp142 = (!tmp141);
 if(tmp142){
 concat_list_I1 tmp143;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "),(&tmp143));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"c""a""n""n""o""t"" ""c""a""s""t"" """),(&tmp143));
 concat_Type tmp144 = ((*l24_argValue).e1_dataType);
 concat_list_I1 tmp145;
 concat_sb_dappendType(tmp143,tmp144,((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp145));
 concat_list_I1 tmp146;
-concat_sb_dappendS(tmp145,((int64_t)4),((int8_t const*)" to "),(&tmp146));
+concat_sb_dappendS(tmp145,((int64_t)4),((int8_t const*)" ""t""o"" """),(&tmp146));
 concat_arrayView_I3 tmp147 = l20_inTypes;
 concat_Type tmp148 = concat_array_dget_I2(tmp147,((int64_t)tmp102));
 concat_list_I1 tmp149;
@@ -32322,7 +32323,7 @@ concat_optional_I45 tmp156 = concat_list_dat_I21(tmp155,l18_typeOffset);
 bool const tmp157 = concat_optional_disEmpty_I10(tmp156);
 if(tmp157){
 concat_list_I1 tmp158;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"),(&tmp158));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp158));
 concat_FilePosition tmp159 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp158,tmp159,arg4/*state*/);
 return;
@@ -32342,7 +32343,7 @@ concat_ConstantArray const l26_templateIndices = ((concat_ConstantArray){.e0_off
 concat_ConstantArray const l27_genericIndices = ((concat_ConstantArray){.e0_offset = ((int64_t)(l13_argBufferOffset+((int64_t)l11_templateCount))),.e1_length = ((int64_t)l12_staticArgCount)});
 if(false){
 concat_list_I1 tmp163;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"-----------------\x0A"),(&tmp163));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""-""\x0A"""),(&tmp163));
 concat_Operation tmp164 = (*arg0/*op*/);
 concat_list_I1 tmp165;
 concat_sb_dappendOp(tmp163,tmp164,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp165));
@@ -32458,7 +32459,7 @@ int32_t* const tmp216 = (arg2/*templateImpl*/.data.e1_data);
 }else{
 else_label1261:;
 concat_list_I1 tmp217;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"could not store template info for call"),(&tmp217));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""s""t""o""r""e"" ""t""e""m""p""l""a""t""e"" ""i""n""f""o"" ""f""o""r"" ""c""a""l""l"""),(&tmp217));
 concat_FilePosition tmp218 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp217,tmp218,arg4/*state*/);
 }
@@ -32660,7 +32661,7 @@ concat_OpValue tmp300 = ((concat_OpValue){.label=26,.data={.e26_call = ((concat_
 }else{
 else_label1273:;
 concat_list_I1 tmp301;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"unexpected type for call operation"),(&tmp301));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""f""o""r"" ""c""a""l""l"" ""o""p""e""r""a""t""i""o""n"""),(&tmp301));
 concat_Operation tmp302 = (*arg0/*op*/);
 concat_list_I1 tmp303;
 concat_sb_dappendOp(tmp301,tmp302,((concat_ConstantContext const*)l1_constContext),((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp303));
@@ -32683,7 +32684,7 @@ concat_Type tmp309 = l5_inType;
 concat_arrayView_I3 tmp310;
 concat_types_dcompositeElts(tmp309,((concat_TypeContext const*)l3_typeContext),(&tmp310));
 concat_arrayView_I1 tmp311;
-concat_string_dwrap(((int64_t)14),((int8_t const*)"procedure call"),(&tmp311));
+concat_string_dwrap(((int64_t)14),((int8_t const*)"p""r""o""c""e""d""u""r""e"" ""c""a""l""l"""),(&tmp311));
 concat_FilePosition tmp312 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp310,tmp311,tmp312,arg4/*state*/);
 concat_FilePosition tmp313 = ((*arg0/*op*/).e2_pos);
@@ -32847,11 +32848,11 @@ bool const tmp4 = ((bool)(tmp3|(((int64_t)tmp2)>=(((*arg2/*state*/).e5_autoTypes
 int32_t tmp5 = tmp2;
 if(tmp4){
 concat_list_I1 tmp6;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"auto-type id out of range "),(&tmp6));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"a""u""t""o""-""t""y""p""e"" ""i""d"" ""o""u""t"" ""o""f"" ""r""a""n""g""e"" """),(&tmp6));
 concat_list_I1 tmp7;
 concat_sb_dappendI(tmp6,((int64_t)tmp5),(&tmp7));
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp7,((int64_t)5),((int8_t const*)" max:"),(&tmp8));
+concat_sb_dappendS(tmp7,((int64_t)5),((int8_t const*)" ""m""a""x"":"""),(&tmp8));
 int64_t tmp9 = (((*arg2/*state*/).e5_autoTypes).e1_length);
 concat_list_I1 tmp10;
 concat_sb_dappendI(tmp8,((int64_t)(tmp9-((int64_t)1))),(&tmp10));
@@ -32873,13 +32874,13 @@ concat_LabelFlag const tmp16 = concat_id_dlabelFlags((arg1/*idInfo*/.e1_labelId)
 bool const tmp17 = (((concat_LabelFlag)(tmp16&((concat_LabelFlag)1)))==((int32_t)0));
 if(tmp17){
 concat_list_I1 tmp18;
-concat_sb_dwrap(((int64_t)9),((int8_t const*)"variable "),(&tmp18));
+concat_sb_dwrap(((int64_t)9),((int8_t const*)"v""a""r""i""a""b""l""e"" """),(&tmp18));
 concat_optional_I3 tmp19 = concat_id_dlabelName((arg1/*idInfo*/.e1_labelId),((concat_LabelContext const*)l1_labelContext));
 concat_internal_checkEnumIndex(tmp19.label,1,"./concat.concat/typeCheck.concat:1241:55");
 concat_list_I1 tmp20;
 concat_sb_dappendStr(tmp18,(tmp19.data.e1_data),(&tmp20));
 concat_list_I1 tmp21;
-concat_sb_dappendS(tmp20,((int64_t)15),((int8_t const*)" is not mutable"),(&tmp21));
+concat_sb_dappendS(tmp20,((int64_t)15),((int8_t const*)" ""i""s"" ""n""o""t"" ""m""u""t""a""b""l""e"""),(&tmp21));
 concat_FilePosition tmp22 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp21,tmp22,arg2/*state*/);
 }else{
@@ -32888,7 +32889,7 @@ else_label1282:;
 concat_arrayView_I3 tmp23;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))),(&tmp23));
 concat_arrayView_I1 tmp24;
-concat_string_dwrap(((int64_t)19),((int8_t const*)"variable assignment"),(&tmp24));
+concat_string_dwrap(((int64_t)19),((int8_t const*)"v""a""r""i""a""b""l""e"" ""a""s""s""i""g""n""m""e""n""t"""),(&tmp24));
 concat_FilePosition tmp25 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp23,tmp24,tmp25,arg2/*state*/);
 concat_Type tmp26 = ((*arg0/*op*/).e1_dataType);
@@ -32963,7 +32964,7 @@ concat_OpValue* const tmp52 = (&((*arg0/*op*/).e0_val));
 bool const tmp53 = ((*tmp52).label==5);
 if(tmp53){
 concat_list_I1 tmp54;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"cannot set the value of a procedure"),(&tmp54));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"c""a""n""n""o""t"" ""s""e""t"" ""t""h""e"" ""v""a""l""u""e"" ""o""f"" ""a"" ""p""r""o""c""e""d""u""r""e"""),(&tmp54));
 concat_FilePosition tmp55 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp54,tmp55,arg2/*state*/);
 return;
@@ -32973,12 +32974,12 @@ else_label1288:;
 break;
 case 3:case 0:case 4:;
 concat_list_I1 tmp56;
-concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "),(&tmp56));
+concat_sb_dwrap(((int64_t)10),((int8_t const*)"o""p""e""r""a""t""i""o""n"" """),(&tmp56));
 concat_Operation tmp57 = (*arg0/*op*/);
 concat_list_I1 tmp58;
 concat_sb_dappendOp(tmp56,tmp57,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp58));
 concat_list_I1 tmp59;
-concat_sb_dappendS(tmp58,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"),(&tmp59));
+concat_sb_dappendS(tmp58,((int64_t)46),((int8_t const*)" ""s""h""o""u""l""d"" ""n""o""t"" ""e""x""i""s""t"" ""a""t"" ""t""h""i""s"" ""s""t""a""g""e"" ""o""f"" ""c""o""m""p""i""l""a""t""i""o""n"""),(&tmp59));
 concat_FilePosition tmp60 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp59,tmp60,arg2/*state*/);
 break;
@@ -33002,11 +33003,11 @@ int32_t const l3_autoTypeId = tmp4;
 bool const tmp5 = ((bool)((l3_autoTypeId<((int32_t)0))|(((int64_t)l3_autoTypeId)>=(((*arg2/*state*/).e5_autoTypes).e1_length))));
 if(tmp5){
 concat_list_I1 tmp6;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"auto-type id out of range "),(&tmp6));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"a""u""t""o""-""t""y""p""e"" ""i""d"" ""o""u""t"" ""o""f"" ""r""a""n""g""e"" """),(&tmp6));
 concat_list_I1 tmp7;
 concat_sb_dappendI(tmp6,((int64_t)l3_autoTypeId),(&tmp7));
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp7,((int64_t)5),((int8_t const*)" max:"),(&tmp8));
+concat_sb_dappendS(tmp7,((int64_t)5),((int8_t const*)" ""m""a""x"":"""),(&tmp8));
 int64_t tmp9 = (((*arg2/*state*/).e5_autoTypes).e1_length);
 concat_list_I1 tmp10;
 concat_sb_dappendI(tmp8,((int64_t)(tmp9-((int64_t)1))),(&tmp10));
@@ -33033,7 +33034,7 @@ else_label1290:;
 concat_arrayView_I3 tmp17;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))),(&tmp17));
 concat_arrayView_I1 tmp18;
-concat_string_dwrap(((int64_t)20),((int8_t const*)"variable declaration"),(&tmp18));
+concat_string_dwrap(((int64_t)20),((int8_t const*)"v""a""r""i""a""b""l""e"" ""d""e""c""l""a""r""a""t""i""o""n"""),(&tmp18));
 concat_FilePosition tmp19 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp17,tmp18,tmp19,arg2/*state*/);
 }else{
@@ -33135,12 +33136,12 @@ tmp48 = ((int32_t)(tmp48+((int32_t)1)));
 break;
 case 6:case 3:case 0:case 4:;
 concat_list_I1 tmp61;
-concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "),(&tmp61));
+concat_sb_dwrap(((int64_t)10),((int8_t const*)"o""p""e""r""a""t""i""o""n"" """),(&tmp61));
 concat_Operation tmp62 = (*arg0/*op*/);
 concat_list_I1 tmp63;
 concat_sb_dappendOp(tmp61,tmp62,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp63));
 concat_list_I1 tmp64;
-concat_sb_dappendS(tmp63,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"),(&tmp64));
+concat_sb_dappendS(tmp63,((int64_t)46),((int8_t const*)" ""s""h""o""u""l""d"" ""n""o""t"" ""e""x""i""s""t"" ""a""t"" ""t""h""i""s"" ""s""t""a""g""e"" ""o""f"" ""c""o""m""p""i""l""a""t""i""o""n"""),(&tmp64));
 concat_FilePosition tmp65 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp64,tmp65,arg2/*state*/);
 break;
@@ -33157,7 +33158,7 @@ int64_t tmp0 = (((*arg2/*state*/).e3_typeStack).e1_length);
 bool const tmp1 = (tmp0==((int64_t)0));
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"missing argument for operation "),(&tmp2));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"m""i""s""s""i""n""g"" ""a""r""g""u""m""e""n""t"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp2));
 concat_Operation tmp3 = (*arg0/*op*/);
 concat_list_I1 tmp4;
 concat_sb_dappendOp(tmp2,tmp3,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp4));
@@ -33193,12 +33194,12 @@ bool const tmp17 = concat_types_disInt(tmp16,((concat_TypeContext const*)l2_type
 bool const tmp18 = (!tmp17);
 if(tmp18){
 concat_list_I1 tmp19;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"invalid type for operation "),(&tmp19));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"i""n""v""a""l""i""d"" ""t""y""p""e"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp19));
 concat_Operation tmp20 = (*arg0/*op*/);
 concat_list_I1 tmp21;
 concat_sb_dappendOp(tmp19,tmp20,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp21));
 concat_list_I1 tmp22;
-concat_sb_dappendS(tmp21,((int64_t)1),((int8_t const*)" "),(&tmp22));
+concat_sb_dappendS(tmp21,((int64_t)1),((int8_t const*)" """),(&tmp22));
 concat_list_I39 tmp23 = ((*arg2/*state*/).e3_typeStack);
 concat_optional_I45 tmp24 = concat_list_dat_I21(tmp23,l3_offset);
 concat_internal_checkEnumIndex(tmp24.label,1,"./concat.concat/typeCheck.concat:1417:44");
@@ -33207,7 +33208,7 @@ concat_Type tmp26 = ((*tmp25).e0_valType);
 concat_list_I1 tmp27;
 concat_sb_dappendType(tmp22,tmp26,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp27));
 concat_list_I1 tmp28;
-concat_sb_dappendS(tmp27,((int64_t)17),((int8_t const*)" is not a pointer"),(&tmp28));
+concat_sb_dappendS(tmp27,((int64_t)17),((int8_t const*)" ""i""s"" ""n""o""t"" ""a"" ""p""o""i""n""t""e""r"""),(&tmp28));
 concat_FilePosition tmp29 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp28,tmp29,arg2/*state*/);
 return;
@@ -33225,12 +33226,12 @@ bool const tmp34 = concat_types_disPointer(tmp33,((concat_TypeContext const*)l2_
 bool const tmp35 = (!tmp34);
 if(tmp35){
 concat_list_I1 tmp36;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"invalid type for operation "),(&tmp36));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"i""n""v""a""l""i""d"" ""t""y""p""e"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp36));
 concat_Operation tmp37 = (*arg0/*op*/);
 concat_list_I1 tmp38;
 concat_sb_dappendOp(tmp36,tmp37,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp38));
 concat_list_I1 tmp39;
-concat_sb_dappendS(tmp38,((int64_t)1),((int8_t const*)" "),(&tmp39));
+concat_sb_dappendS(tmp38,((int64_t)1),((int8_t const*)" """),(&tmp39));
 concat_list_I39 tmp40 = ((*arg2/*state*/).e3_typeStack);
 concat_optional_I45 tmp41 = concat_list_dat_I21(tmp40,l3_offset);
 concat_internal_checkEnumIndex(tmp41.label,1,"./concat.concat/typeCheck.concat:1428:42");
@@ -33239,7 +33240,7 @@ concat_Type tmp43 = ((*tmp42).e0_valType);
 concat_list_I1 tmp44;
 concat_sb_dappendType(tmp39,tmp43,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp44));
 concat_list_I1 tmp45;
-concat_sb_dappendS(tmp44,((int64_t)17),((int8_t const*)" is not a pointer"),(&tmp45));
+concat_sb_dappendS(tmp44,((int64_t)17),((int8_t const*)" ""i""s"" ""n""o""t"" ""a"" ""p""o""i""n""t""e""r"""),(&tmp45));
 concat_FilePosition tmp46 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp45,tmp46,arg2/*state*/);
 return;
@@ -33257,7 +33258,7 @@ concat_Type tmp51 = l5_pointerType;
 bool const tmp52 = concat_types_disCallable(tmp51,((concat_TypeContext const*)l2_typeContext));
 if(tmp52){
 concat_list_I1 tmp53;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"cannot deference procedure pointer"),(&tmp53));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"c""a""n""n""o""t"" ""d""e""f""e""r""e""n""c""e"" ""p""r""o""c""e""d""u""r""e"" ""p""o""i""n""t""e""r"""),(&tmp53));
 concat_Type tmp54 = l5_pointerType;
 concat_list_I1 tmp55;
 concat_sb_dappendType(tmp53,tmp54,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp55));
@@ -33276,11 +33277,11 @@ int64_t const tmp61 = concat_types_dgetArrayDims(tmp60,((concat_TypeContext cons
 bool const tmp62 = (((int64_t)tmp59)>tmp61);
 if(tmp62){
 concat_list_I1 tmp63;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"too much indices for pointer access "),(&tmp63));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"t""o""o"" ""m""u""c""h"" ""i""n""d""i""c""e""s"" ""f""o""r"" ""p""o""i""n""t""e""r"" ""a""c""c""e""s""s"" """),(&tmp63));
 concat_list_I1 tmp64;
 concat_sb_dappendI(tmp63,((int64_t)l4_indexCount),(&tmp64));
 concat_list_I1 tmp65;
-concat_sb_dappendS(tmp64,((int64_t)12),((int8_t const*)" dimensions:"),(&tmp65));
+concat_sb_dappendS(tmp64,((int64_t)12),((int8_t const*)" ""d""i""m""e""n""s""i""o""n""s"":"""),(&tmp65));
 concat_Type tmp66 = l5_pointerType;
 int64_t const tmp67 = concat_types_dgetArrayDims(tmp66,((concat_TypeContext const*)l2_typeContext));
 concat_list_I1 tmp68;
@@ -33333,7 +33334,7 @@ concat_types_dArraySizeType const tmp89 = (tmp88.e1_sizeType);
 bool const tmp90 = (!(tmp89.label==0));
 if(tmp90){
 concat_list_I1 tmp91;
-concat_sb_dwrap(((int64_t)92),((int8_t const*)"unexpected type for array-size, generics should no longer exist at this point of compilation"),(&tmp91));
+concat_sb_dwrap(((int64_t)92),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""f""o""r"" ""a""r""r""a""y""-""s""i""z""e"","" ""g""e""n""e""r""i""c""s"" ""s""h""o""u""l""d"" ""n""o"" ""l""o""n""g""e""r"" ""e""x""i""s""t"" ""a""t"" ""t""h""i""s"" ""p""o""i""n""t"" ""o""f"" ""c""o""m""p""i""l""a""t""i""o""n"""),(&tmp91));
 concat_FilePosition tmp92 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp91,tmp92,arg2/*state*/);
 }else{
@@ -33383,7 +33384,7 @@ concat_Type tmp112 = l5_pointerType;
 concat_list_I1 tmp113;
 concat_sb_dappendType(tmp111,tmp112,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp113));
 concat_list_I1 tmp114;
-concat_sb_dappendS(tmp113,((int64_t)15),((int8_t const*)" is not mutable"),(&tmp114));
+concat_sb_dappendS(tmp113,((int64_t)15),((int8_t const*)" ""i""s"" ""n""o""t"" ""m""u""t""a""b""l""e"""),(&tmp114));
 concat_FilePosition tmp115 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp114,tmp115,arg2/*state*/);
 }else{
@@ -33399,7 +33400,7 @@ concat_29_FaddCompiledStackOps(((int64_t)((int32_t)(tmp118+((int32_t)1)))),tmp11
 concat_arrayView_I3 tmp120;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&l6_baseType)),(&tmp120));
 concat_arrayView_I1 tmp121;
-concat_string_dwrap(((int64_t)18),((int8_t const*)"pointer assignment"),(&tmp121));
+concat_string_dwrap(((int64_t)18),((int8_t const*)"p""o""i""n""t""e""r"" ""a""s""s""i""g""n""m""e""n""t"""),(&tmp121));
 concat_FilePosition tmp122 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp120,tmp121,tmp122,arg2/*state*/);
 concat_FilePosition tmp123 = ((*arg0/*op*/).e2_pos);
@@ -33437,12 +33438,12 @@ concat_optional_I45 tmp0 = concat_list_dpeek_I5(((*arg2/*state*/).e3_typeStack))
 bool const tmp1 = concat_optional_disEmpty_I10(tmp0);
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp2));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp2));
 concat_Operation tmp3 = (*arg0/*op*/);
 concat_list_I1 tmp4;
 concat_sb_dappendOp(tmp2,tmp3,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp4));
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp4,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp5));
+concat_sb_dappendS(tmp4,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp5));
 concat_list_I1 tmp6;
 concat_sb_dappendI(tmp5,(((*arg2/*state*/).e3_typeStack).e1_length),(&tmp6));
 concat_FilePosition tmp7 = ((*arg0/*op*/).e2_pos);
@@ -33465,7 +33466,7 @@ concat_Type tmp14 = ((*l3_typeInfo).e0_valType);
 concat_list_I1 tmp15;
 concat_sb_dappendType(tmp13,tmp14,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp15));
 concat_list_I1 tmp16;
-concat_sb_dappendS(tmp15,((int64_t)29),((int8_t const*)" is not a tuple or union type"),(&tmp16));
+concat_sb_dappendS(tmp15,((int64_t)29),((int8_t const*)" ""i""s"" ""n""o""t"" ""a"" ""t""u""p""l""e"" ""o""r"" ""u""n""i""o""n"" ""t""y""p""e"""),(&tmp16));
 concat_FilePosition tmp17 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp16,tmp17,arg2/*state*/);
 return;
@@ -33480,11 +33481,11 @@ int64_t const tmp21 = concat_types_dcompositeEltCount(tmp20,((concat_TypeContext
 bool const tmp22 = ((bool)((arg1/*eltIndex*/<((int32_t)0))|(((int64_t)arg1/*eltIndex*/)>=tmp21)));
 if(tmp22){
 concat_list_I1 tmp23;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"element index outside allowed range "),(&tmp23));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"e""l""e""m""e""n""t"" ""i""n""d""e""x"" ""o""u""t""s""i""d""e"" ""a""l""l""o""w""e""d"" ""r""a""n""g""e"" """),(&tmp23));
 concat_list_I1 tmp24;
 concat_sb_dappendI(tmp23,((int64_t)arg1/*eltIndex*/),(&tmp24));
 concat_list_I1 tmp25;
-concat_sb_dappendS(tmp24,((int64_t)6),((int8_t const*)" size:"),(&tmp25));
+concat_sb_dappendS(tmp24,((int64_t)6),((int8_t const*)" ""s""i""z""e"":"""),(&tmp25));
 concat_Type tmp26 = l4_compositeType;
 int64_t const tmp27 = concat_types_dcompositeEltCount(tmp26,((concat_TypeContext const*)l2_typeContext));
 concat_list_I1 tmp28;
@@ -33521,7 +33522,7 @@ if(tmp42){
 bool const tmp43 = (!l7_mutable);
 if(tmp43){
 concat_list_I1 tmp44;
-concat_sb_dwrap(((int64_t)8),((int8_t const*)"element "),(&tmp44));
+concat_sb_dwrap(((int64_t)8),((int8_t const*)"e""l""e""m""e""n""t"" """),(&tmp44));
 bool const tmp45 = concat_id_disLabelEmpty(l6_elementLabel,((concat_LabelContext const*)l1_labelContext));
 if(tmp45){
 concat_list_I1 tmp46;
@@ -33536,12 +33537,12 @@ concat_sb_dappendStr(tmp44,(tmp47.data.e1_data),(&tmp48));
 tmp44 = tmp48;
 }
 concat_list_I1 tmp49;
-concat_sb_dappendS(tmp44,((int64_t)4),((int8_t const*)" in "),(&tmp49));
+concat_sb_dappendS(tmp44,((int64_t)4),((int8_t const*)" ""i""n"" """),(&tmp49));
 concat_Type tmp50 = ((*l3_typeInfo).e0_valType);
 concat_list_I1 tmp51;
 concat_sb_dappendType(tmp49,tmp50,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp51));
 concat_list_I1 tmp52;
-concat_sb_dappendS(tmp51,((int64_t)15),((int8_t const*)" is not mutable"),(&tmp52));
+concat_sb_dappendS(tmp51,((int64_t)15),((int8_t const*)" ""i""s"" ""n""o""t"" ""m""u""t""a""b""l""e"""),(&tmp52));
 concat_FilePosition tmp53 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp52,tmp53,arg2/*state*/);
 }else{
@@ -33564,7 +33565,7 @@ concat_29_FaddCompiledStackOps(((int64_t)1),tmp59,arg2/*state*/);
 concat_arrayView_I3 tmp60;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&l5_elementType)),(&tmp60));
 concat_arrayView_I1 tmp61;
-concat_string_dwrap(((int64_t)16),((int8_t const*)"tuple assignment"),(&tmp61));
+concat_string_dwrap(((int64_t)16),((int8_t const*)"t""u""p""l""e"" ""a""s""s""i""g""n""m""e""n""t"""),(&tmp61));
 concat_FilePosition tmp62 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp60,tmp61,tmp62,arg2/*state*/);
 concat_Type tmp63 = l5_elementType;
@@ -33606,7 +33607,7 @@ concat_TypeContext* const l2_typeContext = (&((*l0_idContext).e2_typeContext));
 bool const tmp0 = concat_id_disLabelEmpty(arg1/*label*/,((concat_LabelContext const*)l1_labelContext));
 if(tmp0){
 concat_list_I1 tmp1;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"missing label name "),(&tmp1));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"m""i""s""s""i""n""g"" ""l""a""b""e""l"" ""n""a""m""e"" """),(&tmp1));
 concat_FilePosition tmp2 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp1,tmp2,arg2/*state*/);
 return;
@@ -33620,12 +33621,12 @@ concat_optional_I45 tmp4 = concat_list_dpeek_I5(((*arg2/*state*/).e3_typeStack))
 bool const tmp5 = concat_optional_disEmpty_I10(tmp4);
 if(tmp5){
 concat_list_I1 tmp6;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp6));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp6));
 concat_Operation tmp7 = (*arg0/*op*/);
 concat_list_I1 tmp8;
 concat_sb_dappendOp(tmp6,tmp7,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp8));
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp8,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp9));
+concat_sb_dappendS(tmp8,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp9));
 concat_list_I1 tmp10;
 concat_sb_dappendI(tmp9,(((*arg2/*state*/).e3_typeStack).e1_length),(&tmp10));
 concat_FilePosition tmp11 = ((*arg0/*op*/).e2_pos);
@@ -33677,7 +33678,7 @@ concat_OpValue* const tmp27 = (&((*arg0/*op*/).e0_val));
 break;
 default:;
 concat_list_I1 tmp28;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"unexpected operation for get label: "),(&tmp28));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""f""o""r"" ""g""e""t"" ""l""a""b""e""l"":"" """),(&tmp28));
 concat_Operation tmp29 = (*arg0/*op*/);
 concat_list_I1 tmp30;
 concat_sb_dappendOp(tmp28,tmp29,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp30));
@@ -33715,16 +33716,16 @@ concat_Type tmp44 = l10_eltType;
 bool const tmp45 = concat_types_disEmpty(tmp44,((concat_TypeContext const*)l2_typeContext));
 if(tmp45){
 concat_list_I1 tmp46;
-concat_sb_dwrap(((int64_t)8),((int8_t const*)"element "),(&tmp46));
+concat_sb_dwrap(((int64_t)8),((int8_t const*)"e""l""e""m""e""n""t"" """),(&tmp46));
 concat_list_I1 tmp47;
 concat_sb_dappendStr(tmp46,l3_labelName,(&tmp47));
 concat_list_I1 tmp48;
-concat_sb_dappendS(tmp47,((int64_t)9),((int8_t const*)" in enum "),(&tmp48));
+concat_sb_dappendS(tmp47,((int64_t)9),((int8_t const*)" ""i""n"" ""e""n""u""m"" """),(&tmp48));
 concat_Type tmp49 = l5_targetType;
 concat_list_I1 tmp50;
 concat_sb_dappendType(tmp48,tmp49,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp50));
 concat_list_I1 tmp51;
-concat_sb_dappendS(tmp50,((int64_t)22),((int8_t const*)" does not hold a value"),(&tmp51));
+concat_sb_dappendS(tmp50,((int64_t)22),((int8_t const*)" ""d""o""e""s"" ""n""o""t"" ""h""o""l""d"" ""a"" ""v""a""l""u""e"""),(&tmp51));
 concat_FilePosition tmp52 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp51,tmp52,arg2/*state*/);
 }else{goto else_label1329;}
@@ -33770,7 +33771,7 @@ concat_OpValue* const tmp65 = (&((*arg0/*op*/).e0_val));
 break;
 default:;
 concat_list_I1 tmp66;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"unexpected operation for get label: "),(&tmp66));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""f""o""r"" ""g""e""t"" ""l""a""b""e""l"":"" """),(&tmp66));
 concat_Operation tmp67 = (*arg0/*op*/);
 concat_list_I1 tmp68;
 concat_sb_dappendOp(tmp66,tmp67,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp68));
@@ -33787,16 +33788,16 @@ if(tmp72){
 bool const tmp73 = (!l11_mutable);
 if(tmp73){
 concat_list_I1 tmp74;
-concat_sb_dwrap(((int64_t)8),((int8_t const*)"element "),(&tmp74));
+concat_sb_dwrap(((int64_t)8),((int8_t const*)"e""l""e""m""e""n""t"" """),(&tmp74));
 concat_list_I1 tmp75;
 concat_sb_dappendStr(tmp74,l3_labelName,(&tmp75));
 concat_list_I1 tmp76;
-concat_sb_dappendS(tmp75,((int64_t)9),((int8_t const*)" in enum "),(&tmp76));
+concat_sb_dappendS(tmp75,((int64_t)9),((int8_t const*)" ""i""n"" ""e""n""u""m"" """),(&tmp76));
 concat_Type tmp77 = l5_targetType;
 concat_list_I1 tmp78;
 concat_sb_dappendType(tmp76,tmp77,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp78));
 concat_list_I1 tmp79;
-concat_sb_dappendS(tmp78,((int64_t)15),((int8_t const*)" is not mutable"),(&tmp79));
+concat_sb_dappendS(tmp78,((int64_t)15),((int8_t const*)" ""i""s"" ""n""o""t"" ""m""u""t""a""b""l""e"""),(&tmp79));
 concat_FilePosition tmp80 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp79,tmp80,arg2/*state*/);
 }else{
@@ -33822,7 +33823,7 @@ concat_29_FaddCompiledStackOps(((int64_t)1),tmp90,arg2/*state*/);
 concat_arrayView_I3 tmp91;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&l10_eltType)),(&tmp91));
 concat_arrayView_I1 tmp92;
-concat_string_dwrap(((int64_t)15),((int8_t const*)"enum assignment"),(&tmp92));
+concat_string_dwrap(((int64_t)15),((int8_t const*)"e""n""u""m"" ""a""s""s""i""g""n""m""e""n""t"""),(&tmp92));
 concat_FilePosition tmp93 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp91,tmp92,tmp93,arg2/*state*/);
 concat_FilePosition tmp94 = ((*arg0/*op*/).e2_pos);
@@ -33912,7 +33913,7 @@ concat_OpValue* const tmp126 = (&((*arg0/*op*/).e0_val));
 break;
 default:;
 concat_list_I1 tmp127;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"unexpected operation for get label: "),(&tmp127));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""f""o""r"" ""g""e""t"" ""l""a""b""e""l"":"" """),(&tmp127));
 concat_Operation tmp128 = (*arg0/*op*/);
 concat_list_I1 tmp129;
 concat_sb_dappendOp(tmp127,tmp128,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp129));
@@ -33934,7 +33935,7 @@ concat_Type tmp132 = ((*l4_typeInfo).e0_valType);
 concat_list_I1 tmp133;
 concat_sb_dappendType(tmp131,tmp132,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp133));
 concat_list_I1 tmp134;
-concat_sb_dappendS(tmp133,((int64_t)23),((int8_t const*)" does not have a label "),(&tmp134));
+concat_sb_dappendS(tmp133,((int64_t)23),((int8_t const*)" ""d""o""e""s"" ""n""o""t"" ""h""a""v""e"" ""a"" ""l""a""b""e""l"" """),(&tmp134));
 concat_list_I1 tmp135;
 concat_sb_dappendStr(tmp134,l3_labelName,(&tmp135));
 concat_FilePosition tmp136 = ((*arg0/*op*/).e2_pos);
@@ -33950,12 +33951,12 @@ bool const tmp1 = concat_types_disProcedure(tmp0,((concat_TypeContext const*)l2_
 bool const tmp2 = (!tmp1);
 if(tmp2){
 concat_list_I1 tmp3;
-concat_sb_dwrap(((int64_t)28),((int8_t const*)"unexpected type for return: "),(&tmp3));
+concat_sb_dwrap(((int64_t)28),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""f""o""r"" ""r""e""t""u""r""n"":"" """),(&tmp3));
 concat_Type tmp4 = ((*arg0/*op*/).e1_dataType);
 concat_list_I1 tmp5;
 concat_sb_dappendType(tmp3,tmp4,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp5));
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp5,((int64_t)19),((int8_t const*)" expected procedure"),(&tmp6));
+concat_sb_dappendS(tmp5,((int64_t)19),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""p""r""o""c""e""d""u""r""e"""),(&tmp6));
 concat_FilePosition tmp7 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp6,tmp7,arg1/*state*/);
 return;
@@ -33967,7 +33968,7 @@ concat_Type tmp9;
 bool const tmp10 = concat_types_dgetProcOut(tmp8,((concat_TypeContext const*)l2_typeContext),(&tmp9));
 if(tmp10){
 concat_list_I1 tmp11;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"could not resolve procedure return value"),(&tmp11));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""r""e""s""o""l""v""e"" ""p""r""o""c""e""d""u""r""e"" ""r""e""t""u""r""n"" ""v""a""l""u""e"""),(&tmp11));
 concat_FilePosition tmp12 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp11,tmp12,arg1/*state*/);
 return;
@@ -33981,11 +33982,11 @@ int64_t const l4_valCount = tmp14;
 bool const tmp15 = (l4_valCount<(((*arg1/*state*/).e3_typeStack).e1_length));
 if(tmp15){
 concat_list_I1 tmp16;
-concat_sb_dwrap(((int64_t)64),((int8_t const*)"wrong number of return values at the end of procedure expected: "),(&tmp16));
+concat_sb_dwrap(((int64_t)64),((int8_t const*)"w""r""o""n""g"" ""n""u""m""b""e""r"" ""o""f"" ""r""e""t""u""r""n"" ""v""a""l""u""e""s"" ""a""t"" ""t""h""e"" ""e""n""d"" ""o""f"" ""p""r""o""c""e""d""u""r""e"" ""e""x""p""e""c""t""e""d"":"" """),(&tmp16));
 concat_list_I1 tmp17;
 concat_sb_dappendI(tmp16,l4_valCount,(&tmp17));
 concat_list_I1 tmp18;
-concat_sb_dappendS(tmp17,((int64_t)5),((int8_t const*)" got "),(&tmp18));
+concat_sb_dappendS(tmp17,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp18));
 concat_list_I1 tmp19;
 concat_sb_dappendI(tmp18,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp19));
 concat_FilePosition tmp20 = ((*arg0/*op*/).e2_pos);
@@ -33997,7 +33998,7 @@ concat_Type tmp21 = l3_procOut;
 concat_arrayView_I3 tmp22;
 concat_types_dcompositeElts(tmp21,((concat_TypeContext const*)l2_typeContext),(&tmp22));
 concat_arrayView_I1 tmp23;
-concat_string_dwrap(((int64_t)16),((int8_t const*)"return statement"),(&tmp23));
+concat_string_dwrap(((int64_t)16),((int8_t const*)"r""e""t""u""r""n"" ""s""t""a""t""e""m""e""n""t"""),(&tmp23));
 concat_FilePosition tmp24 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp22,tmp23,tmp24,arg1/*state*/);
 concat_list_I25 tmp25 = ((*arg1/*state*/).e1_compiledOps);
@@ -34018,7 +34019,7 @@ return;
 else_label1340:;
 }
 concat_list_I1 tmp1;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"unreachable operation: "),(&tmp1));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"u""n""r""e""a""c""h""a""b""l""e"" ""o""p""e""r""a""t""i""o""n"":"" """),(&tmp1));
 concat_Operation tmp2 = (*arg0/*op*/);
 concat_IdentifierContext* const tmp3 = ((*arg1/*state*/).e0_idContext);
 concat_IdentifierContext* const tmp4 = ((*arg1/*state*/).e0_idContext);
@@ -34038,7 +34039,7 @@ return;
 else_label1341:;
 }
 concat_list_I1 tmp2;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"unexpected operation at global level: "),(&tmp2));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" ""a""t"" ""g""l""o""b""a""l"" ""l""e""v""e""l"":"" """),(&tmp2));
 concat_Operation tmp3 = (*arg0/*op*/);
 concat_IdentifierContext* const tmp4 = ((*arg1/*state*/).e0_idContext);
 concat_IdentifierContext* const tmp5 = ((*arg1/*state*/).e0_idContext);
@@ -34191,9 +34192,9 @@ concat_TypeContext* const l2_typeContext = (&((*l0_idContext).e2_typeContext));
 bool const tmp0 = concat_29_FcheckSync(arg1/*state*/);
 if(tmp0){
 concat_list_I1 tmp1;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"type-stack out of sync "),(&tmp1));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""o""u""t"" ""o""f"" ""s""y""n""c"" """),(&tmp1));
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp1,((int64_t)4),((int8_t const*)" at "),(&tmp2));
+concat_sb_dappendS(tmp1,((int64_t)4),((int8_t const*)" ""a""t"" """),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendStr(tmp2,(((*arg0/*op*/).e2_pos).e0_fileName),(&tmp3));
 concat_list_I1 tmp4;
@@ -34233,7 +34234,7 @@ bool const tmp20 = concat_types_disEmpty(tmp19,((concat_TypeContext const*)l2_ty
 bool const tmp21 = (!tmp20);
 if(tmp21){
 concat_list_I1 tmp22;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"cannot directly use enum label \""),(&tmp22));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"c""a""n""n""o""t"" ""d""i""r""e""c""t""l""y"" ""u""s""e"" ""e""n""u""m"" ""l""a""b""e""l"" ""\""""),(&tmp22));
 concat_Type tmp23 = ((*arg0/*op*/).e1_dataType);
 concat_OpValue* const tmp24 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp24).label,1,"./concat.concat/typeCheck.concat:1861:46");
@@ -34245,12 +34246,12 @@ concat_internal_checkEnumIndex(tmp27.label,1,"./concat.concat/typeCheck.concat:1
 concat_list_I1 tmp28;
 concat_sb_dappendStr(tmp22,(tmp27.data.e1_data),(&tmp28));
 concat_list_I1 tmp29;
-concat_sb_dappendS(tmp28,((int64_t)5),((int8_t const*)"\" in "),(&tmp29));
+concat_sb_dappendS(tmp28,((int64_t)5),((int8_t const*)"\""" ""i""n"" """),(&tmp29));
 concat_Type tmp30 = ((*arg0/*op*/).e1_dataType);
 concat_list_I1 tmp31;
 concat_sb_dappendType(tmp29,tmp30,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp31));
 concat_list_I1 tmp32;
-concat_sb_dappendS(tmp31,((int64_t)32),((int8_t const*)" use \"new\" to create enum values"),(&tmp32));
+concat_sb_dappendS(tmp31,((int64_t)32),((int8_t const*)" ""u""s""e"" ""\"""n""e""w""\""" ""t""o"" ""c""r""e""a""t""e"" ""e""n""u""m"" ""v""a""l""u""e""s"""),(&tmp32));
 concat_FilePosition tmp33 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp32,tmp33,arg1/*state*/);
 }else{
@@ -34289,12 +34290,12 @@ bool const tmp45 = concat_types_dcanAutoCast(tmp43,tmp44,((concat_TypeContext co
 bool const tmp46 = (!tmp45);
 if(tmp46){
 concat_list_I1 tmp47;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"wrong type for switch label: expected "),(&tmp47));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""s""w""i""t""c""h"" ""l""a""b""e""l"":"" ""e""x""p""e""c""t""e""d"" """),(&tmp47));
 concat_Type tmp48 = l5_switchType;
 concat_list_I1 tmp49;
 concat_sb_dappendType(tmp47,tmp48,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp49));
 concat_list_I1 tmp50;
-concat_sb_dappendS(tmp49,((int64_t)5),((int8_t const*)" got "),(&tmp50));
+concat_sb_dappendS(tmp49,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp50));
 concat_Type tmp51 = ((*arg0/*op*/).e1_dataType);
 concat_list_I1 tmp52;
 concat_sb_dappendType(tmp50,tmp51,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp52));
@@ -34317,7 +34318,7 @@ concat_ConstValue tmp60 = l6_constant;
 bool const tmp61 = concat_constantEquals(tmp59,tmp60,((concat_LabelContext const*)l1_labelContext));
 if(tmp61){
 concat_list_I1 tmp62;
-concat_sb_dwrap(((int64_t)16),((int8_t const*)"duplicate label "),(&tmp62));
+concat_sb_dwrap(((int64_t)16),((int8_t const*)"d""u""p""l""i""c""a""t""e"" ""l""a""b""e""l"" """),(&tmp62));
 concat_Type tmp63 = l5_switchType;
 bool const tmp64 = concat_types_disEnum(tmp63,((concat_TypeContext const*)l2_typeContext));
 if(tmp64){
@@ -34337,7 +34338,7 @@ concat_sb_dappendConstant(tmp62,tmp69,((concat_ConstantContext const*)(&((*l0_id
 tmp62 = tmp70;
 }
 concat_list_I1 tmp71;
-concat_sb_dappendS(tmp62,((int64_t)15),((int8_t const*)" in switch-case"),(&tmp71));
+concat_sb_dappendS(tmp62,((int64_t)15),((int8_t const*)" ""i""n"" ""s""w""i""t""c""h""-""c""a""s""e"""),(&tmp71));
 concat_FilePosition tmp72 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp71,tmp72,arg1/*state*/);
 }else{
@@ -34374,12 +34375,12 @@ concat_optional_I45 tmp82 = concat_list_dpeek_I5(((*arg1/*state*/).e3_typeStack)
 bool const tmp83 = concat_optional_disEmpty_I10(tmp82);
 if(tmp83){
 concat_list_I1 tmp84;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp84));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp84));
 concat_Operation tmp85 = (*arg0/*op*/);
 concat_list_I1 tmp86;
 concat_sb_dappendOp(tmp84,tmp85,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp86));
 concat_list_I1 tmp87;
-concat_sb_dappendS(tmp86,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp87));
+concat_sb_dappendS(tmp86,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp87));
 concat_list_I1 tmp88;
 concat_sb_dappendI(tmp87,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp88));
 concat_FilePosition tmp89 = ((*arg0/*op*/).e2_pos);
@@ -34403,13 +34404,13 @@ bool const tmp94 = concat_types_disNumber(tmp93,((concat_TypeContext const*)l2_t
 bool const tmp95 = (!tmp94);
 if(tmp95){
 concat_list_I1 tmp96;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "),(&tmp96));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"w""r""o""n""g"" ""o""p""e""r""a""n""d"" ""f""o""r"" ""u""n""a""r""y"" ""o""p""e""r""a""t""o""r"" """),(&tmp96));
 concat_OpValue* const tmp97 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp97).label,36,"./concat.concat/typeCheck.concat:1929:26");
 concat_list_I1 tmp98;
 concat_sb_dappendUnaryOperator(tmp96,((*tmp97).data.e36_unaryOperator),(&tmp98));
 concat_list_I1 tmp99;
-concat_sb_dappendS(tmp98,((int64_t)21),((int8_t const*)" expected number got "),(&tmp99));
+concat_sb_dappendS(tmp98,((int64_t)21),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""n""u""m""b""e""r"" ""g""o""t"" """),(&tmp99));
 concat_list_I1 tmp100;
 concat_sb_dappendType(tmp99,tmp93,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp100));
 concat_FilePosition tmp101 = ((*arg0/*op*/).e2_pos);
@@ -34424,13 +34425,13 @@ bool const tmp103 = concat_types_disInt(tmp102,((concat_TypeContext const*)l2_ty
 bool const tmp104 = (!tmp103);
 if(tmp104){
 concat_list_I1 tmp105;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "),(&tmp105));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"w""r""o""n""g"" ""o""p""e""r""a""n""d"" ""f""o""r"" ""u""n""a""r""y"" ""o""p""e""r""a""t""o""r"" """),(&tmp105));
 concat_OpValue* const tmp106 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp106).label,36,"./concat.concat/typeCheck.concat:1939:26");
 concat_list_I1 tmp107;
 concat_sb_dappendUnaryOperator(tmp105,((*tmp106).data.e36_unaryOperator),(&tmp107));
 concat_list_I1 tmp108;
-concat_sb_dappendS(tmp107,((int64_t)22),((int8_t const*)" expected integer got "),(&tmp108));
+concat_sb_dappendS(tmp107,((int64_t)22),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""i""n""t""e""g""e""r"" ""g""o""t"" """),(&tmp108));
 concat_list_I1 tmp109;
 concat_sb_dappendType(tmp108,tmp102,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp109));
 concat_FilePosition tmp110 = ((*arg0/*op*/).e2_pos);
@@ -34445,13 +34446,13 @@ bool const tmp112 = concat_types_disBoolean(tmp111,((concat_TypeContext const*)l
 bool const tmp113 = (!tmp112);
 if(tmp113){
 concat_list_I1 tmp114;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "),(&tmp114));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"w""r""o""n""g"" ""o""p""e""r""a""n""d"" ""f""o""r"" ""u""n""a""r""y"" ""o""p""e""r""a""t""o""r"" """),(&tmp114));
 concat_OpValue* const tmp115 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp115).label,36,"./concat.concat/typeCheck.concat:1949:26");
 concat_list_I1 tmp116;
 concat_sb_dappendUnaryOperator(tmp114,((*tmp115).data.e36_unaryOperator),(&tmp116));
 concat_list_I1 tmp117;
-concat_sb_dappendS(tmp116,((int64_t)22),((int8_t const*)" expected boolean got "),(&tmp117));
+concat_sb_dappendS(tmp116,((int64_t)22),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""b""o""o""l""e""a""n"" ""g""o""t"" """),(&tmp117));
 concat_list_I1 tmp118;
 concat_sb_dappendType(tmp117,tmp111,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp118));
 concat_FilePosition tmp119 = ((*arg0/*op*/).e2_pos);
@@ -34466,13 +34467,13 @@ bool const tmp121 = concat_types_disInt(tmp120,((concat_TypeContext const*)l2_ty
 bool const tmp122 = (!tmp121);
 if(tmp122){
 concat_list_I1 tmp123;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"wrong operand for unary operator "),(&tmp123));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"w""r""o""n""g"" ""o""p""e""r""a""n""d"" ""f""o""r"" ""u""n""a""r""y"" ""o""p""e""r""a""t""o""r"" """),(&tmp123));
 concat_OpValue* const tmp124 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp124).label,36,"./concat.concat/typeCheck.concat:1959:26");
 concat_list_I1 tmp125;
 concat_sb_dappendUnaryOperator(tmp123,((*tmp124).data.e36_unaryOperator),(&tmp125));
 concat_list_I1 tmp126;
-concat_sb_dappendS(tmp125,((int64_t)22),((int8_t const*)" expected integer got "),(&tmp126));
+concat_sb_dappendS(tmp125,((int64_t)22),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""i""n""t""e""g""e""r"" ""g""o""t"" """),(&tmp126));
 concat_list_I1 tmp127;
 concat_sb_dappendType(tmp126,tmp120,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp127));
 concat_FilePosition tmp128 = ((*arg0/*op*/).e2_pos);
@@ -34492,12 +34493,12 @@ int64_t tmp130 = (((*arg1/*state*/).e3_typeStack).e1_length);
 bool const tmp131 = (tmp130<((int64_t)2));
 if(tmp131){
 concat_list_I1 tmp132;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp132));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp132));
 concat_Operation tmp133 = (*arg0/*op*/);
 concat_list_I1 tmp134;
 concat_sb_dappendOp(tmp132,tmp133,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp134));
 concat_list_I1 tmp135;
-concat_sb_dappendS(tmp134,((int64_t)12),((int8_t const*)" need 2 got "),(&tmp135));
+concat_sb_dappendS(tmp134,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""2"" ""g""o""t"" """),(&tmp135));
 concat_list_I1 tmp136;
 concat_sb_dappendI(tmp135,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp136));
 concat_FilePosition tmp137 = ((*arg0/*op*/).e2_pos);
@@ -34711,18 +34712,18 @@ break;
 bool const tmp224 = (l11_outType.label==0);
 if(tmp224){
 concat_list_I1 tmp225;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"no version of binary operator "),(&tmp225));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"n""o"" ""v""e""r""s""i""o""n"" ""o""f"" ""b""i""n""a""r""y"" ""o""p""e""r""a""t""o""r"" """),(&tmp225));
 concat_OpValue* const tmp226 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp226).label,37,"./concat.concat/typeCheck.concat:2083:22");
 concat_list_I1 tmp227;
 concat_sb_dappendBinaryOperator(tmp225,((*tmp226).data.e37_binaryOperator),(&tmp227));
 concat_list_I1 tmp228;
-concat_sb_dappendS(tmp227,((int64_t)15),((int8_t const*)" accepts types "),(&tmp228));
+concat_sb_dappendS(tmp227,((int64_t)15),((int8_t const*)" ""a""c""c""e""p""t""s"" ""t""y""p""e""s"" """),(&tmp228));
 concat_Type tmp229 = ((*l9_left).e0_valType);
 concat_list_I1 tmp230;
 concat_sb_dappendType(tmp228,tmp229,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp230));
 concat_list_I1 tmp231;
-concat_sb_dappendS(tmp230,((int64_t)5),((int8_t const*)" and "),(&tmp231));
+concat_sb_dappendS(tmp230,((int64_t)5),((int8_t const*)" ""a""n""d"" """),(&tmp231));
 concat_Type tmp232 = ((*l8_right).e0_valType);
 concat_list_I1 tmp233;
 concat_sb_dappendType(tmp231,tmp232,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp233));
@@ -34732,7 +34733,7 @@ concat_29_FappendError2(tmp233,tmp234,arg1/*state*/);
 else_label1378:;
 }
 concat_list_I1 tmp235;
-concat_sb_dwrap(((int64_t)16),((int8_t const*)"binary operator "),(&tmp235));
+concat_sb_dwrap(((int64_t)16),((int8_t const*)"b""i""n""a""r""y"" ""o""p""e""r""a""t""o""r"" """),(&tmp235));
 concat_OpValue* const tmp236 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp236).label,37,"./concat.concat/typeCheck.concat:2090:45");
 concat_list_I1 tmp237;
@@ -34782,7 +34783,7 @@ concat_29_FextractCompositeOps(((int64_t)1),false,tmp254,arg1/*state*/);
 concat_arrayView_I3 tmp255;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))),(&tmp255));
 concat_arrayView_I1 tmp256;
-concat_string_dwrap(((int64_t)12),((int8_t const*)"if condition"),(&tmp256));
+concat_string_dwrap(((int64_t)12),((int8_t const*)"i""f"" ""c""o""n""d""i""t""i""o""n"""),(&tmp256));
 concat_FilePosition tmp257 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp255,tmp256,tmp257,arg1/*state*/);
 concat_FilePosition tmp258 = ((*arg0/*op*/).e2_pos);
@@ -34810,7 +34811,7 @@ bool const tmp269 = concat_optional_dhasData_I11(l15_enclosingIf_X63);
 bool const tmp270 = (!tmp269);
 if(tmp270){
 concat_list_I1 tmp271;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"_if cannot appear at to level"),(&tmp271));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"_""i""f"" ""c""a""n""n""o""t"" ""a""p""p""e""a""r"" ""a""t"" ""t""o"" ""l""e""v""e""l"""),(&tmp271));
 concat_FilePosition tmp272 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp271,tmp272,arg1/*state*/);
 return;
@@ -34822,7 +34823,7 @@ concat_BlockType tmp274 = ((*tmp273).e4_blockType);
 bool const tmp275 = ((bool)((!(tmp274.label==3))&(!(tmp274.label==4))));
 if(tmp275){
 concat_list_I1 tmp276;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"unexpected _if statement"),(&tmp276));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""_""i""f"" ""s""t""a""t""e""m""e""n""t"""),(&tmp276));
 concat_FilePosition tmp277 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp276,tmp277,arg1/*state*/);
 return;
@@ -34859,7 +34860,7 @@ int64_t tmp288 = (((*arg1/*state*/).e4_openBlocks).e1_length);
 bool const tmp289 = (tmp288==((int64_t)0));
 if(tmp289){
 concat_list_I1 tmp290;
-concat_sb_dwrap(((int64_t)25),((int8_t const*)"unexpected else statement"),(&tmp290));
+concat_sb_dwrap(((int64_t)25),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""l""s""e"" ""s""t""a""t""e""m""e""n""t"""),(&tmp290));
 concat_FilePosition tmp291 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp290,tmp291,arg1/*state*/);
 return;
@@ -34873,7 +34874,7 @@ concat_BlockType* const tmp293 = (&((*l17_ifBlock).e4_blockType));
 bool const tmp294 = (!((*tmp293).label==3));
 if(tmp294){
 concat_list_I1 tmp295;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"else can only appear in if blocks"),(&tmp295));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"e""l""s""e"" ""c""a""n"" ""o""n""l""y"" ""a""p""p""e""a""r"" ""i""n"" ""i""f"" ""b""l""o""c""k""s"""),(&tmp295));
 concat_FilePosition tmp296 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp295,tmp296,arg1/*state*/);
 return;
@@ -34968,7 +34969,7 @@ int64_t tmp331 = (((*arg1/*state*/).e4_openBlocks).e1_length);
 bool const tmp332 = (tmp331==((int64_t)0));
 if(tmp332){
 concat_list_I1 tmp333;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"unexpected do statement"),(&tmp333));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""d""o"" ""s""t""a""t""e""m""e""n""t"""),(&tmp333));
 concat_FilePosition tmp334 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp333,tmp334,arg1/*state*/);
 return;
@@ -34982,7 +34983,7 @@ concat_BlockType* const tmp336 = (&((*l21_whileBlock).e4_blockType));
 bool const tmp337 = (!((*tmp336).label==6));
 if(tmp337){
 concat_list_I1 tmp338;
-concat_sb_dwrap(((int64_t)34),((int8_t const*)"do can only appear in while blocks"),(&tmp338));
+concat_sb_dwrap(((int64_t)34),((int8_t const*)"d""o"" ""c""a""n"" ""o""n""l""y"" ""a""p""p""e""a""r"" ""i""n"" ""w""h""i""l""e"" ""b""l""o""c""k""s"""),(&tmp338));
 concat_FilePosition tmp339 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp338,tmp339,arg1/*state*/);
 return;
@@ -35001,7 +35002,7 @@ concat_Type tmp343 = concat_primitive_dtypes_dBOOL;
 concat_arrayView_I3 tmp344;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))),(&tmp344));
 concat_arrayView_I1 tmp345;
-concat_string_dwrap(((int64_t)12),((int8_t const*)"do condition"),(&tmp345));
+concat_string_dwrap(((int64_t)12),((int8_t const*)"d""o"" ""c""o""n""d""i""t""i""o""n"""),(&tmp345));
 concat_FilePosition tmp346 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp344,tmp345,tmp346,arg1/*state*/);
 concat_list_I25 tmp347 = ((*arg1/*state*/).e1_compiledOps);
@@ -35027,7 +35028,7 @@ concat_sb_dcreate(((int64_t)60),(&tmp355));
 concat_list_I1 tmp356;
 concat_sb_dappendBlockType(tmp355,((concat_BlockType){.label=8}),(&tmp356));
 concat_list_I1 tmp357;
-concat_sb_dappendS(tmp356,((int64_t)52),((int8_t const*)" can only appear in loops and switch-case statements"),(&tmp357));
+concat_sb_dappendS(tmp356,((int64_t)52),((int8_t const*)" ""c""a""n"" ""o""n""l""y"" ""a""p""p""e""a""r"" ""i""n"" ""l""o""o""p""s"" ""a""n""d"" ""s""w""i""t""c""h""-""c""a""s""e"" ""s""t""a""t""e""m""e""n""t""s"""),(&tmp357));
 concat_FilePosition tmp358 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp357,tmp358,arg1/*state*/);
 return;
@@ -35114,7 +35115,7 @@ concat_sb_dcreate(((int64_t)35),(&tmp381));
 concat_list_I1 tmp382;
 concat_sb_dappendBlockType(tmp381,((concat_BlockType){.label=9}),(&tmp382));
 concat_list_I1 tmp383;
-concat_sb_dappendS(tmp382,((int64_t)25),((int8_t const*)" can only appear in loops"),(&tmp383));
+concat_sb_dappendS(tmp382,((int64_t)25),((int8_t const*)" ""c""a""n"" ""o""n""l""y"" ""a""p""p""e""a""r"" ""i""n"" ""l""o""o""p""s"""),(&tmp383));
 concat_FilePosition tmp384 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp383,tmp384,arg1/*state*/);
 return;
@@ -35170,7 +35171,7 @@ bool const tmp401 = concat_optional_disEmpty_I10(tmp400);
 concat_Type tmp404;
 if(tmp401){
 concat_list_I1 tmp402;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"missing argument for switch-statement"),(&tmp402));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"m""i""s""s""i""n""g"" ""a""r""g""u""m""e""n""t"" ""f""o""r"" ""s""w""i""t""c""h""-""s""t""a""t""e""m""e""n""t"""),(&tmp402));
 concat_FilePosition tmp403 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp402,tmp403,arg1/*state*/);
 tmp404 = ((concat_Type){.label=0});
@@ -35198,7 +35199,7 @@ concat_Type tmp412 = l26_switchType;
 }else{
 else_label1400:;
 concat_list_I1 tmp413;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"cannot switch values of type "),(&tmp413));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"c""a""n""n""o""t"" ""s""w""i""t""c""h"" ""v""a""l""u""e""s"" ""o""f"" ""t""y""p""e"" """),(&tmp413));
 concat_Type tmp414 = l26_switchType;
 concat_list_I1 tmp415;
 concat_sb_dappendType(tmp413,tmp414,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp415));
@@ -35239,11 +35240,11 @@ int64_t tmp431 = (((*arg1/*state*/).e4_openBlocks).e1_length);
 bool const tmp432 = (tmp431==((int64_t)0));
 if(tmp432){
 concat_list_I1 tmp433;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp433));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp433));
 concat_list_I1 tmp434;
 concat_sb_dappendBlockType(tmp433,((concat_BlockType){.label=11}),(&tmp434));
 concat_list_I1 tmp435;
-concat_sb_dappendS(tmp434,((int64_t)10),((int8_t const*)" statement"),(&tmp435));
+concat_sb_dappendS(tmp434,((int64_t)10),((int8_t const*)" ""s""t""a""t""e""m""e""n""t"""),(&tmp435));
 concat_FilePosition tmp436 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp435,tmp436,arg1/*state*/);
 return;
@@ -35261,7 +35262,7 @@ concat_sb_dcreate(((int64_t)40),(&tmp440));
 concat_list_I1 tmp441;
 concat_sb_dappendBlockType(tmp440,((concat_BlockType){.label=11}),(&tmp441));
 concat_list_I1 tmp442;
-concat_sb_dappendS(tmp441,((int64_t)50),((int8_t const*)"-statements are only allowed in switch-case blocks"),(&tmp442));
+concat_sb_dappendS(tmp441,((int64_t)50),((int8_t const*)"-""s""t""a""t""e""m""e""n""t""s"" ""a""r""e"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""s""w""i""t""c""h""-""c""a""s""e"" ""b""l""o""c""k""s"""),(&tmp442));
 concat_FilePosition tmp443 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp442,tmp443,arg1/*state*/);
 return;
@@ -35271,11 +35272,11 @@ else_label1402:;
 bool const tmp444 = ((*arg1/*state*/).e12_reachable);
 if(tmp444){
 concat_list_I1 tmp445;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unfinished "),(&tmp445));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""f""i""n""i""s""h""e""d"" """),(&tmp445));
 concat_list_I1 tmp446;
 concat_sb_dappendBlockType(tmp445,((concat_BlockType){.label=11}),(&tmp446));
 concat_list_I1 tmp447;
-concat_sb_dappendS(tmp446,((int64_t)10),((int8_t const*)" statement"),(&tmp447));
+concat_sb_dappendS(tmp446,((int64_t)10),((int8_t const*)" ""s""t""a""t""e""m""e""n""t"""),(&tmp447));
 concat_FilePosition tmp448 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp447,tmp448,arg1/*state*/);
 }else{
@@ -35297,7 +35298,7 @@ concat_sb_dcreate(((int64_t)60),(&tmp456));
 concat_list_I1 tmp457;
 concat_sb_dappendBlockType(tmp456,((concat_BlockType){.label=11}),(&tmp457));
 concat_list_I1 tmp458;
-concat_sb_dappendS(tmp457,((int64_t)51),((int8_t const*)"-statement has to be preceded by at least one label"),(&tmp458));
+concat_sb_dappendS(tmp457,((int64_t)51),((int8_t const*)"-""s""t""a""t""e""m""e""n""t"" ""h""a""s"" ""t""o"" ""b""e"" ""p""r""e""c""e""d""e""d"" ""b""y"" ""a""t"" ""l""e""a""s""t"" ""o""n""e"" ""l""a""b""e""l"""),(&tmp458));
 concat_FilePosition tmp459 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp458,tmp459,arg1/*state*/);
 }else{
@@ -35342,11 +35343,11 @@ int64_t tmp476 = (((*arg1/*state*/).e4_openBlocks).e1_length);
 bool const tmp477 = (tmp476==((int64_t)0));
 if(tmp477){
 concat_list_I1 tmp478;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unexpected "),(&tmp478));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" """),(&tmp478));
 concat_list_I1 tmp479;
 concat_sb_dappendBlockType(tmp478,((concat_BlockType){.label=12}),(&tmp479));
 concat_list_I1 tmp480;
-concat_sb_dappendS(tmp479,((int64_t)10),((int8_t const*)" statement"),(&tmp480));
+concat_sb_dappendS(tmp479,((int64_t)10),((int8_t const*)" ""s""t""a""t""e""m""e""n""t"""),(&tmp480));
 concat_FilePosition tmp481 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp480,tmp481,arg1/*state*/);
 return;
@@ -35364,7 +35365,7 @@ concat_sb_dcreate(((int64_t)40),(&tmp485));
 concat_list_I1 tmp486;
 concat_sb_dappendBlockType(tmp485,((concat_BlockType){.label=12}),(&tmp486));
 concat_list_I1 tmp487;
-concat_sb_dappendS(tmp486,((int64_t)50),((int8_t const*)"-statements are only allowed in switch-case blocks"),(&tmp487));
+concat_sb_dappendS(tmp486,((int64_t)50),((int8_t const*)"-""s""t""a""t""e""m""e""n""t""s"" ""a""r""e"" ""o""n""l""y"" ""a""l""l""o""w""e""d"" ""i""n"" ""s""w""i""t""c""h""-""c""a""s""e"" ""b""l""o""c""k""s"""),(&tmp487));
 concat_FilePosition tmp488 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp487,tmp488,arg1/*state*/);
 return;
@@ -35374,11 +35375,11 @@ else_label1406:;
 bool const tmp489 = ((*arg1/*state*/).e12_reachable);
 if(tmp489){
 concat_list_I1 tmp490;
-concat_sb_dwrap(((int64_t)11),((int8_t const*)"unfinished "),(&tmp490));
+concat_sb_dwrap(((int64_t)11),((int8_t const*)"u""n""f""i""n""i""s""h""e""d"" """),(&tmp490));
 concat_list_I1 tmp491;
 concat_sb_dappendBlockType(tmp490,((concat_BlockType){.label=11}),(&tmp491));
 concat_list_I1 tmp492;
-concat_sb_dappendS(tmp491,((int64_t)10),((int8_t const*)" statement"),(&tmp492));
+concat_sb_dappendS(tmp491,((int64_t)10),((int8_t const*)" ""s""t""a""t""e""m""e""n""t"""),(&tmp492));
 concat_FilePosition tmp493 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp492,tmp493,arg1/*state*/);
 }else{
@@ -35399,7 +35400,7 @@ concat_sb_dcreate(((int64_t)60),(&tmp501));
 concat_list_I1 tmp502;
 concat_sb_dappendBlockType(tmp501,((concat_BlockType){.label=12}),(&tmp502));
 concat_list_I1 tmp503;
-concat_sb_dappendS(tmp502,((int64_t)42),((int8_t const*)"-statement cannot be preceded by at labels"),(&tmp503));
+concat_sb_dappendS(tmp502,((int64_t)42),((int8_t const*)"-""s""t""a""t""e""m""e""n""t"" ""c""a""n""n""o""t"" ""b""e"" ""p""r""e""c""e""d""e""d"" ""b""y"" ""a""t"" ""l""a""b""e""l""s"""),(&tmp503));
 concat_FilePosition tmp504 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp503,tmp504,arg1/*state*/);
 }else{
@@ -35428,13 +35429,13 @@ concat_list_dappendP_I0(tmp511,((int64_t)1),((concat_Operation const*)arg0/*op*/
 return;
 case 0:case 1:case 2:case 13:case 14:case 15:case 16:case 17:case 18:case 19:case 20:;
 concat_list_I1 tmp513;
-concat_sb_dwrap(((int64_t)15),((int8_t const*)"blocks of type "),(&tmp513));
+concat_sb_dwrap(((int64_t)15),((int8_t const*)"b""l""o""c""k""s"" ""o""f"" ""t""y""p""e"" """),(&tmp513));
 concat_OpValue* const tmp514 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp514).label,2,"./concat.concat/typeCheck.concat:2419:24");
 concat_list_I1 tmp515;
 concat_sb_dappendBlockType(tmp513,(((*tmp514).data.e2_block).e0_blockType),(&tmp515));
 concat_list_I1 tmp516;
-concat_sb_dappendS(tmp515,((int64_t)18),((int8_t const*)" are not supported"),(&tmp516));
+concat_sb_dappendS(tmp515,((int64_t)18),((int8_t const*)" ""a""r""e"" ""n""o""t"" ""s""u""p""p""o""r""t""e""d"""),(&tmp516));
 concat_FilePosition tmp517 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp516,tmp517,arg1/*state*/);
 return;
@@ -35447,7 +35448,7 @@ int64_t tmp518 = (((*arg1/*state*/).e4_openBlocks).e1_length);
 bool const tmp519 = (tmp518==((int64_t)0));
 if(tmp519){
 concat_list_I1 tmp520;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp520));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp520));
 concat_OpValue* const tmp521 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp521).label,3,"./concat.concat/typeCheck.concat:2428:22");
 concat_list_I1 tmp522;
@@ -35467,13 +35468,13 @@ concat_BlockType tmp526 = (((*tmp525).data.e3_blockEnd).e0_blockType);
 bool const tmp527 = (tmp526.label!=((*l33_closed).e4_blockType).label);
 if(tmp527){
 concat_list_I1 tmp528;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp528));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp528));
 concat_OpValue* const tmp529 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp529).label,3,"./concat.concat/typeCheck.concat:2435:22");
 concat_list_I1 tmp530;
 concat_sb_dappendBlockType(tmp528,(((*tmp529).data.e3_blockEnd).e0_blockType),(&tmp530));
 concat_list_I1 tmp531;
-concat_sb_dappendS(tmp530,((int64_t)20),((int8_t const*)" block expected end "),(&tmp531));
+concat_sb_dappendS(tmp530,((int64_t)20),((int8_t const*)" ""b""l""o""c""k"" ""e""x""p""e""c""t""e""d"" ""e""n""d"" """),(&tmp531));
 concat_list_I1 tmp532;
 concat_sb_dappendBlockType(tmp531,((*l33_closed).e4_blockType),(&tmp532));
 concat_FilePosition tmp533 = ((*arg0/*op*/).e2_pos);
@@ -35564,11 +35565,11 @@ concat_list_dpop_I7(((*arg1/*state*/).e4_openBlocks),(&tmp562),(&tmp563));
 return;
 case 6:;
 concat_list_I1 tmp564;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp564));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp564));
 concat_list_I1 tmp565;
 concat_sb_dappendBlockType(tmp564,((*l33_closed).e4_blockType),(&tmp565));
 concat_list_I1 tmp566;
-concat_sb_dappendS(tmp565,((int64_t)16),((int8_t const*)"-block expected "),(&tmp566));
+concat_sb_dappendS(tmp565,((int64_t)16),((int8_t const*)"-""b""l""o""c""k"" ""e""x""p""e""c""t""e""d"" """),(&tmp566));
 concat_list_I1 tmp567;
 concat_sb_dappendBlockType(tmp566,((concat_BlockType){.label=7}),(&tmp567));
 concat_FilePosition tmp568 = ((*arg0/*op*/).e2_pos);
@@ -35587,7 +35588,7 @@ concat_internal_checkEnumIndex((*tmp572).label,2,"./concat.concat/typeCheck.conc
 bool const tmp573 = (!((bool)(tmp571|(((*tmp572).data.e2_whileBlock).e3_doesLoop))));
 if(tmp573){
 concat_list_I1 tmp574;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"while block cannot complete a loop "),(&tmp574));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"w""h""i""l""e"" ""b""l""o""c""k"" ""c""a""n""n""o""t"" ""c""o""m""p""l""e""t""e"" ""a"" ""l""o""o""p"" """),(&tmp574));
 concat_FilePosition tmp575 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp574,tmp575,arg1/*state*/);
 }else{
@@ -35613,11 +35614,11 @@ concat_29_FfreeStackState(((concat_29_FStackState const*)(&(((*tmp580).data.e2_w
 break;
 case 10:;
 concat_list_I1 tmp581;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp581));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp581));
 concat_list_I1 tmp582;
 concat_sb_dappendBlockType(tmp581,((*l33_closed).e4_blockType),(&tmp582));
 concat_list_I1 tmp583;
-concat_sb_dappendS(tmp582,((int64_t)16),((int8_t const*)"-block expected "),(&tmp583));
+concat_sb_dappendS(tmp582,((int64_t)16),((int8_t const*)"-""b""l""o""c""k"" ""e""x""p""e""c""t""e""d"" """),(&tmp583));
 concat_list_I1 tmp584;
 concat_sb_dappendBlockType(tmp583,((concat_BlockType){.label=11}),(&tmp584));
 concat_FilePosition tmp585 = ((*arg0/*op*/).e2_pos);
@@ -35633,7 +35634,7 @@ case 11:;
 bool const tmp588 = ((*arg1/*state*/).e12_reachable);
 if(tmp588){
 concat_list_I1 tmp589;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"missing break statement at end of case"),(&tmp589));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"m""i""s""s""i""n""g"" ""b""r""e""a""k"" ""s""t""a""t""e""m""e""n""t"" ""a""t"" ""e""n""d"" ""o""f"" ""c""a""s""e"""),(&tmp589));
 concat_FilePosition tmp590 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp589,tmp590,arg1/*state*/);
 }else{
@@ -35656,12 +35657,12 @@ int64_t const l38_eltCount = tmp598;
 bool const tmp599 = ((l37_labels.e1_length)<l38_eltCount);
 if(tmp599){
 concat_list_I1 tmp600;
-concat_sb_dwrap(((int64_t)51),((int8_t const*)"switch statement does not cover all labels in enum "),(&tmp600));
+concat_sb_dwrap(((int64_t)51),((int8_t const*)"s""w""i""t""c""h"" ""s""t""a""t""e""m""e""n""t"" ""d""o""e""s"" ""n""o""t"" ""c""o""v""e""r"" ""a""l""l"" ""l""a""b""e""l""s"" ""i""n"" ""e""n""u""m"" """),(&tmp600));
 concat_Type tmp601 = ((*l36_switchBlock).e2_switchType);
 concat_list_I1 tmp602;
 concat_sb_dappendType(tmp600,tmp601,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp602));
 concat_list_I1 tmp603;
-concat_sb_dappendS(tmp602,((int64_t)17),((int8_t const*)"\x0Amissing labels:\x0A"),(&tmp603));
+concat_sb_dappendS(tmp602,((int64_t)17),((int8_t const*)"\x0A""m""i""s""s""i""n""g"" ""l""a""b""e""l""s"":""\x0A"""),(&tmp603));
 int32_t tmp604 = ((int32_t)0);
 do{
 bool const tmp605 = (((int64_t)tmp604)<l38_eltCount);
@@ -35694,13 +35695,13 @@ concat_Type tmp614 = ((*l36_switchBlock).e2_switchType);
 concat_LabelId const tmp615 = concat_types_dcompositeGetLabel(tmp614,tmp604,((concat_TypeContext const*)l2_typeContext));
 concat_LabelId const l40_label = tmp615;
 concat_list_I1 tmp616;
-concat_sb_dappendS(tmp603,((int64_t)4),((int8_t const*)" - \""),(&tmp616));
+concat_sb_dappendS(tmp603,((int64_t)4),((int8_t const*)" ""-"" ""\""""),(&tmp616));
 concat_optional_I3 tmp617 = concat_id_dlabelName(l40_label,((concat_LabelContext const*)l1_labelContext));
 concat_internal_checkEnumIndex(tmp617.label,1,"./concat.concat/typeCheck.concat:2532:53");
 concat_list_I1 tmp618;
 concat_sb_dappendStr(tmp616,(tmp617.data.e1_data),(&tmp618));
 concat_list_I1 tmp619;
-concat_sb_dappendS(tmp618,((int64_t)12),((int8_t const*)"\" declaredAt"),(&tmp619));
+concat_sb_dappendS(tmp618,((int64_t)12),((int8_t const*)"\""" ""d""e""c""l""a""r""e""d""A""t"""),(&tmp619));
 concat_optional_I4 tmp620 = concat_id_dlabelPos(l40_label,((concat_LabelContext const*)l1_labelContext));
 concat_internal_checkEnumIndex(tmp620.label,1,"./concat.concat/typeCheck.concat:2534:52");
 concat_list_I1 tmp621;
@@ -35777,13 +35778,13 @@ else_label1421:;
 break;
 case 3:case 8:case 9:case 0:case 13:case 14:case 15:case 16:case 17:case 18:case 19:case 20:;
 concat_list_I1 tmp641;
-concat_sb_dwrap(((int64_t)23),((int8_t const*)"closing blocks of type "),(&tmp641));
+concat_sb_dwrap(((int64_t)23),((int8_t const*)"c""l""o""s""i""n""g"" ""b""l""o""c""k""s"" ""o""f"" ""t""y""p""e"" """),(&tmp641));
 concat_OpValue* const tmp642 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp642).label,3,"./concat.concat/typeCheck.concat:2575:24");
 concat_list_I1 tmp643;
 concat_sb_dappendBlockType(tmp641,(((*tmp642).data.e3_blockEnd).e0_blockType),(&tmp643));
 concat_list_I1 tmp644;
-concat_sb_dappendS(tmp643,((int64_t)17),((int8_t const*)" is not supported"),(&tmp644));
+concat_sb_dappendS(tmp643,((int64_t)17),((int8_t const*)" ""i""s"" ""n""o""t"" ""s""u""p""p""o""r""t""e""d"""),(&tmp644));
 concat_FilePosition tmp645 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp644,tmp645,arg1/*state*/);
 break;
@@ -35935,12 +35936,12 @@ int64_t tmp684 = (((*arg1/*state*/).e3_typeStack).e1_length);
 bool const tmp685 = (tmp684==((int64_t)0));
 if(tmp685){
 concat_list_I1 tmp686;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp686));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp686));
 concat_Operation tmp687 = (*arg0/*op*/);
 concat_list_I1 tmp688;
 concat_sb_dappendOp(tmp686,tmp687,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp688));
 concat_list_I1 tmp689;
-concat_sb_dappendS(tmp688,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp689));
+concat_sb_dappendS(tmp688,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp689));
 concat_list_I1 tmp690;
 concat_sb_dappendI(tmp689,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp690));
 concat_FilePosition tmp691 = ((*arg0/*op*/).e2_pos);
@@ -35975,7 +35976,7 @@ bool const tmp701 = concat_types_disFixedSize(tmp700,((concat_TypeContext const*
 bool const tmp702 = (!tmp701);
 if(tmp702){
 concat_list_I1 tmp703;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"variable size arrays are not supported"),(&tmp703));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"v""a""r""i""a""b""l""e"" ""s""i""z""e"" ""a""r""r""a""y""s"" ""a""r""e"" ""n""o""t"" ""s""u""p""p""o""r""t""e""d"""),(&tmp703));
 concat_FilePosition tmp704 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp703,tmp704,arg1/*state*/);
 }else{
@@ -35996,7 +35997,7 @@ concat_Type tmp709 = ((*arg0/*op*/).e1_dataType);
 concat_arrayView_I3 tmp710;
 concat_types_dcompositeElts(tmp709,((concat_TypeContext const*)l2_typeContext),(&tmp710));
 concat_arrayView_I1 tmp711;
-concat_string_dwrap(((int64_t)14),((int8_t const*)"tuple creation"),(&tmp711));
+concat_string_dwrap(((int64_t)14),((int8_t const*)"t""u""p""l""e"" ""c""r""e""a""t""i""o""n"""),(&tmp711));
 concat_FilePosition tmp712 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp710,tmp711,tmp712,arg1/*state*/);
 concat_29_FinsertStackOp(((concat_Operation const*)arg0/*op*/),l43_count,arg1/*state*/);
@@ -36011,7 +36012,7 @@ bool const tmp714 = concat_types_disEnum(tmp713,((concat_TypeContext const*)l2_t
 bool const tmp715 = (!tmp714);
 if(tmp715){
 concat_list_I1 tmp716;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"unexpected type for newEnum: "),(&tmp716));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""f""o""r"" ""n""e""w""E""n""u""m"":"" """),(&tmp716));
 concat_Type tmp717 = ((*arg0/*op*/).e1_dataType);
 concat_list_I1 tmp718;
 concat_sb_dappendType(tmp716,tmp717,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp718));
@@ -36037,7 +36038,7 @@ else_label1429:;
 concat_arrayView_I3 tmp725;
 concat_array_dcreate_I3(((concat_Type const*)(&l44_labelType)),((int64_t)1),(&tmp725));
 concat_arrayView_I1 tmp726;
-concat_string_dwrap(((int64_t)13),((int8_t const*)"enum creation"),(&tmp726));
+concat_string_dwrap(((int64_t)13),((int8_t const*)"e""n""u""m"" ""c""r""e""a""t""i""o""n"""),(&tmp726));
 concat_FilePosition tmp727 = ((*arg0/*op*/).e2_pos);
 concat_29_FrequireTypes(tmp725,tmp726,tmp727,arg1/*state*/);
 concat_29_FinsertStackOp(((concat_Operation const*)arg0/*op*/),((int64_t)1),arg1/*state*/);
@@ -36061,12 +36062,12 @@ concat_optional_I45 tmp730 = concat_list_dpeek_I5(((*arg1/*state*/).e3_typeStack
 bool const tmp731 = concat_optional_disEmpty_I10(tmp730);
 if(tmp731){
 concat_list_I1 tmp732;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp732));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp732));
 concat_Operation tmp733 = (*arg0/*op*/);
 concat_list_I1 tmp734;
 concat_sb_dappendOp(tmp732,tmp733,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp734));
 concat_list_I1 tmp735;
-concat_sb_dappendS(tmp734,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp735));
+concat_sb_dappendS(tmp734,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp735));
 concat_list_I1 tmp736;
 concat_sb_dappendI(tmp735,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp736));
 concat_FilePosition tmp737 = ((*arg0/*op*/).e2_pos);
@@ -36084,12 +36085,12 @@ bool const tmp740 = concat_types_disInt(tmp739,((concat_TypeContext const*)l2_ty
 bool const tmp741 = (!tmp740);
 if(tmp741){
 concat_list_I1 tmp742;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"wrong type for argument index : "),(&tmp742));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" ""a""r""g""u""m""e""n""t"" ""i""n""d""e""x"" "":"" """),(&tmp742));
 concat_Type tmp743 = ((*l45_argIndex).e0_valType);
 concat_list_I1 tmp744;
 concat_sb_dappendType(tmp742,tmp743,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp744));
 concat_list_I1 tmp745;
-concat_sb_dappendS(tmp744,((int64_t)17),((int8_t const*)" expected integer"),(&tmp745));
+concat_sb_dappendS(tmp744,((int64_t)17),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""i""n""t""e""g""e""r"""),(&tmp745));
 concat_FilePosition tmp746 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp745,tmp746,arg1/*state*/);
 return;
@@ -36163,12 +36164,12 @@ concat_optional_I45 tmp782 = concat_list_dpeek_I5(((*arg1/*state*/).e3_typeStack
 bool const tmp783 = concat_optional_disEmpty_I10(tmp782);
 if(tmp783){
 concat_list_I1 tmp784;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp784));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp784));
 concat_Operation tmp785 = (*arg0/*op*/);
 concat_list_I1 tmp786;
 concat_sb_dappendOp(tmp784,tmp785,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp786));
 concat_list_I1 tmp787;
-concat_sb_dappendS(tmp786,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp787));
+concat_sb_dappendS(tmp786,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp787));
 concat_list_I1 tmp788;
 concat_sb_dappendI(tmp787,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp788));
 concat_FilePosition tmp789 = ((*arg0/*op*/).e2_pos);
@@ -36190,12 +36191,12 @@ bool const tmp796 = concat_types_disFixedSize(tmp795,((concat_TypeContext const*
 bool const tmp797 = (!tmp796);
 if(tmp797){
 concat_list_I1 tmp798;
-concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "),(&tmp798));
+concat_sb_dwrap(((int64_t)22),((int8_t const*)"i""n""v""a""l""i""d"" ""o""p""e""r""a""n""d"" ""f""o""r"" "":"" """),(&tmp798));
 concat_Operation tmp799 = (*arg0/*op*/);
 concat_list_I1 tmp800;
 concat_sb_dappendOp(tmp798,tmp799,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp800));
 concat_list_I1 tmp801;
-concat_sb_dappendS(tmp800,((int64_t)26),((int8_t const*)" cannot get the length of "),(&tmp801));
+concat_sb_dappendS(tmp800,((int64_t)26),((int8_t const*)" ""c""a""n""n""o""t"" ""g""e""t"" ""t""h""e"" ""l""e""n""g""t""h"" ""o""f"" """),(&tmp801));
 concat_Type tmp802 = ((*l46_src).e0_valType);
 concat_list_I1 tmp803;
 concat_sb_dappendType(tmp801,tmp802,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp803));
@@ -36255,7 +36256,7 @@ concat_opConst(tmp828,tmp829,((*arg0/*op*/).e2_pos),(&tmp830));
 }else{
 else_label1438:;
 concat_list_I1 tmp831;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "),(&tmp831));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""a""r""r""a""y""-""s""i""z""e"" ""t""y""p""e"" ""f""o""r"" """),(&tmp831));
 concat_Operation tmp832 = (*arg0/*op*/);
 concat_list_I1 tmp833;
 concat_sb_dappendOp(tmp831,tmp832,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp833));
@@ -36290,12 +36291,12 @@ concat_optional_I45 tmp841 = concat_list_dpeek_I5(((*arg1/*state*/).e3_typeStack
 bool const tmp842 = concat_optional_disEmpty_I10(tmp841);
 if(tmp842){
 concat_list_I1 tmp843;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp843));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp843));
 concat_Operation tmp844 = (*arg0/*op*/);
 concat_list_I1 tmp845;
 concat_sb_dappendOp(tmp843,tmp844,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp845));
 concat_list_I1 tmp846;
-concat_sb_dappendS(tmp845,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp846));
+concat_sb_dappendS(tmp845,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp846));
 concat_list_I1 tmp847;
 concat_sb_dappendI(tmp846,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp847));
 concat_FilePosition tmp848 = ((*arg0/*op*/).e2_pos);
@@ -36317,12 +36318,12 @@ bool const tmp855 = concat_types_disFixedSize(tmp854,((concat_TypeContext const*
 bool const tmp856 = (!tmp855);
 if(tmp856){
 concat_list_I1 tmp857;
-concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "),(&tmp857));
+concat_sb_dwrap(((int64_t)22),((int8_t const*)"i""n""v""a""l""i""d"" ""o""p""e""r""a""n""d"" ""f""o""r"" "":"" """),(&tmp857));
 concat_Operation tmp858 = (*arg0/*op*/);
 concat_list_I1 tmp859;
 concat_sb_dappendOp(tmp857,tmp858,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp859));
 concat_list_I1 tmp860;
-concat_sb_dappendS(tmp859,((int64_t)26),((int8_t const*)" cannot get the length of "),(&tmp860));
+concat_sb_dappendS(tmp859,((int64_t)26),((int8_t const*)" ""c""a""n""n""o""t"" ""g""e""t"" ""t""h""e"" ""l""e""n""g""t""h"" ""o""f"" """),(&tmp860));
 concat_Type tmp861 = ((*l48_src).e0_valType);
 concat_list_I1 tmp862;
 concat_sb_dappendType(tmp860,tmp861,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp862));
@@ -36364,7 +36365,7 @@ tmp870 = tmp876;
 }else{
 else_label1443:;
 concat_list_I1 tmp877;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "),(&tmp877));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""a""r""r""a""y""-""s""i""z""e"" ""t""y""p""e"" ""f""o""r"" """),(&tmp877));
 concat_Operation tmp878 = (*arg0/*op*/);
 concat_list_I1 tmp879;
 concat_sb_dappendOp(tmp877,tmp878,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp879));
@@ -36415,12 +36416,12 @@ concat_optional_I45 tmp898 = concat_list_dpeek_I5(((*arg1/*state*/).e3_typeStack
 bool const tmp899 = concat_optional_disEmpty_I10(tmp898);
 if(tmp899){
 concat_list_I1 tmp900;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"not enough operands for : "),(&tmp900));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""o""p""e""r""a""n""d""s"" ""f""o""r"" "":"" """),(&tmp900));
 concat_Operation tmp901 = (*arg0/*op*/);
 concat_list_I1 tmp902;
 concat_sb_dappendOp(tmp900,tmp901,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp902));
 concat_list_I1 tmp903;
-concat_sb_dappendS(tmp902,((int64_t)12),((int8_t const*)" need 1 got "),(&tmp903));
+concat_sb_dappendS(tmp902,((int64_t)12),((int8_t const*)" ""n""e""e""d"" ""1"" ""g""o""t"" """),(&tmp903));
 concat_list_I1 tmp904;
 concat_sb_dappendI(tmp903,(((*arg1/*state*/).e3_typeStack).e1_length),(&tmp904));
 concat_FilePosition tmp905 = ((*arg0/*op*/).e2_pos);
@@ -36454,12 +36455,12 @@ bool const tmp914 = concat_types_dcanCast(tmp912,tmp913,l54_forceCast,((concat_T
 bool const tmp915 = (!tmp914);
 if(tmp915){
 concat_list_I1 tmp916;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "),(&tmp916));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"c""a""n""n""o""t"" ""c""a""s""t"" """),(&tmp916));
 concat_Type tmp917 = ((*l53_src).e0_valType);
 concat_list_I1 tmp918;
 concat_sb_dappendType(tmp916,tmp917,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp918));
 concat_list_I1 tmp919;
-concat_sb_dappendS(tmp918,((int64_t)4),((int8_t const*)" to "),(&tmp919));
+concat_sb_dappendS(tmp918,((int64_t)4),((int8_t const*)" ""t""o"" """),(&tmp919));
 concat_Type tmp920 = ((*arg0/*op*/).e1_dataType);
 concat_list_I1 tmp921;
 concat_sb_dappendType(tmp919,tmp920,((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp921));
@@ -36482,7 +36483,7 @@ int32_t const l55_param = (((*tmp923).data.e42_stackMod).e0_n);
 bool const tmp924 = (l55_param<((int32_t)0));
 if(tmp924){
 concat_list_I1 tmp925;
-concat_sb_dwrap(((int64_t)56),((int8_t const*)"stack modification parameter has to be non-negative got:"),(&tmp925));
+concat_sb_dwrap(((int64_t)56),((int8_t const*)"s""t""a""c""k"" ""m""o""d""i""f""i""c""a""t""i""o""n"" ""p""a""r""a""m""e""t""e""r"" ""h""a""s"" ""t""o"" ""b""e"" ""n""o""n""-""n""e""g""a""t""i""v""e"" ""g""o""t"":"""),(&tmp925));
 concat_list_I1 tmp926;
 concat_sb_dappendI(tmp925,((int64_t)l55_param),(&tmp926));
 concat_FilePosition tmp927 = ((*arg0/*op*/).e2_pos);
@@ -36499,7 +36500,7 @@ case 2:;
 bool const tmp930 = (((int64_t)l55_param)>(((*arg1/*state*/).e3_typeStack).e1_length));
 if(tmp930){
 concat_list_I1 tmp931;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"),(&tmp931));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp931));
 concat_FilePosition tmp932 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp931,tmp932,arg1/*state*/);
 concat_list_I39 tmp933;
@@ -36531,7 +36532,7 @@ int32_t const l58_count = ((int32_t)1);
 bool const tmp942 = (((int64_t)((int32_t)(((int32_t)1)+l57_offset)))>(((*arg1/*state*/).e3_typeStack).e1_length));
 if(tmp942){
 concat_list_I1 tmp943;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"),(&tmp943));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp943));
 concat_FilePosition tmp944 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp943,tmp944,arg1/*state*/);
 return;
@@ -36580,7 +36581,7 @@ case 1:;
 bool const tmp966 = (((int64_t)2)>(((*arg1/*state*/).e3_typeStack).e1_length));
 if(tmp966){
 concat_list_I1 tmp967;
-concat_sb_dwrap(((int64_t)20),((int8_t const*)"type-stack underflow"),(&tmp967));
+concat_sb_dwrap(((int64_t)20),((int8_t const*)"t""y""p""e""-""s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"""),(&tmp967));
 concat_FilePosition tmp968 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp967,tmp968,arg1/*state*/);
 return;
@@ -36654,18 +36655,18 @@ exit(EXIT_FAILURE);//unreachable
 break;
 case 46:case 17:case 47:case 38:case 40:case 39:case 30:case 26:;
 concat_list_I1 tmp995;
-concat_sb_dwrap(((int64_t)10),((int8_t const*)"operation "),(&tmp995));
+concat_sb_dwrap(((int64_t)10),((int8_t const*)"o""p""e""r""a""t""i""o""n"" """),(&tmp995));
 concat_Operation tmp996 = (*arg0/*op*/);
 concat_list_I1 tmp997;
 concat_sb_dappendOp(tmp995,tmp996,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp997));
 concat_list_I1 tmp998;
-concat_sb_dappendS(tmp997,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"),(&tmp998));
+concat_sb_dappendS(tmp997,((int64_t)46),((int8_t const*)" ""s""h""o""u""l""d"" ""n""o""t"" ""e""x""i""s""t"" ""a""t"" ""t""h""i""s"" ""s""t""a""g""e"" ""o""f"" ""c""o""m""p""i""l""a""t""i""o""n"""),(&tmp998));
 concat_FilePosition tmp999 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp998,tmp999,arg1/*state*/);
 return;
 case 43:;
 concat_list_I1 tmp1000;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""),(&tmp1000));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"u""n""r""e""s""o""l""v""e""d"" ""i""d""e""n""t""i""f""i""e""r"":"" ""\""""),(&tmp1000));
 concat_OpValue* const tmp1001 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp1001).label,43,"./concat.concat/typeCheck.concat:3038:20");
 concat_optional_I3 tmp1002 = concat_id_dlabelName(((*tmp1001).data.e43_getName),((concat_LabelContext const*)l1_labelContext));
@@ -36679,7 +36680,7 @@ concat_29_FappendError2(tmp1004,tmp1005,arg1/*state*/);
 return;
 case 44:;
 concat_list_I1 tmp1006;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""),(&tmp1006));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"u""n""r""e""s""o""l""v""e""d"" ""i""d""e""n""t""i""f""i""e""r"":"" ""\""""),(&tmp1006));
 concat_OpValue* const tmp1007 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp1007).label,44,"./concat.concat/typeCheck.concat:3044:20");
 concat_LabelId tmp1008 = ((*tmp1007).data.e44_setName);
@@ -36694,7 +36695,7 @@ concat_29_FappendError2(tmp1011,tmp1012,arg1/*state*/);
 return;
 case 45:;
 concat_list_I1 tmp1013;
-concat_sb_dwrap(((int64_t)24),((int8_t const*)"unresolved identifier: \""),(&tmp1013));
+concat_sb_dwrap(((int64_t)24),((int8_t const*)"u""n""r""e""s""o""l""v""e""d"" ""i""d""e""n""t""i""f""i""e""r"":"" ""\""""),(&tmp1013));
 concat_OpValue* const tmp1014 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp1014).label,45,"./concat.concat/typeCheck.concat:3050:20");
 concat_LabelId tmp1015 = ((*tmp1014).data.e45__X64Name);
@@ -36724,12 +36725,12 @@ case 0:;
 return;
 }
 concat_list_I1 tmp1024;
-concat_sb_dwrap(((int64_t)28),((int8_t const*)"type-checking for operation "),(&tmp1024));
+concat_sb_dwrap(((int64_t)28),((int8_t const*)"t""y""p""e""-""c""h""e""c""k""i""n""g"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp1024));
 concat_Operation tmp1025 = (*arg0/*op*/);
 concat_list_I1 tmp1026;
 concat_sb_dappendOp(tmp1024,tmp1025,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l1_labelContext),((concat_TypeContext const*)l2_typeContext),(&tmp1026));
 concat_list_I1 tmp1027;
-concat_sb_dappendS(tmp1026,((int64_t)19),((int8_t const*)" is not implemented"),(&tmp1027));
+concat_sb_dappendS(tmp1026,((int64_t)19),((int8_t const*)" ""i""s"" ""n""o""t"" ""i""m""p""l""e""m""e""n""t""e""d"""),(&tmp1027));
 concat_FilePosition tmp1028 = ((*arg0/*op*/).e2_pos);
 concat_29_FappendError2(tmp1027,tmp1028,arg1/*state*/);
 return;
@@ -36957,7 +36958,7 @@ int64_t tmp22 = ((l1_state.e4_openBlocks).e1_length);
 bool const tmp23 = (tmp22>((int64_t)0));
 if(tmp23){
 concat_list_I1 tmp24;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"unfinished code block"),(&tmp24));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"u""n""f""i""n""i""s""h""e""d"" ""c""o""d""e"" ""b""l""o""c""k"""),(&tmp24));
 concat_optional_I19 tmp25 = concat_list_dpeek_I6((l1_state.e4_openBlocks));
 concat_internal_checkEnumIndex(tmp25.label,1,"./concat.concat/typeCheck.concat:3168:69");
 concat_29_FBlockInfo* const tmp26 = (tmp25.data.e1_data);
@@ -37000,7 +37001,7 @@ int64_t tmp38 = ((l1_state.e4_openBlocks).e1_length);
 bool const tmp39 = (tmp38>((int64_t)0));
 if(tmp39){
 concat_list_I1 tmp40;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"unfinished code block"),(&tmp40));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"u""n""f""i""n""i""s""h""e""d"" ""c""o""d""e"" ""b""l""o""c""k"""),(&tmp40));
 concat_optional_I19 tmp41 = concat_list_dpeek_I6((l1_state.e4_openBlocks));
 concat_internal_checkEnumIndex(tmp41.label,1,"./concat.concat/typeCheck.concat:3185:69");
 concat_29_FBlockInfo* const tmp42 = (tmp41.data.e1_data);
@@ -37117,7 +37118,7 @@ int64_t tmp94 = ((l1_state.e4_openBlocks).e1_length);
 bool const tmp95 = (tmp94>((int64_t)0));
 if(tmp95){
 concat_list_I1 tmp96;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"unfinished code block"),(&tmp96));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"u""n""f""i""n""i""s""h""e""d"" ""c""o""d""e"" ""b""l""o""c""k"""),(&tmp96));
 concat_optional_I19 tmp97 = concat_list_dpeek_I6((l1_state.e4_openBlocks));
 concat_internal_checkEnumIndex(tmp97.label,1,"./concat.concat/typeCheck.concat:3230:75");
 concat_29_FBlockInfo* const tmp98 = (tmp97.data.e1_data);
@@ -37133,7 +37134,7 @@ int64_t tmp101 = (((*l5_template).e5_implementations).e1_length);
 bool const tmp102 = (((int64_t)(((int64_t)(tmp101-l6_prevImpl))+((int64_t)l3_depth)))>((int64_t)128));
 if(tmp102){
 concat_list_I1 tmp103;
-concat_sb_dwrap(((int64_t)31),((int8_t const*)"exceeded maximum template depth"),(&tmp103));
+concat_sb_dwrap(((int64_t)31),((int8_t const*)"e""x""c""e""e""d""e""d"" ""m""a""x""i""m""u""m"" ""t""e""m""p""l""a""t""e"" ""d""e""p""t""h"""),(&tmp103));
 concat_FilePosition tmp104 = ((*l7_impl).e2_implPos);
 concat_29_FappendError2(tmp103,tmp104,(&l1_state));
 break;
@@ -37309,11 +37310,11 @@ int64_t const tmp0 = concat_branchTree_ddepth_I0(((*arg2/*state*/).e3_stack));
 bool const tmp1 = (tmp0<arg0/*count*/);
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dwrap(((int64_t)22),((int8_t const*)"stack underflow: need "),(&tmp2));
+concat_sb_dwrap(((int64_t)22),((int8_t const*)"s""t""a""c""k"" ""u""n""d""e""r""f""l""o""w"":"" ""n""e""e""d"" """),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendI(tmp2,arg0/*count*/,(&tmp3));
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp3,((int64_t)12),((int8_t const*)" values got "),(&tmp4));
+concat_sb_dappendS(tmp3,((int64_t)12),((int8_t const*)" ""v""a""l""u""e""s"" ""g""o""t"" """),(&tmp4));
 int64_t const tmp5 = concat_branchTree_ddepth_I0(((*arg2/*state*/).e3_stack));
 concat_list_I1 tmp6;
 concat_sb_dappendI(tmp4,tmp5,(&tmp6));
@@ -37362,7 +37363,7 @@ concat_internal_checkEnumIndex((*tmp13).label,4,"./concat.concat/typeCheck2.conc
 bool const tmp14 = (((*tmp13).data.e4_int)<((int64_t)0));
 if(tmp14){
 concat_list_I1 tmp15;
-concat_sb_dwrap(((int64_t)41),((int8_t const*)"array indices cannot be less than 0 got: "),(&tmp15));
+concat_sb_dwrap(((int64_t)41),((int8_t const*)"a""r""r""a""y"" ""i""n""d""i""c""e""s"" ""c""a""n""n""o""t"" ""b""e"" ""l""e""s""s"" ""t""h""a""n"" ""0"" ""g""o""t"":"" """),(&tmp15));
 concat_ConstValue* const tmp16 = (&((*arg0/*src*/).e1_value));
 concat_internal_checkEnumIndex((*tmp16).label,4,"./concat.concat/typeCheck2.concat:163:23");
 concat_list_I1 tmp17;
@@ -37393,13 +37394,13 @@ concat_internal_checkEnumIndex((*tmp25).label,4,"./concat.concat/typeCheck2.conc
 bool const tmp26 = ((bool)((((*tmp24).data.e4_int)<((int64_t)0))|(((*tmp25).data.e4_int)>=(l3_index.e0_value))));
 if(tmp26){
 concat_list_I1 tmp27;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"array index outside allowed range: "),(&tmp27));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"a""r""r""a""y"" ""i""n""d""e""x"" ""o""u""t""s""i""d""e"" ""a""l""l""o""w""e""d"" ""r""a""n""g""e"":"" """),(&tmp27));
 concat_ConstValue* const tmp28 = (&((*arg0/*src*/).e1_value));
 concat_internal_checkEnumIndex((*tmp28).label,4,"./concat.concat/typeCheck2.concat:173:23");
 concat_list_I1 tmp29;
 concat_sb_dappendI(tmp27,((*tmp28).data.e4_int),(&tmp29));
 concat_list_I1 tmp30;
-concat_sb_dappendS(tmp29,((int64_t)7),((int8_t const*)" size: "),(&tmp30));
+concat_sb_dappendS(tmp29,((int64_t)7),((int8_t const*)" ""s""i""z""e"":"" """),(&tmp30));
 concat_list_I1 tmp31;
 concat_sb_dappendI(tmp30,(l3_index.e0_value),(&tmp31));
 concat_FilePosition tmp32 = arg2/*pos*/;
@@ -37442,7 +37443,7 @@ int64_t const tmp7 = concat_branchTree_ddepth_I0(((*arg3/*state*/).e3_stack));
 bool const tmp8 = (tmp7<=((int64_t)0));
 if(tmp8){
 concat_list_I1 tmp9;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"not enough types for "),(&tmp9));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"n""o""t"" ""e""n""o""u""g""h"" ""t""y""p""e""s"" ""f""o""r"" """),(&tmp9));
 concat_list_I1 tmp10;
 concat_sb_dappendStr(tmp9,arg1/*name*/,(&tmp10));
 concat_FilePosition tmp11 = arg2/*pos*/;
@@ -37508,16 +37509,16 @@ continue;
 else_label1485:;
 }
 concat_list_I1 tmp34;
-concat_sb_dwrap(((int64_t)15),((int8_t const*)"wrong type for "),(&tmp34));
+concat_sb_dwrap(((int64_t)15),((int8_t const*)"w""r""o""n""g"" ""t""y""p""e"" ""f""o""r"" """),(&tmp34));
 concat_list_I1 tmp35;
 concat_sb_dappendStr(tmp34,arg1/*name*/,(&tmp35));
 concat_list_I1 tmp36;
-concat_sb_dappendS(tmp35,((int64_t)10),((int8_t const*)" expected "),(&tmp36));
+concat_sb_dappendS(tmp35,((int64_t)10),((int8_t const*)" ""e""x""p""e""c""t""e""d"" """),(&tmp36));
 concat_Type tmp37 = l7_expectedType;
 concat_list_I1 tmp38;
 concat_sb_dappendType(tmp36,tmp37,((concat_LabelContext const*)l4_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp38));
 concat_list_I1 tmp39;
-concat_sb_dappendS(tmp38,((int64_t)5),((int8_t const*)" got "),(&tmp39));
+concat_sb_dappendS(tmp38,((int64_t)5),((int8_t const*)" ""g""o""t"" """),(&tmp39));
 concat_Type tmp40 = ((*l6_typeInfo).e0_valueType);
 concat_list_I1 tmp41;
 concat_sb_dappendType(tmp39,tmp40,((concat_LabelContext const*)l4_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp41));
@@ -37607,7 +37608,7 @@ concat_Type tmp13 = l7_valType;
 bool const tmp14 = (tmp13.label!=concat_primitive_dtypes_dTYPE.label);
 if(tmp14){
 concat_list_I1 tmp15;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"expected type got "),(&tmp15));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"e""x""p""e""c""t""e""d"" ""t""y""p""e"" ""g""o""t"" """),(&tmp15));
 concat_Type tmp16 = l7_valType;
 concat_list_I1 tmp17;
 concat_sb_dappendType(tmp15,tmp16,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp17));
@@ -37621,7 +37622,7 @@ concat_ConstValue* const tmp19 = (&((*l6_typeInfo).e1_value));
 bool const tmp20 = (!((*tmp19).label==8));
 if(tmp20){
 concat_list_I1 tmp21;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"expected type-constant got "),(&tmp21));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"e""x""p""e""c""t""e""d"" ""t""y""p""e""-""c""o""n""s""t""a""n""t"" ""g""o""t"" """),(&tmp21));
 concat_ConstValue tmp22 = ((*l6_typeInfo).e1_value);
 concat_list_I1 tmp23;
 concat_sb_dappendConstant(tmp21,tmp22,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp23));
@@ -38031,7 +38032,7 @@ tmp12 = tmp9;
 }else{
 else_label1506:;
 concat_list_I1 tmp13;
-concat_sb_dwrap(((int64_t)28),((int8_t const*)"missing type for declaration"),(&tmp13));
+concat_sb_dwrap(((int64_t)28),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""f""o""r"" ""d""e""c""l""a""r""a""t""i""o""n"""),(&tmp13));
 concat_FilePosition tmp14 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp13,tmp14,l0_errors);
 return;
@@ -38049,11 +38050,11 @@ concat_Type tmp18 = l5_valType;
 bool const tmp19 = ((bool)((l3_id<((int32_t)0))|(((int64_t)l3_id)>=((*l1_autoTypes).e1_length))));
 if(tmp19){
 concat_list_I1 tmp20;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"auto-type id outside allowed range:"),(&tmp20));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"a""u""t""o""-""t""y""p""e"" ""i""d"" ""o""u""t""s""i""d""e"" ""a""l""l""o""w""e""d"" ""r""a""n""g""e"":"""),(&tmp20));
 concat_list_I1 tmp21;
 concat_sb_dappendI(tmp20,((int64_t)l3_id),(&tmp21));
 concat_list_I1 tmp22;
-concat_sb_dappendS(tmp21,((int64_t)9),((int8_t const*)" maximum:"),(&tmp22));
+concat_sb_dappendS(tmp21,((int64_t)9),((int8_t const*)" ""m""a""x""i""m""u""m"":"""),(&tmp22));
 int64_t tmp23 = ((*l1_autoTypes).e1_length);
 concat_list_I1 tmp24;
 concat_sb_dappendI(tmp22,((int64_t)(tmp23-((int64_t)1))),(&tmp24));
@@ -38128,7 +38129,7 @@ concat_30_FunfreezeInterpreter(arg1/*state*/);
 bool const tmp19 = concat_evaluateOperation(((concat_Operation const*)arg0/*op*/),(&((*arg1/*state*/).e1_interpreter)),true);
 if(tmp19){
 concat_list_I1 tmp20;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"could not evaluate "),(&tmp20));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""e""v""a""l""u""a""t""e"" """),(&tmp20));
 concat_Operation tmp21 = (*arg0/*op*/);
 concat_list_I1 tmp22;
 concat_sb_dappendOp(tmp20,tmp21,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp22));
@@ -38219,14 +38220,14 @@ concat_30_FupdateOpInfo((!l11_mutable),true,((int64_t)0),((int64_t)0),arg1/*stat
 return;
 case 0:case 6:case 4:case 3:;
 concat_list_I1 tmp49;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"taking the address of identifier "),(&tmp49));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"t""a""k""i""n""g"" ""t""h""e"" ""a""d""d""r""e""s""s"" ""o""f"" ""i""d""e""n""t""i""f""i""e""r"" """),(&tmp49));
 concat_OpValue* const tmp50 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp50).label,6,"./concat.concat/typeCheck2.concat:632:24");
 concat_IdentifierInfo tmp51 = ((*tmp50).data.e6__X64Id);
 concat_list_I1 tmp52;
 concat_sb_dappendIdInfo(tmp49,tmp51,((concat_LabelContext const*)l5_labelContext),(&tmp52));
 concat_list_I1 tmp53;
-concat_sb_dappendS(tmp52,((int64_t)17),((int8_t const*)" is not supported"),(&tmp53));
+concat_sb_dappendS(tmp52,((int64_t)17),((int8_t const*)" ""i""s"" ""n""o""t"" ""s""u""p""p""o""r""t""e""d"""),(&tmp53));
 concat_FilePosition tmp54 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp53,tmp54,l1_errors);
 return;
@@ -38246,7 +38247,7 @@ int64_t const tmp58 = concat_30_FappendOp(tmp57,arg1/*state*/);
 return;
 case 1:case 0:case 3:case 4:;
 concat_list_I1 tmp59;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"unexpected declaration of identifier "),(&tmp59));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""d""e""c""l""a""r""a""t""i""o""n"" ""o""f"" ""i""d""e""n""t""i""f""i""e""r"" """),(&tmp59));
 concat_OpValue* const tmp60 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp60).label,6,"./concat.concat/typeCheck2.concat:646:24");
 concat_IdentifierInfo tmp61 = ((*tmp60).data.e6__X64Id);
@@ -38257,7 +38258,7 @@ concat_appendError(tmp62,tmp63,l1_errors);
 return;
 case 6:;
 concat_list_I1 tmp64;
-concat_sb_dwrap(((int64_t)26),((int8_t const*)"cannot declare identifier "),(&tmp64));
+concat_sb_dwrap(((int64_t)26),((int8_t const*)"c""a""n""n""o""t"" ""d""e""c""l""a""r""e"" ""i""d""e""n""t""i""f""i""e""r"" """),(&tmp64));
 concat_OpValue* const tmp65 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp65).label,6,"./concat.concat/typeCheck2.concat:651:24");
 concat_IdentifierInfo tmp66 = ((*tmp65).data.e6__X64Id);
@@ -38301,7 +38302,7 @@ case 2:case 5:;
 concat_arrayView_I3 tmp79;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&((*arg0/*op*/).e1_dataType))),(&tmp79));
 concat_arrayView_I1 tmp80;
-concat_string_dwrap(((int64_t)14),((int8_t const*)"initialization"),(&tmp80));
+concat_string_dwrap(((int64_t)14),((int8_t const*)"i""n""i""t""i""a""l""i""z""a""t""i""o""n"""),(&tmp80));
 concat_FilePosition tmp81 = ((*arg0/*op*/).e2_pos);
 int64_t tmp82;
 bool const tmp83 = concat_30_FrequireTypes(tmp79,tmp80,tmp81,arg1/*state*/,(&tmp82));
@@ -38330,7 +38331,7 @@ concat_30_FopenBlock(tmp91,arg1/*state*/);
 return;
 case 0:case 3:case 4:case 6:case 7:;
 concat_list_I1 tmp92;
-concat_sb_dwrap(((int64_t)40),((int8_t const*)"unexpected initialization of identifier "),(&tmp92));
+concat_sb_dwrap(((int64_t)40),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""i""n""i""t""i""a""l""i""z""a""t""i""o""n"" ""o""f"" ""i""d""e""n""t""i""f""i""e""r"" """),(&tmp92));
 concat_OpValue* const tmp93 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp93).label,6,"./concat.concat/typeCheck2.concat:681:24");
 concat_IdentifierInfo tmp94 = ((*tmp93).data.e6__X64Id);
@@ -38369,7 +38370,7 @@ bool const tmp105 = concat_types_disPointer(tmp104,((concat_TypeContext const*)l
 bool const tmp106 = (!((bool)(tmp103|tmp105)));
 if(tmp106){
 concat_list_I1 tmp107;
-concat_sb_dwrap(((int64_t)47),((int8_t const*)"can only assign to pointers or references got: "),(&tmp107));
+concat_sb_dwrap(((int64_t)47),((int8_t const*)"c""a""n"" ""o""n""l""y"" ""a""s""s""i""g""n"" ""t""o"" ""p""o""i""n""t""e""r""s"" ""o""r"" ""r""e""f""e""r""e""n""c""e""s"" ""g""o""t"":"" """),(&tmp107));
 concat_Type tmp108 = (l14_target.e0_valueType);
 concat_list_I1 tmp109;
 concat_sb_dappendType(tmp107,tmp108,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp109));
@@ -38386,12 +38387,12 @@ if(tmp113){
 bool const tmp114 = ((l14_target.e2_valueId)!=((concat_LabelId)-1));
 if(tmp114){
 concat_list_I1 tmp115;
-concat_sb_dwrap(((int64_t)41),((int8_t const*)"cannot assign to immutable value of type "),(&tmp115));
+concat_sb_dwrap(((int64_t)41),((int8_t const*)"c""a""n""n""o""t"" ""a""s""s""i""g""n"" ""t""o"" ""i""m""m""u""t""a""b""l""e"" ""v""a""l""u""e"" ""o""f"" ""t""y""p""e"" """),(&tmp115));
 concat_Type tmp116 = (l14_target.e0_valueType);
 concat_list_I1 tmp117;
 concat_sb_dappendType(tmp115,tmp116,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp117));
 concat_list_I1 tmp118;
-concat_sb_dappendS(tmp117,((int64_t)5),((int8_t const*)" in \""),(&tmp118));
+concat_sb_dappendS(tmp117,((int64_t)5),((int8_t const*)" ""i""n"" ""\""""),(&tmp118));
 concat_optional_I3 tmp119 = concat_id_dlabelName((l14_target.e2_valueId),((concat_LabelContext const*)l5_labelContext));
 concat_internal_checkEnumIndex(tmp119.label,1,"./concat.concat/typeCheck2.concat:707:55");
 concat_list_I1 tmp120;
@@ -38403,7 +38404,7 @@ concat_appendError(tmp121,tmp122,l1_errors);
 }else{
 else_label1524:;
 concat_list_I1 tmp123;
-concat_sb_dwrap(((int64_t)33),((int8_t const*)"cannot assign to immutable type: "),(&tmp123));
+concat_sb_dwrap(((int64_t)33),((int8_t const*)"c""a""n""n""o""t"" ""a""s""s""i""g""n"" ""t""o"" ""i""m""m""u""t""a""b""l""e"" ""t""y""p""e"":"" """),(&tmp123));
 concat_Type tmp124 = (l14_target.e0_valueType);
 concat_list_I1 tmp125;
 concat_sb_dappendType(tmp123,tmp124,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp125));
@@ -38422,7 +38423,7 @@ concat_Type tmp129 = l15_base;
 concat_arrayView_I3 tmp130;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&l15_base)),(&tmp130));
 concat_arrayView_I1 tmp131;
-concat_string_dwrap(((int64_t)10),((int8_t const*)"assignment"),(&tmp131));
+concat_string_dwrap(((int64_t)10),((int8_t const*)"a""s""s""i""g""n""m""e""n""t"""),(&tmp131));
 concat_FilePosition tmp132 = ((*arg0/*op*/).e2_pos);
 int64_t tmp133;
 bool const tmp134 = concat_30_FrequireTypes(tmp130,tmp131,tmp132,arg1/*state*/,(&tmp133));
@@ -38533,7 +38534,7 @@ if(l16_checkOnly){
 bool const tmp176 = concat_30_FtryDeleteOp((l19_container.e4_opIndex),arg1/*state*/);
 if(tmp176){
 concat_list_I1 tmp177;
-concat_sb_dwrap(((int64_t)47),((int8_t const*)"internal compiler error: could not remove value"),(&tmp177));
+concat_sb_dwrap(((int64_t)47),((int8_t const*)"i""n""t""e""r""n""a""l"" ""c""o""m""p""i""l""e""r"" ""e""r""r""o""r"":"" ""c""o""u""l""d"" ""n""o""t"" ""r""e""m""o""v""e"" ""v""a""l""u""e"""),(&tmp177));
 concat_FilePosition tmp178 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp177,tmp178,l1_errors);
 }else{
@@ -38548,12 +38549,12 @@ return;
 else_label1532:;
 }
 concat_list_I1 tmp182;
-concat_sb_dwrap(((int64_t)5),((int8_t const*)"type "),(&tmp182));
+concat_sb_dwrap(((int64_t)5),((int8_t const*)"t""y""p""e"" """),(&tmp182));
 concat_Type tmp183 = l23_containerType;
 concat_list_I1 tmp184;
 concat_sb_dappendType(tmp182,tmp183,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp184));
 concat_list_I1 tmp185;
-concat_sb_dappendS(tmp184,((int64_t)24),((int8_t const*)" does not have a label \""),(&tmp185));
+concat_sb_dappendS(tmp184,((int64_t)24),((int8_t const*)" ""d""o""e""s"" ""n""o""t"" ""h""a""v""e"" ""a"" ""l""a""b""e""l"" ""\""""),(&tmp185));
 concat_list_I1 tmp186;
 concat_sb_dappendStr(tmp185,l24_labelName,(&tmp186));
 concat_list_I1 tmp187;
@@ -38579,7 +38580,7 @@ if(tmp196){
 bool const tmp197 = concat_30_FtryDeleteOp((l19_container.e4_opIndex),arg1/*state*/);
 if(tmp197){
 concat_list_I1 tmp198;
-concat_sb_dwrap(((int64_t)47),((int8_t const*)"internal compiler error: could not remove value"),(&tmp198));
+concat_sb_dwrap(((int64_t)47),((int8_t const*)"i""n""t""e""r""n""a""l"" ""c""o""m""p""i""l""e""r"" ""e""r""r""o""r"":"" ""c""o""u""l""d"" ""n""o""t"" ""r""e""m""o""v""e"" ""v""a""l""u""e"""),(&tmp198));
 concat_FilePosition tmp199 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp198,tmp199,l1_errors);
 }else{
@@ -38616,7 +38617,7 @@ if(l22_isType){
 bool const tmp209 = concat_30_FtryDeleteOp((l19_container.e4_opIndex),arg1/*state*/);
 if(tmp209){
 concat_list_I1 tmp210;
-concat_sb_dwrap(((int64_t)46),((int8_t const*)"internal compiler error: could not remove type"),(&tmp210));
+concat_sb_dwrap(((int64_t)46),((int8_t const*)"i""n""t""e""r""n""a""l"" ""c""o""m""p""i""l""e""r"" ""e""r""r""o""r"":"" ""c""o""u""l""d"" ""n""o""t"" ""r""e""m""o""v""e"" ""t""y""p""e"""),(&tmp210));
 concat_FilePosition tmp211 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp210,tmp211,l1_errors);
 }else{
@@ -38624,11 +38625,11 @@ else_label1538:;
 }
 if(l17_isAddr){
 concat_list_I1 tmp212;
-concat_sb_dwrap(((int64_t)37),((int8_t const*)"cannot take address of enum-creator \""),(&tmp212));
+concat_sb_dwrap(((int64_t)37),((int8_t const*)"c""a""n""n""o""t"" ""t""a""k""e"" ""a""d""d""r""e""s""s"" ""o""f"" ""e""n""u""m""-""c""r""e""a""t""o""r"" ""\""""),(&tmp212));
 concat_list_I1 tmp213;
 concat_sb_dappendStr(tmp212,l24_labelName,(&tmp213));
 concat_list_I1 tmp214;
-concat_sb_dappendS(tmp213,((int64_t)5),((int8_t const*)"\" in "),(&tmp214));
+concat_sb_dappendS(tmp213,((int64_t)5),((int8_t const*)"\""" ""i""n"" """),(&tmp214));
 concat_Type tmp215 = l23_containerType;
 concat_list_I1 tmp216;
 concat_sb_dappendType(tmp214,tmp215,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp216));
@@ -38641,7 +38642,7 @@ else_label1539:;
 concat_arrayView_I3 tmp218;
 concat_array_dwrap_I1(((int64_t)1),((concat_Type const*)(&l27_eltType)),(&tmp218));
 concat_arrayView_I1 tmp219;
-concat_string_dwrap(((int64_t)13),((int8_t const*)"enum-creation"),(&tmp219));
+concat_string_dwrap(((int64_t)13),((int8_t const*)"e""n""u""m""-""c""r""e""a""t""i""o""n"""),(&tmp219));
 concat_FilePosition tmp220 = ((*arg0/*op*/).e2_pos);
 int64_t tmp221;
 bool const tmp222 = concat_30_FrequireTypes(tmp218,tmp219,tmp220,arg1/*state*/,(&tmp221));
@@ -38688,7 +38689,7 @@ bool const tmp236 = concat_types_disReference(tmp235,((concat_TypeContext const*
 bool const tmp237 = (!((bool)(tmp234|tmp236)));
 if(tmp237){
 concat_list_I1 tmp238;
-concat_sb_dwrap(((int64_t)54),((int8_t const*)"can only take address of pointers or references got: \""),(&tmp238));
+concat_sb_dwrap(((int64_t)54),((int8_t const*)"c""a""n"" ""o""n""l""y"" ""t""a""k""e"" ""a""d""d""r""e""s""s"" ""o""f"" ""p""o""i""n""t""e""r""s"" ""o""r"" ""r""e""f""e""r""e""n""c""e""s"" ""g""o""t"":"" ""\""""),(&tmp238));
 concat_Type tmp239 = l20_srcType;
 concat_list_I1 tmp240;
 concat_sb_dappendType(tmp238,tmp239,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp240));
@@ -38835,17 +38836,17 @@ bool const tmp294 = concat_types_disInt(tmp293,((concat_TypeContext const*)l4_ty
 bool const tmp295 = (!tmp294);
 if(tmp295){
 concat_list_I1 tmp296;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"invalid type for operation "),(&tmp296));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"i""n""v""a""l""i""d"" ""t""y""p""e"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp296));
 concat_Operation tmp297 = (*arg0/*op*/);
 concat_list_I1 tmp298;
 concat_sb_dappendOp(tmp296,tmp297,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp298));
 concat_list_I1 tmp299;
-concat_sb_dappendS(tmp298,((int64_t)1),((int8_t const*)" "),(&tmp299));
+concat_sb_dappendS(tmp298,((int64_t)1),((int8_t const*)" """),(&tmp299));
 concat_Type tmp300 = ((*l36_typeInfo).e0_valueType);
 concat_list_I1 tmp301;
 concat_sb_dappendType(tmp299,tmp300,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp301));
 concat_list_I1 tmp302;
-concat_sb_dappendS(tmp301,((int64_t)28),((int8_t const*)" is not a pointer or integer"),(&tmp302));
+concat_sb_dappendS(tmp301,((int64_t)28),((int8_t const*)" ""i""s"" ""n""o""t"" ""a"" ""p""o""i""n""t""e""r"" ""o""r"" ""i""n""t""e""g""e""r"""),(&tmp302));
 concat_FilePosition tmp303 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp302,tmp303,l1_errors);
 return;
@@ -38863,12 +38864,12 @@ bool const tmp307 = concat_itr_dbranchTree_dhasNext_I0(tmp279,(&tmp306));
 bool const tmp308 = (!tmp307);
 if(tmp308){
 concat_list_I1 tmp309;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"missing type for operation "),(&tmp309));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"m""i""s""s""i""n""g"" ""t""y""p""e"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp309));
 concat_Operation tmp310 = (*arg0/*op*/);
 concat_list_I1 tmp311;
 concat_sb_dappendOp(tmp309,tmp310,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp311));
 concat_list_I1 tmp312;
-concat_sb_dappendS(tmp311,((int64_t)17),((int8_t const*)" expected pointer"),(&tmp312));
+concat_sb_dappendS(tmp311,((int64_t)17),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""p""o""i""n""t""e""r"""),(&tmp312));
 concat_FilePosition tmp313 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp312,tmp313,l1_errors);
 return;
@@ -38898,11 +38899,11 @@ int32_t tmp322 = l35_indexCount;
 bool const tmp323 = (((int64_t)tmp322)>l42_dimensions);
 if(tmp323){
 concat_list_I1 tmp324;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"too much indices for pointer access "),(&tmp324));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"t""o""o"" ""m""u""c""h"" ""i""n""d""i""c""e""s"" ""f""o""r"" ""p""o""i""n""t""e""r"" ""a""c""c""e""s""s"" """),(&tmp324));
 concat_list_I1 tmp325;
 concat_sb_dappendI(tmp324,((int64_t)l35_indexCount),(&tmp325));
 concat_list_I1 tmp326;
-concat_sb_dappendS(tmp325,((int64_t)12),((int8_t const*)" dimensions:"),(&tmp326));
+concat_sb_dappendS(tmp325,((int64_t)12),((int8_t const*)" ""d""i""m""e""n""s""i""o""n""s"":"""),(&tmp326));
 concat_list_I1 tmp327;
 concat_sb_dappendI(tmp326,l42_dimensions,(&tmp327));
 concat_FilePosition tmp328 = ((*arg0/*op*/).e2_pos);
@@ -38957,7 +38958,7 @@ concat_Type tmp347;
 bool const tmp348 = concat_types_dgetIndexType(tmp346,tmp344,((concat_TypeContext const*)l4_typeContext),(&tmp347));
 if(tmp348){
 concat_list_I1 tmp349;
-concat_sb_dwrap(((int64_t)36),((int8_t const*)"could not find index type for index "),(&tmp349));
+concat_sb_dwrap(((int64_t)36),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""f""i""n""d"" ""i""n""d""e""x"" ""t""y""p""e"" ""f""o""r"" ""i""n""d""e""x"" """),(&tmp349));
 concat_list_I1 tmp350;
 concat_sb_dappendI(tmp349,((int64_t)tmp344),(&tmp350));
 concat_FilePosition tmp351 = ((*arg0/*op*/).e2_pos);
@@ -38974,7 +38975,7 @@ l46_typeBuffer = tmp342;
 concat_arrayView_I3 tmp353;
 concat_list_dasArray_I1(l46_typeBuffer,(&tmp353));
 concat_arrayView_I1 tmp354;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"index"),(&tmp354));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"i""n""d""e""x"""),(&tmp354));
 concat_FilePosition tmp355 = ((*arg0/*op*/).e2_pos);
 int64_t tmp356;
 bool const tmp357 = concat_30_FrequireTypes(tmp353,tmp354,tmp355,arg1/*state*/,(&tmp356));
@@ -39022,7 +39023,7 @@ concat_Type tmp374;
 bool const tmp375 = concat_types_dnewArrayType(tmp370,l34_isAddr,tmp373,true,l50_mutable,l4_typeContext,(&tmp374));
 if(tmp375){
 concat_list_I1 tmp376;
-concat_sb_dwrap(((int64_t)27),((int8_t const*)"could not create array type"),(&tmp376));
+concat_sb_dwrap(((int64_t)27),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""c""r""e""a""t""e"" ""a""r""r""a""y"" ""t""y""p""e"""),(&tmp376));
 concat_FilePosition tmp377 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp376,tmp377,l1_errors);
 }else{
@@ -39106,12 +39107,12 @@ bool const tmp403 = concat_types_dcanCast(tmp400,tmp401,((*tmp402).label==35),((
 bool const tmp404 = (!tmp403);
 if(tmp404){
 concat_list_I1 tmp405;
-concat_sb_dwrap(((int64_t)12),((int8_t const*)"cannot cast "),(&tmp405));
+concat_sb_dwrap(((int64_t)12),((int8_t const*)"c""a""n""n""o""t"" ""c""a""s""t"" """),(&tmp405));
 concat_Type tmp406 = (l51_value.e0_valueType);
 concat_list_I1 tmp407;
 concat_sb_dappendType(tmp405,tmp406,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp407));
 concat_list_I1 tmp408;
-concat_sb_dappendS(tmp407,((int64_t)4),((int8_t const*)" to "),(&tmp408));
+concat_sb_dappendS(tmp407,((int64_t)4),((int8_t const*)" ""t""o"" """),(&tmp408));
 concat_Type tmp409 = ((*arg0/*op*/).e1_dataType);
 concat_list_I1 tmp410;
 concat_sb_dappendType(tmp408,tmp409,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp410));
@@ -39148,7 +39149,7 @@ bool const tmp423 = concat_types_disFixedSize(tmp422,((concat_TypeContext const*
 bool const tmp424 = (!tmp423);
 if(tmp424){
 concat_list_I1 tmp425;
-concat_sb_dwrap(((int64_t)38),((int8_t const*)"variable size arrays are not supported"),(&tmp425));
+concat_sb_dwrap(((int64_t)38),((int8_t const*)"v""a""r""i""a""b""l""e"" ""s""i""z""e"" ""a""r""r""a""y""s"" ""a""r""e"" ""n""o""t"" ""s""u""p""p""o""r""t""e""d"""),(&tmp425));
 concat_FilePosition tmp426 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp425,tmp426,l1_errors);
 }else{
@@ -39172,7 +39173,7 @@ concat_Type tmp433 = ((*arg0/*op*/).e1_dataType);
 concat_arrayView_I3 tmp434;
 concat_types_dcompositeElts(tmp433,((concat_TypeContext const*)l4_typeContext),(&tmp434));
 concat_arrayView_I1 tmp435;
-concat_string_dwrap(((int64_t)13),((int8_t const*)"tuple element"),(&tmp435));
+concat_string_dwrap(((int64_t)13),((int8_t const*)"t""u""p""l""e"" ""e""l""e""m""e""n""t"""),(&tmp435));
 concat_FilePosition tmp436 = ((*arg0/*op*/).e2_pos);
 int64_t tmp437;
 bool const tmp438 = concat_30_FrequireTypes(tmp434,tmp435,tmp436,arg1/*state*/,(&tmp437));
@@ -39202,13 +39203,13 @@ concat_30_FunfreezeInterpreter(arg1/*state*/);
 bool const tmp444 = concat_evaluateOperation(((concat_Operation const*)arg0/*op*/),(&((*arg1/*state*/).e1_interpreter)),true);
 if(tmp444){
 concat_list_I1 tmp445;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"could not evaluate "),(&tmp445));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""e""v""a""l""u""a""t""e"" """),(&tmp445));
 concat_OpValue* const tmp446 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp446).label,2,"./concat.concat/typeCheck2.concat:1073:26");
 concat_list_I1 tmp447;
 concat_sb_dappendBlockType(tmp445,(((*tmp446).data.e2_block).e0_blockType),(&tmp447));
 concat_list_I1 tmp448;
-concat_sb_dappendS(tmp447,((int64_t)6),((int8_t const*)" block"),(&tmp448));
+concat_sb_dappendS(tmp447,((int64_t)6),((int8_t const*)" ""b""l""o""c""k"""),(&tmp448));
 concat_FilePosition tmp449 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp448,tmp449,l1_errors);
 }else{
@@ -39226,13 +39227,13 @@ concat_BlockType const tmp451 = (((*tmp450).data.e3_blockEnd).e0_blockType);
 switch(tmp451.label){
 case 14:case 15:case 16:case 17:case 18:case 19:case 20:case 13:;
 concat_list_I1 tmp452;
-concat_sb_dwrap(((int64_t)19),((int8_t const*)"could not evaluate "),(&tmp452));
+concat_sb_dwrap(((int64_t)19),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""e""v""a""l""u""a""t""e"" """),(&tmp452));
 concat_OpValue* const tmp453 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp453).label,3,"./concat.concat/typeCheck2.concat:1105:24");
 concat_list_I1 tmp454;
 concat_sb_dappendBlockType(tmp452,(((*tmp453).data.e3_blockEnd).e0_blockType),(&tmp454));
 concat_list_I1 tmp455;
-concat_sb_dappendS(tmp454,((int64_t)6),((int8_t const*)" block"),(&tmp455));
+concat_sb_dappendS(tmp454,((int64_t)6),((int8_t const*)" ""b""l""o""c""k"""),(&tmp455));
 concat_FilePosition tmp456 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp455,tmp456,l1_errors);
 return;
@@ -39246,11 +39247,11 @@ concat_internal_checkEnumIndex((*tmp460).label,3,"./concat.concat/typeCheck2.con
 bool const tmp461 = (tmp459.label!=(((*tmp460).data.e3_blockEnd).e0_blockType).label);
 if(tmp461){
 concat_list_I1 tmp462;
-concat_sb_dwrap(((int64_t)18),((int8_t const*)"unexpected end of "),(&tmp462));
+concat_sb_dwrap(((int64_t)18),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""e""n""d"" ""o""f"" """),(&tmp462));
 concat_list_I1 tmp463;
 concat_sb_dappendBlockType(tmp462,l55_closed,(&tmp463));
 concat_list_I1 tmp464;
-concat_sb_dappendS(tmp463,((int64_t)16),((int8_t const*)" block expected "),(&tmp464));
+concat_sb_dappendS(tmp463,((int64_t)16),((int8_t const*)" ""b""l""o""c""k"" ""e""x""p""e""c""t""e""d"" """),(&tmp464));
 concat_OpValue* const tmp465 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp465).label,3,"./concat.concat/typeCheck2.concat:1115:26");
 concat_list_I1 tmp466;
@@ -39273,12 +39274,12 @@ concat_optional_I23 const l56_value_X63 = tmp470;
 bool const tmp471 = concat_optional_disEmpty_I13(l56_value_X63);
 if(tmp471){
 concat_list_I1 tmp472;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"missing argument for "),(&tmp472));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"m""i""s""s""i""n""g"" ""a""r""g""u""m""e""n""t"" ""f""o""r"" """),(&tmp472));
 concat_Operation tmp473 = (*arg0/*op*/);
 concat_list_I1 tmp474;
 concat_sb_dappendOp(tmp472,tmp473,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp474));
 concat_list_I1 tmp475;
-concat_sb_dappendS(tmp474,((int64_t)26),((int8_t const*)" expected pointer or array"),(&tmp475));
+concat_sb_dappendS(tmp474,((int64_t)26),((int8_t const*)" ""e""x""p""e""c""t""e""d"" ""p""o""i""n""t""e""r"" ""o""r"" ""a""r""r""a""y"""),(&tmp475));
 concat_FilePosition tmp476 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp475,tmp476,l1_errors);
 return;
@@ -39308,12 +39309,12 @@ bool const tmp488 = concat_types_disFixedSize(tmp487,((concat_TypeContext const*
 bool const tmp489 = (!tmp488);
 if(tmp489){
 concat_list_I1 tmp490;
-concat_sb_dwrap(((int64_t)22),((int8_t const*)"invalid operand for : "),(&tmp490));
+concat_sb_dwrap(((int64_t)22),((int8_t const*)"i""n""v""a""l""i""d"" ""o""p""e""r""a""n""d"" ""f""o""r"" "":"" """),(&tmp490));
 concat_Operation tmp491 = (*arg0/*op*/);
 concat_list_I1 tmp492;
 concat_sb_dappendOp(tmp490,tmp491,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp492));
 concat_list_I1 tmp493;
-concat_sb_dappendS(tmp492,((int64_t)26),((int8_t const*)" cannot get the length of "),(&tmp493));
+concat_sb_dappendS(tmp492,((int64_t)26),((int8_t const*)" ""c""a""n""n""o""t"" ""g""e""t"" ""t""h""e"" ""l""e""n""g""t""h"" ""o""f"" """),(&tmp493));
 concat_Type tmp494 = l57_valType;
 concat_list_I1 tmp495;
 concat_sb_dappendType(tmp493,tmp494,((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp495));
@@ -39374,7 +39375,7 @@ return;
 }else{
 else_label1586:;
 concat_list_I1 tmp524;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "),(&tmp524));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""a""r""r""a""y""-""s""i""z""e"" ""t""y""p""e"" ""f""o""r"" """),(&tmp524));
 concat_Operation tmp525 = (*arg0/*op*/);
 concat_list_I1 tmp526;
 concat_sb_dappendOp(tmp524,tmp525,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp526));
@@ -39420,7 +39421,7 @@ tmp532 = tmp538;
 }else{
 else_label1588:;
 concat_list_I1 tmp539;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"unsupported array-size type for "),(&tmp539));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""a""r""r""a""y""-""s""i""z""e"" ""t""y""p""e"" ""f""o""r"" """),(&tmp539));
 concat_Operation tmp540 = (*arg0/*op*/);
 concat_list_I1 tmp541;
 concat_sb_dappendOp(tmp539,tmp540,((concat_ConstantContext const*)(&((*l2_idContext).e0_constContext))),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp541));
@@ -39457,7 +39458,7 @@ exit(EXIT_FAILURE);//unreachable
 else_label1581:;
 }
 concat_list_I1 tmp554;
-concat_sb_dwrap(((int64_t)30),((int8_t const*)"unsupported argument type for "),(&tmp554));
+concat_sb_dwrap(((int64_t)30),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""a""r""g""u""m""e""n""t"" ""t""y""p""e"" ""f""o""r"" """),(&tmp554));
 concat_Operation tmp555 = (*arg0/*op*/);
 concat_list_I1 tmp556;
 concat_sb_dappendOp(tmp554,tmp555,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp556));
@@ -39568,7 +39569,7 @@ int64_t tmp598 = ((*l66_lower).e4_opIndex);
 bool const tmp599 = concat_30_FtryDeleteOp(tmp598,arg1/*state*/);
 if(tmp599){
 concat_list_I1 tmp600;
-concat_sb_dwrap(((int64_t)49),((int8_t const*)"internal compiler error: could not move operation"),(&tmp600));
+concat_sb_dwrap(((int64_t)49),((int8_t const*)"i""n""t""e""r""n""a""l"" ""c""o""m""p""i""l""e""r"" ""e""r""r""o""r"":"" ""c""o""u""l""d"" ""n""o""t"" ""m""o""v""e"" ""o""p""e""r""a""t""i""o""n"""),(&tmp600));
 concat_FilePosition tmp601 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp600,tmp601,l1_errors);
 }else{
@@ -39587,7 +39588,7 @@ concat_30_FunfreezeInterpreter(arg1/*state*/);
 bool const tmp602 = concat_evaluateOperation(((concat_Operation const*)arg0/*op*/),(&((*arg1/*state*/).e1_interpreter)),true);
 if(tmp602){
 concat_list_I1 tmp603;
-concat_sb_dwrap(((int64_t)32),((int8_t const*)"could not evaluate type modifier"),(&tmp603));
+concat_sb_dwrap(((int64_t)32),((int8_t const*)"c""o""u""l""d"" ""n""o""t"" ""e""v""a""l""u""a""t""e"" ""t""y""p""e"" ""m""o""d""i""f""i""e""r"""),(&tmp603));
 concat_OpValue* const tmp604 = (&((*arg0/*op*/).e0_val));
 concat_internal_checkEnumIndex((*tmp604).label,47,"./concat.concat/typeCheck2.concat:1293:22");
 concat_list_I1 tmp605;
@@ -39600,7 +39601,7 @@ else_label1596:;
 return;
 case 5:case 11:case 15:case 19:case 33:case 41:;
 concat_list_I1 tmp607;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"unsupported operation"),(&tmp607));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"u""n""s""u""p""p""o""r""t""e""d"" ""o""p""e""r""a""t""i""o""n"""),(&tmp607));
 concat_Operation tmp608 = (*arg0/*op*/);
 concat_list_I1 tmp609;
 concat_sb_dappendOp(tmp607,tmp608,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp609));
@@ -39609,12 +39610,12 @@ concat_appendError(tmp609,tmp610,l1_errors);
 return;
 }
 concat_list_I1 tmp611;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"type-checking for operation: "),(&tmp611));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"t""y""p""e""-""c""h""e""c""k""i""n""g"" ""f""o""r"" ""o""p""e""r""a""t""i""o""n"":"" """),(&tmp611));
 concat_Operation tmp612 = (*arg0/*op*/);
 concat_list_I1 tmp613;
 concat_sb_dappendOp(tmp611,tmp612,((concat_ConstantContext const*)l3_constContext),((concat_LabelContext const*)l5_labelContext),((concat_TypeContext const*)l4_typeContext),(&tmp613));
 concat_list_I1 tmp614;
-concat_sb_dappendS(tmp613,((int64_t)25),((int8_t const*)" has not been implemented"),(&tmp614));
+concat_sb_dappendS(tmp613,((int64_t)25),((int8_t const*)" ""h""a""s"" ""n""o""t"" ""b""e""e""n"" ""i""m""p""l""e""m""e""n""t""e""d"""),(&tmp614));
 concat_FilePosition tmp615 = ((*arg0/*op*/).e2_pos);
 concat_appendError(tmp614,tmp615,l1_errors);
 return;
@@ -40000,22 +40001,22 @@ return;
 }
 // ./concat.concat/generator_c.concat
 //global
-static int8_t const* const concat_32_FCONCAT__PREFIX = ((int8_t const*)"concat_");
-static int8_t const* const concat_32_FARGC__NAME = ((int8_t const*)"internal_argc");
-static int8_t const* const concat_32_FARGV__NAME = ((int8_t const*)"internal_argv");
-static int8_t const* const concat_32_FCHECK__INDEX__NAME = ((int8_t const*)"internal_checkArrayIndex");
-static int8_t const* const concat_32_FCHECK__ENUM__NAME = ((int8_t const*)"internal_checkEnumIndex");
-static int8_t const* const concat_32_FCHARNAMES__NAME = ((int8_t const*)"internal_charNames");
+static int8_t const* const concat_32_FCONCAT__PREFIX = ((int8_t const*)"c""o""n""c""a""t""_""");
+static int8_t const* const concat_32_FARGC__NAME = ((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""c""");
+static int8_t const* const concat_32_FARGV__NAME = ((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""v""");
+static int8_t const* const concat_32_FCHECK__INDEX__NAME = ((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""e""c""k""A""r""r""a""y""I""n""d""e""x""");
+static int8_t const* const concat_32_FCHECK__ENUM__NAME = ((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""e""c""k""E""n""u""m""I""n""d""e""x""");
+static int8_t const* const concat_32_FCHARNAMES__NAME = ((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""a""r""N""a""m""e""s""");
 static int32_t const concat_32_FEXIT__CODE__ARRAY__INDEX = 1;
 static int32_t const concat_32_FEXIT__CODE__ENUM__INDEX = 2;
 //local
 static void concat_32_FprintHeader(concat_io_dFILE arg0/*target*/){
-concat_io_dIOError const tmp0 = concat_io_dfputs(arg0/*target*/,((int64_t)20),((int8_t const*)"#include <stdlib.h>\x0A"));
-concat_io_dIOError const tmp1 = concat_io_dfputs(arg0/*target*/,((int64_t)19),((int8_t const*)"#include <stdio.h>\x0A"));
-concat_io_dIOError const tmp2 = concat_io_dfputs(arg0/*target*/,((int64_t)22),((int8_t const*)"#include <inttypes.h>\x0A"));
-concat_io_dIOError const tmp3 = concat_io_dfputs(arg0/*target*/,((int64_t)20),((int8_t const*)"#include <string.h>\x0A"));
-concat_io_dIOError const tmp4 = concat_io_dfputs(arg0/*target*/,((int64_t)21),((int8_t const*)"#include <stdbool.h>\x0A"));
-concat_io_dIOError const tmp5 = concat_io_dfputs(arg0/*target*/,((int64_t)18),((int8_t const*)"#include <math.h>\x0A"));
+concat_io_dIOError const tmp0 = concat_io_dfputs(arg0/*target*/,((int64_t)20),((int8_t const*)"#""i""n""c""l""u""d""e"" ""<""s""t""d""l""i""b"".""h"">""\x0A"""));
+concat_io_dIOError const tmp1 = concat_io_dfputs(arg0/*target*/,((int64_t)19),((int8_t const*)"#""i""n""c""l""u""d""e"" ""<""s""t""d""i""o"".""h"">""\x0A"""));
+concat_io_dIOError const tmp2 = concat_io_dfputs(arg0/*target*/,((int64_t)22),((int8_t const*)"#""i""n""c""l""u""d""e"" ""<""i""n""t""t""y""p""e""s"".""h"">""\x0A"""));
+concat_io_dIOError const tmp3 = concat_io_dfputs(arg0/*target*/,((int64_t)20),((int8_t const*)"#""i""n""c""l""u""d""e"" ""<""s""t""r""i""n""g"".""h"">""\x0A"""));
+concat_io_dIOError const tmp4 = concat_io_dfputs(arg0/*target*/,((int64_t)21),((int8_t const*)"#""i""n""c""l""u""d""e"" ""<""s""t""d""b""o""o""l"".""h"">""\x0A"""));
+concat_io_dIOError const tmp5 = concat_io_dfputs(arg0/*target*/,((int64_t)18),((int8_t const*)"#""i""n""c""l""u""d""e"" ""<""m""a""t""h"".""h"">""\x0A"""));
 return;
 }
 static void concat_32_Fsb_dappendAsciified(concat_list_I1 arg0,concat_arrayView_I1 arg1,concat_list_I1* out0){
@@ -40062,7 +40063,7 @@ else_label1602:;
 bool const tmp11 = (l1_c==((int8_t)95));
 if(tmp11){
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"__"),(&tmp12));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"_""_"""),(&tmp12));
 tmp0 = tmp12;
 tmp1 = ((int32_t)(tmp1+((int32_t)1)));
 continue;
@@ -40072,7 +40073,7 @@ else_label1603:;
 bool const tmp13 = (l1_c==((int8_t)46));
 if(tmp13){
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"_d"),(&tmp14));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"_""d"""),(&tmp14));
 tmp0 = tmp14;
 tmp1 = ((int32_t)(tmp1+((int32_t)1)));
 continue;
@@ -40080,7 +40081,7 @@ continue;
 else_label1604:;
 }
 concat_list_I1 tmp15;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"_X"),(&tmp15));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"_""X"""),(&tmp15));
 bool const tmp16 = (((int32_t)(((int32_t)l1_c)&((int32_t)255)))<((int32_t)16));
 if(tmp16){
 concat_list_I1 tmp17;
@@ -40097,12 +40098,32 @@ tmp1 = ((int32_t)(tmp1+((int32_t)1)));
 *(out0)= tmp0;
 return;
 }
+void concat_sb_dappendEscapedStrC(concat_list_I1 arg0,concat_arrayView_I1 arg1,concat_list_I1* out0){
+concat_list_I1 tmp0 = arg0;
+concat_arrayView_I1 const l0_str = arg1;
+int32_t tmp1 = ((int32_t)0);
+do{
+bool const tmp2 = (((int64_t)tmp1)<(l0_str.e1_length));
+if(!tmp2)
+  break;
+concat_arrayView_I1 tmp3 = l0_str;
+int8_t const tmp4 = concat_string_dcharAt(tmp3,((int64_t)tmp1));
+concat_list_I1 tmp5;
+concat_sb_dappendEscapedChr(tmp0,tmp4,(&tmp5));
+concat_list_I1 tmp6;
+concat_sb_dappendS(tmp5,((int64_t)2),((int8_t const*)"\"""\""""),(&tmp6));
+tmp0 = tmp6;
+tmp1 = ((int32_t)(tmp1+((int32_t)1)));
+}while(1);
+*(out0)= tmp0;
+return;
+}
 static void concat_32_FprintGlobalName(concat_LabelId arg0/*label*/,int32_t arg1/*implId*/,concat_io_dFILE arg2/*target*/,concat_ProgramContext* arg3/*prog*/){
 concat_LabelContext* const l0_labelContext = (&(((*arg3/*prog*/).e0_idContext).e1_labelContext));
 concat_list_I1 tmp0;
 concat_sb_dcreate(((int64_t)128),(&tmp0));
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"concat_"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp1));
 concat_LabelFlag const tmp2 = concat_id_dlabelFlags(arg0/*label*/,((concat_LabelContext const*)l0_labelContext));
 bool const tmp3 = (((concat_LabelFlag)(tmp2&((concat_LabelFlag)8)))==((int32_t)0));
 if(tmp3){
@@ -40110,7 +40131,7 @@ concat_FileId const tmp4 = concat_id_dgetLabelFile(arg0/*label*/,l0_labelContext
 concat_list_I1 tmp5;
 concat_sb_dappendI(tmp1,((int64_t)tmp4),(&tmp5));
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp5,((int64_t)2),((int8_t const*)"_F"),(&tmp6));
+concat_sb_dappendS(tmp5,((int64_t)2),((int8_t const*)"_""F"""),(&tmp6));
 tmp1 = tmp6;
 }else{
 else_label1606:;
@@ -40129,7 +40150,7 @@ concat_id_dnamespaceName(tmp11,l0_labelContext,(&tmp12));
 concat_list_I1 tmp13;
 concat_32_Fsb_dappendAsciified(tmp1,tmp12,(&tmp13));
 concat_arrayView_I1 tmp14;
-concat_string_dwrap(((int64_t)1),((int8_t const*)"."),(&tmp14));
+concat_string_dwrap(((int64_t)1),((int8_t const*)"."""),(&tmp14));
 concat_list_I1 tmp15;
 concat_32_Fsb_dappendAsciified(tmp13,tmp14,(&tmp15));
 concat_NamespaceId tmp16 = l1_mNamespace;
@@ -40140,7 +40161,7 @@ tmp1 = tmp15;
 concat_optional_I3 tmp18 = concat_id_dlabelName(arg0/*label*/,((concat_LabelContext const*)l0_labelContext));
 bool const tmp19 = concat_optional_dhasData_I0(tmp18);
 if(tmp19){
-concat_internal_checkEnumIndex(tmp18.label,1,"./concat.concat/generator_c.concat:77:7");
+concat_internal_checkEnumIndex(tmp18.label,1,"./concat.concat/generator_c.concat:86:7");
 concat_list_I1 tmp20;
 concat_32_Fsb_dappendAsciified(tmp1,(tmp18.data.e1_data),(&tmp20));
 tmp1 = tmp20;
@@ -40150,7 +40171,7 @@ else_label1607:;
 bool const tmp21 = (arg1/*implId*/>=((int32_t)0));
 if(tmp21){
 concat_list_I1 tmp22;
-concat_sb_dappendS(tmp1,((int64_t)2),((int8_t const*)"_I"),(&tmp22));
+concat_sb_dappendS(tmp1,((int64_t)2),((int8_t const*)"_""I"""),(&tmp22));
 concat_list_I1 tmp23;
 concat_sb_dappendI(tmp22,((int64_t)arg1/*implId*/),(&tmp23));
 tmp1 = tmp23;
@@ -40169,18 +40190,18 @@ concat_optional_I3 const l1_labelName = tmp0;
 concat_list_I1 tmp1;
 concat_sb_dcreate(((int64_t)64),(&tmp1));
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"arg"),(&tmp2));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"a""r""g"""),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendI(tmp2,((int64_t)arg0/*index*/),(&tmp3));
 bool const tmp4 = concat_optional_dhasData_I0(l1_labelName);
 if(tmp4){
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp3,((int64_t)2),((int8_t const*)"/*"),(&tmp5));
-concat_internal_checkEnumIndex(l1_labelName.label,1,"./concat.concat/generator_c.concat:94:17");
+concat_sb_dappendS(tmp3,((int64_t)2),((int8_t const*)"/""*"""),(&tmp5));
+concat_internal_checkEnumIndex(l1_labelName.label,1,"./concat.concat/generator_c.concat:103:17");
 concat_list_I1 tmp6;
 concat_32_Fsb_dappendAsciified(tmp5,(l1_labelName.data.e1_data),(&tmp6));
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)2),((int8_t const*)"*/"),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)2),((int8_t const*)"*""/"""),(&tmp7));
 tmp3 = tmp7;
 }else{
 else_label1609:;
@@ -40197,18 +40218,18 @@ concat_optional_I3 const l1_labelName = tmp0;
 concat_list_I1 tmp1;
 concat_sb_dcreate(((int64_t)64),(&tmp1));
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"out"),(&tmp2));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"o""u""t"""),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendI(tmp2,((int64_t)arg0/*index*/),(&tmp3));
 bool const tmp4 = concat_optional_dhasData_I0(l1_labelName);
 if(tmp4){
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp3,((int64_t)2),((int8_t const*)"/*"),(&tmp5));
-concat_internal_checkEnumIndex(l1_labelName.label,1,"./concat.concat/generator_c.concat:108:17");
+concat_sb_dappendS(tmp3,((int64_t)2),((int8_t const*)"/""*"""),(&tmp5));
+concat_internal_checkEnumIndex(l1_labelName.label,1,"./concat.concat/generator_c.concat:117:17");
 concat_list_I1 tmp6;
 concat_32_Fsb_dappendAsciified(tmp5,(l1_labelName.data.e1_data),(&tmp6));
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)2),((int8_t const*)"*/"),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)2),((int8_t const*)"*""/"""),(&tmp7));
 tmp3 = tmp7;
 }else{
 else_label1610:;
@@ -40229,15 +40250,15 @@ case 5:;
 concat_list_I1 tmp1;
 concat_sb_dcreate(((int64_t)64),(&tmp1));
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp1,((int64_t)1),((int8_t const*)"l"),(&tmp2));
+concat_sb_dappendS(tmp1,((int64_t)1),((int8_t const*)"l"""),(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendI(tmp2,((int64_t)(arg0/*idInfo*/.e4_id)),(&tmp3));
 concat_optional_I3 tmp4 = concat_id_dlabelName((arg0/*idInfo*/.e1_labelId),((concat_LabelContext const*)l0_labelContext));
 bool const tmp5 = concat_optional_dhasData_I0(tmp4);
 if(tmp5){
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp3,((int64_t)1),((int8_t const*)"_"),(&tmp6));
-concat_internal_checkEnumIndex(tmp4.label,1,"./concat.concat/generator_c.concat:126:17");
+concat_sb_dappendS(tmp3,((int64_t)1),((int8_t const*)"_"""),(&tmp6));
+concat_internal_checkEnumIndex(tmp4.label,1,"./concat.concat/generator_c.concat:135:17");
 concat_list_I1 tmp7;
 concat_32_Fsb_dappendAsciified(tmp6,(tmp4.data.e1_data),(&tmp7));
 tmp3 = tmp7;
@@ -40252,7 +40273,7 @@ case 7:;
 concat_list_I1 tmp10;
 concat_sb_dcreate(((int64_t)64),(&tmp10));
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)3),((int8_t const*)"tmp"),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)3),((int8_t const*)"t""m""p"""),(&tmp11));
 concat_list_I1 tmp12;
 concat_sb_dappendI(tmp11,((int64_t)(arg0/*idInfo*/.e4_id)),(&tmp12));
 concat_io_dIOError const tmp13 = concat_io_dfputSb(arg1/*target*/,tmp12);
@@ -40271,7 +40292,7 @@ static void concat_32_FprintCompositeName(concat_arrayView_I1 arg0/*name*/,int32
 concat_list_I1 tmp0;
 concat_sb_dcreate(((int64_t)128),(&tmp0));
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"concat_"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp1));
 concat_list_I1 tmp2;
 concat_sb_dappendStr(tmp1,arg0/*name*/,(&tmp2));
 concat_list_I1 tmp3;
@@ -40286,40 +40307,40 @@ concat_LabelContext* const l0_labelContext = (&(((*arg2/*prog*/).e0_idContext).e
 concat_TypeContext* const l1_typeContext = (&(((*arg2/*prog*/).e0_idContext).e2_typeContext));
 switch(arg0/*t*/.label){
 case 0:case 1:case 18:case 17:;
-concat_io_dIOError const tmp0 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"void"));
+concat_io_dIOError const tmp0 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"v""o""i""d"""));
 break;
 case 2:;
-concat_internal_checkEnumIndex(arg0/*t*/.label,2,"./concat.concat/generator_c.concat:161:9");
+concat_internal_checkEnumIndex(arg0/*t*/.label,2,"./concat.concat/generator_c.concat:170:9");
 concat_23_Ftypes_dPrimitiveType const tmp1 = (arg0/*t*/.data.e2_primitiveType);
 switch(tmp1.label){
 case 7:;
-concat_io_dIOError const tmp2 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"size_t"));
+concat_io_dIOError const tmp2 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"s""i""z""e""_""t"""));
 break;
 case 0:;
-concat_io_dIOError const tmp3 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"bool"));
+concat_io_dIOError const tmp3 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"b""o""o""l"""));
 break;
 case 1:;
-concat_io_dIOError const tmp4 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"int8_t"));
+concat_io_dIOError const tmp4 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"i""n""t""8""_""t"""));
 break;
 case 2:;
-concat_io_dIOError const tmp5 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"int16_t"));
+concat_io_dIOError const tmp5 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"i""n""t""1""6""_""t"""));
 break;
 case 3:;
-concat_io_dIOError const tmp6 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"int32_t"));
+concat_io_dIOError const tmp6 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"i""n""t""3""2""_""t"""));
 break;
 case 4:;
-concat_io_dIOError const tmp7 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"int64_t"));
+concat_io_dIOError const tmp7 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"i""n""t""6""4""_""t"""));
 break;
 case 5:;
-concat_io_dIOError const tmp8 = concat_io_dfputs(arg1/*target*/,((int64_t)5),((int8_t const*)"float"));
+concat_io_dIOError const tmp8 = concat_io_dfputs(arg1/*target*/,((int64_t)5),((int8_t const*)"f""l""o""a""t"""));
 break;
 case 6:;
-concat_io_dIOError const tmp9 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"double"));
+concat_io_dIOError const tmp9 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"d""o""u""b""l""e"""));
 break;
 }
 break;
 case 20:;
-concat_io_dIOError const tmp10 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"int64_t"));
+concat_io_dIOError const tmp10 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"i""n""t""6""4""_""t"""));
 break;
 case 16:;
 break;
@@ -40338,36 +40359,36 @@ concat_Type tmp15 = arg0/*t*/;
 bool const tmp16 = concat_types_disMutable(tmp15,((concat_TypeContext const*)l1_typeContext));
 bool const tmp17 = (!tmp16);
 if(tmp17){
-concat_io_dIOError const tmp18 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)" const"));
+concat_io_dIOError const tmp18 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)" ""c""o""n""s""t"""));
 }else{
 else_label1613:;
 }
-concat_io_dIOError const tmp19 = concat_io_dfputs(arg1/*target*/,((int64_t)1),((int8_t const*)"*"));
+concat_io_dIOError const tmp19 = concat_io_dfputs(arg1/*target*/,((int64_t)1),((int8_t const*)"*"""));
 break;
 case 8:case 9:;
 break;
 case 4:;
 concat_arrayView_I1 tmp20;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"array"),(&tmp20));
-concat_internal_checkEnumIndex(arg0/*t*/.label,4,"./concat.concat/generator_c.concat:190:29");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"a""r""r""a""y"""),(&tmp20));
+concat_internal_checkEnumIndex(arg0/*t*/.label,4,"./concat.concat/generator_c.concat:199:29");
 concat_32_FprintCompositeName(tmp20,(arg0/*t*/.data.e4_arrayType),arg1/*target*/);
 break;
 case 5:;
 concat_arrayView_I1 tmp21;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp21));
-concat_internal_checkEnumIndex(arg0/*t*/.label,5,"./concat.concat/generator_c.concat:193:29");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp21));
+concat_internal_checkEnumIndex(arg0/*t*/.label,5,"./concat.concat/generator_c.concat:202:29");
 concat_32_FprintCompositeName(tmp21,(arg0/*t*/.data.e5_tuple),arg1/*target*/);
 break;
 case 6:;
 concat_arrayView_I1 tmp22;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp22));
-concat_internal_checkEnumIndex(arg0/*t*/.label,6,"./concat.concat/generator_c.concat:196:29");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp22));
+concat_internal_checkEnumIndex(arg0/*t*/.label,6,"./concat.concat/generator_c.concat:205:29");
 concat_32_FprintCompositeName(tmp22,(arg0/*t*/.data.e6_struct),arg1/*target*/);
 break;
 case 7:;
 concat_arrayView_I1 tmp23;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"union"),(&tmp23));
-concat_internal_checkEnumIndex(arg0/*t*/.label,7,"./concat.concat/generator_c.concat:199:29");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"u""n""i""o""n"""),(&tmp23));
+concat_internal_checkEnumIndex(arg0/*t*/.label,7,"./concat.concat/generator_c.concat:208:29");
 concat_32_FprintCompositeName(tmp23,(arg0/*t*/.data.e7_union),arg1/*target*/);
 break;
 case 10:;
@@ -40376,7 +40397,7 @@ int64_t const tmp25 = concat_types_dcompositeEltCount(tmp24,((concat_TypeContext
 int64_t const l2_eltCount = tmp25;
 bool const tmp26 = (l2_eltCount==((int64_t)0));
 if(tmp26){
-concat_io_dIOError const tmp27 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"void"));
+concat_io_dIOError const tmp27 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"v""o""i""d"""));
 break;
 }else{
 else_label1614:;
@@ -40391,20 +40412,20 @@ break;
 else_label1615:;
 }
 concat_arrayView_I1 tmp31;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp31));
-concat_internal_checkEnumIndex(arg0/*t*/.label,10,"./concat.concat/generator_c.concat:211:29");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp31));
+concat_internal_checkEnumIndex(arg0/*t*/.label,10,"./concat.concat/generator_c.concat:220:29");
 concat_32_FprintCompositeName(tmp31,(arg0/*t*/.data.e10_procOut),arg1/*target*/);
 break;
 case 11:;
 concat_arrayView_I1 tmp32;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"enum"),(&tmp32));
-concat_internal_checkEnumIndex(arg0/*t*/.label,11,"./concat.concat/generator_c.concat:214:28");
+concat_string_dwrap(((int64_t)4),((int8_t const*)"e""n""u""m"""),(&tmp32));
+concat_internal_checkEnumIndex(arg0/*t*/.label,11,"./concat.concat/generator_c.concat:223:28");
 concat_32_FprintCompositeName(tmp32,(arg0/*t*/.data.e11_enum),arg1/*target*/);
 break;
 case 12:;
 concat_arrayView_I1 tmp33;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"proc"),(&tmp33));
-concat_internal_checkEnumIndex(arg0/*t*/.label,12,"./concat.concat/generator_c.concat:217:28");
+concat_string_dwrap(((int64_t)4),((int8_t const*)"p""r""o""c"""),(&tmp33));
+concat_internal_checkEnumIndex(arg0/*t*/.label,12,"./concat.concat/generator_c.concat:226:28");
 concat_32_FprintCompositeName(tmp33,(arg0/*t*/.data.e12_procedure),arg1/*target*/);
 break;
 case 13:;
@@ -40436,32 +40457,32 @@ else_label1616:;
 }
 concat_Type tmp4 = arg0/*t*/;
 concat_Type tmp5 = concat_types_dunwrapNamed(tmp4,((concat_TypeContext const*)l0_typeContext));
-concat_internal_checkEnumIndex(tmp5.label,2,"./concat.concat/generator_c.concat:233:35");
+concat_internal_checkEnumIndex(tmp5.label,2,"./concat.concat/generator_c.concat:242:35");
 concat_23_Ftypes_dPrimitiveType const tmp6 = (tmp5.data.e2_primitiveType);
 switch(tmp6.label){
 case 7:;
-concat_io_dIOError const tmp7 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"size_t"));
+concat_io_dIOError const tmp7 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"s""i""z""e""_""t"""));
 break;
 case 0:;
-concat_io_dIOError const tmp8 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"bool"));
+concat_io_dIOError const tmp8 = concat_io_dfputs(arg1/*target*/,((int64_t)4),((int8_t const*)"b""o""o""l"""));
 break;
 case 1:;
-concat_io_dIOError const tmp9 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"uint8_t"));
+concat_io_dIOError const tmp9 = concat_io_dfputs(arg1/*target*/,((int64_t)7),((int8_t const*)"u""i""n""t""8""_""t"""));
 break;
 case 2:;
-concat_io_dIOError const tmp10 = concat_io_dfputs(arg1/*target*/,((int64_t)8),((int8_t const*)"uint16_t"));
+concat_io_dIOError const tmp10 = concat_io_dfputs(arg1/*target*/,((int64_t)8),((int8_t const*)"u""i""n""t""1""6""_""t"""));
 break;
 case 3:;
-concat_io_dIOError const tmp11 = concat_io_dfputs(arg1/*target*/,((int64_t)8),((int8_t const*)"uint32_t"));
+concat_io_dIOError const tmp11 = concat_io_dfputs(arg1/*target*/,((int64_t)8),((int8_t const*)"u""i""n""t""3""2""_""t"""));
 break;
 case 4:;
-concat_io_dIOError const tmp12 = concat_io_dfputs(arg1/*target*/,((int64_t)8),((int8_t const*)"uint64_t"));
+concat_io_dIOError const tmp12 = concat_io_dfputs(arg1/*target*/,((int64_t)8),((int8_t const*)"u""i""n""t""6""4""_""t"""));
 break;
 case 5:;
-concat_io_dIOError const tmp13 = concat_io_dfputs(arg1/*target*/,((int64_t)5),((int8_t const*)"float"));
+concat_io_dIOError const tmp13 = concat_io_dfputs(arg1/*target*/,((int64_t)5),((int8_t const*)"f""l""o""a""t"""));
 break;
 case 6:;
-concat_io_dIOError const tmp14 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"double"));
+concat_io_dIOError const tmp14 = concat_io_dfputs(arg1/*target*/,((int64_t)6),((int8_t const*)"d""o""u""b""l""e"""));
 break;
 }
 return;
@@ -40490,7 +40511,7 @@ concat_arrayView_I3 tmp12;
 concat_types_dcompositeElts(tmp11,((concat_TypeContext const*)l1_typeContext),(&tmp12));
 concat_arrayView_I3 const l6_outTypes = tmp12;
 bool l7_hasArgs = false;
-concat_io_dIOError const tmp13 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp13 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)"("""));
 int32_t tmp14 = ((int32_t)0);
 do{
 bool const tmp15 = (((int64_t)tmp14)<(l4_args.e1_length));
@@ -40506,7 +40527,7 @@ continue;
 else_label1617:;
 }
 if(l7_hasArgs){
-concat_io_dIOError const tmp19 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)","));
+concat_io_dIOError const tmp19 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)","""));
 }else{
 else_label1618:;
 }
@@ -40515,7 +40536,7 @@ concat_arrayView_I3 tmp20 = l4_args;
 concat_Type tmp21 = concat_array_dget_I2(tmp20,((int64_t)tmp14));
 concat_32_FprintTypeName(tmp21,arg2/*target*/,arg3/*prog*/);
 if(arg1/*argNames*/){
-concat_io_dIOError const tmp22 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp22 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_Type tmp23 = l3_inType;
 concat_LabelId const tmp24 = concat_types_dcompositeGetLabel(tmp23,tmp14,((concat_TypeContext const*)l1_typeContext));
 concat_32_FprintArgName(tmp14,tmp24,arg2/*target*/,arg3/*prog*/);
@@ -40558,7 +40579,7 @@ continue;
 else_label1623:;
 }
 if(l7_hasArgs){
-concat_io_dIOError const tmp38 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)","));
+concat_io_dIOError const tmp38 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)","""));
 }else{
 else_label1624:;
 }
@@ -40568,7 +40589,7 @@ concat_Type tmp40 = concat_array_dget_I2(tmp39,((int64_t)tmp33));
 concat_Type tmp41 = concat_types_dgetAddressType(tmp40,true,l1_typeContext);
 concat_32_FprintTypeName(tmp41,arg2/*target*/,arg3/*prog*/);
 if(arg1/*argNames*/){
-concat_io_dIOError const tmp42 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp42 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_Type tmp43 = l5_outType;
 concat_LabelId const tmp44 = concat_types_dcompositeGetLabel(tmp43,tmp33,((concat_TypeContext const*)l1_typeContext));
 concat_32_FprintOutArgName(tmp33,tmp44,arg2/*target*/,arg3/*prog*/);
@@ -40582,24 +40603,24 @@ else_label1620:;
 }
 bool const tmp45 = (!l7_hasArgs);
 if(tmp45){
-concat_io_dIOError const tmp46 = concat_io_dfputs(arg2/*target*/,((int64_t)4),((int8_t const*)"void"));
+concat_io_dIOError const tmp46 = concat_io_dfputs(arg2/*target*/,((int64_t)4),((int8_t const*)"v""o""i""d"""));
 }else{
 else_label1626:;
 }
-concat_io_dIOError const tmp47 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp47 = concat_io_dfputs(arg2/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 }
 static void concat_32_FprintCompositeDeclaration(concat_arrayView_I1 arg0/*name*/,int32_t arg1/*id*/,concat_arrayView_I1 arg2/*cName*/,concat_io_dFILE arg3/*target*/){
 concat_list_I1 tmp0;
 concat_sb_dcreate(((int64_t)128),(&tmp0));
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"typedef "),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"t""y""p""e""d""e""f"" """),(&tmp1));
 concat_list_I1 tmp2;
 concat_sb_dappendStr(tmp1,arg2/*cName*/,(&tmp2));
 concat_list_I1 tmp3;
 concat_sb_dappendC(tmp2,((int8_t)32),(&tmp3));
 concat_list_I1 tmp4;
-concat_sb_dappendS(tmp3,((int64_t)7),((int8_t const*)"concat_"),(&tmp4));
+concat_sb_dappendS(tmp3,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp4));
 concat_list_I1 tmp5;
 concat_sb_dappendStr(tmp4,arg0/*name*/,(&tmp5));
 concat_list_I1 tmp6;
@@ -40607,13 +40628,13 @@ concat_sb_dappendI(tmp5,((int64_t)arg1/*id*/),(&tmp6));
 concat_list_I1 tmp7;
 concat_sb_dappendC(tmp6,((int8_t)32),(&tmp7));
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp7,((int64_t)7),((int8_t const*)"concat_"),(&tmp8));
+concat_sb_dappendS(tmp7,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp8));
 concat_list_I1 tmp9;
 concat_sb_dappendStr(tmp8,arg0/*name*/,(&tmp9));
 concat_list_I1 tmp10;
 concat_sb_dappendI(tmp9,((int64_t)arg1/*id*/),(&tmp10));
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)2),((int8_t const*)";\x0A"),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)2),((int8_t const*)";""\x0A"""),(&tmp11));
 concat_io_dIOError const tmp12 = concat_io_dfputSb(arg3/*target*/,tmp11);
 concat_list_I1 tmp13;
 concat_sb_dfree(tmp11,(&tmp13));
@@ -40625,7 +40646,7 @@ concat_TypeContext* const l1_typeContext = (&(((*arg3/*prog*/).e0_idContext).e2_
 concat_list_I1 tmp0;
 concat_sb_dcreate(((int64_t)64),(&tmp0));
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)"e"),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)"e"""),(&tmp1));
 concat_list_I1 tmp2;
 concat_sb_dappendI(tmp1,((int64_t)arg1/*index*/),(&tmp2));
 concat_Type tmp3 = arg0/*composite*/;
@@ -40634,8 +40655,8 @@ concat_optional_I3 tmp5 = concat_id_dlabelName(tmp4,((concat_LabelContext const*
 bool const tmp6 = concat_optional_dhasData_I0(tmp5);
 if(tmp6){
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp2,((int64_t)1),((int8_t const*)"_"),(&tmp7));
-concat_internal_checkEnumIndex(tmp5.label,1,"./concat.concat/generator_c.concat:320:13");
+concat_sb_dappendS(tmp2,((int64_t)1),((int8_t const*)"_"""),(&tmp7));
+concat_internal_checkEnumIndex(tmp5.label,1,"./concat.concat/generator_c.concat:329:13");
 concat_list_I1 tmp8;
 concat_32_Fsb_dappendAsciified(tmp7,(tmp5.data.e1_data),(&tmp8));
 tmp2 = tmp8;
@@ -40668,10 +40689,10 @@ continue;
 else_label1628:;
 }
 concat_32_FprintTypeName(tmp5,arg1/*target*/,arg2/*prog*/);
-concat_io_dIOError const tmp7 = concat_io_dfputs(arg1/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp7 = concat_io_dfputs(arg1/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_Type tmp8 = arg0/*composite*/;
 concat_32_FprintEltName(tmp8,tmp2,arg1/*target*/,arg2/*prog*/);
-concat_io_dIOError const tmp9 = concat_io_dfputs(arg1/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp9 = concat_io_dfputs(arg1/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 tmp2 = ((int32_t)(tmp2+((int32_t)1)));
 }while(1);
 return;
@@ -40681,7 +40702,7 @@ concat_TypeContext* const l0_typeContext = (&(((*arg1/*prog*/).e0_idContext).e2_
 concat_list_I10 tmp0;
 concat_getDeclaredTypes(arg1/*prog*/,(&tmp0));
 concat_list_I10 const l1_types = tmp0;
-concat_io_dIOError const tmp1 = concat_io_dfputs(arg0/*target*/,((int64_t)20),((int8_t const*)"//type declarations\x0A"));
+concat_io_dIOError const tmp1 = concat_io_dfputs(arg0/*target*/,((int64_t)20),((int8_t const*)"/""/""t""y""p""e"" ""d""e""c""l""a""r""a""t""i""o""n""s""\x0A"""));
 int32_t tmp2 = ((int32_t)0);
 do{
 bool const tmp3 = (((int64_t)tmp2)<(l1_types.e1_length));
@@ -40700,7 +40721,7 @@ if(tmp7){
 concat_Type tmp8 = l2_t;
 concat_Type tmp9 = concat_types_dgetBaseType(tmp8,((concat_TypeContext const*)l0_typeContext));
 concat_Type const l3_base = tmp9;
-concat_io_dIOError const tmp10 = concat_io_dfputs(arg0/*target*/,((int64_t)8),((int8_t const*)"typedef "));
+concat_io_dIOError const tmp10 = concat_io_dfputs(arg0/*target*/,((int64_t)8),((int8_t const*)"t""y""p""e""d""e""f"" """));
 concat_Type tmp11 = l3_base;
 concat_Type tmp12;
 bool const tmp13 = concat_types_dgetProcRet(tmp11,((concat_TypeContext const*)l0_typeContext),(&tmp12));
@@ -40708,72 +40729,72 @@ concat_32_FprintTypeName(tmp12,arg0/*target*/,arg1/*prog*/);
 concat_list_I1 tmp14;
 concat_sb_dcreate(((int64_t)32),(&tmp14));
 concat_list_I1 tmp15;
-concat_sb_dappendS(tmp14,((int64_t)3),((int8_t const*)" (*"),(&tmp15));
+concat_sb_dappendS(tmp14,((int64_t)3),((int8_t const*)" ""(""*"""),(&tmp15));
 concat_list_I1 tmp16;
-concat_sb_dappendS(tmp15,((int64_t)7),((int8_t const*)"concat_"),(&tmp16));
+concat_sb_dappendS(tmp15,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp16));
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp16,((int64_t)4),((int8_t const*)"proc"),(&tmp17));
+concat_sb_dappendS(tmp16,((int64_t)4),((int8_t const*)"p""r""o""c"""),(&tmp17));
 int32_t const tmp18 = concat_types_dgetTypeId(l3_base);
 concat_list_I1 tmp19;
 concat_sb_dappendI(tmp17,((int64_t)tmp18),(&tmp19));
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp19,((int64_t)2),((int8_t const*)") "),(&tmp20));
+concat_sb_dappendS(tmp19,((int64_t)2),((int8_t const*)")"" """),(&tmp20));
 concat_io_dIOError const tmp21 = concat_io_dfputSb(arg0/*target*/,tmp20);
 concat_list_I1 tmp22;
 concat_sb_dfree(tmp20,(&tmp22));
 concat_Type tmp23 = l3_base;
 concat_32_FprintProcArgs(tmp23,false,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp24 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp24 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 }else{
 else_label1629:;
 }
 break;
 case 4:;
 concat_arrayView_I1 tmp25;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"array"),(&tmp25));
-concat_internal_checkEnumIndex(l2_t.label,4,"./concat.concat/generator_c.concat:368:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"a""r""r""a""y"""),(&tmp25));
+concat_internal_checkEnumIndex(l2_t.label,4,"./concat.concat/generator_c.concat:377:31");
 concat_arrayView_I1 tmp26;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"struct"),(&tmp26));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""t""r""u""c""t"""),(&tmp26));
 concat_32_FprintCompositeDeclaration(tmp25,(l2_t.data.e4_arrayType),tmp26,arg0/*target*/);
 break;
 case 5:;
 concat_arrayView_I1 tmp27;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp27));
-concat_internal_checkEnumIndex(l2_t.label,5,"./concat.concat/generator_c.concat:371:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp27));
+concat_internal_checkEnumIndex(l2_t.label,5,"./concat.concat/generator_c.concat:380:31");
 concat_arrayView_I1 tmp28;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"struct"),(&tmp28));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""t""r""u""c""t"""),(&tmp28));
 concat_32_FprintCompositeDeclaration(tmp27,(l2_t.data.e5_tuple),tmp28,arg0/*target*/);
 break;
 case 6:;
 concat_arrayView_I1 tmp29;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp29));
-concat_internal_checkEnumIndex(l2_t.label,6,"./concat.concat/generator_c.concat:374:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp29));
+concat_internal_checkEnumIndex(l2_t.label,6,"./concat.concat/generator_c.concat:383:31");
 concat_arrayView_I1 tmp30;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"struct"),(&tmp30));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""t""r""u""c""t"""),(&tmp30));
 concat_32_FprintCompositeDeclaration(tmp29,(l2_t.data.e6_struct),tmp30,arg0/*target*/);
 break;
 case 7:;
 concat_arrayView_I1 tmp31;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"union"),(&tmp31));
-concat_internal_checkEnumIndex(l2_t.label,7,"./concat.concat/generator_c.concat:377:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"u""n""i""o""n"""),(&tmp31));
+concat_internal_checkEnumIndex(l2_t.label,7,"./concat.concat/generator_c.concat:386:31");
 concat_arrayView_I1 tmp32;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"union"),(&tmp32));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"u""n""i""o""n"""),(&tmp32));
 concat_32_FprintCompositeDeclaration(tmp31,(l2_t.data.e7_union),tmp32,arg0/*target*/);
 break;
 case 10:;
 concat_arrayView_I1 tmp33;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp33));
-concat_internal_checkEnumIndex(l2_t.label,10,"./concat.concat/generator_c.concat:380:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp33));
+concat_internal_checkEnumIndex(l2_t.label,10,"./concat.concat/generator_c.concat:389:31");
 concat_arrayView_I1 tmp34;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"struct"),(&tmp34));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""t""r""u""c""t"""),(&tmp34));
 concat_32_FprintCompositeDeclaration(tmp33,(l2_t.data.e10_procOut),tmp34,arg0/*target*/);
 break;
 case 11:;
 concat_arrayView_I1 tmp35;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"enum"),(&tmp35));
-concat_internal_checkEnumIndex(l2_t.label,11,"./concat.concat/generator_c.concat:383:30");
+concat_string_dwrap(((int64_t)4),((int8_t const*)"e""n""u""m"""),(&tmp35));
+concat_internal_checkEnumIndex(l2_t.label,11,"./concat.concat/generator_c.concat:392:30");
 concat_arrayView_I1 tmp36;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"struct"),(&tmp36));
+concat_string_dwrap(((int64_t)6),((int8_t const*)"s""t""r""u""c""t"""),(&tmp36));
 concat_32_FprintCompositeDeclaration(tmp35,(l2_t.data.e11_enum),tmp36,arg0/*target*/);
 break;
 case 13:;
@@ -40784,17 +40805,17 @@ break;
 }else{
 else_label1630:;
 }
-concat_io_dIOError const tmp39 = concat_io_dfputs(arg0/*target*/,((int64_t)8),((int8_t const*)"typedef "));
+concat_io_dIOError const tmp39 = concat_io_dfputs(arg0/*target*/,((int64_t)8),((int8_t const*)"t""y""p""e""d""e""f"" """));
 concat_Type tmp40 = l2_t;
 concat_Type tmp41 = concat_types_dunwrapNamed(tmp40,((concat_TypeContext const*)l0_typeContext));
 concat_32_FprintTypeName(tmp41,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp42 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp42 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_Type tmp43 = l2_t;
 concat_LabelId const tmp44 = concat_types_dnamedTypeName(tmp43,((concat_TypeContext const*)l0_typeContext));
 concat_Type tmp45 = l2_t;
 concat_LabelId const tmp46 = concat_types_dgetImplId(tmp45,((concat_TypeContext const*)l0_typeContext));
 concat_32_FprintGlobalName(tmp44,tmp46,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp47 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp47 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 break;
 }
 tmp2 = ((int32_t)(tmp2+((int32_t)1)));
@@ -40815,23 +40836,23 @@ concat_Type tmp52 = l4_t;
 bool const tmp53 = concat_types_disFixedSize(tmp52,((concat_TypeContext const*)l0_typeContext));
 bool const tmp54 = (!tmp53);
 if(tmp54){
-concat_io_dIOError const tmp55 = concat_io_dputs(((int64_t)31),((int8_t const*)"arrays cannot be variable sized"));
+concat_io_dIOError const tmp55 = concat_io_dputs(((int64_t)31),((int8_t const*)"a""r""r""a""y""s"" ""c""a""n""n""o""t"" ""b""e"" ""v""a""r""i""a""b""l""e"" ""s""i""z""e""d"""));
 }else{
 else_label1631:;
 }
-concat_io_dIOError const tmp56 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"struct "));
+concat_io_dIOError const tmp56 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""r""u""c""t"" """));
 concat_arrayView_I1 tmp57;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"array"),(&tmp57));
-concat_internal_checkEnumIndex(l4_t.label,4,"./concat.concat/generator_c.concat:412:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"a""r""r""a""y"""),(&tmp57));
+concat_internal_checkEnumIndex(l4_t.label,4,"./concat.concat/generator_c.concat:421:31");
 concat_32_FprintCompositeName(tmp57,(l4_t.data.e4_arrayType),arg0/*target*/);
-concat_io_dIOError const tmp58 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp58 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 concat_Type tmp59 = l4_t;
 concat_Type tmp60 = concat_types_dgetBaseType(tmp59,((concat_TypeContext const*)l0_typeContext));
 concat_32_FprintTypeName(tmp60,arg0/*target*/,arg1/*prog*/);
 concat_list_I1 tmp61;
 concat_sb_dcreate(((int64_t)32),(&tmp61));
 concat_list_I1 tmp62;
-concat_sb_dappendS(tmp61,((int64_t)6),((int8_t const*)" data["),(&tmp62));
+concat_sb_dappendS(tmp61,((int64_t)6),((int8_t const*)" ""d""a""t""a""["""),(&tmp62));
 concat_Type tmp63 = l4_t;
 concat_arrayView_I2 tmp64;
 concat_types_dgetArraySize(tmp63,((concat_TypeContext const*)l0_typeContext),(&tmp64));
@@ -40848,7 +40869,7 @@ concat_array_dget_I0(tmp67,((int64_t)tmp65),(&tmp68));
 concat_types_dArraySizeType const tmp69 = (tmp68.e1_sizeType);
 bool const tmp70 = (!(tmp69.label==0));
 if(tmp70){
-concat_io_dIOError const tmp71 = concat_io_dputs(((int64_t)69),((int8_t const*)"non-integer array sizes should not exist at this stage of compilation"));
+concat_io_dIOError const tmp71 = concat_io_dputs(((int64_t)69),((int8_t const*)"n""o""n""-""i""n""t""e""g""e""r"" ""a""r""r""a""y"" ""s""i""z""e""s"" ""s""h""o""u""l""d"" ""n""o""t"" ""e""x""i""s""t"" ""a""t"" ""t""h""i""s"" ""s""t""a""g""e"" ""o""f"" ""c""o""m""p""i""l""a""t""i""o""n"""));
 }else{
 else_label1632:;
 }
@@ -40858,74 +40879,74 @@ tmp65 = ((int32_t)(tmp65+((int32_t)1)));
 concat_list_I1 tmp72;
 concat_sb_dappendI(tmp62,l6_totalSize,(&tmp72));
 concat_list_I1 tmp73;
-concat_sb_dappendS(tmp72,((int64_t)6),((int8_t const*)"];\x0A};\x0A"),(&tmp73));
+concat_sb_dappendS(tmp72,((int64_t)6),((int8_t const*)"]"";""\x0A""}"";""\x0A"""),(&tmp73));
 concat_io_dIOError const tmp74 = concat_io_dfputSb(arg0/*target*/,tmp73);
 concat_list_I1 tmp75;
 concat_sb_dfree(tmp73,(&tmp75));
 break;
 case 5:;
-concat_io_dIOError const tmp76 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"struct "));
+concat_io_dIOError const tmp76 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""r""u""c""t"" """));
 concat_arrayView_I1 tmp77;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp77));
-concat_internal_checkEnumIndex(l4_t.label,5,"./concat.concat/generator_c.concat:435:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp77));
+concat_internal_checkEnumIndex(l4_t.label,5,"./concat.concat/generator_c.concat:444:31");
 concat_32_FprintCompositeName(tmp77,(l4_t.data.e5_tuple),arg0/*target*/);
-concat_io_dIOError const tmp78 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp78 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 concat_Type tmp79 = l4_t;
 concat_32_FprintCompositeElements(tmp79,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp80 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"};\x0A"));
+concat_io_dIOError const tmp80 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"}"";""\x0A"""));
 break;
 case 6:;
-concat_io_dIOError const tmp81 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"struct "));
+concat_io_dIOError const tmp81 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""r""u""c""t"" """));
 concat_arrayView_I1 tmp82;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp82));
-concat_internal_checkEnumIndex(l4_t.label,6,"./concat.concat/generator_c.concat:442:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp82));
+concat_internal_checkEnumIndex(l4_t.label,6,"./concat.concat/generator_c.concat:451:31");
 concat_32_FprintCompositeName(tmp82,(l4_t.data.e6_struct),arg0/*target*/);
-concat_io_dIOError const tmp83 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp83 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 concat_Type tmp84 = l4_t;
 concat_32_FprintCompositeElements(tmp84,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp85 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"};\x0A"));
+concat_io_dIOError const tmp85 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"}"";""\x0A"""));
 break;
 case 10:;
-concat_io_dIOError const tmp86 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"struct "));
+concat_io_dIOError const tmp86 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""r""u""c""t"" """));
 concat_arrayView_I1 tmp87;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"tuple"),(&tmp87));
-concat_internal_checkEnumIndex(l4_t.label,10,"./concat.concat/generator_c.concat:449:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"t""u""p""l""e"""),(&tmp87));
+concat_internal_checkEnumIndex(l4_t.label,10,"./concat.concat/generator_c.concat:458:31");
 concat_32_FprintCompositeName(tmp87,(l4_t.data.e10_procOut),arg0/*target*/);
-concat_io_dIOError const tmp88 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp88 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 concat_Type tmp89 = l4_t;
 concat_32_FprintCompositeElements(tmp89,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp90 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"};\x0A"));
+concat_io_dIOError const tmp90 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"}"";""\x0A"""));
 break;
 case 11:;
-concat_io_dIOError const tmp91 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"struct "));
+concat_io_dIOError const tmp91 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""r""u""c""t"" """));
 concat_arrayView_I1 tmp92;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"enum"),(&tmp92));
-concat_internal_checkEnumIndex(l4_t.label,11,"./concat.concat/generator_c.concat:456:30");
+concat_string_dwrap(((int64_t)4),((int8_t const*)"e""n""u""m"""),(&tmp92));
+concat_internal_checkEnumIndex(l4_t.label,11,"./concat.concat/generator_c.concat:465:30");
 concat_32_FprintCompositeName(tmp92,(l4_t.data.e11_enum),arg0/*target*/);
-concat_io_dIOError const tmp93 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp93 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 concat_Type tmp94 = l4_t;
 concat_23_Ftypes_dCompositeFlag const tmp95 = concat_types_dcompositeFlags(tmp94,((concat_TypeContext const*)l0_typeContext));
 bool const tmp96 = (((concat_23_Ftypes_dCompositeFlag)(tmp95&((concat_23_Ftypes_dCompositeFlag)64)))==((int32_t)0));
 if(tmp96){
-concat_io_dIOError const tmp97 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"union{\x0A"));
+concat_io_dIOError const tmp97 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"u""n""i""o""n""{""\x0A"""));
 concat_Type tmp98 = l4_t;
 concat_32_FprintCompositeElements(tmp98,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp99 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"}data;\x0A"));
+concat_io_dIOError const tmp99 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"}""d""a""t""a"";""\x0A"""));
 }else{
 else_label1633:;
 }
-concat_io_dIOError const tmp100 = concat_io_dfputs(arg0/*target*/,((int64_t)18),((int8_t const*)"int32_t label;\x0A};\x0A"));
+concat_io_dIOError const tmp100 = concat_io_dfputs(arg0/*target*/,((int64_t)18),((int8_t const*)"i""n""t""3""2""_""t"" ""l""a""b""e""l"";""\x0A""}"";""\x0A"""));
 break;
 case 7:;
-concat_io_dIOError const tmp101 = concat_io_dfputs(arg0/*target*/,((int64_t)6),((int8_t const*)"union "));
+concat_io_dIOError const tmp101 = concat_io_dfputs(arg0/*target*/,((int64_t)6),((int8_t const*)"u""n""i""o""n"" """));
 concat_arrayView_I1 tmp102;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"union"),(&tmp102));
-concat_internal_checkEnumIndex(l4_t.label,7,"./concat.concat/generator_c.concat:467:31");
+concat_string_dwrap(((int64_t)5),((int8_t const*)"u""n""i""o""n"""),(&tmp102));
+concat_internal_checkEnumIndex(l4_t.label,7,"./concat.concat/generator_c.concat:476:31");
 concat_32_FprintCompositeName(tmp102,(l4_t.data.e7_union),arg0/*target*/);
-concat_io_dIOError const tmp103 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp103 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 concat_Type tmp104 = l4_t;
 concat_32_FprintCompositeElements(tmp104,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp105 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"};\x0A"));
+concat_io_dIOError const tmp105 = concat_io_dfputs(arg0/*target*/,((int64_t)3),((int8_t const*)"}"";""\x0A"""));
 break;
 }
 tmp48 = ((int32_t)(tmp48+((int32_t)1)));
@@ -40941,7 +40962,7 @@ return false;
 case 4:case 6:case 12:case 20:case 21:case 19:case 22:;
 return true;
 }
-fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:485:3\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:494:3\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 }
 static bool concat_32_FisArithimeticOp(concat_BinaryOperator arg0){
@@ -40951,7 +40972,7 @@ return true;
 case 13:case 14:case 16:case 17:case 15:case 18:case 20:case 21:case 19:case 22:;
 return false;
 }
-fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:494:3\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:503:3\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 }
 static void concat_32_FcompileCall(concat_Type arg0/*t*/,int64_t arg1/*argCount*/,concat_arrayView_I6 arg2/*operations*/,int32_t* arg3/*index*/,bool arg4/*isGlobal*/,concat_io_dFILE arg5/*target*/,concat_ProgramContext* arg6/*prog*/){
@@ -40982,7 +41003,7 @@ tmp10 = ((int64_t)1);
 tmp7 = tmp10;
 }
 int64_t const l3_retCount = tmp7;
-concat_io_dIOError const tmp11 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp11 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"("""));
 int32_t tmp12 = ((int32_t)0);
 do{
 bool const tmp13 = (((int64_t)tmp12)<arg1/*argCount*/);
@@ -40990,7 +41011,7 @@ if(!tmp13)
   break;
 bool const tmp14 = (tmp12>((int32_t)0));
 if(tmp14){
-concat_io_dIOError const tmp15 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)","));
+concat_io_dIOError const tmp15 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)","""));
 }else{
 else_label1636:;
 }
@@ -40998,10 +41019,10 @@ concat_arrayView_I6 tmp16 = arg2/*operations*/;
 concat_32_FcompileOp(tmp16,arg3/*index*/,arg4/*isGlobal*/,arg5/*target*/,arg6/*prog*/);
 tmp12 = ((int32_t)(tmp12+((int32_t)1)));
 }while(1);
-concat_io_dIOError const tmp17 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp17 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)")"""));
 bool const tmp18 = (l3_retCount==((int64_t)0));
 if(tmp18){
-concat_io_dIOError const tmp19 = concat_io_dfputs(arg5/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp19 = concat_io_dfputs(arg5/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 }else{
 else_label1637:;
 }
@@ -41009,30 +41030,30 @@ return;
 }
 static void concat_32_FcompileGetElt(concat_Type arg0/*base*/,int32_t arg1/*eltIndex*/,concat_arrayView_I6 arg2/*operations*/,int32_t* arg3/*index*/,bool arg4/*isGlobal*/,concat_io_dFILE arg5/*target*/,concat_ProgramContext* arg6/*prog*/){
 concat_TypeContext* const l0_typeContext = (&(((*arg6/*prog*/).e0_idContext).e2_typeContext));
-concat_io_dIOError const tmp0 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp0 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_arrayView_I6 tmp1 = arg2/*operations*/;
 concat_32_FcompileOp(tmp1,arg3/*index*/,arg4/*isGlobal*/,arg5/*target*/,arg6/*prog*/);
 concat_Type tmp2 = arg0/*base*/;
 bool const tmp3 = concat_types_disEnum(tmp2,((concat_TypeContext const*)l0_typeContext));
 if(tmp3){
-concat_io_dIOError const tmp4 = concat_io_dfputs(arg5/*target*/,((int64_t)6),((int8_t const*)".data."));
+concat_io_dIOError const tmp4 = concat_io_dfputs(arg5/*target*/,((int64_t)6),((int8_t const*)".""d""a""t""a""."""));
 }else{
 else_label1638:;
-concat_io_dIOError const tmp5 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"."));
+concat_io_dIOError const tmp5 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"."""));
 }
 concat_Type tmp6 = arg0/*base*/;
 concat_32_FprintEltName(tmp6,arg1/*eltIndex*/,arg5/*target*/,arg6/*prog*/);
-concat_io_dIOError const tmp7 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp7 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 }
 static void concat_32_FcompileGetIndex(concat_Type arg0/*base*/,int32_t arg1/*dims*/,concat_arrayView_I6 arg2/*operations*/,int32_t* arg3/*index*/,bool arg4/*isGlobal*/,concat_io_dFILE arg5/*target*/,concat_ProgramContext* arg6/*prog*/){
 concat_TypeContext* const l0_typeContext = (&(((*arg6/*prog*/).e0_idContext).e2_typeContext));
 bool const tmp0 = (arg1/*dims*/==((int32_t)0));
 if(tmp0){
-concat_io_dIOError const tmp1 = concat_io_dfputs(arg5/*target*/,((int64_t)2),((int8_t const*)"(*"));
+concat_io_dIOError const tmp1 = concat_io_dfputs(arg5/*target*/,((int64_t)2),((int8_t const*)"(""*"""));
 concat_arrayView_I6 tmp2 = arg2/*operations*/;
 concat_32_FcompileOp(tmp2,arg3/*index*/,arg4/*isGlobal*/,arg5/*target*/,arg6/*prog*/);
-concat_io_dIOError const tmp3 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp3 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 }else{
 else_label1639:;
@@ -41041,13 +41062,13 @@ concat_Type tmp4 = arg0/*base*/;
 concat_arrayView_I2 tmp5;
 concat_types_dgetArraySize(tmp4,((concat_TypeContext const*)l0_typeContext),(&tmp5));
 concat_arrayView_I2 const l1_sizes = tmp5;
-concat_io_dIOError const tmp6 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp6 = concat_io_dfputs(arg5/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_arrayView_I6 tmp7 = arg2/*operations*/;
 concat_32_FcompileOp(tmp7,arg3/*index*/,arg4/*isGlobal*/,arg5/*target*/,arg6/*prog*/);
 concat_list_I1 tmp8;
 concat_sb_dcreate(((int64_t)64),(&tmp8));
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp8,((int64_t)1),((int8_t const*)"["),(&tmp9));
+concat_sb_dappendS(tmp8,((int64_t)1),((int8_t const*)"["""),(&tmp9));
 concat_io_dIOError const tmp10 = concat_io_dfputSb(arg5/*target*/,tmp9);
 concat_list_I1 tmp11;
 concat_sb_dclear(tmp9,(&tmp11));
@@ -41057,7 +41078,7 @@ bool const tmp13 = (tmp12<((int32_t)(arg1/*dims*/-((int32_t)1))));
 if(!tmp13)
   break;
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp11,((int64_t)1),((int8_t const*)"("),(&tmp14));
+concat_sb_dappendS(tmp11,((int64_t)1),((int8_t const*)"("""),(&tmp14));
 tmp11 = tmp14;
 tmp12 = ((int32_t)(tmp12+((int32_t)1)));
 }while(1);
@@ -41076,11 +41097,11 @@ if(tmp20){
 bool const tmp21 = (((int64_t)tmp17)>=(l1_sizes.e1_length));
 if(tmp21){
 concat_list_I1 tmp22;
-concat_sb_dwrap(((int64_t)35),((int8_t const*)"number of indices exceeds dimension"),(&tmp22));
+concat_sb_dwrap(((int64_t)35),((int8_t const*)"n""u""m""b""e""r"" ""o""f"" ""i""n""d""i""c""e""s"" ""e""x""c""e""e""d""s"" ""d""i""m""e""n""s""i""o""n"""),(&tmp22));
 concat_arrayView_I6 tmp23 = arg2/*operations*/;
 int32_t tmp24 = (*arg3/*index*/);
 concat_optional_I13 tmp25 = concat_array_dat_I1(tmp23,((int64_t)((int32_t)(tmp24-((int32_t)1)))));
-concat_internal_checkEnumIndex(tmp25.label,1,"./concat.concat/generator_c.concat:555:92");
+concat_internal_checkEnumIndex(tmp25.label,1,"./concat.concat/generator_c.concat:564:92");
 concat_Operation const* const tmp26 = (tmp25.data.e1_data);
 concat_FilePosition tmp27 = ((*tmp26).e2_pos);
 concat_appendError(tmp22,tmp27,(&((*arg6/*prog*/).e6_errors)));
@@ -41089,14 +41110,14 @@ return;
 else_label1641:;
 }
 concat_list_I1 tmp28;
-concat_sb_dappendS(tmp16,((int64_t)1),((int8_t const*)"*"),(&tmp28));
+concat_sb_dappendS(tmp16,((int64_t)1),((int8_t const*)"*"""),(&tmp28));
 concat_arrayView_I2 tmp29 = l1_sizes;
 concat_types_dArraySize tmp30;
 concat_array_dget_I0(tmp29,((int64_t)tmp17),(&tmp30));
 concat_list_I1 tmp31;
 concat_sb_dappendI(tmp28,(tmp30.e0_value),(&tmp31));
 concat_list_I1 tmp32;
-concat_sb_dappendS(tmp31,((int64_t)2),((int8_t const*)")+"),(&tmp32));
+concat_sb_dappendS(tmp31,((int64_t)2),((int8_t const*)")""+"""),(&tmp32));
 concat_io_dIOError const tmp33 = concat_io_dfputSb(arg5/*target*/,tmp32);
 concat_list_I1 tmp34;
 concat_sb_dclear(tmp32,(&tmp34));
@@ -41107,7 +41128,7 @@ else_label1640:;
 tmp17 = ((int32_t)(tmp17+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp35;
-concat_sb_dappendS(tmp16,((int64_t)2),((int8_t const*)"])"),(&tmp35));
+concat_sb_dappendS(tmp16,((int64_t)2),((int8_t const*)"]"")"""),(&tmp35));
 concat_io_dIOError const tmp36 = concat_io_dfputSb(arg5/*target*/,tmp35);
 concat_list_I1 tmp37;
 concat_sb_dfree(tmp35,(&tmp37));
@@ -41121,14 +41142,14 @@ concat_types_dcompositeElts(tmp0,((concat_TypeContext const*)l0_typeContext),(&t
 concat_arrayView_I3 const l1_elts = tmp1;
 bool const tmp2 = (!arg3/*isGlobal*/);
 if(tmp2){
-concat_io_dIOError const tmp3 = concat_io_dfputs(arg4/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp3 = concat_io_dfputs(arg4/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp4 = arg0/*composite*/;
 concat_32_FprintTypeName(tmp4,arg4/*target*/,arg5/*prog*/);
-concat_io_dIOError const tmp5 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp5 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1642:;
 }
-concat_io_dIOError const tmp6 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)"{"));
+concat_io_dIOError const tmp6 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)"{"""));
 int32_t tmp7 = ((int32_t)0);
 do{
 bool const tmp8 = (((int64_t)tmp7)<(l1_elts.e1_length));
@@ -41136,7 +41157,7 @@ if(!tmp8)
   break;
 bool const tmp9 = (tmp7>((int32_t)0));
 if(tmp9){
-concat_io_dIOError const tmp10 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)","));
+concat_io_dIOError const tmp10 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)","""));
 }else{
 else_label1643:;
 }
@@ -41149,19 +41170,19 @@ continue;
 }else{
 else_label1644:;
 }
-concat_io_dIOError const tmp14 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)"."));
+concat_io_dIOError const tmp14 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)"."""));
 concat_Type tmp15 = arg0/*composite*/;
 concat_32_FprintEltName(tmp15,tmp7,arg4/*target*/,arg5/*prog*/);
-concat_io_dIOError const tmp16 = concat_io_dfputs(arg4/*target*/,((int64_t)3),((int8_t const*)" = "));
+concat_io_dIOError const tmp16 = concat_io_dfputs(arg4/*target*/,((int64_t)3),((int8_t const*)" ""="" """));
 concat_arrayView_I6 tmp17 = arg1/*operations*/;
 concat_32_FcompileOp(tmp17,arg2/*index*/,arg3/*isGlobal*/,arg4/*target*/,arg5/*prog*/);
 tmp7 = ((int32_t)(tmp7+((int32_t)1)));
 }while(1);
 if(arg3/*isGlobal*/){
-concat_io_dIOError const tmp18 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)"}"));
+concat_io_dIOError const tmp18 = concat_io_dfputs(arg4/*target*/,((int64_t)1),((int8_t const*)"}"""));
 }else{
 else_label1645:;
-concat_io_dIOError const tmp19 = concat_io_dfputs(arg4/*target*/,((int64_t)2),((int8_t const*)"})"));
+concat_io_dIOError const tmp19 = concat_io_dfputs(arg4/*target*/,((int64_t)2),((int8_t const*)"}"")"""));
 }
 return;
 }
@@ -41171,14 +41192,14 @@ concat_sb_dcreate(((int64_t)64),(&tmp0));
 bool const tmp1 = (!arg1/*isGlobal*/);
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"(("),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)2),((int8_t const*)"(""("""),(&tmp2));
 concat_io_dIOError const tmp3 = concat_io_dfputSb(arg2/*target*/,tmp2);
 concat_list_I1 tmp4;
 concat_sb_dclear(tmp2,(&tmp4));
 concat_Type tmp5 = arg0/*constType*/;
 concat_32_FprintTypeName(tmp5,arg2/*target*/,arg3/*prog*/);
 concat_list_I1 tmp6;
-concat_sb_dappendS(tmp4,((int64_t)1),((int8_t const*)")"),(&tmp6));
+concat_sb_dappendS(tmp4,((int64_t)1),((int8_t const*)")"""),(&tmp6));
 tmp0 = tmp6;
 }else{
 else_label1646:;
@@ -41191,7 +41212,7 @@ concat_list_I1 tmp0 = arg0/*sb*/;
 bool const tmp1 = (!arg1/*isGlobal*/);
 if(tmp1){
 concat_list_I1 tmp2;
-concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)")"),(&tmp2));
+concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)")"""),(&tmp2));
 tmp0 = tmp2;
 }else{
 else_label1647:;
@@ -41207,20 +41228,20 @@ concat_LabelContext* const l1_labelContext = (&((*l0_idContext).e1_labelContext)
 concat_TypeContext* const l2_typeContext = (&((*l0_idContext).e2_typeContext));
 switch(arg1/*const*/.label){
 case 1:;
-concat_internal_checkEnumIndex(arg1/*const*/.label,1,"./concat.concat/generator_c.concat:626:13");
+concat_internal_checkEnumIndex(arg1/*const*/.label,1,"./concat.concat/generator_c.concat:635:13");
 bool const tmp0 = (arg1/*const*/.data.e1_boolean);
 if(tmp0){
-concat_io_dIOError const tmp1 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"true"));
+concat_io_dIOError const tmp1 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"t""r""u""e"""));
 }else{
 else_label1648:;
-concat_io_dIOError const tmp2 = concat_io_dfputs(arg3/*target*/,((int64_t)5),((int8_t const*)"false"));
+concat_io_dIOError const tmp2 = concat_io_dfputs(arg3/*target*/,((int64_t)5),((int8_t const*)"f""a""l""s""e"""));
 }
 return;
 case 3:;
 concat_Type tmp3 = arg0/*constType*/;
 concat_list_I1 tmp4;
 concat_32_FconstStart(tmp3,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/,(&tmp4));
-concat_internal_checkEnumIndex(arg1/*const*/.label,3,"./concat.concat/generator_c.concat:634:15");
+concat_internal_checkEnumIndex(arg1/*const*/.label,3,"./concat.concat/generator_c.concat:643:15");
 concat_list_I1 tmp5;
 concat_sb_dappendI(tmp4,((int64_t)(arg1/*const*/.data.e3_chr)),(&tmp5));
 concat_32_FconstEnd(tmp5,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
@@ -41229,20 +41250,20 @@ case 4:;
 concat_Type tmp6 = arg0/*constType*/;
 concat_list_I1 tmp7;
 concat_32_FconstStart(tmp6,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/,(&tmp7));
-concat_internal_checkEnumIndex(arg1/*const*/.label,4,"./concat.concat/generator_c.concat:639:15");
+concat_internal_checkEnumIndex(arg1/*const*/.label,4,"./concat.concat/generator_c.concat:648:15");
 bool const tmp8 = ((arg1/*const*/.data.e4_int)==((int64_t)(-9223372036854775807-1)));
 if(tmp8){
 concat_list_I1 tmp9;
 concat_sb_dappendC(tmp7,((int8_t)40),(&tmp9));
-concat_internal_checkEnumIndex(arg1/*const*/.label,4,"./concat.concat/generator_c.concat:641:17");
+concat_internal_checkEnumIndex(arg1/*const*/.label,4,"./concat.concat/generator_c.concat:650:17");
 concat_list_I1 tmp10;
 concat_sb_dappendI(tmp9,((int64_t)((arg1/*const*/.data.e4_int)+((int64_t)1))),(&tmp10));
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)3),((int8_t const*)"-1)"),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)3),((int8_t const*)"-""1"")"""),(&tmp11));
 tmp7 = tmp11;
 }else{
 else_label1649:;
-concat_internal_checkEnumIndex(arg1/*const*/.label,4,"./concat.concat/generator_c.concat:644:17");
+concat_internal_checkEnumIndex(arg1/*const*/.label,4,"./concat.concat/generator_c.concat:653:17");
 concat_list_I1 tmp12;
 concat_sb_dappendI(tmp7,(arg1/*const*/.data.e4_int),(&tmp12));
 tmp7 = tmp12;
@@ -41253,7 +41274,7 @@ case 5:;
 concat_Type tmp13 = arg0/*constType*/;
 concat_list_I1 tmp14;
 concat_32_FconstStart(tmp13,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/,(&tmp14));
-concat_internal_checkEnumIndex(arg1/*const*/.label,5,"./concat.concat/generator_c.concat:650:13");
+concat_internal_checkEnumIndex(arg1/*const*/.label,5,"./concat.concat/generator_c.concat:659:13");
 concat_list_I1 tmp15;
 concat_sb_dappendIeeeDouble(tmp14,(arg1/*const*/.data.e5_Float),(&tmp15));
 concat_32_FconstEnd(tmp15,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
@@ -41263,12 +41284,12 @@ concat_Type tmp16 = arg0/*constType*/;
 concat_list_I1 tmp17;
 concat_32_FconstStart(tmp16,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/,(&tmp17));
 concat_list_I1 tmp18;
-concat_sb_dappendS(tmp17,((int64_t)8),((int8_t const*)"{.label="),(&tmp18));
-concat_internal_checkEnumIndex(arg1/*const*/.label,2,"./concat.concat/generator_c.concat:656:15");
+concat_sb_dappendS(tmp17,((int64_t)8),((int8_t const*)"{"".""l""a""b""e""l""="""),(&tmp18));
+concat_internal_checkEnumIndex(arg1/*const*/.label,2,"./concat.concat/generator_c.concat:665:15");
 concat_list_I1 tmp19;
 concat_sb_dappendI(tmp18,((int64_t)(arg1/*const*/.data.e2_enumLabel)),(&tmp19));
 concat_list_I1 tmp20;
-concat_sb_dappendS(tmp19,((int64_t)1),((int8_t const*)"}"),(&tmp20));
+concat_sb_dappendS(tmp19,((int64_t)1),((int8_t const*)"}"""),(&tmp20));
 concat_32_FconstEnd(tmp20,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 return;
 case 8:;
@@ -41276,15 +41297,15 @@ concat_Type tmp21 = arg0/*constType*/;
 concat_list_I1 tmp22;
 concat_32_FconstStart(tmp21,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/,(&tmp22));
 concat_list_I1 tmp23;
-concat_sb_dappendS(tmp22,((int64_t)7),((int8_t const*)"sizeof("),(&tmp23));
+concat_sb_dappendS(tmp22,((int64_t)7),((int8_t const*)"s""i""z""e""o""f""("""),(&tmp23));
 concat_io_dIOError const tmp24 = concat_io_dfputSb(arg3/*target*/,tmp23);
 concat_list_I1 tmp25;
 concat_sb_dclear(tmp23,(&tmp25));
-concat_internal_checkEnumIndex(arg1/*const*/.label,8,"./concat.concat/generator_c.concat:665:15");
+concat_internal_checkEnumIndex(arg1/*const*/.label,8,"./concat.concat/generator_c.concat:674:15");
 concat_Type tmp26 = (arg1/*const*/.data.e8_typeId);
 concat_32_FprintTypeName(tmp26,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp27;
-concat_sb_dappendS(tmp25,((int64_t)1),((int8_t const*)")"),(&tmp27));
+concat_sb_dappendS(tmp25,((int64_t)1),((int8_t const*)")"""),(&tmp27));
 concat_32_FconstEnd(tmp27,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 return;
 case 6:;
@@ -41293,18 +41314,18 @@ concat_list_I1 tmp29;
 concat_32_FconstStart(tmp28,false,arg3/*target*/,arg4/*prog*/,(&tmp29));
 concat_list_I1 tmp30;
 concat_sb_dappendC(tmp29,((int8_t)34),(&tmp30));
-concat_internal_checkEnumIndex(arg1/*const*/.label,6,"./concat.concat/generator_c.concat:672:13");
+concat_internal_checkEnumIndex(arg1/*const*/.label,6,"./concat.concat/generator_c.concat:681:13");
 concat_StringConstant tmp31 = (arg1/*const*/.data.e6_str);
 concat_arrayView_I1 tmp32;
 concat_id_dscAsStr(tmp31,((concat_LabelContext const*)l1_labelContext),(&tmp32));
 concat_list_I1 tmp33;
-concat_sb_dappendEscapedStr(tmp30,tmp32,(&tmp33));
+concat_sb_dappendEscapedStrC(tmp30,tmp32,(&tmp33));
 concat_list_I1 tmp34;
 concat_sb_dappendC(tmp33,((int8_t)34),(&tmp34));
 concat_32_FconstEnd(tmp34,false,arg3/*target*/,arg4/*prog*/);
 break;
 case 7:;
-concat_internal_checkEnumIndex(arg1/*const*/.label,7,"./concat.concat/generator_c.concat:676:30");
+concat_internal_checkEnumIndex(arg1/*const*/.label,7,"./concat.concat/generator_c.concat:685:30");
 concat_ConstantArray tmp35 = (arg1/*const*/.data.e7_arrayConstant);
 concat_arrayView_I5 tmp36;
 concat_constArrayAsArray(tmp35,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),(&tmp36));
@@ -41316,7 +41337,7 @@ concat_Type tmp39 = arg0/*constType*/;
 concat_list_I1 tmp40;
 concat_32_FconstStart(tmp39,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/,(&tmp40));
 concat_list_I1 tmp41;
-concat_sb_dappendS(tmp40,((int64_t)8),((int8_t const*)"{.data={"),(&tmp41));
+concat_sb_dappendS(tmp40,((int64_t)8),((int8_t const*)"{"".""d""a""t""a""=""{"""),(&tmp41));
 int32_t tmp42 = ((int32_t)0);
 do{
 bool const tmp43 = (((int64_t)tmp42)<(l3_mArray.e1_length));
@@ -41341,11 +41362,11 @@ tmp41 = tmp47;
 tmp42 = ((int32_t)(tmp42+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp51;
-concat_sb_dappendS(tmp41,((int64_t)2),((int8_t const*)"}}"),(&tmp51));
+concat_sb_dappendS(tmp41,((int64_t)2),((int8_t const*)"}""}"""),(&tmp51));
 concat_32_FconstEnd(tmp51,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 break;
 case 10:;
-concat_internal_checkEnumIndex(arg1/*const*/.label,10,"./concat.concat/generator_c.concat:694:13");
+concat_internal_checkEnumIndex(arg1/*const*/.label,10,"./concat.concat/generator_c.concat:703:13");
 concat_32_FprintArgName((arg1/*const*/.data.e10_genericArg),((concat_LabelId)-1),arg3/*target*/,arg4/*prog*/);
 return;
 case 0:case 9:case 11:case 12:;
@@ -41369,7 +41390,7 @@ else_label1651:;
 }
 concat_arrayView_I6 tmp2 = arg0/*operations*/;
 concat_optional_I13 tmp3 = concat_array_dat_I1(tmp2,((int64_t)(*arg1/*index*/)));
-concat_internal_checkEnumIndex(tmp3.label,1,"./concat.concat/generator_c.concat:712:34");
+concat_internal_checkEnumIndex(tmp3.label,1,"./concat.concat/generator_c.concat:721:34");
 l4_op = (tmp3.data.e1_data);
 int32_t tmp4 = (*arg1/*index*/);
 (*arg1/*index*/) = ((int32_t)(tmp4+((int32_t)1)));
@@ -41385,7 +41406,7 @@ break;
 case 1:;
 concat_Type tmp8 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp9 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp9.label,1,"./concat.concat/generator_c.concat:720:34");
+concat_internal_checkEnumIndex(tmp9.label,1,"./concat.concat/generator_c.concat:729:34");
 concat_ConstValue tmp10 = (tmp9.data.e1_Constant);
 concat_32_FcompileConstant(tmp8,tmp10,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 return;
@@ -41393,44 +41414,44 @@ case 22:;
 concat_Type tmp11 = ((*l4_op).e1_dataType);
 concat_Type tmp12 = concat_types_dunwrapNamed(tmp11,((concat_TypeContext const*)l3_typeContext));
 concat_Type const l5_printType = tmp12;
-concat_io_dIOError const tmp13 = concat_io_dfputs(arg3/*target*/,((int64_t)17),((int8_t const*)"{//..debug.print\x0A"));
+concat_io_dIOError const tmp13 = concat_io_dfputs(arg3/*target*/,((int64_t)17),((int8_t const*)"{""/""/""."".""d""e""b""u""g"".""p""r""i""n""t""\x0A"""));
 concat_Type tmp14 = l5_printType;
 concat_32_FprintTypeName(tmp14,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp15 = concat_io_dfputs(arg3/*target*/,((int64_t)12),((int8_t const*)" tmpPrint = "));
+concat_io_dIOError const tmp15 = concat_io_dfputs(arg3/*target*/,((int64_t)12),((int8_t const*)" ""t""m""p""P""r""i""n""t"" ""="" """));
 concat_arrayView_I6 tmp16 = arg0/*operations*/;
 concat_32_FcompileOp(tmp16,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp17 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp17 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 bool const tmp18 = concat_types_disPrimitive(l5_printType);
 if(tmp18){
-concat_internal_checkEnumIndex(l5_printType.label,2,"./concat.concat/generator_c.concat:731:19");
+concat_internal_checkEnumIndex(l5_printType.label,2,"./concat.concat/generator_c.concat:740:19");
 concat_23_Ftypes_dPrimitiveType const tmp19 = (l5_printType.data.e2_primitiveType);
 switch(tmp19.label){
 case 0:;
-concat_io_dIOError const tmp20 = concat_io_dfputs(arg3/*target*/,((int64_t)40),((int8_t const*)"printf(\"%s\\n\",tmpPrint?\"true\":\"false\");\x0A"));
+concat_io_dIOError const tmp20 = concat_io_dfputs(arg3/*target*/,((int64_t)40),((int8_t const*)"p""r""i""n""t""f""(""\"""%""s""\\""n""\""",""t""m""p""P""r""i""n""t""?""\"""t""r""u""e""\""":""\"""f""a""l""s""e""\""")"";""\x0A"""));
 break;
 case 1:;
-concat_io_dIOError const tmp21 = concat_io_dfputs(arg3/*target*/,((int64_t)39),((int8_t const*)"printf(\"%\"PRIi8\" (\'%.4s\')\\n\",tmpPrint,&"));
-concat_io_dIOError const tmp22 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"concat_"));
-concat_io_dIOError const tmp23 = concat_io_dfputs(arg3/*target*/,((int64_t)18),((int8_t const*)"internal_charNames"));
-concat_io_dIOError const tmp24 = concat_io_dfputs(arg3/*target*/,((int64_t)22),((int8_t const*)"[4*(tmpPrint&0xff)]);\x0A"));
+concat_io_dIOError const tmp21 = concat_io_dfputs(arg3/*target*/,((int64_t)39),((int8_t const*)"p""r""i""n""t""f""(""\"""%""\"""P""R""I""i""8""\""" ""(""\'""%"".""4""s""\'"")""\\""n""\""",""t""m""p""P""r""i""n""t"",""&"""));
+concat_io_dIOError const tmp22 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""));
+concat_io_dIOError const tmp23 = concat_io_dfputs(arg3/*target*/,((int64_t)18),((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""a""r""N""a""m""e""s"""));
+concat_io_dIOError const tmp24 = concat_io_dfputs(arg3/*target*/,((int64_t)22),((int8_t const*)"[""4""*""(""t""m""p""P""r""i""n""t""&""0""x""f""f"")""]"")"";""\x0A"""));
 break;
 case 2:;
-concat_io_dIOError const tmp25 = concat_io_dfputs(arg3/*target*/,((int64_t)32),((int8_t const*)"printf(\"%\"PRIi16\"\\n\",tmpPrint);\x0A"));
+concat_io_dIOError const tmp25 = concat_io_dfputs(arg3/*target*/,((int64_t)32),((int8_t const*)"p""r""i""n""t""f""(""\"""%""\"""P""R""I""i""1""6""\"""\\""n""\""",""t""m""p""P""r""i""n""t"")"";""\x0A"""));
 break;
 case 3:;
-concat_io_dIOError const tmp26 = concat_io_dfputs(arg3/*target*/,((int64_t)32),((int8_t const*)"printf(\"%\"PRIi32\"\\n\",tmpPrint);\x0A"));
+concat_io_dIOError const tmp26 = concat_io_dfputs(arg3/*target*/,((int64_t)32),((int8_t const*)"p""r""i""n""t""f""(""\"""%""\"""P""R""I""i""3""2""\"""\\""n""\""",""t""m""p""P""r""i""n""t"")"";""\x0A"""));
 break;
 case 4:;
-concat_io_dIOError const tmp27 = concat_io_dfputs(arg3/*target*/,((int64_t)32),((int8_t const*)"printf(\"%\"PRIi64\"\\n\",tmpPrint);\x0A"));
+concat_io_dIOError const tmp27 = concat_io_dfputs(arg3/*target*/,((int64_t)32),((int8_t const*)"p""r""i""n""t""f""(""\"""%""\"""P""R""I""i""6""4""\"""\\""n""\""",""t""m""p""P""r""i""n""t"")"";""\x0A"""));
 break;
 case 5:case 6:;
-concat_io_dIOError const tmp28 = concat_io_dfputs(arg3/*target*/,((int64_t)25),((int8_t const*)"printf(\"%g\\n\",tmpPrint);\x0A"));
+concat_io_dIOError const tmp28 = concat_io_dfputs(arg3/*target*/,((int64_t)25),((int8_t const*)"p""r""i""n""t""f""(""\"""%""g""\\""n""\""",""t""m""p""P""r""i""n""t"")"";""\x0A"""));
 break;
 case 7:;
-concat_io_dIOError const tmp29 = concat_io_dfputs(arg3/*target*/,((int64_t)26),((int8_t const*)"printf(\"%zu\\n\",tmpPrint);\x0A"));
+concat_io_dIOError const tmp29 = concat_io_dfputs(arg3/*target*/,((int64_t)26),((int8_t const*)"p""r""i""n""t""f""(""\"""%""z""u""\\""n""\""",""t""m""p""P""r""i""n""t"")"";""\x0A"""));
 break;
 }
-concat_io_dIOError const tmp30 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}\x0A"));
+concat_io_dIOError const tmp30 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}""\x0A"""));
 return;
 }else{
 else_label1652:;
@@ -41438,13 +41459,13 @@ else_label1652:;
 concat_Type tmp31 = l5_printType;
 bool const tmp32 = concat_types_disPointer(tmp31,((concat_TypeContext const*)l3_typeContext));
 if(tmp32){
-concat_io_dIOError const tmp33 = concat_io_dfputs(arg3/*target*/,((int64_t)38),((int8_t const*)"printf(\"%p\\n\",(void const*)tmpPrint);\x0A"));
-concat_io_dIOError const tmp34 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}\x0A"));
+concat_io_dIOError const tmp33 = concat_io_dfputs(arg3/*target*/,((int64_t)38),((int8_t const*)"p""r""i""n""t""f""(""\"""%""p""\\""n""\""",""(""v""o""i""d"" ""c""o""n""s""t""*"")""t""m""p""P""r""i""n""t"")"";""\x0A"""));
+concat_io_dIOError const tmp34 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}""\x0A"""));
 return;
 }else{
 else_label1653:;
 }
-concat_io_dIOError const tmp35 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}\x0A"));
+concat_io_dIOError const tmp35 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}""\x0A"""));
 break;
 case 24:;
 concat_Type tmp36 = ((*l4_op).e1_dataType);
@@ -41462,14 +41483,14 @@ bool const tmp41 = concat_types_disArray(tmp40,((concat_TypeContext const*)l3_ty
 if(tmp41){
 bool const tmp42 = (!arg2/*isGlobal*/);
 if(tmp42){
-concat_io_dIOError const tmp43 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp43 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_Type tmp44 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp44,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp45 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp45 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1656:;
 }
-concat_io_dIOError const tmp46 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"{0,}"));
+concat_io_dIOError const tmp46 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"{""0"",""}"""));
 return;
 }else{
 else_label1655:;
@@ -41478,58 +41499,58 @@ break;
 case 25:;
 bool const tmp47 = (!arg2/*isGlobal*/);
 if(tmp47){
-concat_io_dIOError const tmp48 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp48 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp49 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp49,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp50 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp50 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1657:;
 }
 concat_list_I1 tmp51;
 concat_sb_dcreate(((int64_t)64),(&tmp51));
 concat_list_I1 tmp52;
-concat_sb_dappendS(tmp51,((int64_t)8),((int8_t const*)"{.label="),(&tmp52));
+concat_sb_dappendS(tmp51,((int64_t)8),((int8_t const*)"{"".""l""a""b""e""l""="""),(&tmp52));
 concat_OpValue const tmp53 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp53.label,25,"./concat.concat/generator_c.concat:794:20");
+concat_internal_checkEnumIndex(tmp53.label,25,"./concat.concat/generator_c.concat:803:20");
 concat_list_I1 tmp54;
 concat_sb_dappendI(tmp52,((int64_t)(tmp53.data.e25_newEnum)),(&tmp54));
 concat_Type tmp55 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp56 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp56.label,25,"./concat.concat/generator_c.concat:795:36");
+concat_internal_checkEnumIndex(tmp56.label,25,"./concat.concat/generator_c.concat:804:36");
 concat_Type tmp57 = concat_types_dcompositeGetElement(tmp55,((int64_t)(tmp56.data.e25_newEnum)),((concat_TypeContext const*)l3_typeContext));
 bool const tmp58 = concat_types_disEmpty(tmp57,((concat_TypeContext const*)l3_typeContext));
 bool const tmp59 = (!tmp58);
 if(tmp59){
 concat_list_I1 tmp60;
-concat_sb_dappendS(tmp54,((int64_t)9),((int8_t const*)",.data={."),(&tmp60));
+concat_sb_dappendS(tmp54,((int64_t)9),((int8_t const*)","".""d""a""t""a""=""{""."""),(&tmp60));
 concat_io_dIOError const tmp61 = concat_io_dfputSb(arg3/*target*/,tmp60);
 concat_list_I1 tmp62;
 concat_sb_dclear(tmp60,(&tmp62));
 concat_Type tmp63 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp64 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp64.label,25,"./concat.concat/generator_c.concat:799:38");
+concat_internal_checkEnumIndex(tmp64.label,25,"./concat.concat/generator_c.concat:808:38");
 concat_32_FprintEltName(tmp63,(tmp64.data.e25_newEnum),arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp65;
-concat_sb_dappendS(tmp62,((int64_t)3),((int8_t const*)" = "),(&tmp65));
+concat_sb_dappendS(tmp62,((int64_t)3),((int8_t const*)" ""="" """),(&tmp65));
 concat_io_dIOError const tmp66 = concat_io_dfputSb(arg3/*target*/,tmp65);
 concat_list_I1 tmp67;
 concat_sb_dclear(tmp65,(&tmp67));
 concat_arrayView_I6 tmp68 = arg0/*operations*/;
 concat_32_FcompileOp(tmp68,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp69;
-concat_sb_dappendS(tmp67,((int64_t)1),((int8_t const*)"}"),(&tmp69));
+concat_sb_dappendS(tmp67,((int64_t)1),((int8_t const*)"}"""),(&tmp69));
 tmp54 = tmp69;
 }else{
 else_label1658:;
 }
 if(arg2/*isGlobal*/){
 concat_list_I1 tmp70;
-concat_sb_dappendS(tmp54,((int64_t)1),((int8_t const*)"}"),(&tmp70));
+concat_sb_dappendS(tmp54,((int64_t)1),((int8_t const*)"}"""),(&tmp70));
 tmp54 = tmp70;
 }else{
 else_label1659:;
 concat_list_I1 tmp71;
-concat_sb_dappendS(tmp54,((int64_t)2),((int8_t const*)"})"),(&tmp71));
+concat_sb_dappendS(tmp54,((int64_t)2),((int8_t const*)"}"")"""),(&tmp71));
 tmp54 = tmp71;
 }
 concat_io_dIOError const tmp72 = concat_io_dfputSb(arg3/*target*/,tmp54);
@@ -41537,37 +41558,37 @@ concat_list_I1 tmp73;
 concat_sb_dfree(tmp54,(&tmp73));
 return;
 case 36:;
-concat_io_dIOError const tmp74 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp74 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_OpValue const tmp75 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp75.label,36,"./concat.concat/generator_c.concat:816:18");
+concat_internal_checkEnumIndex(tmp75.label,36,"./concat.concat/generator_c.concat:825:18");
 concat_UnaryOperator const tmp76 = (tmp75.data.e36_unaryOperator);
 switch(tmp76.label){
 case 2:;
-concat_io_dIOError const tmp77 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"!"));
+concat_io_dIOError const tmp77 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"!"""));
 concat_arrayView_I6 tmp78 = arg0/*operations*/;
 concat_32_FcompileOp(tmp78,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 break;
 case 0:;
-concat_io_dIOError const tmp79 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"-"));
+concat_io_dIOError const tmp79 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"-"""));
 concat_arrayView_I6 tmp80 = arg0/*operations*/;
 concat_32_FcompileOp(tmp80,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 break;
 case 3:;
-concat_io_dIOError const tmp81 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"~"));
+concat_io_dIOError const tmp81 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"~"""));
 concat_arrayView_I6 tmp82 = arg0/*operations*/;
 concat_32_FcompileOp(tmp82,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 break;
 case 1:;
-concat_io_dIOError const tmp83 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"!!"));
+concat_io_dIOError const tmp83 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"!""!"""));
 concat_arrayView_I6 tmp84 = arg0/*operations*/;
 concat_32_FcompileOp(tmp84,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 break;
 }
-concat_io_dIOError const tmp85 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp85 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 case 37:;
 concat_OpValue const tmp86 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp86.label,37,"./concat.concat/generator_c.concat:837:18");
+concat_internal_checkEnumIndex(tmp86.label,37,"./concat.concat/generator_c.concat:846:18");
 concat_BinaryOperator const tmp87 = (tmp86.data.e37_binaryOperator);
 concat_Type tmp88 = ((*l4_op).e1_dataType);
 bool const tmp89 = concat_types_disFloat(tmp88,((concat_TypeContext const*)l3_typeContext));
@@ -41575,53 +41596,53 @@ bool const tmp90 = ((bool)((tmp87.label==5)&tmp89));
 if(tmp90){
 concat_Type tmp91 = ((*l4_op).e1_dataType);
 concat_Type tmp92 = concat_types_dunwrapNamed(tmp91,((concat_TypeContext const*)l3_typeContext));
-concat_internal_checkEnumIndex(tmp92.label,2,"./concat.concat/generator_c.concat:838:55");
+concat_internal_checkEnumIndex(tmp92.label,2,"./concat.concat/generator_c.concat:847:55");
 concat_23_Ftypes_dPrimitiveType const tmp93 = (tmp92.data.e2_primitiveType);
 switch(tmp93.label){
 case 5:;
-concat_io_dIOError const tmp94 = concat_io_dfputs(arg3/*target*/,((int64_t)5),((int8_t const*)"fmodf"));
+concat_io_dIOError const tmp94 = concat_io_dfputs(arg3/*target*/,((int64_t)5),((int8_t const*)"f""m""o""d""f"""));
 break;
 case 6:;
-concat_io_dIOError const tmp95 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"fmod"));
+concat_io_dIOError const tmp95 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"f""m""o""d"""));
 break;
 case 0:case 1:case 2:case 3:case 4:case 7:;
-fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:841:41\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:850:41\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 }
-concat_io_dIOError const tmp96 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp96 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_arrayView_I6 tmp97 = arg0/*operations*/;
 concat_32_FcompileOp(tmp97,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp98 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)","));
+concat_io_dIOError const tmp98 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)","""));
 concat_arrayView_I6 tmp99 = arg0/*operations*/;
 concat_32_FcompileOp(tmp99,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp100 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp100 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 }else{
 else_label1660:;
 }
-concat_io_dIOError const tmp101 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp101 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_OpValue const tmp102 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp102.label,37,"./concat.concat/generator_c.concat:851:18");
+concat_internal_checkEnumIndex(tmp102.label,37,"./concat.concat/generator_c.concat:860:18");
 bool const tmp103 = concat_32_FisArithimeticOp((tmp102.data.e37_binaryOperator));
 if(tmp103){
-concat_io_dIOError const tmp104 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp104 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 concat_Type tmp105 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp105,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp106 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)")("));
+concat_io_dIOError const tmp106 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)")""("""));
 }else{
 else_label1661:;
 }
 concat_OpValue const tmp107 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp107.label,37,"./concat.concat/generator_c.concat:857:18");
+concat_internal_checkEnumIndex(tmp107.label,37,"./concat.concat/generator_c.concat:866:18");
 bool const tmp108 = concat_32_FisUnsignedOp((tmp107.data.e37_binaryOperator));
 if(tmp108){
-concat_io_dIOError const tmp109 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp109 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp110 = ((*l4_op).e1_dataType);
 concat_32_FprintUnsignedTypeName(tmp110,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp111 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp111 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 concat_arrayView_I6 tmp112 = arg0/*operations*/;
 concat_32_FcompileOp(tmp112,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp113 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp113 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1662:;
 concat_arrayView_I6 tmp114 = arg0/*operations*/;
@@ -41630,74 +41651,74 @@ concat_32_FcompileOp(tmp114,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*
 concat_Type tmp115 = ((*l4_op).e1_dataType);
 bool const tmp116 = concat_types_disEnum(tmp115,((concat_TypeContext const*)l3_typeContext));
 if(tmp116){
-concat_io_dIOError const tmp117 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".label"));
+concat_io_dIOError const tmp117 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".""l""a""b""e""l"""));
 }else{
 else_label1663:;
 }
 concat_OpValue const tmp118 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp118.label,37,"./concat.concat/generator_c.concat:869:18");
+concat_internal_checkEnumIndex(tmp118.label,37,"./concat.concat/generator_c.concat:878:18");
 concat_BinaryOperator const tmp119 = (tmp118.data.e37_binaryOperator);
 switch(tmp119.label){
 case 0:;
-concat_io_dIOError const tmp120 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"+"));
+concat_io_dIOError const tmp120 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"+"""));
 break;
 case 1:;
-concat_io_dIOError const tmp121 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"-"));
+concat_io_dIOError const tmp121 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"-"""));
 break;
 case 2:;
-concat_io_dIOError const tmp122 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"*"));
+concat_io_dIOError const tmp122 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"*"""));
 break;
 case 3:case 4:;
-concat_io_dIOError const tmp123 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"/"));
+concat_io_dIOError const tmp123 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"/"""));
 break;
 case 5:case 6:;
-concat_io_dIOError const tmp124 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"%"));
+concat_io_dIOError const tmp124 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"%"""));
 break;
 case 7:;
-concat_io_dIOError const tmp125 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"&"));
+concat_io_dIOError const tmp125 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"&"""));
 break;
 case 8:;
-concat_io_dIOError const tmp126 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"|"));
+concat_io_dIOError const tmp126 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"|"""));
 break;
 case 9:;
-concat_io_dIOError const tmp127 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"^"));
+concat_io_dIOError const tmp127 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"^"""));
 break;
 case 10:;
-concat_io_dIOError const tmp128 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"<<"));
+concat_io_dIOError const tmp128 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"<""<"""));
 break;
 case 11:case 12:;
-concat_io_dIOError const tmp129 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)">>"));
+concat_io_dIOError const tmp129 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)">"">"""));
 break;
 case 13:;
-concat_io_dIOError const tmp130 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"=="));
+concat_io_dIOError const tmp130 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"=""="""));
 break;
 case 14:;
-concat_io_dIOError const tmp131 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"!="));
+concat_io_dIOError const tmp131 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"!""="""));
 break;
 case 16:case 20:;
-concat_io_dIOError const tmp132 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"<="));
+concat_io_dIOError const tmp132 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"<""="""));
 break;
 case 17:case 21:;
-concat_io_dIOError const tmp133 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)">="));
+concat_io_dIOError const tmp133 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)">""="""));
 break;
 case 15:case 19:;
-concat_io_dIOError const tmp134 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"<"));
+concat_io_dIOError const tmp134 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"<"""));
 break;
 case 18:case 22:;
-concat_io_dIOError const tmp135 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)">"));
+concat_io_dIOError const tmp135 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)">"""));
 break;
 }
 concat_OpValue const tmp136 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp136.label,37,"./concat.concat/generator_c.concat:887:18");
+concat_internal_checkEnumIndex(tmp136.label,37,"./concat.concat/generator_c.concat:896:18");
 bool const tmp137 = concat_32_FisUnsignedOp((tmp136.data.e37_binaryOperator));
 if(tmp137){
-concat_io_dIOError const tmp138 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp138 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp139 = ((*l4_op).e1_dataType);
 concat_32_FprintUnsignedTypeName(tmp139,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp140 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp140 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 concat_arrayView_I6 tmp141 = arg0/*operations*/;
 concat_32_FcompileOp(tmp141,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp142 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp142 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1664:;
 concat_arrayView_I6 tmp143 = arg0/*operations*/;
@@ -41706,19 +41727,19 @@ concat_32_FcompileOp(tmp143,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*
 concat_Type tmp144 = ((*l4_op).e1_dataType);
 bool const tmp145 = concat_types_disEnum(tmp144,((concat_TypeContext const*)l3_typeContext));
 if(tmp145){
-concat_io_dIOError const tmp146 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".label"));
+concat_io_dIOError const tmp146 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".""l""a""b""e""l"""));
 }else{
 else_label1665:;
 }
 concat_OpValue const tmp147 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp147.label,37,"./concat.concat/generator_c.concat:899:18");
+concat_internal_checkEnumIndex(tmp147.label,37,"./concat.concat/generator_c.concat:908:18");
 bool const tmp148 = concat_32_FisArithimeticOp((tmp147.data.e37_binaryOperator));
 if(tmp148){
-concat_io_dIOError const tmp149 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp149 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1666:;
 }
-concat_io_dIOError const tmp150 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp150 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 case 34:case 35:;
 concat_OpValue const tmp151 = ((*l4_op).e0_val);
@@ -41726,12 +41747,12 @@ bool const tmp152 = (tmp151.label==35);
 concat_Type tmp154;
 if(tmp152){
 concat_OpValue const tmp153 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp153.label,35,"./concat.concat/generator_c.concat:905:42");
+concat_internal_checkEnumIndex(tmp153.label,35,"./concat.concat/generator_c.concat:914:42");
 tmp154 = (tmp153.data.e35_Cast_X33);
 }else{
 else_label1667:;
 concat_OpValue const tmp155 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp155.label,34,"./concat.concat/generator_c.concat:905:65");
+concat_internal_checkEnumIndex(tmp155.label,34,"./concat.concat/generator_c.concat:914:65");
 tmp154 = (tmp155.data.e34_Cast);
 }
 concat_Type const l6_src = tmp154;
@@ -41752,14 +41773,14 @@ bool const tmp163 = concat_types_disUnion(tmp162,((concat_TypeContext const*)l3_
 if(tmp163){
 bool const tmp164 = (!arg2/*isGlobal*/);
 if(tmp164){
-concat_io_dIOError const tmp165 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp165 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp166 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp166,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp167 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp167 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1670:;
 }
-concat_io_dIOError const tmp168 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"{."));
+concat_io_dIOError const tmp168 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"{""."""));
 concat_Type tmp169 = ((*l4_op).e1_dataType);
 concat_Type tmp170 = l6_src;
 int32_t tmp171;
@@ -41767,12 +41788,12 @@ bool const tmp172 = concat_types_dfindUnionTypeIndex(tmp169,tmp170,((concat_Labe
 int32_t tmp173 = tmp171;
 if(tmp172){
 concat_list_I1 tmp174;
-concat_sb_dwrap(((int64_t)29),((int8_t const*)"cannot store values of type \""),(&tmp174));
+concat_sb_dwrap(((int64_t)29),((int8_t const*)"c""a""n""n""o""t"" ""s""t""o""r""e"" ""v""a""l""u""e""s"" ""o""f"" ""t""y""p""e"" ""\""""),(&tmp174));
 concat_Type tmp175 = l6_src;
 concat_list_I1 tmp176;
 concat_sb_dappendType(tmp174,tmp175,((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp176));
 concat_list_I1 tmp177;
-concat_sb_dappendS(tmp176,((int64_t)5),((int8_t const*)"\" in "),(&tmp177));
+concat_sb_dappendS(tmp176,((int64_t)5),((int8_t const*)"\""" ""i""n"" """),(&tmp177));
 concat_Type tmp178 = ((*l4_op).e1_dataType);
 concat_list_I1 tmp179;
 concat_sb_dappendType(tmp177,tmp178,((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp179));
@@ -41783,13 +41804,13 @@ else_label1671:;
 }
 concat_Type tmp181 = ((*l4_op).e1_dataType);
 concat_32_FprintEltName(tmp181,tmp173,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp182 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"="));
+concat_io_dIOError const tmp182 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"="""));
 concat_arrayView_I6 tmp183 = arg0/*operations*/;
 concat_32_FcompileOp(tmp183,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp184 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"}"));
+concat_io_dIOError const tmp184 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"}"""));
 bool const tmp185 = (!arg2/*isGlobal*/);
 if(tmp185){
-concat_io_dIOError const tmp186 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp186 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 }else{
 else_label1672:;
 }
@@ -41803,13 +41824,13 @@ if(tmp188){
 concat_Type tmp189 = ((*l4_op).e1_dataType);
 bool const tmp190 = concat_types_disPointer(tmp189,((concat_TypeContext const*)l3_typeContext));
 if(tmp190){
-concat_io_dIOError const tmp191 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp191 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp192 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp192,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp193 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp193 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 concat_arrayView_I6 tmp194 = arg0/*operations*/;
 concat_32_FcompileOp(tmp194,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp195 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".data)"));
+concat_io_dIOError const tmp195 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".""d""a""t""a"")"""));
 return;
 }else{
 else_label1674:;
@@ -41824,13 +41845,13 @@ if(tmp197){
 concat_Type tmp198 = ((*l4_op).e1_dataType);
 bool const tmp199 = concat_types_disInt(tmp198,((concat_TypeContext const*)l3_typeContext));
 if(tmp199){
-concat_io_dIOError const tmp200 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp200 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp201 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp201,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp202 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp202 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 concat_arrayView_I6 tmp203 = arg0/*operations*/;
 concat_32_FcompileOp(tmp203,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp204 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)".label)"));
+concat_io_dIOError const tmp204 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)".""l""a""b""e""l"")"""));
 }else{
 else_label1676:;
 }
@@ -41838,17 +41859,17 @@ break;
 }else{
 else_label1675:;
 }
-concat_io_dIOError const tmp205 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp205 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp206 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp206,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp207 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp207 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 concat_arrayView_I6 tmp208 = arg0/*operations*/;
 concat_32_FcompileOp(tmp208,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp209 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp209 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 case 4:;
 concat_OpValue const tmp210 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp210.label,4,"./concat.concat/generator_c.concat:961:18");
+concat_internal_checkEnumIndex(tmp210.label,4,"./concat.concat/generator_c.concat:970:18");
 concat_IdentifierInfo const l7_idInfo = (tmp210.data.e4_getId);
 concat_IdentifierType const tmp211 = (l7_idInfo.e0_idType);
 switch(tmp211.label){
@@ -41865,12 +41886,12 @@ else_label1677:;
 return;
 case 1:;
 concat_list_I1 tmp216;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"unexpected operation "),(&tmp216));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"u""n""e""x""p""e""c""t""e""d"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp216));
 concat_Operation tmp217 = (*l4_op);
 concat_list_I1 tmp218;
 concat_sb_dappendOp(tmp216,tmp217,((concat_ConstantContext const*)l1_constContext),((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp218));
 concat_list_I1 tmp219;
-concat_sb_dappendS(tmp218,((int64_t)46),((int8_t const*)" should not exist at this stage of compilation"),(&tmp219));
+concat_sb_dappendS(tmp218,((int64_t)46),((int8_t const*)" ""s""h""o""u""l""d"" ""n""o""t"" ""e""x""i""s""t"" ""a""t"" ""t""h""i""s"" ""s""t""a""g""e"" ""o""f"" ""c""o""m""p""i""l""a""t""i""o""n"""),(&tmp219));
 concat_FilePosition tmp220 = ((*l4_op).e2_pos);
 concat_appendError(tmp219,tmp220,(&((*arg4/*prog*/).e6_errors)));
 return;
@@ -41880,7 +41901,7 @@ break;
 break;
 case 26:;
 concat_OpValue const tmp221 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp221.label,26,"./concat.concat/generator_c.concat:979:18");
+concat_internal_checkEnumIndex(tmp221.label,26,"./concat.concat/generator_c.concat:988:18");
 concat_CallInfo const l8_callData = (tmp221.data.e26_call);
 concat_IdentifierInfo tmp222 = (l8_callData.e0_idInfo);
 concat_32_FprintIdName(tmp222,arg3/*target*/,arg4/*prog*/);
@@ -41893,23 +41914,23 @@ concat_arrayView_I6 tmp225 = arg0/*operations*/;
 concat_32_FcompileOp(tmp225,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_Type tmp226 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp227 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp227.label,27,"./concat.concat/generator_c.concat:992:34");
+concat_internal_checkEnumIndex(tmp227.label,27,"./concat.concat/generator_c.concat:1001:34");
 concat_arrayView_I6 tmp228 = arg0/*operations*/;
 concat_32_FcompileCall(tmp226,(tmp227.data.e27_callPtr),tmp228,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 return;
 case 6:;
 concat_OpValue const tmp229 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp229.label,6,"./concat.concat/generator_c.concat:995:18");
+concat_internal_checkEnumIndex(tmp229.label,6,"./concat.concat/generator_c.concat:1004:18");
 concat_IdentifierInfo const l9_idInfo = (tmp229.data.e6__X64Id);
 concat_IdentifierType const tmp230 = (l9_idInfo.e0_idType);
 switch(tmp230.label){
 case 5:case 2:case 7:case 6:case 1:;
-concat_io_dIOError const tmp231 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(&"));
+concat_io_dIOError const tmp231 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""&"""));
 concat_Type tmp232 = ((*l4_op).e1_dataType);
 int64_t const tmp233 = concat_types_dgetArrayDims(tmp232,((concat_TypeContext const*)l3_typeContext));
 bool const tmp234 = (tmp233>((int64_t)0));
 if(tmp234){
-concat_io_dIOError const tmp235 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp235 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 }else{
 else_label1678:;
 }
@@ -41919,11 +41940,11 @@ concat_Type tmp237 = ((*l4_op).e1_dataType);
 int64_t const tmp238 = concat_types_dgetArrayDims(tmp237,((concat_TypeContext const*)l3_typeContext));
 bool const tmp239 = (tmp238>((int64_t)0));
 if(tmp239){
-concat_io_dIOError const tmp240 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)".data[0])"));
+concat_io_dIOError const tmp240 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)".""d""a""t""a""[""0""]"")"""));
 }else{
 else_label1679:;
 }
-concat_io_dIOError const tmp241 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp241 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 case 0:case 3:case 4:;
 break;
@@ -41931,17 +41952,17 @@ break;
 break;
 case 5:;
 concat_OpValue const tmp242 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp242.label,5,"./concat.concat/generator_c.concat:1013:18");
+concat_internal_checkEnumIndex(tmp242.label,5,"./concat.concat/generator_c.concat:1022:18");
 concat_IdentifierInfo const l10_idInfo = (tmp242.data.e5_setId);
 concat_IdentifierType const tmp243 = (l10_idInfo.e0_idType);
 switch(tmp243.label){
 case 5:case 2:case 7:;
 concat_IdentifierInfo tmp244 = l10_idInfo;
 concat_32_FprintIdName(tmp244,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp245 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" = "));
+concat_io_dIOError const tmp245 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" ""="" """));
 concat_arrayView_I6 tmp246 = arg0/*operations*/;
 concat_32_FcompileOp(tmp246,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp247 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp247 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 0:case 6:case 3:case 1:case 4:;
 break;
@@ -41953,12 +41974,12 @@ bool const tmp249 = (tmp248.label==7);
 concat_IdentifierInfo tmp251;
 if(tmp249){
 concat_OpValue const tmp250 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp250.label,7,"./concat.concat/generator_c.concat:1027:20");
+concat_internal_checkEnumIndex(tmp250.label,7,"./concat.concat/generator_c.concat:1036:20");
 tmp251 = (tmp250.data.e7_initializeId);
 }else{
 else_label1680:;
 concat_OpValue const tmp252 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp252.label,8,"./concat.concat/generator_c.concat:1029:20");
+concat_internal_checkEnumIndex(tmp252.label,8,"./concat.concat/generator_c.concat:1038:20");
 tmp251 = (tmp252.data.e8_autoTypedInitializeId);
 }
 concat_IdentifierInfo const l11_idInfo = tmp251;
@@ -41970,7 +41991,7 @@ switch(tmp254.label){
 case 1:;
 bool const tmp255 = ((bool)((((concat_LabelFlag)(l12_labelFlags&((concat_LabelFlag)8)))==((int32_t)0))&(((concat_LabelFlag)(l12_labelFlags&((concat_LabelFlag)4)))==((int32_t)0))));
 if(tmp255){
-concat_io_dIOError const tmp256 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"static "));
+concat_io_dIOError const tmp256 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"s""t""a""t""i""c"" """));
 }else{
 else_label1681:;
 }
@@ -41978,34 +41999,34 @@ concat_Type tmp257 = ((*l4_op).e1_dataType);
 concat_Type tmp258;
 bool const tmp259 = concat_types_dgetProcRet(tmp257,((concat_TypeContext const*)l3_typeContext),(&tmp258));
 concat_32_FprintTypeName(tmp258,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp260 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp260 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_32_FprintGlobalName((l11_idInfo.e1_labelId),(l11_idInfo.e4_id),arg3/*target*/,arg4/*prog*/);
 concat_Type tmp261 = ((*l4_op).e1_dataType);
 concat_32_FprintProcArgs(tmp261,true,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp262 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"{\x0A"));
+concat_io_dIOError const tmp262 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"{""\x0A"""));
 return;
 case 5:case 2:case 7:;
 concat_IdentifierType const tmp263 = (l11_idInfo.e0_idType);
 bool const tmp264 = ((bool)(((bool)((tmp263.label==2)&(((concat_LabelFlag)(l12_labelFlags&((concat_LabelFlag)8)))==((int32_t)0))))&(((concat_LabelFlag)(l12_labelFlags&((concat_LabelFlag)4)))==((int32_t)0))));
 if(tmp264){
-concat_io_dIOError const tmp265 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"static "));
+concat_io_dIOError const tmp265 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"s""t""a""t""i""c"" """));
 }else{
 else_label1682:;
 }
 concat_Type tmp266 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp266,arg3/*target*/,arg4/*prog*/);
 if(l13_immutable){
-concat_io_dIOError const tmp267 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)" const "));
+concat_io_dIOError const tmp267 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)" ""c""o""n""s""t"" """));
 }else{
 else_label1683:;
-concat_io_dIOError const tmp268 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp268 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" """));
 }
 concat_IdentifierInfo tmp269 = l11_idInfo;
 concat_32_FprintIdName(tmp269,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp270 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" = "));
+concat_io_dIOError const tmp270 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" ""="" """));
 concat_arrayView_I6 tmp271 = arg0/*operations*/;
 concat_32_FcompileOp(tmp271,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp272 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp272 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 0:case 6:case 3:case 4:;
 break;
@@ -42013,7 +42034,7 @@ break;
 break;
 case 9:;
 concat_OpValue const tmp273 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp273.label,9,"./concat.concat/generator_c.concat:1068:18");
+concat_internal_checkEnumIndex(tmp273.label,9,"./concat.concat/generator_c.concat:1077:18");
 concat_IdentifierInfo const l14_idInfo = (tmp273.data.e9_declareId);
 concat_LabelFlag const tmp274 = concat_id_dlabelFlags((l14_idInfo.e1_labelId),((concat_LabelContext const*)l2_labelContext));
 concat_LabelFlag const l15_labelFlags = tmp274;
@@ -42023,7 +42044,7 @@ switch(tmp275.label){
 case 1:;
 bool const tmp276 = ((bool)((((concat_LabelFlag)(l15_labelFlags&((concat_LabelFlag)8)))==((int32_t)0))&(((concat_LabelFlag)(l15_labelFlags&((concat_LabelFlag)4)))==((int32_t)0))));
 if(tmp276){
-concat_io_dIOError const tmp277 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"static "));
+concat_io_dIOError const tmp277 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"s""t""a""t""i""c"" """));
 }else{
 else_label1684:;
 }
@@ -42031,31 +42052,31 @@ concat_Type tmp278 = ((*l4_op).e1_dataType);
 concat_Type tmp279;
 bool const tmp280 = concat_types_dgetProcRet(tmp278,((concat_TypeContext const*)l3_typeContext),(&tmp279));
 concat_32_FprintTypeName(tmp279,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp281 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp281 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_32_FprintGlobalName((l14_idInfo.e1_labelId),(l14_idInfo.e4_id),arg3/*target*/,arg4/*prog*/);
 concat_Type tmp282 = ((*l4_op).e1_dataType);
 concat_32_FprintProcArgs(tmp282,false,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp283 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp283 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 5:case 2:case 7:;
 concat_IdentifierType const tmp284 = (l14_idInfo.e0_idType);
 bool const tmp285 = ((bool)(((bool)((tmp284.label==2)&(((concat_LabelFlag)(l15_labelFlags&((concat_LabelFlag)8)))==((int32_t)0))))&(((concat_LabelFlag)(l15_labelFlags&((concat_LabelFlag)4)))==((int32_t)0))));
 if(tmp285){
-concat_io_dIOError const tmp286 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"static "));
+concat_io_dIOError const tmp286 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"s""t""a""t""i""c"" """));
 }else{
 else_label1685:;
 }
 concat_Type tmp287 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp287,arg3/*target*/,arg4/*prog*/);
 if(l16_immutable){
-concat_io_dIOError const tmp288 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)" const "));
+concat_io_dIOError const tmp288 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)" ""c""o""n""s""t"" """));
 }else{
 else_label1686:;
-concat_io_dIOError const tmp289 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp289 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)" """));
 }
 concat_IdentifierInfo tmp290 = l14_idInfo;
 concat_32_FprintIdName(tmp290,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp291 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp291 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 0:case 6:case 3:case 4:;
 break;
@@ -42064,23 +42085,23 @@ break;
 case 18:;
 concat_Type tmp292 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp293 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp293.label,18,"./concat.concat/generator_c.concat:1104:34");
+concat_internal_checkEnumIndex(tmp293.label,18,"./concat.concat/generator_c.concat:1113:34");
 concat_arrayView_I6 tmp294 = arg0/*operations*/;
 concat_32_FcompileGetIndex(tmp292,(tmp293.data.e18_getArrayElement),tmp294,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 return;
 case 19:;
 concat_Type tmp295 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp296 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp296.label,19,"./concat.concat/generator_c.concat:1107:34");
+concat_internal_checkEnumIndex(tmp296.label,19,"./concat.concat/generator_c.concat:1116:34");
 concat_arrayView_I6 tmp297 = arg0/*operations*/;
 concat_32_FcompileGetIndex(tmp295,(tmp296.data.e19_setArrayElement),tmp297,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp298 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" = "));
+concat_io_dIOError const tmp298 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" ""="" """));
 concat_arrayView_I6 tmp299 = arg0/*operations*/;
 concat_32_FcompileOp(tmp299,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp300 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp300 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 20:;
-concat_io_dIOError const tmp301 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(&"));
+concat_io_dIOError const tmp301 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""&"""));
 concat_Type tmp302 = ((*l4_op).e1_dataType);
 concat_Type tmp303 = concat_types_dgetBaseType(tmp302,((concat_TypeContext const*)l3_typeContext));
 concat_Type const l17_eltType = tmp303;
@@ -42088,135 +42109,135 @@ concat_Type tmp304 = l17_eltType;
 int64_t const tmp305 = concat_types_dgetArrayDims(tmp304,((concat_TypeContext const*)l3_typeContext));
 bool const tmp306 = (tmp305>((int64_t)0));
 if(tmp306){
-concat_io_dIOError const tmp307 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp307 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 }else{
 else_label1687:;
 }
 concat_Type tmp308 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp309 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp309.label,20,"./concat.concat/generator_c.concat:1118:34");
+concat_internal_checkEnumIndex(tmp309.label,20,"./concat.concat/generator_c.concat:1127:34");
 concat_arrayView_I6 tmp310 = arg0/*operations*/;
 concat_32_FcompileGetIndex(tmp308,(tmp309.data.e20__X64ArrayElement),tmp310,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_Type tmp311 = l17_eltType;
 int64_t const tmp312 = concat_types_dgetArrayDims(tmp311,((concat_TypeContext const*)l3_typeContext));
 bool const tmp313 = (tmp312>((int64_t)0));
 if(tmp313){
-concat_io_dIOError const tmp314 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)".data[0])"));
+concat_io_dIOError const tmp314 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)".""d""a""t""a""[""0""]"")"""));
 }else{
 else_label1688:;
 }
-concat_io_dIOError const tmp315 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp315 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 case 14:;
 concat_Type tmp316 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp317 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp317.label,14,"./concat.concat/generator_c.concat:1125:34");
+concat_internal_checkEnumIndex(tmp317.label,14,"./concat.concat/generator_c.concat:1134:34");
 concat_arrayView_I6 tmp318 = arg0/*operations*/;
 concat_32_FcompileGetElt(tmp316,(tmp317.data.e14_getElement),tmp318,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 return;
 case 15:;
 concat_Type tmp319 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp320 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp320.label,15,"./concat.concat/generator_c.concat:1128:34");
+concat_internal_checkEnumIndex(tmp320.label,15,"./concat.concat/generator_c.concat:1137:34");
 concat_arrayView_I6 tmp321 = arg0/*operations*/;
 concat_32_FcompileGetElt(tmp319,(tmp320.data.e15_setElement),tmp321,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp322 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" = "));
+concat_io_dIOError const tmp322 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)" ""="" """));
 concat_arrayView_I6 tmp323 = arg0/*operations*/;
 concat_32_FcompileOp(tmp323,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp324 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp324 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 16:;
-concat_io_dIOError const tmp325 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(&"));
+concat_io_dIOError const tmp325 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""&"""));
 concat_Type tmp326 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp327 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp327.label,16,"./concat.concat/generator_c.concat:1135:34");
+concat_internal_checkEnumIndex(tmp327.label,16,"./concat.concat/generator_c.concat:1144:34");
 concat_Type tmp328 = concat_types_dcompositeGetElement(tmp326,((int64_t)(tmp327.data.e16__X64Element)),((concat_TypeContext const*)l3_typeContext));
 concat_Type const l18_eltType = tmp328;
 concat_Type tmp329 = l18_eltType;
 int64_t const tmp330 = concat_types_dgetArrayDims(tmp329,((concat_TypeContext const*)l3_typeContext));
 bool const tmp331 = (tmp330>((int64_t)0));
 if(tmp331){
-concat_io_dIOError const tmp332 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("));
+concat_io_dIOError const tmp332 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)"("""));
 }else{
 else_label1689:;
 }
 concat_Type tmp333 = ((*l4_op).e1_dataType);
 concat_OpValue const tmp334 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp334.label,16,"./concat.concat/generator_c.concat:1139:34");
+concat_internal_checkEnumIndex(tmp334.label,16,"./concat.concat/generator_c.concat:1148:34");
 concat_arrayView_I6 tmp335 = arg0/*operations*/;
 concat_32_FcompileGetElt(tmp333,(tmp334.data.e16__X64Element),tmp335,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_Type tmp336 = l18_eltType;
 int64_t const tmp337 = concat_types_dgetArrayDims(tmp336,((concat_TypeContext const*)l3_typeContext));
 bool const tmp338 = (tmp337>((int64_t)0));
 if(tmp338){
-concat_io_dIOError const tmp339 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)".data[0])"));
+concat_io_dIOError const tmp339 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)".""d""a""t""a""[""0""]"")"""));
 }else{
 else_label1690:;
 }
-concat_io_dIOError const tmp340 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"));
+concat_io_dIOError const tmp340 = concat_io_dfputs(arg3/*target*/,((int64_t)1),((int8_t const*)")"""));
 return;
 case 21:;
 break;
 case 2:;
 concat_OpValue const tmp341 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp341.label,2,"./concat.concat/generator_c.concat:1148:18");
+concat_internal_checkEnumIndex(tmp341.label,2,"./concat.concat/generator_c.concat:1157:18");
 concat_BlockType const tmp342 = ((tmp341.data.e2_block).e0_blockType);
 switch(tmp342.label){
 case 0:case 1:case 2:case 13:case 14:case 15:case 16:case 17:case 18:case 19:case 20:;
 break;
 case 3:case 4:;
-concat_io_dIOError const tmp343 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)"if("));
+concat_io_dIOError const tmp343 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)"i""f""("""));
 concat_arrayView_I6 tmp344 = arg0/*operations*/;
 concat_32_FcompileOp(tmp344,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp345 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)"){\x0A"));
+concat_io_dIOError const tmp345 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)")""{""\x0A"""));
 return;
 case 5:;
 concat_list_I1 tmp346;
-concat_sb_dwrap(((int64_t)7),((int8_t const*)"}else{\x0A"),(&tmp346));
+concat_sb_dwrap(((int64_t)7),((int8_t const*)"}""e""l""s""e""{""\x0A"""),(&tmp346));
 concat_list_I1 tmp347;
-concat_sb_dappendS(tmp346,((int64_t)10),((int8_t const*)"else_label"),(&tmp347));
+concat_sb_dappendS(tmp346,((int64_t)10),((int8_t const*)"e""l""s""e""_""l""a""b""e""l"""),(&tmp347));
 concat_OpValue const tmp348 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp348.label,2,"./concat.concat/generator_c.concat:1161:24");
+concat_internal_checkEnumIndex(tmp348.label,2,"./concat.concat/generator_c.concat:1170:24");
 concat_list_I1 tmp349;
 concat_sb_dappendI(tmp347,((int64_t)((tmp348.data.e2_block).e1_blockId)),(&tmp349));
 concat_list_I1 tmp350;
-concat_sb_dappendS(tmp349,((int64_t)3),((int8_t const*)":;\x0A"),(&tmp350));
+concat_sb_dappendS(tmp349,((int64_t)3),((int8_t const*)":"";""\x0A"""),(&tmp350));
 concat_io_dIOError const tmp351 = concat_io_dfputSb(arg3/*target*/,tmp350);
 concat_list_I1 tmp352;
 concat_sb_dfree(tmp350,(&tmp352));
 return;
 case 6:;
-concat_io_dIOError const tmp353 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"do{\x0A"));
+concat_io_dIOError const tmp353 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"d""o""{""\x0A"""));
 return;
 case 7:;
-concat_io_dIOError const tmp354 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"if(!"));
+concat_io_dIOError const tmp354 = concat_io_dfputs(arg3/*target*/,((int64_t)4),((int8_t const*)"i""f""(""!"""));
 concat_arrayView_I6 tmp355 = arg0/*operations*/;
 concat_32_FcompileOp(tmp355,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp356 = concat_io_dfputs(arg3/*target*/,((int64_t)11),((int8_t const*)")\x0A  break;\x0A"));
+concat_io_dIOError const tmp356 = concat_io_dfputs(arg3/*target*/,((int64_t)11),((int8_t const*)")""\x0A"" "" ""b""r""e""a""k"";""\x0A"""));
 return;
 case 8:;
-concat_io_dIOError const tmp357 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"break;\x0A"));
+concat_io_dIOError const tmp357 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"b""r""e""a""k"";""\x0A"""));
 return;
 case 9:;
-concat_io_dIOError const tmp358 = concat_io_dfputs(arg3/*target*/,((int64_t)10),((int8_t const*)"continue;\x0A"));
+concat_io_dIOError const tmp358 = concat_io_dfputs(arg3/*target*/,((int64_t)10),((int8_t const*)"c""o""n""t""i""n""u""e"";""\x0A"""));
 return;
 case 10:;
-concat_io_dIOError const tmp359 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"switch("));
+concat_io_dIOError const tmp359 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"s""w""i""t""c""h""("""));
 concat_arrayView_I6 tmp360 = arg0/*operations*/;
 concat_32_FcompileOp(tmp360,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_Type tmp361 = ((*l4_op).e1_dataType);
 bool const tmp362 = concat_types_disEnum(tmp361,((concat_TypeContext const*)l3_typeContext));
 if(tmp362){
-concat_io_dIOError const tmp363 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".label"));
+concat_io_dIOError const tmp363 = concat_io_dfputs(arg3/*target*/,((int64_t)6),((int8_t const*)".""l""a""b""e""l"""));
 }else{
 else_label1691:;
 }
-concat_io_dIOError const tmp364 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)"){\x0A"));
+concat_io_dIOError const tmp364 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)")""{""\x0A"""));
 return;
 case 11:;
 concat_list_I31 tmp365 = ((*arg4/*prog*/).e5_switchData);
 concat_OpValue const tmp366 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp366.label,2,"./concat.concat/generator_c.concat:1189:42");
+concat_internal_checkEnumIndex(tmp366.label,2,"./concat.concat/generator_c.concat:1198:42");
 concat_optional_I50 tmp367 = concat_list_dat_I25(tmp365,((int64_t)((tmp366.data.e2_block).e1_blockId)));
 bool const tmp368 = concat_optional_disEmpty_I14(tmp367);
 if(tmp368){
@@ -42224,13 +42245,13 @@ return;
 }else{
 else_label1692:;
 }
-concat_internal_checkEnumIndex(tmp367.label,1,"./concat.concat/generator_c.concat:1194:11");
+concat_internal_checkEnumIndex(tmp367.label,1,"./concat.concat/generator_c.concat:1203:11");
 concat_SwitchData* const l19_switchData = (tmp367.data.e1_data);
 concat_list_I28 tmp369 = ((*l19_switchData).e1_cases);
 concat_OpValue const tmp370 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp370.label,2,"./concat.concat/generator_c.concat:1195:43");
+concat_internal_checkEnumIndex(tmp370.label,2,"./concat.concat/generator_c.concat:1204:43");
 concat_optional_I52 tmp371 = concat_list_dat_I30(tmp369,((int64_t)((tmp370.data.e2_block).e2_subId)));
-concat_internal_checkEnumIndex(tmp371.label,1,"./concat.concat/generator_c.concat:1195:65");
+concat_internal_checkEnumIndex(tmp371.label,1,"./concat.concat/generator_c.concat:1204:65");
 concat_CaseInfo* const l20_caseData = (tmp371.data.e1_data);
 concat_list_I1 tmp372;
 concat_sb_dcreate(((int64_t)64),(&tmp372));
@@ -42240,26 +42261,26 @@ bool const tmp374 = (((int64_t)tmp373)<((*l20_caseData).e1_count));
 if(!tmp374)
   break;
 concat_list_I1 tmp375;
-concat_sb_dappendS(tmp372,((int64_t)5),((int8_t const*)"case "),(&tmp375));
+concat_sb_dappendS(tmp372,((int64_t)5),((int8_t const*)"c""a""s""e"" """),(&tmp375));
 concat_list_I27 tmp376 = ((*l19_switchData).e0_labels);
 concat_LabelData tmp377;
 concat_list_dget_I23(tmp376,((int64_t)(((int64_t)tmp373)+((*l20_caseData).e0_offset))),(&tmp377));
 concat_ConstValue const l21_caseVal = (tmp377.e0_value);
 switch(l21_caseVal.label){
 case 4:;
-concat_internal_checkEnumIndex(l21_caseVal.label,4,"./concat.concat/generator_c.concat:1202:36");
+concat_internal_checkEnumIndex(l21_caseVal.label,4,"./concat.concat/generator_c.concat:1211:36");
 concat_list_I1 tmp378;
 concat_sb_dappendI(tmp375,(l21_caseVal.data.e4_int),(&tmp378));
 tmp375 = tmp378;
 break;
 case 3:;
-concat_internal_checkEnumIndex(l21_caseVal.label,3,"./concat.concat/generator_c.concat:1203:36");
+concat_internal_checkEnumIndex(l21_caseVal.label,3,"./concat.concat/generator_c.concat:1212:36");
 concat_list_I1 tmp379;
 concat_sb_dappendI(tmp375,((int64_t)(l21_caseVal.data.e3_chr)),(&tmp379));
 tmp375 = tmp379;
 break;
 case 2:;
-concat_internal_checkEnumIndex(l21_caseVal.label,2,"./concat.concat/generator_c.concat:1204:42");
+concat_internal_checkEnumIndex(l21_caseVal.label,2,"./concat.concat/generator_c.concat:1213:42");
 concat_list_I1 tmp380;
 concat_sb_dappendI(tmp375,((int64_t)(l21_caseVal.data.e2_enumLabel)),(&tmp380));
 tmp375 = tmp380;
@@ -42268,46 +42289,46 @@ case 0:case 9:case 1:case 10:case 11:case 6:case 8:case 7:case 5:case 12:;
 break;
 }
 concat_list_I1 tmp381;
-concat_sb_dappendS(tmp375,((int64_t)1),((int8_t const*)":"),(&tmp381));
+concat_sb_dappendS(tmp375,((int64_t)1),((int8_t const*)":"""),(&tmp381));
 tmp372 = tmp381;
 tmp373 = ((int32_t)(tmp373+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp382;
-concat_sb_dappendS(tmp372,((int64_t)2),((int8_t const*)";\x0A"),(&tmp382));
+concat_sb_dappendS(tmp372,((int64_t)2),((int8_t const*)";""\x0A"""),(&tmp382));
 concat_io_dIOError const tmp383 = concat_io_dfputSb(arg3/*target*/,tmp382);
 concat_list_I1 tmp384;
 concat_sb_dfree(tmp382,(&tmp384));
 return;
 case 12:;
-concat_io_dIOError const tmp385 = concat_io_dfputs(arg3/*target*/,((int64_t)10),((int8_t const*)"default:;\x0A"));
+concat_io_dIOError const tmp385 = concat_io_dfputs(arg3/*target*/,((int64_t)10),((int8_t const*)"d""e""f""a""u""l""t"":"";""\x0A"""));
 return;
 }
 break;
 case 3:;
 concat_OpValue const tmp386 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp386.label,3,"./concat.concat/generator_c.concat:1222:18");
+concat_internal_checkEnumIndex(tmp386.label,3,"./concat.concat/generator_c.concat:1231:18");
 concat_BlockType const tmp387 = ((tmp386.data.e3_blockEnd).e0_blockType);
 switch(tmp387.label){
 case 0:case 8:case 9:case 10:case 13:case 3:case 14:case 15:case 16:case 17:case 18:case 19:case 20:;
 break;
 case 1:case 2:case 5:case 6:case 11:case 12:;
-concat_io_dIOError const tmp388 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}\x0A"));
+concat_io_dIOError const tmp388 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"}""\x0A"""));
 return;
 case 4:;
 concat_list_I1 tmp389;
-concat_sb_dwrap(((int64_t)21),((int8_t const*)"}else{goto else_label"),(&tmp389));
+concat_sb_dwrap(((int64_t)21),((int8_t const*)"}""e""l""s""e""{""g""o""t""o"" ""e""l""s""e""_""l""a""b""e""l"""),(&tmp389));
 concat_OpValue const tmp390 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp390.label,3,"./concat.concat/generator_c.concat:1232:24");
+concat_internal_checkEnumIndex(tmp390.label,3,"./concat.concat/generator_c.concat:1241:24");
 concat_list_I1 tmp391;
 concat_sb_dappendI(tmp389,((int64_t)((tmp390.data.e3_blockEnd).e1_blockId)),(&tmp391));
 concat_list_I1 tmp392;
-concat_sb_dappendS(tmp391,((int64_t)3),((int8_t const*)";}\x0A"),(&tmp392));
+concat_sb_dappendS(tmp391,((int64_t)3),((int8_t const*)";""}""\x0A"""),(&tmp392));
 concat_io_dIOError const tmp393 = concat_io_dfputSb(arg3/*target*/,tmp392);
 concat_list_I1 tmp394;
 concat_sb_dfree(tmp392,(&tmp394));
 return;
 case 7:;
-concat_io_dIOError const tmp395 = concat_io_dfputs(arg3/*target*/,((int64_t)11),((int8_t const*)"}while(1);\x0A"));
+concat_io_dIOError const tmp395 = concat_io_dfputs(arg3/*target*/,((int64_t)11),((int8_t const*)"}""w""h""i""l""e""(""1"")"";""\x0A"""));
 return;
 }
 break;
@@ -42367,29 +42388,29 @@ concat_arrayView_I3 tmp419 = l25_outTypes;
 concat_Type tmp420 = concat_array_dget_I2(tmp419,((int64_t)tmp414));
 bool const tmp421 = concat_types_disArray(tmp420,((concat_TypeContext const*)l3_typeContext));
 if(tmp421){
-concat_io_dIOError const tmp422 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"memcpy("));
+concat_io_dIOError const tmp422 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"m""e""m""c""p""y""("""));
 concat_Type tmp423 = l23_outType;
 concat_LabelId const tmp424 = concat_types_dcompositeGetLabel(tmp423,tmp414,((concat_TypeContext const*)l3_typeContext));
 concat_32_FprintOutArgName(tmp414,tmp424,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp425 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)",("));
+concat_io_dIOError const tmp425 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)",""("""));
 concat_arrayView_I6 tmp426 = arg0/*operations*/;
 concat_32_FcompileOp(tmp426,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp427 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)").data,"));
-concat_io_dIOError const tmp428 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)"sizeof((("));
+concat_io_dIOError const tmp427 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)")"".""d""a""t""a"","""));
+concat_io_dIOError const tmp428 = concat_io_dfputs(arg3/*target*/,((int64_t)9),((int8_t const*)"s""i""z""e""o""f""(""(""("""));
 concat_arrayView_I3 tmp429 = l25_outTypes;
 concat_Type tmp430 = concat_array_dget_I2(tmp429,((int64_t)tmp414));
 concat_32_FprintTypeName(tmp430,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp431 = concat_io_dfputs(arg3/*target*/,((int64_t)14),((int8_t const*)"*)0)->data));\x0A"));
+concat_io_dIOError const tmp431 = concat_io_dfputs(arg3/*target*/,((int64_t)14),((int8_t const*)"*"")""0"")""-"">""d""a""t""a"")"")"";""\x0A"""));
 }else{
 else_label1696:;
-concat_io_dIOError const tmp432 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"*("));
+concat_io_dIOError const tmp432 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"*""("""));
 concat_Type tmp433 = l23_outType;
 concat_LabelId const tmp434 = concat_types_dcompositeGetLabel(tmp433,tmp414,((concat_TypeContext const*)l3_typeContext));
 concat_32_FprintOutArgName(tmp414,tmp434,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp435 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)")= "));
+concat_io_dIOError const tmp435 = concat_io_dfputs(arg3/*target*/,((int64_t)3),((int8_t const*)")""="" """));
 concat_arrayView_I6 tmp436 = arg0/*operations*/;
 concat_32_FcompileOp(tmp436,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp437 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp437 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 }
 tmp414 = ((int32_t)(tmp414+((int32_t)1)));
 }while(1);
@@ -42418,84 +42439,84 @@ tmp442 = tmp445;
 int64_t const l26_retCount = tmp442;
 bool const tmp446 = (l26_retCount==((int64_t)0));
 if(tmp446){
-concat_io_dIOError const tmp447 = concat_io_dfputs(arg3/*target*/,((int64_t)8),((int8_t const*)"return;\x0A"));
+concat_io_dIOError const tmp447 = concat_io_dfputs(arg3/*target*/,((int64_t)8),((int8_t const*)"r""e""t""u""r""n"";""\x0A"""));
 return;
 }else{
 else_label1699:;
 }
 bool const tmp448 = (l26_retCount==((int64_t)1));
 if(tmp448){
-concat_io_dIOError const tmp449 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"return "));
+concat_io_dIOError const tmp449 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"r""e""t""u""r""n"" """));
 concat_arrayView_I6 tmp450 = arg0/*operations*/;
 concat_32_FcompileOp(tmp450,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp451 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp451 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 }else{
 else_label1700:;
 }
-concat_io_dIOError const tmp452 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"return "));
+concat_io_dIOError const tmp452 = concat_io_dfputs(arg3/*target*/,((int64_t)7),((int8_t const*)"r""e""t""u""r""n"" """));
 concat_Type tmp453 = l22_retType;
 concat_arrayView_I6 tmp454 = arg0/*operations*/;
 concat_32_FcompileCreateTuple(tmp453,tmp454,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
-concat_io_dIOError const tmp455 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp455 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 return;
 case 28:;
 concat_list_I1 tmp456;
 concat_sb_dcreate(((int64_t)64),(&tmp456));
 concat_list_I1 tmp457;
-concat_sb_dappendS(tmp456,((int64_t)7),((int8_t const*)"concat_"),(&tmp457));
+concat_sb_dappendS(tmp456,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp457));
 concat_list_I1 tmp458;
-concat_sb_dappendS(tmp457,((int64_t)13),((int8_t const*)"internal_argc"),(&tmp458));
+concat_sb_dappendS(tmp457,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""c"""),(&tmp458));
 concat_io_dIOError const tmp459 = concat_io_dfputSb(arg3/*target*/,tmp458);
 concat_list_I1 tmp460;
 concat_sb_dfree(tmp458,(&tmp460));
 return;
 case 29:;
-concat_io_dIOError const tmp461 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp461 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp462 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp462,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp463;
 concat_sb_dcreate(((int64_t)64),(&tmp463));
 concat_list_I1 tmp464;
-concat_sb_dappendS(tmp463,((int64_t)1),((int8_t const*)")"),(&tmp464));
+concat_sb_dappendS(tmp463,((int64_t)1),((int8_t const*)")"""),(&tmp464));
 concat_list_I1 tmp465;
-concat_sb_dappendS(tmp464,((int64_t)7),((int8_t const*)"concat_"),(&tmp465));
+concat_sb_dappendS(tmp464,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp465));
 concat_list_I1 tmp466;
-concat_sb_dappendS(tmp465,((int64_t)13),((int8_t const*)"internal_argv"),(&tmp466));
+concat_sb_dappendS(tmp465,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""v"""),(&tmp466));
 concat_list_I1 tmp467;
-concat_sb_dappendS(tmp466,((int64_t)1),((int8_t const*)"["),(&tmp467));
+concat_sb_dappendS(tmp466,((int64_t)1),((int8_t const*)"["""),(&tmp467));
 concat_io_dIOError const tmp468 = concat_io_dfputSb(arg3/*target*/,tmp467);
 concat_list_I1 tmp469;
 concat_sb_dclear(tmp467,(&tmp469));
 concat_arrayView_I6 tmp470 = arg0/*operations*/;
 concat_32_FcompileOp(tmp470,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp471;
-concat_sb_dappendS(tmp469,((int64_t)2),((int8_t const*)"])"),(&tmp471));
+concat_sb_dappendS(tmp469,((int64_t)2),((int8_t const*)"]"")"""),(&tmp471));
 concat_io_dIOError const tmp472 = concat_io_dfputSb(arg3/*target*/,tmp471);
 concat_list_I1 tmp473;
 concat_sb_dfree(tmp471,(&tmp473));
 return;
 case 30:;
-concat_io_dIOError const tmp474 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(("));
+concat_io_dIOError const tmp474 = concat_io_dfputs(arg3/*target*/,((int64_t)2),((int8_t const*)"(""("""));
 concat_Type tmp475 = ((*l4_op).e1_dataType);
 concat_32_FprintTypeName(tmp475,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp476;
 concat_sb_dcreate(((int64_t)64),(&tmp476));
 concat_list_I1 tmp477;
-concat_sb_dappendS(tmp476,((int64_t)8),((int8_t const*)")strlen("),(&tmp477));
+concat_sb_dappendS(tmp476,((int64_t)8),((int8_t const*)")""s""t""r""l""e""n""("""),(&tmp477));
 concat_list_I1 tmp478;
-concat_sb_dappendS(tmp477,((int64_t)7),((int8_t const*)"concat_"),(&tmp478));
+concat_sb_dappendS(tmp477,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp478));
 concat_list_I1 tmp479;
-concat_sb_dappendS(tmp478,((int64_t)13),((int8_t const*)"internal_argv"),(&tmp479));
+concat_sb_dappendS(tmp478,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""v"""),(&tmp479));
 concat_list_I1 tmp480;
-concat_sb_dappendS(tmp479,((int64_t)1),((int8_t const*)"["),(&tmp480));
+concat_sb_dappendS(tmp479,((int64_t)1),((int8_t const*)"["""),(&tmp480));
 concat_io_dIOError const tmp481 = concat_io_dfputSb(arg3/*target*/,tmp480);
 concat_list_I1 tmp482;
 concat_sb_dclear(tmp480,(&tmp482));
 concat_arrayView_I6 tmp483 = arg0/*operations*/;
 concat_32_FcompileOp(tmp483,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp484;
-concat_sb_dappendS(tmp482,((int64_t)3),((int8_t const*)"]))"),(&tmp484));
+concat_sb_dappendS(tmp482,((int64_t)3),((int8_t const*)"]"")"")"""),(&tmp484));
 concat_io_dIOError const tmp485 = concat_io_dfputSb(arg3/*target*/,tmp484);
 concat_list_I1 tmp486;
 concat_sb_dfree(tmp484,(&tmp486));
@@ -42506,13 +42527,13 @@ concat_32_FcompileOp(tmp487,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*
 concat_list_I1 tmp488;
 concat_sb_dcreate(((int64_t)32),(&tmp488));
 concat_list_I1 tmp489;
-concat_sb_dappendS(tmp488,((int64_t)9),((int8_t const*)".label = "),(&tmp489));
+concat_sb_dappendS(tmp488,((int64_t)9),((int8_t const*)".""l""a""b""e""l"" ""="" """),(&tmp489));
 concat_OpValue const tmp490 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp490.label,39,"./concat.concat/generator_c.concat:1335:20");
+concat_internal_checkEnumIndex(tmp490.label,39,"./concat.concat/generator_c.concat:1344:20");
 concat_list_I1 tmp491;
 concat_sb_dappendI(tmp489,((int64_t)(tmp490.data.e39_setEnumLabel)),(&tmp491));
 concat_list_I1 tmp492;
-concat_sb_dappendS(tmp491,((int64_t)2),((int8_t const*)";\x0A"),(&tmp492));
+concat_sb_dappendS(tmp491,((int64_t)2),((int8_t const*)";""\x0A"""),(&tmp492));
 concat_io_dIOError const tmp493 = concat_io_dfputSb(arg3/*target*/,tmp492);
 concat_list_I1 tmp494;
 concat_sb_dfree(tmp492,(&tmp494));
@@ -42521,28 +42542,28 @@ case 38:;
 concat_list_I1 tmp495;
 concat_sb_dcreate(((int64_t)64),(&tmp495));
 concat_list_I1 tmp496;
-concat_sb_dappendS(tmp495,((int64_t)7),((int8_t const*)"concat_"),(&tmp496));
+concat_sb_dappendS(tmp495,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp496));
 concat_list_I1 tmp497;
-concat_sb_dappendS(tmp496,((int64_t)23),((int8_t const*)"internal_checkEnumIndex"),(&tmp497));
+concat_sb_dappendS(tmp496,((int64_t)23),((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""e""c""k""E""n""u""m""I""n""d""e""x"""),(&tmp497));
 concat_list_I1 tmp498;
-concat_sb_dappendS(tmp497,((int64_t)1),((int8_t const*)"("),(&tmp498));
+concat_sb_dappendS(tmp497,((int64_t)1),((int8_t const*)"("""),(&tmp498));
 concat_io_dIOError const tmp499 = concat_io_dfputSb(arg3/*target*/,tmp498);
 concat_list_I1 tmp500;
 concat_sb_dclear(tmp498,(&tmp500));
 concat_arrayView_I6 tmp501 = arg0/*operations*/;
 concat_32_FcompileOp(tmp501,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp502;
-concat_sb_dappendS(tmp500,((int64_t)7),((int8_t const*)".label,"),(&tmp502));
+concat_sb_dappendS(tmp500,((int64_t)7),((int8_t const*)".""l""a""b""e""l"","""),(&tmp502));
 concat_OpValue const tmp503 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp503.label,38,"./concat.concat/generator_c.concat:1349:20");
+concat_internal_checkEnumIndex(tmp503.label,38,"./concat.concat/generator_c.concat:1358:20");
 concat_list_I1 tmp504;
 concat_sb_dappendI(tmp502,((int64_t)(tmp503.data.e38_checkEnumLabel)),(&tmp504));
 concat_list_I1 tmp505;
-concat_sb_dappendS(tmp504,((int64_t)2),((int8_t const*)",\""),(&tmp505));
+concat_sb_dappendS(tmp504,((int64_t)2),((int8_t const*)",""\""""),(&tmp505));
 concat_list_I1 tmp506;
 concat_sb_dappendPos(tmp505,((*l4_op).e2_pos),(&tmp506));
 concat_list_I1 tmp507;
-concat_sb_dappendS(tmp506,((int64_t)4),((int8_t const*)"\");\x0A"),(&tmp507));
+concat_sb_dappendS(tmp506,((int64_t)4),((int8_t const*)"\""")"";""\x0A"""),(&tmp507));
 concat_io_dIOError const tmp508 = concat_io_dfputSb(arg3/*target*/,tmp507);
 concat_list_I1 tmp509;
 concat_sb_dfree(tmp507,(&tmp509));
@@ -42551,20 +42572,20 @@ case 17:;
 concat_list_I1 tmp510;
 concat_sb_dcreate(((int64_t)64),(&tmp510));
 concat_list_I1 tmp511;
-concat_sb_dappendS(tmp510,((int64_t)1),((int8_t const*)"("),(&tmp511));
+concat_sb_dappendS(tmp510,((int64_t)1),((int8_t const*)"("""),(&tmp511));
 concat_io_dIOError const tmp512 = concat_io_dfputSb(arg3/*target*/,tmp511);
 concat_list_I1 tmp513;
 concat_sb_dclear(tmp511,(&tmp513));
 concat_arrayView_I6 tmp514 = arg0/*operations*/;
 concat_32_FcompileOp(tmp514,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp515;
-concat_sb_dappendS(tmp513,((int64_t)8),((int8_t const*)".label=="),(&tmp515));
+concat_sb_dappendS(tmp513,((int64_t)8),((int8_t const*)".""l""a""b""e""l""=""="""),(&tmp515));
 concat_OpValue const tmp516 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp516.label,17,"./concat.concat/generator_c.concat:1363:20");
+concat_internal_checkEnumIndex(tmp516.label,17,"./concat.concat/generator_c.concat:1372:20");
 concat_list_I1 tmp517;
 concat_sb_dappendI(tmp515,((int64_t)(tmp516.data.e17_hasElement)),(&tmp517));
 concat_list_I1 tmp518;
-concat_sb_dappendS(tmp517,((int64_t)1),((int8_t const*)")"),(&tmp518));
+concat_sb_dappendS(tmp517,((int64_t)1),((int8_t const*)")"""),(&tmp518));
 concat_io_dIOError const tmp519 = concat_io_dfputSb(arg3/*target*/,tmp518);
 concat_list_I1 tmp520;
 concat_sb_dfree(tmp518,(&tmp520));
@@ -42573,13 +42594,13 @@ case 40:;
 concat_list_I1 tmp521;
 concat_sb_dcreate(((int64_t)64),(&tmp521));
 concat_list_I1 tmp522;
-concat_sb_dappendS(tmp521,((int64_t)7),((int8_t const*)"concat_"),(&tmp522));
+concat_sb_dappendS(tmp521,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp522));
 concat_list_I1 tmp523;
-concat_sb_dappendS(tmp522,((int64_t)24),((int8_t const*)"internal_checkArrayIndex"),(&tmp523));
+concat_sb_dappendS(tmp522,((int64_t)24),((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""e""c""k""A""r""r""a""y""I""n""d""e""x"""),(&tmp523));
 concat_list_I1 tmp524;
-concat_sb_dappendS(tmp523,((int64_t)1),((int8_t const*)"("),(&tmp524));
+concat_sb_dappendS(tmp523,((int64_t)1),((int8_t const*)"("""),(&tmp524));
 concat_OpValue const tmp525 = ((*l4_op).e0_val);
-concat_internal_checkEnumIndex(tmp525.label,40,"./concat.concat/generator_c.concat:1373:20");
+concat_internal_checkEnumIndex(tmp525.label,40,"./concat.concat/generator_c.concat:1382:20");
 int64_t const tmp526 = (tmp525.data.e40_checkArrayIndex);
 bool const tmp527 = (tmp526==((int64_t)-1));
 int64_t tmp528 = tmp526;
@@ -42597,33 +42618,33 @@ concat_sb_dappendI(tmp524,tmp528,(&tmp532));
 tmp524 = tmp532;
 }
 concat_list_I1 tmp533;
-concat_sb_dappendS(tmp524,((int64_t)1),((int8_t const*)","),(&tmp533));
+concat_sb_dappendS(tmp524,((int64_t)1),((int8_t const*)","""),(&tmp533));
 concat_io_dIOError const tmp534 = concat_io_dfputSb(arg3/*target*/,tmp533);
 concat_list_I1 tmp535;
 concat_sb_dclear(tmp533,(&tmp535));
 concat_arrayView_I6 tmp536 = arg0/*operations*/;
 concat_32_FcompileOp(tmp536,arg1/*index*/,arg2/*isGlobal*/,arg3/*target*/,arg4/*prog*/);
 concat_list_I1 tmp537;
-concat_sb_dappendS(tmp535,((int64_t)2),((int8_t const*)",\""),(&tmp537));
+concat_sb_dappendS(tmp535,((int64_t)2),((int8_t const*)",""\""""),(&tmp537));
 concat_list_I1 tmp538;
 concat_sb_dappendPos(tmp537,((*l4_op).e2_pos),(&tmp538));
 concat_list_I1 tmp539;
-concat_sb_dappendS(tmp538,((int64_t)4),((int8_t const*)"\");\x0A"),(&tmp539));
+concat_sb_dappendS(tmp538,((int64_t)4),((int8_t const*)"\""")"";""\x0A"""),(&tmp539));
 concat_io_dIOError const tmp540 = concat_io_dfputSb(arg3/*target*/,tmp539);
 concat_list_I1 tmp541;
 concat_sb_dfree(tmp539,(&tmp541));
 return;
 case 48:;
 concat_list_I1 tmp542;
-concat_sb_dwrap(((int64_t)49),((int8_t const*)"fprintf(stderr,\"reached unreachable statement at "),(&tmp542));
+concat_sb_dwrap(((int64_t)49),((int8_t const*)"f""p""r""i""n""t""f""(""s""t""d""e""r""r"",""\"""r""e""a""c""h""e""d"" ""u""n""r""e""a""c""h""a""b""l""e"" ""s""t""a""t""e""m""e""n""t"" ""a""t"" """),(&tmp542));
 concat_list_I1 tmp543;
 concat_sb_dappendPos(tmp542,((*l4_op).e2_pos),(&tmp543));
 concat_list_I1 tmp544;
-concat_sb_dappendS(tmp543,((int64_t)19),((int8_t const*)"\\n\");//unreachable\x0A"),(&tmp544));
+concat_sb_dappendS(tmp543,((int64_t)19),((int8_t const*)"\\""n""\""")"";""/""/""u""n""r""e""a""c""h""a""b""l""e""\x0A"""),(&tmp544));
 concat_io_dIOError const tmp545 = concat_io_dfputSb(arg3/*target*/,tmp544);
 concat_list_I1 tmp546;
 concat_sb_dfree(tmp544,(&tmp546));
-concat_io_dIOError const tmp547 = concat_io_dfputs(arg3/*target*/,((int64_t)33),((int8_t const*)"exit(EXIT_FAILURE);//unreachable\x0A"));
+concat_io_dIOError const tmp547 = concat_io_dfputs(arg3/*target*/,((int64_t)33),((int8_t const*)"e""x""i""t""(""E""X""I""T""_""F""A""I""L""U""R""E"")"";""/""/""u""n""r""e""a""c""h""a""b""l""e""\x0A"""));
 return;
 case 49:;
 break;
@@ -42631,7 +42652,7 @@ case 43:case 44:case 45:case 10:case 11:case 12:case 31:case 32:case 42:case 41:
 break;
 }
 concat_list_I1 tmp548;
-concat_sb_dwrap(((int64_t)28),((int8_t const*)"unable to compile operation "),(&tmp548));
+concat_sb_dwrap(((int64_t)28),((int8_t const*)"u""n""a""b""l""e"" ""t""o"" ""c""o""m""p""i""l""e"" ""o""p""e""r""a""t""i""o""n"" """),(&tmp548));
 concat_Operation tmp549 = (*l4_op);
 concat_list_I1 tmp550;
 concat_sb_dappendOp(tmp548,tmp549,((concat_ConstantContext const*)(&((*l0_idContext).e0_constContext))),((concat_LabelContext const*)l2_labelContext),((concat_TypeContext const*)l3_typeContext),(&tmp550));
@@ -42642,7 +42663,7 @@ return;
 static void concat_32_FappendCharNames(concat_list_I1 arg0,concat_list_I1* out0){
 concat_list_I1 tmp0 = arg0;
 concat_list_I1 tmp1;
-concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)"\""),(&tmp1));
+concat_sb_dappendS(tmp0,((int64_t)1),((int8_t const*)"\""""),(&tmp1));
 int32_t tmp2 = ((int32_t)0);
 do{
 bool const tmp3 = (tmp2<((int32_t)256));
@@ -42652,46 +42673,46 @@ int8_t const tmp4 = ((int8_t)tmp2);
 switch(tmp4){
 case 39:case 34:;
 concat_list_I1 tmp5;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\\\\\\"),(&tmp5));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\\""\\""\\"""),(&tmp5));
 concat_list_I1 tmp6;
 concat_sb_dappendC(tmp5,((int8_t)tmp2),(&tmp6));
 concat_list_I1 tmp7;
-concat_sb_dappendS(tmp6,((int64_t)8),((int8_t const*)"\\000\\000"),(&tmp7));
+concat_sb_dappendS(tmp6,((int64_t)8),((int8_t const*)"\\""0""0""0""\\""0""0""0"""),(&tmp7));
 tmp1 = tmp7;
 break;
 case 92:;
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp1,((int64_t)12),((int8_t const*)"\\\\\\\\\\000\\000"),(&tmp8));
+concat_sb_dappendS(tmp1,((int64_t)12),((int8_t const*)"\\""\\""\\""\\""\\""0""0""0""\\""0""0""0"""),(&tmp8));
 tmp1 = tmp8;
 break;
 case 10:;
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\\\n\\000\\000"),(&tmp9));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\""\\""n""\\""0""0""0""\\""0""0""0"""),(&tmp9));
 tmp1 = tmp9;
 break;
 case 9:;
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\\\t\\000\\000"),(&tmp10));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\""\\""t""\\""0""0""0""\\""0""0""0"""),(&tmp10));
 tmp1 = tmp10;
 break;
 case 8:;
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\\\b\\000\\000"),(&tmp11));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\""\\""b""\\""0""0""0""\\""0""0""0"""),(&tmp11));
 tmp1 = tmp11;
 break;
 case 13:;
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\\\r\\000\\000"),(&tmp12));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\""\\""r""\\""0""0""0""\\""0""0""0"""),(&tmp12));
 tmp1 = tmp12;
 break;
 case 11:;
 concat_list_I1 tmp13;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\\\v\\000\\000"),(&tmp13));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\""\\""v""\\""0""0""0""\\""0""0""0"""),(&tmp13));
 tmp1 = tmp13;
 break;
 case 12:;
 concat_list_I1 tmp14;
-concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\\\f\\000\\000"),(&tmp14));
+concat_sb_dappendS(tmp1,((int64_t)11),((int8_t const*)"\\""\\""f""\\""0""0""0""\\""0""0""0"""),(&tmp14));
 tmp1 = tmp14;
 break;
 default:;
@@ -42699,7 +42720,7 @@ bool const tmp15 = (tmp2>((int32_t)126));
 bool const tmp16 = ((bool)(tmp15|(tmp2<((int32_t)32))));
 if(tmp16){
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\\\\x"),(&tmp17));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\\""\\""x"""),(&tmp17));
 bool const tmp18 = (tmp2<((int32_t)16));
 if(tmp18){
 concat_list_I1 tmp19;
@@ -42716,7 +42737,7 @@ else_label1702:;
 concat_list_I1 tmp21;
 concat_sb_dappendC(tmp1,((int8_t)tmp2),(&tmp21));
 concat_list_I1 tmp22;
-concat_sb_dappendS(tmp21,((int64_t)12),((int8_t const*)"\\000\\000\\000"),(&tmp22));
+concat_sb_dappendS(tmp21,((int64_t)12),((int8_t const*)"\\""0""0""0""\\""0""0""0""\\""0""0""0"""),(&tmp22));
 tmp1 = tmp22;
 }
 break;
@@ -42724,7 +42745,7 @@ break;
 bool const tmp23 = (((int32_t)(tmp2&((int32_t)7)))==((int32_t)7));
 if(tmp23){
 concat_list_I1 tmp24;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\"\x0A\""),(&tmp24));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\"""\x0A""\""""),(&tmp24));
 tmp1 = tmp24;
 }else{
 else_label1704:;
@@ -42732,7 +42753,7 @@ else_label1704:;
 tmp2 = ((int32_t)(tmp2+((int32_t)1)));
 }while(1);
 concat_list_I1 tmp25;
-concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\";\x0A"),(&tmp25));
+concat_sb_dappendS(tmp1,((int64_t)3),((int8_t const*)"\""";""\x0A"""),(&tmp25));
 *(out0)= tmp25;
 return;
 }
@@ -42744,7 +42765,7 @@ concat_32_FprintHeader(arg0/*target*/);
 concat_32_FprintTypes(arg0/*target*/,arg1/*prog*/);
 concat_LabelId l3_mainId = ((concat_LabelId)-1);
 concat_arrayView_I1 tmp0;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"main"),(&tmp0));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"m""a""i""n"""),(&tmp0));
 concat_25_FIdentifierName tmp1;
 concat_25_FIdentifierData* tmp2;
 bool const tmp3 = concat_id_dgetIdentifier(tmp0,((concat_FileId)0),l0_idContext,(&tmp1),(&tmp2));
@@ -42755,7 +42776,7 @@ concat_25_FIdentifierData* const l4_data = tmp5;
 concat_25_FIdentifierName const l5_name = tmp1;
 bool const tmp6 = ((l5_name.e1_namespace)!=((int32_t)0));
 if(tmp6){
-fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:1458:7\n");//unreachable
+fprintf(stderr,"reached unreachable statement at ./concat.concat/generator_c.concat:1467:7\n");//unreachable
 exit(EXIT_FAILURE);//unreachable
 }else{
 else_label1706:;
@@ -42769,24 +42790,24 @@ if(tmp7){
 concat_list_I1 tmp8;
 concat_sb_dcreate(((int64_t)64),(&tmp8));
 concat_list_I1 tmp9;
-concat_sb_dappendS(tmp8,((int64_t)11),((int8_t const*)"static int "),(&tmp9));
+concat_sb_dappendS(tmp8,((int64_t)11),((int8_t const*)"s""t""a""t""i""c"" ""i""n""t"" """),(&tmp9));
 concat_list_I1 tmp10;
-concat_sb_dappendS(tmp9,((int64_t)7),((int8_t const*)"concat_"),(&tmp10));
+concat_sb_dappendS(tmp9,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp10));
 concat_list_I1 tmp11;
-concat_sb_dappendS(tmp10,((int64_t)13),((int8_t const*)"internal_argc"),(&tmp11));
+concat_sb_dappendS(tmp10,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""c"""),(&tmp11));
 concat_list_I1 tmp12;
-concat_sb_dappendS(tmp11,((int64_t)2),((int8_t const*)";\x0A"),(&tmp12));
+concat_sb_dappendS(tmp11,((int64_t)2),((int8_t const*)";""\x0A"""),(&tmp12));
 concat_io_dIOError const tmp13 = concat_io_dfputSb(arg0/*target*/,tmp12);
 concat_list_I1 tmp14;
 concat_sb_dclear(tmp12,(&tmp14));
 concat_list_I1 tmp15;
-concat_sb_dappendS(tmp14,((int64_t)14),((int8_t const*)"static char** "),(&tmp15));
+concat_sb_dappendS(tmp14,((int64_t)14),((int8_t const*)"s""t""a""t""i""c"" ""c""h""a""r""*""*"" """),(&tmp15));
 concat_list_I1 tmp16;
-concat_sb_dappendS(tmp15,((int64_t)7),((int8_t const*)"concat_"),(&tmp16));
+concat_sb_dappendS(tmp15,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp16));
 concat_list_I1 tmp17;
-concat_sb_dappendS(tmp16,((int64_t)13),((int8_t const*)"internal_argv"),(&tmp17));
+concat_sb_dappendS(tmp16,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""v"""),(&tmp17));
 concat_list_I1 tmp18;
-concat_sb_dappendS(tmp17,((int64_t)2),((int8_t const*)";\x0A"),(&tmp18));
+concat_sb_dappendS(tmp17,((int64_t)2),((int8_t const*)";""\x0A"""),(&tmp18));
 concat_io_dIOError const tmp19 = concat_io_dfputSb(arg0/*target*/,tmp18);
 concat_list_I1 tmp20;
 concat_sb_dfree(tmp18,(&tmp20));
@@ -42798,23 +42819,23 @@ if(tmp21){
 concat_list_I1 tmp22;
 concat_sb_dcreate(((int64_t)64),(&tmp22));
 concat_list_I1 tmp23;
-concat_sb_dappendS(tmp22,((int64_t)12),((int8_t const*)"static void "),(&tmp23));
+concat_sb_dappendS(tmp22,((int64_t)12),((int8_t const*)"s""t""a""t""i""c"" ""v""o""i""d"" """),(&tmp23));
 concat_list_I1 tmp24;
-concat_sb_dappendS(tmp23,((int64_t)7),((int8_t const*)"concat_"),(&tmp24));
+concat_sb_dappendS(tmp23,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp24));
 concat_list_I1 tmp25;
-concat_sb_dappendS(tmp24,((int64_t)24),((int8_t const*)"internal_checkArrayIndex"),(&tmp25));
+concat_sb_dappendS(tmp24,((int64_t)24),((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""e""c""k""A""r""r""a""y""I""n""d""e""x"""),(&tmp25));
 concat_list_I1 tmp26;
-concat_sb_dappendS(tmp25,((int64_t)48),((int8_t const*)"(int64_t length,int64_t index,char const* pos){\x0A"),(&tmp26));
+concat_sb_dappendS(tmp25,((int64_t)48),((int8_t const*)"(""i""n""t""6""4""_""t"" ""l""e""n""g""t""h"",""i""n""t""6""4""_""t"" ""i""n""d""e""x"",""c""h""a""r"" ""c""o""n""s""t""*"" ""p""o""s"")""{""\x0A"""),(&tmp26));
 concat_list_I1 tmp27;
-concat_sb_dappendS(tmp26,((int64_t)43),((int8_t const*)"  if(index>=0 && index<length)\x0A    return;\x0A"),(&tmp27));
+concat_sb_dappendS(tmp26,((int64_t)43),((int8_t const*)" "" ""i""f""(""i""n""d""e""x"">""=""0"" ""&""&"" ""i""n""d""e""x""<""l""e""n""g""t""h"")""\x0A"" "" "" "" ""r""e""t""u""r""n"";""\x0A"""),(&tmp27));
 concat_list_I1 tmp28;
-concat_sb_dappendS(tmp27,((int64_t)99),((int8_t const*)"  fprintf(stderr,\"array index out of bounds: %\"PRIi64\" size: %\"PRIi64\" at %s\\n\",index,length,pos);\x0A"),(&tmp28));
+concat_sb_dappendS(tmp27,((int64_t)99),((int8_t const*)" "" ""f""p""r""i""n""t""f""(""s""t""d""e""r""r"",""\"""a""r""r""a""y"" ""i""n""d""e""x"" ""o""u""t"" ""o""f"" ""b""o""u""n""d""s"":"" ""%""\"""P""R""I""i""6""4""\""" ""s""i""z""e"":"" ""%""\"""P""R""I""i""6""4""\""" ""a""t"" ""%""s""\\""n""\""",""i""n""d""e""x"",""l""e""n""g""t""h"",""p""o""s"")"";""\x0A"""),(&tmp28));
 concat_list_I1 tmp29;
-concat_sb_dappendS(tmp28,((int64_t)7),((int8_t const*)"  exit("),(&tmp29));
+concat_sb_dappendS(tmp28,((int64_t)7),((int8_t const*)" "" ""e""x""i""t""("""),(&tmp29));
 concat_list_I1 tmp30;
 concat_sb_dappendI(tmp29,((int64_t)1),(&tmp30));
 concat_list_I1 tmp31;
-concat_sb_dappendS(tmp30,((int64_t)5),((int8_t const*)");\x0A}\x0A"),(&tmp31));
+concat_sb_dappendS(tmp30,((int64_t)5),((int8_t const*)")"";""\x0A""}""\x0A"""),(&tmp31));
 concat_io_dIOError const tmp32 = concat_io_dfputSb(arg0/*target*/,tmp31);
 concat_list_I1 tmp33;
 concat_sb_dfree(tmp31,(&tmp33));
@@ -42826,23 +42847,23 @@ if(tmp34){
 concat_list_I1 tmp35;
 concat_sb_dcreate(((int64_t)64),(&tmp35));
 concat_list_I1 tmp36;
-concat_sb_dappendS(tmp35,((int64_t)12),((int8_t const*)"static void "),(&tmp36));
+concat_sb_dappendS(tmp35,((int64_t)12),((int8_t const*)"s""t""a""t""i""c"" ""v""o""i""d"" """),(&tmp36));
 concat_list_I1 tmp37;
-concat_sb_dappendS(tmp36,((int64_t)7),((int8_t const*)"concat_"),(&tmp37));
+concat_sb_dappendS(tmp36,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp37));
 concat_list_I1 tmp38;
-concat_sb_dappendS(tmp37,((int64_t)23),((int8_t const*)"internal_checkEnumIndex"),(&tmp38));
+concat_sb_dappendS(tmp37,((int64_t)23),((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""e""c""k""E""n""u""m""I""n""d""e""x"""),(&tmp38));
 concat_list_I1 tmp39;
-concat_sb_dappendS(tmp38,((int64_t)52),((int8_t const*)"(int64_t current,int64_t expected,char const* pos){\x0A"),(&tmp39));
+concat_sb_dappendS(tmp38,((int64_t)52),((int8_t const*)"(""i""n""t""6""4""_""t"" ""c""u""r""r""e""n""t"",""i""n""t""6""4""_""t"" ""e""x""p""e""c""t""e""d"",""c""h""a""r"" ""c""o""n""s""t""*"" ""p""o""s"")""{""\x0A"""),(&tmp39));
 concat_list_I1 tmp40;
-concat_sb_dappendS(tmp39,((int64_t)36),((int8_t const*)"  if(current==expected)\x0A    return;\x0A"),(&tmp40));
+concat_sb_dappendS(tmp39,((int64_t)36),((int8_t const*)" "" ""i""f""(""c""u""r""r""e""n""t""=""=""e""x""p""e""c""t""e""d"")""\x0A"" "" "" "" ""r""e""t""u""r""n"";""\x0A"""),(&tmp40));
 concat_list_I1 tmp41;
-concat_sb_dappendS(tmp40,((int64_t)114),((int8_t const*)"  fprintf(stderr,\"enum index (%\"PRIi64\") does not match current value (%\"PRIi64\") at %s\\n\",expected,current,pos);\x0A"),(&tmp41));
+concat_sb_dappendS(tmp40,((int64_t)114),((int8_t const*)" "" ""f""p""r""i""n""t""f""(""s""t""d""e""r""r"",""\"""e""n""u""m"" ""i""n""d""e""x"" ""(""%""\"""P""R""I""i""6""4""\""")"" ""d""o""e""s"" ""n""o""t"" ""m""a""t""c""h"" ""c""u""r""r""e""n""t"" ""v""a""l""u""e"" ""(""%""\"""P""R""I""i""6""4""\""")"" ""a""t"" ""%""s""\\""n""\""",""e""x""p""e""c""t""e""d"",""c""u""r""r""e""n""t"",""p""o""s"")"";""\x0A"""),(&tmp41));
 concat_list_I1 tmp42;
-concat_sb_dappendS(tmp41,((int64_t)7),((int8_t const*)"  exit("),(&tmp42));
+concat_sb_dappendS(tmp41,((int64_t)7),((int8_t const*)" "" ""e""x""i""t""("""),(&tmp42));
 concat_list_I1 tmp43;
 concat_sb_dappendI(tmp42,((int64_t)2),(&tmp43));
 concat_list_I1 tmp44;
-concat_sb_dappendS(tmp43,((int64_t)5),((int8_t const*)");\x0A}\x0A"),(&tmp44));
+concat_sb_dappendS(tmp43,((int64_t)5),((int8_t const*)")"";""\x0A""}""\x0A"""),(&tmp44));
 concat_io_dIOError const tmp45 = concat_io_dfputSb(arg0/*target*/,tmp44);
 concat_list_I1 tmp46;
 concat_sb_dfree(tmp44,(&tmp46));
@@ -42852,19 +42873,19 @@ else_label1709:;
 concat_list_I1 tmp47;
 concat_sb_dcreate(((int64_t)64),(&tmp47));
 concat_list_I1 tmp48;
-concat_sb_dappendS(tmp47,((int64_t)12),((int8_t const*)"static char "),(&tmp48));
+concat_sb_dappendS(tmp47,((int64_t)12),((int8_t const*)"s""t""a""t""i""c"" ""c""h""a""r"" """),(&tmp48));
 concat_list_I1 tmp49;
-concat_sb_dappendS(tmp48,((int64_t)7),((int8_t const*)"concat_"),(&tmp49));
+concat_sb_dappendS(tmp48,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp49));
 concat_list_I1 tmp50;
-concat_sb_dappendS(tmp49,((int64_t)18),((int8_t const*)"internal_charNames"),(&tmp50));
+concat_sb_dappendS(tmp49,((int64_t)18),((int8_t const*)"i""n""t""e""r""n""a""l""_""c""h""a""r""N""a""m""e""s"""),(&tmp50));
 concat_list_I1 tmp51;
-concat_sb_dappendS(tmp50,((int64_t)3),((int8_t const*)"[]="),(&tmp51));
+concat_sb_dappendS(tmp50,((int64_t)3),((int8_t const*)"[""]""="""),(&tmp51));
 concat_list_I1 tmp52;
 concat_32_FappendCharNames(tmp51,(&tmp52));
 concat_io_dIOError const tmp53 = concat_io_dfputSb(arg0/*target*/,tmp52);
 concat_list_I1 tmp54;
 concat_sb_dfree(tmp52,(&tmp54));
-concat_io_dIOError const tmp55 = concat_io_dfputs(arg0/*target*/,((int64_t)15),((int8_t const*)"//declarations\x0A"));
+concat_io_dIOError const tmp55 = concat_io_dfputs(arg0/*target*/,((int64_t)15),((int8_t const*)"/""/""d""e""c""l""a""r""a""t""i""o""n""s""\x0A"""));
 concat_26_Fmap_dIterator_I1 tmp56;
 concat_itr_dmap_dstart_I0((&((((*arg1/*prog*/).e0_idContext).e3_globalScope).e0_identifiers)),(&tmp56));
 do{
@@ -42895,7 +42916,7 @@ if(tmp66){
 concat_list_I10 tmp67 = ((*arg1/*prog*/).e3_autoTypes);
 int32_t const tmp68 = concat_types_dgetTypeId(l7_mType);
 concat_optional_I35 tmp69 = concat_list_dat_I14(tmp67,((int64_t)tmp68));
-concat_internal_checkEnumIndex(tmp69.label,1,"./concat.concat/generator_c.concat:1524:15");
+concat_internal_checkEnumIndex(tmp69.label,1,"./concat.concat/generator_c.concat:1533:15");
 concat_Type* const tmp70 = (tmp69.data.e1_data);
 l7_mType = (*tmp70);
 }else{
@@ -42914,30 +42935,30 @@ else_label1713:;
 concat_list_I21 tmp74 = ((*l0_idContext).e5_templateInfos);
 concat_25_FIdentifierData* const tmp75 = (l6_declaration.e1);
 concat_optional_I10 tmp76 = concat_list_dat_I18(tmp74,((int64_t)((*tmp75).e4_templateId)));
-concat_internal_checkEnumIndex(tmp76.label,1,"./concat.concat/generator_c.concat:1533:15");
+concat_internal_checkEnumIndex(tmp76.label,1,"./concat.concat/generator_c.concat:1542:15");
 concat_TemplateInfo* const l9_templateInfo = (tmp76.data.e1_data);
 int32_t tmp77 = ((int32_t)0);
 do{
 bool const tmp78 = (((int64_t)tmp77)<(((*l9_templateInfo).e5_implementations).e1_length));
 if(!tmp78)
   break;
-concat_io_dIOError const tmp79 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"static "));
+concat_io_dIOError const tmp79 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""a""t""i""c"" """));
 concat_list_I17 tmp80 = ((*l9_templateInfo).e5_implementations);
 concat_optional_I49 tmp81 = concat_list_dat_I24(tmp80,((int64_t)tmp77));
-concat_internal_checkEnumIndex(tmp81.label,1,"./concat.concat/generator_c.concat:1536:56");
+concat_internal_checkEnumIndex(tmp81.label,1,"./concat.concat/generator_c.concat:1545:56");
 concat_TemplateImplementation* const tmp82 = (tmp81.data.e1_data);
 l7_mType = ((*tmp82).e0_implType);
 concat_Type tmp83 = l7_mType;
 concat_Type tmp84;
 bool const tmp85 = concat_types_dgetProcRet(tmp83,((concat_TypeContext const*)l2_typeContext),(&tmp84));
 concat_32_FprintTypeName(tmp84,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp86 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp86 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_25_FIdentifierData* const tmp87 = (l6_declaration.e1);
 concat_LabelId const tmp88 = ((*tmp87).e3_labelId);
 concat_32_FprintGlobalName(tmp88,tmp77,arg0/*target*/,arg1/*prog*/);
 concat_Type tmp89 = l7_mType;
 concat_32_FprintProcArgs(tmp89,false,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp90 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp90 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 tmp77 = ((int32_t)(tmp77+((int32_t)1)));
 }while(1);
 tmp56 = tmp59;
@@ -42947,13 +42968,13 @@ else_label1712:;
 }
 bool const tmp91 = ((bool)((((concat_LabelFlag)(l8_labelFlags&((concat_LabelFlag)8)))==((int32_t)0))&(((concat_LabelFlag)(l8_labelFlags&((concat_LabelFlag)4)))==((int32_t)0))));
 if(tmp91){
-concat_io_dIOError const tmp92 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"static "));
+concat_io_dIOError const tmp92 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"s""t""a""t""i""c"" """));
 }else{
 else_label1714:;
 }
 bool const tmp93 = (!!((concat_LabelFlag)(l8_labelFlags&((concat_LabelFlag)4))));
 if(tmp93){
-concat_io_dIOError const tmp94 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"extern "));
+concat_io_dIOError const tmp94 = concat_io_dfputs(arg0/*target*/,((int64_t)7),((int8_t const*)"e""x""t""e""r""n"" """));
 }else{
 else_label1715:;
 }
@@ -42964,12 +42985,12 @@ concat_Type tmp97 = l7_mType;
 concat_Type tmp98;
 bool const tmp99 = concat_types_dgetProcRet(tmp97,((concat_TypeContext const*)l2_typeContext),(&tmp98));
 concat_32_FprintTypeName(tmp98,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp100 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp100 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" """));
 concat_25_FIdentifierData* const tmp101 = (l6_declaration.e1);
 concat_32_FprintGlobalName(((*tmp101).e3_labelId),((int32_t)-1),arg0/*target*/,arg1/*prog*/);
 concat_Type tmp102 = l7_mType;
 concat_32_FprintProcArgs(tmp102,false,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp103 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp103 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 tmp56 = tmp59;
 continue;
 }else{
@@ -42977,16 +42998,16 @@ else_label1716:;
 }
 concat_Type tmp104 = l7_mType;
 concat_32_FprintTypeName(tmp104,arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp105 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" "));
+concat_io_dIOError const tmp105 = concat_io_dfputs(arg0/*target*/,((int64_t)1),((int8_t const*)" """));
 bool const tmp106 = (((concat_LabelFlag)(l8_labelFlags&((concat_LabelFlag)1)))==((int32_t)0));
 if(tmp106){
-concat_io_dIOError const tmp107 = concat_io_dfputs(arg0/*target*/,((int64_t)6),((int8_t const*)"const "));
+concat_io_dIOError const tmp107 = concat_io_dfputs(arg0/*target*/,((int64_t)6),((int8_t const*)"c""o""n""s""t"" """));
 }else{
 else_label1717:;
 }
 concat_25_FIdentifierData* const tmp108 = (l6_declaration.e1);
 concat_32_FprintGlobalName(((*tmp108).e3_labelId),((int32_t)-1),arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp109 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";\x0A"));
+concat_io_dIOError const tmp109 = concat_io_dfputs(arg0/*target*/,((int64_t)2),((int8_t const*)";""\x0A"""));
 tmp56 = tmp59;
 }while(1);
 int32_t tmp110 = ((int32_t)0);
@@ -42996,23 +43017,23 @@ if(!tmp111)
   break;
 concat_list_I29 tmp112 = ((*arg1/*prog*/).e1_progFiles);
 concat_optional_I26 tmp113 = concat_list_dat_I1(tmp112,((int64_t)tmp110));
-concat_internal_checkEnumIndex(tmp113.label,1,"./concat.concat/generator_c.concat:1579:38");
+concat_internal_checkEnumIndex(tmp113.label,1,"./concat.concat/generator_c.concat:1588:38");
 concat_ProgramFile* const l10_f = (tmp113.data.e1_data);
 concat_list_I1 tmp114;
 concat_sb_dcreate(((int64_t)64),(&tmp114));
 concat_list_I1 tmp115;
-concat_sb_dappendS(tmp114,((int64_t)3),((int8_t const*)"// "),(&tmp115));
+concat_sb_dappendS(tmp114,((int64_t)3),((int8_t const*)"/""/"" """),(&tmp115));
 concat_list_I1 tmp116;
 concat_sb_dappendSb(tmp115,((*l10_f).e4_fileName),(&tmp116));
 concat_list_I1 tmp117;
-concat_sb_dappendS(tmp116,((int64_t)1),((int8_t const*)"\x0A"),(&tmp117));
+concat_sb_dappendS(tmp116,((int64_t)1),((int8_t const*)"\x0A"""),(&tmp117));
 concat_io_dIOError const tmp118 = concat_io_dfputSb(arg0/*target*/,tmp117);
 concat_list_I1 tmp119;
 concat_sb_dfree(tmp117,(&tmp119));
 int64_t tmp120 = (((*l10_f).e0_globalOps).e1_length);
 bool const tmp121 = (tmp120>((int64_t)0));
 if(tmp121){
-concat_io_dIOError const tmp122 = concat_io_dfputs(arg0/*target*/,((int64_t)9),((int8_t const*)"//global\x0A"));
+concat_io_dIOError const tmp122 = concat_io_dfputs(arg0/*target*/,((int64_t)9),((int8_t const*)"/""/""g""l""o""b""a""l""\x0A"""));
 }else{
 else_label1718:;
 }
@@ -43029,7 +43050,7 @@ concat_32_FcompileOp(tmp125,(&l11_index),true,arg0/*target*/,arg1/*prog*/);
 int64_t tmp126 = (((*l10_f).e1_localOps).e1_length);
 bool const tmp127 = (tmp126>((int64_t)0));
 if(tmp127){
-concat_io_dIOError const tmp128 = concat_io_dfputs(arg0/*target*/,((int64_t)8),((int8_t const*)"//local\x0A"));
+concat_io_dIOError const tmp128 = concat_io_dfputs(arg0/*target*/,((int64_t)8),((int8_t const*)"/""/""l""o""c""a""l""\x0A"""));
 }else{
 else_label1719:;
 }
@@ -43046,7 +43067,7 @@ concat_32_FcompileOp(tmp131,(&l11_index),false,arg0/*target*/,arg1/*prog*/);
 int64_t tmp132 = (((*l10_f).e2_templateOps).e1_length);
 bool const tmp133 = (tmp132>((int64_t)0));
 if(tmp133){
-concat_io_dIOError const tmp134 = concat_io_dfputs(arg0/*target*/,((int64_t)12),((int8_t const*)"//templates\x0A"));
+concat_io_dIOError const tmp134 = concat_io_dfputs(arg0/*target*/,((int64_t)12),((int8_t const*)"/""/""t""e""m""p""l""a""t""e""s""\x0A"""));
 }else{
 else_label1720:;
 }
@@ -43074,29 +43095,29 @@ if(tmp140){
 concat_list_I1 tmp141;
 concat_sb_dcreate(((int64_t)128),(&tmp141));
 concat_list_I1 tmp142;
-concat_sb_dappendS(tmp141,((int64_t)32),((int8_t const*)"int main(int argc,char** argv){\x0A"),(&tmp142));
+concat_sb_dappendS(tmp141,((int64_t)32),((int8_t const*)"i""n""t"" ""m""a""i""n""(""i""n""t"" ""a""r""g""c"",""c""h""a""r""*""*"" ""a""r""g""v"")""{""\x0A"""),(&tmp142));
 concat_list_I1 tmp143;
-concat_sb_dappendS(tmp142,((int64_t)7),((int8_t const*)"concat_"),(&tmp143));
+concat_sb_dappendS(tmp142,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp143));
 concat_list_I1 tmp144;
-concat_sb_dappendS(tmp143,((int64_t)13),((int8_t const*)"internal_argc"),(&tmp144));
+concat_sb_dappendS(tmp143,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""c"""),(&tmp144));
 concat_list_I1 tmp145;
-concat_sb_dappendS(tmp144,((int64_t)7),((int8_t const*)"=argc;\x0A"),(&tmp145));
+concat_sb_dappendS(tmp144,((int64_t)7),((int8_t const*)"=""a""r""g""c"";""\x0A"""),(&tmp145));
 concat_list_I1 tmp146;
-concat_sb_dappendS(tmp145,((int64_t)7),((int8_t const*)"concat_"),(&tmp146));
+concat_sb_dappendS(tmp145,((int64_t)7),((int8_t const*)"c""o""n""c""a""t""_"""),(&tmp146));
 concat_list_I1 tmp147;
-concat_sb_dappendS(tmp146,((int64_t)13),((int8_t const*)"internal_argv"),(&tmp147));
+concat_sb_dappendS(tmp146,((int64_t)13),((int8_t const*)"i""n""t""e""r""n""a""l""_""a""r""g""v"""),(&tmp147));
 concat_list_I1 tmp148;
-concat_sb_dappendS(tmp147,((int64_t)7),((int8_t const*)"=argv;\x0A"),(&tmp148));
+concat_sb_dappendS(tmp147,((int64_t)7),((int8_t const*)"=""a""r""g""v"";""\x0A"""),(&tmp148));
 concat_io_dIOError const tmp149 = concat_io_dfputSb(arg0/*target*/,tmp148);
 concat_list_I1 tmp150;
 concat_sb_dfree(tmp148,(&tmp150));
 }else{
 else_label1722:;
-concat_io_dIOError const tmp151 = concat_io_dfputs(arg0/*target*/,((int64_t)16),((int8_t const*)"int main(void){\x0A"));
+concat_io_dIOError const tmp151 = concat_io_dfputs(arg0/*target*/,((int64_t)16),((int8_t const*)"i""n""t"" ""m""a""i""n""(""v""o""i""d"")""{""\x0A"""));
 }
 concat_LabelId tmp152 = l3_mainId;
 concat_32_FprintGlobalName(tmp152,((int32_t)-1),arg0/*target*/,arg1/*prog*/);
-concat_io_dIOError const tmp153 = concat_io_dfputs(arg0/*target*/,((int64_t)27),((int8_t const*)"();\x0Areturn EXIT_SUCCESS;\x0A}\x0A"));
+concat_io_dIOError const tmp153 = concat_io_dfputs(arg0/*target*/,((int64_t)27),((int8_t const*)"("")"";""\x0A""r""e""t""u""r""n"" ""E""X""I""T""_""S""U""C""C""E""S""S"";""\x0A""}""\x0A"""));
 return;
 }
 // ./concat.concat/measure.concat
@@ -43117,7 +43138,7 @@ concat_Type tmp6 = arg0/*declared*/;
 concat_list_I1 tmp7;
 concat_sb_dappendType(tmp5,tmp6,((concat_LabelContext const*)(&(((*arg2/*prog*/).e0_idContext).e1_labelContext))),((concat_TypeContext const*)(&(((*arg2/*prog*/).e0_idContext).e2_typeContext))),(&tmp7));
 concat_list_I1 tmp8;
-concat_sb_dappendS(tmp7,((int64_t)3),((int8_t const*)"! \x0A"),(&tmp8));
+concat_sb_dappendS(tmp7,((int64_t)3),((int8_t const*)"!"" ""\x0A"""),(&tmp8));
 concat_io_dFILE const tmp9 = concat_io_dstdOut();
 concat_io_dIOError const tmp10 = concat_io_dfputSb(tmp9,tmp8);
 }else{

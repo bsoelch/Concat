@@ -58,6 +58,15 @@ proc( stringBuilder string => stringBuilder ) =: appendAsciified
     #swap 1 +
   end #drop
 end
+proc( stringBuilder string => stringBuilder ) =: public appendEscapedStrC
+  =:: str
+  0 while #dup str .length < do
+    #swap
+      str #over:2 string.charAt appendEscapedChr
+      "\"\"" appendS
+    #swap 1 +
+  end #drop
+end
 #end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog => ) =: printGlobalName
   prog [] .idContext .labelContext @ =:: labelContext
@@ -669,7 +678,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
     str case ## TODO string constants
       constType false target prog constStart ## treat all strings as global constants (cast to int8_t*)
       '"' sb.appendC
-      const .str labelContext id.scAsStr sb.appendEscapedStr
+      const .str labelContext id.scAsStr sb.appendEscapedStrC
       '"' sb.appendC
       false target prog constEnd
       break
