@@ -735,10 +735,10 @@ proc( BlockInfo ptr mut : whileBlock bool : ignoreLast FilePosition : pos TypeCh
   inTypes outTypes create whileBlock [] .blockType  whileBlock [] .blockStart ignoreLast pos state storeOutTypes
   true whileBlock [] .blockData .whileBlock .hasOutTypes =
 end
-proc( BlockInfo ptr mut : ifBlock bool : noElse FilePosition : pos TypeCheckState ptr mut : state => ) =: storeIfOutTypes
-  noElse if false else ifBlock [] .blockData .ifBlock .elseReachable ! end =:: create
+proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: storeIfOutTypes
+  ifBlock [] .blockData .ifBlock .elseReachable ! =:: create
   ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
-  noElse if inTypes else ifBlock [] .blockData .ifBlock .outTypes @ end =:: outTypes
+  ifBlock [] .blockData .ifBlock .outTypes @ =:: outTypes
   inTypes outTypes create ifBlock [] .blockType ifBlock [] .blockStart false pos state storeOutTypes
 end
 proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state => ) =: checkIfIfTypes
@@ -2157,7 +2157,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             return
           end
           state [] .reachable if
-            ifBlock false op [] .pos state storeIfOutTypes
+            ifBlock op [] .pos state storeIfOutTypes
             true ifBlock [] .blockData .ifBlock .elseReachable =
           end
           BlockType .IFIF op [] .pos opEndBlock =:: mut closeIfIf
@@ -2439,11 +2439,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       closed [] .blockId op [] .val .blockEnd .blockId =
       closed [] .blockType switch
-        IF ELSE case
+        ELSE case
           state [] .reachable if
-            closed closed [] .blockType .IF ?? op [] .pos state storeIfOutTypes
-          else closed [] .blockType .IF ?? _if
-            closed [] .blockData .ifBlock .inTypes @ state resetStack
+            closed op [] .pos state storeIfOutTypes
           else
             closed [] .blockData .ifBlock .outTypes @ state resetStack
           end
@@ -2571,7 +2569,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           true state [] .reachable =
           break
-        BREAK CONTINUE UNKNOWN INITIALIZER
+        IF BREAK CONTINUE UNKNOWN INITIALIZER
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           "closing blocks of type " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType

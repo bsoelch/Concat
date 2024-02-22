@@ -1781,8 +1781,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "end" string.wrap string.eq _if #drop
       while
-        idContext id.currentScopeType
-        fileState [] .wordStart opEndBlock  state appendOp
+        idContext id.currentScopeType =:: currentBlock
+        currentBlock BlockType .IF == if
+          BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
+          BlockType .ELSE fileState [] .wordStart opEndBlock  state appendOp
+        else
+          currentBlock fileState [] .wordStart opEndBlock  state appendOp
+        end
         idContext id.closeScope if #+scope data+# #drop:3
           "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError2
           return

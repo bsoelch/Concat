@@ -1220,24 +1220,12 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     blockEnd case
       op [] .val .blockEnd .blockType switch
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER
+        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
         PROCEDURE EXPERIMENTAL_PROCEDURE ELSE WHILE CASE DEFAULT case
           target "}\n" io.fputs #drop
-          return
-        IF case
-          op [] .val .blockEnd .subId 0 > if
-            target "}\n" io.fputs #drop
-          else
-            "}\n" sb.wrap
-              "else_label" sb.appendS
-              op [] .val .blockEnd .blockId sb.appendI
-              ":;\n" sb.appendS
-              target #over io.fputSb #drop
-            sb.free #drop
-          end
           return
         IFIF case
           "}else{goto else_label" sb.wrap
