@@ -624,12 +624,12 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
   else
     nTypes outTypes [] .typeStack .length != if
       "wrong number of types at the " sb.wrap
-        blockName .IFIF ?? if
-          "beginning of " sb.appendS
+        "end of " sb.appendS
+        blockName .ELSE ?? if
+          BlockType .IF sb.appendBlockType
         else
-          "end of " sb.appendS
+          blockName sb.appendBlockType
         end
-        blockName sb.appendBlockType
         "-statement expected " sb.appendS
         outTypes [] .typeStack .length sb.appendI
         " got " sb.appendS
@@ -664,12 +664,12 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
       out [] .val .getId tmpId =
       typeInfo [] .valType out [] .dataType types.typeEquals ! if
           "incompatible types at the " sb.wrap
-            blockName .IFIF ?? if
-              "beginning of " sb.appendS
+            "end of " sb.appendS
+            blockName .ELSE ?? if
+              BlockType .IF sb.appendBlockType
             else
-              "end of " sb.appendS
+              blockName sb.appendBlockType
             end
-            blockName sb.appendBlockType
             "-statement expected " sb.appendS
             out [] .dataType labelContext typeContext sb.appendType
             " got " sb.appendS
