@@ -276,7 +276,11 @@ proc(
 end
 #end
 
-proc( Operation ptr : op io.FILE : target ProgramContext ptr mut : prog => ) =: compileOp
+proc(
+  stringBuilder : sb
+  Operation ptr : op
+  ProgramContext ptr mut : prog
+=> stringBuilder ) =: compileOp
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
@@ -284,27 +288,33 @@ proc( Operation ptr : op io.FILE : target ProgramContext ptr mut : prog => ) =: 
   idContext [] .typeContext @ =:: typeContext
   op [] .val switch
     NOP case
-      return
+      sb return
     Constant case
       op [] .dataType types.isPrimitive if
-        64 sb.create
+        sb
           "%s =" sb.appendS
           op [] .dataType false op [] .pos prog sb.appendTypeNameQBE
           " copy " sb.appendS ## TODO increment op index
           op [] .dataType op [] .val .Constant false op [] .pos prog sb.appendConstQBE
           '\n' sb.appendC
-          target #over io.fputSb #drop
-        sb.free #drop
         return
       end
       break
-    initializeId case
-      op [] .val .initializeId =:: idInfo
+    declareId initializeId case
+      op [] .val .declareId ?? if
+        op [] .val .declareId
+      else
+        op [] .val .initializeId
+      end =:: idInfo
+      op [] .val .initializeId ?? =:: assignValue
       idInfo .labelId labelContext id.labelFlags =:: labelFlags
-      labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
+      labelFlags id.FLAG_MUTABLE & ? =:: mutable
       idInfo .idType switch
         PROCEDURE case
-          128 sb.create
+          assignValue ! if
+            sb return
+          end
+          sb
             labelFlags id.FLAG_PUBLIC & ? labelFlags id.FLAG_EXTERN & ? | if
               "export " sb.appendS
             end
@@ -317,30 +327,62 @@ proc( Operation ptr : op io.FILE : target ProgramContext ptr mut : prog => ) =: 
             idInfo .labelId prog sb.appendGlobalName
             op [] .dataType op [] .pos prog sb.appendProcArgs
             "{\n@start\n" sb.appendS
-            target #over io.fputSb #drop
-          sb.free #drop
-          return
-        GLOBAL_VAR case
-          128 sb.create
-            labelFlags id.FLAG_PUBLIC & ? if
-              "export " sb.appendS
-            end
-            "data " sb.appendS
-            idInfo .labelId prog sb.appendGlobalName
-            " = {}\n" sb.appendS ## TODO use operation containing value (needs prefix code)
-            target #over io.fputSb #drop
-          sb.free #drop
           return
         LOCAL_VAR TMP_VAR case
-          break
-        TYPE ARGUMENT TEMPLATE_ARG LABEL case
+          op [] .dataType =:: mut varType
+          ## use pointers as stack representation of arrays and composites
+          varType typeContext types.isArray
+           varType typeContext types.isComposite | if
+            varType
+              mutable typeContext types.getAddressType
+            varType =
+          end
+          sb
+            ## TODO use incrementing id for tmp-variable
+            "%t =l alloc" sb.appendS
+            varType typeContext types.alignOf
+              #dup 4 < if #drop 4i64 end
+            sb.appendI
+            ' ' sb.appendC
+            varType typeContext types.sizeOf sb.appendI
+            '\n' sb.appendC
+            assignValue if
+              ## TODO copy stack-value to memory
+            end
+          return
+        GLOBAL_VAR TYPE ARGUMENT TEMPLATE_ARG LABEL case
           break ## XXX error message
       end
       break
+    New case
+      sb
+        ## TODO use incrementing id for tmp-variable
+        ## prepare memory
+        "%t =l alloc" sb.appendS
+        op [] .dataType typeContext types.alignOf
+          #dup 4 < if #drop 4i64 end
+        sb.appendI
+        ' ' sb.appendC
+        op [] .dataType typeContext types.sizeOf sb.appendI
+        '\n' sb.appendC
+        op [] .dataType typeContext types.isArray if
+          "%s =l copy %t\n" sb.appendS
+          return
+        else op [] .dataType typeContext types.isTuple ! _if
+          "unsupported type for new:" sb.wrap
+            op [] .dataType
+              labelContext
+              typeContext
+            sb.appendType
+          op [] .pos errors appendError
+          return
+        end
+        ## TODO assign values
+      return
     blockEnd case
       op [] .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          target "}\n" io.fputs #drop
+          sb "}\n" sb.appendS
           return
         IFIF ELSE WHILE CASE DEFAULT DO case
           break
@@ -350,9 +392,9 @@ proc( Operation ptr : op io.FILE : target ProgramContext ptr mut : prog => ) =: 
           break
       end
       break
-    block getId setId @Id declareId autoTypedInitializeId
+    block getId setId @Id autoTypedInitializeId
     getElement setElement @Element hasElement getArrayElement
-    setArrayElement @ArrayElement setValue Print Return New newEnum call callPtr
+    setArrayElement @ArrayElement setValue Print Return newEnum call callPtr
     argc getArg getArgLen Cast Cast! unaryOperator binaryOperator checkEnumLabel
     setEnumLabel checkArrayIndex unreachable
     compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod copy
@@ -362,6 +404,7 @@ proc( Operation ptr : op io.FILE : target ProgramContext ptr mut : prog => ) =: 
   "unable to compile operation " sb.wrap
     op [] constContext labelContext typeContext sb.appendOp
   op [] .pos errors appendError
+  sb return
 end
 
 proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
@@ -416,16 +459,17 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
   end #drop
   0 while #dup prog [] .progFiles .length < do
     prog [] .progFiles #over list.at .data =:: f
-    64 sb.create
+    1024 sb.create
       "dbgfile \"" sb.appendS
       f [] .fileName sb.appendSb
       "\"\n"    sb.appendS
+      0 while #dup f [] .localOps .length < do
+        #swap
+        f [] .localOps #over:2 list.at .data prog compileOp
+        #swap 1 +
+      end #drop
       target #over io.fputSb #drop
     sb.free #drop
-    0 while #dup f [] .localOps .length < do
-      f [] .localOps #over list.at .data target prog compileOp
-      1 +
-    end #drop
     1 +
   end #drop
   mainId id.LABEL_ID_NONE == if ## no main
