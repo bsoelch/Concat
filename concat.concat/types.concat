@@ -1145,7 +1145,10 @@ proc(
 end
 
 proc( Type : generator TypeContext ptr mut : context => Type ) =: public getGeneratedType
-  generator context unwrapNamed =:: mut t
+  generator =:: mut t
+  t .namedType ?? if
+    t context unwrapNamed t =
+  end
   t .generatedType ?? ! if
     generator return
   end
