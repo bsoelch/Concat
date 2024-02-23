@@ -2,6 +2,7 @@
 
 #include "program.concat"
 #include "measure.concat"
+#include "branchTree.concat"
 
 ## XXX make prefix customizable
 "cct_" =:: CONCAT_PREFIX
@@ -9,11 +10,36 @@
 "cctI_argv" =:: CONCAT_ARGV_NAME
 "cctI_envp" =:: CONCAT_ENVP_NAME
 
-proc( io.FILE : target => ) =: printHeader
-  ## XXX is a header needed
+struct(
+  i64 : varId
+) =:: StackElement
+
+struct(
+  ProgramContext ptr mut : program
+  StackElement BranchTree : mut stackInfo
+  i64 : mut stackCount
+  i64 : mut tmpCount
+) =:: CompilerContext
+
+proc( CompilerContext ptr mut : context => i64 ) =: pushValue
+  context [] .stackCount =:: oldCount
+    context [] .stackInfo @ oldCount StackElement new branchTree.push
+    oldCount
+      1 +
+    context [] .stackCount =
+  oldCount return
 end
+proc( CompilerContext ptr mut : context => i64 ) =: nextTmpId
+  context [] .tmpCount =:: oldCount
+    oldCount
+      1 +
+    context [] .tmpCount =
+  oldCount return
+end
+
 #namespace sb
-proc( stringBuilder : sb LabelId : label ProgramContext ptr mut : prog => stringBuilder ) =: appendGlobalName
+proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context => stringBuilder ) =: appendGlobalName
+  context [] .program =:: prog
   prog [] .idContext .labelContext @ =:: labelContext
   sb
     '$' sb.appendC
@@ -56,20 +82,21 @@ proc(
   Type : t
   bool : isStored
   FilePosition : pos
-  ProgramContext ptr mut : prog
+  CompilerContext ptr mut : context
 => stringBuilder ) =: appendTypeNameQBE
+  context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   t switch
     namedType case
       sb
-        t typeContext types.unwrapNamed isStored pos prog
+        t typeContext types.unwrapNamed isStored pos context
       appendTypeNameQBE
       return
     generatedType case
       sb
-        t typeContext types.getGeneratedType isStored pos prog
+        t typeContext types.getGeneratedType isStored pos context
       appendTypeNameQBE
       return
     primitiveType case
@@ -127,8 +154,9 @@ proc(
   stringBuilder : sb
   i32 : index
   LabelId : labelId
-  ProgramContext ptr mut : prog
+  CompilerContext ptr mut : context
 => stringBuilder ) =: appendArgName
+  context [] .program =:: prog
   prog [] .idContext .labelContext @ =:: labelContext
   labelId labelContext id.labelName =:: labelName
   sb
@@ -145,8 +173,9 @@ proc(
   stringBuilder : sb
   i32 : index
   LabelId : labelId
-  ProgramContext ptr mut : prog
+  CompilerContext ptr mut : context
 => stringBuilder ) =: appendOutArgName
+  context [] .program =:: prog
   prog [] .idContext .labelContext @ =:: labelContext
   labelId labelContext id.labelName =:: labelName
   sb
@@ -163,8 +192,9 @@ proc(
   stringBuilder : sb
   Type : procType
   FilePosition : pos
-  ProgramContext ptr mut : prog
+  CompilerContext ptr mut : context
 => stringBuilder ) =: appendProcArgs
+  context [] .program =:: prog
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   procType typeContext types.getCallConvention #drop =:: callConvention
@@ -185,9 +215,9 @@ proc(
           ',' sb.appendC
         end
         true hasArgs =
-        arg true pos prog appendTypeNameQBE
+        arg true pos context appendTypeNameQBE
         ' ' sb.appendC
-        #over inType #over typeContext types.compositeGetLabel prog appendArgName
+        #over inType #over typeContext types.compositeGetLabel context appendArgName
       #swap 1 +
     end #drop
     callConvention .POINTER ?? if
@@ -206,7 +236,7 @@ proc(
           end
           true hasArgs =
           "l " sb.appendS ## all out arguments are pointers
-          #over outType #over typeContext types.compositeGetLabel prog appendOutArgName
+          #over outType #over typeContext types.compositeGetLabel context appendOutArgName
         #swap 1 +
       end #drop
     end
@@ -219,15 +249,16 @@ proc(
   ConstValue : value
   bool : isGlobal
   FilePosition : pos
-  ProgramContext ptr mut : prog
+  CompilerContext ptr mut : context
 => stringBuilder ) =: appendConstQBE
+  context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
   prog [] .idContext .constContext @ =:: constContext
   sb
     isGlobal if t types.isPrimitive _if
-      t true pos prog sb.appendTypeNameQBE
+      t true pos context sb.appendTypeNameQBE
       ' ' sb.appendC
     end
     value switch
@@ -248,7 +279,7 @@ proc(
           value .arrayConstant constContext constArrayAsArray =:: elts
           0 while #dup elts .length < do
             #swap
-              base elts #over:3  array.get true pos prog appendConstQBE
+              base elts #over:3  array.get true pos context appendConstQBE
               ',' sb.appendC
             #swap 1 +
           end #drop
@@ -259,7 +290,7 @@ proc(
           value .arrayConstant constContext constArrayAsArray =:: elts
           0 while #dup elts .length < do
             #swap
-              types #over:2 array.get elts #over:3  array.get true pos prog appendConstQBE
+              types #over:2 array.get elts #over:3  array.get true pos context appendConstQBE
               ',' sb.appendC
             #swap 1 +
           end #drop
@@ -279,8 +310,9 @@ end
 proc(
   stringBuilder : sb
   Operation ptr : op
-  ProgramContext ptr mut : prog
+  CompilerContext ptr mut : context
 => stringBuilder ) =: compileOp
+  context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
@@ -292,10 +324,12 @@ proc(
     Constant case
       op [] .dataType types.isPrimitive if
         sb
-          "%s =" sb.appendS
-          op [] .dataType false op [] .pos prog sb.appendTypeNameQBE
-          " copy " sb.appendS ## TODO increment op index
-          op [] .dataType op [] .val .Constant false op [] .pos prog sb.appendConstQBE
+          "%s" sb.appendS
+          context pushValue sb.appendI
+          " =" sb.appendS
+          op [] .dataType false op [] .pos context sb.appendTypeNameQBE
+          " copy " sb.appendS
+          op [] .dataType op [] .val .Constant false op [] .pos context sb.appendConstQBE
           '\n' sb.appendC
         return
       end
@@ -314,6 +348,10 @@ proc(
           assignValue ! if
             sb return
           end
+          ## reset stack-info in context
+          0 context [] .stackCount =
+          0 context [] .tmpCount =
+          context [] .stackInfo @ branchTree.clear
           sb
             labelFlags id.FLAG_PUBLIC & ? labelFlags id.FLAG_EXTERN & ? | if
               "export " sb.appendS
@@ -321,44 +359,109 @@ proc(
             "function " sb.appendS
             op [] .dataType typeContext types.getProcRet #drop =:: retType
             retType typeContext types.isEmpty ! if
-              retType true op [] .pos prog sb.appendTypeNameQBE
+              retType true op [] .pos context sb.appendTypeNameQBE
               ' ' sb.appendC
             end
-            idInfo .labelId prog sb.appendGlobalName
-            op [] .dataType op [] .pos prog sb.appendProcArgs
+            idInfo .labelId context sb.appendGlobalName
+            op [] .dataType op [] .pos context sb.appendProcArgs
             "{\n@start\n" sb.appendS
           return
         LOCAL_VAR TMP_VAR case
-          op [] .dataType =:: mut varType
+          op [] .dataType =:: valType
           ## use pointers as stack representation of arrays and composites
-          varType typeContext types.isArray
-           varType typeContext types.isComposite | if
-            varType
-              mutable typeContext types.getAddressType
-            varType =
-          end
+          valType typeContext types.isArray
+           valType typeContext types.isComposite | !
+          =:: isValue
           sb
-            ## TODO use incrementing id for tmp-variable
-            "%t =l alloc" sb.appendS
-            varType typeContext types.alignOf
+            idInfo .idType .LOCAL_VAR ?? if
+              "%l" sb.appendS
+              idInfo .labelId sb.appendI
+            else
+              "%tmp" sb.appendS
+              idInfo .id sb.appendI
+            end
+            " =l alloc" sb.appendS
+            valType typeContext types.alignOf
               #dup 4 < if #drop 4i64 end
             sb.appendI
             ' ' sb.appendC
-            varType typeContext types.sizeOf sb.appendI
+            valType typeContext types.sizeOf sb.appendI
             '\n' sb.appendC
             assignValue if
-              ## TODO copy stack-value to memory
+              isValue if
+                "store" sb.appendS
+                valType true op [] .pos context sb.appendTypeNameQBE
+              else
+                "blit " sb.appendS ## XXX call memcopy for large structs
+              end
+              " %s" sb.appendS
+              context [] .stackInfo @ branchTree.pop =:: tmp ## TODO remove check one compiler is complete
+                tmp .data ?? if tmp .data [] .varId sb.appendI end
+              ',' sb.appendC
+              idInfo .idType .LOCAL_VAR ?? if
+                "%l" sb.appendS
+                idInfo .labelId sb.appendI
+              else
+                "%tmp" sb.appendS
+                idInfo .id sb.appendI
+              end
+              isValue ! if
+                ',' sb.appendC
+                op [] .dataType typeContext types.sizeOf sb.appendI
+              end
+              '\n' sb.appendC
             end
           return
         GLOBAL_VAR TYPE ARGUMENT TEMPLATE_ARG LABEL case
           break ## XXX error message
       end
       break
+    getId @Id case
+      op [] .val .getId ?? if
+        op [] .val .getId
+      else
+        op [] .val .@Id
+      end =:: idInfo
+      op [] .val .@Id ?? =:: isAddr
+      idInfo .idType switch
+        PROCEDURE GLOBAL_VAR case
+          isAddr ! if idInfo .idType .PROCEDURE ?? _if
+            break ## TODO call
+          end
+          sb
+            "%s" sb.appendS
+            context pushValue sb.appendI
+            " =l copy " sb.appendS
+            idInfo .labelId context sb.appendGlobalName
+            "\n" sb.appendS
+          return
+        LOCAL_VAR case
+          sb
+            "%s" sb.appendS
+            context pushValue sb.appendI
+            " =l copy %l" sb.appendS
+            idInfo .labelId sb.appendI
+            '\n' sb.appendC
+          return
+        TMP_VAR case
+          sb
+            "%s" sb.appendS
+            context pushValue sb.appendI
+            " =l copy %tmp" sb.appendS
+            idInfo .id sb.appendI
+            '\n' sb.appendC
+          return
+         TYPE ARGUMENT TEMPLATE_ARG LABEL case
+          break ## XXX error message
+      end
+      break
     New case
+      context nextTmpId =:: tmpId
       sb
-        ## TODO use incrementing id for tmp-variable
         ## prepare memory
-        "%t =l alloc" sb.appendS
+        "%s" sb.appendS
+        context pushValue sb.appendI
+        " =l alloc" sb.appendS
         op [] .dataType typeContext types.alignOf
           #dup 4 < if #drop 4i64 end
         sb.appendI
@@ -366,7 +469,6 @@ proc(
         op [] .dataType typeContext types.sizeOf sb.appendI
         '\n' sb.appendC
         op [] .dataType typeContext types.isArray if
-          "%s =l copy %t\n" sb.appendS
           return
         else op [] .dataType typeContext types.isTuple ! _if
           "unsupported type for new:" sb.wrap
@@ -392,7 +494,7 @@ proc(
           break
       end
       break
-    block getId setId @Id autoTypedInitializeId
+    block setId autoTypedInitializeId
     getElement setElement @Element hasElement getArrayElement
     setArrayElement @ArrayElement setValue Print Return newEnum call callPtr
     argc getArg getArgLen Cast Cast! unaryOperator binaryOperator checkEnumLabel
@@ -411,7 +513,13 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
-  target printHeader
+  ## CompilerContext
+    prog
+    StackElement branchTree.create
+    0
+    0
+  CompilerContext new =:: mut contextData
+  contextData @ =:: context
   ## TODO declare composite types
   id.LABEL_ID_NONE =:: mut mainId
   MAIN_NAME string.wrap 0 idContext id.getIdentifier ! if =:: data =:: name
@@ -420,7 +528,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
     end
     data [] .labelId mainId =
   else #drop:2 end
-  ## TODO functions for checks
+  ## TODO internal functions
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 =:: idData
@@ -443,12 +551,12 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
         "export " sb.appendS
       end
       "data " sb.appendS
-      labelId prog sb.appendGlobalName
+      labelId context sb.appendGlobalName
       " = align " sb.appendS
       valType typeContext types.alignOf sb.appendI
       " {" sb.appendS
       idData [] .constValue ConstValue .none != if
-        valType idData [] .constValue true idData [] .declaredAt prog sb.appendConstQBE
+        valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
       else
         "z " sb.appendS
         valType typeContext types.sizeOf sb.appendI
@@ -465,13 +573,14 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
       "\"\n"    sb.appendS
       0 while #dup f [] .localOps .length < do
         #swap
-        f [] .localOps #over:2 list.at .data prog compileOp
+        f [] .localOps #over:2 list.at .data context compileOp
         #swap 1 +
       end #drop
       target #over io.fputSb #drop
     sb.free #drop
     1 +
   end #drop
+  context [] .stackInfo @ branchTree.free
   mainId id.LABEL_ID_NONE == if ## no main
     return
   end
@@ -500,7 +609,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
     else
       "export function w $main(){\n@start\ncall " sb.appendS
     end
-    mainId prog sb.appendGlobalName
+    mainId context sb.appendGlobalName
     "()\nret 0\n}\n" sb.appendS
     target #over io.fputSb #drop
   sb.free #drop
