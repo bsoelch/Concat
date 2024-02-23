@@ -615,7 +615,7 @@
       end #drop
       composite .flags COMP_CLASS_MASK &
       #over list.asArray
-      composite ._labelOffset
+      composite .labelOffset
         #dup types.UNLABELED == if #drop
           LabelId arrayView optional.empty
         else

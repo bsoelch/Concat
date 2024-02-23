@@ -325,7 +325,98 @@ proc( Type : a Type : b TypeContext ptr : context => Type ) =: public commonNumb
   end
   Type .undefined return
 end
-
+## size and alignment
+proc( PrimitiveType => i32 ) =: sizeOfPrimitive
+  switch
+    TYPE case
+      0 return
+    BOOL I8 case
+      1 return
+    I16 case
+      2 return
+    I32 FLOAT32 case
+      4 return
+    I64 FLOAT64 case
+      8 return
+  end
+end
+8 =:: PTR_SIZE
+8 =:: PTR_ALIGN
+8 =:: I_SIZE_SIZE
+8 =:: I_SIZE_ALIGN
+## alignment of type in bytes, will be a power of two
+proc( Type : t TypeContext ptr : context => i64 ) =: public alignOf
+  t switch
+    undefined empty autoType genericType templateType case
+      0 return
+    primitiveType case
+      t .primitiveType sizeOfPrimitive return
+    arrayIndex case
+      I_SIZE_SIZE return
+    pointer reference mutableReference procedure case
+      PTR_SIZE return
+    arrayType case
+      t context getBaseType context alignOf return
+    tuple struct union labeledProcIn procIn procOut enum case
+      t context compositeData .data =:: compData
+      compData [] .alignment return
+    namedType case
+      t context unwrapNamed context alignOf return
+    generatedType case
+      t context getGeneratedType context alignOf return
+  end
+end
+## return next multiple of a >= s, assumes that a is a power of 2
+proc( i64 : s i64 : a => i64 ) =: alignSize
+  s
+    a 1 - +
+    a 1 - ~ &
+  return
+end
+proc( Type : t bool : aligned TypeContext ptr : context => i64 ) =: computeSize
+  t switch
+    empty undefined autoType genericType templateType case
+      0 return
+    primitiveType case
+      t .primitiveType sizeOfPrimitive return
+    arrayIndex case
+      I_SIZE_SIZE return
+    pointer reference mutableReference procedure case
+      PTR_SIZE return
+    arrayType case
+      t context getArraySize =:: dims
+      t context getBaseType context strideOf =:: mut size
+      0 while #dup dims .length < do
+        dims #over array.get =:: dim
+        dim .sizeType .int ?? if
+          size dim .value * size =
+        else #drop
+          0 return ## XXX? better result for dynamic size arrays
+        end
+        1 +
+      end #drop
+      size return
+    tuple struct union labeledProcIn procIn procOut enum case
+      t context compositeData .data =:: compData
+      compData [] .size
+        aligned if
+          compData [] .alignment alignSize
+        end
+      return
+    namedType case
+      t context unwrapNamed aligned context computeSize return
+    generatedType case
+      t context getGeneratedType aligned context computeSize return
+  end
+end
+## size of value in bytes
+proc( Type : t TypeContext ptr : context => i64 ) =: public sizeOf
+  t false context computeSize ## TODO dependent on backend: C:aligned=true, QBE/ASM:aligned=false
+end
+## size padded to next multiple of alignment
+proc( Type : t TypeContext ptr : context => i64 ) =: public strideOf
+  t true context computeSize
+end
 ## array & pointer types
 enum( int templateArg staticArg ) =:: public ArraySizeType
 struct( i64 : value ArraySizeType : sizeType ) =:: public ArraySize
@@ -569,7 +660,15 @@ i32 =:: CompositeFlag
 128 CompositeFlag =: public COMP_FLAG_STATIC_ARGS
 256 CompositeFlag =: public COMP_FLAG_TEMPLATE
 384 CompositeFlag =: public COMP_GENERIC_MASK
-struct( i64 : eltsOffset LabelOffset : _labelOffset i64 : eltCount CompositeFlag : mut flags ) =:: CompositeType
+
+struct(
+  i64 : eltsOffset
+  LabelOffset : labelOffset
+  i64 : eltCount
+  i64 : alignment
+  i64 : size
+  CompositeFlag : mut flags
+) =:: CompositeType
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
@@ -649,7 +748,7 @@ proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: pub
     #dup optional.isEmpty if #drop
       id.LABEL_ID_NONE return
     end
-  .data [] ._labelOffset =:: offset
+  .data [] .labelOffset =:: offset
   offset UNLABELED == if
     id.LABEL_ID_NONE return
   end
@@ -671,7 +770,7 @@ proc( Type : composite string : name LabelContext ptr : labelContext TypeContext
     end
   .data =:: labels
   0 while #dup labels [] .eltCount < do
-    context [] .elementLabels labels [] ._labelOffset #over:2 + list.get labelContext id.labelName #dup optional.hasData if .data name string.eq if
+    context [] .elementLabels labels [] .labelOffset #over:2 + list.get labelContext id.labelName #dup optional.hasData if .data name string.eq if
       return
     end else #drop end
     1 +
@@ -759,19 +858,32 @@ proc( LabelOffset : offset LabelId arrayView optional : labels TypeContext ptr :
 end
 proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
   classFlag CompositeFlag =: mut flags
+  1i64 =:: mut alignment
+  0i64 =:: mut size
   true =:: mut isVoid
+  classFlag COMP_FLAG_TUPLE == if
+    ## XXX sort tuple elements by alignment
+  end
   0 while #dup elts .length < do
-    elts #over array.get
-      #dup context isEmpty ! if
-        false isVoid =
-      end
-      #dup context containsGeneric if
-        flags COMP_FLAG_STATIC_ARGS | flags =
-      end
-      #+2nd return value+# if
-        flags COMP_FLAG_TEMPLATE | flags =
-      end
-    #drop
+    elts #over array.get =:: elt
+    elt context isEmpty ! if
+      false isVoid =
+    end
+    elt context containsGeneric if
+      flags COMP_FLAG_STATIC_ARGS | flags =
+    end #+2nd return value+# if
+      flags COMP_FLAG_TEMPLATE | flags =
+    end
+    ## size and alignment
+    elt context alignOf =:: eltAlign
+    eltAlign alignment > if
+      eltAlign alignment =
+    end
+    size
+     eltAlign alignSize
+     ## TODO remember offsets of elements
+     elt context sizeOf +
+    size =
     1 +
   end #drop
   isVoid if
@@ -783,7 +895,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional
       #dup .eltCount elts .length != if #drop
         1 + continue
       end
-      #dup ._labelOffset labels context labelsEqual ! if #drop
+      #dup .labelOffset labels context labelsEqual ! if #drop
         1 + continue
       end
       context [] .compositeData #over .eltsOffset #over:2 .eltCount list.slice elts typesOffset 0 != if #drop
@@ -807,7 +919,7 @@ proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional
     context [] .elementLabels =
   end
   composites []
-    eltsOffset labelOffset elts .length flags CompositeType new list.append
+    eltsOffset labelOffset elts .length alignment size flags CompositeType new list.append
   composites [] =
   composites [] .length 1 - CompositeId cast
   return
@@ -848,7 +960,7 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
   =:: context
   =:: labelContext
   =:: comp
-  comp ._labelOffset types.UNLABELED == =:: unlabeled
+  comp .labelOffset types.UNLABELED == =:: unlabeled
   0 while #dup comp .eltCount < do
     #swap
       context [] .compositeData #over:2 comp .eltsOffset + list.at .data =:: eltType
@@ -857,7 +969,7 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
         ' ' appendC
         #swap 1 + continue
       end
-      context [] .elementLabels comp ._labelOffset #over:3 + list.get =:: label
+      context [] .elementLabels comp .labelOffset #over:3 + list.get =:: label
       label labelContext id.labelName =:: labelName
       eltType [] context types.isEmpty ! if
         eltType [] labelContext context false appendTypeRecursive
@@ -1144,7 +1256,7 @@ proc(
   false return
 end
 
-proc( Type : generator TypeContext ptr mut : context => Type ) =: public getGeneratedType
+proc( Type : generator TypeContext ptr : context => Type ) =: public getGeneratedType
   generator =:: mut t
   t .namedType ?? if
     t context unwrapNamed t =

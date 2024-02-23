@@ -401,12 +401,14 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
       end
       "data " sb.appendS
       labelId prog sb.appendGlobalName
-      " = {" sb.appendS
+      " = align " sb.appendS
+      valType typeContext types.alignOf sb.appendI
+      " {" sb.appendS
       idData [] .constValue ConstValue .none != if
         valType idData [] .constValue true idData [] .declaredAt prog sb.appendConstQBE
       else
         "z " sb.appendS
-        1 sb.appendI ## TODO use size of corresponding type
+        valType typeContext types.sizeOf sb.appendI
       end
       "}\n" sb.appendS
       target #over io.fputSb #drop
@@ -452,7 +454,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
         '\n' sb.appendC
         "call " sb.appendS
     else
-      "export w function $main(){\n@start\ncall " sb.appendS
+      "export function w $main(){\n@start\ncall " sb.appendS
     end
     mainId prog sb.appendGlobalName
     "()\nret 0\n}\n" sb.appendS
