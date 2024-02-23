@@ -5,11 +5,11 @@
 
 "concat_" =:: CONCAT_PREFIX ## TODO? shorten to cct_ (current name for compatibility with old library C code)
 ## XXX? use separate prefix for extern procedures
-"internal_argc"            =:: ARGC_NAME ## FIXME use different prefix for internal operations
-"internal_argv"            =:: ARGV_NAME
-"internal_checkArrayIndex" =:: CHECK_INDEX_NAME
-"internal_checkEnumIndex"  =:: CHECK_ENUM_NAME
-"internal_charNames"       =:: CHARNAMES_NAME
+"concatInternal_argc"      =:: ARGC_NAME
+"concatInternal_argv"      =:: ARGV_NAME
+"concatInternal_checkArrayIndex" =:: CHECK_INDEX_NAME
+"concatInternal_checkEnumIndex"  =:: CHECK_ENUM_NAME
+"concatInternal_charNames"       =:: CHARNAMES_NAME
 1 =:: EXIT_CODE_ARRAY_INDEX
 2 =:: EXIT_CODE_ENUM_INDEX
 
@@ -710,7 +710,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             break
           I8 case ## XXX use stringBuilder instead of multiple writes
             target "printf(\"%\"PRIi8\" ('%.4s')\\n\",tmpPrint,&" io.fputs #drop
-            target CONCAT_PREFIX io.fputs #drop
             target CHARNAMES_NAME io.fputs #drop
             target "[4*(tmpPrint&0xff)]);\n" io.fputs #drop
             break
@@ -1269,7 +1268,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     argc case
       64 sb.create
-        CONCAT_PREFIX sb.appendS
         ARGC_NAME     sb.appendS
         target #over io.fputSb #drop
       sb.free #drop
@@ -1279,7 +1277,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       op [] .dataType target prog printTypeName
       64 sb.create
         ")" sb.appendS
-        CONCAT_PREFIX      sb.appendS
         ARGV_NAME          sb.appendS
         "["                sb.appendS
         target #over io.fputSb #drop
@@ -1294,7 +1291,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       op [] .dataType target prog printTypeName
       64 sb.create
         ")strlen("  sb.appendS
-        CONCAT_PREFIX        sb.appendS
         ARGV_NAME            sb.appendS
         "["                  sb.appendS
         target #over io.fputSb #drop
@@ -1315,7 +1311,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     checkEnumLabel case
       64 sb.create
-        CONCAT_PREFIX   sb.appendS
         CHECK_ENUM_NAME sb.appendS
         "("             sb.appendS
         target #over io.fputSb #drop
@@ -1343,7 +1338,6 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     checkArrayIndex case
       64 sb.create
-        CONCAT_PREFIX   sb.appendS
         CHECK_INDEX_NAME sb.appendS
         "("             sb.appendS
         op [] .val .checkArrayIndex
@@ -1438,13 +1432,11 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   prog [] .hasGetArgs if
     64 sb.create
       "static int " sb.appendS
-      CONCAT_PREFIX sb.appendS
       ARGC_NAME     sb.appendS
       ";\n"         sb.appendS
       target #over io.fputSb #drop
     sb.clear
       "static char** " sb.appendS
-      CONCAT_PREFIX    sb.appendS
       ARGV_NAME        sb.appendS
       ";\n"            sb.appendS
       target #over io.fputSb #drop
@@ -1453,7 +1445,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   prog [] .hasCheckIndex if
     64 sb.create
       "static void " sb.appendS
-      CONCAT_PREFIX  sb.appendS
       CHECK_INDEX_NAME sb.appendS
       "(int64_t length,int64_t index,char const* pos){\n" sb.appendS
       "  if(index>=0 && index<length)\n    return;\n" sb.appendS
@@ -1467,7 +1458,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   prog [] .hasCheckEnum if
     64 sb.create
       "static void " sb.appendS
-      CONCAT_PREFIX  sb.appendS
       CHECK_ENUM_NAME sb.appendS
       "(int64_t current,int64_t expected,char const* pos){\n" sb.appendS
       "  if(current==expected)\n    return;\n" sb.appendS
@@ -1480,7 +1470,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   end
   64 sb.create ## XXX? only add when needed
     "static char " sb.appendS
-    CONCAT_PREFIX  sb.appendS
     CHARNAMES_NAME sb.appendS
     "[]="          sb.appendS
     appendCharNames
@@ -1588,10 +1577,8 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   prog [] .hasGetArgs if
     128 sb.create
       "int main(int argc,char** argv){\n" sb.appendS
-      CONCAT_PREFIX sb.appendS
       ARGC_NAME     sb.appendS
       "=argc;\n"    sb.appendS
-      CONCAT_PREFIX sb.appendS
       ARGV_NAME     sb.appendS
       "=argv;\n"    sb.appendS
       target #over io.fputSb #drop
