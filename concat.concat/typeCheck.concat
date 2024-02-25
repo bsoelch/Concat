@@ -1238,7 +1238,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       op [] .val .setId ?? if
         idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
           "variable " sb.wrap
-            idInfo .labelId labelContext id.labelName .data sb.appendStr
+            idInfo .labelId labelContext sb.appendLabelName
             " is not mutable" sb.appendS
           op [] .pos state appendError2
         end
@@ -1542,7 +1542,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state => )
         elementLabel labelContext id.isLabelEmpty if
           eltIndex sb.appendI
         else
-          elementLabel labelContext id.labelName .data sb.appendStr
+          elementLabel labelContext sb.appendLabelName
         end
         " in " sb.appendS
         typeInfo [] .valType labelContext typeContext sb.appendType
@@ -1582,7 +1582,6 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
     "missing label name " sb.wrap op [] .pos state appendError2
     return
   end
-  label labelContext id.labelName .data =:: labelName
   state [] .typeStack list.peek #dup optional.isEmpty if #drop
     "not enough operands for : " sb.wrap
       op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
@@ -1597,7 +1596,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
   end
   targetType typeContext isTuple if
     targetType typeContext unwrapNamed =:: tupleType
-    tupleType labelName labelContext typeContext compositeFindLabel =:: index
+    tupleType label labelContext typeContext compositeFindLabel =:: index
     index 0 >= if
       op [] .val switch
         getLabel case
@@ -1621,12 +1620,12 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
   end
   targetType typeContext isEnum if
     targetType typeContext unwrapNamed =:: enumType
-    enumType labelName labelContext typeContext compositeFindLabel =:: index
+    enumType label labelContext typeContext compositeFindLabel =:: index
     index 0 >= if
       enumType index typeContext compositeGetElement =:: mut eltType
        op [] .val .hasLabel ?? ! if eltType typeContext isEmpty _if
         "element " sb.wrap
-          labelName sb.appendStr
+          label labelContext sb.appendLabelName
           " in enum " sb.appendS
           targetType labelContext typeContext sb.appendType
           " does not hold a value" sb.appendS
@@ -1661,7 +1660,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
       op [] .val .setElement ?? if
         mutable ! if
           "element " sb.wrap
-            labelName sb.appendStr
+            label labelContext sb.appendLabelName
             " in enum " sb.appendS
             targetType labelContext typeContext sb.appendType
             " is not mutable" sb.appendS
@@ -1699,7 +1698,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
   end
   targetType typeContext isUnion if
     targetType typeContext unwrapNamed =:: unionType
-    unionType labelName labelContext typeContext compositeFindLabel =:: index
+    unionType label labelContext typeContext compositeFindLabel =:: index
     index 0 >= if
       op [] .val switch
         getLabel case
@@ -1724,7 +1723,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state => 
   0 sb.create
     typeInfo [] .valType labelContext typeContext sb.appendType
     " does not have a label " sb.appendS
-    labelName sb.appendStr
+    label labelContext sb.appendLabelName
   op [] .pos state appendError2
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckReturn
@@ -1794,18 +1793,18 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: resolveIdent
     default
       return
   end =:: label
-  label labelContext id.labelName #dup optional.isEmpty if #drop
+  label id.LABEL_ID_NONE == if
     return
-  end .data =:: name
+  end
   state [] .openBlocks list.peek #dup optional.hasData state [] .reachable ! & if .data =:: block
   block [] .blockType #dup .SWITCH ?? #swap .CASE ?? | if
   block [] .blockData .switchBlock .switchType =:: switchType
   switchType typeContext types.isEnum if
     switchType typeContext types.compositeEltCount =:: count
     0 while #dup count < do
-      switchType #over typeContext types.compositeGetLabel labelContext id.labelName #dup optional.isEmpty if #drop
+      switchType #over typeContext types.compositeGetLabel #dup id.LABEL_ID_NONE == if #drop
         1 + continue
-      end .data name string.eq if
+      end label labelContext id.labelNamesEq if
         switchType op [] .dataType =
         ConstValue .enumLabel new op [] .val .Constant =
         return
@@ -1814,7 +1813,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: resolveIdent
     end #drop
   end end else #drop end
   label labelContext id.inLabelNamespace
-  name state [] .fileId idContext id.getIdentifier if
+  label state [] .fileId idContext id.getIdentifierByLabel if
     #drop:2 return
   end
   #swap #drop
@@ -1859,7 +1858,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             #dup typeContext types.isEmpty ! if
               "cannot directly use enum label \"" sb.wrap
                   op [] .dataType op [] .val .Constant .enumLabel typeContext types.compositeGetLabel
-                labelContext id.labelName .data sb.appendStr
+                labelContext sb.appendLabelName
                "\" in " sb.appendS
                op [] .dataType labelContext typeContext sb.appendType
                " use \"new\" to create enum values" sb.appendS
@@ -1885,7 +1884,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             labels [] #over list.at .data [] .value constant labelContext constantEquals if
               "duplicate label " sb.wrap
                 switchType typeContext types.isEnum if
-                  switchType constant .enumLabel typeContext types.compositeGetLabel labelContext id.labelName .data sb.appendStr
+                  switchType constant .enumLabel typeContext types.compositeGetLabel labelContext sb.appendLabelName
                 else
                   constant idContext [] .constContext @ labelContext typeContext sb.appendConstant
                 end
@@ -2529,7 +2528,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
                   match ! if
                     switchBlock [] .switchType #over:2 typeContext types.compositeGetLabel =:: label
                     " - \"" sb.appendS
-                    label labelContext id.labelName .data sb.appendStr
+                    label labelContext sb.appendLabelName
                     "\" declaredAt" sb.appendS
                     label labelContext id.labelPos .data sb.appendPos
                     '\n' sb.appendC
@@ -3035,19 +3034,19 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       return
     getName case
       "unresolved identifier: \"" sb.wrap
-        op [] .val .getName labelContext id.labelName .data sb.appendStr
+        op [] .val .getName labelContext sb.appendLabelName
         '"' sb.appendC
       op [] .pos state appendError2
       return
     setName case
       "unresolved identifier: \"" sb.wrap
-        op [] .val .setName labelContext id.labelName .data sb.appendStr
+        op [] .val .setName labelContext sb.appendLabelName
         '"' sb.appendC
       op [] .pos state appendError2
       return
     @Name case
       "unresolved identifier: \"" sb.wrap
-        op [] .val .@Name labelContext id.labelName .data sb.appendStr
+        op [] .val .@Name labelContext sb.appendLabelName
         '"' sb.appendC
       op [] .pos state appendError2
       return

@@ -59,8 +59,26 @@ struct(
   proc( LabelContext ptr => LabelId ) =: public labelOffset
     [] .labels .length LabelId cast return
   end
-  proc( StringConstant : const LabelContext ptr : context => string ) =: public scAsStr
-    context [] .nameBuffer .data const .offset + const .length string.create return
+  proc( StringConstant : const i64 : index LabelContext ptr : context => i8 ) =: public scCharAt
+    context [] .nameBuffer .data const .offset + const .length string.create index string.charAt return
+  end
+  proc( string : a StringConstant : b LabelContext ptr : context => bool ) =: public scEqualTo
+    ## string.eq
+      a
+      context [] .nameBuffer .data b .offset + b .length string.create
+    string.eq return
+  end
+  proc( StringConstant : a StringConstant : b LabelContext ptr : context => bool ) =: public scEqual
+    a .length b .length != if
+      false return
+    end
+    a .offset b .offset == if
+      true return
+    end
+    ## string.eq
+      context [] .nameBuffer .data a .offset + a .length string.create
+      context [] .nameBuffer .data b .offset + b .length string.create
+    string.eq return
   end
   proc( LabelId : id LabelContext ptr mut : context => NamespaceId ) =: public getLabelNamespace
     id 0 < id context [] .labels .length >= | if
@@ -80,11 +98,33 @@ struct(
     end
     context [] .labels id list.at .data [] .namespaceInfo context [] .namespaceInfo =
   end
-  proc( LabelId : id LabelContext ptr : context => string optional ) =: public labelName
+  proc( string : str LabelId : id LabelContext ptr : context => bool ) =: public labelNameEq
     id 0 < id context [] .labels .length >= | if
-      string optional.empty return
+      false return
     end
-    context [] .labels id list.get .name context scAsStr optional.wrap return
+    context [] .labels id list.at .data [] .name =:: name
+    context [] .nameBuffer .data name .offset +
+      name .length
+    string.create str string.eq return
+  end
+  proc( LabelId : a LabelId : b LabelContext ptr : context => bool ) =: public labelNamesEq
+    a b == if
+      true return
+    end
+    a 0 < a context [] .labels .length >= |
+    b 0 < b context [] .labels .length >= | | if
+      false return
+    end
+    context [] .labels a list.at .data [] .name =:: aData
+    context [] .labels b list.at .data [] .name =:: bData
+    ## string.eq
+      context [] .nameBuffer .data aData .offset +
+        aData .length
+      string.create
+      context [] .nameBuffer .data bData .offset +
+        bData .length
+      string.create
+    string.eq return
   end
   proc( LabelId : id LabelContext ptr : context => LabelFlag ) =: public labelFlags
     id 0 < id context [] .labels .length >= | if
@@ -135,7 +175,6 @@ struct(
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-
   proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context => StringConstant ) =: public parseStringConstant
     stringStart =:: mut pos
     '"' pos @ updateFilePos ## string content starts after "
@@ -266,7 +305,6 @@ struct(
     uft8Buff sb.free #drop
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
-
   proc( NamespaceId : parent string : name  LabelContext ptr mut : context => NamespaceId ) =: newNamespace
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
@@ -291,8 +329,7 @@ struct(
     context [] .namespaces base list.at .data =:: baseSpace
     0 while #dup baseSpace [] .children .length < do
       baseSpace [] .children #over list.get =:: child
-      context [] .namespaces child list.get .name context scAsStr
-      childName string.eq if #drop
+      childName context [] .namespaces child list.get .name context scEqualTo if #drop
         child return
       end
       1 +
@@ -320,11 +357,11 @@ struct(
     #drop
     id return
   end
-  proc( NamespaceId : id LabelContext ptr mut : context => string ) =: public namespaceName
+  proc( NamespaceId : id LabelContext ptr mut : context => StringConstant ) =: public namespaceName
     id NAMESPACE_ID_NONE == if
-      string.empty return
+      0 0 StringConstant new return
     end
-    context [] .namespaces id list.get .name context scAsStr return
+    context [] .namespaces id list.get .name return
   end
   proc( NamespaceId : id LabelContext ptr mut : context => NamespaceId ) =: public parentNamespace
     id NAMESPACE_ID_NONE == if
@@ -363,5 +400,44 @@ struct(
       NamespaceImport new list.append
     context [] .namespaceImports =
     context [] .namespaceImports .length 1 - NamespaceImportId cast return
+  end
+#end
+
+#namespace sb
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context => stringBuilder ) =: public appendLabelName
+    id 0 < id context [] .labels .length >= | if
+      sb return
+    end
+    context [] .labels id list.at .data [] .name =:: name
+    sb
+      context [] .nameBuffer .data name .offset +
+        name .length
+      string.create
+    sb.appendStr return
+  end
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context => stringBuilder ) =: public appendAsciifiedLabelName
+    id 0 < id context [] .labels .length >= | if
+      sb return
+    end
+    context [] .labels id list.at .data [] .name =:: name
+    sb
+      context [] .nameBuffer .data name .offset +
+        name .length
+      string.create
+    sb.appendAsciified return
+  end
+  proc( stringBuilder : sb StringConstant : const LabelContext ptr : context => stringBuilder ) =: public appendStringConst
+    sb
+      context [] .nameBuffer .data const .offset +
+        const .length
+      string.create
+    sb.appendStr return
+  end
+  proc( stringBuilder : sb StringConstant : const LabelContext ptr : context => stringBuilder ) =: public appendAsciifiedStringConst
+    sb
+      context [] .nameBuffer .data const .offset +
+        const .length
+      string.create
+    sb.appendAsciified return
   end
 #end

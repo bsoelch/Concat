@@ -725,7 +725,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           "cannot assign to immutable value of type " sb.wrap
             target .valueType labelContext typeContext sb.appendType
             " in \"" sb.appendS
-            target .valueId labelContext id.labelName .data sb.appendStr
+            target .valueId labelContext sb.appendLabelName
             '"' sb.appendC
           op [] .pos errors appendError
         else
@@ -770,10 +770,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
            srcType
         end
       end =:: mut containerType
-      labelId labelContext id.labelName .data =:: labelName
       ## compositeFindLabel
         containerType
-        labelName
+        labelId
         labelContext
         typeContext
       types.compositeFindLabel =:: elementIndex
@@ -790,7 +789,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         "type " sb.wrap
           containerType labelContext typeContext sb.appendType
           " does not have a label \"" sb.appendS
-          labelName sb.appendStr
+          labelId labelContext sb.appendLabelName
           '"' sb.appendC
         op [] .pos errors appendError
         return
@@ -827,7 +826,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         end ## remove type
         isAddr if
           "cannot take address of enum-creator \"" sb.wrap
-          labelName sb.appendStr
+          labelId labelContext sb.appendLabelName
           "\" in " sb.appendS
           containerType labelContext typeContext sb.appendType
           op [] .pos errors appendError

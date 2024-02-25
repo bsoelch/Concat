@@ -25,14 +25,14 @@ proc( io.FILE : target => ) =: printHeader
 end
 
 #namespace sb
-proc( stringBuilder string => stringBuilder ) =: public appendEscapedStrC
-  =:: str
-  0 while #dup str .length < do
-    #swap
-      str #over:2 string.charAt appendEscapedChr
+proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: public appendEscapedStrC
+  sb
+    0 while #dup str .length < do =:: i
+      str i labelContext id.scCharAt appendEscapedChr
       "\"\"" appendS
-    #swap 1 +
-  end #drop
+      i 1 +
+    end #drop
+  return
 end
 #end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog => ) =: printGlobalName
@@ -45,13 +45,13 @@ proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : pro
     end
     label labelContext id.getLabelNamespace =:: mut mNamespace
     while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
-      mNamespace labelContext id.namespaceName sb.appendAsciified
+      mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
       "." string.wrap sb.appendAsciified
       mNamespace labelContext id.parentNamespace mNamespace =
     end ## XXX? reverse order
-    label labelContext id.labelName #dup optional.hasData if
-      .data sb.appendAsciified
-    else #drop end
+    label id.LABEL_ID_NONE != if
+      label labelContext sb.appendAsciifiedLabelName
+    end
     implId 0 >= if
       "_I" sb.appendS
       implId sb.appendI
@@ -61,13 +61,12 @@ proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : pro
 end
 proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : prog => ) =: printArgName
   prog [] .idContext .labelContext @ =:: labelContext
-  labelId labelContext id.labelName =:: labelName
   64 sb.create
     "arg" sb.appendS
     index sb.appendI
-    labelName optional.hasData if
+    labelId id.LABEL_ID_NONE != if
       "/*" sb.appendS
-      labelName .data sb.appendAsciified
+      labelId labelContext sb.appendAsciifiedLabelName
       "*/" sb.appendS
     end
     target #over io.fputSb #drop
@@ -75,13 +74,12 @@ proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : pr
 end
 proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : prog => ) =: printOutArgName
   prog [] .idContext .labelContext @ =:: labelContext
-  labelId labelContext id.labelName =:: labelName
   64 sb.create
     "out" sb.appendS
     index sb.appendI
-    labelName optional.hasData if
+    labelId id.LABEL_ID_NONE != if
       "/*" sb.appendS
-      labelName .data sb.appendAsciified
+      labelId labelContext sb.appendAsciifiedLabelName
       "*/" sb.appendS
     end
     target #over io.fputSb #drop
@@ -96,11 +94,10 @@ proc( IdentifierInfo : idInfo io.FILE : target ProgramContext ptr mut : prog => 
       64 sb.create
         "l" sb.appendS
         idInfo .id sb.appendI
-        idInfo .labelId labelContext id.labelName #dup optional.hasData if
-          #swap
-            "_" sb.appendS
-          #swap .data sb.appendAsciified
-        else #drop end
+        idInfo .labelId id.LABEL_ID_NONE != if
+          "_" sb.appendS
+          idInfo .labelId labelContext sb.appendAsciifiedLabelName
+        end
         target #over io.fputSb #drop
       sb.free #drop
       return
@@ -290,11 +287,11 @@ proc( Type : composite i32 : index io.FILE : target ProgramContext ptr mut : pro
   64 sb.create
     "e" sb.appendS
     index sb.appendI
-    composite index typeContext types.compositeGetLabel labelContext id.labelName #dup optional.hasData if
-      #swap
-        "_" sb.appendS
-      #swap .data sb.appendAsciified
-    else #drop end
+    composite index typeContext types.compositeGetLabel =:: labelId
+    labelId id.LABEL_ID_NONE != if
+      "_" sb.appendS
+      labelId labelContext sb.appendAsciifiedLabelName
+    end
     target #over io.fputSb #drop
   sb.free #drop
 end
@@ -645,7 +642,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
     str case ## TODO string constants
       constType false target prog constStart ## treat all strings as global constants (cast to int8_t*)
       '"' sb.appendC
-      const .str labelContext id.scAsStr sb.appendEscapedStrC
+      const .str labelContext sb.appendEscapedStrC
       '"' sb.appendC
       false target prog constEnd
       break
@@ -1423,7 +1420,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
   target prog printTypes
   ## TODO initialize string data
   id.LABEL_ID_NONE =:: mut mainId
-  MAIN_NAME string.wrap 0 idContext id.getIdentifier ! if =:: data =:: name
+  MAIN_NAME string.wrap 0 idContext id.getIdentifierByName ! if =:: data =:: name
     name .namespace 0 != if
       ..unreachable ## assert that namespace is always top level
     end

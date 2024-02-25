@@ -754,7 +754,7 @@ proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: pub
   end
   context [] .elementLabels offset index + list.get return
 end
-proc( Type : composite string : name LabelContext ptr : labelContext TypeContext ptr : context => i32 ) =: public compositeFindLabel
+proc( Type : composite LabelId : name LabelContext ptr : labelContext TypeContext ptr : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
       struct union labeledProcIn enum case
@@ -770,9 +770,9 @@ proc( Type : composite string : name LabelContext ptr : labelContext TypeContext
     end
   .data =:: labels
   0 while #dup labels [] .eltCount < do
-    context [] .elementLabels labels [] .labelOffset #over:2 + list.get labelContext id.labelName #dup optional.hasData if .data name string.eq if
+    name context [] .elementLabels labels [] .labelOffset #over:3 + list.get labelContext id.labelNamesEq if
       return
-    end else #drop end
+    end
     1 +
   end #drop
   -1 return
@@ -970,20 +970,19 @@ proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stri
         #swap 1 + continue
       end
       context [] .elementLabels comp .labelOffset #over:3 + list.get =:: label
-      label labelContext id.labelName =:: labelName
       eltType [] context types.isEmpty ! if
         eltType [] labelContext context false appendTypeRecursive
-        labelName optional.hasData if
+        label id.LABEL_ID_NONE != if
           " : " appendS
         else
           ' ' appendC
         end
       end
-      labelName optional.hasData if
+      label id.LABEL_ID_NONE != if
         label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
           "mut " appendS
         end
-        labelName .data appendStr
+        label labelContext appendLabelName
         ' ' appendC
       end
     #swap
@@ -1171,7 +1170,7 @@ proc( stringBuilder types.NamedType LabelContext ptr TypeContext ptr bool => str
   =:: labelContext
   #swap
     '"' sb.appendC
-    #over .name labelContext id.labelName .data sb.appendStr
+    #over .name labelContext sb.appendLabelName
     '"' sb.appendC
     " [ " sb.appendS
     #swap .data context types.unwrapNamed labelContext context allowRecurse appendTypeRecursive
@@ -1722,7 +1721,7 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       .generatedType
       context [] .generatedTypes #swap list.at .data =:: typeData
       "? " appendS ## TODO append arguments
-      typeData [] .generator labelContext id.labelName .data sb.appendStr
+      typeData [] .generator labelContext sb.appendLabelName
       " [ "     appendS
         typeData [] .generated labelContext context allowRecurse appendTypeRecursive
       " ]"     appendS

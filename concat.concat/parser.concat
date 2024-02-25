@@ -471,11 +471,10 @@ proc( LabelId : label Type : valType i64 : argId ParserState ptr mut : state => 
 end
 proc( string : name ParserState ptr mut : state => StaticArgument optional ) =: getStaticArg
   0 while #dup state [] .staticArgs .length < do
-    state [] .staticArgs #over list.get
-      #dup .labelId state [] .progContext [] .idContext .labelContext @ id.labelName #dup optional.hasData if .data name string.eq else #drop false end if
-        #swap #drop optional.wrap return
-      end
-    #drop
+    state [] .staticArgs #over list.get =:: arg
+    name arg .labelId state [] .progContext [] .idContext .labelContext @ id.labelNameEq if
+      #drop arg optional.wrap return
+    end
     1 +
   end #drop
   StaticArgument optional.empty return
@@ -800,8 +799,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #dup .length 1 != if
             "A character literal has to contain exactly one character" sb.wrap fileState [] .wordStart state appendError2
           end
-          labelContext id.scAsStr
-          0 string.charAt
+          0 labelContext id.scCharAt
         fileState [] .wordStart newCharConstant state pushConst
         "" string.wrap true return
       IDENTIFIER case
@@ -978,7 +976,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Constant new state pushConst
       true return
     else #drop end
-    #dup state [] .currentFile idContext id.getIdentifier if
+    #dup state [] .currentFile idContext id.getIdentifierByName if
       #drop:2 false return ## unknown identifier
     end
     #dup [] .constValue .none ?? if
@@ -1823,13 +1821,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             state popConst
               #dup .val .typeId ?? if #dup .val .typeId typeContext types.isEnum else false end if #dup .val .typeId
                 #dup typeContext types.compositeEltCount =:: count
-                0 while #dup count < do
-                  #over #over typeContext types.compositeGetLabel
-                    labelContext id.labelName #dup optional.hasData if .data #over:4 string.eq else #drop false end if
-                      fileState [] .wordStart newEnumLabelConstant state pushConst
+                0 while #dup count < do =:: i
+                  #over:2
+                  #over i typeContext types.compositeGetLabel
+                    labelContext id.labelNameEq if
+                      i fileState [] .wordStart newEnumLabelConstant state pushConst
                       #drop:2 return
                     end
-                  1 +
+                  i 1 +
                 end #drop
                 #drop
               end
@@ -2727,12 +2726,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError2
       return
     end
-  #dup state [] .currentFile idContext id.getIdentifier ! if ## try parsing as identifier
+  id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel =:: labelId
+  labelId state [] .currentFile idContext id.getIdentifierByLabel ! if ## try parsing as identifier
     #dup [] .valueType #swap id.asIdInfo fileState [] .wordStart opGet state appendOp
-    #drop:2
+    #drop
     return
   end #drop:2
-  id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel fileState [] .wordStart opGetName  state appendOp
+  labelId fileState [] .wordStart opGetName  state appendOp
   return
 end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: checkIOError

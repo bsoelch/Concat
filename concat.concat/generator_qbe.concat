@@ -50,13 +50,11 @@ proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context => st
     end
     label labelContext id.getLabelNamespace =:: mut mNamespace
     while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
-      mNamespace labelContext id.namespaceName sb.appendAsciified
+      mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
       "." string.wrap sb.appendAsciified
       mNamespace labelContext id.parentNamespace mNamespace =
     end ## XXX? reverse order
-    label labelContext id.labelName #dup optional.hasData if
-      .data sb.appendAsciified
-    else #drop end
+    label labelContext sb.appendAsciifiedLabelName
   return
 end
 
@@ -158,13 +156,12 @@ proc(
 => stringBuilder ) =: appendArgName
   context [] .program =:: prog
   prog [] .idContext .labelContext @ =:: labelContext
-  labelId labelContext id.labelName =:: labelName
   sb
     "%a" sb.appendS
     index sb.appendI
-    labelName optional.hasData if
+    labelId id.LABEL_ID_NONE != if
       "/*" sb.appendS
-      labelName .data sb.appendAsciified
+      labelId labelContext sb.appendAsciifiedLabelName
       "*/" sb.appendS
     end
   return
@@ -177,13 +174,12 @@ proc(
 => stringBuilder ) =: appendOutArgName
   context [] .program =:: prog
   prog [] .idContext .labelContext @ =:: labelContext
-  labelId labelContext id.labelName =:: labelName
   sb
     "%o" sb.appendS
     index sb.appendI
-    labelName optional.hasData if
+    labelId id.LABEL_ID_NONE != if
       "/*" sb.appendS
-      labelName .data sb.appendAsciified
+      labelId labelContext sb.appendAsciifiedLabelName
       "*/" sb.appendS
     end
   return
@@ -522,7 +518,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
   contextData @ =:: context
   ## TODO declare composite types
   id.LABEL_ID_NONE =:: mut mainId
-  MAIN_NAME string.wrap 0 idContext id.getIdentifier ! if =:: data =:: name
+  MAIN_NAME string.wrap 0 idContext id.getIdentifierByName ! if =:: data =:: name
     name .namespace 0 != if
       ..unreachable ## assert that namespace is always top level
     end

@@ -75,7 +75,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext => bool ) =:
       a .str .offset b .str .offset == if
         true return
       end
-      a .str labelContext id.scAsStr b .str labelContext id.scAsStr string.eq return
+      a .str b .str labelContext id.scEqual return
     arrayConstant case
       a .arrayConstant .length b .arrayConstant .length != if
         false return
@@ -113,13 +113,13 @@ proc( stringBuilder i8 => stringBuilder ) =: public appendEscapedChr
   end
   chr  sb.appendC
 end
-proc( stringBuilder string => stringBuilder ) =: public appendEscapedStr
-  =:: str
-  0 while #dup str .length < do
-    #swap
-      str #over:2 string.charAt appendEscapedChr
-    #swap 1 +
-  end #drop
+proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: public appendEscapedStr
+  sb
+    0 while #dup str .length < do =:: i
+        str i labelContext id.scCharAt appendEscapedChr
+      i 1 +
+    end #drop
+  return
 end
 proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext ptr => stringBuilder ) =: public appendConstant
   =:: typeContext
@@ -147,7 +147,7 @@ proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext 
         break
       str case
         "string: \""  sb.appendS
-        #over .str labelContext id.scAsStr  sb.appendEscapedStr
+        #over .str labelContext sb.appendEscapedStr
                '\"'  sb.appendC
         break
       chr case

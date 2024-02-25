@@ -406,25 +406,25 @@ end
           "get label ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .getLabel labelContext id.labelName .data sb.appendStr
+          #over .val .getLabel labelContext sb.appendLabelName
           break
         setLabel case
           "set label ( " sb.appendS
           #over .dataType labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .setLabel labelContext id.labelName .data sb.appendStr
+          #over .val .setLabel labelContext sb.appendLabelName
           break
         @Label case
           "label address ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .@Label labelContext id.labelName .data sb.appendStr
+          #over .val .@Label labelContext sb.appendLabelName
           break
         hasLabel case
           "has label ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          #over .val .hasLabel labelContext id.labelName .data sb.appendStr
+          #over .val .hasLabel labelContext sb.appendLabelName
           break
         typeModifier case
           "typeModifier \"" sb.appendS
@@ -588,19 +588,19 @@ end
           break
         getName case
           "get: " sb.appendS
-          #over .val .getName labelContext id.labelName .data sb.appendStr
+          #over .val .getName labelContext sb.appendLabelName
           break
         setName case
           "set: " sb.appendS
-          #over .val .setName labelContext id.labelName .data sb.appendStr
+          #over .val .setName labelContext sb.appendLabelName
           break
         @Name case
           "address of: " sb.appendS
-          #over .val .@Name labelContext id.labelName .data sb.appendStr
+          #over .val .@Name labelContext sb.appendLabelName
           break
         hasName case
           "has name: " sb.appendS
-          #over .val .hasName labelContext id.labelName .data sb.appendStr
+          #over .val .hasName labelContext sb.appendLabelName
           break
         unreachable case
           "unreachable " sb.appendS
@@ -648,7 +648,7 @@ end
         break
       find case
         "#find " sb.appendS
-        info .find labelContext id.labelName .data sb.appendStr
+        info .find labelContext sb.appendLabelName
         break
     end
   end

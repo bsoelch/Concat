@@ -612,7 +612,7 @@ proc(
             procOut typeContext types.compositeElts =:: inTypes
             inTypes .length context checkStack if
               "not enough arguments for type-generator " sb.wrap
-                label labelContext id.labelName .data sb.appendStr
+                label labelContext sb.appendLabelName
               op [] .pos errors appendError
               true return
             end
@@ -631,7 +631,7 @@ proc(
               idContext [] .templateArgBuffer =
               idInfo .constValue .procedure op [] .pos context evaluateCall if #drop
                 "could not initialize type-generator " sb.wrap
-                  label labelContext id.labelName .data sb.appendStr
+                  label labelContext sb.appendLabelName
                 op [] .pos errors appendError
                 idContext [] .templateArgBuffer
                   argOffset list.setLength
@@ -650,7 +650,7 @@ proc(
                 constContext
               types.initializeGeneratedType if #drop
                 "could not initialize type-generator " sb.wrap
-                  label labelContext id.labelName .data sb.appendStr
+                  label labelContext sb.appendLabelName
                 op [] .pos errors appendError
                 true return
               end

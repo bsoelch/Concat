@@ -73,6 +73,7 @@
     TemplateInfo list : mut templateInfos
     ConstValue list : mut templateArgBuffer
     types.ArraySize list : mut arraySizeBuffer
+    stringBuilder : mut nameBuffer
     NamespaceImportId list : mut prevImports
     i32 : mut localVarCount
     TemplateId : mut currentTemplate
@@ -88,6 +89,7 @@
     128 TemplateInfo      list.create
     32  ConstValue        list.create
     128 types.ArraySize   list.create
+    128                     sb.create
     32  NamespaceImportId list.create
     0
     TEMPLATE_ID_NONE
@@ -325,10 +327,9 @@
     context hasOpenTemplate if
       context [] .templateInfos context [] .currentTemplate list.get =:: template
       template .templateType
-        0 while #dup #over:2 context [] .typeContext @ types.compositeEltCount < do
-          #swap
-            #dup #over:2 context [] .typeContext @ types.compositeGetLabel context [] .labelContext @ labelName .data id string.eq if
-              =:: tType =:: tId
+        0 while #dup #over:2 context [] .typeContext @ types.compositeEltCount < do =:: tId
+            id #over tId context [] .typeContext @ types.compositeGetLabel context [] .labelContext @ labelNameEq if
+              =:: tType
               tType tId context [] .typeContext @ types.compositeGetElement =:: eType
               eType
               eType types.primitive.TYPE types.typeEquals if
@@ -344,15 +345,26 @@
               IdentifierData new ID_TMP_DATA =
               name context [] .labelContext .namespaceInfo .current fileId IdentifierName new ID_TMP_DATA @ false return
             end
-          #swap
-          1 +
+          tId 1 +
         end #drop
       #drop
     end
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
   end
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: public getIdentifier
-    id fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
+  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: public getIdentifierByLabel
+    context [] .nameBuffer
+      #dup .length 0 != if ..unreachable end ## TODO error message
+      nameId context [] .labelContext @ sb.appendLabelName
+    context [] .nameBuffer =
+    context [] .nameBuffer list.asArray =:: name
+    name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier
+    context [] .nameBuffer
+      list.clear
+    context [] .nameBuffer =
+    return
+  end
+  proc( string : name FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: public getIdentifierByName
+    name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
   proc( string : id FilePosition : pos CompilerError list ptr mut : errors => bool ) =: public checkIdentifier
     id .length 0 == if
@@ -370,13 +382,17 @@
     false return
   end
   proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+    context [] .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA @ true return
     end
-    label  context [] .labelContext @
-      #over #over labelFlags =:: flags
-    labelName .data =:: name
+    label labelContext labelFlags =:: flags
+    context [] .nameBuffer
+      #dup .length 0 != if ..unreachable end ## TODO error message
+      label context [] .labelContext @ sb.appendLabelName
+    context [] .nameBuffer =
+    context [] .nameBuffer list.asArray =:: name
     context id.isTopLevel flags FLAG_PUBLIC & ? & if ## public global -> ignore fileId
       FILE_ID_NONE
     else
@@ -384,19 +400,23 @@
     end =:: fileId
     flags FLAG_MUTABLE & ? if
       idType .TYPE ?? if
+        context [] .nameBuffer list.clear context [] .nameBuffer =
         "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
       idType .PROCEDURE ?? if
+        context [] .nameBuffer list.clear context [] .nameBuffer =
         "procedures cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
       idType .ARGUMENT ??  if
+        context [] .nameBuffer list.clear context [] .nameBuffer =
         "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
         ID_NONE ID_NONE_DATA @ true return
       end
     end
     name declaredAt errors checkIdentifier if
+      context [] .nameBuffer list.clear context [] .nameBuffer =
       ID_NONE ID_NONE_DATA @ true return
     end
     context [] .openScopes .length 0 > if
@@ -404,19 +424,26 @@
     else
       context [] .globalScope @
     end =:: mScope
-    name .length sb.create name sb.appendStr ## ensure name allocation stays valid for whole lifetime of scope
+    0 sb.create label labelContext sb.appendLabelName ## ensure name allocation stays valid for whole lifetime of scope
       mScope [] .scopeStrings
         #over .data list.append ## remember allocated string
       mScope [] .scopeStrings =
     sb.asStr
-    context [] .labelContext .namespaceInfo .current fileId IdentifierName new =:: mut idName
+    labelContext [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
     mScope [] .identifiers @ idName map.at #dup optional.hasData if .data =:: prevDec
-      "re declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt errors appendWarning
+      "re declaration of identifier \"" sb.wrap
+        label labelContext sb.appendLabelName
+        '\"' sb.appendC
+      declaredAt errors appendWarning
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
+      context [] .nameBuffer list.clear context [] .nameBuffer =
       ID_NONE ID_NONE_DATA @ true return
     end #drop
-    name fileId context getIdentifier ! if
-      "declaration of identifier \"" sb.wrap name sb.appendStr '\"' sb.appendC declaredAt errors appendWarning
+    name fileId context getIdentifierByName ! if
+      "declaration of identifier \"" sb.wrap
+        label labelContext sb.appendLabelName
+        '\"' sb.appendC
+      declaredAt errors appendWarning
       "shadows previous declaration " sb.wrap #over [] .declaredAt errors appendInfo
     end #drop:2
     mScope [] .identifiers @
@@ -439,6 +466,7 @@
       idType
       IdentifierData new
     map.put #drop ## previous entry is always empty
+    context [] .nameBuffer list.clear context [] .nameBuffer =
     idName mScope [] .identifiers @ idName map.at .data false return
   end
 #end
@@ -470,50 +498,50 @@
       id .idType switch
         TYPE case
           "type \"" sb.appendS
-          id .labelId labelContext id.labelName .data sb.appendStr
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         PROCEDURE case
           "procedure \"" sb.appendS
-          id .labelId labelContext id.labelName .data sb.appendStr
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         GLOBAL_VAR case
           "global variable \"" sb.appendS
-          id .labelId labelContext id.labelName .data sb.appendStr
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         LABEL case
           "label \"" sb.appendS
-          id .labelId labelContext id.labelName .data sb.appendStr
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         LOCAL_VAR case
           "local variable (" sb.appendS
           id .id sb.appendI
           ") \"" sb.appendS
-          id .labelId labelContext id.labelName #dup optional.hasData if .data sb.appendStr else #drop end
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         ARGUMENT case
           "procedure argument (" sb.appendS
           id .id sb.appendI
           ") \"" sb.appendS
-          id .labelId labelContext id.labelName #dup optional.hasData if .data sb.appendStr else #drop end
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         TMP_VAR case
           "temporary variable (" sb.appendS
           id .id sb.appendI
           ") \"" sb.appendS
-          id .labelId labelContext id.labelName #dup optional.hasData if .data sb.appendStr else #drop end
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         TEMPLATE_ARG case
           "template argument (" sb.appendS
           id .id sb.appendI
           ") \"" sb.appendS
-          id .labelId labelContext id.labelName #dup optional.hasData if .data sb.appendStr else #drop end
+          id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
       end
@@ -524,12 +552,24 @@
     context [] .prevImports
       context [] .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
+    context [] .nameBuffer
+       #dup .length 0 != if ..unreachable end ## TODO error message
+       name context [] .labelContext @ sb.appendLabelName
+    context [] .nameBuffer =
+    context [] .nameBuffer list.asArray =:: nameAsStr
     context [] .labelContext .namespaceInfo .current
-      name context [] .labelContext @ labelName .data true context [] .labelContext @ childId
+      nameAsStr true context [] .labelContext @ childId
     context [] .labelContext .namespaceInfo .current =
+    context [] .nameBuffer list.clear context [] .nameBuffer =
   end
   proc( LabelId : name IdentifierContext ptr mut : context => bool ) =: public importNamespace
-    0 NamespaceId cast name context [] .labelContext @ labelName .data context [] .labelContext @ findNamespace
+    context [] .nameBuffer
+       #dup .length 0 != if ..unreachable end ## TODO error message
+       name context [] .labelContext @ sb.appendLabelName
+    context [] .nameBuffer =
+    context [] .nameBuffer list.asArray =:: nameAsStr
+    0 NamespaceId cast nameAsStr context [] .labelContext @ findNamespace
+    context [] .nameBuffer list.clear context [] .nameBuffer =
     #dup NAMESPACE_ID_NONE == if #drop
       true return
     end
