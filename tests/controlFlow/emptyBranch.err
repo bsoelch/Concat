@@ -1,1 +1,1 @@
-wrong number of types at the end of else-statement expected 1 got 0 at emptyBranch.concat:5:3
+wrong number of types at the end of if-statement expected 1 got 0 at emptyBranch.concat:5:3
