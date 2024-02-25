@@ -132,7 +132,7 @@ proc(
     arrayType case
       sb t "array" string.wrap isStored appendCompositeTypeQBE return
       break
-    tuple struct case
+    struct case
       sb t "struct" string.wrap isStored appendCompositeTypeQBE return
       break
     union case
@@ -142,7 +142,7 @@ proc(
       sb t "enum" string.wrap isStored appendCompositeTypeQBE return
       break
     undefined empty templateType genericType autoType
-    labeledProcIn procIn procOut case
+    procIn procOut case
       "unsupported type" sb.wrap
       pos errors appendError
       sb return
@@ -203,7 +203,7 @@ proc(
     "(" sb.appendS
     0 while #dup args .length < do
       #swap
-        args #over:2 array.get =:: arg
+        args #over:2 types.compositeElts.get =:: arg
         arg typeContext types.isEmpty if ## skip empty arguments
           #swap 1 + continue
         end
@@ -218,12 +218,12 @@ proc(
     end #drop
     callConvention .POINTER ?? if
       outTypes .length =:: mut N
-      N 0 > if outTypes N 1 - array.get typeContext types.isSmallType if
+      N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
         N 1 - N =
       end end
       0 while #dup N < do
         #swap
-          outTypes #over:2 array.get =:: arg
+          outTypes #over:2 types.compositeElts.get =:: arg
           arg typeContext types.isEmpty if ## skip empty arguments
             #swap 1 + continue
           end
@@ -286,7 +286,7 @@ proc(
           value .arrayConstant constContext constArrayAsArray =:: elts
           0 while #dup elts .length < do
             #swap
-              types #over:2 array.get elts #over:3  array.get true pos context appendConstQBE
+              types #over:2 types.compositeElts.get elts #over:3  array.get true pos context appendConstQBE
               ',' sb.appendC
             #swap 1 +
           end #drop

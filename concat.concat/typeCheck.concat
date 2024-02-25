@@ -813,7 +813,7 @@ proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state => 
     args .length 1 - =:: mut argIndex
     state [] .typeStack .length 1 - =:: mut stackIndex
     while argIndex 0 >= stackIndex 0 >= & do
-      args args .length #over:2 - array.at .data [] =:: argType
+      args args .length #over:2 - types.compositeElts.get =:: argType
       state [] .typeStack #dup .length #over:2 - list.at .data [] .valType =:: stackType
       ## TODO handle autoArgs
       stackType typeContext types.isEmpty ! if
@@ -924,11 +924,11 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           state [] .typeStack
             #dup .length 1 - list.setLength
           state [] .typeStack =
-          argValue [] .dataType templateArgs #over:2 array.get false typeContext canCast ! if
+          argValue [] .dataType templateArgs #over:2 types.compositeElts.get false typeContext canCast ! if
             "cannot cast " sb.wrap
                 argValue [] .dataType labelContext typeContext sb.appendType
                 " to " sb.appendS
-                templateArgs #over:2 array.get labelContext typeContext sb.appendType
+                templateArgs #over:2 types.compositeElts.get labelContext typeContext sb.appendType
             op [] .pos state appendError2
             1 - continue
           end
@@ -941,7 +941,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     state [] .opStack .length =:: mut opOffset
     inType typeContext compositeElts =:: inTypes
     argCount i32 cast 1 - while #dup 0 >= do
-      inTypes #over array.get =:: argType
+      inTypes #over types.compositeElts.get =:: argType
       inType #over typeContext compositeGetLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
         argValues [] templateCount #over:2 + argBufferOffset + list.get =:: constVal
         constVal .none ?? ! if
@@ -970,11 +970,11 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           return
         end
         state [] .opStack opOffset list.at .data =:: argValue
-        argValue [] .dataType inTypes #over:2 array.get false typeContext types.canCast ! if
+        argValue [] .dataType inTypes #over:2 types.compositeElts.get false typeContext types.canCast ! if
           "cannot cast " sb.wrap
               argValue [] .dataType labelContext typeContext sb.appendType
               " to " sb.appendS
-              inTypes #over:2 array.get labelContext typeContext sb.appendType
+              inTypes #over:2 types.compositeElts.get labelContext typeContext sb.appendType
           op [] .pos state appendError2
           1 - continue
         end
@@ -1059,7 +1059,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   argCount
    0 while #dup inTypes .length < do
     #swap
-     inTypes #over:2 array.get typeContext types.isEmpty if 1 - end
+     inTypes #over:2 types.compositeElts.get typeContext types.isEmpty if 1 - end
     #swap 1 +
    end #drop
   =:: mut totalArgs ## only count non-empty arguments
@@ -1139,7 +1139,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   callType .POINTER ?? if
     1 op [] .pos state addCompiledStackOps
   end
-  inType typeContext types.compositeElts "procedure call" string.wrap op [] .pos state requireTypes
+  inType typeContext types.compositeEltArray "procedure call" string.wrap op [] .pos state requireTypes
   ## XXX? check for unresolved generic arguments
   argCount op [] .pos state CompileType .NON_EMPTY processStackOps
   callConvention switch
@@ -1750,7 +1750,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state => ) =: typeCheckReturn
     op [] .pos state appendError2
     ## XXX report position of lowest stack value
   end
-  procOut typeContext types.compositeElts "return statement" string.wrap op [] .pos state requireTypes
+  procOut typeContext types.compositeEltArray "return statement" string.wrap op [] .pos state requireTypes
   state [] .compiledOps
     op list.appendP
   state [] .compiledOps =
@@ -2687,7 +2687,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       end
       op [] .dataType typeContext types.isTuple if
         op [] .dataType typeContext types.compositeEltCount =:: count
-        op [] .dataType typeContext types.compositeElts "tuple creation" string.wrap op [] .pos state requireTypes
+        op [] .dataType typeContext types.compositeEltArray "tuple creation" string.wrap op [] .pos state requireTypes
         op count state insertStackOp
       end
       return

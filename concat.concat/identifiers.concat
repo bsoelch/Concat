@@ -635,6 +635,7 @@
   end
 #end
 
+## TODO find way to move generic resolving to types.concat
 #namespace types
   proc( ConstantArray : data i64 : index IdentifierContext ptr mut : context => ConstValue ) =: argBufferGet
     context [] .templateArgBuffer data .offset index + list.get return
@@ -642,27 +643,52 @@
   proc( ConstantArray : data IdentifierContext ptr mut : context => ConstValue arrayView ) =: argBufferAsArray
     context [] .templateArgBuffer .data data .offset + data .length array.create return
   end
-  proc( CompositeId : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => CompositeId ) =: replaceGenericsComposite
-    context [] .typeContext .compositeTypes src list.get =:: composite
-    composite .flags COMP_FLAG_VOID_ONLY & ? composite .flags COMP_GENERIC_MASK & 0 == | if
-      src return ## no generic elements
+  ## TODO improve code for replacing generics
+  proc( TupleId : id CompositeFlags : tupleType ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => TupleId ) =: replaceGenericsTuple
+    context [] .typeContext .tupleTypes id list.at .data [] .compositeInfo @ =:: composite
+    composite [] .flags COMP_FLAG_EMPTY & ? composite [] .flags COMP_GENERIC_MASK & 0 == | if
+      id return ## no generic elements
     end
-    composite .eltCount Type list.create
-      0 while #dup composite .eltCount < do
+    composite [] .eltCount Type list.create
+      0 while #dup composite [] .eltCount < do
         #swap ## composite index list
-          context [] .typeContext .compositeData composite .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
+          context [] .typeContext .compositeData composite [] .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
         #swap 1 +
       end #drop
-      composite .flags COMP_CLASS_MASK &
-      #over list.asArray
-      composite .labelOffset
+      #dup list.asArray
+      composite [] .labelOffset
         #dup types.UNLABELED == if #drop
           LabelId arrayView optional.empty
         else
-          context [] .typeContext .elementLabels .data #swap + composite .eltCount array.create optional.wrap
+          context [] .typeContext .elementLabels .data #swap + composite [] .eltCount array.create optional.wrap
+        end
+      tupleType
+      context [] .typeContext @
+      findTupleInfo
+    #swap list.free #drop
+    return
+  end
+  proc( UnionId : id bool : isTagged ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => UnionId ) =: replaceGenericsUnion
+    context [] .typeContext .unionTypes id list.at .data [] .compositeInfo @ =:: composite
+    composite [] .flags COMP_FLAG_EMPTY & ? composite [] .flags COMP_GENERIC_MASK & 0 == | if
+      id return ## no generic elements
+    end
+    composite [] .eltCount Type list.create
+      0 while #dup composite [] .eltCount < do
+        #swap ## composite index list
+          context [] .typeContext .compositeData composite [] .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
+        #swap 1 +
+      end #drop
+      #dup list.asArray
+      composite [] .labelOffset
+        #dup types.UNLABELED == if #drop
+          LabelId arrayView optional.empty
+        else
+          context [] .typeContext .elementLabels .data #swap + composite [] .eltCount array.create optional.wrap
         end
       context [] .typeContext @
-      newCompositeType
+      isTagged
+      findEnumOrUnion
     #swap list.free #drop
     return
   end
@@ -749,20 +775,16 @@
           arrayType .mutable
           context [] .typeContext @
         newArrayType #drop return
-      tuple case
-        src .tuple templateArgs genericArgs implPos context replaceGenericsComposite Type .tuple new return
       struct case
-        src .struct templateArgs genericArgs implPos context replaceGenericsComposite Type .struct new return
-      union case
-        src .union templateArgs genericArgs implPos context replaceGenericsComposite Type .union new return
-      labeledProcIn case
-        src .labeledProcIn templateArgs genericArgs implPos context replaceGenericsComposite Type .labeledProcIn new return
-      procIn case
-        src .procIn templateArgs genericArgs implPos context replaceGenericsComposite Type .procIn new return
-      procOut case
-        src .procOut templateArgs genericArgs implPos context replaceGenericsComposite Type .procOut new return
+        src .struct TUPLE_FLAG_IS_STRUCT templateArgs genericArgs implPos context replaceGenericsTuple Type .struct new return
       enum case
-        src .enum templateArgs genericArgs implPos context replaceGenericsComposite Type .enum new return
+        src .enum true templateArgs genericArgs implPos context replaceGenericsUnion Type .enum new return
+      union case
+        src .union false templateArgs genericArgs implPos context replaceGenericsUnion Type .union new return
+      procIn case
+        src .procIn TUPLE_FLAG_IS_PROC_IN templateArgs genericArgs implPos context replaceGenericsTuple Type .procIn new return
+      procOut case
+        src .procOut TUPLE_FLAG_IS_PROC_OUT templateArgs genericArgs implPos context replaceGenericsTuple Type .procOut new return
       procedure case
         context [] .typeContext .procTypes src .procedure list.get =:: procData
           procData .in templateArgs genericArgs implPos context replaceGenericsType
@@ -1008,7 +1030,7 @@
         break
      generatedType case
         break ## TODO
-      tuple struct union labeledProcIn procIn procOut enum genericType templateType case
+      struct union procIn procOut enum genericType templateType case
         io.stdErr "unreachable\n" io.fputs #drop
         ..unreachable
         break

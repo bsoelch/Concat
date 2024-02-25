@@ -1418,47 +1418,45 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         idData [] .valueType typeContext types.getProcIn if
           "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
         end =:: inType
-        inType .labeledProcIn ?? if
-          inType typeContext types.compositeEltCount =:: count
-          0 while #dup count < do =:: index
-            inType index typeContext types.compositeGetLabel =:: argLabel
-            inType index typeContext types.compositeGetElement =:: argType
-            _EXPERIMENTAL_ if
-              argLabel i32 cast
-            else
-              index
-            end =:: argId
-              argLabel labelContext id.isLabelEmpty ! if
-               argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
-                ## declareIdentifier
-                  argLabel
-                  argType
-                  IdentifierType .ARGUMENT
-                  index
-                  argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
-                    argType types.primitive.TYPE types.typeEquals if
-                      argId types.newGenericType ConstValue .typeId new
-                    else
-                      argId ConstValue .genericArg new
-                    end
+        inType typeContext types.compositeEltCount =:: count
+        0 while #dup count < do =:: index
+          inType index typeContext types.compositeGetLabel =:: argLabel
+          inType index typeContext types.compositeGetElement =:: argType
+          _EXPERIMENTAL_ if
+            argLabel i32 cast
+          else
+            index
+          end =:: argId
+            argLabel labelContext id.isLabelEmpty ! if
+             argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
+              ## declareIdentifier
+                argLabel
+                argType
+                IdentifierType .ARGUMENT
+                index
+                argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
+                  argType types.primitive.TYPE types.typeEquals if
+                    argId types.newGenericType ConstValue .typeId new
                   else
-                    ConstValue .none
+                    argId ConstValue .genericArg new
                   end
-                  fileState [] .wordStart
-                  state [] .currentFile
-                  idContext
-                  progContext [] .errors @
-                id.declareIdentifier if
-                  idName .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
-                  #drop:2 return
-                end #drop:2
-              end
-              argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-                argLabel argType argId state newStaticArg
-              end
-            index 1 +
-          end #drop
-        end
+                else
+                  ConstValue .none
+                end
+                fileState [] .wordStart
+                state [] .currentFile
+                idContext
+                progContext [] .errors @
+              id.declareIdentifier if
+                idName .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
+                #drop:2 return
+              end #drop:2
+            end
+            argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+              argLabel argType argId state newStaticArg
+            end
+          index 1 +
+        end #drop
       end
       isInit ! _EXPERIMENTAL_ if localDeclaration ! else idContext id.isGlobal end & if
         return ## no operation for global pre-declaration

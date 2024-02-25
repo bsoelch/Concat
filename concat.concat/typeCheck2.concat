@@ -1065,7 +1065,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .dataType typeContext types.isTuple if
         op [] .dataType typeContext types.compositeEltCount =:: count
         ## requireTypes
-          op [] .dataType typeContext types.compositeElts
+          op [] .dataType typeContext types.compositeEltArray
           "tuple element" string.wrap
           op [] .pos
         state requireTypes if
@@ -1374,7 +1374,7 @@ proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
         true hasStaticArg =
         break
       end
-      inTypes #over array.get types.primitive.TYPE types.typeEquals if
+      inTypes #over types.compositeElts.get types.primitive.TYPE types.typeEquals if
         true hasStaticArg =
         break
       end

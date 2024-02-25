@@ -156,14 +156,11 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
       end
       target "*" io.fputs #drop
       break
-    labeledProcIn procIn case
+    procIn case
       ## XXX? print proc-in
       break
     arrayType case
       "array" string.wrap t .arrayType target printCompositeName
-      break
-    tuple case
-      "tuple" string.wrap t .tuple target printCompositeName
       break
     struct case
       "tuple" string.wrap t .struct target printCompositeName
@@ -225,14 +222,14 @@ proc( Type : t bool : argNames io.FILE : target ProgramContext ptr mut : prog =>
   false =:: mut hasArgs
   target "(" io.fputs #drop
   0 while #dup args .length < do
-    args #over array.get typeContext types.isEmpty if ## skip empty arguments
+    args #over types.compositeElts.get typeContext types.isEmpty if ## skip empty arguments
       1 + continue
     end
     hasArgs if
       target "," io.fputs #drop
     end
     true hasArgs =
-    args #over array.get target prog printTypeName
+    args #over types.compositeElts.get target prog printTypeName
     argNames if
       target " " io.fputs #drop
       #dup inType #over typeContext types.compositeGetLabel target prog printArgName
@@ -241,18 +238,18 @@ proc( Type : t bool : argNames io.FILE : target ProgramContext ptr mut : prog =>
   end #drop
   callConvention .POINTER ?? if
     outTypes .length =:: mut N
-    N 0 > if outTypes N 1 - array.get typeContext types.isSmallType if
+    N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
       N 1 - N =
     end end
     0 while #dup N < do
-      outTypes #over array.get typeContext types.isEmpty if ## skip empty arguments
+      outTypes #over types.compositeElts.get typeContext types.isEmpty if ## skip empty arguments
         1 + continue
       end
       hasArgs if
         target "," io.fputs #drop
       end
       true hasArgs =
-      outTypes #over array.get true typeContext types.getAddressType target prog printTypeName
+      outTypes #over types.compositeElts.get true typeContext types.getAddressType target prog printTypeName
       argNames if
         target " " io.fputs #drop
         #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
@@ -299,7 +296,7 @@ proc( Type : composite io.FILE : target ProgramContext ptr mut : prog => ) =: pr
   prog [] .idContext .typeContext @ =:: typeContext
   composite typeContext types.compositeElts =:: elts
   0 while #dup elts .length < do
-    elts #over array.get #dup typeContext types.isEmpty if ## skip empty types
+    elts #over types.compositeElts.get #dup typeContext types.isEmpty if ## skip empty types
       #drop 1 + continue
     end target prog printTypeName
     target " " io.fputs #drop
@@ -317,7 +314,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType
-        procedure labeledProcIn procIn reference mutableReference arrayIndex case
+        procedure procIn reference mutableReference arrayIndex case
         ## no global type necessary
         break
       pointer case
@@ -339,9 +336,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
         break
       arrayType case
         "array" string.wrap t .arrayType "struct" string.wrap target printCompositeDeclaration
-        break
-      tuple case
-        "tuple" string.wrap t .tuple "struct" string.wrap target printCompositeDeclaration
         break
       struct case
         "tuple" string.wrap t .struct "struct" string.wrap target printCompositeDeclaration
@@ -373,7 +367,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType procedure
-          labeledProcIn procIn pointer namedType reference mutableReference arrayIndex case
+          procIn pointer namedType reference mutableReference arrayIndex case
         ## no initialization necessary
         break
       arrayType case
@@ -403,13 +397,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
           target #over io.fputSb #drop
         sb.free #drop
         break
-      tuple case
-        target "struct " io.fputs #drop
-        "tuple" string.wrap t .tuple target printCompositeName
-        target "{\n" io.fputs #drop
-        t target prog printCompositeElements
-        target "};\n" io.fputs #drop
-        break
       struct case
         target "struct " io.fputs #drop
         "tuple" string.wrap t .struct target printCompositeName
@@ -428,7 +415,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
         target "struct " io.fputs #drop
         "enum" string.wrap t .enum target printCompositeName
         target "{\n" io.fputs #drop
-        t typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & 0 == if
+        t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & 0 == if
           target "union{\n" io.fputs #drop
           t target prog printCompositeElements
           target "}data;\n" io.fputs #drop
@@ -555,7 +542,7 @@ proc( Type : composite Operation arrayView : operations i32 ptr mut : index bool
     #dup 0 > if
       target "," io.fputs #drop
     end
-    elts #over array.get typeContext types.isEmpty if ## skip empty types
+    elts #over types.compositeElts.get typeContext types.isEmpty if ## skip empty types
       1 + continue
     end
     target "." io.fputs #drop
@@ -1223,17 +1210,17 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           N 0 == if break end
           outType typeContext types.compositeElts =:: outTypes
           0 while #dup N < do
-            outTypes #over array.get typeContext types.isEmpty if
+            outTypes #over types.compositeElts.get typeContext types.isEmpty if
               1 + continue
             end
-            outTypes #over array.get typeContext types.isArray if
+            outTypes #over types.compositeElts.get typeContext types.isArray if
               target "memcpy(" io.fputs #drop
               #dup outType #over typeContext types.compositeGetLabel target prog printOutArgName
               target ",(" io.fputs #drop
               operations index isGlobal target prog compileOp
               target ").data," io.fputs #drop
               target "sizeof(((" io.fputs #drop
-              outTypes #over array.get target prog printTypeName
+              outTypes #over types.compositeElts.get target prog printTypeName
               target "*)0)->data));\n" io.fputs #drop
             else
               target "*(" io.fputs #drop

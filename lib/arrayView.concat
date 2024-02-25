@@ -62,6 +62,36 @@ struct( T _ ptr : data i64 : length ) =:: public arrayView
     elts elt indexOf -1 != return
   end
 
+  #template type : T #end
+  proc(
+    T arrayView : a
+    T arrayView : b
+    proc( T ptr T ptr => bool ) ptr : eq
+  => i64 ) =: public indexOfArray
+    a .length b .length < if
+      -1 return
+    end
+    ## TODO? use faster algorithm
+    0 while #dup a .length b .length - <= do =:: i
+      true =:: mut match
+      0 while #dup b .length < do =:: j
+        ## eq
+          a i j + array.at .data
+          b j array.at .data
+        eq () ! if
+          false match =
+          j break
+        end
+        j 1 +
+      end #drop
+      match if
+        i return
+      end
+      i 1 +
+    end #drop
+    -1 return
+  end
+
   ## first n characters
   #template type : T #end
   proc( T arrayView : elts i64 : n => T arrayView ) =: public head

@@ -35,20 +35,20 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
         declared list.append
       types [] =
       break
-    tuple struct union labeledProcIn procIn procOut enum case
+    struct union procIn procOut enum case
       declared typeContext types.compositeElts =:: elts
       0 while #dup elts .length < do
-        elts #over array.get ptrLevel prog visited types declaredType
+        elts #over types.compositeElts.get ptrLevel prog visited types declaredType
         1 +
       end #drop
-      declared .labeledProcIn ?? declared .procIn ?? | if
+      declared .procIn ?? if
         break ## don't add proc-in to list of declared types
       end
       declared .procOut ?? elts .length 2 < & if
         break ## don't add single element proc-out to list of declared types
       end
       declared .enum  ?? ! if
-        declared typeContext types.compositeFlags types.COMP_FLAG_VOID_ONLY & ? if
+        declared typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? if
           break ## don't add tuple/union/procedure-IO types containing only empty types
         end
       end

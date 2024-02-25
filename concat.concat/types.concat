@@ -9,13 +9,15 @@
 
 #namespace types
 enum( BOOL I8 I16 I32 I64 FLOAT32 FLOAT64 TYPE ) =:: PrimitiveType
-i32 =:: public ArrayId
-i32 =:: public CompositeId
-i32 =:: public ProcId
-i32 =:: public NamedTypeId
-i32 =:: public GeneratedId
-i32 =:: public ReferenceId
-i32 =:: public SizeId
+i32 =:: ArrayId
+i32 =:: public TupleId ## public for access from identifiers.concat
+i32 =:: public UnionId
+i32 =:: EnumId
+i32 =:: ProcId
+i32 =:: NamedTypeId
+i32 =:: GeneratedId
+i32 =:: ReferenceId
+i32 =:: SizeId
 #end
 
 enum(
@@ -24,13 +26,11 @@ enum(
   types.PrimitiveType : primitiveType
         types.ArrayId : pointer
         types.ArrayId : arrayType
-    types.CompositeId : tuple
-    types.CompositeId : struct
-    types.CompositeId : union
-    types.CompositeId : labeledProcIn
-    types.CompositeId : procIn
-    types.CompositeId : procOut
-    types.CompositeId : enum
+        types.TupleId : struct
+        types.UnionId : union
+        types.TupleId : procIn
+        types.TupleId : procOut
+        types.UnionId : enum
          types.ProcId : procedure
     types.NamedTypeId : namedType
     types.ReferenceId : reference
@@ -56,20 +56,16 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .pointer b .pointer == return
     arrayType case
       a .arrayType b .arrayType == return
-    tuple case
-      a .tuple b .tuple == return
     struct case
       a .struct b .struct == return
-    union case
-      a .union b .union == return
-    labeledProcIn case
-      a .labeledProcIn b .labeledProcIn == return
     procIn case
       a .procIn b .procIn == return
     procOut case
       a .procOut b .procOut == return
     enum case
       a .enum b .enum == return
+    union case
+      a .union b .union == return
     procedure case
       a .procedure b .procedure == return
     namedType case
@@ -115,38 +111,34 @@ proc( Type : a => i32 ) =: public typeHash
       bigPrime 3 * a .pointer + return
     arrayType case
       bigPrime 5 * a .arrayType + return
-    tuple case
-      bigPrime 7 * a .tuple + return
     struct case
-      bigPrime 11 * a .struct + return
-    union case
-      bigPrime 13 * a .union + return
-    labeledProcIn case
-      bigPrime 17 * a .labeledProcIn + return
+      bigPrime 7 * a .struct + return
     procIn case
-      bigPrime 19 * a .procIn + return
+      bigPrime 11 * a .procIn + return
     procOut case
-      bigPrime 23 * a .procOut + return
+      bigPrime 13 * a .procOut + return
     enum case
-      bigPrime 29 * a .enum + return
+      bigPrime 17 * a .enum + return
+    union case
+      bigPrime 19 * a .union + return
     procedure case
-      bigPrime 31 * a .procedure + return
+      bigPrime 23 * a .procedure + return
     namedType case
-      bigPrime 37 * a .namedType + return
+      bigPrime 29 * a .namedType + return
     autoType case
-      bigPrime 41 * a .autoType + return
+      bigPrime 31 * a .autoType + return
     genericType case
-      bigPrime 43 * a .genericType + return
+      bigPrime 37 * a .genericType + return
     templateType case
-      bigPrime 47 * a .templateType + return
+      bigPrime 41 * a .templateType + return
     generatedType case
-      bigPrime 53 * a .generatedType + return
+      bigPrime 43 * a .generatedType + return
     reference case
-      bigPrime 59 * a .reference + return
+      bigPrime 47 * a .reference + return
     mutableReference case
-      bigPrime 61 * a .mutableReference + return
+      bigPrime 53 * a .mutableReference + return
     arrayIndex case
-      bigPrime 67 * a .arrayIndex + return
+      bigPrime 59 * a .arrayIndex + return
   end
 end
 
@@ -177,9 +169,10 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? s
      empty case true return
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
-     undefined primitiveType enum procedure reference mutableReference
-       namedType autoType genericType templateType generatedType arrayIndex case false return
-     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & ? return
+     undefined primitiveType procedure reference mutableReference
+       namedType autoType genericType templateType generatedType arrayIndex enum case false return
+     procIn procOut struct union case
+       t context compositeFlags COMP_FLAG_EMPTY & ? return
   end
 end
 ## type is empty if all generics used in type are set to empty
@@ -189,9 +182,9 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
      empty genericType templateType case true return
      pointer arrayType reference mutableReference case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
-     undefined primitiveType enum procedure
+     undefined primitiveType procedure enum
        namedType autoType generatedType arrayIndex case false return
-     labeledProcIn procIn procOut tuple struct union case t context compositeFlags COMP_FLAG_VOID_ONLY & ? return
+     procIn procOut struct union case t context compositeFlags COMP_FLAG_EMPTY & ? return
   end
 end
 proc( Type TypeContext ptr => bool ) =: public isBoolean
@@ -246,8 +239,9 @@ end
 proc( Type TypeContext ptr => bool ) =: public isSmallType
   unwrapNamed
   switch
-    primitiveType enum pointer empty reference mutableReference arrayIndex case true return ## XXX enum is only small if it has no values
-    arrayType tuple struct union labeledProcIn procIn procOut procedure ## TODO? count tuples with size < 128 as small types
+    primitiveType pointer empty reference mutableReference arrayIndex enum case true return
+    ## TODO only union with no values is small
+    arrayType struct union procIn procOut procedure ## TODO? count structs/unions with size < 128 as small types
     undefined namedType autoType genericType templateType generatedType case false return
   end
 end
@@ -357,7 +351,7 @@ proc( Type : t TypeContext ptr : context => i64 ) =: public alignOf
       PTR_SIZE return
     arrayType case
       t context getBaseType context alignOf return
-    tuple struct union labeledProcIn procIn procOut enum case
+    struct enum union procIn procOut case
       t context compositeData .data =:: compData
       compData [] .alignment return
     namedType case
@@ -396,7 +390,7 @@ proc( Type : t bool : aligned TypeContext ptr : context => i64 ) =: computeSize
         1 +
       end #drop
       size return
-    tuple struct union labeledProcIn procIn procOut enum case
+    struct enum union procIn procOut case
       t context compositeData .data =:: compData
       compData [] .size
         aligned if
@@ -646,34 +640,45 @@ proc(
   false return
 end
 
+## XXX flags are public for access from identifiers.concat
 i32 =:: LabelOffset
 -1 LabelOffset =: public UNLABELED
-## composite types
-i32 =:: CompositeFlag
-1   CompositeFlag =: COMP_FLAG_TUPLE
-2   CompositeFlag =: COMP_FLAG_ENUM
-4   CompositeFlag =: COMP_FLAG_UNION
-8   CompositeFlag =: COMP_FLAG_PROC_IN
-16  CompositeFlag =: COMP_FLAG_PROC_OUT
-63  CompositeFlag =: public COMP_CLASS_MASK
-64  CompositeFlag =: public COMP_FLAG_VOID_ONLY
-128 CompositeFlag =: public COMP_FLAG_STATIC_ARGS
-256 CompositeFlag =: public COMP_FLAG_TEMPLATE
-384 CompositeFlag =: public COMP_GENERIC_MASK
 
+## composite types
+i32 =:: public CompositeFlags
+ 0 =:: public COMP_FLAG_NONE
+ 1 =:: public COMP_FLAG_EMPTY
+ 2 =:: public COMP_FLAG_ONLY_EMPTY
+ 3 =:: public COMP_MASK_ONLY_EMPTY
+ 4 =:: public COMP_FLAG_STATIC_ARGS
+ 8 =:: public COMP_FLAG_TEMPLATE
+15 =:: public COMP_MASK_COMMON_FLAGS
+12 =:: public COMP_GENERIC_MASK
+16 =:: public TUPLE_FLAG_IS_STRUCT
+32 =:: public TUPLE_FLAG_IS_PROC_IN
+64 =:: public TUPLE_FLAG_IS_PROC_OUT
 struct(
+  i64 : eltCount
   i64 : eltsOffset
   LabelOffset : labelOffset
-  i64 : eltCount
   i64 : alignment
   i64 : size
-  CompositeFlag : mut flags
-) =:: CompositeType
+  CompositeFlags : mut flags
+) =:: public CompositeInfo
+struct(
+  CompositeInfo : mut compositeInfo
+  i64  : offsetsStart
+) =:: TupleInfo
+struct(
+  CompositeInfo : compositeInfo
+  i64 : enumLabelOffset
+  Type  : labelType
+) =:: UnionInfo
 
 proc( Type TypeContext ptr => bool ) =: public isComposite
   unwrapNamed
   switch
-    tuple struct union labeledProcIn procIn procOut enum case
+    struct enum union procIn procOut case
       true return
     undefined empty primitiveType pointer arrayType procedure
       namedType autoType genericType templateType generatedType
@@ -682,8 +687,7 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
   end
 end
 proc( Type TypeContext ptr => bool ) =: public isTuple
-  unwrapNamed
-  #dup .tuple ?? #swap .struct ?? | return
+  unwrapNamed .struct ?? return
 end
 proc( Type TypeContext ptr => bool ) =: public isEnum
   unwrapNamed .enum ?? return
@@ -694,38 +698,39 @@ end
 proc( Type TypeContext ptr => bool ) =: public isProcOut
   unwrapNamed .procOut ?? return
 end
-proc( Type : composite TypeContext ptr : context => CompositeType ptr optional ) =: compositeData
+proc( Type : composite TypeContext ptr : context => CompositeInfo ptr optional ) =: compositeData
   composite context unwrapNamed
     #dup switch
-      tuple case
-        .tuple
-        break
       struct case
-        .struct
-        break
-      union case
-        .union
-        break
-      labeledProcIn case
-        .labeledProcIn
+        context [] .tupleTypes #swap .struct
+          list.at .data [] .compositeInfo @
+        CompositeInfo ptr cast optional.wrap return
         break
       procIn case
-        .procIn
+        context [] .tupleTypes #swap .procIn
+          list.at .data [] .compositeInfo @
+        CompositeInfo ptr cast optional.wrap return
         break
       procOut case
-        .procOut
+        context [] .tupleTypes #swap .procOut
+          list.at .data [] .compositeInfo @
+        CompositeInfo ptr cast optional.wrap return
+        break
+      union case
+        context [] .unionTypes #swap .union
+          list.at .data [] .compositeInfo @
+        CompositeInfo ptr cast optional.wrap return
         break
       enum case
-        .enum
+        context [] .unionTypes #swap .enum
+          list.at .data [] .compositeInfo @
+        CompositeInfo ptr cast optional.wrap return
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
        reference mutableReference arrayIndex case
-        #drop CompositeType ptr optional.empty return
+        #drop CompositeInfo ptr optional.empty return
     end
-  context [] .compositeTypes #swap list.at #dup optional.isEmpty if #drop
-    CompositeType ptr optional.empty return
-  end .data CompositeType ptr cast optional.wrap return
 end
 proc( Type : composite TypeContext ptr : context => i64 ) =: public compositeEltCount
   composite context compositeData
@@ -737,11 +742,11 @@ end
 proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
-      struct union labeledProcIn enum case
+      struct enum union procIn case
         break
       undefined empty primitiveType pointer arrayType procedure
-       namedType autoType genericType templateType generatedType tuple
-       procIn procOut reference mutableReference arrayIndex case
+       namedType autoType genericType templateType generatedType
+        procOut reference mutableReference arrayIndex case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -757,11 +762,11 @@ end
 proc( Type : composite LabelId : name LabelContext ptr : labelContext TypeContext ptr : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
-      struct union labeledProcIn enum case
+      struct enum union procIn case
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
-       tuple procIn procOut reference mutableReference arrayIndex case
+       procOut reference mutableReference arrayIndex case
         #drop -1 return
     end
   context compositeData
@@ -769,6 +774,9 @@ proc( Type : composite LabelId : name LabelContext ptr : labelContext TypeContex
       -1 return
     end
   .data =:: labels
+  labels [] .labelOffset UNLABELED == if
+    -1 return
+  end
   0 while #dup labels [] .eltCount < do
     name context [] .elementLabels labels [] .labelOffset #over:3 + list.get labelContext id.labelNamesEq if
       return
@@ -780,13 +788,13 @@ end
 proc( Type : union Type : elt LabelContext ptr : labelContext TypeContext ptr : context => i32 bool ) =: public findUnionTypeIndex
   union context compositeElts =:: elts
   0 while #dup elts .length < do
-    elt elts #over:2 array.get typeEquals if
+    elt elts #over:2 compositeElts.get typeEquals if
       false return
     end
     1 +
   end #drop
   0 while #dup elts .length < do
-    elt elts #over:2 array.get context canAutoCast if
+    elt elts #over:2 compositeElts.get context canAutoCast if
       false return
     end
     1 +
@@ -794,21 +802,60 @@ proc( Type : union Type : elt LabelContext ptr : labelContext TypeContext ptr : 
   -1 true return
 end
 proc( Type : composite i64 : index TypeContext ptr : context => Type ) =: public compositeGetElement
-  composite context compositeData
-    #dup optional.isEmpty if #drop
-      Type .undefined return
-    end
-  .data [] .eltsOffset index + context [] .compositeData #swap list.get return
+  composite context compositeData =:: compData?
+  compData? optional.isEmpty if
+    Type .undefined return
+  end
+  compData? .data =:: compData
+  compData [] .flags COMP_FLAG_ONLY_EMPTY & ? if
+    Type .empty return
+  end
+  compData [] .eltsOffset index + context [] .compositeData #swap list.get return
 end
-proc( Type : composite TypeContext ptr : context => Type arrayView ) =: public compositeElts
-  composite context compositeData
-    #dup optional.isEmpty if #drop
-      Type array.empty return
-    end
-  .data =:: data
-  context [] .compositeData .data data [] .eltsOffset + data [] .eltCount array.create return
+struct( TypeContext ptr : context i64 : offset i64 : length bool : onlyEmpty ) =:: public CompositeElts
+proc( Type : composite TypeContext ptr : context => CompositeElts ) =: public compositeElts
+  composite context compositeData =:: compData?
+  compData? optional.isEmpty if
+    context 0 0 false CompositeElts new return
+  end
+  compData? .data =:: compData
+  ## CompositeElts
+    context
+    compData [] .eltsOffset
+    compData [] .eltCount
+    compData [] .flags COMP_FLAG_ONLY_EMPTY & ?
+  CompositeElts new return
 end
-proc( Type : composite TypeContext ptr : context => CompositeFlag ) =: public compositeFlags
+#namespace compositeElts
+proc( CompositeElts : elts i64 : index => Type ) =: public get
+  index 0 < index elts .length >= | if ..unreachable end ## TODO error handling
+  elts .onlyEmpty if
+    Type .empty return
+  end
+  elts .context [] .compositeData index elts .offset + list.get return
+end
+#end
+0 Type ptr mut cast! 0 0 Type list new =:: mut emptyTypeBuffer ## XXX find better way to initialize empty list
+proc( Type : composite TypeContext ptr : context => Type arrayView ) =: public compositeEltArray
+  composite context compositeData =:: compData?
+  compData? optional.isEmpty if
+    Type array.empty return
+  end
+  compData? .data =:: compData
+  compData [] .flags COMP_FLAG_ONLY_EMPTY & ? if
+    emptyTypeBuffer
+      compData [] .eltCount list.ensureCap
+    emptyTypeBuffer =
+    while emptyTypeBuffer .length compData [] .eltCount < do
+      emptyTypeBuffer
+        Type .empty list.append
+      emptyTypeBuffer =
+    end
+    emptyTypeBuffer 0 compData [] .eltCount list.slice return
+  end
+  context [] .compositeData compData [] .eltsOffset compData [] .eltCount list.slice return
+end
+proc( Type : composite TypeContext ptr : context => CompositeFlags ) =: public compositeFlags
   composite context compositeData
     #dup optional.isEmpty if #drop
       0 return
@@ -816,64 +863,89 @@ proc( Type : composite TypeContext ptr : context => CompositeFlag ) =: public co
   .data [] .flags return
 end
 
-proc( Type arrayView : a Type arrayView : b => i32 ) =: typesOffset
-  a .length b .length < if
-    -1 return
-  end
-  0 while #dup a .length b .length - <= do
-    true =:: mut match
-    0 while #dup b .length < do
-      a #over:2 #over:2 + array.get b #over:3 #over:3 + array.get typeEquals ! if
-        false match =
-        break
-      end
-      1 +
-    end #drop
-    match if
-      return
-    end
-    1 +
-  end #drop
-  -1 return
+proc( Type ptr : a Type ptr : b => bool ) =: typePtrEq
+  a [] b [] typeEquals
 end
-proc( LabelOffset : offset LabelId arrayView optional : labels TypeContext ptr : context => bool ) =: labelsEqual
-  offset UNLABELED == if ## unlabeled -> on labels
-    labels optional.isEmpty return
-  end
-  labels optional.isEmpty if
-    false return
-  end
-  labels .data =:: newLabels
-  context [] .elementLabels list.asArray offset array.tail =:: prevLabels
-  prevLabels .length newLabels .length < if
-    false return
-  end
-  0 while #dup newLabels .length < do
-    prevLabels #over array.get newLabels #over:2 array.get != if #drop ## XXX compare strings instead of labelIds
-      false return
-    end
-    1 +
-  end #drop
-  true return
-end
-proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => CompositeId ) =: public newCompositeType
-  classFlag CompositeFlag =: mut flags
-  1i64 =:: mut alignment
-  0i64 =:: mut size
-  true =:: mut isVoid
-  classFlag COMP_FLAG_TUPLE == if
-    ## XXX sort tuple elements by alignment
-  end
+proc(
+  Type arrayView : elts
+  TypeContext ptr mut : context
+=> i64 CompositeFlags ) =: computeEltsOffset
+  true =:: mut emptyData ## composite is empty
+  true =:: mut onlyEmpty ## composite only contains Type .empty
+  COMP_FLAG_NONE =:: mut flags
+  false =:: mut hasTemplate
   0 while #dup elts .length < do
     elts #over array.get =:: elt
+    elt .empty ?? ! if
+      false onlyEmpty =
+    end
     elt context isEmpty ! if
-      false isVoid =
+      false emptyData =
     end
     elt context containsGeneric if
       flags COMP_FLAG_STATIC_ARGS | flags =
     end #+2nd return value+# if
       flags COMP_FLAG_TEMPLATE | flags =
     end
+    1 +
+  end #drop
+  onlyEmpty if
+    0 COMP_MASK_ONLY_EMPTY flags | return
+  else emptyData _if
+     flags COMP_FLAG_EMPTY | flags =
+  end
+  context [] .compositeData list.asArray
+    elts
+    typePtrEq @
+  array.indexOfArray =:: mut offset
+  offset -1 != if
+    offset flags return
+  end
+  context [] .compositeData
+    #dup .length offset =
+    elts list.appendArray
+  context [] .compositeData =
+  offset flags return
+end
+proc( LabelId ptr : a LabelId ptr : b => bool ) =: labelPtrEq
+  ## XXX? switch from labelId equality to name equality
+  a [] b [] ==
+end
+proc(
+  LabelId arrayView optional : labels?
+  TypeContext ptr mut : context
+=> LabelOffset ) =: computeLabelOffset
+  labels? optional.isEmpty if
+    UNLABELED return
+  end
+  labels? .data =:: labels
+  context [] .elementLabels list.asArray
+    labels
+    labelPtrEq @
+  array.indexOfArray =:: mut offset
+  offset -1 != if
+    offset LabelOffset cast return
+  end
+  context [] .elementLabels
+    #dup .length offset =
+    labels list.appendArray
+  context [] .elementLabels =
+  offset LabelOffset cast return
+end
+
+proc(
+  Type arrayView : elts
+  LabelId arrayView optional : labels
+  CompositeFlags : flags0
+  TypeContext ptr mut : context
+=> TupleId ) =: public findTupleInfo ## XXX public only for access from identifier.concat
+  ## TODO sort types by alignment
+  elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
+  labels context computeLabelOffset =:: labelOffset
+  1i64 =:: mut alignment
+  0i64 =:: mut size
+  0 while #dup elts .length < do
+    elts #over array.get =:: elt
     ## size and alignment
     elt context alignOf =:: eltAlign
     eltAlign alignment > if
@@ -886,45 +958,41 @@ proc( CompositeFlag : classFlag Type arrayView : elts LabelId arrayView optional
     size =
     1 +
   end #drop
-  isVoid if
-    flags COMP_FLAG_VOID_ONLY | flags =
-  end
-  context [] .compositeTypes @ =:: composites
-  0 while #dup composites [] .length < do
-    composites [] #over list.get
-      #dup .eltCount elts .length != if #drop
-        1 + continue
-      end
-      #dup .labelOffset labels context labelsEqual ! if #drop
-        1 + continue
-      end
-      context [] .compositeData #over .eltsOffset #over:2 .eltCount list.slice elts typesOffset 0 != if #drop
-        1 + continue
-      end
-    .flags flags | composites [] #over:2 list.at .data [] .flags = ## update flags
-    ## found match
-    CompositeId cast return
+  -1 =:: offsetsStart ## TODO compute offsets start
+  context [] .tupleTypes =:: tuples
+  0 while #dup tuples .length < do
+    tuples #over list.at .data =:: t
+    t [] .compositeInfo .eltCount elts .length == if
+    t [] .compositeInfo .eltsOffset eltsOffset == _if
+    t [] .compositeInfo .labelOffset labelOffset == _if
+    t [] .offsetsStart offsetsStart == _if
+    t [] .compositeInfo .size size == _if
+    t [] .compositeInfo .alignment alignment == _if
+    t [] .compositeInfo .flags COMP_MASK_COMMON_FLAGS &
+      flags COMP_MASK_COMMON_FLAGS &
+    == _if
+      t [] .compositeInfo .flags flags | t [] .compositeInfo .flags =
+      TupleId cast return
+    end
+    1 +
   end #drop
-  context [] .compositeData
-    #dup .length =:: eltsOffset
-    elts list.appendArray
-  context [] .compositeData =
-  LabelOffset : labelOffset
-  labels optional.isEmpty if
-    UNLABELED labelOffset =
-  else
-    context [] .elementLabels
-      #dup .length LabelOffset cast labelOffset =
-      labels .data list.appendArray
-    context [] .elementLabels =
-  end
-  composites []
-    eltsOffset labelOffset elts .length alignment size flags CompositeType new list.append
-  composites [] =
-  composites [] .length 1 - CompositeId cast
-  return
+  tuples .length TupleId cast =:: newId
+  context [] .tupleTypes
+    ## TupleInfo
+      ## CompositeInfo
+        elts .length
+        eltsOffset
+        labelOffset
+        alignment
+        size
+        flags
+      CompositeInfo new
+      offsetsStart
+    TupleInfo new list.append
+  context [] .tupleTypes =
+  newId return
 end
-## creates struct or tuple
+## creates struct
 proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newTuple
   elts .length 0 == if
     labels optional.isEmpty _EXPERIMENTAL_ ! & if ## new version detects empty types in parser
@@ -933,45 +1001,128 @@ proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr 
       Type .undefined true return
     end
   end
-  COMP_FLAG_TUPLE elts labels context newCompositeType
-  labels optional.isEmpty if Type .tuple new else Type .struct new end
-  false return
+  ## findTupleInfo
+    elts
+    labels
+    TUPLE_FLAG_IS_STRUCT
+    context
+  findTupleInfo Type .struct new false return
 end
 proc( Type arrayView : elts LabelId arrayView optional : labels bool : isOut TypeContext ptr mut : context => Type ) =: public newProcArgs
-  isOut if COMP_FLAG_PROC_OUT else COMP_FLAG_PROC_IN end elts labels context newCompositeType
-  isOut if Type .procOut new else labels optional.isEmpty _if Type .procIn new else Type .labeledProcIn new end ## XXX? labeled proc out
+  ## findTupleInfo
+    elts
+    labels
+    isOut if TUPLE_FLAG_IS_PROC_OUT else TUPLE_FLAG_IS_PROC_IN end
+    context
+  findTupleInfo
+  isOut if Type .procOut new else Type .procIn new end
   return
+end
+proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context bool : isTagged => UnionId ) =: public findEnumOrUnion ## XXX public only for access from identifiers.concat
+  elts context computeEltsOffset =:: flags =:: eltsOffset
+  labels context computeLabelOffset =:: labelOffset
+  1i64 =:: mut alignment
+  0i64 =:: mut size
+  0 while #dup elts .length < do
+    elts #over array.get =:: elt
+    ## size and alignment
+    elt context sizeOf =:: eltSize
+    elt context alignOf =:: eltAlign
+    eltAlign alignment > if
+      eltAlign alignment =
+    end
+    eltSize size > if
+      eltSize size =
+    end
+    1 +
+  end #drop
+  isTagged ! if
+    Type .empty
+  else elts .length 0x80 < _if
+    primitive.I8
+  else elts .length 0x8000 < _if
+    primitive.I16
+  else
+    primitive.I32
+  end =:: labelType
+  0i64 =:: mut enumLabelOffset
+  isTagged if
+    labelType context alignOf =:: labelAlign
+    labelAlign alignment > if
+      labelAlign alignment =
+    end
+    size
+      labelAlign alignSize
+      #dup enumLabelOffset =
+      labelType context sizeOf +
+    size =
+  end
+  context [] .unionTypes =:: unions
+  0 while #dup unions .length < do
+    unions #over list.at .data =:: t
+    t [] .compositeInfo .eltCount elts .length == if
+    t [] .compositeInfo .eltsOffset eltsOffset == _if
+    t [] .compositeInfo .labelOffset labelOffset == _if
+    t [] .compositeInfo .size size == _if
+    t [] .compositeInfo .alignment alignment == _if
+    t [] .labelType labelType typeEquals _if
+    t [] .compositeInfo .flags flags == _if
+      break
+    end
+    1 +
+  end =:: unionId
+  unionId unions .length == if
+   context [] .unionTypes
+     ## UnionInfo
+      ## CompositeInfo
+        elts .length
+        eltsOffset
+        labelOffset
+        alignment
+        size
+        flags
+      CompositeInfo new
+      enumLabelOffset
+      labelType
+     UnionInfo new list.append
+   context [] .unionTypes =
+  end
+  unionId return
 end
 proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newEnum
   elts .length 0 ==  labels optional.isEmpty | if
     Type .undefined true return
   end
-  COMP_FLAG_TUPLE elts labels context newCompositeType Type .enum new false return
+  elts labels context true findEnumOrUnion Type .enum new false return
 end
 proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context => Type bool ) =: public newUnion
   elts .length 0 == labels optional.isEmpty | if
     Type .undefined true return
   end
-  COMP_FLAG_UNION elts labels context newCompositeType Type .union new false return
+  elts labels context false findEnumOrUnion Type .union new false return
 end
 #end
 #namespace sb
-proc( stringBuilder types.CompositeType LabelContext ptr TypeContext ptr => stringBuilder ) =: appendComposite
-  =:: context
-  =:: labelContext
-  =:: comp
-  comp .labelOffset types.UNLABELED == =:: unlabeled
-  0 while #dup comp .eltCount < do
+proc(
+  stringBuilder : sb
+  Type : t
+  LabelContext ptr : labelContext
+  TypeContext ptr : context
+=> stringBuilder ) =: appendComposite
+  sb
+  t context types.compositeData .data =:: comp
+  comp [] .labelOffset types.UNLABELED == =:: unlabeled
+  0 while #dup comp [] .eltCount < do
     #swap
-      context [] .compositeData #over:2 comp .eltsOffset + list.at .data =:: eltType
+      t #over:2 context types.compositeGetElement =:: eltType
       unlabeled if
-        eltType [] labelContext context false appendTypeRecursive
+        eltType labelContext context false appendTypeRecursive
         ' ' appendC
         #swap 1 + continue
       end
-      context [] .elementLabels comp .labelOffset #over:3 + list.get =:: label
-      eltType [] context types.isEmpty ! if
-        eltType [] labelContext context false appendTypeRecursive
+      t #over:2 context types.compositeGetLabel =:: label
+      eltType context types.isEmpty ! if
+        eltType labelContext context false appendTypeRecursive
         label id.LABEL_ID_NONE != if
           " : " appendS
         else
@@ -1037,7 +1188,7 @@ proc( Type : proc TypeContext ptr : context => Type bool ) =: public getProcRet
       elts .length 0 == if
         Type .empty false return
       end
-      elts elts .length 1 - array.get =:: lastArg
+      elts elts .length 1 - compositeElts.get =:: lastArg
       lastArg context isSmallType if lastArg else Type .empty end false return
   end
 end
@@ -1072,10 +1223,10 @@ proc( Type : proc TypeContext ptr mut : context => Type bool ) =: public asUnlab
     end
   =:: mProc
   context [] .procTypes mProc .procedure list.get =:: procData
-  procData .in .procIn ?? if
+  context [] .tupleTypes procData .in .procIn list.at .data [] .compositeInfo =:: mut inType
+  inType .labelOffset UNLABELED == if
     proc false return
   end
-  context [] .compositeTypes procData .in .labeledProcIn list.get =:: mut inType
   context [] .compositeData inType .eltsOffset inType .eltCount list.slice LabelId arrayView optional.empty false context newProcArgs
   procData .out procData .callingConvention context newProcedure if #drop proc true return end
   isPtr if
@@ -1306,13 +1457,11 @@ proc( Type => i32 ) =: public getTypeId
     generatedType case .generatedType return
     pointer case .pointer return
     arrayType case .arrayType return
-    tuple case .tuple return
     struct case .struct return
     union case .union return
-    labeledProcIn case .labeledProcIn return
+    enum case .enum return
     procIn case .procIn return
     procOut case .procOut return
-    enum case .enum return
     procedure case .procedure return
     namedType case .namedType return
     reference case .reference return
@@ -1359,7 +1508,7 @@ proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has st
         1 +
       end #drop
       isTemplate isStatic return
-    tuple struct union labeledProcIn procIn procOut enum case
+    struct enum union procIn procOut case
       t context compositeData .data [] .flags #dup COMP_FLAG_TEMPLATE & ? #swap COMP_FLAG_STATIC_ARGS & ? return
     generatedType case
       false false return ## TODO check if type contains generic
@@ -1450,7 +1599,7 @@ proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAuto
   target context types.isUnion if
     target context types.compositeElts =:: elts
     0 while #dup elts .length < do
-      src elts #over:2 array.get context types.canAutoCast if #drop
+      src elts #over:2 compositeElts.get context types.canAutoCast if #drop
         true return
       end
       1 +
@@ -1504,8 +1653,10 @@ end
 struct(
   types.ArrayType     list : mut arrayTypes
   types.ArraySize     list : mut arraySizes
-  types.CompositeType list : mut compositeTypes
+  types.TupleInfo     list : mut tupleTypes
+  types.UnionInfo     list : mut unionTypes
   Type                list : mut compositeData
+  i64                 list : mut tupleOffsets
   types.ProcType      list : mut procTypes
   types.NamedType     list : mut namedTypes
   types.GeneratedType list : mut generatedTypes
@@ -1515,8 +1666,10 @@ struct(
 proc( => TypeContext ) =: public newTypeContext
   128 ArrayType     list.create ## arrayTypes
   128 ArraySize     list.create ## arraySizes
-  128 CompositeType list.create ## compositeTypes
+  128 TupleInfo     list.create ## tupleTypes
+  128 UnionInfo     list.create ## unionTypes
   128 Type          list.create ## compositeData
+  128 i64           list.create ## tupleOffsets
   128 ProcType      list.create ## procTypes
   128 NamedType     list.create ## namedTypes
   128 GeneratedType list.create ## generatedTypes
@@ -1527,8 +1680,10 @@ proc( TypeContext : context => TypeContext ) =: public clearTypeContent
   context
     #dup .arrayTypes     list.free #over .arrayTypes =
     #dup .arraySizes     list.free #over .arraySizes =
-    #dup .compositeTypes list.free #over .compositeTypes =
+    #dup .tupleTypes     list.free #over .tupleTypes =
+    #dup .unionTypes     list.free #over .unionTypes =
     #dup .compositeData  list.free #over .compositeData =
+    #dup .tupleOffsets   list.free #over .tupleOffsets =
     #dup .procTypes      list.free #over .procTypes =
     #dup .namedTypes     list.free #over .namedTypes =
     #dup .elementLabels  list.free #over .elementLabels =
@@ -1613,68 +1768,27 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
       t context types.getArraySize appendArraySize
       " array" appendS return
-    tuple case
-      .tuple
-      #swap
-        "tuple[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    struct case
-      .struct
-      #swap
+    struct enum union case =:: data
+      data .struct ?? if
         "struct[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    union case
-      .union
-      #swap
+      else data .union ?? _if
         "union[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    enum case
-      .enum
-      #swap
+      else
         "enum[" appendS
-        #over    appendI
-        "]( "    appendS
-      #swap
-        allowRecurse if
-          context [] .compositeTypes #swap list.get labelContext context appendComposite
-        else #drop
-          "... " appendS
-        end
-       ")" appendS
-       return
-    labeledProcIn case
-       .labeledProcIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
+      end
+      data types.getTypeId appendI
+      "]( "    appendS
+      allowRecurse if
+        data labelContext context appendComposite
+      else
+        "... " appendS
+      end
+     ")" appendS
+     return
     procIn case
-      .procIn context [] .compositeTypes #swap list.get labelContext context appendComposite return
+      labelContext context appendComposite return
     procOut case
-      .procOut context [] .compositeTypes #swap list.get labelContext context appendComposite return
+      labelContext context appendComposite return
     procedure case
       .procedure
       #swap

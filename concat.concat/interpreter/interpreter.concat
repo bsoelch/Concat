@@ -606,7 +606,7 @@ proc(
           end
           op [] .dataType typeContext types.getProcOut #drop =:: procOut
           procOut typeContext types.compositeElts =:: outTypes
-          outTypes .length 1 == if outTypes 0 array.get types.primitive.TYPE types.typeEquals _if
+          outTypes .length 1 == if outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals _if
             ## type-generator (procedure returning type)
             op [] .dataType typeContext types.getProcIn #drop =:: procIn
             procOut typeContext types.compositeElts =:: inTypes
