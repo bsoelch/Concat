@@ -742,11 +742,11 @@ end
 proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: public compositeGetLabel
   composite context unwrapNamed
     #dup switch
-      struct enum union procIn case
+      struct enum union procIn procOut case
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
-        procOut reference mutableReference arrayIndex case
+        reference mutableReference arrayIndex case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -762,11 +762,11 @@ end
 proc( Type : composite LabelId : name LabelContext ptr : labelContext TypeContext ptr : context => i32 ) =: public compositeFindLabel
   composite context unwrapNamed
     #dup switch
-      struct enum union procIn case
+      struct enum union procIn procOut case
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
-       procOut reference mutableReference arrayIndex case
+       reference mutableReference arrayIndex case
         #drop -1 return
     end
   context compositeData
@@ -800,6 +800,25 @@ proc( Type : union Type : elt LabelContext ptr : labelContext TypeContext ptr : 
     1 +
   end #drop
   -1 true return
+end
+proc( Type : tuple i64 : index TypeContext ptr : context => i64 ) =: public tupleElementOffset
+  tuple context unwrapNamed #dup switch
+    struct case
+      .struct break
+    procIn case
+      .procIn break
+    procOut case
+      .procOut break
+    enum union undefined empty primitiveType pointer arrayType procedure
+     namedType autoType genericType templateType generatedType
+      reference mutableReference arrayIndex case #drop
+       0 return
+  end =:: tupleId
+  context [] .tupleTypes tupleId list.at .data =:: tupleInfo
+  index 0 < index tupleInfo [] .compositeInfo .eltCount >= | if
+    -1 return ## XXX error handling
+  end
+  context [] .tupleOffsets index tupleInfo [] .offsetsStart + list.get return
 end
 proc( Type : composite i64 : index TypeContext ptr : context => Type ) =: public compositeGetElement
   composite context compositeData =:: compData?
@@ -944,6 +963,10 @@ proc(
   labels context computeLabelOffset =:: labelOffset
   1i64 =:: mut alignment
   0i64 =:: mut size
+  context [] .tupleOffsets
+    #dup .length =:: offsetsStart
+    offsetsStart elts .length + list.ensureCap
+  context [] .tupleOffsets =
   0 while #dup elts .length < do
     elts #over array.get =:: elt
     ## size and alignment
@@ -951,14 +974,14 @@ proc(
     eltAlign alignment > if
       eltAlign alignment =
     end
-    size
-     eltAlign alignSize
-     ## TODO remember offsets of elements
-     elt context sizeOf +
-    size =
+    size eltAlign alignSize =:: eltOffset
+    eltOffset elt context sizeOf + size =
+    context [] .tupleOffsets
+      eltOffset list.append
+    context [] .tupleOffsets =
     1 +
   end #drop
-  -1 =:: offsetsStart ## TODO compute offsets start
+  ## XXX? compress tupleOffsets list ( search for previous occurrence of current elements )
   context [] .tupleTypes =:: tuples
   0 while #dup tuples .length < do
     tuples #over list.at .data =:: t

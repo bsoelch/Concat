@@ -15,8 +15,17 @@ struct(
 ) =:: StackElement
 
 struct(
+  Type       : valType
+  ConstValue : value
+  FilePosition : pos
+  i64 : id
+) =:: LocalConst
+
+struct(
   ProgramContext ptr mut : program
   StackElement BranchTree : mut stackInfo
+  LocalConst list : mut localConstants
+  i64 : mut localConstCount
   i64 : mut stackCount
   i64 : mut tmpCount
 ) =:: CompilerContext
@@ -28,6 +37,13 @@ proc( CompilerContext ptr mut : context => i64 ) =: pushValue
       1 +
     context [] .stackCount =
   oldCount return
+end
+proc( CompilerContext ptr mut : context => i64 ) =: popValue
+  context [] .stackInfo @ branchTree.pop =:: tmp
+  tmp .data ?? if
+    tmp .data [] .varId return
+  end
+  -1 return
 end
 proc( CompilerContext ptr mut : context => i64 ) =: nextTmpId
   context [] .tmpCount =:: oldCount
@@ -296,9 +312,67 @@ proc(
       none wildCard genericArg templateArg typeId procedure case
       break
     end
-    "unsupported constant" sb.wrap
-      value constContext labelContext typeContext sb.appendConstant
-    pos errors appendError
+    isGlobal if
+      "unsupported constant" sb.wrap
+        value constContext labelContext typeContext sb.appendConstant
+      pos errors appendError
+      return
+    end
+    context [] .localConstants
+      #dup .length =:: constId
+      ## LocalConst
+        t
+        value
+        pos
+        constId
+      LocalConst new list.append
+    context [] .localConstants =
+    "$localConstant" sb.appendS
+    constId sb.appendI
+  return
+end
+proc(
+  stringBuilder : sb
+  CompilerContext ptr mut : context
+=> stringBuilder ) =: appendLocalConstants
+  context [] .program [] .idContext .typeContext @ =:: typeContext
+  sb
+    0 while #dup context [] .localConstants .length < do =:: i
+      context [] .localConstants i list.at .data =:: constant
+      "data $localConstant" sb.appendS
+      constant [] .id sb.appendI
+      " = align " sb.appendS
+      constant [] .valType typeContext types.alignOf sb.appendI
+      " {" sb.appendS
+      constant [] .valType constant [] .value true constant [] .pos context appendConstQBE
+      "}\n" sb.appendS
+      i 1 +
+    end #drop
+    context [] .localConstants
+      list.clear
+    context [] .localConstants =
+  return
+end
+proc( stringBuilder : sb string : str => stringBuilder ) =: appendEscapedString
+  sb
+    0 while #dup str .length < do =:: i
+        str i string.charAt appendEscapedChr
+      i 1 +
+    end #drop
+  return
+end
+proc(
+  stringBuilder : sb
+  FilePosition : pos
+=> stringBuilder ) =: appendPosQBE
+  sb
+    "dbgloc \"" sb.appendS
+    pos .fileName sb.appendEscapedString
+    "\"," sb.appendS
+    pos .line sb.appendI
+    ',' sb.appendC
+    pos .posInLine sb.appendI
+    '\n' sb.appendC
   return
 end
 #end
@@ -318,18 +392,20 @@ proc(
     NOP case
       sb return
     Constant case
-      op [] .dataType types.isPrimitive if
-        sb
-          "%s" sb.appendS
-          context pushValue sb.appendI
+      sb
+        op [] .pos sb.appendPosQBE
+        "%s" sb.appendS
+        context pushValue sb.appendI
+        op [] .dataType types.isPrimitive if
           " =" sb.appendS
           op [] .dataType false op [] .pos context sb.appendTypeNameQBE
           " copy " sb.appendS
-          op [] .dataType op [] .val .Constant false op [] .pos context sb.appendConstQBE
-          '\n' sb.appendC
-        return
-      end
-      break
+        else
+          " =l copy " sb.appendS
+        end
+        op [] .dataType op [] .val .Constant false op [] .pos context sb.appendConstQBE
+        '\n' sb.appendC
+      return
     declareId initializeId case
       op [] .val .declareId ?? if
         op [] .val .declareId
@@ -365,10 +441,9 @@ proc(
         LOCAL_VAR TMP_VAR case
           op [] .dataType =:: valType
           ## use pointers as stack representation of arrays and composites
-          valType typeContext types.isArray
-           valType typeContext types.isComposite | !
-          =:: isValue
+          valType types.isPrimitive =:: isValue
           sb
+            op [] .pos sb.appendPosQBE
             idInfo .idType .LOCAL_VAR ?? if
               "%l" sb.appendS
               idInfo .labelId sb.appendI
@@ -391,8 +466,7 @@ proc(
                 "blit " sb.appendS ## XXX call memcopy for large structs
               end
               " %s" sb.appendS
-              context [] .stackInfo @ branchTree.pop =:: tmp ## TODO remove check one compiler is complete
-                tmp .data ?? if tmp .data [] .varId sb.appendI end
+              context popValue sb.appendI
               ',' sb.appendC
               idInfo .idType .LOCAL_VAR ?? if
                 "%l" sb.appendS
@@ -425,6 +499,7 @@ proc(
             break ## TODO call
           end
           sb
+            op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             context pushValue sb.appendI
             " =l copy " sb.appendS
@@ -433,6 +508,7 @@ proc(
           return
         LOCAL_VAR case
           sb
+            op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             context pushValue sb.appendI
             " =l copy %l" sb.appendS
@@ -441,6 +517,7 @@ proc(
           return
         TMP_VAR case
           sb
+            op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             context pushValue sb.appendI
             " =l copy %tmp" sb.appendS
@@ -454,9 +531,11 @@ proc(
     New case
       context nextTmpId =:: tmpId
       sb
+        op [] .pos sb.appendPosQBE
         ## prepare memory
-        "%s" sb.appendS
-        context pushValue sb.appendI
+        "%t" sb.appendS
+          context nextTmpId =:: dataPtrId
+        dataPtrId sb.appendI
         " =l alloc" sb.appendS
         op [] .dataType typeContext types.alignOf
           #dup 4 < if #drop 4i64 end
@@ -465,6 +544,11 @@ proc(
         op [] .dataType typeContext types.sizeOf sb.appendI
         '\n' sb.appendC
         op [] .dataType typeContext types.isArray if
+          "%s" sb.appendS
+          context pushValue sb.appendI
+          " =l copy %t" sb.appendS
+          dataPtrId sb.appendI
+          '\n' sb.appendC
           return
         else op [] .dataType typeContext types.isTuple ! _if
           "unsupported type for new:" sb.wrap
@@ -475,12 +559,51 @@ proc(
           op [] .pos errors appendError
           return
         end
-        ## TODO assign values
+        op [] .dataType typeContext types.compositeElts =:: elts
+        elts .length 1 - while #dup 0 >= do =:: i
+          elts i types.compositeElts.get =:: eltType
+          op [] .dataType i typeContext types.tupleElementOffset =:: eltOffset
+          eltType typeContext types.isEmpty if
+            i 1 - continue
+          end
+          "%t" sb.appendS
+            context nextTmpId =:: eltPtrId
+          eltPtrId sb.appendI
+          " =l add %t" sb.appendS
+          dataPtrId sb.appendI
+          ", " sb.appendS
+          eltOffset sb.appendI
+          '\n' sb.appendC
+          eltType types.isPrimitive =:: isValue
+          isValue if
+            "store" sb.appendS
+            eltType true op [] .pos context sb.appendTypeNameQBE
+            " %s" sb.appendS
+          else
+            "blit %s" sb.appendS
+          end
+          context popValue sb.appendI
+          ", %t" sb.appendS
+          eltPtrId sb.appendI
+          isValue ! if
+            ',' sb.appendC
+            eltType typeContext types.sizeOf sb.appendI
+          end
+          '\n' sb.appendC
+          i 1 -
+        end #drop
+        "%s" sb.appendS
+        context pushValue sb.appendI
+        " =l copy %t" sb.appendS
+        dataPtrId sb.appendI
+        '\n' sb.appendC
       return
     blockEnd case
       op [] .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          sb "}\n" sb.appendS
+          sb
+            "}\n" sb.appendS
+            context sb.appendLocalConstants
           return
         IFIF ELSE WHILE CASE DEFAULT DO case
           break
@@ -512,6 +635,8 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
   ## CompilerContext
     prog
     StackElement branchTree.create
+    32 LocalConst list.create
+    0
     0
     0
   CompilerContext new =:: mut contextData
@@ -577,6 +702,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
     1 +
   end #drop
   context [] .stackInfo @ branchTree.free
+  context [] .localConstants list.free #drop
   mainId id.LABEL_ID_NONE == if ## no main
     return
   end
