@@ -527,6 +527,9 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       else #dup "extern" string.wrap string.eq _if
         id.FLAG_EXTERN flags | flags =
         true isModifier =
+      else #dup "externC" string.wrap string.eq _if ## XXX temporary, will replace extern in future update
+        id.MASK_EXTERN2 flags | flags =
+        true isModifier =
       else #dup "public" string.wrap string.eq _if
         id.FLAG_PUBLIC flags | flags =
         true isModifier =
@@ -841,6 +844,42 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       true return
     else #dup "type" string.wrap string.eq _if
       types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.char" string.wrap string.eq _if
+      types.ctype.CHAR fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.schar" string.wrap string.eq _if
+      types.ctype.S_CHAR fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.uchar" string.wrap string.eq _if
+      types.ctype.U_CHAR fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.short" string.wrap string.eq _if
+      types.ctype.SHORT fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.ushort" string.wrap string.eq _if
+      types.ctype.U_SHORT fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.int" string.wrap string.eq _if
+      types.ctype.INT fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.uint" string.wrap string.eq _if
+      types.ctype.U_INT fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.long" string.wrap string.eq _if
+      types.ctype.LONG fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.ulong" string.wrap string.eq _if
+      types.ctype.U_LONG fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.longlong" string.wrap string.eq _if
+      types.ctype.LONGLONG fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.ulonglong" string.wrap string.eq _if
+      types.ctype.U_LONGLONG fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.size" string.wrap string.eq _if
+      types.ctype.SIZE fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "ptr" string.wrap string.eq _EXPERIMENTAL_ ! & _if
       fileState state popArraySize =:: fixedSize =:: sizes

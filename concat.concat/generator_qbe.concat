@@ -143,6 +143,41 @@ proc(
         FLOAT64 case sb "d" sb.appendS return
       end
       break
+    cType case
+      t .cType switch
+        CHAR S_CHAR case
+          isStored if
+            sb "sb" sb.appendS return
+          else
+            sb "w" sb.appendS return
+          end
+          break
+        U_CHAR case
+          isStored if
+            sb "ub" sb.appendS return
+          else
+            sb "w" sb.appendS return
+          end
+        break
+        SHORT case
+          isStored if
+            sb "sh" sb.appendS return
+          else
+            sb "w" sb.appendS return
+          end
+        break
+        U_SHORT case
+          isStored if
+            sb "uh" sb.appendS return
+          else
+            sb "w" sb.appendS return
+          end
+        break
+        INT U_INT case sb "w" sb.appendS return
+        LONG LONGLONG U_LONG U_LONGLONG SIZE case
+          sb "l" sb.appendS return
+      end
+      break
     arrayIndex pointer reference mutableReference procedure case
       sb "l" sb.appendS return ## size or pointer
     arrayType case
@@ -641,7 +676,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
     0
   CompilerContext new =:: mut contextData
   contextData @ =:: context
-  ## TODO declare composite types
   id.LABEL_ID_NONE =:: mut mainId
   MAIN_NAME string.wrap 0 idContext id.getIdentifierByName ! if =:: data =:: name
     name .namespace 0 != if
@@ -649,6 +683,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
     end
     data [] .labelId mainId =
   else #drop:2 end
+  ## TODO declare composite types
   ## TODO internal functions
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used

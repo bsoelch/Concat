@@ -733,7 +733,7 @@
       src return ## no generics to replace
     end
     src switch
-      undefined empty primitiveType autoType case
+      undefined empty primitiveType cType autoType case
         src return ## no generic info
       reference mutableReference case
         context [] .typeContext .compositeData src types.getTypeId list.get =:: base
@@ -943,7 +943,7 @@
       return
     end
     expected switch
-      undefined empty primitiveType autoType case
+      undefined empty primitiveType cType autoType case
         break
       procedure case
         ## resolveGenericsType

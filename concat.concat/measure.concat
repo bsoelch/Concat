@@ -21,7 +21,7 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
   else #drop end
   visited declared ptrLevel map.put #drop
   declared switch
-    undefined empty primitiveType autoType templateType genericType arrayIndex case
+    undefined empty primitiveType autoType templateType genericType arrayIndex cType case
       break
     pointer case
       declared typeContext types.getBaseType ptrLevel 1 + prog visited types declaredType

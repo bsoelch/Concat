@@ -38,6 +38,12 @@ end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog => ) =: printGlobalName
   prog [] .idContext .labelContext @ =:: labelContext
   128 sb.create
+    label labelContext id.labelFlags id.FLAG_EXTERN2 & ? if ## use unmodified name for extern values
+      label labelContext sb.appendLabelName
+        target #over io.fputSb #drop
+      sb.free #drop
+      return
+    end
     CONCAT_PREFIX sb.appendS
     label labelContext id.labelFlags id.FLAG_PUBLIC & 0 == if
       label labelContext id.getLabelFile sb.appendI
@@ -140,6 +146,22 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
         I64     case target "int64_t" io.fputs #drop break
         FLOAT32 case target "float"   io.fputs #drop break
         FLOAT64 case target "double"  io.fputs #drop break
+      end
+      break
+    cType case
+      t .cType switch
+        CHAR       case target "char"               io.fputs #drop break
+        S_CHAR     case target "signed char"        io.fputs #drop break
+        U_CHAR     case target "unsigned char"      io.fputs #drop break
+        SHORT      case target "short"              io.fputs #drop break
+        U_SHORT    case target "unsigned short"     io.fputs #drop break
+        INT        case target "int"                io.fputs #drop break
+        U_INT      case target "unsigned int"       io.fputs #drop break
+        LONG       case target "long"               io.fputs #drop break
+        U_LONG     case target "unsigned long"      io.fputs #drop break
+        LONGLONG   case target "long long"          io.fputs #drop break
+        U_LONGLONG case target "unsigned long long" io.fputs #drop break
+        SIZE       case target "size_t"             io.fputs #drop break
       end
       break
     arrayIndex case
@@ -314,7 +336,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType
-        procedure procIn reference mutableReference arrayIndex case
+        procedure procIn reference mutableReference arrayIndex cType case
         ## no global type necessary
         break
       pointer case
@@ -367,7 +389,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: printTypes
     types #over list.get =:: t
     t switch
       undefined empty primitiveType autoType templateType genericType generatedType procedure
-          procIn pointer namedType reference mutableReference arrayIndex case
+          procIn pointer namedType reference mutableReference arrayIndex cType case
         ## no initialization necessary
         break
       arrayType case
@@ -1348,7 +1370,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         "\\n\");//unreachable\n" sb.appendS
         target #over io.fputSb #drop
       sb.free #drop
-      target "exit(EXIT_FAILURE);//unreachable\n" io.fputs #drop
+      target "exit(1);//unreachable\n" io.fputs #drop
       return
     compilerInfo case
       break
@@ -1571,5 +1593,5 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
     target "int main(void){\n" io.fputs #drop
   end
   mainId -1 target prog printGlobalName
-  target "();\nreturn EXIT_SUCCESS;\n}\n" io.fputs #drop
+  target "();\nreturn 0;\n}\n" io.fputs #drop
 end

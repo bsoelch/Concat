@@ -18,6 +18,14 @@ i32 =:: NamedTypeId
 i32 =:: GeneratedId
 i32 =:: ReferenceId
 i32 =:: SizeId
+## primitive C-types for C interoperability
+enum(
+  CHAR S_CHAR U_CHAR
+  SHORT U_SHORT
+  INT U_INT
+  LONG LONGLONG U_LONG U_LONGLONG SIZE
+  ## XXX? add support for long double
+) =:: CType
 #end
 
 enum(
@@ -40,6 +48,7 @@ enum(
                   i32 : templateType
     types.GeneratedId : generatedType
          types.SizeId : arrayIndex
+          types.CType : cType
 ) Type =
 
 #namespace types
@@ -84,6 +93,8 @@ proc( Type : a Type : b => bool ) =: public typeEquals
       a .mutableReference b .mutableReference == return
     arrayIndex case
       a .arrayIndex b .arrayIndex == return
+    cType case
+      a .cType b .cType == return
   end
 end
 1011001 =:: bigPrime
@@ -97,6 +108,22 @@ proc( PrimitiveType => i32 ) =: primitiveId
     FLOAT32 case 6 return
     FLOAT64 case 7 return
     TYPE case 8 return
+  end
+end
+proc( CType => i32 ) =: cTypeId
+  switch
+    CHAR case 1 return
+    S_CHAR case 2 return
+    U_CHAR case 3 return
+    SHORT  case 4 return
+    U_SHORT case 5 return
+    INT case 6 return
+    U_INT case 7 return
+    LONG  case 8 return
+    LONGLONG  case 9 return
+    U_LONG  case 10 return
+    U_LONGLONG  case 11 return
+    SIZE case 12 return
   end
 end
 proc( Type : a => i32 ) =: public typeHash
@@ -139,6 +166,8 @@ proc( Type : a => i32 ) =: public typeHash
       bigPrime 53 * a .mutableReference + return
     arrayIndex case
       bigPrime 59 * a .arrayIndex + return
+    cType case
+      bigPrime 61 * a .cType cTypeId + return
   end
 end
 
@@ -169,7 +198,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public isEmpty ## TODO? s
      empty case true return
      pointer arrayType case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
-     undefined primitiveType procedure reference mutableReference
+     undefined primitiveType procedure reference mutableReference cType
        namedType autoType genericType templateType generatedType arrayIndex enum case false return
      procIn procOut struct union case
        t context compositeFlags COMP_FLAG_EMPTY & ? return
@@ -182,7 +211,7 @@ proc( Type : t0 TypeContext ptr : context => bool ) =: public maybeEmpty
      empty genericType templateType case true return
      pointer arrayType reference mutableReference case ## arrays of / pointers to empty values are empty
        t context getBaseType context isEmpty return
-     undefined primitiveType procedure enum
+     undefined primitiveType procedure enum cType
        namedType autoType generatedType arrayIndex case false return
      procIn procOut struct union case t context compositeFlags COMP_FLAG_EMPTY & ? return
   end
@@ -239,7 +268,8 @@ end
 proc( Type TypeContext ptr => bool ) =: public isSmallType
   unwrapNamed
   switch
-    primitiveType pointer empty reference mutableReference arrayIndex enum case true return
+    primitiveType pointer empty reference mutableReference
+      arrayIndex enum cType case true return
     ## TODO only union with no values is small
     arrayType struct union procIn procOut procedure ## TODO? count structs/unions with size < 128 as small types
     undefined namedType autoType genericType templateType generatedType case false return
@@ -319,6 +349,30 @@ proc( Type : a Type : b TypeContext ptr : context => Type ) =: public commonNumb
   end
   Type .undefined return
 end
+## ctypes
+#namespace ctype
+  CType .CHAR        Type .cType new Type =: public CHAR
+  CType .S_CHAR      Type .cType new Type =: public S_CHAR
+  CType .U_CHAR      Type .cType new Type =: public U_CHAR
+  CType .SHORT       Type .cType new Type =: public SHORT
+  CType .U_SHORT     Type .cType new Type =: public U_SHORT
+  CType .INT         Type .cType new Type =: public INT
+  CType .U_INT       Type .cType new Type =: public U_INT
+  CType .LONG        Type .cType new Type =: public LONG
+  CType .U_LONG      Type .cType new Type =: public U_LONG
+  CType .LONGLONG    Type .cType new Type =: public LONGLONG
+  CType .U_LONGLONG  Type .cType new Type =: public U_LONGLONG
+  CType .SIZE        Type .cType new Type =: public SIZE
+#end
+proc( CType => Type ) =: cTypeAsType
+  switch
+    CHAR S_CHAR U_CHAR case primitive.I8 return
+    SHORT U_SHORT case primitive.I16 return
+    INT U_INT case primitive.I32 return
+    LONG U_LONG LONGLONG U_LONGLONG SIZE case primitive.I64 return
+  end
+end
+
 ## size and alignment
 proc( PrimitiveType => i32 ) =: sizeOfPrimitive
   switch
@@ -334,6 +388,14 @@ proc( PrimitiveType => i32 ) =: sizeOfPrimitive
       8 return
   end
 end
+proc( CType => i32 ) =: sizeOfCType
+  switch ## sizes for linux-x86-gcc
+    CHAR S_CHAR U_CHAR case 1 return
+    SHORT U_SHORT case 2 return
+    INT U_INT case 4 return
+    LONG LONGLONG U_LONG U_LONGLONG SIZE case 8 return
+  end
+end
 8 =:: PTR_SIZE
 8 =:: PTR_ALIGN
 8 =:: I_SIZE_SIZE
@@ -345,6 +407,8 @@ proc( Type : t TypeContext ptr : context => i64 ) =: public alignOf
       0 return
     primitiveType case
       t .primitiveType sizeOfPrimitive return
+    cType case
+      t .cType sizeOfCType return
     arrayIndex case
       I_SIZE_SIZE return
     pointer reference mutableReference procedure case
@@ -373,6 +437,8 @@ proc( Type : t bool : aligned TypeContext ptr : context => i64 ) =: computeSize
       0 return
     primitiveType case
       t .primitiveType sizeOfPrimitive return
+    cType case
+      t .cType sizeOfCType return
     arrayIndex case
       I_SIZE_SIZE return
     pointer reference mutableReference procedure case
@@ -682,7 +748,7 @@ proc( Type TypeContext ptr => bool ) =: public isComposite
       true return
     undefined empty primitiveType pointer arrayType procedure
       namedType autoType genericType templateType generatedType
-      reference mutableReference arrayIndex case
+      reference mutableReference arrayIndex cType case
       false return
   end
 end
@@ -728,7 +794,7 @@ proc( Type : composite TypeContext ptr : context => CompositeInfo ptr optional )
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
-       reference mutableReference arrayIndex case
+       reference mutableReference arrayIndex cType case
         #drop CompositeInfo ptr optional.empty return
     end
 end
@@ -746,7 +812,7 @@ proc( Type : composite i32 : index TypeContext ptr : context => LabelId ) =: pub
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
-        reference mutableReference arrayIndex case
+        reference mutableReference arrayIndex cType case
         #drop id.LABEL_ID_NONE return
     end
   context compositeData
@@ -766,7 +832,7 @@ proc( Type : composite LabelId : name LabelContext ptr : labelContext TypeContex
         break
       undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
-       reference mutableReference arrayIndex case
+       reference mutableReference arrayIndex cType case
         #drop -1 return
     end
   context compositeData
@@ -811,7 +877,7 @@ proc( Type : tuple i64 : index TypeContext ptr : context => i64 ) =: public tupl
       .procOut break
     enum union undefined empty primitiveType pointer arrayType procedure
      namedType autoType genericType templateType generatedType
-      reference mutableReference arrayIndex case #drop
+      reference mutableReference arrayIndex cType case #drop
        0 return
   end =:: tupleId
   context [] .tupleTypes tupleId list.at .data =:: tupleInfo
@@ -988,7 +1054,8 @@ proc(
     t [] .compositeInfo .eltCount elts .length == if
     t [] .compositeInfo .eltsOffset eltsOffset == _if
     t [] .compositeInfo .labelOffset labelOffset == _if
-    t [] .offsetsStart offsetsStart == _if
+    ## XXX check for equality of offsets once offsets are guaranteed to be unique
+    ## t [] .offsetsStart offsetsStart == _if
     t [] .compositeInfo .size size == _if
     t [] .compositeInfo .alignment alignment == _if
     t [] .compositeInfo .flags COMP_MASK_COMMON_FLAGS &
@@ -1490,7 +1557,7 @@ proc( Type => i32 ) =: public getTypeId
     reference case .reference return
     mutableReference case .mutableReference return
     arrayIndex case .arrayIndex return
-    undefined empty primitiveType case #drop -1 return
+    undefined empty primitiveType cType case #drop -1 return
   end
 end
 
@@ -1510,7 +1577,7 @@ end
 proc( Type : t0 TypeContext ptr : context => bool #+has template+# bool #+has static arg+# ) =: public containsGeneric
   t0 context unwrapNamed =:: t
   t switch
-    undefined empty primitiveType autoType arrayIndex case
+    undefined empty primitiveType autoType arrayIndex cType case
       false false return
     reference mutableReference case
       t context getBaseType context containsGeneric return
@@ -1611,6 +1678,13 @@ proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAuto
   src target types.typeEquals if
     true return
   end
+  ## convert c-types to types
+  target .cType ?? if
+    src target .cType cTypeAsType context canAutoCast return
+  end
+  src .cType ?? if
+    src .cType cTypeAsType target context canAutoCast return
+  end
   src context types.isNumber target context types.isNumber & if
     src context types.numberPrecision target context types.numberPrecision <=
     src context types.numberSize target context types.numberSize <= & return
@@ -1641,6 +1715,13 @@ proc( Type : a Type : b bool : forceCast TypeContext ptr : context => bool ) =: 
   b context types.unwrapNamed =:: mut target
   src target context canAutoCast if
     true return
+  end
+  ## converting c-types to types
+  target .cType ?? if
+    src b .cType cTypeAsType context canAutoCast return
+  end
+  src .cType ?? if
+    src .cType cTypeAsType target context canAutoCast return
   end
   target .arrayIndex ?? if src context types.isInt ! _if
     false return ## can only cast integers to index
@@ -1734,6 +1815,34 @@ proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveTyp
       "type" appendS return
   end
 end
+proc( stringBuilder types.CType => stringBuilder ) =: appendCType
+  switch
+    CHAR case
+      "..ctype.char" appendS return
+    S_CHAR case
+      "..ctype.schar" appendS return
+    U_CHAR case
+      "..ctype.uchar" appendS return
+    SHORT case
+      "..ctype.short" appendS return
+    U_SHORT case
+      "..ctype.ushort" appendS return
+    INT case
+      "..ctype.int" appendS return
+    U_INT case
+      "..ctype.uint" appendS return
+    LONG case
+      "..ctype.long" appendS return
+    U_LONG case
+      "..ctype.ulong" appendS return
+    LONGLONG case
+      "..ctype.longlong" appendS return
+    U_LONGLONG case
+      "..ctype.ulonglong" appendS return
+    SIZE case
+      "..ctype.size" appendS return
+  end
+end
 proc( stringBuilder : sb types.ArraySize arrayView : sizes => stringBuilder  ) =: public appendArraySize
   sb
     0 while #dup sizes .length < do
@@ -1770,6 +1879,8 @@ proc( stringBuilder Type LabelContext ptr TypeContext ptr bool => stringBuilder 
       "empty" appendS return
     primitiveType case
       .primitiveType appendPrimitiveType return
+    cType case
+      .cType appendCType return
     arrayIndex case .arrayIndex =:: sizeIndex
       "index(" appendS
       context [] .arraySizes sizeIndex list.at .data array.wrap appendArraySize
