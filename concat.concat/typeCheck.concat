@@ -2884,6 +2884,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         return
       end
       break
+    typeInfo case
+      op [] .dataType typeContext types.containsGeneric | if
+        break ## generic type-info not implemented
+      end
+      op state pushValue
+      types.primitive.I_SIZE state [] .typeStack list.peek .data [] .valType = ## change type on stack
+      return
     Cast Cast! case
       state [] .typeStack list.peek #dup optional.isEmpty if #drop
         "not enough operands for : " sb.wrap

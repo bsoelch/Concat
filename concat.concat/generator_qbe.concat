@@ -652,7 +652,7 @@ proc(
     getElement setElement @Element hasElement getArrayElement
     setArrayElement @ArrayElement setValue Print Return newEnum call callPtr
     argc getArg getArgLen Cast Cast! unaryOperator binaryOperator checkEnumLabel
-    setEnumLabel checkArrayIndex unreachable
+    setEnumLabel checkArrayIndex unreachable typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod copy
     typeModifier autoCast hasLabel hasName case
       break ## XXX error message

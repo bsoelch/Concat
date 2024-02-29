@@ -803,7 +803,7 @@ proc(
     checkEnumLabel setEnumLabel checkArrayIndex
     hasLabel hasName hasElement
     stackMod setName @Name copy
-    compilerInfo unreachable case
+    compilerInfo unreachable typeInfo case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap
           op [] constContext labelContext typeContext sb.appendOp

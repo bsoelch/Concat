@@ -1238,6 +1238,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
       op [] .pos errors appendError
       return
       break
+    typeInfo case
+      op [] .dataType typeContext types.containsGeneric | if
+        break ## generic type-info not implemented
+      end
+      ConstValue .none op [] state pushValue
+      types.primitive.I_SIZE state replaceType
+      break
     Return getName
     newEnum call callPtr
     argc getArg getArgLen

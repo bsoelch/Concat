@@ -1216,7 +1216,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #dup .length 0 > if
             opName fileState [] .wordStart state getCompilerOpParam
           else #drop -1 end
-          fileState [] .wordStart opTypeInfo state appendOp
+          fileState [] .wordStart opTypesInfo state appendOp
           return
         else "stack" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
           #dup .length 0 > if
@@ -2513,6 +2513,31 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else #dup "..size" string.wrap string.eq _if #drop ##XXX compute size of constants at compile time
       fileState [] .wordStart opSize state appendOp
+      return
+    else #dup "..type.alignment" string.wrap string.eq
+         #over "..type.size" string.wrap string.eq |
+         #over "..type.stride" string.wrap string.eq | _if =:: opName
+     opName "..type.alignment" string.wrap string.eq if
+       TypeMemoryInfo .ALIGNMENT
+     else opName "..type.size" string.wrap string.eq _if
+       TypeMemoryInfo .SIZE
+     else
+       TypeMemoryInfo .STRIDE
+     end =:: infoType
+      state hasConst _EXPERIMENTAL_ ! & if
+        state popConst =:: constant
+        constant .val .typeId ?? ! if
+          "expected type got: " sb.wrap
+            constant .val
+              idContext [] .constContext @ labelContext typeContext
+            sb.appendConstant
+          fileState [] .wordStart state appendError2
+        end
+        constant .val .typeId
+      else
+        Type .undefined
+      end
+      infoType fileState [] .wordStart opTypeInfo state appendOp
       return
     else #dup "..unreachable" string.wrap string.eq _if #drop
       fileState [] .wordStart opUnreachable state appendOp

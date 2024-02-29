@@ -1315,6 +1315,16 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target #over io.fputSb #drop
       sb.free #drop
       return
+    typeInfo case
+      op [] .val .typeInfo switch
+        ALIGNMENT case
+           target "_Alignof(" io.fputs #drop break
+        SIZE STRIDE case
+          target "sizeof(" io.fputs #drop break
+      end
+      op [] .dataType target prog printTypeName
+      target ")" io.fputs #drop
+      return
     checkEnumLabel case
       64 sb.create
         CHECK_ENUM_NAME sb.appendS

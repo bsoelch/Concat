@@ -13,6 +13,7 @@ enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: publ
 struct( IdentifierInfo : idInfo i64 : argCount ) =:: public CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: public TypeModifier
 struct( Type : src i32 : mut offset ) =:: public CastInfo
+enum( ALIGNMENT SIZE STRIDE ) =:: public TypeMemoryInfo
 
 enum(
                       NOP
@@ -63,6 +64,7 @@ enum(
             LabelId : mut @Name
             LabelId : mut hasName
        TypeModifier : mut typeModifier
+     TypeMemoryInfo : typeInfo
                       unreachable
        CompilerInfo : compilerInfo
 ) =:: public OpValue
@@ -189,6 +191,9 @@ end
 proc( FilePosition : pos => Operation ) =: public opSize
   OpValue .size Type .undefined pos Operation new return
 end
+proc( Type : t TypeMemoryInfo : infoType FilePosition : pos => Operation ) =: public opTypeInfo
+  infoType OpValue .typeInfo new t pos Operation new return
+end
 proc( Type i32 FilePosition => Operation ) =: public opCheckEnum
   =:: pos
   OpValue .checkEnumLabel new #swap pos Operation new return
@@ -215,7 +220,7 @@ end
 proc( FilePosition : pos => Operation ) =: public opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
 end
-proc( i32 : count FilePosition : pos => Operation ) =: public opTypeInfo
+proc( i32 : count FilePosition : pos => Operation ) =: public opTypesInfo
   count CompilerInfo .typeInfo new OpValue .compilerInfo new Type .undefined  pos Operation new return
 end
 proc( i32 : count FilePosition : pos => Operation ) =: public opStackInfo
@@ -558,6 +563,16 @@ end
           "size ( " sb.appendS
           #over .dataType  labelContext typeContext sb.appendType
           " )" sb.appendS
+          break
+        typeInfo case
+          "typeInfo ( " sb.appendS
+          #over .dataType  labelContext typeContext sb.appendType
+          " ): " sb.appendS
+          #over .val .typeInfo switch
+            ALIGNMENT case "alignment" sb.appendS break
+            SIZE case "size" sb.appendS break
+            STRIDE case "stride" sb.appendS break
+          end
           break
         checkEnumLabel case
           "check enum label ( " sb.appendS
