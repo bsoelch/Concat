@@ -145,6 +145,13 @@ proc(
       break
     cType case
       t .cType switch
+        BOOL case
+          isStored if
+            sb "sb" sb.appendS return
+          else
+            sb "w" sb.appendS return
+          end
+          break
         CHAR S_CHAR case
           isStored if
             sb "sb" sb.appendS return
@@ -176,6 +183,8 @@ proc(
         INT U_INT case sb "w" sb.appendS return
         LONG LONGLONG U_LONG U_LONGLONG SIZE case
           sb "l" sb.appendS return
+        FLOAT case sb "s" sb.appendS return
+        DOUBLE case sb "d" sb.appendS return
       end
       break
     arrayIndex pointer reference mutableReference procedure case

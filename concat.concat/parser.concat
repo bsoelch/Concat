@@ -845,6 +845,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else #dup "type" string.wrap string.eq _if
       types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst
       true return
+    else #dup "..ctype.bool" string.wrap string.eq _if
+      types.ctype.BOOL fileState [] .wordStart newTypeConst  state pushConst
+      true return
     else #dup "..ctype.char" string.wrap string.eq _if
       types.ctype.CHAR fileState [] .wordStart newTypeConst  state pushConst
       true return
@@ -880,6 +883,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       true return
     else #dup "..ctype.size" string.wrap string.eq _if
       types.ctype.SIZE fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.float" string.wrap string.eq _if
+      types.ctype.FLOAT fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else #dup "..ctype.double" string.wrap string.eq _if
+      types.ctype.DOUBLE fileState [] .wordStart newTypeConst  state pushConst
       true return
     else #dup "ptr" string.wrap string.eq _EXPERIMENTAL_ ! & _if
       fileState state popArraySize =:: fixedSize =:: sizes

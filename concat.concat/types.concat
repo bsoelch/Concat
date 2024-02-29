@@ -20,10 +20,12 @@ i32 =:: ReferenceId
 i32 =:: SizeId
 ## primitive C-types for C interoperability
 enum(
+  BOOL
   CHAR S_CHAR U_CHAR
   SHORT U_SHORT
   INT U_INT
   LONG LONGLONG U_LONG U_LONGLONG SIZE
+  FLOAT DOUBLE
   ## XXX? add support for long double
 ) =:: CType
 #end
@@ -112,6 +114,7 @@ proc( PrimitiveType => i32 ) =: primitiveId
 end
 proc( CType => i32 ) =: cTypeId
   switch
+    BOOL case 0 return
     CHAR case 1 return
     S_CHAR case 2 return
     U_CHAR case 3 return
@@ -124,6 +127,8 @@ proc( CType => i32 ) =: cTypeId
     U_LONG  case 10 return
     U_LONGLONG  case 11 return
     SIZE case 12 return
+    FLOAT case 13 return
+    DOUBLE case 14 return
   end
 end
 proc( Type : a => i32 ) =: public typeHash
@@ -351,6 +356,7 @@ proc( Type : a Type : b TypeContext ptr : context => Type ) =: public commonNumb
 end
 ## ctypes
 #namespace ctype
+  CType .BOOL        Type .cType new Type =: public BOOL
   CType .CHAR        Type .cType new Type =: public CHAR
   CType .S_CHAR      Type .cType new Type =: public S_CHAR
   CType .U_CHAR      Type .cType new Type =: public U_CHAR
@@ -363,13 +369,18 @@ end
   CType .LONGLONG    Type .cType new Type =: public LONGLONG
   CType .U_LONGLONG  Type .cType new Type =: public U_LONGLONG
   CType .SIZE        Type .cType new Type =: public SIZE
+  CType .FLOAT       Type .cType new Type =: public FLOAT
+  CType .DOUBLE      Type .cType new Type =: public DOUBLE
 #end
 proc( CType => Type ) =: cTypeAsType
   switch
+    BOOL case primitive.BOOL return
     CHAR S_CHAR U_CHAR case primitive.I8 return
     SHORT U_SHORT case primitive.I16 return
     INT U_INT case primitive.I32 return
     LONG U_LONG LONGLONG U_LONGLONG SIZE case primitive.I64 return
+    FLOAT case primitive.FLOAT32 return
+    DOUBLE case primitive.FLOAT64 return
   end
 end
 
@@ -390,10 +401,12 @@ proc( PrimitiveType => i32 ) =: sizeOfPrimitive
 end
 proc( CType => i32 ) =: sizeOfCType
   switch ## sizes for linux-x86-gcc
-    CHAR S_CHAR U_CHAR case 1 return
+    BOOL CHAR S_CHAR U_CHAR case 1 return
     SHORT U_SHORT case 2 return
     INT U_INT case 4 return
     LONG LONGLONG U_LONG U_LONGLONG SIZE case 8 return
+    FLOAT case 4 return
+    DOUBLE case 8 return
   end
 end
 8 =:: PTR_SIZE
@@ -1817,6 +1830,8 @@ proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveTyp
 end
 proc( stringBuilder types.CType => stringBuilder ) =: appendCType
   switch
+    BOOL case
+      "..ctype.bool" appendS return
     CHAR case
       "..ctype.char" appendS return
     S_CHAR case
@@ -1841,6 +1856,10 @@ proc( stringBuilder types.CType => stringBuilder ) =: appendCType
       "..ctype.ulonglong" appendS return
     SIZE case
       "..ctype.size" appendS return
+    FLOAT case
+      "..ctype.float" appendS return
+    DOUBLE case
+      "..ctype.double" appendS return
   end
 end
 proc( stringBuilder : sb types.ArraySize arrayView : sizes => stringBuilder  ) =: public appendArraySize

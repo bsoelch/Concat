@@ -150,6 +150,7 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
       break
     cType case
       t .cType switch
+        BOOL       case target "bool"               io.fputs #drop break
         CHAR       case target "char"               io.fputs #drop break
         S_CHAR     case target "signed char"        io.fputs #drop break
         U_CHAR     case target "unsigned char"      io.fputs #drop break
@@ -162,6 +163,8 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
         LONGLONG   case target "long long"          io.fputs #drop break
         U_LONGLONG case target "unsigned long long" io.fputs #drop break
         SIZE       case target "size_t"             io.fputs #drop break
+        FLOAT      case target "float"             io.fputs #drop break
+        DOUBLE     case target "double"             io.fputs #drop break
       end
       break
     arrayIndex case

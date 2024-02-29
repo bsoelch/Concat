@@ -1,38 +1,144 @@
-#namespace math
-proc( double => double ) : public extern floor
-proc( double => double ) : public extern ceil
-proc( double => double ) : public extern round
-proc( double => double ) : public extern abs
+#namespace c
+proc( ..ctype.double => ..ctype.double ) : externC floor
+proc( ..ctype.double => ..ctype.double ) : externC ceil
+proc( ..ctype.double => ..ctype.double ) : externC round
+proc( ..ctype.double => ..ctype.double ) : externC fabs
 
-proc( double double => double ) : public extern min
-proc( double double => double ) : public extern max
+proc(
+  ..ctype.double
+  ..ctype.double
+=> ..ctype.double ) : externC fmin
+proc(
+  ..ctype.double
+  ..ctype.double
+=> ..ctype.double ) : externC fmax
 
-proc( double => double ) : public extern log2
-proc( double => double ) : public extern log
-proc( double => double ) : public extern exp
+proc( ..ctype.double => ..ctype.double ) : externC log2
+proc( ..ctype.double => ..ctype.double ) : externC log
+proc( ..ctype.double => ..ctype.double ) : externC exp
 
-proc( double => double ) : public extern sqrt
-proc( double => double ) : public extern cbrt
-proc( double double => double ) : public extern pow
+proc( ..ctype.double => ..ctype.double ) : externC sqrt
+proc( ..ctype.double => ..ctype.double ) : externC cbrt
+proc(
+  ..ctype.double
+  ..ctype.double
+=> ..ctype.double ) : externC pow
 ## XXX gamma function
 
-proc( double => double ) : public extern sin
-proc( double => double ) : public extern cos
-proc( double => double ) : public extern tan
-proc( double => double ) : public extern asin
-proc( double => double ) : public extern acos
-proc( double => double ) : public extern atan
-proc( double => double ) : public extern sinh
-proc( double => double ) : public extern cosh
-proc( double => double ) : public extern tanh
-proc( double => double ) : public extern asinh
-proc( double => double ) : public extern acosh
-proc( double => double ) : public extern atanh
-proc( double double => double ) : public extern atan2 ## y,x
-#end
+proc( ..ctype.double => ..ctype.double ) : externC sin
+proc( ..ctype.double => ..ctype.double ) : externC cos
+proc( ..ctype.double => ..ctype.double ) : externC tan
+proc( ..ctype.double => ..ctype.double ) : externC asin
+proc( ..ctype.double => ..ctype.double ) : externC acos
+proc( ..ctype.double => ..ctype.double ) : externC atan
+proc( ..ctype.double => ..ctype.double ) : externC sinh
+proc( ..ctype.double => ..ctype.double ) : externC cosh
+proc( ..ctype.double => ..ctype.double ) : externC tanh
+proc( ..ctype.double => ..ctype.double ) : externC asinh
+proc( ..ctype.double => ..ctype.double ) : externC acosh
+proc( ..ctype.double => ..ctype.double ) : externC atanh
+proc(
+  ..ctype.double : y
+  ..ctype.double : x
+=> ..ctype.double ) : externC atan2
 
+proc( ..ctype.float => ..ctype.int ) : externC isnanf
+proc( ..ctype.float => ..ctype.int ) : externC isinff
+proc( ..ctype.float => ..ctype.int ) : externC isfinitef
+proc( ..ctype.double => ..ctype.int ) : externC isnan
+proc( ..ctype.double => ..ctype.int ) : externC isinf
+proc( ..ctype.double => ..ctype.int ) : externC isfinite
+#end
+#namespace math
+proc( double => double ) =: public floor
+  c.floor
+end
+proc( double => double ) =: public ceil
+  c.ceil
+end
+proc( double => double ) =: public round
+  c.round
+end
+proc( double => double ) =: public abs
+  c.fabs
+end
+
+proc( double double => double ) =: public min
+  c.fmin
+end
+proc( double double => double ) =: public max
+  c.fmax
+end
+
+proc( double => double ) =: public log2
+  c.log2
+end
+proc( double => double ) =: public log
+  c.log
+end
+proc( double => double ) =: public exp
+  c.exp
+end
+
+proc( double => double ) =: public sqrt
+  c.sqrt
+end
+proc( double => double ) =: public cbrt
+  c.cbrt
+end
+proc( double : base double : power => double ) =: public pow
+  base power c.pow
+end
+## XXX gamma function
+
+proc( double => double ) =: public sin
+  c.sin
+end
+proc( double => double ) =: public cos
+  c.cos
+end
+proc( double => double ) =: public tan
+  c.tan
+end
+proc( double => double ) =: public asin
+  c.asin
+end
+proc( double => double ) =: public acos
+  c.acos
+end
+proc( double => double ) =: public atan
+  c.atan
+end
+proc( double => double ) =: public sinh
+  c.sinh
+end
+proc( double => double ) =: public cosh
+  c.cosh
+end
+proc( double => double ) =: public tanh
+  c.tanh
+end
+proc( double => double ) =: public asinh
+  c.asinh
+end
+proc( double => double ) =: public acosh
+  c.acosh
+end
+proc( double => double ) =: public atanh
+  c.atanh
+end
+proc( double double => double ) =: public atan2
+  c.atan2
+end
+#end
 #namespace double
-proc( double => bool ) : public extern isNaN
-proc( double => bool ) : public extern isInfinite
-proc( double => bool ) : public extern isFinite
+  proc( double => bool ) =: public isNaN
+    c.isnan i32 cast ?
+  end
+  proc( double => bool ) =: public isInfinite
+    c.isinf i32 cast ?
+  end
+  proc( double => bool ) =: public isFinite
+    c.isfinite i32 cast ?
+  end
 #end
