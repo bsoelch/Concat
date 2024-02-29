@@ -3217,9 +3217,24 @@ proc( ProgramContext ptr mut => ) =: public typeCheckProgram
             state .typeStack list.clear state .typeStack =
             state .opStack list.clear state .opStack =
             template [] .implementations #over list.at .data =:: impl
+            impl [] .argValues state .idContext [] .constContext @ constArrayAsArray =:: argArray
+            false =:: mut isTemplate
+            0 while #dup argArray .length < do =:: i
+              argArray i array.at .data =:: arg
+              arg [] .typeId ?? if arg [] .typeId prog [] .idContext .typeContext @ types.containsGeneric #drop _if
+                true isTemplate =
+                0 break
+              end
+              i 1 +
+            end #drop
+            isTemplate if
+              ## don't create code for implementations contains template arguments
+              ## XXX figure out why some implementations contain unresolved template arguments
+              1 + continue
+            end
             state .idContext [] .templateArgBuffer .length =:: argBufferOffset
             state .idContext [] .templateArgBuffer
-              impl [] .argValues state .idContext [] .constContext @ constArrayAsArray list.appendArray
+              argArray list.appendArray
             state .idContext [] .templateArgBuffer =
             argBufferOffset state .idContext [] .templateArgBuffer .length argBufferOffset - ConstantArray new =:: argsIndices
             0 while #dup template [] .codeLength < do

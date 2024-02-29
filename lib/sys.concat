@@ -1,3 +1,8 @@
+#namespace c
+  proc( ..ctype.int => ) : externC #:noReturn exit
+#end
 #namespace sys
-  proc( i32 => ) : public extern #:noReturn exit
+  proc( i32 => ) =: public #:noReturn exit
+    c.exit
+  end
 #end
