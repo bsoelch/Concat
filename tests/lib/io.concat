@@ -17,9 +17,7 @@ proc( => ) =: main
   file "Written directly to file!\n" fputs ..debug.print
   file fflush ..debug.print
   file fclose ..debug.print
-  stdErr fstart
-    "printing to stderr" fappendS
-    '\n' fappendC
-    "non ASCII string: ä×√φ\U0001F4BB□\n" fappendS
-  ..debug.print #drop
+  stdErr "printing to stderr" fputs ..debug.print
+  stdErr '\n' fputc ..debug.print
+  stdErr "non ASCII string: ä×√φ\U0001F4BB□\n" fputs ..debug.print
 end

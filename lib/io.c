@@ -5,10 +5,9 @@
 #include <inttypes.h>
 #include <errno.h>
 
-typedef void concat_File;
-typedef int32_t IOError;
-typedef int32_t OpenMode;
+typedef void concatIOHelper_File;
 
+typedef int32_t IOError;
 static const IOError FILE_ERR_NONE=0;
 static const IOError FILE_ERR_END_OF_FILE=-1;
 static const IOError FILE_ERR_IO=1;
@@ -20,22 +19,22 @@ static const IOError FILE_ERR_FILE_ALREADY_EXISTS=6;
 static const IOError FILE_ERR_ACCESS_DENIED=7;
 static const IOError FILE_ERR_INVALID_FILE=8;
 
-static const OpenMode OPEN_READ=1;
-static const OpenMode OPEN_WRITE=2;
-static const OpenMode OPEN_APPEND=4;
-
-concat_File* concat_io_dstdIn(void){
-  return stdin;
+concatIOHelper_File* concatIOHelper_stdin(void){
+  return (concatIOHelper_File*)stdin;
 }
-concat_File* concat_io_dstdOut(void){
-  return stdout;
+concatIOHelper_File* concatIOHelper_stdout(void){
+  return (concatIOHelper_File*)stdout;
 }
-concat_File* concat_io_dstdErr(void){
-  return stderr;
+concatIOHelper_File* concatIOHelper_stderr(void){
+  return (concatIOHelper_File*)stderr;
 }
-
-static IOError getErrorId(int errnoVal){
-  switch(errnoVal){
+void concatIOHelper_resetErrno(void){
+  errno=0;
+}
+IOError concatIOHelper_checkErrno(void){
+  switch(errno){
+    case 0:
+      return FILE_ERR_NONE;
     case EINVAL://wrong open mode
       return FILE_ERR_OPEN_MODE;
     case ENOENT://file does not exist
@@ -52,83 +51,29 @@ static IOError getErrorId(int errnoVal){
   }
   return FILE_ERR_IO;
 }
-
-#ifndef MAX_PATH
-#define MAX_PATH 4096
-#endif
-static char fopenBuffer[MAX_PATH+1];//XXX make buffer thread safe
-IOError concat_io_d__fopen(int8_t const* nameChars,int64_t nameLength,OpenMode mode,FILE** file){
-  *file=NULL;
-  char const* path=(char const*)nameChars;
-  if(nameChars[nameLength-1]!='\0'){
-    if(nameLength>MAX_PATH){
-      return FILE_ERR_PATH_OVERFLOW;
-    }
-    memcpy(fopenBuffer,nameChars,nameLength*sizeof(int8_t));
-    fopenBuffer[nameLength]='\0';
-    path=fopenBuffer;
-  }
-  char const* openMode="r+b";
-  if((mode&OPEN_READ)!=0){
-    if((mode&OPEN_APPEND)!=0){
-      openMode="a+b";
-    }else if((mode&OPEN_WRITE)==0){
-      openMode="rb";
-    }
-  }else if(mode!=0){
-    if((mode&OPEN_APPEND)!=0){
-      openMode="ab";
-    }else{
-      openMode="wb";
-    }
-  }
-  errno=0;//reset errno
-  *file=fopen(path,openMode);
-  if(*file==NULL){
-    return getErrorId(errno);
-  }
-  return FILE_ERR_NONE;
+// wrappers converting between FILE* and void*
+concatIOHelper_File* concatIOHelper_fopen(char const* path,char const* mode){
+  return (concatIOHelper_File*)fopen(path,mode);
 }
-IOError concat_io_d__fread(concat_File* file,int8_t* buffer,int64_t off,int64_t count,int64_t* N){
-  *N=0;
-  if(file==NULL)
-    return FILE_ERR_INVALID_FILE;
-  clearerr(file);//reset error flags
-  errno=0;//reset errno
-  *N=fread(buffer+off,sizeof(int8_t),count,file);
-  if(feof(file))
-    return FILE_ERR_END_OF_FILE;
-  if(ferror(file))
-    return getErrorId(errno);
-  return FILE_ERR_NONE;
+void concatIOHelper_clearerr(concatIOHelper_File* f){
+  clearerr((FILE*)f);
 }
-IOError concat_io_d__fwrite(concat_File* file,int8_t* buffer,int64_t off,int64_t count,int64_t* N){
-  *N=0;
-  if(file==NULL)
-    return FILE_ERR_INVALID_FILE;
-  clearerr(file);//reset error flags
-  errno=0;//reset errno
-  *N=fwrite(buffer+off,sizeof(int8_t),count,file);
-  if(feof(file))
-    return FILE_ERR_END_OF_FILE;
-  if(ferror(file))
-    return getErrorId(errno);
-  return FILE_ERR_NONE;
+int concatIOHelper_feof(concatIOHelper_File* f){
+  return feof((FILE*)f);
 }
-IOError concat_io_dfflush(concat_File* file){
-  if(file==NULL)
-    return FILE_ERR_INVALID_FILE;
-  errno=0;//reset errno
-  if(fflush(file)!=0)
-    return getErrorId(errno);
-  return FILE_ERR_NONE;
+int concatIOHelper_ferror(concatIOHelper_File* f){
+  return ferror((FILE*)f);
 }
-IOError concat_io_dfclose(concat_File* file){
-  if(file==NULL)
-    return FILE_ERR_NONE;
-  errno=0;//reset errno
-  if(fclose(file)!=0)
-    return getErrorId(errno);
-  return FILE_ERR_NONE;
+size_t concatIOHelper_fread(void* buffer,size_t eltSize,size_t eltCount,concatIOHelper_File* f){
+  return fread(buffer,eltSize,eltCount,(FILE*)f);
+}
+size_t concatIOHelper_fwrite(void const* buffer,size_t eltSize,size_t eltCount,concatIOHelper_File* f){
+  return fwrite(buffer,eltSize,eltCount,(FILE*)f);
+}
+int concatIOHelper_fflush(concatIOHelper_File* f){
+  return fflush((FILE*)f);
+}
+int concatIOHelper_fclose(concatIOHelper_File* f){
+  return fclose((FILE*)f);
 }
 

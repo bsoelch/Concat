@@ -1,93 +1,235 @@
+#include mem
+#include stringBuilder
+
 #namespace io
-  type : extern _FILE
-  _FILE ptr mut =:: public FILE
-  
-  i32 type =: public IOError
-  i32 type =: public OpenMode
-  
-  0  IOError =: public FILE_ERROR_NONE
-  -1 IOError =: public FILE_ERR_END_OF_FILE 
-  1  IOError =: public FILE_ERR_IO
-  2  IOError =: public FILE_ERR_PATH_OVERFLOW
-  3  IOError =: public FILE_ERR_OPEN_MODE
-  4  IOError =: public FILE_ERR_FILE_NOT_FOUND
-  5  IOError =: public FILE_ERR_FILE_IS_DIR
-  6  IOError =: public FILE_ERR_FILE_ALREADY_EXISTS
-  7  IOError =: public FILE_ERR_ACCESS_DENIED
-  8  IOError =: public FILE_ERR_INVALID_FILE
+i32 type =: public IOError
+0  IOError =: public FILE_ERROR_NONE
+-1 IOError =: public FILE_ERR_END_OF_FILE
+1  IOError =: public FILE_ERR_IO
+2  IOError =: public FILE_ERR_PATH_OVERFLOW
+3  IOError =: public FILE_ERR_OPEN_MODE
+4  IOError =: public FILE_ERR_FILE_NOT_FOUND
+5  IOError =: public FILE_ERR_FILE_IS_DIR
+6  IOError =: public FILE_ERR_FILE_ALREADY_EXISTS
+7  IOError =: public FILE_ERR_ACCESS_DENIED
+8  IOError =: public FILE_ERR_INVALID_FILE
 
-  1 OpenMode =: public OPEN_READ
-  2 OpenMode =: public OPEN_WRITE
-  4 OpenMode =: public OPEN_APPEND
-  
-  
-  proc( => FILE ) : extern public stdIn
-  proc( => FILE ) : extern public stdOut
-  proc( => FILE ) : extern public stdErr
-
-  proc( i8 _ ptr : fileName i64 : nameLength OpenMode : mode FILE ptr mut : #:out file => IOError ) : extern public _fopen
-  proc( i8 _ ptr : fileName i64 : nameLength OpenMode : mode => FILE IOError ) =: public fopen
-    FILE : f
-    fileName nameLength mode f @ _fopen f #swap return
-  end
-
-  proc( i64 : auto k  i8 k ptr : fileName  OpenMode : mode => FILE IOError ) =: public fopenS
-    fileName k mode fopen return
-  end
-  ## file buffer off count -> nRead errCode
-  proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count i64 ptr mut : #:out N => IOError ) : extern public _fread
-  proc( FILE : file i8 _ ptr mut : buffer i64 : off i64 : count => i64 IOError ) =: public fread
-    i64 : N
-    file buffer off count N @ _fread N #swap return
-  end
-  ## file buffer off count -> nWritten errCode
-  proc( FILE : file i8 _ ptr : buffer i64 : off i64 : count i64 ptr mut : #:out N =>  IOError ) : extern public _fwrite
-  proc( FILE : file i8 _ ptr : buffer i64 : off i64 : count => i64 IOError ) =: public fwrite
-    i64 : N
-    file buffer off count N @ _fwrite N #swap return
-  end
-  proc( FILE => IOError ) : extern public fflush
-  proc( FILE => IOError ) : extern public fclose
-  ## XXX fseek
-  
-  proc( FILE : file i8 : chr => IOError ) =: public fputc
-    file chr @ 0 1 fwrite #swap #drop return
-  end
-  proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: public fputs
-    0 i64 =: mut off
-    k =:: mut count
-    str i8 _ ptr cast =:: data
-    while count 0 > do
-      file data off count fwrite 
-        #dup FILE_ERROR_NONE != if ## error
-            #swap #drop return
-          end
-        #drop
-        count #over - count =
-      off #swap + off =
-    end
-    FILE_ERROR_NONE return
-  end
-  proc( FILE : file => FILE IOError ) =: public fstart
-    file FILE_ERROR_NONE return
-  end
-  proc( FILE : file IOError : err  i64 : auto k  i8 k ptr : str => FILE  IOError ) =: public fappendS
-    err FILE_ERROR_NONE != if
-      file err return
-    end
-    file #dup str fputs return
-  end
-  proc( FILE : file IOError : err i8 : c => FILE  IOError ) =: public fappendC
-    err FILE_ERROR_NONE != if
-      file err return
-    end
-    file #dup c fputc return
-  end
-  
-  proc( i64 : auto k  i8 k ptr : str => IOError ) =: public puts
-    stdOut fstart 
-      str  fappendS 
-      "\n" fappendS
-    #swap #drop return
-  end
+i32 type =: public OpenMode
+1 OpenMode =: public OPEN_READ
+2 OpenMode =: public OPEN_WRITE
+4 OpenMode =: public OPEN_APPEND
 #end
+
+#namespace c
+..ctype.void =:: FILE
+## wrapper functions to allow interoperability with lib-c code
+proc( => FILE ptr mut ) : externC concatIOHelper_stdin
+proc( => FILE ptr mut ) : externC concatIOHelper_stdout
+proc( => FILE ptr mut ) : externC concatIOHelper_stderr
+proc( => ) : externC concatIOHelper_resetErrno
+proc( => io.IOError ) : externC concatIOHelper_checkErrno
+proc(
+  ..ctype.char _ ptr : path
+  ..ctype.char _ ptr : mode
+=> FILE ptr mut ) : externC concatIOHelper_fopen
+proc( FILE ptr mut
+=> ) : externC concatIOHelper_clearerr
+proc( FILE ptr mut
+=> ..ctype.int ) : externC concatIOHelper_feof
+proc( FILE ptr mut
+=> ..ctype.int ) : externC concatIOHelper_ferror
+proc(
+  ..ctype.void _ ptr mut : buffer
+  ..ctype.size : eltSize
+  ..ctype.size : eltCount
+  FILE ptr mut : file
+=> ..ctype.size ) : externC concatIOHelper_fread
+proc(
+  ..ctype.void _ ptr : buffer
+  ..ctype.size : eltSize
+  ..ctype.size : eltCount
+  FILE ptr mut : file
+=> ..ctype.size ) : externC concatIOHelper_fwrite
+proc( FILE ptr mut : file
+=> ..ctype.int ) : externC concatIOHelper_fflush
+proc( FILE ptr mut : file
+=> ..ctype.int ) : externC concatIOHelper_fclose
+#end
+
+#namespace io
+c.FILE ptr mut =:: public FILE ## XXX ? wrapper type
+
+proc( => FILE ) =: public stdIn
+  c.concatIOHelper_stdin
+end
+proc( => FILE ) =: public stdOut
+  c.concatIOHelper_stdout
+end
+proc( => FILE ) =: public stdErr
+  c.concatIOHelper_stderr
+end
+
+i8 4096 array : fileNameBuffer ## XXX make buffer thread safe
+proc(
+  i8 _ ptr : fileName
+  i64 : nameLength
+  OpenMode : mode
+=> FILE IOError ) =: public fopen
+  fileName nameLength 1 - [] '\x00' == if ## name not null-terminated
+    fileName
+  else
+    nameLength fileNameBuffer @ ..length >= if
+      c.nullPtr FILE cast! FILE_ERR_PATH_OVERFLOW return
+    end
+    ## mem.copy
+      fileNameBuffer @
+      fileName
+      nameLength
+    mem.copy #drop
+    '\x00' fileNameBuffer @ nameLength [] =
+    fileNameBuffer @ i8 _ ptr cast
+  end =:: path
+  "r+b\x00" i8 _ ptr =: mut openMode
+  mode OPEN_READ & ? if
+    mode OPEN_APPEND & ? if
+      "a+b\x00" openMode =
+    else mode OPEN_WRITE & ? ! _if
+      "rb\x00"openMode =
+    end
+  else mode ? _if
+    mode OPEN_APPEND & ? if
+      "ab\x00" openMode =
+    else mode OPEN_WRITE & ? _if
+      "wb\x00"openMode =
+    end
+  end
+  c.concatIOHelper_resetErrno
+  ##fopen
+    path ..ctype.char ptr cast!
+    openMode ..ctype.char ptr cast!
+  c.concatIOHelper_fopen
+  #dup c.FILE ptr cast c.isNull if
+    c.concatIOHelper_checkErrno
+  else
+    FILE_ERROR_NONE
+  end
+end
+proc(
+  i64 : auto k
+  i8 k ptr : fileName
+  OpenMode : mode
+=> FILE IOError ) =: public fopenS
+  fileName k mode fopen return
+end
+#template type : T #end
+proc(
+  FILE : file
+  T _ ptr mut : buffer
+  i64 : off
+  i64 : count
+=> i64 IOError ) =: public fread
+  file c.FILE ptr cast c.isNull if
+    0 FILE_ERR_INVALID_FILE return
+  end
+  file c.concatIOHelper_clearerr
+  c.concatIOHelper_resetErrno
+  ## fread
+    buffer off + ..ctype.void ptr mut cast!
+    T ..type.size
+    count
+    file
+  c.concatIOHelper_fread
+    ## XXX remove explicit cast of return value
+    file c.concatIOHelper_feof i32 cast ? if
+      FILE_ERR_END_OF_FILE return
+    end
+    file c.concatIOHelper_ferror i32 cast ? if
+      c.concatIOHelper_checkErrno return
+    end
+  FILE_ERROR_NONE return
+end
+#template type : T #end
+proc(
+  FILE : file
+  T _ ptr : buffer
+  i64 : off
+  i64 : count
+=> i64 IOError ) =: public fwrite
+  file c.FILE ptr cast c.isNull if
+    0 FILE_ERR_INVALID_FILE return
+  end
+  file c.concatIOHelper_clearerr
+  c.concatIOHelper_resetErrno
+  ## fread
+    buffer off + ..ctype.void ptr cast!
+    T ..type.size
+    count
+    file
+  c.concatIOHelper_fwrite
+    ## XXX remove explicit cast of return value
+    file c.concatIOHelper_feof i32 cast ? if
+      FILE_ERR_END_OF_FILE return
+    end
+    file c.concatIOHelper_ferror i32 cast ? if
+      c.concatIOHelper_checkErrno return
+    end
+  FILE_ERROR_NONE return
+end
+proc( FILE : file => IOError ) =: public fflush
+  file c.FILE ptr cast c.isNull if
+    FILE_ERR_INVALID_FILE return
+  end
+  c.concatIOHelper_resetErrno
+  ## XXX remove explicit cast of return value
+  file c.concatIOHelper_fflush i32 cast ? if
+    c.concatIOHelper_checkErrno return
+  end
+  FILE_ERROR_NONE return
+end
+proc( FILE : file => IOError ) =: public fclose
+  file c.FILE ptr cast c.isNull if
+    FILE_ERR_INVALID_FILE return
+  end
+  c.concatIOHelper_resetErrno
+  ## XXX remove explicit cast of return value
+  file c.concatIOHelper_fclose i32 cast ? if
+    c.concatIOHelper_checkErrno return
+  end
+  FILE_ERROR_NONE return
+end
+## XXX fseek/ftell
+
+
+proc( FILE : file i8 : chr => IOError ) =: public fputc
+  file chr @ 0 1 fwrite #swap #drop return
+end
+proc( FILE : file  i64 : k  i8 _ ptr : str => IOError ) =: public fputArray
+  0 i64 =: mut off
+  k =:: mut count
+  str i8 _ ptr cast =:: data
+  while count 0 > do
+    file data off count fwrite
+      #dup FILE_ERROR_NONE != if ## error
+          #swap #drop return
+        end
+      #drop
+      count #over - count =
+    off #swap + off =
+  end
+  FILE_ERROR_NONE return
+end
+proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: public fputs
+  file k str fputArray
+end
+
+proc( i64 : auto k  i8 k ptr : str => IOError ) =: public puts
+  k 1 + sb.create
+    str sb.appendS
+    '\n' sb.appendC
+  =:: chars
+    stdOut chars .length chars .data fputArray =:: errId
+  chars sb.free #drop
+  errId return
+end
+#end
+
