@@ -203,6 +203,18 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
+    <context id="cType" style-ref="type">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          ..ctype.(
+            void | bool | char | schar | uchar |
+            short | ushort | int | uint |
+            long | ulong | longlong | ulonglong | size |
+            float | double
+          )
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
     <context id="libType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -301,9 +313,10 @@
         <context ref="postfix-keyword"/>
         <context ref="declaration"/>
         <context ref="type-keywords"/>
-        <context ref="libtype-keywords"/>
         <context ref="primitiveType"/>
+        <context ref="cType"/>
         <context ref="libType"/>
+        <context ref="libtype-keywords"/>
         <context ref="string"/>
         <context ref="char"/>
     <!--    <context ref="float"/> -->
