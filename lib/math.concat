@@ -1,53 +1,53 @@
 #namespace c
-proc( ..ctype.double => ..ctype.double ) : externC floor
-proc( ..ctype.double => ..ctype.double ) : externC ceil
-proc( ..ctype.double => ..ctype.double ) : externC round
-proc( ..ctype.double => ..ctype.double ) : externC fabs
+proc( ..ctype.double => ..ctype.double ) : extern floor
+proc( ..ctype.double => ..ctype.double ) : extern ceil
+proc( ..ctype.double => ..ctype.double ) : extern round
+proc( ..ctype.double => ..ctype.double ) : extern fabs
 
 proc(
   ..ctype.double
   ..ctype.double
-=> ..ctype.double ) : externC fmin
+=> ..ctype.double ) : extern fmin
 proc(
   ..ctype.double
   ..ctype.double
-=> ..ctype.double ) : externC fmax
+=> ..ctype.double ) : extern fmax
 
-proc( ..ctype.double => ..ctype.double ) : externC log2
-proc( ..ctype.double => ..ctype.double ) : externC log
-proc( ..ctype.double => ..ctype.double ) : externC exp
+proc( ..ctype.double => ..ctype.double ) : extern log2
+proc( ..ctype.double => ..ctype.double ) : extern log
+proc( ..ctype.double => ..ctype.double ) : extern exp
 
-proc( ..ctype.double => ..ctype.double ) : externC sqrt
-proc( ..ctype.double => ..ctype.double ) : externC cbrt
+proc( ..ctype.double => ..ctype.double ) : extern sqrt
+proc( ..ctype.double => ..ctype.double ) : extern cbrt
 proc(
   ..ctype.double
   ..ctype.double
-=> ..ctype.double ) : externC pow
+=> ..ctype.double ) : extern pow
 ## XXX gamma function
 
-proc( ..ctype.double => ..ctype.double ) : externC sin
-proc( ..ctype.double => ..ctype.double ) : externC cos
-proc( ..ctype.double => ..ctype.double ) : externC tan
-proc( ..ctype.double => ..ctype.double ) : externC asin
-proc( ..ctype.double => ..ctype.double ) : externC acos
-proc( ..ctype.double => ..ctype.double ) : externC atan
-proc( ..ctype.double => ..ctype.double ) : externC sinh
-proc( ..ctype.double => ..ctype.double ) : externC cosh
-proc( ..ctype.double => ..ctype.double ) : externC tanh
-proc( ..ctype.double => ..ctype.double ) : externC asinh
-proc( ..ctype.double => ..ctype.double ) : externC acosh
-proc( ..ctype.double => ..ctype.double ) : externC atanh
+proc( ..ctype.double => ..ctype.double ) : extern sin
+proc( ..ctype.double => ..ctype.double ) : extern cos
+proc( ..ctype.double => ..ctype.double ) : extern tan
+proc( ..ctype.double => ..ctype.double ) : extern asin
+proc( ..ctype.double => ..ctype.double ) : extern acos
+proc( ..ctype.double => ..ctype.double ) : extern atan
+proc( ..ctype.double => ..ctype.double ) : extern sinh
+proc( ..ctype.double => ..ctype.double ) : extern cosh
+proc( ..ctype.double => ..ctype.double ) : extern tanh
+proc( ..ctype.double => ..ctype.double ) : extern asinh
+proc( ..ctype.double => ..ctype.double ) : extern acosh
+proc( ..ctype.double => ..ctype.double ) : extern atanh
 proc(
   ..ctype.double : y
   ..ctype.double : x
-=> ..ctype.double ) : externC atan2
+=> ..ctype.double ) : extern atan2
 
-proc( ..ctype.float => ..ctype.int ) : externC isnanf
-proc( ..ctype.float => ..ctype.int ) : externC isinff
-proc( ..ctype.float => ..ctype.int ) : externC isfinitef
-proc( ..ctype.double => ..ctype.int ) : externC isnan
-proc( ..ctype.double => ..ctype.int ) : externC isinf
-proc( ..ctype.double => ..ctype.int ) : externC isfinite
+proc( ..ctype.float => ..ctype.int ) : extern isnanf
+proc( ..ctype.float => ..ctype.int ) : extern isinff
+proc( ..ctype.float => ..ctype.int ) : extern isfinitef
+proc( ..ctype.double => ..ctype.int ) : extern isnan
+proc( ..ctype.double => ..ctype.int ) : extern isinf
+proc( ..ctype.double => ..ctype.int ) : extern isfinite
 #end
 #namespace math
 proc( double => double ) =: public floor

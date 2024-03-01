@@ -23,37 +23,37 @@ i32 type =: public OpenMode
 #namespace c
 ..ctype.void =:: FILE
 ## wrapper functions to allow interoperability with lib-c code
-proc( => FILE ptr mut ) : externC concatIOHelper_stdin
-proc( => FILE ptr mut ) : externC concatIOHelper_stdout
-proc( => FILE ptr mut ) : externC concatIOHelper_stderr
-proc( => ) : externC concatIOHelper_resetErrno
-proc( => io.IOError ) : externC concatIOHelper_checkErrno
+proc( => FILE ptr mut ) : extern concatIOHelper_stdin
+proc( => FILE ptr mut ) : extern concatIOHelper_stdout
+proc( => FILE ptr mut ) : extern concatIOHelper_stderr
+proc( => ) : extern concatIOHelper_resetErrno
+proc( => io.IOError ) : extern concatIOHelper_checkErrno
 proc(
   ..ctype.char _ ptr : path
   ..ctype.char _ ptr : mode
-=> FILE ptr mut ) : externC concatIOHelper_fopen
+=> FILE ptr mut ) : extern concatIOHelper_fopen
 proc( FILE ptr mut
-=> ) : externC concatIOHelper_clearerr
+=> ) : extern concatIOHelper_clearerr
 proc( FILE ptr mut
-=> ..ctype.int ) : externC concatIOHelper_feof
+=> ..ctype.int ) : extern concatIOHelper_feof
 proc( FILE ptr mut
-=> ..ctype.int ) : externC concatIOHelper_ferror
+=> ..ctype.int ) : extern concatIOHelper_ferror
 proc(
   ..ctype.void _ ptr mut : buffer
   ..ctype.size : eltSize
   ..ctype.size : eltCount
   FILE ptr mut : file
-=> ..ctype.size ) : externC concatIOHelper_fread
+=> ..ctype.size ) : extern concatIOHelper_fread
 proc(
   ..ctype.void _ ptr : buffer
   ..ctype.size : eltSize
   ..ctype.size : eltCount
   FILE ptr mut : file
-=> ..ctype.size ) : externC concatIOHelper_fwrite
+=> ..ctype.size ) : extern concatIOHelper_fwrite
 proc( FILE ptr mut : file
-=> ..ctype.int ) : externC concatIOHelper_fflush
+=> ..ctype.int ) : extern concatIOHelper_fflush
 proc( FILE ptr mut : file
-=> ..ctype.int ) : externC concatIOHelper_fclose
+=> ..ctype.int ) : extern concatIOHelper_fclose
 #end
 
 #namespace io

@@ -38,7 +38,7 @@ end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog => ) =: printGlobalName
   prog [] .idContext .labelContext @ =:: labelContext
   128 sb.create
-    label labelContext id.labelFlags id.FLAG_EXTERN2 & ? if ## use unmodified name for extern values
+    label labelContext id.labelFlags id.FLAG_EXTERN & ? if ## use unmodified name for extern values
       label labelContext sb.appendLabelName
         target #over io.fputSb #drop
       sb.free #drop

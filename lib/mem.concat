@@ -11,36 +11,36 @@
   end
   proc(
     ..ctype.size : size
-  => ..ctype.void _ ptr mut ) : externC malloc
+  => ..ctype.void _ ptr mut ) : extern malloc
   proc(
     ..ctype.size : count
     ..ctype.size : size
-  => ..ctype.void _ ptr mut ) : externC calloc
+  => ..ctype.void _ ptr mut ) : extern calloc
   proc(
     ..ctype.void _ ptr mut : prev
     ..ctype.size : size
-  => ..ctype.void _ ptr mut ) : externC realloc
-  proc( ..ctype.void _ ptr mut : src => ) : externC free
+  => ..ctype.void _ ptr mut ) : extern realloc
+  proc( ..ctype.void _ ptr mut : src => ) : extern free
   proc(
     ..ctype.void _ ptr mut : target
     ..ctype.void _ ptr : src
     ..ctype.size : count
-  => ..ctype.void _ ptr mut ) : externC memcpy
+  => ..ctype.void _ ptr mut ) : extern memcpy
   proc(
     ..ctype.void _ ptr mut : target
     ..ctype.void _ ptr : src
     ..ctype.size : count
-  => ..ctype.void _ ptr mut ) : externC memmove
+  => ..ctype.void _ ptr mut ) : extern memmove
   proc(
     ..ctype.void _ ptr mut : target
     ..ctype.int  : value
     ..ctype.size : count
-  => ..ctype.void _ ptr mut ) : externC memset
+  => ..ctype.void _ ptr mut ) : extern memset
   proc(
     ..ctype.void _ ptr : a
     ..ctype.void _ ptr : b
     ..ctype.size : count
-  => ..ctype.int ) : externC memcmp
+  => ..ctype.int ) : extern memcmp
 #end
 #namespace mem
   proc(

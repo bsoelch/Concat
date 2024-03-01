@@ -527,9 +527,6 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       else #dup "extern" string.wrap string.eq _if
         id.FLAG_EXTERN flags | flags =
         true isModifier =
-      else #dup "externC" string.wrap string.eq _if ## XXX temporary, will replace extern in future update
-        id.MASK_EXTERN2 flags | flags =
-        true isModifier =
       else #dup "public" string.wrap string.eq _if
         id.FLAG_PUBLIC flags | flags =
         true isModifier =
