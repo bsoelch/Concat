@@ -150,6 +150,7 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog => ) =: printTypeN
       break
     cType case
       t .cType switch
+        VOID       case target "void"               io.fputs #drop break
         BOOL       case target "bool"               io.fputs #drop break
         CHAR       case target "char"               io.fputs #drop break
         S_CHAR     case target "signed char"        io.fputs #drop break

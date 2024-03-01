@@ -20,7 +20,7 @@ i32 =:: ReferenceId
 i32 =:: SizeId
 ## primitive C-types for C interoperability
 enum(
-  BOOL
+  VOID BOOL
   CHAR S_CHAR U_CHAR
   SHORT U_SHORT
   INT U_INT
@@ -114,21 +114,22 @@ proc( PrimitiveType => i32 ) =: primitiveId
 end
 proc( CType => i32 ) =: cTypeId
   switch
-    BOOL case 0 return
-    CHAR case 1 return
-    S_CHAR case 2 return
-    U_CHAR case 3 return
-    SHORT  case 4 return
-    U_SHORT case 5 return
-    INT case 6 return
-    U_INT case 7 return
-    LONG  case 8 return
-    LONGLONG  case 9 return
-    U_LONG  case 10 return
-    U_LONGLONG  case 11 return
-    SIZE case 12 return
-    FLOAT case 13 return
-    DOUBLE case 14 return
+    VOID case 0 return
+    BOOL case 1 return
+    CHAR case 2 return
+    S_CHAR case 3 return
+    U_CHAR case 4 return
+    SHORT  case 5 return
+    U_SHORT case 6 return
+    INT case 7 return
+    U_INT case 8 return
+    LONG  case 9 return
+    LONGLONG  case 10 return
+    U_LONG  case 11 return
+    U_LONGLONG  case 12 return
+    SIZE case 13 return
+    FLOAT case 14 return
+    DOUBLE case 15 return
   end
 end
 proc( Type : a => i32 ) =: public typeHash
@@ -356,6 +357,7 @@ proc( Type : a Type : b TypeContext ptr : context => Type ) =: public commonNumb
 end
 ## ctypes
 #namespace ctype
+  CType .VOID        Type .cType new Type =: public VOID
   CType .BOOL        Type .cType new Type =: public BOOL
   CType .CHAR        Type .cType new Type =: public CHAR
   CType .S_CHAR      Type .cType new Type =: public S_CHAR
@@ -374,6 +376,7 @@ end
 #end
 proc( CType => Type ) =: cTypeAsType
   switch
+    VOID case Type .empty return
     BOOL case primitive.BOOL return
     CHAR S_CHAR U_CHAR case primitive.I8 return
     SHORT U_SHORT case primitive.I16 return
@@ -401,6 +404,7 @@ proc( PrimitiveType => i32 ) =: sizeOfPrimitive
 end
 proc( CType => i32 ) =: sizeOfCType
   switch ## sizes for linux-x86-gcc
+    VOID case 0 return
     BOOL CHAR S_CHAR U_CHAR case 1 return
     SHORT U_SHORT case 2 return
     INT U_INT case 4 return
@@ -1830,6 +1834,8 @@ proc( stringBuilder types.PrimitiveType => stringBuilder ) =: appendPrimitiveTyp
 end
 proc( stringBuilder types.CType => stringBuilder ) =: appendCType
   switch
+    VOID case
+      "..ctype.void" appendS return
     BOOL case
       "..ctype.bool" appendS return
     CHAR case

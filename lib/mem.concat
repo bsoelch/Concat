@@ -1,41 +1,51 @@
 #namespace c
-  type : VOID
-  proc( => VOID _ ptr mut ) =: nullPtr
-    0 VOID _ ptr mut cast! return
+  proc( => ..ctype.void _ ptr mut ) =: public nullPtr
+    0 ..ctype.void _ ptr mut cast! return
   end
-  proc( ..ctype.size : size => VOID _ ptr mut ) : externC malloc
+  #template type : T #end
+  proc( T _ ptr : p => bool ) =: public isNull
+    ## ==
+    p ..ctype.void _ ptr cast!
+    nullPtr ..ctype.void _ ptr cast!
+    == return
+  end
+  proc(
+    ..ctype.size : size
+  => ..ctype.void _ ptr mut ) : externC malloc
   proc(
     ..ctype.size : count
     ..ctype.size : size
-  => VOID _ ptr mut ) : externC calloc
+  => ..ctype.void _ ptr mut ) : externC calloc
   proc(
-    VOID _ ptr mut : prev
+    ..ctype.void _ ptr mut : prev
     ..ctype.size : size
-  => VOID _ ptr mut ) : externC realloc
-  proc( VOID _ ptr mut : src => ) : externC free
+  => ..ctype.void _ ptr mut ) : externC realloc
+  proc( ..ctype.void _ ptr mut : src => ) : externC free
   proc(
-    VOID _ ptr mut : target
-    VOID _ ptr : src
+    ..ctype.void _ ptr mut : target
+    ..ctype.void _ ptr : src
     ..ctype.size : count
-  => VOID _ ptr mut ) : externC memcpy
+  => ..ctype.void _ ptr mut ) : externC memcpy
   proc(
-    VOID _ ptr mut : target
-    VOID _ ptr : src
+    ..ctype.void _ ptr mut : target
+    ..ctype.void _ ptr : src
     ..ctype.size : count
-  => VOID _ ptr mut ) : externC memmove
+  => ..ctype.void _ ptr mut ) : externC memmove
   proc(
-    VOID _ ptr mut : target
+    ..ctype.void _ ptr mut : target
     ..ctype.int  : value
     ..ctype.size : count
-  => VOID _ ptr mut ) : externC memset
+  => ..ctype.void _ ptr mut ) : externC memset
   proc(
-    VOID _ ptr : a
-    VOID _ ptr : b
+    ..ctype.void _ ptr : a
+    ..ctype.void _ ptr : b
     ..ctype.size : count
   => ..ctype.int ) : externC memcmp
 #end
 #namespace mem
-  proc( c.VOID _ ptr mut : p => c.VOID _ ptr mut ) =: checkPtr
+  proc(
+    ..ctype.void _ ptr mut : p
+  => ..ctype.void _ ptr mut ) =: checkPtr
     p c.nullPtr == if ## check for null-ptr
       ..unreachable ## TODO handle error
     end
@@ -61,38 +71,38 @@
       prev free
       c.nullPtr T _ ptr mut cast! return
     end
-    prev c.VOID _ ptr mut cast! T ..type.stride n * c.realloc checkPtr T _ ptr mut cast! return
+    prev ..ctype.void _ ptr mut cast! T ..type.stride n * c.realloc checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
   proc( T _ ptr mut : p => ) =: public free
-    p c.VOID ptr mut cast! c.free
+    p ..ctype.void ptr mut cast! c.free
   end
   ## set memory to zero
   #template type : T #end
   proc( T _ ptr mut : src  i64 : n => T _ ptr mut ) =: public clear
-    src c.VOID _ ptr mut cast! 0 T ..type.stride n * c.memset checkPtr T _ ptr mut cast! return
+    src ..ctype.void _ ptr mut cast! 0 T ..type.stride n * c.memset checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
   proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: public copy
     ## memcpy
-      target c.VOID _ ptr mut cast!
-      src c.VOID _ ptr cast!
+      target ..ctype.void _ ptr mut cast!
+      src ..ctype.void _ ptr cast!
       T ..type.stride n *
     c.memcpy checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
   proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: public move
     ## memmove
-      target c.VOID _ ptr mut cast!
-      src c.VOID _ ptr cast!
+      target ..ctype.void _ ptr mut cast!
+      src ..ctype.void _ ptr cast!
       T ..type.stride n *
     c.memmove checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
   proc( T _ ptr : a  T _ ptr : b  i64 : n   => i32 ) =: public compare
     ## memcmp
-      a c.VOID _ ptr cast!
-      b c.VOID _ ptr cast!
+      a ..ctype.void _ ptr cast!
+      b ..ctype.void _ ptr cast!
       T ..type.stride n *
     c.memcmp return
   end

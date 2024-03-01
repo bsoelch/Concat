@@ -185,6 +185,7 @@ proc(
           sb "l" sb.appendS return
         FLOAT case sb "s" sb.appendS return
         DOUBLE case sb "d" sb.appendS return
+        VOID case break
       end
       break
     arrayIndex pointer reference mutableReference procedure case
@@ -203,10 +204,11 @@ proc(
       break
     undefined empty templateType genericType autoType
     procIn procOut case
-      "unsupported type" sb.wrap
-      pos errors appendError
-      sb return
+      break
   end
+  "unsupported type" sb.wrap
+  pos errors appendError
+  sb return
 end
 proc(
   stringBuilder : sb
