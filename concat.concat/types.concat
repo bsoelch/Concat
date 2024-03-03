@@ -1376,6 +1376,7 @@ end
 proc( Type => bool ) =: public isNamedType
   .namedType ?? return
 end
+## completely unwrap named type
 proc( Type TypeContext ptr => Type ) =: public unwrapNamed
   =:: context
   while
@@ -1391,6 +1392,16 @@ proc( Type TypeContext ptr => Type ) =: public unwrapNamed
       continue
     end
   false do end
+  return
+end
+## unwrap only top level named type
+proc( Type TypeContext ptr => Type ) =: flatUnwrapNamed
+  =:: context
+  #dup .namedType ?? if
+    context [] .namedTypes
+      #swap .namedType
+    list.at .data [] .data
+  end
   return
 end
 proc( Type TypeContext ptr => LabelId ) =: public namedTypeName
@@ -1431,7 +1442,7 @@ proc( stringBuilder types.NamedType LabelContext ptr TypeContext ptr bool => str
     #over .name labelContext sb.appendLabelName
     '"' sb.appendC
     " [ " sb.appendS
-    #swap .data context types.unwrapNamed labelContext context allowRecurse appendTypeRecursive
+    #swap .data context types.flatUnwrapNamed labelContext context allowRecurse appendTypeRecursive
     " ]"  sb.appendS
   return
 end
@@ -1687,20 +1698,32 @@ proc( Type : src Type : target bool : reshape TypeContext ptr : context => bool 
   end #drop
   true return
 end
+1i8 =:: NAMED_UNWRAP_SRC
+0i8 =:: NAMED_UNWRAP_NONE
+-1i8 =:: NAMED_UNWRAP_TARGET
 proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAutoCast
+  src to context NAMED_UNWRAP_NONE canAutoCast_internal
+end
+proc( Type : src Type : to TypeContext ptr : context i8 : namedDirection => bool ) =: canAutoCast_internal
   to =:: mut target
-  src types.isNamedType ! target types.isNamedType & if
-    target context types.unwrapNamed target =
-  end
   src target types.typeEquals if
+    true return
+  end
+  ## allow auto-cast from/to direct descendant of named type
+  src .namedType ?? if namedDirection NAMED_UNWRAP_TARGET != _if
+    src context flatUnwrapNamed target context NAMED_UNWRAP_SRC canAutoCast_internal _if
+    true return
+  end
+  target .namedType ?? if namedDirection NAMED_UNWRAP_SRC != _if
+    src target context flatUnwrapNamed context NAMED_UNWRAP_TARGET canAutoCast_internal _if
     true return
   end
   ## convert c-types to types
   target .cType ?? if
-    src target .cType cTypeAsType context canAutoCast return
+    src target .cType cTypeAsType context namedDirection canAutoCast_internal return
   end
   src .cType ?? if
-    src .cType cTypeAsType target context canAutoCast return
+    src .cType cTypeAsType target context namedDirection canAutoCast_internal return
   end
   src context types.isNumber target context types.isNumber & if
     src context types.numberPrecision target context types.numberPrecision <=
@@ -1721,9 +1744,6 @@ proc( Type : src Type : to TypeContext ptr : context => bool ) =: public canAuto
   end
   src context types.isReference if src context getBaseType to context canAutoCast _if
     true return
-  end
-  src types.isPrimitive ! target types.isPrimitive ! | if
-    false return
   end
   false return
 end

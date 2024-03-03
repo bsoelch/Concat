@@ -3,7 +3,7 @@
 #include string
 #include arrayView
 
-i8 list #typedef public stringBuilder
+i8 list =:: public stringBuilder
 #namespace sb
   proc( i64 : cap => stringBuilder ) =: public create
     cap i8 list.create return

@@ -1206,21 +1206,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "could not create template" sb.wrap fileState [] .wordStart state appendError2
           end
           return
-        else "typedef" string.wrap #over string.eq _if #drop:2
-          fileState state nextWord fileState state readLabel
-          ## declareIdentifier
-            types.primitive.TYPE
-            IdentifierType .TYPE
-            -1 ## id
-            fileState state popTypeConstant #drop ConstValue .typeId new
-          fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if #drop
-            .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
-            return
-          end
-          idContext id.isTopLevel if
-            progContext [] .templateOps .length idContext  id.endOpenTemplate
-          end
-          #drop:2 return
         else "types" string.wrap #over string.eq _if =:: opName ':' string.split #swap #drop ## ignore 2nd parameter
           #dup .length 0 > if
             opName fileState [] .wordStart state getCompilerOpParam
@@ -2887,7 +2872,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state => FileId io.IOError 
     state [] .progContext =:: progContext
     #dup #over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
-      #dup .length 1 - list.setLength ## ensure there is a zero-terminator after the last character
+      #dup .length 1 - sb.setLength ## ensure there is a zero-terminator after the last character
     end
     #dup sb.asStr 0 1 FilePosition new #dup FileState new =:: mut fileState
     progContext [] .progFiles

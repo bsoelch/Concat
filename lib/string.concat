@@ -1,7 +1,7 @@
 #include arrayView
 #include mem
 
-i8 arrayView #typedef public string
+i8 arrayView =:: public string
 
 #namespace string
   "" 0 string new =:: EMPTY
