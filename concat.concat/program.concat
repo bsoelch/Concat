@@ -647,28 +647,28 @@ end
     =:: info
     info switch
       typeInfo case
-        "#types" sb.appendS
+        "..compiler.types" sb.appendS
         info .typeInfo 0 > if
-          ':' sb.appendC
+          '.' sb.appendC
           info .typeInfo sb.appendI
         end
         break
       stackInfo case
-        "#stack" sb.appendS
+        "..compiler.stack" sb.appendS
         info .stackInfo 0 > if
-          ':' sb.appendC
+          '.' sb.appendC
           info .stackInfo sb.appendI
         end
         break
       compiledOps case
-        "#ops" sb.appendS
+        "..compiler.ops" sb.appendS
         info .compiledOps 0 > if
-          ':' sb.appendC
+          '.' sb.appendC
           info .compiledOps sb.appendI
         end
         break
       find case
-        "#find " sb.appendS
+        "..compiler.find." sb.appendS
         info .find labelContext sb.appendLabelName
         break
     end

@@ -2,7 +2,7 @@
 "A string" =:: s2
 
 proc( => ) =: main
-  #find s2
+  ..compiler.parser.find.s2
   s3 ..length ..debug.print
   specialString ..length ..debug.print
   0 while #dup specialString ..length < do

@@ -7,12 +7,12 @@ proc( => ) =: main
   1234i16 =:: f
   -2i1 =:: g
   3u1 =:: h
-  #find a
-  #find b
-  #find c
-  #find d
-  #find e
-  #find f
-  #find g
-  #find h
+  ..compiler.parser.find.a
+  ..compiler.parser.find.b
+  ..compiler.parser.find.c
+  ..compiler.parser.find.d
+  ..compiler.parser.find.e
+  ..compiler.parser.find.f
+  ..compiler.parser.find.g
+  ..compiler.parser.find.h
 end

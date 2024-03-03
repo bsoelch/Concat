@@ -4,7 +4,7 @@ proc( => ) =: main
   c0 ..debug.print
   'B' c0 =  
   c0 ..debug.print
-  #find y
+  ..compiler.parser.find.y
 end
 
 'A' i8 =: mut c0

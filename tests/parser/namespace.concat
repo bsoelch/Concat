@@ -40,5 +40,5 @@ end
   #using B
   #using C
   4 =:: i
-  #find i
+  ..compiler.parser.find.i
 #end
