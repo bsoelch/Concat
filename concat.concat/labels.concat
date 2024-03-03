@@ -368,7 +368,7 @@ struct(
     end
     context [] .namespaces id list.get .parent return
   end
-  proc( NamespaceImportId : parent NamespaceId : import LabelContext ptr mut : context => NamespaceImportId ) =: export getNamespaceImportId
+  proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr mut : context => NamespaceImportId ) =: export getNamespaceImportId
     context [] .namespaceImports .length 0 > if
       parent NAMESPACE_IMPORT_NONE == if
         0 NamespaceImportId cast
@@ -381,7 +381,7 @@ struct(
       end
       NAMESPACE_IMPORT_NONE #swap
         while #dup NAMESPACE_IMPORT_NONE != do #swap #drop
-          context [] .namespaceImports #over list.get .imported import == if
+          context [] .namespaceImports #over list.get .imported importId == if
             return
           end
           context [] .namespaceImports #over list.get .next
@@ -392,7 +392,7 @@ struct(
       end #drop
     end
     context [] .namespaceImports
-      import
+      importId
       parent
       NAMESPACE_IMPORT_NONE
       NAMESPACE_IMPORT_NONE

@@ -2784,9 +2784,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
          #over "and*"      string.wrap string.startsWith |
          #over "or"        string.wrap string.eq |
          #over "or*"       string.wrap string.startsWith |
-         #over "namespace" string.wrap string.eq |
          #over "using"     string.wrap string.eq |
-         #over "include"   string.wrap string.eq |
+         #over "import"   string.wrap string.eq |
+         #over "overload"   string.wrap string.eq |
       _if =:: opName
       "`" sb.wrap
         opName sb.appendStr

@@ -375,8 +375,16 @@
       "identifier names cannot start with '#'" sb.wrap pos errors appendError
       true return
     end
+    id 0 string.charAt '@' == if
+      "identifier names cannot start with '@'" sb.wrap pos errors appendError
+      true return
+    end
     id '.' string.contains if
       "identifier names cannot contain '.'" sb.wrap pos errors appendError
+      true return
+    end
+    id ':' string.contains if
+      "identifier names cannot contain ':'" sb.wrap pos errors appendError
       true return
     end
     false return
