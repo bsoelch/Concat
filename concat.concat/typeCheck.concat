@@ -1192,7 +1192,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         retIds  #over list.get =:: eltId
         #dup outArgCount < if
           state [] .compiledOps
-              eltType
+              eltType true typeContext types.getAddressType
               eltId
               op [] .pos
             op@Id list.append

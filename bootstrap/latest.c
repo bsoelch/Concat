@@ -36806,45 +36806,46 @@ bool const tmp358 = (((int64_t)tmp350)<l35_outArgCount);
 if(tmp358){
 concat_list_I27 tmp359 = ((*arg4/*state*/).e1_compiledOps);
 concat_Type tmp360 = l44_eltType;
-concat_IdentifierInfo tmp361 = l45_eltId;
-concat_Operation tmp362;
-concat_op_X64Id(tmp360,tmp361,((*arg0/*op*/).e2_pos),(&tmp362));
-concat_list_I27 tmp363;
-concat_list_dappend_I0(tmp359,tmp362,(&tmp363));
-((*arg4/*state*/).e1_compiledOps) = tmp363;
+concat_Type tmp361 = concat_types_dgetAddressType(tmp360,true,l3_typeContext);
+concat_IdentifierInfo tmp362 = l45_eltId;
+concat_Operation tmp363;
+concat_op_X64Id(tmp361,tmp362,((*arg0/*op*/).e2_pos),(&tmp363));
+concat_list_I27 tmp364;
+concat_list_dappend_I0(tmp359,tmp363,(&tmp364));
+((*arg4/*state*/).e1_compiledOps) = tmp364;
 }else{
 else_label1333:;
 }
 tmp350 = ((int32_t)(tmp350+((int32_t)1)));
 }while(1);
-int32_t tmp364 = ((int32_t)0);
+int32_t tmp365 = ((int32_t)0);
 do{
-bool const tmp365 = (((int64_t)tmp364)<l9_resCount);
-if(!tmp365)
+bool const tmp366 = (((int64_t)tmp365)<l9_resCount);
+if(!tmp366)
   break;
-concat_Type tmp366 = l6_outType;
-concat_Type tmp367 = concat_types_dcompositeGetElement(tmp366,((int64_t)tmp364),((concat_TypeContext const*)l3_typeContext));
-concat_Type const l46_eltType = tmp367;
-concat_list_I43 tmp368 = l34_retIds;
-concat_IdentifierInfo tmp369;
-concat_list_dget_I22(tmp368,((int64_t)tmp364),(&tmp369));
-concat_IdentifierInfo const l47_eltId = tmp369;
-concat_Type tmp370 = l46_eltType;
-concat_IdentifierInfo tmp371 = l47_eltId;
-concat_Operation tmp372;
-concat_opGet(tmp370,tmp371,((*arg0/*op*/).e2_pos),(&tmp372));
-concat_Operation const l48_tmp = tmp372;
+concat_Type tmp367 = l6_outType;
+concat_Type tmp368 = concat_types_dcompositeGetElement(tmp367,((int64_t)tmp365),((concat_TypeContext const*)l3_typeContext));
+concat_Type const l46_eltType = tmp368;
+concat_list_I43 tmp369 = l34_retIds;
+concat_IdentifierInfo tmp370;
+concat_list_dget_I22(tmp369,((int64_t)tmp365),(&tmp370));
+concat_IdentifierInfo const l47_eltId = tmp370;
+concat_Type tmp371 = l46_eltType;
+concat_IdentifierInfo tmp372 = l47_eltId;
+concat_Operation tmp373;
+concat_opGet(tmp371,tmp372,((*arg0/*op*/).e2_pos),(&tmp373));
+concat_Operation const l48_tmp = tmp373;
 concat_29_FpushValue((&l48_tmp),arg4/*state*/);
-concat_Type tmp373 = l46_eltType;
-bool const tmp374 = concat_types_disComposite(tmp373,((concat_TypeContext const*)l3_typeContext));
-concat_optional_I45 tmp375 = concat_list_dpeek_I5(((*arg4/*state*/).e3_typeStack));
-concatInternal_checkEnumIndex(tmp375.label,1,"./concat.concat/typeCheck.concat:1212:77");
-concat_29_FTypeInfo* const tmp376 = (tmp375.data.e1_data);
-((*tmp376).e2_writable) = tmp374;
-tmp364 = ((int32_t)(tmp364+((int32_t)1)));
+concat_Type tmp374 = l46_eltType;
+bool const tmp375 = concat_types_disComposite(tmp374,((concat_TypeContext const*)l3_typeContext));
+concat_optional_I45 tmp376 = concat_list_dpeek_I5(((*arg4/*state*/).e3_typeStack));
+concatInternal_checkEnumIndex(tmp376.label,1,"./concat.concat/typeCheck.concat:1212:77");
+concat_29_FTypeInfo* const tmp377 = (tmp376.data.e1_data);
+((*tmp377).e2_writable) = tmp375;
+tmp365 = ((int32_t)(tmp365+((int32_t)1)));
 }while(1);
-concat_list_I43 tmp377;
-concat_list_dfree_I22(l34_retIds,(&tmp377));
+concat_list_I43 tmp378;
+concat_list_dfree_I22(l34_retIds,(&tmp378));
 break;
 }
 return;
