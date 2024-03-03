@@ -3,7 +3,7 @@
 #include list
 
 #namespace branchTree
-  i64 =:: public NodeId
+  i64 =:: export NodeId
 
   #template type : T #end
   struct(
@@ -11,7 +11,7 @@
     NodeId : parent
     i64 : level
     bool : mut deleted
-  ) =:: public Node
+  ) =:: export Node
 #end
 
 #template type : T #end
@@ -19,11 +19,11 @@ struct(
   branchTree.NodeId : mut branchHead
   branchTree.NodeId list : mut branchPoints
   T branchTree.Node list : mut nodes
-) =:: public BranchTree
+) =:: export BranchTree
 
 #namespace branchTree
   #template type : T #end
-  proc( => T BranchTree ) =: public create
+  proc( => T BranchTree ) =: export create
     ## BranchTree
       -1
       32 branchTree.NodeId list.create
@@ -31,7 +31,7 @@ struct(
     T BranchTree new
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => ) =: public clear
+  proc( T BranchTree ptr mut : tree => ) =: export clear
     -1 tree [] .branchHead =
     tree [] .branchPoints
       list.clear
@@ -41,7 +41,7 @@ struct(
     tree [] .nodes =
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => ) =: public free
+  proc( T BranchTree ptr mut : tree => ) =: export free
     -1 tree [] .branchHead =
     tree [] .branchPoints
       list.free
@@ -55,41 +55,41 @@ struct(
   struct(
    T BranchTree ptr mut : tree
    NodeId : id
-  ) =:: public BranchItr
+  ) =:: export BranchItr
   
   #namespace itr
     #template type : T #end
-    proc( T BranchTree ptr mut : tree => T BranchItr ) =: public start
+    proc( T BranchTree ptr mut : tree => T BranchItr ) =: export start
       tree tree [] .branchHead T BranchItr new
     end
     #template type : T #end
-    proc( T BranchItr : itr => T BranchItr bool ) =: public hasNext
+    proc( T BranchItr : itr => T BranchItr bool ) =: export hasNext
       itr .id 0 < itr .id itr .tree [] .nodes .length >= | if
         itr false return
       end
       itr itr .tree [] .nodes itr .id list.at .data [] .deleted ! return
     end
     #template type : T #end
-    proc( T BranchItr : itr => T BranchItr T ptr ) =: public next
+    proc( T BranchItr : itr => T BranchItr T ptr ) =: export next
       itr .tree [] .nodes itr .id list.at .data =:: node
       ## return
         itr .tree node [] .parent T BranchItr new
       node [] .data @ return
     end
     #template type : T #end
-    proc( T BranchItr : itr => T BranchItr T ptr ) =: public peekNext
+    proc( T BranchItr : itr => T BranchItr T ptr ) =: export peekNext
       itr .tree [] .nodes itr .id list.at .data =:: node
       itr node [] .data @ return
     end
     #template type : T #end
-    proc( T BranchItr : itr => T BranchItr ) =: public skipNext
+    proc( T BranchItr : itr => T BranchItr ) =: export skipNext
       itr .tree [] .nodes itr .id list.at .data =:: node
       itr .tree node [] .parent T BranchItr new return
     end
   #end
   
   #template type : T #end
-  proc( T BranchTree ptr mut : tree NodeId : id => ) =: public unlinkNode
+  proc( T BranchTree ptr mut : tree NodeId : id => ) =: export unlinkNode
     tree [] .branchPoints .length 0 > if
      id tree [] .branchPoints #dup .length 1 - list.get < _if
       return ## node still on different branch
@@ -107,7 +107,7 @@ struct(
     newLength tree [] .nodes .length =
   end
   #template type : T #end
-  proc( T BranchTree : tree => i64 ) =: public depth
+  proc( T BranchTree : tree => i64 ) =: export depth
     tree .branchHead -1 == if
       0 return
     end
@@ -116,26 +116,26 @@ struct(
     list.at .data [] .level return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => NodeId ) =: public startBranch
+  proc( T BranchTree ptr mut : tree => NodeId ) =: export startBranch
     tree [] .branchPoints
       tree [] .nodes .length NodeId cast list.append
     tree [] .branchPoints =
     tree [] .branchHead return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => ) =: public endBranch
+  proc( T BranchTree ptr mut : tree => ) =: export endBranch
     tree [] .branchPoints .length
       1 -
     tree [] .branchPoints .length =
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree NodeId : branchPoint => NodeId ) =: public reset
+  proc( T BranchTree ptr mut : tree NodeId : branchPoint => NodeId ) =: export reset
     tree [] .branchHead =:: oldHead
       branchPoint tree [] .branchHead =
     oldHead return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree T : value => ) =: public push
+  proc( T BranchTree ptr mut : tree T : value => ) =: export push
     tree [] .branchHead -1 == if
       1i64
     else
@@ -151,7 +151,7 @@ struct(
     newId tree [] .branchHead =
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => T ptr mut optional ) =: public peek
+  proc( T BranchTree ptr mut : tree => T ptr mut optional ) =: export peek
     tree [] .branchHead =:: nodeId
     nodeId 0 < nodeId tree [] .nodes .length >= | if
       T ptr mut optional.empty return
@@ -161,7 +161,7 @@ struct(
     optional.wrap return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree i32 : index => T ptr mut optional ) =: public at
+  proc( T BranchTree ptr mut : tree i32 : index => T ptr mut optional ) =: export at
     tree [] .branchHead =:: mut nodeId
     index while
       nodeId 0 < nodeId tree [] .nodes .length >= | if #drop
@@ -176,7 +176,7 @@ struct(
     optional.wrap return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => T ptr mut optional ) =: public pop
+  proc( T BranchTree ptr mut : tree => T ptr mut optional ) =: export pop
     tree [] .branchHead =:: nodeId
     nodeId 0 < nodeId tree [] .nodes .length >= | if
       T ptr mut optional.empty return
@@ -188,7 +188,7 @@ struct(
     popped [] .data @ optional.wrap return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree => ) =: public swap
+  proc( T BranchTree ptr mut : tree => ) =: export swap
     tree pop .data [] =:: upper
     tree pop .data [] =:: lower
     tree upper push
@@ -201,7 +201,7 @@ struct(
     NodeId arrayView : branchHeads
     proc( T ptr arrayView C => T ) ptr : mergeValues
     C : context
-  => bool ) =: public merge
+  => bool ) =: export merge
     branchHeads .length 1 <= if
       false return ## nothing to merge
     end

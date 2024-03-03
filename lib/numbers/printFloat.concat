@@ -13,7 +13,7 @@ end
 
 #namespace sb
 ## appends the C-style hexadecimal representation of an IEEE double to a stringBuilder
-proc( stringBuilder : sb double : f => stringBuilder ) =: public appendIeeeDouble
+proc( stringBuilder : sb double : f => stringBuilder ) =: export appendIeeeDouble
   f =:: mut value
   -1022 =:: MIN_POW
   1023 =:: MAX_POW
@@ -61,7 +61,7 @@ proc( stringBuilder : sb double : f => stringBuilder ) =: public appendIeeeDoubl
     e sb.appendI
   return
 end
-proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci => stringBuilder ) =: public appendFloat???
+proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci => stringBuilder ) =: export appendFloat???
   f =:: mut value
   base 2 < base 62 > | if 
     ## TODO error handling
@@ -177,40 +177,40 @@ proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci => str
     end
   return
 end
-proc( stringBuilder double #+value+# => stringBuilder ) =: public appendF
+proc( stringBuilder double #+value+# => stringBuilder ) =: export appendF
   0 10 false appendFloat???
 end
-proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendF?
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: export appendF?
   10 false appendFloat???
 end
-proc( stringBuilder double #+value+# => stringBuilder ) =: public appendE
+proc( stringBuilder double #+value+# => stringBuilder ) =: export appendE
   0 10 true appendFloat???
 end
-proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendE?
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: export appendE?
   10 true appendFloat???
 end
-proc( stringBuilder double #+value+# => stringBuilder ) =: public appendXF
+proc( stringBuilder double #+value+# => stringBuilder ) =: export appendXF
   0 16 false appendFloat???
 end
-proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendXF?
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: export appendXF?
   16 false appendFloat???
 end
-proc( stringBuilder double #+value+# => stringBuilder ) =: public appendXE
+proc( stringBuilder double #+value+# => stringBuilder ) =: export appendXE
   0 16 true appendFloat???
 end
-proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendXE?
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: export appendXE?
   16 true appendFloat???
 end
-proc( stringBuilder double #+value+# => stringBuilder ) =: public appendBF
+proc( stringBuilder double #+value+# => stringBuilder ) =: export appendBF
   0 2 false appendFloat???
 end
-proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendBF?
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: export appendBF?
   2 false appendFloat???
 end
-proc( stringBuilder double #+value+# => stringBuilder ) =: public appendBE
+proc( stringBuilder double #+value+# => stringBuilder ) =: export appendBE
   0 2 true appendFloat???
 end
-proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: public appendBE?
+proc( stringBuilder double #+value+# i32 #+precision+# => stringBuilder ) =: export appendBE?
   2 true appendFloat???
 end
 #end

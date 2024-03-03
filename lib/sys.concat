@@ -2,7 +2,7 @@
   proc( ..ctype.int => ) : extern #:noReturn exit
 #end
 #namespace sys
-  proc( i32 => ) =: public #:noReturn exit
+  proc( i32 => ) =: export #:noReturn exit
     c.exit
   end
 #end

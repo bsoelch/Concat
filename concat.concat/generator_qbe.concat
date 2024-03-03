@@ -60,7 +60,7 @@ proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context => st
   sb
     '$' sb.appendC
     CONCAT_PREFIX sb.appendS
-    label labelContext id.labelFlags id.FLAG_PUBLIC & 0 == if
+    label labelContext id.labelFlags id.FLAG_EXPORT & 0 == if
       label labelContext id.getLabelFile sb.appendI
       "_F" sb.appendS
     end
@@ -471,7 +471,7 @@ proc(
           0 context [] .tmpCount =
           context [] .stackInfo @ branchTree.clear
           sb
-            labelFlags id.FLAG_PUBLIC & ? labelFlags id.FLAG_EXTERN & ? | if
+            labelFlags id.FLAG_EXPORT & ? labelFlags id.FLAG_EXTERN & ? | if
               "export " sb.appendS
             end
             "function " sb.appendS
@@ -674,7 +674,7 @@ proc(
   sb return
 end
 
-proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
+proc( io.FILE : target ProgramContext ptr mut : prog => ) =: export compileToQBE
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -714,7 +714,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToQBE
       continue
     end
     128 sb.create
-      labelFlags id.FLAG_PUBLIC & ? if
+      labelFlags id.FLAG_EXPORT & ? if
         "export " sb.appendS
       end
       "data " sb.appendS

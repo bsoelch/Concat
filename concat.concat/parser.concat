@@ -527,11 +527,8 @@ proc( string : code string : start FileState ptr mut : fileState  ParserState pt
       else #dup "extern" string.wrap string.eq _if
         id.FLAG_EXTERN flags | flags =
         true isModifier =
-      else #dup "public" string.wrap string.eq _if
-        id.FLAG_PUBLIC flags | flags =
-        true isModifier =
-      else #dup "private" string.wrap string.eq _if
-        id.FLAG_PRIVATE flags | flags =
+      else #dup "export" string.wrap string.eq _if
+        id.FLAG_EXPORT flags | flags =
         true isModifier =
       else #dup "#:experimental" string.wrap string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags =
@@ -1386,7 +1383,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
         end
         true =:: mut validMain
-        idName .fileId 0 != if idData [] .labelId labelContext id.labelFlags id.FLAG_PUBLIC & ? ! _if
+        idName .fileId 0 != if idData [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
           "main procedure is not visible from root file" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
@@ -2825,7 +2822,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state =>
   #swap [] .includedFiles =
 end
 
-proc( stringBuilder : rootFile string : libPath string : basePath => ProgramContext ) =: public parseProgram
+proc( stringBuilder : rootFile string : libPath string : basePath => ProgramContext ) =: export parseProgram
   ## ProgramContext
     id.newIdentifierContext
     16  ProgramFile           list.create

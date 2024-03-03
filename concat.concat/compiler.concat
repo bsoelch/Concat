@@ -15,8 +15,8 @@ string optional : mut compilerTokensFile
 string optional : mut errorFile
 false =:: mut wError
 ## enable constant-folding
-true =:: mut public _FOLD_CONSTANTS_
-false =:: mut public _EXPERIMENTAL_
+true =:: mut export _FOLD_CONSTANTS_
+false =:: mut export _EXPERIMENTAL_
 
 proc( string : path => ) =: printUsage
   "usage: " sb.wrap

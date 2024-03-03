@@ -1,9 +1,9 @@
 #namespace c
-  proc( => ..ctype.void _ ptr mut ) =: public nullPtr
+  proc( => ..ctype.void _ ptr mut ) =: export nullPtr
     0 ..ctype.void _ ptr mut cast! return
   end
   #template type : T #end
-  proc( T _ ptr : p => bool ) =: public isNull
+  proc( T _ ptr : p => bool ) =: export isNull
     ## ==
     p ..ctype.void _ ptr cast!
     nullPtr ..ctype.void _ ptr cast!
@@ -52,21 +52,21 @@
     p return
   end
   #template type : T #end
-  proc( i64 : n => T _ ptr mut ) =: public alloc
+  proc( i64 : n => T _ ptr mut ) =: export alloc
     n 0 == if
       c.nullPtr T _ ptr mut cast! return
     end
     n T ..type.stride * c.malloc checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
-  proc( i64 : n => T _ ptr mut ) =: public calloc
+  proc( i64 : n => T _ ptr mut ) =: export calloc
     n 0 == if
       c.nullPtr T _ ptr mut cast! return
     end
     n T ..type.stride c.calloc checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
-  proc( T _ ptr mut : prev i64 : n => T _ ptr mut ) =: public realloc
+  proc( T _ ptr mut : prev i64 : n => T _ ptr mut ) =: export realloc
     n 0 == if
       prev free
       c.nullPtr T _ ptr mut cast! return
@@ -74,16 +74,16 @@
     prev ..ctype.void _ ptr mut cast! T ..type.stride n * c.realloc checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
-  proc( T _ ptr mut : p => ) =: public free
+  proc( T _ ptr mut : p => ) =: export free
     p ..ctype.void ptr mut cast! c.free
   end
   ## set memory to zero
   #template type : T #end
-  proc( T _ ptr mut : src  i64 : n => T _ ptr mut ) =: public clear
+  proc( T _ ptr mut : src  i64 : n => T _ ptr mut ) =: export clear
     src ..ctype.void _ ptr mut cast! 0 T ..type.stride n * c.memset checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
-  proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: public copy
+  proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: export copy
     ## memcpy
       target ..ctype.void _ ptr mut cast!
       src ..ctype.void _ ptr cast!
@@ -91,7 +91,7 @@
     c.memcpy checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
-  proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: public move
+  proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: export move
     ## memmove
       target ..ctype.void _ ptr mut cast!
       src ..ctype.void _ ptr cast!
@@ -99,7 +99,7 @@
     c.memmove checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
-  proc( T _ ptr : a  T _ ptr : b  i64 : n   => i32 ) =: public compare
+  proc( T _ ptr : a  T _ ptr : b  i64 : n   => i32 ) =: export compare
     ## memcmp
       a ..ctype.void _ ptr cast!
       b ..ctype.void _ ptr cast!
@@ -107,7 +107,7 @@
     c.memcmp return
   end
   #template type : T #end
-  proc( T _ ptr mut : data i64 : count T : elt => ) =: public fill
+  proc( T _ ptr mut : data i64 : count T : elt => ) =: export fill
     0 while #dup count < do
       elt data #over:2 [] =
       1 +

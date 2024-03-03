@@ -1515,7 +1515,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   op [] .pos errors appendError
 end
 
-proc( ProgramContext ptr mut : program => ) =: public typeCheckProgram2
+proc( ProgramContext ptr mut : program => ) =: export typeCheckProgram2
   ## TypeCheckState
     program
     program wrapProgram

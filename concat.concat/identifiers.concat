@@ -8,17 +8,17 @@
 #include "codeBlocks.concat"
 #include "common.concat"
 
-  enum( TYPE PROCEDURE GLOBAL_VAR TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR ) =:: public IdentifierType
+  enum( TYPE PROCEDURE GLOBAL_VAR TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR ) =:: export IdentifierType
 
-  struct( Type : implType ConstantArray : argValues FilePosition : implPos ) =:: public TemplateImplementation
+  struct( Type : implType ConstantArray : argValues FilePosition : implPos ) =:: export TemplateImplementation
   ## XXX? ( offset length file code-Type ) -> code-position
-  struct( Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: public TemplateInfo
+  struct( Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: export TemplateInfo
 
   struct( Type : mut valueType ConstValue : mut constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
-  struct( IdentifierType : idType LabelId : labelId ConstValue : constValue TemplateId : templateId i32 : mut id ) =:: public IdentifierInfo
+  struct( IdentifierType : idType LabelId : labelId ConstValue : constValue TemplateId : templateId i32 : mut id ) =:: export IdentifierInfo
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
-  struct( IdentifierName : name IdentifierData ptr : data ) =:: public IdentifierMatch
+  struct( IdentifierName : name IdentifierData ptr : data ) =:: export IdentifierMatch
 #namespace id
 
   "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
@@ -36,8 +36,8 @@
     a .name b .name string.eq return
   end
 
-  1 =:: public SCOPE_FLAG_AUTO_CLOSE
-  2 =:: public SCOPE_FLAG_NO_CONST_FOLD
+  1 =:: export SCOPE_FLAG_AUTO_CLOSE
+  2 =:: export SCOPE_FLAG_NO_CONST_FOLD
   struct(
     IdentifierName IdentifierData hashMap : mut identifiers
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
@@ -77,10 +77,10 @@
     NamespaceImportId list : mut prevImports
     i32 : mut localVarCount
     TemplateId : mut currentTemplate
-  ) =:: public IdentifierContext
+  ) =:: export IdentifierContext
 #namespace id
 
-  proc( => IdentifierContext ) =: public newIdentifierContext
+  proc( => IdentifierContext ) =: export newIdentifierContext
     newConstContext
     newLabelContext
     types.newTypeContext
@@ -97,7 +97,7 @@
     newContext return
   end
 
-  proc( IdentifierData ptr : idData => IdentifierInfo ) =: public asIdInfo
+  proc( IdentifierData ptr : idData => IdentifierInfo ) =: export asIdInfo
     idData [] .idType
     idData [] .labelId
     idData [] .constValue
@@ -106,16 +106,16 @@
     IdentifierInfo new return
   end
 
-  proc( IdentifierContext ptr mut : context => bool ) =: public isTopLevel
+  proc( IdentifierContext ptr mut : context => bool ) =: export isTopLevel
     context [] .openScopes .length 0 == return
   end
-  proc( IdentifierContext ptr mut : context => bool ) =: public isGlobal
+  proc( IdentifierContext ptr mut : context => bool ) =: export isGlobal
     context [] .openScopes .length 0 == if
       true return
     end
     context [] .openScopes list.peek .data [] .currentProc Type .undefined types.typeEquals return
   end
-  proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context => ) =: public openProcScope
+  proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context => ) =: export openProcScope
     context [] .openScopes
        ## newScope
          blockType
@@ -126,7 +126,7 @@
        newScope list.append
     context [] .openScopes =
   end
-  proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: public openScope
+  proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: export openScope
     context [] .openScopes .length 0 == if
       Type .undefined false
     else
@@ -137,7 +137,7 @@
        list.append
     context [] .openScopes =
   end
-  proc( BlockType : blockType bool : autoClose IdentifierContext ptr mut : context => bool ) =: public updateScopeType
+  proc( BlockType : blockType bool : autoClose IdentifierContext ptr mut : context => bool ) =: export updateScopeType
     context [] .openScopes .length 0 == if
       true return
     end
@@ -149,7 +149,7 @@
     end
     false return
   end
-  proc( i32 : flag bool : value IdentifierContext ptr mut : context => ) =: public setScopeFlag
+  proc( i32 : flag bool : value IdentifierContext ptr mut : context => ) =: export setScopeFlag
     context [] .openScopes .length 0 == if
       context [] .globalScope @
     else
@@ -161,25 +161,25 @@
       #dup [] .flags flag ~ & #swap [] .flags =
     end
   end
-  proc( IdentifierContext ptr mut : context => i32 ) =: public scopeFlags
+  proc( IdentifierContext ptr mut : context => i32 ) =: export scopeFlags
     context [] .openScopes .length 0 == if
       context [] .globalScope .flags return
     end
     context [] .openScopes list.peek .data [] .flags return
   end
-  proc( IdentifierContext ptr mut : context => bool ) =: public foldConsts
+  proc( IdentifierContext ptr mut : context => bool ) =: export foldConsts
     _FOLD_CONSTANTS_ if
       context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 == return
     end
     context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & ? return
   end
-  proc( IdentifierContext ptr mut : context => BlockType ) =: public currentScopeType
+  proc( IdentifierContext ptr mut : context => BlockType ) =: export currentScopeType
     context [] .openScopes .length 0 == if
       BlockType .UNKNOWN return
     end
     context [] .openScopes list.peek .data [] .blockType return
   end
-  proc( IdentifierContext ptr mut : context => Type bool ) =: public currentScopeProc
+  proc( IdentifierContext ptr mut : context => Type bool ) =: export currentScopeProc
     context [] .openScopes .length 0 == if
       Type .undefined false return
     end
@@ -199,7 +199,7 @@
     i64 #+staticArgsOffset+#
     BlockType
     bool #+isError+#
-  ) =: public closeScope
+  ) =: export closeScope
     context [] .openScopes .length 0 == if
       false -1 BlockType .UNKNOWN true return
     end
@@ -216,7 +216,7 @@
   end
 
 
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr mut bool ) =: public searchIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches => IdentifierName IdentifierData ptr mut bool ) =: export searchIdentifier
     context [] .labelContext .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
@@ -351,7 +351,7 @@
     end
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
   end
-  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: public getIdentifierByLabel
+  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: export getIdentifierByLabel
     context [] .nameBuffer
       #dup .length 0 != if ..unreachable end ## TODO error message
       nameId context [] .labelContext @ sb.appendLabelName
@@ -363,10 +363,10 @@
     context [] .nameBuffer =
     return
   end
-  proc( string : name FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: public getIdentifierByName
+  proc( string : name FileId : fileId IdentifierContext ptr mut : context => IdentifierName IdentifierData ptr mut bool ) =: export getIdentifierByName
     name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( string : id FilePosition : pos CompilerError list ptr mut : errors => bool ) =: public checkIdentifier
+  proc( string : id FilePosition : pos CompilerError list ptr mut : errors => bool ) =: export checkIdentifier
     id .length 0 == if
       "identifier names have to be non-empty" sb.wrap pos errors appendError
       true return
@@ -381,7 +381,7 @@
     end
     false return
   end
-  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: public declareIdentifier
+  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors =>  IdentifierName IdentifierData ptr bool ) =: export declareIdentifier
     context [] .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
@@ -393,7 +393,7 @@
       label context [] .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
-    context id.isTopLevel flags FLAG_PUBLIC & ? & if ## public global -> ignore fileId
+    context id.isTopLevel flags FLAG_EXPORT & ? & if ## exported global -> ignore fileId
       FILE_ID_NONE
     else
       currentFile
@@ -471,11 +471,11 @@
   end
 #end
 #namespace sb
-  proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext => stringBuilder ) =: public appendIdInfo
+  proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext => stringBuilder ) =: export appendIdInfo
     sb
       id .labelId labelContext id.labelFlags #swap
-        #over id.FLAG_PUBLIC & ? if
-          "public " sb.appendS
+        #over id.FLAG_EXPORT & ? if
+          "export " sb.appendS
         end
         #over id.FLAG_EXTERN & ? if
           "extern " sb.appendS
@@ -548,7 +548,7 @@
   end
 #end
 #namespace id
-  proc( LabelId : name IdentifierContext ptr mut : context => ) =: public beginNamespace
+  proc( LabelId : name IdentifierContext ptr mut : context => ) =: export beginNamespace
     context [] .prevImports
       context [] .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
@@ -562,7 +562,7 @@
     context [] .labelContext .namespaceInfo .current =
     context [] .nameBuffer list.clear context [] .nameBuffer =
   end
-  proc( LabelId : name IdentifierContext ptr mut : context => bool ) =: public importNamespace
+  proc( LabelId : name IdentifierContext ptr mut : context => bool ) =: export importNamespace
     context [] .nameBuffer
        #dup .length 0 != if ..unreachable end ## TODO error message
        name context [] .labelContext @ sb.appendLabelName
@@ -578,7 +578,7 @@
     context [] .labelContext .namespaceInfo .imports =
     false return
   end
-  proc( IdentifierContext ptr mut : context => bool ) =: public endNamespace
+  proc( IdentifierContext ptr mut : context => bool ) =: export endNamespace
     context [] .labelContext .namespaceInfo .current 0 == if
       true return
     end
@@ -591,22 +591,22 @@
     false
   end
 
-  proc( IdentifierContext ptr mut : context => bool ) =: public hasOpenTemplate
+  proc( IdentifierContext ptr mut : context => bool ) =: export hasOpenTemplate
     context [] .currentTemplate TEMPLATE_ID_NONE != return
   end
-  proc( TemplateId : id IdentifierContext ptr mut : context => TemplateInfo ptr mut optional ) =: public getTemplateInfo
+  proc( TemplateId : id IdentifierContext ptr mut : context => TemplateInfo ptr mut optional ) =: export getTemplateInfo
     id 0 < id context [] .templateInfos .length >= | if
       TemplateInfo ptr mut optional.empty return
     end
     context [] .templateInfos id list.at return
   end
-  proc( TemplateId : id IdentifierContext ptr mut : context => Type ) =: public templateArgs
+  proc( TemplateId : id IdentifierContext ptr mut : context => Type ) =: export templateArgs
     id 0 < id context [] .templateInfos .length >= | if
       Type .undefined return
     end
     context [] .templateInfos id list.get .templateType return
   end
-  proc( Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context => bool ) =: public beginTemplate
+  proc( Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context => bool ) =: export beginTemplate
     context hasOpenTemplate if
       true return
     end
@@ -624,7 +624,7 @@
     context [] .templateInfos =
     false return
   end
-  proc( i64 : templateOpsOffset IdentifierContext ptr mut : context => ) =: public endOpenTemplate
+  proc( i64 : templateOpsOffset IdentifierContext ptr mut : context => ) =: export endOpenTemplate
     context hasOpenTemplate ! if
       return
     end
@@ -728,7 +728,7 @@
         src return
     end
   end
-  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => Type ) =: public replaceGenericsType
+  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => Type ) =: export replaceGenericsType
     src context [] .typeContext @ containsGeneric genericArgs .length 0 > & #swap templateArgs .length 0 > & | ! if
       src return ## no generics to replace
     end
@@ -875,7 +875,7 @@
         src return ## TODO
     end
   end
-  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => ConstValue ) =: public replaceGenerics
+  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context => ConstValue ) =: export replaceGenerics
     src switch
       none wildCard boolean int enumLabel chr str Float case
         src return
@@ -1038,7 +1038,7 @@
   end
   ## XXX resolve generics method for general constants
 
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset IdentifierContext ptr mut : context => ) =: public resolveGenericsType
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset IdentifierContext ptr mut : context => ) =: export resolveGenericsType
     templateCount genericCount + bool mem.calloc =:: visitedValues
     64 i32 list.create =:: mut visitedTypes
     values []

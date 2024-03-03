@@ -4,12 +4,12 @@
 
 #include "common.concat"
 
-struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: public FileState
+struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: export FileState
 
-enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: public Token
+enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: export Token
 
 #namespace sb
-  proc( stringBuilder : sb Token : token => stringBuilder ) =: public appendToken
+  proc( stringBuilder : sb Token : token => stringBuilder ) =: export appendToken
     token switch
       EMPTY case
         sb "empty" sb.appendS return
@@ -32,7 +32,7 @@ enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: public Token
         return
     end
   end
-  proc( stringBuilder : sb FilePosition : pos => stringBuilder ) =: public appendPos
+  proc( stringBuilder : sb FilePosition : pos => stringBuilder ) =: export appendPos
     sb
       pos .fileName sb.appendStr
       ':' sb.appendC
@@ -43,7 +43,7 @@ enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: public Token
   end
 #end
 
-proc( string => ) =: public printTokens
+proc( string => ) =: export printTokens
   "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
     state @ nextToken
@@ -57,7 +57,7 @@ proc( string => ) =: public printTokens
   do end #drop
 end
 
-proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: public updateFilePos
+proc( i8 : chr  FilePosition ptr mut : currentPos => ) =: export updateFilePos
   chr '\n' == if
       currentPos [] .line 1 + currentPos [] .line =
     1 currentPos [] .posInLine =
@@ -72,7 +72,7 @@ proc( string : code FileState ptr mut : fileState => string ) =: skipSpaces
   end
   code #swap string.tail return
 end
-proc( string : code FileState ptr mut : fileState => string Token ) =: public nextToken
+proc( string : code FileState ptr mut : fileState => string Token ) =: export nextToken
   code .length 0 <= if
     string.empty Token .EMPTY return
   end

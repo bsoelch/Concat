@@ -34,16 +34,16 @@ end
   end
 #end
 
-struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: public int
+struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: export int
 
 #namespace int
-  0 0 0  0i8 int new int =: public ZERO
-  1 1 0  1i8 int new int =: public ONE
-  2 1 0  1i8 int new int =: public TWO
-  1 1 0 -1i8 int new int =: public MINUS_ONE
+  0 0 0  0i8 int new int =: export ZERO
+  1 1 0  1i8 int new int =: export ONE
+  2 1 0  1i8 int new int =: export TWO
+  1 1 0 -1i8 int new int =: export MINUS_ONE
 
   ## XXX? from/to byte
-  proc( i64 : i => int ) =: public #:alloc:int wrap
+  proc( i64 : i => int ) =: export #:alloc:int wrap
     i 0 < if
       ## int
         i -_
@@ -62,7 +62,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
        0 0 0 0i8 int new
     end
   end
-  proc( i64 : i i8 : sgn => int ) =: public #:alloc:int uwrap
+  proc( i64 : i i8 : sgn => int ) =: export #:alloc:int uwrap
     i 0 != if
       ## int
         i
@@ -105,7 +105,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     6049 6074 6098
   } =:: bitsPerDigit
   bitsPerDigit ..length number.MAX_BASE 1 + == #assert "bitsPerDigit.length==maxBase+1"
-  proc( i64 : auto k i8 k ptr : data => int ) =: public fromStr ## XXX better name
+  proc( i64 : auto k i8 k ptr : data => int ) =: export fromStr ## XXX better name
     data string.wrap 0 fromString #drop return ## TODO error handling
   end
   #+
@@ -113,7 +113,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
 
     algorithm based on openjdk version of BigInteger(String) constructor
   +#
-  proc( string : str i32 : base => int number.ParserError ) =: public fromString
+  proc( string : str i32 : base => int number.ParserError ) =: export fromString
     #using number
     1i8 =:: mut sign
     base =:: mut mBase
@@ -199,18 +199,18 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     mStr sb.free #drop
     data size cap sign int new ParserError .NONE return
   end
-  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray
+  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn => int ) =: export fromArray
     data k sgn fromPtr return
   end
-  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: public fromPtr
+  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: export fromPtr
     length i32 mem.alloc =:: mData
     mData data length mem.copy #drop
     mData length length sgn int new return
   end
-  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn => int ) =: public fromArray_BE
+  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn => int ) =: export fromArray_BE
     data k sgn fromPtr_BE return
   end
-  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: public fromPtr_BE
+  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn => int ) =: export fromPtr_BE
     length i32 mem.alloc =:: mData
     length 1 - =:: maxIndex
     0 while #dup length < do ## reverse entries
@@ -219,7 +219,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end #drop
     mData length length sgn int new return
   end
-  proc( int : #:const src => int ) =: public #:alloc:int copy
+  proc( int : #:const src => int ) =: export #:alloc:int copy
     src .cap 0 == if
       src .data .i src .sign uwrap return
     end
@@ -260,14 +260,14 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     target src .data .p src .size mem.copy #drop
   end
 
-  proc( int => ) =: public #:free:int free
+  proc( int => ) =: export #:free:int free
     #dup .cap 0 == if #drop
       return
     end
     .data .p mem.free
   end
 
-  proc( stringBuilder : sb int : i => stringBuilder ) =: public dumpHex
+  proc( stringBuilder : sb int : i => stringBuilder ) =: export dumpHex
     sb
       i .sign 0 < if
         '-' sb.appendC
@@ -405,7 +405,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
 
   { 0 0 1 } =:: 2POW64_data
-  proc( int : #:consume a => int ) =: public #:alloc:int logicalNotOf
+  proc( int : #:consume a => int ) =: export #:alloc:int logicalNotOf
     a .sign 0 == if
       a free
       MINUS_ONE return
@@ -557,7 +557,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int andWith
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int andWith
     b .sign 0 == a .sign 0 == | if
       a free
       ZERO return
@@ -586,7 +586,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     resData resSize resCap a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end int new return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int orWith
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int orWith
     b .sign 0 == if
       a return
     end
@@ -618,7 +618,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     resData resSize resCap a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end int new return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int xorWith
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int xorWith
     b .sign 0 == if
       a return
     end
@@ -789,7 +789,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     aData amount resData a .sign 0i8 < rightShiftInternal =:: resSize
     resData resSize resCap a .sign int new return
   end
-  proc( int : #:consume a i32 : amount => int ) =: public #:alloc:int shiftLeftBy
+  proc( int : #:consume a i32 : amount => int ) =: export #:alloc:int shiftLeftBy
     a .sign 0 == if
       a return
     end
@@ -801,7 +801,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     end
     a amount leftShiftBy return
   end
-  proc( int : #:consume a i32 : amount => int ) =: public #:alloc:int shiftRightBy
+  proc( int : #:consume a i32 : amount => int ) =: export #:alloc:int shiftRightBy
     a .sign 0 == if
       a return
     end
@@ -815,13 +815,13 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
 
   ## flips the sign of a
-  proc( int : #:return a => int ) =: public negated
+  proc( int : #:return a => int ) =: export negated
     a =:: mut tmp
     tmp .sign -_ tmp .sign =
     tmp return
   end
   ## creates a copy of a with value abs(a)
-  proc( int : #:const a => int ) =: public #:alloc:int abs
+  proc( int : #:const a => int ) =: export #:alloc:int abs
     a copy =:: mut tmp
     tmp .sign tmp .sign * tmp .sign = ## replace sign with its absolute value
     tmp return
@@ -876,7 +876,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int addTo
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int addTo
     b .sign 0 == if
       a return
     end
@@ -961,7 +961,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int subtractFrom
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int subtractFrom
     b .sign 0 == if
       a return
     end
@@ -1256,7 +1256,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
   ## XXX efficient multiplication algorithm for large numbers
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int multiplyWith
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int multiplyWith
     a .sign 0 == if
       a return
     end
@@ -1321,7 +1321,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     aData bData resData karatsubaMultiply =:: resSize
     resData resSize resCap sign int new return
   end
-  proc( int : #:consume x => int ) =: public squared
+  proc( int : #:consume x => int ) =: export squared
     x x multiplyWith return
   end
 
@@ -1506,20 +1506,20 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int #+remainder+# int #+divide+# ) =: public #:alloc:int divideAndRemainderBy ## XXX better name
+  proc( int : #:consume a int : #:const b => int #+remainder+# int #+divide+# ) =: export #:alloc:int divideAndRemainderBy ## XXX better name
     a b true true divideRemConsumeInternal
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int divideBy
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int divideBy
     a b true false divideRemConsumeInternal #swap free ## remainder
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int remainderBy
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int remainderBy
     a b false true divideRemConsumeInternal free ## division result
   end
 
   #+computes the gcd of a and b, a and b are not modified by the calculation+#
-  proc( int : #:const a int : #:const b => int ) =: public #:alloc:int gcd
+  proc( int : #:const a int : #:const b => int ) =: export #:alloc:int gcd
     a abs =:: mut x
     b abs =:: mut y
     x y compare 0 > if x y x = y = end ## ensure x<=y
@@ -1533,7 +1533,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   end
   ## XXX lcm
 
-  proc( int : #:const a i64 : n => int ) =: public #:alloc:int pow
+  proc( int : #:const a i64 : n => int ) =: export #:alloc:int pow
     n 0 < if
       ZERO return
     end
@@ -1562,14 +1562,14 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     x free
     p return
   end
-  proc( int : #:consume a i64 : n => int ) =: public #:alloc:int powBy
+  proc( int : #:consume a i64 : n => int ) =: export #:alloc:int powBy
     a n pow
       a free
     return
   end
 
 
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int modBy
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int modBy
     b .sign 0 == if
       a return
     end
@@ -1580,7 +1580,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     x return
   end
   #+inverts a modulo b, returns integer k s.t.  a*k=gcd(a,b) mod b for some integer n +#
-  proc( int : #:consume a int : #:const b => int ) =: public #:alloc:int modInvert
+  proc( int : #:consume a int : #:const b => int ) =: export #:alloc:int modInvert
     b abs =:: mut y
     a b modBy =:: mut x
     ZERO =:: mut s
@@ -1605,7 +1605,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
 #end
 
 #namespace sb
-  proc( stringBuilder : sb int : #:const i i32 : base => stringBuilder ) =: public appendInt?
+  proc( stringBuilder : sb int : #:const i i32 : base => stringBuilder ) =: export appendInt?
     ## TODO check base
     ## XXX efficient int to string algorithm for large bases
     int.maxSafeI32Digits @ base [] =:: n
@@ -1651,7 +1651,7 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
       buff sb.free #drop
     return
   end
-  proc( stringBuilder : sb int : #:const i => stringBuilder ) =: public appendInt
+  proc( stringBuilder : sb int : #:const i => stringBuilder ) =: export appendInt
     sb i 10 appendInt?
   end
 #end

@@ -9,7 +9,7 @@ struct(
   LabelId : valueId
   LabelId : mut valueName
   FilePosition : mut pushedAt
-) =:: public ValueInfo
+) =:: export ValueInfo
 
 struct(
   ConstValue : value
@@ -29,7 +29,7 @@ struct(
   BlockInfo  list : mut openBlocks
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
-) =:: public InterpreterContext
+) =:: export InterpreterContext
 proc( LabelId => i32 ) =: labelHash end
 proc( LabelId LabelId => bool ) =: labelEq == end
 
@@ -264,7 +264,7 @@ proc(
   bool : showErrorMessages ## TODO distinguish non-interpretable operations and errors
 =>
   bool
-) =: public evaluateOperation
+) =: export evaluateOperation
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
@@ -818,7 +818,7 @@ proc(
   InterpreterContext ptr mut : context
 =>
   bool
-) =: public evaluateOperations
+) =: export evaluateOperations
   0 =:: mut offset
   context [] .openBlocks .length 1 - while #dup 0 >= do
     context [] .openBlocks #over list.at .data [] .blockType
@@ -847,7 +847,7 @@ proc(
   InterpreterContext ptr mut : context
 =>
   bool
-) =: public evaluateCall
+) =: export evaluateCall
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
@@ -958,7 +958,7 @@ proc(
   ProgramContext ptr mut : progContext
 =>
   InterpreterContext
-) =: public wrapProgram
+) =: export wrapProgram
   ## InterpreterContext
     progContext
     labelHash @ labelEq @ 32 Constant map.create
@@ -972,7 +972,7 @@ end
 
 proc(
   InterpreterContext ptr mut : context
-=> ) =: public resetContext
+=> ) =: export resetContext
   ## TODO? clear local variables in map
   context [] .stackInfo   list.clear context [] .stackInfo =
   context [] .openBlocks  list.clear context [] .openBlocks =
@@ -983,7 +983,7 @@ end
 
 proc(
   InterpreterContext ptr mut : context
-=> ) =: public cleanupContext
+=> ) =: export cleanupContext
   context [] .variables @ map.free
   context [] .stackInfo   list.free context [] .stackInfo =
   context [] .openBlocks  list.free context [] .openBlocks =

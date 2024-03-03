@@ -25,7 +25,7 @@ proc( io.FILE : target => ) =: printHeader
 end
 
 #namespace sb
-proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: public appendEscapedStrC
+proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: export appendEscapedStrC
   sb
     0 while #dup str .length < do =:: i
       str i labelContext id.scCharAt appendEscapedChr
@@ -45,7 +45,7 @@ proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : pro
       return
     end
     CONCAT_PREFIX sb.appendS
-    label labelContext id.labelFlags id.FLAG_PUBLIC & 0 == if
+    label labelContext id.labelFlags id.FLAG_EXPORT & 0 == if
       label labelContext id.getLabelFile sb.appendI
       "_F" sb.appendS
     end
@@ -1017,8 +1017,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch
         PROCEDURE case
-          labelFlags id.FLAG_PUBLIC & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
-            target "static " io.fputs #drop ## mark all non-public values as static
+          labelFlags id.FLAG_EXPORT & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
+            target "static " io.fputs #drop ## mark all non-exported values as static
           end
           op [] .dataType typeContext types.getProcRet #drop target prog printTypeName
           target " " io.fputs #drop
@@ -1031,8 +1031,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target "{\n" io.fputs #drop
           return
         LOCAL_VAR GLOBAL_VAR TMP_VAR case
-          idInfo .idType .GLOBAL_VAR ?? labelFlags id.FLAG_PUBLIC & 0 == & labelFlags id.FLAG_EXTERN & 0 == & if
-            target "static " io.fputs #drop ## mark all non-public values as static
+          idInfo .idType .GLOBAL_VAR ?? labelFlags id.FLAG_EXPORT & 0 == & labelFlags id.FLAG_EXTERN & 0 == & if
+            target "static " io.fputs #drop ## mark all non-exported values as static
           end
           op [] .dataType target prog printTypeName
           immutable if
@@ -1055,8 +1055,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       labelFlags id.FLAG_MUTABLE & 0 == =:: immutable
       idInfo .idType switch
         PROCEDURE case
-          labelFlags id.FLAG_PUBLIC & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
-            target "static " io.fputs #drop ## mark all non-public values as static
+          labelFlags id.FLAG_EXPORT & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
+            target "static " io.fputs #drop ## mark all non-exported values as static
           end
           op [] .dataType typeContext types.getProcRet #drop target prog printTypeName
           target " " io.fputs #drop
@@ -1069,8 +1069,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target ";\n" io.fputs #drop
           return
         LOCAL_VAR GLOBAL_VAR TMP_VAR case
-          idInfo .idType .GLOBAL_VAR ?? labelFlags id.FLAG_PUBLIC & 0 == & labelFlags id.FLAG_EXTERN & 0 == & if
-            target "static " io.fputs #drop ## mark all non-public values as static
+          idInfo .idType .GLOBAL_VAR ?? labelFlags id.FLAG_EXPORT & 0 == & labelFlags id.FLAG_EXTERN & 0 == & if
+            target "static " io.fputs #drop ## mark all non-exported values as static
           end
           op [] .dataType target prog printTypeName
           immutable if
@@ -1435,7 +1435,7 @@ proc( stringBuilder => stringBuilder ) =: appendCharNames
   "\";\n"          sb.appendS
 end
 
-proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
+proc( io.FILE : target ProgramContext ptr mut : prog => ) =: export compileToC
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1532,8 +1532,8 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: public compileToC
       end #drop
       continue
     end
-    labelFlags id.FLAG_PUBLIC & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
-      target "static " io.fputs #drop ## mark all non-public values as static
+    labelFlags id.FLAG_EXPORT & 0 == labelFlags id.FLAG_EXTERN & 0 == & if
+      target "static " io.fputs #drop ## mark all non-exported values as static
     end
     ## GOHERE
     labelFlags id.FLAG_EXTERN & ? if

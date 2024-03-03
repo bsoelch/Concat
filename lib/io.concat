@@ -2,22 +2,22 @@
 #include stringBuilder
 
 #namespace io
-i32 type =: public IOError
-0  IOError =: public FILE_ERROR_NONE
--1 IOError =: public FILE_ERR_END_OF_FILE
-1  IOError =: public FILE_ERR_IO
-2  IOError =: public FILE_ERR_PATH_OVERFLOW
-3  IOError =: public FILE_ERR_OPEN_MODE
-4  IOError =: public FILE_ERR_FILE_NOT_FOUND
-5  IOError =: public FILE_ERR_FILE_IS_DIR
-6  IOError =: public FILE_ERR_FILE_ALREADY_EXISTS
-7  IOError =: public FILE_ERR_ACCESS_DENIED
-8  IOError =: public FILE_ERR_INVALID_FILE
+i32 type =: export IOError
+0  IOError =: export FILE_ERROR_NONE
+-1 IOError =: export FILE_ERR_END_OF_FILE
+1  IOError =: export FILE_ERR_IO
+2  IOError =: export FILE_ERR_PATH_OVERFLOW
+3  IOError =: export FILE_ERR_OPEN_MODE
+4  IOError =: export FILE_ERR_FILE_NOT_FOUND
+5  IOError =: export FILE_ERR_FILE_IS_DIR
+6  IOError =: export FILE_ERR_FILE_ALREADY_EXISTS
+7  IOError =: export FILE_ERR_ACCESS_DENIED
+8  IOError =: export FILE_ERR_INVALID_FILE
 
-i32 type =: public OpenMode
-1 OpenMode =: public OPEN_READ
-2 OpenMode =: public OPEN_WRITE
-4 OpenMode =: public OPEN_APPEND
+i32 type =: export OpenMode
+1 OpenMode =: export OPEN_READ
+2 OpenMode =: export OPEN_WRITE
+4 OpenMode =: export OPEN_APPEND
 #end
 
 #namespace c
@@ -57,15 +57,15 @@ proc( FILE ptr mut : file
 #end
 
 #namespace io
-c.FILE ptr mut =:: public FILE ## XXX ? wrapper type
+c.FILE ptr mut =:: export FILE ## XXX ? wrapper type
 
-proc( => FILE ) =: public stdIn
+proc( => FILE ) =: export stdIn
   c.concatIOHelper_stdin
 end
-proc( => FILE ) =: public stdOut
+proc( => FILE ) =: export stdOut
   c.concatIOHelper_stdout
 end
-proc( => FILE ) =: public stdErr
+proc( => FILE ) =: export stdErr
   c.concatIOHelper_stderr
 end
 
@@ -74,7 +74,7 @@ proc(
   i8 _ ptr : fileName
   i64 : nameLength
   OpenMode : mode
-=> FILE IOError ) =: public fopen
+=> FILE IOError ) =: export fopen
   fileName nameLength 1 - [] '\x00' == if ## name not null-terminated
     fileName
   else
@@ -118,7 +118,7 @@ proc(
   i64 : auto k
   i8 k ptr : fileName
   OpenMode : mode
-=> FILE IOError ) =: public fopenS
+=> FILE IOError ) =: export fopenS
   fileName k mode fopen return
 end
 #template type : T #end
@@ -127,7 +127,7 @@ proc(
   T _ ptr mut : buffer
   i64 : off
   i64 : count
-=> i64 IOError ) =: public fread
+=> i64 IOError ) =: export fread
   file c.FILE ptr cast c.isNull if
     0 FILE_ERR_INVALID_FILE return
   end
@@ -154,7 +154,7 @@ proc(
   T _ ptr : buffer
   i64 : off
   i64 : count
-=> i64 IOError ) =: public fwrite
+=> i64 IOError ) =: export fwrite
   file c.FILE ptr cast c.isNull if
     0 FILE_ERR_INVALID_FILE return
   end
@@ -175,7 +175,7 @@ proc(
     end
   FILE_ERROR_NONE return
 end
-proc( FILE : file => IOError ) =: public fflush
+proc( FILE : file => IOError ) =: export fflush
   file c.FILE ptr cast c.isNull if
     FILE_ERR_INVALID_FILE return
   end
@@ -186,7 +186,7 @@ proc( FILE : file => IOError ) =: public fflush
   end
   FILE_ERROR_NONE return
 end
-proc( FILE : file => IOError ) =: public fclose
+proc( FILE : file => IOError ) =: export fclose
   file c.FILE ptr cast c.isNull if
     FILE_ERR_INVALID_FILE return
   end
@@ -200,10 +200,10 @@ end
 ## XXX fseek/ftell
 
 
-proc( FILE : file i8 : chr => IOError ) =: public fputc
+proc( FILE : file i8 : chr => IOError ) =: export fputc
   file chr @ 0 1 fwrite #swap #drop return
 end
-proc( FILE : file  i64 : k  i8 _ ptr : str => IOError ) =: public fputArray
+proc( FILE : file  i64 : k  i8 _ ptr : str => IOError ) =: export fputArray
   0 i64 =: mut off
   k =:: mut count
   str i8 _ ptr cast =:: data
@@ -218,11 +218,11 @@ proc( FILE : file  i64 : k  i8 _ ptr : str => IOError ) =: public fputArray
   end
   FILE_ERROR_NONE return
 end
-proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: public fputs
+proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: export fputs
   file k str fputArray
 end
 
-proc( i64 : auto k  i8 k ptr : str => IOError ) =: public puts
+proc( i64 : auto k  i8 k ptr : str => IOError ) =: export puts
   k 1 + sb.create
     str sb.appendS
     '\n' sb.appendC

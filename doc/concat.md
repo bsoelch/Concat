@@ -568,7 +568,7 @@ Library includes includes files from the standard library, the file path has to 
 The files are included in the order they are declared in the source code, included within included files are treated in depth first order.
 If a included file is already in the process of being included it is skipped.
 
-public global variables from included files can be used independent of the position of the include statement.
+exported global variables from included files can be used independent of the position of the include statement.
 
 All constants declared in included files can be used as constants, 
 if the included file is skipped due to an include loop then constants declared after the include loop cannot be used in constant expressions.
@@ -596,7 +596,7 @@ end
 
 ```
 #include "subDir/subInclude.concat"
-proc( i32 => ) =: public f  ## the procedure f in the included file is not visible
+proc( i32 => ) =: export f  ## the procedure f in the included file is not visible
   ..debug.print
 end
 

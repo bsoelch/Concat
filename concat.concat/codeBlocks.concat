@@ -22,10 +22,10 @@ enum(
   TYPE_PROC_IN
   TYPE_PROC_OUT
   TYPE_COMPOSITE
-) =:: public BlockType
-struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: public BlockId
+) =:: export BlockType
+struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: export BlockId
 #namespace sb
-  proc( stringBuilder BlockType => stringBuilder ) =: public appendBlockType
+  proc( stringBuilder BlockType => stringBuilder ) =: export appendBlockType
     switch
       UNKNOWN case
         "unknown" sb.appendS

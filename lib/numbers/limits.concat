@@ -1,36 +1,36 @@
 #namespace i32
-  -0x8000_0000 i32 =: public MIN
-   0x7fff_ffff i32 =: public MAX
+  -0x8000_0000 i32 =: export MIN
+   0x7fff_ffff i32 =: export MAX
 #end
 #namespace u32
-   0 i32 =: public MIN
-   0xffff_ffff i64 =: public MAX
+   0 i32 =: export MIN
+   0xffff_ffff i64 =: export MAX
 #end
 #namespace i64
-  -0x8000_0000_0000_0000 i64 =: public MIN
-   0x7fff_ffff_ffff_ffff i64 =: public MAX
+  -0x8000_0000_0000_0000 i64 =: export MIN
+   0x7fff_ffff_ffff_ffff i64 =: export MAX
 #end
 #namespace float
   ## XXX min/max/eps
-  proc( => float ) =: public Infinity #:opt:!fold
+  proc( => float ) =: export Infinity #:opt:!fold
     1 float cast 0 float cast / return
   end
-  proc( => float ) =: public -Infinity #:opt:!fold
+  proc( => float ) =: export -Infinity #:opt:!fold
     -1 float cast 0 float cast / return
   end
-  proc( => float ) =: public NaN #:opt:!fold
+  proc( => float ) =: export NaN #:opt:!fold
     0 float cast 0 float cast / return
   end
 #end
 #namespace double
   ## XXX min/max/eps
-  proc( => double ) =: public Infinity #:opt:!fold
+  proc( => double ) =: export Infinity #:opt:!fold
     1 double cast 0 double cast / return
   end
-  proc( => double ) =: public -Infinity #:opt:!fold
+  proc( => double ) =: export -Infinity #:opt:!fold
     -1 double cast 0 double cast / return
   end
-  proc( => double ) =: public NaN #:opt:!fold
+  proc( => double ) =: export NaN #:opt:!fold
     0 double cast 0 double cast / return
   end
 #end

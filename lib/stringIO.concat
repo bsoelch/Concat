@@ -2,10 +2,10 @@
 #include io
 
 #namespace io
-  proc( string : fileName  OpenMode : mode => FILE IOError ) =: public fopenStr
+  proc( string : fileName  OpenMode : mode => FILE IOError ) =: export fopenStr
     fileName .data fileName .length mode fopen return
   end
-  proc( FILE : file string : str => IOError ) =: public fputStr
+  proc( FILE : file string : str => IOError ) =: export fputStr
     0 i64 =: mut off
     str .length i64 =: mut count
     str .data =:: data
@@ -20,16 +20,16 @@
     end
     FILE_ERROR_NONE return
   end
-  proc( FILE : file stringBuilder : str => IOError ) =: public fputSb
+  proc( FILE : file stringBuilder : str => IOError ) =: export fputSb
     file  str sb.asStr fputStr return
   end
-  proc( FILE : file IOError : err string : str => FILE  IOError ) =: public fappendStr
+  proc( FILE : file IOError : err string : str => FILE  IOError ) =: export fappendStr
     err FILE_ERROR_NONE != if
       file err return
     end
     file #dup str fputStr return
   end
-  proc( FILE : file IOError : err stringBuilder : str => FILE  IOError ) =: public fappendSb
+  proc( FILE : file IOError : err stringBuilder : str => FILE  IOError ) =: export fappendSb
     err FILE_ERROR_NONE != if
       file err return
     end
@@ -38,7 +38,7 @@
 #end
 #namespace sb
   #using io
-  proc( stringBuilder : sb FILE : file => stringBuilder IOError ) =: public appendFile
+  proc( stringBuilder : sb FILE : file => stringBuilder IOError ) =: export appendFile
     16 =:: mut delta
     FILE_ERROR_NONE IOError =: mut err
     sb
