@@ -136,10 +136,9 @@
               using              |
               end                |
               include            |
-              template           |
-              find               |
-              assert
+              template
             )|
+            \.\.assert |
             \.\.compiler\.(
               types(\.[0-9]+)?   |
               stack(\.[0-9]+)?   |

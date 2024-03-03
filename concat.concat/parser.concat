@@ -1203,29 +1203,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "could not create template" sb.wrap fileState [] .wordStart state appendError2
           end
           return
-        else "assert" string.wrap #over string.eq _if #drop:2
-          fileState nextToken
-          #dup .STRING ?? if .STRING
-          else #drop
-            "expected string" sb.wrap fileState [] .wordStart state appendWarning2
-            return
-          end  =:: message
-          ## TODO handle asserts in local code
-          state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
-            "need boolean constant for static assertion" sb.wrap fileState [] .wordStart state appendError2
-            return
-          end
-          state _EXPERIMENTAL_ if popConst2 #drop else popConst .val end
-            #dup .boolean ?? if
-              .boolean
-            else
-              "expected boolean got " sb.wrap #swap idContext [] .constContext @ labelContext typeContext sb.appendConstant fileState [] .wordStart state appendWarning2
-              false
-            end
-            ! if
-              "assertion failed \"" sb.wrap message sb.appendStr "\" " sb.appendS fileState [] .wordStart state appendError2
-            end
-          return
         end
       64 sb.create
         "unknown compiler command \"" sb.appendS
@@ -2687,18 +2664,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
       end
       return
-    else #dup "assert" string.wrap string.eq _EXPERIMENTAL_ & _if =:: opName
-      fileState nextToken
-      #dup .STRING ?? ! if #drop
-        "expected string" sb.wrap fileState [] .wordStart state appendWarning2
+    else #dup "..assert" string.wrap string.eq _if =:: opName
+      state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
+        "missing message string for assertion, message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2
         return
-      end .STRING =:: message
-      state hasConst2 ! if
+      end
+      state _EXPERIMENTAL_ if popConst2 #drop else popConst .val end
+        #dup .str ?? ! if
+          "expected message string got: " sb.wrap
+            #swap idContext [] .constContext @ labelContext typeContext sb.appendConstant
+          fileState [] .wordStart state appendError2
+          return
+        end .str
+      =:: message
+      state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
         ## TODO local assertions
         "unimplemented: dynamic assertions" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      state popConst2 #drop
+      state _EXPERIMENTAL_ if popConst2 #drop else popConst .val end
         #dup .boolean ?? ! if
           "expected boolean got " sb.wrap
             #swap idContext [] .constContext @ labelContext typeContext sb.appendConstant
@@ -2706,7 +2690,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           false
         else .boolean end ! if
           "assertion failed \"" sb.wrap
-            message sb.appendStr
+            message labelContext sb.appendStringConst
             "\" " sb.appendS
           fileState [] .wordStart state appendError2
         end
