@@ -360,10 +360,16 @@ end
         block case
           "Block: " sb.appendS
           #over .val .block .blockType sb.appendBlockType
+          " (" sb.appendS
+          #over .val .block .blockId sb.appendI
+          ')' sb.appendC
           break
         blockEnd case
           "End: " sb.appendS
           #over .val .blockEnd .blockType sb.appendBlockType
+          " (" sb.appendS
+          #over .val .blockEnd .blockId sb.appendI
+          ')' sb.appendC
           break
         getId case
           "get ( " sb.appendS

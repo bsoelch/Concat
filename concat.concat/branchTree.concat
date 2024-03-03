@@ -129,8 +129,10 @@ struct(
     tree [] .branchPoints .length =
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree NodeId : branchPoint => ) =: public reset
-    branchPoint tree [] .branchHead =
+  proc( T BranchTree ptr mut : tree NodeId : branchPoint => NodeId ) =: public reset
+    tree [] .branchHead =:: oldHead
+      branchPoint tree [] .branchHead =
+    oldHead return
   end
   #template type : T #end
   proc( T BranchTree ptr mut : tree T : value => ) =: public push
@@ -203,19 +205,19 @@ struct(
     branchHeads .length 1 <= if
       false return ## nothing to merge
     end
-    -1 =:: mut initDepth
-    -1 =:: mut parentId
+    -1i64 =:: mut initDepth
+    -1i64 =:: mut parentId
     false =:: mut needMerge
     0 while #dup branchHeads .length < do
       branchHeads #over array.get =:: nodeId
-      nodeId 0 < nodeId tree [] .nodes .length >= if
+      nodeId 0 < nodeId tree [] .nodes .length >= | if
         #drop
         true return ## nodeId invalid
       end
       initDepth -1 == if
-        tree [] .nodes nodeId list.at .data .level initDepth =
+        tree [] .nodes nodeId list.at .data [] .level initDepth =
       else
-        tree [] .nodes nodeId list.at .data .level initDepth != _if
+        tree [] .nodes nodeId list.at .data [] .level initDepth != _if
           #drop
           true return ## nodes on top level have different depths
       end
