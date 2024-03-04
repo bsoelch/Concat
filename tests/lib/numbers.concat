@@ -1,4 +1,4 @@
-#include numbers
+import numbers
 #using number
 
 proc( => ) =: main

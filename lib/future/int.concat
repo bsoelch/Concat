@@ -1,7 +1,7 @@
 #+big-integer implementation+#
-#include numbers
+import numbers
 
-#include stringIO ## debug
+import stringIO ## debug
 
 #namespace i64
 proc( i64 i64 => i64 ) =: max

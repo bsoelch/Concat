@@ -1,5 +1,5 @@
-#include mem
-#include optional
+import mem
+import optional
 
 #template type : T #end
 struct( T _ ptr : data i64 : length ) =:: export arrayView

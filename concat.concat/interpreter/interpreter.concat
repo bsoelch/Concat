@@ -1,8 +1,8 @@
-#include map
+import map
 
-#include "interpreter/operators.concat"
-#include "identifiers.concat"
-#include "program.concat"
+import "interpreter/operators.concat"
+import "identifiers.concat"
+import "program.concat"
 
 struct(
   Type : valueType

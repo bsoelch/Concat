@@ -1,4 +1,4 @@
-#include mem
+import mem
 
 proc( => ) =: main
   1024 i32 mem.alloc i32 _ ptr mut =: mut dynamicArray

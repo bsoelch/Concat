@@ -1,8 +1,8 @@
-#include stringBuilder
+import stringBuilder
 
-#include "files.concat"
-#include "labels.concat"
-#include "types.concat"
+import "files.concat"
+import "labels.concat"
+import "types.concat"
 
 struct( i64 : offset i64 : length ) ConstantArray =
 enum(

@@ -1,5 +1,5 @@
-#include arrayView
-#include mem
+import arrayView
+import mem
 
 i8 arrayView =:: export string
 

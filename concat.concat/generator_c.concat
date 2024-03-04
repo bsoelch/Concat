@@ -1,7 +1,7 @@
-#include stringIO
+import stringIO
 
-#include "program.concat"
-#include "measure.concat"
+import "program.concat"
+import "measure.concat"
 
 "concat_" =:: CONCAT_PREFIX ## TODO? shorten to cct_ (current name for compatibility with old library C code)
 ## XXX? use separate prefix for extern procedures

@@ -1,12 +1,12 @@
-#include stringBuilder
-#include map
-#include optional
+import stringBuilder
+import map
+import optional
 
-#include "constants.concat"
-#include "types.concat"
-#include "labels.concat"
-#include "codeBlocks.concat"
-#include "common.concat"
+import "constants.concat"
+import "types.concat"
+import "labels.concat"
+import "codeBlocks.concat"
+import "common.concat"
 
   enum( TYPE PROCEDURE GLOBAL_VAR TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR ) =:: export IdentifierType
 

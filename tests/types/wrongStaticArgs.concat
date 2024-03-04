@@ -1,4 +1,4 @@
-#include list
+import list
 
 proc( => ) =: main
   16 i8 list.create

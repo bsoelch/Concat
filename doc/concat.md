@@ -548,13 +548,13 @@ base.anInt ..debug.print  ## print base.anInt
 anInt ..debug.print  ## still prints anInt in current namespace
 subspace.anInt ..debug.print  ## addreses with . are resolved relative to the current namespace
 #namespace base
- #using base.subspace ## namespace imports allways have to include the full name
+ #using base.subspace ## namespace imports always have to include the full name
 #end
 ```
 
 ## Includes
 
-Source code can be split between multiple file, files can be includes using `#include` 
+Source code can be split between multiple file, files can be includes using `import` 
 there are two kinds of includes, local includes and library includes.
 
 Local includes include files relative to the "base-directory" (directory the file passed to the compiler is located) of the current program,
@@ -581,7 +581,7 @@ Example:
 proc( => ) =: main
   42 f ## calls f in 'anotherFile'
 end
-#include "anotherFile.concat"  ## includes 'anotherFile.concat' located in the same directory as the current file
+import "anotherFile.concat"  ## includes 'anotherFile.concat' located in the same directory as the current file
 1 =:: mainConstant
 proc( i32 => bool ) =: isConst 
   switch
@@ -595,7 +595,7 @@ end
 `src/anotherFile.concat`:
 
 ```
-#include "subDir/subInclude.concat"
+import "subDir/subInclude.concat"
 proc( i32 => ) =: export f  ## the procedure f in the included file is not visible
   ..debug.print
 end
@@ -609,7 +609,7 @@ end
 
 ```
 
-#include "../main.concat" ## files in subdirectorys have to used .. to reference files in superdirectories
+import "../main.concat" ## files in subdirectorys have to used .. to reference files in superdirectories
 0 i32 =: subIncludeConstant
 proc( => ) =: f ## private procedure f
   mainConstant ..debug.print  ## main constant is accessible but not constant
@@ -629,7 +629,7 @@ Example:
 
 The following program prints its program arguments, separated by newlines
 ```
-#include stringIO
+import stringIO
 
 proc( => ) =: main
   0 while #dup ..argc < do

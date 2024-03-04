@@ -1,5 +1,5 @@
-#include string
-#include io
+import string
+import io
 
 proc( => ) =: main
   "Hello World!" io.puts ..debug.print

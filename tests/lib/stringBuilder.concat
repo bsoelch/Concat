@@ -1,5 +1,5 @@
-#include stringIO
-#include stringBuilder
+import stringIO
+import stringBuilder
 
 proc( => ) =: main 
   16 sb.create

@@ -1,7 +1,7 @@
-#include mem
-#include list
-#include string
-#include arrayView
+import mem
+import list
+import string
+import arrayView
 
 i8 list =:: export stringBuilder
 #namespace sb

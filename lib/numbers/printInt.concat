@@ -1,4 +1,4 @@
-#include stringBuilder
+import stringBuilder
 
 #namespace sb
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars

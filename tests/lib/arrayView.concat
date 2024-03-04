@@ -1,4 +1,4 @@
-#include arrayView
+import arrayView
 
 #template type : T #end
 proc( T arrayView : l => ) =: printArray

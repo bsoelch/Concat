@@ -1,7 +1,7 @@
-#include numbers/printFloat
-#include numbers/printInt
-#include numbers/limits
-#include string
+import numbers/printFloat
+import numbers/printInt
+import numbers/limits
+import string
 
 #namespace number
 #template type : T #end

@@ -5,11 +5,11 @@ The old type-checker does two separate transformations on the source code
 the new type-checking code in this file will only perform the first operation outputting
 type-checked code in post-fix notation.
 +#
-#include "program.concat"
-#include "types.concat"
-#include "identifiers.concat"
-#include "interpreter/interpreter.concat"
-#include "branchTree.concat"
+import "program.concat"
+import "types.concat"
+import "identifiers.concat"
+import "interpreter/interpreter.concat"
+import "branchTree.concat"
 
 struct(
   Type         : mut valueType

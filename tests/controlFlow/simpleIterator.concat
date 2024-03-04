@@ -1,4 +1,4 @@
-#include string
+import string
 
 proc( i64 : auto k i8 k ptr : str => string i64 ) =: startItr
   str string.wrap 0

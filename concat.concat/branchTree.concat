@@ -1,6 +1,6 @@
-#include mem
-#include arrayView
-#include list
+import mem
+import arrayView
+import list
 
 #namespace branchTree
   i64 =:: export NodeId

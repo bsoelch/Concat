@@ -1,5 +1,5 @@
-#include stringBuilder
-#include io
+import stringBuilder
+import io
 
 #namespace io
   proc( string : fileName  OpenMode : mode => FILE IOError ) =: export fopenStr

@@ -1,4 +1,4 @@
-#include "constants.concat"
+import "constants.concat"
 
 #namespace interpreter
 

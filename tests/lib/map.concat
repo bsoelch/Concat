@@ -1,10 +1,10 @@
-#include map
-#include optional
+import map
+import optional
 
-#include io
-#include stringBuilder
-#include numbers/printInt
-#include stringIO
+import io
+import stringBuilder
+import numbers/printInt
+import stringIO
 
 proc( i32 => i32 ) =: i32Hash end
 proc( i32 i32 => bool ) =: i32Eq  == end

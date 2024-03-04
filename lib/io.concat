@@ -1,5 +1,5 @@
-#include mem
-#include stringBuilder
+import mem
+import stringBuilder
 
 #namespace io
 i32 type =: export IOError

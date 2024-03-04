@@ -1,8 +1,8 @@
-#include stringIO
-#include numbers
-#include chars
+import stringIO
+import numbers
+import chars
 
-#include "common.concat"
+import "common.concat"
 
 struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: export FileState
 

@@ -1,4 +1,4 @@
-#include stringIO
+import stringIO
 
 proc( => ) =: main
   0 while #dup ..argc < do

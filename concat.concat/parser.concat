@@ -1,18 +1,18 @@
-#include stringIO
-#include list
-#include arrayView
-#include numbers
+import stringIO
+import list
+import arrayView
+import numbers
 
-#include "program.concat"
-#include "files.concat"
-#include "labels.concat"
-#include "types.concat"
-#include "constants.concat"
-#include "codeBlocks.concat"
-#include "identifiers.concat"
+import "program.concat"
+import "files.concat"
+import "labels.concat"
+import "types.concat"
+import "constants.concat"
+import "codeBlocks.concat"
+import "identifiers.concat"
 
-#include "interpreter/operators.concat"
-#include "interpreter/interpreter.concat"
+import "interpreter/operators.concat"
+import "interpreter/interpreter.concat"
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
@@ -1121,26 +1121,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ':' string.split #swap #drop ## ignore additional parameters
           opName fileState [] .wordStart state getCompilerOpParam ## :count
           StackModType .DROP fileState [] .wordStart opStackMod state appendOp
-          return
-        else "include" string.wrap #over string.eq _if #drop:2
-          fileState nextToken
-          #dup .STRING ?? if .STRING ## local file TODO? allow ignoring name of current folder (search base-path, then current folder)
-            state [] .basePath .length #over .length + sb.create
-              state [] .basePath sb.appendStr
-              #swap sb.appendStr
-            fileState [] .wordStart state includeFile
-            return
-          else #dup .IDENTIFIER ?? _if .IDENTIFIER ## library file
-            state [] .libPath .length #over .length + ".concat" ..length + sb.create
-              state [] .libPath sb.appendStr
-              #swap sb.appendStr ".concat" sb.appendS
-            fileState [] .wordStart state includeFile
-            return
-          end
-          64 sb.create
-            "invalid token for include" sb.appendS
-            #swap sb.appendToken
-          fileState [] .wordStart state appendError2
           return
         else "namespace" string.wrap #over string.eq _if #drop
           idContext id.isTopLevel ! if
@@ -2664,6 +2644,30 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
       end
       return
+    else #dup "import" string.wrap string.eq _if =:: opName
+      fileState nextToken
+      #dup .STRING ?? if .STRING ## local file
+        ## TODO? allow ignoring name of current folder (search base-path, then current folder)
+        state [] .basePath .length #over .length + sb.create
+          state [] .basePath sb.appendStr
+          #swap sb.appendStr
+        fileState [] .wordStart state importFile
+        return
+      else #dup .IDENTIFIER ?? _if .IDENTIFIER ## library file
+        state [] .libPath .length #over .length + ".concat" ..length + sb.create
+          state [] .libPath sb.appendStr
+          #swap sb.appendStr ".concat" sb.appendS
+        fileState [] .wordStart state importFile
+        return
+      end
+      64 sb.create
+        "invalid parameter for " sb.appendS
+        opName sb.appendStr
+        ':' sb.appendC
+        #swap sb.appendToken
+        " expected identifier or string" sb.appendS
+      fileState [] .wordStart state appendError2
+      return
     else #dup "..assert" string.wrap string.eq _if =:: opName
       state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
         "missing message string for assertion, message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2
@@ -2769,7 +2773,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
          #over "or"        string.wrap string.eq |
          #over "or*"       string.wrap string.startsWith |
          #over "using"     string.wrap string.eq |
-         #over "import"   string.wrap string.eq |
          #over "overload"   string.wrap string.eq |
       _if =:: opName
       "`" sb.wrap
@@ -2800,22 +2803,22 @@ proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState p
       return
   end
 end
-proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: includeFile
+proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state => ) =: importFile
   state [] .progContext =:: progContext
-  FILE_ID_NONE =:: mut included
+  FILE_ID_NONE =:: mut imported
   0 while #dup progContext [] .progFiles .length < do
     progContext [] .progFiles #over list.get .fileName sb.asStr fileName sb.asStr string.eq if
-      #dup included =
+      #dup imported =
       break
     end
     1 +
   end #drop
-  included FILE_ID_NONE == if ## file has not yet been included
-    fileName state parseFile fileName pos state checkIOError included =
+  imported FILE_ID_NONE == if ## file has not yet been imported
+    fileName state parseFile fileName pos state checkIOError imported =
   end
   progContext [] .progFiles state [] .currentFile list.at .data
   #dup [] .includedFiles
-      included
+      imported
       pos
     IncludedFile new list.append
   #swap [] .includedFiles =

@@ -1,8 +1,8 @@
-#include list
+import list
 
-#include "program.concat"
-#include "types.concat"
-#include "labels.concat"
+import "program.concat"
+import "types.concat"
+import "labels.concat"
 
 struct( Type : mut valType i32 : mut opCount bool : mut writable ) =:: TypeInfo
 struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState

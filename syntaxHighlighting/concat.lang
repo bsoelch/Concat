@@ -135,9 +135,9 @@
               namespace          |
               using              |
               end                |
-              include            |
               template
             )|
+            import |
             \.\.assert |
             \.\.compiler\.(
               types(\.[0-9]+)?   |

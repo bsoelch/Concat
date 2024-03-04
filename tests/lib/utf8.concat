@@ -1,4 +1,4 @@
-#include utf8
+import utf8
 
 proc( => ) =: main
   "ACBÄÖÜ°?ℂ💻!0\xc2\x80\xc1\xbf\xec\x3a\xf0" string.wrap =:: str

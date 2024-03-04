@@ -1,7 +1,7 @@
-#include stringBuilder
-#include numbers/printInt
-#include numbers/limits
-#include math
+import stringBuilder
+import numbers/printInt
+import numbers/limits
+import math
 
 proc( i32 => i8 ) =: getDigit
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" #swap []

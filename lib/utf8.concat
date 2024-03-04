@@ -1,4 +1,4 @@
-#include stringBuilder
+import stringBuilder
 
 
 #namespace utf8

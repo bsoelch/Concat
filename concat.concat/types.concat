@@ -1,10 +1,10 @@
-#include list
-#include arrayView
-#include string
-#include stringBuilder
+import list
+import arrayView
+import string
+import stringBuilder
 
-#include "labels.concat"
-#include "constants.concat"
+import "labels.concat"
+import "constants.concat"
 
 
 #namespace types

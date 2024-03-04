@@ -1,12 +1,12 @@
-#include numbers
-#include string
-#include stringBuilder
-#include list
-#include optional
-#include utf8
+import numbers
+import string
+import stringBuilder
+import list
+import optional
+import utf8
 
-#include "files.concat"
-#include "common.concat"
+import "files.concat"
+import "common.concat"
 
 struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: export NamespaceInfo
 

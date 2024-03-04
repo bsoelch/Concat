@@ -1,10 +1,10 @@
 #+
 common code for code generators
 +#
-#include map
+import map
 
-#include "program.concat"
-#include "types.concat"
+import "program.concat"
+import "types.concat"
 
 
 proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: declaredType

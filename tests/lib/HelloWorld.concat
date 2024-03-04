@@ -1,4 +1,4 @@
-#include io
+import io
 
 proc( => ) =: main
   "Hello World!" io.puts ..debug.print

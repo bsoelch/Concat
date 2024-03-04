@@ -1,6 +1,6 @@
-#include mem
-#include arrayView
-#include optional
+import mem
+import arrayView
+import optional
 
 ## XXX allow auto-cast from list -> arrayView
 

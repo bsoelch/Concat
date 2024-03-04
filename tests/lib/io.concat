@@ -1,4 +1,4 @@
-#include io
+import io
 #using io
 proc( => ) =: main
   i8 64 array new =:: mut buff

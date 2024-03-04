@@ -1,9 +1,9 @@
-#include stringBuilder
+import stringBuilder
 
-#include "constants.concat"
-#include "codeBlocks.concat"
-#include "identifiers.concat"
-#include "common.concat"
+import "constants.concat"
+import "codeBlocks.concat"
+import "identifiers.concat"
+import "common.concat"
 
 enum( NEGATE TO_BOOL NOT FLIP ) =:: export UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export BinaryOperator

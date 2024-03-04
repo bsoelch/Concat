@@ -1,10 +1,10 @@
-#include sys
+import sys
 
-#include "parser.concat"
-#include "typeCheck.concat"
-#include "typeCheck2.concat"
-#include "generator_c.concat"
-#include "generator_qbe.concat"
+import "parser.concat"
+import "typeCheck.concat"
+import "typeCheck2.concat"
+import "generator_c.concat"
+import "generator_qbe.concat"
 
 stringBuilder : mut srcFile
 stringBuilder : mut outFile

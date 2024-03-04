@@ -1,4 +1,4 @@
-#include list
+import list
 
 #template type : T #end
 proc( T list : l => ) =: printList

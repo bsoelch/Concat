@@ -1,6 +1,6 @@
-#include mem
-#include list
-#include optional
+import mem
+import list
+import optional
 
 #namespace map
   i64 =:: NodeId

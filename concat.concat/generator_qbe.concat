@@ -1,8 +1,8 @@
-#include stringIO
+import stringIO
 
-#include "program.concat"
-#include "measure.concat"
-#include "branchTree.concat"
+import "program.concat"
+import "measure.concat"
+import "branchTree.concat"
 
 ## XXX make prefix customizable
 "cct_" =:: CONCAT_PREFIX
