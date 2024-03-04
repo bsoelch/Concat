@@ -272,7 +272,7 @@ proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext
   ProgramFile new return
 end
 
-#namespace sb
+namespace: sb
   proc( stringBuilder UnaryOperator => stringBuilder ) =: export appendUnaryOperator
     switch
       NEGATE case "NEGATE" sb.appendS return
@@ -720,5 +720,5 @@ end
         1 +
       end #drop
   end
-#end
+end
 

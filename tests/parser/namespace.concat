@@ -1,13 +1,13 @@
-#namespace mut
-  #namespace subspace
+namespace: mut
+  namespace: subspace
    1 i32 =: spaceVar
-  #end
+  end
   0 i32 =: spaceVar
-#end
-#namespace i32
+end
+namespace: i32
   #using mut
   #using mut.subspace
-#end
+end
 proc( => ) =: spaceTest
   #using mut
   spaceVar ..debug.print
@@ -15,30 +15,30 @@ proc( => ) =: spaceTest
   spaceVar ..debug.print
   subspace.subspaceVar ..debug.print
 end
-#namespace mut
-  #namespace subspace
+namespace: mut
+  namespace: subspace
     2 i64 =: subspaceVar
-  #end
-#end
+  end
+end
 
 proc( => ) =: main
   spaceTest
 end
 
-#namespace A
+namespace: A
   1 =:: i
-#end
-#namespace B
+end
+namespace: B
   2 =:: i
-#end
-#namespace C
+end
+namespace: C
   3 =:: i
-#end
+end
 0 =:: i
-#namespace D
+namespace: D
   #using A 
   #using B
   #using C
   4 =:: i
   ..compiler.parser.find.i
-#end
+end

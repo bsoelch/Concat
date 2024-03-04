@@ -1,137 +1,137 @@
-#namespace c
-proc( ..ctype.double => ..ctype.double ) : extern floor
-proc( ..ctype.double => ..ctype.double ) : extern ceil
-proc( ..ctype.double => ..ctype.double ) : extern round
-proc( ..ctype.double => ..ctype.double ) : extern fabs
+namespace: c
+  proc( ..ctype.double => ..ctype.double ) : extern floor
+  proc( ..ctype.double => ..ctype.double ) : extern ceil
+  proc( ..ctype.double => ..ctype.double ) : extern round
+  proc( ..ctype.double => ..ctype.double ) : extern fabs
 
-proc(
-  ..ctype.double
-  ..ctype.double
-=> ..ctype.double ) : extern fmin
-proc(
-  ..ctype.double
-  ..ctype.double
-=> ..ctype.double ) : extern fmax
+  proc(
+    ..ctype.double
+    ..ctype.double
+  => ..ctype.double ) : extern fmin
+  proc(
+    ..ctype.double
+    ..ctype.double
+  => ..ctype.double ) : extern fmax
 
-proc( ..ctype.double => ..ctype.double ) : extern log2
-proc( ..ctype.double => ..ctype.double ) : extern log
-proc( ..ctype.double => ..ctype.double ) : extern exp
+  proc( ..ctype.double => ..ctype.double ) : extern log2
+  proc( ..ctype.double => ..ctype.double ) : extern log
+  proc( ..ctype.double => ..ctype.double ) : extern exp
 
-proc( ..ctype.double => ..ctype.double ) : extern sqrt
-proc( ..ctype.double => ..ctype.double ) : extern cbrt
-proc(
-  ..ctype.double
-  ..ctype.double
-=> ..ctype.double ) : extern pow
-## XXX gamma function
+  proc( ..ctype.double => ..ctype.double ) : extern sqrt
+  proc( ..ctype.double => ..ctype.double ) : extern cbrt
+  proc(
+    ..ctype.double
+    ..ctype.double
+  => ..ctype.double ) : extern pow
+  ## XXX gamma function
 
-proc( ..ctype.double => ..ctype.double ) : extern sin
-proc( ..ctype.double => ..ctype.double ) : extern cos
-proc( ..ctype.double => ..ctype.double ) : extern tan
-proc( ..ctype.double => ..ctype.double ) : extern asin
-proc( ..ctype.double => ..ctype.double ) : extern acos
-proc( ..ctype.double => ..ctype.double ) : extern atan
-proc( ..ctype.double => ..ctype.double ) : extern sinh
-proc( ..ctype.double => ..ctype.double ) : extern cosh
-proc( ..ctype.double => ..ctype.double ) : extern tanh
-proc( ..ctype.double => ..ctype.double ) : extern asinh
-proc( ..ctype.double => ..ctype.double ) : extern acosh
-proc( ..ctype.double => ..ctype.double ) : extern atanh
-proc(
-  ..ctype.double : y
-  ..ctype.double : x
-=> ..ctype.double ) : extern atan2
+  proc( ..ctype.double => ..ctype.double ) : extern sin
+  proc( ..ctype.double => ..ctype.double ) : extern cos
+  proc( ..ctype.double => ..ctype.double ) : extern tan
+  proc( ..ctype.double => ..ctype.double ) : extern asin
+  proc( ..ctype.double => ..ctype.double ) : extern acos
+  proc( ..ctype.double => ..ctype.double ) : extern atan
+  proc( ..ctype.double => ..ctype.double ) : extern sinh
+  proc( ..ctype.double => ..ctype.double ) : extern cosh
+  proc( ..ctype.double => ..ctype.double ) : extern tanh
+  proc( ..ctype.double => ..ctype.double ) : extern asinh
+  proc( ..ctype.double => ..ctype.double ) : extern acosh
+  proc( ..ctype.double => ..ctype.double ) : extern atanh
+  proc(
+    ..ctype.double : y
+    ..ctype.double : x
+  => ..ctype.double ) : extern atan2
 
-proc( ..ctype.float => ..ctype.int ) : extern isnanf
-proc( ..ctype.float => ..ctype.int ) : extern isinff
-proc( ..ctype.float => ..ctype.int ) : extern isfinitef
-proc( ..ctype.double => ..ctype.int ) : extern isnan
-proc( ..ctype.double => ..ctype.int ) : extern isinf
-proc( ..ctype.double => ..ctype.int ) : extern isfinite
-#end
-#namespace math
-proc( double => double ) =: export floor
-  c.floor
+  proc( ..ctype.float => ..ctype.int ) : extern isnanf
+  proc( ..ctype.float => ..ctype.int ) : extern isinff
+  proc( ..ctype.float => ..ctype.int ) : extern isfinitef
+  proc( ..ctype.double => ..ctype.int ) : extern isnan
+  proc( ..ctype.double => ..ctype.int ) : extern isinf
+  proc( ..ctype.double => ..ctype.int ) : extern isfinite
 end
-proc( double => double ) =: export ceil
-  c.ceil
-end
-proc( double => double ) =: export round
-  c.round
-end
-proc( double => double ) =: export abs
-  c.fabs
-end
+namespace: math
+  proc( double => double ) =: export floor
+    c.floor
+  end
+  proc( double => double ) =: export ceil
+    c.ceil
+  end
+  proc( double => double ) =: export round
+    c.round
+  end
+  proc( double => double ) =: export abs
+    c.fabs
+  end
 
-proc( double double => double ) =: export min
-  c.fmin
-end
-proc( double double => double ) =: export max
-  c.fmax
-end
+  proc( double double => double ) =: export min
+    c.fmin
+  end
+  proc( double double => double ) =: export max
+    c.fmax
+  end
 
-proc( double => double ) =: export log2
-  c.log2
-end
-proc( double => double ) =: export log
-  c.log
-end
-proc( double => double ) =: export exp
-  c.exp
-end
+  proc( double => double ) =: export log2
+    c.log2
+  end
+  proc( double => double ) =: export log
+    c.log
+  end
+  proc( double => double ) =: export exp
+    c.exp
+  end
 
-proc( double => double ) =: export sqrt
-  c.sqrt
-end
-proc( double => double ) =: export cbrt
-  c.cbrt
-end
-proc( double : base double : power => double ) =: export pow
-  base power c.pow
-end
-## XXX gamma function
+  proc( double => double ) =: export sqrt
+    c.sqrt
+  end
+  proc( double => double ) =: export cbrt
+    c.cbrt
+  end
+  proc( double : base double : power => double ) =: export pow
+    base power c.pow
+  end
+  ## XXX gamma function
 
-proc( double => double ) =: export sin
-  c.sin
+  proc( double => double ) =: export sin
+    c.sin
+  end
+  proc( double => double ) =: export cos
+    c.cos
+  end
+  proc( double => double ) =: export tan
+    c.tan
+  end
+  proc( double => double ) =: export asin
+    c.asin
+  end
+  proc( double => double ) =: export acos
+    c.acos
+  end
+  proc( double => double ) =: export atan
+    c.atan
+  end
+  proc( double => double ) =: export sinh
+    c.sinh
+  end
+  proc( double => double ) =: export cosh
+    c.cosh
+  end
+  proc( double => double ) =: export tanh
+    c.tanh
+  end
+  proc( double => double ) =: export asinh
+    c.asinh
+  end
+  proc( double => double ) =: export acosh
+    c.acosh
+  end
+  proc( double => double ) =: export atanh
+    c.atanh
+  end
+  proc( double double => double ) =: export atan2
+    c.atan2
+  end
 end
-proc( double => double ) =: export cos
-  c.cos
-end
-proc( double => double ) =: export tan
-  c.tan
-end
-proc( double => double ) =: export asin
-  c.asin
-end
-proc( double => double ) =: export acos
-  c.acos
-end
-proc( double => double ) =: export atan
-  c.atan
-end
-proc( double => double ) =: export sinh
-  c.sinh
-end
-proc( double => double ) =: export cosh
-  c.cosh
-end
-proc( double => double ) =: export tanh
-  c.tanh
-end
-proc( double => double ) =: export asinh
-  c.asinh
-end
-proc( double => double ) =: export acosh
-  c.acosh
-end
-proc( double => double ) =: export atanh
-  c.atanh
-end
-proc( double double => double ) =: export atan2
-  c.atan2
-end
-#end
-#namespace double
+namespace: double
   proc( double => bool ) =: export isNaN
     c.isnan i32 cast ?
   end
@@ -141,4 +141,4 @@ end
   proc( double => bool ) =: export isFinite
     c.isfinite i32 cast ?
   end
-#end
+end

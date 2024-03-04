@@ -48,8 +48,8 @@
       </include>
     </context>
 
-
-    <context id="postfix-keyword" style-ref="keyword">
+    <!-- XXX? match up beginning and end of block -->
+    <context id="block-keyword" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           if              |
@@ -64,6 +64,7 @@
           case            |
           default         |
           return          |
+          namespace\:     |
           end             
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
@@ -132,7 +133,6 @@
               drop(\:[0-9]+)?    |
               swap               |
               over(\:[0-9]+)?    |
-              namespace          |
               using              |
               end                |
               template
@@ -316,7 +316,7 @@
       <include>
         <context ref="line-comment"/>
         <context ref="block-comment"/>
-        <context ref="postfix-keyword"/>
+        <context ref="block-keyword"/>
         <context ref="declaration"/>
         <context ref="type-keywords"/>
         <context ref="primitiveType"/>

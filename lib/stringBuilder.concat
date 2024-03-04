@@ -4,7 +4,7 @@ import string
 import arrayView
 
 i8 list =:: export stringBuilder
-#namespace sb
+namespace: sb
   proc( i64 : cap => stringBuilder ) =: export create
     cap i8 list.create return
   end
@@ -51,5 +51,5 @@ i8 list =:: export stringBuilder
   proc( stringBuilder => string ) =: export asStr
     asArray return
   end
-#end
+end
 

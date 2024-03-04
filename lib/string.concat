@@ -3,7 +3,7 @@ import mem
 
 i8 arrayView =:: export string
 
-#namespace string
+namespace: string
   "" 0 string new =:: EMPTY
 
   proc( => string ) =: export empty
@@ -129,4 +129,4 @@ i8 arrayView =:: export string
   proc( string : str i8 : chr => string string ) =: export splitLast
     str chr array.splitLast return
   end
-#end
+end

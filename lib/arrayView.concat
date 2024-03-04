@@ -5,7 +5,7 @@ import optional
 struct( T _ ptr : data i64 : length ) =:: export arrayView
 ## TODO writable array view
 
-#namespace array
+namespace: array
   #template type : T #end
   proc( => T arrayView ) =: export empty
     0 T mem.alloc 0 T arrayView new return
@@ -161,4 +161,4 @@ struct( T _ ptr : data i64 : length ) =:: export arrayView
       end
     splitIndex return
   end
-#end
+end

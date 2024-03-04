@@ -19,7 +19,7 @@ import "common.concat"
 
   struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
   struct( IdentifierName : name IdentifierData ptr : data ) =:: export IdentifierMatch
-#namespace id
+namespace: id
 
   "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
   Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
@@ -36,12 +36,11 @@ import "common.concat"
     a .name b .name string.eq return
   end
 
-  1 =:: export SCOPE_FLAG_AUTO_CLOSE
-  2 =:: export SCOPE_FLAG_NO_CONST_FOLD
+  1 =:: export SCOPE_FLAG_NO_CONST_FOLD
   struct(
     IdentifierName IdentifierData hashMap : mut identifiers
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
-    BlockType : mut blockType
+    bool : isProcScope
     Type : currentProc
     i64 : staticArgsOffset
     bool : experimental
@@ -49,13 +48,13 @@ import "common.concat"
     i32 : mut flags
   ) =:: Scope
 
-  proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports => Scope ) =: newScope
+  proc( bool : isProc Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports => Scope ) =: newScope
      ## Scope
       idHash @
       idEq @
       128 IdentifierData map.create
       128 i8 _ ptr mut list.create
-      blockType
+      isProc
       procType
       staticArgsOffset
       experimental
@@ -63,7 +62,7 @@ import "common.concat"
       0
     Scope new return
   end
-#end
+end
   struct(
     ConstantContext : mut constContext
     LabelContext : mut labelContext
@@ -78,13 +77,13 @@ import "common.concat"
     i32 : mut localVarCount
     TemplateId : mut currentTemplate
   ) =:: export IdentifierContext
-#namespace id
+namespace: id
 
   proc( => IdentifierContext ) =: export newIdentifierContext
     newConstContext
     newLabelContext
     types.newTypeContext
-    BlockType .UNKNOWN Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
+    false Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     128 TemplateInfo      list.create
     32  ConstValue        list.create
@@ -109,10 +108,10 @@ import "common.concat"
   proc( IdentifierContext ptr mut : context => bool ) =: isTopLevel
     context [] .openScopes .length 0 == return
   end
-  proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context => ) =: export openProcScope
+  proc( Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context => ) =: export openProcScope
     context [] .openScopes
        ## newScope
-         blockType
+         true
          procType
          staticArgsOffset
          experimental
@@ -120,28 +119,16 @@ import "common.concat"
        newScope list.append
     context [] .openScopes =
   end
-  proc( BlockType : blockType  IdentifierContext ptr mut : context => ) =: export openScope
+  proc( IdentifierContext ptr mut : context => ) =: export openScope
     context [] .openScopes .length 0 == if
       Type .undefined false
     else
       context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental
     end =:: experimental =:: currentProc
     context [] .openScopes
-       blockType currentProc -1 experimental context [] .labelContext .namespaceInfo .imports newScope
+       false currentProc -1 experimental context [] .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
-  end
-  proc( BlockType : blockType bool : autoClose IdentifierContext ptr mut : context => bool ) =: export updateScopeType
-    context [] .openScopes .length 0 == if
-      true return
-    end
-    blockType context [] .openScopes list.peek .data [] .blockType =
-    autoClose if
-      context [] .openScopes list.peek .data #dup [] .flags SCOPE_FLAG_AUTO_CLOSE | #swap [] .flags =
-    else
-      context [] .openScopes list.peek .data #dup [] .flags SCOPE_FLAG_AUTO_CLOSE ~ & #swap [] .flags =
-    end
-    false return
   end
   proc( i32 : flag bool : value IdentifierContext ptr mut : context => ) =: export setScopeFlag
     context [] .openScopes .length 0 == if
@@ -167,12 +154,6 @@ import "common.concat"
     end
     context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & ? return
   end
-  proc( IdentifierContext ptr mut : context => BlockType ) =: export currentScopeType
-    context [] .openScopes .length 0 == if
-      BlockType .UNKNOWN return
-    end
-    context [] .openScopes list.peek .data [] .blockType return
-  end
   proc( IdentifierContext ptr mut : context => Type bool ) =: export currentScopeProc
     context [] .openScopes .length 0 == if
       Type .undefined false return
@@ -189,13 +170,11 @@ import "common.concat"
   proc(
     IdentifierContext ptr mut : context
   =>
-    bool #+autoClose+#
     i64 #+staticArgsOffset+#
-    BlockType
     bool #+isError+#
   ) =: export closeScope
     context [] .openScopes .length 0 == if
-      false -1 BlockType .UNKNOWN true return
+      -1 true return
     end
     context [] .openScopes
       list.pop =:: mut closed
@@ -203,10 +182,10 @@ import "common.concat"
     closed .scopeStrings freeScopeStrings closed .scopeStrings =
     closed .identifiers @ map.free
     closed .prevImports context [] .labelContext .namespaceInfo .imports =
-    closed .blockType .PROCEDURE ?? if
+    closed .isProcScope if
       0 context [] .localVarCount = ## XXX handle nested procedures
     end
-    closed .flags SCOPE_FLAG_AUTO_CLOSE & ? closed .staticArgsOffset closed .blockType false return
+    closed .staticArgsOffset false return
   end
 
 
@@ -471,8 +450,8 @@ import "common.concat"
     context [] .nameBuffer list.clear context [] .nameBuffer =
     idName mScope [] .identifiers @ idName map.at .data false return
   end
-#end
-#namespace sb
+end
+namespace: sb
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext => stringBuilder ) =: export appendIdInfo
     sb
       id .labelId labelContext id.labelFlags #swap
@@ -548,8 +527,8 @@ import "common.concat"
           return
       end
   end
-#end
-#namespace id
+end
+namespace: id
   proc( LabelId : name IdentifierContext ptr mut : context => ) =: export beginNamespace
     context [] .prevImports
       context [] .labelContext .namespaceInfo .imports list.append
@@ -635,10 +614,10 @@ import "common.concat"
       #swap [] .codeLength =
     TEMPLATE_ID_NONE context [] .currentTemplate =
   end
-#end
+end
 
 ## TODO find way to move generic resolving to types.concat
-#namespace types
+namespace: types
   proc( ConstantArray : data i64 : index IdentifierContext ptr mut : context => ConstValue ) =: argBufferGet
     context [] .templateArgBuffer data .offset index + list.get return
   end
@@ -1050,5 +1029,5 @@ import "common.concat"
     visitedValues mem.free
     visitedTypes list.free visitedTypes =
   end
-#end
+end
 

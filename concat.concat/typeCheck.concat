@@ -35,47 +35,47 @@ struct(
   bool : mut hasGetArgs
 ) =:: TypeCheckState
 
-#namespace sb
-proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state => stringBuilder ) =: appendTypeStack
-  state [] .idContext =:: idContext
-  idContext [] .labelContext @ =:: labelContext
-  idContext [] .typeContext @ =:: typeContext
-  state [] .opStack .length =:: mut offset
-  maxTypes =:: mut remaining
-  sb
-    state [] .typeStack .length 1 - while #dup 0 >= do
-      #swap
-        remaining 0 == if
-          #swap #drop return
-        end
-        remaining 1 - remaining =
-        state [] .typeStack #over:2 list.at .data =:: elt
-        elt [] .writable if
-          "writable " sb.appendS
-        end
-        elt [] .valType labelContext typeContext sb.appendType
-        printOps ! if
-          '\n' sb.appendC
-          #swap 1 - continue
-        end
-        ' ' sb.appendC
-        elt [] .opCount sb.appendI
-        ":\n" sb.appendS
-        offset elt [] .opCount - offset =
-        offset 0 < if
-          "out of sync\n" sb.appendS
-        end
-        0 while #dup elt [] .opCount < do
-          #swap
-          "   " sb.appendS
-          state [] .opStack offset #over:3 + list.get idContext [] .constContext @ labelContext typeContext sb.appendOp
-          #swap 1 +
-        end #drop
-      #swap 1 -
-    end #drop
-  return
+namespace: sb
+  proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state => stringBuilder ) =: appendTypeStack
+    state [] .idContext =:: idContext
+    idContext [] .labelContext @ =:: labelContext
+    idContext [] .typeContext @ =:: typeContext
+    state [] .opStack .length =:: mut offset
+    maxTypes =:: mut remaining
+    sb
+      state [] .typeStack .length 1 - while #dup 0 >= do
+        #swap
+          remaining 0 == if
+            #swap #drop return
+          end
+          remaining 1 - remaining =
+          state [] .typeStack #over:2 list.at .data =:: elt
+          elt [] .writable if
+            "writable " sb.appendS
+          end
+          elt [] .valType labelContext typeContext sb.appendType
+          printOps ! if
+            '\n' sb.appendC
+            #swap 1 - continue
+          end
+          ' ' sb.appendC
+          elt [] .opCount sb.appendI
+          ":\n" sb.appendS
+          offset elt [] .opCount - offset =
+          offset 0 < if
+            "out of sync\n" sb.appendS
+          end
+          0 while #dup elt [] .opCount < do
+            #swap
+            "   " sb.appendS
+            state [] .opStack offset #over:3 + list.get idContext [] .constContext @ labelContext typeContext sb.appendOp
+            #swap 1 +
+          end #drop
+        #swap 1 -
+      end #drop
+    return
+  end
 end
-#end
 proc( bool : printOps i32 : maxTypes TypeCheckState ptr mut : state => ) =: printTypes
   printOps if "stack:\n" sb.wrap else "types:\n" sb.wrap end
     "-----------------\n" sb.appendS
@@ -2411,7 +2411,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
             op list.appendP
           state [] .compiledOps =
           return
-        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         case
           "blocks of type " sb.wrap
@@ -2568,7 +2568,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
           end
           true state [] .reachable =
           break
-        IF BREAK CONTINUE UNKNOWN INITIALIZER
+        IF BREAK CONTINUE UNKNOWN INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           "closing blocks of type " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType

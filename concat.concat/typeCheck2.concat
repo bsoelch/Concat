@@ -49,17 +49,17 @@ proc( branchTree.NodeId : branchRoot i32 : blockId => BlockInfo ) =: newIfBlock
     false
   IfBlockInfo new BlockInfo .If new return
 end
-#namespace sb
-proc( stringBuilder BlockInfo => stringBuilder ) =: appendBlockInfoName
-  switch
-    Unknown case "unknown" sb.appendS return
-    Procedure case "procedure" sb.appendS return
-    If case "if-else" sb.appendS return
-    While case "while" sb.appendS return
-    Switch case "switch" sb.appendS return
+namespace: sb
+  proc( stringBuilder BlockInfo => stringBuilder ) =: appendBlockInfoName
+    switch
+      Unknown case "unknown" sb.appendS return
+      Procedure case "procedure" sb.appendS return
+      If case "if-else" sb.appendS return
+      While case "while" sb.appendS return
+      Switch case "switch" sb.appendS return
+    end
   end
 end
-#end
 struct(
   ProgramContext ptr mut : program
   InterpreterContext : mut interpreter
@@ -1252,7 +1252,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         SWITCH
         CASE
         DEFAULT
-        UNKNOWN case
+        UNKNOWN
+        NAMESPACE case
           break
       end
       break
@@ -1329,7 +1330,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
         SWITCH
         CASE
         DEFAULT
-        UNKNOWN case
+        UNKNOWN
+        NAMESPACE case
           break
       end
       break

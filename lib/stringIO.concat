@@ -1,7 +1,7 @@
 import stringBuilder
 import io
 
-#namespace io
+namespace: io
   proc( string : fileName  OpenMode : mode => FILE IOError ) =: export fopenStr
     fileName .data fileName .length mode fopen return
   end
@@ -35,8 +35,8 @@ import io
     end
     file #dup str sb.asStr fputStr return
   end
-#end
-#namespace sb
+end
+namespace: sb
   #using io
   proc( stringBuilder : sb FILE : file => stringBuilder IOError ) =: export appendFile
     16 =:: mut delta
@@ -59,4 +59,4 @@ import io
       end
     return
   end
-#end
+end

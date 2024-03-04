@@ -2,7 +2,7 @@ import mem
 import arrayView
 import list
 
-#namespace branchTree
+namespace: branchTree
   i64 =:: export NodeId
 
   #template type : T #end
@@ -12,7 +12,7 @@ import list
     i64 : level
     bool : mut deleted
   ) =:: export Node
-#end
+end
 
 #template type : T #end
 struct(
@@ -21,7 +21,7 @@ struct(
   T branchTree.Node list : mut nodes
 ) =:: export BranchTree
 
-#namespace branchTree
+namespace: branchTree
   #template type : T #end
   proc( => T BranchTree ) =: export create
     ## BranchTree
@@ -57,7 +57,7 @@ struct(
    NodeId : id
   ) =:: export BranchItr
   
-  #namespace itr
+  namespace: itr
     #template type : T #end
     proc( T BranchTree ptr mut : tree => T BranchItr ) =: export start
       tree tree [] .branchHead T BranchItr new
@@ -86,7 +86,7 @@ struct(
       itr .tree [] .nodes itr .id list.at .data =:: node
       itr .tree node [] .parent T BranchItr new return
     end
-  #end
+  end
   
   #template type : T #end
   proc( T BranchTree ptr mut : tree NodeId : id => ) =: export unlinkNode
@@ -264,4 +264,4 @@ struct(
     heads mem.free
     false return
   end
-#end
+end

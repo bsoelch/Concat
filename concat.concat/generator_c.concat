@@ -24,17 +24,17 @@ proc( io.FILE : target => ) =: printHeader
   #drop
 end
 
-#namespace sb
-proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: export appendEscapedStrC
-  sb
-    0 while #dup str .length < do =:: i
-      str i labelContext id.scCharAt appendEscapedChr
-      "\"\"" appendS
-      i 1 +
-    end #drop
-  return
+namespace: sb
+  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: export appendEscapedStrC
+    sb
+      0 while #dup str .length < do =:: i
+        str i labelContext id.scCharAt appendEscapedChr
+        "\"\"" appendS
+        i 1 +
+      end #drop
+    return
+  end
 end
-#end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog => ) =: printGlobalName
   prog [] .idContext .labelContext @ =:: labelContext
   128 sb.create
@@ -1131,7 +1131,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break ## TODO implement set value
     block case
       op [] .val .block .blockType switch
-        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER
+        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
@@ -1205,7 +1205,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     blockEnd case
       op [] .val .blockEnd .blockType switch
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF
+        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break

@@ -30,17 +30,17 @@ i32 =:: export LabelId
 i32 =:: export NamespaceId
 i32 =:: export NamespaceImportId
 i32 =:: export TemplateId
-#namespace id
+namespace: id
   -1 LabelId =: export LABEL_ID_NONE
   -1 NamespaceId =: export NAMESPACE_ID_NONE
   -1 NamespaceImportId =: export NAMESPACE_IMPORT_NONE
   -1 TemplateId =: export TEMPLATE_ID_NONE
-#end
+end
 
 enum( STRUCT POINTER ) =:: export CallingConvention
-#namespace CallingConvention
+namespace: CallingConvention
   CallingConvention .POINTER =:: export DEFAULT
-#end
+end
 
 ## declare Type and ConstValue to allow mutual inclusion of types.concat and constants.concat
 type : export Type
@@ -49,38 +49,38 @@ type : export ConstantArray
 type : export ConstantContext
 
 
-#namespace sb
-proc( stringBuilder string => stringBuilder ) =: export appendAsciified
-  =:: str
-  0 while #dup str .length < do
-    #swap
-      str #over:2 string.charAt =:: c
-      c '0' >= c '9' <= & if
-        c sb.appendC
-        #swap 1 + continue
-      end
-      c 'A' >= c 'Z' <= & if
-        c sb.appendC
-        #swap 1 + continue
-      end
-      c 'a' >= c 'z' <= & if
-        c sb.appendC
-        #swap 1 + continue
-      end
-      c '_' == if
-        "__" sb.appendS
-        #swap 1 + continue
-      end
-      c '.' == if
-        "_d" sb.appendS
-        #swap 1 + continue
-      end
-      "_X" sb.appendS
-      c 0xff & 0x10 < if
-        '0' sb.appendC
-      end
-      c 0xff & sb.appendI
-    #swap 1 +
-  end #drop
+namespace: sb
+  proc( stringBuilder string => stringBuilder ) =: export appendAsciified
+    =:: str
+    0 while #dup str .length < do
+      #swap
+        str #over:2 string.charAt =:: c
+        c '0' >= c '9' <= & if
+          c sb.appendC
+          #swap 1 + continue
+        end
+        c 'A' >= c 'Z' <= & if
+          c sb.appendC
+          #swap 1 + continue
+        end
+        c 'a' >= c 'z' <= & if
+          c sb.appendC
+          #swap 1 + continue
+        end
+        c '_' == if
+          "__" sb.appendS
+          #swap 1 + continue
+        end
+        c '.' == if
+          "_d" sb.appendS
+          #swap 1 + continue
+        end
+        "_X" sb.appendS
+        c 0xff & 0x10 < if
+          '0' sb.appendC
+        end
+        c 0xff & sb.appendI
+      #swap 1 +
+    end #drop
+  end
 end
-#end

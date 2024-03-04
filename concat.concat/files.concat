@@ -8,7 +8,7 @@ struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: export 
 
 enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: export Token
 
-#namespace sb
+namespace: sb
   proc( stringBuilder : sb Token : token => stringBuilder ) =: export appendToken
     token switch
       EMPTY case
@@ -41,7 +41,7 @@ enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: export Token
       pos .posInLine sb.appendI
     return
   end
-#end
+end
 
 proc( string => ) =: export printTokens
   "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state

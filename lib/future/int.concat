@@ -3,23 +3,23 @@ import numbers
 
 import stringIO ## debug
 
-#namespace i64
-proc( i64 i64 => i64 ) =: max
-  #over #over > if
-    #drop return
-  else
-    #swap #drop return
+namespace: i64
+  proc( i64 i64 => i64 ) =: max
+    #over #over > if
+      #drop return
+    else
+      #swap #drop return
+    end
+  end
+  proc( i64 i64 => i64 ) =: min
+    #over #over < if
+      #drop return
+    else
+      #swap #drop return
+    end
   end
 end
-proc( i64 i64 => i64 ) =: min
-  #over #over < if
-    #drop return
-  else
-    #swap #drop return
-  end
-end
-#end
-#namespace u32
+namespace: u32
   0xffff_ffffi64 =:: MASK
   proc( i32 => i32 ) =: leadingZeros
     =:: mut i
@@ -32,11 +32,11 @@ end
       i 2 >> 0 != if 2 - i 2 >> i = end
       i 1 >> 0 != if 1 - i 1 >> i = end
   end
-#end
+end
 
 struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64 : mut cap i8 : mut sign ) =:: export int
 
-#namespace int
+namespace: int
   0 0 0  0i8 int new int =: export ZERO
   1 1 0  1i8 int new int =: export ONE
   2 1 0  1i8 int new int =: export TWO
@@ -1602,9 +1602,9 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
     s b modBy return
   end
   ## modPow
-#end
+end
 
-#namespace sb
+namespace: sb
   proc( stringBuilder : sb int : #:const i i32 : base => stringBuilder ) =: export appendInt?
     ## TODO check base
     ## XXX efficient int to string algorithm for large bases
@@ -1654,4 +1654,4 @@ struct( union( i32 _ ptr mut : mut p i64 : mut i ) : mut data i64 : mut size i64
   proc( stringBuilder : sb int : #:const i => stringBuilder ) =: export appendInt
     sb i 10 appendInt?
   end
-#end
+end

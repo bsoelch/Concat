@@ -15,7 +15,7 @@ struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mu
 struct( i64 : offset i64 : length ) =:: export StringConstant
 
 i32 =:: export LabelFlag
-#namespace id
+namespace: id
   0   LabelFlag =: export FLAG_NONE
   1   LabelFlag =: export FLAG_MUTABLE
   2   LabelFlag =: export FLAG_AUTO
@@ -26,7 +26,7 @@ i32 =:: export LabelFlag
   128 LabelFlag =: export FLAG_DUMMY
 
   0x40000000u32 LabelFlag =: export FLAG_EXPERIMENTAL
-#end
+end
 
 struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
 struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : flags ) =:: Label
@@ -38,7 +38,7 @@ struct(
   NamespaceImport list : mut namespaceImports
   NamespaceInfo : mut namespaceInfo
 ) =:: export LabelContext
-#namespace id
+namespace: id
 
   proc( => LabelContext ) =: export newLabelContext
     1024            i8 list.create
@@ -400,9 +400,9 @@ struct(
     context [] .namespaceImports =
     context [] .namespaceImports .length 1 - NamespaceImportId cast return
   end
-#end
+end
 
-#namespace sb
+namespace: sb
   proc( stringBuilder : sb LabelId : id LabelContext ptr : context => stringBuilder ) =: export appendLabelName
     id 0 < id context [] .labels .length >= | if
       sb return
@@ -439,4 +439,4 @@ struct(
       string.create
     sb.appendAsciified return
   end
-#end
+end

@@ -96,97 +96,97 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext => bool ) =:
   end
 end
 
-#namespace sb
-proc( stringBuilder i8 => stringBuilder ) =: export appendEscapedChr
-  =:: chr
-  chr 0x20 < chr 0x7f == | if ## non-printable ASCII-characters + hex-codes for multi-char characters
-    "\\x" sb.appendS
-    chr 0xff &
-      #dup 0x10 < if #swap '0' sb.appendC #swap end
-    sb.appendX
-    return
-  end
-  chr '\\' == chr '\'' == | chr '\"' == | if
-    '\\' sb.appendC
-    chr  sb.appendC
-    return
-  end
-  chr  sb.appendC
-end
-proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: export appendEscapedStr
-  sb
-    0 while #dup str .length < do =:: i
-        str i labelContext id.scCharAt appendEscapedChr
-      i 1 +
-    end #drop
-  return
-end
-proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext ptr => stringBuilder ) =: export appendConstant
-  =:: typeContext
-  =:: labelContext
-  =:: constContext
-  #swap
-    #over switch
-      none case
-        "none"  sb.appendS
-        break
-      wildCard case
-        "_"  sb.appendS
-        break
-      boolean case
-        "bool: " sb.appendS
-        #over .boolean if "true" sb.appendS else "false" sb.appendS end
-        break
-      int case
-        "integer: "  sb.appendS
-        #over .int sb.appendI
-        break
-      Float case
-        "float: "    sb.appendS
-        #over .Float sb.appendF
-        break
-      str case
-        "string: \""  sb.appendS
-        #over .str labelContext sb.appendEscapedStr
-               '\"'  sb.appendC
-        break
-      chr case
-        "char: \'"  sb.appendS
-        #over .chr sb.appendEscapedChr
-             '\''  sb.appendC
-        break
-      typeId case
-        "type: "     sb.appendS
-        #over .typeId labelContext typeContext sb.appendType
-        break
-      enumLabel case
-        "enum label: ("   sb.appendS
-        #over .enumLabel sb.appendI
-                 ')'     sb.appendC
-        break
-      arrayConstant case #over .arrayConstant =:: mArray
-        "{ " sb.appendS
-        0 while #dup mArray .length < do
-          #swap
-            mArray #over:2 constContext constArrayGet constContext labelContext typeContext appendConstant
-            ' ' sb.appendC
-          #swap 1 +
-        end #drop
-        "}" sb.appendS
-        break
-      procedure case
-        "procedure: "  sb.appendS
-        #over .procedure sb.appendI
-        break
-      genericArg case
-        "generic argument: "  sb.appendS
-        #over .genericArg sb.appendI
-        break
-      templateArg case
-        "template argument: "  sb.appendS
-        #over .templateArg sb.appendI
-        break
+namespace: sb
+  proc( stringBuilder i8 => stringBuilder ) =: export appendEscapedChr
+    =:: chr
+    chr 0x20 < chr 0x7f == | if ## non-printable ASCII-characters + hex-codes for multi-char characters
+      "\\x" sb.appendS
+      chr 0xff &
+        #dup 0x10 < if #swap '0' sb.appendC #swap end
+      sb.appendX
+      return
     end
-   #swap #drop return
+    chr '\\' == chr '\'' == | chr '\"' == | if
+      '\\' sb.appendC
+      chr  sb.appendC
+      return
+    end
+    chr  sb.appendC
+  end
+  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext => stringBuilder ) =: export appendEscapedStr
+    sb
+      0 while #dup str .length < do =:: i
+          str i labelContext id.scCharAt appendEscapedChr
+        i 1 +
+      end #drop
+    return
+  end
+  proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext ptr => stringBuilder ) =: export appendConstant
+    =:: typeContext
+    =:: labelContext
+    =:: constContext
+    #swap
+      #over switch
+        none case
+          "none"  sb.appendS
+          break
+        wildCard case
+          "_"  sb.appendS
+          break
+        boolean case
+          "bool: " sb.appendS
+          #over .boolean if "true" sb.appendS else "false" sb.appendS end
+          break
+        int case
+          "integer: "  sb.appendS
+          #over .int sb.appendI
+          break
+        Float case
+          "float: "    sb.appendS
+          #over .Float sb.appendF
+          break
+        str case
+          "string: \""  sb.appendS
+          #over .str labelContext sb.appendEscapedStr
+                 '\"'  sb.appendC
+          break
+        chr case
+          "char: \'"  sb.appendS
+          #over .chr sb.appendEscapedChr
+               '\''  sb.appendC
+          break
+        typeId case
+          "type: "     sb.appendS
+          #over .typeId labelContext typeContext sb.appendType
+          break
+        enumLabel case
+          "enum label: ("   sb.appendS
+          #over .enumLabel sb.appendI
+                   ')'     sb.appendC
+          break
+        arrayConstant case #over .arrayConstant =:: mArray
+          "{ " sb.appendS
+          0 while #dup mArray .length < do
+            #swap
+              mArray #over:2 constContext constArrayGet constContext labelContext typeContext appendConstant
+              ' ' sb.appendC
+            #swap 1 +
+          end #drop
+          "}" sb.appendS
+          break
+        procedure case
+          "procedure: "  sb.appendS
+          #over .procedure sb.appendI
+          break
+        genericArg case
+          "generic argument: "  sb.appendS
+          #over .genericArg sb.appendI
+          break
+        templateArg case
+          "template argument: "  sb.appendS
+          #over .templateArg sb.appendI
+          break
+      end
+     #swap #drop return
+  end
 end
-#end

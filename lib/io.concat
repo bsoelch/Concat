@@ -1,235 +1,235 @@
 import mem
 import stringBuilder
 
-#namespace io
-i32 type =: export IOError
-0  IOError =: export FILE_ERROR_NONE
--1 IOError =: export FILE_ERR_END_OF_FILE
-1  IOError =: export FILE_ERR_IO
-2  IOError =: export FILE_ERR_PATH_OVERFLOW
-3  IOError =: export FILE_ERR_OPEN_MODE
-4  IOError =: export FILE_ERR_FILE_NOT_FOUND
-5  IOError =: export FILE_ERR_FILE_IS_DIR
-6  IOError =: export FILE_ERR_FILE_ALREADY_EXISTS
-7  IOError =: export FILE_ERR_ACCESS_DENIED
-8  IOError =: export FILE_ERR_INVALID_FILE
+namespace: io
+  i32 type =: export IOError
+  0  IOError =: export FILE_ERROR_NONE
+  -1 IOError =: export FILE_ERR_END_OF_FILE
+  1  IOError =: export FILE_ERR_IO
+  2  IOError =: export FILE_ERR_PATH_OVERFLOW
+  3  IOError =: export FILE_ERR_OPEN_MODE
+  4  IOError =: export FILE_ERR_FILE_NOT_FOUND
+  5  IOError =: export FILE_ERR_FILE_IS_DIR
+  6  IOError =: export FILE_ERR_FILE_ALREADY_EXISTS
+  7  IOError =: export FILE_ERR_ACCESS_DENIED
+  8  IOError =: export FILE_ERR_INVALID_FILE
 
-i32 type =: export OpenMode
-1 OpenMode =: export OPEN_READ
-2 OpenMode =: export OPEN_WRITE
-4 OpenMode =: export OPEN_APPEND
-#end
-
-#namespace c
-..ctype.void =:: FILE
-## wrapper functions to allow interoperability with lib-c code
-proc( => FILE ptr mut ) : extern concatIOHelper_stdin
-proc( => FILE ptr mut ) : extern concatIOHelper_stdout
-proc( => FILE ptr mut ) : extern concatIOHelper_stderr
-proc( => ) : extern concatIOHelper_resetErrno
-proc( => io.IOError ) : extern concatIOHelper_checkErrno
-proc(
-  ..ctype.char _ ptr : path
-  ..ctype.char _ ptr : mode
-=> FILE ptr mut ) : extern concatIOHelper_fopen
-proc( FILE ptr mut
-=> ) : extern concatIOHelper_clearerr
-proc( FILE ptr mut
-=> ..ctype.int ) : extern concatIOHelper_feof
-proc( FILE ptr mut
-=> ..ctype.int ) : extern concatIOHelper_ferror
-proc(
-  ..ctype.void _ ptr mut : buffer
-  ..ctype.size : eltSize
-  ..ctype.size : eltCount
-  FILE ptr mut : file
-=> ..ctype.size ) : extern concatIOHelper_fread
-proc(
-  ..ctype.void _ ptr : buffer
-  ..ctype.size : eltSize
-  ..ctype.size : eltCount
-  FILE ptr mut : file
-=> ..ctype.size ) : extern concatIOHelper_fwrite
-proc( FILE ptr mut : file
-=> ..ctype.int ) : extern concatIOHelper_fflush
-proc( FILE ptr mut : file
-=> ..ctype.int ) : extern concatIOHelper_fclose
-#end
-
-#namespace io
-c.FILE ptr mut =:: export FILE ## XXX ? wrapper type
-
-proc( => FILE ) =: export stdIn
-  c.concatIOHelper_stdin
-end
-proc( => FILE ) =: export stdOut
-  c.concatIOHelper_stdout
-end
-proc( => FILE ) =: export stdErr
-  c.concatIOHelper_stderr
+  i32 type =: export OpenMode
+  1 OpenMode =: export OPEN_READ
+  2 OpenMode =: export OPEN_WRITE
+  4 OpenMode =: export OPEN_APPEND
 end
 
-i8 4096 array : fileNameBuffer ## XXX make buffer thread safe
-proc(
-  i8 _ ptr : fileName
-  i64 : nameLength
-  OpenMode : mode
-=> FILE IOError ) =: export fopen
-  fileName nameLength 1 - [] '\x00' == if ## name not null-terminated
-    fileName
-  else
-    nameLength fileNameBuffer @ ..length >= if
-      c.nullPtr FILE cast! FILE_ERR_PATH_OVERFLOW return
-    end
-    ## mem.copy
-      fileNameBuffer @
+namespace: c
+  ..ctype.void =:: FILE
+  ## wrapper functions to allow interoperability with lib-c code
+  proc( => FILE ptr mut ) : extern concatIOHelper_stdin
+  proc( => FILE ptr mut ) : extern concatIOHelper_stdout
+  proc( => FILE ptr mut ) : extern concatIOHelper_stderr
+  proc( => ) : extern concatIOHelper_resetErrno
+  proc( => io.IOError ) : extern concatIOHelper_checkErrno
+  proc(
+    ..ctype.char _ ptr : path
+    ..ctype.char _ ptr : mode
+  => FILE ptr mut ) : extern concatIOHelper_fopen
+  proc( FILE ptr mut
+  => ) : extern concatIOHelper_clearerr
+  proc( FILE ptr mut
+  => ..ctype.int ) : extern concatIOHelper_feof
+  proc( FILE ptr mut
+  => ..ctype.int ) : extern concatIOHelper_ferror
+  proc(
+    ..ctype.void _ ptr mut : buffer
+    ..ctype.size : eltSize
+    ..ctype.size : eltCount
+    FILE ptr mut : file
+  => ..ctype.size ) : extern concatIOHelper_fread
+  proc(
+    ..ctype.void _ ptr : buffer
+    ..ctype.size : eltSize
+    ..ctype.size : eltCount
+    FILE ptr mut : file
+  => ..ctype.size ) : extern concatIOHelper_fwrite
+  proc( FILE ptr mut : file
+  => ..ctype.int ) : extern concatIOHelper_fflush
+  proc( FILE ptr mut : file
+  => ..ctype.int ) : extern concatIOHelper_fclose
+end
+
+namespace: io
+  c.FILE ptr mut =:: export FILE ## XXX ? wrapper type
+
+  proc( => FILE ) =: export stdIn
+    c.concatIOHelper_stdin
+  end
+  proc( => FILE ) =: export stdOut
+    c.concatIOHelper_stdout
+  end
+  proc( => FILE ) =: export stdErr
+    c.concatIOHelper_stderr
+  end
+
+  i8 4096 array : fileNameBuffer ## XXX make buffer thread safe
+  proc(
+    i8 _ ptr : fileName
+    i64 : nameLength
+    OpenMode : mode
+  => FILE IOError ) =: export fopen
+    fileName nameLength 1 - [] '\x00' == if ## name not null-terminated
       fileName
-      nameLength
-    mem.copy #drop
-    '\x00' fileNameBuffer @ nameLength [] =
-    fileNameBuffer @ i8 _ ptr cast
-  end =:: path
-  "r+b\x00" i8 _ ptr =: mut openMode
-  mode OPEN_READ & ? if
-    mode OPEN_APPEND & ? if
-      "a+b\x00" openMode =
-    else mode OPEN_WRITE & ? ! _if
-      "rb\x00"openMode =
+    else
+      nameLength fileNameBuffer @ ..length >= if
+        c.nullPtr FILE cast! FILE_ERR_PATH_OVERFLOW return
+      end
+      ## mem.copy
+        fileNameBuffer @
+        fileName
+        nameLength
+      mem.copy #drop
+      '\x00' fileNameBuffer @ nameLength [] =
+      fileNameBuffer @ i8 _ ptr cast
+    end =:: path
+    "r+b\x00" i8 _ ptr =: mut openMode
+    mode OPEN_READ & ? if
+      mode OPEN_APPEND & ? if
+        "a+b\x00" openMode =
+      else mode OPEN_WRITE & ? ! _if
+        "rb\x00"openMode =
+      end
+    else mode ? _if
+      mode OPEN_APPEND & ? if
+        "ab\x00" openMode =
+      else mode OPEN_WRITE & ? _if
+        "wb\x00"openMode =
+      end
     end
-  else mode ? _if
-    mode OPEN_APPEND & ? if
-      "ab\x00" openMode =
-    else mode OPEN_WRITE & ? _if
-      "wb\x00"openMode =
+    c.concatIOHelper_resetErrno
+    ##fopen
+      path ..ctype.char ptr cast!
+      openMode ..ctype.char ptr cast!
+    c.concatIOHelper_fopen
+    #dup c.FILE ptr cast c.isNull if
+      c.concatIOHelper_checkErrno
+    else
+      FILE_ERROR_NONE
     end
   end
-  c.concatIOHelper_resetErrno
-  ##fopen
-    path ..ctype.char ptr cast!
-    openMode ..ctype.char ptr cast!
-  c.concatIOHelper_fopen
-  #dup c.FILE ptr cast c.isNull if
-    c.concatIOHelper_checkErrno
-  else
-    FILE_ERROR_NONE
+  proc(
+    i64 : auto k
+    i8 k ptr : fileName
+    OpenMode : mode
+  => FILE IOError ) =: export fopenS
+    fileName k mode fopen return
   end
-end
-proc(
-  i64 : auto k
-  i8 k ptr : fileName
-  OpenMode : mode
-=> FILE IOError ) =: export fopenS
-  fileName k mode fopen return
-end
-#template type : T #end
-proc(
-  FILE : file
-  T _ ptr mut : buffer
-  i64 : off
-  i64 : count
-=> i64 IOError ) =: export fread
-  file c.FILE ptr cast c.isNull if
-    0 FILE_ERR_INVALID_FILE return
+  #template type : T #end
+  proc(
+    FILE : file
+    T _ ptr mut : buffer
+    i64 : off
+    i64 : count
+  => i64 IOError ) =: export fread
+    file c.FILE ptr cast c.isNull if
+      0 FILE_ERR_INVALID_FILE return
+    end
+    file c.concatIOHelper_clearerr
+    c.concatIOHelper_resetErrno
+    ## fread
+      buffer off + ..ctype.void ptr mut cast!
+      T ..type.size
+      count
+      file
+    c.concatIOHelper_fread
+      ## XXX remove explicit cast of return value
+      file c.concatIOHelper_feof i32 cast ? if
+        FILE_ERR_END_OF_FILE return
+      end
+      file c.concatIOHelper_ferror i32 cast ? if
+        c.concatIOHelper_checkErrno return
+      end
+    FILE_ERROR_NONE return
   end
-  file c.concatIOHelper_clearerr
-  c.concatIOHelper_resetErrno
-  ## fread
-    buffer off + ..ctype.void ptr mut cast!
-    T ..type.size
-    count
-    file
-  c.concatIOHelper_fread
+  #template type : T #end
+  proc(
+    FILE : file
+    T _ ptr : buffer
+    i64 : off
+    i64 : count
+  => i64 IOError ) =: export fwrite
+    file c.FILE ptr cast c.isNull if
+      0 FILE_ERR_INVALID_FILE return
+    end
+    file c.concatIOHelper_clearerr
+    c.concatIOHelper_resetErrno
+    ## fread
+      buffer off + ..ctype.void ptr cast!
+      T ..type.size
+      count
+      file
+    c.concatIOHelper_fwrite
+      ## XXX remove explicit cast of return value
+      file c.concatIOHelper_feof i32 cast ? if
+        FILE_ERR_END_OF_FILE return
+      end
+      file c.concatIOHelper_ferror i32 cast ? if
+        c.concatIOHelper_checkErrno return
+      end
+    FILE_ERROR_NONE return
+  end
+  proc( FILE : file => IOError ) =: export fflush
+    file c.FILE ptr cast c.isNull if
+      FILE_ERR_INVALID_FILE return
+    end
+    c.concatIOHelper_resetErrno
     ## XXX remove explicit cast of return value
-    file c.concatIOHelper_feof i32 cast ? if
-      FILE_ERR_END_OF_FILE return
-    end
-    file c.concatIOHelper_ferror i32 cast ? if
+    file c.concatIOHelper_fflush i32 cast ? if
       c.concatIOHelper_checkErrno return
     end
-  FILE_ERROR_NONE return
-end
-#template type : T #end
-proc(
-  FILE : file
-  T _ ptr : buffer
-  i64 : off
-  i64 : count
-=> i64 IOError ) =: export fwrite
-  file c.FILE ptr cast c.isNull if
-    0 FILE_ERR_INVALID_FILE return
+    FILE_ERROR_NONE return
   end
-  file c.concatIOHelper_clearerr
-  c.concatIOHelper_resetErrno
-  ## fread
-    buffer off + ..ctype.void ptr cast!
-    T ..type.size
-    count
-    file
-  c.concatIOHelper_fwrite
-    ## XXX remove explicit cast of return value
-    file c.concatIOHelper_feof i32 cast ? if
-      FILE_ERR_END_OF_FILE return
+  proc( FILE : file => IOError ) =: export fclose
+    file c.FILE ptr cast c.isNull if
+      FILE_ERR_INVALID_FILE return
     end
-    file c.concatIOHelper_ferror i32 cast ? if
+    c.concatIOHelper_resetErrno
+    ## XXX remove explicit cast of return value
+    file c.concatIOHelper_fclose i32 cast ? if
       c.concatIOHelper_checkErrno return
     end
-  FILE_ERROR_NONE return
-end
-proc( FILE : file => IOError ) =: export fflush
-  file c.FILE ptr cast c.isNull if
-    FILE_ERR_INVALID_FILE return
+    FILE_ERROR_NONE return
   end
-  c.concatIOHelper_resetErrno
-  ## XXX remove explicit cast of return value
-  file c.concatIOHelper_fflush i32 cast ? if
-    c.concatIOHelper_checkErrno return
-  end
-  FILE_ERROR_NONE return
-end
-proc( FILE : file => IOError ) =: export fclose
-  file c.FILE ptr cast c.isNull if
-    FILE_ERR_INVALID_FILE return
-  end
-  c.concatIOHelper_resetErrno
-  ## XXX remove explicit cast of return value
-  file c.concatIOHelper_fclose i32 cast ? if
-    c.concatIOHelper_checkErrno return
-  end
-  FILE_ERROR_NONE return
-end
-## XXX fseek/ftell
+  ## XXX fseek/ftell
 
 
-proc( FILE : file i8 : chr => IOError ) =: export fputc
-  file chr @ 0 1 fwrite #swap #drop return
-end
-proc( FILE : file  i64 : k  i8 _ ptr : str => IOError ) =: export fputArray
-  0 i64 =: mut off
-  k =:: mut count
-  str i8 _ ptr cast =:: data
-  while count 0 > do
-    file data off count fwrite
-      #dup FILE_ERROR_NONE != if ## error
-          #swap #drop return
-        end
-      #drop
-      count #over - count =
-    off #swap + off =
+  proc( FILE : file i8 : chr => IOError ) =: export fputc
+    file chr @ 0 1 fwrite #swap #drop return
   end
-  FILE_ERROR_NONE return
-end
-proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: export fputs
-  file k str fputArray
-end
+  proc( FILE : file  i64 : k  i8 _ ptr : str => IOError ) =: export fputArray
+    0 i64 =: mut off
+    k =:: mut count
+    str i8 _ ptr cast =:: data
+    while count 0 > do
+      file data off count fwrite
+        #dup FILE_ERROR_NONE != if ## error
+            #swap #drop return
+          end
+        #drop
+        count #over - count =
+      off #swap + off =
+    end
+    FILE_ERROR_NONE return
+  end
+  proc( FILE : file  i64 : auto k  i8 k ptr : str => IOError ) =: export fputs
+    file k str fputArray
+  end
 
-proc( i64 : auto k  i8 k ptr : str => IOError ) =: export puts
-  k 1 + sb.create
-    str sb.appendS
-    '\n' sb.appendC
-  =:: chars
-    stdOut chars .length chars .data fputArray =:: errId
-  chars sb.free #drop
-  errId return
+  proc( i64 : auto k  i8 k ptr : str => IOError ) =: export puts
+    k 1 + sb.create
+      str sb.appendS
+      '\n' sb.appendC
+    =:: chars
+      stdOut chars .length chars .data fputArray =:: errId
+    chars sb.free #drop
+    errId return
+  end
 end
-#end
 

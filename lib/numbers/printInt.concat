@@ -1,6 +1,6 @@
 import stringBuilder
 
-#namespace sb
+namespace: sb
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
 
   proc( stringBuilder : buffer i64 : i i32 : base bool : signed => stringBuilder ) =: export appendI??
@@ -55,4 +55,4 @@ import stringBuilder
   proc( stringBuilder i64 #+value+# => stringBuilder ) =: export appendUHex
     16 false appendI??
   end
-#end
+end

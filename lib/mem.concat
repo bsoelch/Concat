@@ -1,4 +1,4 @@
-#namespace c
+namespace: c
   proc( => ..ctype.void _ ptr mut ) =: export nullPtr
     0 ..ctype.void _ ptr mut cast! return
   end
@@ -41,8 +41,8 @@
     ..ctype.void _ ptr : b
     ..ctype.size : count
   => ..ctype.int ) : extern memcmp
-#end
-#namespace mem
+end
+namespace: mem
   proc(
     ..ctype.void _ ptr mut : p
   => ..ctype.void _ ptr mut ) =: checkPtr
@@ -113,4 +113,4 @@
       1 +
     end #drop
   end
-#end
+end

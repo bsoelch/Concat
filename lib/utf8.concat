@@ -1,13 +1,13 @@
 import stringBuilder
 
 
-#namespace utf8
+namespace: utf8
   i32 =:: export Codepoint
   -1 Codepoint =: export UNKNOWN_CODEPOINT
   0x10FFFF Codepoint =: export MAX_CODEPOINT
-#end
+end
 
-#namespace sb
+namespace: sb
   proc( stringBuilder : sb utf8.Codepoint : cp => stringBuilder ) =: export appendCodepoint
     cp 0 < if ## invalid code point
       cp -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
@@ -59,8 +59,8 @@ import stringBuilder
       cp       0x3f & 0x80 | i8 cast sb.appendC
     return
   end
-#end
-#namespace utf8
+end
+namespace: utf8
   proc( Codepoint => bool ) =: export isValid
     #dup 0 >= #swap MAX_CODEPOINT <= & return
   end
@@ -116,4 +116,4 @@ import stringBuilder
     str i 1 + cp Codepoint cast return
   end
 
-#end
+end

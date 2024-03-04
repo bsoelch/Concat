@@ -7,7 +7,7 @@ import optional
 #template type : T #end
 struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: export list
 
-#namespace list
+namespace: list
   #template type : T #end
   proc( i64 : k => T list ) =: export create
     k T mem.alloc  0 k  T list new return
@@ -191,4 +191,4 @@ struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: export list
   proc( T list : elts i64 : from i64 : len => T arrayView ) =: export slice
     elts asArray from len array.slice return
   end
-#end
+end

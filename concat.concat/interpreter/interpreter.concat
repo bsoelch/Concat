@@ -68,7 +68,7 @@ proc( InterpreterContext ptr mut : context => bool ) =: inTypeOrInitializer
       PROCEDURE EXPERIMENTAL_PROCEDURE case
         #drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH CASE DEFAULT case break
+       SWITCH CASE DEFAULT NAMESPACE case break
     end
     1 -
   end #drop
@@ -85,7 +85,7 @@ proc( InterpreterContext ptr mut : context => bool ) =: inInitializer
        PROCEDURE EXPERIMENTAL_PROCEDURE case
          #drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH CASE DEFAULT case break
+       SWITCH CASE DEFAULT NAMESPACE case break
     end
     1 -
   end #drop
@@ -320,7 +320,8 @@ proc(
         SWITCH
         CASE
         DEFAULT
-        UNKNOWN case
+        UNKNOWN
+        NAMESPACE case
           showErrorMessages if
             "unsupported block-type in constant evaluation: " sb.wrap
               op [] .val .block .blockType sb.appendBlockType
@@ -528,7 +529,8 @@ proc(
         SWITCH
         CASE
         DEFAULT
-        UNKNOWN case
+        UNKNOWN
+        NAMESPACE case
           showErrorMessages if
             "unsupported block-end in constant evaluation: " sb.wrap
               op [] .val .blockEnd .blockType sb.appendBlockType

@@ -53,239 +53,219 @@ proc( CompilerContext ptr mut : context => i64 ) =: nextTmpId
   oldCount return
 end
 
-#namespace sb
-proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context => stringBuilder ) =: appendGlobalName
-  context [] .program =:: prog
-  prog [] .idContext .labelContext @ =:: labelContext
-  sb
-    '$' sb.appendC
-    CONCAT_PREFIX sb.appendS
-    label labelContext id.labelFlags id.FLAG_EXPORT & 0 == if
-      label labelContext id.getLabelFile sb.appendI
-      "_F" sb.appendS
-    end
-    label labelContext id.getLabelNamespace =:: mut mNamespace
-    while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
-      mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
-      "." string.wrap sb.appendAsciified
-      mNamespace labelContext id.parentNamespace mNamespace =
-    end ## XXX? reverse order
-    label labelContext sb.appendAsciifiedLabelName
-  return
-end
-
-proc(
-  stringBuilder : sb
-  Type : t
-  string : name
-  bool : isStored
-=> stringBuilder ) =: appendCompositeTypeQBE
-  isStored if
+namespace: sb
+  proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context => stringBuilder ) =: appendGlobalName
+    context [] .program =:: prog
+    prog [] .idContext .labelContext @ =:: labelContext
     sb
-      ":" sb.appendS
-      name sb.appendStr
-      t types.getTypeId sb.appendI
+      '$' sb.appendC
+      CONCAT_PREFIX sb.appendS
+      label labelContext id.labelFlags id.FLAG_EXPORT & 0 == if
+        label labelContext id.getLabelFile sb.appendI
+        "_F" sb.appendS
+      end
+      label labelContext id.getLabelNamespace =:: mut mNamespace
+      while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
+        mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
+        "." string.wrap sb.appendAsciified
+        mNamespace labelContext id.parentNamespace mNamespace =
+      end ## XXX? reverse order
+      label labelContext sb.appendAsciifiedLabelName
     return
-  else
-    sb "l" sb.appendS return
   end
-end
 
-proc(
-  stringBuilder : sb
-  Type : t
-  bool : isStored
-  FilePosition : pos
-  CompilerContext ptr mut : context
-=> stringBuilder ) =: appendTypeNameQBE
-  context [] .program =:: prog
-  prog [] .errors @ =:: errors
-  prog [] .idContext .labelContext @ =:: labelContext
-  prog [] .idContext .typeContext @ =:: typeContext
-  t switch
-    namedType case
+  proc(
+    stringBuilder : sb
+    Type : t
+    string : name
+    bool : isStored
+  => stringBuilder ) =: appendCompositeTypeQBE
+    isStored if
       sb
-        t typeContext types.unwrapNamed isStored pos context
-      appendTypeNameQBE
+        ":" sb.appendS
+        name sb.appendStr
+        t types.getTypeId sb.appendI
       return
-    generatedType case
-      sb
-        t typeContext types.getGeneratedType isStored pos context
-      appendTypeNameQBE
-      return
-    primitiveType case
-      t .primitiveType switch
-        TYPE case sb ":type" sb.appendS return break
-        BOOL case
-          isStored if
-            sb "ub" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-          break
-        I8 case
-          isStored if
-            sb "sb" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-          break
-        I16 case
-          isStored if
-            sb "sh" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-          break
-        I32     case sb "w" sb.appendS return
-        I64     case sb "l" sb.appendS return
-        FLOAT32 case sb "s" sb.appendS return
-        FLOAT64 case sb "d" sb.appendS return
-      end
-      break
-    cType case
-      t .cType switch
-        BOOL case
-          isStored if
-            sb "sb" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-          break
-        CHAR S_CHAR case
-          isStored if
-            sb "sb" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-          break
-        U_CHAR case
-          isStored if
-            sb "ub" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-        break
-        SHORT case
-          isStored if
-            sb "sh" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-        break
-        U_SHORT case
-          isStored if
-            sb "uh" sb.appendS return
-          else
-            sb "w" sb.appendS return
-          end
-        break
-        INT U_INT case sb "w" sb.appendS return
-        LONG LONGLONG U_LONG U_LONGLONG SIZE case
-          sb "l" sb.appendS return
-        FLOAT case sb "s" sb.appendS return
-        DOUBLE case sb "d" sb.appendS return
-        VOID case break
-      end
-      break
-    arrayIndex pointer reference mutableReference procedure case
-      sb "l" sb.appendS return ## size or pointer
-    arrayType case
-      sb t "array" string.wrap isStored appendCompositeTypeQBE return
-      break
-    struct case
-      sb t "struct" string.wrap isStored appendCompositeTypeQBE return
-      break
-    union case
-      sb t "union" string.wrap isStored appendCompositeTypeQBE return
-      break
-    enum case
-      sb t "enum" string.wrap isStored appendCompositeTypeQBE return
-      break
-    undefined empty templateType genericType autoType
-    procIn procOut case
-      break
+    else
+      sb "l" sb.appendS return
+    end
   end
-  "unsupported type" sb.wrap
-  pos errors appendError
-  sb return
-end
-proc(
-  stringBuilder : sb
-  i32 : index
-  LabelId : labelId
-  CompilerContext ptr mut : context
-=> stringBuilder ) =: appendArgName
-  context [] .program =:: prog
-  prog [] .idContext .labelContext @ =:: labelContext
-  sb
-    "%a" sb.appendS
-    index sb.appendI
-    labelId id.LABEL_ID_NONE != if
-      "/*" sb.appendS
-      labelId labelContext sb.appendAsciifiedLabelName
-      "*/" sb.appendS
-    end
-  return
-end
-proc(
-  stringBuilder : sb
-  i32 : index
-  LabelId : labelId
-  CompilerContext ptr mut : context
-=> stringBuilder ) =: appendOutArgName
-  context [] .program =:: prog
-  prog [] .idContext .labelContext @ =:: labelContext
-  sb
-    "%o" sb.appendS
-    index sb.appendI
-    labelId id.LABEL_ID_NONE != if
-      "/*" sb.appendS
-      labelId labelContext sb.appendAsciifiedLabelName
-      "*/" sb.appendS
-    end
-  return
-end
-proc(
-  stringBuilder : sb
-  Type : procType
-  FilePosition : pos
-  CompilerContext ptr mut : context
-=> stringBuilder ) =: appendProcArgs
-  context [] .program =:: prog
-  prog [] .idContext .labelContext @ =:: labelContext
-  prog [] .idContext .typeContext @ =:: typeContext
-  procType typeContext types.getCallConvention #drop =:: callConvention
-  procType typeContext types.getProcIn #drop =:: inType
-  inType typeContext types.compositeElts =:: args
-  procType typeContext types.getProcOut #drop =:: outType
-  outType typeContext types.compositeElts =:: outTypes
-  false =:: mut hasArgs
-  sb
-    "(" sb.appendS
-    0 while #dup args .length < do
-      #swap
-        args #over:2 types.compositeElts.get =:: arg
-        arg typeContext types.isEmpty if ## skip empty arguments
-          #swap 1 + continue
+
+  proc(
+    stringBuilder : sb
+    Type : t
+    bool : isStored
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  => stringBuilder ) =: appendTypeNameQBE
+    context [] .program =:: prog
+    prog [] .errors @ =:: errors
+    prog [] .idContext .labelContext @ =:: labelContext
+    prog [] .idContext .typeContext @ =:: typeContext
+    t switch
+      namedType case
+        sb
+          t typeContext types.unwrapNamed isStored pos context
+        appendTypeNameQBE
+        return
+      generatedType case
+        sb
+          t typeContext types.getGeneratedType isStored pos context
+        appendTypeNameQBE
+        return
+      primitiveType case
+        t .primitiveType switch
+          TYPE case sb ":type" sb.appendS return break
+          BOOL case
+            isStored if
+              sb "ub" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+            break
+          I8 case
+            isStored if
+              sb "sb" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+            break
+          I16 case
+            isStored if
+              sb "sh" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+            break
+          I32     case sb "w" sb.appendS return
+          I64     case sb "l" sb.appendS return
+          FLOAT32 case sb "s" sb.appendS return
+          FLOAT64 case sb "d" sb.appendS return
         end
-        hasArgs if
-          ',' sb.appendC
+        break
+      cType case
+        t .cType switch
+          BOOL case
+            isStored if
+              sb "sb" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+            break
+          CHAR S_CHAR case
+            isStored if
+              sb "sb" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+            break
+          U_CHAR case
+            isStored if
+              sb "ub" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+          break
+          SHORT case
+            isStored if
+              sb "sh" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+          break
+          U_SHORT case
+            isStored if
+              sb "uh" sb.appendS return
+            else
+              sb "w" sb.appendS return
+            end
+          break
+          INT U_INT case sb "w" sb.appendS return
+          LONG LONGLONG U_LONG U_LONGLONG SIZE case
+            sb "l" sb.appendS return
+          FLOAT case sb "s" sb.appendS return
+          DOUBLE case sb "d" sb.appendS return
+          VOID case break
         end
-        true hasArgs =
-        arg true pos context appendTypeNameQBE
-        ' ' sb.appendC
-        #over inType #over typeContext types.compositeGetLabel context appendArgName
-      #swap 1 +
-    end #drop
-    callConvention .POINTER ?? if
-      outTypes .length =:: mut N
-      N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
-        N 1 - N =
-      end end
-      0 while #dup N < do
+        break
+      arrayIndex pointer reference mutableReference procedure case
+        sb "l" sb.appendS return ## size or pointer
+      arrayType case
+        sb t "array" string.wrap isStored appendCompositeTypeQBE return
+        break
+      struct case
+        sb t "struct" string.wrap isStored appendCompositeTypeQBE return
+        break
+      union case
+        sb t "union" string.wrap isStored appendCompositeTypeQBE return
+        break
+      enum case
+        sb t "enum" string.wrap isStored appendCompositeTypeQBE return
+        break
+      undefined empty templateType genericType autoType
+      procIn procOut case
+        break
+    end
+    "unsupported type" sb.wrap
+    pos errors appendError
+    sb return
+  end
+  proc(
+    stringBuilder : sb
+    i32 : index
+    LabelId : labelId
+    CompilerContext ptr mut : context
+  => stringBuilder ) =: appendArgName
+    context [] .program =:: prog
+    prog [] .idContext .labelContext @ =:: labelContext
+    sb
+      "%a" sb.appendS
+      index sb.appendI
+      labelId id.LABEL_ID_NONE != if
+        "/*" sb.appendS
+        labelId labelContext sb.appendAsciifiedLabelName
+        "*/" sb.appendS
+      end
+    return
+  end
+  proc(
+    stringBuilder : sb
+    i32 : index
+    LabelId : labelId
+    CompilerContext ptr mut : context
+  => stringBuilder ) =: appendOutArgName
+    context [] .program =:: prog
+    prog [] .idContext .labelContext @ =:: labelContext
+    sb
+      "%o" sb.appendS
+      index sb.appendI
+      labelId id.LABEL_ID_NONE != if
+        "/*" sb.appendS
+        labelId labelContext sb.appendAsciifiedLabelName
+        "*/" sb.appendS
+      end
+    return
+  end
+  proc(
+    stringBuilder : sb
+    Type : procType
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  => stringBuilder ) =: appendProcArgs
+    context [] .program =:: prog
+    prog [] .idContext .labelContext @ =:: labelContext
+    prog [] .idContext .typeContext @ =:: typeContext
+    procType typeContext types.getCallConvention #drop =:: callConvention
+    procType typeContext types.getProcIn #drop =:: inType
+    inType typeContext types.compositeElts =:: args
+    procType typeContext types.getProcOut #drop =:: outType
+    outType typeContext types.compositeElts =:: outTypes
+    false =:: mut hasArgs
+    sb
+      "(" sb.appendS
+      0 while #dup args .length < do
         #swap
-          outTypes #over:2 types.compositeElts.get =:: arg
+          args #over:2 types.compositeElts.get =:: arg
           arg typeContext types.isEmpty if ## skip empty arguments
             #swap 1 + continue
           end
@@ -293,135 +273,155 @@ proc(
             ',' sb.appendC
           end
           true hasArgs =
-          "l " sb.appendS ## all out arguments are pointers
-          #over outType #over typeContext types.compositeGetLabel context appendOutArgName
+          arg true pos context appendTypeNameQBE
+          ' ' sb.appendC
+          #over inType #over typeContext types.compositeGetLabel context appendArgName
         #swap 1 +
       end #drop
-    end
-    ")" sb.appendS
-  return
-end
-proc(
-  stringBuilder : sb
-  Type : t
-  ConstValue : value
-  bool : isGlobal
-  FilePosition : pos
-  CompilerContext ptr mut : context
-=> stringBuilder ) =: appendConstQBE
-  context [] .program =:: prog
-  prog [] .errors @ =:: errors
-  prog [] .idContext .labelContext @ =:: labelContext
-  prog [] .idContext .typeContext @ =:: typeContext
-  prog [] .idContext .constContext @ =:: constContext
-  sb
-    isGlobal if t types.isPrimitive _if
-      t true pos context sb.appendTypeNameQBE
-      ' ' sb.appendC
-    end
-    value switch
-      boolean case value .boolean if 1 else 0 end sb.appendI return
-      int case value .int sb.appendI return
-      break
-      chr case value .chr sb.appendI return
-      break
-      enumLabel case break
-      Float case break
-      str case break
-      arrayConstant case
-        isGlobal ! if
-          break ## TODO handle local composite constants
-        end
-        t typeContext types.isArray if
-          t typeContext types.getBaseType =:: base
-          value .arrayConstant constContext constArrayAsArray =:: elts
-          0 while #dup elts .length < do
-            #swap
-              base elts #over:3  array.get true pos context appendConstQBE
+      callConvention .POINTER ?? if
+        outTypes .length =:: mut N
+        N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
+          N 1 - N =
+        end end
+        0 while #dup N < do
+          #swap
+            outTypes #over:2 types.compositeElts.get =:: arg
+            arg typeContext types.isEmpty if ## skip empty arguments
+              #swap 1 + continue
+            end
+            hasArgs if
               ',' sb.appendC
-            #swap 1 +
-          end #drop
-          return
-        else t typeContext types.isTuple _if
-          ## TODO padding/alignment
-          t typeContext types.compositeElts =:: types
-          value .arrayConstant constContext constArrayAsArray =:: elts
-          0 while #dup elts .length < do
-            #swap
-              types #over:2 types.compositeElts.get elts #over:3  array.get true pos context appendConstQBE
-              ',' sb.appendC
-            #swap 1 +
-          end #drop
-          return
-        end
-      break
-      none wildCard genericArg templateArg typeId procedure case
-      break
-    end
-    isGlobal if
-      "unsupported constant" sb.wrap
-        value constContext labelContext typeContext sb.appendConstant
-      pos errors appendError
-      return
-    end
-    context [] .localConstants
-      #dup .length =:: constId
-      ## LocalConst
-        t
-        value
-        pos
-        constId
-      LocalConst new list.append
-    context [] .localConstants =
-    "$localConstant" sb.appendS
-    constId sb.appendI
-  return
+            end
+            true hasArgs =
+            "l " sb.appendS ## all out arguments are pointers
+            #over outType #over typeContext types.compositeGetLabel context appendOutArgName
+          #swap 1 +
+        end #drop
+      end
+      ")" sb.appendS
+    return
+  end
+  proc(
+    stringBuilder : sb
+    Type : t
+    ConstValue : value
+    bool : isGlobal
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  => stringBuilder ) =: appendConstQBE
+    context [] .program =:: prog
+    prog [] .errors @ =:: errors
+    prog [] .idContext .labelContext @ =:: labelContext
+    prog [] .idContext .typeContext @ =:: typeContext
+    prog [] .idContext .constContext @ =:: constContext
+    sb
+      isGlobal if t types.isPrimitive _if
+        t true pos context sb.appendTypeNameQBE
+        ' ' sb.appendC
+      end
+      value switch
+        boolean case value .boolean if 1 else 0 end sb.appendI return
+        int case value .int sb.appendI return
+        break
+        chr case value .chr sb.appendI return
+        break
+        enumLabel case break
+        Float case break
+        str case break
+        arrayConstant case
+          isGlobal ! if
+            break ## TODO handle local composite constants
+          end
+          t typeContext types.isArray if
+            t typeContext types.getBaseType =:: base
+            value .arrayConstant constContext constArrayAsArray =:: elts
+            0 while #dup elts .length < do
+              #swap
+                base elts #over:3  array.get true pos context appendConstQBE
+                ',' sb.appendC
+              #swap 1 +
+            end #drop
+            return
+          else t typeContext types.isTuple _if
+            ## TODO padding/alignment
+            t typeContext types.compositeElts =:: types
+            value .arrayConstant constContext constArrayAsArray =:: elts
+            0 while #dup elts .length < do
+              #swap
+                types #over:2 types.compositeElts.get elts #over:3  array.get true pos context appendConstQBE
+                ',' sb.appendC
+              #swap 1 +
+            end #drop
+            return
+          end
+        break
+        none wildCard genericArg templateArg typeId procedure case
+        break
+      end
+      isGlobal if
+        "unsupported constant" sb.wrap
+          value constContext labelContext typeContext sb.appendConstant
+        pos errors appendError
+        return
+      end
+      context [] .localConstants
+        #dup .length =:: constId
+        ## LocalConst
+          t
+          value
+          pos
+          constId
+        LocalConst new list.append
+      context [] .localConstants =
+      "$localConstant" sb.appendS
+      constId sb.appendI
+    return
+  end
+  proc(
+    stringBuilder : sb
+    CompilerContext ptr mut : context
+  => stringBuilder ) =: appendLocalConstants
+    context [] .program [] .idContext .typeContext @ =:: typeContext
+    sb
+      0 while #dup context [] .localConstants .length < do =:: i
+        context [] .localConstants i list.at .data =:: constant
+        "data $localConstant" sb.appendS
+        constant [] .id sb.appendI
+        " = align " sb.appendS
+        constant [] .valType typeContext types.alignOf sb.appendI
+        " {" sb.appendS
+        constant [] .valType constant [] .value true constant [] .pos context appendConstQBE
+        "}\n" sb.appendS
+        i 1 +
+      end #drop
+      context [] .localConstants
+        list.clear
+      context [] .localConstants =
+    return
+  end
+  proc( stringBuilder : sb string : str => stringBuilder ) =: appendEscapedString
+    sb
+      0 while #dup str .length < do =:: i
+          str i string.charAt appendEscapedChr
+        i 1 +
+      end #drop
+    return
+  end
+  proc(
+    stringBuilder : sb
+    FilePosition : pos
+  => stringBuilder ) =: appendPosQBE
+    sb
+      "dbgloc \"" sb.appendS
+      pos .fileName sb.appendEscapedString
+      "\"," sb.appendS
+      pos .line sb.appendI
+      ',' sb.appendC
+      pos .posInLine sb.appendI
+      '\n' sb.appendC
+    return
+  end
 end
-proc(
-  stringBuilder : sb
-  CompilerContext ptr mut : context
-=> stringBuilder ) =: appendLocalConstants
-  context [] .program [] .idContext .typeContext @ =:: typeContext
-  sb
-    0 while #dup context [] .localConstants .length < do =:: i
-      context [] .localConstants i list.at .data =:: constant
-      "data $localConstant" sb.appendS
-      constant [] .id sb.appendI
-      " = align " sb.appendS
-      constant [] .valType typeContext types.alignOf sb.appendI
-      " {" sb.appendS
-      constant [] .valType constant [] .value true constant [] .pos context appendConstQBE
-      "}\n" sb.appendS
-      i 1 +
-    end #drop
-    context [] .localConstants
-      list.clear
-    context [] .localConstants =
-  return
-end
-proc( stringBuilder : sb string : str => stringBuilder ) =: appendEscapedString
-  sb
-    0 while #dup str .length < do =:: i
-        str i string.charAt appendEscapedChr
-      i 1 +
-    end #drop
-  return
-end
-proc(
-  stringBuilder : sb
-  FilePosition : pos
-=> stringBuilder ) =: appendPosQBE
-  sb
-    "dbgloc \"" sb.appendS
-    pos .fileName sb.appendEscapedString
-    "\"," sb.appendS
-    pos .line sb.appendI
-    ',' sb.appendC
-    pos .posInLine sb.appendI
-    '\n' sb.appendC
-  return
-end
-#end
 
 proc(
   stringBuilder : sb
@@ -653,7 +653,7 @@ proc(
           return
         IFIF ELSE WHILE CASE DEFAULT DO case
           break
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF
+        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
