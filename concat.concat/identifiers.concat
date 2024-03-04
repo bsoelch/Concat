@@ -106,14 +106,8 @@ import "common.concat"
     IdentifierInfo new return
   end
 
-  proc( IdentifierContext ptr mut : context => bool ) =: export isTopLevel
+  proc( IdentifierContext ptr mut : context => bool ) =: isTopLevel
     context [] .openScopes .length 0 == return
-  end
-  proc( IdentifierContext ptr mut : context => bool ) =: export isGlobal
-    context [] .openScopes .length 0 == if
-      true return
-    end
-    context [] .openScopes list.peek .data [] .currentProc Type .undefined types.typeEquals return
   end
   proc( BlockType : blockType Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context => ) =: export openProcScope
     context [] .openScopes

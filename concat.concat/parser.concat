@@ -117,7 +117,7 @@ proc( ParserState ptr mut : state => i64 ) =: opCount
   progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     progContext [] .templateOps .length return
   end
-  progContext [] .idContext @ id.isGlobal if
+  state [] .currentProc optional.isEmpty if
     progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps .length return
   end
   _EXPERIMENTAL_ if
@@ -129,7 +129,7 @@ proc( Operation : op ParserState ptr mut : state => ) =: appendOp
   state [] .progContext =:: progContext
   progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     progContext [] .templateOps @
-  else progContext [] .idContext @ id.isGlobal _if
+  else state [] .currentProc optional.isEmpty _if
     _EXPERIMENTAL_ if
       state [] .globalOpBuffer @
     else
@@ -223,7 +223,7 @@ proc( ParserState ptr mut : state => Operation ptr mut optional ) =: peekOp
   state [] .progContext =:: progContext
   progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     progContext [] .templateOps
-  else progContext [] .idContext @ id.isGlobal _if
+  else state [] .currentProc optional.isEmpty _if
     _EXPERIMENTAL_ if
       state [] .globalOpBuffer
     else
@@ -1123,7 +1123,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           StackModType .DROP fileState [] .wordStart opStackMod state appendOp
           return
         else "namespace" string.wrap #over string.eq _if #drop
-          idContext id.isTopLevel ! if
+          state [] .currentProc optional.isEmpty ! if
             "#" sb.wrap
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
@@ -1160,7 +1160,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           else #drop end
           return
         else "end" string.wrap #over string.eq _if #drop
-          idContext id.isTopLevel ! if
+          state [] .currentProc optional.isEmpty ! if
             "#" sb.wrap
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
@@ -1170,7 +1170,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           return
         else "template" string.wrap #over string.eq _if #drop
-          idContext id.isTopLevel ! if
+          state [] .currentProc optional.isEmpty ! if
             "#" sb.wrap
               #swap sb.appendStr
             " can only be used at global level" sb.appendS fileState [] .wordStart state appendError2
@@ -1276,7 +1276,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
         return
       end =:: idData =:: idName
-      idContext id.isTopLevel if
+      state [] .currentProc optional.isEmpty if
         idData [] .idType .PROCEDURE ?? ! isInit ! | if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
@@ -1393,7 +1393,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           index 1 +
         end #drop
       end
-      isInit ! _EXPERIMENTAL_ if localDeclaration ! else idContext id.isGlobal end & if
+      isInit ! _EXPERIMENTAL_ if localDeclaration ! else state [] .currentProc optional.isEmpty end & if
         return ## no operation for global pre-declaration
       end
       idData [] .valueType idData id.asIdInfo fileState [] .wordStart isInit if
@@ -1422,7 +1422,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #drop:2 return
             else #dup types.primitive.TYPE types.typeEquals _if
               IdentifierType .TYPE
-            else idContext id.isTopLevel _if
+            else state [] .currentProc optional.isEmpty _if
               IdentifierType .GLOBAL_VAR
             else
               IdentifierType .LOCAL_VAR
@@ -1447,7 +1447,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               #drop:2 return
             else #dup types.primitive.TYPE types.typeEquals _if
               IdentifierType .TYPE
-            else idContext id.isTopLevel _if
+            else state [] .currentProc optional.isEmpty _if
               IdentifierType .GLOBAL_VAR
             else
               IdentifierType .LOCAL_VAR
@@ -1468,7 +1468,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           progContext [] .autoTypes
             Type .undefined list.append
           progContext [] .autoTypes =
-          idContext id.isTopLevel if
+          state [] .currentProc optional.isEmpty if
             IdentifierType .GLOBAL_VAR
           else
             IdentifierType .LOCAL_VAR
@@ -1480,7 +1480,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           .name 0 sb.create #swap sb.appendStr fileState [] .wordStart state appendError2
           return
         end
-        idContext id.isTopLevel if
+        state [] .currentProc optional.isEmpty if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
         #dup [] .idType .TYPE ?? if
@@ -1501,7 +1501,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           #dup types.isNamedType if
             fileState state popTypeConstant ! if
               -1 typeContext types.setNamedType ! if
-                idContext id.isTopLevel if
+                state [] .currentProc optional.isEmpty if
                   progContext [] .templateOps .length idContext  id.endOpenTemplate
                 end
                 return
@@ -1743,7 +1743,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state resetStaticArgs
         else #drop end
       do end
-      idContext id.isTopLevel if
+      state [] .currentProc optional.isEmpty if
         progContext [] .templateOps .length idContext  id.endOpenTemplate
       end
       return
