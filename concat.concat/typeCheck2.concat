@@ -468,7 +468,7 @@ proc(
   program [] .idContext .constContext @ =:: constContext
   program [] .idContext .typeContext @ =:: typeContext
   program [] .idContext .labelContext @ =:: labelContext
-  toMerge .length 0 == if
+  toMerge .length 1 == if
     toMerge 0 array.get [] return
   end
   toMerge 0 array.get =:: root
