@@ -28,6 +28,14 @@ Array types follow the same syntax, but without the option to signal mutability 
 
 The array/pointer dimension can be either (expressions that evaluate to) integer constants or automatic procedure arguments.
 
+Grammar:
+
+```
+<pointer-type> := <type> (<dimension>)* `_` ? `ptr` `mut`?
+<array-type> := <type> (<dimension>)+ `_` ? `array`
+<dimension> := <int> | <int-const-expr> | <auto-argument>
+```
+
 Semantics:
 
 An array is a sequential collection of elements, stored in []-major order. <!-- TODO determine if order is row or colum major --> )
@@ -51,12 +59,69 @@ i32 2 3 array ## a 2x3 matrix for 32-bit integers
 Syntax:
 
 
-### structures
-### unions
-### enums
+Structure declarations start with `struct(` or `(` and end with `)`
+Structure elements are declared as a type optionally followed by ` : ` and a label identifier.
+If no label is given the element is labeled with its index (starting from 0).
+
+Union declarations start with `union(` and end with `)`
+Union elements are declared as a type followed by a name using the same syntax as labeled structure elements.
+
+Enum declarations start with `enum(` and end with `)`
+Enum elements can be declared either as labeled structure elements or identifiers without a corresponding type declaration. If no label type is given the type of the enum elements is the empty type.
+
+Grammar:
+
+```
+<composite-type> := <struct-type> | <union-type> | <enum-type>
+<struct-type> := ( `struct(` | `(` ) ( <type> ( `:` <label> )? )+ `)`
+<union-type> := `union(` ( <type>   `:` <label> )+ `)`
+<enum-type> :=  `enum(`  ( ( <type> `:` ) ? <label> )+ `)`
+<label> := <modifier>* <identifier>
+```
+
+Semantics:
+
+Structure elements store all their elements in independent locations, unlike in C there is NO guarantee that the elements are stored in a specific order. <!--XXX? add flag for specifying fixed order -->
+Each element is stored at a position given by its alignment requirements, with padding being inserted between the elements.
+
+<!-- XXX? mention that size is used instead of stride for element layout stride -->
+
+The elements of an Enum are all stored in the same memory location.
+The alignment of an Enum is the maximum alignment of all elements.
+Enums store which element currently is in use and terminate the program if the wrong value is read from.
+
+
+Unions store their elements the same way as Enums but do not check the indices of their elements.
+Unions are intended as a way to save memory when the index of the current Enum-element can be computed from a different value of a structure.
+
+<!-- XXX? is reading from wrong union element supported? -->
 
 ## procedures
 
+Syntax:
+
+Procedure type declarations start with `proc(` or `(`
+followed by a list of optionally labeled argument types, using the same syntax as structure elements.
+The list of argument types is followed by `->` and a list of (unlabeled) return types <!-- TODO? allow labelded return types -->
+the list of return types is terminated by a `)`
+
+Grammar:
+
+```
+<procedure-type> := ( `proc(` | `(` ) ( <type> ( `:` <label> )? )+ `->` <type> * `)`
+```
+
+Semantics:
+
+Procedure types can only be used to declare procedures or as base-type of a procedure pointer.
+
+<!-- TODO more detailed description of procedure pointer syntax -->
+
+For procedure syntax see the general syntax section <!-- TODO section for general syntax -->
+
+Procedure pointers:
+<!-- TODO describe procedure pointers -->
+Procedure pointers cannot be mutable.
 
 ## named types
 
