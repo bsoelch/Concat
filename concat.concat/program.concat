@@ -647,28 +647,28 @@ namespace: sb
     =:: info
     info switch
       typeInfo case
-        "..compiler.types" sb.appendS
+        "..?types" sb.appendS
         info .typeInfo 0 > if
           '.' sb.appendC
           info .typeInfo sb.appendI
         end
         break
       stackInfo case
-        "..compiler.stack" sb.appendS
+        "..?stack" sb.appendS
         info .stackInfo 0 > if
           '.' sb.appendC
           info .stackInfo sb.appendI
         end
         break
       compiledOps case
-        "..compiler.ops" sb.appendS
+        "..?ops" sb.appendS
         info .compiledOps 0 > if
           '.' sb.appendC
           info .compiledOps sb.appendI
         end
         break
       find case
-        "..compiler.find." sb.appendS
+        "..?find." sb.appendS
         info .find labelContext sb.appendLabelName
         break
     end

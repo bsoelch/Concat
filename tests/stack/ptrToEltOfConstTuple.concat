@@ -4,7 +4,7 @@ proc( -> ) =>: main
   0 0 struct new =:: s
   s .a @
   s .b @
-  ..compiler.types
+  ..?types
   #drop:2
   s .a ..debug.print
   s .b ..debug.print
@@ -12,7 +12,7 @@ proc( -> ) =>: main
   0 0 struct new =:: mut mutS
   mutS .a @
   mutS .b @
-  ..compiler.types
+  ..?types
   #drop 1 #swap [] =
   mutS .a ..debug.print
   mutS .b ..debug.print
@@ -20,7 +20,7 @@ proc( -> ) =>: main
   s @ =:: sP
   sP [] .a @
   sP [] .b @
-  ..compiler.types
+  ..?types
   #drop:2
   sP [] .a ..debug.print
   sP [] .b ..debug.print
@@ -28,7 +28,7 @@ proc( -> ) =>: main
   mutS @ =:: mutSP
   mutSP [] .a @
   mutSP [] .b @
-  ..compiler.types
+  ..?types
   #drop 2 #swap [] =
   mutSP [] .a ..debug.print
   mutSP [] .b ..debug.print

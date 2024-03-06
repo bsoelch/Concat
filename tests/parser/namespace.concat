@@ -40,5 +40,5 @@ namespace: D
   #using B
   #using C
   4 =:: i
-  ..compiler.parser.find.i
+  ..?parser.find.i
 end

@@ -2778,36 +2778,36 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
         end
       return
-    else #dup "..compiler.types" string.wrap string.eq
-       #over "..compiler.types." string.wrap string.startsWith | _if =:: mut opName
-      opName "..compiler.types." ..length string.tail =:: params
-      "..compiler.types" string.wrap opName =
+    else #dup "..?types" string.wrap string.eq
+       #over "..?types." string.wrap string.startsWith | _if =:: mut opName
+      opName "..?types." ..length string.tail =:: params
+      "..?types" string.wrap opName =
       params .length 0 > if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
       fileState [] .wordStart opTypesInfo state appendOp
       return
-    else #dup "..compiler.stack" string.wrap string.eq
-       #over "..compiler.stack." string.wrap string.startsWith | _if =:: mut opName
-      opName "..compiler.stack." ..length string.tail =:: params
-      "..compiler.stack" string.wrap opName =
+    else #dup "..?stack" string.wrap string.eq
+       #over "..?stack." string.wrap string.startsWith | _if =:: mut opName
+      opName "..?stack." ..length string.tail =:: params
+      "..?stack" string.wrap opName =
       params .length 0 > if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
       fileState [] .wordStart opStackInfo state appendOp
       return
-    else #dup "..compiler.ops" string.wrap string.eq
-       #over "..compiler.ops." string.wrap string.startsWith | _if =:: mut opName
-      opName "..compiler.ops." ..length string.tail =:: params
-      "..compiler.ops" string.wrap opName =
+    else #dup "..?ops" string.wrap string.eq
+       #over "..?ops." string.wrap string.startsWith | _if =:: mut opName
+      opName "..?ops." ..length string.tail =:: params
+      "..?ops" string.wrap opName =
       params .length 0 > if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
       fileState [] .wordStart opPrintCompiledOps state appendOp
       return
-    ## XXX ..compiler.parser.ops
-    else #dup "..compiler.find." string.wrap string.startsWith _if =:: mut opName
-      opName "..compiler.find." ..length string.tail =:: idName
+    ## XXX ..?parser.ops
+    else #dup "..?find." string.wrap string.startsWith _if =:: mut opName
+      opName "..?find." ..length string.tail =:: idName
       ## opPrintIdentifierMatches
         idName
           id.FLAG_NONE
@@ -2817,8 +2817,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart
       opPrintIdentifierMatches state appendOp
       return
-    else #dup "..compiler.parser.find." string.wrap string.startsWith _if =:: mut opName
-        opName "..compiler.parser.find." ..length string.tail =:: idName
+    else #dup "..?parser.find." string.wrap string.startsWith _if =:: mut opName
+        opName "..?parser.find." ..length string.tail =:: idName
         16 IdentifierMatch list.create =:: mut matches
         idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier #drop:3
         "-----------------\n" sb.wrap

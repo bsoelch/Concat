@@ -6,5 +6,5 @@ proc( -> ) =>: main
   else
     anEnum .B
   end =:: e
-  e ..compiler.types #drop
+  e ..?types #drop
 end
