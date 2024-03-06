@@ -71,7 +71,10 @@ namespace: mem
       prev free
       c.nullPtr T _ ptr mut cast! return
     end
-    prev ..ctype.void _ ptr mut cast! T ..type.stride n * c.realloc checkPtr T _ ptr mut cast! return
+    ## realloc
+      prev ..ctype.void _ ptr mut cast!
+      T ..type.stride n *
+    c.realloc checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
   proc( T _ ptr mut : p => ) =: export free
@@ -80,14 +83,18 @@ namespace: mem
   ## set memory to zero
   #template type : T #end
   proc( T _ ptr mut : src  i64 : n => T _ ptr mut ) =: export clear
-    src ..ctype.void _ ptr mut cast! 0 T ..type.stride n * c.memset checkPtr T _ ptr mut cast! return
+    ## memset
+      src ..ctype.void _ ptr mut cast!
+      0
+      T ..type.stride n 1 - * T ..type.size +
+    c.memset checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
   proc( T _ ptr mut : target T _ ptr : src i64 : n => T _ ptr mut ) =: export copy
     ## memcpy
       target ..ctype.void _ ptr mut cast!
       src ..ctype.void _ ptr cast!
-      T ..type.stride n *
+      T ..type.stride n 1 - * T ..type.size +
     c.memcpy checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
@@ -95,7 +102,7 @@ namespace: mem
     ## memmove
       target ..ctype.void _ ptr mut cast!
       src ..ctype.void _ ptr cast!
-      T ..type.stride n *
+      T ..type.stride n 1 - * T ..type.size +
     c.memmove checkPtr T _ ptr mut cast! return
   end
   #template type : T #end
@@ -103,7 +110,7 @@ namespace: mem
     ## memcmp
       a ..ctype.void _ ptr cast!
       b ..ctype.void _ ptr cast!
-      T ..type.stride n *
+      T ..type.stride n 1 - * T ..type.size +
     c.memcmp return
   end
   #template type : T #end
