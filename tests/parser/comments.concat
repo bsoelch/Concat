@@ -1,4 +1,4 @@
-proc( -> ) =: main
+proc( -> ) =>: main
 ## end
 ## this is a comment
 1 #+ inline comment +# 1 + 2 == "1+1==2" ..assert

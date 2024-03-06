@@ -8,7 +8,7 @@ namespace: utf8
 end
 
 namespace: sb
-  proc( stringBuilder : sb utf8.Codepoint : cp -> stringBuilder ) =: export appendCodepoint
+  proc( stringBuilder : sb utf8.Codepoint : cp -> stringBuilder ) =>: export appendCodepoint
     cp 0 < if ## invalid code point
       cp -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
         sb cp -_ i8 cast sb.appendC return
@@ -61,10 +61,10 @@ namespace: sb
   end
 end
 namespace: utf8
-  proc( Codepoint -> bool ) =: export isValid
+  proc( Codepoint -> bool ) =>: export isValid
     #dup 0 >= #swap MAX_CODEPOINT <= & return
   end
-  proc( string  : str i64 : index -> string i64 Codepoint ) =: export nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
+  proc( string  : str i64 : index -> string i64 Codepoint ) =>: export nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
     index str .length >= if
       str str .length UNKNOWN_CODEPOINT return
     end

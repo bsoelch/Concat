@@ -1,6 +1,6 @@
 struct( i32 : mut x ) =:: s
 
-proc( -> ) =: main
+proc( -> ) =>: main
   0 s new =:: mut A
   A .x ..debug.print
   ## direct edit

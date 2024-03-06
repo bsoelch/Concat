@@ -1,2 +1,2 @@
-proc( -> ) =: main
+proc( -> ) =>: main
 end

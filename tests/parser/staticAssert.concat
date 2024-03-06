@@ -7,4 +7,4 @@ enum( A B C D E ) =:: anEnum
 anEnum ..length 5 == "enum length" ..assert
 i32 2 3 array ..length 6 == "multi-dim. array length" ..assert
 
-proc( -> ) =: main end
+proc( -> ) =>: main end

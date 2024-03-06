@@ -5,7 +5,7 @@ import string
 
 namespace: number
   #template type : T #end
-  proc( T : x i64 : p -> T ) =: export powI
+  proc( T : x i64 : p -> T ) =>: export powI
     p 0 == if
       1 T cast return
     else p 0 < _if
@@ -26,7 +26,7 @@ namespace: number
   end
   2 =:: export MIN_BASE
   62 =:: export MAX_BASE
-  proc( i8 : chr i32 : base -> i32 ) =: export parseDigit
+  proc( i8 : chr i32 : base -> i32 ) =>: export parseDigit
     chr '0' >= chr '9' <= & if
       chr '0' - return
     else chr 'A' >= chr 'Z' <= & _if
@@ -38,7 +38,7 @@ namespace: number
     end
     -1 return
   end
-  proc( string -> string i32 ) =: export resolveBase
+  proc( string -> string i32 ) =>: export resolveBase
     #dup .length 2 < if
       10 return
     end
@@ -75,7 +75,7 @@ namespace: number
     10 return
   end
   enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR OVERFLOW ) =:: export ParserError
-  proc( string : str  i32 : base bool : unsigned -> i64 ParserError ) =: tryParseIntInternal
+  proc( string : str  i32 : base bool : unsigned -> i64 ParserError ) =>: tryParseIntInternal
     false =:: mut sign
     base =:: mut mBase
     base 0 != base 2 < base 62 > | & if
@@ -132,13 +132,13 @@ namespace: number
     overflow if ParserError .OVERFLOW return end
     ParserError .NONE return
   end
-  proc( string : str  i32 : base -> i64 ParserError ) =: export tryParseInt
+  proc( string : str  i32 : base -> i64 ParserError ) =>: export tryParseInt
     str base false tryParseIntInternal
   end
-  proc( string : str  i32 : base -> i64 ParserError ) =: export tryParseUInt
+  proc( string : str  i32 : base -> i64 ParserError ) =>: export tryParseUInt
     str base true tryParseIntInternal
   end
-  proc( i8 : chr i32 : base -> bool ) =: isExpChar
+  proc( i8 : chr i32 : base -> bool ) =>: isExpChar
     chr switch
       'e' 'E' case
         base 15 < return
@@ -150,7 +150,7 @@ namespace: number
         false return
     end
   end
-  proc( string : str i32 : base -> double ParserError ) =: export tryParseFloat
+  proc( string : str i32 : base -> double ParserError ) =>: export tryParseFloat
     false =:: mut sign
     base =:: mut mBase
     base 0 != base 2 < base 62 > | & if

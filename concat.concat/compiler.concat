@@ -18,7 +18,7 @@ false =:: mut wError
 true =:: mut export _FOLD_CONSTANTS_
 false =:: mut export _EXPERIMENTAL_
 
-proc( string : path -> ) =: printUsage
+proc( string : path -> ) =>: printUsage
   "usage: " sb.wrap
     path sb.appendStr
     " \"inputFile\" [-o \"outputFile\"]\n" sb.appendS
@@ -35,7 +35,7 @@ proc( string : path -> ) =: printUsage
   sb.free #drop
 end
 enum( NONE IN OUT TOKENS_PARSER TOKENS_COMPILER LIB_PATH ERR_PATH ) =:: ArgParserState
-proc( -> ) =: parseArgs
+proc( -> ) =>: parseArgs
   false =:: mut printedUsage
   false =:: mut hasSrc
   false =:: mut hasOut
@@ -177,7 +177,7 @@ proc( -> ) =: parseArgs
   ## XXX check if libPath exists
 end
 
-proc( CompilerError list ptr mut : errors -> ) =: checkErrors
+proc( CompilerError list ptr mut : errors -> ) =>: checkErrors
   errors [] .length 0 == if
     return
   end
@@ -205,7 +205,7 @@ proc( CompilerError list ptr mut : errors -> ) =: checkErrors
   errors [] list.clear errors [] =
 end
 
-proc( -> ) =: main ## TODO check return value of fopen
+proc( -> ) =>: main ## TODO check return value of fopen
   parseArgs
   ## TODO cleanup program memory after compilation
   srcFile libPath basePath parseProgram =:: mut prog

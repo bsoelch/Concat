@@ -26,10 +26,10 @@ namespace: id
   Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
 
 
-  proc( IdentifierName : a -> i32 ) =: idHash
+  proc( IdentifierName : a -> i32 ) =>: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
   end
-  proc( IdentifierName : a IdentifierName : b -> bool ) =: idEq
+  proc( IdentifierName : a IdentifierName : b -> bool ) =>: idEq
     a .fileId b .fileId != a .namespace b .namespace != | if
       false return
     end
@@ -48,7 +48,7 @@ namespace: id
     i32 : mut flags
   ) =:: Scope
 
-  proc( bool : isProc Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports -> Scope ) =: newScope
+  proc( bool : isProc Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
      ## Scope
       idHash @
       idEq @
@@ -79,7 +79,7 @@ end
   ) =:: export IdentifierContext
 namespace: id
 
-  proc( -> IdentifierContext ) =: export newIdentifierContext
+  proc( -> IdentifierContext ) =>: export newIdentifierContext
     newConstContext
     newLabelContext
     types.newTypeContext
@@ -96,7 +96,7 @@ namespace: id
     newContext return
   end
 
-  proc( IdentifierData ptr : idData -> IdentifierInfo ) =: export asIdInfo
+  proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export asIdInfo
     idData [] .idType
     idData [] .labelId
     idData [] .constValue
@@ -105,10 +105,10 @@ namespace: id
     IdentifierInfo new return
   end
 
-  proc( IdentifierContext ptr mut : context -> bool ) =: isTopLevel
+  proc( IdentifierContext ptr mut : context -> bool ) =>: isTopLevel
     context [] .openScopes .length 0 == return
   end
-  proc( Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context -> ) =: export openProcScope
+  proc( Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context -> ) =>: export openProcScope
     context [] .openScopes
        ## newScope
          true
@@ -119,7 +119,7 @@ namespace: id
        newScope list.append
     context [] .openScopes =
   end
-  proc( IdentifierContext ptr mut : context -> ) =: export openScope
+  proc( IdentifierContext ptr mut : context -> ) =>: export openScope
     context [] .openScopes .length 0 == if
       Type .undefined false
     else
@@ -130,7 +130,7 @@ namespace: id
        list.append
     context [] .openScopes =
   end
-  proc( i32 : flag bool : value IdentifierContext ptr mut : context -> ) =: export setScopeFlag
+  proc( i32 : flag bool : value IdentifierContext ptr mut : context -> ) =>: export setScopeFlag
     context [] .openScopes .length 0 == if
       context [] .globalScope @
     else
@@ -142,25 +142,25 @@ namespace: id
       #dup [] .flags flag ~ & #swap [] .flags =
     end
   end
-  proc( IdentifierContext ptr mut : context -> i32 ) =: export scopeFlags
+  proc( IdentifierContext ptr mut : context -> i32 ) =>: export scopeFlags
     context [] .openScopes .length 0 == if
       context [] .globalScope .flags return
     end
     context [] .openScopes list.peek .data [] .flags return
   end
-  proc( IdentifierContext ptr mut : context -> bool ) =: export foldConsts
+  proc( IdentifierContext ptr mut : context -> bool ) =>: export foldConsts
     _FOLD_CONSTANTS_ if
       context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 == return
     end
     context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & ? return
   end
-  proc( IdentifierContext ptr mut : context -> Type bool ) =: export currentScopeProc
+  proc( IdentifierContext ptr mut : context -> Type bool ) =>: export currentScopeProc
     context [] .openScopes .length 0 == if
       Type .undefined false return
     end
     context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental return
   end
-  proc( i8 _ ptr mut list -> i8 _ ptr mut list ) =: freeScopeStrings
+  proc( i8 _ ptr mut list -> i8 _ ptr mut list ) =>: freeScopeStrings
     0 while #dup #over:2 .length < do
       #over #over list.get mem.free
       1 +
@@ -172,7 +172,7 @@ namespace: id
   ->
     i64 #+staticArgsOffset+#
     bool #+isError+#
-  ) =: export closeScope
+  ) =>: export closeScope
     context [] .openScopes .length 0 == if
       -1 true return
     end
@@ -189,7 +189,7 @@ namespace: id
   end
 
 
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName IdentifierData ptr mut bool ) =: export searchIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName IdentifierData ptr mut bool ) =>: export searchIdentifier
     context [] .labelContext .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
@@ -324,7 +324,7 @@ namespace: id
     end
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
   end
-  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =: export getIdentifierByLabel
+  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export getIdentifierByLabel
     context [] .nameBuffer
       #dup .length 0 != if ..unreachable end ## TODO error message
       nameId context [] .labelContext @ sb.appendLabelName
@@ -336,10 +336,10 @@ namespace: id
     context [] .nameBuffer =
     return
   end
-  proc( string : name FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =: export getIdentifierByName
+  proc( string : name FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export getIdentifierByName
     name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
-  proc( string : id FilePosition : pos CompilerError list ptr mut : errors -> bool ) =: export checkIdentifier
+  proc( string : id FilePosition : pos CompilerError list ptr mut : errors -> bool ) =>: export checkIdentifier
     id .length 0 == if
       "identifier names have to be non-empty" sb.wrap pos errors appendError
       true return
@@ -362,7 +362,7 @@ namespace: id
     end
     false return
   end
-  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors ->  IdentifierName IdentifierData ptr bool ) =: export declareIdentifier
+  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors ->  IdentifierName IdentifierData ptr bool ) =>: export declareIdentifier
     context [] .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
@@ -452,7 +452,7 @@ namespace: id
   end
 end
 namespace: sb
-  proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =: export appendIdInfo
+  proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =>: export appendIdInfo
     sb
       id .labelId labelContext id.labelFlags #swap
         #over id.FLAG_EXPORT & ? if
@@ -529,7 +529,7 @@ namespace: sb
   end
 end
 namespace: id
-  proc( LabelId : name IdentifierContext ptr mut : context -> ) =: export beginNamespace
+  proc( LabelId : name IdentifierContext ptr mut : context -> ) =>: export beginNamespace
     context [] .prevImports
       context [] .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
@@ -543,7 +543,7 @@ namespace: id
     context [] .labelContext .namespaceInfo .current =
     context [] .nameBuffer list.clear context [] .nameBuffer =
   end
-  proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =: export importNamespace
+  proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =>: export importNamespace
     context [] .nameBuffer
        #dup .length 0 != if ..unreachable end ## TODO error message
        name context [] .labelContext @ sb.appendLabelName
@@ -559,7 +559,7 @@ namespace: id
     context [] .labelContext .namespaceInfo .imports =
     false return
   end
-  proc( IdentifierContext ptr mut : context -> bool ) =: export endNamespace
+  proc( IdentifierContext ptr mut : context -> bool ) =>: export endNamespace
     context [] .labelContext .namespaceInfo .current 0 == if
       true return
     end
@@ -572,22 +572,22 @@ namespace: id
     false
   end
 
-  proc( IdentifierContext ptr mut : context -> bool ) =: export hasOpenTemplate
+  proc( IdentifierContext ptr mut : context -> bool ) =>: export hasOpenTemplate
     context [] .currentTemplate TEMPLATE_ID_NONE != return
   end
-  proc( TemplateId : id IdentifierContext ptr mut : context -> TemplateInfo ptr mut optional ) =: export getTemplateInfo
+  proc( TemplateId : id IdentifierContext ptr mut : context -> TemplateInfo ptr mut optional ) =>: export getTemplateInfo
     id 0 < id context [] .templateInfos .length >= | if
       TemplateInfo ptr mut optional.empty return
     end
     context [] .templateInfos id list.at return
   end
-  proc( TemplateId : id IdentifierContext ptr mut : context -> Type ) =: export templateArgs
+  proc( TemplateId : id IdentifierContext ptr mut : context -> Type ) =>: export templateArgs
     id 0 < id context [] .templateInfos .length >= | if
       Type .undefined return
     end
     context [] .templateInfos id list.get .templateType return
   end
-  proc( Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context -> bool ) =: export beginTemplate
+  proc( Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context -> bool ) =>: export beginTemplate
     context hasOpenTemplate if
       true return
     end
@@ -605,7 +605,7 @@ namespace: id
     context [] .templateInfos =
     false return
   end
-  proc( i64 : templateOpsOffset IdentifierContext ptr mut : context -> ) =: export endOpenTemplate
+  proc( i64 : templateOpsOffset IdentifierContext ptr mut : context -> ) =>: export endOpenTemplate
     context hasOpenTemplate ! if
       return
     end
@@ -618,14 +618,14 @@ end
 
 ## TODO find way to move generic resolving to types.concat
 namespace: types
-  proc( ConstantArray : data i64 : index IdentifierContext ptr mut : context -> ConstValue ) =: argBufferGet
+  proc( ConstantArray : data i64 : index IdentifierContext ptr mut : context -> ConstValue ) =>: argBufferGet
     context [] .templateArgBuffer data .offset index + list.get return
   end
-  proc( ConstantArray : data IdentifierContext ptr mut : context -> ConstValue arrayView ) =: argBufferAsArray
+  proc( ConstantArray : data IdentifierContext ptr mut : context -> ConstValue arrayView ) =>: argBufferAsArray
     context [] .templateArgBuffer .data data .offset + data .length array.create return
   end
   ## TODO improve code for replacing generics
-  proc( TupleId : id CompositeFlags : tupleType ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> TupleId ) =: replaceGenericsTuple
+  proc( TupleId : id CompositeFlags : tupleType ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> TupleId ) =>: replaceGenericsTuple
     context [] .typeContext .tupleTypes id list.at .data [] .compositeInfo @ =:: composite
     composite [] .flags COMP_FLAG_EMPTY & ? composite [] .flags COMP_GENERIC_MASK & 0 == | if
       id return ## no generic elements
@@ -649,7 +649,7 @@ namespace: types
     #swap list.free #drop
     return
   end
-  proc( UnionId : id bool : isTagged ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> UnionId ) =: replaceGenericsUnion
+  proc( UnionId : id bool : isTagged ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> UnionId ) =>: replaceGenericsUnion
     context [] .typeContext .unionTypes id list.at .data [] .compositeInfo @ =:: composite
     composite [] .flags COMP_FLAG_EMPTY & ? composite [] .flags COMP_GENERIC_MASK & 0 == | if
       id return ## no generic elements
@@ -673,7 +673,7 @@ namespace: types
     #swap list.free #drop
     return
   end
-  proc( ConstValue -> ArraySize bool ) =: constToSize
+  proc( ConstValue -> ArraySize bool ) =>: constToSize
     #dup .int ?? if
       .int ArraySizeType .int ArraySize new false return
     end
@@ -686,7 +686,7 @@ namespace: types
     #drop
     -1 ArraySizeType .int ArraySize new true return
   end
-  proc( ArraySize : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ArraySize ) =: replaceGenericsSize
+  proc( ArraySize : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ArraySize ) =>: replaceGenericsSize
     src .sizeType switch
       int case
         src return
@@ -709,7 +709,7 @@ namespace: types
         src return
     end
   end
-  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> Type ) =: export replaceGenericsType
+  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> Type ) =>: export replaceGenericsType
     src context [] .typeContext @ containsGeneric genericArgs .length 0 > & #swap templateArgs .length 0 > & | ! if
       src return ## no generics to replace
     end
@@ -856,7 +856,7 @@ namespace: types
         src return ## TODO
     end
   end
-  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ConstValue ) =: export replaceGenerics
+  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ConstValue ) =>: export replaceGenerics
     src switch
       none wildCard boolean int enumLabel chr str Float case
         src return
@@ -881,7 +881,7 @@ namespace: types
     end
   end
 
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes IdentifierContext ptr mut : context -> ) =: resolveGenericsTypeInternal
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes IdentifierContext ptr mut : context -> ) =>: resolveGenericsTypeInternal
     #using types
     context [] .typeContext @ =:: typeContext
     expected .templateType ?? if
@@ -1019,7 +1019,7 @@ namespace: types
   end
   ## XXX resolve generics method for general constants
 
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset IdentifierContext ptr mut : context -> ) =: export resolveGenericsType
+  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset IdentifierContext ptr mut : context -> ) =>: export resolveGenericsType
     templateCount genericCount + bool mem.calloc =:: visitedValues
     64 i32 list.create =:: mut visitedTypes
     values []

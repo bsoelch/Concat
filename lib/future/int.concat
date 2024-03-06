@@ -4,14 +4,14 @@ import numbers
 import stringIO ## debug
 
 namespace: i64
-  proc( i64 i64 -> i64 ) =: max
+  proc( i64 i64 -> i64 ) =>: max
     #over #over > if
       #drop return
     else
       #swap #drop return
     end
   end
-  proc( i64 i64 -> i64 ) =: min
+  proc( i64 i64 -> i64 ) =>: min
     #over #over < if
       #drop return
     else
@@ -21,7 +21,7 @@ namespace: i64
 end
 namespace: u32
   0xffff_ffffi64 =:: MASK
-  proc( i32 -> i32 ) =: leadingZeros
+  proc( i32 -> i32 ) =>: leadingZeros
     =:: mut i
     i 0 < if 0 return end
     i 0 == if 32 return end
@@ -43,7 +43,7 @@ namespace: int
   1 1 0 -1i8 int new int =: export MINUS_ONE
 
   ## XXX? from/to byte
-  proc( i64 : i -> int ) =: export #:alloc:int wrap
+  proc( i64 : i -> int ) =>: export #:alloc:int wrap
     i 0 < if
       ## int
         i -_
@@ -62,7 +62,7 @@ namespace: int
        0 0 0 0i8 int new
     end
   end
-  proc( i64 : i i8 : sgn -> int ) =: export #:alloc:int uwrap
+  proc( i64 : i i8 : sgn -> int ) =>: export #:alloc:int uwrap
     i 0 != if
       ## int
         i
@@ -105,7 +105,7 @@ namespace: int
     6049 6074 6098
   } =:: bitsPerDigit
   bitsPerDigit ..length number.MAX_BASE 1 + == "bitsPerDigit.length==maxBase+1" ..assert 
-  proc( i64 : auto k i8 k ptr : data -> int ) =: export fromStr ## XXX better name
+  proc( i64 : auto k i8 k ptr : data -> int ) =>: export fromStr ## XXX better name
     data string.wrap 0 fromString #drop return ## TODO error handling
   end
   #+
@@ -113,7 +113,7 @@ namespace: int
 
     algorithm based on openjdk version of BigInteger(String) constructor
   +#
-  proc( string : str i32 : base -> int number.ParserError ) =: export fromString
+  proc( string : str i32 : base -> int number.ParserError ) =>: export fromString
     #using number
     1i8 =:: mut sign
     base =:: mut mBase
@@ -199,18 +199,18 @@ namespace: int
     mStr sb.free #drop
     data size cap sign int new ParserError .NONE return
   end
-  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn -> int ) =: export fromArray
+  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn -> int ) =>: export fromArray
     data k sgn fromPtr return
   end
-  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn -> int ) =: export fromPtr
+  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn -> int ) =>: export fromPtr
     length i32 mem.alloc =:: mData
     mData data length mem.copy #drop
     mData length length sgn int new return
   end
-  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn -> int ) =: export fromArray_BE
+  proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn -> int ) =>: export fromArray_BE
     data k sgn fromPtr_BE return
   end
-  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn -> int ) =: export fromPtr_BE
+  proc( i32 _ ptr :  #:const data i64 : length i8 : sgn -> int ) =>: export fromPtr_BE
     length i32 mem.alloc =:: mData
     length 1 - =:: maxIndex
     0 while #dup length < do ## reverse entries
@@ -219,7 +219,7 @@ namespace: int
     end #drop
     mData length length sgn int new return
   end
-  proc( int : #:const src -> int ) =: export #:alloc:int copy
+  proc( int : #:const src -> int ) =>: export #:alloc:int copy
     src .cap 0 == if
       src .data .i src .sign uwrap return
     end
@@ -227,7 +227,7 @@ namespace: int
     newData src .data .p src .size mem.copy #drop
     newData src .size src .cap src .sign int new return
   end
-  proc( int : #:const src int : #:consume target -> int ) =: #:alloc:int copyTo
+  proc( int : #:const src int : #:consume target -> int ) =>: #:alloc:int copyTo
     src .cap 0 == if
       target free
       src .data .i src .sign uwrap return
@@ -249,7 +249,7 @@ namespace: int
     newData src .data .p src .size mem.copy #drop
     newData src .size src .cap src .sign int new return
   end
-  proc( int : #:const src i32 _ ptr mut : target -> ) =: copyData
+  proc( int : #:const src i32 _ ptr mut : target -> ) =>: copyData
     src .cap 0 == if
       src .data .i u32.MASK & i32 cast target 0 [] =
       src .size 1 > if
@@ -260,14 +260,14 @@ namespace: int
     target src .data .p src .size mem.copy #drop
   end
 
-  proc( int -> ) =: export #:free:int free
+  proc( int -> ) =>: export #:free:int free
     #dup .cap 0 == if #drop
       return
     end
     .data .p mem.free
   end
 
-  proc( stringBuilder : sb int : i -> stringBuilder ) =: export dumpHex
+  proc( stringBuilder : sb int : i -> stringBuilder ) =>: export dumpHex
     sb
       i .sign 0 < if
         '-' sb.appendC
@@ -297,7 +297,7 @@ namespace: int
       end #drop
     return
   end
-  proc( i32 arrayView : data -> ) =: dumpIntData
+  proc( i32 arrayView : data -> ) =>: dumpIntData
     17 data .length * sb.create
       true =:: mut first
       data .length 1 - while #dup 0 >= do
@@ -325,7 +325,7 @@ namespace: int
   end
 
   ## TODO sign, bit-count ...
-  proc( i32 arrayView : #:const a i32 arrayView : #:const b -> i32 ) =: cmpInternal
+  proc( i32 arrayView : #:const a i32 arrayView : #:const b -> i32 ) =>: cmpInternal
     a .length b .length != if
       a .length b .length > if
         1 return
@@ -345,7 +345,7 @@ namespace: int
     end #drop
     0 return
   end
-  proc( int : #:const a int : #:const b -> i32 ) =: compareAbs
+  proc( int : #:const a int : #:const b -> i32 ) =>: compareAbs
     a .size b .size != if
       a .size b .size > if
         1 return
@@ -372,7 +372,7 @@ namespace: int
     end
     aData bData cmpInternal return
   end
-  proc( int : #:const a int : #:const b -> i32 ) =: compare
+  proc( int : #:const a int : #:const b -> i32 ) =>: compare
     a .sign b .sign != if
       a .sign b .sign - return
     end
@@ -382,7 +382,7 @@ namespace: int
   ## TODO versions of arithmetic operations than don't consume their parameters
 
   ## increments number, assumes, that incremented number first in target
-  proc( i32 _ ptr mut : target i64 : len -> bool ) =: incrementInternal
+  proc( i32 _ ptr mut : target i64 : len -> bool ) =>: incrementInternal
     0 while #dup len < do
       target #over [] 1 + target #over:2 [] =
       target #over [] 0 != if #drop
@@ -393,7 +393,7 @@ namespace: int
     true return
   end
   ## decrements number, assumes that the number is greater than 0
-  proc( i32 _ ptr mut : target i64 : len -> bool ) =: decrementInternal
+  proc( i32 _ ptr mut : target i64 : len -> bool ) =>: decrementInternal
     0 while #dup len < do
       target #over [] 1 - target #over:2 [] =
       target #over [] -1 != if #drop
@@ -405,7 +405,7 @@ namespace: int
   end
 
   { 0 0 1 } =:: 2POW64_data
-  proc( int : #:consume a -> int ) =: export #:alloc:int logicalNotOf
+  proc( int : #:consume a -> int ) =>: export #:alloc:int logicalNotOf
     a .sign 0 == if
       a free
       MINUS_ONE return
@@ -448,7 +448,7 @@ namespace: int
   end
 
   struct(  i32 arrayView : data i8 : sign i64 : mut index bool : mut hadNonzero ) =:: IntIterator
-  proc( IntIterator : #:return i -> IntIterator i32 ) =: nextInt
+  proc( IntIterator : #:return i -> IntIterator i32 ) =>: nextInt
     i =:: mut itr
     itr .index =:: index
     itr .index 1 + itr .index =
@@ -472,7 +472,7 @@ namespace: int
     next 0 != itr .hadNonzero =
     itr next -_ return
   end
-  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target -> i64 ) =: andInternal
+  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target -> i64 ) =>: andInternal
     a aSign 0 false IntIterator new =:: mut aItr
     b bSign 0 false IntIterator new =:: mut bItr
     a .length b .length i64.max =:: resLen
@@ -500,7 +500,7 @@ namespace: int
       1 + ## length == maxIndex + 1
     return
   end
-  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target -> i64 ) =: orInternal
+  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target -> i64 ) =>: orInternal
     a aSign 0 false IntIterator new =:: mut aItr
     b bSign 0 false IntIterator new =:: mut bItr
     a .length b .length i64.max =:: resLen
@@ -528,7 +528,7 @@ namespace: int
       1 + ## length == maxIndex + 1
     return
   end
-  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target -> i64 ) =: xorInternal
+  proc( i32 arrayView : a i8 : aSign i32 arrayView : b i8 : bSign i32 _ ptr mut : target -> i64 ) =>: xorInternal
     a aSign 0 false IntIterator new =:: mut aItr
     b bSign 0 false IntIterator new =:: mut bItr
     a .length b .length i64.max =:: resLen
@@ -557,7 +557,7 @@ namespace: int
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int andWith
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int andWith
     b .sign 0 == a .sign 0 == | if
       a free
       ZERO return
@@ -586,7 +586,7 @@ namespace: int
     resData resSize resCap a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end int new return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int orWith
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int orWith
     b .sign 0 == if
       a return
     end
@@ -618,7 +618,7 @@ namespace: int
     resData resSize resCap a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end int new return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int xorWith
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int xorWith
     b .sign 0 == if
       a return
     end
@@ -653,7 +653,7 @@ namespace: int
 
 
   #+assumes target has capacity >= a .length + ceil(amount/32) +#
-  proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target -> i64 ) =: leftShiftInternal
+  proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target -> i64 ) =>: leftShiftInternal
     amount 32 ..udiv =:: offset
     amount 32 ..umod =:: bitShift
     a .length offset + =:: newLen
@@ -684,7 +684,7 @@ namespace: int
     newLen return
   end
   #+assumes target has capacity >= a .length - floor(amount/32) +#
-  proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target bool : isNegative -> i64 ) =: rightShiftInternal
+  proc( i32 arrayView : a i32 : amount i32 _ ptr mut : target bool : isNegative -> i64 ) =>: rightShiftInternal
     ## (-a)>>b = - ((a-1)>>b +1) (?alternative: increment if one shifted of edge)
     amount 32 ..udiv =:: offset
     amount 32 ..umod =:: bitShift
@@ -738,7 +738,7 @@ namespace: int
     end
     newLen return
   end
-  proc( int : #:consume a i32 : amount -> int ) =: #:alloc:int leftShiftBy
+  proc( int : #:consume a i32 : amount -> int ) =>: #:alloc:int leftShiftBy
     a .size amount 32 ..udiv + 1 + =:: mut resCap
     i32 arrayView : aData
     i32 _ ptr mut : resData
@@ -765,7 +765,7 @@ namespace: int
     aData amount resData leftShiftInternal =:: resSize
     resData resSize resCap a .sign int new return
   end
-  proc( int : #:consume a i32 : amount -> int ) =: #:alloc:int rightShiftBy
+  proc( int : #:consume a i32 : amount -> int ) =>: #:alloc:int rightShiftBy
     a .size amount 32 / - =:: resCap
     resCap 0 <= if
       a free
@@ -789,7 +789,7 @@ namespace: int
     aData amount resData a .sign 0i8 < rightShiftInternal =:: resSize
     resData resSize resCap a .sign int new return
   end
-  proc( int : #:consume a i32 : amount -> int ) =: export #:alloc:int shiftLeftBy
+  proc( int : #:consume a i32 : amount -> int ) =>: export #:alloc:int shiftLeftBy
     a .sign 0 == if
       a return
     end
@@ -801,7 +801,7 @@ namespace: int
     end
     a amount leftShiftBy return
   end
-  proc( int : #:consume a i32 : amount -> int ) =: export #:alloc:int shiftRightBy
+  proc( int : #:consume a i32 : amount -> int ) =>: export #:alloc:int shiftRightBy
     a .sign 0 == if
       a return
     end
@@ -815,13 +815,13 @@ namespace: int
   end
 
   ## flips the sign of a
-  proc( int : #:return a -> int ) =: export negated
+  proc( int : #:return a -> int ) =>: export negated
     a =:: mut tmp
     tmp .sign -_ tmp .sign =
     tmp return
   end
   ## creates a copy of a with value abs(a)
-  proc( int : #:const a -> int ) =: export #:alloc:int abs
+  proc( int : #:const a -> int ) =>: export #:alloc:int abs
     a copy =:: mut tmp
     tmp .sign tmp .sign * tmp .sign = ## replace sign with its absolute value
     tmp return
@@ -829,7 +829,7 @@ namespace: int
 
 
   #+assumes, target is large enough to hold the result of the addition +#
-  proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =: addU32
+  proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =>: addU32
     val i64 =: mut carry
     0 while #dup a .length < do
       carry 0 == if
@@ -847,7 +847,7 @@ namespace: int
     a .length 1 + return
   end
   #+assumes, target has cap at least max{a.length,b.length}+1+#
-  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =: addInternal
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =>: addInternal
     a .length b .length i64.min =:: commonPart
     0 i64 =: mut carry
     0
@@ -876,7 +876,7 @@ namespace: int
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int addTo
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int addTo
     b .sign 0 == if
       a return
     end
@@ -933,7 +933,7 @@ namespace: int
   end
 
   #+! assumes that a .length >= b .length, target has cap at least max{a.length,b.length}+1+#
-  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =: subtInternal
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =>: subtInternal
     ## a .length b .length >= assert XXX assertions
     0 i64 =: mut carry
     0
@@ -961,7 +961,7 @@ namespace: int
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int subtractFrom
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int subtractFrom
     b .sign 0 == if
       a return
     end
@@ -1024,7 +1024,7 @@ namespace: int
 
 
   #+assumes, target is large enough to hold the result of the addition +#
-  proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =: multU32
+  proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =>: multU32
     val u32.MASK &  i64 cast =:: scale
     0 i64 =: mut carry
     0 while #dup a .length < do
@@ -1039,7 +1039,7 @@ namespace: int
     carry u32.MASK & i32 cast target a .length [] =
     a .length 1 + return
   end
-  proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi -> ) =: inplaceSquareOverflow
+  proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi -> ) =>: inplaceSquareOverflow
     resLow =:: mut buffer
     resHi 32 << =:: mut overflow
     i =:: mut pos
@@ -1062,7 +1062,7 @@ namespace: int
     end
   end
   #+assumes a and target are either the same pointer or non intersecting, assumes target has capacity >= 2* a .size-1+#
-  proc( i32 arrayView : a i32 _ ptr mut : target -> i64 ) =: inplaceSquare
+  proc( i32 arrayView : a i32 _ ptr mut : target -> i64 ) =>: inplaceSquare
     a .length 0 <= if
       0 return ## length 0 -> length 0
     end
@@ -1126,7 +1126,7 @@ namespace: int
     3) a .data b .data and target don't intersect
     additionally assumes, that target has capacity >= a.length + b .length-1
   +#
-  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =: simpleMultiply ## XXX split in fast and in-place version
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =>: simpleMultiply ## XXX split in fast and in-place version
     a .length 0 <= b .length 0 <= | if
       0 return ## multiply with length 0 -> length 0
     end
@@ -1162,7 +1162,7 @@ namespace: int
     return
   end
   128 =:: KARATSUBA_THRESHOLD ## XXX find good value
-  proc( i32 _ ptr : data i64 : index -> i32 _ ptr i64 ) =: stripLeadingZeros
+  proc( i32 _ ptr : data i64 : index -> i32 _ ptr i64 ) =>: stripLeadingZeros
     index 1 - =:: mut i
     while i 0 >= do
       data i [] 0 != if
@@ -1173,7 +1173,7 @@ namespace: int
     data i 1 + return
   end
   ## XXX? reuse temporary memory in recursive calls
-  proc( i32 arrayView : a i32 _ ptr mut : target -> i64 ) =: karatsubaSquare
+  proc( i32 arrayView : a i32 _ ptr mut : target -> i64 ) =>: karatsubaSquare
     a .length KARATSUBA_THRESHOLD <= if
       a a target simpleMultiply return
     end
@@ -1198,7 +1198,7 @@ namespace: int
     total_len return
   end
   #+karatsuba multiplication if length of b <= half the length of a +#
-  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =: karatsubaMultHalf
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =>: karatsubaMultHalf
     a .length 2 / =:: B
     ## b .length B <= assert
     ## (a0+B*a1)*b
@@ -1220,7 +1220,7 @@ namespace: int
     total_len return
   end
   #+assumes a and b do not intersect target, target.length >= a.length+b.length-1+#
-  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =: karatsubaMultiply
+  proc( i32 arrayView : a i32 arrayView : b i32 _ ptr mut : target -> i64 ) =>: karatsubaMultiply
     a .length KARATSUBA_THRESHOLD <= b .length KARATSUBA_THRESHOLD <= | if
       a b target simpleMultiply return
     end
@@ -1256,7 +1256,7 @@ namespace: int
   end
   ## XXX efficient multiplication algorithm for large numbers
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int multiplyWith
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int multiplyWith
     a .sign 0 == if
       a return
     end
@@ -1321,12 +1321,12 @@ namespace: int
     aData bData resData karatsubaMultiply =:: resSize
     resData resSize resCap sign int new return
   end
-  proc( int : #:consume x -> int ) =: export squared
+  proc( int : #:consume x -> int ) =>: export squared
     x x multiplyWith return
   end
 
   #+ writes the result of the division into target and its size into rSize, returns the remainder of the division+#
-  proc( i32 arrayView : a i32 : val bool : computeDivision i32 _ ptr mut : #:update target i64 ptr mut : #:update tSize -> i32 #+remainder+# ) =: divideU32
+  proc( i32 arrayView : a i32 : val bool : computeDivision i32 _ ptr mut : #:update target i64 ptr mut : #:update tSize -> i32 #+remainder+# ) =>: divideU32
     a .length 0 == if 0 return end ## replace with assertion
     val 0 == if 0 return end ## replace with assertion
     val 1 == if 0 return end
@@ -1355,7 +1355,7 @@ namespace: int
   computes a/b using long division, stores the result of the division in res, returns the size
   this procedure computes the remainder of the division as a byproduct, it will be stored in a, the size will be stored in aSize
   +#
-  proc( i32 _ ptr mut : #:update a i64 ptr mut : #:update aSize i32 arrayView : b bool : computeDivision i32 _ ptr mut : #:update res -> i64 ) =: simpleDivide
+  proc( i32 _ ptr mut : #:update a i64 ptr mut : #:update aSize i32 arrayView : b bool : computeDivision i32 _ ptr mut : #:update res -> i64 ) =>: simpleDivide
     ## ... assert
     b .length 0 == if 0 return end ## replace with assertion
     b .length 1 == if ## call divideU32
@@ -1436,7 +1436,7 @@ namespace: int
   end
   ## TODO efficient division algorithm
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b bool : computeDiv bool : computeRem -> int #+remainder+# int #+divide+# ) =: #:alloc:int divideRemConsumeInternal
+  proc( int : #:consume a int : #:const b bool : computeDiv bool : computeRem -> int #+remainder+# int #+divide+# ) =>: #:alloc:int divideRemConsumeInternal
     computeDiv computeRem | ! if
       a free
       ZERO ZERO return
@@ -1506,20 +1506,20 @@ namespace: int
     return
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int #+remainder+# int #+divide+# ) =: export #:alloc:int divideAndRemainderBy ## XXX better name
+  proc( int : #:consume a int : #:const b -> int #+remainder+# int #+divide+# ) =>: export #:alloc:int divideAndRemainderBy ## XXX better name
     a b true true divideRemConsumeInternal
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int divideBy
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int divideBy
     a b true false divideRemConsumeInternal #swap free ## remainder
   end
   ## consumes a, keeps b unchanged
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int remainderBy
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int remainderBy
     a b false true divideRemConsumeInternal free ## division result
   end
 
   #+computes the gcd of a and b, a and b are not modified by the calculation+#
-  proc( int : #:const a int : #:const b -> int ) =: export #:alloc:int gcd
+  proc( int : #:const a int : #:const b -> int ) =>: export #:alloc:int gcd
     a abs =:: mut x
     b abs =:: mut y
     x y compare 0 > if x y x = y = end ## ensure x<=y
@@ -1533,7 +1533,7 @@ namespace: int
   end
   ## XXX lcm
 
-  proc( int : #:const a i64 : n -> int ) =: export #:alloc:int pow
+  proc( int : #:const a i64 : n -> int ) =>: export #:alloc:int pow
     n 0 < if
       ZERO return
     end
@@ -1562,14 +1562,14 @@ namespace: int
     x free
     p return
   end
-  proc( int : #:consume a i64 : n -> int ) =: export #:alloc:int powBy
+  proc( int : #:consume a i64 : n -> int ) =>: export #:alloc:int powBy
     a n pow
       a free
     return
   end
 
 
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int modBy
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int modBy
     b .sign 0 == if
       a return
     end
@@ -1580,7 +1580,7 @@ namespace: int
     x return
   end
   #+inverts a modulo b, returns integer k s.t.  a*k=gcd(a,b) mod b for some integer n +#
-  proc( int : #:consume a int : #:const b -> int ) =: export #:alloc:int modInvert
+  proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int modInvert
     b abs =:: mut y
     a b modBy =:: mut x
     ZERO =:: mut s
@@ -1605,7 +1605,7 @@ namespace: int
 end
 
 namespace: sb
-  proc( stringBuilder : sb int : #:const i i32 : base -> stringBuilder ) =: export appendInt?
+  proc( stringBuilder : sb int : #:const i i32 : base -> stringBuilder ) =>: export appendInt?
     ## TODO check base
     ## XXX efficient int to string algorithm for large bases
     int.maxSafeI32Digits @ base [] =:: n
@@ -1651,7 +1651,7 @@ namespace: sb
       buff sb.free #drop
     return
   end
-  proc( stringBuilder : sb int : #:const i -> stringBuilder ) =: export appendInt
+  proc( stringBuilder : sb int : #:const i -> stringBuilder ) =>: export appendInt
     sb i 10 appendInt?
   end
 end

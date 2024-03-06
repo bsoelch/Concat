@@ -5,50 +5,50 @@ import arrayView
 
 i8 list =:: export stringBuilder
 namespace: sb
-  proc( i64 : cap -> stringBuilder ) =: export create
+  proc( i64 : cap -> stringBuilder ) =>: export create
     cap i8 list.create return
   end
-  proc( stringBuilder -> stringBuilder ) =: export clear
+  proc( stringBuilder -> stringBuilder ) =>: export clear
     list.clear return
   end
-  proc( stringBuilder i64 -> stringBuilder ) =: export setLength
+  proc( stringBuilder i64 -> stringBuilder ) =>: export setLength
     list.setLength return
   end
-  proc( stringBuilder -> stringBuilder ) =: export free
+  proc( stringBuilder -> stringBuilder ) =>: export free
     list.free return
   end
-  proc( i64 : auto k  i8 k ptr : str -> stringBuilder ) =: export wrap
+  proc( i64 : auto k  i8 k ptr : str -> stringBuilder ) =>: export wrap
     k create
       str appendS
     return
   end
-  proc( string : str -> stringBuilder ) =: export fromStr
+  proc( string : str -> stringBuilder ) =>: export fromStr
     str .length create
       str appendStr
     return
   end
-  proc( stringBuilder : str i64 : index -> i8 ) =: export charAt
+  proc( stringBuilder : str i64 : index -> i8 ) =>: export charAt
     str index list.get return
   end
-  proc( stringBuilder : buffer i64 : minCap -> stringBuilder ) =: export ensureCap
+  proc( stringBuilder : buffer i64 : minCap -> stringBuilder ) =>: export ensureCap
     buffer minCap list.ensureCap return
   end
-  proc( stringBuilder : buffer i8 : chr -> stringBuilder ) =: export appendC
+  proc( stringBuilder : buffer i8 : chr -> stringBuilder ) =>: export appendC
     buffer chr list.append return
   end
-  proc( stringBuilder : buffer i64 : auto k i8 k ptr : str -> stringBuilder ) =: export appendS
+  proc( stringBuilder : buffer i64 : auto k i8 k ptr : str -> stringBuilder ) =>: export appendS
     buffer str list.appendP return
   end
-  proc( stringBuilder : buffer string : str -> stringBuilder ) =: export appendStr
+  proc( stringBuilder : buffer string : str -> stringBuilder ) =>: export appendStr
     buffer str list.appendArray return
   end
-  proc( stringBuilder : buffer stringBuilder : str -> stringBuilder ) =: export appendSb
+  proc( stringBuilder : buffer stringBuilder : str -> stringBuilder ) =>: export appendSb
     buffer str list.appendAll return
   end
-  proc( stringBuilder -> i8 arrayView ) =: export asArray
+  proc( stringBuilder -> i8 arrayView ) =>: export asArray
     #dup .data #swap .length array.create return
   end
-  proc( stringBuilder -> string ) =: export asStr
+  proc( stringBuilder -> string ) =>: export asStr
     asArray return
   end
 end

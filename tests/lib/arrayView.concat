@@ -1,7 +1,7 @@
 import arrayView
 
 #template type : T #end
-proc( T arrayView : l -> ) =: printArray
+proc( T arrayView : l -> ) =>: printArray
   0 while #dup l .length < do
     l .data #over [] ..debug.print
     1 +
@@ -9,7 +9,7 @@ proc( T arrayView : l -> ) =: printArray
 end
 
 #using array 
-proc( -> ) =: main
+proc( -> ) =>: main
   "Hello World" array.wrap =:: str
   str 5 get ..debug.print
   str 'A' indexOf ..debug.print

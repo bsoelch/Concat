@@ -6,10 +6,10 @@ import stringBuilder
 import numbers/printInt
 import stringIO
 
-proc( i32 -> i32 ) =: i32Hash end
-proc( i32 i32 -> bool ) =: i32Eq  == end
+proc( i32 -> i32 ) =>: i32Hash end
+proc( i32 i32 -> bool ) =>: i32Eq  == end
 
-proc( i64 optional -> ) =: printOpt
+proc( i64 optional -> ) =>: printOpt
   #dup optional.isEmpty if #drop
     "empty" io.puts #drop
     return
@@ -21,7 +21,7 @@ proc( i64 optional -> ) =: printOpt
   io.stdOut #swap io.fputSb #drop
 end
 
-proc( -> ) =: main
+proc( -> ) =>: main
   i32Hash @ i32Eq @ 16 i64 map.create =:: mut myMap
   myMap @
     #dup 0   1 map.put printOpt

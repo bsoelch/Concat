@@ -30,16 +30,16 @@ struct(
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
 ) =:: export InterpreterContext
-proc( LabelId -> i32 ) =: labelHash end
-proc( LabelId LabelId -> bool ) =: labelEq == end
+proc( LabelId -> i32 ) =>: labelHash end
+proc( LabelId LabelId -> bool ) =>: labelEq == end
 
-proc( i64 : count InterpreterContext ptr mut : context -> bool ) =: checkStack
+proc( i64 : count InterpreterContext ptr mut : context -> bool ) =>: checkStack
   context [] .openBlocks .length 0 > if
     context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
   else 0i64 end =:: offset
   context [] .stack .length offset - count <
 end
-proc( InterpreterContext ptr mut : context -> i64 ) =: minStackOffset
+proc( InterpreterContext ptr mut : context -> i64 ) =>: minStackOffset
   context [] .openBlocks .length 0 > if
     context [] .openBlocks
       context [] .openBlocks .length 1 - list.at .data []
@@ -48,7 +48,7 @@ proc( InterpreterContext ptr mut : context -> i64 ) =: minStackOffset
   0 return
 end
 
-proc( InterpreterContext ptr mut : context -> bool ) =: inEnum
+proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
   ## XXX cache number of open enum blocks
   context [] .openBlocks .length 1 - while #dup 0 >= do
     context [] .openBlocks #over list.at .data [] .blockType .TYPE_ENUM ?? if #drop
@@ -58,7 +58,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =: inEnum
   end #drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =: inTypeOrInitializer
+proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while #dup 0 >= do
     context [] .openBlocks #over list.at .data [] .blockType switch
@@ -74,7 +74,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =: inTypeOrInitializer
   end #drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =: inInitializer
+proc( InterpreterContext ptr mut : context -> bool ) =>: inInitializer
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while #dup 0 >= do
     context [] .openBlocks #over list.at .data [] .blockType switch
@@ -92,7 +92,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =: inInitializer
   false return
 end
 
-proc( BlockType : blockType InterpreterContext ptr mut : context -> ) =: openBlock
+proc( BlockType : blockType InterpreterContext ptr mut : context -> ) =>: openBlock
   context [] .openBlocks
     ## BlockInfo
       blockType
@@ -106,7 +106,7 @@ proc(
   BlockInfo ptr : closedBlock
   bool : forceLabel
   InterpreterContext ptr mut : context
--> bool ) =: closedTypeBlock
+-> bool ) =>: closedTypeBlock
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext @ =:: idContext
   context [] .program [] .idContext .constContext @ =:: constContext
@@ -177,7 +177,7 @@ proc(
   ConstValue arrayView
   Type
   bool
-) =: closedInitializer
+) =>: closedInitializer
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext @ =:: idContext
   context [] .program [] .idContext .constContext @ =:: constContext
@@ -242,7 +242,7 @@ proc(
   LabelId : id
   FilePosition : pos
   InterpreterContext ptr mut : context
--> ) =: pushValue
+-> ) =>: pushValue
   context [] .stack
     value list.append
   context [] .stack =
@@ -264,7 +264,7 @@ proc(
   bool : showErrorMessages ## TODO distinguish non-interpretable operations and errors
 ->
   bool
-) =: export evaluateOperation
+) =>: export evaluateOperation
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
@@ -820,7 +820,7 @@ proc(
   InterpreterContext ptr mut : context
 ->
   bool
-) =: export evaluateOperations
+) =>: export evaluateOperations
   0 =:: mut offset
   context [] .openBlocks .length 1 - while #dup 0 >= do
     context [] .openBlocks #over list.at .data [] .blockType
@@ -849,7 +849,7 @@ proc(
   InterpreterContext ptr mut : context
 ->
   bool
-) =: export evaluateCall
+) =>: export evaluateCall
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
@@ -960,7 +960,7 @@ proc(
   ProgramContext ptr mut : progContext
 ->
   InterpreterContext
-) =: export wrapProgram
+) =>: export wrapProgram
   ## InterpreterContext
     progContext
     labelHash @ labelEq @ 32 Constant map.create
@@ -974,7 +974,7 @@ end
 
 proc(
   InterpreterContext ptr mut : context
--> ) =: export resetContext
+-> ) =>: export resetContext
   ## TODO? clear local variables in map
   context [] .stackInfo   list.clear context [] .stackInfo =
   context [] .openBlocks  list.clear context [] .openBlocks =
@@ -985,7 +985,7 @@ end
 
 proc(
   InterpreterContext ptr mut : context
--> ) =: export cleanupContext
+-> ) =>: export cleanupContext
   context [] .variables @ map.free
   context [] .stackInfo   list.free context [] .stackInfo =
   context [] .openBlocks  list.free context [] .openBlocks =

@@ -36,7 +36,7 @@ struct(
 ) =:: TypeCheckState
 
 namespace: sb
-  proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state -> stringBuilder ) =: appendTypeStack
+  proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state -> stringBuilder ) =>: appendTypeStack
     state [] .idContext =:: idContext
     idContext [] .labelContext @ =:: labelContext
     idContext [] .typeContext @ =:: typeContext
@@ -76,36 +76,36 @@ namespace: sb
     return
   end
 end
-proc( bool : printOps i32 : maxTypes TypeCheckState ptr mut : state -> ) =: printTypes
+proc( bool : printOps i32 : maxTypes TypeCheckState ptr mut : state -> ) =>: printTypes
   printOps if "stack:\n" sb.wrap else "types:\n" sb.wrap end
     "-----------------\n" sb.appendS
     printOps maxTypes state sb.appendTypeStack
     "-----------------\n" sb.appendS
   io.stdOut #swap io.fputSb #drop
 end
-proc( TypeCheckState ptr mut : state -> ) =: printTypesDebug
+proc( TypeCheckState ptr mut : state -> ) =>: printTypesDebug
   0 sb.create
     "-----------------\n" sb.appendS
     true -1 state sb.appendTypeStack
   io.stdOut #swap io.fputSb #drop
 end
 
-proc( stringBuilder : msg FilePosition : pos TypeCheckState ptr mut : state -> ) =: appendError2
+proc( stringBuilder : msg FilePosition : pos TypeCheckState ptr mut : state -> ) =>: appendError2
   msg pos state [] .errors @ appendError
 end
-proc( -> StackState ) =: emptyStackState
+proc( -> StackState ) =>: emptyStackState
     0 Operation list.create
     0 TypeInfo  list.create
   StackState new return
 end
-proc( TypeCheckState ptr mut : state -> StackState ) =: copyStack
+proc( TypeCheckState ptr mut : state -> StackState ) =>: copyStack
     0 Operation list.create
       state [] .opStack list.appendAll
     0 TypeInfo  list.create
       state [] .typeStack list.appendAll
   StackState new return
 end
-proc( StackState ptr : src TypeCheckState ptr mut : state -> ) =: resetStack
+proc( StackState ptr : src TypeCheckState ptr mut : state -> ) =>: resetStack
   state [] .opStack list.clear
     src [] .opStack list.appendAll
   state [] .opStack =
@@ -113,14 +113,14 @@ proc( StackState ptr : src TypeCheckState ptr mut : state -> ) =: resetStack
     src [] .typeStack list.appendAll
   state [] .typeStack =
 end
-proc( StackState ptr : src -> ) =: freeStackState
+proc( StackState ptr : src -> ) =>: freeStackState
   src [] .opStack list.free #drop
   src [] .typeStack list.free #drop
 end
 
 ## returns the number of elements in the opStack corresponding to the elements starting at index from in the typeStack
 ##  ( with 0 being the index of the top stack element )
-proc( i64 : from i64 : len TypeCheckState ptr mut : state -> i64 ) =: countStackOps
+proc( i64 : from i64 : len TypeCheckState ptr mut : state -> i64 ) =>: countStackOps
   0 =:: mut count
   state [] .typeStack .length from - =:: offset
   1 while #dup len <= do
@@ -131,18 +131,18 @@ proc( i64 : from i64 : len TypeCheckState ptr mut : state -> i64 ) =: countStack
   end #drop
   count return
 end
-proc( TypeCheckState ptr mut : state -> bool ) =: checkSync
+proc( TypeCheckState ptr mut : state -> bool ) =>: checkSync
   state [] .opStack .length 0 <  state [] .typeStack .length 0 < |
   0 state [] .typeStack .length state countStackOps state [] .opStack .length != | return
 end
-proc( Type : valType -> TypeInfo ) =: newTypeInfo
+proc( Type : valType -> TypeInfo ) =>: newTypeInfo
   ## TypeInfo
     valType
     1
     false
   TypeInfo new return
 end
-proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state -> IdentifierInfo ) =: newTmpVar
+proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state -> IdentifierInfo ) =>: newTmpVar
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   id.FLAG_NONE mutable if id.FLAG_MUTABLE | LabelFlag cast end =:: flags
@@ -162,7 +162,7 @@ proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state -> Identi
   IdentifierInfo new return
 end
 
-proc( TypeCheckState ptr mut : state -> ) =: ensureStackHeadIsValue
+proc( TypeCheckState ptr mut : state -> ) =>: ensureStackHeadIsValue
   state [] .openBlocks .length 0 == if
     return ## no extracting of values at global level XXX ? allow stack operations at global level
   end
@@ -218,19 +218,19 @@ proc( TypeCheckState ptr mut : state -> ) =: ensureStackHeadIsValue
   1 head [] .opCount =
   true head [] .writable =
 end
-proc( Type : valType TypeCheckState ptr mut : state -> ) =: pushType
+proc( Type : valType TypeCheckState ptr mut : state -> ) =>: pushType
   state [] .typeStack
      valType newTypeInfo list.append
   state [] .typeStack =
 end
-proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: pushValue
+proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: pushValue
   state ensureStackHeadIsValue
   state [] .opStack
     op list.appendP
   state [] .opStack =
   op [] .dataType state pushType
 end
-proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state -> ) =: insertStackOp
+proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state -> ) =>: insertStackOp
   typeCount state [] .typeStack .length > if
     "type stack underflow" sb.wrap op [] .pos state appendError2
     return
@@ -256,7 +256,7 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state -> ) =: 
   totalOps 1 + state [] .typeStack list.peek .data [] .opCount =
 end
 enum( ALL NON_EMPTY NONE ) =:: CompileType
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state CompileType : compileOps -> ) =: processStackOps
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state CompileType : compileOps -> ) =>: processStackOps
   state [] .idContext =:: idContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length count -
@@ -302,13 +302,13 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state CompileType 
     typeOffset list.setLength
   state [] .typeStack =
 end
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =: addCompiledStackOps
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =>: addCompiledStackOps
   count pos state CompileType .ALL processStackOps
 end
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =: discardStackOps
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =>: discardStackOps
   count pos state CompileType .NONE processStackOps
 end
-proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut : state -> ) =: extractCompositeOps
+proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut : state -> ) =>: extractCompositeOps
   state [] .idContext =:: idContext
   idContext [] .typeContext @ =:: typeContext
   state [] .openBlocks .length 0 == if
@@ -416,7 +416,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
   state [] .opStack =
 end
 
-proc( bool : breakSwitch TypeCheckState ptr mut : state -> BlockInfo ptr mut optional ) =: findBreakableBlock
+proc( bool : breakSwitch TypeCheckState ptr mut : state -> BlockInfo ptr mut optional ) =>: findBreakableBlock
   state [] .openBlocks .length 1 - while #dup 0 >= do
     state [] .openBlocks #over list.at
       #dup .data [] .blockType #dup .WHILE ?? #swap .DO ?? | if
@@ -432,7 +432,7 @@ proc( bool : breakSwitch TypeCheckState ptr mut : state -> BlockInfo ptr mut opt
   end #drop
   BlockInfo ptr mut optional.empty return
 end
-proc( TypeCheckState ptr mut : state -> IfBlockData ptr mut optional ) =: findEnclosingIf
+proc( TypeCheckState ptr mut : state -> IfBlockData ptr mut optional ) =>: findEnclosingIf
   state [] .openBlocks .length 1 - while #dup 0 >= do
     state [] .openBlocks #over list.at
       #dup .data [] .blockType .IF ?? if
@@ -445,7 +445,7 @@ proc( TypeCheckState ptr mut : state -> IfBlockData ptr mut optional ) =: findEn
   IfBlockData ptr mut optional.empty return
 end
 
-proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -> Type ) =: checkBinOpNumber
+proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -> Type ) =>: checkBinOpNumber
   a b context types.commonNumberType
     #dup Type .undefined types.typeEquals ! if
       #dup inTypes 0 [] =
@@ -453,7 +453,7 @@ proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -
     end
   return
 end
-proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -> Type ) =: checkBinOpInt
+proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -> Type ) =>: checkBinOpInt
   a b context types.commonIntType
     #dup Type .undefined types.typeEquals ! if
       #dup inTypes 0 [] =
@@ -462,7 +462,7 @@ proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -
   return
 end
 
-proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state -> ) =: requireTypes
+proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state -> ) =>: requireTypes
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -541,7 +541,7 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
   end #drop
 end
 
-proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) =: storeStack
+proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) =>: storeStack
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -585,7 +585,7 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) 
     1 +
   end return
 end
-proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create BlockType : blockName i64 : blockStart bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state -> ) =: storeOutTypes
+proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create BlockType : blockName i64 : blockStart bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeOutTypes
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -724,29 +724,29 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
     end
   end
 end
-proc( BlockInfo ptr mut : whileBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =: storeLoopInTypes
+proc( BlockInfo ptr mut : whileBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeLoopInTypes
   whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
   inTypes inTypes false whileBlock [] .blockType whileBlock [] .blockStart false pos state storeOutTypes
 end
-proc( BlockInfo ptr mut : whileBlock bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state -> ) =: storeLoopOutTypes
+proc( BlockInfo ptr mut : whileBlock bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeLoopOutTypes
   whileBlock [] .blockData .whileBlock .hasOutTypes ! =:: create
   whileBlock [] .blockData .whileBlock .inTypes @ =:: inTypes
   whileBlock [] .blockData .whileBlock .outTypes @ =:: outTypes
   inTypes outTypes create whileBlock [] .blockType  whileBlock [] .blockStart ignoreLast pos state storeOutTypes
   true whileBlock [] .blockData .whileBlock .hasOutTypes =
 end
-proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =: storeIfOutTypes
+proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeIfOutTypes
   ifBlock [] .blockData .ifBlock .elseReachable ! =:: create
   ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
   ifBlock [] .blockData .ifBlock .outTypes @ =:: outTypes
   inTypes outTypes create ifBlock [] .blockType ifBlock [] .blockStart false pos state storeOutTypes
 end
-proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =: checkIfIfTypes
+proc( BlockInfo ptr mut : ifBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =>: checkIfIfTypes
   ifBlock [] .blockData .ifBlock .inTypes @ =:: inTypes
   ifBlock [] .blockData .ifBlock .inTypes @ =:: outTypes
   inTypes outTypes false BlockType .IFIF ifBlock [] .blockStart false pos state storeOutTypes
 end
-proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =: storeSwitchOutTypes
+proc( BlockInfo ptr mut : switchBlock FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeSwitchOutTypes
   switchBlock [] .blockData .switchBlock .endReachable ! =:: create
   switchBlock [] .blockData .switchBlock .inTypes @ =:: inTypes
   switchBlock [] .blockData .switchBlock .outTypes @ =:: outTypes
@@ -758,7 +758,7 @@ struct( ProcData : procData i32 : mut matchedArgs i32 : mut nCasts i64 : templat
 enum( UNUSED EMPTY NON_EMPTY ) =:: TemplateState
 ## signature data: -> emptyTemplateVars(EMPTY,UNUSED,NON_EMPTY), #matched arguments, autoArguments, template data, #casts
 
-proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state -> ProcData optional ) =: resolveProcedureSignature
+proc( ProcData arrayView : possibleSignatures TypeCheckState ptr mut : state -> ProcData optional ) =>: resolveProcedureSignature
   state [] .idContext =:: idContext
   idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
@@ -853,7 +853,7 @@ end
 
 enum( PROC POINTER ) =:: CallType
 
-proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state -> ) =: typeCheckCall
+proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state -> ) =>: typeCheckCall
   #using types
   state [] .idContext =:: idContext
   idContext [] .constContext @ =:: constContext
@@ -1217,7 +1217,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   end
 end
 
-proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =: typeCheckGetId
+proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =>: typeCheckGetId
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1298,7 +1298,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       break
   end
 end
-proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =: typeCheckDeclareId
+proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =>: typeCheckDeclareId
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1392,7 +1392,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       break
   end
 end
-proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : state -> ) =: typeCheckGetArrayElement
+proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : state -> ) =>: typeCheckGetArrayElement
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -1500,7 +1500,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     pointerType typeContext isMutable state [] .typeStack list.peek .data [] .writable =
   end
 end
-proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> ) =: typeCheckGetElement
+proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> ) =>: typeCheckGetElement
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -1573,7 +1573,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
     mutable state [] .typeStack list.peek .data [] .writable =
   end
 end
-proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> ) =: typeCheckGetLabel
+proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> ) =>: typeCheckGetLabel
   #using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -1726,7 +1726,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
     label labelContext sb.appendLabelName
   op [] .pos state appendError2
 end
-proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: typeCheckReturn
+proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1758,7 +1758,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: typeCheckReturn
   false state [] .reachable =
 end
 
-proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: checkReachable
+proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkReachable
   state [] .reachable if
     return
   end
@@ -1766,7 +1766,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: checkReachable
     op [] state [] .idContext [] .constContext @ state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
   op [] .pos state appendError2
 end
-proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: checkLocal
+proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkLocal
   state [] .openBlocks .length 0 > if
     return
   end
@@ -1775,7 +1775,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =: checkLocal
   op [] .pos state appendError2
 end
 
-proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =: resolveIdentifiers
+proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIdentifiers
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1833,7 +1833,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =: resolveIdent
   end
 end
 ## TODO? constant evalutation
-proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =: typeCheckOp
+proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -3082,7 +3082,7 @@ proc(
   i32 : implId
   ConstantArray : argsIndices
   TypeCheckState ptr mut : state ->
-) =: resolveTemplateGetIdentifer
+) =>: resolveTemplateGetIdentifer
   idInfo .idType switch
     TEMPLATE_ARG case
       ## opConst
@@ -3113,7 +3113,7 @@ proc(
   i32 : implId
   ConstantArray : argsIndices
   TypeCheckState ptr mut : state ->
-) =: resolveTemplateOp
+) =>: resolveTemplateOp
   op [] .val .getId ?? if
     op op [] .val .getId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val .setId ?? _if
@@ -3137,7 +3137,7 @@ proc(
 end
 
 128 =:: MAX_TEMPLATE_DEPTH
-proc( ProgramContext ptr mut -> ) =: export typeCheckProgram
+proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
   =:: mut prog
   ## TypeCheckState
     prog [] .idContext @

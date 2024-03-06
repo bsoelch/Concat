@@ -1,5 +1,5 @@
 namespace: char
-  proc( i8 -> bool ) =: export isWhitespace
+  proc( i8 -> bool ) =>: export isWhitespace
     switch
       ' ' '\n' '\t' '\v' '\f' '\r' case
         true return
@@ -7,7 +7,7 @@ namespace: char
         false return
     end
   end
-  proc( i8 : d -> bool ) =: export isDigit
+  proc( i8 : d -> bool ) =>: export isDigit
     d '0' < if
       false return
     end

@@ -50,95 +50,95 @@ namespace: c
   proc( ..ctype.double -> ..ctype.int ) : extern isfinite
 end
 namespace: math
-  proc( double -> double ) =: export floor
+  proc( double -> double ) =>: export floor
     c.floor
   end
-  proc( double -> double ) =: export ceil
+  proc( double -> double ) =>: export ceil
     c.ceil
   end
-  proc( double -> double ) =: export round
+  proc( double -> double ) =>: export round
     c.round
   end
-  proc( double -> double ) =: export abs
+  proc( double -> double ) =>: export abs
     c.fabs
   end
 
-  proc( double double -> double ) =: export min
+  proc( double double -> double ) =>: export min
     c.fmin
   end
-  proc( double double -> double ) =: export max
+  proc( double double -> double ) =>: export max
     c.fmax
   end
 
-  proc( double -> double ) =: export log2
+  proc( double -> double ) =>: export log2
     c.log2
   end
-  proc( double -> double ) =: export log
+  proc( double -> double ) =>: export log
     c.log
   end
-  proc( double -> double ) =: export exp
+  proc( double -> double ) =>: export exp
     c.exp
   end
 
-  proc( double -> double ) =: export sqrt
+  proc( double -> double ) =>: export sqrt
     c.sqrt
   end
-  proc( double -> double ) =: export cbrt
+  proc( double -> double ) =>: export cbrt
     c.cbrt
   end
-  proc( double : base double : power -> double ) =: export pow
+  proc( double : base double : power -> double ) =>: export pow
     base power c.pow
   end
   ## XXX gamma function
 
-  proc( double -> double ) =: export sin
+  proc( double -> double ) =>: export sin
     c.sin
   end
-  proc( double -> double ) =: export cos
+  proc( double -> double ) =>: export cos
     c.cos
   end
-  proc( double -> double ) =: export tan
+  proc( double -> double ) =>: export tan
     c.tan
   end
-  proc( double -> double ) =: export asin
+  proc( double -> double ) =>: export asin
     c.asin
   end
-  proc( double -> double ) =: export acos
+  proc( double -> double ) =>: export acos
     c.acos
   end
-  proc( double -> double ) =: export atan
+  proc( double -> double ) =>: export atan
     c.atan
   end
-  proc( double -> double ) =: export sinh
+  proc( double -> double ) =>: export sinh
     c.sinh
   end
-  proc( double -> double ) =: export cosh
+  proc( double -> double ) =>: export cosh
     c.cosh
   end
-  proc( double -> double ) =: export tanh
+  proc( double -> double ) =>: export tanh
     c.tanh
   end
-  proc( double -> double ) =: export asinh
+  proc( double -> double ) =>: export asinh
     c.asinh
   end
-  proc( double -> double ) =: export acosh
+  proc( double -> double ) =>: export acosh
     c.acosh
   end
-  proc( double -> double ) =: export atanh
+  proc( double -> double ) =>: export atanh
     c.atanh
   end
-  proc( double double -> double ) =: export atan2
+  proc( double double -> double ) =>: export atan2
     c.atan2
   end
 end
 namespace: double
-  proc( double -> bool ) =: export isNaN
+  proc( double -> bool ) =>: export isNaN
     c.isnan i32 cast ?
   end
-  proc( double -> bool ) =: export isInfinite
+  proc( double -> bool ) =>: export isInfinite
     c.isinf i32 cast ?
   end
-  proc( double -> bool ) =: export isFinite
+  proc( double -> bool ) =>: export isFinite
     c.isfinite i32 cast ?
   end
 end

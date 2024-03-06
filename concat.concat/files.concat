@@ -9,7 +9,7 @@ struct( FilePosition : mut currentPos FilePosition : mut wordStart ) =:: export 
 enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: export Token
 
 namespace: sb
-  proc( stringBuilder : sb Token : token -> stringBuilder ) =: export appendToken
+  proc( stringBuilder : sb Token : token -> stringBuilder ) =>: export appendToken
     token switch
       EMPTY case
         sb "empty" sb.appendS return
@@ -32,7 +32,7 @@ namespace: sb
         return
     end
   end
-  proc( stringBuilder : sb FilePosition : pos -> stringBuilder ) =: export appendPos
+  proc( stringBuilder : sb FilePosition : pos -> stringBuilder ) =>: export appendPos
     sb
       pos .fileName sb.appendStr
       ':' sb.appendC
@@ -43,7 +43,7 @@ namespace: sb
   end
 end
 
-proc( string -> ) =: export printTokens
+proc( string -> ) =>: export printTokens
   "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state
   while
     state @ nextToken
@@ -57,7 +57,7 @@ proc( string -> ) =: export printTokens
   do end #drop
 end
 
-proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =: export updateFilePos
+proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export updateFilePos
   chr '\n' == if
       currentPos [] .line 1 + currentPos [] .line =
     1 currentPos [] .posInLine =
@@ -65,14 +65,14 @@ proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =: export updateFilePos
     currentPos [] .posInLine 1 + currentPos [] .posInLine =
   end
 end
-proc( string : code FileState ptr mut : fileState -> string ) =: skipSpaces
+proc( string : code FileState ptr mut : fileState -> string ) =>: skipSpaces
   0 while #dup code .length < if code #over string.charAt char.isWhitespace else false end do
     code #over string.charAt fileState [] .currentPos @ updateFilePos
     1 +
   end
   code #swap string.tail return
 end
-proc( string : code FileState ptr mut : fileState -> string Token ) =: export nextToken
+proc( string : code FileState ptr mut : fileState -> string Token ) =>: export nextToken
   code .length 0 <= if
     string.empty Token .EMPTY return
   end

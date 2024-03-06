@@ -1,11 +1,11 @@
 0 i32 =: x
   
-proc( -> ( ( i32 i32 _ ptr ) _ ptr i32 ) ) =: ptrTest
+proc( -> ( ( i32 i32 _ ptr ) _ ptr i32 ) ) =>: ptrTest
   0  x @  ( i32  i32 _ ptr ) new =:: y
   y @ 0 ( ( i32  i32 _ ptr ) _ ptr i32 ) new return
 end
 
-proc( -> ) =: main
+proc( -> ) =>: main
   ptrTest .0 [] .1 [] ..debug.print
   
   1 2 ( i64 i64 ) new =:: mut tmp

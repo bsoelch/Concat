@@ -1,5 +1,5 @@
 import io
 
-proc( -> ) =: main
+proc( -> ) =>: main
   "Hello World!" io.puts ..debug.print
 end

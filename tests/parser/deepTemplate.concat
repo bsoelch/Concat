@@ -1,8 +1,8 @@
 #template type : T #end
-proc( -> ) =: infiniteExpand
+proc( -> ) =>: infiniteExpand
   ( T T ) infiniteExpand
 end
 
-proc( -> ) =: main
+proc( -> ) =>: main
   i32 infiniteExpand
 end

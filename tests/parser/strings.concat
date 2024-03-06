@@ -1,7 +1,7 @@
 "A" =:: s1
 "A string" =:: s2
 
-proc( -> ) =: main
+proc( -> ) =>: main
   ..compiler.parser.find.s2
   s3 ..length ..debug.print
   specialString ..length ..debug.print
