@@ -1,4 +1,4 @@
-proc( => ) =: main
+proc( -> ) =: main
   true if 
     1 ..debug.print
   end

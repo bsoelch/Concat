@@ -1,7 +1,7 @@
 import stringIO
 import stringBuilder
 
-proc( => ) =: main 
+proc( -> ) =: main 
   16 sb.create
     "Hello" sb.appendS
     ' '     sb.appendC

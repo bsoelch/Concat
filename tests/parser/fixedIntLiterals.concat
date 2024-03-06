@@ -1,4 +1,4 @@
-proc( => ) =: main
+proc( -> ) =: main
   10_000_000_000_000_000i256 =:: a
   0xffff_ffff_ffff_ffffu =:: b
   10_000_000_000_000_000i32 =:: c

@@ -10,17 +10,17 @@ i32 =:: export FileId
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: export FilePosition
 enum( ERROR WARNING INFO ) =:: export ErrorType
 struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export CompilerError
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors => ) =: export appendError
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =: export appendError
   errors []
     message ErrorType .ERROR pos CompilerError new list.append
   errors [] =
 end
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors => ) =: export appendWarning
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =: export appendWarning
   errors []
     message ErrorType .WARNING pos CompilerError new list.append
   errors [] =
 end
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors => ) =: export appendInfo
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =: export appendInfo
   errors []
     message ErrorType .INFO pos CompilerError new list.append
   errors [] =
@@ -50,7 +50,7 @@ type : export ConstantContext
 
 
 namespace: sb
-  proc( stringBuilder string => stringBuilder ) =: export appendAsciified
+  proc( stringBuilder string -> stringBuilder ) =: export appendAsciified
     =:: str
     0 while #dup str .length < do
       #swap

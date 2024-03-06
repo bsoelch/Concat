@@ -1,20 +1,20 @@
 import "constants.concat"
 
 namespace: interpreter
-  proc( ConstValue : a => bool bool ) =: constAsBool
+  proc( ConstValue : a -> bool bool ) =: constAsBool
     a switch
       boolean case a .boolean false return
       none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case false true return
     end
   end
-  proc( ConstValue : a => i64 bool ) =: constAsInt ## all integer calculations are done in 64 bits
+  proc( ConstValue : a -> i64 bool ) =: constAsInt ## all integer calculations are done in 64 bits
     a switch
       chr case a .chr i64 cast false return
       int case a .int i64 cast false return
       none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure case 0i64 true return
     end
   end
-  proc( ConstValue : a => float bool ) =: constAsF32
+  proc( ConstValue : a -> float bool ) =: constAsF32
     a switch
       chr case a .chr float cast false return
       int case a .int float cast false return
@@ -22,7 +22,7 @@ namespace: interpreter
       none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 float cast true return
     end
   end
-  proc( ConstValue : a => double bool ) =: constAsF64
+  proc( ConstValue : a -> double bool ) =: constAsF64
     a switch
       chr case a .chr double cast false return
       int case a .int double cast false return
@@ -30,13 +30,13 @@ namespace: interpreter
       none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 double cast true return
     end
   end
-  proc( ConstValue : a => i32 bool ) =: constAsEnumLabel
+  proc( ConstValue : a -> i32 bool ) =: constAsEnumLabel
     a switch
       enumLabel case a .enumLabel false return
       none boolean chr int Float str arrayConstant typeId wildCard genericArg templateArg procedure case 0 true return
     end
   end
-  proc( ConstValue : a => Type bool ) =: constAsType
+  proc( ConstValue : a -> Type bool ) =: constAsType
     a switch
       typeId case a .typeId false return
       none boolean chr int enumLabel Float str arrayConstant  wildCard genericArg templateArg procedure case Type .undefined true return
@@ -44,7 +44,7 @@ namespace: interpreter
   end
 
 
-  proc( Type : opType ConstValue : a => Type ConstValue bool ) =: export operator-_
+  proc( Type : opType ConstValue : a -> Type ConstValue bool ) =: export operator-_
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -62,7 +62,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a => Type ConstValue bool ) =: export operator!
+  proc( Type : opType ConstValue : a -> Type ConstValue bool ) =: export operator!
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -74,7 +74,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a => Type ConstValue bool ) =: export operator~
+  proc( Type : opType ConstValue : a -> Type ConstValue bool ) =: export operator~
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -97,7 +97,7 @@ namespace: interpreter
   end
 
 
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator+
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator+
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -118,7 +118,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator-
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator-
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -139,7 +139,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator*
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator*
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -160,7 +160,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator/
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator/
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -181,7 +181,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned/
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned/
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -206,7 +206,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator%
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator%
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -227,7 +227,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned%
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned%
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -252,7 +252,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator&
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator&
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -269,7 +269,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator|
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator|
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -286,7 +286,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator^
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator^
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -303,7 +303,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator<<
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator<<
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -316,7 +316,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator>>
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator>>
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -341,7 +341,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned>>
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned>>
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
     end
@@ -366,7 +366,7 @@ namespace: interpreter
         Type .undefined ConstValue .none true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type ConstValue bool ) =: export operator==
+  proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc -> Type ConstValue bool ) =: export operator==
     opType tc types.isEnum if
       a constAsEnumLabel =:: e1
       b constAsEnumLabel =:: e2
@@ -410,7 +410,7 @@ namespace: interpreter
         types.typeEquals ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc => Type ConstValue bool ) =: export operator!=
+  proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc -> Type ConstValue bool ) =: export operator!=
     opType tc types.isEnum if
       a constAsEnumLabel =:: e1
       b constAsEnumLabel =:: e2
@@ -454,7 +454,7 @@ namespace: interpreter
         types.typeEquals ! ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => i8 bool ) =: operator_compare
+  proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =: operator_compare
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       0i8 true return
     end
@@ -487,32 +487,32 @@ namespace: interpreter
         0i8 true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator<
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator<
     opType a b operator_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 < ConstValue .boolean new types.primitive.BOOL #swap false return
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator<=
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator<=
     opType a b operator_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 <= ConstValue .boolean new types.primitive.BOOL #swap false return
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator>
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator>
     opType a b operator_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 > ConstValue .boolean new types.primitive.BOOL #swap false return
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator>=
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator>=
     opType a b operator_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 >= ConstValue .boolean new types.primitive.BOOL #swap false return
   end
 
-  proc( Type : opType ConstValue : a ConstValue : b => i8 bool ) =: operator_unsigned_compare
+  proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =: operator_unsigned_compare
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       0i8 true return
     end
@@ -537,25 +537,25 @@ namespace: interpreter
         0i8 true return
     end
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned<
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned<
     opType a b operator_unsigned_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 < ConstValue .boolean new types.primitive.BOOL #swap false return
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned<=
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned<=
     opType a b operator_unsigned_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 <= ConstValue .boolean new types.primitive.BOOL #swap false return
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned>
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned>
     opType a b operator_unsigned_compare if #drop
       Type .undefined ConstValue .none true return
     end
     0i8 > ConstValue .boolean new types.primitive.BOOL #swap false return
   end
-  proc( Type : opType ConstValue : a ConstValue : b => Type ConstValue bool ) =: export operator_unsigned>=
+  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =: export operator_unsigned>=
     opType a b operator_unsigned_compare if #drop
       Type .undefined ConstValue .none true return
     end

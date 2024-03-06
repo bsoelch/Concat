@@ -1,14 +1,14 @@
 import list
 
 #template type : T #end
-proc( T list : l => ) =: printList
+proc( T list : l -> ) =: printList
   0 while #dup l .length < do
     l .data #over [] ..debug.print
     1 +
   end #drop
 end
 
-proc( => ) =: main
+proc( -> ) =: main
   4 i32 list.create
     1 list.append
     2 list.append

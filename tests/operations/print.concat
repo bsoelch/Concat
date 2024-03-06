@@ -1,4 +1,4 @@
-proc( => ) =: main
+proc( -> ) =: main
   1 ..debug.print
   'A' ..debug.print
   0x123456789abcdef ..debug.print

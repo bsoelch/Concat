@@ -1,6 +1,6 @@
 import list
 
-proc( => ) =: main
+proc( -> ) =: main
   16 i8 list.create
     "Hello" 3 list.appendP
   list.free

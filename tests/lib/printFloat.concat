@@ -1,7 +1,7 @@
 import numbers
 import stringIO
 
-proc( => ) =: main
+proc( -> ) =: main
   0 sb.create
     0x123456789 double cast 4 sb.appendXE? '\n' sb.appendC
     -0x0.0000000000001P-1022 sb.appendF '\n' sb.appendC

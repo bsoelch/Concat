@@ -1,10 +1,10 @@
 struct( i32 : a i32 : mut b ) =:: aStruct
 
-proc( aStruct ptr => aStruct ) =: get
+proc( aStruct ptr -> aStruct ) =: get
   []
 end
 
-proc( => ) =: main
+proc( -> ) =: main
   37 42 aStruct new =:: X
   X @ get
     0 #over .b  =

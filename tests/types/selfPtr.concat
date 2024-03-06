@@ -1,7 +1,7 @@
 type : selfPtr 
 ( i32 selfPtr ptr ) selfPtr =
 
-proc( => ) =: main
+proc( -> ) =: main
   ..compiler.parser.find.selfPtr
   selfPtr : mut X
   1 X @ selfPtr new X =

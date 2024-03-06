@@ -1,10 +1,10 @@
-proc( i64 ptr mut : arg => i64 ) =: set2
+proc( i64 ptr mut : arg -> i64 ) =: set2
   arg []
     2 arg [] =
   return
 end
 
-proc( => ) =: main
+proc( -> ) =: main
   0 i64 =: mut val
   val @ set2 ..debug.print
   val ..debug.print

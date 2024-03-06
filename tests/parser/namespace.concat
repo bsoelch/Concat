@@ -8,7 +8,7 @@ namespace: i32
   #using mut
   #using mut.subspace
 end
-proc( => ) =: spaceTest
+proc( -> ) =: spaceTest
   #using mut
   spaceVar ..debug.print
   #using mut.subspace
@@ -21,7 +21,7 @@ namespace: mut
   end
 end
 
-proc( => ) =: main
+proc( -> ) =: main
   spaceTest
 end
 

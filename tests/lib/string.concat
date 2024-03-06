@@ -1,7 +1,7 @@
 import string
 import io
 
-proc( => ) =: main
+proc( -> ) =: main
   "Hello World!" io.puts ..debug.print
 
   
@@ -11,7 +11,7 @@ proc( => ) =: main
   "This sentence will be split into Worlds!" string.wrap ' ' printSplit
 end
 
-proc( string : str i8 : chr => ) =: printSplit
+proc( string : str i8 : chr -> ) =: printSplit
   0 =:: mut i
   str 
   while
@@ -20,7 +20,7 @@ proc( string : str i8 : chr => ) =: printSplit
   do end #drop
 end
 
-proc( string : str => ) =: printStr
+proc( string : str -> ) =: printStr
   io.stdOut str .data 0 str .length io.fwrite #drop:2
   io.stdOut  '\n' io.fputc #drop
 end

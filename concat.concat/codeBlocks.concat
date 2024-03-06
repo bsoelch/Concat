@@ -26,7 +26,7 @@ enum(
 ) =:: export BlockType
 struct( BlockType : blockType i32 : mut blockId i32 : mut subId ) =:: export BlockId
 namespace: sb
-  proc( stringBuilder BlockType => stringBuilder ) =: export appendBlockType
+  proc( stringBuilder BlockType -> stringBuilder ) =: export appendBlockType
     switch
       UNKNOWN case
         "unknown" sb.appendS
@@ -89,7 +89,7 @@ namespace: sb
         "proc( )" sb.appendS
         return
       TYPE_PROC_OUT case
-        "proc( => )" sb.appendS
+        "proc( -> )" sb.appendS
         return
       NAMESPACE case
         "namespace" sb.appendS

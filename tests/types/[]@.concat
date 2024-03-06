@@ -1,4 +1,4 @@
-proc( => ) =: main
+proc( -> ) =: main
   i32 5 array new =:: mut a
   a @ 3 [] @ =:: p
   3 p [] =

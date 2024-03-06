@@ -1,4 +1,4 @@
-proc( bool : a bool : b => bool ) =: AND
+proc( bool : a bool : b -> bool ) =: AND
   a if b _if
     true
   else
@@ -6,7 +6,7 @@ proc( bool : a bool : b => bool ) =: AND
   end
 end
 
-proc( bool : a bool : b bool : c bool : d => i32 ) =: COUNT
+proc( bool : a bool : b bool : c bool : d -> i32 ) =: COUNT
   a if b _if c _if
     3
   else b _if c _if d _if
@@ -24,13 +24,13 @@ proc( bool : a bool : b bool : c bool : d => i32 ) =: COUNT
   end
 end
 
-proc( bool : x bool : a bool : b => bool ) =: INVIF
+proc( bool : x bool : a bool : b -> bool ) =: INVIF
   x
     a if b _if ! end
   return
 end
 
-proc( => ) =: main
+proc( -> ) =: main
   false false AND ..debug.print
   false true  AND ..debug.print
   true  false AND ..debug.print

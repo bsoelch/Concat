@@ -175,7 +175,7 @@
           \(|\)                        | 
           tuple\(                      |
           proc\(                       |
-          =&gt;                        |
+          -&gt;                        |
           enum\(                       |
           struct\(                     |
           union\(                      |

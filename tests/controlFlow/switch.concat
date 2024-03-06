@@ -1,6 +1,6 @@
 enum( A B i32 : C i8 : D ) =:: anEnum
 
-proc( i32 : i anEnum : e i8 : c => ) =: switchTest
+proc( i32 : i anEnum : e i8 : c -> ) =: switchTest
   i switch
     1 2 case
       return
@@ -34,7 +34,7 @@ proc( i32 : i anEnum : e i8 : c => ) =: switchTest
   isSpace ..debug.print
 end
 
-proc( => ) =: main
+proc( -> ) =: main
  0 anEnum .A 'A' switchTest
  1 'A' anEnum .D new  '\n' switchTest
  0xabcdef  0x12345678 anEnum .C new  ' ' switchTest

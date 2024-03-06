@@ -1,7 +1,7 @@
 import numbers/printInt
 import stringIO
 
-proc( => ) =: main
+proc( -> ) =: main
   16 sb.create
     -12345678             sb.appendI    '\n' sb.appendC
     "0x"                  sb.appendS

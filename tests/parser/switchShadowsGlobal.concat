@@ -2,7 +2,7 @@ enum( A i32 : B i64 : ERROR ) =:: e
 
 ( i32 i64 ) =:: ERROR
 
-proc( => ) =: main
+proc( -> ) =: main
   e .A switch
     A case
       break

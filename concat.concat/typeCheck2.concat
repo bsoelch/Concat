@@ -41,7 +41,7 @@ enum(
   While
   Switch
 ) =:: BlockInfo
-proc( branchTree.NodeId : branchRoot i32 : blockId => BlockInfo ) =: newIfBlock
+proc( branchTree.NodeId : branchRoot i32 : blockId -> BlockInfo ) =: newIfBlock
   ## IfBlockInfo
     branchRoot
     -1 branchTree.NodeId cast
@@ -50,7 +50,7 @@ proc( branchTree.NodeId : branchRoot i32 : blockId => BlockInfo ) =: newIfBlock
   IfBlockInfo new BlockInfo .If new return
 end
 namespace: sb
-  proc( stringBuilder BlockInfo => stringBuilder ) =: appendBlockInfoName
+  proc( stringBuilder BlockInfo -> stringBuilder ) =: appendBlockInfoName
     switch
       Unknown case "unknown" sb.appendS return
       Procedure case "procedure" sb.appendS return
@@ -78,7 +78,7 @@ struct(
   ## * is folding (non-type) constants allowed
 ) =:: TypeCheckState
 
-proc( TypeCheckState ptr mut : state => i64 ) =: currentBlockStart
+proc( TypeCheckState ptr mut : state -> i64 ) =: currentBlockStart
   state [] .blockStarts .length 0 == if
     0 return
   end
@@ -86,7 +86,7 @@ proc( TypeCheckState ptr mut : state => i64 ) =: currentBlockStart
     #dup .length 1 -
   list.get return
 end
-proc( TypeCheckState ptr mut : state => ) =: freezeInterpreter
+proc( TypeCheckState ptr mut : state -> ) =: freezeInterpreter
   state [] .interpreterActive ! if
     return
   end
@@ -109,7 +109,7 @@ proc( TypeCheckState ptr mut : state => ) =: freezeInterpreter
   interpreter resetContext
   false state [] .interpreterActive =
 end
-proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
+proc( TypeCheckState ptr mut : state -> ) =: unfreezeInterpreter
   state [] .interpreterActive if
     return
   end
@@ -161,13 +161,13 @@ proc( TypeCheckState ptr mut : state => ) =: unfreezeInterpreter
 end
 
 
-proc( TypeCheckState ptr mut : state => ) =: resetInterpreter
+proc( TypeCheckState ptr mut : state -> ) =: resetInterpreter
   state [] .interpreter @ =:: interpreter
   interpreter resetContext
   true state [] .interpreterActive =
 end
 
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => bool ) =: checkStackSize
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> bool ) =: checkStackSize
   state [] .stack branchTree.depth count < if
     "stack underflow: need " sb.wrap
       count sb.appendI
@@ -184,7 +184,7 @@ proc(
   Type : target
   FilePosition : pos
   TypeCheckState ptr mut : state
-=> bool ) =: tryCastConstant
+-> bool ) =: tryCastConstant
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext .typeContext @ =:: typeContext
   src [] .value .none ?? if
@@ -226,7 +226,7 @@ proc(
   string : name
   FilePosition : pos
   TypeCheckState ptr mut : state
-=> i64 #+argOffset+# bool ) =: requireTypes
+-> i64 #+argOffset+# bool ) =: requireTypes
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
   state [] .program [] .idContext .constContext @ =:: constContext
@@ -284,7 +284,7 @@ proc(
   end #drop
   argOffset false return
 end
-proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: discardValues
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =: discardValues
   count pos state checkStackSize if return end
   0 =:: mut toDrop
   0 while #dup count < do
@@ -300,7 +300,7 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state => ) =: disc
   end
 end
 
-proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
+proc( FilePosition : pos TypeCheckState ptr mut : state -> Type ) =: popType
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
@@ -340,7 +340,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state => Type ) =: popType
   typeId return
 end
 
-proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state => ) =: pushConstant
+proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mut : state -> ) =: pushConstant
     ## branchTree.push
       state [] .stack @
       ## TypeInfo
@@ -365,7 +365,7 @@ proc( ConstValue : value Type : valType FilePosition : pos TypeCheckState ptr mu
       OpInfo new list.append
     state [] .opInfo =
 end
-proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: pushValue
+proc( ConstValue : value Operation : op TypeCheckState ptr mut : state -> ) =: pushValue
     ## branchTree.push
       state [] .stack @
       ## TypeInfo
@@ -390,7 +390,7 @@ proc( ConstValue : value Operation : op TypeCheckState ptr mut : state => ) =: p
       OpInfo new list.append
     state [] .opInfo =
 end
-proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state => ) =: updateOpInfo
+proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state -> ) =: updateOpInfo
   state [] .program [] .errors @ =:: errors
   state [] .stack @ branchTree.peek .data =:: typeInfo
   typeInfo [] .opIndex =:: opIndex
@@ -401,10 +401,10 @@ proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckSt
   end
   canMove canDelete argCount argOffset state opIndex updateOpInfoIndex
 end
-proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state => ) =: updateOpInfo_noStack
+proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state -> ) =: updateOpInfo_noStack
   canMove canDelete argCount argOffset state state [] .opInfo .length 1 - updateOpInfoIndex
 end
-proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state i64 : opIndex => ) =: updateOpInfoIndex
+proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckState ptr mut : state i64 : opIndex -> ) =: updateOpInfoIndex
   state [] .opInfo opIndex list.at .data =:: opInfo
   argCount i32.MAX > if
     ..unreachable ## XXX handle case of too many arguments
@@ -422,25 +422,25 @@ proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckSt
   canMove canMoveChildren & opInfo [] .canMove =
   canDelete opInfo [] .canDelete =
 end
-proc( LabelId : label TypeCheckState ptr mut : state => ) =: replaceLabel
+proc( LabelId : label TypeCheckState ptr mut : state -> ) =: replaceLabel
   state [] .stack @ branchTree.peek .data =:: top
   label top [] .valueId =
 end
-proc( Type : newType TypeCheckState ptr mut : state => ) =: replaceType
+proc( Type : newType TypeCheckState ptr mut : state -> ) =: replaceType
   state [] .stack @ branchTree.peek .data =:: top
   newType top [] .valueType =
 end
 
-proc( BlockInfo : blockInfo TypeCheckState ptr mut : state => ) =: openBlock
+proc( BlockInfo : blockInfo TypeCheckState ptr mut : state -> ) =: openBlock
   state [] .openBlocks
     blockInfo list.append
   state [] .openBlocks =
 end
 
-proc( TypeCheckState ptr mut : state => BlockInfo ptr mut optional ) =: peekBlock
+proc( TypeCheckState ptr mut : state -> BlockInfo ptr mut optional ) =: peekBlock
   state [] .openBlocks list.peek
 end
-proc( FilePosition : pos TypeCheckState ptr mut : state => BlockInfo ) =: closeBlock
+proc( FilePosition : pos TypeCheckState ptr mut : state -> BlockInfo ) =: closeBlock
   state [] .program [] .errors @ =:: errors
   state [] .openBlocks .length 0 == if
     BlockInfo .Unknown return
@@ -461,7 +461,7 @@ struct(
 proc(
   TypeInfo ptr arrayView : toMerge
   MergePoint : mergePoint
-=> TypeInfo ) =: mergeBranches
+-> TypeInfo ) =: mergeBranches
   mergePoint .state [] .program =:: program
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
@@ -503,7 +503,7 @@ proc(
   TypeInfo new return
 end
 
-proc( Operation : op TypeCheckState ptr mut : state => i64 #+opIndex+# ) =: appendOp
+proc( Operation : op TypeCheckState ptr mut : state -> i64 #+opIndex+# ) =: appendOp
   state [] .compiledOps .length =:: index
   state [] .compiledOps
     op list.append
@@ -518,7 +518,7 @@ proc( Operation : op TypeCheckState ptr mut : state => i64 #+opIndex+# ) =: appe
   state [] .opInfo =
   index return
 end
-proc( TypeCheckState ptr mut : state => ) =: wrapCopy
+proc( TypeCheckState ptr mut : state -> ) =: wrapCopy
   state [] .stack @ branchTree.peek .data =:: topValue
   state [] .childIds
     topValue [] .opIndex list.append
@@ -539,7 +539,7 @@ proc( TypeCheckState ptr mut : state => ) =: wrapCopy
   index topValue [] .opIndex =
   index topValue [] .copyMutableIndex =
 end
-proc( i64 : copyMutableIndex TypeCheckState ptr mut : state => ) =: removeCopy
+proc( i64 : copyMutableIndex TypeCheckState ptr mut : state -> ) =: removeCopy
   copyMutableIndex -1 != if
     ## no copy when writing to value
     OpValue .NOP state [] .compiledOps copyMutableIndex list.at .data [] .val =
@@ -547,7 +547,7 @@ proc( i64 : copyMutableIndex TypeCheckState ptr mut : state => ) =: removeCopy
 end
 
 ## FIXME prevent editing of operations outside current block
-proc( i64 : index TypeCheckState ptr mut : state => bool ) =: tryDeleteOp
+proc( i64 : index TypeCheckState ptr mut : state -> bool ) =: tryDeleteOp
   index state currentBlockStart < if
     true return
   end
@@ -558,7 +558,7 @@ proc( i64 : index TypeCheckState ptr mut : state => bool ) =: tryDeleteOp
     true return
   end
 end
-proc( i64 : index TypeCheckState ptr mut : state => ) =: deleteOp
+proc( i64 : index TypeCheckState ptr mut : state -> ) =: deleteOp
   state [] .opInfo index list.at .data =:: opInfo
   0 =:: mut toDrop
   0 while #dup opInfo [] .childCount < do
@@ -576,7 +576,7 @@ proc( i64 : index TypeCheckState ptr mut : state => ) =: deleteOp
   false opInfo [] .canMove =
   false opInfo [] .canDelete =
 end
-proc( i64 : index TypeCheckState ptr mut : state => i64 ) =: copyOp
+proc( i64 : index TypeCheckState ptr mut : state -> i64 ) =: copyOp
   state [] .opInfo index list.at .data =:: opInfo
   state [] .childIds .length =:: argOffset
   0 while #dup opInfo [] .childCount < do ## copy child operations
@@ -602,7 +602,7 @@ proc( i64 : index TypeCheckState ptr mut : state => i64 ) =: copyOp
   argOffset newOpInfo [] .childOffset =
   copyIndex return
 end
-proc( i64 : opIndex FilePosition : pos TypeCheckState ptr mut : state => i64 bool ) =: tryCopyOp
+proc( i64 : opIndex FilePosition : pos TypeCheckState ptr mut : state -> i64 bool ) =: tryCopyOp
   opIndex 0 < if
     0 true return
   end
@@ -612,7 +612,7 @@ proc( i64 : opIndex FilePosition : pos TypeCheckState ptr mut : state => i64 boo
   end
   opIndex state copyOp false return
 end
-proc( TypeCheckState ptr mut : state => ) =: removeTrailingNOPs
+proc( TypeCheckState ptr mut : state -> ) =: removeTrailingNOPs
   state [] .compiledOps .length 1 - while #dup 0 >= do
     state [] .compiledOps #over list.at .data [] .val .NOP ?? ! if
       break
@@ -626,7 +626,7 @@ proc( TypeCheckState ptr mut : state => ) =: removeTrailingNOPs
     offset list.setLength
   state [] .opInfo =
 end
-proc( TypeCheckState ptr mut : state => ) =: clearOps
+proc( TypeCheckState ptr mut : state -> ) =: clearOps
   state [] .compiledOps
     list.clear
   state [] .compiledOps =
@@ -637,7 +637,7 @@ proc( TypeCheckState ptr mut : state => ) =: clearOps
     list.clear
   state [] .blockStarts =
 end
-proc( TypeCheckState ptr mut : state => ) =: freeOps
+proc( TypeCheckState ptr mut : state -> ) =: freeOps
   state [] .compiledOps
     list.free
   state [] .compiledOps =
@@ -649,7 +649,7 @@ proc( TypeCheckState ptr mut : state => ) =: freeOps
   state [] .blockStarts =
 end
 
-proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state => ) =: resolveAutoType
+proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state -> ) =: resolveAutoType
   state [] .program [] .errors @ =:: errors
   state [] .program [] .autoTypes @ =:: autoTypes
   state [] .program [] .idContext .typeContext @ =:: typeContext
@@ -682,7 +682,7 @@ proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state => 
     end
 end
 
-proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
+proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =: typeCheckOp
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
@@ -1517,7 +1517,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state => ) =: typeCheckOp
   op [] .pos errors appendError
 end
 
-proc( ProgramContext ptr mut : program => ) =: export typeCheckProgram2
+proc( ProgramContext ptr mut : program -> ) =: export typeCheckProgram2
   ## TypeCheckState
     program
     program wrapProgram

@@ -1,15 +1,15 @@
-proc( i32 i32 => i32 i32 ) =: #:experimental divMod
+proc( i32 i32 -> i32 i32 ) =: #:experimental divMod
   #over #over % =:: mod / mod return
 end
 
-proc( i32 i32 => i32 2 array ) =: #:experimental array2
+proc( i32 i32 -> i32 2 array ) =: #:experimental array2
   i32 2 array new =:: mut data
     data @ 1 [] =
     data @ 0 [] =
   data return
 end
 
-proc( i64 i64 i64 i64 => i64 4 array ) =: #:experimental array4
+proc( i64 i64 i64 i64 -> i64 4 array ) =: #:experimental array4
   i64 4 array new =:: mut data
     data @ 3 [] =
     data @ 2 [] =
@@ -18,18 +18,18 @@ proc( i64 i64 i64 i64 => i64 4 array ) =: #:experimental array4
   data return
 end
 
-proc( i32 : a i32 : b => i32 ) =: #:experimental cmp
+proc( i32 : a i32 : b -> i32 ) =: #:experimental cmp
   a b > if 1 else a b < _if -1 else 0 end
 end
 
-proc( i32 : ignore => ) =: #:experimental consume end
+proc( i32 : ignore -> ) =: #:experimental consume end
 
 
 struct( i64 : length i8 _ ptr : data ) =:: String
-proc( i64 : auto k i8 k ptr : str => String i64 ) =: #:experimental startItr
+proc( i64 : auto k i8 k ptr : str -> String i64 ) =: #:experimental startItr
   k str String new 0
 end
-proc( String i64 => String i64 i8 bool ) =: #:experimental nextChar
+proc( String i64 -> String i64 i8 bool ) =: #:experimental nextChar
   =:: i
   =:: s
   s
@@ -38,16 +38,16 @@ proc( String i64 => String i64 i8 bool ) =: #:experimental nextChar
     end
     i 1 +  s .data i [] true return
 end
-proc( String i64 i8 => ) =: #:experimental endItr
+proc( String i64 i8 -> ) =: #:experimental endItr
   #drop #drop #drop
 end
 
 enum( i32 : a i32 : b ) =:: E
-proc( i32 => E ) =: #:experimental enumCreate
+proc( i32 -> E ) =: #:experimental enumCreate
   E .a new return
 end
 
-proc( => ) =: main
+proc( -> ) =: main
   1234 consume
   43 17 divMod #swap ..debug.print ..debug.print
   5 7 cmp ..debug.print

@@ -7,7 +7,7 @@ import "program.concat"
 import "types.concat"
 
 
-proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: declaredType
+proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types -> ) =: declaredType
   prog [] .idContext .typeContext @ =:: typeContext
   visited declared map.at #dup optional.hasData if .data []
     ptrLevel == if
@@ -78,7 +78,7 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
   -1 visited declared map.at .data [] = ## finished declaration
 end
 
-proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types => ) =: addOpType
+proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types -> ) =: addOpType
   op [] .val .initializeId ?? op [] .val .declareId ?? | if
     op [] .dataType 0 prog visited types declaredType
   else op [] .val .Cast ?? op [] .val .Cast! ?? | _if
@@ -90,7 +90,7 @@ proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut 
   end
 end
 
-proc( ProgramContext ptr mut : prog => Type list ) =: export getDeclaredTypes
+proc( ProgramContext ptr mut : prog -> Type list ) =: export getDeclaredTypes
   types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut visited ## XXX start with power of two closest to total type count as capacity
   128 Type list.create =:: mut types
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next

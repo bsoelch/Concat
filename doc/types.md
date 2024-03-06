@@ -159,7 +159,7 @@ explicit casts allowed between any two named types with same source type
 <enum-type> :=  `enum(`  ( <type> ? `:` <label> )+ `)`
 <label> := <modifier>* <identifier>
 
-<procedure-type> := ( `proc(` | `(` ) ( <type> ( `:` <label> )? )+ `=>` <type> * `)`
+<procedure-type> := ( `proc(` | `(` ) ( <type> ( `:` <label> )? )+ `->` <type> * `)`
 
 <named-type> := <identifier>
 

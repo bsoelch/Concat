@@ -1,14 +1,14 @@
-proc( i32 : a i32 : b => i32 i32 ) =: proc0
+proc( i32 : a i32 : b -> i32 i32 ) =: proc0
   doNothing
   b a return
 end
-proc( i32 : x i32 : y => ) =: argTest
+proc( i32 : x i32 : y -> ) =: argTest
 end
-proc( => ) =: doNothing
+proc( -> ) =: doNothing
   return
 end 
 
-proc( => ) =: main
+proc( -> ) =: main
   proc0 @ =:: fct
   1 2 fct () ..debug.print ..debug.print
   1 2 proc0 doNothing proc0 ..debug.print ..debug.print
