@@ -10,9 +10,12 @@ import "branchTree.concat"
 "cctI_argv" =:: CONCAT_ARGV_NAME
 "cctI_envp" =:: CONCAT_ENVP_NAME
 
+enum( START IF ELSE END_IF ) =:: BranchType
+struct( BranchType : branchType i32 : id ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR ) =:: ValType
 struct(
   i64 : varId
+  BranchId : branch
   ValType : valType
 ) =:: StackElement
 
@@ -36,6 +39,7 @@ enum(
 struct(
   ProgramContext ptr mut : program
   StackElement BranchTree : mut stackInfo
+  BranchId : mut currentBranch
   BlockInfo list : mut openBlocks
   LocalConst list : mut localConstants
   i64 : mut localConstCount
@@ -94,9 +98,38 @@ proc( Type : t CompilerContext ptr : context => ValType ) =: toValType
   end
 end
 
+namespace: sb
+  proc( stringBuilder : sb BranchId : branch => stringBuilder ) =: appendBranchId
+    sb
+      branch .branchType switch
+        START case "@start" sb.appendS break
+        IF case "@if_" sb.appendS branch .id sb.appendI break
+        ELSE case "@else_" sb.appendS branch .id sb.appendI break
+        END_IF case "@endIf_" sb.appendS branch .id sb.appendI break
+      end
+    return
+  end
+end
+proc(
+  stringBuilder : sb
+  BranchType : branchType
+  i32 : branchId
+  CompilerContext ptr mut : context
+=> stringBuilder ) =: startBranch
+  branchType branchId BranchId new =:: branch
+  branch context [] .currentBranch =
+  sb
+    branch sb.appendBranchId
+    '\n' sb.appendC
+  return
+end
 proc( ValType : valType CompilerContext ptr mut : context => i64 ) =: pushValue
   context [] .stackCount =:: oldCount
-    context [] .stackInfo @ oldCount valType StackElement new branchTree.push
+    context [] .stackInfo @
+      oldCount
+      context [] .currentBranch
+      valType
+    StackElement new branchTree.push
     oldCount
       1 +
     context [] .stackCount =
@@ -167,18 +200,19 @@ proc(
       FLOAT case 's' sb.appendC break
       DOUBLE case 'd' sb.appendC break
     end
-    " phi @if_" sb.appendS
-    mergePoint .blockId sb.appendI
+    " phi " sb.appendS
+    ifValue [] .branch sb.appendBranchId
     " %s" sb.appendS
     ifValue [] .varId sb.appendI
-    ", @else_" sb.appendS
-    mergePoint .blockId sb.appendI
+    ", " sb.appendS
+    elseValue [] .branch sb.appendBranchId
     " %s" sb.appendS
     elseValue [] .varId sb.appendI
     '\n' sb.appendC
   mergePoint .out [] =
   ## StackElement
     oldCount
+    context [] .currentBranch
     ifValue [] .valType
   StackElement new return
 end
@@ -787,17 +821,26 @@ proc(
       return
     block case
       op [] .val .block .blockType switch
-        IF case ## TODO branch stack
+        IF case
           sb
             "jnz $s" sb.appendS
             context popValue sb.appendI
-            " ,@if_" sb.appendS
-            op [] .val .block .blockId sb.appendI
-            " ,@else_" sb.appendS
-            op [] .val .block .blockId sb.appendI
-            "\n@if_" sb.appendS
-            op [] .val .block .blockId sb.appendI
+            " ," sb.appendS
+            ## appendBranchId
+              BranchType .IF
+              op [] .val .block .blockId
+            BranchId new sb.appendBranchId
+            " ," sb.appendS
+            ## appendBranchId
+              BranchType .ELSE
+              op [] .val .block .blockId
+            BranchId new sb.appendBranchId
             '\n' sb.appendC
+            ## startBranch
+              BranchType .IF
+              op [] .val .block .blockId
+              context
+            startBranch
             context [] .stackInfo @ branchTree.startBranch =:: branchRoot
             op [] .val .block .blockId branchRoot newIfBlock context openBlock
           return
@@ -806,11 +849,17 @@ proc(
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
           ifBranch ifBlock [] .If .ifBranch =
           sb
-            "jmp @endIf_" sb.appendS
-            op [] .val .block .blockId sb.appendI
-            "\n@else_" sb.appendS
-            op [] .val .block .blockId sb.appendI
+            "jmp " sb.appendS
+            ## appendBranchId
+              BranchType .END_IF
+              op [] .val .block .blockId
+            BranchId new sb.appendBranchId
             '\n' sb.appendC
+            ## startBranch
+              BranchType .ELSE
+              op [] .val .block .blockId
+              context
+            startBranch
           return
         IFIF WHILE CASE DEFAULT DO case
           break
@@ -832,9 +881,11 @@ proc(
             list.pop .If =:: ifBlock
           context [] .openBlocks =
           sb
-            "@endIf_" sb.appendS
-            op [] .val .blockEnd .blockId sb.appendI
-            '\n' sb.appendC
+            ## startBranch
+              BranchType .END_IF
+              op [] .val .blockEnd .blockId
+              context
+            startBranch
             branchTree.NodeId 2 array new =:: mut branches
             ifBlock .ifBranch branches @ 0 [] =
             context [] .stackInfo .branchHead branches @ 1 [] =
@@ -884,6 +935,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog => ) =: export compileToQBE
   ## CompilerContext
     prog
     StackElement branchTree.create
+    BranchType .START 0 BranchId new
     32 BlockInfo list.create
     32 LocalConst list.create
     0
