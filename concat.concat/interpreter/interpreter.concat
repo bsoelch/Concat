@@ -104,6 +104,7 @@ end
 proc(
   Operation ptr : op
   BlockInfo ptr : closedBlock
+  bool : createDummyLables
   bool : forceLabel
   InterpreterContext ptr mut : context
 -> bool ) =>: closedTypeBlock
@@ -146,13 +147,15 @@ proc(
         stackInfo [] .pushedAt errors appendError
         true error =
       end
-      ## newDummyLabel
-        #dup
-        id.FLAG_DUMMY ## TODO? flags
-        stackInfo [] .pushedAt
-        -1 ## TODO resolve current file
-        labelContext
-      id.newDummyLabel stackInfo [] .valueName =
+      createDummyLables if
+        ## newDummyLabel
+          #dup
+          id.FLAG_DUMMY ## TODO? flags
+          stackInfo [] .pushedAt
+          -1 ## TODO resolve current file
+          labelContext
+        id.newDummyLabel stackInfo [] .valueName =
+      end
     end
     context [] .labelBuffer
       stackInfo [] .valueName list.append
@@ -354,7 +357,7 @@ proc(
       end
       blockType switch
         TYPE_TUPLE TYPE_STRUCT case
-          op closedBlock @ false context closedTypeBlock if true return end
+          op closedBlock @ true false context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -372,7 +375,7 @@ proc(
           context pushValue
           false return
         TYPE_ENUM case
-          op closedBlock @ true context closedTypeBlock if true return end
+          op closedBlock @ false true context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -390,7 +393,7 @@ proc(
           context pushValue
           false return
         TYPE_UNION case
-          op closedBlock @ true context closedTypeBlock if true return end
+          op closedBlock @ false true context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
@@ -409,12 +412,28 @@ proc(
           false return
         TYPE_PROC_IN
         TYPE_COMPOSITE case
-          op closedBlock @ false context closedTypeBlock if true return end
+          ## TODO? distinguish tuple and proc in parser
+          ##  -> removes need to create labels for procIn
+          op closedBlock @
+            blockType .TYPE_COMPOSITE ??
+            false
+          context closedTypeBlock if true return end
           context [] .typeBuffer .length 1 >= if
             ## last argument is procedure output
             context [] .typeBuffer context [] .typeBuffer .length 1 - list.get .procOut ?? _if
               true
           else false end =:: isProc
+          isProc if ## clear dummy lables
+            0 while #dup context [] .labelBuffer .length < do
+              context [] .labelBuffer #over list.at .data =:: label
+              label []
+                labelContext id.labelFlags
+              id.FLAG_DUMMY & ? if
+                id.LABEL_ID_NONE label [] =
+              end
+              1 +
+            end #drop
+          end
           context [] .typeBuffer .length
             isProc if 1 else 0 end - ## last value is return type
           =:: nArgs
@@ -460,7 +479,7 @@ proc(
           context pushValue
           false return
         TYPE_PROC_OUT case
-          op closedBlock @ false context closedTypeBlock if true return end
+          op closedBlock @ false false context closedTypeBlock if true return end
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap

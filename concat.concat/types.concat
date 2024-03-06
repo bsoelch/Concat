@@ -1020,6 +1020,17 @@ namespace: types
       UNLABELED return
     end
     labels? .data =:: labels
+    true =:: mut unlabled
+    0 while #dup labels .length < do
+      labels #over array.get id.LABEL_ID_NONE != if
+        false unlabled =
+        break
+      end
+      1 +
+    end #drop
+    unlabled if
+      UNLABELED return
+    end
     context [] .elementLabels list.asArray
       labels
       labelPtrEq @
