@@ -18,5 +18,5 @@ proc( -> ) =>: main
   
   i32 2 3 array new =:: mut matrix
   -14121 matrix @ 2 1 [] = ##  0 1  2 3  4 5
-  matrix i32 _ ptr cast 5 [] ..debug.print
+  matrix @ i32 _ ptr cast 5 [] ..debug.print
 end

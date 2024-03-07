@@ -330,29 +330,48 @@ namespace: types
           1023 return ## IEEE float-64
       end
   end
-  proc( Type : a Type : b TypeContext ptr : context -> Type ) =>: export commonIntType
+  proc( i32 : size i32 : precission -> Type bool ) =>: findNumberType
+    size 7 <= precission 7 <= & if
+      primitive.I8 false return
+    end
+    size 15 <= precission 15 <= & if
+      primitive.I16 false return
+    end
+    size 31 <= precission 31 <= & if
+      primitive.I32 false return
+    end
+    size 63 <= precission 63 <= & if
+      primitive.I64 false return
+    end
+    size 127 <= precission 24 <= & if
+      primitive.FLOAT32 false return
+    end
+    size 1023 <= precission 53 <= & if
+      primitive.FLOAT64 false return
+    end
+    Type .undefined true return
+  end
+  proc( Type : a Type : b TypeContext ptr : context -> Type bool ) =>: export commonIntType
     a context types.isInt ! b context types.isInt ! | if
-      Type .undefined return
+      Type .undefined true return
     end
     a context numberPrecision b context numberPrecision < if
-      b return
+      b false return
     else
-      a return
+      a false return
     end
   end
-  proc( Type : a Type : b TypeContext ptr : context -> Type ) =>: export commonNumberType
+  proc( Type : a Type : b TypeContext ptr : context -> Type bool ) =>: export commonNumberType
     a context types.isNumber ! b context types.isNumber ! | if
-      Type .undefined return
+      Type .undefined true return
     end
-    a context numberPrecision b context numberPrecision <=
-    a context numberSize b context numberSize <= & if
-      b return
-    end
-    a context numberPrecision b context numberPrecision >=
-    a context numberSize b context numberSize >= & if
-      a return
-    end
-    Type .undefined return
+    a context types.numberPrecision b context types.numberPrecision
+      ..over ..over < if ..swap end ..drop
+    =:: minPrecision
+    a context types.numberSize b context types.numberSize
+      ..over ..over < if ..swap end ..drop
+    =:: minSize
+    minSize minPrecision findNumberType return
   end
   ## ctypes
   namespace: ctype
@@ -1499,7 +1518,6 @@ namespace: types
       end
       1 +
     end ..drop
-    ## TODO check if combination of base and arguments already exists
     typeContext [] .generatedTypes
       ..dup .length GeneratedId cast =:: newId
       ## GeneratedType
@@ -1739,7 +1757,7 @@ namespace: types
       src context types.numberPrecision target context types.numberPrecision <=
       src context types.numberSize target context types.numberSize <= & return
     end
-    src context types.isPointer src context types.isArray | target context types.isPointer & if
+    src context types.isPointer target context types.isPointer & if
     src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
       src target false context sizeCompatible return
     end end
@@ -1776,7 +1794,7 @@ namespace: types
     src context types.isNumber target context types.isNumber & if
       true return
     end
-    src context types.isPointer src context types.isArray | target context types.isPointer & if
+    src context types.isPointer target context types.isPointer & if
     src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
       src target true context sizeCompatible if
         true return
@@ -1798,6 +1816,75 @@ namespace: types
       true return
     end
     false return
+  end
+  proc( Type : a Type : b TypeContext ptr mut : context -> Type bool ) =>: export mergeTypes
+    a b types.typeEquals if
+      a false return
+    end
+    ## merge named types to common content type
+    a .namedType ?? if
+      a context flatUnwrapNamed b context mergeTypes ! if
+        false return
+      else ..drop end
+    end
+    b .namedType ?? if
+      a b context flatUnwrapNamed context mergeTypes ! if
+        false return
+      else ..drop end
+    end
+    ## unwrap references
+    a context types.isReference if
+      a context getBaseType b context mergeTypes ! if
+        false return
+      else ..drop end
+    end
+    b context types.isReference if
+      a b context getBaseType context mergeTypes ! if
+        false return
+      else ..drop end
+    end
+    a context types.isNumber b context types.isNumber & if
+      a b context commonNumberType return
+    end
+    a context types.isPointer b context types.isPointer & if
+     a context types.getBaseType b context types.getBaseType types.typeEquals _if
+      a context types.isMutable b context types.isMutable & =:: mutable
+      a context types.getArraySize =:: aSizes
+      b context types.getArraySize =:: bSizes
+      a context types.isFixedSize b context types.isFixedSize &
+        aSizes .length bSizes .length == &
+      =:: mut fixedSize
+      aSizes .length bSizes .length < if aSizes .length else bSizes .length end =:: s
+      0 =:: mut commonPrefix
+      while commonPrefix s < do
+        aSizes commonPrefix array.get =:: aElt
+        bSizes commonPrefix array.get =:: bElt
+        aElt .sizeType bElt .sizeType != if
+          false fixedSize =
+          break
+        end
+        aElt .value bElt .value != if
+          false fixedSize =
+          break
+        end
+        commonPrefix 1 + commonPrefix =
+      end
+      ## newArrayType
+        a context types.getBaseType
+        true
+        aSizes commonPrefix array.head
+        fixedSize
+        mutable
+        context
+      newArrayType return
+    end
+    a context types.isUnion if b a context canAutoCast _if
+      a false return
+    end
+    b context types.isUnion if a b context canAutoCast _if
+      b false return
+    end
+    Type .undefined true return
   end
 end
 ## type context

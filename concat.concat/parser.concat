@@ -1968,13 +1968,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator+ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -1986,13 +1985,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator- ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2004,13 +2002,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator* ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2022,13 +2019,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator/ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2040,13 +2036,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonIntType ! if =:: t
             t a .val b .val interpreter.operator_unsigned/ ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2058,13 +2053,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType  ! if =:: t
             t a .val b .val interpreter.operator% ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2076,13 +2070,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonIntType  ! if =:: t
             t a .val b .val interpreter.operator_unsigned% ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2097,7 +2090,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           a .valueType b .valueType types.typeEquals if
             a .valueType
           else
-            a .valueType b .valueType typeContext types.commonIntType
+            a .valueType b .valueType typeContext types.commonIntType ..drop
           end =:: t
           t Type .undefined types.typeEquals ! if
             t a .val b .val interpreter.operator& ! if
@@ -2119,7 +2112,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           a .valueType b .valueType types.typeEquals if
             a .valueType
           else
-            a .valueType b .valueType typeContext types.commonIntType
+            a .valueType b .valueType typeContext types.commonIntType ..drop
           end =:: t
           t Type .undefined types.typeEquals ! if
             t a .val b .val interpreter.operator| ! if
@@ -2141,7 +2134,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           a .valueType b .valueType types.typeEquals if
             a .valueType
           else
-            a .valueType b .valueType typeContext types.commonIntType
+            a .valueType b .valueType typeContext types.commonIntType ..drop
           end =:: t
           t Type .undefined types.typeEquals ! if
             t a .val b .val interpreter.operator^ ! if
@@ -2160,13 +2153,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonIntType ! if =:: t
             t a .val b .val interpreter.operator<< ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2178,13 +2170,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonIntType ! if =:: t
             t a .val b .val interpreter.operator>> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2196,13 +2187,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonIntType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonIntType ! if =:: t
             t a .val b .val interpreter.operator_unsigned>> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2214,17 +2204,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType types.typeEquals if
-            a .valueType
-          else
-            a .valueType b .valueType typeContext types.commonNumberType
-          end =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.mergeTypes ! if =:: t
             t a .val b .val typeContext interpreter.operator== ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2236,17 +2221,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType types.typeEquals if
-            a .valueType
-          else
-            a .valueType b .valueType typeContext types.commonNumberType
-          end =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.mergeTypes  ! if =:: t
             t a .val b .val typeContext interpreter.operator!= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2258,13 +2238,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator< ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2276,13 +2255,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator<= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2294,13 +2272,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator>= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2312,13 +2289,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2330,13 +2306,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator_unsigned< ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2348,13 +2323,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator_unsigned<= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2366,13 +2340,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator_unsigned>= ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end
@@ -2384,13 +2357,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length 2 >= if
           state popConst =:: b
           state popConst =:: a
-          a .valueType b .valueType typeContext types.commonNumberType =:: t
-          t Type .undefined types.typeEquals ! if
+          a .valueType b .valueType typeContext types.commonNumberType ! if =:: t
             t a .val b .val interpreter.operator_unsigned> ! if
               IdentifierInfo optional.empty fileState [] .wordStart Constant new state pushConst
               return
             end ..drop.2
-          end
+          else ..drop end
           a state pushConst
           b state pushConst
         end

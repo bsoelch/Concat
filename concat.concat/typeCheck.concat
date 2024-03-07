@@ -446,16 +446,14 @@ proc( TypeCheckState ptr mut : state -> IfBlockData ptr mut optional ) =>: findE
 end
 
 proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -> Type ) =>: checkBinOpNumber
-  a b context types.commonNumberType
-    ..dup Type .undefined types.typeEquals ! if
+  a b context types.commonNumberType ! if
       ..dup inTypes 0 [] =
       ..dup inTypes 1 [] =
     end
   return
 end
 proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -> Type ) =>: checkBinOpInt
-  a b context types.commonIntType
-    ..dup Type .undefined types.typeEquals ! if
+  a b context types.commonIntType ! if
       ..dup inTypes 0 [] =
       ..dup inTypes 1 [] =
     end
