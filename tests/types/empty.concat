@@ -6,7 +6,7 @@ end
 proc( i32 i32 -> i32 ) =>: f1
   +
 end
-proc( i32 ( ) -> ( ) ) =>: f2 #swap #drop end
+proc( i32 ( ) -> ( ) ) =>: f2 ..swap ..drop end
 
 struct( ( ) : mut empty i32 : nonEmpty ) =:: testStruct 
 
@@ -20,5 +20,5 @@ proc( -> ) =>: main
   5 f1 @ 3 test ..debug.print
   testStruct : mut aStruct
   ( ) : X
-  X aStruct @ assignEmpty #drop:2
+  X aStruct @ assignEmpty ..drop.2
 end

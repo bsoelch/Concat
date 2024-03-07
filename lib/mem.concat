@@ -115,9 +115,9 @@ namespace: mem
   end
   #template type : T #end
   proc( T _ ptr mut : data i64 : count T : elt -> ) =>: export fill
-    0 while #dup count < do
-      elt data #over:2 [] =
+    0 while ..dup count < do
+      elt data ..over.2 [] =
       1 +
-    end #drop
+    end ..drop
   end
 end

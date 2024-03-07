@@ -15,9 +15,9 @@ proc( -> ) =>: main
   dynamicArray mem.free
   dynamicArray2 0 [] ..debug.print
   dynamicArray2 1 [] ..debug.print
-  dynamicArray2 2 + dynamicArray2 16 mem.move #drop
-  dynamicArray2 2 + dynamicArray2 16 mem.move #drop
-  dynamicArray2 dynamicArray2 1 + 16 mem.move #drop
+  dynamicArray2 2 + dynamicArray2 16 mem.move ..drop
+  dynamicArray2 2 + dynamicArray2 16 mem.move ..drop
+  dynamicArray2 dynamicArray2 1 + 16 mem.move ..drop
   dynamicArray2 0 [] ..debug.print
   dynamicArray2 1 [] ..debug.print
   dynamicArray2 2 [] ..debug.print
@@ -29,8 +29,8 @@ proc( -> ) =>: main
   
   i32 16 array new =:: mut a
   a @ 10 42 mem.fill
-  0 while #dup a ..length < do
-    a @ #over [] ..debug.print
+  0 while ..dup a ..length < do
+    a @ ..over [] ..debug.print
     1 +
-  end #drop
+  end ..drop
 end

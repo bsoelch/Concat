@@ -51,13 +51,13 @@ namespace: interpreter
     opType .primitiveType switch
       I8 I16 I32 I64 case
         a constAsInt =:: e1
-        -_ ConstValue .int new opType #swap e1 return
+        -_ ConstValue .int new opType ..swap e1 return
       FLOAT32 case
         a constAsF32 =:: e1
-        -_ ConstValue .Float new opType #swap e1 return
+        -_ ConstValue .Float new opType ..swap e1 return
       FLOAT64 case
         a constAsF64 =:: e1
-        -_ ConstValue .Float new opType #swap e1 return
+        -_ ConstValue .Float new opType ..swap e1 return
       BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -69,7 +69,7 @@ namespace: interpreter
     opType .primitiveType switch
       BOOL case
         a constAsBool =:: e1
-        ! ConstValue .boolean new opType #swap e1 return
+        ! ConstValue .boolean new opType ..swap e1 return
       I8 I16 I32 I64 FLOAT32 FLOAT64 TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -81,16 +81,16 @@ namespace: interpreter
     opType .primitiveType switch
       I8 case
         a constAsInt =:: e1 i8 cast
-        ~ ConstValue .int new opType #swap e1 return
+        ~ ConstValue .int new opType ..swap e1 return
       I16 case
         a constAsInt =:: e1 i16 cast
-        ~ ConstValue .int new opType #swap e1 return
+        ~ ConstValue .int new opType ..swap e1 return
       I32 case
         a constAsInt =:: e1 i32 cast
-        ~ ConstValue .int new opType #swap e1 return
+        ~ ConstValue .int new opType ..swap e1 return
       I64 case
         a constAsInt =:: e1
-        ~ ConstValue .int new opType #swap e1 return
+        ~ ConstValue .int new opType ..swap e1 return
       BOOL FLOAT32 FLOAT64 TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -105,15 +105,15 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        + ConstValue .int new opType #swap e1 e2 | return
+        + ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        + ConstValue .Float new opType #swap e1 e2 | return
+        + ConstValue .Float new opType ..swap e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        + ConstValue .Float new opType #swap e1 e2 | return
+        + ConstValue .Float new opType ..swap e1 e2 | return
       BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -126,15 +126,15 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        - ConstValue .int new opType #swap e1 e2 | return
+        - ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        - ConstValue .Float new opType #swap e1 e2 | return
+        - ConstValue .Float new opType ..swap e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        - ConstValue .Float new opType #swap e1 e2 | return
+        - ConstValue .Float new opType ..swap e1 e2 | return
       BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -147,15 +147,15 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        * ConstValue .int new opType #swap e1 e2 | return
+        * ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        * ConstValue .Float new opType #swap e1 e2 | return
+        * ConstValue .Float new opType ..swap e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        * ConstValue .Float new opType #swap e1 e2 | return
+        * ConstValue .Float new opType ..swap e1 e2 | return
       BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -168,15 +168,15 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        / ConstValue .int new opType #swap e1 e2 | return
+        / ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        / ConstValue .Float new opType #swap e1 e2 | return
+        / ConstValue .Float new opType ..swap e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        / ConstValue .Float new opType #swap e1 e2 | return
+        / ConstValue .Float new opType ..swap e1 e2 | return
       BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -189,19 +189,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 0xff &
         b constAsInt =:: e2 0xff &
-        ..udiv ConstValue .int new opType #swap e1 e2 | return
+        ..udiv ConstValue .int new opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 0xffff &
         b constAsInt =:: e2 0xffff &
-        ..udiv ConstValue .int new opType #swap e1 e2 | return
+        ..udiv ConstValue .int new opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 0xffff_ffff &
         b constAsInt =:: e2 0xffff_ffff &
-        ..udiv ConstValue .int new opType #swap e1 e2 | return
+        ..udiv ConstValue .int new opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ..udiv ConstValue .int new opType #swap e1 e2 | return
+        ..udiv ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -214,15 +214,15 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        % ConstValue .int new opType #swap e1 e2 | return
+        % ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        % ConstValue .Float new opType #swap e1 e2 | return ##XXX? float32 constants
+        % ConstValue .Float new opType ..swap e1 e2 | return ##XXX? float32 constants
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        % ConstValue .Float new opType #swap e1 e2 | return
+        % ConstValue .Float new opType ..swap e1 e2 | return
       BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -235,19 +235,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 0xff &
         b constAsInt =:: e2 0xff &
-        ..umod ConstValue .int new opType #swap e1 e2 | return
+        ..umod ConstValue .int new opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 0xffff &
         b constAsInt =:: e2 0xffff &
-        ..umod ConstValue .int new opType #swap e1 e2 | return
+        ..umod ConstValue .int new opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 0xffff_ffff &
         b constAsInt =:: e2 0xffff_ffff &
-        ..umod ConstValue .int new opType #swap e1 e2 | return
+        ..umod ConstValue .int new opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ..umod ConstValue .int new opType #swap e1 e2 | return
+        ..umod ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -260,11 +260,11 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        & ConstValue .int new opType #swap e1 e2 | return
+        & ConstValue .int new opType ..swap e1 e2 | return
       BOOL case
         a constAsBool =:: e1
         b constAsBool =:: e2
-        & ConstValue .boolean new opType #swap e1 e2 | return
+        & ConstValue .boolean new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -277,11 +277,11 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        | ConstValue .int new opType #swap e1 e2 | return
+        | ConstValue .int new opType ..swap e1 e2 | return
       BOOL case
         a constAsBool =:: e1
         b constAsBool =:: e2
-        | ConstValue .boolean new opType #swap e1 e2 | return
+        | ConstValue .boolean new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -294,11 +294,11 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ^ ConstValue .int new opType #swap e1 e2 | return
+        ^ ConstValue .int new opType ..swap e1 e2 | return
       BOOL case
         a constAsBool =:: e1
         b constAsBool =:: e2
-        ^ ConstValue .boolean new opType #swap e1 e2 | return
+        ^ ConstValue .boolean new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -311,7 +311,7 @@ namespace: interpreter
       I8 I16 I32 I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        << ConstValue .int new opType #swap e1 e2 | return
+        << ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -324,19 +324,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 i8 cast
         b constAsInt =:: e2 i8 cast
-        >> ConstValue .int new opType #swap e1 e2 | return
+        >> ConstValue .int new opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 i16 cast
         b constAsInt =:: e2 i16 cast
-        >> ConstValue .int new opType #swap e1 e2 | return
+        >> ConstValue .int new opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 i32 cast
         b constAsInt =:: e2 i32 cast
-        >> ConstValue .int new opType #swap e1 e2 | return
+        >> ConstValue .int new opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        >> ConstValue .int new opType #swap e1 e2 | return
+        >> ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -349,19 +349,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 0xff &
         b constAsInt =:: e2 i8 cast
-        ..lshr ConstValue .int new opType #swap e1 e2 | return
+        ..lshr ConstValue .int new opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 0xffff &
         b constAsInt =:: e2 i16 cast
-        ..lshr ConstValue .int new opType #swap e1 e2 | return
+        ..lshr ConstValue .int new opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 0xffff_ffff &
         b constAsInt =:: e2 i32 cast
-        ..lshr ConstValue .int new opType #swap e1 e2 | return
+        ..lshr ConstValue .int new opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ..lshr ConstValue .int new opType #swap e1 e2 | return
+        ..lshr ConstValue .int new opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end
@@ -370,7 +370,7 @@ namespace: interpreter
     opType tc types.isEnum if
       a constAsEnumLabel =:: e1
       b constAsEnumLabel =:: e2
-      == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+      == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
     end
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
@@ -379,42 +379,42 @@ namespace: interpreter
       BOOL case
         a constAsBool =:: e1
         b constAsBool =:: e2
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I8 case
         a constAsInt =:: e1 i8 cast
         b constAsInt =:: e2 i8 cast
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 i16 cast
         b constAsInt =:: e2 i16 cast
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 i32 cast
         b constAsInt =:: e2 i32 cast
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        == ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        == ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       TYPE case
         a constAsType =:: e1
         b constAsType =:: e2
-        types.typeEquals ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        types.typeEquals ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
     end
   end
   proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc -> Type ConstValue bool ) =>: export operator!=
     opType tc types.isEnum if
       a constAsEnumLabel =:: e1
       b constAsEnumLabel =:: e2
-      != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+      != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
     end
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
       Type .undefined ConstValue .none true return
@@ -423,35 +423,35 @@ namespace: interpreter
       BOOL case
         a constAsBool =:: e1
         b constAsBool =:: e2
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I8 case
         a constAsInt =:: e1 i8 cast
         b constAsInt =:: e2 i8 cast
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 i16 cast
         b constAsInt =:: e2 i16 cast
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 i32 cast
         b constAsInt =:: e2 i32 cast
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1
         b constAsF32 =:: e2
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1
         b constAsF64 =:: e2
-        != ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        != ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
       TYPE case
         a constAsType =:: e1
         b constAsType =:: e2
-        types.typeEquals ! ConstValue .boolean new types.primitive.BOOL #swap e1 e2 | return
+        types.typeEquals ! ConstValue .boolean new types.primitive.BOOL ..swap e1 e2 | return
     end
   end
   proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =>: operator_compare
@@ -488,28 +488,28 @@ namespace: interpreter
     end
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator<
-    opType a b operator_compare if #drop
+    opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 < ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 < ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator<=
-    opType a b operator_compare if #drop
+    opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 <= ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 <= ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator>
-    opType a b operator_compare if #drop
+    opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 > ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 > ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator>=
-    opType a b operator_compare if #drop
+    opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 >= ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 >= ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
 
   proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =>: operator_unsigned_compare
@@ -538,28 +538,28 @@ namespace: interpreter
     end
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator_unsigned<
-    opType a b operator_unsigned_compare if #drop
+    opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 < ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 < ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator_unsigned<=
-    opType a b operator_unsigned_compare if #drop
+    opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 <= ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 <= ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator_unsigned>
-    opType a b operator_unsigned_compare if #drop
+    opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 > ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 > ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export operator_unsigned>=
-    opType a b operator_unsigned_compare if #drop
+    opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 >= ConstValue .boolean new types.primitive.BOOL #swap false return
+    0i8 >= ConstValue .boolean new types.primitive.BOOL ..swap false return
   end
 
 end

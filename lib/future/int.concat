@@ -5,17 +5,17 @@ import stringIO ## debug
 
 namespace: i64
   proc( i64 i64 -> i64 ) =>: max
-    #over #over > if
-      #drop return
+    ..over ..over > if
+      ..drop return
     else
-      #swap #drop return
+      ..swap ..drop return
     end
   end
   proc( i64 i64 -> i64 ) =>: min
-    #over #over < if
-      #drop return
+    ..over ..over < if
+      ..drop return
     else
-      #swap #drop return
+      ..swap ..drop return
     end
   end
 end
@@ -47,14 +47,14 @@ namespace: int
     i 0 < if
       ## int
         i -_
-        #dup 32 ..lshr 0 == if 1 else 2 end
+        ..dup 32 ..lshr 0 == if 1 else 2 end
         0
         -1i8
       int new
     else i 0 > _if
       ## int
         i
-        #dup 32 ..lshr 0 == if 1 else 2 end
+        ..dup 32 ..lshr 0 == if 1 else 2 end
         0
         1i8
       int new
@@ -66,7 +66,7 @@ namespace: int
     i 0 != if
       ## int
         i
-        #dup 32 ..lshr 0 == if 1 else 2 end
+        ..dup 32 ..lshr 0 == if 1 else 2 end
         0
         sgn
       int new
@@ -106,7 +106,7 @@ namespace: int
   } =:: bitsPerDigit
   bitsPerDigit ..length number.MAX_BASE 1 + == "bitsPerDigit.length==maxBase+1" ..assert 
   proc( i64 : auto k i8 k ptr : data -> int ) =>: export fromStr ## XXX better name
-    data string.wrap 0 fromString #drop return ## TODO error handling
+    data string.wrap 0 fromString ..drop return ## TODO error handling
   end
   #+
     creates an int from a string
@@ -121,39 +121,39 @@ namespace: int
       ZERO ParserError .INVALID_BASE return
     end
     str
-      #dup .length 0 == if
-        #drop ZERO ParserError .EMPTY return
+      ..dup .length 0 == if
+        ..drop ZERO ParserError .EMPTY return
       end
-      #dup 0 string.charAt '-' == if
+      ..dup 0 string.charAt '-' == if
         -1i8 sign =
         1 string.tail
-      else #dup 0 string.charAt '+' == _if
+      else ..dup 0 string.charAt '+' == _if
         1 string.tail
       end
-      #dup .length 0 == if
-        #drop ZERO ParserError .EMPTY return
+      ..dup .length 0 == if
+        ..drop ZERO ParserError .EMPTY return
       end
       mBase 0 == if
         resolveBase mBase =
       end
-      #dup .length sb.create =:: mut mStr
-      0 while #dup #over:2 .length < do
-        #over #over string.charAt
-          #dup '_' == #over '\'' == | if #drop
+      ..dup .length sb.create =:: mut mStr
+      0 while ..dup ..over.2 .length < do
+        ..over ..over string.charAt
+          ..dup '_' == ..over '\'' == | if ..drop
             1 + continue
           end
-        mStr #swap sb.appendC mStr =
+        mStr ..swap sb.appendC mStr =
         1 +
-      end #drop
-    #drop
+      end ..drop
+    ..drop
     mStr .length 0 == if
-      mStr sb.free #drop
+      mStr sb.free ..drop
       ZERO ParserError .EMPTY return
     end
     mStr .length bitsPerDigit @ mBase [] 10 ..lshr * =:: nBits
     nBits 64 <= if
-      mStr sb.asStr mBase tryParseUInt #swap sign uwrap #swap
-        mStr sb.free #drop
+      mStr sb.asStr mBase tryParseUInt ..swap sign uwrap ..swap
+        mStr sb.free ..drop
       return
     end
     nBits 32 / 1 + =:: cap
@@ -165,10 +165,10 @@ namespace: int
     1 i64 =: mut size
     firstBlock 0 > if
       mStr sb.asStr firstBlock string.head mBase tryParseUInt
-        #dup .NONE ?? ! if #swap #drop
-          mStr sb.free #drop
-          ZERO #swap return
-        end #drop
+        ..dup .NONE ?? ! if ..swap ..drop
+          mStr sb.free ..drop
+          ZERO ..swap return
+        end ..drop
       i32 cast data 0 [] =
     else
       0 size =
@@ -187,16 +187,16 @@ namespace: int
       ## addU32
         data size array.create
         mStr sb.asStr offset blockSize string.slice mBase tryParseUInt
-          #dup .NONE ?? ! if #swap #drop #swap #drop
-            mStr sb.free #drop
-            ZERO #swap return
-          end #drop
+          ..dup .NONE ?? ! if ..swap ..drop ..swap ..drop
+            mStr sb.free ..drop
+            ZERO ..swap return
+          end ..drop
         i32 cast
         data
       addU32 size =
       offset blockSize + offset =
     end
-    mStr sb.free #drop
+    mStr sb.free ..drop
     data size cap sign int new ParserError .NONE return
   end
   proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn -> int ) =>: export fromArray
@@ -204,7 +204,7 @@ namespace: int
   end
   proc( i32 _ ptr :  #:const data i64 : length i8 : sgn -> int ) =>: export fromPtr
     length i32 mem.alloc =:: mData
-    mData data length mem.copy #drop
+    mData data length mem.copy ..drop
     mData length length sgn int new return
   end
   proc( i32 : auto k i32 k ptr :  #:const data i8 : sgn -> int ) =>: export fromArray_BE
@@ -213,10 +213,10 @@ namespace: int
   proc( i32 _ ptr :  #:const data i64 : length i8 : sgn -> int ) =>: export fromPtr_BE
     length i32 mem.alloc =:: mData
     length 1 - =:: maxIndex
-    0 while #dup length < do ## reverse entries
-      data #over [] mData maxIndex #over:3 - [] =
+    0 while ..dup length < do ## reverse entries
+      data ..over [] mData maxIndex ..over.3 - [] =
       1 +
-    end #drop
+    end ..drop
     mData length length sgn int new return
   end
   proc( int : #:const src -> int ) =>: export #:alloc:int copy
@@ -224,7 +224,7 @@ namespace: int
       src .data .i src .sign uwrap return
     end
     src .size i32 mem.alloc =:: newData
-    newData src .data .p src .size mem.copy #drop
+    newData src .data .p src .size mem.copy ..drop
     newData src .size src .cap src .sign int new return
   end
   proc( int : #:const src int : #:consume target -> int ) =>: #:alloc:int copyTo
@@ -246,7 +246,7 @@ namespace: int
       src .size i32 mem.alloc newData =
       src .size newCap =
     end
-    newData src .data .p src .size mem.copy #drop
+    newData src .data .p src .size mem.copy ..drop
     newData src .size src .cap src .sign int new return
   end
   proc( int : #:const src i32 _ ptr mut : target -> ) =>: copyData
@@ -257,11 +257,11 @@ namespace: int
       end
       return
     end
-    target src .data .p src .size mem.copy #drop
+    target src .data .p src .size mem.copy ..drop
   end
 
   proc( int -> ) =>: export #:free:int free
-    #dup .cap 0 == if #drop
+    ..dup .cap 0 == if ..drop
       return
     end
     .data .p mem.free
@@ -276,52 +276,52 @@ namespace: int
         i .data .i sb.appendUHex return
       end
       true =:: mut first
-      i .size 1 - while #dup 0 >= do
-        #swap
-          i .data .p #over:2 [] u32.MASK & =:: D
+      i .size 1 - while ..dup 0 >= do
+        ..swap
+          i .data .p ..over.2 [] u32.MASK & =:: D
           first ! if
             '\'' sb.appendC
             D 0 == if
               "00000000" sb.appendS
-              #swap 1 - continue
+              ..swap 1 - continue
             end
-            0xf000_0000 while #dup D & 0 == do
-              #swap
+            0xf000_0000 while ..dup D & 0 == do
+              ..swap
                 '0' sb.appendC
-              #swap 4 ..lshr
-            end #drop
+              ..swap 4 ..lshr
+            end ..drop
           end
           D sb.appendUHex
-        #swap 1 -
+        ..swap 1 -
         false first =
-      end #drop
+      end ..drop
     return
   end
   proc( i32 arrayView : data -> ) =>: dumpIntData
     17 data .length * sb.create
       true =:: mut first
-      data .length 1 - while #dup 0 >= do
-        #swap
-          data #over:2 array.get u32.MASK & =:: D
+      data .length 1 - while ..dup 0 >= do
+        ..swap
+          data ..over.2 array.get u32.MASK & =:: D
           first ! if
             '\'' sb.appendC
             D 0 == if
               "00000000" sb.appendS
-              #swap 1 - continue
+              ..swap 1 - continue
             end
-            0xf000_0000 while #dup D & 0 == do
-              #swap
+            0xf000_0000 while ..dup D & 0 == do
+              ..swap
                 '0' sb.appendC
-              #swap 4 ..lshr
-            end #drop
+              ..swap 4 ..lshr
+            end ..drop
           end
           D sb.appendUHex
-        #swap 1 -
+        ..swap 1 -
         false first =
-      end #drop
+      end ..drop
       '\n' sb.appendC
-      io.stdOut #over io.fputSb #drop
-    sb.free #drop
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
   end
 
   ## TODO sign, bit-count ...
@@ -333,16 +333,16 @@ namespace: int
         -1 return
       end
     end
-    a .length 1 - while #dup 0 >= do
-      a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast - ## no overflow (values cast to i64)
-      #dup 0 != if #swap #drop
+    a .length 1 - while ..dup 0 >= do
+      a ..over array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast - ## no overflow (values cast to i64)
+      ..dup 0 != if ..swap ..drop
         0 < if
           -1 return
         end
         1 return
-      end #drop
+      end ..drop
       1 -
-    end #drop
+    end ..drop
     0 return
   end
   proc( int : #:const a int : #:const b -> i32 ) =>: compareAbs
@@ -383,24 +383,24 @@ namespace: int
 
   ## increments number, assumes, that incremented number first in target
   proc( i32 _ ptr mut : target i64 : len -> bool ) =>: incrementInternal
-    0 while #dup len < do
-      target #over [] 1 + target #over:2 [] =
-      target #over [] 0 != if #drop
+    0 while ..dup len < do
+      target ..over [] 1 + target ..over.2 [] =
+      target ..over [] 0 != if ..drop
         false return
       end
       1 +
-    end #drop
+    end ..drop
     true return
   end
   ## decrements number, assumes that the number is greater than 0
   proc( i32 _ ptr mut : target i64 : len -> bool ) =>: decrementInternal
-    0 while #dup len < do
-      target #over [] 1 - target #over:2 [] =
-      target #over [] -1 != if #drop
+    0 while ..dup len < do
+      target ..over [] 1 - target ..over.2 [] =
+      target ..over [] -1 != if ..drop
         false return
       end
       1 +
-    end #drop
+    end ..drop
     true return
   end
 
@@ -491,8 +491,8 @@ namespace: int
       end
     end
     resLen 1 - ## length -> index
-      while #dup 0 > do ## remove leading zeros
-        target #over [] 0 != if
+      while ..dup 0 > do ## remove leading zeros
+        target ..over [] 0 != if
           break
         end
         1 -
@@ -519,8 +519,8 @@ namespace: int
       end
     end
     resLen 1 - ## length -> index
-      while #dup 0 > do ## remove leading zeros
-        target #over [] 0 != if
+      while ..dup 0 > do ## remove leading zeros
+        target ..over [] 0 != if
           break
         end
         1 -
@@ -547,8 +547,8 @@ namespace: int
       end
     end
     resLen 1 - ## length -> index
-      while #dup 0 > do ## remove leading zeros
-        target #over [] 0 != if
+      while ..dup 0 > do ## remove leading zeros
+        target ..over [] 0 != if
           break
         end
         1 -
@@ -661,23 +661,23 @@ namespace: int
       0 return
     end
     bitShift 0 == if
-      target offset + a .data a .length mem.move #drop
-      target offset mem.clear #drop
+      target offset + a .data a .length mem.move ..drop
+      target offset mem.clear ..drop
       newLen return
     end
     a a .length 1 - array.get u32.MASK & i64 cast bitShift << i64 =: mut buffer
     buffer 32 ..lshr i32 cast
-      #dup 0 != =:: extend
-    extend if target newLen [] = else #drop end
+      ..dup 0 != =:: extend
+    extend if target newLen [] = else ..drop end
     buffer 32 << buffer =
-    a .length 1 - while #dup 0 > do
-      a #over 1 - array.get u32.MASK & i64 cast bitShift << buffer | buffer =
-      buffer 32 ..lshr i32 cast target #over:2 offset + [] =
+    a .length 1 - while ..dup 0 > do
+      a ..over 1 - array.get u32.MASK & i64 cast bitShift << buffer | buffer =
+      buffer 32 ..lshr i32 cast target ..over.2 offset + [] =
       buffer 32 << buffer =
       1 -
-    end #drop
+    end ..drop
     buffer 32 ..lshr i32 cast target offset + [] =
-    target offset mem.clear #drop
+    target offset mem.clear ..drop
     extend if
       newLen 1 + return
     end
@@ -691,19 +691,19 @@ namespace: int
     a .length offset - =:: mut newLen
     false =:: mut needIncrement
     isNegative if
-      0 while #dup offset < do
-        a #over array.get 0 != if
+      0 while ..dup offset < do
+        a ..over array.get 0 != if
           true needIncrement =
           break
         end
         1 +
-      end #drop
+      end ..drop
     end
     newLen 0 <= if
       0 return
     end
     bitShift 0 == if
-      target a .data offset + newLen mem.move #drop
+      target a .data offset + newLen mem.move ..drop
       needIncrement if
         target newLen incrementInternal if
           1 target newLen [] =
@@ -718,12 +718,12 @@ namespace: int
       a offset array.get reverseShift << 0 != needIncrement | needIncrement =
     end
     a offset array.get u32.MASK & i64 cast bitShift ..lshr =:: mut buffer
-    1 while #dup newLen < do
-      a #over offset + array.get u32.MASK & i64 cast reverseShift << buffer | buffer =
-      buffer u32.MASK & i32 cast target #over:2 1 - [] =
+    1 while ..dup newLen < do
+      a ..over offset + array.get u32.MASK & i64 cast reverseShift << buffer | buffer =
+      buffer u32.MASK & i32 cast target ..over.2 1 - [] =
       buffer 32 ..lshr buffer =
       1 +
-    end #drop
+    end ..drop
     buffer 0 != if
       buffer u32.MASK & i32 cast target newLen 1 - [] =
     else
@@ -831,15 +831,15 @@ namespace: int
   #+assumes, target is large enough to hold the result of the addition +#
   proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =>: addU32
     val i64 =: mut carry
-    0 while #dup a .length < do
+    0 while ..dup a .length < do
       carry 0 == if
         break
       end
-      a #over array.get u32.MASK & i64 cast carry + carry =
-      carry u32.MASK & i32 cast target #over:2 [] =
+      a ..over array.get u32.MASK & i64 cast carry + carry =
+      carry u32.MASK & i32 cast target ..over.2 [] =
       carry 32 ..lshr carry =
       1 +
-    end #drop
+    end ..drop
     carry 0 == if
       a .length return
     end
@@ -851,26 +851,26 @@ namespace: int
     a .length b .length i64.min =:: commonPart
     0 i64 =: mut carry
     0
-      while #dup commonPart < do
-        a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast + carry + =:: tmp
-        tmp u32.MASK & i32 cast target #over:2 [] =
+      while ..dup commonPart < do
+        a ..over array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast + carry + =:: tmp
+        tmp u32.MASK & i32 cast target ..over.2 [] =
         tmp 32 ..lshr carry =
         1 +
       end
-      while #dup a .length < do
-        a #over array.get u32.MASK & i64 cast carry + =:: tmp
-        tmp u32.MASK & i32 cast target #over:2 [] =
+      while ..dup a .length < do
+        a ..over array.get u32.MASK & i64 cast carry + =:: tmp
+        tmp u32.MASK & i32 cast target ..over.2 [] =
         tmp 32 ..lshr carry =
         1 +
       end
-      while #dup b .length < do
-        b #over array.get u32.MASK & i64 cast carry + =:: tmp
-        tmp u32.MASK & i32 cast target #over:2 [] =
+      while ..dup b .length < do
+        b ..over array.get u32.MASK & i64 cast carry + =:: tmp
+        tmp u32.MASK & i32 cast target ..over.2 [] =
         tmp 32 ..lshr carry =
         1 +
       end
       carry 0 != if
-        carry i32 cast target #over:2 [] =
+        carry i32 cast target ..over.2 [] =
         1 +
       end
     return
@@ -937,22 +937,22 @@ namespace: int
     ## a .length b .length >= assert XXX assertions
     0 i64 =: mut carry
     0
-      while #dup b .length < do
-        a #over array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast - carry + =:: tmp
-        tmp u32.MASK & i32 cast target #over:2 [] =
+      while ..dup b .length < do
+        a ..over array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast - carry + =:: tmp
+        tmp u32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >> carry = ## keep sign
         1 +
       end
-      while #dup a .length < do
-        a #over array.get u32.MASK & i64 cast carry + =:: tmp
-        tmp u32.MASK & i32 cast target #over:2 [] =
+      while ..dup a .length < do
+        a ..over array.get u32.MASK & i64 cast carry + =:: tmp
+        tmp u32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >> carry = ## keep sign
         1 +
       end
       ## carry 0 == assert
       1 - ## length -> index
-      while #dup 0 > do ## remove leading zeros
-        target #over [] 0 != if
+      while ..dup 0 > do ## remove leading zeros
+        target ..over [] 0 != if
           break
         end
         1 -
@@ -967,7 +967,7 @@ namespace: int
     end
     a .sign 0 == if
       b a copyTo
-        #dup .sign -_ #over .sign =
+        ..dup .sign -_ ..over .sign =
       return
     end
     a .sign b .sign != if
@@ -1027,12 +1027,12 @@ namespace: int
   proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =>: multU32
     val u32.MASK &  i64 cast =:: scale
     0 i64 =: mut carry
-    0 while #dup a .length < do
-      a #over array.get u32.MASK & i64 cast scale * carry + carry = ## i32*i32+i32 fits in i64
-      carry u32.MASK & i32 cast target #over:2 [] =
+    0 while ..dup a .length < do
+      a ..over array.get u32.MASK & i64 cast scale * carry + carry = ## i32*i32+i32 fits in i64
+      carry u32.MASK & i32 cast target ..over.2 [] =
       carry 32 ..lshr carry =
       1 +
-    end #drop
+    end ..drop
     carry 0 == if
       a .length return
     end
@@ -1114,7 +1114,7 @@ namespace: int
       s 1 - s =
     end
     a .length 2 * 1 -
-      target #over [] 0 == if
+      target ..over [] 0 == if
         1 -
       end
     1 + ## length == maxIndex + 1
@@ -1134,11 +1134,11 @@ namespace: int
     ## b .data target != assert
     i64 : buffer
     i64 : i
-    a .length 1 - while #dup 0 >= do
-      b .length 1 - while #dup 0 >= do
-        a #over:2 array.get u32.MASK & i64 cast b #over:2 array.get u32.MASK & i64 cast * buffer =
-        #over #over + i =
-        #dup 0 != #over:2 a .length 1 - != & if
+    a .length 1 - while ..dup 0 >= do
+      b .length 1 - while ..dup 0 >= do
+        a ..over.2 array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast * buffer =
+        ..over ..over + i =
+        ..dup 0 != ..over.2 a .length 1 - != & if
           buffer target i [] u32.MASK & i64 cast + buffer = ## i32*i32+i32 fits in i64
         end
         buffer u32.MASK & i32 cast target i [] =
@@ -1151,11 +1151,11 @@ namespace: int
           buffer 32 ..lshr buffer =
         end
         1 -
-      end #drop
+      end ..drop
       1 -
-    end #drop
+    end ..drop
     a .length b .length + 1 -
-      target #over [] 0 == if
+      target ..over [] 0 == if
         1 -
       end
       1 + ## length == maxIndex + 1
@@ -1187,7 +1187,7 @@ namespace: int
     target a12_len array.create tmp karatsubaSquare =:: mut tmp_len
     ## a0*a0 | a1*a1 , (a0+a1)(a0+a1)
     a0 target karatsubaSquare =:: a0_len
-    target a0_len + B 2 * a0_len - mem.clear #drop ## pad with zeros
+    target a0_len + B 2 * a0_len - mem.clear ..drop ## pad with zeros
     a1 target B 2 * + karatsubaSquare =:: a1_len
     ## a0*a0 | a1*a1 , (a0+a1)(a0+a1)-a0*a0-a1*a1
     tmp tmp_len array.create target a0_len array.create tmp subtInternal tmp_len =
@@ -1207,7 +1207,7 @@ namespace: int
     ## a0*b
     a0 b target karatsubaMultiply =:: a0b_len
     a0b_len B <= if ## numbers don't intersect
-      target a0b_len + B a0b_len - mem.clear #drop ## pad with zeros
+      target a0b_len + B a0b_len - mem.clear ..drop ## pad with zeros
       ## a0*b | a1*b
       a1 b target B + karatsubaMultiply B + return
     end
@@ -1244,7 +1244,7 @@ namespace: int
     target a12_len array.create target a12_len + b12_len array.create tmp karatsubaMultiply =:: mut tmp_len
     ## a0*b0 | a1*b1 , (a0+a1)(b0+b1)
     a0 b0 target karatsubaMultiply =:: a0b0_len
-    target a0b0_len + B 2 * a0b0_len - mem.clear #drop ## pad with zeros
+    target a0b0_len + B 2 * a0b0_len - mem.clear ..drop ## pad with zeros
     a1 b1 target B 2 * + karatsubaMultiply =:: a1b1_len
     ## a0*b0 | a1*b1 , (a0+a1)(b0+b1)-a0*b0-a1*b1
     tmp tmp_len array.create target a0b0_len array.create tmp subtInternal tmp_len =
@@ -1332,15 +1332,15 @@ namespace: int
     val 1 == if 0 return end
     val u32.MASK &  i64 cast =:: div
     0 i64 =: mut carry
-    a .length 1 - while #dup 0 >= do
+    a .length 1 - while ..dup 0 >= do
       carry 32 << carry =
-      a #over array.get u32.MASK & i64 cast carry + carry =
+      a ..over array.get u32.MASK & i64 cast carry + carry =
       computeDivision if
-        carry div / u32.MASK & i32 cast target #over:2 [] =
+        carry div / u32.MASK & i32 cast target ..over.2 [] =
       end
       carry div % carry =
       1 -
-    end #drop
+    end ..drop
     computeDivision if
       a .length
         target a .length 1 - [] 0 == if
@@ -1382,9 +1382,9 @@ namespace: int
     while aSize [] b .length >= do
       aSize [] 2 -
         ## take highest two digits
-        a #over [] u32.MASK & i64 cast hiA =
-        a #over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
-      #drop
+        a ..over [] u32.MASK & i64 cast hiA =
+        a ..over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
+      ..drop
       hiA div ..udiv shift ..lshr u32.MASK & i32 cast f =
       b f buff multU32 buffSize =
       computeDivision if
@@ -1412,9 +1412,9 @@ namespace: int
       offset 0 == if break end
       aSize [] 2 -
         ## take highest two digits
-        a #over [] u32.MASK & i64 cast hiA =
-        a #over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
-      #drop
+        a ..over [] u32.MASK & i64 cast hiA =
+        a ..over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
+      ..drop
       hiA hiB u32.MASK & i64 cast 1 + ..udiv u32.MASK & i32 cast f = ## XXX? use low bits of first division to calculate better approximation [multiply than shift, store low bits in carry]
       f carry =
       b f buff multU32 buffSize =
@@ -1511,7 +1511,7 @@ namespace: int
   end
   ## consumes a, keeps b unchanged
   proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int divideBy
-    a b true false divideRemConsumeInternal #swap free ## remainder
+    a b true false divideRemConsumeInternal ..swap free ## remainder
   end
   ## consumes a, keeps b unchanged
   proc( int : #:consume a int : #:const b -> int ) =>: export #:alloc:int remainderBy
@@ -1552,13 +1552,13 @@ namespace: int
     1 dataP 0 [] =
     dataP 1 cap 1i8 int new =:: mut p
     ## XXX? calculate on arrays for higher efficiency
-    n while #dup 0 != do
-      #dup 1 & 1 == if
+    n while ..dup 0 != do
+      ..dup 1 & 1 == if
         p x multiplyWith p =
       end
       x squared x =
       1 ..lshr
-    end #drop
+    end ..drop
     x free
     p return
   end
@@ -1621,7 +1621,7 @@ namespace: sb
       i .size i32 list.create =:: mut digits
       64 sb.create =:: mut buff
       i .size =:: mut size
-      data i .data .p i .size mem.copy #drop
+      data i .data .p i .size mem.copy ..drop
       while size 0 > do
         digits
           data size array.create B true data size @ int.divideU32 list.push
@@ -1638,17 +1638,17 @@ namespace: sb
             sb.clear
             d base false sb.appendI??
           buff =
-          buff .length while #dup n < do
-            #swap
+          buff .length while ..dup n < do
+            ..swap
               '0' sb.appendC
-            #swap 1 +
-          end #drop
+            ..swap 1 +
+          end ..drop
           buff sb.appendSb
         end
       end
       data mem.free
-      digits list.free #drop
-      buff sb.free #drop
+      digits list.free ..drop
+      buff sb.free ..drop
     return
   end
   proc( stringBuilder : sb int : #:const i -> stringBuilder ) =>: export appendInt

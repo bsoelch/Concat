@@ -33,12 +33,12 @@ namespace: map
   #template type : K type : V #end
   proc( proc( K -> ) ptr : freeKey  proc( V -> ) ptr : freeValue  K V hashMap ptr mut : data -> ) =>: export freeAll
     data [] .nodeBuffer
-      0 while #dup #over:2 .length < do
-        #over #over list.get
-          #dup .key freeKey ()
+      0 while ..dup ..over.2 .length < do
+        ..over ..over list.get
+          ..dup .key freeKey ()
         .value freeValue ()
         1 +
-      end #drop
+      end ..drop
       list.free
     data [] .nodeBuffer =
     data [] .data mem.free
@@ -51,47 +51,47 @@ namespace: map
        0 return
     end
     key data [] .hash () data [] .cap ..umod  NodeId cast ## sync types in loop
-      data [] .data #over []
-        #dup 0 == if #drop
+      data [] .data ..over []
+        ..dup 0 == if ..drop
           newNode if
             data [] .nodeBuffer .length 1 +
-              #dup data [] .data #over:3 [] =
-            #swap #drop
+              ..dup data [] .data ..over.3 [] =
+            ..swap ..drop
             NodeId cast return
           end
-          #drop 0 return
+          ..drop 0 return
         end
-        while #dup 0 > do #swap #drop
-          data [] .nodeBuffer #over 1 - list.get
-            #dup .key key data [] .eq () if #drop
+        while ..dup 0 > do ..swap ..drop
+          data [] .nodeBuffer ..over 1 - list.get
+            ..dup .key key data [] .eq () if ..drop
               return
             end
           .next
-        end #drop
+        end ..drop
       newNode if
         data [] .nodeBuffer .length 1 +
-          #dup data [] .nodeBuffer #over:3 1 - list.at .data [] .next =
-        #swap #drop
+          ..dup data [] .nodeBuffer ..over.3 1 - list.at .data [] .next =
+        ..swap ..drop
         NodeId cast return
       end
-    #drop 0 return
+    ..drop 0 return
   end
 
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key -> V optional ) =>: export get
     data key false find
-      #dup 0 == if #drop
+      ..dup 0 == if ..drop
         V optional.empty return
       end
-    data [] .nodeBuffer #swap 1 - list.get .value optional.wrap return
+    data [] .nodeBuffer ..swap 1 - list.get .value optional.wrap return
   end
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key -> V ptr mut optional ) =>: export at
     data key false find
-      #dup 0 == if #drop
+      ..dup 0 == if ..drop
         V ptr mut optional.empty return
       end
-    data [] .nodeBuffer #swap 1 - list.at #dup optional.isEmpty if #drop
+    data [] .nodeBuffer ..swap 1 - list.at ..dup optional.isEmpty if ..drop
       V ptr mut optional.empty return
     end
     .data [] .value @ optional.wrap return
@@ -99,15 +99,15 @@ namespace: map
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data  K : key V : value -> V optional ) =>: export put
     data key true find
-      #dup data [] .nodeBuffer .length > if #drop
+      ..dup data [] .nodeBuffer .length > if ..drop
         data [] .nodeBuffer
           key value 0 K V Node new list.append
         data [] .nodeBuffer =
         V optional.empty return
       end
-    data [] .nodeBuffer #swap 1 - list.at .data
-      #dup [] .value #swap
-      value #swap [] .value =
+    data [] .nodeBuffer ..swap 1 - list.at .data
+      ..dup [] .value ..swap
+      value ..swap [] .value =
     optional.wrap return
   end
 
@@ -116,17 +116,17 @@ namespace: map
   namespace: itr
     #template type : K type : V #end
     proc( K V hashMap ptr mut : map -> K V Iterator ) =>: export start
-      0 while #dup map [] .cap < do
-        map [] .data #over [] 0 != if
-          map #swap map [] .data #over [] #swap 1 + K V Iterator new return
+      0 while ..dup map [] .cap < do
+        map [] .data ..over [] 0 != if
+          map ..swap map [] .data ..over [] ..swap 1 + K V Iterator new return
         end
         1 +
-      end #drop
+      end ..drop
       map 0 map [] .cap i32 cast K V Iterator new return
     end
     #template type : K type : V #end
     proc( K V Iterator -> K V Iterator bool ) =>: export hasNext
-      #dup .next 0 != return
+      ..dup .next 0 != return
     end
     #template type : K type : V #end
     proc( K V Iterator -> K V Iterator ( K ptr V ptr mut ) ) =>: export next

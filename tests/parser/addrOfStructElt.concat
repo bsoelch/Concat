@@ -7,5 +7,5 @@ proc( -> ) =>: main
   s =:: mut mutS
   mutS .a @
   mutS .b @
-  #drop:4
+  ..drop.4
 end

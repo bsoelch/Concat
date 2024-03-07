@@ -11,12 +11,12 @@ namespace: io
     str .data =:: data
     while count 0 > do
       file data off count fwrite
-        #dup FILE_ERROR_NONE != if ## error
-            #swap #drop return
+        ..dup FILE_ERROR_NONE != if ## error
+            ..swap ..drop return
           end
-        #drop
-        count #over - count =
-      off #swap + off =
+        ..drop
+        count ..over - count =
+      off ..swap + off =
     end
     FILE_ERROR_NONE return
   end
@@ -27,13 +27,13 @@ namespace: io
     err FILE_ERROR_NONE != if
       file err return
     end
-    file #dup str fputStr return
+    file ..dup str fputStr return
   end
   proc( FILE : file IOError : err stringBuilder : str -> FILE  IOError ) =>: export fappendSb
     err FILE_ERROR_NONE != if
       file err return
     end
-    file #dup str sb.asStr fputStr return
+    file ..dup str sb.asStr fputStr return
   end
 end
 namespace: sb
@@ -43,11 +43,11 @@ namespace: sb
     FILE_ERROR_NONE IOError =: mut err
     sb
       while err FILE_ERROR_NONE == do
-        #dup .length delta + ensureCap
-        file #over .data #over:2 .length delta fread
+        ..dup .length delta + ensureCap
+        file ..over .data ..over.2 .length delta fread
           err =
         =:: count
-        #dup .length count + sb.setLength
+        ..dup .length count + sb.setLength
         count delta ==  delta 8192 <= & if
           delta 2 * delta =
         end

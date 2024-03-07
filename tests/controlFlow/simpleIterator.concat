@@ -13,7 +13,7 @@ proc( string i64 -> string i64 i8 bool ) =>: nextChar
     i 1 +  s i string.charAt true return
 end
 proc( string i64 i8 -> ) =>: endItr
-  #drop #drop #drop
+  ..drop ..drop ..drop
 end
 
 proc( -> ) =>: main

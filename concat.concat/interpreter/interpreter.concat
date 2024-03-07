@@ -50,45 +50,45 @@ end
 
 proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
   ## XXX cache number of open enum blocks
-  context [] .openBlocks .length 1 - while #dup 0 >= do
-    context [] .openBlocks #over list.at .data [] .blockType .TYPE_ENUM ?? if #drop
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType .TYPE_ENUM ?? if ..drop
       true return
     end
     1 -
-  end #drop
+  end ..drop
   false return
 end
 proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
   ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while #dup 0 >= do
-    context [] .openBlocks #over list.at .data [] .blockType switch
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType switch
       INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-         #drop true return
+         ..drop true return
       PROCEDURE EXPERIMENTAL_PROCEDURE case
-        #drop false return
+        ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
        SWITCH CASE DEFAULT NAMESPACE case break
     end
     1 -
-  end #drop
+  end ..drop
   false return
 end
 proc( InterpreterContext ptr mut : context -> bool ) =>: inInitializer
   ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while #dup 0 >= do
-    context [] .openBlocks #over list.at .data [] .blockType switch
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType switch
       INITIALIZER case
-         #drop true return
+         ..drop true return
       TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
        PROCEDURE EXPERIMENTAL_PROCEDURE case
-         #drop false return
+         ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
        SWITCH CASE DEFAULT NAMESPACE case break
     end
     1 -
-  end #drop
+  end ..drop
   false return
 end
 
@@ -124,12 +124,12 @@ proc(
     elementCount list.ensureCap
   context [] .labelBuffer =
   false =:: mut error
-  0 while #dup elementCount < do
+  0 while ..dup elementCount < do
     context [] .stack
-      #over offset +
+      ..over offset +
     list.at .data =:: stackValue
     context [] .stackInfo
-      #over offset +
+      ..over offset +
     list.at .data =:: stackInfo
     stackInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
       "unsupported type in composite type, expected type got " sb.wrap
@@ -149,7 +149,7 @@ proc(
       end
       createDummyLables if
         ## newDummyLabel
-          #dup
+          ..dup
           id.FLAG_DUMMY ## TODO? flags
           stackInfo [] .pushedAt
           -1 ## TODO resolve current file
@@ -161,7 +161,7 @@ proc(
       stackInfo [] .valueName list.append
     context [] .labelBuffer =
     1 +
-  end #drop
+  end ..drop
   context [] .stack
     offset list.setLength
   context [] .stack =
@@ -200,12 +200,12 @@ proc(
   true =:: mut hasArrayType
   false =:: mut hasName
   false =:: mut error
-  0 while #dup elementCount < do
+  0 while ..dup elementCount < do
     context [] .stack
-      #over offset +
+      ..over offset +
     list.at .data =:: stackValue
     context [] .stackInfo
-      #over offset +
+      ..over offset +
     list.at .data =:: stackInfo
     context [] .typeBuffer
       stackInfo [] .valueType list.append
@@ -228,7 +228,7 @@ proc(
       end
     end
     1 +
-  end #drop
+  end ..drop
   context [] .stack list.asArray offset array.tail =:: values
   context [] .stack
     offset list.setLength
@@ -286,17 +286,17 @@ proc(
       context pushValue
       false return
     Return case
-      context [] .openBlocks .length 1 - while #dup 0 >= do
-        context [] .openBlocks #over list.at .data [] .blockType
-         #dup .PROCEDURE ?? #swap .EXPERIMENTAL_PROCEDURE ?? | if
+      context [] .openBlocks .length 1 - while ..dup 0 >= do
+        context [] .openBlocks ..over list.at .data [] .blockType
+         ..dup .PROCEDURE ?? ..swap .EXPERIMENTAL_PROCEDURE ?? | if
           ## close procedure block
           context [] .openBlocks
-            #swap list.setLength
+            ..swap list.setLength
           context [] .openBlocks =
           false return
         end
         1 -
-      end #drop
+      end ..drop
       "return outside procedure" sb.wrap op [] .pos errors appendError
       true return
     block case
@@ -361,7 +361,7 @@ proc(
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
-          typeContext types.newTuple if #drop
+          typeContext types.newTuple if ..drop
             showErrorMessages if
               "could not create structure-type" sb.wrap op [] .pos errors appendError
             end
@@ -379,7 +379,7 @@ proc(
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
-          typeContext types.newEnum if #drop
+          typeContext types.newEnum if ..drop
             showErrorMessages if
               "could not create enum" sb.wrap op [] .pos errors appendError
             end
@@ -397,7 +397,7 @@ proc(
           ## newProcArgs
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
-          typeContext types.newUnion if #drop
+          typeContext types.newUnion if ..drop
             showErrorMessages if
               "could not create union-type" sb.wrap op [] .pos errors appendError
             end
@@ -424,15 +424,15 @@ proc(
               true
           else false end =:: isProc
           isProc if ## clear dummy lables
-            0 while #dup context [] .labelBuffer .length < do
-              context [] .labelBuffer #over list.at .data =:: label
+            0 while ..dup context [] .labelBuffer .length < do
+              context [] .labelBuffer ..over list.at .data =:: label
               label []
                 labelContext id.labelFlags
               id.FLAG_DUMMY & ? if
                 id.LABEL_ID_NONE label [] =
               end
               1 +
-            end #drop
+            end ..drop
           end
           context [] .typeBuffer .length
             isProc if 1 else 0 end - ## last value is return type
@@ -450,7 +450,7 @@ proc(
               false
             typeContext types.newProcArgs =:: procIn
             context [] .typeBuffer nArgs list.get =:: procOut
-            procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if #drop
+            procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
               showErrorMessages if
                 "could not create procedure-type" sb.wrap op [] .pos errors appendError
               end
@@ -463,7 +463,7 @@ proc(
               ## newProcArgs
                 context [] .typeBuffer list.asArray nArgs array.head
                 context [] .labelBuffer list.asArray nArgs array.head optional.wrap
-              typeContext types.newTuple if #drop
+              typeContext types.newTuple if ..drop
                 showErrorMessages if
                   "could not create structure-type" sb.wrap op [] .pos errors appendError
                 end
@@ -497,7 +497,7 @@ proc(
           false return
         INITIALIZER case
           op closedBlock @ context closedInitializer if
-            #drop:2 true return
+            ..drop.2 true return
           end =:: arrayType =:: values
           ## newArrayConst
             values
@@ -591,7 +591,7 @@ proc(
           op [] .val .declareId .labelId types.newGenericType ConstValue .typeId new
           valInfo []
         Constant new
-      map.put #drop
+      map.put ..drop
       false return
     getName case
       context inEnum if
@@ -625,11 +625,11 @@ proc(
             op [] .pos errors appendError
             true return
           end
-          op [] .dataType typeContext types.getProcOut #drop =:: procOut
+          op [] .dataType typeContext types.getProcOut ..drop =:: procOut
           procOut typeContext types.compositeElts =:: outTypes
           outTypes .length 1 == if outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals _if
             ## type-generator (procedure returning type)
-            op [] .dataType typeContext types.getProcIn #drop =:: procIn
+            op [] .dataType typeContext types.getProcIn ..drop =:: procIn
             procOut typeContext types.compositeElts =:: inTypes
             inTypes .length context checkStack if
               "not enough arguments for type-generator " sb.wrap
@@ -650,7 +650,7 @@ proc(
               idContext [] .templateArgBuffer ## remember procedure arguments
                 context [] .stack list.asArray offset array.tail list.appendArray
               idContext [] .templateArgBuffer =
-              idInfo .constValue .procedure op [] .pos context evaluateCall if #drop
+              idInfo .constValue .procedure op [] .pos context evaluateCall if ..drop
                 "could not initialize type-generator " sb.wrap
                   label labelContext sb.appendLabelName
                 op [] .pos errors appendError
@@ -669,7 +669,7 @@ proc(
                 typeContext
                 labelContext
                 constContext
-              types.initializeGeneratedType if #drop
+              types.initializeGeneratedType if ..drop
                 "could not initialize type-generator " sb.wrap
                   label labelContext sb.appendLabelName
                 op [] .pos errors appendError
@@ -723,8 +723,8 @@ proc(
           offset 1 - offset =
         end
         0 =:: mut intArgs
-        offset while #dup minOffset >= do
-          context [] .stackInfo #over list.at .data [] .valueType typeContext types.isInt ! if
+        offset while ..dup minOffset >= do
+          context [] .stackInfo ..over list.at .data [] .valueType typeContext types.isInt ! if
             break
           end
           intArgs 1 + intArgs =
@@ -734,8 +734,8 @@ proc(
           list.clear
           intArgs list.ensureCap
         idContext [] .arraySizeBuffer =
-        1 while #dup intArgs <= do
-          context [] .stack offset #over:2 + list.get =:: intArg
+        1 while ..dup intArgs <= do
+          context [] .stack offset ..over.2 + list.get =:: intArg
           intArg .int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
@@ -761,10 +761,10 @@ proc(
           else
             "unexpected constant for array size: " sb.wrap
               intArg constContext labelContext typeContext sb.appendConstant
-            context [] .stackInfo #over:2 list.at .data [] .pushedAt errors appendError
+            context [] .stackInfo ..over.2 list.at .data [] .pushedAt errors appendError
           end
           1 +
-        end #drop
+        end ..drop
         offset minOffset < if
           "missing type parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
@@ -791,7 +791,7 @@ proc(
         fixedSize
         op [] .val .typeModifier .PTR_MUT ??
         typeContext
-      types.newArrayType if #drop
+      types.newArrayType if ..drop
         isPtr if
           "could not create pointer type" sb.wrap op [] .pos errors appendError
         else
@@ -841,9 +841,9 @@ proc(
   bool
 ) =>: export evaluateOperations
   0 =:: mut offset
-  context [] .openBlocks .length 1 - while #dup 0 >= do
-    context [] .openBlocks #over list.at .data [] .blockType
-     #dup .PROCEDURE ?? #swap .EXPERIMENTAL_PROCEDURE ?? | if
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType
+     ..dup .PROCEDURE ?? ..swap .EXPERIMENTAL_PROCEDURE ?? | if
       break
     end
     1 -
@@ -876,7 +876,7 @@ proc(
   context [] .program [] .idContext .typeContext @ =:: typeContext
   program [] .procedures procId list.at .data =:: procData
   procData [] .procType =:: procType
-  procType typeContext types.getProcIn #drop =:: inType
+  procType typeContext types.getProcIn ..drop =:: inType
   inType typeContext types.compositeElts =:: args
   args .length context checkStack if
     "not enough arguments for procedure " sb.wrap
@@ -908,10 +908,10 @@ proc(
   end
   context [] .stack .length =:: stackOffset
   ## process procedure arguments
-  0 while #dup args .length < do
-    context [] .stack #over argsOffset + list.at .data =:: value
-    context [] .stackInfo #over argsOffset + list.at .data =:: valueInfo
-    inType #over typeContext types.compositeGetLabel =:: label
+  0 while ..dup args .length < do
+    context [] .stack ..over argsOffset + list.at .data =:: value
+    context [] .stackInfo ..over argsOffset + list.at .data =:: valueInfo
+    inType ..over typeContext types.compositeGetLabel =:: label
     label id.LABEL_ID_NONE != if ## store argument as value
      label labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
       context [] .variables @
@@ -920,7 +920,7 @@ proc(
           value []
           valueInfo []
         Constant new
-      map.put #drop
+      map.put ..drop
     else ## push argument
       context [] .stack
         value list.appendP
@@ -935,7 +935,7 @@ proc(
       context [] .stackInfo =
     end
     1 +
-  end #drop
+  end ..drop
   BlockType .PROCEDURE context openBlock
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
@@ -954,23 +954,23 @@ proc(
       context [] .stack .data argsOffset +
       context [] .stack .data stackOffset +
       nReturn
-    mem.copy #drop
+    mem.copy ..drop
     ## mem.copy
       context [] .stackInfo .data argsOffset +
       context [] .stackInfo .data stackOffset +
       nReturn
-    mem.copy #drop
+    mem.copy ..drop
     context [] .stack
       argsOffset nReturn + list.setLength
     context [] .stack =
     context [] .stackInfo
       argsOffset nReturn + list.setLength
     context [] .stackInfo =
-    argsOffset while #dup context [] .stackInfo .length < do
+    argsOffset while ..dup context [] .stackInfo .length < do
       ## update push position of return values
-      pos context [] .stackInfo #over:2 list.at .data [] .pushedAt =
+      pos context [] .stackInfo ..over.2 list.at .data [] .pushedAt =
       1 +
-    end #drop
+    end ..drop
     false return
   end
 end

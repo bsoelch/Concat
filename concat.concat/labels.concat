@@ -180,23 +180,23 @@ namespace: id
     context [] .nameBuffer .length =:: offset
     6 sb.create =:: mut uft8Buff
     context [] .nameBuffer
-      #dup .length str .length + list.ensureCap
-      0 while #dup str .length < do
-        #swap
-          str #over:2 string.charAt #dup '\\' != if
-            #dup pos @ updateFilePos
+      ..dup .length str .length + list.ensureCap
+      0 while ..dup str .length < do
+        ..swap
+          str ..over.2 string.charAt ..dup '\\' != if
+            ..dup pos @ updateFilePos
             list.append
-            #swap
+            ..swap
               1 +
             continue
-          end #drop
-        #swap
+          end ..drop
+        ..swap
         1 +
-        #swap
-          str #over:2 string.charAt #dup switch
+        ..swap
+          str ..over.2 string.charAt ..dup switch
             '\\' '\'' '"' case
               '\\' pos @ updateFilePos
-              #dup pos @ updateFilePos
+              ..dup pos @ updateFilePos
               list.append
               break
             'n' case
@@ -231,77 +231,77 @@ namespace: id
               break
             'x' 'u' 'U' case =:: c
               c 'x' == if 2 else c 'u' == _if 4 else 8 end =:: nChars
-              #over nChars + str .length >= if
+              ..over nChars + str .length >= if
                 "not enough characters for escape sequence \"\\" sb.wrap
                   c                     sb.appendC
                   "\" need "            sb.appendS
                   nChars                sb.appendI
                   " got "               sb.appendS
-                  str .length #over:3 - sb.appendI
+                  str .length ..over.3 - sb.appendI
                 pos errors appendError
                 '\\' pos @ updateFilePos
                 c pos @ updateFilePos
-                #swap 1 +
+                ..swap 1 +
                 continue
               end
               '\\' pos @ updateFilePos
               c pos @ updateFilePos
-              #swap
+              ..swap
               1 +
-              #swap
-                str .data #over:2 + nChars string.create 16 number.tryParseInt .NONE ?? if
-                  #dup 0 < if #drop
-                    "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
+              ..swap
+                str .data ..over.2 + nChars string.create 16 number.tryParseInt .NONE ?? if
+                  ..dup 0 < if ..drop
+                    "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                   else
                     c 'x' == if
                       i8 cast list.append
                     else c 'u' == _if
                       uft8Buff sb.clear
-                        #swap i32 cast sb.appendCodepoint
+                        ..swap i32 cast sb.appendCodepoint
                       uft8Buff =
                       uft8Buff sb.asArray list.appendArray
                     else c 'U' == _if
-                      #dup i32.MAX > if
+                      ..dup i32.MAX > if
                         "hex-code for escape sequence: \"\\U" sb.wrap
-                          str .data #over:4 + nChars string.create sb.appendStr
+                          str .data ..over.4 + nChars string.create sb.appendStr
                           "\" does not fit in a signed integer" sb.appendS
                         pos errors appendError
-                      else #dup utf8.MAX_CODEPOINT > _if
+                      else ..dup utf8.MAX_CODEPOINT > _if
                         "code-point outside allowed range: \"\\U" sb.wrap
-                          str .data #over:4 + nChars string.create sb.appendStr
+                          str .data ..over.4 + nChars string.create sb.appendStr
                           "\" (maximum: " sb.appendS
                           utf8.MAX_CODEPOINT sb.appendX
                           ")" sb.appendS
                         pos errors appendWarning
                       end
                       uft8Buff sb.clear
-                        #swap i32 cast sb.appendCodepoint
+                        ..swap i32 cast sb.appendCodepoint
                       uft8Buff =
                       uft8Buff sb.asArray list.appendArray
-                    else #drop
+                    else ..drop
                       "unknown hex-escape sequence: \"\\" sb.wrap c sb.appendC '\"' sb.appendC pos errors appendError
                     end
                   end
-                else #drop
-                  "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data #over:3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
+                else ..drop
+                  "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                 end
-              #swap ## update file position
-                0 while #dup nChars < do
-                  str #over #over:2 + string.charAt pos @ updateFilePos
-                  #swap 1 +
-                  #swap 1 +
-                end #drop
+              ..swap ## update file position
+                0 while ..dup nChars < do
+                  str ..over ..over.2 + string.charAt pos @ updateFilePos
+                  ..swap 1 +
+                  ..swap 1 +
+                end ..drop
               continue
             default
-              "unknown escape sequence \"\\" sb.wrap #over sb.appendC '\"' sb.appendC pos errors appendError
+              "unknown escape sequence \"\\" sb.wrap ..over sb.appendC '\"' sb.appendC pos errors appendError
               '\\' pos @ updateFilePos
               pos @ updateFilePos
           end
-        #swap
+        ..swap
         1 +
-      end #drop
+      end ..drop
     context [] .nameBuffer =
-    uft8Buff sb.free #drop
+    uft8Buff sb.free ..drop
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
   proc( NamespaceId : parent string : name  LabelContext ptr mut : context -> NamespaceId ) =>: newNamespace
@@ -326,34 +326,34 @@ namespace: id
       NAMESPACE_ID_NONE return ## id out of range
     end
     context [] .namespaces base list.at .data =:: baseSpace
-    0 while #dup baseSpace [] .children .length < do
-      baseSpace [] .children #over list.get =:: child
-      childName context [] .namespaces child list.get .name context scEqualTo if #drop
+    0 while ..dup baseSpace [] .children .length < do
+      baseSpace [] .children ..over list.get =:: child
+      childName context [] .namespaces child list.get .name context scEqualTo if ..drop
         child return
       end
       1 +
-    end #drop
+    end ..drop
     create ! if
       NAMESPACE_ID_NONE return
     end
     base childName context newNamespace
       context [] .namespaces base list.at .data
-        #dup [] .children
-          #over:2 list.append
-      #swap [] .children =
+        ..dup [] .children
+          ..over.2 list.append
+      ..swap [] .children =
     return
   end
   proc( NamespaceId : base string : path  LabelContext ptr mut : context -> NamespaceId ) =>: export findNamespace
     base NamespaceId =: mut id
     path
-      while #dup .length 0 > do
+      while ..dup .length 0 > do
         '.' string.split
-        id #swap false context childId id =
+        id ..swap false context childId id =
         id NAMESPACE_ID_NONE == if
           break
         end
       end
-    #drop
+    ..drop
     id return
   end
   proc( NamespaceId : id LabelContext ptr mut : context -> StringConstant ) =>: export namespaceName
@@ -375,21 +375,21 @@ namespace: id
       else
         context [] .namespaceImports parent list.get .firstChild
       end
-      #dup NAMESPACE_IMPORT_NONE == if
+      ..dup NAMESPACE_IMPORT_NONE == if
         context [] .namespaceImports .length NamespaceImportId cast
           context [] .namespaceImports parent list.at .data [] .firstChild =
       end
-      NAMESPACE_IMPORT_NONE #swap
-        while #dup NAMESPACE_IMPORT_NONE != do #swap #drop
-          context [] .namespaceImports #over list.get .imported importId == if
+      NAMESPACE_IMPORT_NONE ..swap
+        while ..dup NAMESPACE_IMPORT_NONE != do ..swap ..drop
+          context [] .namespaceImports ..over list.get .imported importId == if
             return
           end
-          context [] .namespaceImports #over list.get .next
-        end #drop
-      #dup NAMESPACE_IMPORT_NONE != if
+          context [] .namespaceImports ..over list.get .next
+        end ..drop
+      ..dup NAMESPACE_IMPORT_NONE != if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports #over:2 list.at .data [] .next =
-      end #drop
+          context [] .namespaceImports ..over.2 list.at .data [] .next =
+      end ..drop
     end
     context [] .namespaceImports
       importId

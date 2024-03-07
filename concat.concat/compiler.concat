@@ -31,8 +31,8 @@ proc( string : path -> ) =>: printUsage
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
     "  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\n" sb.appendS
-    io.stdOut #over io.fputSb #drop
-  sb.free #drop
+    io.stdOut ..over io.fputSb ..drop
+  sb.free ..drop
 end
 enum( NONE IN OUT TOKENS_PARSER TOKENS_COMPILER LIB_PATH ERR_PATH ) =:: ArgParserState
 proc( -> ) =>: parseArgs
@@ -47,14 +47,14 @@ proc( -> ) =>: parseArgs
   string optional.empty errorFile =
   0 ..getArg string.create =:: path
   ArgParserState .IN =:: mut state
-  1 while #dup ..argc < do
-    #dup ..getArg string.create =:: arg
+  1 while ..dup ..argc < do
+    ..dup ..getArg string.create =:: arg
     arg .length 0 == if
       1 + continue
     end
     arg 0 string.charAt '-' == if
       arg .length 2 < if
-        io.stdErr "invalid argument \"-\"" io.fputs #drop
+        io.stdErr "invalid argument \"-\"" io.fputs ..drop
         1 + continue
       end
       arg 1 string.charAt switch
@@ -90,8 +90,8 @@ proc( -> ) =>: parseArgs
           "unknown compiler option: \"" sb.wrap
             arg sb.appendStr
             "\"\n" sb.appendS
-            io.stdErr #over io.fputSb #drop
-          sb.free #drop
+            io.stdErr ..over io.fputSb ..drop
+          sb.free ..drop
       end
       1 + continue
     end
@@ -100,8 +100,8 @@ proc( -> ) =>: parseArgs
         "expected compiler option got \"" sb.wrap
           arg sb.appendStr
           "\"\n" sb.appendS
-          io.stdErr #over io.fputSb #drop
-        sb.free #drop
+          io.stdErr ..over io.fputSb ..drop
+        sb.free ..drop
         break
       IN case
         srcFile sb.clear arg sb.appendStr srcFile =
@@ -132,13 +132,13 @@ proc( -> ) =>: parseArgs
         break
     end
     1 +
-  end #drop
+  end ..drop
   hasSrc ! if
     printedUsage if
       0 sys.exit
       ..unreachable
     end
-    io.stdErr "no input file specified\n" io.fputs #drop
+    io.stdErr "no input file specified\n" io.fputs ..drop
     path printUsage
     srcFile sb.free
     outFile sb.free
@@ -167,8 +167,8 @@ proc( -> ) =>: parseArgs
   iSlash 0 < if "./" string.wrap else srcFile .data iSlash 1 + string.create end basePath =
   hasLib ! if
     "./lib/" string.wrap libPath =
-  else libPath #dup .length 1 - string.charAt #dup '/' != #swap '\\' != & _if
-    io.stdErr "library path has to end with '/' or '\\'\n" io.fputs #drop
+  else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
+    io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
     srcFile sb.free
     outFile sb.free
     1 sys.exit
@@ -183,21 +183,21 @@ proc( CompilerError list ptr mut : errors -> ) =>: checkErrors
   end
   false =:: mut hasError
   1024 sb.create
-    0 while #dup errors [] .length < do
-      #swap
-        errors [] #over:2 list.at .data =:: err
+    0 while ..dup errors [] .length < do
+      ..swap
+        errors [] ..over.2 list.at .data =:: err
         err [] sb.appendCompilerError
         err [] .errType .ERROR ?? if
           true hasError =
         else wError err [] .errType .WARNING ?? & _if
           true hasError =
         end
-      #swap 1 +
-    end #drop
-    errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr #drop else io.stdErr end
-      #dup #over:2 io.fputSb #drop
-    errorFile optional.hasData if io.fclose #drop else #drop end ## don't close stdErr
-  sb.free #drop
+      ..swap 1 +
+    end ..drop
+    errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr ..drop else io.stdErr end
+      ..dup ..over.2 io.fputSb ..drop
+    errorFile optional.hasData if io.fclose ..drop else ..drop end ## don't close stdErr
+  sb.free ..drop
   hasError if
     1 sys.exit
     ..unreachable
@@ -213,10 +213,10 @@ proc( -> ) =>: main ## TODO check return value of fopen
     1024 sb.create
       prog sb.appendProgram
     =:: parsedOps
-    parserTokensFile .data io.OPEN_WRITE io.fopenStr #drop
-      #dup parsedOps io.fputSb #drop
-    io.fclose #drop
-    parsedOps sb.free #drop
+    parserTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+      ..dup parsedOps io.fputSb ..drop
+    io.fclose ..drop
+    parsedOps sb.free ..drop
   end
   prog .errors @ checkErrors
   _EXPERIMENTAL_ if
@@ -226,16 +226,16 @@ proc( -> ) =>: main ## TODO check return value of fopen
       1024 sb.create
         prog sb.appendProgram
       =:: parsedOps
-      compilerTokensFile .data io.OPEN_WRITE io.fopenStr #drop
-        #dup parsedOps io.fputSb #drop
-      io.fclose #drop
-      parsedOps sb.free #drop
+      compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+        ..dup parsedOps io.fputSb ..drop
+      io.fclose ..drop
+      parsedOps sb.free ..drop
     end
     prog .errors @ checkErrors
     ## QBE backend
-    outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
-      #dup prog @ compileToQBE
-    io.fclose #drop
+    outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
+      ..dup prog @ compileToQBE
+    io.fclose ..drop
     prog .errors @ checkErrors
   else
     ## C backend
@@ -244,15 +244,15 @@ proc( -> ) =>: main ## TODO check return value of fopen
       1024 sb.create
         prog sb.appendProgram
       =:: parsedOps
-      compilerTokensFile .data io.OPEN_WRITE io.fopenStr #drop
-        #dup parsedOps io.fputSb #drop
-      io.fclose #drop
-      parsedOps sb.free #drop
+      compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+        ..dup parsedOps io.fputSb ..drop
+      io.fclose ..drop
+      parsedOps sb.free ..drop
     end
     prog .errors @ checkErrors
-    outFile sb.asStr io.OPEN_WRITE io.fopenStr #drop
-      #dup prog @ compileToC
-    io.fclose #drop
+    outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
+      ..dup prog @ compileToC
+    io.fclose ..drop
     prog .errors @ checkErrors
   end
 end

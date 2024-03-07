@@ -4,7 +4,7 @@ import numbers/limits
 import math
 
 proc( i32 -> i8 ) =>: getDigit
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" #swap []
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
 end
 
 namespace: double
@@ -50,13 +50,13 @@ namespace: sb
       value math.floor =:: mut d
       d i32 cast getDigit sb.appendC
       '.' sb.appendC
-      0 while #dup DIGIT_COUNT < do
-        #swap
+      0 while ..dup DIGIT_COUNT < do
+        ..swap
           value d - 16 * value =
           value math.floor d = 
           d i32 cast getDigit sb.appendC
-        #swap 1 +
-      end #drop
+        ..swap 1 +
+      end ..drop
       'P' sb.appendC
       e sb.appendI
     return
@@ -128,7 +128,7 @@ namespace: sb
           j 1 - j =
         end
         inc if
-          buff @ i32 _ ptr mut cast 1 + buff @ n mem.move #drop
+          buff @ i32 _ ptr mut cast 1 + buff @ n mem.move ..drop
           1 buff @ 0 [] =
           n 1 + n =
           e_max 1 + e_max =
@@ -144,36 +144,36 @@ namespace: sb
         buff @ 0 [] getDigit sb.appendC
         n 1 > if
           '.' sb.appendC
-          1 while #dup n < do
-             #swap
-               buff @ #over:2 [] getDigit sb.appendC
-             #swap 1 +
-          end #drop
+          1 while ..dup n < do
+             ..swap
+               buff @ ..over.2 [] getDigit sb.appendC
+             ..swap 1 +
+          end ..drop
         end
         base 10 <= if 'E' else base 30 <= _if 'X' else '#' end sb.appendC
         e_max 0 >= if '+' sb.appendC end
         e_max  base appendI?
       else e_max 0 >= _if
-        0 while #dup n < do
-          #swap
-            buff @ #over:2 [] getDigit sb.appendC
-            #over e_max == #over:2 n 1 - < & if
+        0 while ..dup n < do
+          ..swap
+            buff @ ..over.2 [] getDigit sb.appendC
+            ..over e_max == ..over.2 n 1 - < & if
               '.' sb.appendC
             end
-          #swap 1 +
-        end #drop
+          ..swap 1 +
+        end ..drop
       else
         "0." sb.appendS
-        1 e_max - while #dup 0 > do
-          #swap
+        1 e_max - while ..dup 0 > do
+          ..swap
             '0' sb.appendC
-          #swap 1 -
-        end #drop
-        0 while #dup n < do
-          #swap
-            buff @ #over:2 [] getDigit sb.appendC
-          #swap 1 +
-        end #drop
+          ..swap 1 -
+        end ..drop
+        0 while ..dup n < do
+          ..swap
+            buff @ ..over.2 [] getDigit sb.appendC
+          ..swap 1 +
+        end ..drop
       end
     return
   end

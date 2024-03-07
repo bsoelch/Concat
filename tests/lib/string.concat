@@ -16,12 +16,12 @@ proc( string : str i8 : chr -> ) =>: printSplit
   str 
   while
     chr string.split printStr
-    #dup .length 0 >
-  do end #drop
+    ..dup .length 0 >
+  do end ..drop
 end
 
 proc( string : str -> ) =>: printStr
-  io.stdOut str .data 0 str .length io.fwrite #drop:2
-  io.stdOut  '\n' io.fputc #drop
+  io.stdOut str .data 0 str .length io.fwrite ..drop.2
+  io.stdOut  '\n' io.fputc ..drop
 end
 

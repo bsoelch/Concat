@@ -5,15 +5,15 @@ proc( -> ) =>: main
   ..?parser.find.s2
   s3 ..length ..debug.print
   specialString ..length ..debug.print
-  0 while #dup specialString ..length < do
-    specialString #over [] ..debug.print
+  0 while ..dup specialString ..length < do
+    specialString ..over [] ..debug.print
     1 +
-  end #drop
+  end ..drop
   multiLine ..length ..debug.print
-  0 while #dup multiLine ..length < do
-    multiLine #over [] ..debug.print
+  0 while ..dup multiLine ..length < do
+    multiLine ..over [] ..debug.print
     1 +
-  end #drop
+  end ..drop
 end
 
 "string" =:: s3

@@ -2,10 +2,10 @@ import list
 
 #template type : T #end
 proc( T list : l -> ) =>: printList
-  0 while #dup l .length < do
-    l .data #over [] ..debug.print
+  0 while ..dup l .length < do
+    l .data ..over [] ..debug.print
     1 +
-  end #drop
+  end ..drop
 end
 
 proc( -> ) =>: main

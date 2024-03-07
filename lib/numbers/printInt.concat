@@ -11,27 +11,27 @@ namespace: sb
     i8 64 array new =:: mut chrBuff
     buffer
       i
-      #dup 0 < signed & if
-        #swap '-' appendC #swap
+      ..dup 0 < signed & if
+        ..swap '-' appendC ..swap
         -_
-      else #dup 0 == _if
-        #drop '0' appendC return
+      else ..dup 0 == _if
+        ..drop '0' appendC return
       end
-      63 #swap ## index in chrBuff
-        while #dup 0 != do
-          #swap ## <buffer> <i> <chrIndex>
-            #over base ..umod stringChars #swap []
-            #over chrBuff @ #swap [] =
+      63 ..swap ## index in chrBuff
+        while ..dup 0 != do
+          ..swap ## <buffer> <i> <chrIndex>
+            ..over base ..umod stringChars ..swap []
+            ..over chrBuff @ ..swap [] =
             1 -
-          #swap
+          ..swap
           base ..udiv
-        end #drop
-        while 1 + #dup 64 < do
-          #swap ## <chrIndex> <buffer>
-            #over chrBuff @ #swap [] appendC
-          #swap
+        end ..drop
+        while 1 + ..dup 64 < do
+          ..swap ## <chrIndex> <buffer>
+            ..over chrBuff @ ..swap [] appendC
+          ..swap
         end
-      #drop
+      ..drop
     return
   end
   proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export appendI?

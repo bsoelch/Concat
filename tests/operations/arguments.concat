@@ -1,9 +1,9 @@
 import stringIO
 
 proc( -> ) =>: main
-  0 while #dup ..argc < do
-    #dup ..getArg string.create io.stdOut #swap io.fputStr #drop
-    io.stdOut '\n' io.fputc #drop
+  0 while ..dup ..argc < do
+    ..dup ..getArg string.create io.stdOut ..swap io.fputStr ..drop
+    io.stdOut '\n' io.fputc ..drop
     1 +
-  end #drop
+  end ..drop
 end

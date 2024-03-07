@@ -123,7 +123,7 @@ namespace: id
     context [] .openScopes .length 0 == if
       Type .undefined false
     else
-      context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental
+      context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental
     end =:: experimental =:: currentProc
     context [] .openScopes
        false currentProc -1 experimental context [] .labelContext .namespaceInfo .imports newScope
@@ -137,9 +137,9 @@ namespace: id
       context [] .openScopes list.peek .data
     end
     value if
-      #dup [] .flags flag | #swap [] .flags =
+      ..dup [] .flags flag | ..swap [] .flags =
     else
-      #dup [] .flags flag ~ & #swap [] .flags =
+      ..dup [] .flags flag ~ & ..swap [] .flags =
     end
   end
   proc( IdentifierContext ptr mut : context -> i32 ) =>: export scopeFlags
@@ -158,13 +158,13 @@ namespace: id
     context [] .openScopes .length 0 == if
       Type .undefined false return
     end
-    context [] .openScopes list.peek .data #dup [] .currentProc #swap [] .experimental return
+    context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental return
   end
   proc( i8 _ ptr mut list -> i8 _ ptr mut list ) =>: freeScopeStrings
-    0 while #dup #over:2 .length < do
-      #over #over list.get mem.free
+    0 while ..dup ..over.2 .length < do
+      ..over ..over list.get mem.free
       1 +
-    end #drop
+    end ..drop
     list.free
   end
   proc(
@@ -206,19 +206,19 @@ namespace: id
     name relSpace fileId IdentifierName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .openScopes .length 1 -
-      while #dup 0 >= do
-        context [] .openScopes #over list.at .data [] .identifiers @ idName map.at
-        #dup optional.hasData if .data
-          matches optional.isEmpty if #swap #drop
-            idName #swap false return
+      while ..dup 0 >= do
+        context [] .openScopes ..over list.at .data [] .identifiers @ idName map.at
+        ..dup optional.hasData if .data
+          matches optional.isEmpty if ..swap ..drop
+            idName ..swap false return
           end
           matches .data []
-            idName #over:2 IdentifierMatch new list.append
+            idName ..over.2 IdentifierMatch new list.append
           matches .data [] =
-          #drop
-        else #drop end
+          ..drop
+        else ..drop end
         1 -
-      end #drop
+      end ..drop
     end
     ## 2. search global variable in current&parent namespaces
     name relSpace FILE_ID_NONE IdentifierName new =:: mut globalName
@@ -228,25 +228,25 @@ namespace: id
       relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
         context [] .globalScope .identifiers @ idName map.at
-        #dup optional.hasData if .data
+        ..dup optional.hasData if .data
           matches optional.isEmpty if
-            idName #swap false return
+            idName ..swap false return
           end
           matches .data []
-            idName #over:2 IdentifierMatch new list.append
+            idName ..over.2 IdentifierMatch new list.append
           matches .data [] =
-          #drop
-        else #drop end
+          ..drop
+        else ..drop end
         context [] .globalScope .identifiers @ globalName map.at
-        #dup optional.hasData if .data
+        ..dup optional.hasData if .data
           matches optional.isEmpty if
-            globalName #swap false return
+            globalName ..swap false return
           end
           matches .data []
-            globalName #over:2 IdentifierMatch new list.append
+            globalName ..over.2 IdentifierMatch new list.append
           matches .data [] =
-          #drop
-        else #drop end
+          ..drop
+        else ..drop end
       end
       context [] .labelContext .namespaces mNamespace list.get .parent mNamespace =
     end
@@ -254,45 +254,45 @@ namespace: id
     false =:: mut multiMatch
     IdentifierData ptr mut optional.empty =:: mut match
     false =:: mut matchGlobal
-    context [] .labelContext .namespaceInfo .imports while #dup NAMESPACE_IMPORT_NONE != do
-      context [] .labelContext .namespaceImports #swap list.get
-        #dup .imported path  context [] .labelContext @ findNamespace relSpace =
+    context [] .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
+      context [] .labelContext .namespaceImports ..swap list.get
+        ..dup .imported path  context [] .labelContext @ findNamespace relSpace =
         relSpace idName .namespace =
         relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
           context [] .globalScope .identifiers @ idName map.at
-          #dup optional.hasData if .data
+          ..dup optional.hasData if .data
             matches optional.hasData if
               matches .data []
-                idName #over:2 IdentifierMatch new list.append
+                idName ..over.2 IdentifierMatch new list.append
               matches .data [] =
             end
             mNamespace NAMESPACE_ID_NONE == if
               optional.wrap match =
               false matchGlobal =
-              #dup .imported mNamespace =
-            else #drop
+              ..dup .imported mNamespace =
+            else ..drop
               true multiMatch =
             end
-          else #drop end
+          else ..drop end
           context [] .globalScope .identifiers @ globalName map.at
-          #dup optional.hasData if .data
+          ..dup optional.hasData if .data
             matches optional.hasData if
               matches .data []
-                globalName #over:2 IdentifierMatch new list.append
+                globalName ..over.2 IdentifierMatch new list.append
               matches .data [] =
             end
             mNamespace NAMESPACE_ID_NONE == if
               optional.wrap match =
               true matchGlobal =
-              #dup .imported mNamespace =
-            else #drop
+              ..dup .imported mNamespace =
+            else ..drop
               true multiMatch =
             end
-          else #drop end
+          else ..drop end
         end
      .parent
-    end #drop
+    end ..drop
     matches optional.isEmpty match optional.hasData & if ## TODO return value indicating multi-match
       matchGlobal if globalName else idName end match .data false return
     end
@@ -300,8 +300,8 @@ namespace: id
     context hasOpenTemplate if
       context [] .templateInfos context [] .currentTemplate list.get =:: template
       template .templateType
-        0 while #dup #over:2 context [] .typeContext @ types.compositeEltCount < do =:: tId
-            id #over tId context [] .typeContext @ types.compositeGetLabel context [] .labelContext @ labelNameEq if
+        0 while ..dup ..over.2 context [] .typeContext @ types.compositeEltCount < do =:: tId
+            id ..over tId context [] .typeContext @ types.compositeGetLabel context [] .labelContext @ labelNameEq if
               =:: tType
               tType tId context [] .typeContext @ types.compositeGetElement =:: eType
               eType
@@ -319,14 +319,14 @@ namespace: id
               name context [] .labelContext .namespaceInfo .current fileId IdentifierName new ID_TMP_DATA @ false return
             end
           tId 1 +
-        end #drop
-      #drop
+        end ..drop
+      ..drop
     end
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
   end
   proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export getIdentifierByLabel
     context [] .nameBuffer
-      #dup .length 0 != if ..unreachable end ## TODO error message
+      ..dup .length 0 != if ..unreachable end ## TODO error message
       nameId context [] .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
@@ -370,7 +370,7 @@ namespace: id
     end
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
-      #dup .length 0 != if ..unreachable end ## TODO error message
+      ..dup .length 0 != if ..unreachable end ## TODO error message
       label context [] .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
@@ -401,17 +401,17 @@ namespace: id
       ID_NONE ID_NONE_DATA @ true return
     end
     context [] .openScopes .length 0 > if
-      context [] .openScopes #dup .length 1 - list.at .data
+      context [] .openScopes ..dup .length 1 - list.at .data
     else
       context [] .globalScope @
     end =:: mScope
     0 sb.create label labelContext sb.appendLabelName ## ensure name allocation stays valid for whole lifetime of scope
       mScope [] .scopeStrings
-        #over .data list.append ## remember allocated string
+        ..over .data list.append ## remember allocated string
       mScope [] .scopeStrings =
     sb.asStr
     labelContext [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
-    mScope [] .identifiers @ idName map.at #dup optional.hasData if .data =:: prevDec
+    mScope [] .identifiers @ idName map.at ..dup optional.hasData if .data =:: prevDec
       "re declaration of identifier \"" sb.wrap
         label labelContext sb.appendLabelName
         '\"' sb.appendC
@@ -419,14 +419,14 @@ namespace: id
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
       context [] .nameBuffer list.clear context [] .nameBuffer =
       ID_NONE ID_NONE_DATA @ true return
-    end #drop
+    end ..drop
     name fileId context getIdentifierByName ! if
       "declaration of identifier \"" sb.wrap
         label labelContext sb.appendLabelName
         '\"' sb.appendC
       declaredAt errors appendWarning
-      "shadows previous declaration " sb.wrap #over [] .declaredAt errors appendInfo
-    end #drop:2
+      "shadows previous declaration " sb.wrap ..over [] .declaredAt errors appendInfo
+    end ..drop.2
     mScope [] .identifiers @
       idName
       valType
@@ -440,13 +440,13 @@ namespace: id
       end
       id -1 == idType .LOCAL_VAR ?? & if
         context [] .localVarCount
-          #dup 1 + context [] .localVarCount =
+          ..dup 1 + context [] .localVarCount =
       else
         id
       end
       idType
       IdentifierData new
-    map.put #drop ## previous entry is always empty
+    map.put ..drop ## previous entry is always empty
     context [] .nameBuffer list.clear context [] .nameBuffer =
     idName mScope [] .identifiers @ idName map.at .data false return
   end
@@ -454,17 +454,17 @@ end
 namespace: sb
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =>: export appendIdInfo
     sb
-      id .labelId labelContext id.labelFlags #swap
-        #over id.FLAG_EXPORT & ? if
+      id .labelId labelContext id.labelFlags ..swap
+        ..over id.FLAG_EXPORT & ? if
           "export " sb.appendS
         end
-        #over id.FLAG_EXTERN & ? if
+        ..over id.FLAG_EXTERN & ? if
           "extern " sb.appendS
         end
-        #over id.FLAG_MUTABLE & ? if
+        ..over id.FLAG_MUTABLE & ? if
           "mutable " sb.appendS
         end
-      #swap #drop
+      ..swap ..drop
       ## TODO print namespace
       ## TODO print templateInfo
       id .templateId id.TEMPLATE_ID_NONE != if
@@ -534,7 +534,7 @@ namespace: id
       context [] .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
     context [] .nameBuffer
-       #dup .length 0 != if ..unreachable end ## TODO error message
+       ..dup .length 0 != if ..unreachable end ## TODO error message
        name context [] .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: nameAsStr
@@ -545,17 +545,17 @@ namespace: id
   end
   proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =>: export importNamespace
     context [] .nameBuffer
-       #dup .length 0 != if ..unreachable end ## TODO error message
+       ..dup .length 0 != if ..unreachable end ## TODO error message
        name context [] .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: nameAsStr
     0 NamespaceId cast nameAsStr context [] .labelContext @ findNamespace
     context [] .nameBuffer list.clear context [] .nameBuffer =
-    #dup NAMESPACE_ID_NONE == if #drop
+    ..dup NAMESPACE_ID_NONE == if ..drop
       true return
     end
     context [] .labelContext .namespaceInfo .imports
-      #swap context [] .labelContext @ getNamespaceImportId
+      ..swap context [] .labelContext @ getNamespaceImportId
     context [] .labelContext .namespaceInfo .imports =
     false return
   end
@@ -566,7 +566,7 @@ namespace: id
     context [] .labelContext .namespaceInfo .current context [] .labelContext @ parentNamespace
     context [] .labelContext .namespaceInfo .current =
     context [] .prevImports
-      list.pop #swap
+      list.pop ..swap
     context [] .prevImports =
     context [] .labelContext .namespaceInfo .imports =
     false
@@ -592,7 +592,7 @@ namespace: id
       true return
     end
     context [] .templateInfos
-      #dup .length TemplateId cast context [] .currentTemplate =
+      ..dup .length TemplateId cast context [] .currentTemplate =
       ## TemplateInfo
         templateTypes
         pos
@@ -610,8 +610,8 @@ namespace: id
       return
     end
     context [] .templateInfos context [] .currentTemplate list.at .data
-      templateOpsOffset #over [] .codeOffset -
-      #swap [] .codeLength =
+      templateOpsOffset ..over [] .codeOffset -
+      ..swap [] .codeLength =
     TEMPLATE_ID_NONE context [] .currentTemplate =
   end
 end
@@ -631,22 +631,22 @@ namespace: types
       id return ## no generic elements
     end
     composite [] .eltCount Type list.create
-      0 while #dup composite [] .eltCount < do
-        #swap ## composite index list
-          context [] .typeContext .compositeData composite [] .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
-        #swap 1 +
-      end #drop
-      #dup list.asArray
+      0 while ..dup composite [] .eltCount < do
+        ..swap ## composite index list
+          context [] .typeContext .compositeData composite [] .eltsOffset ..over.3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
+        ..swap 1 +
+      end ..drop
+      ..dup list.asArray
       composite [] .labelOffset
-        #dup types.UNLABELED == if #drop
+        ..dup types.UNLABELED == if ..drop
           LabelId arrayView optional.empty
         else
-          context [] .typeContext .elementLabels .data #swap + composite [] .eltCount array.create optional.wrap
+          context [] .typeContext .elementLabels .data ..swap + composite [] .eltCount array.create optional.wrap
         end
       tupleType
       context [] .typeContext @
       findTupleInfo
-    #swap list.free #drop
+    ..swap list.free ..drop
     return
   end
   proc( UnionId : id bool : isTagged ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> UnionId ) =>: replaceGenericsUnion
@@ -655,35 +655,35 @@ namespace: types
       id return ## no generic elements
     end
     composite [] .eltCount Type list.create
-      0 while #dup composite [] .eltCount < do
-        #swap ## composite index list
-          context [] .typeContext .compositeData composite [] .eltsOffset #over:3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
-        #swap 1 +
-      end #drop
-      #dup list.asArray
+      0 while ..dup composite [] .eltCount < do
+        ..swap ## composite index list
+          context [] .typeContext .compositeData composite [] .eltsOffset ..over.3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
+        ..swap 1 +
+      end ..drop
+      ..dup list.asArray
       composite [] .labelOffset
-        #dup types.UNLABELED == if #drop
+        ..dup types.UNLABELED == if ..drop
           LabelId arrayView optional.empty
         else
-          context [] .typeContext .elementLabels .data #swap + composite [] .eltCount array.create optional.wrap
+          context [] .typeContext .elementLabels .data ..swap + composite [] .eltCount array.create optional.wrap
         end
       context [] .typeContext @
       isTagged
       findEnumOrUnion
-    #swap list.free #drop
+    ..swap list.free ..drop
     return
   end
   proc( ConstValue -> ArraySize bool ) =>: constToSize
-    #dup .int ?? if
+    ..dup .int ?? if
       .int ArraySizeType .int ArraySize new false return
     end
-    #dup .genericArg ?? if
+    ..dup .genericArg ?? if
       .genericArg ArraySizeType .staticArg ArraySize new false return
     end
-    #dup .templateArg ?? if
+    ..dup .templateArg ?? if
       .templateArg ArraySizeType .templateArg ArraySize new false return
     end
-    #drop
+    ..drop
     -1 ArraySizeType .int ArraySize new true return
   end
   proc( ArraySize : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ArraySize ) =>: replaceGenericsSize
@@ -692,25 +692,25 @@ namespace: types
         src return
       staticArg case
         src .value
-        #dup 0 >= #over genericArgs .length < & if
-          genericArgs #swap context argBufferGet
+        ..dup 0 >= ..over genericArgs .length < & if
+          genericArgs ..swap context argBufferGet
           constToSize if
             #+TODO handle errors+#
-            #drop src
+            ..drop src
           end return
-        end #drop
+        end ..drop
         src return
       templateArg case
         src .value
-        #dup 0 >= #over templateArgs .length < & if
-          templateArgs #swap context argBufferGet
-          constToSize if #drop src end return
-        end #drop
+        ..dup 0 >= ..over templateArgs .length < & if
+          templateArgs ..swap context argBufferGet
+          constToSize if ..drop src end return
+        end ..drop
         src return
     end
   end
   proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> Type ) =>: export replaceGenericsType
-    src context [] .typeContext @ containsGeneric genericArgs .length 0 > & #swap templateArgs .length 0 > & | ! if
+    src context [] .typeContext @ containsGeneric genericArgs .length 0 > & ..swap templateArgs .length 0 > & | ! if
       src return ## no generics to replace
     end
     src switch
@@ -733,20 +733,20 @@ namespace: types
       pointer arrayType case
         src .pointer ?? =:: isPtr
         src isPtr if .pointer else .arrayType end
-        context [] .typeContext .arrayTypes #swap list.get =:: arrayType
+        context [] .typeContext .arrayTypes ..swap list.get =:: arrayType
           arrayType .base templateArgs genericArgs implPos context replaceGenericsType
           isPtr
           context [] .arraySizeBuffer .length =:: offset
           arrayType .fixedSize if
             context [] .typeContext .arraySizes .data arrayType .sizeOffset + arrayType .dims array.create =:: prevSizes
-            0 while #dup prevSizes .length < do
-              prevSizes #over array.get
+            0 while ..dup prevSizes .length < do
+              prevSizes ..over array.get
                 templateArgs genericArgs implPos context replaceGenericsSize
               context [] .arraySizeBuffer
-                #swap list.append
+                ..swap list.append
               context [] .arraySizeBuffer =
               1 +
-            end #drop
+            end ..drop
             context [] .arraySizeBuffer .data offset + context [] .arraySizeBuffer .length offset - array.create
             true
           else
@@ -755,7 +755,7 @@ namespace: types
           end
           arrayType .mutable
           context [] .typeContext @
-        newArrayType #drop return
+        newArrayType ..drop return
       struct case
         src .struct TUPLE_FLAG_IS_STRUCT templateArgs genericArgs implPos context replaceGenericsTuple Type .struct new return
       enum case
@@ -771,7 +771,7 @@ namespace: types
           procData .in templateArgs genericArgs implPos context replaceGenericsType
           procData .out templateArgs genericArgs implPos context replaceGenericsType
           procData .callingConvention
-        context [] .typeContext @ newProcedure #drop return
+        context [] .typeContext @ newProcedure ..drop return
       namedType case
         context [] .typeContext .namedTypes
           src .namedType
@@ -783,38 +783,38 @@ namespace: types
         context [] .templateArgBuffer .length =:: offset
         typeData .implId -1 != if ## already implemented
           templateInfo [] .implementations typeData .implId list.get .argValues =:: argValues
-          0 while #dup argValues .length < do
-              argValues #over context [] .constContext @ constArrayGet
+          0 while ..dup argValues .length < do
+              argValues ..over context [] .constContext @ constArrayGet
                 templateArgs genericArgs implPos context replaceGenerics
             context [] .templateArgBuffer
-              #swap list.append
+              ..swap list.append
             context [] .templateArgBuffer =
             1 +
-          end #drop
+          end ..drop
           offset context [] .templateArgBuffer .length offset - ConstantArray new
         else
           ## TODO check if template arguments have correct size
           templateArgs
         end =:: args
-        0 while #dup templateInfo [] .implementations .length < do ## check if template arguments have already been implemented
-          templateInfo [] .implementations #over list.get
-            true 0 while #dup #over:3 .argValues .length < do
-              #swap #drop
-                #over .argValues #over context [] .constContext @ constArrayGet args #over:2 context argBufferGet context [] .labelContext @ constantEquals #dup ! if
-                  #swap break
+        0 while ..dup templateInfo [] .implementations .length < do ## check if template arguments have already been implemented
+          templateInfo [] .implementations ..over list.get
+            true 0 while ..dup ..over.3 .argValues .length < do
+              ..swap ..drop
+                ..over .argValues ..over context [] .constContext @ constArrayGet args ..over.2 context argBufferGet context [] .labelContext @ constantEquals ..dup ! if
+                  ..swap break
                 end
-              #swap 1 +
-            end #drop
+              ..swap 1 +
+            end ..drop
             if ## already implemented
               context [] .templateArgBuffer
                 offset list.setLength
               context [] .templateArgBuffer = ## reset template buffer
               .implType
-              #swap #drop return
+              ..swap ..drop return
             end
-          #drop
+          ..drop
           1 +
-        end #drop
+        end ..drop
         ## create implementation
         Type .undefined typeData .name typeData .templateId context [] .typeContext @ newNamedType =:: newType
         templateInfo [] .implementations .length i32 cast =:: newId
@@ -829,28 +829,28 @@ namespace: types
           typeData .data templateArgs genericArgs implPos context replaceGenericsType
           newId
           context [] .typeContext @
-        setNamedType #drop
+        setNamedType ..drop
         context [] .templateArgBuffer
           offset list.setLength
         context [] .templateArgBuffer = ## reset template buffer
         newType return
       genericType case
         src .genericType
-          #dup 0 >= #over genericArgs .length < & if
-            genericArgs #swap context argBufferGet #dup .typeId ?? if
+          ..dup 0 >= ..over genericArgs .length < & if
+            genericArgs ..swap context argBufferGet ..dup .typeId ?? if
               .typeId return
-            end #drop
+            end ..drop
             ## TODO error message if argument is not typeId
-        else #drop end
+        else ..drop end
         src return
       templateType case
         src .templateType
-          #dup 0 >= #over templateArgs .length < & if
-            templateArgs #swap context argBufferGet #dup .typeId ?? if
+          ..dup 0 >= ..over templateArgs .length < & if
+            templateArgs ..swap context argBufferGet ..dup .typeId ?? if
               .typeId return
-            end #drop
+            end ..drop
             ## error message if argument is not typeId
-        else #drop end
+        else ..drop end
         src return
      generatedType case
         src return ## TODO
@@ -868,15 +868,15 @@ namespace: types
         src .typeId templateArgs genericArgs implPos context replaceGenericsType ConstValue .typeId new return
       genericArg case
         src .genericArg
-        #dup 0 >= #over genericArgs .length < & if
-          genericArgs #swap context argBufferGet return
-        end #drop
+        ..dup 0 >= ..over genericArgs .length < & if
+          genericArgs ..swap context argBufferGet return
+        end ..drop
         src return
       templateArg case
         src .templateArg
-        #dup 0 >= #over templateArgs .length < & if
-          templateArgs #swap context argBufferGet return
-        end #drop
+        ..dup 0 >= ..over templateArgs .length < & if
+          templateArgs ..swap context argBufferGet return
+        end ..drop
         src return
     end
   end
@@ -904,20 +904,20 @@ namespace: types
       true visitedValues expected .genericType templateCount + [] =
       return
     end
-    expected typeContext containsGeneric genericCount 0 > & #swap templateCount 0 > & | ! if
+    expected typeContext containsGeneric genericCount 0 > & ..swap templateCount 0 > & | ! if
       return ## no generics to replace
     end
     src typeContext isComposite expected typeContext isComposite & if
       src typeContext compositeEltCount =:: srcCount
       expected typeContext compositeEltCount =:: expectedCount
       srcCount expectedCount < if srcCount else expectedCount end =:: count
-      0 while #dup count < do
+      0 while ..dup count < do
         ## resolveGenericsType
-          src #over typeContext compositeGetElement
-          expected #over:2 typeContext compositeGetElement
+          src ..over typeContext compositeGetElement
+          expected ..over.2 typeContext compositeGetElement
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         1 +
-      end #drop
+      end ..drop
       return
     end
     src expected != if
@@ -928,12 +928,12 @@ namespace: types
         break
       procedure case
         ## resolveGenericsType
-          src typeContext getProcIn #drop
-          expected typeContext getProcIn #drop
+          src typeContext getProcIn ..drop
+          expected typeContext getProcIn ..drop
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         ## resolveGenericsType
-          src typeContext getProcOut #drop
-          expected typeContext getProcOut #drop
+          src typeContext getProcOut ..drop
+          expected typeContext getProcOut ..drop
         templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
         break
       reference mutableReference case
@@ -952,10 +952,10 @@ namespace: types
         src typeContext isFixedSize  expected typeContext isFixedSize & if
           src typeContext getArraySize =:: srcSizes
           expected typeContext getArraySize =:: sizes
-          0 while #dup sizes .length < do
-            #dup srcSizes .length < if
-              srcSizes #over array.get
-              #dup .sizeType switch
+          0 while ..dup sizes .length < do
+            ..dup srcSizes .length < if
+              srcSizes ..over array.get
+              ..dup .sizeType switch
                 int case
                   .value ConstValue .int new
                   break
@@ -969,7 +969,7 @@ namespace: types
             else
               1 ConstValue .int new
             end =:: srcVal
-            sizes #over array.get =:: val
+            sizes ..over array.get =:: val
             val .sizeType switch
              int case
                1 + continue
@@ -993,7 +993,7 @@ namespace: types
               break
             end
             1 +
-          end #drop
+          end ..drop
         end
         break
       namedType case
@@ -1012,7 +1012,7 @@ namespace: types
      generatedType case
         break ## TODO
       struct union procIn procOut enum genericType templateType case
-        io.stdErr "unreachable\n" io.fputs #drop
+        io.stdErr "unreachable\n" io.fputs ..drop
         ..unreachable
         break
     end

@@ -47,8 +47,8 @@ end
 
 ```
 ## sort a pair of numbers on the stack (the numbers have to have the same type)
-#over #over < if
-  #swap
+..over ..over < if
+  ..swap
 end
 ```
 

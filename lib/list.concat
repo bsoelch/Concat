@@ -14,7 +14,7 @@ namespace: list
   end
   #template type : T #end
   proc( T arrayView : data -> T list ) =>: export fromArray
-    data .length #dup 8 / + =:: C
+    data .length ..dup 8 / + =:: C
     C T mem.alloc =:: p
     p data .data data .length mem.copy data .length C T list new return
   end
@@ -25,25 +25,25 @@ namespace: list
   #template type : T #end
   proc( T list : elts i64 : minCap -> T list ) =>: export ensureCap
     elts
-      #dup .cap minCap > if
+      ..dup .cap minCap > if
         return
       end
       minCap minCap 8 / + 8 +
-        #over .data #over mem.realloc #over:2 .data =
-        #over .cap =
+        ..over .data ..over mem.realloc ..over.2 .data =
+        ..over .cap =
     return
   end
   #template type : T #end
   proc( T list -> T list ) =>: export free
-    #dup .data mem.free
-      0 #over .cap =
-      0 #over .length =
+    ..dup .data mem.free
+      0 ..over .cap =
+      0 ..over .length =
     return
   end
   #template type : T #end
   proc( T list -> T list ) =>: export clear
     ## list
-      0 #over .length =
+      0 ..over .length =
     return
   end
   #template type : T #end
@@ -84,33 +84,33 @@ namespace: list
   #template type : T #end
   proc( T list : elts T : elt -> T list ) =>: export append
     elts
-      #dup .length 1 + ensureCap
-      elt #over .data #over:2 .length [] =
-      #dup .length 1 + #over .length =
+      ..dup .length 1 + ensureCap
+      elt ..over .data ..over.2 .length [] =
+      ..dup .length 1 + ..over .length =
     return
   end
   #template type : T #end
   proc( T list : a i64 : auto k  T k ptr : b -> T list ) =>: export appendP
     a
-      #dup .length k + ensureCap
-      #dup .data #over .length + b T _ ptr cast k mem.copy #drop
-      #dup .length k + #over .length =
+      ..dup .length k + ensureCap
+      ..dup .data ..over .length + b T _ ptr cast k mem.copy ..drop
+      ..dup .length k + ..over .length =
     return
   end
   #template type : T #end
   proc( T list : a T arrayView : b -> T list ) =>: export appendArray
     a
-      #dup .length   b .length + ensureCap
-      #dup .data #over .length + b .data b .length mem.copy #drop
-      #dup .length   b .length + #over .length =
+      ..dup .length   b .length + ensureCap
+      ..dup .data ..over .length + b .data b .length mem.copy ..drop
+      ..dup .length   b .length + ..over .length =
     return
   end
   #template type : T #end
   proc( T list : a T list : b -> T list ) =>: export appendAll
     a
-      #dup .length   b .length + ensureCap
-      #dup .data #over .length + b .data b .length mem.copy #drop
-      #dup .length   b .length + #over .length =
+      ..dup .length   b .length + ensureCap
+      ..dup .data ..over .length + b .data b .length mem.copy ..drop
+      ..dup .length   b .length + ..over .length =
     return
   end
 
@@ -120,7 +120,7 @@ namespace: list
     elts
       elts .length 1 + ensureCap
     elts =
-    elts .data index 1 + + elts .data index + elts .length index - mem.move #drop
+    elts .data index 1 + + elts .data index + elts .length index - mem.move ..drop
     elt elts .data index [] =
     elts .length 1 + elts .length =
     elts return
@@ -131,8 +131,8 @@ namespace: list
     elts
       elts .length k + ensureCap
     elts =
-    elts .data index k + +  elts .data index +  elts .length index -  mem.move #drop
-    elts .data index +  b T _ ptr cast  k  mem.copy #drop
+    elts .data index k + +  elts .data index +  elts .length index -  mem.move ..drop
+    elts .data index +  b T _ ptr cast  k  mem.copy ..drop
     elts .length k + elts .length =
     elts return
   end
@@ -142,8 +142,8 @@ namespace: list
     elts
       elts .length b .length + ensureCap
     elts =
-    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move #drop
-    elts .data index +  b .data b .length  mem.copy #drop
+    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move ..drop
+    elts .data index +  b .data b .length  mem.copy ..drop
     elts .length b .length + elts .length =
     elts return
   end
@@ -153,8 +153,8 @@ namespace: list
     elts
       elts .length b .length + ensureCap
     elts =
-    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move #drop
-    elts .data index +  b .data b .length  mem.copy #drop
+    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move ..drop
+    elts .data index +  b .data b .length  mem.copy ..drop
     elts .length b .length + elts .length =
     elts return
   end
@@ -178,8 +178,8 @@ namespace: list
       ..unreachable
     end
     elts
-      #dup .length 1 - #over .length =
-    #dup .data #over .length [] return
+      ..dup .length 1 - ..over .length =
+    ..dup .data ..over .length [] return
   end
 
 

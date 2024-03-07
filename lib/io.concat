@@ -85,7 +85,7 @@ namespace: io
         fileNameBuffer @
         fileName
         nameLength
-      mem.copy #drop
+      mem.copy ..drop
       '\x00' fileNameBuffer @ nameLength [] =
       fileNameBuffer @ i8 _ ptr cast
     end =:: path
@@ -108,7 +108,7 @@ namespace: io
       path ..ctype.char ptr cast!
       openMode ..ctype.char ptr cast!
     c.concatIOHelper_fopen
-    #dup c.FILE ptr cast c.isNull if
+    ..dup c.FILE ptr cast c.isNull if
       c.concatIOHelper_checkErrno
     else
       FILE_ERROR_NONE
@@ -201,7 +201,7 @@ namespace: io
 
 
   proc( FILE : file i8 : chr -> IOError ) =>: export fputc
-    file chr @ 0 1 fwrite #swap #drop return
+    file chr @ 0 1 fwrite ..swap ..drop return
   end
   proc( FILE : file  i64 : k  i8 _ ptr : str -> IOError ) =>: export fputArray
     0 i64 =: mut off
@@ -209,12 +209,12 @@ namespace: io
     str i8 _ ptr cast =:: data
     while count 0 > do
       file data off count fwrite
-        #dup FILE_ERROR_NONE != if ## error
-            #swap #drop return
+        ..dup FILE_ERROR_NONE != if ## error
+            ..swap ..drop return
           end
-        #drop
-        count #over - count =
-      off #swap + off =
+        ..drop
+        count ..over - count =
+      off ..swap + off =
     end
     FILE_ERROR_NONE return
   end
@@ -228,7 +228,7 @@ namespace: io
       '\n' sb.appendC
     =:: chars
       stdOut chars .length chars .data fputArray =:: errId
-    chars sb.free #drop
+    chars sb.free ..drop
     errId return
   end
 end

@@ -129,22 +129,24 @@
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))((( # start of file or white-space
             (\#(
-              dup                |
-              drop(\:[0-9]+)?    |
-              swap               |
-              over(\:[0-9]+)?    |
-              using              |
-              end                |
-              template
-            )|
-            import |
-            \.\.assert |
-            \.\.\?(
-              types(\.[0-9]+)?   |
-              stack(\.[0-9]+)?   |
-              ops(\.[0-9]+)?     |
-              parser\.ops(\.[0-9]+)?
-            )
+                using              |
+                end                |
+                template
+              )|
+              import |
+              \.\.(
+                dup                |
+                drop(\.[0-9]+)?    |
+                swap               |
+                over(\.[0-9]+)?    |
+                assert |
+                \?(
+                  types(\.[0-9]+)?   |
+                  stack(\.[0-9]+)?   |
+                  ops(\.[0-9]+)?     |
+                  parser\.ops(\.[0-9]+)?
+                )
+             )
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space
           )|

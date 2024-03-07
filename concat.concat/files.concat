@@ -44,17 +44,17 @@ namespace: sb
 end
 
 proc( string -> ) =>: export printTokens
-  "test" #dup ..length string.create 0 1 FilePosition new #dup FileState new =:: mut state
+  "test" ..dup ..length string.create 0 1 FilePosition new ..dup FileState new =:: mut state
   while
     state @ nextToken
     128 sb.create
-      #swap sb.appendToken
+      ..swap sb.appendToken
       " at " sb.appendS
       state .wordStart sb.appendPos
       '\n' sb.appendC
-    io.stdOut #swap io.fputSb #drop
-    #dup .length 0 >
-  do end #drop
+    io.stdOut ..swap io.fputSb ..drop
+    ..dup .length 0 >
+  do end ..drop
 end
 
 proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export updateFilePos
@@ -66,40 +66,40 @@ proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export updateFilePos
   end
 end
 proc( string : code FileState ptr mut : fileState -> string ) =>: skipSpaces
-  0 while #dup code .length < if code #over string.charAt char.isWhitespace else false end do
-    code #over string.charAt fileState [] .currentPos @ updateFilePos
+  0 while ..dup code .length < if code ..over string.charAt char.isWhitespace else false end do
+    code ..over string.charAt fileState [] .currentPos @ updateFilePos
     1 +
   end
-  code #swap string.tail return
+  code ..swap string.tail return
 end
 proc( string : code FileState ptr mut : fileState -> string Token ) =>: export nextToken
   code .length 0 <= if
     string.empty Token .EMPTY return
   end
   code fileState skipSpaces ## cut of leading white-spaces
-  #dup .length 0 <= if #drop
+  ..dup .length 0 <= if ..drop
     string.empty Token .EMPTY return
   end
     while
-      #dup .length 2 < if break end
-      #dup 0 string.charAt '#' == #over 1 string.charAt '#' == & if ## line comment
+      ..dup .length 2 < if break end
+      ..dup 0 string.charAt '#' == ..over 1 string.charAt '#' == & if ## line comment
         '#' fileState [] .currentPos @ updateFilePos
         '#' fileState [] .currentPos @ updateFilePos
-        2 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\n' != & do
-          #over #over string.charAt fileState [] .currentPos @ updateFilePos
+        2 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\n' != & do
+          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
         string.tail fileState skipSpaces
-        #dup .length 2 < if break end
+        ..dup .length 2 < if break end
         true
-      else false end #swap
-      #dup 0 string.charAt '#' == #over 1 string.charAt '+' == & if ## block comment
+      else false end ..swap
+      ..dup 0 string.charAt '#' == ..over 1 string.charAt '+' == & if ## block comment
         '#' fileState [] .currentPos @ updateFilePos
         '+' fileState [] .currentPos @ updateFilePos
         1 =:: mut k
-        2 while #dup #over:2 .length < k 0 > & do
-          #over #over string.tail
-            #dup "+#" string.wrap string.startsWith if #drop
+        2 while ..dup ..over.2 .length < k 0 > & do
+          ..over ..over string.tail
+            ..dup "+#" string.wrap string.startsWith if ..drop
               k 1 - k =
               '+' fileState [] .currentPos @ updateFilePos
               '#' fileState [] .currentPos @ updateFilePos
@@ -112,52 +112,52 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export n
               2 +
               continue
             end
-          #over #over string.charAt fileState [] .currentPos @ updateFilePos
+          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
         ## TODO error for unfinished comment at end of file
         string.tail fileState skipSpaces ## length will be checked at start of next loop
-        #swap #drop true
-      else #swap end
+        ..swap ..drop true
+      else ..swap end
     do end
-    #dup .length 0 <= if #drop
+    ..dup .length 0 <= if ..drop
       string.empty Token .EMPTY return
     end
     fileState [] .currentPos fileState [] .wordStart =
-    #dup 0 string.charAt fileState [] .currentPos @ updateFilePos
-    #dup 0 string.charAt '"' == if ## string
+    ..dup 0 string.charAt fileState [] .currentPos @ updateFilePos
+    ..dup 0 string.charAt '"' == if ## string
       1 string.tail
-      0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '"' != & do
-        #over #over string.charAt '\\' == if ##escape characters
-          #over #over string.charAt fileState [] .currentPos @ updateFilePos
+      0 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '"' != & do
+        ..over ..over string.charAt '\\' == if ##escape characters
+          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
-        #over #over string.charAt fileState [] .currentPos @ updateFilePos
+        ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
         1 +
       end
-      #over #over string.charAt fileState [] .currentPos @ updateFilePos
+      ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .STRING new return
     end
-    #dup 0 string.charAt '\'' == if ## char
+    ..dup 0 string.charAt '\'' == if ## char
       1 string.tail
-      0 while #dup #over:2 .length < #over:2 #over:2 string.charAt '\'' != & do
-        #over #over string.charAt '\\' == if ##escape characters
-          #over #over string.charAt fileState [] .currentPos @ updateFilePos
+      0 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\'' != & do
+        ..over ..over string.charAt '\\' == if ##escape characters
+          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
-        #over #over string.charAt fileState [] .currentPos @ updateFilePos
+        ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
         1 +
       end
-      #over #over string.charAt fileState [] .currentPos @ updateFilePos
+      ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .CHAR new return
     end
-    1 while #dup #over:2 .length < #over:2 #over:2 string.charAt char.isWhitespace ! & do
-      #over #over string.charAt fileState [] .currentPos @ updateFilePos
+    1 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt char.isWhitespace ! & do
+      ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       1 +
     end
   string.cutIndex
-    #dup .length 0 == if
-      #drop Token .EMPTY return
+    ..dup .length 0 == if
+      ..drop Token .EMPTY return
     end
   Token .IDENTIFIER new return
 end

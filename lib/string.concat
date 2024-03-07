@@ -19,11 +19,11 @@ namespace: string
   proc( string : s1 string : s2 -> i32 ) =>: export compare
     s1 .length s2 .length < if s1 .length else s2 .length end =:: l
     s1 .data s2 .data l mem.compare
-    #dup 0 != if
+    ..dup 0 != if
       return
-    else #drop end
+    else ..drop end
     s1 .length s2 .length -
-    #dup 0 > if #drop
+    ..dup 0 > if ..drop
        1 return
     else 0 < _if
       -1 return
@@ -37,14 +37,14 @@ namespace: string
   proc( string : str -> i32 ) =>: export hash
     0 ## hash
       0 ## index
-      while #dup str .length < do
-        #swap
+      while ..dup str .length < do
+        ..swap
           31 *
-          #over str .data #swap [] +
-        #swap
+          ..over str .data ..swap [] +
+        ..swap
         1 +
       end
-      #drop
+      ..drop
     return
   end
 
@@ -63,13 +63,13 @@ namespace: string
     end
     base .length subStr .length - =:: maxOffset
     0 ## offset
-    while #dup maxOffset <= do
-      base .data #over + subStr .length create  subStr compare 0 == if
+    while ..dup maxOffset <= do
+      base .data ..over + subStr .length create  subStr compare 0 == if
         return
       end
       1 +
     end
-    #drop
+    ..drop
     -1 return
   end
   proc( string : base string : subStr -> i64 ) =>: export lastIndexOfStr
@@ -77,8 +77,8 @@ namespace: string
       -1 return
     end
     base .length subStr .length -
-      while #dup 0 >= do
-        base .data #over + subStr .length create  subStr compare 0 == if
+      while ..dup 0 >= do
+        base .data ..over + subStr .length create  subStr compare 0 == if
           return
         end
         1 -

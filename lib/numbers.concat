@@ -13,15 +13,15 @@ namespace: number
     end
     x =:: mut xPow
     1 T cast
-      p while #dup 0 != do
-        #dup 1 & 0 != if
-        #swap
+      p while ..dup 0 != do
+        ..dup 1 & 0 != if
+        ..swap
           xPow *
-        #swap
+        ..swap
         end
         1 >>
         xPow xPow * xPow =
-      end #drop
+      end ..drop
     return
   end
   2 =:: export MIN_BASE
@@ -39,30 +39,30 @@ namespace: number
     -1 return
   end
   proc( string -> string i32 ) =>: export resolveBase
-    #dup .length 2 < if
+    ..dup .length 2 < if
       10 return
     end
     ## XXX? support #... for hex numbers
-    #dup 0 string.charAt '0' == if
-      #dup 1 string.charAt 'x' == if
+    ..dup 0 string.charAt '0' == if
+      ..dup 1 string.charAt 'x' == if
         2 string.tail 16 return
-      else #dup 1 string.charAt 'o' == _if
+      else ..dup 1 string.charAt 'o' == _if
         2 string.tail 8 return
-      else #dup 1 string.charAt 'b' == _if
+      else ..dup 1 string.charAt 'b' == _if
         2 string.tail 2 return
       end
     end
     ## arbitrary base numbers <BASE>b<NUMBER>
-    #dup 1 string.charAt 'b' == if
-      #dup 0 string.charAt '0' - i32 =: mut b
+    ..dup 1 string.charAt 'b' == if
+      ..dup 0 string.charAt '0' - i32 =: mut b
       b 2 < b 9 > | if
         10 return ## invalid base -> return unmodified string
       end
       2 string.tail b return
     end
-    #dup .length 3 > if #dup 2 string.charAt 'b' == if ## two digits before b
-      #dup 0 string.charAt '0' - =:: mut b1
-      #dup 1 string.charAt '0' - =:: mut b2
+    ..dup .length 3 > if ..dup 2 string.charAt 'b' == if ## two digits before b
+      ..dup 0 string.charAt '0' - =:: mut b1
+      ..dup 1 string.charAt '0' - =:: mut b2
       b1 0 < b1 9 > | b2 0 < b2 9 > | | if
         10 return ## invalid base -> return unmodified string
       end
@@ -84,32 +84,32 @@ namespace: number
     0 i64 =: mut res
     false =:: mut overflow
     str
-      #dup .length 0 == if
-        #drop 0 ParserError .EMPTY return
+      ..dup .length 0 == if
+        ..drop 0 ParserError .EMPTY return
       end
-      #dup 0 string.charAt '-' == if
+      ..dup 0 string.charAt '-' == if
         true sign =
         1 string.tail
-      else #dup 0 string.charAt '+' == _if
+      else ..dup 0 string.charAt '+' == _if
         1 string.tail
       end
-      #dup .length 0 == if
-        #drop 0 ParserError .EMPTY return
+      ..dup .length 0 == if
+        ..drop 0 ParserError .EMPTY return
       end
       mBase 0 == if
         resolveBase mBase =
       end
       unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxVal
       maxVal mBase ..udiv =:: maxSafe
-      0 while #dup #over:2 .length < do
-        #over #over string.charAt
-          #over 0 > #over '_' == #over:2 '\'' == | & if
-            #drop ## ignore _ and ' in numbers
+      0 while ..dup ..over.2 .length < do
+        ..over ..over string.charAt
+          ..over 0 > ..over '_' == ..over.2 '\'' == | & if
+            ..drop ## ignore _ and ' in numbers
             1 + continue
           end
         mBase parseDigit
-          #dup 0 < #over mBase >= | if
-            #drop:3 0 ParserError .INVALID_CHAR return
+          ..dup 0 < ..over mBase >= | if
+            ..drop.3 0 ParserError .INVALID_CHAR return
           end
         res maxSafe > if
           true overflow =
@@ -117,15 +117,15 @@ namespace: number
         res
           mBase *
           res maxSafe == if ## check last digit if previous value was exactly maxSafe
-            maxVal #over - #over:2 < if
+            maxVal ..over - ..over.2 < if
               true overflow =
             end
           end
           +
         res = ## add digit to number
         1 +
-      end #drop
-    #drop
+      end ..drop
+    ..drop
     res
       sign if -_ end
     sign unsigned & if ParserError .SIGN return end
@@ -163,65 +163,65 @@ namespace: number
     1 i64 cast 56 << i64 =: mut maxVal ## higher precision than double, no overflow in base 62
     false =:: mut cStyleHex
     str
-      #dup .length 0 == if
-        #drop 0 double cast ParserError .EMPTY return
+      ..dup .length 0 == if
+        ..drop 0 double cast ParserError .EMPTY return
       end
-      #dup 0 string.charAt '-' == if
+      ..dup 0 string.charAt '-' == if
         true sign =
         1 string.tail
-      else #dup 0 string.charAt '+' == _if
+      else ..dup 0 string.charAt '+' == _if
         1 string.tail
       end
-      #dup .length 0 == if
-        #drop 0 double cast ParserError .EMPTY return
+      ..dup .length 0 == if
+        ..drop 0 double cast ParserError .EMPTY return
       end
       mBase 0 == if
         resolveBase mBase =
       end
-      0 while #dup #over:2 .length < do
-        #over #over string.charAt '.' == if
-          #dup 0 == d | if ## . cannot be first character
-            #drop:2 double.NaN ParserError .INVALID_CHAR return
+      0 while ..dup ..over.2 .length < do
+        ..over ..over string.charAt '.' == if
+          ..dup 0 == d | if ## . cannot be first character
+            ..drop.2 double.NaN ParserError .INVALID_CHAR return
           end
           true d =
-        else #over #over string.charAt mBase isExpChar _if
-          #dup 0 == if ##-exp char cannot be first character
-            #drop:2 double.NaN ParserError .INVALID_CHAR return
+        else ..over ..over string.charAt mBase isExpChar _if
+          ..dup 0 == if ##-exp char cannot be first character
+            ..drop.2 double.NaN ParserError .INVALID_CHAR return
           end
-          #dup 1 + e =
+          ..dup 1 + e =
           break
-        else #over #over string.charAt #dup 'p' == #swap 'P' == | mBase 16 == & _if
-          #dup 0 == if ##-exp char cannot be first character
-            #drop:2 double.NaN ParserError .INVALID_CHAR return
+        else ..over ..over string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
+          ..dup 0 == if ##-exp char cannot be first character
+            ..drop.2 double.NaN ParserError .INVALID_CHAR return
           end
-          #dup 1 + e =
+          ..dup 1 + e =
           true cStyleHex =
           10 mBase = ## exponent written in base 10
           c 4 * c = ## scale c to power of 2
           break
-        else #over #over string.charAt mBase parseDigit
-          #dup 0 < #over mBase >= | if
-            #drop:3 double.NaN ParserError .INVALID_CHAR return
+        else ..over ..over string.charAt mBase parseDigit
+          ..dup 0 < ..over mBase >= | if
+            ..drop.3 double.NaN ParserError .INVALID_CHAR return
           end
           val maxVal < if
             val mBase * + val =
             d if
               c 1 - c =
             end
-          else #drop d ! _if
+          else ..drop d ! _if
             c 1 - c =
           end
         end
         1 +
-      end #drop
+      end ..drop
       e 0 > if
-        #dup e string.tail mBase tryParseInt
-          #dup .NONE ?? ! if =:: err
-            #drop:2 double.NaN err return
-          end #drop
+        ..dup e string.tail mBase tryParseInt
+          ..dup .NONE ?? ! if =:: err
+            ..drop.2 double.NaN err return
+          end ..drop
         c + c =
       end
-    #drop
+    ..drop
     cStyleHex if ## calculate powers of 2 instead of powers of base
       2 mBase =
     end
@@ -230,7 +230,7 @@ namespace: number
     mBase double cast  c -100 < if
        ## calculate power of 1/base instead of negative power of base and
        ## split of last factor to prevent underflow of intermediate results
-       1 double cast #swap /
+       1 double cast ..swap /
        -1 c - powI *  mBase double cast /
     else
        c powI *

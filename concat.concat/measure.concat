@@ -9,17 +9,17 @@ import "types.concat"
 
 proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types -> ) =>: declaredType
   prog [] .idContext .typeContext @ =:: typeContext
-  visited declared map.at #dup optional.hasData if .data []
+  visited declared map.at ..dup optional.hasData if .data []
     ptrLevel == if
       0 sb.create
         declared prog [] .idContext .labelContext @ prog [] .idContext .typeContext @ sb.appendType
         "! \n" sb.appendS
-      io.stdOut #swap io.fputSb #drop
+      io.stdOut ..swap io.fputSb ..drop
       ## TODO add to error messages instead of printing to console
     end
     return
-  else #drop end
-  visited declared ptrLevel map.put #drop
+  else ..drop end
+  visited declared ptrLevel map.put ..drop
   declared switch
     undefined empty primitiveType autoType templateType genericType arrayIndex cType case
       break
@@ -37,10 +37,10 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
       break
     struct union procIn procOut enum case
       declared typeContext types.compositeElts =:: elts
-      0 while #dup elts .length < do
-        elts #over types.compositeElts.get ptrLevel prog visited types declaredType
+      0 while ..dup elts .length < do
+        elts ..over types.compositeElts.get ptrLevel prog visited types declaredType
         1 +
-      end #drop
+      end ..drop
       declared .procIn ?? if
         break ## don't add proc-in to list of declared types
       end
@@ -57,8 +57,8 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
       types [] =
       break
     procedure case
-      declared typeContext types.getProcIn #drop ptrLevel prog visited types declaredType
-      declared typeContext types.getProcOut #drop ptrLevel prog visited types declaredType
+      declared typeContext types.getProcIn ..drop ptrLevel prog visited types declaredType
+      declared typeContext types.getProcOut ..drop ptrLevel prog visited types declaredType
       ## don't add procedure type to list of declared types
       ## type declaration of proc-pointer will be covered by surrounding pointer type
       break
@@ -99,27 +99,27 @@ proc( ProgramContext ptr mut : prog -> Type list ) =>: export getDeclaredTypes
       continue
     end
     declaration .1 [] .valueType 0 prog visited @ types @ declaredType
-  end #drop
-  0 while #dup prog [] .progFiles .length < do
-    prog [] .progFiles #over list.at .data
-      0 while #dup #over:2 [] .globalOps .length < do
-        #swap
-          #dup [] .globalOps #over:2 list.at .data prog visited @ types @ addOpType
-        #swap 1 +
-      end #drop
-      0 while #dup #over:2 [] .localOps .length < do
-        #swap
-          #dup [] .localOps #over:2 list.at .data prog visited @ types @ addOpType
-        #swap 1 +
-      end #drop
-      0 while #dup #over:2 [] .templateOps .length < do
-        #swap
-          #dup [] .templateOps #over:2 list.at .data prog visited @ types @ addOpType
-        #swap 1 +
-      end #drop
-    #drop
+  end ..drop
+  0 while ..dup prog [] .progFiles .length < do
+    prog [] .progFiles ..over list.at .data
+      0 while ..dup ..over.2 [] .globalOps .length < do
+        ..swap
+          ..dup [] .globalOps ..over.2 list.at .data prog visited @ types @ addOpType
+        ..swap 1 +
+      end ..drop
+      0 while ..dup ..over.2 [] .localOps .length < do
+        ..swap
+          ..dup [] .localOps ..over.2 list.at .data prog visited @ types @ addOpType
+        ..swap 1 +
+      end ..drop
+      0 while ..dup ..over.2 [] .templateOps .length < do
+        ..swap
+          ..dup [] .templateOps ..over.2 list.at .data prog visited @ types @ addOpType
+        ..swap 1 +
+      end ..drop
+    ..drop
     1 +
-  end #drop
+  end ..drop
   visited @ map.free
   types return
 end

@@ -12,6 +12,6 @@ proc( -> ) =>: main
    -0x8000_0000_0000_0000 sb.appendI    '\n' sb.appendC
    -1                     sb.appendU    '\n' sb.appendC
    -1                     sb.appendUBin '\n' sb.appendC
-   io.stdOut #over io.fputSb ..debug.print
-  sb.free #drop
+   io.stdOut ..over io.fputSb ..debug.print
+  sb.free ..drop
 end

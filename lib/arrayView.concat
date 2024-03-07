@@ -37,20 +37,20 @@ namespace: array
   #template type : T #end
   proc( T arrayView : elts T : elt -> i64 ) =>: export indexOf
     0 ## index
-    while #dup elts .length < do
-      elts .data #over [] elt == if
+    while ..dup elts .length < do
+      elts .data ..over [] elt == if
         return
       end
       1 +
     end
-    #drop
+    ..drop
     -1 return
   end
   #template type : T #end
   proc( T arrayView : elts T : elt -> i64 ) =>: export lastIndexOf
     elts .length 1 - ## index
-    while #dup 0 >= do
-      elts .data #over [] elt == if
+    while ..dup 0 >= do
+      elts .data ..over [] elt == if
         return
       end
       1 -
@@ -72,9 +72,9 @@ namespace: array
       -1 return
     end
     ## TODO? use faster algorithm
-    0 while #dup a .length b .length - <= do =:: i
+    0 while ..dup a .length b .length - <= do =:: i
       true =:: mut match
-      0 while #dup b .length < do =:: j
+      0 while ..dup b .length < do =:: j
         ## eq
           a i j + array.at .data
           b j array.at .data
@@ -83,12 +83,12 @@ namespace: array
           j break
         end
         j 1 +
-      end #drop
+      end ..drop
       match if
         i return
       end
       i 1 +
-    end #drop
+    end ..drop
     -1 return
   end
 
@@ -156,7 +156,7 @@ namespace: array
   proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export splitLast
     elts
       elts elt lastIndexOf
-      #dup -1 == if #drop:2
+      ..dup -1 == if ..drop.2
         elts T empty return
       end
     splitIndex return

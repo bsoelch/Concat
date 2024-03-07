@@ -91,15 +91,15 @@ namespace: branchTree
   #template type : T #end
   proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export unlinkNode
     tree [] .branchPoints .length 0 > if
-     id tree [] .branchPoints #dup .length 1 - list.get < _if
+     id tree [] .branchPoints ..dup .length 1 - list.get < _if
       return ## node still on different branch
     end
     id tree [] .nodes .length 1 - != if
       true tree [] .nodes id list.at .data [] .deleted =
       return
     end
-    id 1 - while #dup 0 >= do
-      tree [] .nodes #over list.at .data [] .deleted ! if
+    id 1 - while ..dup 0 >= do
+      tree [] .nodes ..over list.at .data [] .deleted ! if
         break
       end
       1 -
@@ -164,13 +164,13 @@ namespace: branchTree
   proc( T BranchTree ptr mut : tree i32 : index -> T ptr mut optional ) =>: export at
     tree [] .branchHead =:: mut nodeId
     index while
-      nodeId 0 < nodeId tree [] .nodes .length >= | if #drop
+      nodeId 0 < nodeId tree [] .nodes .length >= | if ..drop
         T ptr mut optional.empty return
       end
-    #dup 0 > do
+    ..dup 0 > do
       tree [] .nodes nodeId list.at .data [] .parent nodeId =
       1 -
-    end #drop
+    end ..drop
     tree [] .nodes nodeId list.at
       .data [] .data @
     optional.wrap return
@@ -208,17 +208,17 @@ namespace: branchTree
     -1i64 =:: mut initDepth
     -1i64 =:: mut parentId
     false =:: mut needMerge
-    0 while #dup branchHeads .length < do
-      branchHeads #over array.get =:: nodeId
+    0 while ..dup branchHeads .length < do
+      branchHeads ..over array.get =:: nodeId
       nodeId 0 < nodeId tree [] .nodes .length >= | if
-        #drop
+        ..drop
         true return ## nodeId invalid
       end
       initDepth -1 == if
         tree [] .nodes nodeId list.at .data [] .level initDepth =
       else
         tree [] .nodes nodeId list.at .data [] .level initDepth != _if
-          #drop
+          ..drop
           true return ## nodes on top level have different depths
       end
       parentId -1 == if
@@ -228,14 +228,14 @@ namespace: branchTree
         true needMerge =
       end
       1 +
-    end #drop
+    end ..drop
     needMerge ! if
       false return ## heads identical -> no merge necessary
     end
     ## create mutable copy of heads
     branchHeads .length =:: headCount
     headCount NodeId mem.alloc =:: heads
-    heads branchHeads .data headCount mem.copy #drop
+    heads branchHeads .data headCount mem.copy ..drop
     headCount T ptr mem.alloc =:: buffer
     while
       tree [] .nodes heads 0 [] list.at .data =:: root

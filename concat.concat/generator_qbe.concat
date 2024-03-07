@@ -429,19 +429,19 @@ namespace: sb
     context [] .program =:: prog
     prog [] .idContext .labelContext @ =:: labelContext
     prog [] .idContext .typeContext @ =:: typeContext
-    procType typeContext types.getCallConvention #drop =:: callConvention
-    procType typeContext types.getProcIn #drop =:: inType
+    procType typeContext types.getCallConvention ..drop =:: callConvention
+    procType typeContext types.getProcIn ..drop =:: inType
     inType typeContext types.compositeElts =:: args
-    procType typeContext types.getProcOut #drop =:: outType
+    procType typeContext types.getProcOut ..drop =:: outType
     outType typeContext types.compositeElts =:: outTypes
     false =:: mut hasArgs
     sb
       "(" sb.appendS
-      0 while #dup args .length < do
-        #swap
-          args #over:2 types.compositeElts.get =:: arg
+      0 while ..dup args .length < do
+        ..swap
+          args ..over.2 types.compositeElts.get =:: arg
           arg typeContext types.isEmpty if ## skip empty arguments
-            #swap 1 + continue
+            ..swap 1 + continue
           end
           hasArgs if
             ',' sb.appendC
@@ -449,28 +449,28 @@ namespace: sb
           true hasArgs =
           arg true pos context appendTypeNameQBE
           ' ' sb.appendC
-          #over inType #over typeContext types.compositeGetLabel context appendArgName
-        #swap 1 +
-      end #drop
+          ..over inType ..over typeContext types.compositeGetLabel context appendArgName
+        ..swap 1 +
+      end ..drop
       callConvention .POINTER ?? if
         outTypes .length =:: mut N
         N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
           N 1 - N =
         end end
-        0 while #dup N < do
-          #swap
-            outTypes #over:2 types.compositeElts.get =:: arg
+        0 while ..dup N < do
+          ..swap
+            outTypes ..over.2 types.compositeElts.get =:: arg
             arg typeContext types.isEmpty if ## skip empty arguments
-              #swap 1 + continue
+              ..swap 1 + continue
             end
             hasArgs if
               ',' sb.appendC
             end
             true hasArgs =
             "l " sb.appendS ## all out arguments are pointers
-            #over outType #over typeContext types.compositeGetLabel context appendOutArgName
-          #swap 1 +
-        end #drop
+            ..over outType ..over typeContext types.compositeGetLabel context appendOutArgName
+          ..swap 1 +
+        end ..drop
       end
       ")" sb.appendS
     return
@@ -509,23 +509,23 @@ namespace: sb
           t typeContext types.isArray if
             t typeContext types.getBaseType =:: base
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0 while #dup elts .length < do
-              #swap
-                base elts #over:3  array.get true pos context appendConstQBE
+            0 while ..dup elts .length < do
+              ..swap
+                base elts ..over.3  array.get true pos context appendConstQBE
                 ',' sb.appendC
-              #swap 1 +
-            end #drop
+              ..swap 1 +
+            end ..drop
             return
           else t typeContext types.isTuple _if
             ## TODO padding/alignment
             t typeContext types.compositeElts =:: types
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0 while #dup elts .length < do
-              #swap
-                types #over:2 types.compositeElts.get elts #over:3  array.get true pos context appendConstQBE
+            0 while ..dup elts .length < do
+              ..swap
+                types ..over.2 types.compositeElts.get elts ..over.3  array.get true pos context appendConstQBE
                 ',' sb.appendC
-              #swap 1 +
-            end #drop
+              ..swap 1 +
+            end ..drop
             return
           end
         break
@@ -539,7 +539,7 @@ namespace: sb
         return
       end
       context [] .localConstants
-        #dup .length =:: constId
+        ..dup .length =:: constId
         ## LocalConst
           t
           value
@@ -557,7 +557,7 @@ namespace: sb
   -> stringBuilder ) =>: appendLocalConstants
     context [] .program [] .idContext .typeContext @ =:: typeContext
     sb
-      0 while #dup context [] .localConstants .length < do =:: i
+      0 while ..dup context [] .localConstants .length < do =:: i
         context [] .localConstants i list.at .data =:: constant
         "data $localConstant" sb.appendS
         constant [] .id sb.appendI
@@ -567,7 +567,7 @@ namespace: sb
         constant [] .valType constant [] .value true constant [] .pos context appendConstQBE
         "}\n" sb.appendS
         i 1 +
-      end #drop
+      end ..drop
       context [] .localConstants
         list.clear
       context [] .localConstants =
@@ -575,10 +575,10 @@ namespace: sb
   end
   proc( stringBuilder : sb string : str -> stringBuilder ) =>: appendEscapedString
     sb
-      0 while #dup str .length < do =:: i
+      0 while ..dup str .length < do =:: i
           str i string.charAt appendEscapedChr
         i 1 +
-      end #drop
+      end ..drop
     return
   end
   proc(
@@ -650,7 +650,7 @@ proc(
               "export " sb.appendS
             end
             "function " sb.appendS
-            op [] .dataType typeContext types.getProcRet #drop =:: retType
+            op [] .dataType typeContext types.getProcRet ..drop =:: retType
             retType typeContext types.isEmpty ! if
               retType true op [] .pos context sb.appendTypeNameQBE
               ' ' sb.appendC
@@ -674,7 +674,7 @@ proc(
             end
             " =l alloc" sb.appendS
             valType typeContext types.alignOf
-              #dup 4 < if #drop 4i64 end
+              ..dup 4 < if ..drop 4i64 end
             sb.appendI
             ' ' sb.appendC
             valType typeContext types.sizeOf sb.appendI
@@ -759,7 +759,7 @@ proc(
         dataPtrId sb.appendI
         " =l alloc" sb.appendS
         op [] .dataType typeContext types.alignOf
-          #dup 4 < if #drop 4i64 end
+          ..dup 4 < if ..drop 4i64 end
         sb.appendI
         ' ' sb.appendC
         op [] .dataType typeContext types.sizeOf sb.appendI
@@ -781,7 +781,7 @@ proc(
           return
         end
         op [] .dataType typeContext types.compositeElts =:: elts
-        elts .length 1 - while #dup 0 >= do =:: i
+        elts .length 1 - while ..dup 0 >= do =:: i
           elts i types.compositeElts.get =:: eltType
           op [] .dataType i typeContext types.tupleElementOffset =:: eltOffset
           eltType typeContext types.isEmpty if
@@ -812,7 +812,7 @@ proc(
           end
           '\n' sb.appendC
           i 1 -
-        end #drop
+        end ..drop
         "%s" sb.appendS
         ValType .PTR context pushValue sb.appendI
         " =l copy %t" sb.appendS
@@ -949,7 +949,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       ..unreachable ## assert that namespace is always top level
     end
     data [] .labelId mainId =
-  else #drop:2 end
+  else ..drop.2 end
   ## TODO declare composite types
   ## TODO internal functions
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
@@ -985,26 +985,26 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
         valType typeContext types.sizeOf sb.appendI
       end
       "}\n" sb.appendS
-      target #over io.fputSb #drop
-    sb.free #drop
-  end #drop
-  0 while #dup prog [] .progFiles .length < do
-    prog [] .progFiles #over list.at .data =:: f
+      target ..over io.fputSb ..drop
+    sb.free ..drop
+  end ..drop
+  0 while ..dup prog [] .progFiles .length < do
+    prog [] .progFiles ..over list.at .data =:: f
     1024 sb.create
       "dbgfile \"" sb.appendS
       f [] .fileName sb.appendSb
       "\"\n"    sb.appendS
-      0 while #dup f [] .localOps .length < do
-        #swap
-        f [] .localOps #over:2 list.at .data context compileOp
-        #swap 1 +
-      end #drop
-      target #over io.fputSb #drop
-    sb.free #drop
+      0 while ..dup f [] .localOps .length < do
+        ..swap
+        f [] .localOps ..over.2 list.at .data context compileOp
+        ..swap 1 +
+      end ..drop
+      target ..over io.fputSb ..drop
+    sb.free ..drop
     1 +
-  end #drop
+  end ..drop
   context [] .stackInfo @ branchTree.free
-  context [] .localConstants list.free #drop
+  context [] .localConstants list.free ..drop
   mainId id.LABEL_ID_NONE == if ## no main
     return
   end
@@ -1035,6 +1035,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     end
     mainId context sb.appendGlobalName
     "()\nret 0\n}\n" sb.appendS
-    target #over io.fputSb #drop
-  sb.free #drop
+    target ..over io.fputSb ..drop
+  sb.free ..drop
 end

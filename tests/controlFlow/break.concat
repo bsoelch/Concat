@@ -2,14 +2,14 @@ proc( -> ) =>: main
   0
     while true do
       1 + 
-      #dup 5 > if
+      ..dup 5 > if
         break
       end
     end
   ..debug.print
   0
     while
-      #dup 5 > if
+      ..dup 5 > if
         break
       end
       true 
@@ -20,7 +20,7 @@ proc( -> ) =>: main
   0
     true while do
       1 + 
-      #dup 5 < if
+      ..dup 5 < if
         true continue
       end
       false
@@ -29,7 +29,7 @@ proc( -> ) =>: main
   0
     while 
       1 + 
-      #dup 5 < if
+      ..dup 5 < if
         continue
       end
       false

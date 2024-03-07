@@ -1,5 +1,5 @@
 proc( i32 i32 -> i32 i32 ) =>: #:experimental divMod
-  #over #over % =:: mod / mod return
+  ..over ..over % =:: mod / mod return
 end
 
 proc( i32 i32 -> i32 2 array ) =>: #:experimental array2
@@ -39,7 +39,7 @@ proc( String i64 -> String i64 i8 bool ) =>: #:experimental nextChar
     i 1 +  s .data i [] true return
 end
 proc( String i64 i8 -> ) =>: #:experimental endItr
-  #drop #drop #drop
+  ..drop ..drop ..drop
 end
 
 enum( i32 : a i32 : b ) =:: E
@@ -49,7 +49,7 @@ end
 
 proc( -> ) =>: main
   1234 consume
-  43 17 divMod #swap ..debug.print ..debug.print
+  43 17 divMod ..swap ..debug.print ..debug.print
   5 7 cmp ..debug.print
   1 2 array2 =:: A
   A @ 0 [] ..debug.print

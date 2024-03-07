@@ -2,10 +2,10 @@ import arrayView
 
 #template type : T #end
 proc( T arrayView : l -> ) =>: printArray
-  0 while #dup l .length < do
-    l .data #over [] ..debug.print
+  0 while ..dup l .length < do
+    l .data ..over [] ..debug.print
     1 +
-  end #drop
+  end ..drop
 end
 
 #using array 
@@ -18,24 +18,24 @@ proc( -> ) =>: main
   str 'o' lastIndexOf ..debug.print
   str 'c' contains ..debug.print
   i32 10 array new =:: mut a
-  0 while #dup a ..length < do
-    #dup #dup * a @ #over:2 [] =
+  0 while ..dup a ..length < do
+    ..dup ..dup * a @ ..over.2 [] =
     1 +
-  end #drop
+  end ..drop
   a @ 8 array.create
-    #dup 3 head printArray
+    ..dup 3 head printArray
     -141516511 ..debug.print
-    #dup 5 tail printArray
+    ..dup 5 tail printArray
     -34731715 ..debug.print
-    #dup 1 4 slice printArray
+    ..dup 1 4 slice printArray
     -82745267 ..debug.print
-    #dup -1 12 slice printArray
+    ..dup -1 12 slice printArray
     -125136145 ..debug.print
-    #dup 4 cutIndex printArray -313123 ..debug.print printArray
+    ..dup 4 cutIndex printArray -313123 ..debug.print printArray
     -991749124 ..debug.print
-    #dup 3 split printArray -112414 ..debug.print printArray
+    ..dup 3 split printArray -112414 ..debug.print printArray
     -124151151 ..debug.print
-    #dup 16 split printArray -112414 ..debug.print printArray
+    ..dup 16 split printArray -112414 ..debug.print printArray
     -434262161 ..debug.print
   printArray
 end

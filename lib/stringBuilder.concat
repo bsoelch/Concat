@@ -46,7 +46,7 @@ namespace: sb
     buffer str list.appendAll return
   end
   proc( stringBuilder -> i8 arrayView ) =>: export asArray
-    #dup .data #swap .length array.create return
+    ..dup .data ..swap .length array.create return
   end
   proc( stringBuilder -> string ) =>: export asStr
     asArray return
