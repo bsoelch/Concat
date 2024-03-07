@@ -197,6 +197,9 @@ namespace: types
   proc( Type -> bool ) =>: export isPrimitive
     .primitiveType ?? return
   end
+  proc( Type : t TypeContext ptr : context -> PrimitiveType ) =>: export primitiveValue
+    t context unwrapNamed .primitiveType return
+  end
   proc( Type : t0 TypeContext ptr : context -> bool ) =>: export isEmpty ## TODO? should pointer to empty be empty
     t0 context unwrapNamed =:: t
     t switch
