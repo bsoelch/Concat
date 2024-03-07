@@ -37,7 +37,7 @@ namespace: io
   end
 end
 namespace: sb
-  #using io
+  using io
   proc( stringBuilder : sb FILE : file -> stringBuilder IOError ) =>: export appendFile
     16 =:: mut delta
     FILE_ERROR_NONE IOError =: mut err

@@ -1667,7 +1667,7 @@ namespace: types
   end
 
   proc( Type : src Type : target bool : reshape TypeContext ptr : context -> bool ) =>: sizeCompatible
-    #using types
+    using types
     target context isFixedSize ! if
       true return
     end

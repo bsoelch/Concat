@@ -1,5 +1,5 @@
 import numbers
-#using number
+using number
 
 proc( -> ) =>: main
   5 2 powI ..debug.print

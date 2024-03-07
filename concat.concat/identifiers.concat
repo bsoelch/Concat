@@ -882,7 +882,7 @@ namespace: types
   end
 
   proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes IdentifierContext ptr mut : context -> ) =>: resolveGenericsTypeInternal
-    #using types
+    using types
     context [] .typeContext @ =:: typeContext
     expected .templateType ?? if
       expected .templateType 0 < expected .templateType templateCount >= | if

@@ -97,7 +97,7 @@ proc( i8 FilePosition -> Constant ) =>: newCharConstant
   types.primitive.I8 ..swap ConstValue .chr new IdentifierInfo optional.empty pos Constant new return
 end
 proc( StringConstant : str FilePosition : pos TypeContext ptr mut : context -> Constant ) =>: newStringConstant
-  #using types
+  using types
   str .length ArraySizeType .int ArraySize new =:: size
   types.primitive.I8 true size @ 1 array.create true false context newArrayType ..drop str ConstValue .str new IdentifierInfo optional.empty pos Constant new return
 end
@@ -1185,20 +1185,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return ## ignore unknown annotations
       end
       ':' string.split
-        "using" string.wrap ..over string.eq if ..drop.2
-          fileState nextToken
-          ..dup .IDENTIFIER ?? ! if ..drop
-            "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError2
-            return
-          end .IDENTIFIER
-          ..dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-          idContext id.importNamespace if
-            "namespace \"" sb.wrap
-              ..swap sb.appendStr
-            "\" does not exist" sb.appendS fileState [] .wordStart state appendError2
-          else ..drop end
-          return
-        else "template" string.wrap ..over string.eq _if ..drop
+        "template" string.wrap ..over string.eq if ..drop
           state [] .currentProc optional.isEmpty ! if
             "#" sb.wrap
               ..swap sb.appendStr
@@ -2749,6 +2736,20 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       idContext id.beginNamespace
       BlockType .NAMESPACE state openBlock
       return
+    
+    else ..dup "using" string.wrap string.eq _if =:: opName
+      fileState nextToken
+      ..dup .IDENTIFIER ?? ! if ..drop
+        "namespace names have to be identifiers" sb.wrap fileState [] .wordStart state appendError2
+        return
+      end .IDENTIFIER
+      ..dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+      idContext id.importNamespace if
+        "namespace \"" sb.wrap
+          ..swap sb.appendStr
+        "\" does not exist" sb.appendS fileState [] .wordStart state appendError2
+      else ..drop end
+      return
     else ..dup "..assert" string.wrap string.eq _if =:: opName
       state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
         "missing message string for assertion, message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2
@@ -2853,7 +2854,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
          ..over "and*"      string.wrap string.startsWith |
          ..over "or"        string.wrap string.eq |
          ..over "or*"       string.wrap string.startsWith |
-         ..over "using"     string.wrap string.eq |
          ..over "overload"   string.wrap string.eq |
       _if =:: opName
       "`" sb.wrap
@@ -2872,7 +2872,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   return
 end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state -> ) =>: checkIOError
-  #using io
+  using io
   err switch
     FILE_ERROR_NONE case
       return

@@ -114,7 +114,7 @@ namespace: int
     algorithm based on openjdk version of BigInteger(String) constructor
   +#
   proc( string : str i32 : base -> int number.ParserError ) =>: export fromString
-    #using number
+    using number
     1i8 =:: mut sign
     base =:: mut mBase
     base 0 != base 2 < base 62 > | & if

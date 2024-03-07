@@ -854,7 +854,7 @@ end
 enum( PROC POINTER ) =:: CallType
 
 proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state -> ) =>: typeCheckCall
-  #using types
+  using types
   state [] .idContext =:: idContext
   idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
@@ -1393,7 +1393,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
   end
 end
 proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : state -> ) =>: typeCheckGetArrayElement
-  #using types
+  using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1501,7 +1501,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   end
 end
 proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> ) =>: typeCheckGetElement
-  #using types
+  using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -1574,7 +1574,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
   end
 end
 proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> ) =>: typeCheckGetLabel
-  #using types
+  using types
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext

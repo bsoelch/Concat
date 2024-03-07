@@ -1,5 +1,5 @@
 import io
-#using io
+using io
 proc( -> ) =>: main
   i8 64 array new =:: mut buff
   stdIn buff @  0 16 fread ..debug.print ..debug.print

@@ -129,11 +129,11 @@
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))((( # start of file or white-space
             (\#(
-                using              |
                 end                |
                 template
               )|
               import |
+              using  |
               \.\.(
                 dup                |
                 drop(\.[0-9]+)?    |

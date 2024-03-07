@@ -8,7 +8,7 @@ proc( T arrayView : l -> ) =>: printArray
   end ..drop
 end
 
-#using array 
+using array 
 proc( -> ) =>: main
   "Hello World" array.wrap =:: str
   str 5 get ..debug.print
