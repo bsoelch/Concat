@@ -199,7 +199,7 @@ namespace: branchTree
   proc(
     T BranchTree ptr mut : tree
     NodeId arrayView : branchHeads
-    proc( T ptr arrayView C -> T ) ptr : mergeValues
+    proc( T ptr arrayView : types i64 : offset C : context -> T ) ptr : mergeValues
     C : context
   -> bool ) =>: export merge
     branchHeads .length 1 <= if
@@ -237,6 +237,7 @@ namespace: branchTree
     headCount NodeId mem.alloc =:: heads
     heads branchHeads .data headCount mem.copy ..drop
     headCount T ptr mem.alloc =:: buffer
+    0 =:: mut offset
     while
       tree [] .nodes heads 0 [] list.at .data =:: root
       root [] .parent parentId =
@@ -255,8 +256,10 @@ namespace: branchTree
       end
       ## mergeValues
         buffer headCount array.create
+        offset
         context
       mergeValues () root [] .data =
+      offset 1 + offset =
     needMerge do end
     branchHeads 0 array.get tree [] .branchHead =
     ## cleanup

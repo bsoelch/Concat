@@ -31,6 +31,7 @@ struct(
 struct(
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut ifBranch
+  i64 : mut ifCastsOffset
   i32 : blockId
   bool : mut hasElse
 ) =:: IfBlockInfo
@@ -45,6 +46,7 @@ proc( branchTree.NodeId : branchRoot i32 : blockId -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
     -1 branchTree.NodeId cast
+    -1
     blockId
     false
   IfBlockInfo new BlockInfo .If new return
@@ -456,10 +458,13 @@ end
 struct(
   string : blockName
   FilePosition : mergePoint
+  i64 arrayView : castPointOffsets
   TypeCheckState ptr mut : state
+  bool : fixRootTypes
 ) =:: MergePoint
 proc(
   TypeInfo ptr arrayView : toMerge
+  i64 : offset
   MergePoint : mergePoint
 -> TypeInfo ) =>: mergeBranches
   mergePoint .state [] .program =:: program
@@ -472,24 +477,70 @@ proc(
     toMerge 0 array.get [] return
   end
   toMerge 0 array.get =:: root
-  root [] .valueType =:: mergedType
+  root [] .valueType =:: mut mergedType
   1 while ..dup toMerge .length < do =:: i
     toMerge i array.get =:: current
-    current [] .valueType mergedType types.typeEquals ! if
-      "cannot merge the branches of " sb.wrap
-        mergePoint .blockName sb.appendStr
-        "\n expected: " sb.appendS
-        mergedType labelContext typeContext sb.appendType
-        " ( pushed at " sb.appendS
-        root [] .pushedAt sb.appendPos
-        " )\n got: " sb.appendS
-        current [] .valueType labelContext typeContext sb.appendType
-        " ( pushed at " sb.appendS
-        current [] .pushedAt sb.appendPos
-        " )\n" sb.appendS
-      mergePoint .mergePoint errors appendError
+    mergePoint .fixRootTypes if
+      current [] .valueType mergedType typeContext types.canAutoCast ! if
+        "cannot merge the branches of " sb.wrap
+          mergePoint .blockName sb.appendStr
+          "\n expected: " sb.appendS
+          mergedType labelContext typeContext sb.appendType
+          " ( pushed at " sb.appendS
+          root [] .pushedAt sb.appendPos
+          " )\n got: " sb.appendS
+          current [] .valueType labelContext typeContext sb.appendType
+          " ( pushed at " sb.appendS
+          current [] .pushedAt sb.appendPos
+          " )\n" sb.appendS
+        mergePoint .mergePoint errors appendError
+      end
+    else
+      current [] .valueType mergedType typeContext types.mergeTypes if ..drop
+        "cannot merge the branches of " sb.wrap
+          mergePoint .blockName sb.appendStr
+          "\n cannot merge types " sb.appendS
+          mergedType labelContext typeContext sb.appendType
+          " ( pushed at " sb.appendS
+          root [] .pushedAt sb.appendPos
+          " )\n and " sb.appendS
+          current [] .valueType labelContext typeContext sb.appendType
+          " ( pushed at " sb.appendS
+          current [] .pushedAt sb.appendPos
+          " )\n" sb.appendS
+        mergePoint .mergePoint errors appendError
+      else
+        mergedType =
+      end
     end
-    ## XXX allow cast to common super-type
+    i 1 +
+  end ..drop
+  0 while ..dup toMerge .length < do =:: i
+    toMerge i array.get =:: current
+      current [] .valueType mergedType types.typeEquals ! if
+        mergePoint .castPointOffsets i array.get =:: castRoot
+        castRoot 0 >= if
+          mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
+          castPoint [] .val .NOP ?? if
+            ## opAutoCast
+              current [] .valueType
+              offset i32 cast
+              mergedType
+              mergePoint .mergePoint
+            opAutoCast castPoint [] =
+            i 1 + continue
+          end
+          "operation is not a NO-OP" sb.wrap
+            castPoint [] constContext labelContext typeContext sb.appendOp
+          mergePoint .mergePoint errors appendError
+        end
+        "cannot cast " sb.wrap
+          offset sb.appendI
+          "th value in " sb.appendS
+          i sb.appendI
+          "th branch" sb.appendS
+        mergePoint .mergePoint errors appendError
+      end
     i 1 +
   end ..drop
   ## TypeInfo
@@ -517,6 +568,31 @@ proc( Operation : op TypeCheckState ptr mut : state -> i64 #+opIndex+# ) =>: app
     OpInfo new list.append
   state [] .opInfo =
   index return
+end
+## appends count NOPs to the code, returns the position of the first NOP
+proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> i64 ) =>: appendNOPs
+  state [] .compiledOps .length =:: offset
+  state [] .compiledOps
+    offset count + list.ensureCap
+    offset count + list.setLength
+  state [] .compiledOps =
+  ## mem.fill
+    state [] .compiledOps .data offset +
+    count
+    pos opNOP
+  mem.fill
+  state [] .opInfo
+  0 while ..dup count < do =:: i
+    ## OpInfo
+      0
+      0
+      false
+      false
+    OpInfo new list.append
+    i 1 +
+  end ..drop
+  state [] .opInfo =
+  offset return
 end
 proc( TypeCheckState ptr mut : state -> ) =>: wrapCopy
   state [] .stack @ branchTree.peek .data =:: topValue
@@ -1235,8 +1311,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op [] .pos errors appendError
           end
           currentBlock [] .If .blockId op [] .val .block .blockId =
-          ## update editable operations
+          ## update which operations are editable
           state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
+          ## add space for casts of values on stack
+          state [] .stack branchTree.depth op [] .pos state appendNOPs currentBlock [] .If .ifCastsOffset =
           ## reset stack to start of if statement
           state [] .stack @ currentBlock [] .If .branchRoot branchTree.reset currentBlock [] .If .ifBranch =
           true currentBlock [] .If .hasElse =
@@ -1297,12 +1375,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               " block, expected `else` before `end`" sb.appendS
             op [] .pos errors appendError
           end
+          state [] .stack branchTree.depth op [] .pos state appendNOPs =:: elseCastOffset
           state [] .blockStarts
             list.pop ..drop
           state [] .blockStarts =
           branchTree.NodeId 2 array new =:: mut branches
           closed .If .ifBranch branches @ 0 [] =
           state [] .stack .branchHead branches @ 1 [] =
+          i64 2 array new =:: mut castOffsets
+          closed .If .ifCastsOffset castOffsets @ 0 [] =
+          elseCastOffset castOffsets @ 1 [] =
           ## mergeValues
             state [] .stack @
             branches @ array.wrap
@@ -1310,7 +1392,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## MergePoint
               "If-Else block" string.wrap
               op [] .pos
+              castOffsets @ array.wrap
               state
+              false
             MergePoint new
           branchTree.merge if
             "could not merge branches of " sb.wrap

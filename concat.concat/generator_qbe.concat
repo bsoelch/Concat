@@ -159,6 +159,7 @@ struct(
 ) =:: MergePoint
 proc(
   StackElement ptr arrayView : toMerge
+  i64 : offset
   MergePoint : mergePoint
 -> StackElement ) =>: mergeIfBranches
   mergePoint .context =:: context
