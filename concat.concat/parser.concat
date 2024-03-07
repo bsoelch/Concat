@@ -20,7 +20,7 @@ struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
 struct( InterpreterContext : mut context i64 : mut offset ) =:: InterpreterInfo
 
 struct(
-  BlockType : blockType
+  BlockType : mut blockType
   bool : mut autoClose
   bool : hasScope
 ) =:: BlockInfo
@@ -1665,7 +1665,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         BlockType .IFIF
       end =:: blockType
       blockType fileState [] .wordStart opBlock  state appendOp
-      blockType state openBlockScope
+      blockType .IFIF ?? if ## use same scope as for if-branch
+        blockType state openBlock
+      else
+        blockType state openBlockScope
+      end
       state autoCloseCurrentBlock
       return
     else ..dup "else" string.wrap string.eq _if ..drop
@@ -1694,12 +1698,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .WHILE  state openBlockScope
       return
     else ..dup "do" string.wrap string.eq _if ..drop
-      state closeBlock ..swap .WHILE ?? ! | if ..drop
+      state [] .openBlocks list.peek =:: current?
+      current? optional.isEmpty if true else current? .data [] .blockType .WHILE ?? ! end if
         "'do' is only allowed in while-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
-      end ..drop ## ignore auto-close
+      end
+      BlockType .DO  current? .data [] .blockType =
       BlockType .DO  fileState [] .wordStart opBlock  state appendOp
-      BlockType .DO  state openBlockScope
       return
     else ..dup "break" string.wrap string.eq _if ..drop
       BlockType .BREAK  fileState [] .wordStart opBlock  state appendOp
