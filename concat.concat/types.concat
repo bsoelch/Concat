@@ -928,6 +928,18 @@ namespace: types
     end
     context [] .tupleOffsets index tupleInfo [] .offsetsStart + list.get return
   end
+  proc( Type : tuple TypeContext ptr : context -> Type i64 ) =>: export enumLabelInfo
+    tuple context unwrapNamed ..dup switch
+      enum case
+        .enum break
+      struct procIn procOut union undefined empty primitiveType pointer arrayType procedure
+       namedType autoType genericType templateType generatedType
+        reference mutableReference arrayIndex cType case ..drop
+         Type .empty 0 return
+    end =:: enumId
+    context [] .unionTypes enumId list.at .data =:: enumInfo
+    enumInfo [] .labelType enumInfo [] .enumLabelOffset return
+  end
   proc( Type : composite i64 : index TypeContext ptr : context -> Type ) =>: export compositeGetElement
     composite context compositeData =:: compData?
     compData? optional.isEmpty if

@@ -9,11 +9,12 @@ import "branchTree.concat"
 "cctI_argc" =:: CONCAT_ARGC_NAME
 "cctI_argv" =:: CONCAT_ARGV_NAME
 "cctI_envp" =:: CONCAT_ENVP_NAME
-"cctI_checkIndex" =:: CONCAT_CHECKINDEX_NAME
 "localConstant" =:: LOCAL_CONST_NAME
+"checkIndexFormat" =:: CHECK_INDEX_FORMAT
+"checkEnumFormat" =:: CHECK_ENUM_FORMAT
 "fileName" =:: FILE_NAME_NAME
 
-enum( START IF ELSE END_IF ) =:: BranchType
+enum( START NEXT ERROR IF ELSE END_IF ) =:: BranchType
 struct( BranchType : branchType i32 : id ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 struct(
@@ -48,6 +49,7 @@ struct(
   i64 : mut localConstCount
   i64 : mut stackCount
   i64 : mut tmpCount
+  i32 : mut jumpLabelCount
 ) =:: CompilerContext
 
 namespace: sb
@@ -117,6 +119,8 @@ namespace: sb
     sb
       branch .branchType switch
         START case "@start" sb.appendS break
+        NEXT case "@next" sb.appendS branch .id sb.appendI break
+        ERROR case "@error" sb.appendS branch .id sb.appendI break
         IF case "@if_" sb.appendS branch .id sb.appendI break
         ELSE case "@else_" sb.appendS branch .id sb.appendI break
         END_IF case "@endIf_" sb.appendS branch .id sb.appendI break
@@ -175,6 +179,13 @@ proc( CompilerContext ptr mut : context -> i64 ) =>: nextTmpId
     oldCount
       1 +
     context [] .tmpCount =
+  oldCount return
+end
+proc( CompilerContext ptr mut : context -> i32 ) =>: nextJumpLabelId
+  context [] .jumpLabelCount =:: oldCount
+    oldCount
+      1 +
+    context [] .jumpLabelCount =
   oldCount return
 end
 
@@ -297,11 +308,13 @@ namespace: sb
       sb "l" sb.appendS return
     end
   end
-
+end
+  enum( STACK LOAD STORE ) =:: StorageType
+namespace: sb
   proc(
     stringBuilder : sb
     Type : t
-    bool : isStored
+    StorageType : storeType
     FilePosition : pos
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendTypeNameQBE
@@ -312,36 +325,36 @@ namespace: sb
     t switch
       namedType case
         sb
-          t typeContext types.unwrapNamed isStored pos context
+          t typeContext types.unwrapNamed storeType pos context
         appendTypeNameQBE
         return
       generatedType case
         sb
-          t typeContext types.getGeneratedType isStored pos context
+          t typeContext types.getGeneratedType storeType pos context
         appendTypeNameQBE
         return
       primitiveType case
         t .primitiveType switch
           TYPE case sb ":type" sb.appendS return break
           BOOL case
-            isStored if
-              sb "ub" sb.appendS return
-            else
-              sb "w" sb.appendS return
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "ub" sb.appendS return
+              STORE case sb "b" sb.appendS return
             end
             break
           I8 case
-            isStored if
-              sb "sb" sb.appendS return
-            else
-              sb "w" sb.appendS return
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "sb" sb.appendS return
+              STORE case sb "b" sb.appendS return
             end
             break
           I16 case
-            isStored if
-              sb "sh" sb.appendS return
-            else
-              sb "w" sb.appendS return
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "sh" sb.appendS return
+              STORE case sb "h" sb.appendS return
             end
             break
           I32     case sb "w" sb.appendS return
@@ -352,41 +365,34 @@ namespace: sb
         break
       cType case
         t .cType switch ## TODO consider sizes of c-types
-          BOOL case
-            isStored if
-              sb "sb" sb.appendS return
-            else
-              sb "w" sb.appendS return
+          BOOL U_CHAR case
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "ub" sb.appendS return
+              STORE case sb "b" sb.appendS return
             end
             break
           CHAR S_CHAR case
-            isStored if
-              sb "sb" sb.appendS return
-            else
-              sb "w" sb.appendS return
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "sb" sb.appendS return
+              STORE case sb "b" sb.appendS return
             end
             break
-          U_CHAR case
-            isStored if
-              sb "ub" sb.appendS return
-            else
-              sb "w" sb.appendS return
-            end
-          break
           SHORT case
-            isStored if
-              sb "sh" sb.appendS return
-            else
-              sb "w" sb.appendS return
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "sh" sb.appendS return
+              STORE case sb "h" sb.appendS return
             end
-          break
+            break
           U_SHORT case
-            isStored if
-              sb "uh" sb.appendS return
-            else
-              sb "w" sb.appendS return
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD case sb "uh" sb.appendS return
+              STORE case sb "h" sb.appendS return
             end
-          break
+            break
           INT U_INT case sb "w" sb.appendS return
           LONG LONGLONG U_LONG U_LONGLONG SIZE case
             sb "l" sb.appendS return
@@ -398,16 +404,16 @@ namespace: sb
       arrayIndex pointer reference mutableReference procedure case
         sb "l" sb.appendS return ## size or pointer
       arrayType case
-        sb t "array" string.wrap isStored appendCompositeTypeQBE return
+        sb t "array" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       struct case
-        sb t "struct" string.wrap isStored appendCompositeTypeQBE return
+        sb t "struct" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       union case
-        sb t "union" string.wrap isStored appendCompositeTypeQBE return
+        sb t "union" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       enum case
-        sb t "enum" string.wrap isStored appendCompositeTypeQBE return
+        sb t "enum" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       undefined empty templateType genericType autoType
       procIn procOut case
@@ -470,7 +476,7 @@ namespace: sb
             ',' sb.appendC
           end
           true hasArgs =
-          arg true pos context appendTypeNameQBE
+          arg StorageType .LOAD pos context appendTypeNameQBE
           ' ' sb.appendC
           ..over inType ..over typeContext types.compositeGetLabel context appendArgName
         ..swap 1 +
@@ -530,7 +536,7 @@ namespace: sb
     prog [] .idContext .constContext @ =:: constContext
     sb
       isGlobal if t types.isPrimitive _if
-        t true pos context sb.appendTypeNameQBE
+        t StorageType .LOAD pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
       value switch
@@ -650,29 +656,6 @@ proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
   FILE_ID_NONE return
 end
 
-proc( stringBuilder -> stringBuilder ) =>: appendCheckIndex
-  "data $" sb.appendS
-  CONCAT_CHECKINDEX_NAME sb.appendS
-  "_format = { b \"index out of range: %lli size: %llu at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
-  "function $" sb.appendS
-  CONCAT_CHECKINDEX_NAME sb.appendS
-  "(l %index,l %size,l %fileNameLength,l %fileNamePtr,w %line,w %posInLine){\n" sb.appendS
-  "@start\n" sb.appendS
-  "%c1 =w csltl %index, 0\n" sb.appendS
-  "jnz %c1, @error, @next1\n" sb.appendS
-  "@next1\n" sb.appendS
-  "%c2 =w csgel %index, %size\n" sb.appendS
-  "jnz %c2, @error, @next2\n" sb.appendS
-  "@next2\n" sb.appendS
-  "ret\n" sb.appendS
-  "@error\n" sb.appendS
-  "call $printf (l $" sb.appendS
-  CONCAT_CHECKINDEX_NAME sb.appendS
-  "_format, ...,l %index,l %size,l %fileNamePtr,l %fileNameLength,w %line,w %posInLine)\n" sb.appendS
-  "call $exit (w 1)\n" sb.appendS
-  "ret\n" sb.appendS
-  "}\n" sb.appendS
-end
 proc(
   stringBuilder : sb
   types.ArraySize : size
@@ -691,23 +674,175 @@ proc(
       size sb.appendArraySize
     pos errors appendError
   end
+  ## BranchId
+    BranchType .NEXT
+    context nextJumpLabelId
+  BranchId new =:: check1Branch
+  ## BranchId
+    BranchType .ERROR
+    context nextJumpLabelId
+  BranchId new =:: errorBranch
+  ## BranchId
+    BranchType .NEXT
+    context nextJumpLabelId
+  BranchId new =:: okBranch
+  context nextTmpId =:: c1
+  context nextTmpId =:: c2
   sb
-    "call $" sb.appendS
-    CONCAT_CHECKINDEX_NAME sb.appendS
-    "(l %s" sb.appendS
+    "## check index\n" sb.appendS
+    "%t" sb.appendS
+    c1 sb.appendI
+    " =w csltl %s" sb.appendS
+    valId sb.appendI
+    ", 0\n" sb.appendS
+    "jnz %t" sb.appendS
+    c1 sb.appendI
+    ", " sb.appendS
+    errorBranch sb.appendBranchId
+    ", " sb.appendS
+    check1Branch sb.appendBranchId
+    '\n' sb.appendC
+    check1Branch sb.appendBranchId
+    "\n%t" sb.appendS
+    c1 sb.appendI
+    " =w csgel %s" sb.appendS
+    valId sb.appendI
+    ", " sb.appendS
+    size .value sb.appendI
+    "\njnz %t" sb.appendS
+    c1 sb.appendI
+    ", " sb.appendS
+    errorBranch sb.appendBranchId
+    ", " sb.appendS
+    okBranch sb.appendBranchId
+    '\n' sb.appendC
+    errorBranch sb.appendBranchId
+    "\ncall $printf (l $" sb.appendS
+    CHECK_INDEX_FORMAT sb.appendS
+    ", ...,l %s" sb.appendS
     valId sb.appendI
     ",l " sb.appendS
     size .value sb.appendI
+    ",l " sb.appendS
+    pos .fileName .length sb.appendI
     ",l $" sb.appendS
     FILE_NAME_NAME sb.appendS
     pos .fileName prog findFileId sb.appendI
-    ",l " sb.appendS
-    pos .fileName .length sb.appendI
     ",w " sb.appendS
     pos .line sb.appendI
     ",w " sb.appendS
     pos .posInLine sb.appendI
     ")\n" sb.appendS
+    "call $exit (w 1)\n" sb.appendS
+    ## continue execution, need to start new "branch" as jumps end previous branch
+    okBranch .branchType okBranch .id context startBranch
+  return
+end
+
+proc(
+  stringBuilder : sb
+  Type : enumType
+  i64 : valId
+  i64 : expectedIndex
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder i64 i64 ) =>: checkEnumIndex
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  enumType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+  context nextTmpId =:: labelPtr
+  context nextTmpId =:: mut label
+  context nextTmpId =:: c
+  sb
+    "%t" sb.appendS
+    labelPtr sb.appendI
+    " =l add %s" sb.appendS
+    valId sb.appendI
+    ", " sb.appendS
+    labelOffset sb.appendI
+    "\n%t" sb.appendS
+    label sb.appendI
+    " =w load" sb.appendS
+    labelType StorageType .LOAD pos context sb.appendTypeNameQBE
+    " %t" sb.appendS
+    labelPtr sb.appendI
+    labelType types.primitive.I32 types.typeEquals ! if
+      label =:: oldLabel
+      context nextTmpId label =
+      "\n%t" sb.appendS
+      label sb.appendI
+      " =w ext" sb.appendS
+      labelType StorageType .LOAD pos context sb.appendTypeNameQBE
+      " %t" sb.appendS
+      oldLabel sb.appendI
+    end
+    "\n%t" sb.appendS
+    c sb.appendI
+    " =w ceqw %t" sb.appendS
+    label sb.appendI
+    ", " sb.appendS
+    expectedIndex sb.appendI
+    '\n' sb.appendC
+  c label return
+end
+
+proc(
+  stringBuilder : sb
+  Type : enumType
+  i64 : valId
+  i64 : expectedIndex
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendEnumCheck
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  ## BranchId
+    BranchType .ERROR
+    context nextJumpLabelId
+  BranchId new =:: errorBranch
+  ## BranchId
+    BranchType .NEXT
+    context nextJumpLabelId
+  BranchId new =:: okBranch
+  ## XXX? support enums with i64 labels? ( currently only i8,i16,i32 supported)
+  sb
+    "## check enum \n" sb.appendS
+    enumType valId expectedIndex pos context checkEnumIndex =:: c =:: label
+    "jnz %t" sb.appendS
+    c sb.appendI
+    ", " sb.appendS
+    okBranch sb.appendBranchId
+    ", " sb.appendS
+    errorBranch sb.appendBranchId
+    '\n' sb.appendC
+    errorBranch sb.appendBranchId
+    "\ncall $printf (l $" sb.appendS
+    CHECK_ENUM_FORMAT sb.appendS
+    ", ...,w %t" sb.appendS
+    label sb.appendI
+    ",w " sb.appendS
+    expectedIndex sb.appendI
+    ",l " sb.appendS
+    pos .fileName .length sb.appendI
+    ",l $" sb.appendS
+    FILE_NAME_NAME sb.appendS
+    pos .fileName prog findFileId sb.appendI
+    ",w " sb.appendS
+    pos .line sb.appendI
+    ",w " sb.appendS
+    pos .posInLine sb.appendI
+    ")\n" sb.appendS
+    "call $exit (w 1)\n" sb.appendS
+    ## continue execution, need to start new "branch" as jumps end previous branch
+    okBranch .branchType okBranch .id context startBranch
   return
 end
 
@@ -742,11 +877,11 @@ proc(
       target typeContext types.numberPrecision =:: targetPrec
       targetPrec srcPrec <= if
         " =" sb.appendS
-        target false pos context sb.appendTypeNameQBE
+        target StorageType .STACK pos context sb.appendTypeNameQBE
         " copy" sb.appendS
       else
         " =" sb.appendS
-        target false pos context sb.appendTypeNameQBE
+        target StorageType .STACK pos context sb.appendTypeNameQBE
         " exts" sb.appendS
         fromVal switch
           BOOL TYPE FLOAT32 FLOAT64 case break
@@ -766,7 +901,7 @@ proc(
           " =s truncd" sb.appendS break
         I8 I16 I32 I64 case
           " =" sb.appendS
-          target false pos context sb.appendTypeNameQBE
+          target StorageType .STACK pos context sb.appendTypeNameQBE
           fromVal .FLOAT32 ?? if
             " stosi" sb.appendS
           else
@@ -875,9 +1010,9 @@ proc(
           "%s" sb.appendS
           targetId sb.appendI
           " =" sb.appendS
-          baseType false pos context sb.appendTypeNameQBE
+          baseType StorageType .STACK pos context sb.appendTypeNameQBE
           " load" sb.appendS
-          baseType true pos context sb.appendTypeNameQBE
+          baseType StorageType .LOAD pos context sb.appendTypeNameQBE
           " %s" sb.appendS
           srcId sb.appendI
           '\n' sb.appendC
@@ -926,7 +1061,7 @@ proc(
         op [] .dataType context referenceOnly ! if
           op [] .dataType context toValType context pushValue sb.appendI
           " =" sb.appendS
-          op [] .dataType false op [] .pos context sb.appendTypeNameQBE
+          op [] .dataType StorageType .STACK op [] .pos context sb.appendTypeNameQBE
           " copy " sb.appendS
         else
           ValType .REFERENCE context pushValue sb.appendI
@@ -952,6 +1087,7 @@ proc(
           ## reset stack-info in context
           0 context [] .stackCount =
           0 context [] .tmpCount =
+          0 context [] .jumpLabelCount =
           context [] .stackInfo @ branchTree.clear
           sb
             labelFlags id.FLAG_EXPORT & ? labelFlags id.FLAG_EXTERN & ? | if
@@ -960,7 +1096,7 @@ proc(
             "function " sb.appendS
             op [] .dataType typeContext types.getProcRet ..drop =:: retType
             retType typeContext types.isEmpty ! if
-              retType true op [] .pos context sb.appendTypeNameQBE
+              retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
               ' ' sb.appendC
             end
             idInfo .labelId context sb.appendGlobalName
@@ -990,7 +1126,7 @@ proc(
             assignValue if
               isValue if
                 "store" sb.appendS
-                valType true op [] .pos context sb.appendTypeNameQBE
+                valType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
               else
                 "blit " sb.appendS ## XXX call memcopy for large structs
               end
@@ -1088,7 +1224,7 @@ proc(
           "blit %s" sb.appendS
         else
           "store" sb.appendS
-          valType true op [] .pos context sb.appendTypeNameQBE
+          valType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
           " %s" sb.appendS
         end
         valId sb.appendI
@@ -1222,6 +1358,7 @@ proc(
         srcVal? optional.isEmpty if
           "stack underflow" sb.wrap
           op [] .pos errors appendError
+          sb return
         end
         srcVal? .data =:: srcVal
         srcVal [] .valType .REFERENCE ?? ! if
@@ -1233,9 +1370,9 @@ proc(
           "%s" sb.appendS
           baseType context toValType context pushValue sb.appendI
           " =" sb.appendS
-          baseType false op [] .pos context sb.appendTypeNameQBE
+          baseType StorageType .STACK op [] .pos context sb.appendTypeNameQBE
           " load" sb.appendS
-          baseType true op [] .pos context sb.appendTypeNameQBE
+          baseType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
           " %s" sb.appendS
           srcId sb.appendI
           '\n' sb.appendC
@@ -1265,8 +1402,7 @@ proc(
         dataPtrId sb.appendI
         '\n' sb.appendC
       return
-    New case
-      context nextTmpId =:: tmpId
+    New newEnum case
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
@@ -1280,14 +1416,75 @@ proc(
         ' ' sb.appendC
         op [] .dataType typeContext types.sizeOf sb.appendI
         '\n' sb.appendC
-        op [] .dataType typeContext types.isArray if
-          "%s" sb.appendS
-          ValType .REFERENCE context pushValue sb.appendI
-          " =l copy %t" sb.appendS
+        op [] .val .newEnum ?? if
+          op [] .dataType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+          op [] .val .newEnum =:: index
+          op [] .dataType index typeContext types.compositeGetElement =:: eltType
+          "%t" sb.appendS
+            context nextTmpId =:: labelPtrId
+          labelPtrId sb.appendI
+          " =l add %t" sb.appendS
           dataPtrId sb.appendI
+          ", " sb.appendS
+          labelOffset sb.appendI
+          "\nstore" sb.appendS
+          labelType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+          ' ' sb.appendC
+          index sb.appendI
+          ", %t" sb.appendS
+          labelPtrId sb.appendI
           '\n' sb.appendC
-          return
-        else op [] .dataType typeContext types.isTuple ! _if
+          eltType typeContext types.isEmpty ! if
+            eltType context referenceOnly if
+              "blit %s" sb.appendS
+            else
+              "store" sb.appendS
+              eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+              " %s" sb.appendS
+            end
+            context popValue sb.appendI
+            ", %t" sb.appendS
+            dataPtrId sb.appendI
+            eltType context referenceOnly if
+              ',' sb.appendC
+              eltType typeContext types.sizeOf sb.appendI
+            end
+            '\n' sb.appendC
+          end
+        else op [] .dataType typeContext types.isTuple _if
+          op [] .dataType typeContext types.compositeElts =:: elts
+          elts .length 1 - while ..dup 0 >= do =:: i
+            elts i types.compositeElts.get =:: eltType
+            op [] .dataType i typeContext types.tupleElementOffset =:: eltOffset
+            eltType typeContext types.isEmpty if
+              i 1 - continue
+            end
+            "%t" sb.appendS
+              context nextTmpId =:: eltPtrId
+            eltPtrId sb.appendI
+            " =l add %t" sb.appendS
+            dataPtrId sb.appendI
+            ", " sb.appendS
+            eltOffset sb.appendI
+            '\n' sb.appendC
+            eltType context referenceOnly if
+              "blit %s" sb.appendS
+            else
+              "store" sb.appendS
+              eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+              " %s" sb.appendS
+            end
+            context popValue sb.appendI
+            ", %t" sb.appendS
+            eltPtrId sb.appendI
+            eltType context referenceOnly if
+              ',' sb.appendC
+              eltType typeContext types.sizeOf sb.appendI
+            end
+            '\n' sb.appendC
+            i 1 -
+          end ..drop
+        else op [] .dataType typeContext types.isArray ! _if
           "unsupported type for new:" sb.wrap
             op [] .dataType
               labelContext
@@ -1296,46 +1493,51 @@ proc(
           op [] .pos errors appendError
           return
         end
-        op [] .dataType typeContext types.compositeElts =:: elts
-        elts .length 1 - while ..dup 0 >= do =:: i
-          elts i types.compositeElts.get =:: eltType
-          op [] .dataType i typeContext types.tupleElementOffset =:: eltOffset
-          eltType typeContext types.isEmpty if
-            i 1 - continue
-          end
-          "%t" sb.appendS
-            context nextTmpId =:: eltPtrId
-          eltPtrId sb.appendI
-          " =l add %t" sb.appendS
-          dataPtrId sb.appendI
-          ", " sb.appendS
-          eltOffset sb.appendI
-          '\n' sb.appendC
-          eltType context referenceOnly if
-            "blit %s" sb.appendS
-          else
-            "store" sb.appendS
-            eltType true op [] .pos context sb.appendTypeNameQBE
-            " %s" sb.appendS
-          end
-          context popValue sb.appendI
-          ", %t" sb.appendS
-          eltPtrId sb.appendI
-          eltType context referenceOnly if
-            ',' sb.appendC
-            eltType typeContext types.sizeOf sb.appendI
-          end
-          '\n' sb.appendC
-          i 1 -
-        end ..drop
         "%s" sb.appendS
         ValType .REFERENCE context pushValue sb.appendI
         " =l copy %t" sb.appendS
         dataPtrId sb.appendI
         '\n' sb.appendC
       return
+    checkEnumLabel case
+      context [] .stackInfo @ branchTree.peek =:: srcVal?
+      srcVal? optional.isEmpty if
+        "stack underflow" sb.wrap
+        op [] .pos errors appendError
+        sb return
+      end
+      sb
+        op [] .pos sb.appendPosQBE
+        ## appendEnumCheck
+          op [] .dataType
+          srcVal? .data [] .varId
+          op [] .val .checkEnumLabel
+          op [] .pos
+          context
+        appendEnumCheck
+      return
+    hasElement case
+      op [] .dataType
+        ..dup typeContext types.isReference if
+           typeContext types.getBaseType
+        end
+      =:: containerType
+      containerType typeContext types.isEnum ! if
+        break
+      end
+      context popValue =:: srcId
+      sb
+        op [] .pos sb.appendPosQBE
+        containerType srcId op [] .val .hasElement op [] .pos context checkEnumIndex ..drop =:: c
+        "%s" sb.appendS
+        ValType .I32 context pushValue sb.appendI
+        " =w copy %t" sb.appendS
+        c sb.appendI
+        '\n' sb.appendC
+      return
     autoCast case
       sb
+        op [] .pos sb.appendPosQBE
         true
         op [] .val .autoCast .src
         op [] .val .autoCast .offset
@@ -1346,6 +1548,7 @@ proc(
       break
     Cast Cast! case ## XXX? make cast! bit-cast
       sb
+        op [] .pos sb.appendPosQBE
         false
         op [] .val .Cast! ?? if
           op [] .val .Cast!
@@ -1362,6 +1565,7 @@ proc(
       op [] .val .block .blockType switch
         IF case
           sb
+            op [] .pos sb.appendPosQBE
             "jnz $s" sb.appendS
             context popValue sb.appendI
             " ," sb.appendS
@@ -1388,6 +1592,7 @@ proc(
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
           ifBranch ifBlock [] .If .ifBranch =
           sb
+            op [] .pos sb.appendPosQBE
             "jmp " sb.appendS
             ## appendBranchId
               BranchType .END_IF
@@ -1412,6 +1617,7 @@ proc(
       op [] .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           sb
+            op [] .pos sb.appendPosQBE
             "}\n" sb.appendS
             context sb.appendLocalConstants
           return
@@ -1420,6 +1626,7 @@ proc(
             list.pop .If =:: ifBlock
           context [] .openBlocks =
           sb
+            op [] .pos sb.appendPosQBE
             ## startBranch
               BranchType .END_IF
               op [] .val .blockEnd .blockId
@@ -1453,8 +1660,8 @@ proc(
       end
       break
     setId autoTypedInitializeId
-    setElement hasElement setArrayElement Print Return newEnum call callPtr
-    argc getArg getArgLen unaryOperator binaryOperator checkEnumLabel
+    setElement setArrayElement Print Return call callPtr
+    argc getArg getArgLen unaryOperator binaryOperator
     setEnumLabel checkArrayIndex unreachable typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod
     typeModifier hasLabel hasName case
@@ -1479,6 +1686,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     0
     0
     0
+    0
   CompilerContext new =:: mut contextData ## TODO cleanup context
   contextData @ =:: context
   id.LABEL_ID_NONE =:: mut mainId
@@ -1491,11 +1699,20 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
   ## TODO declare composite types
   prog [] .hasCheckIndex if
     128 sb.create
-      appendCheckIndex
+      "data $" sb.appendS
+      CHECK_INDEX_FORMAT sb.appendS
+      " = { b \"index out of range: %lli size: %llu at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
       target ..over io.fputSb ..drop
     sb.free ..drop
   end
-  ## TODO internal functions
+  prog [] .hasCheckEnum if
+    128 sb.create
+      "data $" sb.appendS
+      CHECK_ENUM_FORMAT sb.appendS
+      " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
+      target ..over io.fputSb ..drop
+    sb.free ..drop
+  end
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 =:: idData

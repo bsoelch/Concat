@@ -1050,6 +1050,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           true true 0 0 state updateOpInfo_noStack
           onRead list.append
           childCount 1 + childCount =
+          true program [] .hasCheckEnum =
         end
       state [] .childIds =
       ## pushValue
