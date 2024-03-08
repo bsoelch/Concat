@@ -178,6 +178,19 @@ proc( CompilerContext ptr mut : context -> i64 ) =>: nextTmpId
   oldCount return
 end
 
+proc( Type : t CompilerContext ptr mut : context -> bool ) =>: referenceOnly
+  context [] .program =:: program
+  program [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.unwrapNamed types.isPrimitive if
+    false return
+  end
+  t typeContext types.isPointer if
+    false return
+  end
+  ## XXX allow empty enums as value-type
+  true return
+end
+
 struct(
   i32 : blockId
   FilePosition : pos
@@ -854,7 +867,7 @@ proc(
   end
   src typeContext types.isReference if target typeContext types.isReference ! _if
     src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
-    baseType types.isPrimitive baseType typeContext types.isPointer | if
+    baseType context referenceOnly ! if
       sb
         ## unwrap reference
         valType .REFERENCE ?? if
@@ -910,7 +923,7 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
-        op [] .dataType types.isPrimitive if ## TODO unwrap named types when checking for primitive
+        op [] .dataType context referenceOnly ! if
           op [] .dataType context toValType context pushValue sb.appendI
           " =" sb.appendS
           op [] .dataType false op [] .pos context sb.appendTypeNameQBE
@@ -957,7 +970,7 @@ proc(
         LOCAL_VAR TMP_VAR case
           op [] .dataType =:: valType
           ## use pointers as stack representation of arrays and composites
-          valType types.isPrimitive =:: isValue
+          valType context referenceOnly ! =:: isValue
           sb
             op [] .pos sb.appendPosQBE
             idInfo .idType .LOCAL_VAR ?? if
@@ -1041,15 +1054,15 @@ proc(
             '\n' sb.appendC
           return
        ARGUMENT case
-          isAddr if op [] .dataType types.isPrimitive _if
+          isAddr if op [] .dataType context referenceOnly ! _if
             "cannot take the address of procedure argument" sb.wrap
             op [] .pos errors appendError
             sb return
           end
-          op [] .dataType types.isPrimitive if
-            op [] .dataType context toValType
-          else
+          op [] .dataType context referenceOnly if
             ValType .REFERENCE
+          else
+            op [] .dataType context toValType
           end =:: valType
           sb
             op [] .pos sb.appendPosQBE
@@ -1065,6 +1078,28 @@ proc(
           break ## XXX error message
       end
       break
+    setValue case
+      context popValue =:: targetId
+      context popValue =:: valId
+      op [] .dataType =:: valType
+      sb
+        op [] .pos sb.appendPosQBE
+        valType context referenceOnly if
+          "blit %s" sb.appendS
+        else
+          "store" sb.appendS
+          valType true op [] .pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+        end
+        valId sb.appendI
+        ", %s" sb.appendS
+        targetId sb.appendI
+        valType context referenceOnly if
+          ',' sb.appendC
+          valType typeContext types.sizeOf sb.appendI
+        end
+        '\n' sb.appendC
+      return
     getArrayElement @ArrayElement case
       op [] .val .getArrayElement ?? if
         op [] .val .getArrayElement
@@ -1182,8 +1217,7 @@ proc(
         break ## copy only implemented for references
       end
       srcType typeContext types.getBaseType =:: baseType
-      baseType typeContext types.unwrapNamed types.isPrimitive
-        baseType typeContext types.isPointer | if
+      baseType context referenceOnly ! if
         context [] .stackInfo @ branchTree.peek =:: srcVal?
         srcVal? optional.isEmpty if
           "stack underflow" sb.wrap
@@ -1277,18 +1311,17 @@ proc(
           ", " sb.appendS
           eltOffset sb.appendI
           '\n' sb.appendC
-          eltType typeContext types.unwrapNamed types.isPrimitive eltType typeContext types.isPointer | =:: isValue
-          isValue if
+          eltType context referenceOnly if
+            "blit %s" sb.appendS
+          else
             "store" sb.appendS
             eltType true op [] .pos context sb.appendTypeNameQBE
             " %s" sb.appendS
-          else
-            "blit %s" sb.appendS
           end
           context popValue sb.appendI
           ", %t" sb.appendS
           eltPtrId sb.appendI
-          isValue ! if
+          eltType context referenceOnly if
             ',' sb.appendC
             eltType typeContext types.sizeOf sb.appendI
           end
@@ -1420,7 +1453,7 @@ proc(
       end
       break
     setId autoTypedInitializeId
-    setElement hasElement setArrayElement setValue Print Return newEnum call callPtr
+    setElement hasElement setArrayElement Print Return newEnum call callPtr
     argc getArg getArgLen unaryOperator binaryOperator checkEnumLabel
     setEnumLabel checkArrayIndex unreachable typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod
