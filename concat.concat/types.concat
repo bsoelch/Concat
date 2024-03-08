@@ -198,7 +198,11 @@ namespace: types
     .primitiveType ?? return
   end
   proc( Type : t TypeContext ptr : context -> PrimitiveType ) =>: export primitiveValue
-    t context unwrapNamed .primitiveType return
+    t context unwrapNamed
+      ..dup .arrayIndex ?? if ..drop
+        primitive.I_SIZE .primitiveType return
+      end
+    .primitiveType return
   end
   proc( Type : t0 TypeContext ptr : context -> bool ) =>: export isEmpty ## TODO? should pointer to empty be empty
     t0 context unwrapNamed =:: t
@@ -1988,27 +1992,31 @@ namespace: sb
         "..ctype.double" appendS return
     end
   end
-  proc( stringBuilder : sb types.ArraySize arrayView : sizes -> stringBuilder  ) =>: export appendArraySize
+  proc( stringBuilder : sb types.ArraySize : size -> stringBuilder  ) =>: export appendArraySize
+    sb
+      size .sizeType switch
+        int case
+          ' ' sb.appendC
+          size .value sb.appendI
+          break
+        staticArg case
+          " staticArg(" sb.appendS
+          size .value sb.appendI
+          ")" sb.appendS
+          break
+        templateArg case
+          " templateArg(" sb.appendS
+          size .value sb.appendI
+          ")" sb.appendS
+          break
+      end
+    return
+  end
+  proc( stringBuilder : sb types.ArraySize arrayView : sizes -> stringBuilder  ) =>: export appendArraySizes
     sb
       0 while ..dup sizes .length < do
         ..swap
-          sizes ..over.2 array.at .data =:: s
-          s [] .sizeType switch
-            int case
-              ' ' sb.appendC
-              s [] .value sb.appendI
-              break
-            staticArg case
-              " staticArg(" sb.appendS
-              s [] .value sb.appendI
-              ")" sb.appendS
-              break
-            templateArg case
-              " templateArg(" sb.appendS
-              s [] .value sb.appendI
-              ")" sb.appendS
-              break
-          end
+          sizes ..over.2 array.get appendArraySize
         ..swap 1 +
       end ..drop
     return
@@ -2028,12 +2036,12 @@ namespace: sb
         .cType appendCType return
       arrayIndex case .arrayIndex =:: sizeIndex
         "index(" appendS
-        context [] .arraySizes sizeIndex list.at .data array.wrap appendArraySize
+        context [] .arraySizes sizeIndex list.get appendArraySize
         " )" appendS
         return
       pointer case =:: t
         t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-        t context types.getArraySize appendArraySize
+        t context types.getArraySize appendArraySizes
         t context types.isFixedSize if
           " ptr" appendS
         else
@@ -2045,7 +2053,7 @@ namespace: sb
         return
       arrayType case =:: t
         t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-        t context types.getArraySize appendArraySize
+        t context types.getArraySize appendArraySizes
         " array" appendS return
       struct enum union case =:: data
         data .struct ?? if

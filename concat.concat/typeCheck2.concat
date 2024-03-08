@@ -235,12 +235,12 @@ proc(
   state [] .program [] .idContext .typeContext @ =:: typeContext
   state [] .program [] .idContext .labelContext @ =:: labelContext
   state [] .childIds .length =:: argOffset
-  1 while ..dup types .length <= do
-    types types .length ..over.2 - array.get =:: expectedType
+  1 while ..dup types .length <= do =:: i
+    types types .length i - array.get =:: expectedType
     state [] .stack branchTree.depth 0 <= if
       expectedType .empty ?? if
-        1 + continue ## skip empty arguments if no values on stack
-      end ..drop
+        i 1 + continue ## skip empty arguments if no values on stack
+      end
       "not enough types for " sb.wrap
         name sb.appendStr
       pos errors appendError
@@ -251,17 +251,20 @@ proc(
       typeInfo [] .opIndex list.append
     state [] .childIds =
     typeInfo [] .valueType expectedType types.typeEquals if
-      1 + continue
+      i 1 + continue
     end
     expectedType .empty ?? if
-      1 + continue ## TODO proper support for empty values
+      i 1 + continue ## TODO proper support for empty values
     end
     ## canAutoCast
       typeInfo [] .valueType
       expectedType
     typeContext types.canAutoCast if
       typeInfo expectedType pos state tryCastConstant ! if
-        1 + continue
+        i 1 + continue
+      end
+      expectedType .arrayIndex ?? if
+        true state [] .program [] .hasCheckIndex =
       end
       state [] .childIds
         ..dup .length =:: argId
@@ -269,11 +272,11 @@ proc(
       state [] .childIds =
       ## opAutoCast
         typeInfo [] .valueType
-        ..over
+        i 1 -
         expectedType
         pos
       opAutoCast state appendOp ..drop
-      1 + continue
+      i 1 + continue
     end
     "wrong type for " sb.wrap
       name sb.appendStr
@@ -282,7 +285,7 @@ proc(
       " got " sb.appendS
       typeInfo [] .valueType labelContext typeContext sb.appendType
     pos errors appendError
-    1 +
+    i 1 +
   end ..drop
   argOffset false return
 end
@@ -1051,9 +1054,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       state [] .childIds =
       ## pushValue
         ConstValue .none ## XXX compute constant value
-        srcType elementIndex op [] .pos isAddr if op@Element else opGetElement end
+        srcType
+        elementIndex
+        op [] .pos
+        isAddr if
+          op@Element
+        else
+          opGetElement
+        end
       state pushValue
-      ## TODO can only take address of reference or pointer
+      ## can only take address of reference or pointer
       isAddr srcType typeContext types.isPointer | if
         eltType mutable typeContext types.getAddressType
       else srcType typeContext types.isReference _if
@@ -1116,12 +1126,17 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         srcArray [] .valueType =:: srcType
         srcArray [] .copyMutableIndex =:: srcCopyMutIndex
       ..drop
-      srcType op [] .dataType =
       srcType
         ..dup typeContext types.isReference if
           typeContext types.getBaseType
         end
       =:: arrayType
+      arrayType typeContext types.isArray if
+        srcType
+      else
+        arrayType
+      end =:: opType
+      opType op [] .dataType =
       arrayType typeContext types.getArrayDims =:: dimensions
       indexCount dimensions > if
         "too much indices for pointer access " sb.wrap
@@ -1141,7 +1156,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       indexCount Type list.create =:: mut typeBuffer ## XXX? store type-buffer in context
       typeBuffer
-        srcType list.append
+        opType list.append
         ..dup .length =:: bufferOffset
         indexCount 1 - while ..dup 0 >= do ## push index types in reverse order (0th index last)
           ..swap
@@ -1167,11 +1182,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       else
         dimensions indexCount -
       end =:: freeDimensions
-      arrayType typeContext types.isArray if
-        srcType
-      else
-        arrayType
-      end typeContext types.isMutable =:: mutable
+      opType typeContext types.isMutable =:: mutable
       arrayType typeContext types.getBaseType
         freeDimensions 0 > if
           ## newArrayType

@@ -12,7 +12,7 @@ struct( i32 : n StackModType : modType ) =:: export StackModification
 enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export CompilerInfo
 struct( IdentifierInfo : idInfo i64 : argCount ) =:: export CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: export TypeModifier
-struct( Type : src i32 : mut offset ) =:: export CastInfo
+struct( Type : src i32 : mut offset ) =:: export CastInfo ## offset: zero-indexed from top of stack
 enum( ALIGNMENT SIZE STRIDE ) =:: export TypeMemoryInfo
 
 enum(

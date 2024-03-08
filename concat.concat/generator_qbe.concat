@@ -9,10 +9,13 @@ import "branchTree.concat"
 "cctI_argc" =:: CONCAT_ARGC_NAME
 "cctI_argv" =:: CONCAT_ARGV_NAME
 "cctI_envp" =:: CONCAT_ENVP_NAME
+"cctI_checkIndex" =:: CONCAT_CHECKINDEX_NAME
+"localConstant" =:: LOCAL_CONST_NAME
+"fileName" =:: FILE_NAME_NAME
 
 enum( START IF ELSE END_IF ) =:: BranchType
 struct( BranchType : branchType i32 : id ) =:: BranchId
-enum( EMPTY I32 I64 FLOAT DOUBLE PTR ) =:: ValType
+enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 struct(
   i64 : mut varId
   BranchId : branch
@@ -56,13 +59,14 @@ namespace: sb
       FLOAT case "float" sb.appendS return
       DOUBLE case "double" sb.appendS return
       PTR case "pointer" sb.appendS return
+      REFERENCE case "reference" sb.appendS return
     end
   end
   proc( stringBuilder ValType -> stringBuilder ) =>: appendValTypeQBE
     switch
       EMPTY case break
       I32 case 'w' sb.appendC break
-      I64 PTR case 'l' sb.appendC break
+      I64 PTR REFERENCE case 'l' sb.appendC break
       FLOAT case 's' sb.appendC break
       DOUBLE case 'd' sb.appendC break
     end
@@ -98,9 +102,10 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       break
     arrayIndex case
       ValType .I64 return
-    pointer reference mutableReference procedure
-    arrayType struct union enum case
+    pointer case
       ValType .PTR return
+    reference mutableReference procedure arrayType struct union enum case
+      ValType .REFERENCE return
     undefined empty templateType genericType autoType
     procIn procOut case
       ValType .EMPTY return
@@ -482,6 +487,23 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
+    StringConstant : value
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: appendStringConstQBE
+    context [] .program =:: prog
+    prog [] .idContext .labelContext @ =:: labelContext
+    sb
+      0 while ..dup value .length < do =:: i
+        "b " sb.appendS
+        value i labelContext id.scCharAt 0xff & sb.appendI
+        ',' sb.appendC
+        i 1 +
+      end ..drop
+      "b 0" sb.appendS
+    return
+  end
+  proc(
+    stringBuilder : sb
     Type : t
     ConstValue : value
     bool : isGlobal
@@ -552,7 +574,8 @@ namespace: sb
           constId
         LocalConst new list.append
       context [] .localConstants =
-      "$localConstant" sb.appendS
+      "$" sb.appendS
+      LOCAL_CONST_NAME sb.appendS
       constId sb.appendI
     return
   end
@@ -564,7 +587,8 @@ namespace: sb
     sb
       0 while ..dup context [] .localConstants .length < do =:: i
         context [] .localConstants i list.at .data =:: constant
-        "data $localConstant" sb.appendS
+        "data $" sb.appendS
+        LOCAL_CONST_NAME sb.appendS
         constant [] .id sb.appendI
         " = align " sb.appendS
         constant [] .valType typeContext types.alignOf sb.appendI
@@ -602,13 +626,159 @@ namespace: sb
   end
 end
 
+proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
+  0 while ..dup prog [] .progFiles .length < do =:: i
+    prog [] .progFiles i list.at .data [] .fileName list.asArray =:: currentName
+    fileName currentName string.eq if
+      i return
+    end
+    i 1 +
+  end ..drop
+  FILE_ID_NONE return
+end
+
+proc( stringBuilder -> stringBuilder ) =>: appendCheckIndex
+  "data $" sb.appendS
+  CONCAT_CHECKINDEX_NAME sb.appendS
+  "_format = { b \"index out of range: %lli size: %llu at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
+  "function $" sb.appendS
+  CONCAT_CHECKINDEX_NAME sb.appendS
+  "(l %index,l %size,l %fileNameLength,l %fileNamePtr,w %line,w %posInLine){\n" sb.appendS
+  "@start\n" sb.appendS
+  "%c1 =w csltl %index, 0\n" sb.appendS
+  "jnz %c1, @error, @next1\n" sb.appendS
+  "@next1\n" sb.appendS
+  "%c2 =w csgel %index, %size\n" sb.appendS
+  "jnz %c2, @error, @next2\n" sb.appendS
+  "@next2\n" sb.appendS
+  "ret\n" sb.appendS
+  "@error\n" sb.appendS
+  "call $printf (l $" sb.appendS
+  CONCAT_CHECKINDEX_NAME sb.appendS
+  "_format, ...,l %index,l %size,l %fileNamePtr,l %fileNameLength,w %line,w %posInLine)\n" sb.appendS
+  "call $exit (w 1)\n" sb.appendS
+  "ret\n" sb.appendS
+  "}\n" sb.appendS
+end
+proc(
+  stringBuilder : sb
+  types.ArraySize : size
+  i64 : valId
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendIndexCheck
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  size .sizeType .int ?? ! if
+    "unsupported size type for array element" sb.wrap
+      size sb.appendArraySize
+    pos errors appendError
+  end
+  sb
+    "call $" sb.appendS
+    CONCAT_CHECKINDEX_NAME sb.appendS
+    "(l %s" sb.appendS
+    valId sb.appendI
+    ",l " sb.appendS
+    size .value sb.appendI
+    ",l $" sb.appendS
+    FILE_NAME_NAME sb.appendS
+    pos .fileName prog findFileId sb.appendI
+    ",l " sb.appendS
+    pos .fileName .length sb.appendI
+    ",w " sb.appendS
+    pos .line sb.appendI
+    ",w " sb.appendS
+    pos .posInLine sb.appendI
+    ")\n" sb.appendS
+  return
+end
+
+proc(
+  stringBuilder : sb
+  Type : src
+  i64 : srcIndex
+  Type : target
+  i64 : targetIndex
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: castNumbers
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  src typeContext types.primitiveValue =:: fromVal
+  target typeContext types.primitiveValue =:: toVal
+  fromVal toVal == if
+    sb return ## no cast necessary
+  end
+  sb
+    ## common prefix
+    pos sb.appendPosQBE
+    "%s" sb.appendS
+    targetIndex sb.appendI
+    ## case 1: integer extension/narrowing
+    src typeContext types.isInt target typeContext types.isInt & if
+      src typeContext types.numberPrecision =:: srcPrec
+      target typeContext types.numberPrecision =:: targetPrec
+      targetPrec srcPrec <= if
+        " =" sb.appendS
+        target false pos context sb.appendTypeNameQBE
+        " copy" sb.appendS
+      else
+        " =" sb.appendS
+        target false pos context sb.appendTypeNameQBE
+        " exts" sb.appendS
+        fromVal switch
+          BOOL TYPE FLOAT32 FLOAT64 case break
+          I8  case "b" sb.appendS break
+          I16 case "h" sb.appendS break
+          I32 case "w" sb.appendS break
+          I64 case "l" sb.appendS break
+        end
+      end
+    ## case 2: float -> float/int
+    else fromVal .FLOAT32 ?? fromVal .FLOAT64 ?? | _if
+      toVal switch
+        BOOL TYPE case break
+        FLOAT32 case
+          " =d exts" sb.appendS break
+        FLOAT64 case
+          " =s truncd" sb.appendS break
+        I8 I16 I32 I64 case
+          " =" sb.appendS
+          target false pos context sb.appendTypeNameQBE
+          fromVal .FLOAT32 ?? if
+            " stosi" sb.appendS
+          else
+            " dtosi" sb.appendS
+          end
+          break
+      end
+    ## case 3: int -> float
+    else fromVal .I64 ?? _if
+      " =l sltof" sb.appendS
+    else
+      " =w swtof" sb.appendS
+    end
+    " %s" sb.appendS
+    srcIndex sb.appendI
+    '\n' sb.appendC
+  return
+end
+
 proc(
   stringBuilder : sb
   bool : autoCast
   Type : src
   i32 : offset
   Type : target
-  bool : bitCast
   FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: compileCast
@@ -624,79 +794,94 @@ proc(
       pos errors appendError
       sb return
     end
+    context [] .stackInfo @ offset branchTree.at .data [] .valType
     context [] .stackInfo @ offset branchTree.at .data [] .varId
   else
+    context [] .stackInfo @ offset branchTree.at .data [] .valType
     context popValue
-  end =:: srcId
-  src typeContext types.isNumber target typeContext types.isNumber & if
-    src typeContext types.primitiveValue =:: fromVal
-    target typeContext types.primitiveValue =:: toVal
-    fromVal toVal == if
-      sb return ## no cast necessary
-    end
+  end =:: srcId =:: valType
+  autoCast if
+    target context toValType offset context replaceValue
+  else
+    target context toValType context pushValue
+  end =:: targetId
+  src typeContext types.isNumber target typeContext types.unwrapNamed .arrayIndex ?? & if
+    ## isNumber returns true for array index
+    ##   -> have to check for cast to array index before checking for cast to number
     sb
-      ## common prefix
-      pos sb.appendPosQBE
-      "%s" sb.appendS
-      autoCast if
-        target context toValType offset context replaceValue sb.appendI
-      else
-        target context toValType context pushValue sb.appendI
-      end
-      ## case 1: integer extension/narrowing
-      src typeContext types.isInt target typeContext types.isInt & if
-        src typeContext types.numberPrecision =:: srcPrec
-        target typeContext types.numberPrecision =:: targetPrec
-        targetPrec srcPrec <= if
-          target context toValType
-            context [] .stackInfo @ offset branchTree.at .data
-          [] .valType =
-          " =" sb.appendS
-          target false pos context sb.appendTypeNameQBE
-          " copy" sb.appendS
-        else
-          " =" sb.appendS
-          target false pos context sb.appendTypeNameQBE
-          " exts" sb.appendS
-          fromVal switch
-            BOOL TYPE FLOAT32 FLOAT64 case break
-            I8  case "b" sb.appendS break
-            I16 case "h" sb.appendS break
-            I32 case "w" sb.appendS break
-            I64 case "l" sb.appendS break
-          end
-        end
-      ## case 2: float -> float/int
-      else fromVal .FLOAT32 ?? fromVal .FLOAT64 ?? | _if
-        toVal switch
-          BOOL TYPE case break
-          FLOAT32 case
-            " =d exts" sb.appendS break
-          FLOAT64 case
-            " =s truncd" sb.appendS break
-          I8 I16 I32 I64 case
-            " =" sb.appendS
-            target false pos context sb.appendTypeNameQBE
-            fromVal .FLOAT32 ?? if
-              " stosi" sb.appendS
-            else
-              " dtosi" sb.appendS
-            end
-            break
-        end
-      ## case 3: int -> float
-      else fromVal .I64 ?? _if
-        " =l sltof" sb.appendS
-      else
-        " =w swtof" sb.appendS
-      end
-      " %s" sb.appendS
-      srcId sb.appendI
-      '\n' sb.appendC
+      ## castNumbers
+        src
+        srcId
+        types.primitive.I_SIZE
+        targetId
+      pos context castNumbers
+      target typeContext types.getArraySize 0 array.get targetId pos context appendIndexCheck
     return
   end
+  src typeContext types.isNumber target typeContext types.isNumber & if
+    sb src srcId target targetId pos context castNumbers return
+  end
   src typeContext types.isPointer target typeContext types.isPointer & if
-    sb return ## both are pointer types
+    sb
+      "%s" sb.appendS
+      targetId sb.appendI
+      " =l copy %s" sb.appendS
+      srcId sb.appendI
+      '\n' sb.appendC
+    return ## both are pointer types
+  end
+  src typeContext types.isInt target typeContext types.isPointer & if
+    ## src -> I_PTR ~ ptr
+    sb
+      ## castNumbers
+        src
+        srcId
+        types.primitive.I_PTR
+        targetId
+      pos context castNumbers
+    return
+  end
+  src typeContext types.isPointer target typeContext types.isInt & if
+    ## ptr ~ I_PTR -> target
+    sb
+      ## castNumbers
+        types.primitive.I_PTR
+        srcId
+        target
+        targetId
+      pos context castNumbers
+    return
+  end
+  src typeContext types.isReference if target typeContext types.isReference ! _if
+    src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
+    baseType types.isPrimitive baseType typeContext types.isPointer | if
+      sb
+        ## unwrap reference
+        valType .REFERENCE ?? if
+          pos sb.appendPosQBE
+          "%s" sb.appendS
+          targetId sb.appendI
+          " =" sb.appendS
+          baseType false pos context sb.appendTypeNameQBE
+          " load" sb.appendS
+          baseType true pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+          srcId sb.appendI
+          '\n' sb.appendC
+        end
+        ## cast value
+        baseType target typeContext types.unwrapNamed types.typeEquals ! if
+          ## compileCast
+            autoCast
+            baseType
+            offset
+            target
+            pos
+            context
+          compileCast
+        end
+      return
+    end
   end
   "casting from " sb.wrap
     src labelContext typeContext sb.appendType
@@ -725,13 +910,13 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
-        op [] .dataType types.isPrimitive if
+        op [] .dataType types.isPrimitive if ## TODO unwrap named types when checking for primitive
           op [] .dataType context toValType context pushValue sb.appendI
           " =" sb.appendS
           op [] .dataType false op [] .pos context sb.appendTypeNameQBE
           " copy " sb.appendS
         else
-          ValType .PTR context pushValue sb.appendI
+          ValType .REFERENCE context pushValue sb.appendI
           " =l copy " sb.appendS
         end
         op [] .dataType op [] .val .Constant false op [] .pos context sb.appendConstQBE
@@ -832,7 +1017,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
-            ValType .PTR context pushValue sb.appendI
+            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy " sb.appendS
             idInfo .labelId context sb.appendGlobalName
             "\n" sb.appendS
@@ -841,7 +1026,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
-            ValType .PTR context pushValue sb.appendI
+            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy %l" sb.appendS
             idInfo .labelId sb.appendI
             '\n' sb.appendC
@@ -850,7 +1035,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
-            ValType .PTR context pushValue sb.appendI
+            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy %tmp" sb.appendS
             idInfo .id sb.appendI
             '\n' sb.appendC
@@ -864,7 +1049,7 @@ proc(
           op [] .dataType types.isPrimitive if
             op [] .dataType context toValType
           else
-            ValType .PTR
+            ValType .REFERENCE
           end =:: valType
           sb
             op [] .pos sb.appendPosQBE
@@ -880,6 +1065,172 @@ proc(
           break ## XXX error message
       end
       break
+    getArrayElement @ArrayElement case
+      op [] .val .getArrayElement ?? if
+        op [] .val .getArrayElement
+      else
+        op [] .val .@ArrayElement
+      end =:: mut argCount
+      op [] .val .@ArrayElement ?? =:: isAddr
+      op [] .dataType =:: mut arrayType
+      arrayType typeContext types.isPointer =:: mut isPtr
+      arrayType typeContext types.isReference if
+        arrayType typeContext types.getBaseType arrayType =
+        true isPtr =
+      end
+      arrayType typeContext types.getArraySize =:: sizes
+      sizes .length
+        arrayType typeContext types.isFixedSize if 2 - else 1 - end
+      =:: mut sizeOffset
+      context nextTmpId =:: mut offsetId
+      offsetId =:: mut prevId
+      sb
+        op [] .pos sb.appendPosQBE
+        "%t" sb.appendS
+        offsetId sb.appendI
+        argCount 0 == if
+          " =l copy 0" sb.appendS
+        else
+          argCount 1 - argCount =
+          " =l copy %s" sb.appendS
+          context popValue sb.appendI
+        end
+        '\n' sb.appendC
+        while sizeOffset 0 >= do
+          sizes sizeOffset array.get =:: size
+          sizeOffset 1 - sizeOffset =
+          size .sizeType .int ?? ! if
+            "unsupported size type for array element" sb.wrap
+              size sb.appendArraySize
+            op [] .pos errors appendError
+          end
+          offsetId prevId =
+          context nextTmpId offsetId =
+          "%t" sb.appendS
+          offsetId sb.appendI
+          " =l mul %t" sb.appendS
+          prevId sb.appendI
+          ", " sb.appendS
+          size .value sb.appendI
+          '\n' sb.appendC
+          argCount 0 > if
+            offsetId prevId =
+            context nextTmpId offsetId =
+            argCount 1 - argCount =
+            "%t" sb.appendS
+            offsetId sb.appendI
+            " =l add %t" sb.appendS
+            prevId sb.appendI
+            ", %s" sb.appendS
+            context popValue sb.appendI
+            '\n' sb.appendC
+          end
+        end
+        context popValue =:: srcId
+        "%s" sb.appendS
+        isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+        " =l add %s" sb.appendS
+        srcId sb.appendI
+        ", %t" sb.appendS
+        offsetId sb.appendI
+        '\n' sb.appendC
+      return
+    getElement @Element case
+      op [] .val .getElement ?? if
+        op [] .val .getElement
+      else
+        op [] .val .@Element
+      end =:: index
+      op [] .val .@Element ?? =:: isAddr
+      op [] .dataType =:: mut containerType
+      false =:: mut isPtr
+      containerType typeContext types.isPointer
+      containerType typeContext types.isReference | if
+        containerType typeContext types.getBaseType containerType =
+        true isPtr =
+      end
+      isAddr if ValType .PTR else ValType .REFERENCE end =:: valType
+      context popValue =:: srcId
+      isPtr if
+        containerType typeContext types.isUnion
+        containerType typeContext types.isEnum | if
+          sb
+            op [] .pos sb.appendPosQBE
+            "%s" sb.appendS
+            valType context pushValue sb.appendI
+            " =l copy %s" sb.appendS ## union/enum element access does not change pointer
+            srcId sb.appendI
+            '\n' sb.appendC
+          return
+        else containerType typeContext types.isTuple _if
+          sb
+            op [] .pos sb.appendPosQBE
+            "%s" sb.appendS
+            valType context pushValue sb.appendI
+            " =l add %s" sb.appendS ## union/enum element access does not change pointer
+            srcId sb.appendI
+            "," sb.appendS
+            containerType index typeContext types.tupleElementOffset sb.appendI
+            '\n' sb.appendC
+          return
+        end
+      end
+      break
+    copy case
+      op [] .dataType =:: srcType
+      srcType typeContext types.isReference ! if
+        break ## copy only implemented for references
+      end
+      srcType typeContext types.getBaseType =:: baseType
+      baseType typeContext types.unwrapNamed types.isPrimitive
+        baseType typeContext types.isPointer | if
+        context [] .stackInfo @ branchTree.peek =:: srcVal?
+        srcVal? optional.isEmpty if
+          "stack underflow" sb.wrap
+          op [] .pos errors appendError
+        end
+        srcVal? .data =:: srcVal
+        srcVal [] .valType .REFERENCE ?? ! if
+          sb return ## value is not a reference -> no copy necessary
+        end
+        context popValue =:: srcId
+        sb
+          op [] .pos sb.appendPosQBE
+          "%s" sb.appendS
+          baseType context toValType context pushValue sb.appendI
+          " =" sb.appendS
+          baseType false op [] .pos context sb.appendTypeNameQBE
+          " load" sb.appendS
+          baseType true op [] .pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+          srcId sb.appendI
+          '\n' sb.appendC
+        return
+      end
+      sb
+        op [] .pos sb.appendPosQBE
+        ## prepare memory
+        "%t" sb.appendS
+          context nextTmpId =:: dataPtrId
+        dataPtrId sb.appendI
+        " =l alloc" sb.appendS
+        baseType typeContext types.alignOf
+          ..dup 4 < if ..drop 4i64 end
+        sb.appendI
+        ' ' sb.appendC
+        baseType typeContext types.sizeOf sb.appendI
+        "\nblit %s" sb.appendS
+        context popValue sb.appendI
+        ", %t" sb.appendS
+        dataPtrId sb.appendI
+        ", " sb.appendS
+        baseType typeContext types.sizeOf sb.appendI
+        "\n%s" sb.appendS
+        ValType .REFERENCE context pushValue sb.appendI
+        " =l copy %t" sb.appendS
+        dataPtrId sb.appendI
+        '\n' sb.appendC
+      return
     New case
       context nextTmpId =:: tmpId
       sb
@@ -897,7 +1248,7 @@ proc(
         '\n' sb.appendC
         op [] .dataType typeContext types.isArray if
           "%s" sb.appendS
-          ValType .PTR context pushValue sb.appendI
+          ValType .REFERENCE context pushValue sb.appendI
           " =l copy %t" sb.appendS
           dataPtrId sb.appendI
           '\n' sb.appendC
@@ -926,7 +1277,7 @@ proc(
           ", " sb.appendS
           eltOffset sb.appendI
           '\n' sb.appendC
-          eltType types.isPrimitive =:: isValue
+          eltType typeContext types.unwrapNamed types.isPrimitive eltType typeContext types.isPointer | =:: isValue
           isValue if
             "store" sb.appendS
             eltType true op [] .pos context sb.appendTypeNameQBE
@@ -945,7 +1296,7 @@ proc(
           i 1 -
         end ..drop
         "%s" sb.appendS
-        ValType .PTR context pushValue sb.appendI
+        ValType .REFERENCE context pushValue sb.appendI
         " =l copy %t" sb.appendS
         dataPtrId sb.appendI
         '\n' sb.appendC
@@ -956,12 +1307,11 @@ proc(
         op [] .val .autoCast .src
         op [] .val .autoCast .offset
         op [] .dataType
-        false
         op [] .pos
         context
       compileCast return
       break
-    Cast Cast! case
+    Cast Cast! case ## XXX? make cast! bit-cast
       sb
         false
         op [] .val .Cast! ?? if
@@ -971,7 +1321,6 @@ proc(
         end
         0 ## no offset
         op [] .dataType
-        op [] .val .Cast! ??
         op [] .pos
         context
       compileCast return
@@ -1071,11 +1420,10 @@ proc(
       end
       break
     setId autoTypedInitializeId
-    getElement setElement @Element hasElement getArrayElement
-    setArrayElement @ArrayElement setValue Print Return newEnum call callPtr
+    setElement hasElement setArrayElement setValue Print Return newEnum call callPtr
     argc getArg getArgLen unaryOperator binaryOperator checkEnumLabel
     setEnumLabel checkArrayIndex unreachable typeInfo
-    compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod copy
+    compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod
     typeModifier hasLabel hasName case
       break ## XXX error message
   end
@@ -1108,6 +1456,12 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     data [] .labelId mainId =
   else ..drop.2 end
   ## TODO declare composite types
+  prog [] .hasCheckIndex if
+    128 sb.create
+      appendCheckIndex
+      target ..over io.fputSb ..drop
+    sb.free ..drop
+  end
   ## TODO internal functions
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
@@ -1145,12 +1499,21 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       target ..over io.fputSb ..drop
     sb.free ..drop
   end ..drop
-  0 while ..dup prog [] .progFiles .length < do
-    prog [] .progFiles ..over list.at .data =:: f
+  0 while ..dup prog [] .progFiles .length < do =:: i
+    prog [] .progFiles i list.at .data =:: f
     1024 sb.create
       "dbgfile \"" sb.appendS
       f [] .fileName sb.appendSb
       "\"\n"    sb.appendS
+      "data $" sb.appendS
+      FILE_NAME_NAME sb.appendS
+      i sb.appendI
+      " = {" sb.appendS
+        f [] .fileName
+          list.asArray labelContext id.wrapStringConstant
+          context
+        sb.appendStringConstQBE
+      "} \n" sb.appendS
       0 while ..dup f [] .localOps .length < do
         ..swap
         f [] .localOps ..over.2 list.at .data context compileOp
@@ -1158,7 +1521,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       end ..drop
       target ..over io.fputSb ..drop
     sb.free ..drop
-    1 +
+    i 1 +
   end ..drop
   context [] .stackInfo @ branchTree.free
   context [] .localConstants list.free ..drop

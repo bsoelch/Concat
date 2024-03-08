@@ -174,6 +174,13 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
+  proc( string : str LabelContext ptr mut : context -> StringConstant ) =>: export wrapStringConstant
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer
+      str sb.appendStr
+    context [] .nameBuffer =
+    offset context [] .nameBuffer .length offset - StringConstant new return
+  end
   proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export parseStringConstant
     stringStart =:: mut pos
     '"' pos @ updateFilePos ## string content starts after "
