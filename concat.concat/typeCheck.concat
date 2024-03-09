@@ -2066,6 +2066,13 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             left [] .valType op [] .dataType =
             types.primitive.BOOL outType =
           end
+          left [] .valType typeContext types.unwrapNamed =:: leftType
+          right [] .valType typeContext types.unwrapNamed =:: rigthType
+          ## T:cType, T==T -> bool
+          leftType .cType ?? rigthType .cType ?? & if leftType rigthType types.typeEquals _if
+            leftType op [] .dataType =
+            types.primitive.BOOL outType =
+          end
           break
         LT LE GE GT ULT ULE UGE UGT case
           ## number<number -> bool
