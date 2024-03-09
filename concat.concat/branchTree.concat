@@ -108,11 +108,15 @@ namespace: branchTree
   end
   #template type : T #end
   proc( T BranchTree : tree -> i64 ) =>: export depth
-    tree .branchHead -1 == if
+    tree tree .branchHead depthFrom return
+  end
+  #template type : T #end
+  proc( T BranchTree : tree NodeId : root -> i64 ) =>: export depthFrom
+    root -1 == if
       0 return
     end
     tree .nodes
-      tree .branchHead
+      root
     list.at .data [] .level return
   end
   #template type : T #end
@@ -210,16 +214,20 @@ namespace: branchTree
     false =:: mut needMerge
     0 while ..dup branchHeads .length < do
       branchHeads ..over array.get =:: nodeId
-      nodeId 0 < nodeId tree [] .nodes .length >= | if
+      nodeId -1 < nodeId tree [] .nodes .length >= | if ## id=-1 or 0 <= id < length
         ..drop
         true return ## nodeId invalid
       end
-      initDepth -1 == if
-        tree [] .nodes nodeId list.at .data [] .level initDepth =
+      nodeId -1 == if
+        0i64
       else
-        tree [] .nodes nodeId list.at .data [] .level initDepth != _if
-          ..drop
-          true return ## nodes on top level have different depths
+        tree [] .nodes nodeId list.at .data [] .level
+      end =:: nodeDepth
+      initDepth -1 == if
+         nodeDepth initDepth =
+      else nodeDepth initDepth != _if
+        ..drop
+        true return ## nodes on top level have different depths
       end
       parentId -1 == if
         nodeId parentId =

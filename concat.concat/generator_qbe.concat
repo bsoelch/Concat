@@ -130,11 +130,9 @@ namespace: sb
 end
 proc(
   stringBuilder : sb
-  BranchType : branchType
-  i32 : branchId
+  BranchId : branch
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: startBranch
-  branchType branchId BranchId new =:: branch
   branch context [] .currentBranch =
   sb
     branch sb.appendBranchId
@@ -735,7 +733,7 @@ proc(
     ")\n" sb.appendS
     "call $exit (w 1)\n" sb.appendS
     ## continue execution, need to start new "branch" as jumps end previous branch
-    okBranch .branchType okBranch .id context startBranch
+    okBranch context startBranch
   return
 end
 
@@ -842,7 +840,7 @@ proc(
     ")\n" sb.appendS
     "call $exit (w 1)\n" sb.appendS
     ## continue execution, need to start new "branch" as jumps end previous branch
-    okBranch .branchType okBranch .id context startBranch
+    okBranch context startBranch
   return
 end
 
@@ -1564,26 +1562,44 @@ proc(
     block case
       op [] .val .block .blockType switch
         IF case
+          ## BranchId
+            BranchType .IF
+            op [] .val .block .blockId
+          BranchId new =:: ifBranch
           sb
             op [] .pos sb.appendPosQBE
             "jnz $s" sb.appendS
             context popValue sb.appendI
-            " ," sb.appendS
-            ## appendBranchId
-              BranchType .IF
-              op [] .val .block .blockId
-            BranchId new sb.appendBranchId
-            " ," sb.appendS
+            ", " sb.appendS
+            ifBranch sb.appendBranchId
+            ", " sb.appendS
             ## appendBranchId
               BranchType .ELSE
               op [] .val .block .blockId
             BranchId new sb.appendBranchId
             '\n' sb.appendC
-            ## startBranch
-              BranchType .IF
+            ifBranch context startBranch
+            context [] .stackInfo @ branchTree.startBranch =:: branchRoot
+            op [] .val .block .blockId branchRoot newIfBlock context openBlock
+          return
+        IFIF case
+          ## appendBranchId
+            BranchType .NEXT
+            context nextJumpLabelId
+          BranchId new =:: ifBranch
+          sb
+            op [] .pos sb.appendPosQBE
+            "jnz $s" sb.appendS
+            context popValue sb.appendI
+            ", " sb.appendS
+            ifBranch sb.appendBranchId
+            ", " sb.appendS
+            ## appendBranchId
+              BranchType .ELSE
               op [] .val .block .blockId
-              context
-            startBranch
+            BranchId new sb.appendBranchId
+            '\n' sb.appendC
+            ifBranch context startBranch
             context [] .stackInfo @ branchTree.startBranch =:: branchRoot
             op [] .val .block .blockId branchRoot newIfBlock context openBlock
           return
@@ -1600,12 +1616,14 @@ proc(
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             ## startBranch
-              BranchType .ELSE
-              op [] .val .block .blockId
+              ## BranchId
+                BranchType .ELSE
+                op [] .val .block .blockId
+              BranchId new
               context
             startBranch
           return
-        IFIF WHILE CASE DEFAULT DO case
+        WHILE CASE DEFAULT DO case
           break
         UNKNOWN BREAK CONTINUE SWITCH INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
@@ -1628,8 +1646,10 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             ## startBranch
-              BranchType .END_IF
-              op [] .val .blockEnd .blockId
+              ## BranchId
+                BranchType .END_IF
+                op [] .val .blockEnd .blockId
+              BranchId new
               context
             startBranch
             branchTree.NodeId 2 array new =:: mut branches
@@ -1651,7 +1671,8 @@ proc(
               op [] .pos errors appendError
             end
           newSb return
-        IFIF WHILE CASE DEFAULT DO case
+        IFIF case sb return ## no-op
+        WHILE CASE DEFAULT DO case
           break
         UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
