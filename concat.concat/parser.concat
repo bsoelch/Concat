@@ -577,8 +577,9 @@ end
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state -> string string ) =>: nextWord
   code
     fileState nextToken
-    ..dup .IDENTIFIER ?? ! if
+    ..dup .IDENTIFIER ?? ! if ..drop
       "expected identifier" sb.wrap fileState [] .wordStart state appendError2
+      string.empty return
     end
     .IDENTIFIER
   return
