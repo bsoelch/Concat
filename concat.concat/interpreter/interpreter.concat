@@ -338,7 +338,7 @@ proc(
       context [] .openBlocks .length 0 == if
         "unexpected end of " sb.wrap
          blockType sb.appendBlockType
-         "-Block" sb.appendS
+         "-block" sb.appendS
         op [] .pos errors appendError
         true return
       end
@@ -349,7 +349,7 @@ proc(
         showErrorMessages if
           "unexpected end of " sb.wrap
            blockType sb.appendBlockType
-           "-Block expected " sb.appendS
+           "-block expected " sb.appendS
            closedBlock .blockType sb.appendBlockType
           op [] .pos errors appendError
         end
