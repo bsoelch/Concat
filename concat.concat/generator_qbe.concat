@@ -846,6 +846,77 @@ end
 
 proc(
   stringBuilder : sb
+  Type : tupleType
+  i64 : dataPtrId
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: initializeTupleQBE
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  tupleType typeContext types.compositeElts =:: elts
+  sb
+    elts .length 1 - while ..dup 0 >= do =:: i
+      elts i types.compositeElts.get =:: eltType
+      tupleType i typeContext types.tupleElementOffset =:: eltOffset
+      eltType typeContext types.isEmpty if
+        i 1 - continue
+      end
+      "%t" sb.appendS
+        context nextTmpId =:: eltPtrId
+      eltPtrId sb.appendI
+      " =l add %t" sb.appendS
+      dataPtrId sb.appendI
+      ", " sb.appendS
+      eltOffset sb.appendI
+      '\n' sb.appendC
+      eltType context referenceOnly if
+        "blit %s" sb.appendS
+      else
+        "store" sb.appendS
+        eltType StorageType .STORE pos context sb.appendTypeNameQBE
+        " %s" sb.appendS
+      end
+      context popValue sb.appendI
+      ", %t" sb.appendS
+      eltPtrId sb.appendI
+      eltType context referenceOnly if
+        ',' sb.appendC
+        eltType typeContext types.sizeOf sb.appendI
+      end
+      '\n' sb.appendC
+      i 1 -
+    end ..drop
+  return
+end
+proc(
+  stringBuilder : sb
+  Type : valType
+  CompilerContext ptr mut : context
+  bool : createId
+-> stringBuilder i64 ) =>: appendAlloc
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  -1i64 =:: mut tmpId
+  sb
+    createId if
+      context nextTmpId tmpId =
+      "%t" sb.appendS
+      tmpId sb.appendI
+    end
+    " =l alloc" sb.appendS
+    valType typeContext types.alignOf
+      ..dup 4 < if ..drop 4i64 end
+    sb.appendI
+    ' ' sb.appendC
+    valType typeContext types.sizeOf sb.appendI
+    '\n' sb.appendC
+  tmpId return
+end
+
+proc(
+  stringBuilder : sb
   Type : src
   i64 : srcIndex
   Type : target
@@ -1092,7 +1163,13 @@ proc(
               "export " sb.appendS
             end
             "function " sb.appendS
-            op [] .dataType typeContext types.getProcRet ..drop =:: retType
+            op [] .dataType typeContext types.getProcRet if ..drop
+              "wrong type for procedure initialization: " sb.wrap
+                op [] .dataType labelContext typeContext sb.appendType
+                " expected procedure" sb.appendS
+              op [] .pos errors appendError
+              return
+            end =:: retType
             retType typeContext types.isEmpty ! if
               retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
               ' ' sb.appendC
@@ -1100,6 +1177,28 @@ proc(
             idInfo .labelId context sb.appendGlobalName
             op [] .dataType op [] .pos context sb.appendProcArgs
             "{\n@start\n" sb.appendS
+            ## push unnamed arguments
+            op [] .dataType typeContext types.getProcIn ..drop =:: inType
+            inType typeContext types.compositeElts =:: args
+            0 while ..dup args .length < do =:: i
+              inType i typeContext types.compositeGetLabel =:: label
+              args i types.compositeElts.get =:: argType
+              label id.LABEL_ID_NONE == if ## push argument
+                argType context referenceOnly if
+                  ValType .REFERENCE
+                else
+                  argType context toValType
+                end =:: valType
+                "%s" sb.appendS
+                valType context pushValue sb.appendI
+                " =" sb.appendS
+                valType sb.appendValTypeQBE
+                " copy " sb.appendS
+                i id.LABEL_ID_NONE context sb.appendArgName
+                '\n' sb.appendC
+              end
+              i 1 +
+            end ..drop
           return
         LOCAL_VAR TMP_VAR case
           op [] .dataType =:: valType
@@ -1114,19 +1213,13 @@ proc(
               "%tmp" sb.appendS
               idInfo .id sb.appendI
             end
-            " =l alloc" sb.appendS
-            valType typeContext types.alignOf
-              ..dup 4 < if ..drop 4i64 end
-            sb.appendI
-            ' ' sb.appendC
-            valType typeContext types.sizeOf sb.appendI
-            '\n' sb.appendC
+            valType context false appendAlloc ..drop
             assignValue if
               isValue if
                 "store" sb.appendS
                 valType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
               else
-                "blit " sb.appendS ## XXX call memcopy for large structs
+                "blit" sb.appendS ## XXX call memcopy for large structs
               end
               " %s" sb.appendS
               context popValue sb.appendI
@@ -1379,16 +1472,8 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
-        "%t" sb.appendS
-          context nextTmpId =:: dataPtrId
-        dataPtrId sb.appendI
-        " =l alloc" sb.appendS
-        baseType typeContext types.alignOf
-          ..dup 4 < if ..drop 4i64 end
-        sb.appendI
-        ' ' sb.appendC
-        baseType typeContext types.sizeOf sb.appendI
-        "\nblit %s" sb.appendS
+        baseType context true appendAlloc =:: dataPtrId
+        "blit %s" sb.appendS
         context popValue sb.appendI
         ", %t" sb.appendS
         dataPtrId sb.appendI
@@ -1404,17 +1489,8 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
-        "%t" sb.appendS
-          context nextTmpId =:: dataPtrId
-        dataPtrId sb.appendI
-        " =l alloc" sb.appendS
-        op [] .dataType typeContext types.alignOf
-          ..dup 4 < if ..drop 4i64 end
-        sb.appendI
-        ' ' sb.appendC
-        op [] .dataType typeContext types.sizeOf sb.appendI
-        '\n' sb.appendC
-        op [] .val .newEnum ?? if
+        op [] .dataType context true appendAlloc =:: dataPtrId
+        op [] .val .newEnum ?? if ## TODO store enums without values as integer
           op [] .dataType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
           op [] .val .newEnum =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
@@ -1450,38 +1526,7 @@ proc(
             '\n' sb.appendC
           end
         else op [] .dataType typeContext types.isTuple _if
-          op [] .dataType typeContext types.compositeElts =:: elts
-          elts .length 1 - while ..dup 0 >= do =:: i
-            elts i types.compositeElts.get =:: eltType
-            op [] .dataType i typeContext types.tupleElementOffset =:: eltOffset
-            eltType typeContext types.isEmpty if
-              i 1 - continue
-            end
-            "%t" sb.appendS
-              context nextTmpId =:: eltPtrId
-            eltPtrId sb.appendI
-            " =l add %t" sb.appendS
-            dataPtrId sb.appendI
-            ", " sb.appendS
-            eltOffset sb.appendI
-            '\n' sb.appendC
-            eltType context referenceOnly if
-              "blit %s" sb.appendS
-            else
-              "store" sb.appendS
-              eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-              " %s" sb.appendS
-            end
-            context popValue sb.appendI
-            ", %t" sb.appendS
-            eltPtrId sb.appendI
-            eltType context referenceOnly if
-              ',' sb.appendC
-              eltType typeContext types.sizeOf sb.appendI
-            end
-            '\n' sb.appendC
-            i 1 -
-          end ..drop
+          op [] .dataType dataPtrId op [] .pos context initializeTupleQBE
         else op [] .dataType typeContext types.isArray ! _if
           "unsupported type for new:" sb.wrap
             op [] .dataType
@@ -1635,7 +1680,6 @@ proc(
       op [] .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           sb
-            op [] .pos sb.appendPosQBE
             "}\n" sb.appendS
             context sb.appendLocalConstants
           return
@@ -1680,8 +1724,68 @@ proc(
           break
       end
       break
+    Return case
+      op [] .dataType typeContext types.isProcedure ! if
+        "unexpected type for return: " sb.wrap
+          op [] .dataType labelContext typeContext sb.appendType
+          " expected procedure" sb.appendS
+        op [] .pos errors appendError
+        sb return
+      end
+      op [] .dataType typeContext types.getProcRet ..drop =:: retType
+      sb
+        op [] .pos sb.appendPosQBE
+        op [] .dataType typeContext types.getCallConvention ..drop switch
+          STRUCT case break ## no changes needed
+          POINTER case
+            op [] .dataType typeContext types.getProcOut ..drop =:: outType
+            outType typeContext types.compositeEltCount
+              i32 cast
+              retType typeContext types.isEmpty ! if 1 - end
+            =:: N
+            N 0 == if break end
+            outType typeContext types.compositeElts =:: outTypes
+            N 1 - while ..dup 0 >= do =:: i
+              outTypes i types.compositeElts.get =:: elt
+              elt typeContext types.isEmpty if
+                i 1 - continue
+              end
+              elt context referenceOnly if
+                "blit" sb.appendS
+              else
+                "store" sb.appendS
+                elt StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+              end
+              " %s" sb.appendS
+              context popValue sb.appendI
+              ", " sb.appendS
+              i outType i typeContext types.compositeGetLabel context sb.appendOutArgName
+              '\n' sb.appendC
+            i 1 -
+            end ..drop
+            break
+        end
+        retType typeContext types.isProcOut if
+          retType typeContext types.compositeEltCount
+        else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
+      retCount 0 == if
+        "ret\n" sb.appendS
+        return
+      end
+      retCount 1 == if
+        "ret %s" sb.appendS
+        context popValue sb.appendI
+        '\n' sb.appendC
+        return
+      end
+      retType context true appendAlloc =:: retId
+      retType retId op [] .pos context initializeTupleQBE
+        "ret %t" sb.appendS
+        retId sb.appendI
+        '\n' sb.appendC
+      return
     setId autoTypedInitializeId
-    setElement setArrayElement Print Return call callPtr
+    setElement setArrayElement Print call callPtr
     argc getArg getArgLen unaryOperator binaryOperator
     setEnumLabel checkArrayIndex unreachable typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod
