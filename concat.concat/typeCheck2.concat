@@ -39,10 +39,11 @@ struct(
   i64 : mut ifCastsOffset
   i32 : blockId
   bool : mut hasElse
+  bool : mut ifBranchTerminates
 ) =:: IfBlockInfo
 enum(
   Unknown
-  Procedure
+  Type : Procedure
   IfBlockInfo : mut If
   While
   Switch
@@ -57,6 +58,7 @@ proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockIn
     BranchPoint new list.append
     -1
     blockId
+    false
     false
   IfBlockInfo new BlockInfo .If new return
 end
@@ -83,6 +85,7 @@ struct(
   OpInfo list : mut opInfo
   i64 list : mut childIds
   FileId : mut currentFile
+  bool : mut reachable
   ## TODO flags:
   ## * disable reorganizing of operations (excluding types)
   ## * is it allowed to optimize out reading from variables
@@ -170,7 +173,6 @@ proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
   state removeTrailingNOPs
   true state [] .interpreterActive =
 end
-
 
 proc( TypeCheckState ptr mut : state -> ) =>: resetInterpreter
   state [] .interpreter @ =:: interpreter
@@ -428,7 +430,9 @@ proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckSt
   true =:: mut canMoveChildren
   0 while ..dup argCount < do
     state [] .childIds ..over argOffset + list.get =:: childId
-    state [] .opInfo childId list.at .data [] .canMove ! if
+    childId 0 < if
+      false canMoveChildren =
+    else state [] .opInfo childId list.at .data [] .canMove ! _if
       false canMoveChildren =
     end
     1 +
@@ -580,6 +584,40 @@ proc(
     -1
   TypeInfo new return
 end
+proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkReachable
+  state [] .reachable if
+    return
+  end
+  ## check if op can appear in unreachable context
+  op [] .val switch
+    ## XXX allow constants as case-labels
+    block case
+      op [] .val .block .blockType switch
+        ELSE CASE DEFAULT case
+          return
+        default break
+      end
+      ## XXX allow break at end of case branch
+      break
+    initializeId case
+      op [] .val .initializeId .idType .PROCEDURE ?? if
+        return
+      end
+      break
+    blockEnd unreachable NOP compilerInfo case
+      return
+    default break
+  end
+  state [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext @ =:: idContext
+  program [] .idContext .constContext @ =:: constContext
+  program [] .idContext .typeContext @ =:: typeContext
+  program [] .idContext .labelContext @ =:: labelContext
+  "unreachable operation: " sb.wrap
+    op [] constContext labelContext typeContext sb.appendOp
+  op [] .pos errors appendError
+end
 
 proc( Operation : op TypeCheckState ptr mut : state -> i64 #+opIndex+# ) =>: appendOp
   state [] .compiledOps .length =:: index
@@ -649,7 +687,6 @@ proc( i64 : copyMutableIndex TypeCheckState ptr mut : state -> ) =>: removeCopy
   end
 end
 
-## FIXME prevent editing of operations outside current block
 proc( i64 : index TypeCheckState ptr mut : state -> bool ) =>: tryDeleteOp
   index state currentBlockStart < if
     true return
@@ -785,6 +822,42 @@ proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state -> 
     end
 end
 
+proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
+  state [] .program =:: program
+  state [] .program [] .errors @ =:: errors
+  program [] .idContext @ =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  op [] .dataType typeContext types.isProcedure ! if
+    "unexpected type for return: " sb.wrap
+      op [] .dataType labelContext typeContext sb.appendType
+      " expected procedure" sb.appendS
+    op [] .pos errors appendError
+    return
+  end
+  op [] .dataType typeContext types.getProcOut if ..drop
+    "could not resolve procedure return value" sb.wrap op [] .pos errors appendError
+    return
+  end =:: procOut
+  procOut typeContext types.compositeEltCount =:: valCount
+  valCount state [] .stack branchTree.depth < if
+    "wrong number of return values at the end of procedure got: " sb.wrap
+      valCount      sb.appendI
+      " expected: " sb.appendS
+      state [] .stack branchTree.depth sb.appendI
+    op [] .pos errors appendError
+    ## XXX report position of lowest stack value
+    return
+  end
+  procOut typeContext types.compositeEltArray "return statement" string.wrap op [] .pos state requireTypes if
+    ..drop return
+  end =:: argsOffset
+  op [] state appendOp ..drop
+  false false valCount argsOffset state updateOpInfo_noStack
+  false state [] .reachable =
+  state [] .stack @ branchTree.prune ## stack types no longer needed
+end
+
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
@@ -805,6 +878,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
     return ## evaluate constants
   end
   state freezeInterpreter
+  op state checkReachable
   op [] .val switch
     NOP case return
     OpValue .Constant case
@@ -901,7 +975,35 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           return
         PROCEDURE case
           op [] state appendOp ..drop
-          BlockInfo .Procedure state openBlock
+          op [] .dataType BlockInfo .Procedure new state openBlock
+          true state [] .reachable =
+          op [] .dataType typeContext types.getProcIn if ..drop
+            "wrong type for procedure initialization: " sb.wrap
+              op [] .dataType labelContext typeContext sb.appendType
+              " expected procedure" sb.appendS
+            op [] .pos errors appendError
+            return
+          end =:: inType
+          inType typeContext types.compositeElts =:: args
+          ## push unnamed arguments
+          0 while ..dup args .length < do =:: i
+            inType i typeContext types.compositeGetLabel =:: label
+            label id.LABEL_ID_NONE == if ## push argument
+              args i types.compositeElts.get =:: arg
+              state [] .stack @
+                ## TypeInfo
+                  arg
+                  ConstValue .none
+                  id.LABEL_ID_NONE
+                  op [] .pos
+                  -1
+                  -1
+                  -1
+                TypeInfo new
+              branchTree.push
+            end
+            i 1 +
+          end ..drop
           return
         TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.wrap
@@ -1399,7 +1501,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op [] .pos
           BranchPoint new currentBlock [] .If .ifBranch =
           true currentBlock [] .If .hasElse =
+          state [] .reachable currentBlock [] .If .ifBranchTerminates =
           op [] state appendOp ..drop
+          true state [] .reachable =
           return
         IFIF case
           state peekBlock =:: currentBlock?
@@ -1464,13 +1568,17 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           op [] .pos errors appendError
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          ## TODO ensure correct return types, create implicit return operation
           op [] .pos state closeBlock =:: closed
           closed .Procedure ?? ! if
             "unexpected end of " sb.wrap
               closed sb.appendBlockInfoName
               " block expected Procedure block" sb.appendS
             op [] .pos errors appendError
+          end
+          state [] .reachable if
+            ## create explicit return operation if end of procedure reachable
+            closed .Procedure op [] .pos opReturn =:: tmp
+            tmp @ state typeCheckReturn
           end
           op [] state appendOp ..drop
           return
@@ -1493,32 +1601,41 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             list.pop ..drop
           state [] .blockStarts =
           branchTree.NodeId 2 array new =:: mut branches
-          closed .If .ifBranch .node branches @ 0 [] =
-          state [] .stack .branchHead branches @ 1 [] =
           i64 2 array new =:: mut castOffsets
-          closed .If .ifCastsOffset castOffsets @ 0 [] =
-          elseCastOffset castOffsets @ 1 [] =
-          ## mergeValues
-            state [] .stack @
-            branches @ array.wrap
-            mergeBranches @
-            ## MergePoint
-              "If-Else block" string.wrap
-              op [] .pos
-              castOffsets @ array.wrap
-              state
-              MergeType .MERGE
-            MergePoint new
-          branchTree.merge if
-            "different numbers of types at the end of " sb.wrap
-              closed sb.appendBlockInfoName
-              " block\n  * ifBranch: " sb.appendS ## XXX print position of if-branch
-              state [] .stack closed .If .ifBranch .node branchTree.depthFrom sb.appendI
-              " at " sb.appendS
-              closed .If .ifBranch .pos sb.appendPos
-              "\n  * elseBranch: " sb.appendS
-              state [] .stack branchTree.depth sb.appendI
-            op [] .pos errors appendError
+          0 =:: mut nBranches
+          closed .If .ifBranchTerminates if
+            closed .If .ifBranch .node branches @ nBranches [] =
+            closed .If .ifCastsOffset castOffsets @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          state [] .reachable if
+            state [] .stack .branchHead branches @ nBranches [] =
+            elseCastOffset castOffsets @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          nBranches 1 > if
+            ## mergeValues
+              state [] .stack @
+              branches @ nBranches array.create
+              mergeBranches @
+              ## MergePoint
+                "If-Else block" string.wrap
+                op [] .pos
+                castOffsets @ nBranches array.create
+                state
+                MergeType .MERGE
+              MergePoint new
+            branchTree.merge if
+              "different numbers of types at the end of " sb.wrap
+                closed sb.appendBlockInfoName
+                " block\n  * ifBranch: " sb.appendS ## XXX print position of if-branch
+                state [] .stack closed .If .ifBranch .node branchTree.depthFrom sb.appendI
+                " at " sb.appendS
+                closed .If .ifBranch .pos sb.appendPos
+                "\n  * elseBranch: " sb.appendS
+                state [] .stack branchTree.depth sb.appendI
+              op [] .pos errors appendError
+            end
           end
           closed .If .blockId op [] .val .blockEnd .blockId =
           op [] state appendOp ..drop
@@ -1551,6 +1668,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         NAMESPACE case
           break
       end
+      break
+    Return case
+      op state typeCheckReturn
       break
     length size case
       state [] .stack @ branchTree.peek =:: value?
@@ -1646,7 +1766,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       ConstValue .none op [] state pushValue
       types.primitive.I_SIZE state replaceType
       break
-    Return getName
+    getName
     newEnum call callPtr
     argc getArg getArgLen
     unaryOperator binaryOperator
@@ -1747,6 +1867,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     128 OpInfo    list.create
     128 i64       list.create
     FILE_ID_NONE
+    true
   TypeCheckState new =:: mut state
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext

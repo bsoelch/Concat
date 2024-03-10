@@ -87,7 +87,7 @@ namespace: branchTree
       itr .tree node [] .parent T BranchItr new return
     end
   end
-  
+
   #template type : T #end
   proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export unlinkNode
     tree [] .branchPoints .length 0 > if
@@ -187,7 +187,7 @@ namespace: branchTree
     end
     tree [] .nodes nodeId list.at .data =:: popped
     popped [] .parent tree [] .branchHead =
-    ## unlink node, node stays available until now node is added
+    ## unlink node, node stays available until new node is added
     tree nodeId unlinkNode
     popped [] .data @ optional.wrap return
   end
@@ -197,6 +197,18 @@ namespace: branchTree
     tree pop .data [] =:: lower
     tree upper push
     tree lower push
+  end
+  ## remove all nodes from current branch
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree -> ) =>: export prune
+    tree [] .branchHead =:: mut nodeId
+    while nodeId 0 >= nodeId tree [] .nodes .length < & do
+      tree [] .nodes nodeId list.at .data =:: popped
+      popped [] .parent
+        tree nodeId unlinkNode
+      nodeId =
+    end
+    nodeId tree [] .branchHead =
   end
 
   #template type : T type : C #end
