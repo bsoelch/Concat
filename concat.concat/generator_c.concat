@@ -1177,22 +1177,26 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
               return
             end
           .data =:: switchData
-          switchData [] .cases op [] .val .block .subId list.at .data =:: caseData
+          op [] .val .block .subId =:: caseId
+          switchData [] .labels =:: labelData
           64 sb.create
-            0 while ..dup caseData [] .count < do
-              ..swap
-                "case " sb.appendS
-                switchData [] .labels ..over.2 caseData [] .offset + list.get .value =:: caseVal
-                caseVal switch
-                  int case caseVal .int sb.appendI break
-                  chr case caseVal .chr sb.appendI break
-                  enumLabel case caseVal .enumLabel sb.appendI break
-                  none wildCard boolean genericArg templateArg str typeId arrayConstant Float procedure case
-                    ## TODO error message
-                    break
-                end
-                ":" sb.appendS
-              ..swap 1 +
+            0 while ..dup labelData .length < do =:: i
+              labelData i list.at .data =:: caseLabel
+              caseLabel [] .caseId caseId != if
+                i 1 + continue
+              end
+              "case " sb.appendS
+              caseLabel [] .value =:: caseVal
+              caseVal switch
+                int case caseVal .int sb.appendI break
+                chr case caseVal .chr sb.appendI break
+                enumLabel case caseVal .enumLabel sb.appendI break
+                none wildCard boolean genericArg templateArg str typeId arrayConstant Float procedure case
+                  ## TODO error message
+                  break
+              end
+              ":" sb.appendS
+              i 1 +
             end ..drop
             ";\n" sb.appendS
             target ..over io.fputSb ..drop

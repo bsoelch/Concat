@@ -1868,7 +1868,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       state [] .openBlocks list.peek ..dup optional.hasData if .data =:: block
         block [] .blockType ..dup .SWITCH ?? ..swap .CASE ?? | if
-          state [] .switchData block [] .blockId list.at .data [] .labels @ =:: labels
+          state [] .switchData
+            block [] .blockId list.at .data
+          =:: switchData
+          switchData [] .labels @ =:: labels
           block [] .blockData .switchBlock .switchType =:: switchType
           op [] .val .Constant =:: constant
           op [] .dataType switchType typeContext types.canAutoCast ! if
@@ -1895,12 +1898,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## LabelData
               constant
               op [] .pos
+              switchData [] .caseCount
             LabelData new list.append
           labels [] =
-          state [] .switchData block [] .blockId list.at .data [] .cases list.peek .data
-            ..dup [] .count
-              1 +
-            ..swap [] .count =
           return
         end
       else ..drop end
@@ -2294,9 +2294,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           op state checkReachable
           state [] .switchData .length i32 cast =:: blockId
           state [] .switchData
-            16 LabelData list.create
-            16 CaseInfo list.create
-              0 0 CaseInfo new list.append
+            ## SwitchData
+              16 LabelData list.create
+              0
+              false
             SwitchData new list.append
           state [] .switchData =
           blockId op [] .val .block .blockId =
@@ -2361,17 +2362,31 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               BlockType .CASE sb.appendBlockType
             " statement" sb.appendS op [] .pos state appendError2
           end
-          state [] .switchData switchBlock [] .blockId list.at .data [] .cases @ =:: cases
-          cases [] list.peek .data [] .count 0 == if
+          state [] .switchData
+            switchBlock [] .blockId list.at .data
+          =:: switchData
+          switchData [] .hasDefault if
+            60 sb.create
+              "unexpected " sb.appendS
+              BlockType .CASE sb.appendBlockType
+            "-statement, default case has to be last case in switch" sb.appendS op [] .pos state appendError2
+            return
+          end
+          switchData [] .labels list.peek =:: prev?
+          prev? optional.isEmpty if
+            true
+          else
+            prev? .data [] .caseId switchData [] .caseCount <
+          end if
             60 sb.create
               BlockType .CASE sb.appendBlockType
             "-statement has to be preceded by at least one label" sb.appendS op [] .pos state appendError2
           end
           switchBlock [] .blockId op [] .val .block .blockId =
-          cases [] .length 1 - i32 cast op [] .val .block .subId =
-          cases []
-            state [] .switchData switchBlock [] .blockId list.at .data [] .labels .length 0 CaseInfo new list.append
-          cases [] =
+          switchData [] .caseCount op [] .val .block .subId =
+          switchData [] .caseCount
+            1 +
+          switchData [] .caseCount =
           true state [] .reachable =
           switchBlock [] .blockData .switchBlock .inTypes @ state resetStack
           BlockType .CASE switchBlock [] .blockType =
@@ -2401,17 +2416,37 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               BlockType .CASE sb.appendBlockType
             " statement" sb.appendS op [] .pos state appendError2
           end
-          state [] .switchData switchBlock [] .blockId list.at .data [] .cases list.peek .data [] .count 0 != if
+          state [] .switchData
+            switchBlock [] .blockId list.at .data
+          =:: switchData
+          switchData [] .labels list.peek =:: prev?
+          prev? optional.isEmpty if
+            60 sb.create
+              "unexpected " sb.appendS
+              BlockType .DEFAULT sb.appendBlockType
+            "-statement, switch block has to contain at least one case" sb.appendS op [] .pos state appendError2
+            return
+          end
+          switchData [] .hasDefault if
+            60 sb.create
+              "unexpected " sb.appendS
+              BlockType .DEFAULT sb.appendBlockType
+            "-statement, switch block can only contain one default case" sb.appendS op [] .pos state appendError2
+            return
+          end
+          prev? .data [] .caseId switchData [] .caseCount == if
             60 sb.create
               BlockType .DEFAULT sb.appendBlockType
             "-statement cannot be preceded by at labels" sb.appendS op [] .pos state appendError2
           end
+          true switchData [] .hasDefault =
           true state [] .reachable =
           switchBlock [] .blockData .switchBlock .inTypes @ state resetStack
           BlockType .DEFAULT switchBlock [] .blockType =
           false switchBlock [] .blockData .switchBlock .explicitBreak =
           switchBlock [] .blockData .switchBlock .switchType op [] .dataType =
           switchBlock [] .blockId op [] .val .block .blockId =
+          switchData [] .caseCount op [] .val .block .subId =
           state [] .compiledOps
             op list.appendP
           state [] .compiledOps =

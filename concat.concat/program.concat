@@ -245,9 +245,8 @@ struct(
              FileId : id
 ) =:: export ProgramFile
 
-struct( ConstValue : value FilePosition : pos ) =:: export LabelData
-struct( i64 : offset i64 : mut count ) =:: export CaseInfo
-struct( LabelData list : mut labels CaseInfo list : mut cases ) =:: export SwitchData
+struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export LabelData
+struct( LabelData list : mut labels i32 : mut caseCount bool : mut hasDefault ) =:: export SwitchData
 struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: export ProcedureInfo
 struct(
   IdentifierContext : mut idContext
