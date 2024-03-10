@@ -41,12 +41,20 @@ struct(
   bool : mut hasElse
   bool : mut ifBranchTerminates
 ) =:: IfBlockInfo
+struct(
+  Type : switchType
+  branchTree.NodeId : branchRoot
+  BranchPoint list : mut caseBranches
+  i64 list : mut castOffsets
+  i32 : blockId
+  bool : mut allowBreak
+) =:: SwitchBlockInfo
 enum(
   Unknown
   Type : Procedure
   IfBlockInfo : mut If
+  SwitchBlockInfo : mut Switch
   While
-  Switch
 ) =:: BlockInfo
 proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
@@ -62,14 +70,26 @@ proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockIn
     false
   IfBlockInfo new BlockInfo .If new return
 end
+proc( Type : switchType branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockInfo ) =>: newSwitchBlock
+  ## SwitchBlockInfo
+    switchType
+    branchRoot
+    16 BranchPoint list.create
+    16 i64 list.create
+    blockId
+    false
+  SwitchBlockInfo new BlockInfo .Switch new return
+end
+"if-else" =:: IF_BLOCK_INFO_NAME
+"switch-case" =:: SWITCH_BLOCK_INFO_NAME
 namespace: sb
   proc( stringBuilder BlockInfo -> stringBuilder ) =>: appendBlockInfoName
     switch
       Unknown case "unknown" sb.appendS return
       Procedure case "procedure" sb.appendS return
-      If case "if-else" sb.appendS return
+      If case IF_BLOCK_INFO_NAME sb.appendS return
+      Switch case SWITCH_BLOCK_INFO_NAME sb.appendS return
       While case "while" sb.appendS return
-      Switch case "switch" sb.appendS return
     end
   end
 end
@@ -470,6 +490,41 @@ proc( FilePosition : pos TypeCheckState ptr mut : state -> BlockInfo ) =>: close
   state [] .openBlocks =
   closed return
 end
+proc( TypeCheckState ptr mut : state -> bool ) =>: inSwitchLabel
+  state [] .reachable if
+    false return
+  end
+  state [] .openBlocks .length 0 == if
+    false return
+  end
+  state [] .openBlocks list.peek .data [] .Switch ?? return
+end
+proc(
+  BlockType : breakType
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+-> BlockInfo ptr mut optional ) =>: findBreakableBlock
+  state [] .program =:: program
+  program [] .errors @ =:: errors
+  state [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
+    state [] .openBlocks i list.at .data =:: block
+    block [] .While ?? if
+      block optional.wrap return
+    end
+    breakType .BREAK ?? if block [] .Switch ?? _if
+      block optional.wrap return
+    end
+    i 1 -
+  end ..drop
+  60 sb.create
+    breakType sb.appendBlockType
+    " can only appear in loops " sb.appendS
+    breakType .BREAK ?? if
+      "and switch-case statements" sb.appendS
+    end
+  pos errors appendError
+  BlockInfo ptr mut optional.empty return
+end
 
 enum( MERGE MERGE_ROOT NO_CAST ) =:: MergeType
 struct(
@@ -858,6 +913,144 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
   state [] .stack @ branchTree.prune ## stack types no longer needed
 end
 
+proc(
+  i32 : switchId
+  ConstValue : label
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+-> ) =>: newSwitchLabel
+  state [] .program =:: program
+  program [] .switchData
+    switchId list.at .data
+  =:: switchData
+  switchData [] .labels
+    ## LabelData
+      label
+      pos
+      switchData [] .caseCount
+    LabelData new list.append
+  switchData [] .labels =
+  ## TODO check for duplicate labels
+end
+proc(
+  i32 : switchId
+  Type : switchType
+  TypeCheckState ptr mut : state
+-> ) =>: resolveSwitchLabels
+  state [] .program =:: program
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .constContext @ =:: constContext
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
+  state [] .interpreter .stack =:: labels
+  state [] .interpreter .stackInfo =:: stackInfo
+  0 while ..dup labels .length < do =:: i
+    labels i list.get =:: mut label
+    stackInfo i list.at .data =:: labelInfo
+    ## XXX? less strict condition for types?
+    labelInfo [] .valueType switchType types.typeEquals ! if
+      label .int ?? ! if
+        "invalid constant for switch label of type " sb.wrap
+          switchType labelContext typeContext sb.appendType
+          " : " sb.appendS
+          label constContext labelContext typeContext sb.appendConstant
+        labelInfo [] .pushedAt errors appendError
+      end
+      ## XXX ensure correct size of int label
+      ## i8 257 -> i8 1
+    end
+    switchId label labelInfo [] .pushedAt state newSwitchLabel
+    i 1 +
+  end ..drop
+  state [] .interpreter @ resetContext
+end
+proc(
+  Operation ptr mut : op
+  TypeCheckState ptr mut : state
+-> bool #+consume op+# ) =>: typeCheckSwitchLabel
+  state [] .program =:: program
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .constContext @ =:: constContext
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
+  state peekBlock .data [] .Switch @ =:: switchBlock
+  switchBlock [] .switchType =:: switchType
+  switchBlock [] .blockId =:: switchId
+  op [] .val .block ?? if
+    op [] .val .block .blockType switch
+      CASE DEFAULT case
+        ## resolveSwitchLabels
+          switchId
+          switchType
+        state resolveSwitchLabels
+        false return
+      BREAK case
+        switchBlock [] .allowBreak if
+          false switchBlock [] .allowBreak =
+          true return
+        end
+        break
+      default
+        break
+    end
+  else op [] .val .blockEnd ?? _if
+      op [] .val .blockEnd .blockType .CASE ?? 
+      op [] .val .blockEnd .blockType .DEFAULT ?? | _if
+    ## resolveSwitchLabels
+      switchId
+      switchType
+    state resolveSwitchLabels
+    false return
+  end
+  ## operation after switch -> don't allow break statement
+  false switchBlock [] .allowBreak =
+  switchType typeContext types.isEnum ! if
+    op state [] .interpreter @ false evaluateOperation if
+      "unsupported operation in switch label:\n " sb.wrap
+        op [] constContext labelContext typeContext sb.appendOp
+      op [] .pos errors appendError
+    end
+    true return
+  end
+  ## enum-switch -> try read label
+  op [] .val .getId ?? if
+    op [] .val .getId .labelId
+  else op [] .val .getName ?? _if
+    op [] .val .getName
+  else
+    "unsupported operation for switch label of type " sb.wrap
+      switchType labelContext typeContext sb.appendType
+      " : " sb.appendS
+      op [] constContext labelContext typeContext sb.appendOp
+      " expected identifier" sb.appendS
+    op [] .pos errors appendError
+    true return
+  end =:: labelId
+  ## compositeFindLabel
+    switchType
+    labelId
+    labelContext
+  typeContext types.compositeFindLabel =:: labelIndex
+  labelIndex 0 < if
+    "enum " sb.wrap
+      switchType labelContext typeContext sb.appendType
+      " does not have a label " sb.appendS
+      labelId labelContext sb.appendLabelName
+    op [] .pos errors appendError
+    true return
+  end
+  ## newSwitchLabel
+    switchId
+    ## ConstValue
+      labelIndex
+    ConstValue .enumLabel new
+    op [] .pos
+  state newSwitchLabel
+  true return
+end
+
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
@@ -873,6 +1066,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         autoType op [] .dataType =
       end
     end
+  end
+  state inSwitchLabel if op state typeCheckSwitchLabel _if
+    return
   end
   state [] .interpreterActive if op state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
@@ -1467,7 +1663,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               branchPoints list.asArray
               mergeBranches @
               ## MergePoint
-                "If-If-branches" string.wrap
+                "if-_if branches" string.wrap
                 op [] .pos
                 i64 array.empty
                 state
@@ -1493,22 +1689,31 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           currentBlock [] .If .blockId op [] .val .block .blockId =
           ## update which operations are editable
           state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
-          ## add space for casts of values on stack
-          state [] .stack branchTree.depth op [] .pos state appendNOPs currentBlock [] .If .ifCastsOffset =
-          ## reset stack to start of if statement
-          ## BranchPoint
-            state [] .stack @ currentBlock [] .If .branchRoot branchTree.reset
-            op [] .pos
-          BranchPoint new currentBlock [] .If .ifBranch =
+          state [] .reachable if
+            ## add space for casts of values on stack
+            ## ifCastsOffset
+              ## appendNOPs
+                state [] .stack branchTree.depth
+                op [] .pos
+              state appendNOPs
+            currentBlock [] .If .ifCastsOffset =
+            ## reset stack to start of if statement
+            ## BranchPoint
+              state [] .stack @
+                currentBlock [] .If .branchRoot
+              branchTree.reset
+              op [] .pos
+            BranchPoint new currentBlock [] .If .ifBranch =
+            true currentBlock [] .If .ifBranchTerminates =
+          end
           true currentBlock [] .If .hasElse =
-          state [] .reachable currentBlock [] .If .ifBranchTerminates =
           op [] state appendOp ..drop
           true state [] .reachable =
           return
         IFIF case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty if
-            "unexpected end of if_if-statement, if_if can only appear in if-blocks" sb.wrap
+            "unexpected of if_if-statement, if_if can only appear in if-blocks" sb.wrap
             op [] .pos errors appendError
             return
           end
@@ -1538,15 +1743,174 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           currentBlock [] .If .blockId op [] .val .block .blockId =
           op [] state appendOp ..drop
           return
+        SWITCH case
+          program [] .switchData .length i32 cast =:: switchId
+          program [] .switchData
+            ## SwitchData
+              16 LabelData list.create
+              0
+              false
+            SwitchData new list.append
+          program [] .switchData =
+          switchId op [] .val .block .blockId =
+          state [] .stack @ branchTree.pop =:: value?
+          value? optional.isEmpty if
+            "missing argument for switch-statement" sb.wrap
+            op [] .pos errors appendError
+            return
+          end
+          value? .data [] .valueType =:: switchType
+          switchType typeContext types.isInt ! if
+            switchType typeContext types.isEnum ! _if
+            "cannot switch values of type " sb.wrap
+              switchType labelContext typeContext sb.appendType
+            op [] .pos errors appendError
+          end
+          switchType op [] .dataType =
+          op [] state appendOp ..drop
+          state [] .blockStarts
+            state [] .compiledOps .length list.append
+          state [] .blockStarts =
+          ## XXX? pull constants into branches
+          state [] .stack @ branchTree.startBranch =:: switchBranch
+          ## newSwitchBlock
+            switchType
+            switchBranch
+            switchId
+            op [] .pos
+          newSwitchBlock state openBlock
+          false state [] .reachable =
+          return
+        CASE DEFAULT case
+          op [] .val .block .blockType =:: blockType
+          state peekBlock =:: currentBlock?
+          currentBlock? optional.isEmpty if true else
+            currentBlock? .data [] .Switch ?? !
+          end if
+            "unexpected " sb.wrap
+              blockType sb.appendBlockType
+              ", " sb.appendS
+              blockType sb.appendBlockType
+              " can only appear in " sb.appendS
+              BlockType .SWITCH sb.appendBlockType
+              "-blocks" sb.appendS
+            op [] .pos errors appendError
+            return
+          end
+          currentBlock? .data [] .Switch @ =:: switchBlock
+          state [] .reachable if
+            "missing break before " sb.wrap
+              blockType sb.appendBlockType
+            op [] .pos errors appendError
+          end
+          program [] .switchData
+            switchBlock [] .blockId list.at .data
+          =:: switchData
+          switchData [] .hasDefault if
+            "unexpected " sb.wrap
+              blockType sb.appendBlockType
+              ", " sb.appendS
+              BlockType .DEFAULT sb.appendBlockType
+              blockType .DEFAULT ?? if
+                " can only appear once in " sb.appendS
+              else
+                " has to be last case in " sb.appendS
+              end
+              BlockType .SWITCH sb.appendBlockType
+              "-block" sb.appendS
+            op [] .pos errors appendError
+            return
+          end
+          switchData [] .labels list.peek =:: prev?
+          blockType .CASE ?? if
+            prev? optional.isEmpty if
+              true
+            else
+              prev? .data [] .caseId switchData [] .caseCount <
+            end if
+              64 sb.create
+                BlockType .CASE sb.appendBlockType
+                " has to be preceded by at least one label" sb.appendS
+              op [] .pos errors appendError
+            end
+          else
+            prev? optional.isEmpty if
+              "unexpected " sb.wrap
+                BlockType .DEFAULT sb.appendBlockType
+                "-statement, " sb.appendS
+                BlockType .SWITCH sb.appendBlockType
+                "-block can only at least one " sb.appendS
+                BlockType .CASE sb.appendBlockType
+              op [] .pos errors appendError
+              return
+            end
+            prev? .data [] .caseId switchData [] .caseCount == if
+              64 sb.create
+                BlockType .DEFAULT sb.appendBlockType
+                " cannot be preceded by at labels" sb.appendS
+              op [] .pos errors appendError
+            end
+            true switchData [] .hasDefault =
+          end
+          switchBlock [] .blockId op [] .val .block .blockId =
+          switchData [] .caseCount op [] .val .block .subId =
+          switchData [] .caseCount
+            1 +
+          switchData [] .caseCount =
+          true state [] .reachable =
+          ## update which operations are editable
+          state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
+          switchBlock [] .switchType op [] .dataType =
+          op [] state appendOp ..drop
+          true switchBlock [] .allowBreak =
+          return
+        BREAK case
+          ## findBreakableBlock
+            BlockType .BREAK
+            op [] .pos
+            state
+          findBreakableBlock =:: breakBlock?
+          breakBlock? optional.isEmpty if
+            return ## error message handled by findBreakableBlock
+          end
+          breakBlock? .data =:: breakBlock
+          breakBlock [] .Switch ?? if
+            breakBlock [] .Switch @ =:: switchBlock
+            switchBlock [] .blockId op [] .val .block .blockId =
+            false switchBlock [] .allowBreak =
+            ## update which operations are editable
+            state [] .compiledOps .length
+              state [] .blockStarts
+            list.peek .data [] =
+            state [] .reachable if
+              ## add space for casts of values on stack
+              switchBlock [] .castOffsets
+                ## appendNOPs
+                  state [] .stack branchTree.depth
+                  op [] .pos
+                state appendNOPs list.append
+              switchBlock [] .castOffsets =
+              ## reset stack to start of if statement
+              switchBlock [] .caseBranches
+                ## BranchPoint
+                  state [] .stack @
+                    switchBlock [] .branchRoot
+                  branchTree.reset
+                  op [] .pos
+                BranchPoint new list.append
+              switchBlock [] .caseBranches =
+            end
+          else
+            break
+          end
+          op [] state appendOp ..drop
+          false state [] .reachable =
+          return
         PROCEDURE
         EXPERIMENTAL_PROCEDURE
         WHILE
         DO
-        BREAK
         CONTINUE
-        SWITCH
-        CASE
-        DEFAULT
         UNKNOWN
         NAMESPACE case
           break
@@ -1587,7 +1951,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           closed .If ?? ! if
             "unexpected end of " sb.wrap
               closed sb.appendBlockInfoName
-              " block expected If-Else block" sb.appendS
+              " block expected " sb.appendS
+              IF_BLOCK_INFO_NAME sb.appendS
+              " block" sb.appendS
             op [] .pos errors appendError
           end
           closed .If .hasElse ! if
@@ -1619,7 +1985,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               branches @ nBranches array.create
               mergeBranches @
               ## MergePoint
-                "If-Else block" string.wrap
+                "if-else block" string.wrap
                 op [] .pos
                 castOffsets @ nBranches array.create
                 state
@@ -1641,29 +2007,90 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           op [] state appendOp ..drop
           ## cleanup closed block
           closed .If .ififBranches list.free ..drop
+          nBranches 0 > state [] .reachable =
           return
         IF case break ## end-if should not be created by parser
         IFIF case
           state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty if
-            "unexpected end of if_if-statement, if_if can only appear in if-blocks" sb.wrap
+          currentBlock? optional.isEmpty if true else
+            currentBlock? .data [] .If ?? !
+          end if
+            "unexpected end of " sb.wrap
+              BlockType .IFIF sb.appendBlockType
+              "-statement, " sb.appendS
+              BlockType .IFIF sb.appendBlockType
+              " can only appear in " sb.appendS
+              BlockType .IF sb.appendBlockType
+              "-blocks" sb.appendS
             op [] .pos errors appendError
           end
           currentBlock? .data =:: currentBlock
-          currentBlock [] .If ?? ! if
-            "unexpected if_if-statement, if_if can only appear in if-blocks" sb.wrap
-            op [] .pos errors appendError
-          end
           currentBlock [] .If .blockId op [] .val .blockEnd .blockId =
           op [] state appendOp ..drop
           return
+        CASE DEFAULT case
+          op [] .pos state closeBlock =:: closed
+          state [] .reachable if
+            "missing break statement" sb.wrap
+            op [] .pos errors appendError
+          end
+          closed .Switch ?? ! if
+            "unexpected end of " sb.wrap
+              closed sb.appendBlockInfoName
+              "-block expected " sb.appendS
+              SWITCH_BLOCK_INFO_NAME sb.appendS
+              "-block" sb.appendS
+            op [] .pos errors appendError
+          end
+          closed .Switch @ =:: switchBlock
+          ## TODO check for completeness of enum labels
+          switchBlock [] .caseBranches =:: caseBranches
+          caseBranches .length 1 > if
+            caseBranches .length =:: nodeCount
+            nodeCount branchTree.NodeId list.create
+              0 while ..dup nodeCount < do =:: i
+                caseBranches
+                  i list.at .data
+                [] .node list.append
+                i 1 +
+              end ..drop
+            =:: branchPoints
+            ## mergeValues
+              state [] .stack @
+              branchPoints list.asArray
+              mergeBranches @
+              ## MergePoint
+                "switch-case block" string.wrap
+                op [] .pos
+                switchBlock [] .castOffsets list.asArray
+                state
+                MergeType .MERGE
+              MergePoint new
+            branchTree.merge if
+              "different numbers of types at the end of switch-branches: " sb.wrap
+                0 while ..dup caseBranches .length < do =:: i
+                  "\n  * " sb.appendS
+                  caseBranches i list.at .data =:: branchPoint
+                  state [] .stack
+                     branchPoint [] .node
+                  branchTree.depthFrom sb.appendI
+                  " in branch at " sb.appendS
+                    branchPoint [] .pos sb.appendPos
+                  i 1 +
+                end ..drop
+                '\n' sb.appendC
+              op [] .pos errors appendError
+            end
+            branchPoints list.free ..drop
+          end
+          caseBranches .length 0 > state [] .reachable =
+          return
+        SWITCH case ## end-switch should not be created by parser
+          break
         WHILE
         DO
         BREAK
         CONTINUE
-        SWITCH
-        CASE
-        DEFAULT
         UNKNOWN
         NAMESPACE case
           break
@@ -1671,7 +2098,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       break
     Return case
       op state typeCheckReturn
-      break
+      return
     length size case
       state [] .stack @ branchTree.peek =:: value?
       value? optional.isEmpty if
