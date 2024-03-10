@@ -2890,6 +2890,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       break
     typeInfo case
+      op state checkReachable
       op [] .dataType typeContext types.containsGeneric | if
         break ## generic type-info not implemented
       end
