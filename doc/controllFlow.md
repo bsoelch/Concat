@@ -28,14 +28,14 @@ An if-block starts with the keyword `if` and ends with the matching `end` keywor
 `else` can appear between `if` (or `_if`) and `end`
 `_if` can appear anywhere in an if-block.
 
-When the execution reaches `if`or `_if` a boolean is popped from the stack, if the value is `true` the execution continues on the current path, otherwise execution will jump after the matching `else` statement, if there is no `else`statement (next statement in the same if block) the execution will jump to the end of the if-block.
+When the execution reaches `if`or `_if` a boolean is popped from the stack, if the value is `true` the execution continues on the current path, otherwise execution will jump to the position directly after the next `else` statement in the current `if` block, (if there is no `else`statement the execution will jump to the end of the if-block).
 When the execution reaches an `else` keyword, the execution will jump to the end of the if-statement
 
-<!-- XXX? definition of branch-->
+The types at the end of all branches of the if statement have, need to the compatible (equal up to implicit casts).
 
-At the end of each branch  of the if-statement the same types have to be on the stack (due to parsing constraints implicit conversion of types at the end of branches is not supported)
+The types on the stack after all `if`/`_if` statements jumping to the same `else` statement need to be identical.
 
-Variables declared within an if-block are accessible until the end of the current branch.
+Variables declared in the `if`-branch are accessible until reaching the matching `else` statement, variables declared in the `else`-branch are accessible until reaching the matching `end`.
 
 Examples:
 
@@ -61,9 +61,74 @@ else
 end =:: Y
 ```
 
+## switch-block
+
+syntax:
+
+```
+  <value> switch
+     <label>+ case
+       <case-body>
+       break
+     default
+       <default-body>
+       break
+  end
+```
+
+A switch statement allows to execute different branches of code depending on the value of a given integer.
+
+The type of the input value of a switch statement can either be an integer type, or an enum.
+When switching an enum, the picked case is chosen depending on the current value stored in the enum.
+
+A switch statement consists of one or more case-branches,optionally followed by an default branch.
+
+Each case branch consists is labeled with a list of constants of the input type, or when switching an enum a list of element-labels of the type of the given enum.
+Each value can be assigned to at most one case.
+When switching over an enum-value, the compiler requires that all labels of the enum are handled by a branch of the `switch` statement.
+
+When hitting a `break` statement the current case will be terminated and the execution will jump to the end of the `switch` block (for nested `break` statements only the innermost block will be terminated).
+A case block ends after the last statement reachable by a direct execution path starting at the `case` label.
+If the last statement in the case block is not a `break` statement, an optional `break` can be added at the end of the block.
+Unlike in C all cases of the `switch` statement have to be terminated with a `break` statement, fall-though between different `switch` branches is not allowed.
+
+For values that are not assigned to any label the `default` case will be executed, if no `default` case is present the program will directly jump to the end of the `switch'  block.
+In the current version of the compiler, `default` has to be the last branch in a `switch`-case statement.
+
+The types at the end of all branches reaching the end of the `switch` statement have to be compatible (equal up to implicit conversions)
+
+Variables declared within one `case` block are only accessible in that `case` block.
+
+Examples:
+
+anInt switch
+  0 2 4 6 8 case
+      0 return
+    break ## explicit break at end of branch
+  1 3 5 7 9 case
+      1 return
+    ## break at end of branch can be omitted, if end of branch is unreachable
+  10 11 12 case
+     'A' break
+  default  ## there is a case branch modifying the stack so, default branch is necessary
+    'B' break
+end
+## anInt is not between 0 and 9
+```
+
+```
+## enum( A B i32 : C ) =:: anEnum
+anEnum switch
+  A ## only labels of enum are allowed as case labels
+  case 1 return ## case ends at return
+  B case 2 break  ## case ends at break
+  C case anEnum .C 0 < if -1 break else 3 return end
+  ## all cases handled -> no default neccessary
+end
+```
+
+
 ## while-block
 <!-- TODO while -->
-## switch-block
-<!-- TODO switch -->
 
 
