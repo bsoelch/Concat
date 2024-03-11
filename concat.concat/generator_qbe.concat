@@ -27,10 +27,9 @@ enum(
 ) =:: BranchType
 struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
-## FIXME QBE's phi instruction needs branch of last jump no branch of declaration -> store branch with jump locations not stack elements
+
 struct(
   i64 : mut varId
-  BranchId : branch
   ValType : mut valType
 ) =:: StackElement
 
@@ -43,13 +42,16 @@ struct(
 
 struct(
   branchTree.NodeId list : mut ififBranches
+  BranchId list : mut ififBranchIds
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut ifBranch
+  BranchId : mut ifBranchId
   i32 : blockId
   bool : mut ifBranchTerminates
 ) =:: IfBlockInfo
 struct(
   branchTree.NodeId list : mut caseBranches
+  BranchId list : mut caseBranchIds
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: SwitchBlockInfo
@@ -172,7 +174,6 @@ proc( ValType : valType CompilerContext ptr mut : context -> i64 ) =>: pushValue
   context [] .stackCount =:: oldCount
     context [] .stackInfo @
       oldCount
-      context [] .currentBranch
       valType
     StackElement new branchTree.push
     oldCount
@@ -232,6 +233,7 @@ end
 struct(
   string : blockName
   i32 : blockId
+  BranchId arrayView : branchIds
   FilePosition : pos
   CompilerContext ptr mut : context
   stringBuilder ptr mut : out
@@ -285,43 +287,54 @@ proc(
       i 0 > if
         ", " sb.appendS
       end
-      toMerge i array.get =:: branchVal
-      branchVal [] .branch sb.appendBranchId
+      mergePoint .branchIds i array.get sb.appendBranchId
       " %s" sb.appendS
-      branchVal [] .varId sb.appendI
+      toMerge i array.get [] .varId sb.appendI
       i 1 +
     end ..drop
     '\n' sb.appendC
   mergePoint .out [] =
   ## StackElement
     newId
-    context [] .currentBranch
     rootValue [] .valType
   StackElement new return
 end
 
-proc( i32 : blockId branchTree.NodeId : branchRoot -> BlockInfo ) =>: newIfBlock
-  ## IfBlockInfo
-    8 branchTree.NodeId list.create
-      branchRoot list.append
-    branchRoot
-    -1
-    blockId
-    false
-  IfBlockInfo new BlockInfo .If new return
-end
-proc( i32 : blockId branchTree.NodeId : branchRoot -> BlockInfo ) =>: newSwitchBlock
-  ## SwitchBlockInfo
-    16 branchTree.NodeId list.create
-    branchRoot
-    blockId
-  SwitchBlockInfo new BlockInfo .Switch new return
-end
 proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
   context [] .openBlocks
     block list.append
   context [] .openBlocks =
 end
+proc(
+  i32 : blockId
+  branchTree.NodeId : branchRoot
+  CompilerContext ptr mut : context
+-> ) =>: openIfBlock
+  ## IfBlockInfo
+    8 branchTree.NodeId list.create
+      branchRoot list.append
+    8 BranchId list.create
+      context [] .currentBranch list.append
+    branchRoot
+    -1
+    context [] .currentBranch
+    blockId
+    false
+  IfBlockInfo new BlockInfo .If new context openBlock
+end
+proc(
+  i32 : blockId
+  branchTree.NodeId : branchRoot
+  CompilerContext ptr mut : context
+-> ) =>: openSwitchBlock
+  ## SwitchBlockInfo
+    16 branchTree.NodeId list.create
+    16 BranchId list.create
+    branchRoot
+    blockId
+  SwitchBlockInfo new BlockInfo .Switch new context openBlock
+end
+
 proc(
   BlockType : breakType
   FilePosition : pos
@@ -1970,9 +1983,9 @@ proc(
               0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
-            ifBranch context startBranch
             context [] .stackInfo @ branchTree.startBranch =:: branchRoot
-            op [] .val .block .blockId branchRoot newIfBlock context openBlock
+            op [] .val .block .blockId branchRoot context openIfBlock
+            ifBranch context startBranch
           return
         IFIF case
           context [] .openBlocks list.peek .data =:: ifBlock
@@ -1994,16 +2007,21 @@ proc(
               0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
-            ifBranch context startBranch
             ifBlock [] .If .ififBranches
               context [] .stackInfo .branchHead list.append
             ifBlock [] .If .ififBranches =
+            ifBlock [] .If .ififBranchIds
+              context [] .currentBranch list.append
+            ifBlock [] .If .ififBranchIds =
+            ifBranch context startBranch
           return
         ELSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
           context [] .reachable ifBlock [] .If .ifBranchTerminates =
+          ## BranchPoint
           ifBranch ifBlock [] .If .ifBranch =
+          context [] .currentBranch ifBlock [] .If .ifBranchId =
           sb
             ## don't add position for labels
             context [] .reachable if
@@ -2034,6 +2052,7 @@ proc(
               ## MergePoint
                 "if _if" string.wrap
                 ifBlock [] .If .blockId
+                ifBlock [] .If .ififBranchIds list.asArray
                 op [] .pos
                 context
                 newSb @
@@ -2060,7 +2079,7 @@ proc(
               context
             appendSwitchTable
             context [] .stackInfo @ branchTree.startBranch =:: branchRoot
-            switchId branchRoot newSwitchBlock context openBlock
+            switchId branchRoot context openSwitchBlock
             false context [] .reachable =
           return
         CASE case
@@ -2105,11 +2124,13 @@ proc(
             ## remember break (if reachable)
             context [] .reachable if
               breakBlock [] .Switch .caseBranches
-                ## BranchPoint
                 context [] .stackInfo @
                   breakBlock [] .Switch .branchRoot
                 branchTree.reset list.append
               breakBlock [] .Switch .caseBranches =
+              breakBlock [] .Switch .caseBranchIds
+                context [] .currentBranch list.append
+              breakBlock [] .Switch .caseBranchIds =
             end
             sb
               context [] .reachable if
@@ -2145,6 +2166,23 @@ proc(
           context [] .openBlocks
             list.pop .If =:: ifBlock
           context [] .openBlocks =
+          branchTree.NodeId 2 array new =:: mut branches
+          BranchId 2 array new =:: mut branchIds
+          0 =:: mut nBranches
+          ifBlock .ifBranchTerminates if
+            ifBlock .ifBranch branches @ nBranches [] =
+            ifBlock .ifBranchId branchIds @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          context [] .reachable if
+            context [] .stackInfo .branchHead branches @ nBranches [] =
+            context [] .currentBranch branchIds @ nBranches [] =
+            nBranches 1 + nBranches =
+          else ifBlock .ifBranchTerminates _if
+            context [] .stackInfo @
+              ifBlock .ifBranch
+            branchTree.reset ..drop
+          end
           sb
             ## don't add position for labels
             ## startBranch
@@ -2156,29 +2194,16 @@ proc(
               context
             startBranch
           =:: mut newSb
-          branchTree.NodeId 2 array new =:: mut branches
-          0 =:: mut nBranches
-          ifBlock .ifBranchTerminates if
-            ifBlock .ifBranch branches @ nBranches [] =
-            nBranches 1 + nBranches =
-          end
-          context [] .reachable if
-            context [] .stackInfo .branchHead branches @ nBranches [] =
-            nBranches 1 + nBranches =
-          else ifBlock .ifBranchTerminates _if
-            context [] .stackInfo @
-              ifBlock .ifBranch
-            branchTree.reset ..drop
-          end
           nBranches 1 > if
             ## mergeValues
               context [] .stackInfo @
-              branches @ array.wrap
+              branches @ nBranches array.create
               true
               mergeBranches @
               ## MergeIf
                 "if" string.wrap
                 ifBlock .blockId
+                branchIds @ nBranches array.create
                 op [] .pos
                 context
                 newSb @
@@ -2211,7 +2236,7 @@ proc(
           =:: mut newSb
           caseBranches .length 1 >= if
             context [] .stackInfo @
-              caseBranches 0 list.get
+              caseBranches 0 list.at .data []
             branchTree.reset ..drop
           end
           caseBranches .length 1 > if
@@ -2224,6 +2249,7 @@ proc(
               ## MergePoint
                 "switch" string.wrap
                 switchBlock .blockId
+                switchBlock .caseBranchIds list.asArray
                 op [] .pos
                 context
                 newSb @
