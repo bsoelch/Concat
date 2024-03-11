@@ -857,8 +857,7 @@ proc(
     ",w " sb.appendS
     pos .posInLine sb.appendI
     ")\n" sb.appendS
-    "call $exit (w 1)\n" sb.appendS
-    ## continue execution, need to start new "branch" as jumps end previous branch
+    "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
     okBranch context startBranch
   return
 end
@@ -989,8 +988,7 @@ proc(
     ",w " sb.appendS
     pos .posInLine sb.appendI
     ")\n" sb.appendS
-    "call $exit (w 1)\n" sb.appendS
-    ## continue execution, need to start new "branch" as jumps end previous branch
+    "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
     okBranch context startBranch
   return
 end
