@@ -632,7 +632,7 @@ namespace: sb
     prog [] .idContext .constContext @ =:: constContext
     sb
       isGlobal if t types.isPrimitive _if
-        t StorageType .LOAD pos context sb.appendTypeNameQBE
+        t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
       value switch
@@ -650,24 +650,54 @@ namespace: sb
           end
           t typeContext types.isArray if
             t typeContext types.getBaseType =:: base
+            base typeContext types.sizeOf =:: baseSize
+            base typeContext types.strideOf =:: baseStride
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0 while ..dup elts .length < do
-              ..swap
-                base elts ..over.3  array.get true pos context appendConstQBE
+            0 while ..dup elts .length < do =:: i
+              i 0 > if
                 ',' sb.appendC
-              ..swap 1 +
+              end
+              base elts i array.get true pos context appendConstQBE
+              baseSize baseStride < if
+                ",z " sb.appendS
+                baseStride baseSize - sb.appendI
+              end
+              i 1 +
             end ..drop
             return
           else t typeContext types.isTuple _if
-            ## TODO padding/alignment
+            ## TODO ensure elements are ordered by memory location
             t typeContext types.compositeElts =:: types
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0 while ..dup elts .length < do
-              ..swap
-                types ..over.2 types.compositeElts.get elts ..over.3  array.get true pos context appendConstQBE
+            0i64 =:: mut offset
+            0 while ..dup elts .length < do =:: i
+              types i types.compositeElts.get =:: elt
+              t i typeContext types.tupleElementOffset =:: eltOffset
+              i 0 > if
                 ',' sb.appendC
-              ..swap 1 +
+              end
+              offset eltOffset < if
+                "z " sb.appendS
+                eltOffset offset - sb.appendI
+                ',' sb.appendC
+                eltOffset offset =
+              end
+              ## appendConstQBE
+                elt
+                elts i array.get
+                true
+                pos
+              context appendConstQBE
+              offset
+                elt typeContext types.sizeOf +
+              offset =
+              i 1 +
             end ..drop
+            t typeContext types.sizeOf =:: size
+            offset size < if
+              ",z " sb.appendS
+              size offset - sb.appendI
+            end
             return
           end
         break
