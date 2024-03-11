@@ -926,9 +926,40 @@ proc(
   TypeCheckState ptr mut : state
 -> ) =>: newSwitchLabel
   state [] .program =:: program
+  state [] .program [] .errors @ =:: errors
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .constContext @ =:: constContext
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
   program [] .switchData
     switchId list.at .data
   =:: switchData
+  0 while ..dup switchData [] .labels .length < do =:: i
+    ## constantEquals
+      switchData [] .labels i list.at .data [] .value
+      label
+      labelContext
+    constantEquals if
+      "duplicate label " sb.wrap
+        ## TODO? print position of previous occurrence
+        switchData [] .switchType typeContext types.isEnum if
+          ## appendLabelName
+            switchData [] .switchType
+            label .enumLabel typeContext types.compositeGetLabel
+            labelContext
+          sb.appendLabelName
+        else
+          label
+            constContext
+            labelContext
+            typeContext
+          sb.appendConstant
+        end
+        " in switch-case" sb.appendS
+      pos errors appendError
+    end
+    i 1 +
+  end ..drop
   switchData [] .labels
     ## LabelData
       label
@@ -936,7 +967,6 @@ proc(
       switchData [] .caseCount
     LabelData new list.append
   switchData [] .labels =
-  ## TODO check for duplicate labels
 end
 proc(
   i32 : switchId
@@ -1002,7 +1032,7 @@ proc(
         break
     end
   else op [] .val .blockEnd ?? _if
-      op [] .val .blockEnd .blockType .CASE ?? 
+      op [] .val .blockEnd .blockType .CASE ??
       op [] .val .blockEnd .blockType .DEFAULT ?? | _if
     ## resolveSwitchLabels
       switchId
@@ -1679,6 +1709,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           true currentBlock [] .If .hasElse =
           op [] state appendOp ..drop
           true state [] .reachable =
+          ## current branch is on of the if_if branches, so case = 1 does not need to be handled
           currentBlock [] .If .ififBranches .length 1 > if
             currentBlock [] .If .ififBranches .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
@@ -1991,6 +2022,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             state [] .stack .branchHead branches @ nBranches [] =
             elseCastOffset castOffsets @ nBranches [] =
             nBranches 1 + nBranches =
+          else closed .If .ifBranchTerminates _if
+            ## set stack head to terminating branch
+            state [] .stack @
+              closed .If .ifBranch .node
+            branchTree.reset ..drop
           end
           nBranches 1 > if
             ## mergeValues
@@ -2057,8 +2093,70 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op [] .pos errors appendError
           end
           closed .Switch @ =:: switchBlock
-          ## TODO check for completeness of enum labels
-          switchBlock [] .caseBranches =:: caseBranches
+          switchBlock [] .caseBranches =:: mut caseBranches
+          op [] .val .blockEnd .blockType .CASE ?? if
+            BlockType .DEFAULT op [] .pos opBlock =:: mut tmp
+            switchBlock [] .blockId tmp .val .block .blockId =
+            tmp state appendOp ..drop
+            switchBlock [] .switchType typeContext types.isEnum if
+              switchBlock [] .switchType
+                typeContext
+              types.compositeEltCount =:: eltCount
+              ## TODO check for completeness of enum labels
+              program [] .switchData
+                switchBlock [] .blockId list.at .data
+              =:: switchData
+              switchData [] .labels =:: labels
+              labels  .length eltCount < if
+                "switch statement does not cover all labels in enum " sb.wrap
+                  switchBlock [] .switchType
+                    labelContext typeContext
+                  sb.appendType
+                  "\nmissing labels:\n" sb.appendS
+                  0 while ..dup eltCount < do =:: i
+                    false =:: mut  match
+                    ## XXX? use array.find
+                    0 while ..dup labels .length < do =:: j
+                      labels j list.get .value .enumLabel i == if
+                        true match =
+                        j break
+                      end
+                      j 1 +
+                    end ..drop
+                    match ! if
+                      switchBlock [] .switchType
+                        i
+                        typeContext
+                      types.compositeGetLabel =:: label
+                      " - \"" sb.appendS
+                      label labelContext sb.appendLabelName
+                      "\" declaredAt" sb.appendS
+                      label labelContext id.labelPos .data sb.appendPos
+                      '\n' sb.appendC
+                    end
+                    i 1 +
+                  end ..drop
+                op [] .pos errors appendError
+              end
+              op [] .pos opUnreachable state appendOp ..drop
+            else
+              caseBranches
+                ## BranchPoint
+                  switchBlock [] .branchRoot
+                  op [] .pos
+                BranchPoint new list.append
+              caseBranches =
+            end
+            BlockType .BREAK_SWITCH op [] .pos opBlock tmp =
+            switchBlock [] .blockId tmp .val .block .blockId =
+            tmp state appendOp ..drop
+          end
+          ## set stack head to one of the accepting branches
+          caseBranches .length 1 >= if
+            state [] .stack @
+              caseBranches 0 list.at .data [] .node
+            branchTree.reset ..drop
+          end
           caseBranches .length 1 > if
             caseBranches .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
@@ -2099,15 +2197,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             branchPoints list.free ..drop
           end
           caseBranches .length 0 > state [] .reachable =
-          op [] .val .blockEnd .blockType .CASE ?? if
-            BlockType .DEFAULT op [] .pos opBlock =:: mut tmp
-            switchBlock [] .blockId tmp .val .block .blockId =
-            tmp state appendOp ..drop
-            ## XXX mark as unreachable for enum-switch case
-            BlockType .BREAK_SWITCH op [] .pos opBlock tmp =
-            switchBlock [] .blockId tmp .val .block .blockId =
-            tmp state appendOp ..drop
-          end
           BlockType .SWITCH op [] .pos opEndBlock =:: mut tmp
           switchBlock [] .blockId tmp .val .blockEnd .blockId =
           tmp state appendOp ..drop

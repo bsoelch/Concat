@@ -27,6 +27,7 @@ enum(
 ) =:: BranchType
 struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
+## FIXME QBE's phi instruction needs branch of last jump no branch of declaration -> store branch with jump locations not stack elements
 struct(
   i64 : mut varId
   BranchId : branch
@@ -817,7 +818,7 @@ proc(
       check1Branch
     context appendCmpInt
     check1Branch sb.appendBranchId
-    "\n%t" sb.appendS
+    "\n" sb.appendS
     ## cmp int
       ValType .I64
       's' valId
@@ -2004,14 +2005,16 @@ proc(
           context [] .reachable ifBlock [] .If .ifBranchTerminates =
           ifBranch ifBlock [] .If .ifBranch =
           sb
-            op [] .pos sb.appendPosQBE
-            "jmp " sb.appendS
-            ## appendBranchId
-              BranchType .END_IF
-              op [] .val .block .blockId
-              0
-            BranchId new sb.appendBranchId
-            '\n' sb.appendC
+            ## don't add position for labels
+            context [] .reachable if
+              "jmp " sb.appendS
+              ## appendBranchId
+                BranchType .END_IF
+                op [] .val .block .blockId
+                0
+              BranchId new sb.appendBranchId
+              '\n' sb.appendC
+            end
             ## startBranch
               ## BranchId
                 BranchType .ELSE
@@ -2062,7 +2065,7 @@ proc(
           return
         CASE case
             sb
-              op [] .pos sb.appendPosQBE
+              ## don't add position before label
               op [] .val .block .blockId =:: switchId
               ## BranchId
                 BranchType .CASE
@@ -2073,7 +2076,7 @@ proc(
             return
         DEFAULT case
             sb
-              op [] .pos sb.appendPosQBE
+              ## don't add position before label
               op [] .val .block .blockId =:: switchId
               ## BranchId
                 BranchType .DEFAULT
@@ -2099,6 +2102,7 @@ proc(
                 ## XXX append type of broken block
               op [] .pos errors appendError
             end
+            ## remember break (if reachable)
             context [] .reachable if
               breakBlock [] .Switch .caseBranches
                 ## BranchPoint
@@ -2107,17 +2111,19 @@ proc(
                 branchTree.reset list.append
               breakBlock [] .Switch .caseBranches =
             end
-            ## remember break (if reachable)
-            false context [] .reachable =
             sb
-              op [] .pos sb.appendPosQBE
-              "jmp " sb.appendS
-              ## BlockId
-                BranchType .END_SWITCH
-                breakBlock [] .Switch .blockId
-                0
-              BranchId new sb.appendBranchId
-              '\n' sb.appendC
+              context [] .reachable if
+                ## don't add jump in unreachable branches
+                op [] .pos sb.appendPosQBE
+                "jmp " sb.appendS
+                ## BlockId
+                  BranchType .END_SWITCH
+                  breakBlock [] .Switch .blockId
+                  0
+                BranchId new sb.appendBranchId
+                '\n' sb.appendC
+              end
+              false context [] .reachable =
             return
           break
         WHILE DO case
@@ -2140,7 +2146,7 @@ proc(
             list.pop .If =:: ifBlock
           context [] .openBlocks =
           sb
-            op [] .pos sb.appendPosQBE
+            ## don't add position for labels
             ## startBranch
               ## BranchId
                 BranchType .END_IF
@@ -2159,6 +2165,10 @@ proc(
           context [] .reachable if
             context [] .stackInfo .branchHead branches @ nBranches [] =
             nBranches 1 + nBranches =
+          else ifBlock .ifBranchTerminates _if
+            context [] .stackInfo @
+              ifBlock .ifBranch
+            branchTree.reset ..drop
           end
           nBranches 1 > if
             ## mergeValues
@@ -2189,7 +2199,7 @@ proc(
           switchBlock .caseBranches =:: caseBranches
           caseBranches .length 0 > context [] .reachable =
           sb
-            op [] .pos sb.appendPosQBE
+            ## don't add position for labels
             ## startBranch
               ## BranchId
                 BranchType .END_SWITCH
@@ -2199,6 +2209,11 @@ proc(
               context
             startBranch
           =:: mut newSb
+          caseBranches .length 1 >= if
+            context [] .stackInfo @
+              caseBranches 0 list.get
+            branchTree.reset ..drop
+          end
           caseBranches .length 1 > if
             caseBranches .length =:: nodeCount
             ## mergeValues
@@ -2290,6 +2305,13 @@ proc(
         retId sb.appendI
         '\n' sb.appendC
       return
+    unreachable case
+      false context [] .reachable =
+      sb
+        op [] .pos sb.appendPosQBE
+        "## unreachable\n" sb.appendS
+        "hlt\n" sb.appendS
+      return
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
@@ -2316,7 +2338,7 @@ proc(
     setId autoTypedInitializeId
     setElement setArrayElement Print call callPtr
     argc getArg getArgLen unaryOperator binaryOperator
-    setEnumLabel checkArrayIndex unreachable typeInfo
+    setEnumLabel checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case
       break ## XXX error message
   end
