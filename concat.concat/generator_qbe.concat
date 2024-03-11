@@ -1515,7 +1515,11 @@ proc(
             end
             idInfo .labelId context sb.appendGlobalName
             op [] .dataType op [] .pos context sb.appendProcArgs
-            "{\n@start\n" sb.appendS
+            "{\n" sb.appendS
+            ## BranchId
+              BranchType .START
+              0 0
+            BranchId new context startBranch
             ## push unnamed arguments
             op [] .dataType typeContext types.getProcIn ..drop =:: inType
             inType typeContext types.compositeElts =:: args
@@ -2286,12 +2290,34 @@ proc(
         retId sb.appendI
         '\n' sb.appendC
       return
+    stackMod case
+      op [] .val .stackMod .modType switch
+        DROP case
+          op [] .val .stackMod .n =:: count
+          count while ..dup 0 > do 1 -
+             context [] .stackInfo @ branchTree.pop ..drop
+          end ..drop
+          sb return
+        COPY case
+          op [] .val .stackMod .n =:: offset
+          ## copy value on stack
+          context [] .stackInfo @
+            offset
+          branchTree.at .data =:: copied
+          context [] .stackInfo @
+            copied []
+          branchTree.push
+          sb return
+        SWAP case
+          context [] .stackInfo @ branchTree.swap
+          sb return
+      end
+      break
     setId autoTypedInitializeId
     setElement setArrayElement Print call callPtr
     argc getArg getArgLen unaryOperator binaryOperator
     setEnumLabel checkArrayIndex unreachable typeInfo
-    compilerInfo getName setName @Name getLabel setLabel @Label length size stackMod
-    typeModifier hasLabel hasName case
+    compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap
