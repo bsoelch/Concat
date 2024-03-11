@@ -1,0 +1,70 @@
+import mem
+
+namespace: array
+  #template type : T type : C #end
+  proc(
+    T _ ptr mut : src
+    T _ ptr mut : buff
+    i64 : offset
+    i64 : size
+    proc( T T C -> i32 ) ptr : cmp
+    C : context
+    i32 : depth
+  -> ) =>: mergeSortRec
+    size 1 < if
+      return
+    end
+    size 2 / =:: mid
+    size 2 < if ## data in src
+      depth 1 & 0 == if
+        return ## data in src & data to src
+      end
+      src offset [] buff offset [] =
+    end
+    src buff offset mid cmp context depth 1 + mergeSortRec
+    src buff offset mid + size mid - cmp context depth 1 + mergeSortRec
+    depth 1 & 0 == if
+      buff src
+    else
+      src buff
+    end =:: to =:: from
+    0 =:: mut i
+    mid =:: mut j
+    0 =:: mut k
+    while i mid < j size < & do
+      ## cmp
+        from offset i + + []
+        from offset j + + []
+        context
+      cmp () 0 < if
+        from offset i + [] to offset k + [] =
+        i 1 + i =
+      else
+        from offset j + [] to offset k + [] =
+        j 1 + j =
+      end
+      k 1 + k =
+    end
+    while i mid < do
+      from offset i + [] to offset k + [] =
+      i 1 + i =
+      k 1 + k =
+    end
+    while j size < do
+      from offset j + [] to offset k + [] =
+      j 1 + j =
+      k 1 + k =
+    end
+  end
+  #template type : T type : C #end
+  proc(
+    T _ ptr mut : data
+    i64 : size
+    proc( T T C -> i32 ) ptr : cmp
+    C : context
+  -> ) =>: export sort
+    size T mem.alloc =:: buffer
+    data buffer 0 size cmp context 0 mergeSortRec
+    buffer mem.free
+  end
+end

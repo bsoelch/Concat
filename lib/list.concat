@@ -1,6 +1,7 @@
 import mem
 import arrayView
 import optional
+import array
 
 ## XXX allow auto-cast from list -> arrayView
 
@@ -190,5 +191,19 @@ namespace: list
   #template type : T #end
   proc( T list : elts i64 : from i64 : len -> T arrayView ) =>: export slice
     elts asArray from len array.slice return
+  end
+
+  #template type : T type : C #end
+  proc(
+    T list : elts
+    proc( T T C -> i32 ) ptr : cmp
+    C : context
+  -> ) =>: export sort
+    ## sort
+      elts .data
+      elts .length
+      cmp
+      context
+    array.sort
   end
 end
