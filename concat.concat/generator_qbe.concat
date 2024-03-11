@@ -14,8 +14,18 @@ import "branchTree.concat"
 "checkEnumFormat" =:: CHECK_ENUM_FORMAT
 "fileName" =:: FILE_NAME_NAME
 
-enum( START NEXT ERROR IF ELSE END_IF ) =:: BranchType
-struct( BranchType : branchType i32 : id ) =:: BranchId
+enum(
+  START
+  NEXT
+  ERROR
+  IF
+  ELSE
+  END_IF
+  CASE
+  DEFAULT
+  END_SWITCH
+) =:: BranchType
+struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 struct(
   i64 : mut varId
@@ -31,13 +41,22 @@ struct(
 ) =:: LocalConst
 
 struct(
-  i32 : blockId
+  branchTree.NodeId list : mut ififBranches
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut ifBranch
+  i32 : blockId
+  bool : mut ifBranchTerminates
 ) =:: IfBlockInfo
+struct(
+  branchTree.NodeId list : mut caseBranches
+  branchTree.NodeId : branchRoot
+  i32 : blockId
+) =:: SwitchBlockInfo
 
 enum(
   IfBlockInfo : mut If
+  SwitchBlockInfo : mut Switch
+  While
 ) =:: BlockInfo
 
 struct(
@@ -50,6 +69,7 @@ struct(
   i64 : mut stackCount
   i64 : mut tmpCount
   i32 : mut jumpLabelCount
+  bool : mut reachable
 ) =:: CompilerContext
 
 namespace: sb
@@ -124,6 +144,14 @@ namespace: sb
         IF case "@if_" sb.appendS branch .id sb.appendI break
         ELSE case "@else_" sb.appendS branch .id sb.appendI break
         END_IF case "@endIf_" sb.appendS branch .id sb.appendI break
+        CASE case
+          "@case_" sb.appendS
+          branch .id sb.appendI
+          '_' sb.appendC
+          branch .subId sb.appendI
+         break
+        DEFAULT case "@default" sb.appendS branch .id sb.appendI break
+        END_SWITCH case "@endSwitch_" sb.appendS branch .id sb.appendI break
       end
     return
   end
@@ -201,6 +229,7 @@ proc( Type : t CompilerContext ptr mut : context -> bool ) =>: referenceOnly
 end
 
 struct(
+  string : blockName
   i32 : blockId
   FilePosition : pos
   CompilerContext ptr mut : context
@@ -210,7 +239,7 @@ proc(
   StackElement ptr arrayView : toMerge
   i64 : offset
   MergePoint : mergePoint
--> StackElement ) =>: mergeIfBranches
+-> StackElement ) =>: mergeBranches
   mergePoint .context =:: context
   context [] .program =:: program
   program [] .errors @ =:: errors
@@ -218,56 +247,109 @@ proc(
   program [] .idContext .constContext @ =:: constContext
   program [] .idContext .typeContext @ =:: typeContext
   program [] .idContext .labelContext @ =:: labelContext
-  toMerge 0 array.get =:: ifValue
-  toMerge .length 2 != if
-    "wrong number of branches in if-statement expected: 2 got:" sb.wrap
-       toMerge .length sb.appendI
-    mergePoint .pos errors appendError
-    ifValue [] return
+  toMerge 0 array.get =:: rootValue
+  rootValue [] .varId =:: rootId
+  true =:: mut isMerged
+  1 while ..dup toMerge .length < do =:: i
+    toMerge i array.get [] .varId rootId != if
+      false isMerged =
+      i break
+    end
+    i 1 +
+  end ..drop
+  isMerged if
+    rootValue [] return
   end
-  toMerge 1 array.get =:: elseValue
-  ifValue [] .varId elseValue [] .varId == if
-    ifValue [] return
-  end
-  ifValue [] .valType elseValue [] .valType != if
-    "branches of if-statement are out of sync expected: " sb.wrap
-       ifValue [] .valType sb.appendValType
-       " got: " sb.appendS
-       elseValue [] .valType sb.appendValType
-    mergePoint .pos errors appendError
-  end
+  1 while ..dup toMerge .length < do =:: i
+    toMerge i array.get [] .valType rootValue [] .valType != if
+      "branches of " sb.wrap
+         mergePoint .blockName sb.appendStr
+         "-statement are out of sync expected: " sb.appendS
+         rootValue [] .valType sb.appendValType
+         " got: " sb.appendS
+         toMerge i array.get [] .valType sb.appendValType
+      mergePoint .pos errors appendError
+      i break
+    end
+    i 1 +
+  end ..drop
   context nextValueId =:: newId
   mergePoint .out []
     "%s" sb.appendS
     newId sb.appendI
     " =" sb.appendS
-    ifValue [] .valType sb.appendValTypeQBE
+    rootValue [] .valType sb.appendValTypeQBE
     " phi " sb.appendS
-    ifValue [] .branch sb.appendBranchId
-    " %s" sb.appendS
-    ifValue [] .varId sb.appendI
-    ", " sb.appendS
-    elseValue [] .branch sb.appendBranchId
-    " %s" sb.appendS
-    elseValue [] .varId sb.appendI
+    0 while ..dup toMerge .length < do =:: i
+      i 0 > if
+        ", " sb.appendS
+      end
+      toMerge i array.get =:: branchVal
+      branchVal [] .branch sb.appendBranchId
+      " %s" sb.appendS
+      branchVal [] .varId sb.appendI
+      i 1 +
+    end ..drop
     '\n' sb.appendC
   mergePoint .out [] =
   ## StackElement
     newId
     context [] .currentBranch
-    ifValue [] .valType
+    rootValue [] .valType
   StackElement new return
 end
 
 proc( i32 : blockId branchTree.NodeId : branchRoot -> BlockInfo ) =>: newIfBlock
-  blockId branchRoot -1 IfBlockInfo new BlockInfo .If new return
+  ## IfBlockInfo
+    8 branchTree.NodeId list.create
+      branchRoot list.append
+    branchRoot
+    -1
+    blockId
+    false
+  IfBlockInfo new BlockInfo .If new return
+end
+proc( i32 : blockId branchTree.NodeId : branchRoot -> BlockInfo ) =>: newSwitchBlock
+  ## SwitchBlockInfo
+    16 branchTree.NodeId list.create
+    branchRoot
+    blockId
+  SwitchBlockInfo new BlockInfo .Switch new return
 end
 proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
   context [] .openBlocks
     block list.append
   context [] .openBlocks =
 end
-
+proc(
+  BlockType : breakType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> BlockInfo ptr mut optional ) =>: findBreakableBlock
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
+    context [] .openBlocks i list.at .data =:: block
+    breakType .BREAK ?? if block [] .While ?? _if
+      block optional.wrap return
+    end
+    breakType .CONTINUE ?? if block [] .While ?? _if
+      block optional.wrap return
+    end
+    breakType .BREAK_SWITCH ?? if block [] .Switch ?? _if
+      block optional.wrap return
+    end
+    i 1 -
+  end ..drop
+  60 sb.create
+    breakType sb.appendBlockType
+    " can only appear in loops " sb.appendS
+    breakType .BREAK_SWITCH ?? if
+      "and switch-case statements" sb.appendS
+    end
+  pos errors appendError
+  BlockInfo ptr mut optional.empty return
+end
 
 namespace: sb
   proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context -> stringBuilder ) =>: appendGlobalName
@@ -307,7 +389,7 @@ namespace: sb
     end
   end
 end
-  enum( STACK LOAD STORE ) =:: StorageType
+  enum( STACK LOAD ULOAD STORE ) =:: StorageType
 namespace: sb
   proc(
     stringBuilder : sb
@@ -337,7 +419,7 @@ namespace: sb
           BOOL case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "ub" sb.appendS return
+              LOAD ULOAD case sb "ub" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
             break
@@ -345,6 +427,7 @@ namespace: sb
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sb" sb.appendS return
+              ULOAD case sb "ub" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
             break
@@ -352,6 +435,7 @@ namespace: sb
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sh" sb.appendS return
+              ULOAD case sb "uh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
             break
@@ -366,28 +450,28 @@ namespace: sb
           BOOL U_CHAR case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "ub" sb.appendS return
+              LOAD ULOAD case sb "ub" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
             break
           CHAR S_CHAR case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "sb" sb.appendS return
+              LOAD ULOAD case sb "sb" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
             break
           SHORT case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "sh" sb.appendS return
+              LOAD ULOAD case sb "sh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
             break
           U_SHORT case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "uh" sb.appendS return
+              LOAD ULOAD case sb "uh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
             break
@@ -654,6 +738,39 @@ proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
   FILE_ID_NONE return
 end
 
+
+proc(
+  stringBuilder : sb
+  ValType : valType
+  i8 : valStackType
+  i64 : valId
+  string : cmpType
+  i64 : value
+  BranchId : ifBranch
+  BranchId : elseBranch
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendCmpInt
+  context nextTmpId =:: tmpId
+  sb
+    "%t" sb.appendS
+    tmpId sb.appendI
+    " =w c" sb.appendS
+    cmpType sb.appendStr
+    valType sb.appendValTypeQBE
+    " %" sb.appendS
+    valStackType sb.appendC
+    valId sb.appendI
+    ", " sb.appendS
+    value sb.appendI
+    "\njnz %t" sb.appendS
+    tmpId sb.appendI
+    ", " sb.appendS
+    ifBranch sb.appendBranchId
+    ", " sb.appendS
+    elseBranch sb.appendBranchId
+    "\n" sb.appendS
+  return
+end
 proc(
   stringBuilder : sb
   types.ArraySize : size
@@ -675,45 +792,40 @@ proc(
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
+    0
   BranchId new =:: check1Branch
   ## BranchId
     BranchType .ERROR
     context nextJumpLabelId
+    0
   BranchId new =:: errorBranch
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
+    0
   BranchId new =:: okBranch
   context nextTmpId =:: c1
   context nextTmpId =:: c2
   sb
     "## check index\n" sb.appendS
-    "%t" sb.appendS
-    c1 sb.appendI
-    " =w csltl %s" sb.appendS
-    valId sb.appendI
-    ", 0\n" sb.appendS
-    "jnz %t" sb.appendS
-    c1 sb.appendI
-    ", " sb.appendS
-    errorBranch sb.appendBranchId
-    ", " sb.appendS
-    check1Branch sb.appendBranchId
-    '\n' sb.appendC
+    ## cmp int
+      ValType .I64
+      's' valId
+      "slt" string.wrap
+      0
+      errorBranch
+      check1Branch
+    context appendCmpInt
     check1Branch sb.appendBranchId
     "\n%t" sb.appendS
-    c1 sb.appendI
-    " =w csgel %s" sb.appendS
-    valId sb.appendI
-    ", " sb.appendS
-    size .value sb.appendI
-    "\njnz %t" sb.appendS
-    c1 sb.appendI
-    ", " sb.appendS
-    errorBranch sb.appendBranchId
-    ", " sb.appendS
-    okBranch sb.appendBranchId
-    '\n' sb.appendC
+    ## cmp int
+      ValType .I64
+      's' valId
+      "sge" string.wrap
+      size .value
+      errorBranch
+      okBranch
+    context appendCmpInt
     errorBranch sb.appendBranchId
     "\ncall $printf (l $" sb.appendS
     CHECK_INDEX_FORMAT sb.appendS
@@ -741,20 +853,17 @@ proc(
   stringBuilder : sb
   Type : enumType
   i64 : valId
-  i64 : expectedIndex
   FilePosition : pos
   CompilerContext ptr mut : context
--> stringBuilder i64 i64 ) =>: checkEnumIndex
+-> stringBuilder i64 ValType ) =>: loadEnumLabel
   context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   enumType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+  labelType typeContext types.numberSize =:: numSize
   context nextTmpId =:: labelPtr
   context nextTmpId =:: mut label
-  context nextTmpId =:: c
   sb
     "%t" sb.appendS
     labelPtr sb.appendI
@@ -765,27 +874,53 @@ proc(
     "\n%t" sb.appendS
     label sb.appendI
     " =w load" sb.appendS
-    labelType StorageType .LOAD pos context sb.appendTypeNameQBE
+    labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
     " %t" sb.appendS
     labelPtr sb.appendI
-    labelType types.primitive.I32 types.typeEquals ! if
+    numSize types.primitive.I32 typeContext types.numberSize < if
       label =:: oldLabel
       context nextTmpId label =
       "\n%t" sb.appendS
       label sb.appendI
       " =w ext" sb.appendS
-      labelType StorageType .LOAD pos context sb.appendTypeNameQBE
+      labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
       " %t" sb.appendS
       oldLabel sb.appendI
     end
-    "\n%t" sb.appendS
+    '\n' sb.appendC
+  label ValType .I32 return
+end
+proc(
+  stringBuilder : sb
+  Type : enumType
+  i64 : valId
+  i64 : expectedIndex
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder i64 i64 ) =>: checkEnumIndex
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  sb
+    ## loadEnumLabel
+      enumType
+      valId
+      pos
+    context loadEnumLabel =:: labelType =:: labelId
+    context nextTmpId =:: c
+    "%t" sb.appendS
     c sb.appendI
-    " =w ceqw %t" sb.appendS
-    label sb.appendI
+    " =w ceq" sb.appendS
+    labelType sb.appendValTypeQBE
+    " %t" sb.appendS
+    labelId sb.appendI
     ", " sb.appendS
     expectedIndex sb.appendI
     '\n' sb.appendC
-  c label return
+  c labelId return
 end
 
 proc(
@@ -805,10 +940,12 @@ proc(
   ## BranchId
     BranchType .ERROR
     context nextJumpLabelId
+    0
   BranchId new =:: errorBranch
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
+    0
   BranchId new =:: okBranch
   ## XXX? support enums with i64 labels? ( currently only i8,i16,i32 supported)
   sb
@@ -913,6 +1050,208 @@ proc(
     valType typeContext types.sizeOf sb.appendI
     '\n' sb.appendC
   tmpId return
+end
+
+proc( ConstValue : label -> i64 ) =>: labelAsInt
+  label .int ?? if
+    label .int return
+  end
+  label .enumLabel ?? if
+    label .enumLabel return
+  end
+  ..unreachable
+end
+proc(
+  stringBuilder : sb
+  ValType : valType
+  i64 : valId
+  i32 : switchId
+  LabelData arrayView : labels
+  i64 optional : lower
+  i64 optional : upper
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendSwitchJumpTree
+  labels .length 3 <= if
+    false =:: mut contiguous
+    labels .length =:: mut loopCount
+    lower optional.hasData if upper optional.hasData _if
+      upper .data lower .data - labels .length == contiguous =
+      loopCount 1 - loopCount =
+    end
+    sb
+      0 while ..dup loopCount < do =:: i
+        ## BranchId
+          BranchType .CASE
+          switchId
+          labels i array.at .data [] .caseId
+        BranchId new =:: caseBranch
+        ## BranchId
+          BranchType .NEXT
+          context nextJumpLabelId
+          0
+        BranchId new =:: nextBranch
+        labels i array.get .value labelAsInt =:: cmpVal
+        ## cmp int
+          valType
+          't' valId
+          "eq" string.wrap
+          cmpVal
+          caseBranch
+          nextBranch
+        context appendCmpInt
+        nextBranch sb.appendBranchId
+        '\n' sb.appendC
+        i 1 +
+      end ..drop
+      "jmp " sb.appendS
+      contiguous if
+        ## BranchId
+          BranchType .CASE
+          switchId
+          labels loopCount array.at .data [] .caseId
+        BranchId new sb.appendBranchId
+        '\n' sb.appendC
+      else
+        ## BranchId
+          BranchType .DEFAULT
+          switchId
+          0
+        BranchId new sb.appendBranchId
+        '\n' sb.appendC
+      end
+    return
+  end
+  labels .length 2 / =:: p
+  ## BranchId
+    BranchType .NEXT
+    context nextJumpLabelId
+    0
+  BranchId new =:: ltBranch
+  ## BranchId
+    BranchType .NEXT
+    context nextJumpLabelId
+    0
+  BranchId new =:: geBranch
+  labels p array.get .value labelAsInt =:: cmpVal
+  labels p array.cutIndex =:: lElts =:: rElts
+  sb
+    ## cmp int
+      valType
+      't' valId
+      "slt" string.wrap
+      cmpVal
+      ltBranch
+      geBranch
+    context appendCmpInt
+    ltBranch sb.appendBranchId
+    '\n' sb.appendC
+    ## appendSwitchJumpTree
+      valType
+      valId
+      switchId
+      lElts
+      lower
+      upper optional.isEmpty if
+        cmpVal optional.wrap
+      else
+        upper .data cmpVal ## XXX min/max procedure
+          ..over ..over > if ..swap end ..drop
+        optional.wrap
+      end
+      context
+    appendSwitchJumpTree
+    geBranch sb.appendBranchId
+    '\n' sb.appendC
+    ## appendSwitchJumpTree
+      valType
+      valId
+      switchId
+      rElts
+      lower optional.isEmpty if
+        cmpVal optional.wrap
+      else
+        lower .data cmpVal
+          ..over ..over < if ..swap end ..drop
+        optional.wrap
+      end
+      upper
+      context
+    appendSwitchJumpTree
+  return
+end
+proc(
+  LabelData : a
+  LabelData : b
+  CompilerContext ptr mut : context
+-> i32 ) =>: labelCmp
+  a .value labelAsInt =:: aInt
+  b .value labelAsInt =:: bInt
+  aInt bInt == if
+    0 return
+  end
+  aInt bInt < if -1 else 1 end return
+end
+proc(
+  stringBuilder : sb
+  Type : switchType
+  i64 : valId
+  i32 : switchId
+  LabelData list : labels
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendSwitchTable
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  ValType : valType
+  i64 : tmpId
+  labels labelCmp @ context list.sort
+  sb
+    "## switch\n" sb.appendS
+    switchType typeContext types.isEnum if
+      ## loadEnumLabel
+        switchType
+        valId
+        pos
+      context loadEnumLabel valType = tmpId =
+    else switchType typeContext types.isInt _if
+      switchType typeContext types.numberSize =:: numSize
+      context nextTmpId tmpId =
+      switchType context toValType valType =
+      "%t" sb.appendS
+      tmpId sb.appendI
+      " =" sb.appendS
+      valType sb.appendValTypeQBE
+      numSize types.primitive.I32 typeContext types.numberSize < if
+        " ext" sb.appendS
+        switchType
+          StorageType .ULOAD
+        pos context sb.appendTypeNameQBE
+        " %s" sb.appendS
+      else
+        " copy %s" sb.appendS
+      end
+      valId sb.appendI
+      '\n' sb.appendC
+    else
+      "unsupported type in switch: " sb.wrap
+        switchType labelContext typeContext sb.appendType
+      pos errors appendError
+      return
+    end
+    ## appendJumpTable
+      valType
+      tmpId
+      switchId
+      labels list.asArray
+      i64 optional.empty
+      i64 optional.empty
+      context
+    appendSwitchJumpTree
+  return
 end
 
 proc(
@@ -1199,6 +1538,7 @@ proc(
               end
               i 1 +
             end ..drop
+            true context [] .reachable =
           return
         LOCAL_VAR TMP_VAR case
           op [] .dataType =:: valType
@@ -1610,6 +1950,7 @@ proc(
           ## BranchId
             BranchType .IF
             op [] .val .block .blockId
+            0
           BranchId new =:: ifBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -1621,6 +1962,7 @@ proc(
             ## appendBranchId
               BranchType .ELSE
               op [] .val .block .blockId
+              0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             ifBranch context startBranch
@@ -1628,9 +1970,11 @@ proc(
             op [] .val .block .blockId branchRoot newIfBlock context openBlock
           return
         IFIF case
+          context [] .openBlocks list.peek .data =:: ifBlock
           ## appendBranchId
             BranchType .NEXT
             context nextJumpLabelId
+            0
           BranchId new =:: ifBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -1642,15 +1986,18 @@ proc(
             ## appendBranchId
               BranchType .ELSE
               op [] .val .block .blockId
+              0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             ifBranch context startBranch
-            context [] .stackInfo @ branchTree.startBranch =:: branchRoot
-            op [] .val .block .blockId branchRoot newIfBlock context openBlock
+            ifBlock [] .If .ififBranches
+              context [] .stackInfo .branchHead list.append
+            ifBlock [] .If .ififBranches =
           return
         ELSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
+          context [] .reachable ifBlock [] .If .ifBranchTerminates =
           ifBranch ifBlock [] .If .ifBranch =
           sb
             op [] .pos sb.appendPosQBE
@@ -1658,19 +2005,120 @@ proc(
             ## appendBranchId
               BranchType .END_IF
               op [] .val .block .blockId
+              0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             ## startBranch
               ## BranchId
                 BranchType .ELSE
                 op [] .val .block .blockId
+                0
               BranchId new
               context
             startBranch
+            true context [] .reachable =
+          =:: mut newSb
+          ifBlock [] .If .ififBranches .length 1 > if
+            ## mergeValues
+              context [] .stackInfo @
+              ifBlock [] .If .ififBranches list.asArray
+              false ## keep branches active
+              mergeBranches @
+              ## MergePoint
+                "if _if" string.wrap
+                ifBlock [] .If .blockId
+                op [] .pos
+                context
+                newSb @
+              MergePoint new
+            branchTree.merge if
+              "could not merge if _if branches" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          newSb return
+        SWITCH case
+          op [] .val .block .blockId =:: switchId
+          prog [] .switchData
+            switchId list.at .data
+          =:: switchData
+          sb
+            op [] .pos sb.appendPosQBE
+            ## appendSwitchTable
+              switchData [] .switchType
+              context popValue
+              switchId
+              switchData [] .labels
+              op [] .pos
+              context
+            appendSwitchTable
+            context [] .stackInfo @ branchTree.startBranch =:: branchRoot
+            switchId branchRoot newSwitchBlock context openBlock
+            false context [] .reachable =
           return
-        WHILE CASE DEFAULT DO case
+        CASE case
+            sb
+              op [] .pos sb.appendPosQBE
+              op [] .val .block .blockId =:: switchId
+              ## BranchId
+                BranchType .CASE
+                switchId
+                op [] .val .block .subId
+              BranchId new context startBranch
+              true context [] .reachable =
+            return
+        DEFAULT case
+            sb
+              op [] .pos sb.appendPosQBE
+              op [] .val .block .blockId =:: switchId
+              ## BranchId
+                BranchType .DEFAULT
+                switchId
+                0
+              BranchId new context startBranch
+              true context [] .reachable =
+            return
+        BREAK_SWITCH case
+            ## findBreakableBlock
+              BlockType .BREAK_SWITCH
+              op [] .pos
+              context
+            findBreakableBlock =:: breakBlock?
+            breakBlock? optional.isEmpty if
+              ## error message handled by findBreakableBlock
+              sb return
+            end
+            breakBlock? .data =:: breakBlock
+            breakBlock [] .Switch ?? ! if
+              "unexpected block for " sb.wrap
+                BlockType .BREAK_SWITCH sb.appendBlockType
+                ## XXX append type of broken block
+              op [] .pos errors appendError
+            end
+            context [] .reachable if
+              breakBlock [] .Switch .caseBranches
+                ## BranchPoint
+                context [] .stackInfo @
+                  breakBlock [] .Switch .branchRoot
+                branchTree.reset list.append
+              breakBlock [] .Switch .caseBranches =
+            end
+            ## remember break (if reachable)
+            false context [] .reachable =
+            sb
+              op [] .pos sb.appendPosQBE
+              "jmp " sb.appendS
+              ## BlockId
+                BranchType .END_SWITCH
+                breakBlock [] .Switch .blockId
+                0
+              BranchId new sb.appendBranchId
+              '\n' sb.appendC
+            return
           break
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
+        WHILE DO case
+          break
+        UNKNOWN BREAK CONTINUE INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
@@ -1693,18 +2141,29 @@ proc(
               ## BranchId
                 BranchType .END_IF
                 op [] .val .blockEnd .blockId
+                0
               BranchId new
               context
             startBranch
-            branchTree.NodeId 2 array new =:: mut branches
-            ifBlock .ifBranch branches @ 0 [] =
-            context [] .stackInfo .branchHead branches @ 1 [] =
           =:: mut newSb
+          branchTree.NodeId 2 array new =:: mut branches
+          0 =:: mut nBranches
+          ifBlock .ifBranchTerminates if
+            ifBlock .ifBranch branches @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          context [] .reachable if
+            context [] .stackInfo .branchHead branches @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          nBranches 1 > if
             ## mergeValues
               context [] .stackInfo @
               branches @ array.wrap
-              mergeIfBranches @
+              true
+              mergeBranches @
               ## MergeIf
+                "if" string.wrap
                 ifBlock .blockId
                 op [] .pos
                 context
@@ -1714,11 +2173,53 @@ proc(
               "could not merge branches of if-else block" sb.wrap
               op [] .pos errors appendError
             end
+          end
+          nBranches 0 > context [] .reachable =
+          ifBlock .ififBranches list.free ..drop
           newSb return
         IFIF case sb return ## no-op
-        WHILE CASE DEFAULT DO case
+        SWITCH case
+          context [] .openBlocks
+            list.pop .Switch =:: switchBlock
+          context [] .openBlocks =
+          switchBlock .caseBranches =:: caseBranches
+          caseBranches .length 0 > context [] .reachable =
+          sb
+            op [] .pos sb.appendPosQBE
+            ## startBranch
+              ## BranchId
+                BranchType .END_SWITCH
+                op [] .val .blockEnd .blockId
+                0
+              BranchId new
+              context
+            startBranch
+          =:: mut newSb
+          caseBranches .length 1 > if
+            caseBranches .length =:: nodeCount
+            ## mergeValues
+              context [] .stackInfo @
+              caseBranches list.asArray
+              true
+              mergeBranches @
+              ## MergePoint
+                "switch" string.wrap
+                switchBlock .blockId
+                op [] .pos
+                context
+                newSb @
+              MergePoint new
+            branchTree.merge if
+              "could not merge branches of switch-case block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          caseBranches .length 0 > context [] .reachable =
+          caseBranches list.free ..drop
+          newSb return
+        WHILE DO case
           break
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF NAMESPACE
+        UNKNOWN CASE DEFAULT BREAK BREAK_SWITCH CONTINUE INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
@@ -1768,6 +2269,7 @@ proc(
         retType typeContext types.isProcOut if
           retType typeContext types.compositeEltCount
         else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
+      false context [] .reachable =
       retCount 0 == if
         "ret\n" sb.appendS
         return
@@ -1805,13 +2307,14 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
   ## CompilerContext
     prog
     StackElement branchTree.create
-    BranchType .START 0 BranchId new
+    BranchType .START 0 0 BranchId new
     32 BlockInfo list.create
     32 LocalConst list.create
     0
     0
     0
     0
+    true
   CompilerContext new =:: mut contextData ## TODO cleanup context
   contextData @ =:: context
   id.LABEL_ID_NONE =:: mut mainId

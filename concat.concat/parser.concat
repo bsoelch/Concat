@@ -2639,7 +2639,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
           return
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
-        IF IFIF ELSE WHILE DO BREAK CONTINUE
+        IF IFIF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
             opName sb.appendStr

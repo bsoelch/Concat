@@ -68,7 +68,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
       PROCEDURE EXPERIMENTAL_PROCEDURE case
         ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH CASE DEFAULT NAMESPACE case break
+       SWITCH BREAK_SWITCH CASE DEFAULT NAMESPACE case break
     end
     1 -
   end ..drop
@@ -85,7 +85,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inInitializer
        PROCEDURE EXPERIMENTAL_PROCEDURE case
          ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH CASE DEFAULT NAMESPACE case break
+       SWITCH BREAK_SWITCH CASE DEFAULT NAMESPACE case break
     end
     1 -
   end ..drop
@@ -321,6 +321,7 @@ proc(
         BREAK
         CONTINUE
         SWITCH
+        BREAK_SWITCH
         CASE
         DEFAULT
         UNKNOWN
@@ -544,6 +545,7 @@ proc(
         WHILE
         DO
         BREAK
+        BREAK_SWITCH
         CONTINUE
         SWITCH
         CASE

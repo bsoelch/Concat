@@ -215,6 +215,7 @@ namespace: branchTree
   proc(
     T BranchTree ptr mut : tree
     NodeId arrayView : branchHeads
+    bool : mergeBranches
     proc( T ptr arrayView : types i64 : offset C : context -> T ) ptr : mergeValues
     C : context
   -> bool ) =>: export merge
@@ -270,7 +271,9 @@ namespace: branchTree
           true needMerge =
         end
         next [] .data @ buffer i [] =
-        tree heads i [] unlinkNode
+        mergeBranches if
+          tree heads i [] unlinkNode
+        end
         next [] .parent heads i [] =
         i 1 + i =
       end

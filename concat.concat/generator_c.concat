@@ -1156,7 +1156,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           operations index isGlobal target prog compileOp
           target ")\n  break;\n" io.fputs ..drop
           return
-        BREAK case
+        BREAK BREAK_SWITCH case
           target "break;\n" io.fputs ..drop
           return
         CONTINUE case
@@ -1209,7 +1209,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     blockEnd case
       op [] .val .blockEnd .blockType switch
-        UNKNOWN BREAK CONTINUE SWITCH INITIALIZER IF NAMESPACE
+        UNKNOWN BREAK BREAK_SWITCH CONTINUE SWITCH INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break

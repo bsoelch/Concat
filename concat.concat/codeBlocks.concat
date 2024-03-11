@@ -12,6 +12,7 @@ enum(
   BREAK
   CONTINUE
   SWITCH
+  BREAK_SWITCH
   CASE
   DEFAULT
   INITIALIZER
@@ -54,6 +55,9 @@ namespace: sb
         return
       BREAK case
         "break" sb.appendS
+        return
+      BREAK_SWITCH case
+        "break switch" sb.appendS
         return
       CONTINUE case
         "continue" sb.appendS

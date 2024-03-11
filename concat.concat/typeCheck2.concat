@@ -645,14 +645,12 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkReachable
   end
   ## check if op can appear in unreachable context
   op [] .val switch
-    ## XXX allow constants as case-labels
     block case
       op [] .val .block .blockType switch
         ELSE CASE DEFAULT case
           return
         default break
       end
-      ## XXX allow break at end of case branch
       break
     initializeId case
       op [] .val .initializeId .idType .PROCEDURE ?? if
@@ -910,7 +908,15 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
   op [] state appendOp ..drop
   false false valCount argsOffset state updateOpInfo_noStack
   false state [] .reachable =
-  state [] .stack @ branchTree.prune ## stack types no longer needed
+  state [] .stack branchTree.depth 0 > if
+    state [] .stack @ branchTree.pop .data =:: val
+    "extra value at the end of procedure" sb.wrap
+       val [] .valueType labelContext typeContext sb.appendType
+       " ( pushed at " sb.appendS
+       val [] .pushedAt sb.appendPos
+       " )" sb.appendS
+    op [] .pos errors appendError
+  end
 end
 
 proc(
@@ -1650,42 +1656,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             "unexpected else-statement, if-else block can only contain one else statement" sb.wrap
             op [] .pos errors appendError
           end
-          currentBlock [] .If .ififBranches .length 1 > if
-            currentBlock [] .If .ififBranches .length =:: nodeCount
-            nodeCount branchTree.NodeId list.create
-              0 while ..dup nodeCount < do =:: i
-                currentBlock [] .If .ififBranches i list.at .data [] .node list.append
-                i 1 +
-              end ..drop
-            =:: branchPoints
-            ## mergeValues
-              state [] .stack @
-              branchPoints list.asArray
-              mergeBranches @
-              ## MergePoint
-                "if-_if branches" string.wrap
-                op [] .pos
-                i64 array.empty
-                state
-                MergeType .NO_CAST
-              MergePoint new
-            branchTree.merge if
-              "different number of types at the start of else-branch: " sb.wrap
-                0 while ..dup currentBlock [] .If .ififBranches .length < do =:: i
-                  "\n  * " sb.appendS
-                  currentBlock [] .If .ififBranches i list.at .data =:: branchPoint
-                  state [] .stack
-                     branchPoint [] .node
-                  branchTree.depthFrom sb.appendI
-                  " in branch at " sb.appendS
-                    branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
-                '\n' sb.appendC
-              op [] .pos errors appendError
-            end
-            branchPoints list.free ..drop
-          end
           currentBlock [] .If .blockId op [] .val .block .blockId =
           ## update which operations are editable
           state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
@@ -1709,6 +1679,43 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           true currentBlock [] .If .hasElse =
           op [] state appendOp ..drop
           true state [] .reachable =
+          currentBlock [] .If .ififBranches .length 1 > if
+            currentBlock [] .If .ififBranches .length =:: nodeCount
+            nodeCount branchTree.NodeId list.create
+              0 while ..dup nodeCount < do =:: i
+                currentBlock [] .If .ififBranches i list.at .data [] .node list.append
+                i 1 +
+              end ..drop
+            =:: branchPoints
+            ## mergeValues
+              state [] .stack @
+              branchPoints list.asArray
+              false ## keep branches active
+              mergeBranches @
+              ## MergePoint
+                "if _if block" string.wrap
+                op [] .pos
+                i64 array.empty
+                state
+                MergeType .NO_CAST
+              MergePoint new
+            branchTree.merge if
+              "different number of types at the start of else-branch: " sb.wrap
+                0 while ..dup currentBlock [] .If .ififBranches .length < do =:: i
+                  "\n  * " sb.appendS
+                  currentBlock [] .If .ififBranches i list.at .data =:: branchPoint
+                  state [] .stack
+                     branchPoint [] .node
+                  branchTree.depthFrom sb.appendI
+                  " in branch at " sb.appendS
+                    branchPoint [] .pos sb.appendPos
+                  i 1 +
+                end ..drop
+                '\n' sb.appendC
+              op [] .pos errors appendError
+            end
+            branchPoints list.free ..drop
+          end
           return
         IFIF case
           state peekBlock =:: currentBlock?
@@ -1744,15 +1751,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           op [] state appendOp ..drop
           return
         SWITCH case
-          program [] .switchData .length i32 cast =:: switchId
-          program [] .switchData
-            ## SwitchData
-              16 LabelData list.create
-              0
-              false
-            SwitchData new list.append
-          program [] .switchData =
-          switchId op [] .val .block .blockId =
           state [] .stack @ branchTree.pop =:: value?
           value? optional.isEmpty if
             "missing argument for switch-statement" sb.wrap
@@ -1760,6 +1758,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             return
           end
           value? .data [] .valueType =:: switchType
+          program [] .switchData .length i32 cast =:: switchId
+          program [] .switchData
+            ## SwitchData
+              16 LabelData list.create
+              switchType
+              0
+              false
+            SwitchData new list.append
+          program [] .switchData =
+          switchId op [] .val .block .blockId =
           switchType typeContext types.isInt ! if
             switchType typeContext types.isEnum ! _if
             "cannot switch values of type " sb.wrap
@@ -1876,7 +1884,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           breakBlock? .data =:: breakBlock
           breakBlock [] .Switch ?? if
             breakBlock [] .Switch @ =:: switchBlock
-            switchBlock [] .blockId op [] .val .block .blockId =
+            ## BlockId
+              BlockType .BREAK_SWITCH
+              switchBlock [] .blockId
+              0
+            BlockId new op [] .val .block =
             false switchBlock [] .allowBreak =
             ## update which operations are editable
             state [] .compiledOps .length
@@ -1912,7 +1924,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         DO
         CONTINUE
         UNKNOWN
-        NAMESPACE case
+        NAMESPACE
+        BREAK_SWITCH case
           break
       end
       break
@@ -1983,6 +1996,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## mergeValues
               state [] .stack @
               branches @ nBranches array.create
+              true
               mergeBranches @
               ## MergePoint
                 "if-else block" string.wrap
@@ -2058,6 +2072,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## mergeValues
               state [] .stack @
               branchPoints list.asArray
+              true
               mergeBranches @
               ## MergePoint
                 "switch-case block" string.wrap
@@ -2084,6 +2099,18 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             branchPoints list.free ..drop
           end
           caseBranches .length 0 > state [] .reachable =
+          op [] .val .blockEnd .blockType .CASE ?? if
+            BlockType .DEFAULT op [] .pos opBlock =:: mut tmp
+            switchBlock [] .blockId tmp .val .block .blockId =
+            tmp state appendOp ..drop
+            ## XXX mark as unreachable for enum-switch case
+            BlockType .BREAK_SWITCH op [] .pos opBlock tmp =
+            switchBlock [] .blockId tmp .val .block .blockId =
+            tmp state appendOp ..drop
+          end
+          BlockType .SWITCH op [] .pos opEndBlock =:: mut tmp
+          switchBlock [] .blockId tmp .val .blockEnd .blockId =
+          tmp state appendOp ..drop
           return
         SWITCH case ## end-switch should not be created by parser
           break
@@ -2092,7 +2119,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         BREAK
         CONTINUE
         UNKNOWN
-        NAMESPACE case
+        NAMESPACE
+        BREAK_SWITCH case
           break
       end
       break

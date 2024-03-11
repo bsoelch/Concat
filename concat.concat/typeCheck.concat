@@ -2252,6 +2252,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             breakBlock [] .blockData .switchBlock .explicitBreak if
               op state checkReachable
             end
+            ## BlockId
+              BlockType .BREAK_SWITCH
+              breakBlock [] .blockId
+              0
+            BlockId new op [] .val .block =
             breakBlock op [] .pos state storeSwitchOutTypes
             state [] .openBlocks list.peek .data [] .blockType ..dup .CASE ?? ..swap .DEFAULT ?? | if
               true breakBlock [] .blockData .switchBlock .explicitBreak =
@@ -2292,19 +2297,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           return
         SWITCH case
           op state checkReachable
+          state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
+            "missing argument for switch-statement" sb.wrap op [] .pos state appendError2
+            Type .undefined
+          else .data [] .valType end =:: switchType
           state [] .switchData .length i32 cast =:: blockId
           state [] .switchData
             ## SwitchData
               16 LabelData list.create
+              switchType
               0
               false
             SwitchData new list.append
           state [] .switchData =
           blockId op [] .val .block .blockId =
-          state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
-            "missing argument for switch-statement" sb.wrap op [] .pos state appendError2
-            Type .undefined
-          else .data [] .valType end =:: switchType
           1 false op [] .pos state extractCompositeOps
           switchType typeContext types.isInt if
             switchType op [] .dataType =
@@ -2451,7 +2457,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op list.appendP
           state [] .compiledOps =
           return
-        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
+        UNKNOWN BREAK_SWITCH PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         case
           "blocks of type " sb.wrap
@@ -2608,7 +2614,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           true state [] .reachable =
           break
-        IF BREAK CONTINUE UNKNOWN INITIALIZER NAMESPACE
+        IF BREAK BREAK_SWITCH CONTINUE UNKNOWN INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           "closing blocks of type " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType
