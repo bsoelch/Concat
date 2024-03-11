@@ -2317,7 +2317,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
     checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
     hasName hasElement
-    compilerInfo unreachable case
+    compilerInfo case
       break
     Print case
       1 op [] .pos state checkStackSize if
@@ -2325,6 +2325,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       state [] .stack @ branchTree.pop .data [] =:: value
       value .valueType op [] .dataType =
+      op [] state appendOp ..drop
+      return
+    unreachable case
+      false state [] .reachable =
       op [] state appendOp ..drop
       return
     stackMod case
