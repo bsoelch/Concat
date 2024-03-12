@@ -1501,6 +1501,10 @@ namespace: types
 
   struct( LabelId : generator ConstantArray : arguments Type : mut generated ) =:: GeneratedType
 
+
+  proc( Type -> bool ) =>: export isGeneratedType
+    .generatedType ?? return
+  end
   #+ finds the generated type for the given type generator and arguments
      returns the type and a boolean that is true if a new GeneratedType was created +#
   proc(

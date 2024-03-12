@@ -646,7 +646,7 @@ namespace: sb
         str case break
         arrayConstant case
           isGlobal ! if
-            break ## TODO handle local composite constants
+            break
           end
           t typeContext types.isArray if
             t typeContext types.getBaseType =:: base
@@ -746,6 +746,200 @@ namespace: sb
         list.clear
       context [] .localConstants =
     return
+  end
+
+  proc(
+    stringBuilder : sb
+    Type : t
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: startTypeDeclaration
+    sb
+      "type " sb.appendS
+      t StorageType .LOAD pos context appendTypeNameQBE
+      " = {" sb.appendS
+    return
+  end
+  proc(
+    stringBuilder : sb
+    Type : t
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: startEltTypeDeclaration
+    sb
+      "type " sb.appendS
+      t StorageType .LOAD pos context appendTypeNameQBE
+      "_elt" sb.appendS
+      " = {" sb.appendS
+    return
+  end
+  proc(
+    stringBuilder : sb
+    Type : t
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: eltTypeName
+    sb
+      t StorageType .LOAD pos context appendTypeNameQBE
+      "_elt" sb.appendS
+    return
+  end
+  proc(
+    stringBuilder
+  -> stringBuilder ) =>: endTypeDeclaration
+    "}\n" sb.appendS return
+  end
+  proc(
+    stringBuilder : sb
+    Type : t
+    FilePosition : pos
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: appendTypeDeclarationQBE
+    context [] .program =:: prog
+    prog [] .errors @ =:: errors
+    prog [] .idContext .labelContext @ =:: labelContext
+    prog [] .idContext .typeContext @ =:: typeContext
+    prog [] .idContext .constContext @ =:: constContext
+    t types.isNamedType t types.isGeneratedType | if
+      sb return ## ignore named types
+    end
+    t typeContext types.isEmpty if
+      sb return ## ignore empy types
+    end
+    t typeContext types.containsGeneric | if
+      sb return ## ignore generic types
+    end
+    t typeContext types.isArray if
+      t typeContext types.isFixedSize _if
+      t typeContext types.getArraySize =:: sizes
+      1i64 =:: mut S
+      0 while ..dup sizes .length < do =:: i
+        sizes i array.get =:: size
+        size .sizeType .int ?? ! if
+          sb return ## no declaration for var-size array
+        end
+        S size .value * S =
+        i 1 +
+      end ..drop
+      t typeContext types.getBaseType =:: baseType
+      baseType typeContext types.sizeOf =:: baseSize
+      baseType typeContext types.strideOf =:: baseStride
+      sb
+        baseSize baseStride < if
+          t pos context startEltTypeDeclaration
+            ## appendTypeNameQBE
+              baseType
+              StorageType .STORE
+              pos
+            context sb.appendTypeNameQBE
+            ",b " sb.appendS
+            baseStride baseSize - sb.appendI
+          endTypeDeclaration
+        end
+        t pos context startTypeDeclaration
+        baseSize baseStride < if
+           t pos context eltTypeName
+        else
+          ## appendTypeNameQBE
+            baseType
+            StorageType .STORE
+            pos
+          context sb.appendTypeNameQBE
+        end
+        ' ' sb.appendC
+        S sb.appendI
+      endTypeDeclaration return
+    end
+    t typeContext types.isTuple if
+      t typeContext types.compositeElts =:: elts
+      0i64 =:: mut offset
+      sb t pos context startTypeDeclaration
+        0 while ..dup elts .length < do =:: i
+          elts i types.compositeElts.get =:: elt
+          t i typeContext types.tupleElementOffset =:: eltOffset
+          i 0 > if
+            ',' sb.appendC
+          end
+          offset eltOffset < if
+            "b " sb.appendS
+            eltOffset offset - sb.appendI
+            ',' sb.appendC
+            eltOffset offset =
+          end
+          ## appendTypeNameQBE
+            elt
+            StorageType .STORE
+            pos
+          context sb.appendTypeNameQBE
+          offset
+            elt typeContext types.sizeOf +
+          offset =
+          i 1 +
+        end ..drop
+        t typeContext types.sizeOf =:: size
+        offset size < if
+          ",z " sb.appendS
+          size offset - sb.appendI
+        end
+      endTypeDeclaration return
+    end
+    t typeContext types.isUnion
+    t typeContext types.isEnum | if
+      t typeContext types.isEnum =:: isTagged
+      t typeContext types.compositeElts =:: elts
+      false =:: mut hasElt
+      0i64 =:: mut bodySize
+      sb
+        t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
+          isTagged if
+            t pos context startEltTypeDeclaration
+          else
+            t pos context startTypeDeclaration
+          end
+          0 while ..dup elts .length < do =:: i
+            elts i types.compositeElts.get =:: elt
+            hasElt if
+              "," sb.appendS
+            end
+            elt typeContext types.isEmpty if
+              i 1 + continue
+            end
+            elt typeContext types.sizeOf =:: eltSize
+            eltSize bodySize > if
+              eltSize bodySize =
+            end
+            "{" sb.appendS
+              ## appendTypeNameQBE
+                elt
+                StorageType .STORE
+                pos
+              context sb.appendTypeNameQBE
+            "}" sb.appendS
+            true hasElt =
+            i 1 +
+          end ..drop
+          endTypeDeclaration
+        end
+      isTagged ! if return end
+      t typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+      t pos context startTypeDeclaration
+        t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
+          t pos context eltTypeName
+          ',' sb.appendC
+        end
+        bodySize labelOffset < if
+          "b " sb.appendS
+          labelOffset bodySize - sb.appendI
+          ',' sb.appendC
+        end
+        ## appendTypeNameQBE
+          labelType
+          StorageType .STORE
+          pos
+        context sb.appendTypeNameQBE
+      endTypeDeclaration return
+    end
+    sb return
   end
   proc( stringBuilder : sb string : str -> stringBuilder ) =>: appendEscapedString
     sb
@@ -2426,23 +2620,27 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     end
     data [] .labelId mainId =
   else ..drop.2 end
-  ## TODO declare composite types
-  prog [] .hasCheckIndex if
-    128 sb.create
+  1024 sb.create
+    prog getDeclaredTypes =:: types
+    0 while ..dup types .length < do =:: i
+      types i list.get
+        ## TODO? use declaration position of type
+        string.empty 0 0 FilePosition new
+      context sb.appendTypeDeclarationQBE
+      i 1 +
+    end ..drop
+    prog [] .hasCheckIndex if
       "data $" sb.appendS
       CHECK_INDEX_FORMAT sb.appendS
       " = { b \"index out of range: %lli size: %llu at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
-      target ..over io.fputSb ..drop
-    sb.free ..drop
-  end
-  prog [] .hasCheckEnum if
-    128 sb.create
+    end
+    prog [] .hasCheckEnum if
       "data $" sb.appendS
       CHECK_ENUM_FORMAT sb.appendS
       " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
-      target ..over io.fputSb ..drop
-    sb.free ..drop
-  end
+    end
+    target ..over io.fputSb ..drop
+  sb.free ..drop ## XXX? keep string builder
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 =:: idData
