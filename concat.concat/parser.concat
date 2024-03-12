@@ -21,6 +21,7 @@ struct( InterpreterContext : mut context i64 : mut offset ) =:: InterpreterInfo
 
 struct(
   BlockType : mut blockType
+  i64  : mut blockStart
   bool : mut autoClose
   bool : hasScope
 ) =:: BlockInfo
@@ -123,42 +124,49 @@ proc( ParserState ptr mut : state -> i64 ) =>: opCount
   state [] .progContext =:: progContext
   progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
     progContext [] .templateOps .length return
-  end
-  state [] .currentProc optional.isEmpty if
-    progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps .length return
-  end
-  _EXPERIMENTAL_ if
-    progContext [] .templateOps .length return
-  end
-  progContext [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
-end
-proc( Operation : op ParserState ptr mut : state -> ) =>: appendOp
-  state [] .progContext =:: progContext
-  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    progContext [] .templateOps @
   else state [] .currentProc optional.isEmpty _if
     _EXPERIMENTAL_ if
-      state [] .globalOpBuffer @
+      state [] .globalOpBuffer .length return
     else
-      progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @
+      progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps .length return
     end
   else
     _EXPERIMENTAL_ if
-      progContext [] .templateOps @
+      progContext [] .templateOps .length return
     else
-      progContext [] .progFiles state [] .currentFile list.at .data [] .localOps @
+      progContext [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
     end
   end
-  ..dup []
-    0 while ..dup state [] .constants .length < do
-      ..swap
-        state [] .constants ..over.2 list.get constantToOp list.append
-      ..swap
-      1 +
+end
+proc( ParserState ptr mut : state -> Operation list ptr mut ) =>: currentOps
+  state [] .progContext =:: progContext
+  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
+    progContext [] .templateOps @ return
+  else state [] .currentProc optional.isEmpty _if
+    _EXPERIMENTAL_ if
+      state [] .globalOpBuffer @ return
+    else
+      progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @ return
+    end
+  else
+    _EXPERIMENTAL_ if
+      progContext [] .templateOps @ return
+    else
+      progContext [] .progFiles state [] .currentFile list.at .data [] .localOps @ return
+    end
+  end
+end
+proc( Operation : op ParserState ptr mut : state -> ) =>: appendOp
+  state [] .progContext =:: progContext
+  state currentOps =:: ops
+  ops []
+    0 while ..dup state [] .constants .length < do =:: i
+      state [] .constants i list.get constantToOp list.append
+      i 1 +
     end ..drop
     state [] .constants list.clear state [] .constants =
     op list.append
-  ..swap [] =
+  ops [] =
 end
 proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state -> ) =>: appendError2
   msg pos state [] .progContext [] .errors @ appendError
@@ -509,13 +517,13 @@ end
 
 proc( BlockType : blockType ParserState ptr mut : state -> ) =>: openBlock
   state [] .openBlocks
-    blockType false false BlockInfo new list.append
+    blockType -1 false false BlockInfo new list.append
   state [] .openBlocks =
 end
 proc( BlockType : blockType ParserState ptr mut : state -> ) =>: openBlockScope
   state [] .progContext [] .idContext @ id.openScope
   state [] .openBlocks
-    blockType false true BlockInfo new list.append
+    blockType -1 false true BlockInfo new list.append
   state [] .openBlocks =
 end
 proc( Type : valType bool : experimental ParserState ptr mut : state -> ) =>: openProcBlock
@@ -531,6 +539,7 @@ proc( Type : valType bool : experimental ParserState ptr mut : state -> ) =>: op
       else
         BlockType .PROCEDURE
       end
+      -1
       false
       true
     BlockInfo new list.append
@@ -552,12 +561,11 @@ end
 proc(
   ParserState ptr mut : state
 ->
-  bool #+autoClose+#
-  BlockType #+type+#
+  BlockInfo
   bool #+isError+#
 ) =>: closeBlock
   state [] .openBlocks .length 0 == if
-    false BlockType .UNKNOWN true return
+    BlockType .UNKNOWN -1 false false BlockInfo new true return
   end
   state [] .openBlocks
     list.pop =:: closed
@@ -571,7 +579,7 @@ proc(
       staticArgsOffset state resetStaticArgs
     end
   end
-  closed .autoClose closed .blockType false return
+  closed false return
 end
 
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state -> string string ) =>: nextWord
@@ -1170,6 +1178,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
   code
     token fileState state tryParseConstant if
       ..drop return
@@ -1567,7 +1576,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       else
         "unexpected operation for \"=\" \n" sb.wrap
-          ..swap [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          ..swap [] constContext labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError2
         return
       end
@@ -1618,7 +1627,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected operation for \"" sb.wrap
         opName sb.appendStr
         "\"\n" sb.appendS
-        ..swap [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        ..swap [] constContext labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError2
         return
       end
@@ -1649,7 +1658,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected operation for \"" sb.wrap
         opName sb.appendStr
         "\"\n" sb.appendS
-        prevOp [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        prevOp [] constContext labelContext typeContext sb.appendOp
         fileState [] .wordStart state appendError2
         return
       end
@@ -1677,23 +1686,22 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state autoCloseCurrentBlock
       return
     else ..dup "else" string.wrap string.eq _if ..drop
-      BlockType : blockType
-      bool : autoClose
+      BlockInfo : closed
       while
-        state closeBlock if ..drop.2
+        state closeBlock if ..drop
           "'else' statements can not appear at top level" sb.wrap fileState [] .wordStart state appendError2
           return
-        end blockType = autoClose =
-      blockType .IFIF ?? do
+        end closed =
+      closed .blockType .IFIF ?? do
         BlockType .IFIF  fileState [] .wordStart opEndBlock  state appendOp
       end
-      blockType .IF ?? ! if
+      closed .blockType .IF ?? ! if
         "'else' is only allowed in if-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
       BlockType .ELSE  fileState [] .wordStart opBlock  state appendOp
       BlockType .ELSE  state openBlockScope
-      autoClose if
+      closed .autoClose if
         state autoCloseCurrentBlock
       end
       return
@@ -1721,18 +1729,20 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .SWITCH  state openBlockScope
       return
     else ..dup "case" string.wrap string.eq _if ..drop
-      state closeBlock ..swap ..dup .SWITCH ?? ! ..swap .CASE ?? ! & | if #+scope data+# ..drop
+      state closeBlock =:: isError .blockType =:: closedBlock
+      closedBlock .SWITCH ?? ! closedBlock .CASE ?? ! & isError | if
         "'case' is only allowed in switch-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
-      end ..drop ## ignore auto-close
+      end
       BlockType .CASE  fileState [] .wordStart opBlock  state appendOp
       BlockType .CASE  state openBlockScope
       return
     else ..dup "default" string.wrap string.eq _if ..drop
-      state closeBlock ..swap .CASE ?? ! | if #+scope data+# ..drop
+      state closeBlock =:: isError =:: closed
+      closed .blockType .CASE ?? ! isError | if
         "'default' is only allowed in switch-case-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
-      end ..drop ## ignore auto-close
+      end
       BlockType .DEFAULT  fileState [] .wordStart opBlock  state appendOp
       BlockType .DEFAULT  state openBlockScope
       return
@@ -1752,12 +1762,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else currentBlock .NAMESPACE ?? ! _if
           currentBlock fileState [] .wordStart opEndBlock  state appendOp
         end
-        state closeBlock if #+scope data+# ..drop.2
+        state closeBlock if #+scope data+# ..drop
           "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError2
           return
-        end =:: closedType
+        end =:: closedBlock
+        closedBlock .blockType =:: closedType
         closedType .PROCEDURE ?? closedType .EXPERIMENTAL_PROCEDURE ?? | if
-          state [] .currentProc optional.isEmpty if ..drop
+          state [] .currentProc optional.isEmpty if
             "unexpected end of procedure" sb.wrap fileState [] .wordStart state appendError2
             return
           end
@@ -1774,11 +1785,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             currentProc list.append
           progContext [] .procedures =
         end
-        closedType .NAMESPACE ?? if
-          idContext id.endNamespace if
-            "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2
-          end
+        closedType .NAMESPACE ?? if idContext id.endNamespace _if
+          "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2
         end
+        closedBlock .autoClose
       do end
       state [] .currentProc optional.isEmpty if
         progContext [] .templateOps .length idContext  id.endOpenTemplate
@@ -1803,7 +1813,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 ..drop
               end
             "constant "                    sb.wrap
-              ..swap .val idContext [] .constContext @ idContext [] .labelContext @ idContext [] .typeContext @ sb.appendConstant
+              ..swap .val constContext labelContext typeContext sb.appendConstant
               " does not have a field: \"" sb.appendS
               ..swap                        sb.appendStr
             '"' sb.appendC fileState [] .wordStart state appendError2
@@ -1866,7 +1876,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        value idContext [] .constContext @ labelContext typeContext sb.appendConstant
+        value constContext labelContext typeContext sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError2
       return
     else ..dup "cast" string.wrap string.eq ..over "cast!" string.wrap string.eq | _if =:: opName
@@ -1897,7 +1907,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        target idContext [] .constContext @ labelContext typeContext sb.appendConstant
+        target constContext labelContext typeContext sb.appendConstant
         " expected type" sb.appendS fileState [] .wordStart state appendError2
         return
       end
@@ -2410,7 +2420,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             ..drop
           end
         "cannot determine the length of constant " sb.wrap
-          ..swap .val idContext [] .constContext @ idContext [] .labelContext @ idContext [] .typeContext @ sb.appendConstant
+          ..swap .val constContext labelContext typeContext sb.appendConstant
         fileState [] .wordStart state appendError2
         return
       end
@@ -2434,7 +2444,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         constant .val .typeId ?? ! if
           "expected type got: " sb.wrap
             constant .val
-              idContext [] .constContext @ labelContext typeContext
+              constContext labelContext typeContext
             sb.appendConstant
           fileState [] .wordStart state appendError2
         end
@@ -2461,9 +2471,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       return
     else ..dup "}" string.wrap string.eq _if =:: opName
-      state closeBlock if ..drop true else .INITIALIZER ?? ! end if
+      state closeBlock =:: isError =:: closed
+      isError if true else closed .blockType .INITIALIZER ?? ! end if
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
-      end ..drop ## XXX remember declared variables
+      end
       state [] .constantBlocks .length 0 == if
         return
       end
@@ -2479,7 +2490,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .constants .length offset .constOffset - fileState state popConstantArray =:: arrayType =:: values =:: types
         ## newArrayConst
           values
-          idContext [] .constContext @
+          constContext
         newArrayConst =:: value
         arrayType Type .undefined types.typeEquals if
           types LabelId arrayView optional.empty typeContext types.newTuple if ## TODO handle empty array
@@ -2531,6 +2542,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
+      state opCount
+        state [] .openBlocks list.peek .data
+      [] .blockStart =
       BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "tuple(" string.wrap string.eq _if ..drop
@@ -2594,16 +2608,36 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state appendError2
         return
       end
+      blockType .TYPE_COMPOSITE ?? if
+        state [] .openBlocks list.peek .data [] @ =:: currentBlock
+        currentBlock [] .blockStart =:: blockStart
+        state currentOps [] blockStart list.at .data =:: startOp
+        startOp [] .val .block ?? if
+          startOp [] .val .block .blockType .TYPE_COMPOSITE ?? _if
+          BlockType .TYPE_PROC_IN currentBlock [] .blockType =
+          BlockType .TYPE_PROC_IN
+            startOp [] .pos
+          opBlock startOp [] =
+        else
+          "operations and blocks are out of sync got: " sb.wrap
+            startOp [] constContext labelContext typeContext sb.appendOp
+            " expected: " sb.appendS
+            BlockType .TYPE_COMPOSITE sb.appendBlockType
+            " block" sb.appendS
+          fileState [] .wordStart state appendError2
+          return
+        end
+      end
       BlockType .TYPE_PROC_OUT state openBlockScope
       ## don't update constant blocks, procedure-type is a single constant
       BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
       return
     else ..dup ")" string.wrap string.eq _if =:: opName
-      state closeBlock if
+      state closeBlock if ..drop
         "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart state appendError2
-        ..drop.2
         return
-      end =:: blockType ..drop
+      end =:: closed
+      closed .blockType =:: blockType
       state [] .constantBlocks
         list.pop =:: offset
       state [] .constantBlocks =
@@ -2612,29 +2646,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
           break
         TYPE_PROC_OUT case
-          state closeBlock if ## close procedure scope
-            "expected " sb.wrap
-              BlockType .TYPE_PROC_IN sb.appendBlockType
-              " or " sb.appendS
-              BlockType .TYPE_COMPOSITE sb.appendBlockType
-              " block" sb.appendS
-            fileState [] .wordStart state appendError2
-            ..drop.2
-            return
-          else =:: container ..drop
-            container .TYPE_COMPOSITE ?? ! container .TYPE_PROC_IN ?? ! & _if
-            "expected " sb.wrap
-              BlockType .TYPE_PROC_IN sb.appendBlockType
-              " or " sb.appendS
-              BlockType .TYPE_COMPOSITE sb.appendBlockType
-              " block got " sb.appendS
-              container sb.appendBlockType
-            fileState [] .wordStart state appendError2
-            return
-          else
-            container fileState [] .wordStart opEndBlock state appendOp
+          state closeBlock =:: isError .blockType =:: outerType
+          isError ! if outerType .TYPE_PROC_IN ?? _if
+            BlockType .TYPE_PROC_IN
+              fileState [] .wordStart
+            opEndBlock state appendOp
+            break
           end
-          break
+          "expected " sb.wrap
+            BlockType .TYPE_PROC_IN sb.appendBlockType
+            " block got " sb.appendS
+            outerType sb.appendBlockType
+          fileState [] .wordStart state appendError2
+          return
         TYPE_PROC_IN case
          "unexpected " sb.wrap
             opName sb.appendStr

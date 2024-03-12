@@ -357,16 +357,21 @@ proc(
         true return
       end
       blockType switch
-        TYPE_TUPLE TYPE_STRUCT case
+        TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case
           op closedBlock @ true false context closedTypeBlock if true return end
-          ## newProcArgs
-            context [] .typeBuffer list.asArray
-            context [] .labelBuffer list.asArray optional.wrap
-          typeContext types.newTuple if ..drop
-            showErrorMessages if
-              "could not create structure-type" sb.wrap op [] .pos errors appendError
+          blockType .TYPE_COMPOSITE ?? if
+              context [] .typeBuffer .length 0 == _if
+            Type .empty
+          else
+            ## newTuple
+              context [] .typeBuffer list.asArray
+              context [] .labelBuffer list.asArray optional.wrap
+            typeContext types.newTuple if ..drop
+              showErrorMessages if
+                "could not create structure-type" sb.wrap op [] .pos errors appendError
+              end
+              true return
             end
-            true return
           end =:: tupleType
           ## pushValue
             tupleType ConstValue .typeId new
@@ -377,7 +382,7 @@ proc(
           false return
         TYPE_ENUM case
           op closedBlock @ false true context closedTypeBlock if true return end
-          ## newProcArgs
+          ## newEnum
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newEnum if ..drop
@@ -395,7 +400,7 @@ proc(
           false return
         TYPE_UNION case
           op closedBlock @ false true context closedTypeBlock if true return end
-          ## newProcArgs
+          ## newUnion
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newUnion if ..drop
@@ -411,66 +416,37 @@ proc(
             op [] .pos
           context pushValue
           false return
-        TYPE_PROC_IN
-        TYPE_COMPOSITE case
+        TYPE_PROC_IN case
           ## TODO? distinguish tuple and proc in parser
           ##  -> removes need to create labels for procIn
           op closedBlock @
-            blockType .TYPE_COMPOSITE ??
+            false
             false
           context closedTypeBlock if true return end
           context [] .typeBuffer .length 1 >= if
-            ## last argument is procedure output
-            context [] .typeBuffer context [] .typeBuffer .length 1 - list.get .procOut ?? _if
-              true
-          else false end =:: isProc
-          isProc if ## clear dummy lables
-            0 while ..dup context [] .labelBuffer .length < do
-              context [] .labelBuffer ..over list.at .data =:: label
-              label []
-                labelContext id.labelFlags
-              id.FLAG_DUMMY & ? if
-                id.LABEL_ID_NONE label [] =
-              end
-              1 +
-            end ..drop
-          end
-          context [] .typeBuffer .length
-            isProc if 1 else 0 end - ## last value is return type
-          =:: nArgs
-          blockType .TYPE_PROC_IN ?? isProc ! & if
+              ## last argument is procedure output
+              context [] .typeBuffer
+                ..dup .length 1 -
+              list.get .procOut ?? ! _if
             showErrorMessages if
               "missing return type for procedure" sb.wrap op [] .pos errors appendError
             end
             true return
           end
-          isProc if
-            ## newProcArgs
-              context [] .typeBuffer list.asArray nArgs array.head
-              context [] .labelBuffer list.asArray nArgs array.head optional.wrap
-              false
-            typeContext types.newProcArgs =:: procIn
-            context [] .typeBuffer nArgs list.get =:: procOut
-            procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
-              showErrorMessages if
-                "could not create procedure-type" sb.wrap op [] .pos errors appendError
-              end
-              true return
+          context [] .typeBuffer .length
+            1 - ## last value is return type
+          =:: nArgs
+          ## newProcArgs
+            context [] .typeBuffer list.asArray nArgs array.head
+            context [] .labelBuffer list.asArray nArgs array.head optional.wrap
+            false
+          typeContext types.newProcArgs =:: procIn
+          context [] .typeBuffer nArgs list.get =:: procOut
+          procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
+            showErrorMessages if
+              "could not create procedure-type" sb.wrap op [] .pos errors appendError
             end
-          else
-            nArgs 0 == if
-              Type .empty
-            else
-              ## newProcArgs
-                context [] .typeBuffer list.asArray nArgs array.head
-                context [] .labelBuffer list.asArray nArgs array.head optional.wrap
-              typeContext types.newTuple if ..drop
-                showErrorMessages if
-                  "could not create structure-type" sb.wrap op [] .pos errors appendError
-                end
-                true return
-              end
-            end
+            true return
           end =:: newType
           ## pushValue
             newType ConstValue .typeId new
