@@ -62,6 +62,16 @@ enum(
   While
 ) =:: BlockInfo
 
+namespace: sb
+  proc( stringBuilder BlockInfo -> stringBuilder ) =>: appendBlockInfo
+    switch
+      If case "if-else block" sb.appendS return
+      Switch case "switch-case block" sb.appendS return
+      While case "while block" sb.appendS return
+    end
+  end
+end
+
 struct(
   ProgramContext ptr mut : program
   StackElement BranchTree : mut stackInfo
@@ -1134,7 +1144,7 @@ proc(
   i64 : expectedIndex
   FilePosition : pos
   CompilerContext ptr mut : context
--> stringBuilder i64 i64 ) =>: checkEnumIndex
+-> stringBuilder i64 i64 ValType ) =>: checkEnumIndex
   context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
@@ -1157,7 +1167,7 @@ proc(
     ", " sb.appendS
     expectedIndex sb.appendI
     '\n' sb.appendC
-  c labelId return
+  c labelId labelType return
 end
 
 proc(
@@ -1184,10 +1194,9 @@ proc(
     context nextJumpLabelId
     0
   BranchId new =:: okBranch
-  ## XXX? support enums with i64 labels? ( currently only i8,i16,i32 supported)
   sb
     "## check enum \n" sb.appendS
-    enumType valId expectedIndex pos context checkEnumIndex =:: c =:: label
+    enumType valId expectedIndex pos context checkEnumIndex =:: labelType =:: label =:: c
     "jnz %t" sb.appendS
     c sb.appendI
     ", " sb.appendS
@@ -1198,7 +1207,9 @@ proc(
     errorBranch sb.appendBranchId
     "\ncall $printf (l $" sb.appendS
     CHECK_ENUM_FORMAT sb.appendS
-    ", ...,w %t" sb.appendS
+    ", ...," sb.appendS
+    labelType sb.appendValTypeQBE
+    " %t" sb.appendS
     label sb.appendI
     ",w " sb.appendS
     expectedIndex sb.appendI
@@ -1390,9 +1401,7 @@ proc(
       upper optional.isEmpty if
         cmpVal optional.wrap
       else
-        upper .data cmpVal ## XXX min/max procedure
-          ..over ..over > if ..swap end ..drop
-        optional.wrap
+        upper .data cmpVal i64.min optional.wrap
       end
       context
     appendSwitchJumpTree
@@ -1406,9 +1415,7 @@ proc(
       lower optional.isEmpty if
         cmpVal optional.wrap
       else
-        lower .data cmpVal
-          ..over ..over < if ..swap end ..drop
-        optional.wrap
+        lower .data cmpVal i64.max optional.wrap
       end
       upper
       context
@@ -2151,7 +2158,7 @@ proc(
       context popValue =:: srcId
       sb
         op [] .pos sb.appendPosQBE
-        containerType srcId op [] .val .hasElement op [] .pos context checkEnumIndex ..drop =:: c
+        containerType srcId op [] .val .hasElement op [] .pos context checkEnumIndex ..drop.2 =:: c
         "%s" sb.appendS
         ValType .I32 context pushValue sb.appendI
         " =w copy %t" sb.appendS
@@ -2340,7 +2347,8 @@ proc(
             breakBlock [] .Switch ?? ! if
               "unexpected block for " sb.wrap
                 BlockType .BREAK_SWITCH sb.appendBlockType
-                ## XXX append type of broken block
+                ": " sb.appendS
+                breakBlock [] sb.appendBlockInfo
               op [] .pos errors appendError
             end
             ## remember break (if reachable)
@@ -2596,6 +2604,11 @@ proc(
   sb return
 end
 
+proc( CompilerContext ptr mut : context -> ) =>: cleanupCompilerContext
+  context [] .stackInfo @ branchTree.free
+  context [] .openBlocks list.free ..drop
+  context [] .localConstants list.free ..drop
+end
 proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQBE
   prog [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
@@ -2611,7 +2624,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     0
     0
     true
-  CompilerContext new =:: mut contextData ## TODO cleanup context
+  CompilerContext new =:: mut contextData
   contextData @ =:: context
   id.LABEL_ID_NONE =:: mut mainId
   MAIN_NAME string.wrap 0 idContext id.getIdentifierByName ! if =:: data =:: name
@@ -2639,8 +2652,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       CHECK_ENUM_FORMAT sb.appendS
       " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     end
-    target ..over io.fputSb ..drop
-  sb.free ..drop ## XXX? keep string builder
+  =:: mut sb
   prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 =:: idData
@@ -2658,7 +2670,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     valType typeContext types.isProcedure | if
       continue
     end
-    128 sb.create
+    sb
       labelFlags id.FLAG_EXPORT & ? if
         "export " sb.appendS
       end
@@ -2675,59 +2687,61 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       end
       "}\n" sb.appendS
       target ..over io.fputSb ..drop
-    sb.free ..drop
+      sb.clear
+    sb =
   end ..drop
-  0 while ..dup prog [] .progFiles .length < do =:: i
-    prog [] .progFiles i list.at .data =:: f
-    1024 sb.create
-      "dbgfile \"" sb.appendS
-      f [] .fileName sb.appendSb
-      "\"\n"    sb.appendS
-      "data $" sb.appendS
-      FILE_NAME_NAME sb.appendS
-      i sb.appendI
-      " = {" sb.appendS
-        f [] .fileName
-          list.asArray labelContext id.wrapStringConstant
-          context
-        sb.appendStringConstQBE
-      "} \n" sb.appendS
-      0 while ..dup f [] .localOps .length < do
-        ..swap
-        f [] .localOps ..over.2 list.at .data context compileOp
-        ..swap 1 +
-      end ..drop
-      target ..over io.fputSb ..drop
-    sb.free ..drop
-    i 1 +
-  end ..drop
-  context [] .stackInfo @ branchTree.free
-  context [] .localConstants list.free ..drop
-  mainId id.LABEL_ID_NONE == if ## no main
-    return
-  end
-  128 sb.create
+  sb
+    0 while ..dup prog [] .progFiles .length < do =:: i
+      prog [] .progFiles i list.at .data =:: f
+        "dbgfile \"" sb.appendS
+        f [] .fileName sb.appendSb
+        "\"\n"    sb.appendS
+        "data $" sb.appendS
+        FILE_NAME_NAME sb.appendS
+        i sb.appendI
+        " = {" sb.appendS
+          f [] .fileName
+            list.asArray labelContext id.wrapStringConstant
+            context
+          sb.appendStringConstQBE
+        "} \n" sb.appendS
+        0 while ..dup f [] .localOps .length < do
+          ..swap
+          f [] .localOps ..over.2 list.at .data context compileOp
+          ..swap 1 +
+        end ..drop
+        target ..over io.fputSb ..drop
+        sb.clear
+      i 1 +
+    end ..drop
+    target ..over io.fputSb ..drop
+    sb.clear
+    mainId id.LABEL_ID_NONE == if ## no main
+      sb.free ..drop
+      context cleanupCompilerContext
+      return
+    end
     prog [] .hasGetArgs if
-        "data $" sb.appendS
-        CONCAT_ARGC_NAME sb.appendS
-        " = { l 0 }" sb.appendS
-        "data $" sb.appendS
-        CONCAT_ARGV_NAME sb.appendS
-        " = { l 0 }" sb.appendS
-        "data $" sb.appendS
-        CONCAT_ENVP_NAME sb.appendS
-        " = { l 0 }" sb.appendS
-        "export function w $main(l %argc,l %argv,l %envp){\n@start\n" sb.appendS
-        "storel %argc,$" sb.appendS
-        CONCAT_ARGC_NAME sb.appendS
-        '\n' sb.appendC
-        "storel %argv,$" sb.appendS
-        CONCAT_ARGV_NAME sb.appendS
-        '\n' sb.appendC
-        "storel %envp,$" sb.appendS
-        CONCAT_ENVP_NAME sb.appendS
-        '\n' sb.appendC
-        "call " sb.appendS
+      "data $" sb.appendS
+      CONCAT_ARGC_NAME sb.appendS
+      " = { l 0 }" sb.appendS
+      "data $" sb.appendS
+      CONCAT_ARGV_NAME sb.appendS
+      " = { l 0 }" sb.appendS
+      "data $" sb.appendS
+      CONCAT_ENVP_NAME sb.appendS
+      " = { l 0 }" sb.appendS
+      "export function w $main(l %argc,l %argv,l %envp){\n@start\n" sb.appendS
+      "storel %argc,$" sb.appendS
+      CONCAT_ARGC_NAME sb.appendS
+      '\n' sb.appendC
+      "storel %argv,$" sb.appendS
+      CONCAT_ARGV_NAME sb.appendS
+      '\n' sb.appendC
+      "storel %envp,$" sb.appendS
+      CONCAT_ENVP_NAME sb.appendS
+      '\n' sb.appendC
+      "call " sb.appendS
     else
       "export function w $main(){\n@start\ncall " sb.appendS
     end
@@ -2735,4 +2749,5 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     "()\nret 0\n}\n" sb.appendS
     target ..over io.fputSb ..drop
   sb.free ..drop
+  context cleanupCompilerContext
 end
