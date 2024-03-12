@@ -611,6 +611,9 @@ proc(
       else ..dup "export" string.wrap string.eq _if
         id.FLAG_EXPORT flags | flags =
         true isModifier =
+      else ..dup "inline" string.wrap string.eq _if
+        id.FLAG_INLINE flags | flags =
+        true isModifier =
       else ..dup "#:experimental" string.wrap string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags =
         true isModifier =
@@ -2829,10 +2832,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup  "begin"     string.wrap string.eq
          ..over "defer"     string.wrap string.eq |
          ..over "and"       string.wrap string.eq |
-         ..over "and*"      string.wrap string.startsWith |
          ..over "or"        string.wrap string.eq |
-         ..over "or*"       string.wrap string.startsWith |
-         ..over "overload"   string.wrap string.eq |
+         ..over "overload"  string.wrap string.eq |
       _if =:: opName
       "`" sb.wrap
         opName sb.appendStr

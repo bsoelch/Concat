@@ -22,7 +22,8 @@ namespace: id
   4   LabelFlag =: export FLAG_EXTERN
   8   LabelFlag =: export FLAG_EXPORT
   16  LabelFlag =: export FLAG_STATIC
-  32  LabelFlag =: export FLAG_EMPTY
+  32  LabelFlag =: export FLAG_INLINE
+  64  LabelFlag =: export FLAG_EMPTY
   128 LabelFlag =: export FLAG_DUMMY
 
   0x40000000u32 LabelFlag =: export FLAG_EXPERIMENTAL
