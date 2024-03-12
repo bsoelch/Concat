@@ -211,6 +211,7 @@ namespace: branchTree
     nodeId tree [] .branchHead =
   end
 
+  enum( error i32 : success ) =:: MergeResult
   #template type : T type : C #end
   proc(
     T BranchTree ptr mut : tree
@@ -218,9 +219,9 @@ namespace: branchTree
     bool : mergeBranches
     proc( T ptr arrayView : types i64 : offset C : context -> T ) ptr : mergeValues
     C : context
-  -> bool ) =>: export merge
+  -> MergeResult ) =>: export merge
     branchHeads .length 1 <= if
-      false return ## nothing to merge
+      0 MergeResult .success new return ## nothing to merge
     end
     -1i64 =:: mut initDepth
     -1i64 =:: mut parentId
@@ -229,7 +230,7 @@ namespace: branchTree
       branchHeads ..over array.get =:: nodeId
       nodeId -1 < nodeId tree [] .nodes .length >= | if ## id=-1 or 0 <= id < length
         ..drop
-        true return ## nodeId invalid
+        MergeResult .error return ## nodeId invalid
       end
       nodeId -1 == if
         0i64
@@ -240,7 +241,8 @@ namespace: branchTree
          nodeDepth initDepth =
       else nodeDepth initDepth != _if
         ..drop
-        true return ## nodes on top level have different depths
+        ## nodes on top level have different depths
+        MergeResult .error return
       end
       parentId -1 == if
         nodeId parentId =
@@ -251,7 +253,8 @@ namespace: branchTree
       1 +
     end ..drop
     needMerge ! if
-      false return ## heads identical -> no merge necessary
+      ## heads identical -> no merge necessary
+      0 MergeResult .success new return
     end
     ## create mutable copy of heads
     branchHeads .length =:: headCount
@@ -288,6 +291,6 @@ namespace: branchTree
     ## cleanup
     buffer mem.free
     heads mem.free
-    false return
+    offset MergeResult .success new return
   end
 end

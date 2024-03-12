@@ -2286,7 +2286,7 @@ proc(
                 context
                 newSb @
               MergePoint new
-            branchTree.merge if
+            branchTree.merge .error ?? if
               "could not merge if _if branches" sb.wrap
               op [] .pos errors appendError
             end
@@ -2438,7 +2438,7 @@ proc(
                 context
                 newSb @
               MergePoint new
-            branchTree.merge if
+            branchTree.merge .error ?? if
               "could not merge branches of if-else block" sb.wrap
               op [] .pos errors appendError
             end
@@ -2484,7 +2484,7 @@ proc(
                 context
                 newSb @
               MergePoint new
-            branchTree.merge if
+            branchTree.merge .error ?? if
               "could not merge branches of switch-case block" sb.wrap
               op [] .pos errors appendError
             end
