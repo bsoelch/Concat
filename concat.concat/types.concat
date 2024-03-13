@@ -182,17 +182,17 @@ type : export TypeContext
 namespace: types
   ## primitive types
   namespace: primitive
-    PrimitiveType .BOOL      Type .primitiveType new Type =: export BOOL
-    PrimitiveType .I8        Type .primitiveType new Type =: export I8
-    PrimitiveType .I16       Type .primitiveType new Type =: export I16
-    PrimitiveType .I32       Type .primitiveType new Type =: export I32
-    PrimitiveType .I64       Type .primitiveType new Type =: export I64
-    PrimitiveType .FLOAT32   Type .primitiveType new Type =: export FLOAT32
-    PrimitiveType .FLOAT64   Type .primitiveType new Type =: export FLOAT64
-    PrimitiveType .TYPE      Type .primitiveType new Type =: export TYPE
+    PrimitiveType .BOOL      Type .primitiveType Type =: export BOOL
+    PrimitiveType .I8        Type .primitiveType Type =: export I8
+    PrimitiveType .I16       Type .primitiveType Type =: export I16
+    PrimitiveType .I32       Type .primitiveType Type =: export I32
+    PrimitiveType .I64       Type .primitiveType Type =: export I64
+    PrimitiveType .FLOAT32   Type .primitiveType Type =: export FLOAT32
+    PrimitiveType .FLOAT64   Type .primitiveType Type =: export FLOAT64
+    PrimitiveType .TYPE      Type .primitiveType Type =: export TYPE
     ## compiler internal type-aliases for special purpose types
-    PrimitiveType .I64       Type .primitiveType new Type =: export I_SIZE ## size-off memory-sections
-    PrimitiveType .I64       Type .primitiveType new Type =: export I_PTR  ## integer that can hold a pointer
+    PrimitiveType .I64       Type .primitiveType Type =: export I_SIZE ## size-off memory-sections
+    PrimitiveType .I64       Type .primitiveType Type =: export I_PTR  ## integer that can hold a pointer
   end
   proc( Type -> bool ) =>: export isPrimitive
     .primitiveType ?? return
@@ -382,22 +382,22 @@ namespace: types
   end
   ## ctypes
   namespace: ctype
-    CType .VOID        Type .cType new Type =: export VOID
-    CType .BOOL        Type .cType new Type =: export BOOL
-    CType .CHAR        Type .cType new Type =: export CHAR
-    CType .S_CHAR      Type .cType new Type =: export S_CHAR
-    CType .U_CHAR      Type .cType new Type =: export U_CHAR
-    CType .SHORT       Type .cType new Type =: export SHORT
-    CType .U_SHORT     Type .cType new Type =: export U_SHORT
-    CType .INT         Type .cType new Type =: export INT
-    CType .U_INT       Type .cType new Type =: export U_INT
-    CType .LONG        Type .cType new Type =: export LONG
-    CType .U_LONG      Type .cType new Type =: export U_LONG
-    CType .LONGLONG    Type .cType new Type =: export LONGLONG
-    CType .U_LONGLONG  Type .cType new Type =: export U_LONGLONG
-    CType .SIZE        Type .cType new Type =: export SIZE
-    CType .FLOAT       Type .cType new Type =: export FLOAT
-    CType .DOUBLE      Type .cType new Type =: export DOUBLE
+    CType .VOID        Type .cType Type =: export VOID
+    CType .BOOL        Type .cType Type =: export BOOL
+    CType .CHAR        Type .cType Type =: export CHAR
+    CType .S_CHAR      Type .cType Type =: export S_CHAR
+    CType .U_CHAR      Type .cType Type =: export U_CHAR
+    CType .SHORT       Type .cType Type =: export SHORT
+    CType .U_SHORT     Type .cType Type =: export U_SHORT
+    CType .INT         Type .cType Type =: export INT
+    CType .U_INT       Type .cType Type =: export U_INT
+    CType .LONG        Type .cType Type =: export LONG
+    CType .U_LONG      Type .cType Type =: export U_LONG
+    CType .LONGLONG    Type .cType Type =: export LONGLONG
+    CType .U_LONGLONG  Type .cType Type =: export U_LONGLONG
+    CType .SIZE        Type .cType Type =: export SIZE
+    CType .FLOAT       Type .cType Type =: export FLOAT
+    CType .DOUBLE      Type .cType Type =: export DOUBLE
   end
   proc( CType -> Type ) =>: cTypeAsType
     switch
@@ -637,7 +637,7 @@ namespace: types
     delta arrayType .dims > if
        Type .undefined true return
     end
-    arrayType .sizeOffset arrayType .dims + delta - types.SizeId cast Type .arrayIndex new false return
+    arrayType .sizeOffset arrayType .dims + delta - types.SizeId cast Type .arrayIndex false return
   end
 
   proc( Type TypeContext ptr -> bool ) =>: export isMutable
@@ -735,7 +735,7 @@ namespace: types
         end
       .ptrOnly isPtr & arrays [] ..over.2 list.at .data [] .ptrOnly = ## update ptrOnly flag
       ## found match
-      isPtr if ArrayId cast Type .pointer new else ArrayId cast Type .arrayType new end false return
+      isPtr if ArrayId cast Type .pointer else ArrayId cast Type .arrayType end false return
     end ..drop
     context [] .arraySizes
       ..dup .length =:: sizeOffset
@@ -744,7 +744,7 @@ namespace: types
     arrays []
       base sizeOffset sizes .length fixedSize isPtr mutable ArrayType new list.append
     arrays [] =
-    arrays [] .length 1 - isPtr if ArrayId cast Type .pointer new else ArrayId cast Type .arrayType new end
+    arrays [] .length 1 - isPtr if ArrayId cast Type .pointer else ArrayId cast Type .arrayType end
     false return
   end
 
@@ -1161,7 +1161,7 @@ namespace: types
       labels
       TUPLE_FLAG_IS_STRUCT
       context
-    findTupleInfo Type .struct new false return
+    findTupleInfo Type .struct false return
   end
   proc( Type arrayView : elts LabelId arrayView optional : labels bool : isOut TypeContext ptr mut : context -> Type ) =>: export newProcArgs
     ## findTupleInfo
@@ -1170,7 +1170,7 @@ namespace: types
       isOut if TUPLE_FLAG_IS_PROC_OUT else TUPLE_FLAG_IS_PROC_IN end
       context
     findTupleInfo
-    isOut if Type .procOut new else Type .procIn new end
+    isOut if Type .procOut else Type .procIn end
     return
   end
   proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context bool : isTagged -> UnionId ) =>: export findEnumOrUnion ## XXX exported only for access from identifiers.concat
@@ -1248,13 +1248,13 @@ namespace: types
     elts .length 0 ==  labels optional.isEmpty | if
       Type .undefined true return
     end
-    elts labels context true findEnumOrUnion Type .enum new false return
+    elts labels context true findEnumOrUnion Type .enum false return
   end
   proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context -> Type bool ) =>: export newUnion
     elts .length 0 == labels optional.isEmpty | if
       Type .undefined true return
     end
-    elts labels context false findEnumOrUnion Type .union new false return
+    elts labels context false findEnumOrUnion Type .union false return
   end
 end
 namespace: sb
@@ -1356,14 +1356,14 @@ namespace: types
       procs [] ..over list.get .in in typeEquals
       procs [] ..over.2 list.get .out out typeEquals &
       procs [] ..over.2 list.get .callingConvention callConvention == & if
-        ProcId cast Type .procedure new false return
+        ProcId cast Type .procedure false return
       end
       1 +
     end ..drop
     procs []
       in out callConvention ProcType new list.append
     procs [] =
-    procs [] .length 1 - ProcId cast Type .procedure new
+    procs [] .length 1 - ProcId cast Type .procedure
     false return
   end
   proc( Type : proc TypeContext ptr mut : context -> Type bool ) =>: export asUnlabeledProc
@@ -1419,7 +1419,7 @@ namespace: types
   proc( Type LabelId TemplateId TypeContext ptr mut -> Type ) =>: export newNamedType
     =:: context
     -1 NamedType new context [] .namedTypes ..swap list.append context [] .namedTypes =
-    context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType new return
+    context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType return
   end
   proc( Type -> bool ) =>: export isNamedType
     .namedType ?? return
@@ -1537,7 +1537,7 @@ namespace: types
         1 +
       end ..drop
       match if
-        #+index+# Type .generatedType new false return
+        #+index+# Type .generatedType false return
       end
       1 +
     end ..drop
@@ -1549,7 +1549,7 @@ namespace: types
         Type .undefined
       GeneratedType new list.append
     typeContext [] .generatedTypes =
-    newId Type .generatedType new true return
+    newId Type .generatedType true return
   end
 
   proc(
@@ -1600,22 +1600,22 @@ namespace: types
         base list.append
       context [] .compositeData =
     end
-    id mutable if Type .mutableReference new else Type .reference new end return
+    id mutable if Type .mutableReference else Type .reference end return
   end
 
 
   ## generic,template & auto-types
   proc( i32 : id -> Type ) =>: export newAutoType
-    id Type .autoType new return
+    id Type .autoType return
   end
   proc( Type -> bool ) =>: export isAutoType
     .autoType ?? return
   end
   proc( i32 : id -> Type ) =>: export newGenericType
-    id Type .genericType new return
+    id Type .genericType return
   end
   proc( i32 : id -> Type ) =>: export newTemplateType
-    id Type .templateType new return
+    id Type .templateType return
   end
 
   proc( Type -> i32 ) =>: export getTypeId

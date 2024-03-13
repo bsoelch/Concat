@@ -277,7 +277,7 @@ proc(
   op [] .val switch
     NOP case
       false return
-    OpValue .Constant case
+    Constant case
       ## pushValue
         op [] .val .Constant
         op [] .dataType
@@ -374,7 +374,7 @@ proc(
             end
           end =:: tupleType
           ## pushValue
-            tupleType ConstValue .typeId new
+            tupleType ConstValue .typeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -392,7 +392,7 @@ proc(
             true return
           end =:: enumType
           ## pushValue
-            enumType ConstValue .typeId new
+            enumType ConstValue .typeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -410,7 +410,7 @@ proc(
             true return
           end =:: unionType
           ## pushValue
-            unionType ConstValue .typeId new
+            unionType ConstValue .typeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -449,7 +449,7 @@ proc(
             true return
           end =:: newType
           ## pushValue
-            newType ConstValue .typeId new
+            newType ConstValue .typeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -463,7 +463,7 @@ proc(
             true
           typeContext types.newProcArgs =:: procOut
           ## pushValue
-            procOut ConstValue .typeId new
+            procOut ConstValue .typeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -566,7 +566,7 @@ proc(
         context [] .variables @
         op [] .val .declareId .labelId
         ## Constant
-          op [] .val .declareId .labelId types.newGenericType ConstValue .typeId new
+          op [] .val .declareId .labelId types.newGenericType ConstValue .typeId
           valInfo []
         Constant new
       map.put ..drop
@@ -574,7 +574,7 @@ proc(
     getName case
       context inEnum if
         context [] .stack
-          Type .empty ConstValue .typeId new list.append
+          Type .empty ConstValue .typeId list.append
         context [] .stack =
         context [] .stackInfo
           ## ValueInfo
@@ -661,7 +661,7 @@ proc(
               offset list.setLength
             context [] .stackInfo =
             ## pushValue
-              generated ConstValue .typeId new
+              generated ConstValue .typeId
               types.primitive.TYPE
               id.LABEL_ID_NONE
               op [] .pos
@@ -784,7 +784,7 @@ proc(
         offset list.setLength
       context [] .stackInfo =
       ## pushValue
-        ptrType ConstValue .typeId new
+        ptrType ConstValue .typeId
         types.primitive.TYPE
         id.LABEL_ID_NONE
         op [] .pos

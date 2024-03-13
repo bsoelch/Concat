@@ -702,7 +702,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
   op [] .val switch
     NOP case
       break
-    OpValue .Constant case
+    Constant case
       op [] .dataType op [] .val .Constant isGlobal target prog compileConstant
       return
     Print case

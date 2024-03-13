@@ -330,7 +330,7 @@ proc(
     context [] .currentBranch
     blockId
     false
-  IfBlockInfo new BlockInfo .If new context openBlock
+  IfBlockInfo new BlockInfo .If context openBlock
 end
 proc(
   i32 : blockId
@@ -342,7 +342,7 @@ proc(
     16 BranchId list.create
     branchRoot
     blockId
-  SwitchBlockInfo new BlockInfo .Switch new context openBlock
+  SwitchBlockInfo new BlockInfo .Switch context openBlock
 end
 
 proc(

@@ -87,6 +87,10 @@ proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut 
     op [] .dataType 0 prog visited types declaredType
   else op [] .val .typeInfo ?? _if
     op [] .dataType 0 prog visited types declaredType
+  else op [] .val .Constant ?? _if
+    op [] .dataType 0 prog visited types declaredType
+  else op [] .val .newEnum ?? _if
+    op [] .dataType 0 prog visited types declaredType
   end
 end
 

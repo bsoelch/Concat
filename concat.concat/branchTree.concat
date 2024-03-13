@@ -221,7 +221,7 @@ namespace: branchTree
     C : context
   -> MergeResult ) =>: export merge
     branchHeads .length 1 <= if
-      0 MergeResult .success new return ## nothing to merge
+      0 MergeResult .success return ## nothing to merge
     end
     -1i64 =:: mut initDepth
     -1i64 =:: mut parentId
@@ -254,7 +254,7 @@ namespace: branchTree
     end ..drop
     needMerge ! if
       ## heads identical -> no merge necessary
-      0 MergeResult .success new return
+      0 MergeResult .success return
     end
     ## create mutable copy of heads
     branchHeads .length =:: headCount
@@ -291,6 +291,6 @@ namespace: branchTree
     ## cleanup
     buffer mem.free
     heads mem.free
-    offset MergeResult .success new return
+    offset MergeResult .success return
   end
 end

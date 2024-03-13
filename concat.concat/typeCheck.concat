@@ -1127,7 +1127,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   op [] .val .callPtr ?? if
     totalArgs op [] .val .callPtr =
   else op [] .val .getId ?? _if
-    op [] .val .getId totalArgs CallInfo new OpValue .call new op [] .val = ## XXX extract opValue creation to  to program.concat
+    op [] .val .getId totalArgs CallInfo new OpValue .call op [] .val = ## XXX extract opValue creation to  to program.concat
   else
     "unexpected type for call operation" sb.wrap op [] constContext labelContext typeContext sb.appendOp op [] .pos state appendError2
   end
@@ -1346,7 +1346,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       state [] .openBlocks
         ## BlockInfo
             op [] .dataType
-          BlockData .procBlock new
+          BlockData .procBlock
           op [] .pos
           state [] .compiledOps .length
           -1
@@ -1773,11 +1773,63 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkLocal
   op [] .pos state appendError2
 end
 
+proc( Operation ptr mut : op TypeCheckState ptr mut : state -> bool ) =>: resolveEnumSwitchLabel
+  state [] .idContext =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  state [] .openBlocks list.peek =:: openBlock?
+  openBlock? optional.isEmpty state [] .reachable | if
+    false return
+  end
+  openBlock? .data =:: block
+  block [] .blockType .SWITCH ?? ! if block [] .blockType .CASE ?? ! _if
+    false return
+  end
+  block [] .blockData .switchBlock .switchType =:: switchType
+  switchType typeContext types.isEnum ! if
+    false return
+  end
+  op [] .val switch
+    Constant case
+      op [] .val .Constant =:: constVal
+      constVal .typeId ?? ! if
+        false return
+      end
+      constVal .typeId types.isNamedType ! if
+        false return
+      end
+      constVal .typeId typeContext types.namedTypeName
+      break
+    getId case
+      op [] .val .getId .labelId
+      break
+    getName case
+      op [] .val .getName
+      break
+    default
+      false return
+  end =:: label
+  switchType typeContext types.compositeEltCount =:: count
+  0 while ..dup count < do
+    switchType ..over typeContext types.compositeGetLabel ..dup id.LABEL_ID_NONE == if ..drop
+      1 + continue
+    end label labelContext id.labelNamesEq if
+      switchType op [] .dataType =
+      ConstValue .enumLabel op [] .val .Constant =
+      true return
+    end
+    1 +
+  end ..drop
+  false return
+end
+
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIdentifiers
   state [] .idContext =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
-
+  op state resolveEnumSwitchLabel if
+    return
+  end
   op [] .val switch
     getName case
       op [] .val .getName
@@ -1794,22 +1846,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIden
   label id.LABEL_ID_NONE == if
     return
   end
-  state [] .openBlocks list.peek ..dup optional.hasData state [] .reachable ! & if .data =:: block
-  block [] .blockType ..dup .SWITCH ?? ..swap .CASE ?? | if
-  block [] .blockData .switchBlock .switchType =:: switchType
-  switchType typeContext types.isEnum if
-    switchType typeContext types.compositeEltCount =:: count
-    0 while ..dup count < do
-      switchType ..over typeContext types.compositeGetLabel ..dup id.LABEL_ID_NONE == if ..drop
-        1 + continue
-      end label labelContext id.labelNamesEq if
-        switchType op [] .dataType =
-        ConstValue .enumLabel new op [] .val .Constant =
-        return
-      end
-      1 +
-    end ..drop
-  end end else ..drop end
   label labelContext id.inLabelNamespace
   label state [] .fileId idContext id.getIdentifierByLabel if
     ..drop.2 return
@@ -1849,7 +1885,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   end
   op state resolveIdentifiers
   op [] .val switch
-    OpValue .Constant case
+    Constant case
       state [] .reachable if
         op [] .val .Constant .enumLabel ?? if
           op [] .dataType op [] .val .Constant .enumLabel typeContext types.compositeGetElement
@@ -2140,7 +2176,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               -1
               0
               false
-            IfBlockData new BlockData .ifBlock new
+            IfBlockData new BlockData .ifBlock
             op [] .pos
             blockStart
             blockId
@@ -2195,7 +2231,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               emptyStackState
               false
               false
-            WhileBlockData new BlockData .whileBlock new
+            WhileBlockData new BlockData .whileBlock
             op [] .pos
             state [] .compiledOps .length
             blockId
@@ -2337,7 +2373,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               switchType
               false
               false
-            SwitchBlockData new BlockData .switchBlock new
+            SwitchBlockData new BlockData .switchBlock
             op [] .pos
             blockStart
             blockId
@@ -2833,20 +2869,20 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         op [] .val .length ?? if
           sizes .length 0 == if
             ## opConst
-              1 ConstValue .int new
+              1 ConstValue .int
               types.primitive.I_SIZE
               op [] .pos
             opConst op [] =
           end
           sizes 0 array.get .sizeType .int ?? if
             ## opConst
-              sizes 0 array.get .value ConstValue .int new
+              sizes 0 array.get .value ConstValue .int
               types.primitive.I_SIZE
               op [] .pos
             opConst op [] =
           else sizes 0 array.get .sizeType .staticArg ?? _if
             ## opConst
-              sizes 0 array.get .value i32 cast ConstValue .genericArg new
+              sizes 0 array.get .value i32 cast ConstValue .genericArg
               types.primitive.I_SIZE
               op [] .pos
             opConst op [] =
@@ -2895,9 +2931,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           sizes ..over array.get =:: current
           idContext [] .templateArgBuffer
             current .sizeType .int ?? if
-              current .value ConstValue .int new list.append
+              current .value ConstValue .int list.append
             else current .sizeType .staticArg ?? _if
-              current .value i32 cast ConstValue .genericArg new list.append
+              current .value i32 cast ConstValue .genericArg list.append
             else ..drop.2
               "unsupported array-size type for " sb.wrap
                 op [] idContext [] .constContext @ labelContext typeContext sb.appendOp

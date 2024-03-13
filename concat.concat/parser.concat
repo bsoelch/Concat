@@ -45,11 +45,11 @@ struct(
 ) =:: ParserState
 
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
-  Type .undefined ConstValue .wildCard new IdentifierInfo optional.empty pos Constant new return
+  Type .undefined ConstValue .wildCard IdentifierInfo optional.empty pos Constant new return
 end
 proc( bool FilePosition -> Constant ) =>: newBoolConstant
   =:: pos
-  types.primitive.BOOL ..swap ConstValue .boolean new IdentifierInfo optional.empty pos Constant new return
+  types.primitive.BOOL ..swap ConstValue .boolean IdentifierInfo optional.empty pos Constant new return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> bool ) =>: checkIntSize
   preferedSize 0 <= if
@@ -91,29 +91,29 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
       preferedSize sb.appendU
     pos state appendWarning2
   end
-  value ConstValue .int new IdentifierInfo optional.empty pos Constant new return
+  value ConstValue .int IdentifierInfo optional.empty pos Constant new return
 end
 proc( i8 FilePosition -> Constant ) =>: newCharConstant
   =:: pos
-  types.primitive.I8 ..swap ConstValue .chr new IdentifierInfo optional.empty pos Constant new return
+  types.primitive.I8 ..swap ConstValue .chr IdentifierInfo optional.empty pos Constant new return
 end
 proc( StringConstant : str FilePosition : pos TypeContext ptr mut : context -> Constant ) =>: newStringConstant
   using types
   str .length ArraySizeType .int ArraySize new =:: size
-  types.primitive.I8 true size @ 1 array.create true false context newArrayType ..drop str ConstValue .str new IdentifierInfo optional.empty pos Constant new return
+  types.primitive.I8 true size @ 1 array.create true false context newArrayType ..drop str ConstValue .str IdentifierInfo optional.empty pos Constant new return
 end
 proc( Type FilePosition -> Constant ) =>: newTypeConst
   =:: pos
-  types.primitive.TYPE ..swap ConstValue .typeId new IdentifierInfo optional.empty pos Constant new return
+  types.primitive.TYPE ..swap ConstValue .typeId IdentifierInfo optional.empty pos Constant new return
 end
 
-proc( Type i32 FilePosition -> Constant ) =>: newEnumLabelConstant
+proc( Type i32 FilePosition -> Constant ) =>: newEnumConstant
   =:: pos
-  ConstValue .enumLabel new IdentifierInfo optional.empty pos Constant new return
+  ConstValue .enumLabel IdentifierInfo optional.empty pos Constant new return
 end
 proc( double FilePosition -> Constant ) =>: newFloatConst
   =:: pos
-  types.primitive.FLOAT64 ..swap ConstValue .Float new IdentifierInfo optional.empty pos Constant new return
+  types.primitive.FLOAT64 ..swap ConstValue .Float IdentifierInfo optional.empty pos Constant new return
 end
 
 proc( Constant : const -> Operation ) =>: constantToOp
@@ -476,9 +476,9 @@ proc( LabelId : label Type : valType i64 : argId ParserState ptr mut : state -> 
   state [] .staticArgs
     valType
       ..dup types.primitive.TYPE types.typeEquals if
-        argId i32 cast types.newGenericType ConstValue .typeId new
+        argId i32 cast types.newGenericType ConstValue .typeId
       else
-        argId i32 cast ConstValue .genericArg new
+        argId i32 cast ConstValue .genericArg
       end
     label
     StaticArgument new
@@ -1291,7 +1291,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else isInit ! _if
           ConstValue .none
         else idType .PROCEDURE ?? _if
-          progContext [] .procedures .length ConstValue .procedure new
+          progContext [] .procedures .length ConstValue .procedure
         else state hasConst _EXPERIMENTAL_ ! & _if
           state popConst
             ..dup .valueType valType false typeContext types.canCast ! if
@@ -1406,9 +1406,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 index
                 argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
                   argType types.primitive.TYPE types.typeEquals if
-                    argId types.newGenericType ConstValue .typeId new
+                    argId types.newGenericType ConstValue .typeId
                   else
-                    argId ConstValue .genericArg new
+                    argId ConstValue .genericArg
                   end
                 else
                   ConstValue .none
@@ -1472,7 +1472,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
               fileState [] .wordStart state appendWarning2
             end
-            ..over.4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId new
+            ..over.4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId
           else
             const constantToOp state appendOp
           end
@@ -1498,7 +1498,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
               fileState [] .wordStart state appendWarning2
             end
-            ..over.4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId new
+            ..over.4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId
           end
         else
           progContext [] .autoTypes .length i32 cast types.newAutoType
@@ -1641,7 +1641,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       prevOp [] .val .getId ?? if
         ## identifier for getId always exists
         ## opConst
-          true ConstValue .boolean new
+          true ConstValue .boolean
           types.primitive.BOOL
           fileState [] .wordStart
         opConst prevOp [] =
@@ -1795,44 +1795,49 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       return
     else ..dup .length 1 > _if ..dup 0 string.charAt '.' == _if ..dup 1 string.charAt '.' != _if
-      1 string.tail
-        _EXPERIMENTAL_ ! if
-          state hasConst if
-            state popConst
-              ..dup .val .typeId ?? if ..dup .val .typeId typeContext types.isEnum else false end if ..dup .val .typeId
-                ..dup typeContext types.compositeEltCount =:: count
-                0 while ..dup count < do =:: i
-                  ..over.2
-                  ..over i typeContext types.compositeGetLabel
-                    labelContext id.labelNameEq if
-                      i fileState [] .wordStart newEnumLabelConstant state pushConst
-                      ..drop.2 return
-                    end
-                  i 1 +
-                end ..drop
-                ..drop
+      1 string.tail =:: label
+      _EXPERIMENTAL_ ! if
+        state hasConst if
+          state popConst =:: constVal
+          constVal .val .typeId ?? if constVal .val .typeId =:: enumType
+               enumType typeContext types.isEnum _if
+            enumType typeContext types.compositeEltCount =:: count
+            0 while ..dup count < do =:: i
+              ## name equals
+                label
+                enumType i typeContext types.compositeGetLabel
+              labelContext id.labelNameEq if
+                enumType i typeContext types.compositeGetElement typeContext types.isEmpty if
+                  enumType i fileState [] .wordStart newEnumConstant state pushConst
+                else
+                  enumType i fileState [] .wordStart opNewEnum state appendOp
+                end
+                return
               end
-            "constant "                    sb.wrap
-              ..swap .val constContext labelContext typeContext sb.appendConstant
-              " does not have a field: \"" sb.appendS
-              ..swap                        sb.appendStr
-            '"' sb.appendC fileState [] .wordStart state appendError2
+              i 1 +
+            end ..drop
+          end
+          "constant "                    sb.wrap
+            constVal .val constContext labelContext typeContext sb.appendConstant
+            " does not have a field: \"" sb.appendS
+            label                        sb.appendStr
+          '"' sb.appendC fileState [] .wordStart state appendError2
+          return
+        end
+      end
+      _EXPERIMENTAL_ ! if
+        label 10 number.tryParseInt .NONE ?? if i32 cast =:: index
+          index 0 < if
+            "tuple index has to be non-negative got: " sb.wrap
+              index sb.appendI
+            fileState [] .wordStart state appendError2
             return
           end
-        end
-        _EXPERIMENTAL_ ! if
-          ..dup 10 number.tryParseInt .NONE ?? if i32 cast ..swap ..drop
-            ..dup 0 < if
-              "tuple index has to be non-negative got: " sb.wrap
-                ..swap sb.appendI
-              fileState [] .wordStart state appendError2
-              0
-            end
-            fileState [] .wordStart opTupleGet state appendOp
-            return
-          else ..drop end
-        end
-        id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+          index fileState [] .wordStart opTupleGet state appendOp
+          return
+        else ..drop end
+      end
+      label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
       fileState [] .wordStart opGetLabel state appendOp
       return
     else ..dup "..debug.print" string.wrap string.eq _if ..drop

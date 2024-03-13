@@ -48,7 +48,7 @@ proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView
 end
 
 proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export newArrayConst
-  elts context constArray ConstValue .arrayConstant new return
+  elts context constArray ConstValue .arrayConstant return
 end
 
 proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export constantEquals

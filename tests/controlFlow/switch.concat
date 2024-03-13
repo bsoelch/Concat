@@ -36,6 +36,6 @@ end
 
 proc( -> ) =>: main
  0 anEnum .A 'A' switchTest
- 1 'A' anEnum .D new  '\n' switchTest
- 0xabcdef  0x12345678 anEnum .C new  ' ' switchTest
+ 1 'A' anEnum .D  '\n' switchTest
+ 0xabcdef  0x12345678 anEnum .C  ' ' switchTest
 end

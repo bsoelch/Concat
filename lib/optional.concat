@@ -15,6 +15,6 @@ namespace: optional
   end
   #template type : V #end
   proc( V -> V optional ) =>: export wrap
-    V optional .data new return
+    V optional .data return
   end
 end

@@ -136,7 +136,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export n
         1 +
       end
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-      string.splitIndex Token .STRING new return
+      string.splitIndex Token .STRING return
     end
     ..dup 0 string.charAt '\'' == if ## char
       1 string.tail
@@ -149,7 +149,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export n
         1 +
       end
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-      string.splitIndex Token .CHAR new return
+      string.splitIndex Token .CHAR return
     end
     1 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt char.isWhitespace ! & do
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
@@ -159,5 +159,5 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export n
     ..dup .length 0 == if
       ..drop Token .EMPTY return
     end
-  Token .IDENTIFIER new return
+  Token .IDENTIFIER return
 end

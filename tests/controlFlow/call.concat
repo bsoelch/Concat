@@ -44,7 +44,7 @@ end
 
 enum( i32 : a i32 : b ) =:: E
 proc( i32 -> E ) =>: #:experimental enumCreate
-  E .a new return
+  E .a return
 end
 
 proc( -> ) =>: main
