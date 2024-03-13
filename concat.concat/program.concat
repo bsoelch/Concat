@@ -14,9 +14,10 @@ struct( IdentifierInfo : idInfo i64 : argCount ) =:: export CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: export TypeModifier
 struct( Type : src i32 : mut offset ) =:: export CastInfo ## offset: zero-indexed from top of stack
 enum( ALIGNMENT SIZE STRIDE ) =:: export TypeMemoryInfo
+enum( EMPTY RESERVED ) =:: NopType
 
 enum(
-                      NOP
+            NopType : NOP
          ConstValue : mut Constant
             BlockId : mut block
             BlockId : mut blockEnd
@@ -69,8 +70,14 @@ enum(
        CompilerInfo : compilerInfo
 ) =:: export OpValue
 struct( OpValue : mut val Type : mut dataType FilePosition : mut pos ) =:: export Operation
+proc( -> OpValue ) =>: export opValNOP
+  NopType .EMPTY OpValue .NOP new return
+end
 proc( FilePosition : pos -> Operation ) =>: export opNOP
-  OpValue .NOP Type .undefined pos Operation new return
+  NopType .EMPTY OpValue .NOP new Type .undefined pos Operation new return
+end
+proc( FilePosition : pos -> Operation ) =>: export reserveOp
+  NopType .RESERVED OpValue .NOP new Type .undefined pos Operation new return
 end
 proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export opConst
   constValue OpValue .Constant new constType pos Operation new return
