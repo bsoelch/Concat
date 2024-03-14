@@ -2237,7 +2237,7 @@ proc(
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             ifBlock [] .If .ififBranches
-              context [] .stackInfo .branchHead list.append
+              context [] .stackInfo @ branchTree.startBranch list.append
             ifBlock [] .If .ififBranches =
             ifBlock [] .If .ififBranchIds
               context [] .currentBranch list.append
@@ -2276,7 +2276,6 @@ proc(
             ## mergeValues
               context [] .stackInfo @
               ifBlock [] .If .ififBranches list.asArray
-              false ## keep branches active
               mergeBranches @
               ## MergePoint
                 "if _if" string.wrap
@@ -2405,13 +2404,9 @@ proc(
             nBranches 1 + nBranches =
           end
           context [] .reachable if
-            context [] .stackInfo .branchHead branches @ nBranches [] =
+            context [] .stackInfo @ branchTree.startBranch branches @ nBranches [] =
             context [] .currentBranch branchIds @ nBranches [] =
             nBranches 1 + nBranches =
-          else ifBlock .ifBranchTerminates _if
-            context [] .stackInfo @
-              ifBlock .ifBranch
-            branchTree.reset ..drop
           end
           sb
             ## don't add position for labels
@@ -2424,11 +2419,10 @@ proc(
               context
             startBranch
           =:: mut newSb
-          nBranches 1 > if
+          nBranches 1 >= if
             ## mergeValues
               context [] .stackInfo @
               branches @ nBranches array.create
-              true
               mergeBranches @
               ## MergeIf
                 "if" string.wrap
@@ -2465,16 +2459,10 @@ proc(
             startBranch
           =:: mut newSb
           caseBranches .length 1 >= if
-            context [] .stackInfo @
-              caseBranches 0 list.at .data []
-            branchTree.reset ..drop
-          end
-          caseBranches .length 1 > if
             caseBranches .length =:: nodeCount
             ## mergeValues
               context [] .stackInfo @
               caseBranches list.asArray
-              true
               mergeBranches @
               ## MergePoint
                 "switch" string.wrap

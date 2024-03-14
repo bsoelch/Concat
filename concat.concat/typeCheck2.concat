@@ -1697,6 +1697,34 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           state [] .stack @ branchTree.startBranch =:: ifBranch
           ifBranch blockId op [] .pos newIfBlock state openBlock
           return
+        IFIF case
+          state peekBlock =:: currentBlock?
+          currentBlock? optional.isEmpty ! if
+            currentBlock? .data =:: currentBlock
+            currentBlock [] .If ?? _if
+            currentBlock [] .If .hasElse ! _if
+          else
+            "unexpected of if_if-statement, if_if can only appear in if-blocks" sb.wrap
+            op [] .pos errors appendError
+            return
+          end
+          currentBlock? .data =:: currentBlock
+          ## requireTypes
+            types.primitive.BOOL @ array.wrap
+            "if-condition" string.wrap
+            op [] .pos
+          state requireTypes if
+            ..drop return
+          end ..drop
+          currentBlock [] .If .ififBranches
+            ## BranchPoint
+              state [] .stack @ branchTree.startBranch
+              op [] .pos
+            BranchPoint new list.append
+          currentBlock [] .If .ififBranches =
+          currentBlock [] .If .blockId op [] .val .block .blockId =
+          op [] state appendOp ..drop
+          return
         ELSE case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty if
@@ -1749,7 +1777,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## mergeValues
               state [] .stack @
               branchPoints list.asArray
-              false ## keep branches active
               mergeBranches @
               ## MergePoint
                 "if _if block" string.wrap
@@ -1775,34 +1802,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             end
             branchPoints list.free ..drop
           end
-          return
-        IFIF case
-          state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! if
-            currentBlock? .data =:: currentBlock
-            currentBlock [] .If ?? _if
-            currentBlock [] .If .hasElse ! _if
-          else
-            "unexpected of if_if-statement, if_if can only appear in if-blocks" sb.wrap
-            op [] .pos errors appendError
-            return
-          end
-          currentBlock? .data =:: currentBlock
-          ## requireTypes
-            types.primitive.BOOL @ array.wrap
-            "if-condition" string.wrap
-            op [] .pos
-          state requireTypes if
-            ..drop return
-          end ..drop
-          currentBlock [] .If .ififBranches
-            ## BranchPoint
-              state [] .stack .branchHead
-              op [] .pos
-            BranchPoint new list.append
-          currentBlock [] .If .ififBranches =
-          currentBlock [] .If .blockId op [] .val .block .blockId =
-          op [] state appendOp ..drop
           return
         SWITCH case
           state [] .stack @ branchTree.pop =:: value?
@@ -1989,7 +1988,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## reset stack to start of if statement
             branches []
               ## BranchPoint
-                state [] .stack .branchHead
+                state [] .stack @ branchTree.startBranch
                 op [] .pos
               BranchPoint new list.append
             branches [] =
@@ -2047,7 +2046,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           currentBlock [] .While .breakCastOffsets =
           currentBlock [] .While .breakBranches
             ## BranchPoint
-              state [] .stack .branchHead
+              state [] .stack @ branchTree.startBranch
               op [] .pos
             BranchPoint new list.append
           currentBlock [] .While .breakBranches =
@@ -2123,20 +2122,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             nBranches 1 + nBranches =
           end
           state [] .reachable if
-            state [] .stack .branchHead branches @ nBranches [] =
+            state [] .stack @ branchTree.startBranch branches @ nBranches [] =
             elseCastOffset castOffsets @ nBranches [] =
             nBranches 1 + nBranches =
-          else closed .If .ifBranchTerminates _if
-            ## set stack head to terminating branch
-            state [] .stack @
-              closed .If .ifBranch .node
-            branchTree.reset ..drop
           end
-          nBranches 1 > if
+          nBranches 1 >= if
             ## mergeValues
               state [] .stack @
               branches @ nBranches array.create
-              true
               mergeBranches @
               ## MergePoint
                 "if-else block" string.wrap
@@ -2148,7 +2141,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             branchTree.merge .error ?? if
               "different numbers of types at the end of " sb.wrap
                 closed sb.appendBlockInfoName
-                " block\n  * ifBranch: " sb.appendS ## XXX print position of if-branch
+                " block\n  * ifBranch: " sb.appendS
                 state [] .stack closed .If .ifBranch .node branchTree.depthFrom sb.appendI
                 " at " sb.appendS
                 closed .If .ifBranch .pos sb.appendPos
@@ -2206,7 +2199,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               switchBlock [] .switchType
                 typeContext
               types.compositeEltCount =:: eltCount
-              ## TODO check for completeness of enum labels
               program [] .switchData
                 switchBlock [] .blockId list.at .data
               =:: switchData
@@ -2257,11 +2249,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           ## set stack head to one of the accepting branches
           caseBranches .length 1 >= if
-            state [] .stack @
-              caseBranches 0 list.at .data [] .node
-            branchTree.reset ..drop
-          end
-          caseBranches .length 1 > if
             caseBranches .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
               0 while ..dup nodeCount < do =:: i
@@ -2274,7 +2261,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## mergeValues
               state [] .stack @
               branchPoints list.asArray
-              true
               mergeBranches @
               ## MergePoint
                 "switch-case block" string.wrap
@@ -2332,7 +2318,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             whileBlock [] .continueCastOffsets =
             continueBranches
               ## BranchPoint
-                state [] .stack .branchHead
+                state [] .stack @ branchTree.startBranch
                 op [] .pos
               BranchPoint new list.append
             continueBranches =
@@ -2343,16 +2329,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           i64.max branchTree.NodeId list.create =:: mut branchPoints
           ## merge continue branches
           continueBranches .length 1 >= if
-            ## set stack to continuing branch
-            state [] .stack @
-              continueBranches
-                ..dup .length 1 -
-              list.at .data [] .node
-            branchTree.reset ..drop
-          else
-            ## TODO error loop does not loop
-          end
-          continueBranches .length 1 > if
             continueBranches .length =:: nodeCount
             branchPoints
               0 while ..dup nodeCount < do =:: i
@@ -2365,7 +2341,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## mergeValues
               state [] .stack @
               branchPoints list.asArray
-              true
               mergeBranches @
               ## MergePoint
                 "while block" string.wrap
@@ -2392,12 +2367,16 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             branchPoints
               list.clear
             branchPoints =
+          else
+            "while-loop does not loop: " sb.wrap
+            op [] .pos errors appendError
+            return
           end
           state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
           ## XXX insert deferred code ( recursively run interpreter )
           branchPoints
-              whileBlock [] .branchRoot .node list.append
-              state [] .stack .branchHead list.append
+            whileBlock [] .branchRoot .node list.append
+            state [] .stack @ branchTree.startBranch list.append
           branchPoints =
           i64 2 array new =:: mut castOffsets
           -1 castOffsets @ 0 [] =
@@ -2408,7 +2387,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           ## mergeValues
             state [] .stack @
             branchPoints list.asArray
-            true
             mergeBranches @
             ## MergePoint
               "while loop" string.wrap
@@ -2435,13 +2413,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           ## TODO remember number of changed stack values ( necessary for merging values in compiled code )
           breakBranches .length 1 >= if
-            state [] .stack @
-              breakBranches 0 list.at .data [] .node
-            branchTree.reset ..drop
-          end
-          breakBranches .length 1 > if
             breakBranches .length =:: nodeCount
             branchPoints
+              list.clear
               0 while ..dup nodeCount < do =:: i
                 breakBranches
                   i list.at .data
@@ -2452,7 +2426,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ## mergeValues
               state [] .stack @
               branchPoints list.asArray
-              true
               mergeBranches @
               ## MergePoint
                 "while block" string.wrap
@@ -2476,8 +2449,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 '\n' sb.appendC
               op [] .pos errors appendError
             end
-            branchPoints list.free ..drop
           end
+          branchPoints list.free ..drop
           whileBlock [] .breakBranches .length 0 > state [] .reachable =
           state [] .blockStarts
             list.pop ..drop
