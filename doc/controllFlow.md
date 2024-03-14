@@ -129,6 +129,30 @@ end
 
 
 ## while-block
-<!-- TODO while -->
+
+syntax:
+
+```
+  while <while-body> <condition> do
+     <do-body>
+  end
+  
+  while <defered-code> defer <while-body> <condition> do
+     <do-body>
+  end
+```
+
+A while loop first evaluates the code until `do` then pops a boolean from the stack, if the value is false the execution continues after `do`, otherwise the program jumps to the position after `end`.
+When reaching `end` the program jumps back to `while`.
+Within the loop `break` can be used to break out of the loop ( jump to the position after end ) and `continue` can be used to restart the loop ( jump to the end of the loop body ).
+The types at the end of all `break` branches have to be equal ( implicitly convertible to ) the types on the stack when reaching `do` ( after popping the condition ).
+The types obtained by merging the `continue` branches have to be equal to the types at the start of the loop.
+
+Optionally a while loop can contain a `defer` statement, the code between `while`  and `defer` will be executed after each iteration of the loop, if a `defer` statement is present the `continue` branches will jump to the start of the `defered` code.
+( `defer` has not been implemented )
+
+
+
+
 
 
