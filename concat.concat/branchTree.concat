@@ -45,8 +45,8 @@ namespace: branchTree
 
   #template type : T #end
   struct(
-   T BranchTree ptr mut : tree
-   NodeId : id
+    T BranchTree ptr mut : tree
+    NodeId : id
   ) =:: export BranchItr
 
   namespace: itr
@@ -68,7 +68,6 @@ namespace: branchTree
         itr .tree node [] .parent T BranchItr new
       node [] .data @ return
     end
-    ## XXX replace
     #template type : T #end
     proc( T BranchItr : itr -> T BranchItr T ptr ) =>: export peekNext
       itr .tree [] .nodes itr .id list.at .data =:: node
