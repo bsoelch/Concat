@@ -24,6 +24,9 @@ enum(
   CASE
   DEFAULT
   END_SWITCH
+  WHILE
+  CONTINUE_WHILE
+  END_WHILE
 ) =:: BranchType
 struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
@@ -55,11 +58,20 @@ struct(
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: SwitchBlockInfo
+struct(
+  branchTree.NodeId list : mut continueBranches
+  BranchId list : mut continueBranchIds
+  branchTree.NodeId list : mut breakBranches
+  BranchId list : mut breakBranchIds
+  i64 : loopValOffset
+  branchTree.NodeId : branchRoot
+  i32 : blockId
+) =:: WhileBlockInfo
 
 enum(
   IfBlockInfo : mut If
   SwitchBlockInfo : mut Switch
-  While
+  WhileBlockInfo : mut While
 ) =:: BlockInfo
 
 namespace: sb
@@ -165,6 +177,9 @@ namespace: sb
          break
         DEFAULT case "@default" sb.appendS branch .id sb.appendI break
         END_SWITCH case "@endSwitch_" sb.appendS branch .id sb.appendI break
+        WHILE case "@while_" sb.appendS branch .id sb.appendI break
+        CONTINUE_WHILE case "@continueWhile_" sb.appendS branch .id sb.appendI break
+        END_WHILE case "@endWhile_" sb.appendS branch .id sb.appendI break
       end
     return
   end
@@ -343,6 +358,24 @@ proc(
     branchRoot
     blockId
   SwitchBlockInfo new BlockInfo .Switch context openBlock
+end
+proc(
+  i32 : blockId
+  branchTree.NodeId : branchRoot
+  CompilerContext ptr mut : context
+-> ) =>: openWhileBlock
+  ## WhileBlockInfo
+    16 branchTree.NodeId list.create
+    16 BranchId list.create
+    16 branchTree.NodeId list.create
+    16 BranchId list.create
+    context [] .tmpCount
+    branchRoot
+    blockId
+  WhileBlockInfo new BlockInfo .While context openBlock
+  context [] .tmpCount
+    context [] .program [] .whileData blockId list.at .data [] .modifiedTypes +
+  context [] .tmpCount =
 end
 
 proc(
@@ -1519,7 +1552,6 @@ proc(
   end
   sb
     ## common prefix
-    pos sb.appendPosQBE
     "%s" sb.appendS
     targetIndex sb.appendI
     ## case 1: integer extension/narrowing
@@ -1655,19 +1687,20 @@ proc(
     src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
     baseType context referenceOnly ! if
       sb
+        "%s" sb.appendS
+        targetId sb.appendI
+        " =" sb.appendS
+        baseType StorageType .STACK pos context sb.appendTypeNameQBE
         ## unwrap reference
         valType .REFERENCE ?? if
-          pos sb.appendPosQBE
-          "%s" sb.appendS
-          targetId sb.appendI
-          " =" sb.appendS
-          baseType StorageType .STACK pos context sb.appendTypeNameQBE
           " load" sb.appendS
           baseType StorageType .LOAD pos context sb.appendTypeNameQBE
-          " %s" sb.appendS
-          srcId sb.appendI
-          '\n' sb.appendC
+        else
+          " copy" sb.appendS
         end
+        " %s" sb.appendS
+        srcId sb.appendI
+        '\n' sb.appendC
         ## cast value
         baseType target typeContext types.unwrapNamed types.typeEquals ! if
           ## compileCast
@@ -2201,7 +2234,7 @@ proc(
           BranchId new =:: ifBranch
           sb
             op [] .pos sb.appendPosQBE
-            "jnz $s" sb.appendS
+            "jnz %s" sb.appendS
             context popValue sb.appendI
             ", " sb.appendS
             ifBranch sb.appendBranchId
@@ -2225,7 +2258,7 @@ proc(
           BranchId new =:: ifBranch
           sb
             op [] .pos sb.appendPosQBE
-            "jnz $s" sb.appendS
+            "jnz %s" sb.appendS
             context popValue sb.appendI
             ", " sb.appendS
             ifBranch sb.appendBranchId
@@ -2376,9 +2409,128 @@ proc(
               false context [] .reachable =
             return
           break
-        WHILE DO case
-          break
-        UNKNOWN BREAK CONTINUE INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
+        WHILE case
+            ## don't add position before label
+            op [] .val .block .blockId =:: whileId
+            ## BranchId
+              BranchType .WHILE
+              whileId
+              0
+            BranchId new =:: branchId
+            whileId
+              context [] .stackInfo @ branchTree.startBranch
+            context openWhileBlock
+            context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+            prog [] .whileData whileId list.at .data =:: whileData
+            context [] .currentBranch =:: prevBranch
+            whileData [] .modifiedTypes =:: loopEltCount
+            loopEltCount StackElement list.create =:: mut loopElts
+            0 while ..dup loopEltCount < do 1 +
+              loopElts
+                context [] .stackInfo @ branchTree.pop .data list.appendP
+              loopElts =
+            end ..drop
+            sb
+              "jmp " sb.appendS
+              branchId sb.appendBranchId
+              '\n' sb.appendC
+              branchId context startBranch
+              0 while ..dup loopEltCount < do =:: i
+                loopElts i list.at .data =:: elt
+                "%s" sb.appendS
+                elt [] .valType context pushValue sb.appendI
+                " =" sb.appendS
+                elt [] .valType sb.appendValTypeQBE
+                " phi " sb.appendS
+                prevBranch sb.appendBranchId
+                " %s" sb.appendS
+                elt [] .varId sb.appendI
+                ',' sb.appendC
+                ## BranchId
+                  BranchType .CONTINUE_WHILE
+                  whileId
+                  0
+                BranchId new sb.appendBranchId
+                " %t" sb.appendS
+                whileBlock [] .loopValOffset i + sb.appendI
+                '\n' sb.appendC
+                i 1 +
+              end ..drop
+              loopElts list.free loopElts =
+            return
+        DO case
+          context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          ## BranchId
+            BranchType .NEXT
+            context nextJumpLabelId
+            0
+          BranchId new =:: doBranch
+          sb
+            op [] .pos sb.appendPosQBE
+            "jnz %s" sb.appendS
+            context popValue sb.appendI
+            ", " sb.appendS
+            doBranch sb.appendBranchId
+            ", " sb.appendS
+            ## appendBranchId
+              BranchType .END_WHILE
+              op [] .val .block .blockId
+              0
+            BranchId new sb.appendBranchId
+            '\n' sb.appendC
+            whileBlock [] .breakBranches
+              context [] .stackInfo @ branchTree.startBranch list.append
+            whileBlock [] .breakBranches =
+            whileBlock [] .breakBranchIds
+              context [] .currentBranch list.append
+            whileBlock [] .breakBranchIds =
+            doBranch context startBranch
+          return
+        BREAK CONTINUE case
+          op [] .val .block .blockType =:: blockType
+          ## findBreakableBlock
+            blockType
+            op [] .pos
+            context
+          findBreakableBlock =:: breakBlock?
+          breakBlock? optional.isEmpty if
+            ## error message handled by findBreakableBlock
+            sb return
+          end
+          breakBlock? .data =:: breakBlock
+          breakBlock [] .While ?? ! if
+            "unexpected block for " sb.wrap
+              blockType sb.appendBlockType
+              ": " sb.appendS
+              breakBlock [] sb.appendBlockInfo
+            op [] .pos errors appendError
+          end
+          blockType .CONTINUE ?? if
+            breakBlock [] .While .continueBranches @
+            breakBlock [] .While .continueBranchIds @
+          else
+            breakBlock [] .While .breakBranches @
+            breakBlock [] .While .breakBranchIds @
+          end =:: branchIds =:: branches
+          branches []
+            context [] .stackInfo @ branchTree.startBranch list.append
+          branches []  =
+          branchIds []
+            context [] .currentBranch list.append
+          branchIds [] =
+          sb
+            ## don't add jump in unreachable branches
+            op [] .pos sb.appendPosQBE
+            "jmp " sb.appendS
+            ## BlockId
+              blockType .CONTINUE ?? if BranchType .CONTINUE_WHILE else BranchType .END_WHILE end
+              breakBlock [] .While .blockId
+              0
+            BranchId new sb.appendBranchId
+            '\n' sb.appendC
+            false context [] .reachable =
+          return
+        UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
@@ -2479,10 +2631,112 @@ proc(
           end
           caseBranches .length 0 > context [] .reachable =
           caseBranches list.free ..drop
+          switchBlock .caseBranchIds list.free ..drop
           newSb return
-        WHILE DO case
-          break
-        UNKNOWN CASE DEFAULT BREAK BREAK_SWITCH CONTINUE INITIALIZER IF NAMESPACE
+        WHILE case
+          context [] .openBlocks
+            list.pop .While =:: mut whileBlock
+          context [] .openBlocks =
+          whileBlock .continueBranches =:: mut continueBranches
+          context [] .reachable if
+            whileBlock .continueBranchIds
+              context [] .currentBranch list.append
+            whileBlock .continueBranchIds =
+            continueBranches
+              context [] .stackInfo @ branchTree.startBranch list.append
+            continueBranches =
+          end
+          sb
+            ## don't add position for labels
+            ## startBranch
+              ## BranchId
+                BranchType .CONTINUE_WHILE
+                op [] .val .blockEnd .blockId
+                0
+              BranchId new
+              context
+            startBranch
+          =:: mut newSb
+          continueBranches .length 1 >= if
+            continueBranches .length =:: nodeCount
+            ## mergeValues
+              context [] .stackInfo @
+              continueBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "while" string.wrap
+                whileBlock .blockId
+                whileBlock .continueBranchIds list.asArray
+                op [] .pos
+                context
+                newSb @
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge continue branches of while block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          prog [] .whileData whileBlock .blockId list.at .data =:: whileData
+          newSb
+            ## copy values to loop vars
+            0 while ..dup whileData [] .modifiedTypes < do =:: i
+              context [] .stackInfo @ branchTree.pop .data =:: elt
+              "%t" sb.appendS
+              whileBlock .loopValOffset i + sb.appendI
+              " =" sb.appendS
+              elt [] .valType sb.appendValTypeQBE
+              " copy %s" sb.appendS
+              elt [] .varId sb.appendI
+              '\n' sb.appendC
+              i 1 +
+            end ..drop
+            ## jump to start of loop
+            "jmp " sb.appendS
+            ## BranchId
+              BranchType .WHILE
+              op [] .val .blockEnd .blockId
+              0
+            BranchId new sb.appendBranchId
+            '\n' sb.appendC
+          newSb =
+          continueBranches list.free ..drop
+          whileBlock .continueBranchIds list.free ..drop
+          newSb
+            ## don't add position for labels
+            ## startBranch
+              ## BranchId
+                BranchType .END_WHILE
+                op [] .val .blockEnd .blockId
+                0
+              BranchId new
+              context
+            startBranch
+          newSb =
+          whileBlock .breakBranches =:: breakBranches
+          breakBranches .length 1 >= if
+            breakBranches .length =:: nodeCount
+            ## mergeValues
+              context [] .stackInfo @
+              breakBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "while" string.wrap
+                whileBlock .blockId
+                whileBlock .breakBranchIds list.asArray
+                op [] .pos
+                context
+                newSb @
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge break branches of while block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          breakBranches .length 0 > context [] .reachable =
+          breakBranches list.free ..drop
+          whileBlock .breakBranchIds list.free ..drop
+          newSb return
+        UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
@@ -2579,8 +2833,11 @@ proc(
           sb return
       end
       break
+    Print case
+      context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
+      break
     setId autoTypedInitializeId
-    setElement setArrayElement Print call callPtr
+    setElement setArrayElement call callPtr
     argc getArg getArgLen unaryOperator binaryOperator
     setEnumLabel checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case

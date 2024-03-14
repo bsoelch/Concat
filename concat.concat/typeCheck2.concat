@@ -2435,7 +2435,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           whileBlock [] .breakCastOffsets list.free ..drop
           whileBlock [] .continueBranches list.free ..drop
           whileBlock [] .continueCastOffsets list.free ..drop
-          op [] state appendOp ..drop
+          BlockType .WHILE op [] .pos opEndBlock =:: mut tmp
+          whileBlock [] .blockId tmp .val .blockEnd .blockId =
+          tmp state appendOp ..drop
           return
         WHILE case ## end-while should not be created by parser
           break
