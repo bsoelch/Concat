@@ -30,8 +30,6 @@ struct(
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
 ) =:: export InterpreterContext
-proc( LabelId -> i32 ) =>: labelHash end
-proc( LabelId LabelId -> bool ) =>: labelEq == end
 
 proc( i64 : count InterpreterContext ptr mut : context -> bool ) =>: checkStack
   context [] .openBlocks .length 0 > if

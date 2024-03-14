@@ -1,0 +1,308 @@
+import arrayView
+
+import "types.concat"
+import "program.concat"
+
+struct(
+  ProcedureInfo ptr : procedure
+  LabelId ConstValue hashMap : mut genericValues
+) =:: export ResolvedProcedureInfo
+
+enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
+
+struct(
+  Type : valType
+  ConstValue : value
+) =:: export StackValue
+
+struct(
+  i32 : argOffset
+  i32 : mut argCount
+  MatchType : matchType
+) =:: ParameterInfo
+
+struct(
+  ProcedureInfo ptr : procedure
+  ParameterInfo list : mut paramInfo
+  LabelId ConstValue hashMap : mut genericValues
+  bool : mut isMatch
+) =:: CallSignatureInfo
+
+proc(
+  Type : src
+  Type : target
+  LabelId ConstValue hashMap ptr mut : genericValues
+  ProgramContext ptr mut : progContext
+-> bool ) =>: resolveGenerics
+  progContext [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  target typeContext types.containsGeneric | ! if
+    false return
+  end
+  target switch
+    genericType case
+      target types.getTypeId LabelId =: genericId
+      genericValues genericId map.at =:: oldValue
+      oldValue optional.hasData if
+        oldValue .data [] .none ?? if ## generic marked as non-empty
+          src .empty ?? if
+            true return
+          end
+          src true
+        else
+          src oldValue .data [] .typeId typeContext types.mergeTypes
+        end
+      else
+        src true
+      end =:: isError =:: genericValue
+      genericValues
+        genericId
+        genericValue ConstValue .typeId
+      map.put ..drop
+      isError return
+    namedType case
+      src =:: mut unwrapSrc
+      target =:: mut unwrapTarget
+      while
+        unwrapSrc types.isNamedType if
+          unwrapSrc typeContext types.flatUnwrapNamed unwrapSrc =
+        end
+        unwrapTarget typeContext types.flatUnwrapNamed unwrapTarget =
+      unwrapTarget .namedType ?? do end
+      ## resolveGenerics
+        unwrapSrc
+        unwrapTarget
+        genericValues
+        progContext
+      resolveGenerics return
+    reference mutableReference case
+      src typeContext types.isReference ! if
+        true return
+      end
+      ## resolveGenerics
+        src typeContext types.getBaseType
+        target typeContext types.getBaseType
+        genericValues
+        progContext
+      resolveGenerics return
+    pointer arrayType case
+      src typeContext types.isPointer ! if
+          src typeContext types.isArray ! _if
+        true return
+      end
+      ## resolveGenerics
+        src typeContext types.getBaseType
+        target typeContext types.getBaseType
+        genericValues
+        progContext
+      resolveGenerics if
+        true return
+      end
+      ## TODO resolve generic sizes
+      false return
+    struct union procIn procOut enum case
+      ## TODO? allow matching value to union/enum element
+      src typeContext types.unwrapNamed =:: unwrappedSrc
+      unwrappedSrc target != if
+        true return ## src and target have to be same type of composite
+      end
+      target typeContext types.compositeEltCount =:: targetCount
+      unwrappedSrc typeContext types.compositeEltCount =:: srcCount
+      targetCount srcCount < if
+        true return ## all types in source have to be matched to type in target
+      end
+      ## resolve generics for all elements of composite type
+      0 while ..dup targetCount < do =:: i
+        target i typeContext types.compositeGetElement =:: targetElt
+        i srcCount < if
+          unwrappedSrc i typeContext types.compositeGetElement
+        else
+          Type .empty ## extend source with empty if necessary
+        end =:: srcElt
+        ## resolveGenerics
+          srcElt
+          targetElt
+          genericValues
+          progContext
+        resolveGenerics if
+          true return
+        end
+        i 1 +
+      end ..drop
+      false return
+    procedure case
+      src typeContext types.unwrapNamed =:: unwrappedSrc
+      unwrappedSrc target != if
+        true return
+      end
+      ## separately run for in and out arguments
+      ## resolveGenerics
+        unwrappedSrc typeContext types.getProcIn ..drop
+        target typeContext types.getProcIn ..drop
+        genericValues
+        progContext
+      resolveGenerics if
+        true return
+      end
+      ## resolveGenerics
+        unwrappedSrc typeContext types.getProcOut ..drop
+        target typeContext types.getProcOut ..drop
+        genericValues
+        progContext
+      resolveGenerics if
+        true return
+      end
+      false return
+    generatedType case
+      ## TODO resolve generics for generated types
+      ## src generated, same generator as target: -> compare arguments of generators
+      ## otherwise compare underlying types
+      true return
+    undefined empty primitiveType cType arrayIndex autoType case
+      ..unreachable ## type should not contain generics
+    templateType case
+      ..unreachable ## new parser should not generate template types
+  end
+end
+
+proc(
+  CallSignatureInfo ptr : src
+  CallSignatureInfo list ptr mut : elts
+-> CallSignatureInfo ptr mut ) =>: appendCopy
+  elts []
+    ## CallSignatureInfo
+      src [] .procedure
+      src [] .paramInfo list.copy
+      src [] .genericValues map.copy
+      src [] .isMatch
+    CallSignatureInfo new list.append
+  elts [] =
+  elts [] list.peek .data return
+end
+
+proc(
+  ProcedureInfo arrayView : procedures
+  StackValue arrayView : stackValues
+  ProgramContext ptr mut : progContext
+-> ProcedureInfo ) =>: export resolveCall
+  progContext [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  procedures .length CallSignatureInfo list.create =:: mut currentSignatures
+  0 while ..dup procedures .length < do =:: i
+    procedures i array.at .data =:: procInfo
+    procInfo [] .procType
+      typeContext types.getProcIn ..drop typeContext types.compositeEltCount
+    =:: argCount
+    currentSignatures
+      ## CallSignatureInfo
+        procInfo
+        argCount ParameterInfo list.create
+        labelHash @ labelEq @ argCount ConstValue map.create
+        true
+      CallSignatureInfo new list.append
+    currentSignatures =
+    i 1 +
+  end ..drop
+  0 while ..dup stackValues .length < do =:: stackIndex
+    stackValues stackIndex array.at .data =:: stackElement
+    stackElement [] .valType =:: stackType
+    stackElement [] .value =:: stackValue
+    stackType typeContext types.isEmpty if
+      ## XXX allow empty to terminate multi-argument arguments
+      stackIndex 1 + continue ## skip empty arguments
+    end
+    0 while ..dup currentSignatures .length < do =:: i
+      currentSignatures i list.at .data =:: mut current
+      current [] .isMatch ! if
+        i 1 + continue ## don't continue checking if first arguments were no match
+      end
+      current [] .procedure [] .procType typeContext types.getProcIn ..drop =:: inTypes
+      current [] .paramInfo .length i32 cast =:: mut paramIndex
+      inTypes paramIndex typeContext types.compositeGetElement =:: mut paramType
+      inTypes paramIndex typeContext types.compositeGetLabel =:: mut paramLabel
+      ## XXX? allow passing arrays as individual elements
+      while ## skip empty parameters if stack-value is non-empty
+        paramType typeContext types.isEmpty if
+          stackType typeContext types.isEmpty ! _if
+          ## empty parameter, non-empty argument
+          current [] .paramInfo
+            ## ParameterInfo
+              stackIndex 0
+              MatchType .EMPTY
+            ParameterInfo new list.append
+          current [] .paramInfo =
+          paramIndex 1 + paramIndex =
+        else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? _if
+          current [] .genericValues @ paramLabel map.at =:: autoValue
+          autoValue optional.isEmpty ! if autoValue .data [] .none ?? ! _if
+            current [] .paramInfo
+              ## ParameterInfo
+                stackIndex 0
+                MatchType .AUTO
+              ParameterInfo new list.append
+            current [] .paramInfo =
+            paramIndex 1 + paramIndex =
+          end
+        end
+        paramIndex inTypes typeContext types.compositeEltCount <
+      do
+        inTypes paramIndex typeContext types.compositeGetElement paramType =
+        inTypes paramIndex typeContext types.compositeGetLabel paramLabel =
+      end
+      paramIndex inTypes typeContext types.compositeEltCount >= if
+        i 1 + continue
+      end
+      MatchType .NONE =:: mut matchType
+      paramType typeContext types.unwrapNamed types.primitive.TYPE types.typeEquals if
+        current [] .genericValues @ paramLabel map.at optional.isEmpty _if
+        ## add copy of signature with generic type set to empty
+        current currentSignatures @ appendCopy =:: copySig
+        copySig [] .genericValues @
+          paramLabel
+          Type .empty ConstValue .typeId
+        map.put ..drop
+        ## mark generic as non-empty
+        current [] .genericValues @
+          paramLabel
+          ConstValue .none
+        map.put ..drop
+        ## update current pointer after changing list
+        currentSignatures i list.at .data current =
+      end
+      ## try matching type
+      paramType typeContext types.containsGeneric | if
+          ## resolveGenerics
+            stackType
+            paramType
+            current [] .genericValues @
+            progContext
+          resolveGenerics _if
+        MatchType .GENERIC matchType =
+      else stackType paramType types.typeEquals _if
+        MatchType .MATCH matchType =
+      else stackType paramType typeContext types.canAutoCast _if
+        MatchType .CAST matchType =
+      else
+        false current [] .isMatch =
+      end
+      current [] .paramInfo
+        ## ParameterInfo
+          stackIndex
+          1
+          matchType
+        ParameterInfo new list.append
+      current [] .paramInfo =
+      i 1 +
+    end ..drop
+    stackIndex 1 +
+  end ..drop
+  ## TODO resolve call
+  ##  * find best match
+  ##  * cleanup memory
+  ##  * return solution
+  ..unreachable
+end

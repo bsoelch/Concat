@@ -27,6 +27,10 @@ proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : er
 end
 
 i32 =:: export LabelId
+
+proc( LabelId -> i32 ) =>: export labelHash end
+proc( LabelId LabelId -> bool ) =>: export labelEq == end
+
 i32 =:: export NamespaceId
 i32 =:: export NamespaceImportId
 i32 =:: export TemplateId
