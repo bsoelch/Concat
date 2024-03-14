@@ -124,7 +124,7 @@ struct(
   BlockInfo list : mut openBlocks
   i32 : mut blockCount
   Operation list : mut compiledOps
-  i64 list : mut blockStarts
+  i64 : mut blockStart
   OpInfo list : mut opInfo
   i64 list : mut childIds
   FileId : mut currentFile
@@ -136,12 +136,7 @@ struct(
 ) =:: TypeCheckState
 
 proc( TypeCheckState ptr mut : state -> i64 ) =>: currentBlockStart
-  state [] .blockStarts .length 0 == if
-    0 return
-  end
-  state [] .blockStarts
-    ..dup .length 1 -
-  list.get return
+  state [] .blockStart return
 end
 proc( TypeCheckState ptr mut : state -> ) =>: freezeInterpreter
   state [] .interpreterActive ! if
@@ -555,6 +550,7 @@ struct(
   FilePosition : mergePoint
   i64 arrayView : castPointOffsets
   TypeCheckState ptr mut : state
+  i64 : rootBranch
   MergeType : mergeType
 ) =:: MergePoint
 proc(
@@ -571,10 +567,13 @@ proc(
   toMerge .length 1 == if
     toMerge 0 array.get [] return
   end
-  toMerge 0 array.get =:: root
+  toMerge mergePoint .rootBranch array.get =:: root
   root [] .valueType =:: mut mergedType
   true =:: mut noError
-  1 while ..dup toMerge .length < do =:: i
+  0 while ..dup toMerge .length < do =:: i
+    i mergePoint .rootBranch == if
+      i 1 + continue
+    end
     toMerge i array.get =:: current
     mergePoint .mergeType switch
       MERGE case
@@ -853,9 +852,6 @@ proc( TypeCheckState ptr mut : state -> ) =>: clearOps
   state [] .opInfo
     list.clear
   state [] .opInfo =
-  state [] .blockStarts
-    list.clear
-  state [] .blockStarts =
 end
 proc( TypeCheckState ptr mut : state -> ) =>: freeOps
   state [] .compiledOps
@@ -864,9 +860,6 @@ proc( TypeCheckState ptr mut : state -> ) =>: freeOps
   state [] .opInfo
     list.free
   state [] .opInfo =
-  state [] .blockStarts
-    list.free
-  state [] .blockStarts =
 end
 
 proc( Operation ptr mut : op bool : autoTyped TypeCheckState ptr mut : state -> ) =>: resolveAutoType
@@ -1659,6 +1652,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       break
     block case
+      state [] .compiledOps .length state [] .blockStart =
       op [] .val .block .blockType =:: blockType
       blockType switch
         TYPE_TUPLE
@@ -1690,9 +1684,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           state [] .blockCount 1 + state [] .blockCount =
           blockId op [] .val .block .blockId =
           op [] state appendOp ..drop
-          state [] .blockStarts
-            state [] .compiledOps .length list.append
-          state [] .blockStarts =
           ## XXX? pull constants into if branches
           state [] .stack @ branchTree.startBranch =:: ifBranch
           ifBranch blockId op [] .pos newIfBlock state openBlock
@@ -1743,8 +1734,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op [] .pos errors appendError
           end
           currentBlock [] .If .blockId op [] .val .block .blockId =
-          ## update which operations are editable
-          state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
           state [] .reachable if
             ## add space for casts of values on stack
             ## ifCastsOffset
@@ -1783,6 +1772,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 op [] .pos
                 i64 array.empty
                 state
+                0
                 MergeType .NO_CAST
               MergePoint new
             branchTree.merge .error ?? if
@@ -1829,9 +1819,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           switchType op [] .dataType =
           op [] state appendOp ..drop
-          state [] .blockStarts
-            state [] .compiledOps .length list.append
-          state [] .blockStarts =
           ## XXX? pull constants into branches
           state [] .stack @ branchTree.startBranch =:: switchBranch
           ## newSwitchBlock
@@ -1918,8 +1905,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             1 +
           switchData [] .caseCount =
           true state [] .reachable =
-          ## update which operations are editable
-          state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
           switchBlock [] .switchType op [] .dataType =
           op [] state appendOp ..drop
           true switchBlock [] .allowBreak =
@@ -1942,10 +1927,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               0
             BlockId new op [] .val .block =
             false switchBlock [] .allowBreak =
-            ## update which operations are editable
-            state [] .compiledOps .length
-              state [] .blockStarts
-            list.peek .data [] =
             state [] .reachable if
               ## add space for casts of values on stack
               switchBlock [] .castOffsets
@@ -1966,10 +1947,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             end
           else breakBlock [] .While ?? _if
             breakBlock [] .While @ =:: whileBlock
-            ## update which operations are editable
-            state [] .compiledOps .length
-              state [] .blockStarts
-            list.peek .data [] =
             blockType .CONTINUE ?? if
               whileBlock [] .continueCastOffsets @
               whileBlock [] .continueBranches @
@@ -1999,18 +1976,19 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           false state [] .reachable =
           return
         WHILE case
-          state [] .blockCount =:: mut blockId
-          state [] .blockCount 1 + state [] .blockCount =
-          blockId op [] .val .block .blockId =
+          program [] .whileData .length i32 cast =:: whileId
+          program [] .whileData
+            ## WhileData
+              -1
+            WhileData new list.append
+          program [] .whileData =
+          whileId op [] .val .block .blockId =
           op [] state appendOp ..drop
-          state [] .blockStarts
-            state [] .compiledOps .length list.append
-          state [] .blockStarts =
           state [] .stack @ branchTree.startBranch =:: whileBranch
           ## TODO remove constant values on stack ( might be overwritten by merge )
-          ## newSwitchBlock
+          ## newWhileBlock
             whileBranch
-            blockId
+            whileId
             op [] .pos
           newWhileBlock state openBlock
           return
@@ -2051,8 +2029,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             BranchPoint new list.append
           currentBlock [] .While .breakBranches =
           op [] state appendOp ..drop
-          ## update which operations are editable
-          state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
           return
         PROCEDURE
         EXPERIMENTAL_PROCEDURE
@@ -2063,6 +2039,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       break
     blockEnd case
+      state [] .compiledOps .length state [] .blockStart =
       op [] .val .blockEnd .blockType switch
         TYPE_TUPLE
         TYPE_STRUCT
@@ -2110,9 +2087,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op [] .pos errors appendError
           end
           state [] .stack branchTree.depth op [] .pos state reserveOps =:: elseCastOffset
-          state [] .blockStarts
-            list.pop ..drop
-          state [] .blockStarts =
           branchTree.NodeId 2 array new =:: mut branches
           i64 2 array new =:: mut castOffsets
           0 =:: mut nBranches
@@ -2136,6 +2110,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 op [] .pos
                 castOffsets @ nBranches array.create
                 state
+                0
                 MergeType .MERGE
               MergePoint new
             branchTree.merge .error ?? if
@@ -2267,6 +2242,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 op [] .pos
                 switchBlock [] .castOffsets list.asArray
                 state
+                0
                 MergeType .MERGE
               MergePoint new
             branchTree.merge .error ?? if
@@ -2286,9 +2262,6 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             end
             branchPoints list.free ..drop
           end
-          state [] .blockStarts
-            list.pop ..drop
-          state [] .blockStarts =
           caseBranches .length 0 > state [] .reachable =
           BlockType .SWITCH op [] .pos opEndBlock =:: mut tmp
           switchBlock [] .blockId tmp .val .blockEnd .blockId =
@@ -2347,6 +2320,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 op [] .pos
                 whileBlock [] .continueCastOffsets list.asArray
                 state
+                0
                 MergeType .MERGE
               MergePoint new
             branchTree.merge .error ?? if
@@ -2372,7 +2346,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             op [] .pos errors appendError
             return
           end
-          state [] .compiledOps .length state [] .blockStarts list.peek .data [] =
+          ## XXX? insert "continue-loop" operation
           ## XXX insert deferred code ( recursively run interpreter )
           branchPoints
             whileBlock [] .branchRoot .node list.append
@@ -2393,6 +2367,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               op [] .pos
               castOffsets @ 2 array.create
               state
+              0
               MergeType .MERGE_ROOT
             MergePoint new
           branchTree.merge =:: depth
@@ -2411,7 +2386,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               '\n' sb.appendC
             op [] .pos errors appendError
           end
-          ## TODO remember number of changed stack values ( necessary for merging values in compiled code )
+          whileBlock [] .blockId =:: whileId
+          ## remember number of changed stack values ( necessary for merging values in compiled code )
+          depth .success program [] .whileData whileId list.at .data [] .modifiedTypes =
           breakBranches .length 1 >= if
             breakBranches .length =:: nodeCount
             branchPoints
@@ -2432,7 +2409,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 op [] .pos
                 whileBlock [] .breakCastOffsets list.asArray
                 state
-                MergeType .MERGE
+                whileBlock [] .doBranchIndex
+                MergeType .MERGE_ROOT
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of while branches: " sb.wrap
@@ -2452,14 +2430,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           branchPoints list.free ..drop
           whileBlock [] .breakBranches .length 0 > state [] .reachable =
-          state [] .blockStarts
-            list.pop ..drop
-          state [] .blockStarts =
+          whileId op [] .val .blockEnd .blockId =
           whileBlock [] .breakBranches list.free ..drop
           whileBlock [] .breakCastOffsets list.free ..drop
           whileBlock [] .continueBranches list.free ..drop
           whileBlock [] .continueCastOffsets list.free ..drop
-          whileBlock [] .blockId op [] .val .blockEnd .blockId =
           op [] state appendOp ..drop
           return
         WHILE case ## end-while should not be created by parser
@@ -2670,7 +2645,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     32  BlockInfo list.create
     0
     128 Operation list.create
-    128 i64       list.create
+    0
     128 OpInfo    list.create
     128 i64       list.create
     FILE_ID_NONE

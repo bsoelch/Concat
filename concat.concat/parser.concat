@@ -2921,6 +2921,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     0   Type                  list.create ## autoTypes, not used in parser
     128 Operation             list.create
     0   SwitchData            list.create
+    0   WhileData             list.create
     32  CompilerError         list.create
     false ## hasCheckIndex
     false ## hasCheckEnum

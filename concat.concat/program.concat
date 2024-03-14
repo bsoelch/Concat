@@ -254,6 +254,7 @@ struct(
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export LabelData
 struct( LabelData list : mut labels Type : switchType i32 : mut caseCount bool : mut hasDefault ) =:: export SwitchData
+struct( i32 : mut modifiedTypes ) =:: export WhileData
 struct( FileId : fileId Type : procType i64 : codeStart i64 : mut codeLength ) =:: export ProcedureInfo
 struct(
   IdentifierContext : mut idContext
@@ -262,6 +263,7 @@ struct(
           Type list : mut autoTypes
      Operation list : mut templateOps
     SwitchData list : mut switchData
+     WhileData list : mut whileData
  CompilerError list : mut errors
                bool : mut hasCheckIndex
                bool : mut hasCheckEnum
