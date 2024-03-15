@@ -14,15 +14,42 @@ namespace: list
     k T mem.alloc  0 k  T list new return
   end
   #template type : T #end
+  proc( i64 : k -> T list ) =>: export createZeroInit ## creates zero-initialized list of the given length
+    k T mem.calloc  k k  T list new return
+  end
+  #template type : T #end
   proc( T arrayView : data -> T list ) =>: export fromArray
     data .length ..dup 8 / + =:: C
     C T mem.alloc =:: p
     p data .data data .length mem.copy data .length C T list new return
   end
   #template type : T #end
-  proc( i64 : k -> T list ) =>: export createZeroInit ## creates zero-initialized list of the given length
-    k T mem.calloc  k k  T list new return
+  proc( T list : src -> T list ) =>: export copy
+    ## list
+      src .cap T mem.alloc
+        src .data
+        src .length
+      mem.copy
+      src .length
+      src .cap
+    T list new return
   end
+  #template type : T #end
+  proc( T list : src ( T -> T ) ptr : copyElt -> T list ) =>: export deepCopy
+    ## list
+      src .cap T mem.alloc
+      src .length
+      src .cap
+    T list new =:: newList
+    0 while ..dup newList .length < do =:: i
+      src .data i []
+        copyElt ()
+      newList .data i [] =
+      i 1 +
+    end ..drop
+    newList return
+  end
+
   #template type : T #end
   proc( T list : elts i64 : minCap -> T list ) =>: export ensureCap
     elts

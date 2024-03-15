@@ -10,7 +10,13 @@ namespace: map
 end
 
 #template type : K type : V #end
-struct( K V map.Node list : mut nodeBuffer  map.NodeId _ ptr mut : mut data i64 : mut cap  proc( K -> i32 ) ptr : hash  proc( K K -> bool ) ptr : eq  ) =:: export hashMap
+struct(
+  K V map.Node list : mut nodeBuffer
+  map.NodeId _ ptr mut : mut data
+  i64 : mut cap
+  proc( K -> i32 ) ptr : hash
+  proc( K K -> bool ) ptr : eq
+) =:: export hashMap
 
 namespace: map
   #template type : K type : V #end
@@ -22,6 +28,20 @@ namespace: map
     eq
     K V hashMap new return
   end
+  #template type : K type : V #end
+  proc( K V hashMap : src -> K V hashMap ) =>: export copy
+    ## hashMap
+      src .nodeBuffer list.copy
+      src .cap NodeId mem.alloc
+        src .data
+        src .cap
+      mem.copy
+      src .cap
+      src .hash
+      src .eq
+    K V hashMap new return
+  end
+
   #template type : K type : V #end
   proc( K V hashMap ptr mut : data -> ) =>: export free
     data [] .nodeBuffer
