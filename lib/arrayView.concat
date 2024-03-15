@@ -91,6 +91,37 @@ namespace: array
     end ..drop
     -1 return
   end
+  ## find lowest index of array,
+  ## if the array is not a sub-sequence contain the smallest possible start index
+  #template type : T #end
+  proc(
+    T arrayView : a
+    T arrayView : b
+    proc( T ptr T ptr -> bool ) ptr : eq
+  -> i64 ) =>: export indexOfArrayStart
+    ## TODO? use faster algorithm
+    0 while ..dup a .length <= do =:: i
+      true =:: mut match
+      0 while ..dup b .length < do =:: j
+        i j + a .length >= if
+          j break
+        end
+        ## eq
+          a i j + array.at .data
+          b j array.at .data
+        eq () ! if
+          false match =
+          j break
+        end
+        j 1 +
+      end ..drop
+      match if
+        i return
+      end
+      i 1 +
+    end ..drop
+    ..unreachable
+  end
 
   ## first n characters
   #template type : T #end

@@ -1,3 +1,3 @@
 wrong type for procedure call expected template[0] staticArg(1) ptr got i32 at wrongStaticArgs.concat:5:15
-wrong type for procedure call expected named[6]( "list" [ struct[86]( template[0] _ ptr mut : mut data i64 : mut length i64 : mut cap ) ] ) got i8 5 ptr at wrongStaticArgs.concat:5:15
+wrong type for procedure call expected named[6]( "list" [ struct[88]( template[0] _ ptr mut : mut data i64 : mut length i64 : mut cap ) ] ) got i8 5 ptr at wrongStaticArgs.concat:5:15
 wrong number of return values at the end of procedure expected: 0 got 2 at wrongStaticArgs.concat:7:1

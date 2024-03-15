@@ -1025,13 +1025,14 @@ namespace: types
     context [] .compositeData list.asArray
       elts
       typePtrEq @
-    array.indexOfArray =:: mut offset
-    offset -1 != if
+    array.indexOfArrayStart =:: mut offset
+    offset elts .length + context [] .compositeData .length < if
       offset flags return
     end
     context [] .compositeData
-      ..dup .length offset =
-      elts list.appendArray
+      elts ## skip overlap
+        context [] .compositeData .length offset - array.tail
+      list.appendArray
     context [] .compositeData =
     offset flags return
   end
@@ -1061,13 +1062,14 @@ namespace: types
     context [] .elementLabels list.asArray
       labels
       labelPtrEq @
-    array.indexOfArray =:: mut offset
-    offset -1 != if
+    array.indexOfArrayStart =:: mut offset
+    offset labels .length + context [] .elementLabels .length < if
       offset LabelOffset cast return
     end
     context [] .elementLabels
-      ..dup .length offset =
-      labels list.appendArray
+      labels ## skip overlap
+        context [] .elementLabels .length offset - array.tail
+      list.appendArray
     context [] .elementLabels =
     offset LabelOffset cast return
   end
@@ -1341,13 +1343,13 @@ namespace: types
       Type .undefined true return
     end
     context [] .procTypes @ =:: procs
-    0 while ..dup procs [] .length < do
-      procs [] ..over list.get .in in typeEquals
-      procs [] ..over.2 list.get .out out typeEquals &
-      procs [] ..over.2 list.get .callingConvention callConvention == & if
-        ProcId cast Type .procedure false return
+    0 while ..dup procs [] .length < do =:: i
+      procs [] i list.get .in in typeEquals
+      procs [] i list.get .out out typeEquals &
+      procs [] i list.get .callingConvention callConvention == & if
+        i ProcId cast Type .procedure false return
       end
-      1 +
+      i 1 +
     end ..drop
     procs []
       in out callConvention ProcType new list.append
@@ -2100,10 +2102,10 @@ namespace: sb
           "]( "    appendS
         ..swap
           allowRecurse if
-            context [] .procTypes ..swap list.get ..swap
-            ..over .in labelContext context allowRecurse appendTypeRecursive
+            context [] .procTypes ..swap list.get =:: procType
+            procType .in labelContext context allowRecurse appendTypeRecursive
             "-> " appendS
-            ..swap .out labelContext context allowRecurse appendTypeRecursive
+            procType .out labelContext context allowRecurse appendTypeRecursive
           else ..drop
             "... " appendS
           end
