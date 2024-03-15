@@ -1468,7 +1468,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           const .val
           ..over.2 .TYPE ?? if .typeId
             ..dup typeContext types.isProcedure if
-              "declaration of a procedure type as constant\n use '=:' to declare procedures\n" sb.wrap
+              "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
                 "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
               fileState [] .wordStart state appendWarning2
             end
@@ -1494,7 +1494,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ..over.2 .TYPE ?? if .typeId
             state popConst2 ..drop.2
             ..dup typeContext types.isProcedure if
-              "declaration of a procedure type as constant\n use '=:' to declare procedures\n" sb.wrap
+              "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
                 "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
               fileState [] .wordStart state appendWarning2
             end
