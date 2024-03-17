@@ -1207,6 +1207,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           stackValues list.free ..drop
           ## TODO call procedure
+          ## 1. resolve static arguments
+          ## 2. get non-automatic procedure arguments from stack
+          ## 3. append operation for correct version of procedure
+          ##      (remember static&automatic args)
           break
         LABEL case
           break

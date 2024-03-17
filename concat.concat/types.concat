@@ -1443,6 +1443,22 @@ namespace: types
     end
     return
   end
+  ## completely unwrap named type
+  proc(
+    Type
+    TypeContext ptr
+  -> Type ) =>: export unwrapNamedKeepGenerated
+    =:: context
+    while
+      ..dup .namedType ?? if
+        context [] .namedTypes
+          ..swap .namedType
+        list.at .data [] .data
+        continue
+      end
+    false do end
+    return
+  end
   proc( Type TypeContext ptr -> LabelId ) =>: export namedTypeName
     =:: context
     ..dup .namedType ?? if
@@ -1569,13 +1585,36 @@ namespace: types
   proc( Type : generator TypeContext ptr : context -> Type ) =>: export getGeneratedType
     generator =:: mut t
     t .namedType ?? if
-      t context unwrapNamed t =
+      t context unwrapNamedKeepGenerated t =
     end
     t .generatedType ?? ! if
       generator return
     end
     context [] .generatedTypes t .generatedType list.at .data =:: genData
     genData [] .generated return
+  end
+
+  proc( Type : generator TypeContext ptr : context -> LabelId ) =>: export getGeneratorLabel
+    generator =:: mut t
+    t .namedType ?? if
+      t context unwrapNamedKeepGenerated t =
+    end
+    t .generatedType ?? ! if
+      id.LABEL_ID_NONE return
+    end
+    context [] .generatedTypes t .generatedType list.at .data =:: genData
+    genData [] .generator return
+  end
+  proc( Type : generator TypeContext ptr : context -> ConstantArray ) =>: export getGeneratorArgs
+    generator =:: mut t
+    t .namedType ?? if
+      t context unwrapNamedKeepGenerated t =
+    end
+    t .generatedType ?? ! if
+      emptyConstArray return
+    end
+    context [] .generatedTypes t .generatedType list.at .data =:: genData
+    genData [] .arguments return
   end
 
   proc( Type : base bool : mutable TypeContext ptr mut : context -> Type ) =>: export newReferenceType

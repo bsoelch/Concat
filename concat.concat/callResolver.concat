@@ -1,5 +1,6 @@
 import arrayView
 
+import "constants.concat"
 import "types.concat"
 import "program.concat"
 
@@ -39,7 +40,7 @@ struct(
 ) =:: CallSignatureInfo
 
 proc(
-  Type : src
+  Type : src0
   Type : target
   bool : exactMatch
   LabelId GenericArg hashMap ptr mut : genericValues
@@ -51,6 +52,12 @@ proc(
   idContext [] .constContext @ =:: constContext
   target typeContext types.containsGeneric | ! if
     false return
+  end
+  src0 =:: mut src
+  ## unwrap reference in src argument if target is not a reference
+  src typeContext types.isReference if
+    target typeContext types.isReference ! _if
+    src typeContext types.getBaseType src =
   end
   target switch
     genericType case
@@ -143,12 +150,12 @@ proc(
       false return
     struct union procIn procOut enum case
       ## TODO? allow matching value to union/enum element
-      src typeContext types.unwrapNamed =:: unwrappedSrc
-      unwrappedSrc target != if
+      src typeContext types.unwrapNamed src =
+      src target != if
         true return ## src and target have to be same type of composite
       end
       target typeContext types.compositeEltCount =:: targetCount
-      unwrappedSrc typeContext types.compositeEltCount =:: srcCount
+      src typeContext types.compositeEltCount =:: srcCount
       targetCount srcCount < if
         true return ## all types in source have to be matched to type in target
       end
@@ -156,7 +163,7 @@ proc(
       0 while ..dup targetCount < do =:: i
         target i typeContext types.compositeGetElement =:: targetElt
         i srcCount < if
-          unwrappedSrc i typeContext types.compositeGetElement
+          src i typeContext types.compositeGetElement
         else
           Type .empty ## extend source with empty if necessary
         end =:: srcElt
@@ -173,13 +180,13 @@ proc(
       end ..drop
       false return
     procedure case
-      src typeContext types.unwrapNamed =:: unwrappedSrc
-      unwrappedSrc target != if
+      src typeContext types.unwrapNamed src =
+      src target != if
         true return
       end
       ## separately run for in and out arguments
       ## resolveGenerics
-        unwrappedSrc typeContext types.getProcIn ..drop
+        src typeContext types.getProcIn ..drop
         target typeContext types.getProcIn ..drop
         true
         genericValues
@@ -188,7 +195,7 @@ proc(
         true return
       end
       ## resolveGenerics
-        unwrappedSrc typeContext types.getProcOut ..drop
+        src typeContext types.getProcOut ..drop
         target typeContext types.getProcOut ..drop
         true
         genericValues
@@ -198,6 +205,50 @@ proc(
       end
       false return
     generatedType case
+      src typeContext types.unwrapNamedKeepGenerated src =
+      src types.isGeneratedType if
+        src typeContext types.getGeneratorLabel
+        target typeContext types.getGeneratorLabel == _if
+        src typeContext types.getGeneratorArgs =:: srcArgs
+        target typeContext types.getGeneratorArgs =:: targetArgs
+        0 while ..dup targetArgs .length < do =:: i
+          srcArgs i constContext constArrayGet =:: srcArg
+          targetArgs i constContext constArrayGet =:: targetArg
+          targetArg .typeId ?? if
+            ## resolveGenerics
+              srcArg .typeId
+              targetArg .typeId
+              true
+              genericValues
+              progContext
+            resolveGenerics if
+              true return
+            end
+          else targetArg .genericArg ?? _if
+            targetArg .genericArg =:: argId
+            genericValues
+              argId
+            map.at =:: prev?
+            prev? optional.hasData if
+              prev? .data [] switch
+                value case ## XXX allow merging values?
+                  srcArg prev? .data [] .value labelContext constantEquals if break end
+                  true return
+                fixed case
+                  srcArg prev? .data [] .fixed labelContext constantEquals if break end
+                  true return
+                nonEmpty case break
+              end
+            end
+            genericValues
+              argId
+              srcArg GenericArg .fixed
+            map.put ..drop
+          end
+          i 1 +
+        end ..drop
+        false return
+      end
       ## TODO resolve generics for generated types
       ## src generated, same generator as target: -> compare arguments of generators
       ## otherwise compare underlying types
@@ -371,7 +422,7 @@ proc(
       MatchType .NONE =:: mut matchType
       paramType typeContext types.isGeneric if
           current [] .genericValues @
-            paramType types.getTypeId
+            paramType typeContext types.unwrapNamed types.getTypeId
           map.at optional.isEmpty _if
         ## add copy of signature with generic type set to empty
         current currentSignatures @ appendCopy =:: copySig
@@ -398,7 +449,7 @@ proc(
             false
             current [] .genericValues @
             progContext
-          resolveGenerics _if
+          resolveGenerics ! _if
         MatchType .GENERIC matchType =
         current [] .nGenerics 1 + current [] .nGenerics =
       else stackType paramType types.typeEquals _if

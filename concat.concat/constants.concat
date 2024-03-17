@@ -27,6 +27,9 @@ proc( -> ConstantContext ) =>: export newConstContext
  128 ConstValue list.create
  ConstantContext new return
 end
+proc( -> ConstantArray ) =>: export emptyConstArray
+  0 0 ConstantArray new
+end
 proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: export constArray
   context [] .arrayValues .length
     context [] .arrayValues
