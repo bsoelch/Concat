@@ -34,7 +34,8 @@ struct(
   i32 : mut nEmpty
   i32 : mut nCasts
   i32 : mut nGenerics
-  bool : mut isMatch
+  bool : mut argsMatch
+  bool : mut needsParam
 ) =:: CallSignatureInfo
 
 proc(
@@ -226,11 +227,15 @@ proc(
   CallSignatureInfo : b
   ProgramContext ptr mut : progContext
 -> i32 ) =>: cmpSignatures
-  a .isMatch b .isMatch != if
-    ## match before non-match
-    a .isMatch if -1  else 1 end return
+  a .needsParam b .needsParam != if
+    ## fully matched before non-match
+    a .needsParam if 1  else -1 end return
   end
-  a .isMatch ! if
+  a .argsMatch b .argsMatch != if
+    ## missing arguments before wrong arguments
+    a .argsMatch if -1  else 1 end return
+  end
+  a .argsMatch ! if
     ## no-match -> only compare number of matched parameters
     a .paramInfo .length b .paramInfo .length == if
       0 return
@@ -280,7 +285,7 @@ end
 proc(
   ProcedureInfo arrayView : procedures
   StackValue arrayView : stackValues
-  bool : printErrors
+  stringBuilder ptr mut optional : errorMessage
   ProgramContext ptr mut : progContext
 -> ResolvedProcedureInfo optional ) =>: export resolveCall
   progContext [] .idContext @ =:: idContext
@@ -305,6 +310,7 @@ proc(
         0
         0
         true
+        argCount 0 >
       CallSignatureInfo new list.append
     currentSignatures =
     i 1 +
@@ -319,11 +325,14 @@ proc(
     end
     0 while ..dup currentSignatures .length < do =:: i
       currentSignatures i list.at .data =:: mut current
-      current [] .isMatch ! if
-        i 1 + continue ## don't continue checking if first arguments were no match
+      current [] .argsMatch ! current [] .needsParam ! | if
+        ## don't continue checking if first arguments were no match / all params matched
+        i 1 + continue
       end
       current [] .procedure [] .procType typeContext types.getProcIn ..drop =:: inTypes
-      current [] .paramInfo .length i32 cast =:: mut paramIndex
+      inTypes typeContext types.compositeEltCount 1 -
+        current [] .paramInfo .length -
+      i32 cast =:: mut paramIndex
       inTypes paramIndex typeContext types.compositeGetElement =:: mut paramType
       inTypes paramIndex typeContext types.compositeGetLabel =:: mut paramLabel
       ## XXX? allow passing arrays as individual elements
@@ -337,30 +346,33 @@ proc(
               MatchType .EMPTY
             ParameterInfo new list.append
           current [] .paramInfo =
-          paramIndex 1 + paramIndex =
+          paramIndex 1 - paramIndex =
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? _if
-          current [] .genericValues @ paramLabel map.at =:: autoValue
-          autoValue optional.isEmpty ! if autoValue .data [] .nonEmpty ?? ! _if
-            current [] .paramInfo
-              ## ParameterInfo
-                stackIndex 0
-                MatchType .AUTO
-              ParameterInfo new list.append
-            current [] .paramInfo =
-            paramIndex 1 + paramIndex =
-          end
+            current [] .genericValues @ paramLabel map.at =:: autoValue
+            autoValue optional.isEmpty ! _if autoValue .data [] .nonEmpty ?? ! _if
+          current [] .paramInfo
+            ## ParameterInfo
+              stackIndex 0
+              MatchType .AUTO
+            ParameterInfo new list.append
+          current [] .paramInfo =
+          paramIndex 1 - paramIndex =
+        else
+          break
         end
-        paramIndex inTypes typeContext types.compositeEltCount <
-      do
+      paramIndex 0 >= do
         inTypes paramIndex typeContext types.compositeGetElement paramType =
         inTypes paramIndex typeContext types.compositeGetLabel paramLabel =
       end
-      paramIndex inTypes typeContext types.compositeEltCount >= if
+      paramIndex 0 < if
+        false current [] .needsParam =
         i 1 + continue
       end
       MatchType .NONE =:: mut matchType
-      paramType typeContext types.unwrapNamed types.primitive.TYPE types.typeEquals if
-        current [] .genericValues @ paramLabel map.at optional.isEmpty _if
+      paramType typeContext types.isGeneric if
+          current [] .genericValues @
+            paramType types.getTypeId
+          map.at optional.isEmpty _if
         ## add copy of signature with generic type set to empty
         current currentSignatures @ appendCopy =:: copySig
         copySig [] .genericValues @
@@ -395,7 +407,7 @@ proc(
         MatchType .CAST matchType =
         current [] .nCasts 1 + current [] .nCasts =
       else
-        false current [] .isMatch =
+        false current [] .argsMatch =
       end
       current [] .paramInfo
         ## ParameterInfo
@@ -404,24 +416,88 @@ proc(
           matchType
         ParameterInfo new list.append
       current [] .paramInfo =
+      paramIndex 0 == if current [] .argsMatch _if
+        false current [] .needsParam =
+      end
       i 1 +
     end ..drop
     stackIndex 1 +
   end ..drop
   currentSignatures cmpSignatures @ progContext list.sort
   currentSignatures 0 list.at .data =:: candidate
-  ## TODO print error messages
-  candidate [] .isMatch ! if
+  candidate [] .needsParam if
     ## no match
+    errorMessage optional.hasData if
+      errorMessage .data []
+        "no matching signature for arguments ( " sb.appendS
+        stackValues .length 1 - while ..dup 0 >= do =:: i
+          stackValues i array.at .data =:: val
+          val [] .valType labelContext typeContext sb.appendType
+          val [] .value .none ?? ! if
+            " { " sb.appendS
+            val [] .value constContext labelContext typeContext sb.appendConstant
+            " }" sb.appendS
+          end
+          "  " sb.appendS
+          i 1 -
+        end ..drop
+        ")\ncandidates: \n" sb.appendS
+        0 while ..dup currentSignatures .length < do =:: i
+          currentSignatures i list.at .data =:: mut current
+          "  * " sb.appendS
+          current [] .procedure [] .procType labelContext typeContext sb.appendType
+          ' ' sb.appendC
+          current [] .procedure [] .labelId labelContext sb.appendLabelName
+          '\n' sb.appendC
+          i 1 +
+        end ..drop
+      errorMessage .data [] =
+    end
     currentSignatures @ cleanupSignatures
     ResolvedProcedureInfo optional.empty return
   end
-  ## cmpSignatures
-    candidate []
-    currentSignatures 1 list.at .data []
-    progContext
-  cmpSignatures 0 == if
+  currentSignatures .length 1 > if
+      ## cmpSignatures
+        candidate []
+        currentSignatures 1 list.at .data []
+        progContext
+      cmpSignatures 0 == _if
     ## multiple matches
+    errorMessage optional.hasData if
+      errorMessage .data []
+        "multiple matching signature for arguments ( " sb.appendS
+        stackValues .length 1 - while ..dup 0 >= do =:: i
+          stackValues i array.at .data =:: val
+          val [] .valType labelContext typeContext sb.appendType
+          val [] .value .none ?? ! if
+            " { " sb.appendS
+            val [] .value constContext labelContext typeContext sb.appendConstant
+            " }" sb.appendS
+          end
+          "  " sb.appendS
+          i 1 -
+        end ..drop
+        ")\npossible matches: \n" sb.appendS
+        true =:: mut isEquivalent
+        0 while ..dup currentSignatures .length < do =:: i
+          currentSignatures i list.at .data =:: mut current
+          isEquivalent if
+                candidate []
+                current []
+                progContext
+              cmpSignatures 0 != _if
+            "other signatures: \n" sb.appendS
+            false isEquivalent =
+          end
+          "  * " sb.appendS
+          current [] .procedure [] .procType labelContext typeContext sb.appendType
+          ' ' sb.appendC
+          current [] .procedure [] .labelId labelContext sb.appendLabelName
+          '\n' sb.appendC
+          i 1 +
+        end ..drop
+      errorMessage .data [] =
+    end
     currentSignatures @ cleanupSignatures
     ResolvedProcedureInfo optional.empty return
   end

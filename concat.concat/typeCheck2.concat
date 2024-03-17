@@ -10,6 +10,7 @@ import "types.concat"
 import "identifiers.concat"
 import "interpreter/interpreter.concat"
 import "branchTree.concat"
+import "callResolver.concat"
 
 struct(
   Type         : mut valueType
@@ -1169,7 +1170,44 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           true true 0 0 state updateOpInfo
           return
         PROCEDURE case
-          break ## TODO call procedure
+          ## getIdentifierByLabel
+            idInfo .labelId
+            idInfo .labelId labelContext id.getLabelFile
+            idContext
+          id.getIdentifierByLabel if ..drop.2
+            "could not find " sb.wrap
+              idInfo labelContext sb.appendIdInfo
+            op [] .pos errors appendError
+            return
+          end =:: idData ..drop
+          idData [] .constValue .procedure =:: procId
+          state [] .stack branchTree.depth StackValue list.create =:: mut stackValues
+          state [] .stack @ branchTree.itr.start while
+            branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
+            stackValues
+              ## StackValue
+                val [] .valueType
+                val [] .value
+              StackValue new list.append
+            stackValues =
+          end ..drop
+          0 sb.create =:: mut message
+          ## resolveCall
+            program [] .procedures procId list.at .data array.wrap
+            stackValues list.asArray
+            message @ optional.wrap
+            program
+          resolveCall =:: calledProc?
+          calledProc? optional.isEmpty if
+            message op [] .pos errors appendError
+            return
+          else
+            io.stdOut message io.fputSb ..drop ## debug
+            message sb.free ..drop
+          end
+          stackValues list.free ..drop
+          ## TODO call procedure
+          break
         LABEL case
           break
       end
@@ -1219,10 +1257,28 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       idInfo op [] .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR case
-          ## TODO update constant value in identifier if stack-value is constant
+          state [] .stack @ branchTree.peek =:: constVal?
+          constVal? optional.hasData if
+            constVal? .data [] .value
+          else ConstValue .none end =:: constVal
           op [] .dataType @ array.wrap "initialization" string.wrap op [] .pos state requireTypes if
             ..drop return
           end ..drop
+          ## update constant value in identifier if stack-value is constant
+          idInfo .idType .GLOBAL_VAR ?? if constVal .none ?? ! _if
+              idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! _if
+            ## getIdentifierByLabel
+              idInfo .labelId
+              idInfo .labelId labelContext id.getLabelFile
+              idContext
+            id.getIdentifierByLabel if ..drop.2
+              "could not find " sb.wrap
+                idInfo labelContext sb.appendIdInfo
+              op [] .pos errors appendError
+            else =:: idData ..drop
+              constVal idData [] .constValue =
+            end
+          end
           op [] state appendOp ..drop
           return
         PROCEDURE case

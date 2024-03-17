@@ -1378,6 +1378,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## ProcedureInfo
           state [] .currentFile
           valType
+          label
           _EXPERIMENTAL_ if
             progContext [] .templateOps .length
           else
@@ -1782,8 +1783,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             currentProc .codeStart -
           currentProc .codeLength =
           progContext [] .procedures
+            ..dup .length =:: procId
             currentProc list.append
           progContext [] .procedures =
+          ## remember procedure id
+          ## getIdentifierByLabel
+            currentProc .labelId
+            currentProc .fileId
+            idContext
+          id.getIdentifierByLabel if ..drop.2
+            "could not find procedure " sb.wrap
+              currentProc .labelId labelContext sb.appendLabelName
+            fileState [] .wordStart state appendError2
+          else =:: idData ..drop
+            procId ConstValue .procedure idData [] .constValue =
+          end
         end
         closedType .NAMESPACE ?? if idContext id.endNamespace _if
           "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2
