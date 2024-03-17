@@ -2126,10 +2126,15 @@ namespace: sb
           ..swap .autoType appendI
                   "]"     appendS
         return
-      genericType case
-        ..swap "generic["     appendS
-          ..swap .genericType appendI
-                     "]"     appendS
+      genericType case .genericType =:: labelId
+        _EXPERIMENTAL_ if
+          labelId labelContext appendLabelName
+          "[generic " appendS
+        else
+          "generic[" appendS
+        end
+        labelId  appendI
+        "]"  appendS
         return
       templateType case
         ..swap "template["     appendS
@@ -2141,9 +2146,11 @@ namespace: sb
         context [] .generatedTypes ..swap list.at .data =:: typeData
         "? " appendS ## TODO append arguments
         typeData [] .generator labelContext sb.appendLabelName
-        " [ "     appendS
-          typeData [] .generated labelContext context allowRecurse appendTypeRecursive
-        " ]"     appendS
+        allowRecurse if
+          " [ "     appendS
+            typeData [] .generated labelContext context allowRecurse appendTypeRecursive
+          " ]"     appendS
+        end
         return
       reference case
         context [] .compositeData ..swap .reference list.get labelContext context allowRecurse appendTypeRecursive
