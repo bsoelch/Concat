@@ -21,17 +21,27 @@ struct(
   MatchType : matchType
 ) =:: ParameterInfo
 
+enum(
+  ConstValue : value
+  ConstValue : fixed
+               nonEmpty
+) =:: GenericArg
+
 struct(
   ProcedureInfo ptr : procedure
   ParameterInfo list : mut paramInfo
-  LabelId ConstValue hashMap : mut genericValues
+  LabelId GenericArg hashMap : mut genericValues
+  i32 : mut nEmpty
+  i32 : mut nCasts
+  i32 : mut nGenerics
   bool : mut isMatch
 ) =:: CallSignatureInfo
 
 proc(
   Type : src
   Type : target
-  LabelId ConstValue hashMap ptr mut : genericValues
+  bool : exactMatch
+  LabelId GenericArg hashMap ptr mut : genericValues
   ProgramContext ptr mut : progContext
 -> bool ) =>: resolveGenerics
   progContext [] .idContext @ =:: idContext
@@ -44,24 +54,49 @@ proc(
   target switch
     genericType case
       target types.getTypeId LabelId =: genericId
-      genericValues genericId map.at =:: oldValue
-      oldValue optional.hasData if
-        oldValue .data [] .none ?? if ## generic marked as non-empty
-          src .empty ?? if
-            true return
-          end
-          src true
-        else
-          src oldValue .data [] .typeId typeContext types.mergeTypes
+      genericValues genericId map.at =:: oldValue?
+      oldValue? optional.hasData if
+        oldValue? .data [] =:: oldValue
+        oldValue switch
+          nonEmpty case
+            src .empty ?? if
+              true return
+            end
+            src break
+          fixed case
+            exactMatch if ## XXX? allow unwrapping named types for exact match
+              src oldValue .fixed .typeId types.typeEquals ! if
+                true return
+              end
+              src break
+            else src oldValue .fixed .typeId typeContext types.canAutoCast ! _if
+              true return
+            end
+            oldValue .fixed .typeId break
+          value case
+            exactMatch if
+              oldValue .value .typeId src typeContext types.canAutoCast ! if
+                true return
+              end
+              src break
+            end
+            src oldValue .value .typeId typeContext types.mergeTypes if ..drop
+              true return
+            end
+            break
         end
       else
-        src true
-      end =:: isError =:: genericValue
+        src
+      end =:: genericValue
       genericValues
         genericId
-        genericValue ConstValue .typeId
+        genericValue ConstValue .typeId exactMatch if
+          GenericArg .fixed
+        else
+          GenericArg .value
+        end
       map.put ..drop
-      isError return
+      false return
     namedType case
       src =:: mut unwrapSrc
       target =:: mut unwrapTarget
@@ -74,6 +109,7 @@ proc(
       ## resolveGenerics
         unwrapSrc
         unwrapTarget
+        exactMatch
         genericValues
         progContext
       resolveGenerics return
@@ -84,6 +120,7 @@ proc(
       ## resolveGenerics
         src typeContext types.getBaseType
         target typeContext types.getBaseType
+        true
         genericValues
         progContext
       resolveGenerics return
@@ -95,6 +132,7 @@ proc(
       ## resolveGenerics
         src typeContext types.getBaseType
         target typeContext types.getBaseType
+        true
         genericValues
         progContext
       resolveGenerics if
@@ -124,6 +162,7 @@ proc(
         ## resolveGenerics
           srcElt
           targetElt
+          true
           genericValues
           progContext
         resolveGenerics if
@@ -141,6 +180,7 @@ proc(
       ## resolveGenerics
         unwrappedSrc typeContext types.getProcIn ..drop
         target typeContext types.getProcIn ..drop
+        true
         genericValues
         progContext
       resolveGenerics if
@@ -149,6 +189,7 @@ proc(
       ## resolveGenerics
         unwrappedSrc typeContext types.getProcOut ..drop
         target typeContext types.getProcOut ..drop
+        true
         genericValues
         progContext
       resolveGenerics if
@@ -172,25 +213,83 @@ proc(
   CallSignatureInfo list ptr mut : elts
 -> CallSignatureInfo ptr mut ) =>: appendCopy
   elts []
-    ## CallSignatureInfo
-      src [] .procedure
-      src [] .paramInfo list.copy
-      src [] .genericValues map.copy
-      src [] .isMatch
-    CallSignatureInfo new list.append
+    src list.appendP
   elts [] =
-  elts [] list.peek .data return
+  elts [] list.peek .data =:: newVal
+    src [] .paramInfo list.copy newVal [] .paramInfo =
+    src [] .genericValues map.copy newVal [] .genericValues =
+  newVal return
+end
+
+proc(
+  CallSignatureInfo : a
+  CallSignatureInfo : b
+  ProgramContext ptr mut : progContext
+-> i32 ) =>: cmpSignatures
+  a .isMatch b .isMatch != if
+    ## match before non-match
+    a .isMatch if -1  else 1 end return
+  end
+  a .isMatch ! if
+    ## no-match -> only compare number of matched parameters
+    a .paramInfo .length b .paramInfo .length == if
+      0 return
+    end
+    a .paramInfo .length b .paramInfo .length < if
+      -1
+    else
+      1
+    end
+    return
+  end
+  a .nCasts b .nCasts != if
+    ## prefer less casts
+    a .nCasts b .nCasts < if -1  else 1 end return
+  end
+  a .nEmpty b .nEmpty != if
+    ## prefer less empty parameters
+    a .nEmpty b .nEmpty < if -1  else 1 end return
+  end
+  a .nGenerics b .nGenerics != if
+    ## prefer less generics
+    a .nGenerics b .nGenerics < if -1  else 1 end return
+  end
+  a .paramInfo .length b .paramInfo .length != if
+    ## prefer more parameters
+    a .paramInfo .length b .paramInfo .length > if -1  else 1 end return
+  end
+  0 return
+end
+
+proc(
+  CallSignatureInfo list ptr mut : signatures
+-> ) =>: cleanupSignatures
+  0 while ..dup signatures [] .length < do =:: i
+    signatures [] i list.at .data =:: elt
+    elt [] .paramInfo
+      list.free
+    elt [] .paramInfo =
+    elt [] .genericValues @ map.free
+    i 1 +
+  end ..drop
+  signatures []
+    list.free
+  signatures [] =
 end
 
 proc(
   ProcedureInfo arrayView : procedures
   StackValue arrayView : stackValues
+  bool : printErrors
   ProgramContext ptr mut : progContext
--> ProcedureInfo ) =>: export resolveCall
+-> ResolvedProcedureInfo optional ) =>: export resolveCall
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
+  procedures .length 0 == if
+    ResolvedProcedureInfo optional.empty return
+  end
   procedures .length CallSignatureInfo list.create =:: mut currentSignatures
   0 while ..dup procedures .length < do =:: i
     procedures i array.at .data =:: procInfo
@@ -201,7 +300,10 @@ proc(
       ## CallSignatureInfo
         procInfo
         argCount ParameterInfo list.create
-        labelHash @ labelEq @ argCount ConstValue map.create
+        labelHash @ labelEq @ argCount GenericArg map.create
+        0
+        0
+        0
         true
       CallSignatureInfo new list.append
     currentSignatures =
@@ -238,7 +340,7 @@ proc(
           paramIndex 1 + paramIndex =
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? _if
           current [] .genericValues @ paramLabel map.at =:: autoValue
-          autoValue optional.isEmpty ! if autoValue .data [] .none ?? ! _if
+          autoValue optional.isEmpty ! if autoValue .data [] .nonEmpty ?? ! _if
             current [] .paramInfo
               ## ParameterInfo
                 stackIndex 0
@@ -263,12 +365,15 @@ proc(
         current currentSignatures @ appendCopy =:: copySig
         copySig [] .genericValues @
           paramLabel
-          Type .empty ConstValue .typeId
+          Type .empty ConstValue .typeId GenericArg .fixed
         map.put ..drop
+        copySig [] .nEmpty
+          1 +
+        copySig [] .nEmpty =
         ## mark generic as non-empty
         current [] .genericValues @
           paramLabel
-          ConstValue .none
+          GenericArg .nonEmpty
         map.put ..drop
         ## update current pointer after changing list
         currentSignatures i list.at .data current =
@@ -278,14 +383,17 @@ proc(
           ## resolveGenerics
             stackType
             paramType
+            false
             current [] .genericValues @
             progContext
           resolveGenerics _if
         MatchType .GENERIC matchType =
+        current [] .nGenerics 1 + current [] .nGenerics =
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType =
       else stackType paramType typeContext types.canAutoCast _if
         MatchType .CAST matchType =
+        current [] .nCasts 1 + current [] .nCasts =
       else
         false current [] .isMatch =
       end
@@ -300,9 +408,46 @@ proc(
     end ..drop
     stackIndex 1 +
   end ..drop
-  ## TODO resolve call
-  ##  * find best match
-  ##  * cleanup memory
-  ##  * return solution
-  ..unreachable
+  currentSignatures cmpSignatures @ progContext list.sort
+  currentSignatures 0 list.at .data =:: candidate
+  ## TODO print error messages
+  candidate [] .isMatch ! if
+    ## no match
+    currentSignatures @ cleanupSignatures
+    ResolvedProcedureInfo optional.empty return
+  end
+  ## cmpSignatures
+    candidate []
+    currentSignatures 1 list.at .data []
+    progContext
+  cmpSignatures 0 == if
+    ## multiple matches
+    currentSignatures @ cleanupSignatures
+    ResolvedProcedureInfo optional.empty return
+  end
+  ## map.create
+    labelHash @
+    labelEq @
+    candidate [] .genericValues .cap
+  ConstValue map.create =:: mut valueMap
+  candidate [] .genericValues @ map.itr.start while
+   map.itr.hasNext do map.itr.next =:: elt
+     elt .1 [] .nonEmpty ?? if
+       continue ## ignore elements without concrete value
+     end
+     valueMap @
+       elt .0 []
+       elt .1 [] switch
+         value case elt .1 [] .value break
+         fixed case elt .1 [] .fixed break
+         nonEmpty case ..unreachable
+       end
+     map.put ..drop
+  end ..drop
+  ## ResolvedProcedureInfo
+    candidate [] .procedure
+    valueMap
+  ResolvedProcedureInfo new =:: result
+  currentSignatures @ cleanupSignatures
+  result optional.wrap return
 end
