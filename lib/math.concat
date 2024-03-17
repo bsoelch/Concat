@@ -1,7 +1,10 @@
 namespace: c
   proc( ..ctype.double -> ..ctype.double ) : extern floor
   proc( ..ctype.double -> ..ctype.double ) : extern ceil
-  proc( ..ctype.double -> ..ctype.double ) : extern round
+  proc(
+    ..ctype.double
+    ..ctype.double
+  -> ..ctype.double ) : extern remainder
   proc( ..ctype.double -> ..ctype.double ) : extern fabs
 
   proc(
@@ -57,7 +60,11 @@ namespace: math
     c.ceil
   end
   proc( double -> double ) =>: export round
-    c.round
+    ..dup double.isFinite ! if
+      return ## no change for non-finite number
+    end
+    ## remainder(x,1) = x - roundeven(x)
+    ..dup 1.0 c.remainder double cast -
   end
   proc( double -> double ) =>: export abs
     c.fabs
