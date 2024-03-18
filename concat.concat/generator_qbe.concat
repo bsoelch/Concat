@@ -1685,35 +1685,32 @@ proc(
   end
   src typeContext types.isReference if target typeContext types.isReference ! _if
     src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
-    baseType context referenceOnly ! if
-      sb
-        "%s" sb.appendS
-        targetId sb.appendI
-        " =" sb.appendS
-        baseType StorageType .STACK pos context sb.appendTypeNameQBE
-        ## unwrap reference
-        valType .REFERENCE ?? if
-          " load" sb.appendS
-          baseType StorageType .LOAD pos context sb.appendTypeNameQBE
-        else
-          " copy" sb.appendS
-        end
-        " %s" sb.appendS
-        srcId sb.appendI
-        '\n' sb.appendC
-        ## cast value
-        baseType target typeContext types.unwrapNamed types.typeEquals ! if
-          ## compileCast
-            autoCast
-            baseType
-            offset
-            target
-            pos
-            context
-          compileCast
-        end
-      return
-    end
+    sb
+      "%s" sb.appendS
+      targetId sb.appendI
+      " =" sb.appendS
+      baseType StorageType .STACK pos context sb.appendTypeNameQBE
+      baseType context referenceOnly ! if valType .REFERENCE ?? _if ## unwrap reference
+        " load" sb.appendS
+        baseType StorageType .LOAD pos context sb.appendTypeNameQBE
+      else
+        " copy" sb.appendS
+      end
+      " %s" sb.appendS
+      srcId sb.appendI
+      '\n' sb.appendC
+      ## cast value
+      baseType target typeContext types.unwrapNamed types.typeEquals ! if
+        ## compileCast
+          autoCast
+          baseType
+          offset
+          target
+          pos
+          context
+        compileCast
+      end
+    return
   end
   "casting from " sb.wrap
     src labelContext typeContext sb.appendType
