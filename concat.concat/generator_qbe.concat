@@ -37,6 +37,11 @@ struct(
 ) =:: StackElement
 
 struct(
+  Type : mut valType
+  i64 : mut valId
+) =:: TypedValId
+
+struct(
   Type       : valType
   ConstValue : value
   FilePosition : pos
@@ -409,7 +414,12 @@ proc(
 end
 
 namespace: sb
-  proc( stringBuilder : sb LabelId : label CompilerContext ptr mut : context -> stringBuilder ) =>: appendGlobalName
+  proc(
+    stringBuilder : sb
+    LabelId : label
+    i64 : implId
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: appendGlobalName
     context [] .program =:: prog
     prog [] .idContext .labelContext @ =:: labelContext
     sb
@@ -426,6 +436,10 @@ namespace: sb
         mNamespace labelContext id.parentNamespace mNamespace =
       end ## XXX? reverse order
       label labelContext sb.appendAsciifiedLabelName
+      implId 0 >= if
+        "_I" sb.appendS
+        implId sb.appendI
+      end
     return
   end
 
@@ -577,8 +591,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    i32 : index
-    LabelId : labelId
+    i64 : index
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendOutArgName
     context [] .program =:: prog
@@ -600,8 +613,7 @@ namespace: sb
     procType typeContext types.getCallConvention ..drop =:: callConvention
     procType typeContext types.getProcIn ..drop =:: inType
     inType typeContext types.compositeElts =:: args
-    procType typeContext types.getProcOut ..drop =:: outType
-    outType typeContext types.compositeElts =:: outTypes
+    procType typeContext types.getProcOutArgs ..drop =:: outArgs
     false =:: mut hasArgs
     sb
       "(" sb.appendS
@@ -620,26 +632,19 @@ namespace: sb
           ..over inType ..over typeContext types.compositeGetLabel context appendArgName
         ..swap 1 +
       end ..drop
-      callConvention .POINTER ?? if
-        outTypes .length =:: mut N
-        N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
-          N 1 - N =
-        end end
-        0 while ..dup N < do
-          ..swap
-            outTypes ..over.2 types.compositeElts.get =:: arg
-            arg typeContext types.isEmpty if ## skip empty arguments
-              ..swap 1 + continue
-            end
-            hasArgs if
-              ',' sb.appendC
-            end
-            true hasArgs =
-            "l " sb.appendS ## all out arguments are pointers
-            ..over outType ..over typeContext types.compositeGetLabel context appendOutArgName
-          ..swap 1 +
-        end ..drop
-      end
+      0 while ..dup outArgs .length < do =:: i
+          outArgs i array.get =:: arg
+          arg typeContext types.isEmpty if ## skip empty arguments
+            i 1 + continue
+          end
+          hasArgs if
+            ',' sb.appendC
+          end
+          true hasArgs =
+          "l " sb.appendS ## all out arguments are pointers
+          i context appendOutArgName
+        i 1 +
+      end ..drop
       ")" sb.appendS
     return
   end
@@ -1264,6 +1269,59 @@ end
 proc(
   stringBuilder : sb
   Type : tupleType
+  i64 : tupleId
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: flattenTupleQBE
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  tupleType typeContext types.compositeElts =:: elts
+  sb
+    0 while ..dup elts .length < do =:: i
+      elts i types.compositeElts.get =:: eltType
+      eltType context toValType =:: eltValType
+      tupleType i typeContext types.tupleElementOffset =:: eltOffset
+      eltType typeContext types.isEmpty if
+        i 1 - continue
+      end
+      "%t" sb.appendS
+        context nextTmpId =:: eltPtrId
+      eltPtrId sb.appendI
+      " =l add %s" sb.appendS
+      tupleId sb.appendI
+      ", " sb.appendS
+      eltOffset sb.appendI
+      '\n' sb.appendC
+      eltValType context pushValue =:: eltId
+      "%s" sb.appendS
+      eltId sb.appendI
+      eltType context referenceOnly if
+        eltType context false appendAlloc ..drop
+        "blit %t" sb.appendS
+      else
+        " =" sb.appendS
+        eltValType sb.appendValTypeQBE
+        " load" sb.appendS
+        eltType StorageType .LOAD pos context sb.appendTypeNameQBE
+        " %t" sb.appendS
+      end
+      eltPtrId sb.appendI
+      eltType context referenceOnly if
+        ", %s" sb.appendS
+        eltId
+        sb.appendI
+        ',' sb.appendC
+        eltType typeContext types.sizeOf sb.appendI
+      end
+      '\n' sb.appendC
+      i 1 +
+    end ..drop
+  return
+end
+proc(
+  stringBuilder : sb
+  Type : tupleType
   i64 : dataPtrId
   FilePosition : pos
   CompilerContext ptr mut : context
@@ -1323,11 +1381,9 @@ proc(
       tmpId sb.appendI
     end
     " =l alloc" sb.appendS
-    valType typeContext types.alignOf
-      ..dup 4 < if ..drop 4i64 end
-    sb.appendI
+    valType typeContext types.alignOf 4 i64.max sb.appendI
     ' ' sb.appendC
-    valType typeContext types.sizeOf sb.appendI
+    valType typeContext types.sizeOf  4 i64.max sb.appendI
     '\n' sb.appendC
   tmpId return
 end
@@ -1723,6 +1779,30 @@ end
 
 proc(
   stringBuilder : sb
+  Type : constType
+  ConstValue : value
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: pushConstant
+  sb
+    pos sb.appendPosQBE
+    "%s" sb.appendS
+    constType context referenceOnly ! if
+      constType context toValType context pushValue sb.appendI
+      " =" sb.appendS
+      constType StorageType .STACK pos context sb.appendTypeNameQBE
+      " copy " sb.appendS
+    else
+      ValType .REFERENCE context pushValue sb.appendI
+      " =l copy " sb.appendS
+    end
+    constType value false pos context sb.appendConstQBE
+    '\n' sb.appendC
+  return
+end
+
+proc(
+  stringBuilder : sb
   Operation ptr : op
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: compileOp
@@ -1737,19 +1817,11 @@ proc(
       sb return
     Constant case
       sb
-        op [] .pos sb.appendPosQBE
-        "%s" sb.appendS
-        op [] .dataType context referenceOnly ! if
-          op [] .dataType context toValType context pushValue sb.appendI
-          " =" sb.appendS
-          op [] .dataType StorageType .STACK op [] .pos context sb.appendTypeNameQBE
-          " copy " sb.appendS
-        else
-          ValType .REFERENCE context pushValue sb.appendI
-          " =l copy " sb.appendS
-        end
-        op [] .dataType op [] .val .Constant false op [] .pos context sb.appendConstQBE
-        '\n' sb.appendC
+        op [] .dataType
+        op [] .val .Constant
+        op [] .pos
+        context
+      pushConstant
       return
     declareId initializeId case
       op [] .val .declareId ?? if
@@ -1786,7 +1858,7 @@ proc(
               retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
               ' ' sb.appendC
             end
-            idInfo .labelId context sb.appendGlobalName
+            idInfo .labelId idInfo .templateId context sb.appendGlobalName
             op [] .dataType op [] .pos context sb.appendProcArgs
             "{\n" sb.appendS
             ## BranchId
@@ -1869,14 +1941,14 @@ proc(
       idInfo .idType switch
         PROCEDURE GLOBAL_VAR case
           isAddr ! if idInfo .idType .PROCEDURE ?? _if
-            break ## TODO call
+            break ## calls are handled by call instruction
           end
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy " sb.appendS
-            idInfo .labelId context sb.appendGlobalName
+            idInfo .labelId idInfo .templateId context sb.appendGlobalName
             "\n" sb.appendS
           return
         LOCAL_VAR case
@@ -2221,6 +2293,106 @@ proc(
         context
       compileCast return
       break
+    call case
+      op [] .val .call @ =:: callInfo
+      prog [] .procedures
+        callInfo [] .procId list.at .data
+      =:: procData
+      op [] .dataType =:: calledType
+      calledType typeContext types.getProcIn ..drop =:: inTypes
+      calledType typeContext types.getProcOutArgs ..drop =:: outArgs
+      calledType typeContext types.getProcRet ..drop =:: retType
+      inTypes typeContext types.compositeEltCount =:: argCount
+      argCount TypedValId list.create =:: mut argIndices
+      sb
+        op [] .pos sb.appendPosQBE
+      =:: mut newSb
+      ## index of current auto-argument
+      0i64 =:: mut argIndex
+      0 while ..dup argCount < do =:: i
+        inTypes i typeContext types.compositeGetElement =:: arg
+        inTypes i typeContext types.compositeGetLabel =:: argLabel
+        argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+          i 1 + continue ## skip static arguments
+        end
+        argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
+          callInfo [] .autoArgs argIndex constContext constArrayGet =:: argVal
+          argIndex 1 + argIndex =
+          argVal .none ?? ! if
+            newSb
+              arg argVal op [] .pos context pushConstant
+            newSb =
+            argIndices
+              arg context popValue TypedValId new list.append
+            argIndices =
+            i 1 + continue
+          end
+        end
+        argIndices
+          arg -1 TypedValId new list.append
+        argIndices =
+        i 1 +
+      end ..drop
+      argIndices .length argIndex =
+      while argIndex 0 > do argIndex 1 - argIndex =
+        argIndices argIndex list.at .data [] .valId 0 >= if
+          continue ## argument already set
+        end
+        ## get argument from stack
+        argIndices argIndex list.at .data =:: arg
+        context popValue arg [] .valId =
+      end
+      argIndices .length =:: outArgOffset
+      ## allocate output arguments
+      0 while ..dup outArgs .length < do =:: i
+        ValType .PTR context pushValue =:: argId
+        newSb
+          "%s" sb.appendS
+          argId sb.appendI
+          outArgs i array.get context false appendAlloc ..drop
+        newSb =
+        argIndices
+          Type .undefined argId TypedValId new list.append
+        argIndices =
+        i 1 +
+      end ..drop
+      -1i64 =:: mut retId
+      newSb
+        retType typeContext types.isEmpty ! if
+          retType context toValType context pushValue retId =
+          "%s" sb.appendS
+          retId sb.appendI
+          " =" sb.appendS
+          retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
+          ' ' sb.appendC
+        end
+        "call " sb.appendS
+        procData [] .labelId callInfo [] .implementationId context sb.appendGlobalName
+        " (" sb.appendS
+        0 while ..dup argIndices .length < do =:: i
+          argIndices i list.at .data =:: arg
+          i 0 > if
+            ',' sb.appendC
+          end
+          i outArgOffset < if
+            arg [] .valType
+              StorageType .LOAD
+              op [] .pos
+              context
+            sb.appendTypeNameQBE
+          else
+            'l' sb.appendC
+          end
+          " %s" sb.appendS
+          arg [] .valId sb.appendI
+          i 1 +
+        end ..drop
+        ")\n" sb.appendS
+        retType typeContext types.isProcOut if
+          retType context popValue op [] .pos context flattenTupleQBE
+        end
+        argIndices list.free argIndices =
+      return
     block case
       op [] .val .block .blockType switch
         IF case
@@ -2748,38 +2920,27 @@ proc(
         sb return
       end
       op [] .dataType typeContext types.getProcRet ..drop =:: retType
+      op [] .dataType typeContext types.getProcOutArgs ..drop =:: outTypes
       sb
         op [] .pos sb.appendPosQBE
-        op [] .dataType typeContext types.getCallConvention ..drop switch
-          STRUCT case break ## no changes needed
-          POINTER case
-            op [] .dataType typeContext types.getProcOut ..drop =:: outType
-            outType typeContext types.compositeEltCount
-              i32 cast
-              retType typeContext types.isEmpty ! if 1 - end
-            =:: N
-            N 0 == if break end
-            outType typeContext types.compositeElts =:: outTypes
-            N 1 - while ..dup 0 >= do =:: i
-              outTypes i types.compositeElts.get =:: elt
-              elt typeContext types.isEmpty if
-                i 1 - continue
-              end
-              elt context referenceOnly if
-                "blit" sb.appendS
-              else
-                "store" sb.appendS
-                elt StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-              end
-              " %s" sb.appendS
-              context popValue sb.appendI
-              ", " sb.appendS
-              i outType i typeContext types.compositeGetLabel context sb.appendOutArgName
-              '\n' sb.appendC
-            i 1 -
-            end ..drop
-            break
-        end
+        outTypes .length 1 - while ..dup 0 >= do =:: i
+          outTypes i array.get =:: elt
+          elt typeContext types.isEmpty if
+            i 1 - continue
+          end
+          elt context referenceOnly if
+            "blit" sb.appendS
+          else
+            "store" sb.appendS
+            elt StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+          end
+          " %s" sb.appendS
+          context popValue sb.appendI
+          ", " sb.appendS
+          i context sb.appendOutArgName
+          '\n' sb.appendC
+        i 1 -
+        end ..drop
         retType typeContext types.isProcOut if
           retType typeContext types.compositeEltCount
         else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
@@ -2834,7 +2995,7 @@ proc(
       context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
       break
     setId autoTypedInitializeId
-    setElement setArrayElement call callPtr call_old
+    setElement setArrayElement callPtr call_old
     argc getArg getArgLen unaryOperator binaryOperator
     setEnumLabel checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case
@@ -2917,7 +3078,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
         "export " sb.appendS
       end
       "data " sb.appendS
-      labelId context sb.appendGlobalName
+      labelId idData [] .templateId context sb.appendGlobalName
       " = align " sb.appendS
       valType typeContext types.alignOf sb.appendI
       " {" sb.appendS
@@ -2987,7 +3148,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     else
       "export function w $main(){\n@start\ncall " sb.appendS
     end
-    mainId context sb.appendGlobalName
+    mainId -1 context sb.appendGlobalName
     "()\nret 0\n}\n" sb.appendS
     target ..over io.fputSb ..drop
   sb.free ..drop
