@@ -1197,7 +1197,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             stackValues list.asArray
             message @ optional.wrap
             program
-          resolveCall =:: calledProc?
+          resolveCall =:: calledType =:: calledProc?
           calledProc? optional.isEmpty if
             message op [] .pos errors appendError
             return
@@ -1207,11 +1207,37 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
-          calledProc .procId ..debug.print
-          calledProc .implementationId ..debug.print
-          ## TODO get (non-automatic) procedure arguments from stack
+          calledType typeContext types.getProcIn ..drop =:: inTypes
+          ## requireTypes
+            inTypes typeContext types.compositeEltArray
+            "procedure arguments" string.wrap
+            op [] .pos
+            state
+          requireTypes if ..drop
+            return
+          end =:: argOffset
+          calledType typeContext types.getProcOut ..drop
+            typeContext types.compositeElts
+          =:: outTypes
+          calledType op [] .dataType =
           calledProc OpValue .call op [] .val =
-          break
+          op [] state appendOp ..drop
+          ## push return values
+          0 while ..dup outTypes .length < do =:: i
+            state [] .stack @
+              ## TypeInfo
+                outTypes i types.compositeElts.get
+                ConstValue .none
+                id.LABEL_ID_NONE
+                op [] .pos
+                -1
+                -1
+                -1
+              TypeInfo new
+            branchTree.push
+            i 1 +
+          end ..drop
+          return
         LABEL case
           break
       end

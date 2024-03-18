@@ -36,6 +36,184 @@ struct(
 ) =:: CallSignatureInfo
 
 proc(
+  Type : src
+  Type list ptr mut : typeBuffer
+  LabelId list ptr mut : labelBuffer
+  LabelId GenericArg hashMap ptr mut : genericValues
+  ProgramContext ptr mut : progContext
+-> Type ) =>: replaceGenerics
+  progContext [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  src typeContext types.containsGeneric | ! if
+    src return
+  end
+  src switch
+    genericType case
+      src types.getTypeId LabelId =: genericId
+      genericValues genericId map.at =:: value?
+      value? optional.hasData if
+        value? .data [] =:: value
+        value switch
+          fixed case
+            value .fixed .typeId return
+          value case
+            value .value .typeId return
+          nonEmpty case break
+        end
+      end
+      src return ## generic not found XXX? error
+    namedType case
+      src typeContext types.namedTypeName =:: name
+      src typeContext types.flatUnwrapNamed =:: base
+      ## newNamedType
+        ## replaceGenerics
+          base
+          typeBuffer
+          labelBuffer
+          genericValues
+          progContext
+        replaceGenerics
+        name
+        -1
+        typeContext
+      types.newNamedType return
+    reference mutableReference case
+      ## newReferenceType
+        ## replaceGenerics
+          src typeContext types.getBaseType
+          typeBuffer
+          labelBuffer
+          genericValues
+          progContext
+        replaceGenerics
+        src .mutableReference ??
+        typeContext
+      types.newReferenceType return
+    pointer arrayType case
+      src typeContext types.getBaseType =:: base
+      src typeContext types.getArraySize =:: size
+      ## TODO replace generic sizes
+      ## newArrayType
+        ## replaceGenerics
+          base
+          typeBuffer
+          labelBuffer
+          genericValues
+          progContext
+        replaceGenerics
+        src .pointer ??
+        size
+        src typeContext types.isFixedSize
+        src typeContext types.isMutable
+        typeContext
+      types.newArrayType
+        if ..unreachable end ## XXX handle error
+      return
+    struct union procIn procOut enum case
+      typeBuffer [] .length =:: typeOffset
+      labelBuffer [] .length =:: labelOffset
+      src typeContext types.compositeEltCount =:: eltCount
+      0 while ..dup eltCount < do =:: i
+        typeBuffer []
+          ## replaceGenerics
+            src i typeContext types.compositeGetElement
+            typeBuffer
+            labelBuffer
+            genericValues
+            progContext
+          replaceGenerics list.append
+        typeBuffer [] =
+        labelBuffer []
+          src i typeContext types.compositeGetLabel list.append
+        labelBuffer [] =
+        i 1 +
+      end ..drop
+      ## newComposite
+        typeBuffer [] list.asArray typeOffset array.tail
+        labelBuffer [] list.asArray labelOffset array.tail optional.wrap
+        typeContext
+        src switch
+          struct case types.newTuple break
+          union case types.newUnion break
+          enum case types.newEnum break
+          procIn procOut case src .procOut ?? ..swap types.newProcArgs false break
+          default ..unreachable
+        end
+        ## reset buffer
+        typeBuffer [] typeOffset list.setLength typeBuffer [] =
+        labelBuffer [] labelOffset list.setLength labelBuffer [] =
+        if ..unreachable end ## XXX check error
+      return
+    procedure case
+      src typeContext types.getProcIn ..drop =:: inTypes
+      src typeContext types.getProcOut ..drop =:: outTypes
+      ## newProcedure
+        inTypes
+          typeBuffer labelBuffer genericValues progContext
+        replaceGenerics
+        outTypes
+          typeBuffer labelBuffer genericValues progContext
+        replaceGenerics
+        src typeContext types.getCallConvention ..drop
+        typeContext
+      types.newProcedure
+        if ..unreachable end ## XXX check error
+      return
+    generatedType case
+      src typeContext types.getGeneratorArgs =:: args
+      idContext [] .templateArgBuffer @ =:: argBuffer
+      argBuffer [] .length =:: argOffset
+      0 while ..dup args .length < do =:: i
+        args i constContext constArrayGet =:: arg
+        argBuffer []
+          arg switch
+            none boolean enumLabel chr int Float
+            str arrayConstant wildCard procedure case
+              arg break ## argument not generic
+            typeId case
+              arg .typeId
+                typeBuffer labelBuffer genericValues progContext
+              replaceGenerics ConstValue .typeId
+              break
+            genericArg case
+              arg .genericArg =:: argId
+              genericValues argId map.at =:: val?
+              val? optional.isEmpty if arg break end
+              val? .data [] switch
+                value case val? .data [] .value break
+                fixed case val? .data [] .fixed break
+                nonEmpty case arg break
+              end
+              break
+            templateArg case ..unreachable
+          end list.append
+        argBuffer [] =
+        i 1 +
+      end ..drop
+      ##findGeneratedType
+        src typeContext types.getGeneratorLabel
+        argBuffer [] list.asArray argOffset array.tail
+        typeContext
+        labelContext
+        constContext
+      types.findGeneratedType
+        if ## new generated type
+          ..unreachable ## XXX? ensure generator is initialized
+        end
+        argBuffer []
+          argOffset list.setLength
+        argBuffer [] =
+      return
+    undefined empty primitiveType cType arrayIndex autoType case
+      ..unreachable ## type should not contain generics
+    templateType case
+      ..unreachable ## new parser should not generate template types
+  end
+end
+
+proc(
   Type : src0
   Type : target
   bool : exactMatch
@@ -202,53 +380,53 @@ proc(
       false return
     generatedType case
       src typeContext types.unwrapNamedKeepGenerated src =
-      src types.isGeneratedType if
-        src typeContext types.getGeneratorLabel
-        target typeContext types.getGeneratorLabel == _if
-        src typeContext types.getGeneratorArgs =:: srcArgs
-        target typeContext types.getGeneratorArgs =:: targetArgs
-        0 while ..dup targetArgs .length < do =:: i
-          srcArgs i constContext constArrayGet =:: srcArg
-          targetArgs i constContext constArrayGet =:: targetArg
-          targetArg .typeId ?? if
-            ## resolveGenerics
-              srcArg .typeId
-              targetArg .typeId
-              true
-              genericValues
-              progContext
-            resolveGenerics if
-              true return
-            end
-          else targetArg .genericArg ?? _if
-            targetArg .genericArg =:: argId
-            genericValues
-              argId
-            map.at =:: prev?
-            prev? optional.hasData if
-              prev? .data [] switch
-                value case ## XXX allow merging values?
-                  srcArg prev? .data [] .value labelContext constantEquals if break end
-                  true return
-                fixed case
-                  srcArg prev? .data [] .fixed labelContext constantEquals if break end
-                  true return
-                nonEmpty case break
-              end
-            end
-            genericValues
-              argId
-              srcArg GenericArg .fixed
-            map.put ..drop
-          end
-          i 1 +
-        end ..drop
-        false return
+      ## src has to be a compatible generated type
+      src types.isGeneratedType ! if
+        true return
+      else src typeContext types.getGeneratorLabel
+           target typeContext types.getGeneratorLabel != _if
+        true return
       end
-      ## TODO resolve generics for generated types
-      ## src generated, same generator as target: -> compare arguments of generators
-      ## otherwise compare underlying types
-      true return
+      src typeContext types.getGeneratorArgs =:: srcArgs
+      target typeContext types.getGeneratorArgs =:: targetArgs
+      0 while ..dup targetArgs .length < do =:: i
+        srcArgs i constContext constArrayGet =:: srcArg
+        targetArgs i constContext constArrayGet =:: targetArg
+        targetArg .typeId ?? if
+          ## resolveGenerics
+            srcArg .typeId
+            targetArg .typeId
+            true
+            genericValues
+            progContext
+          resolveGenerics if
+            true return
+          end
+        else targetArg .genericArg ?? _if
+          targetArg .genericArg =:: argId
+          genericValues
+            argId
+          map.at =:: prev?
+          prev? optional.hasData if
+            prev? .data [] switch
+              value case ## XXX allow merging values?
+                ## TODO allow auto-casts type-casts
+                srcArg prev? .data [] .value labelContext constantEquals if break end
+                true return
+              fixed case
+                srcArg prev? .data [] .fixed labelContext constantEquals if break end
+                true return
+              nonEmpty case break
+            end
+          end
+          genericValues
+            argId
+            srcArg GenericArg .fixed
+          map.put ..drop
+        end
+        i 1 +
+      end ..drop
+      false return
     undefined empty primitiveType cType arrayIndex autoType case
       ..unreachable ## type should not contain generics
     templateType case
@@ -351,13 +529,13 @@ proc(
   StackValue arrayView : stackValues
   stringBuilder ptr mut optional : errorMessage
   ProgramContext ptr mut : progContext
--> ProcedureCallInfo optional ) =>: export resolveCall ## TODO return called type as 2nd ret value
+-> ProcedureCallInfo optional Type ) =>: export resolveCall ## TODO return called type as 2nd ret value
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   procedureIds .length 0 == if
-    ProcedureCallInfo optional.empty return
+    ProcedureCallInfo optional.empty Type .undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut currentSignatures
   0 while ..dup procedureIds .length < do =:: i
@@ -524,7 +702,7 @@ proc(
       errorMessage .data [] =
     end
     currentSignatures @ cleanupSignatures
-    ProcedureCallInfo optional.empty return
+    ProcedureCallInfo optional.empty Type .undefined return
   end
   currentSignatures .length 1 > if
       ## cmpSignatures
@@ -572,12 +750,13 @@ proc(
       errorMessage .data [] =
     end
     currentSignatures @ cleanupSignatures
-    ProcedureCallInfo optional.empty return
+    ProcedureCallInfo optional.empty Type .undefined return
   end
   progContext [] .procedures
     candidate [] .procId list.at .data
   =:: procInfo
   procInfo [] .procType typeContext types.getProcIn ..drop =:: inType
+  procInfo [] .procType typeContext types.getProcOut ..drop =:: outType
   inType typeContext types.compositeEltCount =:: eltCount
   eltCount ConstValue list.create =:: mut constArgs
   0 while ..dup eltCount < do =:: i
@@ -630,22 +809,71 @@ proc(
   constArgs
     list.clear
   constArgs =
+  eltCount Type list.create =:: mut typeBuffer
+  eltCount LabelId list.create =:: mut labelBuffer
   0 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags
-    flags id.FLAG_AUTO & ? if flags id.FLAG_STATIC & ? ! _if
-      constArgs
-        candidate [] .genericValues @ eltLabel getValueOrNone list.append
-      constArgs =
+    true =:: mut needArg
+    flags id.FLAG_AUTO & ? if
+      candidate [] .genericValues @ eltLabel getValueOrNone =:: value
+      value .none ?? ! if
+        false needArg =
+      end
+      flags id.FLAG_STATIC & ? ! if
+        constArgs
+          value list.append
+        constArgs =
+      end
+    end
+    needArg if ## need argument from stack
+      inType i typeContext types.compositeGetElement =:: eltType
+      typeBuffer
+        ## replaceGenerics
+          eltType
+          typeBuffer @
+          labelBuffer @
+          candidate [] .genericValues @
+          progContext
+        replaceGenerics list.append
+      typeBuffer =
+      labelBuffer
+        eltLabel list.append
+      labelBuffer =
     end
     i 1 +
   end ..drop
+  ## newProcArgs
+    typeBuffer list.asArray
+    labelBuffer list.asArray optional.wrap
+    false
+    typeContext
+  types.newProcArgs =:: newIn
+  typeBuffer list.clear typeBuffer =
+  labelBuffer list.clear labelBuffer =
+  ## replaceGenerics
+    outType
+    typeBuffer @
+    labelBuffer @
+    candidate [] .genericValues @
+    progContext
+  replaceGenerics =:: newOut
+  typeBuffer list.free typeBuffer =
+  labelBuffer list.free labelBuffer =
+  ## newProcedure
+    newIn
+    newOut
+    procInfo [] .procType typeContext types.getCallConvention ..drop
+    typeContext
+  types.newProcedure
+    if ..unreachable end ## XXX check error
+  =:: calledType
   ## ProcedureCallInfo
     candidate [] .procId
     implId
     constArgs list.asArray constContext constArray
   ProcedureCallInfo new =:: result
-  constArgs list.free ..drop
+  constArgs list.free constArgs =
   currentSignatures @ cleanupSignatures
-  result optional.wrap return
+  result optional.wrap calledType return
 end

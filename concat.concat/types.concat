@@ -1407,6 +1407,8 @@ namespace: types
 
   ## named types
   struct( Type : mut data LabelId : name TemplateId : templateId i32 : mut implId ) =:: NamedType
+  ## XXX templateId used by old replace generic procedure
+  ## XXX? prevent recreation of named type with same type and id
   proc( Type LabelId TemplateId TypeContext ptr mut -> Type ) =>: export newNamedType
     =:: context
     -1 NamedType new context [] .namedTypes ..swap list.append context [] .namedTypes =
