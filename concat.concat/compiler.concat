@@ -211,7 +211,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
   srcFile libPath basePath parseProgram =:: mut prog
   parserTokensFile optional.hasData if
     1024 sb.create
-      prog sb.appendProgram
+      prog @ sb.appendProgram
     =:: parsedOps
     parserTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
@@ -224,7 +224,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
     prog @ typeCheckProgram2
     compilerTokensFile optional.hasData if ## XXX separate file for each compilation step
       1024 sb.create
-        prog sb.appendProgram
+        prog @ sb.appendProgram
       =:: parsedOps
       compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
         ..dup parsedOps io.fputSb ..drop
@@ -242,7 +242,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
     prog @ typeCheckProgram
     compilerTokensFile optional.hasData if
       1024 sb.create
-        prog sb.appendProgram
+        prog @ sb.appendProgram
       =:: parsedOps
       compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
         ..dup parsedOps io.fputSb ..drop

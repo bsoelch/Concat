@@ -2837,14 +2837,14 @@ proc(
       context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
       break
     setId autoTypedInitializeId
-    setElement setArrayElement call callPtr
+    setElement setArrayElement call callPtr call_old
     argc getArg getArgLen unaryOperator binaryOperator
     setEnumLabel checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap
-    op [] constContext labelContext typeContext sb.appendOp
+    op [] prog sb.appendOp
   op [] .pos errors appendError
   sb return
 end

@@ -586,7 +586,7 @@ proc(
       end
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap
-          op [] constContext labelContext typeContext sb.appendOp
+          op [] program sb.appendOp
         op [] .pos errors appendError
       end
       true return
@@ -684,7 +684,7 @@ proc(
         TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR case
         showErrorMessages if
           "unsupported operation in constant evaluation: " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
+            op [] program sb.appendOp
           op [] .pos errors appendError
         end
         true return
@@ -793,7 +793,7 @@ proc(
     getLabel setLabel @Label
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement setValue
-    Print New newEnum call callPtr
+    Print New newEnum call callPtr call_old
     argc getArg getArgLen
     length size Cast Cast! autoCast
     unaryOperator binaryOperator
@@ -803,7 +803,7 @@ proc(
     compilerInfo unreachable typeInfo case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap
-          op [] constContext labelContext typeContext sb.appendOp
+          op [] program sb.appendOp
         op [] .pos errors appendError
       end
       true return
@@ -874,11 +874,7 @@ proc(
     op [] .val .initializeId .idType .PROCEDURE ?? !
   end if
     "expected procedure initialization got " sb.wrap
-      op []
-        idContext [] .constContext @
-        labelContext
-        typeContext
-      sb.appendOp
+      op [] program sb.appendOp
     op [] .pos errors appendError
     true return ## not a call
   end

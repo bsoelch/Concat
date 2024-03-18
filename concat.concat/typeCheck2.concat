@@ -639,7 +639,7 @@ proc(
               i 1 + continue
             end
             "operation is not a NO-OP" sb.wrap
-              castPoint [] constContext labelContext typeContext sb.appendOp
+              castPoint [] program sb.appendOp
             mergePoint .mergePoint errors appendError
           end
           "cannot cast " sb.wrap
@@ -691,7 +691,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkReachable
   program [] .idContext .typeContext @ =:: typeContext
   program [] .idContext .labelContext @ =:: labelContext
   "unreachable operation: " sb.wrap
-    op [] constContext labelContext typeContext sb.appendOp
+    op [] program sb.appendOp
   op [] .pos errors appendError
 end
 
@@ -1066,7 +1066,7 @@ proc(
   switchType typeContext types.isEnum ! if
     op state [] .interpreter @ false evaluateOperation if
       "unsupported operation in switch label:\n " sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
+        op [] program sb.appendOp
       op [] .pos errors appendError
     end
     true return
@@ -1080,7 +1080,7 @@ proc(
     "unsupported operation for switch label of type " sb.wrap
       switchType labelContext typeContext sb.appendType
       " : " sb.appendS
-      op [] constContext labelContext typeContext sb.appendOp
+      op [] program sb.appendOp
       " expected identifier" sb.appendS
     op [] .pos errors appendError
     true return
@@ -1139,7 +1139,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         state unfreezeInterpreter
         op state [] .interpreter @ true evaluateOperation if
           "could not evaluate " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
+            op [] program sb.appendOp
           op [] .pos errors appendError
         end
         return
@@ -1193,7 +1193,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end ..drop
           0 sb.create =:: mut message
           ## resolveCall
-            program [] .procedures procId list.at .data array.wrap
+            procId @ array.wrap
             stackValues list.asArray
             message @ optional.wrap
             program
@@ -1206,11 +1206,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             message sb.free ..drop
           end
           stackValues list.free ..drop
-          ## TODO call procedure
-          ## 1. resolve static arguments
-          ## 2. get non-automatic procedure arguments from stack
-          ## 3. append operation for correct version of procedure
-          ##      (remember static&automatic args)
+          calledProc? .data =:: calledProc
+          calledProc .procId ..debug.print
+          calledProc .implementationId ..debug.print
+          ## TODO get (non-automatic) procedure arguments from stack
+          calledProc OpValue .call op [] .val =
           break
         LABEL case
           break
@@ -1544,7 +1544,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         end
         baseType typeContext types.isInt ! if ..drop
           "invalid type for operation " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
+            op [] program sb.appendOp
             " " sb.appendS
             typeInfo [] .valueType labelContext typeContext sb.appendType
             " is not a pointer or integer" sb.appendS
@@ -1556,7 +1556,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
         branchTree.itr.hasNext ! if ..drop
           "missing type for operation " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
+            op [] program sb.appendOp
             " expected pointer" sb.appendS
           op [] .pos errors appendError
           return
@@ -2516,7 +2516,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       state [] .stack @ branchTree.peek =:: value?
       value? optional.isEmpty if
         "missing argument for " sb.wrap
-          op [] constContext labelContext typeContext sb.appendOp
+          op [] program sb.appendOp
           " expected pointer or array" sb.appendS
         op [] .pos errors appendError
         return
@@ -2528,7 +2528,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       valType typeContext types.isPointer valType typeContext types.isArray | if
         valType typeContext types.isFixedSize ! if
           "invalid operand for : " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
+            op [] program sb.appendOp
             " cannot get the length of " sb.appendS
             valType labelContext typeContext sb.appendType
           op [] .pos errors appendError
@@ -2556,7 +2556,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             return
           else
             "unsupported array-size type for " sb.wrap
-              op [] constContext labelContext typeContext sb.appendOp
+              op [] program sb.appendOp
             op [] .pos errors appendError
             return
           end
@@ -2571,7 +2571,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 current .value i32 cast ConstValue .genericArg list.append
               else ..drop.2
                 "unsupported array-size type for " sb.wrap
-                  op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+                  op [] program sb.appendOp
                 op [] .pos errors appendError
                 return
               end
@@ -2594,7 +2594,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         end
       end ## XXX? support length on structs/tuples/enums
       "unsupported argument type for " sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
+        op [] program sb.appendOp
         valType labelContext typeContext sb.appendType
       op [] .pos errors appendError
       return
@@ -2686,14 +2686,14 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         op [] .pos errors appendError
       end
       return
-    setId setLabel setElement setArrayElement autoCast copy case
+    setId setLabel setElement setArrayElement autoCast copy call_old case
       "unsupported operation" sb.wrap
-        op [] constContext labelContext typeContext sb.appendOp
+        op [] program sb.appendOp
       op [] .pos errors appendError
       return
   end
   "type-checking for operation: " sb.wrap
-    op [] constContext labelContext typeContext sb.appendOp
+    op [] program sb.appendOp
     " has not been implemented" sb.appendS
   op [] .pos errors appendError
 end

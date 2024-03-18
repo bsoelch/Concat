@@ -16,6 +16,25 @@ struct( Type : src i32 : mut offset ) =:: export CastInfo ## offset: zero-indexe
 enum( ALIGNMENT SIZE STRIDE ) =:: export TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 
+struct(
+  ConstantArray : staticArgs
+  i64 : codeStart
+  i64 : mut codeLength
+) =:: export ProcImplementation
+struct(
+  FileId : fileId
+  Type : procType
+  LabelId : labelId
+  ProcImplementation list : mut implementations
+  i64 : codeStart
+  i64 : mut codeLength
+) =:: export ProcedureInfo
+struct(
+  i64 : procId
+  i64 : implementationId
+  ConstantArray : autoArgs
+) =:: export ProcedureCallInfo
+
 enum(
             NopType : NOP
          ConstValue : mut Constant
@@ -43,7 +62,8 @@ enum(
                       Return
                       New
                 i32 : newEnum
-           CallInfo : call
+           CallInfo : call_old ## backwards comparability
+  ProcedureCallInfo : call
                 i64 : mut callPtr
                       argc
                       getArg
@@ -255,13 +275,7 @@ struct(
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export LabelData
 struct( LabelData list : mut labels Type : switchType i32 : mut caseCount bool : mut hasDefault ) =:: export SwitchData
 struct( i32 : mut modifiedTypes ) =:: export WhileData
-struct(
-  FileId : fileId
-  Type : procType
-  LabelId : labelId
-  i64 : codeStart
-  i64 : mut codeLength
-) =:: export ProcedureInfo
+
 struct(
   IdentifierContext : mut idContext
    ProgramFile list : mut progFiles
@@ -356,10 +370,11 @@ namespace: sb
         break
     end
   end
-  proc( stringBuilder Operation ConstantContext ptr LabelContext ptr TypeContext ptr -> stringBuilder ) =>: export appendOp
-    =:: typeContext
-    =:: labelContext
-    =:: constContext
+  proc( stringBuilder Operation ProgramContext ptr -> stringBuilder ) =>: export appendOp
+    =:: progContext
+    progContext [] .idContext .typeContext @ =:: typeContext
+    progContext [] .idContext .labelContext @ =:: labelContext
+    progContext [] .idContext .constContext @ =:: constContext
     ..swap
       ..over .val switch
         NOP case
@@ -391,11 +406,28 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getId labelContext sb.appendIdInfo
           break
-        call case
+        call_old case
           "call ( " sb.appendS
           ..over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .call .idInfo labelContext sb.appendIdInfo
+          ..over .val .call_old .idInfo labelContext sb.appendIdInfo
+          break
+        call case ..over =:: op
+          op .val .call @ =:: callInfo
+          "call ( " sb.appendS
+          op .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          progContext [] .procedures
+            callInfo [] .procId list.at .data
+          =:: procInfo
+          procInfo [] .labelId labelContext sb.appendLabelName
+          callInfo [] .implementationId 0 >= if
+            ## XXX append static args instead of impl id
+            " (" sb.appendS
+            callInfo [] .implementationId sb.appendI
+            ')' sb.appendC
+          end
+          ## XXX? print auto args
           break
         setId case
           "set ( " sb.appendS
@@ -687,39 +719,39 @@ namespace: sb
         break
     end
   end
-  proc( stringBuilder ProgramContext -> stringBuilder ) =>: export appendProgram
+  proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export appendProgram
     =:: prog
       "## errors:\n" sb.appendS
-      0 while ..dup prog .errors .length < do
+      0 while ..dup prog [] .errors .length < do
         ..swap
-          prog .errors ..over.2 list.get sb.appendCompilerError
+          prog [] .errors ..over.2 list.get sb.appendCompilerError
         ..swap
         1 +
       end ..drop
-      0 while ..dup prog .progFiles .length < do
+      0 while ..dup prog [] .progFiles .length < do
         ..swap
-          prog .progFiles ..over.2 list.get =:: f
+          prog [] .progFiles ..over.2 list.get =:: f
           "## "          sb.appendS
           f .fileName    sb.appendSb
           '\n'           sb.appendC
           "## global:\n" sb.appendS
           0 while ..dup f .globalOps .length < do
             ..swap
-              f .globalOps ..over.2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @  sb.appendOp
+              f .globalOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
           "## local:\n" sb.appendS
           0 while ..dup f .localOps .length < do
             ..swap
-              f .localOps ..over.2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+              f .localOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
           "## templates:\n" sb.appendS
           0 while ..dup f .templateOps .length < do
             ..swap
-              f .templateOps ..over.2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+              f .templateOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
@@ -727,9 +759,9 @@ namespace: sb
         1 +
       end ..drop
       "## unresolved templates:\n" sb.appendS
-      0 while ..dup prog .templateOps .length < do
+      0 while ..dup prog [] .templateOps .length < do
         ..swap
-          prog .templateOps ..over.2 list.get prog .idContext .constContext @ prog .idContext .labelContext @ prog .idContext .typeContext @   sb.appendOp
+          prog [] .templateOps ..over.2 list.get prog sb.appendOp
         ..swap
         1 +
       end ..drop

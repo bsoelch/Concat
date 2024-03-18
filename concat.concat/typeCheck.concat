@@ -12,7 +12,7 @@ struct( StackState : mut inTypes StackState : mut outTypes bool : mut hasOutType
 enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock SwitchBlockData : mut switchBlock Type : procBlock ) =:: BlockData
 struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId BlockType : mut blockType ) =:: BlockInfo
 struct(
-  IdentifierContext ptr mut : mut idContext
+  ProgramContext ptr mut : mut progContext
 
   Operation list : mut compiledOps
 
@@ -37,7 +37,8 @@ struct(
 
 namespace: sb
   proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state -> stringBuilder ) =>: appendTypeStack
-    state [] .idContext =:: idContext
+    state [] .progContext =:: progContext
+    progContext [] .idContext @ =:: idContext
     idContext [] .labelContext @ =:: labelContext
     idContext [] .typeContext @ =:: typeContext
     state [] .opStack .length =:: mut offset
@@ -68,7 +69,7 @@ namespace: sb
           0 while ..dup elt [] .opCount < do
             ..swap
             "   " sb.appendS
-            state [] .opStack offset ..over.3 + list.get idContext [] .constContext @ labelContext typeContext sb.appendOp
+            state [] .opStack offset ..over.3 + list.get progContext sb.appendOp
             ..swap 1 +
           end ..drop
         ..swap 1 -
@@ -143,7 +144,7 @@ proc( Type : valType -> TypeInfo ) =>: newTypeInfo
   TypeInfo new return
 end
 proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state -> IdentifierInfo ) =>: newTmpVar
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   id.FLAG_NONE mutable if id.FLAG_MUTABLE | LabelFlag cast end =:: flags
   ## IdInfo
@@ -169,7 +170,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: ensureStackHeadIsValue
   state [] .typeStack .length 0 == if
     return
   end
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack list.peek .data =:: head
   head [] .opCount 0 == if
@@ -257,7 +258,7 @@ proc( Operation ptr : op i64 : typeCount TypeCheckState ptr mut : state -> ) =>:
 end
 enum( ALL NON_EMPTY NONE ) =:: CompileType
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state CompileType : compileOps -> ) =>: processStackOps
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length count -
   ..dup 0 < if ..drop
@@ -309,7 +310,7 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =>: dis
   count pos state CompileType .NONE processStackOps
 end
 proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut : state -> ) =>: extractCompositeOps
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   state [] .openBlocks .length 0 == if
     return ## don't extract composites at global level
@@ -461,7 +462,7 @@ proc( Type : a Type : b Type 2 ptr mut : inTypes TypeContext ptr mut : context -
 end
 
 proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state -> ) =>: requireTypes
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length types .length < if
@@ -540,7 +541,7 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
 end
 
 proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) =>: storeStack
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   0 =:: mut opOffset
@@ -584,7 +585,7 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) 
   end return
 end
 proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create BlockType : blockName i64 : blockStart bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeOutTypes
-  state [] .idContext =:: idContext
+  state [] .progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length
@@ -755,7 +756,8 @@ enum( PROC POINTER ) =:: CallType
 
 proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : templateImpl CallType : callType TypeCheckState ptr mut : state -> ) =>: typeCheckCall
   using types
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
@@ -763,7 +765,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   callType .POINTER ?? if
     state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
       "missing argument for operation" sb.wrap
-        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        op [] progContext sb.appendOp
       op [] .pos state appendError2
       return
     end .data [] .valType calledType =
@@ -795,8 +797,8 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     calledType typeContext hasStaticArgs if
      argCount i32 cast ## static argument indices are their argument positions -> array length = argument count
     else 0 end =:: staticArgCount
-    state [] .idContext [] .templateArgBuffer .length =:: argBufferOffset
-    state [] .idContext [] .templateArgBuffer @ =:: argValues
+    idContext [] .templateArgBuffer .length =:: argBufferOffset
+    idContext [] .templateArgBuffer @ =:: argValues
     argValues []
       argBufferOffset templateCount staticArgCount + + list.ensureCap
      ..dup .length templateCount staticArgCount + + list.setLength
@@ -894,7 +896,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     argBufferOffset templateCount + staticArgCount ConstantArray new =:: genericIndices
     false if ## DEBUG
       "-----------------\n" sb.wrap
-        op [] idContext [] .constContext @  labelContext typeContext sb.appendOp
+        op [] progContext sb.appendOp
         0 while ..dup templateCount < do
           ..swap
             argValues [] ..over.2 argBufferOffset + list.get idContext [] .constContext @ labelContext typeContext sb.appendConstant
@@ -945,9 +947,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         "could not store template info for call" sb.wrap op [] .pos state appendError2
       end
     end
-    state [] .idContext [] .templateArgBuffer
+    idContext [] .templateArgBuffer
       argBufferOffset list.setLength
-    state [] .idContext [] .templateArgBuffer = ## reset argument buffer
+    idContext [] .templateArgBuffer = ## reset argument buffer
   end
   Type .undefined =:: mut retType
   IdentifierInfo : mut retId
@@ -1029,9 +1031,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   op [] .val .callPtr ?? if
     totalArgs op [] .val .callPtr =
   else op [] .val .getId ?? _if
-    op [] .val .getId totalArgs CallInfo new OpValue .call op [] .val = ## XXX extract opValue creation to  to program.concat
+    op [] .val .getId totalArgs CallInfo new OpValue .call_old op [] .val = ## XXX extract opValue creation to  to program.concat
   else
-    "unexpected type for call operation" sb.wrap op [] constContext labelContext typeContext sb.appendOp op [] .pos state appendError2
+    "unexpected type for call operation" sb.wrap op [] progContext sb.appendOp op [] .pos state appendError2
   end
   state [] .compiledOps
     op list.appendP ## TODO? store calling convention in operation
@@ -1118,7 +1120,8 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
 end
 
 proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =>: typeCheckGetId
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   idInfo .idType switch
@@ -1192,14 +1195,15 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       break
     TEMPLATE_ARG TYPE LABEL case
       "operation " sb.wrap
-        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
       op [] .pos state appendError2
       break
   end
 end
 proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =>: typeCheckDeclareId
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   idInfo .idType switch
@@ -1286,7 +1290,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
       break
     ARGUMENT TEMPLATE_ARG TYPE LABEL case
       "operation " sb.wrap
-        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
       op [] .pos state appendError2
       break
@@ -1294,14 +1298,15 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
 end
 proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : state -> ) =>: typeCheckGetArrayElement
   using types
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack .length =:: mut offset
   0 =:: mut indexCount
   state [] .typeStack .length 0 == if
     "missing argument for operation " sb.wrap
-      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+      op [] progContext sb.appendOp
     op [] .pos state appendError2
     return
   end
@@ -1312,7 +1317,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     end
     state [] .typeStack offset list.at .data [] .valType typeContext isInt ! if
       "invalid type for operation " sb.wrap
-        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        op [] progContext sb.appendOp
         " " sb.appendS
         state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
         " is not a pointer" sb.appendS
@@ -1323,7 +1328,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   end
   state [] .typeStack offset list.get .valType typeContext isPointer ! if
     "invalid type for operation " sb.wrap
-      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+      op [] progContext sb.appendOp
       " " sb.appendS
       state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
       " is not a pointer" sb.appendS
@@ -1402,12 +1407,13 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
 end
 proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> ) =>: typeCheckGetElement
   using types
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
     "not enough operands for : " sb.wrap
-      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+      op [] progContext sb.appendOp
       " need 1 got " sb.appendS
       state [] .typeStack .length sb.appendI
     op [] .pos state appendError2
@@ -1475,7 +1481,8 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
 end
 proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> ) =>: typeCheckGetLabel
   using types
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   label labelContext id.isLabelEmpty if
@@ -1484,7 +1491,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
   end
   state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
     "not enough operands for : " sb.wrap
-      op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+      op [] progContext sb.appendOp
       " need 1 got " sb.appendS
       state [] .typeStack .length sb.appendI
     op [] .pos state appendError2
@@ -1510,7 +1517,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
           break
         default
           "unexpected operation for get label: " sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+            op [] progContext sb.appendOp
           op [] .pos state appendError2
           return
       end
@@ -1551,7 +1558,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
           break
         default
           "unexpected operation for get label: " sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+            op [] progContext sb.appendOp
           op [] .pos state appendError2
           return
       end
@@ -1612,7 +1619,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
           break
         default
           "unexpected operation for get label: " sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+            op [] progContext sb.appendOp
           op [] .pos state appendError2
           return
       end
@@ -1627,7 +1634,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
   op [] .pos state appendError2
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   op [] .dataType typeContext types.isProcedure ! if
@@ -1663,7 +1671,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkReachable
     return
   end
   "unreachable operation: " sb.wrap
-    op [] state [] .idContext [] .constContext @ state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
+    op [] state [] .progContext sb.appendOp
   op [] .pos state appendError2
 end
 proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkLocal
@@ -1671,12 +1679,13 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkLocal
     return
   end
   "unexpected operation at global level: " sb.wrap
-    op [] state [] .idContext [] .constContext @ state [] .idContext [] .labelContext @ state [] .idContext [] .typeContext @ sb.appendOp
+    op [] state [] .progContext sb.appendOp
   op [] .pos state appendError2
 end
 
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> bool ) =>: resolveEnumSwitchLabel
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state [] .openBlocks list.peek =:: openBlock?
@@ -1726,7 +1735,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> bool ) =>: resolv
 end
 
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIdentifiers
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   op state resolveEnumSwitchLabel if
@@ -1770,7 +1780,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIden
 end
 ## TODO? constant evalutation
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
-  state [] .idContext =:: idContext
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state checkSync if
@@ -1848,7 +1859,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -1905,7 +1916,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       state [] .typeStack .length 2 < if
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 2 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -2645,7 +2656,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkLocal
       state [] .typeStack .length 0 == if
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -2706,7 +2717,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkLocal
       state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -2752,7 +2763,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkLocal
       state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -2761,7 +2772,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       src [] .valType typeContext types.isPointer src [] .valType typeContext types.isArray | if
         src [] .valType typeContext types.isFixedSize ! if
           "invalid operand for : " sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+            op [] progContext sb.appendOp
             " cannot get the length of " sb.appendS
             src [] .valType labelContext typeContext sb.appendType
           op [] .pos state appendError2
@@ -2790,7 +2801,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             opConst op [] =
           else
             "unsupported array-size type for " sb.wrap
-              op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+              op [] progContext sb.appendOp
             op [] .pos state appendError2
             return
           end
@@ -2812,7 +2823,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkLocal
       state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -2821,7 +2832,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       src [] .valType typeContext types.isPointer src [] .valType typeContext types.isArray | if
         src [] .valType typeContext types.isFixedSize ! if
           "invalid operand for : " sb.wrap
-            op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+            op [] progContext sb.appendOp
             " cannot get the length of " sb.appendS
             src [] .valType labelContext typeContext sb.appendType
           op [] .pos state appendError2
@@ -2838,7 +2849,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
               current .value i32 cast ConstValue .genericArg list.append
             else ..drop.2
               "unsupported array-size type for " sb.wrap
-                op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+                op [] progContext sb.appendOp
               op [] .pos state appendError2
               return
             end
@@ -2879,7 +2890,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
     Cast Cast! case
       state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
         "not enough operands for : " sb.wrap
-          op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+          op [] progContext sb.appendOp
           " need 1 got " sb.appendS
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
@@ -3018,9 +3029,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       break
     hasName hasElement
     typeModifier
-    checkEnumLabel checkArrayIndex setEnumLabel getArgLen call case
+    checkEnumLabel checkArrayIndex setEnumLabel getArgLen call call_old case
       "operation " sb.wrap
-        op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+        op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
       op [] .pos state appendError2
       return
@@ -3054,7 +3065,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       return ## do nothing
   end
   "type-checking for operation " sb.wrap
-    op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+    op [] progContext sb.appendOp
     " is not implemented" sb.appendS
   op [] .pos state appendError2
 end
@@ -3068,24 +3079,26 @@ proc(
   ConstantArray : argsIndices
   TypeCheckState ptr mut : state ->
 ) =>: resolveTemplateGetIdentifer
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   idInfo .idType switch
     TEMPLATE_ARG case
       ## opConst
-        impl [] .argValues idInfo .id state [] .idContext [] .constContext @ constArrayGet
-        template [] .templateType idInfo .id state [] .idContext [] .typeContext @ types.compositeGetElement
+        impl [] .argValues idInfo .id idContext [] .constContext @ constArrayGet
+        template [] .templateType idInfo .id idContext [] .typeContext @ types.compositeGetElement
         template [] .declaredAt
       opConst op [] =
       break
     TMP_VAR LOCAL_VAR ARGUMENT LABEL case
-      op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+      op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenericsType op [] .dataType =
       break
     GLOBAL_VAR PROCEDURE TYPE case
       op [] .val .initializeId ?? if
-        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenericsType op [] .dataType =
         implId op [] .val .initializeId .id =
       end
       op [] .val .declareId ?? if
-        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+        op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenericsType op [] .dataType =
         implId op [] .val .declareId .id =
       end
       break
@@ -3099,6 +3112,8 @@ proc(
   ConstantArray : argsIndices
   TypeCheckState ptr mut : state ->
 ) =>: resolveTemplateOp
+  state [] .progContext =:: progContext
+  progContext [] .idContext @ =:: idContext
   op [] .val .getId ?? if
     op op [] .val .getId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val .setId ?? _if
@@ -3110,13 +3125,13 @@ proc(
   else op [] .val .declareId ?? _if
     op op [] .val .declareId template impl implId argsIndices state resolveTemplateGetIdentifer
   else
-    op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .dataType =
+    op [] .dataType argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenericsType op [] .dataType =
     op [] .val .Cast ?? if
-      op [] .val .Cast argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .val .Cast =
+      op [] .val .Cast argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenericsType op [] .val .Cast =
     else op [] .val .Cast! ?? _if
-      op [] .val .Cast! argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenericsType op [] .val .Cast! =
+      op [] .val .Cast! argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenericsType op [] .val .Cast! =
     else op [] .val .Constant ?? _if
-      op [] .val .Constant argsIndices 0 0 ConstantArray new op [] .pos state [] .idContext types.replaceGenerics op [] .val .Constant =
+      op [] .val .Constant argsIndices 0 0 ConstantArray new op [] .pos idContext types.replaceGenerics op [] .val .Constant =
     end
   end
 end
@@ -3125,7 +3140,7 @@ end
 proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
   =:: mut prog
   ## TypeCheckState
-    prog [] .idContext @
+    prog
     128 Operation list.create
     128 Operation list.create
     128 TypeInfo  list.create
@@ -3142,6 +3157,7 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
     prog [] .hasCheckEnum
     prog [] .hasGetArgs
   TypeCheckState new =:: mut state
+  prog [] .idContext @ =:: idContext
   0 =:: mut globalTmpCount
   0 while ..dup prog [] .progFiles .length < do
     ..dup state .fileId =
@@ -3190,8 +3206,8 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
     while
       false compiledImpl =
       depth 1 + depth =
-      0 while ..dup state .idContext [] .templateInfos .length < do
-        state .idContext [] .templateInfos ..over list.at .data =:: mut template
+      0 while ..dup idContext [] .templateInfos .length < do
+        idContext [] .templateInfos ..over list.at .data =:: mut template
         template [] .codeLength 0 > template [] .implementations .length template [] .compiledImpls > & if
           true compiledImpl =
           template [] .implementations .length =:: mut prevImpl
@@ -3202,7 +3218,7 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
             state .typeStack list.clear state .typeStack =
             state .opStack list.clear state .opStack =
             template [] .implementations ..over list.at .data =:: impl
-            impl [] .argValues state .idContext [] .constContext @ constArrayAsArray =:: argArray
+            impl [] .argValues idContext [] .constContext @ constArrayAsArray =:: argArray
             false =:: mut isTemplate
             0 while ..dup argArray .length < do =:: i
               argArray i array.at .data =:: arg
@@ -3217,21 +3233,21 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
               ## XXX figure out why some implementations contain unresolved template arguments
               1 + continue
             end
-            state .idContext [] .templateArgBuffer .length =:: argBufferOffset
-            state .idContext [] .templateArgBuffer
+            idContext [] .templateArgBuffer .length =:: argBufferOffset
+            idContext [] .templateArgBuffer
               argArray list.appendArray
-            state .idContext [] .templateArgBuffer =
-            argBufferOffset state .idContext [] .templateArgBuffer .length argBufferOffset - ConstantArray new =:: argsIndices
+            idContext [] .templateArgBuffer =
+            argBufferOffset idContext [] .templateArgBuffer .length argBufferOffset - ConstantArray new =:: argsIndices
             0 while ..dup template [] .codeLength < do
               prog [] .templateOps template [] .codeOffset ..over.2 + list.get =:: mut op ## copy by value to allow modification
               op @ template impl ..over.4 argsIndices state @ resolveTemplateOp
               op @ state @ typeCheckOp
-              state .idContext [] .templateInfos ..over.3 list.at .data template = ## compiling operation can change template list
+              idContext [] .templateInfos ..over.3 list.at .data template = ## compiling operation can change template list
               1 +
             end ..drop
-            state .idContext [] .templateArgBuffer
+            idContext [] .templateArgBuffer
               argBufferOffset list.setLength
-            state .idContext [] .templateArgBuffer = ## reset template argument buffer
+            idContext [] .templateArgBuffer = ## reset template argument buffer
             state .openBlocks .length 0 > if
               "unfinished code block" sb.wrap state .openBlocks list.peek .data [] .startPos state @ appendError2
               state .openBlocks list.clear state .openBlocks =

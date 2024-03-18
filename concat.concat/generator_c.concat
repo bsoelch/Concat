@@ -952,7 +952,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           return
         PROCEDURE case
           "unexpected operation " sb.wrap
-            op [] constContext labelContext typeContext sb.appendOp
+            op [] prog sb.appendOp
             " should not exist at this stage of compilation" sb.appendS
           op [] .pos prog [] .errors @ appendError
           return
@@ -960,8 +960,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           break ## XXX error message
       end
       break
-    call case
-      op [] .val .call =:: callData
+    call_old case
+      op [] .val .call_old =:: callData
       callData .idInfo target prog printIdName
       ## compileCall
         op [] .dataType
@@ -1393,11 +1393,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     compilerInfo case
       break
     getName setName @Name getLabel setLabel @Label length size stackMod copy
-    typeModifier autoCast hasLabel hasName case
+    typeModifier autoCast hasLabel hasName call case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap
-    op [] idContext [] .constContext @ labelContext typeContext sb.appendOp
+    op [] prog sb.appendOp
   op [] .pos prog [] .errors @ appendError
 end
 

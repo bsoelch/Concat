@@ -4,10 +4,6 @@ import "constants.concat"
 import "types.concat"
 import "program.concat"
 
-struct(
-  ProcedureInfo ptr : procedure
-  LabelId ConstValue hashMap : mut genericValues
-) =:: export ResolvedProcedureInfo
 
 enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
 
@@ -29,7 +25,7 @@ enum(
 ) =:: GenericArg
 
 struct(
-  ProcedureInfo ptr : procedure
+  i64 : procId
   ParameterInfo list : mut paramInfo
   LabelId GenericArg hashMap : mut genericValues
   i32 : mut nEmpty
@@ -334,27 +330,45 @@ proc(
 end
 
 proc(
-  ProcedureInfo arrayView : procedures
+  LabelId GenericArg hashMap ptr mut : genericValues
+  LabelId : key
+-> ConstValue ) =>: getValueOrNone
+  genericValues key map.at =:: eltValue?
+  eltValue? optional.hasData if
+    eltValue? .data [] switch
+      nonEmpty case ConstValue .none return
+      value case eltValue? .data [] .value return
+      fixed case eltValue? .data [] .fixed return
+    end
+  else
+    ConstValue .none return
+  end
+end
+
+
+proc(
+  i64 arrayView : procedureIds
   StackValue arrayView : stackValues
   stringBuilder ptr mut optional : errorMessage
   ProgramContext ptr mut : progContext
--> ResolvedProcedureInfo optional ) =>: export resolveCall
+-> ProcedureCallInfo optional ) =>: export resolveCall ## TODO return called type as 2nd ret value
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
-  procedures .length 0 == if
-    ResolvedProcedureInfo optional.empty return
+  procedureIds .length 0 == if
+    ProcedureCallInfo optional.empty return
   end
-  procedures .length CallSignatureInfo list.create =:: mut currentSignatures
-  0 while ..dup procedures .length < do =:: i
-    procedures i array.at .data =:: procInfo
+  procedureIds .length CallSignatureInfo list.create =:: mut currentSignatures
+  0 while ..dup procedureIds .length < do =:: i
+    procedureIds i array.get =:: procId
+    progContext [] .procedures procId list.at .data =:: procInfo
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
     =:: argCount
     currentSignatures
       ## CallSignatureInfo
-        procInfo
+        procId
         argCount ParameterInfo list.create
         labelHash @ labelEq @ argCount GenericArg map.create
         0
@@ -380,7 +394,9 @@ proc(
         ## don't continue checking if first arguments were no match / all params matched
         i 1 + continue
       end
-      current [] .procedure [] .procType typeContext types.getProcIn ..drop =:: inTypes
+      progContext [] .procedures
+        current [] .procId list.at .data
+      [] .procType typeContext types.getProcIn ..drop =:: inTypes
       inTypes typeContext types.compositeEltCount 1 -
         current [] .paramInfo .length -
       i32 cast =:: mut paramIndex
@@ -495,17 +511,20 @@ proc(
         ")\ncandidates: \n" sb.appendS
         0 while ..dup currentSignatures .length < do =:: i
           currentSignatures i list.at .data =:: mut current
+          progContext [] .procedures
+            current [] .procId list.at .data
+          =:: procInfo
           "  * " sb.appendS
-          current [] .procedure [] .procType labelContext typeContext sb.appendType
+          procInfo [] .procType labelContext typeContext sb.appendType
           ' ' sb.appendC
-          current [] .procedure [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelName
           '\n' sb.appendC
           i 1 +
         end ..drop
       errorMessage .data [] =
     end
     currentSignatures @ cleanupSignatures
-    ResolvedProcedureInfo optional.empty return
+    ProcedureCallInfo optional.empty return
   end
   currentSignatures .length 1 > if
       ## cmpSignatures
@@ -532,6 +551,9 @@ proc(
         true =:: mut isEquivalent
         0 while ..dup currentSignatures .length < do =:: i
           currentSignatures i list.at .data =:: mut current
+          progContext [] .procedures
+            current [] .procId list.at .data
+          =:: procInfo
           isEquivalent if
                 candidate []
                 current []
@@ -541,40 +563,89 @@ proc(
             false isEquivalent =
           end
           "  * " sb.appendS
-          current [] .procedure [] .procType labelContext typeContext sb.appendType
+          procInfo [] .procType labelContext typeContext sb.appendType
           ' ' sb.appendC
-          current [] .procedure [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelName
           '\n' sb.appendC
           i 1 +
         end ..drop
       errorMessage .data [] =
     end
     currentSignatures @ cleanupSignatures
-    ResolvedProcedureInfo optional.empty return
+    ProcedureCallInfo optional.empty return
   end
-  ## map.create
-    labelHash @
-    labelEq @
-    candidate [] .genericValues .cap
-  ConstValue map.create =:: mut valueMap
-  candidate [] .genericValues @ map.itr.start while
-   map.itr.hasNext do map.itr.next =:: elt
-     elt .1 [] .nonEmpty ?? if
-       continue ## ignore elements without concrete value
-     end
-     valueMap @
-       elt .0 []
-       elt .1 [] switch
-         value case elt .1 [] .value break
-         fixed case elt .1 [] .fixed break
-         nonEmpty case ..unreachable
-       end
-     map.put ..drop
+  progContext [] .procedures
+    candidate [] .procId list.at .data
+  =:: procInfo
+  procInfo [] .procType typeContext types.getProcIn ..drop =:: inType
+  inType typeContext types.compositeEltCount =:: eltCount
+  eltCount ConstValue list.create =:: mut constArgs
+  0 while ..dup eltCount < do =:: i
+    inType i typeContext types.compositeGetLabel =:: eltLabel
+    eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+      constArgs
+        candidate [] .genericValues @ eltLabel getValueOrNone list.append
+      constArgs =
+    end
+    i 1 +
   end ..drop
-  ## ResolvedProcedureInfo
-    candidate [] .procedure
-    valueMap
-  ResolvedProcedureInfo new =:: result
+  -1i64 =:: mut implId
+  constArgs .length 0 > if
+    progContext [] .procedures candidate [] .procId list.at .data [] .implementations @ =:: impls
+    false =:: mut isMatch
+    0 while ..dup impls [] .length < do =:: i
+      impls [] i list.at .data =:: impl
+      impl [] .staticArgs .length constArgs .length != if
+        ..unreachable ## XXX? replace with assertion
+      end
+      true isMatch =
+      0 while ..dup constArgs .length < do =:: j
+        ## constEquals
+          impl [] .staticArgs j constContext constArrayGet
+          constArgs j list.get
+          labelContext
+        constantEquals ! if
+          false isMatch =
+          j break
+        end
+        j 1 +
+      end ..drop
+      isMatch if
+        i implId =
+        i break
+      end
+      i 1 +
+    end ..drop
+    isMatch ! if
+      impls []
+        ..dup .length implId =
+        ## ProcImplementation
+          constArgs list.asArray constContext constArray
+          -1
+          -1
+        ProcImplementation new list.append
+      impls [] =
+    end
+  end
+  constArgs
+    list.clear
+  constArgs =
+  0 while ..dup eltCount < do =:: i
+    inType i typeContext types.compositeGetLabel =:: eltLabel
+    eltLabel labelContext id.labelFlags =:: flags
+    flags id.FLAG_AUTO & ? if flags id.FLAG_STATIC & ? ! _if
+      constArgs
+        candidate [] .genericValues @ eltLabel getValueOrNone list.append
+      constArgs =
+    end
+    i 1 +
+  end ..drop
+  ## ProcedureCallInfo
+    candidate [] .procId
+    implId
+    constArgs list.asArray constContext constArray
+  ProcedureCallInfo new =:: result
+  constArgs list.free ..drop
   currentSignatures @ cleanupSignatures
   result optional.wrap return
 end

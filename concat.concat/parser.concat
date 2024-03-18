@@ -1379,6 +1379,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state [] .currentFile
           valType
           label
+          8 ProcImplementation list.create
           _EXPERIMENTAL_ if
             progContext [] .templateOps .length
           else
@@ -1577,7 +1578,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       else
         "unexpected operation for \"=\" \n" sb.wrap
-          ..swap [] constContext labelContext typeContext sb.appendOp
+          ..swap [] progContext sb.appendOp
         fileState [] .wordStart state appendError2
         return
       end
@@ -1628,7 +1629,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected operation for \"" sb.wrap
         opName sb.appendStr
         "\"\n" sb.appendS
-        ..swap [] constContext labelContext typeContext sb.appendOp
+        ..swap [] progContext sb.appendOp
         fileState [] .wordStart state appendError2
         return
       end
@@ -1659,7 +1660,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected operation for \"" sb.wrap
         opName sb.appendStr
         "\"\n" sb.appendS
-        prevOp [] constContext labelContext typeContext sb.appendOp
+        prevOp [] progContext sb.appendOp
         fileState [] .wordStart state appendError2
         return
       end
@@ -2639,7 +2640,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           opBlock startOp [] =
         else
           "operations and blocks are out of sync got: " sb.wrap
-            startOp [] constContext labelContext typeContext sb.appendOp
+            startOp [] progContext sb.appendOp
             " expected: " sb.appendS
             BlockType .TYPE_COMPOSITE sb.appendBlockType
             " block" sb.appendS
