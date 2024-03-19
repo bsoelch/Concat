@@ -479,6 +479,11 @@ proc( bool : canMove bool : canDelete i64 : argCount i64 : argOffset TypeCheckSt
   canMove canMoveChildren & opInfo [] .canMove =
   canDelete opInfo [] .canDelete =
 end
+proc( i64 : opIndex TypeCheckState ptr mut : state -> ) =>: freezeOp
+  state [] .opInfo opIndex list.at .data =:: opInfo
+  false opInfo [] .canMove =
+  false opInfo [] .canDelete =
+end
 proc( LabelId : label TypeCheckState ptr mut : state -> ) =>: replaceLabel
   state [] .stack @ branchTree.peek .data =:: top
   label top [] .valueId =
@@ -2664,7 +2669,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             return
           end
           ## copy value on stack
-          state [] .stack @ offset branchTree.at .data =:: copied
+          state [] .stack @ offset branchTree.at .data =:: mut copied
           copied [] .valueType typeContext types.isReference if
             ## copying converts reference to value
             copied [] .valueType
@@ -2676,9 +2681,12 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             copied []
           branchTree.push
           state [] .stack @ branchTree.peek .data =:: newOp
+          state [] .stack @ offset 1 + branchTree.at .data copied =
           op [] .pos newOp [] .pushedAt =
           ## copy value in code
           copied [] .opIndex op [] .pos state tryCopyOp if ..drop
+            ## copied operation can no longer be deleted
+            copied [] .opIndex state freezeOp
             op [] state appendOp
           end newOp [] .opIndex =
           return
