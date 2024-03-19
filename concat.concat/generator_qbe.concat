@@ -1835,60 +1835,9 @@ proc(
       idInfo .idType switch
         PROCEDURE case
           assignValue ! if
-            sb return
+            sb return ## ignore procedure declarations
           end
-          ## reset stack-info in context
-          0 context [] .stackCount =
-          0 context [] .tmpCount =
-          0 context [] .jumpLabelCount =
-          context [] .stackInfo @ branchTree.clear
-          sb
-            labelFlags id.FLAG_EXPORT & ? labelFlags id.FLAG_EXTERN & ? | if
-              "export " sb.appendS
-            end
-            "function " sb.appendS
-            op [] .dataType typeContext types.getProcRet if ..drop
-              "wrong type for procedure initialization: " sb.wrap
-                op [] .dataType labelContext typeContext sb.appendType
-                " expected procedure" sb.appendS
-              op [] .pos errors appendError
-              return
-            end =:: retType
-            retType typeContext types.isEmpty ! if
-              retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
-              ' ' sb.appendC
-            end
-            idInfo .labelId idInfo .templateId context sb.appendGlobalName
-            op [] .dataType op [] .pos context sb.appendProcArgs
-            "{\n" sb.appendS
-            ## BranchId
-              BranchType .START
-              0 0
-            BranchId new context startBranch
-            ## push unnamed arguments
-            op [] .dataType typeContext types.getProcIn ..drop =:: inType
-            inType typeContext types.compositeElts =:: args
-            0 while ..dup args .length < do =:: i
-              inType i typeContext types.compositeGetLabel =:: label
-              args i types.compositeElts.get =:: argType
-              label id.LABEL_ID_NONE == if ## push argument
-                argType context referenceOnly if
-                  ValType .REFERENCE
-                else
-                  argType context toValType
-                end =:: valType
-                "%s" sb.appendS
-                valType context pushValue sb.appendI
-                " =" sb.appendS
-                valType sb.appendValTypeQBE
-                " copy " sb.appendS
-                i id.LABEL_ID_NONE context sb.appendArgName
-                '\n' sb.appendC
-              end
-              i 1 +
-            end ..drop
-            true context [] .reachable =
-          return
+          break
         LOCAL_VAR TMP_VAR case
           op [] .dataType =:: valType
           ## use pointers as stack representation of arrays and composites
@@ -1931,6 +1880,65 @@ proc(
           break ## XXX error message
       end
       break
+    implementProcedure case
+      op [] .val .implementProcedure =:: implInfo
+      prog [] .procedures
+        implInfo .procId list.at .data
+      =:: procInfo
+      procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
+      ## reset stack-info in context
+      0 context [] .stackCount =
+      0 context [] .tmpCount =
+      0 context [] .jumpLabelCount =
+      context [] .stackInfo @ branchTree.clear
+      sb
+        implInfo .implementationId  0 < if
+          labelFlags id.FLAG_EXPORT & ? labelFlags id.FLAG_EXTERN & ? | _if
+          "export " sb.appendS
+        end
+        "function " sb.appendS
+        op [] .dataType typeContext types.getProcRet if ..drop
+          "wrong type for procedure initialization: " sb.wrap
+            op [] .dataType labelContext typeContext sb.appendType
+            " expected procedure" sb.appendS
+          op [] .pos errors appendError
+          return
+        end =:: retType
+        retType typeContext types.isEmpty ! if
+          retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
+          ' ' sb.appendC
+        end
+        procInfo [] .labelId implInfo .implementationId context sb.appendGlobalName
+        op [] .dataType op [] .pos context sb.appendProcArgs
+        "{\n" sb.appendS
+        ## BranchId
+          BranchType .START
+          0 0
+        BranchId new context startBranch
+        ## push unnamed arguments
+        op [] .dataType typeContext types.getProcIn ..drop =:: inType
+        inType typeContext types.compositeElts =:: args
+        0 while ..dup args .length < do =:: i
+          inType i typeContext types.compositeGetLabel =:: label
+          args i types.compositeElts.get =:: argType
+          label id.LABEL_ID_NONE == if ## push argument
+            argType context referenceOnly if
+              ValType .REFERENCE
+            else
+              argType context toValType
+            end =:: valType
+            "%s" sb.appendS
+            valType context pushValue sb.appendI
+            " =" sb.appendS
+            valType sb.appendValTypeQBE
+            " copy " sb.appendS
+            i id.LABEL_ID_NONE context sb.appendArgName
+            '\n' sb.appendC
+          end
+          i 1 +
+        end ..drop
+        true context [] .reachable =
+      return
     getId @Id case
       op [] .val .getId ?? if
         op [] .val .getId
@@ -1940,7 +1948,8 @@ proc(
       op [] .val .@Id ?? =:: isAddr
       idInfo .idType switch
         PROCEDURE GLOBAL_VAR case
-          isAddr ! if idInfo .idType .PROCEDURE ?? _if
+          idInfo .idType .PROCEDURE ?? if
+            ## XXX handle procedure-pointers via separate instruction
             break ## calls are handled by call instruction
           end
           sb
@@ -1948,7 +1957,7 @@ proc(
             "%s" sb.appendS
             isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy " sb.appendS
-            idInfo .labelId idInfo .templateId context sb.appendGlobalName
+            idInfo .labelId -1 context sb.appendGlobalName
             "\n" sb.appendS
           return
         LOCAL_VAR case
@@ -3078,7 +3087,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
         "export " sb.appendS
       end
       "data " sb.appendS
-      labelId idData [] .templateId context sb.appendGlobalName
+      labelId -1 context sb.appendGlobalName
       " = align " sb.appendS
       valType typeContext types.alignOf sb.appendI
       " {" sb.appendS

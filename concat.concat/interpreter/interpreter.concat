@@ -794,7 +794,7 @@ proc(
     getElement setElement @Element
     getArrayElement setArrayElement @ArrayElement setValue
     Print New newEnum call callPtr call_old
-    argc getArg getArgLen
+    argc getArg getArgLen implementProcedure
     length size Cast Cast! autoCast
     unaryOperator binaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex

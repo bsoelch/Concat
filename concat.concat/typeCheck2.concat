@@ -117,9 +117,14 @@ namespace: sb
     end
   end
 end
+
+## XXX? merge all typed-value types
+struct( Type : valType ConstValue : value ) =:: TypedValue
+
 struct(
   ProgramContext ptr mut : program
   InterpreterContext : mut interpreter
+  LabelId TypedValue hashMap : mut argData
   bool : mut interpreterActive
   TypeInfo BranchTree : mut stack
   BlockInfo list : mut openBlocks
@@ -680,12 +685,7 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: checkReachable
         default break
       end
       break
-    initializeId case
-      op [] .val .initializeId .idType .PROCEDURE ?? if
-        return
-      end
-      break
-    blockEnd unreachable NOP compilerInfo case
+    implementProcedure blockEnd unreachable NOP compilerInfo case
       return
     default break
   end
@@ -1169,9 +1169,21 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             state wrapCopy
           end
           return
-        TYPE ARGUMENT TEMPLATE_ARG case
+        TYPE TEMPLATE_ARG case
           constValue op [] state pushValue
           op [] .val .getId .labelId state replaceLabel
+          true true 0 0 state updateOpInfo
+          return
+        ARGUMENT case
+          op [] .val .getId .labelId =:: label
+          ConstValue .none =:: mut argValue
+          state [] .argData @ label map.at =:: argData?
+          argData? optional.hasData if
+            argData? .data [] .valType op [] .dataType =
+            argData? .data [] .value argValue =
+          end
+          constValue op [] state pushValue
+          label state replaceLabel
           true true 0 0 state updateOpInfo
           return
         PROCEDURE case
@@ -1316,45 +1328,45 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           end
           op [] state appendOp ..drop
           return
-        PROCEDURE case
-          op [] state appendOp ..drop
-          op [] .dataType BlockInfo .Procedure state openBlock
-          true state [] .reachable =
-          op [] .dataType typeContext types.getProcIn if ..drop
-            "wrong type for procedure initialization: " sb.wrap
-              op [] .dataType labelContext typeContext sb.appendType
-              " expected procedure" sb.appendS
-            op [] .pos errors appendError
-            return
-          end =:: inType
-          inType typeContext types.compositeElts =:: args
-          ## push unnamed arguments
-          0 while ..dup args .length < do =:: i
-            inType i typeContext types.compositeGetLabel =:: label
-            label id.LABEL_ID_NONE == if ## push argument
-              args i types.compositeElts.get =:: arg
-              state [] .stack @
-                ## TypeInfo
-                  arg
-                  ConstValue .none
-                  id.LABEL_ID_NONE
-                  op [] .pos
-                  -1
-                  -1
-                  -1
-                TypeInfo new
-              branchTree.push
-            end
-            i 1 +
-          end ..drop
-          return
-        TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
+        PROCEDURE TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.wrap
             op [] .val .@Id labelContext sb.appendIdInfo
           op [] .pos errors appendError
           return
       end
       break
+    implementProcedure case
+      op [] state appendOp ..drop
+      op [] .dataType BlockInfo .Procedure state openBlock
+      true state [] .reachable =
+      op [] .dataType typeContext types.getProcIn if ..drop
+        "wrong type for procedure initialization: " sb.wrap
+          op [] .dataType labelContext typeContext sb.appendType
+          " expected procedure" sb.appendS
+        op [] .pos errors appendError
+        return
+      end =:: inType
+      inType typeContext types.compositeElts =:: args
+      ## push unnamed arguments
+      0 while ..dup args .length < do =:: i
+        inType i typeContext types.compositeGetLabel =:: label
+        label id.LABEL_ID_NONE == if ## push argument
+          args i types.compositeElts.get =:: arg
+          state [] .stack @
+            ## TypeInfo
+              arg
+              ConstValue .none
+              id.LABEL_ID_NONE
+              op [] .pos
+              -1
+              -1
+              -1
+            TypeInfo new
+          branchTree.push
+        end
+        i 1 +
+      end ..drop
+      return
     setValue case
       1 op [] .pos state checkStackSize if
         return
@@ -1665,6 +1677,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             "could not create array type" sb.wrap
             op [] .pos errors appendError
           end
+        else isAddr _if
+          mutable typeContext types.getAddressType
         end
         isAddr ! if
           #+eltType+# mutable typeContext types.newReferenceType
@@ -2732,10 +2746,63 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   op [] .pos errors appendError
 end
 
+proc(
+  ProcedureInfo ptr : procInfo
+  ProgramContext ptr mut : program
+-> i64 ) =>: nextImpl
+  program [] .templateOps
+    procInfo [] .codeStart list.at .data
+  =:: procStart
+  procStart [] .val .implementProcedure ?? ! if
+    0 return
+  end
+  ## implementationId contains id of last compiled implementation
+  procStart [] .val .implementProcedure .implementationId 1 + return
+end
+
+proc(
+  i64 : procId
+  i64 : implId
+  TypeCheckState ptr mut : state
+-> ) =>: typeCheckProcedure
+  state [] .program =:: program
+  program [] .procedures procId list.at .data =:: currentProc
+  ## compile procedures to local code of given file
+  currentProc [] .fileId state [] .currentFile =
+  program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
+  state clearOps
+  program [] .templateOps
+    currentProc [] .codeStart list.at .data
+  =:: procStart
+  ## ProcedureImpl
+    procId
+    implId
+  ProcedureImpl new OpValue .implementProcedure procStart [] .val =
+  implId 0 >= if ## update procedure type
+    currentProc [] .implementations
+      implId list.at .data
+    [] .procType procStart [] .dataType =
+  end
+  0 while ..dup currentProc [] .codeLength < do =:: i
+    program [] .templateOps
+      i currentProc [] .codeStart + list.at .data
+    state typeCheckOp
+    i 1 +
+  end ..drop
+  procFile [] .localOps
+    state [] .compiledOps list.appendAll
+  procFile [] .localOps =
+  state resetInterpreter
+  state [] .stack @ branchTree.clear ## TODO error on unhandled values
+end
+
+64 =:: MAX_STATIC_RECURSION
+
 proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   ## TypeCheckState
     program
     program wrapProgram
+    labelHash @ labelEq @ 64 TypedValue map.create
     true
     TypeInfo branchTree.create
     32  BlockInfo list.create
@@ -2771,45 +2838,88 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   state @ clearOps
   state .compiledOps =:: originalOps
   ## procedures
-  0 while ..dup program [] .procedures .length < do
-    program [] .procedures ..over list.at .data =:: currentProc
+  0 while ..dup program [] .procedures .length < do =:: procId
+    program [] .procedures procId list.at .data =:: currentProc
     currentProc [] .procType typeContext types.getProcIn ..drop =:: procIn
     procIn typeContext types.compositeElts =:: inTypes
     false =:: mut hasStaticArg ## TODO store info about static args in procedure
-    0 while ..dup inTypes .length < do
-      procIn ..over typeContext types.compositeGetLabel
+    0 while ..dup inTypes .length < do =:: i
+      procIn i typeContext types.compositeGetLabel
        labelContext id.labelFlags id.FLAG_STATIC & ? if
         true hasStaticArg =
-        break
+        i break
       end
-      inTypes ..over types.compositeElts.get types.primitive.TYPE types.typeEquals if
+      inTypes i types.compositeElts.get types.primitive.TYPE types.typeEquals if
         true hasStaticArg =
-        break
+        i break
       end
-      1 +
+      i 1 +
     end ..drop
     hasStaticArg if
-      1 + continue
+      procId 1 + continue
     end
-    currentProc [] .fileId state .currentFile = ## compile procedures to local code of given file
-    program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
-    state @ clearOps
-    0 while ..dup currentProc [] .codeLength < do
-      program [] .templateOps
-        ..over currentProc [] .codeStart + list.at .data
-      state @ typeCheckOp
-      1 +
-    end ..drop
-    procFile [] .localOps
-      state .compiledOps list.appendAll
-    procFile [] .localOps =
-    state @ resetInterpreter
-    state .stack @ branchTree.clear ## TODO error on wrong return types
-    1 +
+    procId -1 state @ typeCheckProcedure
+    procId 1 +
   end ..drop
   ## static procedures
-  ## TODO type-check static procedures
+  ## XXX repeat compiling of static procedures until no new signatures created ( max. 16 times )
+  0 =:: mut depth
+  false =:: mut compiledImplementation
+  while
+    false compiledImplementation =
+    0 while ..dup program [] .procedures .length < do =:: procId
+      program [] .procedures procId list.at .data =:: currentProc
+      currentProc program nextImpl =:: nextId
+      currentProc [] .implementations .length =:: implLength
+      nextId implLength >= if
+        procId 1 + continue
+      end
+      true compiledImplementation =
+      nextId while ..dup implLength < do =:: implId
+        currentProc [] .implementations
+          implId list.at .data
+        =:: implData
+        implData [] .procType typeContext types.getProcIn ..drop =:: procIn
+        procIn typeContext types.compositeElts =:: inTypes
+        0 =:: mut staticArgCount
+        ## XXX? clear argument map
+        0 while ..dup inTypes .length < do =:: i
+          procIn i typeContext types.compositeGetLabel =:: labelId
+          inTypes i types.compositeElts.get =:: argType
+          labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+            implData [] .staticArgs
+              staticArgCount constContext constArrayGet
+            =:: argValue
+            state .argData @ labelId
+              argType argValue TypedValue new
+            map.put ..drop
+            staticArgCount 1 + staticArgCount =
+          else
+            state .argData @ labelId
+              argType ConstValue .none TypedValue new
+            map.put ..drop
+          end
+          i 1 +
+        end ..drop
+        procId implId state @ typeCheckProcedure
+        implId 1 +
+      end ..drop
+      procId 1 +
+    end ..drop
+    compiledImplementation if
+      depth 1 + depth =
+      depth MAX_STATIC_RECURSION > if
+        ## TODO error message (need position)
+        #+"exceeded maximum static recursion depth" sb.wrap
+        pos errors appendError+#
+        break
+      end
+      continue
+    end
+    false ## break loop while reaching condition
+  do end
   state @ freeOps
   state .stack @ branchTree.free
   state .interpreter @ cleanupContext
+  state .argData @ map.free
 end

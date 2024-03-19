@@ -769,6 +769,8 @@ proc(
     i 1 +
   end ..drop
   -1i64 =:: mut implId
+  eltCount Type list.create =:: mut typeBuffer
+  eltCount LabelId list.create =:: mut labelBuffer
   constArgs .length 0 > if
     progContext [] .procedures candidate [] .procId list.at .data [] .implementations @ =:: impls
     false =:: mut isMatch
@@ -799,6 +801,13 @@ proc(
       impls []
         ..dup .length implId =
         ## ProcImplementation
+          ## replaceGenerics
+            procInfo [] .procType
+            typeBuffer @
+            labelBuffer @
+            candidate [] .genericValues @
+            progContext
+          replaceGenerics
           constArgs list.asArray constContext constArray
           -1
           -1
@@ -809,8 +818,6 @@ proc(
   constArgs
     list.clear
   constArgs =
-  eltCount Type list.create =:: mut typeBuffer
-  eltCount LabelId list.create =:: mut labelBuffer
   0 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags

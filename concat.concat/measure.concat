@@ -81,6 +81,8 @@ end
 proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types -> ) =>: addOpType
   op [] .val .initializeId ?? op [] .val .declareId ?? | if
     op [] .dataType 0 prog visited types declaredType
+  else op [] .val .implementProcedure ?? _if
+    op [] .dataType 0 prog visited types declaredType
   else op [] .val .Cast ?? op [] .val .Cast! ?? | _if
     op [] .dataType 0 prog visited types declaredType
   else op [] .val .New ?? _if

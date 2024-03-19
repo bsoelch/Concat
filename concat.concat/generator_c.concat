@@ -1393,7 +1393,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     compilerInfo case
       break
     getName setName @Name getLabel setLabel @Label length size stackMod copy
-    typeModifier autoCast hasLabel hasName call case
+    typeModifier autoCast hasLabel hasName call implementProcedure case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap

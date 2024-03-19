@@ -17,6 +17,7 @@ enum( ALIGNMENT SIZE STRIDE ) =:: export TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 
 struct(
+  Type : procType
   ConstantArray : staticArgs
   i64 : codeStart
   i64 : mut codeLength
@@ -34,6 +35,10 @@ struct(
   i64 : implementationId
   ConstantArray : autoArgs
 ) =:: export ProcedureCallInfo
+struct(
+  i64 : procId
+  i64 : implementationId
+) =:: export ProcedureImpl
 
 enum(
             NopType : NOP
@@ -46,6 +51,7 @@ enum(
      IdentifierInfo : mut initializeId
      IdentifierInfo : mut autoTypedInitializeId
      IdentifierInfo : mut declareId
+      ProcedureImpl : mut implementProcedure
             LabelId : getLabel
             LabelId : mut setLabel
             LabelId : mut @Label
@@ -446,6 +452,22 @@ namespace: sb
           ..over .dataType  labelContext typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .initializeId labelContext sb.appendIdInfo
+          break
+        implementProcedure case ..over =:: op
+          op .val .implementProcedure @ =:: implInfo
+          "implement ( " sb.appendS
+          op .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          progContext [] .procedures
+            implInfo [] .procId list.at .data
+          =:: procInfo
+          procInfo [] .labelId labelContext sb.appendLabelName
+          implInfo [] .implementationId 0 >= if
+            ## XXX append static args instead of impl id
+            " (" sb.appendS
+            implInfo [] .implementationId sb.appendI
+            ')' sb.appendC
+          end
           break
         autoTypedInitializeId case
           "auto-typed initialize ( " sb.appendS
