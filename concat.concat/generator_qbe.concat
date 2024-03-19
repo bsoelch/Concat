@@ -617,20 +617,23 @@ namespace: sb
     false =:: mut hasArgs
     sb
       "(" sb.appendS
-      0 while ..dup args .length < do
-        ..swap
-          args ..over.2 types.compositeElts.get =:: arg
-          arg typeContext types.isEmpty if ## skip empty arguments
-            ..swap 1 + continue
-          end
-          hasArgs if
-            ',' sb.appendC
-          end
-          true hasArgs =
-          arg StorageType .LOAD pos context appendTypeNameQBE
-          ' ' sb.appendC
-          ..over inType ..over typeContext types.compositeGetLabel context appendArgName
-        ..swap 1 +
+      0 while ..dup args .length < do =:: i
+        args i types.compositeElts.get =:: arg
+        inType i typeContext types.compositeGetLabel =:: label
+        arg typeContext types.isEmpty if ## skip empty arguments
+          i 1 + continue
+        end
+        label labelContext id.labelFlags id.FLAG_STATIC & ? if
+          i 1 + continue
+        end
+        hasArgs if
+          ',' sb.appendC
+        end
+        true hasArgs =
+        arg StorageType .LOAD pos context appendTypeNameQBE
+        ' ' sb.appendC
+        i inType i typeContext types.compositeGetLabel context appendArgName
+        i 1 +
       end ..drop
       0 while ..dup outArgs .length < do =:: i
           outArgs i array.get =:: arg
@@ -2111,7 +2114,8 @@ proc(
       end
       isAddr if ValType .PTR else ValType .REFERENCE end =:: valType
       context popValue =:: srcId
-      isPtr if
+      ## TODO direct array access
+      isPtr containerType context referenceOnly | if
         containerType typeContext types.isUnion
         containerType typeContext types.isEnum | if
           sb
@@ -2127,7 +2131,7 @@ proc(
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             valType context pushValue sb.appendI
-            " =l add %s" sb.appendS ## union/enum element access does not change pointer
+            " =l add %s" sb.appendS
             srcId sb.appendI
             "," sb.appendS
             containerType index typeContext types.tupleElementOffset sb.appendI
