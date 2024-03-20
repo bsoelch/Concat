@@ -1759,7 +1759,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIden
     return
   end
   label labelContext id.inLabelNamespace
-  label state [] .fileId idContext id.getIdentifierByLabel if
+  label state [] .fileId idContext id.findIdentifierByLabel if
     ..drop.2 return
   end
   ..swap ..drop

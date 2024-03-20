@@ -839,7 +839,7 @@ proc(
 end
 #+evaluate procedure body with the given arguments+#
 proc(
-  i64 : procId
+  ProcId : procId
   FilePosition : pos
   InterpreterContext ptr mut : context
 ->

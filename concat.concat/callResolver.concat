@@ -25,7 +25,7 @@ enum(
 ) =:: GenericArg
 
 struct(
-  i64 : procId
+  ProcId : procId
   ParameterInfo list : mut paramInfo
   LabelId GenericArg hashMap : mut genericValues
   i32 : mut nEmpty

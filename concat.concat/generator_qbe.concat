@@ -756,7 +756,7 @@ namespace: sb
         break
       end
       isGlobal if
-        "unsupported constant" sb.wrap
+        "unsupported constant: " sb.wrap
           value constContext labelContext typeContext sb.appendConstant
         pos errors appendError
         return
@@ -3043,7 +3043,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
   CompilerContext new =:: mut contextData
   contextData @ =:: context
   id.LABEL_ID_NONE =:: mut mainId
-  MAIN_NAME string.wrap 0 idContext id.getIdentifierByName ! if =:: data =:: name
+  MAIN_NAME string.wrap 0 idContext id.findIdentifierByName ! if =:: data =:: name
     name .namespace 0 != if
       ..unreachable ## assert that namespace is always top level
     end

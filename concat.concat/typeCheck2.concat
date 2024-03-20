@@ -920,9 +920,9 @@ proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
   end =:: procOut
   procOut typeContext types.compositeEltCount =:: valCount
   valCount state [] .stack branchTree.depth < if
-    "wrong number of return values at the end of procedure got: " sb.wrap
+    "wrong number of return values at the end of procedure expected: " sb.wrap
       valCount      sb.appendI
-      " expected: " sb.appendS
+      " got: " sb.appendS
       state [] .stack branchTree.depth sb.appendI
     op [] .pos errors appendError
     ## XXX report position of lowest stack value
@@ -1132,6 +1132,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   state inSwitchLabel if op state typeCheckSwitchLabel _if
     return
   end
+  ## TODO try resolving procedure before passing operation to interpreter?
   state [] .interpreterActive if op state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
   end
@@ -2761,7 +2762,7 @@ proc(
 end
 
 proc(
-  i64 : procId
+  ProcId : procId
   i64 : implId
   TypeCheckState ptr mut : state
 -> ) =>: typeCheckProcedure
@@ -2841,6 +2842,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   0 while ..dup program [] .procedures .length < do =:: procId
     program [] .procedures procId list.at .data =:: currentProc
     currentProc [] .procType typeContext types.getProcIn ..drop =:: procIn
+    currentProc [] .codeStart 0 < if
+      procId 1 + continue ## procedure not implemented
+    end
     procIn typeContext types.compositeElts =:: inTypes
     false =:: mut hasStaticArg ## TODO store info about static args in procedure
     0 while ..dup inTypes .length < do =:: i
@@ -2869,6 +2873,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     false compiledImplementation =
     0 while ..dup program [] .procedures .length < do =:: procId
       program [] .procedures procId list.at .data =:: currentProc
+      currentProc [] .codeStart 0 < if
+        procId 1 + continue ## procedure not implemented
+      end
       currentProc program nextImpl =:: nextId
       currentProc [] .implementations .length =:: implLength
       nextId implLength >= if

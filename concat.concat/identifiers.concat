@@ -324,7 +324,18 @@ namespace: id
     end
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
   end
+  ## TODO change data-structure for identifiers:
+  ##   * map: name, namespace -> labelId
+  ##   * map: labelId -> idData
   proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export getIdentifierByLabel
+    context [] .labelContext @ =:: labelContext
+    labelContext [] .namespaceInfo =:: oldNamespace
+    nameId labelContext id.inLabelNamespace
+      ## XXX check if found label is correct
+      nameId fileId context findIdentifierByLabel
+    oldNamespace labelContext [] .namespaceInfo =
+  end
+  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export findIdentifierByLabel
     context [] .nameBuffer
       ..dup .length 0 != if ..unreachable end ## TODO error message
       nameId context [] .labelContext @ sb.appendLabelName
@@ -336,7 +347,7 @@ namespace: id
     context [] .nameBuffer =
     return
   end
-  proc( string : name FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export getIdentifierByName
+  proc( string : name FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export findIdentifierByName
     name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
   end
   proc( string : id FilePosition : pos CompilerError list ptr mut : errors -> bool ) =>: export checkIdentifier
@@ -420,7 +431,7 @@ namespace: id
       context [] .nameBuffer list.clear context [] .nameBuffer =
       ID_NONE ID_NONE_DATA @ true return
     end ..drop
-    name fileId context getIdentifierByName ! if
+    name fileId context findIdentifierByName ! if
       "declaration of identifier \"" sb.wrap
         label labelContext sb.appendLabelName
         '\"' sb.appendC

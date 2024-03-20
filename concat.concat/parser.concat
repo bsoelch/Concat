@@ -38,7 +38,7 @@ struct(
   StaticArgument list : mut staticArgs
   i64 : mut staticArgsOffset
   FileId : mut currentFile
-  ProcedureInfo optional : mut currentProc
+  ProcId optional : mut currentProc
   CompositeConstantOffset list : mut constantBlocks
   InterpreterInfo list : mut globalInterpreters
   LabelId list : mut labelBuffer
@@ -1114,7 +1114,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Constant new state pushConst
       true return
     else ..drop end
-    ..dup state [] .currentFile idContext id.getIdentifierByName if
+    ..dup state [] .currentFile idContext id.findIdentifierByName if
       ..drop.2 false return ## unknown identifier
     end
     ..dup [] .constValue .none ?? if
@@ -1288,10 +1288,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             Type .undefined
           end
           ..over.4 idContext [] .currentTemplate typeContext types.newNamedType fileState [] .wordStart newTypeConst .val
-        else isInit ! _if
-          ConstValue .none
         else idType .PROCEDURE ?? _if
           progContext [] .procedures .length ConstValue .procedure
+        else isInit ! _if
+          ConstValue .none
         else state hasConst _EXPERIMENTAL_ ! & _if
           state popConst
             ..dup .valueType valType false typeContext types.canCast ! if
@@ -1360,77 +1360,85 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       idData [] .idType .TYPE ?? if
         return
       end
-      idData [] .idType .PROCEDURE ?? isInit & if
+      idData [] .idType .PROCEDURE ?? if
         state [] .currentProc optional.hasData if
           "procedures cannot be nested" sb.wrap fileState [] .wordStart state appendError2
         end
-        _EXPERIMENTAL_ if
-          state hasConst2 if
-            state popConst2 =:: info ..drop
-            "unexpected constant at global level" sb.wrap info .pushedAt state appendError2
-          end
-        else
-          state hasConst if
-            "unexpected constant at global level" sb.wrap state popConst .pos state appendError2
-          end
-        end
-        valType experimental state openProcBlock
-        ## ProcedureInfo
-          state [] .currentFile
-          valType
-          label
-          8 ProcImplementation list.create
+        progContext [] .procedures
+          ..dup .length ProcId cast =:: procId
+          ## ProcedureInfo
+            state [] .currentFile
+            valType
+            label
+            8 ProcImplementation list.create
+            isInit if
+              _EXPERIMENTAL_ if
+                progContext [] .templateOps .length
+              else
+                progContext [] .progFiles state [] .currentFile list.get .localOps .length
+              end
+            else -1i64 end
+            -1
+          ProcedureInfo new list.append
+        progContext [] .procedures =
+        isInit if
           _EXPERIMENTAL_ if
-            progContext [] .templateOps .length
+            state hasConst2 if
+              state popConst2 =:: info ..drop
+              "unexpected constant at global level" sb.wrap info .pushedAt state appendError2
+            end
           else
-            progContext [] .progFiles state [] .currentFile list.get .localOps .length
+            state hasConst if
+              "unexpected constant at global level" sb.wrap state popConst .pos state appendError2
+            end
           end
-          -1
-        ProcedureInfo new optional.wrap state [] .currentProc =
-        idData [] .valueType typeContext types.getProcIn if
-          "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
-        end =:: inType
-        inType typeContext types.compositeEltCount =:: count
-        0 while ..dup count < do =:: index
-          inType index typeContext types.compositeGetLabel =:: argLabel
-          inType index typeContext types.compositeGetElement =:: argType
-          _EXPERIMENTAL_ if
-            argLabel i32 cast
-          else
-            index
-          end =:: argId
-            argLabel labelContext id.isLabelEmpty ! if
-             argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
-              ## declareIdentifier
-                argLabel
-                argType
-                IdentifierType .ARGUMENT
-                index
-                argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
-                  argType types.primitive.TYPE types.typeEquals if
-                    argId types.newGenericType ConstValue .typeId
+          valType experimental state openProcBlock
+          procId optional.wrap state [] .currentProc =
+          idData [] .valueType typeContext types.getProcIn if
+            "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
+          end =:: inType
+          inType typeContext types.compositeEltCount =:: count
+          0 while ..dup count < do =:: index
+            inType index typeContext types.compositeGetLabel =:: argLabel
+            inType index typeContext types.compositeGetElement =:: argType
+            _EXPERIMENTAL_ if
+              argLabel i32 cast
+            else
+              index
+            end =:: argId
+              argLabel labelContext id.isLabelEmpty ! if
+               argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
+                ## declareIdentifier
+                  argLabel
+                  argType
+                  IdentifierType .ARGUMENT
+                  index
+                  argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
+                    argType types.primitive.TYPE types.typeEquals if
+                      argId types.newGenericType ConstValue .typeId
+                    else
+                      argId ConstValue .genericArg
+                    end
                   else
-                    argId ConstValue .genericArg
+                    ConstValue .none
                   end
-                else
-                  ConstValue .none
-                end
-                fileState [] .wordStart
-                state [] .currentFile
-                idContext
-                progContext [] .errors @
-              id.declareIdentifier if
-                64 sb.create
-                  idName .name sb.appendStr
-                fileState [] .wordStart state appendError2
-                ..drop.2 return
-              end ..drop.2
-            end
-            argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-              argLabel argType argId state newStaticArg
-            end
-          index 1 +
-        end ..drop
+                  fileState [] .wordStart
+                  state [] .currentFile
+                  idContext
+                  progContext [] .errors @
+                id.declareIdentifier if
+                  64 sb.create
+                    idName .name sb.appendStr
+                  fileState [] .wordStart state appendError2
+                  ..drop.2 return
+                end ..drop.2
+              end
+              argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+                argLabel argType argId state newStaticArg
+              end
+            index 1 +
+          end ..drop
+        end
       end
       isInit ! _EXPERIMENTAL_ if localDeclaration ! else state [] .currentProc optional.isEmpty end & if
         return ## no operation for global pre-declaration
@@ -1774,31 +1782,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "unexpected end of procedure" sb.wrap fileState [] .wordStart state appendError2
             return
           end
-          state [] .currentProc .data =:: mut currentProc
-          ProcedureInfo optional.empty state [] .currentProc =
+          state [] .currentProc .data =:: mut currentProcId
+          progContext [] .procedures
+            currentProcId list.at .data
+          =:: currentProc
+          ProcId optional.empty state [] .currentProc =
           _EXPERIMENTAL_ if
             progContext [] .templateOps .length
           else
             progContext [] .progFiles state [] .currentFile list.get .localOps .length
           end
-            currentProc .codeStart -
-          currentProc .codeLength =
-          progContext [] .procedures
-            ..dup .length =:: procId
-            currentProc list.append
-          progContext [] .procedures =
-          ## remember procedure id
-          ## getIdentifierByLabel
-            currentProc .labelId
-            currentProc .fileId
-            idContext
-          id.getIdentifierByLabel if ..drop.2
-            "could not find procedure " sb.wrap
-              currentProc .labelId labelContext sb.appendLabelName
-            fileState [] .wordStart state appendError2
-          else =:: idData ..drop
-            procId ConstValue .procedure idData [] .constValue =
-          end
+            currentProc [] .codeStart -
+          currentProc [] .codeLength =
         end
         closedType .NAMESPACE ?? if idContext id.endNamespace _if
           "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2
@@ -2885,8 +2880,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError2
       return
     end
-  id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel =:: labelId
-  labelId state [] .currentFile idContext id.getIdentifierByLabel ! if ## try parsing as identifier
+    id.FLAG_NONE fileState [] .wordStart state [] .currentFile
+  labelContext id.newLabel =:: labelId
+  labelId
+    state [] .currentFile
+  idContext id.findIdentifierByLabel ! if ## try parsing as identifier
     ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart opGet state appendOp
     ..drop
     return
@@ -2954,7 +2952,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     32  StaticArgument          list.create
     0
     FILE_ID_NONE
-    ProcedureInfo               optional.empty
+    ProcId                   optional.empty
     128 CompositeConstantOffset list.create
     0   InterpreterInfo         list.create
     128 LabelId                 list.create
