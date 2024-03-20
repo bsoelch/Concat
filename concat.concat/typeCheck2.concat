@@ -2936,17 +2936,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     currentProc [] .codeStart 0 < if
       procId 1 + continue ## procedure not implemented
     end
-    procIn typeContext types.compositeElts =:: inTypes
-    false =:: mut hasStaticArg ## TODO store info about static args in procedure
-    0 while ..dup inTypes .length < do =:: i
-      procIn i typeContext types.compositeGetLabel
-       labelContext id.labelFlags id.FLAG_STATIC & ? if
-        true hasStaticArg =
-        i break
-      end
-      i 1 +
-    end ..drop
-    hasStaticArg if
+    currentProc [] .hasStaticArg if
       procId 1 + continue
     end
     procId -1 state @ typeCheckProcedure

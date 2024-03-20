@@ -525,11 +525,11 @@ end
 
 
 proc(
-  i64 arrayView : procedureIds
+  ProcId arrayView : procedureIds
   StackValue arrayView : stackValues
   stringBuilder ptr mut optional : errorMessage
   ProgramContext ptr mut : progContext
--> ProcedureCallInfo optional Type ) =>: export resolveCall ## TODO return called type as 2nd ret value
+-> ProcedureCallInfo optional Type ) =>: export resolveCall
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   idContext [] .labelContext @ =:: labelContext

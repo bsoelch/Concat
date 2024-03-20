@@ -4,6 +4,7 @@ import "files.concat"
 import "labels.concat"
 import "types.concat"
 
+i64 =:: export ProcId
 struct( i64 : offset i64 : length ) ConstantArray =
 enum(
   none
@@ -18,7 +19,7 @@ enum(
   wildCard
   i32 : genericArg
   i32 : templateArg
-  i64 : procedure
+  ProcId : procedure
 ) ConstValue =
 
 struct( ConstValue list : mut arrayValues ) ConstantContext =

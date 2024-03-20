@@ -595,16 +595,26 @@ proc(
       end
       true return
     getId case
-      op [] .val .getId .labelId =:: label
-      op [] .val .getId .idType switch
+      op [] .val .getId @ =:: idInfo
+      idInfo [] .labelId =:: label
+      idInfo [] .idType switch
         PROCEDURE case
-          op [] .val .getId =:: idInfo
-          idInfo .constValue .procedure ?? ! if
+          idInfo [] .constValue .procedure ?? ! if
             "unexpected value for procedure constant: " sb.wrap
-              idInfo .constValue constContext labelContext typeContext sb.appendConstant
+              idInfo [] .constValue
+                constContext
+                labelContext
+                typeContext
+              sb.appendConstant
             op [] .pos errors appendError
             true return
           end
+          idInfo [] .constValue .procedure =:: procId
+          program [] .procedures procId list.at .data =:: procData
+          procData [] .isStatic ! if
+            true return ## only evaluate static procedures in interpreter
+          end
+          ## static procedure -> no call resolving necessary
           op [] .dataType typeContext types.getProcOut ..drop =:: procOut
           procOut typeContext types.compositeElts =:: outTypes
           outTypes .length 1 == if outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals _if
@@ -617,7 +627,6 @@ proc(
               op [] .pos errors appendError
               true return
             end
-            ## XXX resolve arguments
             context [] .stack .length inTypes .length - =:: offset
             ## findGeneratedType
               label
@@ -630,7 +639,7 @@ proc(
               idContext [] .templateArgBuffer ## remember procedure arguments
                 context [] .stack list.asArray offset array.tail list.appendArray
               idContext [] .templateArgBuffer =
-              idInfo .constValue .procedure op [] .pos context evaluateCall if ..drop
+              procId op [] .pos context evaluateCall if ..drop
                 "could not initialize type-generator " sb.wrap
                   label labelContext sb.appendLabelName
                 op [] .pos errors appendError
@@ -671,7 +680,7 @@ proc(
             pushValue
             false return
           end
-          idInfo .constValue .procedure op [] .pos context evaluateCall return
+          idInfo [] .constValue .procedure op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if

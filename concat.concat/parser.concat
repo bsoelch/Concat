@@ -1224,7 +1224,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError2
       return
     else ..dup ":" string.wrap string.eq
-       ..over "=:" string.wrap string.eq | 
+       ..over "=:" string.wrap string.eq |
        ..over "=>:" string.wrap string.eq | _if =:: opName
       opName ":" string.wrap string.eq ! =:: isInit
       opName "=>:" string.wrap string.eq =:: isProc
@@ -1364,6 +1364,34 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .currentProc optional.hasData if
           "procedures cannot be nested" sb.wrap fileState [] .wordStart state appendError2
         end
+        valType typeContext types.getProcIn ..drop =:: procIn
+        procIn typeContext types.compositeEltCount =:: inCount
+        false =:: mut hasStaticArg
+        0 while ..dup inCount < do =:: i
+          procIn i typeContext types.compositeGetLabel
+              labelContext id.labelFlags id.FLAG_STATIC & ? if
+            true hasStaticArg =
+            i break
+          end
+          i 1 +
+        end ..drop
+        label labelContext id.labelFlags id.FLAG_STATIC & ? =:: mut isStatic
+        valType typeContext types.getProcOut ..drop =:: procOut
+        procOut typeContext types.compositeEltCount =:: outCount
+        0 while ..dup outCount < do =:: i
+          procOut i typeContext types.compositeGetLabel
+              labelContext id.labelFlags id.FLAG_STATIC & ? if
+            true isStatic =
+            i break
+          end
+          procOut i typeContext types.compositeGetElement
+              typeContext types.unwrapNamed
+              types.primitive.TYPE types.typeEquals if
+            true isStatic =
+            i break
+          end
+          i 1 +
+        end ..drop
         progContext [] .procedures
           ..dup .length ProcId cast =:: procId
           ## ProcedureInfo
@@ -1379,6 +1407,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
               end
             else -1i64 end
             -1
+            hasStaticArg
+            isStatic
           ProcedureInfo new list.append
         progContext [] .procedures =
         isInit if
@@ -2706,7 +2736,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "..swap" string.wrap string.eq _if =:: opName
       1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
       return
-    else ..dup "..drop" string.wrap string.eq 
+    else ..dup "..drop" string.wrap string.eq
          ..over "..drop." string.wrap string.startsWith |  _if =:: mut opName
       opName "..drop." ..length string.tail =:: params
       "..drop" string.wrap opName =
@@ -2757,7 +2787,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       idContext id.beginNamespace
       BlockType .NAMESPACE state openBlock
       return
-    
     else ..dup "using" string.wrap string.eq _if =:: opName
       fileState nextToken
       ..dup .IDENTIFIER ?? ! if ..drop

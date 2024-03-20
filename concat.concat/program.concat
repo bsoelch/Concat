@@ -15,7 +15,7 @@ enum( PTR ARRAY PTR_MUT ) =:: export TypeModifier
 struct( Type : src i32 : mut offset ) =:: export CastInfo ## offset: zero-indexed from top of stack
 enum( ALIGNMENT SIZE STRIDE ) =:: export TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
-i64 =:: export ProcId
+
 struct(
   Type : procType
   ConstantArray : staticArgs
@@ -29,6 +29,8 @@ struct(
   ProcImplementation list : mut implementations
   i64 : codeStart
   i64 : mut codeLength
+  bool : hasStaticArg
+  bool : isStatic
 ) =:: export ProcedureInfo
 struct(
   ProcId : procId
