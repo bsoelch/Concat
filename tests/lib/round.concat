@@ -1,5 +1,5 @@
 import math
-proc( double : x -> ) =>: testRound
+proc( f64 : x -> ) =>: testRound
   x ..debug.print
   x math.round ..debug.print
 end

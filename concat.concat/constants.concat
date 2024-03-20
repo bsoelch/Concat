@@ -11,7 +11,7 @@ enum(
   i32 : enumLabel
   i8 : chr
   i64 : int
-  double : Float
+  f64 : Float
   StringConstant : str
   ConstantArray : arrayConstant
   Type : typeId

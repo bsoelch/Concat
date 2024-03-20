@@ -295,9 +295,9 @@ namespace: types
         I64 case
           63 return
         FLOAT32 case
-          24 return ## IEEE float-32
+          24 return ## IEEE binary-32
         FLOAT64 case
-          53 return ## IEEE float-64
+          53 return ## IEEE binary-64
       end
   end
   64 =:: export MAX_INT_WIDTH
@@ -321,9 +321,9 @@ namespace: types
         I64 case
           63 return
         FLOAT32 case
-          127 return ## IEEE float-32
+          127 return ## IEEE binary-32
         FLOAT64 case
-          1023 return ## IEEE float-64
+          1023 return ## IEEE binary-64
       end
   end
   proc( i32 : size i32 : precission -> Type bool ) =>: findNumberType
@@ -2026,9 +2026,9 @@ namespace: sb
       I64 case
         "i64" appendS return
       FLOAT32 case
-        "float" appendS return
+        "f32" appendS return
       FLOAT64 case
-        "double" appendS return
+        "f64" appendS return
       TYPE case
         "type" appendS return
     end

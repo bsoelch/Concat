@@ -7,20 +7,20 @@ proc( i32 -> i8 ) =>: getDigit
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
 end
 
-namespace: double
+namespace: f64
   0x0.0000000000001P-1022 =:: MIN_POSITIVE
 end
 
 namespace: sb
   ## appends the C-style hexadecimal representation of an IEEE double to a stringBuilder
-  proc( stringBuilder : sb double : f -> stringBuilder ) =>: export appendIeeeDouble
+  proc( stringBuilder : sb f64 : f -> stringBuilder ) =>: export appendIeeeDouble
     f =:: mut value
     -1022 =:: MIN_POW
     1023 =:: MAX_POW
     13 =:: DIGIT_COUNT
     sb
-      value double.isFinite ! if
-        value double.isNaN if
+      value f64.isFinite ! if
+        value f64.isNaN if
           "NAN" sb.appendS return
         else value 0 > _if
           "INFINITY" sb.appendS return
@@ -45,7 +45,7 @@ namespace: sb
       else e MAX_POW > _if
         MAX_POW e =
       end
-      2 e double cast math.pow =:: mut p
+      2 e f64 cast math.pow =:: mut p
       value p / value =
       value math.floor =:: mut d
       d i32 cast getDigit sb.appendC
@@ -61,15 +61,15 @@ namespace: sb
       e sb.appendI
     return
   end
-  proc( stringBuilder : sb double : f i32 : precision i32 : base bool : sci -> stringBuilder ) =>: export appendFloat???
+  proc( stringBuilder : sb f64 : f i32 : precision i32 : base bool : sci -> stringBuilder ) =>: export appendFloat???
     f =:: mut value
     base 2 < base 62 > | if 
       ## TODO error handling
       sb return
     end
     sb
-      value double.isFinite ! if
-        value double.isNaN if
+      value f64.isFinite ! if
+        value f64.isNaN if
           "[NaN]" sb.appendS return
         else value 0 > _if
           "[Infinity]" sb.appendS return
@@ -85,18 +85,18 @@ namespace: sb
       end
       value math.log base math.log / math.floor i64 cast =:: mut e
       e =:: mut e_max
-      base e double cast math.pow =:: mut p
+      base e f64 cast math.pow =:: mut p
       i32 64 array new =:: mut buff
       0 =:: mut n
       0b1e-110100 #+2^-52+# value * =:: mut eps ##XXX? better implementation of eps
       eps 0 == if ## adjust size of small numbers
-        base e 1 + double cast math.pow p =
+        base e 1 + f64 cast math.pow p =
         value p / base * value =
-        double.MIN_POSITIVE p / eps =
+        f64.MIN_POSITIVE p / eps =
         1 p =
       end
-      p double.isInfinite if ## adjust size for big numbers
-        base e 1 - double cast math.pow p =
+      p f64.isInfinite if ## adjust size for big numbers
+        base e 1 - f64 cast math.pow p =
         value base / value =
         eps base / eps =
       end
@@ -177,40 +177,40 @@ namespace: sb
       end
     return
   end
-  proc( stringBuilder double #+value+# -> stringBuilder ) =>: export appendF
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendF
     0 10 false appendFloat???
   end
-  proc( stringBuilder double #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendF?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendF?
     10 false appendFloat???
   end
-  proc( stringBuilder double #+value+# -> stringBuilder ) =>: export appendE
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendE
     0 10 true appendFloat???
   end
-  proc( stringBuilder double #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendE?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendE?
     10 true appendFloat???
   end
-  proc( stringBuilder double #+value+# -> stringBuilder ) =>: export appendXF
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendXF
     0 16 false appendFloat???
   end
-  proc( stringBuilder double #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendXF?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendXF?
     16 false appendFloat???
   end
-  proc( stringBuilder double #+value+# -> stringBuilder ) =>: export appendXE
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendXE
     0 16 true appendFloat???
   end
-  proc( stringBuilder double #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendXE?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendXE?
     16 true appendFloat???
   end
-  proc( stringBuilder double #+value+# -> stringBuilder ) =>: export appendBF
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendBF
     0 2 false appendFloat???
   end
-  proc( stringBuilder double #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendBF?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendBF?
     2 false appendFloat???
   end
-  proc( stringBuilder double #+value+# -> stringBuilder ) =>: export appendBE
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendBE
     0 2 true appendFloat???
   end
-  proc( stringBuilder double #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendBE?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendBE?
     2 true appendFloat???
   end
 end

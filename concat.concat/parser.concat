@@ -111,7 +111,7 @@ proc( Type i32 FilePosition -> Constant ) =>: newEnumConstant
   =:: pos
   ConstValue .enumLabel IdentifierInfo optional.empty pos Constant new return
 end
-proc( double FilePosition -> Constant ) =>: newFloatConst
+proc( f64 FilePosition -> Constant ) =>: newFloatConst
   =:: pos
   types.primitive.FLOAT64 ..swap ConstValue .Float IdentifierInfo optional.empty pos Constant new return
 end
@@ -923,10 +923,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "i64" string.wrap string.eq _if
       types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else ..dup "float" string.wrap string.eq _if
+    else ..dup "f32" string.wrap string.eq _if
       types.primitive.FLOAT32 fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else ..dup "double" string.wrap string.eq _if
+    else ..dup "f64" string.wrap string.eq _if
       types.primitive.FLOAT64 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else ..dup "type" string.wrap string.eq _if

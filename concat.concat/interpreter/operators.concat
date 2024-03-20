@@ -14,20 +14,20 @@ namespace: interpreter
       none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure case 0i64 true return
     end
   end
-  proc( ConstValue : a -> float bool ) =>: constAsF32
+  proc( ConstValue : a -> f32 bool ) =>: constAsF32
     a switch
-      chr case a .chr float cast false return
-      int case a .int float cast false return
-      Float case a .Float float cast false return
-      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 float cast true return
+      chr case a .chr f32 cast false return
+      int case a .int f32 cast false return
+      Float case a .Float f32 cast false return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 f32 cast true return
     end
   end
-  proc( ConstValue : a -> double bool ) =>: constAsF64
+  proc( ConstValue : a -> f64 bool ) =>: constAsF64
     a switch
-      chr case a .chr double cast false return
-      int case a .int double cast false return
-      Float case a .Float double cast false return
-      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 double cast true return
+      chr case a .chr f64 cast false return
+      int case a .int f64 cast false return
+      Float case a .Float f64 cast false return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure case 0 f64 cast true return
     end
   end
   proc( ConstValue : a -> i32 bool ) =>: constAsEnumLabel

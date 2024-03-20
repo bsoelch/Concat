@@ -3,7 +3,7 @@ using number
 
 proc( -> ) =>: main
   5 2 powI ..debug.print
-  2 float cast 100 powI ..debug.print
+  2 f32 cast 100 powI ..debug.print
   "1.25" string.wrap 10 tryParseFloat ..drop ..debug.print
 
   "f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat .NONE ?? ..debug.print ..debug.print

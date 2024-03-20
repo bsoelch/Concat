@@ -7,8 +7,8 @@
 * `i16` 16-bit integer
 * `i32` 32-bit integer
 * `i64` 64-bit integer
-* `float` 32-bit IEEE float
-* `double` 64-bit IEEE float
+* `f32` 32-bit IEEE binary float
+* `f64` 64-bit IEEE binary float
 * `type` a type ( can only exist at compile time )
 
 The integer types can be interpreted as signed (represented as two's complement) or unsigned numbers.
@@ -167,7 +167,7 @@ explicit casts allowed between any two named types with same source type
 
 <genrated-type> := <procedure: static, returns type> <!--TODO? make grammar explicit-->
 
-<primitive-type> := `bool` | `i8` | `i16` | `i32` | `i64` | `float` | `double` | `type`
+<primitive-type> := `bool` | `i8` | `i16` | `i32` | `i64` | `f32` | `f64` | `type`
 <C-type> := `..ctype.` (
                 `void`  |
                 `bool`  |

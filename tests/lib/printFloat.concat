@@ -3,7 +3,7 @@ import stringIO
 
 proc( -> ) =>: main
   0 sb.create
-    0x123456789 double cast 4 sb.appendXE? '\n' sb.appendC
+    0x123456789 f64 cast 4 sb.appendXE? '\n' sb.appendC
     -0x0.0000000000001P-1022 sb.appendF '\n' sb.appendC
     0x1.fffffffffffffP+1023 sb.appendE '\n' sb.appendC
     0x0.0000000000001P-1022 sb.appendBE '\n' sb.appendC

@@ -10,27 +10,27 @@ namespace: i64
   -0x8000_0000_0000_0000 i64 =: export MIN
    0x7fff_ffff_ffff_ffff i64 =: export MAX
 end
-namespace: float
+namespace: f32
   ## XXX min/max/eps
-  proc( -> float ) =>: export Infinity #:opt:!fold
-    1 float cast 0 float cast / return
+  proc( -> f32 ) =>: export Infinity #:opt:!fold
+    1 f32 cast 0 f32 cast / return
   end
-  proc( -> float ) =>: export -Infinity #:opt:!fold
-    -1 float cast 0 float cast / return
+  proc( -> f32 ) =>: export -Infinity #:opt:!fold
+    -1 f32 cast 0 f32 cast / return
   end
-  proc( -> float ) =>: export NaN #:opt:!fold
-    0 float cast 0 float cast / return
+  proc( -> f32 ) =>: export NaN #:opt:!fold
+    0 f32 cast 0 f32 cast / return
   end
 end
-namespace: double
+namespace: f64
   ## XXX min/max/eps
-  proc( -> double ) =>: export Infinity #:opt:!fold
-    1 double cast 0 double cast / return
+  proc( -> f64 ) =>: export Infinity #:opt:!fold
+    1 f64 cast 0 f64 cast / return
   end
-  proc( -> double ) =>: export -Infinity #:opt:!fold
-    -1 double cast 0 double cast / return
+  proc( -> f64 ) =>: export -Infinity #:opt:!fold
+    -1 f64 cast 0 f64 cast / return
   end
-  proc( -> double ) =>: export NaN #:opt:!fold
-    0 double cast 0 double cast / return
+  proc( -> f64 ) =>: export NaN #:opt:!fold
+    0 f64 cast 0 f64 cast / return
   end
 end

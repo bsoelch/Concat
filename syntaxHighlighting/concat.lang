@@ -205,8 +205,8 @@
           i16             |
           i32             |
           i64             |
-          float           |
-          double          |
+          f32             |
+          f64             |
           type         
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>

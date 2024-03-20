@@ -173,21 +173,21 @@ namespace: number
         false return
     end
   end
-  proc( string : str i32 : base -> double ParserError ) =>: export tryParseFloat
+  proc( string : str i32 : base -> f64 ParserError ) =>: export tryParseFloat
     false =:: mut sign
     base =:: mut mBase
     base 0 != base 2 < base 62 > | & if
-      double.NaN ParserError .INVALID_BASE return
+      f64.NaN ParserError .INVALID_BASE return
     end
     0 i64 =: mut c
     false bool =: mut d
     0 i64 =: mut e
     0 i64 =: mut val
-    1 i64 cast 56 << i64 =: mut maxVal ## higher precision than double, no overflow in base 62
+    1 i64 cast 56 << i64 =: mut maxVal ## higher precision than f64, no overflow in base 62
     false =:: mut cStyleHex
     str
       ..dup .length 0 == if
-        ..drop 0 double cast ParserError .EMPTY return
+        ..drop 0 f64 cast ParserError .EMPTY return
       end
       ..dup 0 string.charAt '-' == if
         true sign =
@@ -196,7 +196,7 @@ namespace: number
         1 string.tail
       end
       ..dup .length 0 == if
-        ..drop 0 double cast ParserError .EMPTY return
+        ..drop 0 f64 cast ParserError .EMPTY return
       end
       mBase 0 == if
         resolveBase mBase =
@@ -204,18 +204,18 @@ namespace: number
       0 while ..dup ..over.2 .length < do
         ..over ..over string.charAt '.' == if
           ..dup 0 == d | if ## . cannot be first character
-            ..drop.2 double.NaN ParserError .INVALID_CHAR return
+            ..drop.2 f64.NaN ParserError .INVALID_CHAR return
           end
           true d =
         else ..over ..over string.charAt mBase isExpChar _if
           ..dup 0 == if ##-exp char cannot be first character
-            ..drop.2 double.NaN ParserError .INVALID_CHAR return
+            ..drop.2 f64.NaN ParserError .INVALID_CHAR return
           end
           ..dup 1 + e =
           break
         else ..over ..over string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
           ..dup 0 == if ##-exp char cannot be first character
-            ..drop.2 double.NaN ParserError .INVALID_CHAR return
+            ..drop.2 f64.NaN ParserError .INVALID_CHAR return
           end
           ..dup 1 + e =
           true cStyleHex =
@@ -224,7 +224,7 @@ namespace: number
           break
         else ..over ..over string.charAt mBase parseDigit
           ..dup 0 < ..over mBase >= | if
-            ..drop.3 double.NaN ParserError .INVALID_CHAR return
+            ..drop.3 f64.NaN ParserError .INVALID_CHAR return
           end
           val maxVal < if
             val mBase * + val =
@@ -240,7 +240,7 @@ namespace: number
       e 0 > if
         ..dup e string.tail mBase tryParseInt
           ..dup .NONE ?? ! if =:: err
-            ..drop.2 double.NaN err return
+            ..drop.2 f64.NaN err return
           end ..drop
         c + c =
       end
@@ -248,13 +248,13 @@ namespace: number
     cStyleHex if ## calculate powers of 2 instead of powers of base
       2 mBase =
     end
-    val double cast
+    val f64 cast
       sign if -_ end
-    mBase double cast  c -100 < if
+    mBase f64 cast  c -100 < if
        ## calculate power of 1/base instead of negative power of base and
        ## split of last factor to prevent underflow of intermediate results
-       1 double cast ..swap /
-       -1 c - powI *  mBase double cast /
+       1 f64 cast ..swap /
+       -1 c - powI *  mBase f64 cast /
     else
        c powI *
     end

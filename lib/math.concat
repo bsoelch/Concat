@@ -53,99 +53,99 @@ namespace: c
   proc( ..ctype.double -> ..ctype.int ) : extern isfinite
 end
 namespace: math
-  proc( double -> double ) =>: export floor
+  proc( f64 -> f64 ) =>: export floor
     c.floor
   end
-  proc( double -> double ) =>: export ceil
+  proc( f64 -> f64 ) =>: export ceil
     c.ceil
   end
-  proc( double -> double ) =>: export round
-    ..dup double.isFinite ! if
+  proc( f64 -> f64 ) =>: export round
+    ..dup f64.isFinite ! if
       return ## no change for non-finite number
     end
     ## remainder(x,1) = x - roundeven(x)
-    ..dup 1.0 c.remainder double cast -
+    ..dup 1.0 c.remainder f64 cast -
   end
-  proc( double -> double ) =>: export abs
+  proc( f64 -> f64 ) =>: export abs
     c.fabs
   end
 
-  proc( double double -> double ) =>: export min
+  proc( f64 f64 -> f64 ) =>: export min
     c.fmin
   end
-  proc( double double -> double ) =>: export max
+  proc( f64 f64 -> f64 ) =>: export max
     c.fmax
   end
 
-  proc( double -> double ) =>: export log2
+  proc( f64 -> f64 ) =>: export log2
     c.log2
   end
-  proc( double -> double ) =>: export log
+  proc( f64 -> f64 ) =>: export log
     c.log
   end
-  proc( double -> double ) =>: export exp
+  proc( f64 -> f64 ) =>: export exp
     c.exp
   end
 
-  proc( double -> double ) =>: export sqrt
+  proc( f64 -> f64 ) =>: export sqrt
     c.sqrt
   end
-  proc( double -> double ) =>: export cbrt
+  proc( f64 -> f64 ) =>: export cbrt
     c.cbrt
   end
-  proc( double : base double : power -> double ) =>: export pow
+  proc( f64 : base f64 : power -> f64 ) =>: export pow
     base power c.pow
   end
   ## XXX gamma function
 
-  proc( double -> double ) =>: export sin
+  proc( f64 -> f64 ) =>: export sin
     c.sin
   end
-  proc( double -> double ) =>: export cos
+  proc( f64 -> f64 ) =>: export cos
     c.cos
   end
-  proc( double -> double ) =>: export tan
+  proc( f64 -> f64 ) =>: export tan
     c.tan
   end
-  proc( double -> double ) =>: export asin
+  proc( f64 -> f64 ) =>: export asin
     c.asin
   end
-  proc( double -> double ) =>: export acos
+  proc( f64 -> f64 ) =>: export acos
     c.acos
   end
-  proc( double -> double ) =>: export atan
+  proc( f64 -> f64 ) =>: export atan
     c.atan
   end
-  proc( double -> double ) =>: export sinh
+  proc( f64 -> f64 ) =>: export sinh
     c.sinh
   end
-  proc( double -> double ) =>: export cosh
+  proc( f64 -> f64 ) =>: export cosh
     c.cosh
   end
-  proc( double -> double ) =>: export tanh
+  proc( f64 -> f64 ) =>: export tanh
     c.tanh
   end
-  proc( double -> double ) =>: export asinh
+  proc( f64 -> f64 ) =>: export asinh
     c.asinh
   end
-  proc( double -> double ) =>: export acosh
+  proc( f64 -> f64 ) =>: export acosh
     c.acosh
   end
-  proc( double -> double ) =>: export atanh
+  proc( f64 -> f64 ) =>: export atanh
     c.atanh
   end
-  proc( double double -> double ) =>: export atan2
+  proc( f64 f64 -> f64 ) =>: export atan2
     c.atan2
   end
 end
-namespace: double
-  proc( double -> bool ) =>: export isNaN
+namespace: f64
+  proc( f64 -> bool ) =>: export isNaN
     c.isnan i32 cast ?
   end
-  proc( double -> bool ) =>: export isInfinite
+  proc( f64 -> bool ) =>: export isInfinite
     c.isinf i32 cast ?
   end
-  proc( double -> bool ) =>: export isFinite
+  proc( f64 -> bool ) =>: export isFinite
     c.isfinite i32 cast ?
   end
 end
