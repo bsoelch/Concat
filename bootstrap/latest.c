@@ -2836,7 +2836,7 @@ static void concat_list_dget_I27(concat_list_I51,int64_t,concat_27_Fmap_dNode_I4
 static void concat_list_dget_I28(concat_list_I48,int64_t,concat_27_Fmap_dNode_I3*);
 static void concat_list_dget_I29(concat_list_I55,int64_t,concat_27_Fmap_dNode_I5*);
 static concat_io_dIOError concat_io_dfwrite_I0(concat_io_dFILE,int8_t const*,int64_t,int64_t,int64_t*);
-bool concat_double_disInfinite(double);
+bool concat_f64_disInfinite(double);
 void concat_sb_dappendXE_X63(concat_stringBuilder,double,int32_t,concat_stringBuilder*);
 bool concat_types_disUnion(concat_Type,concat_TypeContext const*);
 bool concat_interpreter_doperator_X47(concat_Type,concat_ConstValue,concat_ConstValue,concat_Type*,concat_ConstValue*);
@@ -3083,7 +3083,7 @@ static void concat_list_dfree_I40(concat_list_I55,concat_list_I55*);
 static void concat_list_dfree_I41(concat_list_I52,concat_list_I52*);
 static void concat_list_dfree_I42(concat_list_I58,concat_list_I58*);
 int64_t const concat_i64_dMIN;
-static double const concat_13_Fdouble_dMIN__POSITIVE;
+static double const concat_13_Ff64_dMIN__POSITIVE;
 static void concat_2_FopenBlock(concat_BlockType,concat_2_FParserState*);
 void concat_sb_dappendI(concat_stringBuilder,int64_t,concat_stringBuilder*);
 bool concat_types_disMutable(concat_Type,concat_TypeContext const*);
@@ -3194,7 +3194,7 @@ static int8_t const* const concat_34_FARGV__NAME;
 static void concat_34_FcompileGetElt(concat_Type,int32_t,concat_arrayView_I6,int32_t*,bool,concat_io_dFILE,concat_ProgramContext*);
 static int64_t concat_array_dlastIndexOf_I0(concat_arrayView_I1,int8_t);
 concat_io_dIOError concat_sb_dappendFile(concat_stringBuilder,concat_io_dFILE,concat_stringBuilder*);
-float concat_float_dNaN(void);
+float concat_f32_dNaN(void);
 double concat_math_dexp(double);
 int32_t const concat_number_dMIN__BASE;
 concat_CallingConvention const concat_CallingConvention_dDEFAULT;
@@ -3622,7 +3622,7 @@ int64_t concat_types_dalignOf(concat_Type,concat_TypeContext const*);
 void concat_opGetElement(concat_Type,int32_t,concat_FilePosition,concat_Operation*);
 bool concat_interpreter_doperator_X38(concat_Type,concat_ConstValue,concat_ConstValue,concat_Type*,concat_ConstValue*);
 static concat_Type concat_2_FpopConstantArray(int64_t,concat_FileState*,concat_2_FParserState*,concat_arrayView_I3*,concat_arrayView_I5*);
-float concat_float_d_X45Infinity(void);
+float concat_f32_d_X45Infinity(void);
 concat_LabelFlag const concat_id_dFLAG__EMPTY;
 bool concat_types_disComposite(concat_Type,concat_TypeContext const*);
 void concat_opCheckEnum(concat_Type,int32_t,concat_FilePosition,concat_Operation*);
@@ -3740,7 +3740,7 @@ void concat_opPrint(concat_FilePosition,concat_Operation*);
 static void concat_2_FnewTypeConst(concat_Type,concat_FilePosition,concat_2_FConstant*);
 static int64_t concat_array_dindexOfArrayStart_I0(concat_arrayView_I3,concat_arrayView_I3,concat_proc996);
 static int64_t concat_array_dindexOfArrayStart_I1(concat_arrayView_I4,concat_arrayView_I4,concat_proc1002);
-double concat_double_dNaN(void);
+double concat_f64_dNaN(void);
 bool concat_id_dscEqualTo(concat_string,concat_StringConstant,concat_LabelContext const*);
 bool concat_types_dfindUnionTypeIndex(concat_Type,concat_Type,concat_LabelContext const*,concat_TypeContext const*,int32_t*);
 void concat_id_dendOpenTemplate(int64_t,concat_IdentifierContext*);
@@ -3999,7 +3999,7 @@ void concat_wrapProgram(concat_ProgramContext*,concat_InterpreterContext*);
 static void concat_34_FcompileConstant(concat_Type,concat_ConstValue,bool,concat_io_dFILE,concat_ProgramContext*);
 static int8_t const* const concat_36_FSTRING__CONST__NAME;
 concat_io_dIOError concat_io_dputs(int64_t,int8_t const*);
-float concat_float_dInfinity(void);
+float concat_f32_dInfinity(void);
 void concat_sb_dappendIdInfo(concat_stringBuilder,concat_IdentifierInfo,concat_LabelContext const*,concat_stringBuilder*);
 concat_ConstValue concat_types_dreplaceGenerics(concat_ConstValue,concat_ConstantArray,concat_ConstantArray,concat_FilePosition,concat_IdentifierContext*);
 static bool concat_29_FinInitializer(concat_InterpreterContext*);
@@ -4087,7 +4087,7 @@ int64_t concat_string_dindexOf(concat_string,int8_t);
 concat_LabelId concat_id_dnewLabel(concat_string,concat_LabelFlag,concat_FilePosition,concat_FileId,concat_LabelContext*);
 static void concat_36_Fsb_dendTypeDeclaration(concat_stringBuilder,concat_stringBuilder*);
 double concat_math_datan2(double,double);
-bool concat_double_disNaN(double);
+bool concat_f64_disNaN(double);
 concat_LabelFlag const concat_id_dFLAG__DUMMY;
 static void concat_26_Fid_dfreeScopeStrings(concat_list_I21,concat_list_I21*);
 static void concat_2_FpopConst2(concat_2_FParserState*,concat_ConstValue*,concat_ValueInfo*);
@@ -4113,7 +4113,7 @@ static concat_ConstValue concat_26_Ftypes_dargBufferGet(concat_ConstantArray,int
 void concat_opTypesInfo(int32_t,concat_FilePosition,concat_Operation*);
 static void concat_30_FresolveTemplateOp(concat_Operation*,concat_TemplateInfo const*,concat_TemplateImplementation const*,int32_t,concat_ConstantArray,concat_30_FTypeCheckState*);
 int32_t concat_string_dhash(concat_string);
-double concat_double_d_X45Infinity(void);
+double concat_f64_d_X45Infinity(void);
 extern int isinf(double);
 void concat_printTokens(concat_string);
 bool concat_types_disMultiValueType(concat_Type,concat_TypeContext const*);
@@ -4156,7 +4156,7 @@ static void concat_array_dtail_I4(concat_arrayView_I6,int64_t,concat_arrayView_I
 static void concat_array_dtail_I5(concat_arrayView_I14,int64_t,concat_arrayView_I14*);
 static void concat_array_dsplitLast_I0(concat_arrayView_I1,int8_t,concat_arrayView_I1*,concat_arrayView_I1*);
 void concat_string_dslice(concat_string,int64_t,int64_t,concat_string*);
-bool concat_double_disFinite(double);
+bool concat_f64_disFinite(double);
 concat_Type const concat_ctype_dtypes_dU__LONGLONG;
 bool concat_types_dsetMutability(concat_Type*,bool,concat_TypeContext*);
 void concat_opCast_X33From(concat_Type,concat_Type,concat_FilePosition,concat_Operation*);
@@ -4356,7 +4356,7 @@ static bool concat_array_dcontains_I0(concat_arrayView_I15,int32_t);
 concat_io_dIOError const concat_io_dFILE__ERR__END__OF__FILE;
 concat_io_dIOError concat_io_dfopenS(int64_t,int8_t const*,concat_io_dOpenMode,concat_io_dFILE*);
 int32_t const concat_i32_dMAX;
-double concat_double_dInfinity(void);
+double concat_f64_dInfinity(void);
 void concat_sb_dappendBE_X63(concat_stringBuilder,double,int32_t,concat_stringBuilder*);
 concat_LabelFlag const concat_id_dFLAG__INLINE;
 void concat_id_dinLabelNamespace(concat_LabelId,concat_LabelContext*);
@@ -7077,7 +7077,7 @@ return true;
 }else{
 else_label153:;
 concat_string tmp51;
-concat_string_dwrap(((int64_t)5),((int8_t const*)"f""l""o""a""t"""),(&tmp51));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"f""3""2"""),(&tmp51));
 bool const tmp52 = concat_string_deq(tmp21,tmp51);
 if(tmp52){
 concat_Type tmp53 = concat_primitive_dtypes_dFLOAT32;
@@ -7090,7 +7090,7 @@ return true;
 }else{
 else_label154:;
 concat_string tmp55;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"d""o""u""b""l""e"""),(&tmp55));
+concat_string_dwrap(((int64_t)3),((int8_t const*)"f""6""4"""),(&tmp55));
 bool const tmp56 = concat_string_deq(tmp21,tmp55);
 if(tmp56){
 concat_Type tmp57 = concat_primitive_dtypes_dFLOAT64;
@@ -22857,7 +22857,7 @@ bool l0_sign = false;
 int32_t l1_mBase = arg1/*base*/;
 bool const tmp0 = ((bool)((arg1/*base*/!=((int32_t)0))&((bool)((arg1/*base*/<((int32_t)2))|(arg1/*base*/>((int32_t)62))))));
 if(tmp0){
-double const tmp1 = concat_double_dNaN();
+double const tmp1 = concat_f64_dNaN();
 *(out0)= tmp1;
 return ((concat_number_dParserError){.label=3});
 }else{
@@ -22923,7 +22923,7 @@ bool const tmp18 = (tmp17==((int8_t)46));
 if(tmp18){
 bool const tmp19 = ((bool)((tmp15==((int32_t)0))|l3_d));
 if(tmp19){
-double const tmp20 = concat_double_dNaN();
+double const tmp20 = concat_f64_dNaN();
 *(out0)= tmp20;
 return ((concat_number_dParserError){.label=5});
 }else{
@@ -22937,7 +22937,7 @@ bool const tmp22 = concat_12_Fnumber_disExpChar(tmp21,l1_mBase);
 if(tmp22){
 bool const tmp23 = (tmp15==((int32_t)0));
 if(tmp23){
-double const tmp24 = concat_double_dNaN();
+double const tmp24 = concat_f64_dNaN();
 *(out0)= tmp24;
 return ((concat_number_dParserError){.label=5});
 }else{
@@ -22953,7 +22953,7 @@ bool const tmp27 = ((bool)(((bool)((tmp25==((int8_t)112))|(tmp25==((int8_t)80)))
 if(tmp27){
 bool const tmp28 = (tmp15==((int32_t)0));
 if(tmp28){
-double const tmp29 = concat_double_dNaN();
+double const tmp29 = concat_f64_dNaN();
 *(out0)= tmp29;
 return ((concat_number_dParserError){.label=5});
 }else{
@@ -22973,7 +22973,7 @@ bool const tmp33 = (tmp32<((int32_t)0));
 bool const tmp34 = ((bool)(tmp33|(tmp32>=l1_mBase)));
 int32_t tmp35 = tmp32;
 if(tmp34){
-double const tmp36 = concat_double_dNaN();
+double const tmp36 = concat_f64_dNaN();
 *(out0)= tmp36;
 return ((concat_number_dParserError){.label=5});
 }else{
@@ -23016,7 +23016,7 @@ bool const tmp48 = (!(tmp47.label==0));
 int64_t tmp49 = tmp46;
 if(tmp48){
 concat_number_dParserError const l8_err = tmp47;
-double const tmp50 = concat_double_dNaN();
+double const tmp50 = concat_f64_dNaN();
 *(out0)= tmp50;
 return l8_err;
 }else{
@@ -23098,7 +23098,7 @@ return tmp3;
 }
 // ./lib/numbers/printFloat.concat
 //global
-static double const concat_13_Fdouble_dMIN__POSITIVE = 0x0.0000000000001P-1022;
+static double const concat_13_Ff64_dMIN__POSITIVE = 0x0.0000000000001P-1022;
 //local
 static int8_t concat_13_FgetDigit(int32_t arg0){
 concatInternal_checkArrayIndex(62,arg0,"./lib/numbers/printFloat.concat:7:75");
@@ -23110,10 +23110,10 @@ int32_t const l1_MIN__POW = ((int32_t)-1022);
 int32_t const l2_MAX__POW = ((int32_t)1023);
 int32_t const l3_DIGIT__COUNT = ((int32_t)13);
 concat_stringBuilder tmp0 = arg0/*sb*/;
-bool const tmp1 = concat_double_disFinite(l0_value);
+bool const tmp1 = concat_f64_disFinite(l0_value);
 bool const tmp2 = (!tmp1);
 if(tmp2){
-bool const tmp3 = concat_double_disNaN(l0_value);
+bool const tmp3 = concat_f64_disNaN(l0_value);
 if(tmp3){
 concat_stringBuilder tmp4;
 concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"N""A""N"""),(&tmp4));
@@ -23236,10 +23236,10 @@ return;
 else_label701:;
 }
 concat_stringBuilder tmp1 = arg0/*sb*/;
-bool const tmp2 = concat_double_disFinite(l0_value);
+bool const tmp2 = concat_f64_disFinite(l0_value);
 bool const tmp3 = (!tmp2);
 if(tmp3){
-bool const tmp4 = concat_double_disNaN(l0_value);
+bool const tmp4 = concat_f64_disNaN(l0_value);
 if(tmp4){
 concat_stringBuilder tmp5;
 concat_sb_dappendS(tmp1,((int64_t)5),((int8_t const*)"[""N""a""N""]"""),(&tmp5));
@@ -23313,7 +23313,7 @@ l3_p = ((double)1);
 }else{
 else_label707:;
 }
-bool const tmp26 = concat_double_disInfinite(l3_p);
+bool const tmp26 = concat_f64_disInfinite(l3_p);
 if(tmp26){
 int64_t tmp27 = l1_e;
 double const tmp28 = concat_math_dpow(((double)arg3/*base*/),((double)((int64_t)(tmp27-((int64_t)1)))));
@@ -23752,22 +23752,22 @@ int64_t const concat_u32_dMAX = 4294967295;
 int64_t const concat_i64_dMIN = (-9223372036854775807-1);
 int64_t const concat_i64_dMAX = 9223372036854775807;
 //local
-float concat_float_dInfinity(void){
+float concat_f32_dInfinity(void){
 return ((float)(((float)1)/((float)0)));
 }
-float concat_float_d_X45Infinity(void){
+float concat_f32_d_X45Infinity(void){
 return ((float)(((float)-1)/((float)0)));
 }
-float concat_float_dNaN(void){
+float concat_f32_dNaN(void){
 return ((float)(((float)0)/((float)0)));
 }
-double concat_double_dInfinity(void){
+double concat_f64_dInfinity(void){
 return ((double)(((double)1)/((double)0)));
 }
-double concat_double_d_X45Infinity(void){
+double concat_f64_d_X45Infinity(void){
 return ((double)(((double)-1)/((double)0)));
 }
-double concat_double_dNaN(void){
+double concat_f64_dNaN(void){
 return ((double)(((double)0)/((double)0)));
 }
 // ./lib/math.concat
@@ -23781,7 +23781,7 @@ double const tmp0 = ceil(((double)arg0));
 return ((double)tmp0);
 }
 double concat_math_dround(double arg0){
-bool const tmp0 = concat_double_disFinite(arg0);
+bool const tmp0 = concat_f64_disFinite(arg0);
 bool const tmp1 = (!tmp0);
 double tmp2 = arg0;
 if(tmp1){
@@ -23880,15 +23880,15 @@ double concat_math_datan2(double arg0,double arg1){
 double const tmp0 = atan2(((double)arg0),((double)arg1));
 return ((double)tmp0);
 }
-bool concat_double_disNaN(double arg0){
+bool concat_f64_disNaN(double arg0){
 int const tmp0 = isnan(((double)arg0));
 return (!!((int32_t)tmp0));
 }
-bool concat_double_disInfinite(double arg0){
+bool concat_f64_disInfinite(double arg0){
 int const tmp0 = isinf(((double)arg0));
 return (!!((int32_t)tmp0));
 }
-bool concat_double_disFinite(double arg0){
+bool concat_f64_disFinite(double arg0){
 int const tmp0 = isfinite(((double)arg0));
 return (!!((int32_t)tmp0));
 }
@@ -31228,12 +31228,12 @@ concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"i""6""4"""),(&tmp5));
 return;
 case 5:;
 concat_stringBuilder tmp6;
-concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"f""l""o""a""t"""),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"f""3""2"""),(&tmp6));
 *(out0)= tmp6;
 return;
 case 6:;
 concat_stringBuilder tmp7;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"d""o""u""b""l""e"""),(&tmp7));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)"f""6""4"""),(&tmp7));
 *(out0)= tmp7;
 return;
 case 7:;
