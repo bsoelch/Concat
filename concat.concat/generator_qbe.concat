@@ -424,6 +424,11 @@ namespace: sb
     prog [] .idContext .labelContext @ =:: labelContext
     sb
       '$' sb.appendC
+      label labelContext id.labelFlags id.FLAG_EXTERN & ? if
+        ## use unmodified name for extern values
+        label labelContext sb.appendLabelName
+        return
+      end
       CONCAT_PREFIX sb.appendS
       label labelContext id.labelFlags id.FLAG_EXPORT & 0 == if
         label labelContext id.getLabelFile sb.appendI
