@@ -1203,7 +1203,6 @@ proc(
   state inSwitchLabel if op @ state typeCheckSwitchLabel _if
     return
   end
-  ## TODO try resolving procedure before passing operation to interpreter?
   state [] .interpreterActive if op @ state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
   end
@@ -1297,6 +1296,27 @@ proc(
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
           calledType typeContext types.getProcIn ..drop =:: inTypes
+          inTypes typeContext types.compositeEltCount =:: argCount
+          ## remove static arguments from stack
+          0 while ..dup argCount < do =:: i
+            inTypes i typeContext types.compositeGetLabel =:: eltLabel
+            eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+              state [] .stack @
+                argCount 1 - i - i32 cast
+              branchTree.at .data =:: opData
+              opData [] .opIndex state tryDeleteOp if
+                "could not remove static argument ( pushed at " sb.wrap
+                  opData [] .pushedAt sb.appendPos
+                  " )" sb.appendS
+                op .pos errors appendError
+              end
+            end
+            i 1 +
+          end ..drop
+          #+ XXX? try interpreting call,
+            if all arguments const-value and
+            called procedure compile-time evaluateable
+          +#
           ## requireTypes
             inTypes typeContext types.compositeEltArray
             "procedure arguments" string.wrap
@@ -2937,7 +2957,6 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     procId 1 +
   end ..drop
   ## static procedures
-  ## XXX repeat compiling of static procedures until no new signatures created ( max. 16 times )
   0 =:: mut depth
   false =:: mut compiledImplementation
   while
