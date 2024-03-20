@@ -30,7 +30,7 @@ namespace: id
 end
 
 struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
-struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : flags ) =:: Label
+struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : mut flags ) =:: Label
 
 struct(
   i8 list : mut nameBuffer
@@ -131,6 +131,15 @@ namespace: id
       0 LabelFlag cast return
     end
     context [] .labels id list.get .flags return
+  end
+  proc( LabelId : id LabelFlag : newFlags LabelContext ptr : context -> ) =>: export addLabelFlags
+    id 0 < id context [] .labels .length >= | if
+      return
+    end
+    context [] .labels id list.at .data [] .flags @ =:: flags
+    flags []
+      newFlags | 
+    flags [] =
   end
   proc( LabelId : id LabelContext ptr : context -> bool ) =>: export isLabelEmpty
     id 0 < id context [] .labels .length >= | if

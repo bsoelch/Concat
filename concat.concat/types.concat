@@ -1279,6 +1279,9 @@ namespace: sb
           label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
             "mut " appendS
           end
+          label labelContext id.labelFlags id.FLAG_STATIC & ? if
+            "static " appendS
+          end
           label labelContext appendLabelName
           ' ' appendC
         end

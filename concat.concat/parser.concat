@@ -1433,7 +1433,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   ..drop.2 return
                 end ..drop.2
               end
-              argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+              _EXPERIMENTAL_ ! if
+                argLabel labelContext id.labelFlags id.FLAG_STATIC & ? _if
                 argLabel argType argId state newStaticArg
               end
             index 1 +

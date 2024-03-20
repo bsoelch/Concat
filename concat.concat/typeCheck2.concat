@@ -2944,10 +2944,6 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
         true hasStaticArg =
         i break
       end
-      inTypes i types.compositeElts.get types.primitive.TYPE types.typeEquals if
-        true hasStaticArg =
-        i break
-      end
       i 1 +
     end ..drop
     hasStaticArg if

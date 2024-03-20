@@ -475,6 +475,9 @@ namespace: sb
         ..over id.FLAG_MUTABLE & ? if
           "mutable " sb.appendS
         end
+        ..over id.FLAG_STATIC & ? if
+          "static " sb.appendS
+        end
       ..swap ..drop
       ## TODO print namespace
       ## TODO print templateInfo

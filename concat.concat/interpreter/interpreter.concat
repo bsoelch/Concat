@@ -155,6 +155,10 @@ proc(
         id.newDummyLabel stackInfo [] .valueName =
       end
     end
+    ## types are always static
+    stackValue [] .typeId types.primitive.TYPE types.typeEquals if
+      stackInfo [] .valueName id.FLAG_STATIC labelContext id.addLabelFlags
+    end
     context [] .labelBuffer
       stackInfo [] .valueName list.append
     context [] .labelBuffer =
