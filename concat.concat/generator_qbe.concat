@@ -10,6 +10,7 @@ import "branchTree.concat"
 "cctI_argv" =:: CONCAT_ARGV_NAME
 "cctI_envp" =:: CONCAT_ENVP_NAME
 "localConstant" =:: LOCAL_CONST_NAME
+"stringConstant" =:: STRING_CONST_NAME
 "checkIndexFormat" =:: CHECK_INDEX_FORMAT
 "checkEnumFormat" =:: CHECK_ENUM_FORMAT
 "fileName" =:: FILE_NAME_NAME
@@ -95,6 +96,7 @@ struct(
   BranchId : mut currentBranch
   BlockInfo list : mut openBlocks
   LocalConst list : mut localConstants
+  StringConstant list : mut stringConstants
   i64 : mut localConstCount
   i64 : mut stackCount
   i64 : mut tmpCount
@@ -687,19 +689,29 @@ namespace: sb
     prog [] .idContext .typeContext @ =:: typeContext
     prog [] .idContext .constContext @ =:: constContext
     sb
-      isGlobal if t types.isPrimitive _if
+      isGlobal if
+          t typeContext types.unwrapNamed types.isPrimitive _if
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
       value switch
-        boolean case value .boolean if 1 else 0 end sb.appendI return
+        boolean case
+          value .boolean if '1' else '0' end sb.appendC return
         int case value .int sb.appendI return
         break
         chr case value .chr sb.appendI return
         break
         enumLabel case break
         Float case break
-        str case break
+        str case
+          '$' sb.appendC
+          STRING_CONST_NAME sb.appendS
+          context [] .stringConstants
+            ..dup .length =:: strId
+            value .str list.append
+          context [] .stringConstants =
+          strId sb.appendI
+          return
         arrayConstant case
           isGlobal ! if
             break
@@ -3027,8 +3039,15 @@ end
 
 proc( CompilerContext ptr mut : context -> ) =>: cleanupCompilerContext
   context [] .stackInfo @ branchTree.free
-  context [] .openBlocks list.free ..drop
-  context [] .localConstants list.free ..drop
+  context [] .openBlocks
+    list.free
+  context [] .openBlocks =
+  context [] .localConstants
+    list.free
+  context [] .localConstants =
+  context [] .stringConstants
+    list.free
+  context [] .stringConstants =
 end
 proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQBE
   prog [] .idContext @ =:: idContext
@@ -3040,6 +3059,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     BranchType .START 0 0 BranchId new
     32 BlockInfo list.create
     32 LocalConst list.create
+    32 StringConstant list.create
     0
     0
     0
@@ -3133,6 +3153,18 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
         end ..drop
         target ..over io.fputSb ..drop
         sb.clear
+      i 1 +
+    end ..drop
+    target ..over io.fputSb ..drop
+    sb.clear
+    0 while ..dup context [] .stringConstants .length < do =:: i
+      context [] .stringConstants i list.get =:: str
+      "data $" sb.appendS
+      STRING_CONST_NAME sb.appendS
+      i sb.appendI
+      " = {" sb.appendS
+        str context sb.appendStringConstQBE
+      "} \n" sb.appendS
       i 1 +
     end ..drop
     target ..over io.fputSb ..drop
