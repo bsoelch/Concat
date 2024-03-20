@@ -5,7 +5,8 @@ compilerSrc="./concat.concat/compiler.concat"
 compilerCTarget="./build/concatX.c"
 compilerTarget="./concatX"
 codeSrc="./code.concat"
-codeCTarget="./code.c"
+codeQBETarget="./code.ssa"
+codeAsmTarget="./code.s"
 codeTarget="./code"
 libPath="./lib/"
 externCFiles=( "./extern.c" )
@@ -25,11 +26,15 @@ echo "-----------------------------------------" && {
 } && {
   echo "compile code with experimental compiler"
   echo "-----------------------------------------"
-  $compilerTarget "$codeSrc" -o "$codeCTarget" -X -W -p "./parser.out" -t "./typeCheck.out"
+  $compilerTarget "$codeSrc" -o "$codeQBETarget" -X -W -p "./parser.out" -t "./typeCheck.out"
 } && {
-  echo "compile generated C-code"
+  echo "compile generated QBE-code"
   echo "-----------------------------------------"
-  gcc ${cArgs[@]} -Wno-unused $codeCTarget "./extern.c" -o $codeTarget
+  qbe $codeQBETarget -o $codeAsmTarget
+} && {
+  echo "compile generated Assembly-code"
+  echo "-----------------------------------------"
+  gcc -g $codeAsmTarget "extern.c" -lm -o $codeTarget
 } && {
   echo "run compiled code"
   echo "-----------------------------------------"
