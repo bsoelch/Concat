@@ -1023,12 +1023,12 @@ namespace: sb
     FilePosition : pos
   -> stringBuilder ) =>: appendPosQBE
     sb
-      "dbgloc \"" sb.appendS
-      pos .fileName sb.appendEscapedString
-      "\"," sb.appendS
+      "dbgloc " sb.appendS
       pos .line sb.appendI
       ',' sb.appendC
       pos .posInLine sb.appendI
+      " ## " sb.appendS
+      pos .fileName sb.appendEscapedString
       '\n' sb.appendC
     return
   end
@@ -3409,7 +3409,9 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       i sb.appendI
       " = {" sb.appendS
         str context sb.appendStringConstQBE
-      "} \n" sb.appendS
+      "} ## \"" sb.appendS
+      str labelContext sb.appendEscapedStr
+      "\"\n" sb.appendS
       i 1 +
     end ..drop
     target ..over io.fputSb ..drop
