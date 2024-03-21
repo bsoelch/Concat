@@ -517,6 +517,7 @@ proc(
   canDelete opInfo [] .canDelete =
 end
 proc( i64 : opIndex TypeCheckState ptr mut : state -> ) =>: freezeOp
+  opIndex 0 < if return end
   state [] .opInfo opIndex list.at .data =:: opInfo
   false opInfo [] .canMove =
   false opInfo [] .canDelete =
@@ -2599,6 +2600,7 @@ proc(
               op .pos sb.appendPos
               '\n' sb.appendC
             op .pos errors appendError
+            return
           end
           whileBlock [] .blockId =:: whileId
           ## remember number of changed stack values ( necessary for merging values in compiled code )
