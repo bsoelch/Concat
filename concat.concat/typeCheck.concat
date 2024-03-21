@@ -3027,7 +3027,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           return ## TODO find
       end
       break
-    hasName hasElement
+    hasName hasElement builtIn
     typeModifier implementProcedure
     checkEnumLabel checkArrayIndex setEnumLabel getArgLen call call_old case
       "operation " sb.wrap

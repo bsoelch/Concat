@@ -1,0 +1,389 @@
+import "program.concat"
+
+enum(
+ ## arithmetic
+ NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
+ ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ## +
+ SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 ## -
+ MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
+ DIV_I32 DIV_I64 DIV_F32 DIV_F64                ## /
+ MOD_I32 MOD_I64 MOD_F32 MOD_F64                ## %
+ UDIV_I32 UDIV_I64                              ## ..udiv
+ UMOD_I32 UMOD_I64                              ## ..umod
+ ## logic
+ NOT_BOOL                                       ## !
+ FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64             ## ~
+ AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64        ## &
+ OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64            ## |
+ XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64        ## ^
+ LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64             ## ..lshr
+ ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64             ## >>
+ SHL_I8 SHL_I16 SHL_I32 SHL_I64                 ## <<
+ ## comparison
+ BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
+ #+ XXX ? special handling for ==, !=  to support enum equality
+ EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64       ## ==
+ NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64       ## !=
+ +#
+ ## XXX? are the 16bit operations necessary
+ LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64       ## <
+ LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64       ## <=
+ GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64       ## >=
+ GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64       ## >
+ ULT_I8 ULT_I16 ULT_I32 ULT_I64                 ## ..u<
+ ULE_I8 ULE_I16 ULE_I32 ULE_I64                 ## ..u<=
+ UGE_I8 UGE_I16 UGE_I32 UGE_I64                 ## ..u>=
+ UGT_I8 UGT_I16 UGT_I32 UGT_I64                 ## ..u>
+ ## XXX? more built-in operations
+) BuiltIn =
+
+namespace: sb
+  proc( stringBuilder BuiltIn -> stringBuilder ) =>: export appendBuiltIn
+    switch
+      NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
+        "-_" sb.appendS break
+      ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+        "+" sb.appendS break
+      SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+        "-" sb.appendS break
+      MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
+        "*" sb.appendS break
+      DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+        "/" sb.appendS break
+      MOD_I32 MOD_I64 MOD_F32 MOD_F64 case
+        "%" sb.appendS break
+      UDIV_I32 UDIV_I64 case "..udiv" sb.appendS break
+      UMOD_I32 UMOD_I64 case "..umod" sb.appendS break
+      NOT_BOOL case "!" sb.appendS break
+      FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+        "~" sb.appendS break
+      AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
+        "&" sb.appendS break
+      OR_BOOL OR_I8 OR_I16 OR_I32 OR_I64 case
+        "|" sb.appendS break
+      XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+        "^" sb.appendS break
+      LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+        "..lshr" sb.appendS break
+      ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+        ">>" sb.appendS break
+      SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+        "<<" sb.appendS break
+      BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
+        "?" sb.appendS break
+      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
+        "<" sb.appendS break
+      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
+        "<=" sb.appendS break
+      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
+        ">=" sb.appendS break
+      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
+        ">" sb.appendS break
+      ULT_I8 ULT_I16 ULT_I32 ULT_I64 case "..u<" sb.appendS break
+      ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
+      UGE_I8 UGE_I16 UGE_I32 UGE_I64 case "..u>=" sb.appendS break
+      UGT_I8 UGT_I16 UGT_I32 UGT_I64 case "..u>" sb.appendS break
+    end
+  end
+end
+
+proc(
+  string : name
+  FilePosition : pos
+  ProgramContext ptr mut : context
+-> LabelId ProcBundleId bool ) =>: newBuiltInBundle
+  context [] .idContext @ =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  context [] .procBundles
+    ..dup .length =:: bundleId
+    newProcBundle list.append
+  context [] .procBundles =
+  ## newLabel
+    name
+    id.FLAG_EXPORT id.FLAG_BUILT_IN |
+    pos
+    FILE_ID_BUILT_IN
+  labelContext id.newLabel =:: label
+  ## declareIdentifier
+    label
+    Type .undefined
+    IdentifierType .PROCEDURE_BUNDLE
+    -1
+    bundleId ConstValue .procedureBundle
+    pos
+    FILE_ID_BUILT_IN
+    idContext
+    context [] .errors @
+  id.declareIdentifier =:: isError ..drop.2
+  label bundleId isError return
+end
+proc(
+  BuiltIn : buildIn
+  LabelId : procLabel
+  Type : procType
+  ProcBundleId : bundleId
+  ProgramContext ptr mut : context
+-> ) =>: addBuiltIn
+  context [] .procedures
+    ..dup .length =:: procId
+    ## ProcedureInfo
+      FILE_ID_BUILT_IN
+      procType
+      procLabel
+      buildIn ProcImplType .builtIn
+      false
+      false
+    ProcedureInfo new list.append
+  context [] .procedures =
+  context [] .procBundles bundleId list.at .data =:: bundle
+  bundle [] .procedures
+    procId list.append
+  bundle [] .procedures =
+end
+proc(
+  Type : t
+  ProgramContext ptr mut : context
+-> Type Type Type Type ) =>: operatorProcTypes
+  context [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  idContext [] .labelContext @ =:: labelContext
+  ## TODO? own calling convention for built-ins
+  LabelId arrayView optional.empty =:: argLabels
+  Type 2 array new =:: mut args
+  t args @ 0 [] =
+  t args @ 1 [] =
+  args @ 1 array.create argLabels false typeContext types.newProcArgs =:: mut procIn
+  args @ 1 array.create argLabels true typeContext types.newProcArgs =:: mut procOut
+  procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure
+    if ..unreachable end ## XXX replace with assertion
+  =:: unOpProc
+  args @ array.wrap argLabels false typeContext types.newProcArgs procIn =
+  procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure
+    if ..unreachable end ## XXX replace with assertion
+  =:: binOpProc
+  types.primitive.BOOL args @ 0 [] =
+  args @ 1 array.create argLabels true typeContext types.newProcArgs procOut =
+  procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure
+    if ..unreachable end ## XXX replace with assertion
+  =:: cmpOpProc
+  args @ 1 array.create argLabels false typeContext types.newProcArgs procIn =
+  procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure
+    if ..unreachable end ## XXX replace with assertion
+  =:: toBoolOpProc
+  binOpProc unOpProc cmpOpProc toBoolOpProc return
+end
+
+proc(
+  FilePosition : pos
+  ProgramContext ptr mut : context
+-> bool ) =>: export initBuiltInProcs
+  types.primitive.BOOL
+    context operatorProcTypes
+  =:: bool_bool =:: boolbool_bool ..drop.2
+  types.primitive.I8
+    context operatorProcTypes
+  =:: i8_bool =:: i8i8_bool =:: i8_i8 =:: i8i8_i8
+  types.primitive.I16
+    context operatorProcTypes
+  =:: i16_bool =:: i16i16_bool =:: i16_i16 =:: i16i16_i16
+  types.primitive.I32
+    context operatorProcTypes
+  =:: i32_bool =:: i32i32_bool =:: i32_i32 =:: i32i32_i32
+  types.primitive.I64
+    context operatorProcTypes
+  =:: i64_bool =:: i64i64_bool =:: i64_i64 =:: i64i64_i64
+  types.primitive.FLOAT32
+    context operatorProcTypes
+  =:: f32_bool =:: f32f32_bool =:: f32_f32 =:: f32f32_f32
+  types.primitive.FLOAT64
+    context operatorProcTypes
+  =:: f64_bool =:: f64f64_bool =:: f64f64_f64 =:: f64_f64
+  "-_" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  =:: mut bundle =:: mut label
+  BuiltIn .NEG_I8  label i8_i8   bundle context addBuiltIn
+  BuiltIn .NEG_I16 label i16_i16 bundle context addBuiltIn
+  BuiltIn .NEG_I32 label i32_i32 bundle context addBuiltIn
+  BuiltIn .NEG_I64 label i64_i64 bundle context addBuiltIn
+  BuiltIn .NEG_F32 label f32_f32 bundle context addBuiltIn
+  BuiltIn .NEG_F64 label f64_f64 bundle context addBuiltIn
+  "+" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .ADD_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .ADD_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .ADD_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .ADD_I64 label i64i64_i64 bundle context addBuiltIn
+  BuiltIn .ADD_F32 label f32f32_f32 bundle context addBuiltIn
+  BuiltIn .ADD_F64 label f64f64_f64 bundle context addBuiltIn
+  "-" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .SUB_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .SUB_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .SUB_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .SUB_I64 label i64i64_i64 bundle context addBuiltIn
+  BuiltIn .SUB_F32 label f32f32_f32 bundle context addBuiltIn
+  BuiltIn .SUB_F64 label f64f64_f64 bundle context addBuiltIn
+  "*" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .MUL_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .MUL_I64 label i64i64_i64 bundle context addBuiltIn
+  BuiltIn .MUL_F32 label f32f32_f32 bundle context addBuiltIn
+  BuiltIn .MUL_F64 label f64f64_f64 bundle context addBuiltIn
+  "/" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .DIV_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .DIV_I64 label i64i64_i64 bundle context addBuiltIn
+  BuiltIn .DIV_F32 label f32f32_f32 bundle context addBuiltIn
+  BuiltIn .DIV_F64 label f64f64_f64 bundle context addBuiltIn
+  "%" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .MOD_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .MOD_I64 label i64i64_i64 bundle context addBuiltIn
+  BuiltIn .MOD_F32 label f32f32_f32 bundle context addBuiltIn
+  BuiltIn .MOD_F64 label f64f64_f64 bundle context addBuiltIn
+  "..udiv" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .UDIV_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .UDIV_I64 label i64i64_i64 bundle context addBuiltIn
+  "..umod" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .UMOD_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .UMOD_I64 label i64i64_i64 bundle context addBuiltIn
+  "!" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .NOT_BOOL label bool_bool bundle context addBuiltIn
+  "~" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .FLIP_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .FLIP_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .FLIP_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .FLIP_I64 label i64i64_i64 bundle context addBuiltIn
+  "&" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .AND_BOOL label boolbool_bool bundle context addBuiltIn
+  BuiltIn .AND_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .AND_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .AND_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .AND_I64 label i64i64_i64 bundle context addBuiltIn
+  "|" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .OR_BOOL label boolbool_bool bundle context addBuiltIn
+  BuiltIn .OR_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .OR_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .OR_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .OR_I64 label i64i64_i64 bundle context addBuiltIn
+  "^" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .XOR_BOOL label boolbool_bool bundle context addBuiltIn
+  BuiltIn .XOR_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .XOR_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .XOR_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .XOR_I64 label i64i64_i64 bundle context addBuiltIn
+  "..lshr" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .LSHR_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .LSHR_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .LSHR_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .LSHR_I64 label i64i64_i64 bundle context addBuiltIn
+  ">>" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .ASHR_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .ASHR_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .ASHR_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .ASHR_I64 label i64i64_i64 bundle context addBuiltIn
+  "<<" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .SHL_I8  label i8i8_i8    bundle context addBuiltIn
+  BuiltIn .SHL_I16 label i16i16_i16 bundle context addBuiltIn
+  BuiltIn .SHL_I32 label i32i32_i32 bundle context addBuiltIn
+  BuiltIn .SHL_I64 label i64i64_i64 bundle context addBuiltIn
+  "?" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .BOOL_I8 label i8_bool   bundle context addBuiltIn
+  BuiltIn .BOOL_I16 label i16_bool bundle context addBuiltIn
+  BuiltIn .BOOL_I32 label i32_bool bundle context addBuiltIn
+  BuiltIn .BOOL_I64 label i64_bool bundle context addBuiltIn
+  BuiltIn .BOOL_F32 label f32_bool bundle context addBuiltIn
+  BuiltIn .BOOL_F64 label f64_bool bundle context addBuiltIn
+  "<" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .LT_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .LT_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .LT_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .LT_I64 label i64i64_bool bundle context addBuiltIn
+  BuiltIn .LT_F32 label f32f32_bool bundle context addBuiltIn
+  BuiltIn .LT_F64 label f64f64_bool bundle context addBuiltIn
+  "<=" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .LE_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .LE_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .LE_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .LE_I64 label i64i64_bool bundle context addBuiltIn
+  BuiltIn .LE_F32 label f32f32_bool bundle context addBuiltIn
+  BuiltIn .LE_F64 label f64f64_bool bundle context addBuiltIn
+  ">=" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .GE_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .GE_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .GE_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .GE_I64 label i64i64_bool bundle context addBuiltIn
+  BuiltIn .GE_F32 label f32f32_bool bundle context addBuiltIn
+  BuiltIn .GE_F64 label f64f64_bool bundle context addBuiltIn
+  ">" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .GT_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .GT_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .GT_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .GT_I64 label i64i64_bool bundle context addBuiltIn
+  BuiltIn .GT_F32 label f32f32_bool bundle context addBuiltIn
+  BuiltIn .GT_F64 label f64f64_bool bundle context addBuiltIn
+  "..u<" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .ULT_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .ULT_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .ULT_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .ULT_I64 label i64i64_bool bundle context addBuiltIn
+  "..u<=" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .ULE_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .ULE_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .ULE_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .ULE_I64 label i64i64_bool bundle context addBuiltIn
+  "..u>=" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .UGE_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .UGE_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .UGE_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .UGE_I64 label i64i64_bool bundle context addBuiltIn
+  "..u>" string.wrap pos context newBuiltInBundle
+    if ..drop.2 true return end
+  bundle = label =
+  BuiltIn .UGT_I8  label i8i8_bool   bundle context addBuiltIn
+  BuiltIn .UGT_I16 label i16i16_bool bundle context addBuiltIn
+  BuiltIn .UGT_I32 label i32i32_bool bundle context addBuiltIn
+  BuiltIn .UGT_I64 label i64i64_bool bundle context addBuiltIn
+  false return
+end

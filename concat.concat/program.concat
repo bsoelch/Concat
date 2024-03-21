@@ -23,12 +23,19 @@ struct(
   i64 : mut codeLength
 ) =:: export ProcImplementation
 struct(
-  FileId : fileId
-  Type : procType
-  LabelId : labelId
   ProcImplementation list : mut implementations
   i64 : codeStart
   i64 : mut codeLength
+) =:: export CodeProcData
+enum(
+  BuiltIn : builtIn
+  CodeProcData : mut code
+) =:: export ProcImplType
+struct(
+  FileId : fileId
+  Type : procType
+  LabelId : labelId
+  ProcImplType : mut implementation
   bool : hasStaticArg
   bool : isStatic
 ) =:: export ProcedureInfo
@@ -72,6 +79,7 @@ enum(
                 i32 : newEnum
            CallInfo : call_old ## backwards comparability
   ProcedureCallInfo : call
+            BuiltIn : builtIn
                 i64 : mut callPtr
                       argc
                       getArg
@@ -284,19 +292,48 @@ struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export LabelDat
 struct( LabelData list : mut labels Type : switchType i32 : mut caseCount bool : mut hasDefault ) =:: export SwitchData
 struct( i32 : mut modifiedTypes ) =:: export WhileData
 
+
 struct(
-  IdentifierContext : mut idContext
-   ProgramFile list : mut progFiles
- ProcedureInfo list : mut procedures
-          Type list : mut autoTypes
-     Operation list : mut templateOps
-    SwitchData list : mut switchData
-     WhileData list : mut whileData
- CompilerError list : mut errors
-               bool : mut hasCheckIndex
-               bool : mut hasCheckEnum
-               bool : mut hasGetArgs
+  ProcId list : mut procedures
+) =:: export ProcedureBundle
+
+proc( -> ProcedureBundle ) =>: export newProcBundle
+  ## ProcedureBundle
+    8 ProcId list.create
+  ProcedureBundle new
+end
+
+struct(
+    IdentifierContext : mut idContext
+     ProgramFile list : mut progFiles
+   ProcedureInfo list : mut procedures
+ ProcedureBundle list : mut procBundles
+            Type list : mut autoTypes
+       Operation list : mut templateOps
+      SwitchData list : mut switchData
+       WhileData list : mut whileData
+   CompilerError list : mut errors
+                 bool : mut hasCheckIndex
+                 bool : mut hasCheckEnum
+                 bool : mut hasGetArgs
 ) =:: export ProgramContext
+
+proc( -> ProgramContext ) =>: export newProgramContext
+  ## ProgramContext
+    id.newIdentifierContext
+    16  ProgramFile           list.create
+    64  ProcedureInfo         list.create
+    64  ProcedureBundle       list.create
+    32  Type                  list.create
+    128 Operation             list.create
+    0   SwitchData            list.create
+    0   WhileData             list.create
+    32  CompilerError         list.create
+    false ## hasCheckIndex
+    false ## hasCheckEnum
+    false ## has getArgs
+  ProgramContext new
+end
 
 proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext -> ProgramFile ) =>: export newProgFile
   128 Operation list.create
@@ -436,6 +473,12 @@ namespace: sb
             ')' sb.appendC
           end
           ## XXX? print auto args
+          break
+        builtIn case ..over =:: op
+          "built-in ( " sb.appendS
+          op .dataType  labelContext typeContext sb.appendType
+          " ) : " sb.appendS
+          op .val .builtIn sb.appendBuiltIn
           break
         setId case
           "set ( " sb.appendS

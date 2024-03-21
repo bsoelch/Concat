@@ -5,6 +5,7 @@ import "labels.concat"
 import "types.concat"
 
 i64 =:: export ProcId
+i64 =:: export ProcBundleId
 struct( i64 : offset i64 : length ) ConstantArray =
 enum(
   none
@@ -20,6 +21,7 @@ enum(
   i32 : genericArg
   i32 : templateArg
   ProcId : procedure
+  ProcBundleId : procedureBundle
 ) ConstValue =
 
 struct( ConstValue list : mut arrayValues ) ConstantContext =
@@ -93,6 +95,8 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       a .typeId b .typeId types.typeEquals return
     procedure case
       a .procedure b .procedure == return
+    procedureBundle case
+      a .procedureBundle b .procedureBundle == return
     templateArg case
       a .templateArg b .templateArg == return
     genericArg case
@@ -181,6 +185,10 @@ namespace: sb
         procedure case
           "procedure: "  sb.appendS
           ..over .procedure sb.appendI
+          break
+        procedureBundle case
+          "procedure bundle: "  sb.appendS
+          ..over .procedureBundle sb.appendI
           break
         genericArg case
           "generic argument: "  sb.appendS

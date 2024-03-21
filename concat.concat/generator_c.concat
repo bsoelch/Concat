@@ -679,7 +679,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
     genericArg case ## XXX find correct label
       const .genericArg id.LABEL_ID_NONE target prog printArgName
       return
-    none wildCard templateArg procedure case
+    none wildCard templateArg procedure procedureBundle case
       break ## XXX error message
   end
 end
@@ -1191,7 +1191,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
                 int case caseVal .int sb.appendI break
                 chr case caseVal .chr sb.appendI break
                 enumLabel case caseVal .enumLabel sb.appendI break
-                none wildCard boolean genericArg templateArg str typeId arrayConstant Float procedure case
+                none wildCard boolean genericArg templateArg str typeId arrayConstant Float procedure procedureBundle case
                   ## TODO error message
                   break
               end
@@ -1392,7 +1392,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     compilerInfo case
       break
-    getName setName @Name getLabel setLabel @Label length size stackMod copy
+    getName setName @Name getLabel setLabel @Label length size
+    stackMod copy builtIn
     typeModifier autoCast hasLabel hasName call implementProcedure case
       break ## XXX error message
   end
@@ -1508,10 +1509,13 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
     =:: idData
     idData [] .valueType =:: mut mType
     idData [] .labelId labelContext id.labelFlags =:: labelFlags
+    idData [] .idType .PROCEDURE_BUNDLE ?? if
+      continue
+    end
     mType types.primitive.TYPE types.typeEquals if
       continue
     end
-     mType types.isAutoType if
+    mType types.isAutoType if
       prog [] .autoTypes
         mType types.getTypeId
       list.at .data []

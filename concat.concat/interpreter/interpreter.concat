@@ -812,7 +812,7 @@ proc(
     unaryOperator binaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
     hasLabel hasName hasElement
-    stackMod setName @Name copy
+    stackMod setName @Name copy builtIn
     compilerInfo unreachable typeInfo case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap
@@ -874,13 +874,18 @@ proc(
     true return
   end
   context [] .stack .length args .length - =:: argsOffset
+  procData [] .implementation .builtIn ?? if
+    "interpreting built-in procs is not implemented" sb.wrap
+    pos errors appendError
+    true return
+  end
   ## XXX resolve signature
   ## TODO check argument types
   ## TODO interpreter modes depending on program state
   program [] .templateOps ## -> procedures are stored in template ops until they are type-checked
   ## program [] .progFiles procData [] .fileId list.at .data [] .localOps
-    procData [] .codeStart
-    procData [] .codeLength
+    procData [] .implementation .code .codeStart
+    procData [] .implementation .code .codeLength
   list.slice =:: code
   code 0 array.at .data =:: op
   op [] .val .initializeId ?? ! if true else

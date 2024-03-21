@@ -769,7 +769,8 @@ namespace: sb
             return
           end
         break
-        none wildCard genericArg templateArg typeId procedure case
+        none wildCard genericArg templateArg typeId
+            procedure procedureBundle case
         break
       end
       isGlobal if
@@ -2423,6 +2424,8 @@ proc(
         end
         argIndices list.free argIndices =
       return
+    builtIn case
+      break
     block case
       op [] .val .block .blockType switch
         IF case
@@ -3100,6 +3103,11 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     labelId idContext id.getIdentifier
       if ..unreachable end ## XXX replace with assertion
     =:: idData
+    idData [] .idType .TYPE ??
+    idData [] .idType .PROCEDURE ?? |
+    idData [] .idType .PROCEDURE_BUNDLE ?? | if
+      continue
+    end
     idData [] .valueType =:: mut valType
     labelId labelContext id.labelFlags =:: labelFlags
     valType types.isAutoType if

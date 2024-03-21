@@ -6,6 +6,7 @@ import list
 
 i32 =:: export FileId
 -1 FileId =: export FILE_ID_NONE
+-2 FileId =: export FILE_ID_BUILT_IN
 
 struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: export FilePosition
 enum( ERROR WARNING INFO ) =:: export ErrorType
@@ -45,6 +46,8 @@ enum( STRUCT POINTER ) =:: export CallingConvention
 namespace: CallingConvention
   CallingConvention .POINTER =:: export DEFAULT
 end
+
+type : export BuiltIn
 
 ## declare Type and ConstValue to allow mutual inclusion of types.concat and constants.concat
 type : export Type

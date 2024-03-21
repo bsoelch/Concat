@@ -442,7 +442,17 @@ namespace: id
     end
     false return
   end
-  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors ->  IdentifierName IdentifierData bool ) =>: export declareIdentifier
+  proc(
+    LabelId : label
+    Type : valType
+    IdentifierType : idType
+    i32 : id
+    ConstValue : constVal
+    FilePosition : declaredAt
+    FileId : currentFile
+    IdentifierContext ptr mut : context
+    CompilerError list ptr mut : errors
+  ->  IdentifierName IdentifierData bool ) =>: export declareIdentifier
     context [] .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
@@ -476,7 +486,9 @@ namespace: id
         ID_NONE ID_NONE_DATA true return
       end
     end
-    name declaredAt errors checkIdentifier if
+    ## don't check names of built-in identifiers
+    flags FLAG_BUILT_IN & ? ! if
+        name declaredAt errors checkIdentifier _if
       context [] .nameBuffer list.clear context [] .nameBuffer =
       ID_NONE ID_NONE_DATA true return
     end
@@ -959,7 +971,7 @@ namespace: types
         src return
       arrayConstant case
         src return ## TODO array constants
-      procedure case
+      procedure procedureBundle case
         src return
       typeId case
         src .typeId templateArgs genericArgs implPos context replaceGenericsType ConstValue .typeId return

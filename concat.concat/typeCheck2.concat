@@ -1257,7 +1257,7 @@ proc(
           label state replaceLabel
           true true 0 0 state updateOpInfo
           return
-        PROCEDURE case
+        PROCEDURE PROCEDURE_BUNDLE case
           ## getIdentifierByLabel
             idInfo .labelId
             idContext
@@ -1267,7 +1267,14 @@ proc(
             op .pos errors appendError
             return
           end =:: idData
-          idData [] .constValue .procedure =:: procId
+          idInfo .idType .PROCEDURE ?? if
+            idData [] .constValue .procedure @ array.wrap
+          else  ## PROCEDURE_BUNDLE
+            idData [] .constValue .procedureBundle =:: bundleId
+            program [] .procBundles
+              bundleId list.at .data [] .procedures
+            list.asArray
+          end =:: procedures
           state [] .stack branchTree.depth StackValue list.create =:: mut stackValues
           state [] .stack @ branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
@@ -1280,7 +1287,7 @@ proc(
           end ..drop
           0 sb.create =:: mut message
           ## resolveCall
-            procId @ array.wrap
+            procedures
             stackValues list.asArray
             message @ optional.wrap
             program
@@ -1327,8 +1334,19 @@ proc(
           calledType typeContext types.getProcOut ..drop
             typeContext types.compositeElts
           =:: outTypes
+          program [] .procedures
+            calledProc .procId list.at .data
+          =:: calledProcData
           calledType op .dataType =
-          calledProc OpValue .call op .val =
+          calledProcData [] .implementation switch
+            code case
+              calledProc OpValue .call op .val =
+            break
+            builtIn case
+              calledProcData [] .implementation .builtIn
+                OpValue .builtIn op .val =
+            break
+          end
           op state appendOp ..drop
           ## push return values
           0 while ..dup outTypes .length < do =:: i
@@ -1346,8 +1364,6 @@ proc(
             i 1 +
           end ..drop
           return
-        PROCEDURE_BUNDLE case
-          break ## TODO procedure bundles
         LABEL case
           break
       end
@@ -2744,7 +2760,7 @@ proc(
       ConstValue .none op state pushValue
       types.primitive.I_SIZE state replaceType
       break
-    getName
+    getName builtIn
     newEnum call callPtr
     argc getArg getArgLen
     unaryOperator binaryOperator
@@ -2844,7 +2860,7 @@ proc(
   ProgramContext ptr mut : program
 -> i64 ) =>: nextImpl
   program [] .templateOps
-    procInfo [] .codeStart list.at .data
+    procInfo [] .implementation .code .codeStart list.at .data
   =:: procStart
   procStart [] .val .implementProcedure ?? ! if
     0 return
@@ -2864,21 +2880,22 @@ proc(
   currentProc [] .fileId state [] .currentFile =
   program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
   state clearOps
+  currentProc [] .implementation .code @ =:: codeImpl
   program [] .templateOps
-    currentProc [] .codeStart list.at .data
+     codeImpl [] .codeStart list.at .data
   =:: procStart
   ## ProcedureImpl
     procId
     implId
   ProcedureImpl new OpValue .implementProcedure procStart [] .val =
   implId 0 >= if ## update procedure type
-    currentProc [] .implementations
+    codeImpl [] .implementations
       implId list.at .data
     [] .procType procStart [] .dataType =
   end
-  0 while ..dup currentProc [] .codeLength < do =:: i
+  0 while ..dup codeImpl [] .codeLength < do =:: i
     program [] .templateOps
-      i currentProc [] .codeStart + list.get
+      i codeImpl [] .codeStart + list.get
     state typeCheckOp
     i 1 +
   end ..drop
@@ -2933,8 +2950,11 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   ## procedures
   0 while ..dup program [] .procedures .length < do =:: procId
     program [] .procedures procId list.at .data =:: currentProc
+    currentProc [] .implementation .code ?? ! if
+      procId 1 + continue ## procedure implementation not in code
+    end
     currentProc [] .procType typeContext types.getProcIn ..drop =:: procIn
-    currentProc [] .codeStart 0 < if
+    currentProc [] .implementation .code .codeStart 0 < if
       procId 1 + continue ## procedure not implemented
     end
     currentProc [] .hasStaticArg if
@@ -2950,17 +2970,21 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     false compiledImplementation =
     0 while ..dup program [] .procedures .length < do =:: procId
       program [] .procedures procId list.at .data =:: currentProc
-      currentProc [] .codeStart 0 < if
+      currentProc [] .implementation .code ?? ! if
+        procId 1 + continue ## procedure implementation not in code
+      end
+      currentProc [] .implementation .code @ =:: codeImpl
+      codeImpl [] .codeStart 0 < if
         procId 1 + continue ## procedure not implemented
       end
       currentProc program nextImpl =:: nextId
-      currentProc [] .implementations .length =:: implLength
+      codeImpl [] .implementations .length =:: implLength
       nextId implLength >= if
         procId 1 + continue
       end
       true compiledImplementation =
       nextId while ..dup implLength < do =:: implId
-        currentProc [] .implementations
+        codeImpl [] .implementations
           implId list.at .data
         =:: implData
         implData [] .procType typeContext types.getProcIn ..drop =:: procIn

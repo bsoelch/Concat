@@ -170,7 +170,7 @@ proc(
         argBuffer []
           arg switch
             none boolean enumLabel chr int Float
-            str arrayConstant wildCard procedure case
+            str arrayConstant wildCard procedure procedureBundle case
               arg break ## argument not generic
             typeId case
               arg .typeId
@@ -772,7 +772,9 @@ proc(
   eltCount Type list.create =:: mut typeBuffer
   eltCount LabelId list.create =:: mut labelBuffer
   constArgs .length 0 > if
-    progContext [] .procedures candidate [] .procId list.at .data [] .implementations @ =:: impls
+    progContext [] .procedures
+      candidate [] .procId list.at .data []
+    .implementation .code .implementations @ =:: impls
     false =:: mut isMatch
     0 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
