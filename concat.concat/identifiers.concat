@@ -238,11 +238,14 @@ namespace: id
       "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
     end
     id 0 string.charAt '.' == if
-      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
-    end
-    id '.' string.splitLast
-    =:: path
-    =:: name
+      id .length 2 >= if id 1 string.charAt '.' == _if
+        id string.empty
+      else
+        "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
+      end
+    else
+      id '.' string.splitLast
+    end =:: path =:: name
     LabelId optional : idLabel?
     LabelId : idLabel
     ## 1. search in local scopes
