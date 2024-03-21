@@ -1609,6 +1609,233 @@ end
 
 proc(
   stringBuilder : sb
+  string : name
+  ValType : valType
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendUnaryOperator
+  context popValue =:: arg
+  sb
+    "%s" sb.appendS
+    valType context pushValue sb.appendI
+    " =" sb.appendS
+    valType sb.appendValTypeQBE
+    ' ' sb.appendC
+    name sb.appendStr
+    " %s" sb.appendS
+    arg sb.appendI
+    '\n' sb.appendC
+  return
+end
+proc(
+  stringBuilder : sb
+  string : name
+  ValType : valType
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendBinaryOperator
+  context popValue =:: arg2
+  context popValue =:: arg1
+  sb
+    "%s" sb.appendS
+    valType context pushValue sb.appendI
+    " =" sb.appendS
+    valType sb.appendValTypeQBE
+    ' ' sb.appendC
+    name sb.appendStr
+    " %s" sb.appendS
+    arg1 sb.appendI
+    ", %s" sb.appendS
+    arg2 sb.appendI
+    '\n' sb.appendC
+  return
+end
+proc(
+  stringBuilder : sb
+  string : cmpType
+  ValType : valType
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendComparisonOperator
+  context popValue =:: arg2
+  context popValue =:: arg1
+  sb
+    "%s" sb.appendS
+    ValType .I32 context pushValue sb.appendI
+    " =w c" sb.appendS
+    cmpType sb.appendStr
+    valType sb.appendValTypeQBE
+    " %s" sb.appendS
+    arg1 sb.appendI
+    ", %s" sb.appendS
+    arg2 sb.appendI
+    '\n' sb.appendC
+  return
+end
+proc(
+  stringBuilder : sb
+  Type : src
+  bool : signed
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: extendArguments
+  i64 2 array new =:: mut args
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  src typeContext types.isInt ! if
+    sb return
+  end
+  src typeContext types.numberPrecision
+     types.primitive.I32 typeContext types.numberPrecision >= if
+    sb return
+  end
+  context popValue args @ 1 [] =
+  context popValue args @ 0 [] =
+  sb
+    0 while ..dup 2 < do =:: i
+      "%s" sb.appendS
+      ValType .I32 context pushValue sb.appendI
+      " =w ext" sb.appendS
+      signed if 's' else 'u' end sb.appendC
+      src StorageType .STORE pos context sb.appendTypeNameQBE
+      " %s" sb.appendS
+      args @ i [] sb.appendI
+      '\n' sb.appendC
+      i 1 +
+    end ..drop
+  return
+end
+
+proc(
+  stringBuilder : sb
+  BuiltIn : builtIn
+  Type : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendBuiltInQBE
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  opType typeContext types.getProcIn ..drop =:: inType
+  inType 0 typeContext types.compositeGetElement =:: baseType
+  baseType context toValType =:: baseVal
+  builtIn switch
+    NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
+      sb "neg" string.wrap baseVal context appendUnaryOperator
+      return
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+      sb "add" string.wrap baseVal context appendBinaryOperator
+      return
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+      sb "sub" string.wrap baseVal context appendBinaryOperator
+      return
+    MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
+      sb "mul" string.wrap baseVal context appendBinaryOperator
+      return
+    DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+      sb "div" string.wrap baseVal context appendBinaryOperator
+      return
+    MOD_I32 MOD_I64 MOD_F32 MOD_F64 case
+      sb "rem" string.wrap baseVal context appendBinaryOperator
+      return
+    UDIV_I32 UDIV_I64 case
+      sb "udiv" string.wrap baseVal context appendBinaryOperator
+      return
+    UMOD_I32 UMOD_I64 case
+      sb "urem" string.wrap baseVal context appendBinaryOperator
+      return
+    NOT_BOOL case
+      context popValue =:: arg
+      sb
+        "%s" sb.appendS
+        baseVal context pushValue sb.appendI
+        " =w extub %s" sb.appendS
+        arg sb.appendI
+        '\n' sb.appendC
+        "ceqw 0," string.wrap baseVal context appendUnaryOperator
+      return
+    FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+      sb
+        "xor -1," string.wrap baseVal context appendUnaryOperator
+      return
+    AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
+      sb "and" string.wrap baseVal context appendBinaryOperator
+      return
+    OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64 case
+      sb "or" string.wrap baseVal context appendBinaryOperator
+      return
+    XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+      sb "xor" string.wrap baseVal context appendBinaryOperator
+      return
+    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+      sb
+        baseType false pos context extendArguments
+        "shr" string.wrap baseVal context appendBinaryOperator
+      return
+    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+      sb
+        baseType true pos context extendArguments
+        "sar" string.wrap baseVal context appendBinaryOperator
+      return
+    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+      sb "shl" string.wrap baseVal context appendBinaryOperator
+      return
+    BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
+      sb
+        "%s" sb.appendS
+        baseVal context pushValue sb.appendI
+        " =" sb.appendS
+        baseVal sb.appendValTypeQBE
+        " copy 0\n" sb.appendS
+        baseType false pos context extendArguments
+        "ne" string.wrap baseVal context appendComparisonOperator
+      return
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
+      sb
+        baseType true pos context extendArguments
+        "slt" string.wrap baseVal context appendComparisonOperator
+      return
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
+      sb
+        baseType true pos context extendArguments
+        "sle" string.wrap baseVal context appendComparisonOperator
+      return
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
+      sb
+        baseType true pos context extendArguments
+        "sge" string.wrap baseVal context appendComparisonOperator
+      return
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
+      sb
+        baseType true pos context extendArguments
+        "sgt" string.wrap baseVal context appendComparisonOperator
+      return
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
+      sb
+        baseType false pos context extendArguments
+        "ult" string.wrap baseVal context appendComparisonOperator
+      return
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
+      sb
+        baseType false pos context extendArguments
+        "ule" string.wrap baseVal context appendComparisonOperator
+      return
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
+      sb
+        baseType false pos context extendArguments
+        "uge" string.wrap baseVal context appendComparisonOperator
+      return
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
+      sb
+        baseType false pos context extendArguments
+        "ugt" string.wrap baseVal context appendComparisonOperator
+      return
+  end
+end
+
+proc(
+  stringBuilder : sb
   Type : src
   i64 : srcIndex
   Type : target
@@ -2425,7 +2652,15 @@ proc(
         argIndices list.free argIndices =
       return
     builtIn case
-      break
+      sb
+        op [] .pos sb.appendPosQBE
+        ## appendBuiltInQBE
+          op [] .val .builtIn
+          op [] .dataType
+          op [] .pos
+          context
+        appendBuiltInQBE
+      return
     block case
       op [] .val .block .blockType switch
         IF case

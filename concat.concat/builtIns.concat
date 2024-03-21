@@ -1,5 +1,6 @@
 import "program.concat"
 
+## TODO distinguish mod and remainder
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
@@ -166,7 +167,7 @@ proc(
   procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure
     if ..unreachable end ## XXX replace with assertion
   =:: cmpOpProc
-  args @ 1 array.create argLabels false typeContext types.newProcArgs procIn =
+  args @ 1 [] @ 1 array.create argLabels false typeContext types.newProcArgs procIn =
   procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure
     if ..unreachable end ## XXX replace with assertion
   =:: toBoolOpProc
@@ -263,10 +264,10 @@ proc(
   "~" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
-  BuiltIn .FLIP_I8  label i8i8_i8    bundle context addBuiltIn
-  BuiltIn .FLIP_I16 label i16i16_i16 bundle context addBuiltIn
-  BuiltIn .FLIP_I32 label i32i32_i32 bundle context addBuiltIn
-  BuiltIn .FLIP_I64 label i64i64_i64 bundle context addBuiltIn
+  BuiltIn .FLIP_I8  label i8_i8    bundle context addBuiltIn
+  BuiltIn .FLIP_I16 label i16_i16 bundle context addBuiltIn
+  BuiltIn .FLIP_I32 label i32_i32 bundle context addBuiltIn
+  BuiltIn .FLIP_I64 label i64_i64 bundle context addBuiltIn
   "&" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
