@@ -1260,14 +1260,13 @@ proc(
         PROCEDURE case
           ## getIdentifierByLabel
             idInfo .labelId
-            idInfo .labelId labelContext id.getLabelFile
             idContext
-          id.getIdentifierByLabel if ..drop.2
+          id.getIdentifier if ..drop
             "could not find " sb.wrap
               idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
             return
-          end =:: idData ..drop
+          end =:: idData
           idData [] .constValue .procedure =:: procId
           state [] .stack branchTree.depth StackValue list.create =:: mut stackValues
           state [] .stack @ branchTree.itr.start while
@@ -1347,6 +1346,8 @@ proc(
             i 1 +
           end ..drop
           return
+        PROCEDURE_BUNDLE case
+          break ## TODO procedure bundles
         LABEL case
           break
       end
@@ -1360,7 +1361,7 @@ proc(
           op .val .@Id .labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
           return
-        TYPE ARGUMENT LABEL TEMPLATE_ARG case
+        TYPE ARGUMENT LABEL TEMPLATE_ARG PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.wrap
             op .val .@Id labelContext sb.appendIdInfo
             " is not supported" sb.appendS
@@ -1374,7 +1375,7 @@ proc(
         GLOBAL_VAR LOCAL_VAR TMP_VAR case
           op state appendOp ..drop
           return
-        PROCEDURE TYPE TEMPLATE_ARG LABEL case
+        PROCEDURE TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           "unexpected declaration of identifier " sb.wrap
             op .val .@Id labelContext sb.appendIdInfo
           op .pos errors appendError
@@ -1406,21 +1407,21 @@ proc(
           ## update constant value in identifier if stack-value is constant
           idInfo .idType .GLOBAL_VAR ?? if constVal .none ?? ! _if
               idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! _if
-            ## getIdentifierByLabel
+            ## getIdentifier
               idInfo .labelId
-              idInfo .labelId labelContext id.getLabelFile
               idContext
-            id.getIdentifierByLabel if ..drop.2
+            id.getIdentifier if ..drop
               "could not find " sb.wrap
                 idInfo labelContext sb.appendIdInfo
               op .pos errors appendError
-            else =:: idData ..drop
+            else =:: idData
               constVal idData [] .constValue =
             end
           end
           op state appendOp ..drop
           return
-        PROCEDURE TYPE TEMPLATE_ARG LABEL ARGUMENT TMP_VAR case
+        PROCEDURE PROCEDURE_BUNDLE TYPE TEMPLATE_ARG
+            LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.wrap
             op .val .@Id labelContext sb.appendIdInfo
           op .pos errors appendError

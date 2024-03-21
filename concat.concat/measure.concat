@@ -99,12 +99,17 @@ end
 proc( ProgramContext ptr mut : prog -> Type list ) =>: export getDeclaredTypes
   types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut visited ## XXX start with power of two closest to total type count as capacity
   128 Type list.create =:: mut types
-  prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
+  prog [] .idContext @ =:: idContext 
+  idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## XXX find out which declarations are actually used
-    declaration .1 [] .idType .GLOBAL_VAR ?? ! if
+    declaration .1 [] =:: labelId
+    labelId idContext id.getIdentifier
+      if ..unreachable end ## XXX replace with assertion
+    =:: idData
+    idData [] .idType .GLOBAL_VAR ?? ! if
       continue
     end
-    declaration .1 [] .valueType 0 prog visited @ types @ declaredType
+    idData [] .valueType 0 prog visited @ types @ declaredType
   end ..drop
   0 while ..dup prog [] .progFiles .length < do
     prog [] .progFiles ..over list.at .data

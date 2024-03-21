@@ -1321,18 +1321,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end =:: idData =:: idName
       state [] .currentProc optional.isEmpty if
-        idData [] .idType .PROCEDURE ?? ! isInit ! | if
+        idData .idType .PROCEDURE ?? ! isInit ! | if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
       end
       localDeclaration ! if idName .name MAIN_NAME string.wrap string.eq _if ## main
         idType .PROCEDURE ?? ! if
           "main has to be a procedure got: " sb.wrap
-            idData id.asIdInfo labelContext sb.appendIdInfo
+            idData @ id.asIdInfo labelContext sb.appendIdInfo
           fileState [] .wordStart state appendError2
         end
         true =:: mut validMain
-        idName .fileId 0 != if idData [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
+        idName .fileId 0 != if idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
           "main procedure is not visible from root file" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
@@ -1342,8 +1342,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendWarning2
           false validMain =
         end
-        idData [] .valueType typeContext types.getProcIn ..swap =:: inTypes
-        idData [] .valueType typeContext types.getProcOut ..swap =:: outTypes
+        idData .valueType typeContext types.getProcIn ..swap =:: inTypes
+        idData .valueType typeContext types.getProcOut ..swap =:: outTypes
         #+no inTypes+# #+no outTypes+# | if
           "could not resolve signature of main" sb.wrap
           fileState [] .wordStart state appendError2
@@ -1357,10 +1357,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
            fileState [] .wordStart state appendWarning2
         end
       end
-      idData [] .idType .TYPE ?? if
+      idData .idType .TYPE ?? if
         return
       end
-      idData [] .idType .PROCEDURE ?? if
+      idData .idType .PROCEDURE ?? if
         state [] .currentProc optional.hasData if
           "procedures cannot be nested" sb.wrap fileState [] .wordStart state appendError2
         end
@@ -1424,7 +1424,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           valType experimental state openProcBlock
           procId optional.wrap state [] .currentProc =
-          idData [] .valueType typeContext types.getProcIn if
+          idData .valueType typeContext types.getProcIn if
             "could not resolve procedure signature" sb.wrap fileState [] .wordStart state appendError2
           end =:: inType
           inType typeContext types.compositeEltCount =:: count
@@ -1474,7 +1474,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       isInit ! _EXPERIMENTAL_ if localDeclaration ! else state [] .currentProc optional.isEmpty end & if
         return ## no operation for global pre-declaration
       end
-      idData [] .valueType idData id.asIdInfo fileState [] .wordStart isInit if
+      idData .valueType idData @ id.asIdInfo fileState [] .wordStart isInit if
         opInitializeId
       else
         opDeclareId
@@ -1557,18 +1557,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if ..drop
           .name 0 sb.create ..swap sb.appendStr fileState [] .wordStart state appendError2
           return
-        end
+        end =:: idData =:: idName
         state [] .currentProc optional.isEmpty if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
-        ..dup [] .idType .TYPE ?? if
-          ..drop.2
+        idData .idType .TYPE ?? if
           return
         end
         Operation ptr optional.empty state resetGlobalInterpreter
-        ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
+        idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
         state skipGlobalInterpreter
-        ..drop return
+        return
     else ..dup "=" string.wrap string.eq _if ..drop
       _EXPERIMENTAL_ if
         fileState [] .wordStart opSetValue state appendOp
@@ -2876,22 +2875,29 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.wrap
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
-          0 while ..dup matches .length < do
-            matches ..over list.at .data =:: match
-            ..swap
-              " - " sb.appendS
-              match [] .data id.asIdInfo labelContext sb.appendIdInfo
-              " ( " sb.appendS
-              match [] .data [] .valueType labelContext typeContext sb.appendType
-              match [] .data [] .constValue .none ?? ! if
-                " [ " sb.appendS
-                match [] .data [] .constValue idContext [] .constContext @ labelContext typeContext sb.appendConstant
-                " ]" sb.appendS
-              end
-              " ) declared at " sb.appendS
-              match [] .data [] .labelId labelContext id.labelPos ..dup optional.hasData if .data sb.appendPos else ..drop "?" sb.appendS end
-              '\n' sb.appendC
-            ..swap 1 +
+          0 while ..dup matches .length < do =:: i
+            matches i list.at .data =:: match
+            match [] .labelId idContext id.getIdentifier
+              if ..unreachable end ## XXX replace with assertion
+            =:: idData
+            " - " sb.appendS
+            idData id.asIdInfo labelContext sb.appendIdInfo
+            " ( " sb.appendS
+            idData [] .valueType labelContext typeContext sb.appendType
+            idData [] .constValue .none ?? ! if
+              " [ " sb.appendS
+              idData [] .constValue idContext [] .constContext @ labelContext typeContext sb.appendConstant
+              " ]" sb.appendS
+            end
+            " ) declared at " sb.appendS
+            match [] .labelId labelContext id.labelPos =:: pos?
+            pos? optional.hasData if
+              pos? .data sb.appendPos
+            else
+              "?" sb.appendS
+            end
+            '\n' sb.appendC
+            i 1 +
           end ..drop
           "-----------------\n" sb.appendS
           io.stdOut ..over io.fputSb ..drop
@@ -2910,15 +2916,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError2
       return
     end
-    id.FLAG_NONE fileState [] .wordStart state [] .currentFile
-  labelContext id.newLabel =:: labelId
-  labelId
+  =:: idName
+  idName
     state [] .currentFile
-  idContext id.findIdentifierByLabel ! if ## try parsing as identifier
+  idContext id.findIdentifierByName ! if ## try parsing as identifier
     ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart opGet state appendOp
     ..drop
     return
   end ..drop.2
+  idName
+    id.FLAG_NONE fileState [] .wordStart state [] .currentFile
+  labelContext id.newLabel =:: labelId
   labelId fileState [] .wordStart opGetName  state appendOp
   return
 end

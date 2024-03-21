@@ -1193,7 +1193,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         return
       end
       break
-    TEMPLATE_ARG TYPE LABEL case
+    TEMPLATE_ARG TYPE LABEL PROCEDURE_BUNDLE case
       "operation " sb.wrap
         op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
@@ -1288,7 +1288,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         1 +
       end ..drop
       break
-    ARGUMENT TEMPLATE_ARG TYPE LABEL case
+    ARGUMENT TEMPLATE_ARG TYPE LABEL PROCEDURE_BUNDLE case
       "operation " sb.wrap
         op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS
@@ -3102,6 +3102,7 @@ proc(
         implId op [] .val .declareId .id =
       end
       break
+    PROCEDURE_BUNDLE case ..unreachable
   end
 end
 proc(

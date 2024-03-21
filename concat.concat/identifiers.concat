@@ -8,23 +8,66 @@ import "labels.concat"
 import "codeBlocks.concat"
 import "common.concat"
 
-  enum( TYPE PROCEDURE GLOBAL_VAR TEMPLATE_ARG LABEL LOCAL_VAR ARGUMENT TMP_VAR ) =:: export IdentifierType
+enum(
+  TYPE
+  PROCEDURE
+  PROCEDURE_BUNDLE
+  GLOBAL_VAR
+  TEMPLATE_ARG
+  LABEL
+  LOCAL_VAR
+  ARGUMENT
+  TMP_VAR
+) =:: export IdentifierType
 
-  struct( Type : implType ConstantArray : argValues FilePosition : implPos ) =:: export TemplateImplementation
-  ## XXX? ( offset length file code-Type ) -> code-position
-  struct( Type : templateType FilePosition : declaredAt i64 : codeOffset i64 : mut codeLength FileId : srcFile TemplateImplementation list : mut implementations i32 : mut compiledImpls ) =:: export TemplateInfo
+struct(
+  Type : implType
+  ConstantArray : argValues
+  FilePosition : implPos
+) =:: export TemplateImplementation
+## XXX? ( offset length file code-Type ) -> code-position
+struct(
+  Type : templateType
+  FilePosition : declaredAt
+  i64 : codeOffset
+  i64 : mut codeLength
+  FileId : srcFile
+  TemplateImplementation list : mut implementations
+  i32 : mut compiledImpls
+) =:: export TemplateInfo
 
-  struct( Type : mut valueType ConstValue : mut constValue FilePosition : declaredAt LabelId : labelId TemplateId : templateId i32 : id IdentifierType : idType ) =:: IdentifierData
-  struct( IdentifierType : idType LabelId : labelId ConstValue : constValue TemplateId : templateId i32 : mut id ) =:: export IdentifierInfo
+struct(
+  Type : mut valueType
+  ConstValue : mut constValue
+  FilePosition : declaredAt
+  LabelId : labelId
+  TemplateId : templateId
+  i32 : id
+  IdentifierType : idType
+) =:: IdentifierData
+struct(
+  IdentifierType : idType
+  LabelId : labelId
+  ConstValue : constValue
+  TemplateId : templateId
+  i32 : mut id
+) =:: export IdentifierInfo
 
-  struct( string : name NamespaceId : mut namespace FileId : fileId ) =:: IdentifierName
-  struct( IdentifierName : name IdentifierData ptr : data ) =:: export IdentifierMatch
+struct(
+  string : name
+  NamespaceId : mut namespace
+  FileId : fileId
+) =:: IdentifierName
+struct(
+  IdentifierName : name
+  LabelId : labelId
+) =:: export IdentifierMatch
+
 namespace: id
-
   "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
   Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
   Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
-
+-2 LabelId =: LABEL_ID_TMP
 
   proc( IdentifierName : a -> i32 ) =>: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
@@ -38,7 +81,7 @@ namespace: id
 
   1 =:: export SCOPE_FLAG_NO_CONST_FOLD
   struct(
-    IdentifierName IdentifierData hashMap : mut identifiers
+    IdentifierName LabelId hashMap : mut identifierNames
     i8 _ ptr mut list : mut scopeStrings ## strings allocated for this scope
     bool : isProcScope
     Type : currentProc
@@ -50,9 +93,7 @@ namespace: id
 
   proc( bool : isProc Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
      ## Scope
-      idHash @
-      idEq @
-      128 IdentifierData map.create
+      idHash @ idEq @ 128 LabelId map.create
       128 i8 _ ptr mut list.create
       isProc
       procType
@@ -69,6 +110,7 @@ end
     TypeContext : mut typeContext
     id.Scope : mut globalScope
     id.Scope list : mut openScopes
+    LabelId IdentifierData hashMap : mut identifierData
     TemplateInfo list : mut templateInfos
     ConstValue list : mut templateArgBuffer
     types.ArraySize list : mut arraySizeBuffer
@@ -85,6 +127,7 @@ namespace: id
     types.newTypeContext
     false Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
+    labelHash @ labelEq @ 128 IdentifierData map.create
     128 TemplateInfo      list.create
     32  ConstValue        list.create
     128 types.ArraySize   list.create
@@ -180,7 +223,7 @@ namespace: id
       list.pop =:: mut closed
     context [] .openScopes =
     closed .scopeStrings freeScopeStrings closed .scopeStrings =
-    closed .identifiers @ map.free
+    closed .identifierNames @ map.free
     closed .prevImports context [] .labelContext .namespaceInfo .imports =
     closed .isProcScope if
       0 context [] .localVarCount = ## XXX handle nested procedures
@@ -188,36 +231,39 @@ namespace: id
     closed .staticArgsOffset false return
   end
 
-
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName IdentifierData ptr mut bool ) =>: export searchIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName LabelId bool ) =>: export searchIdentifier
     context [] .labelContext .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
-      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
+      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
     end
     id 0 string.charAt '.' == if
-      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
+      "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
     end
     id '.' string.splitLast
     =:: path
     =:: name
+    LabelId optional : idLabel?
+    LabelId : idLabel
     ## 1. search in local scopes
     mNamespace path  context [] .labelContext @ findNamespace relSpace =
     name relSpace fileId IdentifierName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .openScopes .length 1 -
-      while ..dup 0 >= do
-        context [] .openScopes ..over list.at .data [] .identifiers @ idName map.at
-        ..dup optional.hasData if .data
-          matches optional.isEmpty if ..swap ..drop
-            idName ..swap false return
+      while ..dup 0 >= do =:: i
+        context [] .openScopes
+          i list.at .data
+        [] .identifierNames @ idName map.get idLabel? =
+        idLabel? optional.hasData if
+          idLabel? .data idLabel =
+          matches optional.isEmpty if
+            idName idLabel false return
           end
           matches .data []
-            idName ..over.2 IdentifierMatch new list.append
+            idName idLabel IdentifierMatch new list.append
           matches .data [] =
-          ..drop
-        else ..drop end
-        1 -
+        end
+        i 1 -
       end ..drop
     end
     ## 2. search global variable in current&parent namespaces
@@ -227,32 +273,36 @@ namespace: id
       relSpace idName .namespace =
       relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
-        context [] .globalScope .identifiers @ idName map.at
-        ..dup optional.hasData if .data
+        context [] .globalScope .identifierNames @
+          idName
+        map.get idLabel? =
+        idLabel? optional.hasData if
+          idLabel? .data idLabel =
           matches optional.isEmpty if
-            idName ..swap false return
+            idName idLabel false return
           end
           matches .data []
-            idName ..over.2 IdentifierMatch new list.append
+            idName idLabel IdentifierMatch new list.append
           matches .data [] =
-          ..drop
-        else ..drop end
-        context [] .globalScope .identifiers @ globalName map.at
-        ..dup optional.hasData if .data
+        end
+        context [] .globalScope .identifierNames @
+           globalName
+        map.get idLabel? =
+        idLabel? optional.hasData if
+          idLabel? .data idLabel =
           matches optional.isEmpty if
-            globalName ..swap false return
+            globalName idLabel false return
           end
           matches .data []
-            globalName ..over.2 IdentifierMatch new list.append
+            globalName idLabel IdentifierMatch new list.append
           matches .data [] =
-          ..drop
-        else ..drop end
+        end
       end
       context [] .labelContext .namespaces mNamespace list.get .parent mNamespace =
     end
     ## 3. search imports
     false =:: mut multiMatch
-    IdentifierData ptr mut optional.empty =:: mut match
+    LabelId optional.empty =:: mut match
     false =:: mut matchGlobal
     context [] .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
       context [] .labelContext .namespaceImports ..swap list.get
@@ -260,36 +310,42 @@ namespace: id
         relSpace idName .namespace =
         relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
-          context [] .globalScope .identifiers @ idName map.at
-          ..dup optional.hasData if .data
+          context [] .globalScope .identifierNames @
+            idName
+          map.get idLabel? =
+          idLabel? optional.hasData if
+            idLabel? .data idLabel =
             matches optional.hasData if
               matches .data []
-                idName ..over.2 IdentifierMatch new list.append
+                idName idLabel IdentifierMatch new list.append
               matches .data [] =
             end
             mNamespace NAMESPACE_ID_NONE == if
-              optional.wrap match =
+              idLabel optional.wrap match =
               false matchGlobal =
               ..dup .imported mNamespace =
-            else ..drop
+            else
               true multiMatch =
             end
-          else ..drop end
-          context [] .globalScope .identifiers @ globalName map.at
-          ..dup optional.hasData if .data
+          end
+          context [] .globalScope .identifierNames @
+            globalName
+          map.get idLabel? =
+          idLabel? optional.hasData if
+            idLabel? .data idLabel =
             matches optional.hasData if
               matches .data []
-                globalName ..over.2 IdentifierMatch new list.append
+                globalName idLabel IdentifierMatch new list.append
               matches .data [] =
             end
             mNamespace NAMESPACE_ID_NONE == if
-              optional.wrap match =
+              idLabel optional.wrap match =
               true matchGlobal =
               ..dup .imported mNamespace =
-            else ..drop
+            else
               true multiMatch =
             end
-          else ..drop end
+          end
         end
      .parent
     end ..drop
@@ -316,24 +372,26 @@ namespace: id
               tId
               IdentifierType .TEMPLATE_ARG
               IdentifierData new ID_TMP_DATA =
-              name context [] .labelContext .namespaceInfo .current fileId IdentifierName new ID_TMP_DATA @ false return
+              name context [] .labelContext .namespaceInfo .current fileId IdentifierName new LABEL_ID_TMP false return
             end
           tId 1 +
         end ..drop
       ..drop
     end
-    "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new ID_TMP_DATA @ true return
+    "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
   end
-  ## TODO change data-structure for identifiers:
-  ##   * map: name, namespace -> labelId
-  ##   * map: labelId -> idData
-  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export getIdentifierByLabel
-    context [] .labelContext @ =:: labelContext
-    labelContext [] .namespaceInfo =:: oldNamespace
-    nameId labelContext id.inLabelNamespace
-      ## XXX check if found label is correct
-      nameId fileId context findIdentifierByLabel
-    oldNamespace labelContext [] .namespaceInfo =
+
+  proc( LabelId : nameId IdentifierContext ptr mut : context -> IdentifierData ptr mut bool ) =>: export getIdentifier
+    nameId LABEL_ID_TMP == if
+      ID_TMP_DATA @ false return
+    end
+    context [] .identifierData @
+      nameId
+    map.at =:: data?
+    data? optional.isEmpty if
+      ID_TMP_DATA @ true return
+    end
+    data? .data false return
   end
   proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export findIdentifierByLabel
     context [] .nameBuffer
@@ -341,14 +399,25 @@ namespace: id
       nameId context [] .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
-    name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier
+    ## searchIdentifier
+      name
+      fileId
+      context
+      IdentifierMatch list ptr mut optional.empty
+    searchIdentifier =:: isError =:: label =:: idName
     context [] .nameBuffer
       list.clear
     context [] .nameBuffer =
-    return
+    idName label context getIdentifier isError | return
   end
   proc( string : name FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export findIdentifierByName
-    name fileId context IdentifierMatch list ptr mut optional.empty searchIdentifier return
+    ## searchIdentifier
+      name
+      fileId
+      context
+      IdentifierMatch list ptr mut optional.empty
+    searchIdentifier =:: isError =:: label =:: idName
+    idName label context getIdentifier isError | return
   end
   proc( string : id FilePosition : pos CompilerError list ptr mut : errors -> bool ) =>: export checkIdentifier
     id .length 0 == if
@@ -373,11 +442,11 @@ namespace: id
     end
     false return
   end
-  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors ->  IdentifierName IdentifierData ptr bool ) =>: export declareIdentifier
+  proc( LabelId : label Type : valType IdentifierType : idType i32 : id ConstValue : constVal FilePosition : declaredAt FileId : currentFile IdentifierContext ptr mut : context CompilerError list ptr mut : errors ->  IdentifierName IdentifierData bool ) =>: export declareIdentifier
     context [] .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
-      ID_NONE ID_NONE_DATA @ true return
+      ID_NONE ID_NONE_DATA true return
     end
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
@@ -394,22 +463,22 @@ namespace: id
       idType .TYPE ?? if
         context [] .nameBuffer list.clear context [] .nameBuffer =
         "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
-        ID_NONE ID_NONE_DATA @ true return
+        ID_NONE ID_NONE_DATA true return
       end
       idType .PROCEDURE ?? if
         context [] .nameBuffer list.clear context [] .nameBuffer =
         "procedures cannot be mutable" sb.wrap declaredAt errors appendError
-        ID_NONE ID_NONE_DATA @ true return
+        ID_NONE ID_NONE_DATA true return
       end
       idType .ARGUMENT ??  if
         context [] .nameBuffer list.clear context [] .nameBuffer =
         "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
-        ID_NONE ID_NONE_DATA @ true return
+        ID_NONE ID_NONE_DATA true return
       end
     end
     name declaredAt errors checkIdentifier if
       context [] .nameBuffer list.clear context [] .nameBuffer =
-      ID_NONE ID_NONE_DATA @ true return
+      ID_NONE ID_NONE_DATA true return
     end
     context [] .openScopes .length 0 > if
       context [] .openScopes ..dup .length 1 - list.at .data
@@ -422,15 +491,18 @@ namespace: id
       mScope [] .scopeStrings =
     sb.asStr
     labelContext [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
-    mScope [] .identifiers @ idName map.at ..dup optional.hasData if .data =:: prevDec
+    mScope [] .identifierNames @ idName map.get =:: prevId?
+    prevId? optional.hasData if
+      prevId? .data =:: prevId
+      context [] .identifierData @ prevId map.at .data =:: prevDec
       "re declaration of identifier \"" sb.wrap
         label labelContext sb.appendLabelName
         '\"' sb.appendC
       declaredAt errors appendWarning
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
       context [] .nameBuffer list.clear context [] .nameBuffer =
-      ID_NONE ID_NONE_DATA @ true return
-    end ..drop
+      ID_NONE ID_NONE_DATA true return
+    end
     name fileId context findIdentifierByName ! if
       "declaration of identifier \"" sb.wrap
         label labelContext sb.appendLabelName
@@ -438,8 +510,11 @@ namespace: id
       declaredAt errors appendWarning
       "shadows previous declaration " sb.wrap ..over [] .declaredAt errors appendInfo
     end ..drop.2
-    mScope [] .identifiers @
+    mScope [] .identifierNames @
       idName
+      label
+    map.put ..drop ## previous entry is always empty
+    ## IdentifierData
       valType
       flags FLAG_MUTABLE & ? if ConstValue .none else constVal end
       declaredAt
@@ -456,10 +531,13 @@ namespace: id
         id
       end
       idType
-      IdentifierData new
+    IdentifierData new =:: idData
+    context [] .identifierData @
+      label
+      idData
     map.put ..drop ## previous entry is always empty
     context [] .nameBuffer list.clear context [] .nameBuffer =
-    idName mScope [] .identifiers @ idName map.at .data false return
+    idName idData false return
   end
 end
 namespace: sb
@@ -498,6 +576,11 @@ namespace: sb
           return
         PROCEDURE case
           "procedure \"" sb.appendS
+          id .labelId labelContext sb.appendLabelName
+          "\"" sb.appendS
+          return
+        PROCEDURE_BUNDLE case
+          "procedure bundle  \"" sb.appendS
           id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return

@@ -1896,7 +1896,7 @@ proc(
               '\n' sb.appendC
             end
           return
-        GLOBAL_VAR TYPE ARGUMENT TEMPLATE_ARG LABEL case
+        GLOBAL_VAR TYPE ARGUMENT TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -2019,7 +2019,7 @@ proc(
             idInfo .id idInfo .labelId context sb.appendArgName
             '\n' sb.appendC
           return
-       TYPE TEMPLATE_ARG LABEL case
+       TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -3094,11 +3094,13 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     end
   =:: mut sb
-  prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
+  idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
-    declaration .1 =:: idData
+    declaration .1 [] =:: labelId
+    labelId idContext id.getIdentifier
+      if ..unreachable end ## XXX replace with assertion
+    =:: idData
     idData [] .valueType =:: mut valType
-    idData [] .labelId =:: labelId
     labelId labelContext id.labelFlags =:: labelFlags
     valType types.isAutoType if
       prog [] .autoTypes

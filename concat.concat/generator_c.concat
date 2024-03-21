@@ -117,7 +117,7 @@ proc( IdentifierInfo : idInfo io.FILE : target ProgramContext ptr mut : prog -> 
     ARGUMENT case
       idInfo .id idInfo .labelId target prog printArgName
       return
-    TYPE TEMPLATE_ARG LABEL case
+    TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
       break ## XXX? error message
   end
 end
@@ -950,7 +950,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
             idInfo target prog printIdName
           end
           return
-        PROCEDURE case
+        PROCEDURE PROCEDURE_BUNDLE case
           "unexpected operation " sb.wrap
             op [] prog sb.appendOp
             " should not exist at this stage of compilation" sb.appendS
@@ -990,7 +990,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           end
           target ")" io.fputs ..drop
           return
-        TYPE TEMPLATE_ARG LABEL case
+        TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -1003,7 +1003,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           operations index isGlobal target prog compileOp
           target ";\n" io.fputs ..drop
           return
-        TYPE ARGUMENT TEMPLATE_ARG PROCEDURE LABEL case
+        TYPE ARGUMENT TEMPLATE_ARG PROCEDURE LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -1045,7 +1045,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           operations index isGlobal target prog compileOp
           target ";\n" io.fputs ..drop
           return
-        TYPE ARGUMENT TEMPLATE_ARG LABEL case
+        TYPE ARGUMENT TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -1081,7 +1081,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           idInfo target prog printIdName
           target ";\n" io.fputs ..drop
           return
-        TYPE ARGUMENT TEMPLATE_ARG LABEL case
+        TYPE ARGUMENT TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -1500,10 +1500,14 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
     target ..over io.fputSb ..drop
   sb.free ..drop
   target "//declarations\n" io.fputs ..drop
-  prog [] .idContext .globalScope .identifiers @ map.itr.start while map.itr.hasNext do map.itr.next
+  prog [] .idContext .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
-    declaration .1 [] .valueType =:: mut mType
-    declaration .1 [] .labelId labelContext id.labelFlags =:: labelFlags
+    declaration .1 [] =:: labelId
+    labelId idContext id.getIdentifier
+      if ..unreachable end ## XXX replace with assertion
+    =:: idData
+    idData [] .valueType =:: mut mType
+    idData [] .labelId labelContext id.labelFlags =:: labelFlags
     mType types.primitive.TYPE types.typeEquals if
       continue
     end
@@ -1513,19 +1517,19 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
       list.at .data []
       mType =
     end
-    declaration .1 [] .templateId -1 != if
+    idData [] .templateId -1 != if
       labelFlags id.FLAG_EXTERN & ? if
         ## TODO error message
         continue
       end
-      idContext [] .templateInfos declaration .1 [] .templateId
+      idContext [] .templateInfos idData [] .templateId
       list.at .data =:: templateInfo
       0 while ..dup templateInfo [] .implementations .length < do
         target "static " io.fputs ..drop ## mark all template implementations as static
         templateInfo [] .implementations ..over list.at .data [] .implType mType =
         mType typeContext types.getProcRet ..drop target prog printTypeName
         target " " io.fputs ..drop
-        declaration .1 [] .labelId ..over target prog printGlobalName
+        labelId ..over target prog printGlobalName
         ## printProcArgs
           mType
           false
@@ -1546,7 +1550,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
     mType typeContext types.isProcedure if
       mType typeContext types.getProcRet ..drop target prog printTypeName
       target " " io.fputs ..drop
-      declaration .1 [] .labelId -1 target prog printGlobalName
+      labelId -1 target prog printGlobalName
       ## printProcArgs
         mType
         false
@@ -1560,7 +1564,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
     labelFlags id.FLAG_MUTABLE & 0 == if
       target "const " io.fputs ..drop
     end
-    declaration .1 [] .labelId -1 target prog printGlobalName
+    labelId -1 target prog printGlobalName
     target ";\n" io.fputs ..drop
   end ..drop
   ## TODO global declarations

@@ -694,7 +694,7 @@ proc(
           value? .data =:: value ## TODO? wrap local variable in reference?
           value .value value .info .valueType label op [] .pos context pushValue
           false return
-        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR case
+        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR PROCEDURE_BUNDLE case
         showErrorMessages if
           "unsupported operation in constant evaluation: " sb.wrap
             op [] program sb.appendOp
