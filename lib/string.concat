@@ -4,11 +4,19 @@ import mem
 i8 arrayView =:: export string
 
 namespace: string
+  #:ifnot:exp
   "" 0 string new =:: EMPTY
-
   proc( -> string ) =>: export empty
     EMPTY return
   end
+  #:else
+  ## TODO use constant initializer (when fully implemented)
+  ## { "" : data 0 : length } string =: empty
+  proc( -> string ) =>: export empty
+    "" 0 string new return
+  end
+  #:end
+
   proc( i8 _ ptr  i64 -> string ) =>: export create
     string new return
   end

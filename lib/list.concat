@@ -5,26 +5,56 @@ import array
 
 ## XXX allow auto-cast from list -> arrayView
 
+#:if:exp
+( type : T -> type ) =>: list
+  struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap )
+end
+#:else
 #template type : T #end
 struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap ) =:: export list
+#:end
 
 namespace: list
+  #:ifnot:exp
   #template type : T #end
   proc( i64 : k -> T list ) =>: export create
+  #:else
+  proc( i64 : k type : T -> T list ) =>: export create
+  #:end
     k T mem.alloc  0 k  T list new return
   end
+
+  ## creates zero-initialized list of the given length
+  #:ifnot:exp
   #template type : T #end
-  proc( i64 : k -> T list ) =>: export createZeroInit ## creates zero-initialized list of the given length
+  proc( i64 : k -> T list ) =>: export createZeroInit
+  #:else
+  proc( i64 : k type : T -> T list ) =>: export createZeroInit
+  #:end
     k T mem.calloc  k k  T list new return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T arrayView : data -> T list ) =>: export fromArray
+  #:else
+  proc(
+    type : auto T
+    T arrayView : data
+  -> T list ) =>: export fromArray
+  #:end
     data .length ..dup 8 / + =:: C
     C T mem.alloc =:: p
     p data .data data .length mem.copy data .length C T list new return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : src -> T list ) =>: export copy
+  #:else
+  proc(
+    type : auto T
+    T list : src
+  -> T list ) =>: export copy
+  #:end
     ## list
       src .cap T mem.alloc
         src .data
@@ -34,8 +64,16 @@ namespace: list
       src .cap
     T list new return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : src ( T -> T ) ptr : copyElt -> T list ) =>: export deepCopy
+  #:else
+  proc(
+    type : auto T
+    T list : src
+    ( T -> T ) ptr : copyElt
+  -> T list ) =>: export deepCopy
+  #:end
     ## list
       src .cap T mem.alloc
       src .length
@@ -50,8 +88,16 @@ namespace: list
     newList return
   end
 
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts i64 : minCap -> T list ) =>: export ensureCap
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+    i64 : minCap
+  -> T list ) =>: export ensureCap
+  #:end
     elts
       ..dup .cap minCap > if
         return
@@ -61,21 +107,37 @@ namespace: list
         ..over .cap =
     return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list -> T list ) =>: export free
+  #:else
+  proc( type : auto T T list -> T list ) =>: export free
+  #:end
     ..dup .data mem.free
       0 ..over .cap =
       0 ..over .length =
     return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list -> T list ) =>: export clear
+  #:else
+  proc( type : auto T T list -> T list ) =>: export clear
+  #:end
     ## list
       0 ..over .length =
     return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : src i64 : newLength -> T list ) =>: export setLength
+  #:else
+  proc(
+    type : auto T
+    T list : src
+    i64 : newLength
+  -> T list ) =>: export setLength
+  #:end
     newLength 0 < if
       ## TODO error handling
       ..unreachable
@@ -86,55 +148,113 @@ namespace: list
     l return
   end
 
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts i64 : index -> T ) =>: export get
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+    i64 : index
+  -> T ) =>: export get
+  #:end
     index 0 < index elts .length >= | if
       ## TODO error handling
       ..unreachable
     end
     elts .data index [] return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts i64 : index -> T ptr mut optional ) =>: export at
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+    i64 : index
+  -> T ptr mut optional ) =>: export at
+  #:end
     index 0 < index elts .length >= | if
       T ptr mut optional.empty return
     end
     elts .data index + T ptr mut cast! optional.wrap return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T : elt T list : elts i64 : index -> ) =>: export set
+  #:else
+  proc(
+    type : auto T
+    T : elt
+    T list : elts
+    i64 : index
+  -> ) =>: export set
+  #:end
     index 0 < index elts .length >= | if
       ## TODO error handling
       ..unreachable
     end
     elt elts .data index [] =
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts T : elt -> T list ) =>: export append
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+    T : elt
+  -> T list ) =>: export append
+  #:end
     elts
       ..dup .length 1 + ensureCap
       elt ..over .data ..over.2 .length [] =
       ..dup .length 1 + ..over .length =
     return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a i64 : auto k  T k ptr : b -> T list ) =>: export appendP
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    i64 : auto k
+    T k ptr : b
+  -> T list ) =>: export appendP
+  #:end
     a
       ..dup .length k + ensureCap
       ..dup .data ..over .length + b T _ ptr cast k mem.copy ..drop
       ..dup .length k + ..over .length =
     return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a T arrayView : b -> T list ) =>: export appendArray
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    T arrayView : b
+  -> T list ) =>: export appendArray
+  #:end
     a
       ..dup .length   b .length + ensureCap
       ..dup .data ..over .length + b .data b .length mem.copy ..drop
       ..dup .length   b .length + ..over .length =
     return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a T list : b -> T list ) =>: export appendAll
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    T list : b
+  -> T list ) =>: export appendAll
+  #:end
     a
       ..dup .length   b .length + ensureCap
       ..dup .data ..over .length + b .data b .length mem.copy ..drop
@@ -142,8 +262,17 @@ namespace: list
     return
   end
 
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a T : elt i64 : index -> T list ) =>: export insert
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    T : elt
+    i64 : index
+  -> T list ) =>: export insert
+  #:end
     a =:: mut elts
     elts
       elts .length 1 + ensureCap
@@ -153,8 +282,18 @@ namespace: list
     elts .length 1 + elts .length =
     elts return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a i64 : auto k  T k ptr : b i64 : index -> T list ) =>: export insertP
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    i64 : auto k
+    T k ptr : b
+    i64 : index
+  -> T list ) =>: export insertP
+  #:end
     a =:: mut elts
     elts
       elts .length k + ensureCap
@@ -164,8 +303,17 @@ namespace: list
     elts .length k + elts .length =
     elts return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a T arrayView : b i64 : index -> T list ) =>: export insertArray
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    T arrayView : b
+    i64 : index
+  -> T list ) =>: export insertArray
+  #:end
     a =:: mut elts
     elts
       elts .length b .length + ensureCap
@@ -175,8 +323,17 @@ namespace: list
     elts .length b .length + elts .length =
     elts return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : a T list : b i64 : index -> T list ) =>: export insertAll
+  #:else
+  proc(
+    type : auto T
+    T list : a
+    T list : b
+    i64 : index
+  -> T list ) =>: export insertAll
+  #:end
     a =:: mut elts
     elts
       elts .length b .length + ensureCap
@@ -188,19 +345,41 @@ namespace: list
   end
 
 
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts -> T ptr mut optional ) =>: export peek
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+  -> T ptr mut optional ) =>: export peek
+  #:end
     elts .length 0 <= if
       T ptr mut optional.empty return
     end
     elts .data elts .length 1 - + T ptr mut cast! optional.wrap return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list  T -> T list ) =>: export push
+  #:else
+  proc(
+    type : auto T
+    T list
+    T
+  -> T list ) =>: export push
+  #:end
     append return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts -> T list T ) =>: export pop
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+  -> T list T ) =>: export pop
+  #:end
     elts .length 0 <= if
       ## TODO error handling
       ..unreachable
@@ -211,21 +390,47 @@ namespace: list
   end
 
 
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts -> T arrayView ) =>: export asArray
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+  -> T arrayView ) =>: export asArray
+  #:end
     elts .data elts .length array.create return
   end
+  #:ifnot:exp
   #template type : T #end
   proc( T list : elts i64 : from i64 : len -> T arrayView ) =>: export slice
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+    i64 : from
+    i64 : len
+  -> T arrayView ) =>: export slice
+  #:end
     elts asArray from len array.slice return
   end
 
+  #:ifnot:exp
   #template type : T type : C #end
   proc(
     T list : elts
     proc( T T C -> i32 ) ptr : cmp
     C : context
   -> ) =>: export sort
+  #:else
+  proc(
+    type : auto T
+    type : auto C
+    T list : elts
+    proc( T T C -> i32 ) ptr : cmp
+    C : context
+  -> ) =>: export sort
+  #:end
     ## sort
       elts .data
       elts .length
