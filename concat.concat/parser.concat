@@ -1195,8 +1195,27 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           id.SCOPE_FLAG_NO_CONST_FOLD true idContext id.setScopeFlag
         else "opt:fold" string.wrap ..over string.eq _if
           id.SCOPE_FLAG_NO_CONST_FOLD false idContext id.setScopeFlag
-        end
-        ..drop
+        else "if:exp" string.wrap ..over string.eq _EXPERIMENTAL_ ! & _if ..drop
+          while
+            fileState nextToken =:: next
+            next .IDENTIFIER ?? ! if continue end
+          next .IDENTIFIER "#:end" string.wrap string.eq !
+          next .IDENTIFIER "#:else" string.wrap string.eq ! & do end
+          return
+        else "ifnot:exp" string.wrap ..over string.eq _EXPERIMENTAL_ & _if ..drop
+          while
+            fileState nextToken =:: next
+            next .IDENTIFIER ?? ! if continue end
+          next .IDENTIFIER "#:end" string.wrap string.eq ! 
+          next .IDENTIFIER "#:else" string.wrap string.eq ! & do end
+          return
+        else "else" string.wrap ..over string.eq _if ..drop
+          while
+            fileState nextToken =:: next
+            next .IDENTIFIER ?? ! if continue end
+          next .IDENTIFIER "#:end" string.wrap string.eq ! do end
+          return
+        end ..drop
         return ## ignore unknown annotations
       end
       ':' string.split
