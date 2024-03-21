@@ -151,7 +151,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export n
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .CHAR return
     end
-    1 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt char.isWhitespace ! & do
+    1 while ..dup ..over.2 .length < if ..over ..over string.charAt char.isWhitespace ! else false end do
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       1 +
     end
