@@ -1194,6 +1194,21 @@ proc(
 end
 
 proc(
+  LabelId : label
+  Operation ptr mut : op
+  TypeCheckState ptr mut : state
+-> IdentifierInfo optional ) =>: resolveIdentifer
+  state [] .program =:: program
+  state [] .program [] .idContext @ =:: idContext
+  state [] .program [] .idContext .labelContext @ =:: labelContext
+  label labelContext id.inLabelNamespace
+  label state [] .currentFile idContext id.findIdentifierByLabel if
+    ..drop.2 IdentifierInfo optional.empty return
+  end =:: idData ..drop
+  idData [] .valueType op [] .dataType =
+  idData id.asIdInfo optional.wrap return
+end
+proc(
   Operation : op0
   TypeCheckState ptr mut : state
 -> ) =>: typeCheckOp
@@ -1215,6 +1230,19 @@ proc(
   end
   state inSwitchLabel if op @ state typeCheckSwitchLabel _if
     return
+  end
+  op .val .getName ?? if
+    op .val .getName
+      op @ state resolveIdentifer
+    ..dup optional.hasData if
+      .data op .val .getId =
+    else ..drop end
+  else op .val .@Name ?? _if
+    op .val .@Name
+      op @ state resolveIdentifer
+    ..dup optional.hasData if
+      .data op .val .@Id =
+    else ..drop end
   end
   state [] .interpreterActive if op @ state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
