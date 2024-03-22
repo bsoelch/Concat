@@ -29,6 +29,7 @@ struct(
   ParameterInfo list : mut paramInfo
   LabelId GenericArg hashMap : mut genericValues
   i32 : mut nEmpty
+  i32 : mut nRenames
   i32 : mut nCasts
   i32 : mut nGenerics
   bool : mut argsMatch
@@ -602,6 +603,10 @@ proc(
     ## prefer less generics
     a .nGenerics b .nGenerics < if -1  else 1 end return
   end
+  a .nRenames b .nRenames != if
+    ## prefer less renames
+    a .nRenames b .nRenames < if -1  else 1 end return
+  end
   a .paramInfo .length b .paramInfo .length != if
     ## prefer more parameters
     a .paramInfo .length b .paramInfo .length > if -1  else 1 end return
@@ -667,6 +672,7 @@ proc(
         procId
         argCount ParameterInfo list.create
         labelHash @ labelEq @ argCount GenericArg map.create
+        0
         0
         0
         0
@@ -808,18 +814,24 @@ proc(
           resolveGenerics ! _if
         MatchType .GENERIC matchType =
         current [] .nGenerics 1 + current [] .nGenerics =
-        needCast if
+        needCast if ## ptr mut -> ptr
           current [] .nCasts 1 + current [] .nCasts =
         end
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType =
       else stackType paramType typeContext types.canAutoCast _if
         MatchType .CAST matchType =
-        current [] .nCasts 1 + current [] .nCasts =
+        stackType typeContext types.unwrapNamed
+            paramType typeContext types.unwrapNamed
+            types.typeEquals if
+          ## same underlying type but different name
+          current [] .nRenames 1 + current [] .nRenames =
+        else
+          current [] .nCasts 1 + current [] .nCasts =
+        end
       else
         false current [] .argsMatch =
       end
-      ## TODO get const values for static arguments
       current [] .paramInfo
         ## ParameterInfo
           stackIndex
