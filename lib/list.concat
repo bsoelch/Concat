@@ -6,7 +6,7 @@ import array
 ## XXX allow auto-cast from list -> arrayView
 
 #:if:exp
-( type : T -> type ) =>: list
+( type : T -> type ) =>: export list
   struct( T _ ptr mut : mut data i64 : mut length i64 : mut cap )
 end
 #:else

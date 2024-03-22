@@ -558,10 +558,13 @@ proc(
     currentSignatures =
     i 1 +
   end ..drop
-  0 while ..dup stackValues .length < do =:: stackIndex
-    stackValues stackIndex array.at .data =:: stackElement
-    stackElement [] .valType =:: stackType
-    stackElement [] .value =:: stackValue
+  0 while ..dup stackValues .length <= do =:: stackIndex
+    stackIndex stackValues .length < if
+      stackValues stackIndex array.at .data [] .valType
+    else
+      ## add dummy type below stack to ensure auto-arguments get matched
+      Type .undefined
+    end =:: stackType
     stackType typeContext types.isEmpty if
       ## XXX allow empty to terminate multi-argument arguments
       stackIndex 1 + continue ## skip empty arguments
@@ -615,13 +618,16 @@ proc(
       end
       MatchType .NONE =:: mut matchType
       paramType typeContext types.isGeneric if
+          paramType
+            typeContext types.unwrapNamed
+          types.getTypeId =:: paramId
           current [] .genericValues @
-            paramType typeContext types.unwrapNamed types.getTypeId
+            paramId
           map.at optional.isEmpty _if
         ## add copy of signature with generic type set to empty
         current currentSignatures @ appendCopy =:: copySig
         copySig [] .genericValues @
-          paramLabel
+          paramId
           Type .empty ConstValue .typeId GenericArg .fixed
         map.put ..drop
         copySig [] .nEmpty
@@ -629,7 +635,7 @@ proc(
         copySig [] .nEmpty =
         ## mark generic as non-empty
         current [] .genericValues @
-          paramLabel
+          paramId
           GenericArg .nonEmpty
         map.put ..drop
         ## update current pointer after changing list
@@ -654,6 +660,7 @@ proc(
       else
         false current [] .argsMatch =
       end
+      ## TODO get const values for static arguments
       current [] .paramInfo
         ## ParameterInfo
           stackIndex

@@ -913,6 +913,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: removeTrailingNOPs
   state [] .opInfo =
 end
 proc( TypeCheckState ptr mut : state -> ) =>: clearOps
+  0 state [] .blockStart =
   state [] .compiledOps
     list.clear
   state [] .compiledOps =
@@ -1394,12 +1395,12 @@ proc(
           return
         PROCEDURE TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
           "unexpected declaration of identifier " sb.wrap
-            op .val .@Id labelContext sb.appendIdInfo
+            op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
           return
         ARGUMENT case
           "cannot declare identifier " sb.wrap
-            op .val .@Id labelContext sb.appendIdInfo
+            op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
           return
       end
@@ -1440,7 +1441,7 @@ proc(
         PROCEDURE PROCEDURE_BUNDLE TYPE TEMPLATE_ARG
             LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.wrap
-            op .val .@Id labelContext sb.appendIdInfo
+            idInfo labelContext sb.appendIdInfo
           op .pos errors appendError
           return
       end
