@@ -388,7 +388,7 @@ namespace: types
     CType .FLOAT       Type .cType Type =: export FLOAT
     CType .DOUBLE      Type .cType Type =: export DOUBLE
   end
-  proc( CType -> Type ) =>: cTypeAsType
+  proc( CType -> Type ) =>: export cTypeAsType
     switch
       VOID case Type .empty return
       BOOL case primitive.BOOL return

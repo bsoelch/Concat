@@ -258,6 +258,9 @@ proc( Type : t CompilerContext ptr mut : context -> bool ) =>: referenceOnly
   t typeContext types.isPointer if
     false return
   end
+  t typeContext types.unwrapNamed .cType ?? if
+    false return
+  end
   ## XXX allow empty enums as value-type
   true return
 end
@@ -1680,6 +1683,14 @@ proc(
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
+  src typeContext types.unwrapNamed .cType ?? if
+    sb
+      src typeContext types.unwrapNamed .cType types.cTypeAsType
+      signed
+      pos
+      context
+    extendArguments return
+  end
   src typeContext types.isInt ! if
     sb return
   end
@@ -2661,6 +2672,52 @@ proc(
           context
         appendBuiltInQBE
       return
+    binaryOperator case
+      op [] .val .binaryOperator .EQ ?? !
+      op [] .val .binaryOperator .NE ?? ! & if
+        break ## only equality operators are directly supported
+      end
+      op [] .val .binaryOperator .EQ ?? if
+        "eq" string.wrap
+      else
+        "ne" string.wrap
+      end =:: cmpName
+      op [] .dataType context referenceOnly ! if
+        op [] .dataType context toValType =:: valType
+        sb
+          op [] .dataType true op [] .pos context extendArguments
+          ## appendComparisonOperator
+            cmpName
+            valType
+            context
+          appendComparisonOperator
+        return
+      end
+      op [] .dataType typeContext types.isEnum if
+        context popValue =:: arg1
+        context popValue =:: arg2
+        sb
+          op [] .dataType
+            arg1
+            op [] .pos
+          context loadEnumLabel =:: valType =:: label1
+          op [] .dataType
+            arg2
+            op [] .pos
+          context loadEnumLabel ..drop =:: label2
+          "%s" sb.appendS
+          ValType .I32 context pushValue sb.appendI
+          " =w c" sb.appendS
+          cmpName sb.appendStr
+          valType sb.appendValTypeQBE
+          " %t" sb.appendS
+          label1 sb.appendI
+          ", %t" sb.appendS
+          label2 sb.appendI
+          '\n' sb.appendC
+        return
+      end
+      break
     block case
       op [] .val .block .blockType switch
         IF case
@@ -3264,7 +3321,7 @@ proc(
       break
     setId autoTypedInitializeId
     setElement setArrayElement callPtr call_old
-    argc getArg getArgLen unaryOperator binaryOperator
+    argc getArg getArgLen unaryOperator
     setEnumLabel checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case
       break ## XXX error message

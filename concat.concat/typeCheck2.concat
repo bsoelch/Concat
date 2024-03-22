@@ -1867,6 +1867,44 @@ proc(
         return
       end
       break
+    binaryOperator case
+      op .val .binaryOperator .EQ ?? !
+      op .val .binaryOperator .NE ?? ! & if
+        break ## only equality operators are directly supported
+      end
+      2 op .pos state checkStackSize if
+        return
+      end
+      Type 2 array new =:: mut params
+      state [] .stack @
+         0 branchTree.at .data
+      [] .valueType params @ 0 [] =
+      state [] .stack @
+         1 branchTree.at .data
+      [] .valueType params @ 1 [] =
+      params @ 0 [] params @ 1 [] typeContext types.mergeTypes if
+        ..drop
+        "cannot check for equality between of values of types " sb.wrap
+          params @ 0 [] labelContext typeContext sb.appendType
+          " and " sb.appendS
+          params @ 1 [] labelContext typeContext sb.appendType
+        op .pos errors appendError
+        return
+      end =:: argType
+      argType params @ 0 [] =
+      argType params @ 1 [] =
+      argType op .dataType =
+      ## requireTypes
+        params @ array.wrap
+        "equality-check" string.wrap
+        op .pos
+      state requireTypes if
+        ..drop return
+      end =:: argOffset
+      ConstValue .none op state pushValue
+      types.primitive.BOOL state replaceType
+      true true 2 argOffset state updateOpInfo
+      return
     block case
       state [] .compiledOps .length state [] .blockStart =
       op .val .block .blockType =:: blockType
@@ -2295,12 +2333,14 @@ proc(
               IF_BLOCK_INFO_NAME sb.appendS
               " block" sb.appendS
             op .pos errors appendError
+            return
           end
           closed .If .hasElse ! if
             "unexpected end of " sb.wrap
               closed sb.appendBlockInfoName
               " block, expected `else` before `end`" sb.appendS
             op .pos errors appendError
+            return
           end
           state [] .stack branchTree.depth op .pos state reserveOps =:: elseCastOffset
           branchTree.NodeId 2 array new =:: mut branches
@@ -2766,7 +2806,7 @@ proc(
     getName builtIn
     newEnum call callPtr
     argc getArg getArgLen
-    unaryOperator binaryOperator
+    unaryOperator
     checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
     hasName hasElement
