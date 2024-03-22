@@ -198,7 +198,7 @@ proc(
   =:: f32_bool =:: f32f32_bool =:: f32_f32 =:: f32f32_f32
   types.primitive.FLOAT64
     context operatorProcTypes
-  =:: f64_bool =:: f64f64_bool =:: f64f64_f64 =:: f64_f64
+  =:: f64_bool =:: f64f64_bool =:: f64_f64 =:: f64f64_f64
   "-_" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   =:: mut bundle =:: mut label

@@ -563,13 +563,28 @@ proc(
           true return
         end
       end
-      op [] .val .declareId .labelId valInfo [] .valueName =
+      context [] .stack list.peek .data =:: value
+      value [] .typeId =:: valType
+      valType
+        typeContext types.unwrapNamed
+      types.primitive.TYPE types.typeEquals =:: isType
+      op [] .val .declareId .labelId =:: labelId
+      labelId valInfo [] .valueName =
       ## map.put
         context [] .variables @
-        op [] .val .declareId .labelId
+        labelId
         ## Constant
-          op [] .val .declareId .labelId types.newGenericType ConstValue .typeId
-          valInfo []
+          isType if
+            labelId types.newGenericType ConstValue .typeId
+          else
+            labelId ConstValue .genericArg
+          end
+          ## ValueInfo
+            valType
+            labelId
+            labelId
+            valInfo [] .pushedAt
+          ValueInfo new
         Constant new
       map.put ..drop
       false return

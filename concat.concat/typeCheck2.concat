@@ -822,14 +822,20 @@ proc(
   end
 end
 
+proc( 
+  i64 : index
+  TypeCheckState ptr mut : state
+-> bool ) =>: canDeleteOp
+  index state currentBlockStart < if
+    false return
+  end
+  state [] .opInfo index list.at .data [] .canDelete return
+end
 proc(
   i64 : index
   TypeCheckState ptr mut : state
 -> bool ) =>: tryDeleteOp
-  index state currentBlockStart < if
-    true return
-  end
-  state [] .opInfo index list.at .data [] .canDelete if
+  index state canDeleteOp if
     index state deleteOp
     false return
   else
@@ -882,17 +888,22 @@ proc( i64 : index TypeCheckState ptr mut : state -> i64 ) =>: copyOp
 end
 proc(
   i64 : opIndex
-  FilePosition : pos
   TypeCheckState ptr mut : state
--> i64 bool ) =>: tryCopyOp
+-> bool ) =>: canCopyOp
   opIndex 0 < if
-    0 true return
+    false return
   end
   state [] .opInfo opIndex list.at .data =:: opInfo
-  opInfo [] .canMove ! if
-    0 true return
+  opInfo [] .canMove return
+end
+proc(
+  i64 : opIndex
+  TypeCheckState ptr mut : state
+-> i64 bool ) =>: tryCopyOp
+  opIndex state canCopyOp if
+    opIndex state copyOp false return
   end
-  opIndex state copyOp false return
+  0 true return
 end
 proc( TypeCheckState ptr mut : state -> ) =>: removeTrailingNOPs
   state [] .compiledOps .length 1 - while ..dup 0 >= do =:: i
@@ -1255,7 +1266,7 @@ proc(
             argData? .data [] .valType op .dataType =
             argData? .data [] .value argValue =
           end
-          constValue op state pushValue
+          argValue op state pushValue
           label state replaceLabel
           true true 0 0 state updateOpInfo
           return
@@ -1988,6 +1999,9 @@ proc(
             op .pos errors appendError
           end
           currentBlock [] .If .blockId op .val .block .blockId =
+          state [] .stack @
+            currentBlock [] .If .branchRoot
+          branchTree.reset =:: ifBranch
           state [] .reachable if
             ## add space for casts of values on stack
             ## ifCastsOffset
@@ -1998,9 +2012,7 @@ proc(
             currentBlock [] .If .ifCastsOffset =
             ## reset stack to start of if statement
             ## BranchPoint
-              state [] .stack @
-                currentBlock [] .If .branchRoot
-              branchTree.reset
+              ifBranch
               op .pos
             BranchPoint new currentBlock [] .If .ifBranch =
             true currentBlock [] .If .ifBranchTerminates =
@@ -2181,6 +2193,9 @@ proc(
               0
             BlockId new op .val .block =
             false switchBlock [] .allowBreak =
+            state [] .stack @
+              switchBlock [] .branchRoot
+            branchTree.reset =:: caseBranch
             state [] .reachable if
               ## add space for casts of values on stack
               switchBlock [] .castOffsets
@@ -2192,9 +2207,7 @@ proc(
               ## reset stack to start of if statement
               switchBlock [] .caseBranches
                 ## BranchPoint
-                  state [] .stack @
-                    switchBlock [] .branchRoot
-                  branchTree.reset
+                  caseBranch
                   op .pos
                 BranchPoint new list.append
               switchBlock [] .caseBranches =
@@ -2831,7 +2844,7 @@ proc(
           return
         COPY case
           op .val .stackMod .n =:: offset
-          offset op .pos state checkStackSize if
+          offset 1 + op .pos state checkStackSize if
             return
           end
           ## copy value on stack
@@ -2850,7 +2863,7 @@ proc(
           state [] .stack @ offset 1 + branchTree.at .data copied =
           op .pos newOp [] .pushedAt =
           ## copy value in code
-          copied [] .opIndex op .pos state tryCopyOp if ..drop
+          copied [] .opIndex state tryCopyOp if ..drop
             ## copied operation can no longer be deleted
             copied [] .opIndex state freezeOp
             op state appendOp
@@ -2862,15 +2875,18 @@ proc(
           end
           state [] .stack @ 1 branchTree.at .data =:: lower
           ## swap values in code
-          lower [] .opIndex op .pos state tryCopyOp if ..drop
-            op state appendOp ..drop
-          else =:: newIndex
+          lower [] .opIndex state canCopyOp if
+              lower [] .opIndex state canDeleteOp _if
+            ## copy lower value to to, the discard lower value
             ## discard old operations for lower value
-            lower [] .opIndex state tryDeleteOp if
+            lower [] .opIndex state tryCopyOp =:: isError =:: newIndex
+            lower [] .opIndex state tryDeleteOp isError | if
               "internal compiler error: could not move operation" sb.wrap
               op .pos errors appendError
             end
             newIndex lower [] .opIndex =
+          else
+            op state appendOp ..drop
           end
           ## swap values on stack
           state [] .stack @ branchTree.swap
@@ -2881,7 +2897,7 @@ proc(
       state unfreezeInterpreter
       ## type-modifiers are handled by the interpreter
       op @ state [] .interpreter @ true evaluateOperation if
-        "could not evaluate type modifier" sb.wrap
+        "could not evaluate type modifier " sb.wrap
           op .val .typeModifier sb.appendTypeModifier
         op .pos errors appendError
       end
