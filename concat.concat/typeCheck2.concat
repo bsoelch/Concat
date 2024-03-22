@@ -305,15 +305,18 @@ proc(
       pos errors appendError
       argOffset true return
     end
+    expectedType .empty ?? if
+      state [] .stack @ branchTree.peek .data =:: typeInfo
+      typeInfo [] .valueType typeContext types.isEmpty ! if
+        i 1 + continue ## skip empty if stack value non-empty
+      end
+    end
     state [] .stack @ branchTree.pop .data =:: typeInfo
     state [] .childIds
       typeInfo [] .opIndex list.append
     state [] .childIds =
     typeInfo [] .valueType expectedType types.typeEquals if
       i 1 + continue
-    end
-    expectedType .empty ?? if
-      i 1 + continue ## TODO proper support for empty values
     end
     ## canAutoCast
       typeInfo [] .valueType
@@ -1650,7 +1653,10 @@ proc(
           op .pos errors appendError
           return
         end
-        eltType @ array.wrap "enum-creation" string.wrap op .pos state requireTypes if
+        eltType .empty ?? if
+          -1i64
+        else
+          eltType @ array.wrap "enum-creation" string.wrap op .pos state requireTypes _if
           ..drop return
         end =:: argOffset
         ## pushValue
