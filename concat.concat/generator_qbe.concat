@@ -1735,10 +1735,12 @@ proc(
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg" string.wrap baseVal context appendUnaryOperator
       return
-    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64
+      ADD_PTR ADD_PTR_MUT case
+      ## internal representation of pointers identical to int
       sb "add" string.wrap baseVal context appendBinaryOperator
       return
-    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 PTR_DIFF case
       sb "sub" string.wrap baseVal context appendBinaryOperator
       return
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
@@ -1802,22 +1804,22 @@ proc(
         baseType false pos context extendArguments
         "ne" string.wrap baseVal context appendComparisonOperator
       return
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR case
       sb
         baseType true pos context extendArguments
         "slt" string.wrap baseVal context appendComparisonOperator
       return
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR case
       sb
         baseType true pos context extendArguments
         "sle" string.wrap baseVal context appendComparisonOperator
       return
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR case
       sb
         baseType true pos context extendArguments
         "sge" string.wrap baseVal context appendComparisonOperator
       return
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR  case
       sb
         baseType true pos context extendArguments
         "sgt" string.wrap baseVal context appendComparisonOperator

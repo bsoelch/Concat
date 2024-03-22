@@ -4,8 +4,8 @@ import "program.concat"
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
- ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ## +
- SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 ## -
+ ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ADD_PTR ADD_PTR_MUT ## +
+ SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 PTR_DIFF ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
  DIV_I32 DIV_I64 DIV_F32 DIV_F64                ## /
  MOD_I32 MOD_I64 MOD_F32 MOD_F64                ## %
@@ -27,14 +27,14 @@ enum(
  NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64       ## !=
  +#
  ## XXX? are the 16bit operations necessary
- LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64       ## <
- LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64       ## <=
- GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64       ## >=
- GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64       ## >
- ULT_I8 ULT_I16 ULT_I32 ULT_I64                 ## ..u<
- ULE_I8 ULE_I16 ULE_I32 ULE_I64                 ## ..u<=
- UGE_I8 UGE_I16 UGE_I32 UGE_I64                 ## ..u>=
- UGT_I8 UGT_I16 UGT_I32 UGT_I64                 ## ..u>
+ LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR ## <
+ LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR ## <=
+ GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR ## >=
+ GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR ## >
+ ULT_I8 ULT_I16 ULT_I32 ULT_I64                  ## ..u<
+ ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## ..u<=
+ UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## ..u>=
+ UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## ..u>
  ## XXX? more built-in operations
 ) BuiltIn =
 
@@ -43,9 +43,10 @@ namespace: sb
     switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
         "-_" sb.appendS break
-      ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+      ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64
+          ADD_PTR ADD_PTR_MUT case
         "+" sb.appendS break
-      SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+      SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 PTR_DIFF case
         "-" sb.appendS break
       MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
         "*" sb.appendS break
@@ -72,13 +73,13 @@ namespace: sb
         "<<" sb.appendS break
       BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
         "?" sb.appendS break
-      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
+      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR  case
         "<" sb.appendS break
-      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
+      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR  case
         "<=" sb.appendS break
-      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
+      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR  case
         ">=" sb.appendS break
-      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
+      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR  case
         ">" sb.appendS break
       ULT_I8 ULT_I16 ULT_I32 ULT_I64 case "..u<" sb.appendS break
       ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
@@ -86,6 +87,117 @@ namespace: sb
       UGT_I8 UGT_I16 UGT_I32 UGT_I64 case "..u>" sb.appendS break
     end
   end
+end
+
+proc(
+  Type : base
+  bool : mutable
+  TypeContext ptr mut : typeContext
+-> Type ) =>: wrapPtr
+  base
+    true
+    types.ArraySize array.empty
+    false
+    mutable
+    typeContext
+  types.newArrayType
+    if ..unreachable end ## XXX use assertion ?
+  return
+end
+proc(
+  FilePosition : pos
+  ProgramContext ptr mut : context
+-> Type Type Type Type ) =>: ptrSignatures
+  context [] .idContext @ =:: idContext
+  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext @ =:: typeContext
+  ## newLabel
+    "T" string.wrap
+    id.FLAG_AUTO id.FLAG_STATIC | id.FLAG_BUILT_IN |
+    pos
+    FILE_ID_BUILT_IN
+  labelContext id.newLabel =:: genericLabel
+  genericLabel types.newGenericType =:: genericType
+  genericType false typeContext wrapPtr =:: genericPtr
+  genericType true  typeContext wrapPtr =:: genericPtrMut
+  Type 3 array new =:: mut typeArray
+  typeArray @ =:: types
+  LabelId 3 array new =:: mut labelArray
+  labelArray @ =:: labels
+  genericLabel labels 0 [] =
+  id.LABEL_ID_NONE labels 1 [] =
+  id.LABEL_ID_NONE labels 2 [] =
+  labels array.wrap optional.wrap =:: labelData
+  types.primitive.TYPE types 0 [] =
+  types.primitive.I_PTR types 2 [] =
+  genericPtrMut types 1 [] =
+  ## newProcArgs
+    types array.wrap ## type : T , T ptr mut , iPtr
+    labelData
+    false
+  typeContext types.newProcArgs =:: ptrMutAddIn
+  ## newProcArgs
+    types 1 [] @ array.wrap ## T ptr mut
+    LabelId arrayView optional.empty
+    true
+  typeContext types.newProcArgs =:: ptrMutAddOut
+  genericPtr types 1 [] =
+  ## newProcArgs
+    types array.wrap ## type : T , T ptr , iPtr
+    labelData
+    false
+  typeContext types.newProcArgs =:: ptrAddIn
+  ## newProcArgs
+    types 1 [] @ array.wrap ## T ptr
+    LabelId arrayView optional.empty
+    true
+  typeContext types.newProcArgs =:: ptrAddOut
+  ## newProcArgs
+    types 2 [] @ array.wrap ## iPtr
+    LabelId arrayView optional.empty
+    true
+  typeContext types.newProcArgs =:: ptrDiffOut
+  genericPtr types 2 [] =
+  ## newProcArgs
+    types array.wrap  ## type : T  T ptr  T ptr
+    labelData
+    false
+  typeContext types.newProcArgs =:: ptrCmpIn
+  types.primitive.BOOL types 2 [] =
+  ## newProcArgs
+    types 2 [] @ array.wrap
+    LabelId arrayView optional.empty
+    true
+  typeContext types.newProcArgs =:: ptrCmpOut
+  ## newProcedure
+    ptrMutAddIn
+    ptrMutAddOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    if ..unreachable end ## XXX use assertion ?
+  =:: ptrMutAdd
+  ## newProcedure
+    ptrAddIn
+    ptrAddOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    if ..unreachable end ## XXX use assertion ?
+  =:: ptrAdd
+  ## newProcedure
+    ptrCmpIn
+    ptrDiffOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    if ..unreachable end ## XXX use assertion ?
+  =:: ptrDiff
+  ## newProcedure
+    ptrCmpIn
+    ptrCmpOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    if ..unreachable end ## XXX use assertion ?
+  =:: ptrCmp
+  ptrMutAdd ptrAdd ptrDiff ptrCmp
 end
 
 proc(
@@ -133,6 +245,29 @@ proc(
       procLabel
       buildIn ProcImplType .builtIn
       false
+      false
+    ProcedureInfo new list.append
+  context [] .procedures =
+  context [] .procBundles bundleId list.at .data =:: bundle
+  bundle [] .procedures
+    procId list.append
+  bundle [] .procedures =
+end
+proc(
+  BuiltIn : buildIn
+  LabelId : procLabel
+  Type : procType
+  ProcBundleId : bundleId
+  ProgramContext ptr mut : context
+-> ) =>: addGenericBuiltIn
+  context [] .procedures
+    ..dup .length =:: procId
+    ## ProcedureInfo
+      FILE_ID_BUILT_IN
+      procType
+      procLabel
+      buildIn ProcImplType .builtIn
+      true
       false
     ProcedureInfo new list.append
   context [] .procedures =
@@ -199,6 +334,8 @@ proc(
   types.primitive.FLOAT64
     context operatorProcTypes
   =:: f64_bool =:: f64f64_bool =:: f64_f64 =:: f64f64_f64
+  pos context ptrSignatures
+  =:: ptrCmp =:: ptrDiff =:: ptrAdd =:: ptrMutAdd
   "-_" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   =:: mut bundle =:: mut label
@@ -217,6 +354,8 @@ proc(
   BuiltIn .ADD_I64 label i64i64_i64 bundle context addBuiltIn
   BuiltIn .ADD_F32 label f32f32_f32 bundle context addBuiltIn
   BuiltIn .ADD_F64 label f64f64_f64 bundle context addBuiltIn
+  BuiltIn .ADD_PTR label ptrAdd        bundle context addGenericBuiltIn
+  BuiltIn .ADD_PTR_MUT label ptrMutAdd bundle context addGenericBuiltIn
   "-" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
@@ -226,6 +365,7 @@ proc(
   BuiltIn .SUB_I64 label i64i64_i64 bundle context addBuiltIn
   BuiltIn .SUB_F32 label f32f32_f32 bundle context addBuiltIn
   BuiltIn .SUB_F64 label f64f64_f64 bundle context addBuiltIn
+  BuiltIn .PTR_DIFF label ptrDiff   bundle context addGenericBuiltIn
   "*" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
@@ -331,6 +471,7 @@ proc(
   BuiltIn .LT_I64 label i64i64_bool bundle context addBuiltIn
   BuiltIn .LT_F32 label f32f32_bool bundle context addBuiltIn
   BuiltIn .LT_F64 label f64f64_bool bundle context addBuiltIn
+  BuiltIn .LT_PTR label ptrCmp bundle context addGenericBuiltIn
   "<=" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
@@ -340,6 +481,7 @@ proc(
   BuiltIn .LE_I64 label i64i64_bool bundle context addBuiltIn
   BuiltIn .LE_F32 label f32f32_bool bundle context addBuiltIn
   BuiltIn .LE_F64 label f64f64_bool bundle context addBuiltIn
+  BuiltIn .LE_PTR label ptrCmp bundle context addGenericBuiltIn
   ">=" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
@@ -349,6 +491,7 @@ proc(
   BuiltIn .GE_I64 label i64i64_bool bundle context addBuiltIn
   BuiltIn .GE_F32 label f32f32_bool bundle context addBuiltIn
   BuiltIn .GE_F64 label f64f64_bool bundle context addBuiltIn
+  BuiltIn .GE_PTR label ptrCmp bundle context addGenericBuiltIn
   ">" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =
@@ -358,6 +501,7 @@ proc(
   BuiltIn .GT_I64 label i64i64_bool bundle context addBuiltIn
   BuiltIn .GT_F32 label f32f32_bool bundle context addBuiltIn
   BuiltIn .GT_F64 label f64f64_bool bundle context addBuiltIn
+  BuiltIn .GT_PTR label ptrCmp bundle context addGenericBuiltIn
   "..u<" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
   bundle = label =

@@ -217,6 +217,7 @@ proc(
   Type : src0
   Type : target
   bool : exactMatch
+  bool ptr mut : needCast
   LabelId GenericArg hashMap ptr mut : genericValues
   ProgramContext ptr mut : progContext
 -> bool ) =>: resolveGenerics
@@ -292,6 +293,7 @@ proc(
         unwrapSrc
         unwrapTarget
         exactMatch
+        needCast
         genericValues
         progContext
       resolveGenerics return
@@ -303,6 +305,7 @@ proc(
         src typeContext types.getBaseType
         target typeContext types.getBaseType
         true
+        needCast
         genericValues
         progContext
       resolveGenerics return
@@ -311,10 +314,19 @@ proc(
           src typeContext types.isArray ! _if
         true return
       end
+      src typeContext types.isMutable =:: srcMutable
+      target typeContext types.isMutable =:: targetMutable
+      targetMutable if srcMutable ! _if
+        true return ## cannot cast immutable to mutable
+      end
+      srcMutable if targetMutable ! _if
+        true needCast [] =
+      end
       ## resolveGenerics
         src typeContext types.getBaseType
         target typeContext types.getBaseType
         true
+        needCast
         genericValues
         progContext
       resolveGenerics if
@@ -345,6 +357,7 @@ proc(
           srcElt
           targetElt
           true
+          needCast
           genericValues
           progContext
         resolveGenerics if
@@ -363,6 +376,7 @@ proc(
         src typeContext types.getProcIn ..drop
         target typeContext types.getProcIn ..drop
         true
+        needCast
         genericValues
         progContext
       resolveGenerics if
@@ -372,6 +386,7 @@ proc(
         src typeContext types.getProcOut ..drop
         target typeContext types.getProcOut ..drop
         true
+        needCast
         genericValues
         progContext
       resolveGenerics if
@@ -397,6 +412,7 @@ proc(
             srcArg .typeId
             targetArg .typeId
             true
+            needCast
             genericValues
             progContext
           resolveGenerics if
@@ -616,6 +632,9 @@ proc(
         false current [] .needsParam =
         i 1 + continue
       end
+      stackIndex stackValues .length >= if
+        i 1 + continue ## no value present
+      end
       MatchType .NONE =:: mut matchType
       paramType typeContext types.isGeneric if
           paramType
@@ -641,17 +660,55 @@ proc(
         ## update current pointer after changing list
         currentSignatures i list.at .data current =
       end
+      paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+        stackValues stackIndex array.at .data [] .value =:: stackVal
+        stackVal .none ?? if
+          false current [] .argsMatch =
+        end
+        current [] .genericValues @
+          paramLabel
+        map.at =:: prevVal?
+        prevVal? optional.hasData if
+            prevVal? .data =:: prevVal
+            prevVal [] switch
+              nonEmpty case
+                stackVal .typeId ?? if
+                  stackVal .typeId .empty ??
+                else
+                  false
+                end
+                break
+              value case
+                prevVal [] .value stackVal labelContext constantEquals !
+                break
+              fixed case
+                prevVal [] .fixed stackVal labelContext constantEquals !
+                break
+            end _if
+          false current [] .argsMatch =
+        else
+          current [] .genericValues @
+            paramLabel
+            stackVal GenericArg .fixed
+          map.put ..drop
+        end
+      end
       ## try matching type
       paramType typeContext types.containsGeneric | if
+        false =:: mut needCast
           ## resolveGenerics
             stackType
             paramType
             false
+            needCast @
             current [] .genericValues @
             progContext
           resolveGenerics ! _if
         MatchType .GENERIC matchType =
         current [] .nGenerics 1 + current [] .nGenerics =
+        needCast if
+          current [] .nCasts 1 + current [] .nCasts =
+        end
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType =
       else stackType paramType typeContext types.canAutoCast _if
@@ -779,9 +836,11 @@ proc(
   eltCount Type list.create =:: mut typeBuffer
   eltCount LabelId list.create =:: mut labelBuffer
   constArgs .length 0 > if
-    progContext [] .procedures
-      candidate [] .procId list.at .data []
-    .implementation .code .implementations @ =:: impls
+      progContext [] .procedures
+        candidate [] .procId list.at .data
+      [] .implementation @ =:: implData
+      implData [] .code ?? _if
+    implData [] .code .implementations @ =:: impls
     false =:: mut isMatch
     0 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
