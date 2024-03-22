@@ -1107,14 +1107,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     end
-    ..dup state getStaticArg ..dup optional.hasData if .data
-        ..dup .argType
-        ..swap .val
-        IdentifierInfo optional.empty ## XXX? id-info
-        fileState [] .wordStart
-      Constant new state pushConst
-      true return
-    else ..drop end
+    _EXPERIMENTAL_ ! if
+      ..dup state getStaticArg ..dup optional.hasData if .data
+          ..dup .argType
+          ..swap .val
+          IdentifierInfo optional.empty ## XXX? id-info
+          fileState [] .wordStart
+        Constant new state pushConst
+        true return
+      else ..drop end
+    end
     ..dup state [] .currentFile idContext id.findIdentifierByName if
       ..drop.2 false return ## unknown identifier
     end
@@ -1122,7 +1124,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ..drop.2 false return ## not a constant
     end
     ..dup [] .constValue .procedure ??
-        ..over [] .constValue .procedureBundle ?? | if
+        ..over [] .constValue .procedureBundle ?? |
+        ..over [] .constValue .genericArg ?? _EXPERIMENTAL_ & |  if
       ..drop.2 false return ## ignore procedure constants
     end
     ..dup [] .constValue =:: mut constVal

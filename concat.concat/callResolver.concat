@@ -35,6 +35,34 @@ struct(
   bool : mut needsParam
 ) =:: CallSignatureInfo
 
+
+proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
+  size .sizeType switch
+    int case size .value ConstValue .int return
+    staticArg case
+      size .value LabelId cast ConstValue .genericArg return
+    templateArg case
+      size .value TemplateId cast ConstValue .templateArg return
+  end
+end
+proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
+  val switch
+    int case
+      ## ArraySize
+        val .int
+        types.ArraySizeType .int
+      types.ArraySize new return
+    genericArg case
+      ## ArraySize
+        val .genericArg
+        types.ArraySizeType .staticArg
+      types.ArraySize new return
+    none boolean enumLabel chr Float str
+    arrayConstant typeId wildCard templateArg
+    procedure procedureBundle case ..unreachable
+  end
+end
+
 proc(
   Type : src
   Type list ptr mut : typeBuffer
@@ -93,8 +121,24 @@ proc(
       types.newReferenceType return
     pointer arrayType case
       src typeContext types.getBaseType =:: base
-      src typeContext types.getArraySize =:: size
-      ## TODO replace generic sizes
+      src typeContext types.getArraySize =:: sizes
+      idContext [] .arraySizeBuffer .length =:: sizeOffset
+      0 while ..dup sizes .length < do =:: i
+        sizes i array.get =:: size
+        idContext [] .arraySizeBuffer
+          size .sizeType switch
+            int case
+              size list.append break
+            staticArg case
+              size .value LabelId cast =:: genericId
+              genericValues genericId map.at .data =:: val
+              val [] .fixed constAsSize list.append
+              break
+            templateArg case ..unreachable
+          end
+        idContext [] .arraySizeBuffer =
+        i 1 +
+      end ..drop
       ## newArrayType
         ## replaceGenerics
           base
@@ -104,11 +148,16 @@ proc(
           progContext
         replaceGenerics
         src .pointer ??
-        size
+        idContext [] .arraySizeBuffer list.asArray
+          sizeOffset
+        array.tail
         src typeContext types.isFixedSize
         src typeContext types.isMutable
         typeContext
       types.newArrayType
+        idContext [] .arraySizeBuffer
+          sizeOffset list.setLength
+        idContext [] .arraySizeBuffer =
         if ..unreachable end ## XXX handle error
       return
     struct union procIn procOut enum case
@@ -332,7 +381,60 @@ proc(
       resolveGenerics if
         true return
       end
-      ## TODO resolve generic sizes
+      src typeContext types.isFixedSize =:: srcFixed
+      target typeContext types.isFixedSize =:: targetFixed
+      targetFixed if srcFixed ! _if
+        true return ## cannot assign unknown-size to fixed-size
+      end
+      src typeContext types.getArraySize =:: srcSizes
+      target typeContext types.getArraySize =:: targetSizes
+      srcSizes .length targetSizes .length < if
+        true return ## target sizes have to be matched
+      end
+      targetFixed if srcSizes .length targetSizes .length != _if
+        true return ## all target sizes have to be matched
+      end
+      0 while ..dup targetSizes .length < do =:: i
+        srcSizes i array.get =:: srcSize
+        targetSizes i array.get =:: targetSize
+        targetSize .sizeType switch
+          int case
+            srcSize .sizeType .int ?? ! if
+              true return
+            else srcSize .value targetSize .value != _if
+              true return
+            end
+          break
+          staticArg case
+            targetSize .value LabelId cast =:: genericId
+            srcSize sizeAsConst =:: newValue
+            genericValues genericId map.at =:: oldValue?
+            oldValue? optional.hasData if
+              oldValue? .data [] switch
+                nonEmpty case break
+                value case
+                    oldValue? .data [] .value
+                    newValue
+                    labelContext
+                  constantEquals ! if true return end
+                  break
+                fixed case
+                    oldValue? .data [] .fixed
+                    newValue
+                    labelContext
+                  constantEquals ! if true return end
+                  break
+              end
+            end
+            genericValues
+              genericId
+              newValue GenericArg .fixed
+            map.put ..drop
+            break
+          templateArg case ..unreachable
+        end
+        i 1 +
+      end ..drop
       false return
     struct union procIn procOut enum case
       ## TODO? allow matching value to union/enum element
