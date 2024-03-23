@@ -194,7 +194,14 @@ namespace: branchTree
     end
     tree [] .nodes nodeId list.at .data =:: popped
     popped [] .parent tree [] .branchHead =
-    ## unlink node, node stays in memory until new node is added
+    popped [] .childCount 1 > if ## popped node stays child
+      tree [] .branchHead 0 >= if
+        tree [] .nodes tree [] .branchHead list.at .data =:: newNode
+        newNode [] .childCount
+          1 +
+        newNode [] .childCount =
+      end
+    end
     tree nodeId unlinkNode
     popped [] .data @ optional.wrap return
   end
