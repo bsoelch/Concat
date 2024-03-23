@@ -150,6 +150,7 @@
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space
           )|
+          \.\.type\.(alignment|size|stride)
           \.\.\?(parser\.)?find\.(?=([^[:space:]\.]+(\.[^[:space:]\.]+)*(\Z|[[:space:]])))
         )
       </match>
@@ -214,7 +215,7 @@
     <context id="cType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          ..ctype.(
+          \.\.ctype\.(
             void | bool | char | schar | uchar |
             short | ushort | int | uint |
             long | ulong | longlong | ulonglong | size |

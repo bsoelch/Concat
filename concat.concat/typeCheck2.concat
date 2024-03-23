@@ -825,7 +825,7 @@ proc(
   end
 end
 
-proc( 
+proc(
   i64 : index
   TypeCheckState ptr mut : state
 -> bool ) =>: canDeleteOp
@@ -2843,13 +2843,6 @@ proc(
       op .pos errors appendError
       return
       break
-    typeInfo case
-      op .dataType typeContext types.containsGeneric | if
-        break ## generic type-info not implemented
-      end
-      ConstValue .none op state pushValue
-      types.primitive.I_SIZE state replaceType
-      break
     getName builtIn
     newEnum call callPtr
     argc getArg getArgLen
@@ -2927,6 +2920,23 @@ proc(
           return
       end
       break
+    typeInfo case
+      op .pos state popType =:: valType
+      valType typeContext types.containsGeneric | if
+        break ## XXX? support var-size arrays
+      end
+      ## pushConstant
+        ## computeTypeInfo
+          valType
+          op .val .typeInfo
+          true
+        program interpreter.computeTypeInfo if ..drop
+          return
+        end
+        types.primitive.I_SIZE
+        op .pos
+      state pushConstant
+      return
     typeModifier case
       state unfreezeInterpreter
       ## type-modifiers are handled by the interpreter

@@ -260,8 +260,111 @@ proc(
     ValueInfo new list.append
   context [] .stackInfo =
 end
+proc(
+  bool : showErrorMessages
+  FilePosition : pos
+  InterpreterContext ptr mut : context
+-> ValueInfo ConstValue bool ) =>: popValue
+  context [] .stack .length 0 == if
+    showErrorMessages if
+      "stack underflow " sb.wrap
+      pos context [] .program [] .errors @ appendError
+    end
+    ## return
+      ## ValueInfo
+        Type .undefined
+        -1 -1
+        pos
+      ValueInfo new
+      ConstValue .none
+    true return
+  end
+  context [] .stack
+    list.pop =:: value
+  context [] .stack =
+  context [] .stackInfo
+    list.pop =:: valInfo
+  context [] .stackInfo =
+  valInfo value false return
+end
+proc(
+  ConstValue : value
+  ValueInfo : valInfo
+  InterpreterContext ptr mut : context
+->  ) =>: unpopValue
+  context [] .stack
+     value list.append
+  context [] .stack =
+  context [] .stackInfo
+    valInfo list.append
+  context [] .stackInfo =
+end
+
+proc(
+  bool : showErrorMessages
+  FilePosition : pos
+  InterpreterContext ptr mut : context
+-> ValueInfo Type bool ) =>: popType
+  context [] .program [] .errors @ =:: errors
+  context [] .program =:: program
+  context [] .program [] .idContext @ =:: idContext
+  context [] .program [] .idContext .constContext @ =:: constContext
+  context [] .program [] .idContext .typeContext @ =:: typeContext
+  context [] .program [] .idContext .labelContext @ =:: labelContext
+  ## popValue
+    showErrorMessages
+    pos
+  context popValue =:: isError =:: value =:: valInfo
+  isError if
+    valInfo Type .undefined true return
+  end
+  value .typeId ?? if
+    valInfo value .typeId false return
+  end
+  showErrorMessages if
+    "expected type got: " sb.wrap
+      valInfo .valueType labelContext typeContext sb.appendType
+      " ( " sb.appendS
+      value constContext labelContext typeContext sb.appendConstant
+      " )" sb.appendS
+    pos errors appendError
+  end
+  ## restore stack
+  value valInfo context unpopValue
+  valInfo Type .undefined true return
+end
 
 ## TODO use wrapper procedures for stack access
+
+namespace: interpreter
+  proc(
+    Type : t
+    TypeMemoryInfo : infoType
+    bool : showErrors
+    ProgramContext ptr mut : program
+  -> ConstValue bool ) =>: export computeTypeInfo
+    program [] .errors @ =:: errors
+    program [] .idContext @ =:: idContext
+    program [] .idContext .constContext @ =:: constContext
+    program [] .idContext .typeContext @ =:: typeContext
+    program [] .idContext .labelContext @ =:: labelContext
+    t typeContext types.containsGeneric | if
+      0 ConstValue .int true return
+    end
+    infoType switch
+      ALIGNMENT case
+        t typeContext types.alignOf
+        break
+      SIZE case
+        t typeContext types.sizeOf
+        break
+      STRIDE case
+        t typeContext types.strideOf
+        break
+    end
+    ConstValue .int false return
+  end
+end
 
 proc(
   Operation ptr : op
@@ -270,6 +373,7 @@ proc(
 ->
   bool
 ) =>: export evaluateOperation
+  using interpreter
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
@@ -339,10 +443,12 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .openBlocks .length 0 == if
-        "unexpected end of " sb.wrap
-         blockType sb.appendBlockType
-         "-block" sb.appendS
-        op [] .pos errors appendError
+        showErrorMessages if
+          "unexpected end of " sb.wrap
+           blockType sb.appendBlockType
+           "-block" sb.appendS
+          op [] .pos errors appendError
+        end
         true return
       end
       context [] .openBlocks
@@ -817,6 +923,37 @@ proc(
         context
       pushValue
       false return
+    typeInfo case
+      op [] .dataType .undefined ?? if
+        showErrorMessages op [] .pos context popType if ..drop.2
+          true return
+        end =:: poppedType =:: valInfo
+        poppedType typeContext types.containsGeneric | if
+          ## computing size not possible, reset stack
+          ## unpopValue
+            poppedType ConstValue .typeId
+            valInfo
+          context unpopValue
+          true return
+        end
+        poppedType
+      else
+        op [] .dataType
+      end =:: targetType
+      ## pushValue
+        ## computeTypeInfo
+          targetType
+          op [] .val .typeInfo
+          true ## don't hide errors ( operation modifies stack )
+        program computeTypeInfo if ..drop
+          true return
+        end
+        types.primitive.I_SIZE
+        id.LABEL_ID_NONE
+        op [] .pos
+        context
+      pushValue
+      false return
     setId @Id initializeId autoTypedInitializeId
     getLabel setLabel @Label
     getElement setElement @Element
@@ -828,7 +965,7 @@ proc(
     checkEnumLabel setEnumLabel checkArrayIndex
     hasLabel hasName hasElement
     stackMod setName @Name copy builtIn
-    compilerInfo unreachable typeInfo case
+    compilerInfo unreachable case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap
           op [] program sb.appendOp
