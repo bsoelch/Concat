@@ -3265,6 +3265,10 @@ proc(
           context popValue sb.appendI
           ", " sb.appendS
           i context sb.appendOutArgName
+          elt context referenceOnly if
+            ", " sb.appendS
+            elt typeContext types.sizeOf sb.appendI
+          end
           '\n' sb.appendC
         i 1 -
         end ..drop

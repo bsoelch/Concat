@@ -1315,7 +1315,20 @@ proc(
             return
           end =:: idData
           idInfo .idType .PROCEDURE ?? if
-            idData [] .constValue .procedure @ array.wrap
+            idData [] .constValue .procedure @ =:: procId
+            program [] .procedures
+              procId [] list.at .data
+            =:: procData
+            procData [] .isStatic if
+              state unfreezeInterpreter
+              op @ state [] .interpreter @ true evaluateOperation if
+                "could not evaluate " sb.wrap
+                  op program sb.appendOp
+                op .pos errors appendError
+              end
+              return
+            end
+            procId array.wrap
           else  ## PROCEDURE_BUNDLE
             idData [] .constValue .procedureBundle =:: bundleId
             program [] .procBundles
