@@ -1541,49 +1541,53 @@ proc(
       1 op .pos state checkStackSize if
         return
       end
-      state [] .stack @ branchTree.pop .data [] =:: target
-      target .valueType typeContext types.isReference =:: isReference
-      isReference target .valueType typeContext types.isPointer | ! if
+      state [] .stack @ branchTree.peek .data =:: target
+      target [] .valueType typeContext types.isReference =:: isReference
+      isReference target [] .valueType typeContext types.isPointer | ! if
         "can only assign to pointers or references got: " sb.wrap
-          target .valueType labelContext typeContext sb.appendType
+          target [] .valueType labelContext typeContext sb.appendType
         op .pos errors appendError
         return
       end
-      target .valueType typeContext types.isMutable ! if
-        target .valueId id.LABEL_ID_NONE != if
+      target [] .valueType typeContext types.isMutable ! if
+        target [] .valueId id.LABEL_ID_NONE != if
           ## TODO? resolve reference path from operation
           "cannot assign to immutable value of type " sb.wrap
-            target .valueType labelContext typeContext sb.appendType
+            target [] .valueType labelContext typeContext sb.appendType
             " in \"" sb.appendS
-            target .valueId labelContext sb.appendLabelName
+            target [] .valueId labelContext sb.appendLabelName
             '"' sb.appendC
           op .pos errors appendError
         else
           "cannot assign to immutable type: " sb.wrap
-            target .valueType labelContext typeContext sb.appendType
+            target [] .valueType labelContext typeContext sb.appendType
           op .pos errors appendError
         end
         return
       end
-      isReference if target .opIndex state currentBlockStart < _if
+      isReference if target [] .opIndex state currentBlockStart < _if
         "cannot assign value to reference on different branch" sb.wrap
           "( pushed at" sb.appendS
-          target .pushedAt sb.appendPos
+          target [] .pushedAt sb.appendPos
           " )" sb.appendS
         op .pos errors appendError
         return
       end
-      target .readCheckIndex -1 != if
-        target .readCheckIndex state tryDeleteOp if ## no read check when writing to value
+      target [] .readCheckIndex -1 != if
+        target [] .readCheckIndex state tryDeleteOp if ## no read check when writing to value
           "cannot remove enum index check" sb.wrap
           op .pos errors appendError
           return
         end
       end
-      target .copyMutableIndex state removeCopy
-      target .valueType typeContext types.getBaseType =:: base
+      target [] .copyMutableIndex state removeCopy
+      target [] .valueType typeContext types.getBaseType =:: base
       base op .dataType =
-      base @ array.wrap "assignment" string.wrap op .pos state requireTypes if
+      Type 2 array new =:: mut argData
+      argData @ =:: args
+      base args 0 [] =
+      target [] .valueType args 1 [] =
+      args array.wrap "assignment" string.wrap op .pos state requireTypes if
         ..drop return
       end ..drop
       op state appendOp ..drop

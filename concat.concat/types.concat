@@ -864,23 +864,28 @@ namespace: types
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType templateType generatedType
          reference mutableReference arrayIndex cType case
-          ..drop -1 return
+          ..drop id.LABEL_ID_NONE return
       end
     context compositeData
       ..dup optional.isEmpty if ..drop
-        -1 return
+        id.LABEL_ID_NONE return
       end
     .data =:: labels
     labels [] .labelOffset UNLABELED == if
-      -1 return
+      id.LABEL_ID_NONE return
     end
-    0 while ..dup labels [] .eltCount < do
-      name context [] .elementLabels labels [] .labelOffset ..over.3 + list.get labelContext id.labelNamesEq if
-        return
+    0 while ..dup labels [] .eltCount < do =:: i
+      ## labelNamesEq
+        name
+        context [] .elementLabels
+          labels [] .labelOffset i +
+        list.get
+      labelContext id.labelNamesEq if
+        i return
       end
-      1 +
+      i 1 +
     end ..drop
-    -1 return
+    id.LABEL_ID_NONE return
   end
   proc( Type : union Type : elt LabelContext ptr : labelContext TypeContext ptr : context -> i32 bool ) =>: export findUnionTypeIndex
     union context compositeElts =:: elts

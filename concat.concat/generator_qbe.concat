@@ -97,6 +97,7 @@ struct(
   BlockInfo list : mut openBlocks
   LocalConst list : mut localConstants
   StringConstant list : mut stringConstants
+  Type : mut currentProc
   i64 : mut localConstCount
   i64 : mut stackCount
   i64 : mut tmpCount
@@ -246,6 +247,13 @@ proc( CompilerContext ptr mut : context -> i32 ) =>: nextJumpLabelId
     oldCount
       1 +
     context [] .jumpLabelCount =
+  oldCount return
+end
+proc( CompilerContext ptr mut : context -> i64 ) =>: nextLocalConstId
+  context [] .localConstCount =:: oldCount
+    oldCount
+      1 +
+    context [] .localConstCount =
   oldCount return
 end
 
@@ -706,6 +714,23 @@ namespace: sb
         break
         enumLabel case break
         Float case break
+        genericArg case
+          context [] .currentProc
+            typeContext types.getProcIn ..drop
+          =:: progIn
+          progIn
+            value .genericArg
+            labelContext
+            typeContext
+          types.compositeFindLabel =:: index
+          index id.LABEL_ID_NONE != if
+            ## appendArgName
+              index
+              value .genericArg
+              context
+            appendArgName return
+          end
+          break
         str case
           '$' sb.appendC
           STRING_CONST_NAME sb.appendS
@@ -772,7 +797,7 @@ namespace: sb
             return
           end
         break
-        none wildCard genericArg templateArg typeId
+        none wildCard templateArg typeId
             procedure procedureBundle case
         break
       end
@@ -782,8 +807,8 @@ namespace: sb
         pos errors appendError
         return
       end
+      context nextLocalConstId =:: constId
       context [] .localConstants
-        ..dup .length =:: constId
         ## LocalConst
           t
           value
@@ -1864,15 +1889,18 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   src typeContext types.primitiveValue =:: fromVal
   target typeContext types.primitiveValue =:: toVal
-  fromVal toVal == if
-    sb return ## no cast necessary
-  end
   sb
     ## common prefix
     "%s" sb.appendS
     targetIndex sb.appendI
+    ## case 0: identical types
+    fromVal toVal == if
+      ## copy necessary to update value id
+      " =" sb.appendS
+      target StorageType .STACK pos context sb.appendTypeNameQBE
+      " copy" sb.appendS
     ## case 1: integer extension/narrowing
-    src typeContext types.isInt target typeContext types.isInt & if
+    else src typeContext types.isInt target typeContext types.isInt & _if
       src typeContext types.numberPrecision =:: srcPrec
       target typeContext types.numberPrecision =:: targetPrec
       targetPrec srcPrec <= if
@@ -1967,7 +1995,7 @@ proc(
   else
     target context toValType context pushValue
   end =:: targetId
-  src typeContext types.isNumber target typeContext types.unwrapNamed .arrayIndex ?? & if
+  src typeContext types.isNumber target .arrayIndex ?? & if
     ## isNumber returns true for array index
     ##   -> have to check for cast to array index before checking for cast to number
     sb
@@ -2031,7 +2059,7 @@ proc(
       srcId sb.appendI
       '\n' sb.appendC
       ## cast value
-      baseType target typeContext types.unwrapNamed types.typeEquals ! if
+      baseType target types.typeEquals ! if
         ## compileCast
           autoCast
           baseType
@@ -2160,6 +2188,7 @@ proc(
       prog [] .procedures
         implInfo .procId list.at .data
       =:: procInfo
+      op [] .dataType context [] .currentProc =
       procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
       ## reset stack-info in context
       0 context [] .stackCount =
@@ -2380,38 +2409,56 @@ proc(
       op [] .dataType =:: mut containerType
       false =:: mut isPtr
       containerType typeContext types.isPointer
-      containerType typeContext types.isReference | if
+          containerType typeContext types.isReference | if
         containerType typeContext types.getBaseType containerType =
         true isPtr =
       end
-      isAddr if ValType .PTR else ValType .REFERENCE end =:: valType
-      context popValue =:: srcId
-      ## TODO direct array access
-      isPtr containerType context referenceOnly | if
-        containerType typeContext types.isUnion
-        containerType typeContext types.isEnum | if
-          sb
-            op [] .pos sb.appendPosQBE
-            "%s" sb.appendS
-            valType context pushValue sb.appendI
-            " =l copy %s" sb.appendS ## union/enum element access does not change pointer
-            srcId sb.appendI
-            '\n' sb.appendC
-          return
-        else containerType typeContext types.isTuple _if
-          sb
-            op [] .pos sb.appendPosQBE
-            "%s" sb.appendS
-            valType context pushValue sb.appendI
-            " =l add %s" sb.appendS
-            srcId sb.appendI
-            "," sb.appendS
-            containerType index typeContext types.tupleElementOffset sb.appendI
-            '\n' sb.appendC
-          return
-        end
+      containerType
+        index
+        typeContext
+      types.compositeGetElement =:: eltType
+      isAddr if
+        ValType .PTR
+      else isPtr _if
+        ValType .REFERENCE
+      else
+        eltType context toValType
+      end =:: valType
+      containerType typeContext types.isTuple if
+        context popValue =:: srcId
+        sb
+          op [] .pos sb.appendPosQBE
+          "%s" sb.appendS
+          valType context pushValue sb.appendI
+          " =l add %s" sb.appendS
+          srcId sb.appendI
+          "," sb.appendS
+          containerType index typeContext types.tupleElementOffset sb.appendI
+          '\n' sb.appendC
+      else containerType typeContext types.isUnion
+          containerType typeContext types.isEnum | _if
+        sb ## not change to pointer necessary
+      else
+        break ## unsupported type
       end
-      break
+        isPtr ! if eltType context referenceOnly ! _if
+          context popValue =:: srcId
+          op [] .pos sb.appendPosQBE
+          "%s" sb.appendS
+          valType context pushValue sb.appendI
+          " =" sb.appendS
+          valType sb.appendValTypeQBE
+          " load" sb.appendS
+          eltType
+            StorageType .LOAD
+            op [] .pos
+            context
+          sb.appendTypeNameQBE
+          "%s" sb.appendS
+          srcId sb.appendI
+          '\n' sb.appendC
+        end
+      return
     copy case
       op [] .dataType =:: srcType
       srcType typeContext types.isReference ! if
@@ -2583,7 +2630,13 @@ proc(
       prog [] .procedures
         callInfo [] .procId list.at .data
       =:: procData
-      op [] .dataType =:: calledType
+      callInfo [] .implementationId 0 >= if
+        procData [] .implementation .code .implementations
+          callInfo [] .implementationId list.at .data
+        [] .procType
+      else
+        procData [] .procType
+      end =:: calledType
       calledType typeContext types.getProcIn ..drop =:: inTypes
       calledType typeContext types.getProcOutArgs ..drop =:: outArgs
       calledType typeContext types.getProcRet ..drop =:: retType
@@ -3049,8 +3102,11 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE case
+          Type .undefined context [] .currentProc =
           sb
-            "}\n" sb.appendS
+            ## end of procedure block always unreachable
+            ## ( type-checker ensures there is a return before end )
+            "@end\nhlt\n}\n" sb.appendS
             context sb.appendLocalConstants
           return
         ELSE case
@@ -3262,8 +3318,21 @@ proc(
       end
       op [] .dataType typeContext types.getProcRet ..drop =:: retType
       op [] .dataType typeContext types.getProcOutArgs ..drop =:: outTypes
+      retType typeContext types.isProcOut if
+          retType typeContext types.compositeEltCount
+        else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
+      false context [] .reachable =
       sb
         op [] .pos sb.appendPosQBE
+        retCount 1 == if
+          context popValue
+          "ret %s" string.wrap
+        else
+          retType context true appendAlloc =:: tmpId
+          retType tmpId op [] .pos context initializeTupleQBE
+          tmpId
+          "ret %t" string.wrap
+        end =:: retStr =:: retId
         outTypes .length 1 - while ..dup 0 >= do =:: i
           outTypes i array.get =:: elt
           elt typeContext types.isEmpty if
@@ -3286,23 +3355,11 @@ proc(
           '\n' sb.appendC
         i 1 -
         end ..drop
-        retType typeContext types.isProcOut if
-          retType typeContext types.compositeEltCount
-        else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
-      false context [] .reachable =
-      retCount 0 == if
-        "ret\n" sb.appendS
-        return
-      end
-      retCount 1 == if
-        "ret %s" sb.appendS
-        context popValue sb.appendI
-        '\n' sb.appendC
-        return
-      end
-      retType context true appendAlloc =:: retId
-      retType retId op [] .pos context initializeTupleQBE
-        "ret %t" sb.appendS
+        retCount 0 == if
+          "ret\n" sb.appendS
+          return
+        end
+        retStr sb.appendStr
         retId sb.appendI
         '\n' sb.appendC
       return
@@ -3375,6 +3432,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     32 BlockInfo list.create
     32 LocalConst list.create
     32 StringConstant list.create
+    Type .undefined
     0
     0
     0
