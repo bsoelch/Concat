@@ -1928,9 +1928,9 @@ end
 proc(
   stringBuilder : sb
   bool : autoCast
-  Type : src
+  Type : src0
   i32 : offset
-  Type : target
+  Type : target0
   FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: compileCast
@@ -1940,6 +1940,16 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  ## XXX? better cType <-> type conversion
+  src0 typeContext types.unwrapNamed
+    ..dup .cType ?? if .cType types.cTypeAsType end
+  =:: src
+  target0 typeContext types.unwrapNamed
+    ..dup .cType ?? if .cType types.cTypeAsType end
+  =:: target
+  src target types.typeEquals if
+    sb return ## nothing to do
+  end
   autoCast if
     offset context [] .stackInfo branchTree.depth >= if
       "stack underflow" sb.wrap
