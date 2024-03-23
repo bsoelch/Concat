@@ -2441,11 +2441,15 @@ proc(
               "different numbers of types at the end of " sb.wrap
                 closed sb.appendBlockInfoName
                 " block\n  * ifBranch: " sb.appendS
-                state [] .stack closed .If .ifBranch .node branchTree.depthFrom sb.appendI
+                state [] .stack
+                  closed .If .ifBranch .node
+                branchTree.depthFrom sb.appendI
                 " at " sb.appendS
                 closed .If .ifBranch .pos sb.appendPos
                 "\n  * elseBranch: " sb.appendS
-                state [] .stack branchTree.depth sb.appendI
+                state [] .stack
+                  branches @ 1 []
+                branchTree.depthFrom sb.appendI
               op .pos errors appendError
             end
           end
@@ -2704,7 +2708,9 @@ proc(
               " in branch at " sb.appendS
               whileBlock [] .branchRoot .pos sb.appendPos
               "\n  * " sb.appendS
-              state [] .stack branchTree.depth sb.appendI
+              state [] .stack
+                branchPoints list.peek .data []
+              branchTree.depthFrom sb.appendI
               " in branch at " sb.appendS
               op .pos sb.appendPos
               '\n' sb.appendC
