@@ -1350,6 +1350,7 @@ proc(
             procedures
             stackValues list.asArray
             message @ optional.wrap
+            op .pos
             program
           resolveCall =:: calledType =:: calledProc?
           calledProc? optional.isEmpty if

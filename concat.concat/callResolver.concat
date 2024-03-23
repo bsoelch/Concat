@@ -3,7 +3,7 @@ import arrayView
 import "constants.concat"
 import "types.concat"
 import "program.concat"
-
+import "interpreter/interpreter.concat"
 
 enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
 
@@ -69,6 +69,7 @@ proc(
   Type list ptr mut : typeBuffer
   LabelId list ptr mut : labelBuffer
   LabelId GenericArg hashMap ptr mut : genericValues
+  FilePosition : pos
   ProgramContext ptr mut : progContext
 -> Type ) =>: replaceGenerics
   progContext [] .idContext @ =:: idContext
@@ -102,6 +103,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          pos
           progContext
         replaceGenerics
         name
@@ -115,6 +117,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          pos
           progContext
         replaceGenerics
         src .mutableReference ??
@@ -146,6 +149,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          pos
           progContext
         replaceGenerics
         src .pointer ??
@@ -172,6 +176,7 @@ proc(
             typeBuffer
             labelBuffer
             genericValues
+            pos
             progContext
           replaceGenerics list.append
         typeBuffer [] =
@@ -201,10 +206,10 @@ proc(
       src typeContext types.getProcOut ..drop =:: outTypes
       ## newProcedure
         inTypes
-          typeBuffer labelBuffer genericValues progContext
+          typeBuffer labelBuffer genericValues pos progContext
         replaceGenerics
         outTypes
-          typeBuffer labelBuffer genericValues progContext
+          typeBuffer labelBuffer genericValues pos progContext
         replaceGenerics
         src typeContext types.getCallConvention ..drop
         typeContext
@@ -224,7 +229,7 @@ proc(
               arg break ## argument not generic
             typeId case
               arg .typeId
-                typeBuffer labelBuffer genericValues progContext
+                typeBuffer labelBuffer genericValues pos progContext
               replaceGenerics ConstValue .typeId
               break
             genericArg case
@@ -242,15 +247,22 @@ proc(
         argBuffer [] =
         i 1 +
       end ..drop
+      src typeContext types.getGeneratorLabel =:: generatorName
+      argBuffer [] list.asArray argOffset array.tail =:: generatorArgs
       ##findGeneratedType
-        src typeContext types.getGeneratorLabel
-        argBuffer [] list.asArray argOffset array.tail
+        generatorName
+        generatorArgs
         typeContext
         labelContext
         constContext
       types.findGeneratedType
         if ## new generated type
-          ..unreachable ## XXX? ensure generator is initialized
+          ## initializeGeneratedType
+            generatorName
+            generatorArgs
+            pos
+            progContext
+          interpreter.initializeGeneratedType ..drop
         end
         argBuffer []
           argOffset list.setLength
@@ -651,6 +663,7 @@ proc(
   ProcId arrayView : procedureIds
   StackValue arrayView : stackValues
   stringBuilder ptr mut optional : errorMessage
+  FilePosition : pos
   ProgramContext ptr mut : progContext
 -> ProcedureCallInfo optional Type ) =>: export resolveCall
   progContext [] .idContext @ =:: idContext
@@ -988,6 +1001,7 @@ proc(
             typeBuffer @
             labelBuffer @
             candidate [] .genericValues @
+            pos
             progContext
           replaceGenerics
           constArgs list.asArray constContext constArray
@@ -1023,6 +1037,7 @@ proc(
           typeBuffer @
           labelBuffer @
           candidate [] .genericValues @
+          pos
           progContext
         replaceGenerics list.append
       typeBuffer =
@@ -1045,6 +1060,7 @@ proc(
     typeBuffer @
     labelBuffer @
     candidate [] .genericValues @
+    pos
     progContext
   replaceGenerics =:: newOut
   typeBuffer list.free typeBuffer =

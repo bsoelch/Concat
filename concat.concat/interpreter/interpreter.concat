@@ -364,6 +364,87 @@ namespace: interpreter
     end
     ConstValue .int false return
   end
+  proc(
+    LabelId : generatorName
+    ProcId : generatorProc
+    ConstValue arrayView : args
+    FilePosition : pos
+    InterpreterContext ptr mut : context
+  -> bool ) =>: evalGeneratedType
+    context [] .program =:: program
+    program [] .errors @ =:: errors
+    program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .labelContext @ =:: labelContext
+    idContext [] .typeContext @ =:: typeContext
+    generatorProc pos context evaluateCall if
+      "could not initialize type-generator " sb.wrap
+        generatorName labelContext sb.appendLabelName
+      pos errors appendError
+      true return
+    end
+    ## initializeGeneratedType
+      generatorName
+      args
+      context [] .stack list.peek .data [] .typeId ## return value of call
+      typeContext
+      labelContext
+      constContext
+    types.initializeGeneratedType if
+      "could not initialize type-generator " sb.wrap
+        generatorName labelContext sb.appendLabelName
+      pos errors appendError
+      true return
+    end
+    false return
+  end
+  proc(
+    LabelId : generatorName
+    ConstValue arrayView : args
+    FilePosition : pos
+    ProgramContext ptr mut : program
+  -> bool ) =>: export initializeGeneratedType
+    program [] .errors @ =:: errors
+    program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .labelContext @ =:: labelContext
+    idContext [] .typeContext @ =:: typeContext
+    generatorName idContext id.getIdentifier if ..drop
+      "could not find procedure " sb.wrap
+        generatorName labelContext sb.appendLabelName
+      pos errors appendError
+      true return
+    end =:: idData
+    idData [] .idType .PROCEDURE ?? ! if
+      "expected procedure got: " sb.wrap
+        idData id.asIdInfo labelContext sb.appendIdInfo
+      pos errors appendError
+      true return
+    end
+    idData [] .constValue .procedure =:: procId
+    program [] .procedures
+      procId list.at .data [] .procType
+    =:: procType
+    procType typeContext types.getProcIn ..drop =:: inType
+    inType typeContext types.compositeElts =:: inTypes
+    program wrapProgram =:: mut context
+      ## push arguments
+      0 while ..dup inTypes .length < do =:: i
+        inTypes i types.compositeElts.get =:: argType
+        args i array.get =:: argValue
+        argValue argType -1 pos context @ pushValue
+        i 1 +
+      end ..drop
+      ## evalGeneratedType
+        generatorName
+        procId
+        args
+        pos
+        context @
+      evalGeneratedType
+    context @ cleanupContext
+    return
+  end
 end
 
 proc(
@@ -757,32 +838,25 @@ proc(
               constContext
             types.findGeneratedType if ## newType
               idContext [] .templateArgBuffer .length =:: argOffset
-              idContext [] .templateArgBuffer ## remember procedure arguments
-                context [] .stack list.asArray offset array.tail list.appendArray
+              idContext [] .templateArgBuffer
+                ## remember procedure arguments
+                context [] .stack list.asArray
+                  offset
+                array.tail list.appendArray
               idContext [] .templateArgBuffer =
-              procId op [] .pos context evaluateCall if ..drop
-                "could not initialize type-generator " sb.wrap
-                  label labelContext sb.appendLabelName
-                op [] .pos errors appendError
+              ## evalGeneratedType
+                label
+                procId
+                idContext [] .templateArgBuffer list.asArray
+                  argOffset
+                array.tail
+                op [] .pos
+                context
+              evalGeneratedType
                 idContext [] .templateArgBuffer
                   argOffset list.setLength
                 idContext [] .templateArgBuffer =
-                true return
-              end
-              ## initializeGeneratedType
-                label
-                idContext [] .templateArgBuffer list.asArray argOffset array.tail
-                  idContext [] .templateArgBuffer
-                    argOffset list.setLength
-                  idContext [] .templateArgBuffer =
-                context [] .stack offset list.get .typeId ## return value of call
-                typeContext
-                labelContext
-                constContext
-              types.initializeGeneratedType if ..drop
-                "could not initialize type-generator " sb.wrap
-                  label labelContext sb.appendLabelName
-                op [] .pos errors appendError
+              if ..drop
                 true return
               end
             end =:: generated
