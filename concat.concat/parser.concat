@@ -1209,7 +1209,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           while
             fileState nextToken =:: next
             next .IDENTIFIER ?? ! if continue end
-          next .IDENTIFIER "#:end" string.wrap string.eq ! 
+          next .IDENTIFIER "#:end" string.wrap string.eq !
           next .IDENTIFIER "#:else" string.wrap string.eq ! & do end
           return
         else "else" string.wrap ..over string.eq _if ..drop
@@ -1472,7 +1472,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   argType
                   IdentifierType .ARGUMENT
                   index
-                  argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
+                  _EXPERIMENTAL_ ! if
+                      argLabel labelContext id.labelFlags id.FLAG_AUTO & ? _if
                     argType types.primitive.TYPE types.typeEquals if
                       argId types.newGenericType ConstValue .typeId
                     else
@@ -1816,11 +1817,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .DEFAULT  state openBlockScope
       return
     else ..dup "return" string.wrap string.eq _if ..drop
-      idContext id.currentScopeProc =:: experimental
-        ..dup Type .undefined types.typeEquals if
+      idContext id.currentScopeProc =:: experimental =:: procType
+        procType Type .undefined types.typeEquals if
           "return outside procedure" sb.wrap fileState [] .wordStart state appendError2
         end
-      fileState [] .wordStart opReturn state appendOp
+      ## opReturn
+        _EXPERIMENTAL_ if
+          Type .undefined
+        else
+          procType
+        end
+        fileState [] .wordStart
+      opReturn state appendOp
       return
     else ..dup "end" string.wrap string.eq _if ..drop
       while

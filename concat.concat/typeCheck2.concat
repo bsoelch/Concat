@@ -125,6 +125,7 @@ struct(
   ProgramContext ptr mut : program
   InterpreterContext : mut interpreter
   LabelId TypedValue hashMap : mut argData
+  Type : mut currentProcType
   bool : mut interpreterActive
   TypeInfo BranchTree : mut stack
   BlockInfo list : mut openBlocks
@@ -982,7 +983,7 @@ proc(
 end
 
 proc(
-  Operation ptr : op
+  Operation ptr mut : op
   TypeCheckState ptr mut : state
 -> ) =>: typeCheckReturn
   state [] .program =:: program
@@ -990,14 +991,16 @@ proc(
   program [] .idContext @ =:: idContext
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
-  op [] .dataType typeContext types.isProcedure ! if
+  state [] .currentProcType =:: procType
+  procType op [] .dataType =
+  procType typeContext types.isProcedure ! if
     "unexpected type for return: " sb.wrap
-      op [] .dataType labelContext typeContext sb.appendType
+      procType labelContext typeContext sb.appendType
       " expected procedure" sb.appendS
     op [] .pos errors appendError
     return
   end
-  op [] .dataType typeContext types.getProcOut if ..drop
+  procType typeContext types.getProcOut if ..drop
     "could not resolve procedure return value" sb.wrap op [] .pos errors appendError
     return
   end =:: procOut
@@ -2366,7 +2369,7 @@ proc(
           end
           state [] .reachable if
             ## create explicit return operation if end of procedure reachable
-            closed .Procedure op .pos opReturn =:: tmp
+            closed .Procedure op .pos opReturn =:: mut tmp
             tmp @ state typeCheckReturn
           end
           op state appendOp ..drop
@@ -2994,7 +2997,11 @@ proc(
   implId 0 >= if ## update procedure type
     codeImpl [] .implementations
       implId list.at .data
-    [] .procType procStart [] .dataType =
+    [] .procType =:: procType
+    procType procStart [] .dataType =
+    procType state [] .currentProcType =
+  else
+    currentProc [] .procType state [] .currentProcType =
   end
   0 while ..dup codeImpl [] .codeLength < do =:: i
     program [] .templateOps
@@ -3016,6 +3023,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     program
     program wrapProgram
     labelHash @ labelEq @ 64 TypedValue map.create
+    Type .undefined
     true
     TypeInfo branchTree.create
     32  BlockInfo list.create
