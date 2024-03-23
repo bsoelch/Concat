@@ -1896,9 +1896,9 @@ proc(
       toVal switch
         BOOL TYPE case break
         FLOAT32 case
-          " =d exts" sb.appendS break
-        FLOAT64 case
           " =s truncd" sb.appendS break
+        FLOAT64 case
+          " =d exts" sb.appendS break
         I8 I16 I32 I64 case
           " =" sb.appendS
           target StorageType .STACK pos context sb.appendTypeNameQBE
@@ -1911,9 +1911,13 @@ proc(
       end
     ## case 3: int -> float
     else fromVal .I64 ?? _if
-      " =l sltof" sb.appendS
+      " =" sb.appendS
+      target StorageType .STACK pos context sb.appendTypeNameQBE
+      " sltof" sb.appendS
     else
-      " =w swtof" sb.appendS
+      " =" sb.appendS
+      target StorageType .STACK pos context sb.appendTypeNameQBE
+      " swtof" sb.appendS
     end
     " %s" sb.appendS
     srcIndex sb.appendI
