@@ -57,6 +57,14 @@ namespace: mem
   end
   #:ifnot:exp
   #template type : T #end
+  proc( -> T _ ptr mut ) =>: export nullPtr
+  #:else
+  proc( type : T -> T _ ptr mut ) =>: export nullPtr
+  #:end
+    c.nullPtr T _ ptr mut cast! return
+  end
+  #:ifnot:exp
+  #template type : T #end
   proc( i64 : n -> T _ ptr mut ) =>: export alloc
   #:else
   proc( i64 : n type : T -> T _ ptr mut ) =>: export alloc

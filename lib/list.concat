@@ -90,43 +90,43 @@ namespace: list
 
   #:ifnot:exp
   #template type : T #end
-  proc( T list : elts i64 : minCap -> T list ) =>: export ensureCap
+  proc( T list : elts0 i64 : minCap -> T list ) =>: export ensureCap
   #:else
   proc(
     type : auto T
-    T list : elts
+    T list : elts0
     i64 : minCap
   -> T list ) =>: export ensureCap
   #:end
-    elts
-      ..dup .cap minCap > if
-        return
-      end
-      minCap minCap 8 / + 8 +
-        ..over .data ..over mem.realloc ..over.2 .data =
-        ..over .cap =
-    return
+    elts0 .cap minCap > if
+      elts0 return
+    end
+    elts0 =:: mut elts
+      minCap minCap 8 / + 8 + =:: newCap
+      elts .data
+        newCap mem.realloc
+      elts .data =
+      newCap elts .cap =
+    elts return
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T list -> T list ) =>: export free
+  proc( T list : elts -> T list ) =>: export free
   #:else
-  proc( type : auto T T list -> T list ) =>: export free
+  proc( type : auto T T list : elts -> T list ) =>: export free
   #:end
-    ..dup .data mem.free
-      0 ..over .cap =
-      0 ..over .length =
-    return
+    elts .data mem.free
+    T mem.nullPtr 0 0 T list new return
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T list -> T list ) =>: export clear
+  proc( T list : elts0 -> T list ) =>: export clear
   #:else
-  proc( type : auto T T list -> T list ) =>: export clear
+  proc( type : auto T T list : elts0 -> T list ) =>: export clear
   #:end
-    ## list
-      0 ..over .length =
-    return
+    elts0 =:: mut elts
+      0 elts .length =
+    elts return
   end
   #:ifnot:exp
   #template type : T #end
@@ -143,7 +143,9 @@ namespace: list
       ..unreachable
     end
     src =:: mut l
-    l newLength ensureCap l =
+    l
+      newLength ensureCap
+    l =
     newLength l .length =
     l return
   end
@@ -198,19 +200,23 @@ namespace: list
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T list : elts T : elt -> T list ) =>: export append
+  proc( T list : elts0 T : elt -> T list ) =>: export append
   #:else
   proc(
     type : auto T
-    T list : elts
+    T list : elts0
     T : elt
   -> T list ) =>: export append
   #:end
-    elts
-      ..dup .length 1 + ensureCap
-      elt ..over .data ..over.2 .length [] =
-      ..dup .length 1 + ..over .length =
-    return
+    elts0 =:: mut elts
+      elts
+        elts .length 1 + ensureCap
+      elts =
+      elt elts .data elts .length [] =
+      elts .length
+        1 +
+      elts .length =
+    elts return
   end
   #:ifnot:exp
   #template type : T #end
@@ -223,11 +229,13 @@ namespace: list
     T k ptr : b
   -> T list ) =>: export appendP
   #:end
-    a
-      ..dup .length k + ensureCap
-      ..dup .data ..over .length + b T _ ptr cast k mem.copy ..drop
-      ..dup .length k + ..over .length =
-    return
+    a =:: mut elts
+      elts
+        elts .length k + ensureCap
+      elts =
+      elts .data elts .length + b T _ ptr cast k mem.copy ..drop
+      elts .length k + elts .length =
+    elts return
   end
   #:ifnot:exp
   #template type : T #end
@@ -239,11 +247,13 @@ namespace: list
     T arrayView : b
   -> T list ) =>: export appendArray
   #:end
-    a
-      ..dup .length   b .length + ensureCap
-      ..dup .data ..over .length + b .data b .length mem.copy ..drop
-      ..dup .length   b .length + ..over .length =
-    return
+    a =:: mut elts
+      elts
+        elts .length b .length + ensureCap
+      elts =
+      elts .data elts .length + b .data b .length mem.copy ..drop
+      elts .length   b .length + elts .length =
+    elts return
   end
   #:ifnot:exp
   #template type : T #end
@@ -255,11 +265,13 @@ namespace: list
     T list : b
   -> T list ) =>: export appendAll
   #:end
-    a
-      ..dup .length   b .length + ensureCap
-      ..dup .data ..over .length + b .data b .length mem.copy ..drop
-      ..dup .length   b .length + ..over .length =
-    return
+    a =:: mut elts
+      elts
+        elts .length b .length + ensureCap
+      elts =
+      elts .data elts .length + b .data b .length mem.copy ..drop
+      elts .length   b .length + elts .length =
+    elts return
   end
 
   #:ifnot:exp
@@ -373,20 +385,23 @@ namespace: list
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T list : elts -> T list T ) =>: export pop
+  proc( T list : elts0 -> T list T ) =>: export pop
   #:else
   proc(
     type : auto T
-    T list : elts
+    T list : elts0
   -> T list T ) =>: export pop
   #:end
-    elts .length 0 <= if
+    elts0 .length 0 <= if
       ## TODO error handling
       ..unreachable
     end
-    elts
-      ..dup .length 1 - ..over .length =
-    ..dup .data ..over .length [] return
+    elts0 =:: mut elts
+    elts .length 1 - elts .length =
+    ## return
+      elts
+      elts .data elts .length []
+    return
   end
 
 

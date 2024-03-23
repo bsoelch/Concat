@@ -221,7 +221,9 @@ namespace: io
 
 
   proc( FILE : file i8 : chr -> IOError ) =>: export fputc
-    file chr @ 0 1 fwrite ..swap ..drop return
+    ## TODO? add support for pointers to stack values
+    chr =:: tmp
+    file tmp @ 0 1 fwrite ..swap ..drop return
   end
   proc( FILE : file  i64 : k  i8 _ ptr : str -> IOError ) =>: export fputArray
     0 i64 =: mut off
