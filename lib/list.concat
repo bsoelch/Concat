@@ -212,7 +212,9 @@ namespace: list
       elts
         elts .length 1 + ensureCap
       elts =
-      elt elts .data elts .length [] =
+      elt elts .data
+        elts .length
+      [] =
       elts .length
         1 +
       elts .length =

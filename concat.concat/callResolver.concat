@@ -170,15 +170,17 @@ proc(
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
       0 while ..dup eltCount < do =:: i
+        ## replaceGenerics
+          src i typeContext types.compositeGetElement
+          typeBuffer
+          labelBuffer
+          genericValues
+          pos
+          progContext
+        replaceGenerics =:: newElt
+        ## ! replaceGenerics changes type-buffer
         typeBuffer []
-          ## replaceGenerics
-            src i typeContext types.compositeGetElement
-            typeBuffer
-            labelBuffer
-            genericValues
-            pos
-            progContext
-          replaceGenerics list.append
+          newElt list.append
         typeBuffer [] =
         labelBuffer []
           src i typeContext types.compositeGetLabel list.append
@@ -1031,15 +1033,17 @@ proc(
     end
     needArg if ## need argument from stack
       inType i typeContext types.compositeGetElement =:: eltType
+      ## replaceGenerics
+        eltType
+        typeBuffer @
+        labelBuffer @
+        candidate [] .genericValues @
+        pos
+        progContext
+      replaceGenerics =:: newElt
+      ## ! replaceGenerics changes typeBuffer
       typeBuffer
-        ## replaceGenerics
-          eltType
-          typeBuffer @
-          labelBuffer @
-          candidate [] .genericValues @
-          pos
-          progContext
-        replaceGenerics list.append
+         newElt list.append
       typeBuffer =
       labelBuffer
         eltLabel list.append
