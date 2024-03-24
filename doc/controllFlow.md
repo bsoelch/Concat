@@ -87,10 +87,10 @@ Each case branch consists is labeled with a list of constants of the input type,
 Each value can be assigned to at most one case.
 When switching over an enum-value, the compiler requires that all labels of the enum are handled by a branch of the `switch` statement.
 
-When hitting a `break` statement the current case will be terminated and the execution will jump to the end of the `switch` block (for nested `break` statements only the innermost block will be terminated).
-A case block ends after the last statement reachable by a direct execution path starting at the `case` label.
+When hitting a `break` statement the current case will be terminated and the execution will jump to the end of the `switch` block (for nested `switch` blocks only the innermost block will be terminated).
+A case block ends when at a `break`, `continue`, `return` or `..unreachable` statement outside any enclosing nested blocks is reached (statements in nested blocks do not terminate the branch )
 If the last statement in the case block is not a `break` statement, an optional `break` can be added at the end of the block.
-Unlike in C all cases of the `switch` statement have to be terminated with a `break` statement, fall-though between different `switch` branches is not allowed.
+Unlike in C fall-though between different branches of the `switch` statement is NOT allowed.
 
 For values that are not assigned to any label the `default` case will be executed, if no `default` case is present the program will directly jump to the end of the `switch'  block.
 In the current version of the compiler, `default` has to be the last branch in a `switch`-case statement.
