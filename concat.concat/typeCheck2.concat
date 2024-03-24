@@ -1445,13 +1445,15 @@ proc(
       break
     @Id case
       op .val .@Id .idType switch
-        GLOBAL_VAR LOCAL_VAR PROCEDURE TMP_VAR case
+        GLOBAL_VAR LOCAL_VAR TMP_VAR case
           op .val .@Id .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: mutable
           ConstValue .none op state pushValue
           op .dataType mutable typeContext types.getAddressType state replaceType
           op .val .@Id .labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
           return
+        PROCEDURE case
+          break
         TYPE ARGUMENT LABEL TEMPLATE_ARG PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.wrap
             op .val .@Id labelContext sb.appendIdInfo

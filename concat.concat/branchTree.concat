@@ -307,7 +307,11 @@ namespace: branchTree
       nodeId -1 == if
         0i64
       else
-        tree [] .nodes nodeId list.at .data [] .level
+        tree [] .nodes nodeId list.at .data =:: nodeData
+        nodeData [] .childCount
+          1 -
+        nodeData [] .childCount =
+        nodeData [] .level
       end =:: nodeDepth
       initDepth -1 == if
          nodeDepth initDepth =
@@ -354,7 +358,10 @@ namespace: branchTree
           true needMerge =
         end
         next [] .data @ buffer i [] =
-        tree heads i [] unlinkNode
+        next [] .childCount 0 == if
+          ## TODO? are the child counts updated correctly
+          tree heads i [] unlinkNode
+        end
         next [] .parent heads i [] =
         i 1 + i =
       end

@@ -702,7 +702,8 @@ namespace: sb
     prog [] .idContext .constContext @ =:: constContext
     sb
       isGlobal if
-          t typeContext types.unwrapNamed types.isPrimitive _if
+          t typeContext types.unwrapNamed types.isPrimitive
+          t typeContext types.isPointer | _if
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
@@ -996,9 +997,6 @@ namespace: sb
           end
           0 while ..dup elts .length < do =:: i
             elts i types.compositeElts.get =:: elt
-            hasElt if
-              "," sb.appendS
-            end
             elt typeContext types.isEmpty if
               i 1 + continue
             end
@@ -2819,14 +2817,15 @@ proc(
       argIndices .length =:: outArgOffset
       ## allocate output arguments
       0 while ..dup outArgs .length < do =:: i
-        ValType .PTR context pushValue =:: argId
+        outArgs i array.get =:: outArg
+        ValType .REFERENCE context pushValue =:: argId
         newSb
           "%s" sb.appendS
           argId sb.appendI
-          outArgs i array.get context false appendAlloc ..drop
+          outArg context false appendAlloc ..drop
         newSb =
         argIndices
-          Type .undefined argId TypedValId new list.append
+          outArg argId TypedValId new list.append
         argIndices =
         i 1 +
       end ..drop
@@ -2865,6 +2864,27 @@ proc(
         retType typeContext types.isProcOut if
           retType context popValue op [] .pos context flattenTupleQBE
         end
+        0 while ..dup outArgs .length < do =:: i
+          argIndices
+            i outArgOffset +
+          list.at .data [] .valType =:: outArg
+          outArg context referenceOnly if
+            i 1 + continue
+          end
+          ## compileCast
+            true
+            outArg
+              false
+              typeContext
+            types.newReferenceType
+            ## (len-1-i) +1 for return value
+            outArgs .length i - i32 cast
+            outArg
+            op [] .pos
+            context
+          compileCast
+          i 1 +
+        end ..drop
         argIndices list.free argIndices =
       return
     builtIn case
