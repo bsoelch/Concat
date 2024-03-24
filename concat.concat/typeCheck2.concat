@@ -176,7 +176,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
   state [] .interpreter @ =:: interpreter
   ## XXX? make buffer part of state
   state [] .stack branchTree.depth TypeInfo list.create =:: mut buffer
-  TypeInfo ptr mut optional : typeInfo?
+  TypeInfo ptr optional : typeInfo?
   state currentBlockStart =:: minEditableIndex
   while
     state [] .stack @ branchTree.peek typeInfo? =
@@ -242,26 +242,26 @@ proc(
 end
 
 proc(
-  TypeInfo ptr mut : src
+  TypeInfo : src
   Type : target
   FilePosition : pos
   TypeCheckState ptr mut : state
 -> bool ) =>: tryCastConstant
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext .typeContext @ =:: typeContext
-  src [] .value .none ?? if
+  src .value .none ?? if
     true return
   end
-  state [] .compiledOps src [] .opIndex list.at .data =:: srcOp
+  state [] .compiledOps src .opIndex list.at .data =:: srcOp
   srcOp [] .val .Constant ?? ! if
     true return
   end
   ## casting between integer constants
-  src [] .value .int ?? if target typeContext types.isInt _if
+  src .value .int ?? if target typeContext types.isInt _if
     target .arrayIndex ?? if
-      src [] .value .int 0 < if
+      src .value .int 0 < if
         "array indices cannot be less than 0 got: " sb.wrap
-        src [] .value .int sb.appendI
+        src .value .int sb.appendI
         pos errors appendError
         false return
       end
@@ -269,16 +269,15 @@ proc(
       index .sizeType .int ?? ! if
         true return
       end
-      src [] .value .int 0 < src [] .value .int index .value >= | if
+      src .value .int 0 < src .value .int index .value >= | if
         "array index outside allowed range: " sb.wrap
-        src [] .value .int sb.appendI
+        src .value .int sb.appendI
         " size: " sb.appendS
         index .value sb.appendI
         pos errors appendError
       end
     end
     target srcOp [] .dataType =
-    target src [] .valueType =
     false return
   end
   true return
@@ -312,15 +311,15 @@ proc(
         i 1 + continue ## skip empty if stack value non-empty
       end
     end
-    state [] .stack @ branchTree.pop .data =:: typeInfo
+    state [] .stack @ branchTree.pop .data [] =:: typeInfo
     state [] .childIds
-      typeInfo [] .opIndex list.append
+      typeInfo .opIndex list.append
     state [] .childIds =
-    typeInfo [] .valueType expectedType types.typeEquals if
+    typeInfo .valueType expectedType types.typeEquals if
       i 1 + continue
     end
     ## canAutoCast
-      typeInfo [] .valueType
+      typeInfo .valueType
       expectedType
     typeContext types.canAutoCast if
       typeInfo expectedType pos state tryCastConstant ! if
@@ -331,10 +330,10 @@ proc(
       end
       state [] .childIds
         ..dup .length =:: argId
-        typeInfo [] .opIndex list.append
+        typeInfo .opIndex list.append
       state [] .childIds =
       ## opAutoCast
-        typeInfo [] .valueType
+        typeInfo .valueType
         i 1 -
         expectedType
         pos
@@ -346,7 +345,7 @@ proc(
       " expected " sb.appendS
       expectedType labelContext typeContext sb.appendType
       " got " sb.appendS
-      typeInfo [] .valueType labelContext typeContext sb.appendType
+      typeInfo .valueType labelContext typeContext sb.appendType
     pos errors appendError
     i 1 +
   end ..drop
@@ -527,12 +526,14 @@ proc( i64 : opIndex TypeCheckState ptr mut : state -> ) =>: freezeOp
   false opInfo [] .canDelete =
 end
 proc( LabelId : label TypeCheckState ptr mut : state -> ) =>: replaceLabel
-  state [] .stack @ branchTree.peek .data =:: top
-  label top [] .valueId =
+  state [] .stack @ branchTree.pop .data [] =:: mut top
+  label top .valueId =
+  state [] .stack @ top branchTree.push
 end
 proc( Type : newType TypeCheckState ptr mut : state -> ) =>: replaceType
-  state [] .stack @ branchTree.peek .data =:: top
-  newType top [] .valueType =
+  state [] .stack @ branchTree.pop .data [] =:: mut top
+  newType top .valueType =
+  state [] .stack @ top branchTree.push
 end
 
 proc(
@@ -796,13 +797,13 @@ proc(
   offset return
 end
 proc( TypeCheckState ptr mut : state -> ) =>: wrapCopy
-  state [] .stack @ branchTree.peek .data =:: topValue
+  state [] .stack @ branchTree.pop .data [] =:: mut topValue
   state [] .childIds
-    topValue [] .opIndex list.append
+    topValue .opIndex list.append
   state [] .childIds =
   state [] .compiledOps .length =:: index
   state [] .compiledOps
-    topValue [] .valueType topValue [] .pushedAt opCopy list.append
+    topValue .valueType topValue .pushedAt opCopy list.append
   state [] .compiledOps =
   state [] .opInfo list.peek .data =:: prev
   state [] .opInfo
@@ -813,8 +814,9 @@ proc( TypeCheckState ptr mut : state -> ) =>: wrapCopy
       prev [] .canDelete
     OpInfo new list.append
   state [] .opInfo =
-  index topValue [] .opIndex =
-  index topValue [] .copyMutableIndex =
+  index topValue .opIndex =
+  index topValue .copyMutableIndex =
+  state [] .stack @ topValue branchTree.push
 end
 proc(
   i64 : copyMutableIndex
@@ -1732,14 +1734,17 @@ proc(
       end =:: targetType
       targetType state replaceType
       elementLabel state replaceLabel
-      onRead
-        state [] .stack @ branchTree.peek .data
-      [] .readCheckIndex =
+      state [] .stack @ branchTree.pop .data [] =:: mut topValue
+      onRead topValue .readCheckIndex =
+      ## updateOpInfo info needs to value -> push then pop again
+      state [] .stack @ topValue branchTree.push
       mutable ! true childCount childOffset state updateOpInfo
       isAddr if
         container .copyMutableIndex state removeCopy
       else
-        container .copyMutableIndex state [] .stack @ branchTree.peek .data [] .copyMutableIndex =
+        state [] .stack @ branchTree.pop .data [] topValue =
+        container .copyMutableIndex topValue .copyMutableIndex =
+        state [] .stack @ topValue branchTree.push
       end
       return
     getElement @Element case
@@ -1868,7 +1873,11 @@ proc(
         arrayType typeContext types.isPointer if
           state wrapCopy
         else
-          srcCopyMutIndex state [] .stack @ branchTree.peek .data [] .copyMutableIndex =
+          state [] .stack @
+            branchTree.pop .data []
+          =:: mut topValue
+          srcCopyMutIndex topValue .copyMutableIndex =
+          state [] .stack @ topValue branchTree.push
         end
       end
       return
@@ -2307,7 +2316,35 @@ proc(
           whileId op .val .block .blockId =
           op state appendOp ..drop
           state [] .stack @ branchTree.startBranch =:: whileBranch
-          ## TODO remove constant values on stack ( might be overwritten by merge )
+          ## list.create
+            state [] .stack branchTree.depth
+          TypeInfo list.create =:: mut stackElements
+          while state [] .stack @ branchTree.pop =:: next?
+              next? optional.hasData do
+            stackElements
+              next? .data list.appendP
+            stackElements =
+          end
+          while stackElements .length 0 > do
+            stackElements
+              list.pop =:: mut elt
+            stackElements =
+            ## remove constant values (op can be overwritten by later value )
+            ConstValue .none elt .value =
+            id.LABEL_ID_NONE elt .valueId =
+            -1 elt .opIndex =
+            elt .valueType typeContext types.isReference if
+              ## remove possibility to overwrite copy
+              elt .valueType
+                typeContext types.getBaseType
+              elt .valueType =
+              -1 elt .copyMutableIndex =
+            end
+            state [] .stack @
+              elt
+            branchTree.push
+          end
+          stackElements list.free stackElements =
           ## newWhileBlock
             whileBranch
             whileId
@@ -2902,48 +2939,48 @@ proc(
             return
           end
           ## copy value on stack
-          state [] .stack @ offset branchTree.at .data =:: mut copied
-          copied [] .valueType typeContext types.isReference if
-            ## copying converts reference to value
-            copied [] .valueType
-              typeContext types.getBaseType
-            copied [] .valueType =
-            -1 copied [] .copyMutableIndex = ## remove possibility to overwrite copy
-          end
           state [] .stack @
-            copied []
-          branchTree.push
-          state [] .stack @ branchTree.peek .data =:: newOp
-          state [] .stack @ offset 1 + branchTree.at .data copied =
-          op .pos newOp [] .pushedAt =
+            offset
+          branchTree.at .data [] =:: mut copied
+          copied .valueType typeContext types.isReference if
+            ## copying converts reference to value
+            copied .valueType
+              typeContext types.getBaseType
+            copied .valueType =
+            -1 copied .copyMutableIndex = ## remove possibility to overwrite copy
+          end
+          op .pos copied .pushedAt =
           ## copy value in code
-          copied [] .opIndex state tryCopyOp if ..drop
+          copied .opIndex state tryCopyOp if ..drop
             ## copied operation can no longer be deleted
-            copied [] .opIndex state freezeOp
+            copied .opIndex state freezeOp
             op state appendOp
-          end newOp [] .opIndex =
+          end copied .opIndex =
+          state [] .stack @ copied branchTree.push
           return
         SWAP case
           2 op .pos state checkStackSize if
             return
           end
-          state [] .stack @ 1 branchTree.at .data =:: lower
+          state [] .stack @ branchTree.pop .data [] =:: upper
+          state [] .stack @ branchTree.pop .data [] =:: mut lower
           ## swap values in code
-          lower [] .opIndex state canCopyOp if
-              lower [] .opIndex state canDeleteOp _if
+          lower .opIndex state canCopyOp if
+              lower .opIndex state canDeleteOp _if
             ## copy lower value to to, the discard lower value
             ## discard old operations for lower value
-            lower [] .opIndex state tryCopyOp =:: isError =:: newIndex
-            lower [] .opIndex state tryDeleteOp isError | if
+            lower .opIndex state tryCopyOp =:: isError =:: newIndex
+            lower .opIndex state tryDeleteOp isError | if
               "internal compiler error: could not move operation" sb.wrap
               op .pos errors appendError
             end
-            newIndex lower [] .opIndex =
+            newIndex lower .opIndex =
           else
             op state appendOp ..drop
           end
           ## swap values on stack
-          state [] .stack @ branchTree.swap
+          state [] .stack @ upper branchTree.push
+          state [] .stack @ lower branchTree.push
           return
       end
       break

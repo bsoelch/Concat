@@ -222,10 +222,11 @@ proc( CompilerContext ptr mut : context -> i64 ) =>: nextValueId
 end
 proc( ValType : valType i32 : offset CompilerContext ptr mut : context -> i64 ) =>: replaceValue
   context nextValueId =:: newId
-  newId context [] .stackInfo @ offset branchTree.at .data [] .varId =
-  valType
-    context [] .stackInfo @ offset branchTree.at .data
-  [] .valType =
+  context [] .stackInfo @
+    offset
+  branchTree.replaceAt .data =:: stackElt
+  newId stackElt [] .varId =
+  valType stackElt [] .valType =
   newId return
 end
 proc( CompilerContext ptr mut : context -> i64 ) =>: popValue
@@ -3133,7 +3134,7 @@ proc(
               branchId sb.appendBranchId
               '\n' sb.appendC
               branchId context startBranch
-              0 while ..dup loopEltCount < do =:: i
+              loopEltCount 1 - while ..dup 0 >= do =:: i
                 loopElts i list.at .data =:: elt
                 "%s" sb.appendS
                 elt [] .valType context pushValue sb.appendI
@@ -3152,7 +3153,7 @@ proc(
                 " %t" sb.appendS
                 whileBlock [] .loopValOffset i + sb.appendI
                 '\n' sb.appendC
-                i 1 +
+                i 1 -
               end ..drop
               loopElts list.free loopElts =
             return

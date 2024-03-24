@@ -836,13 +836,22 @@ proc(
         MatchType .MATCH matchType =
       else stackType paramType typeContext types.canAutoCast _if
         MatchType .CAST matchType =
-        stackType typeContext types.unwrapNamed
-            paramType typeContext types.unwrapNamed
-            types.typeEquals if
-          ## same underlying type but different name
-          current [] .nRenames 1 + current [] .nRenames =
-        else
+        stackType =:: mut fromType
+        ## count conversion reference -> value as separate cast
+        stackType typeContext types.isReference
+            paramType typeContext types.isReference ! & if
+          stackType typeContext types.getBaseType fromType =
           current [] .nCasts 1 + current [] .nCasts =
+        end
+        fromType paramType types.typeEquals ! if
+          fromType typeContext types.unwrapNamed
+              paramType typeContext types.unwrapNamed
+              types.typeEquals if
+            ## same underlying type but different name
+            current [] .nRenames 1 + current [] .nRenames =
+          else
+            current [] .nCasts 1 + current [] .nCasts =
+          end
         end
       else
         false current [] .argsMatch =

@@ -124,6 +124,7 @@ namespace: branchTree
   #template type : T #end
   proc( T BranchTree ptr mut : tree -> ) =>: export prune
     tree tree [] .branchHead endBranch
+    -1 tree [] .branchHead =
   end
   #template type : T #end
   proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export endBranch
@@ -136,7 +137,6 @@ namespace: branchTree
       end
       node [] .parent nodeId =
     end
-    -1 tree [] .branchHead =
   end
   #template type : T #end
   proc( T BranchTree ptr mut : tree NodeId : branchPoint -> NodeId ) =>: export reset
@@ -167,30 +167,94 @@ namespace: branchTree
     tree [] .nodes =
     newId tree [] .branchHead =
   end
+
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> T ptr mut optional ) =>: export peek
+  proc( T BranchTree ptr mut : tree -> T ptr optional ) =>: export peek
     tree 0 at return
   end
+  ## returns a pointer to the stack element at the given index (0-indexed from top)
   #template type : T #end
-  proc( T BranchTree ptr mut : tree i32 : index -> T ptr mut optional ) =>: export at
+  proc( T BranchTree ptr mut : tree i32 : index -> T ptr optional ) =>: export at
     tree [] .branchHead =:: mut nodeId
     index while
       nodeId 0 < nodeId tree [] .nodes .length >= | if ..drop
-        T ptr mut optional.empty return
+        T ptr optional.empty return
       end
     ..dup 0 > do
       tree [] .nodes nodeId list.at .data [] .parent nodeId =
       1 -
     end ..drop
     tree [] .nodes nodeId list.at
+      .data [] .data @ T ptr cast
+    optional.wrap return
+  end
+  ## returns a mutable pointer to the stack element at the given index (0-indexed from top), writing to the returned pointer will only modify the current branch
+  #template type : T #end
+  proc( T BranchTree ptr mut : tree i32 : index -> T ptr mut optional ) =>: export replaceAt
+    tree [] .branchHead =:: mut nodeId
+    false =:: mut needCopy
+    index while
+      nodeId 0 < nodeId tree [] .nodes .length >= | if ..drop
+        T ptr mut optional.empty return
+      end
+    ..dup 0 > do
+      tree [] .nodes nodeId list.at .data =:: nodeData
+      nodeData [] .childCount 1 > if
+        true needCopy = ## node on multiple branches
+      end
+      nodeData [] .parent nodeId =
+      1 -
+    end ..drop
+    needCopy ! if
+        tree [] .nodes nodeId list.at .data =:: node
+        node [] .childCount 1 <= _if
+      node [] .data @ optional.wrap return
+    end
+    ## copy branch to prevent modification of other branches
+    ## TODO keep part of tree only present in current branch
+    ##   ( all nodes between head and first node with > 1 child )
+    tree [] .branchHead =:: oldHead
+    tree [] .nodes
+      tree [] .branchHead
+    list.at .data =:: mut currentNode
+    currentNode [] =:: mut newNode
+    tree [] .nodes .length tree [] .branchHead =
+    1 newNode .childCount =
+    tree [] .nodes .length nodeId =
+    tree [] .nodes
+      newNode list.append
+    tree [] .nodes =
+    index while ..dup 0 > do 1 -
+      tree [] .nodes nodeId list.at .data currentNode =
+      tree [] .nodes
+        currentNode [] .parent list.at .data []
+      newNode =
+      tree [] .nodes .length currentNode [] .parent =
+      tree [] .nodes .length nodeId =
+      1 newNode .childCount =
+      tree [] .nodes
+        newNode list.append
+      tree [] .nodes =
+    end ..drop
+    tree [] .nodes nodeId list.at .data currentNode =
+    currentNode [] .parent 0 >= if
+      tree [] .nodes
+        currentNode [] .parent
+      list.at .data =:: parentNode
+      parentNode [] .childCount
+        1 +
+      parentNode [] .childCount =
+    end
+    tree oldHead endBranch ## remove old head from branch
+    tree [] .nodes nodeId list.at
       .data [] .data @
     optional.wrap return
   end
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> T ptr mut optional ) =>: export pop
+  proc( T BranchTree ptr mut : tree -> T ptr optional ) =>: export pop
     tree [] .branchHead =:: nodeId
     nodeId 0 < nodeId tree [] .nodes .length >= | if
-      T ptr mut optional.empty return
+      T ptr optional.empty return
     end
     tree [] .nodes nodeId list.at .data =:: popped
     popped [] .parent tree [] .branchHead =
@@ -203,7 +267,7 @@ namespace: branchTree
       end
     end
     tree nodeId unlinkNode
-    popped [] .data @ optional.wrap return
+    popped [] .data @ T ptr cast optional.wrap return
   end
   #template type : T #end
   proc( T BranchTree ptr mut : tree -> ) =>: export swap
