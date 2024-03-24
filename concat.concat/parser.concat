@@ -1917,7 +1917,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
       fileState [] .wordStart opGetLabel state appendOp
       return
-    else ..dup "..debug.print" string.wrap string.eq _if ..drop
+    else ..dup "..debug.print" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
       fileState [] .wordStart opPrint state appendOp
       return
     else ..dup "[]" string.wrap string.eq _if ..drop
