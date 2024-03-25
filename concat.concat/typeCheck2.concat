@@ -741,6 +741,12 @@ proc(
       op [] .val .block .blockType switch
         ELSE CASE DEFAULT case
           return
+        BREAK BREAK_SWITCH case
+          state [] .openBlocks .length 0 > if
+              state [] .openBlocks list.peek .data [] .Switch ?? _if
+            return ## allow break in switch
+          end
+          break
         default break
       end
       break

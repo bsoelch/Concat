@@ -1440,6 +1440,9 @@ proc( ConstValue : label -> i64 ) =>: labelAsInt
   label .int ?? if
     label .int return
   end
+  label .chr ?? if
+    label .chr return
+  end
   label .enumLabel ?? if
     label .enumLabel return
   end
