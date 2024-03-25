@@ -3,18 +3,17 @@ enum( A B i32 : C i8 : D ) =:: anEnum
 proc( i32 : i anEnum : e i8 : c -> ) =>: switchTest
   i switch
     1 2 case
-      return
+      return ## not needed when branch ends with return
     3 case
       break
     0 case
       false if return else break end
-      ## break is not needed if all branches terminate
+      break
     -1 case
-      false if break else break end
-      break ## break is allowed if all branches terminate
-    default
+      return break ## optional break allowed after return
+    default break
   end
-  e switch 
+  e switch
     A B case
       break
     C case
@@ -30,6 +29,7 @@ proc( i32 : i anEnum : e i8 : c -> ) =>: switchTest
     break
   default
     false
+    break
   end =:: isSpace
   isSpace ..debug.print
 end

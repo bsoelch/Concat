@@ -1,7 +1,11 @@
 import list
 
+#:ifnot:exp
 #template type : T #end
 proc( T list : l -> ) =>: printList
+#:else
+proc( type : auto T  T list : l -> ) =>: printList
+#:end
   0 while ..dup l .length < do
     l .data ..over [] ..debug.print
     1 +

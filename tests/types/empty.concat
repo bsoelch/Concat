@@ -1,5 +1,16 @@
+#:ifnot:exp
 #template type : L type : R type : O #end
 proc( L : x proc( L R -> O ) ptr : f R : data -> O ) =>: test
+#:else
+proc(
+  type : auto L
+  type : auto R
+  type : auto O
+  L : x
+  proc( L R -> O ) ptr : f
+  R : data
+-> O ) =>: test
+#:end
   x data f ()
 end
 

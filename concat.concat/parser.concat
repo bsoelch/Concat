@@ -1932,7 +1932,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         Type .undefined fileState [] .wordStart opNew state appendOp
         return
       end
-      state hasConst if
+      state hasConst ! if
         "missing parameter for \"" sb.wrap
           opName sb.appendStr
         "\" expected type or enum-label" sb.appendS fileState [] .wordStart state appendError2
