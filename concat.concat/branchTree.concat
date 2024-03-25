@@ -289,10 +289,10 @@ namespace: branchTree
       MergeResult .error return
     end
     tree prune ## discard current branch
-    ## move head to first branch
-    branchHeads 0 array.get tree [] .branchHead =
     ## no update of child count necessary (loose link to branch, gain link to head)
     branchHeads .length 1 == if
+      ## move head to first branch
+      branchHeads 0 array.get tree [] .branchHead =
       0 MergeResult .success return ## nothing to merge
     end
     -1i64 =:: mut initDepth
@@ -329,6 +329,8 @@ namespace: branchTree
       1 +
     end ..drop
     needMerge ! if
+      ## move head to first branch
+      branchHeads 0 array.get tree [] .branchHead =
       ## heads identical -> no merge necessary
       0 MergeResult .success return
     end

@@ -226,7 +226,7 @@ namespace: map
   #template type : K type : V #end
   struct( K V hashMap ptr : map NodeId : mut next i32 : mut index ) =:: Iterator
   #:else
-  ( type : K type : V ) =>: Iterator
+  ( type : K type : V -> type ) =>: Iterator
     struct( K V hashMap ptr : map NodeId : mut next i32 : mut index )
   end
   #:end

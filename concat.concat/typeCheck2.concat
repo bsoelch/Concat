@@ -1271,6 +1271,14 @@ proc(
     ..dup optional.hasData if
       .data op .val .@Id =
     else ..drop end
+  else op .val .getId ?? _if ## convert static arguments to constants
+      op .val .getId .labelId =:: label
+      label labelContext id.labelFlags id.FLAG_STATIC & ? _if
+      ConstValue .none =:: mut argValue
+      state [] .argData @ label map.at =:: argData?
+      argData? optional.hasData _if
+    argData? .data [] .valType op .dataType =
+    argData? .data [] .value op .val .Constant =
   end
   state [] .interpreterActive if op @ state [] .interpreter @ false evaluateOperation ! _if
     return ## evaluate constants
@@ -3067,6 +3075,7 @@ proc(
   i64 : implId
   TypeCheckState ptr mut : state
 -> ) =>: typeCheckProcedure
+  state [] .program [] .autoTypes list.copy =:: globalAutoTypes
   state [] .program =:: program
   program [] .procedures procId list.at .data =:: currentProc
   ## compile procedures to local code of given file
@@ -3100,6 +3109,10 @@ proc(
     state [] .compiledOps list.appendAll
   procFile [] .localOps =
   state resetInterpreter
+  state [] .program [] .autoTypes
+    list.free ..drop
+    globalAutoTypes ## reset local auto-types
+  state [] .program [] .autoTypes =
   state [] .stack @ branchTree.clear ## TODO error on unhandled values
 end
 

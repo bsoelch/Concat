@@ -1756,19 +1756,51 @@ proc(
   idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   opType typeContext types.getProcIn ..drop =:: inType
-  inType 0 typeContext types.compositeGetElement =:: baseType
+  inType 0 typeContext types.compositeGetLabel
+      labelContext id.labelFlags id.FLAG_STATIC & ? if
+    1
+  else
+    0
+  end =:: firstArg
+  inType firstArg typeContext types.compositeGetElement =:: baseType
   baseType context toValType =:: baseVal
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg" string.wrap baseVal context appendUnaryOperator
       return
-    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64
-      ADD_PTR ADD_PTR_MUT case
-      ## internal representation of pointers identical to int
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
       sb "add" string.wrap baseVal context appendBinaryOperator
       return
-    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 PTR_DIFF case
+    ADD_PTR ADD_PTR_MUT case
+      baseType typeContext types.getBaseType =:: valueType
+      context popValue =:: offsetId
+      sb
+        ## correctly scale offset
+        "%s" sb.appendS
+        ValType .I64 context pushValue sb.appendI
+        " =l mul %s" sb.appendS
+        offsetId sb.appendI
+        ", " sb.appendS
+        valueType typeContext types.sizeOf sb.appendI
+        '\n' sb.appendC
+       "add" string.wrap ValType .PTR context appendBinaryOperator
+      return
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
       sb "sub" string.wrap baseVal context appendBinaryOperator
+      return
+    PTR_DIFF case
+      baseType typeContext types.getBaseType =:: valueType
+      sb
+        "sub" string.wrap baseVal context appendBinaryOperator
+        context popValue =:: resId
+        ## correctly scale offset
+        "%s" sb.appendS
+        ValType .I64 context pushValue sb.appendI
+        " =l udiv %s" sb.appendS
+        resId sb.appendI
+        ", " sb.appendS
+        valueType typeContext types.sizeOf sb.appendI
+        '\n' sb.appendC
       return
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
       sb "mul" string.wrap baseVal context appendBinaryOperator
