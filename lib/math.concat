@@ -1,3 +1,4 @@
+import numbers/float
 namespace: c
   proc( ..ctype.double -> ..ctype.double ) : extern floor
   proc( ..ctype.double -> ..ctype.double ) : extern ceil
@@ -44,13 +45,6 @@ namespace: c
     ..ctype.double : y
     ..ctype.double : x
   -> ..ctype.double ) : extern atan2
-
-  proc( ..ctype.float -> ..ctype.int ) : extern isnanf
-  proc( ..ctype.float -> ..ctype.int ) : extern isinff
-  proc( ..ctype.float -> ..ctype.int ) : extern isfinitef
-  proc( ..ctype.double -> ..ctype.int ) : extern isnan
-  proc( ..ctype.double -> ..ctype.int ) : extern isinf
-  proc( ..ctype.double -> ..ctype.int ) : extern isfinite
 end
 namespace: math
   proc( f64 -> f64 ) =>: export floor
@@ -136,16 +130,5 @@ namespace: math
   end
   proc( f64 f64 -> f64 ) =>: export atan2
     c.atan2
-  end
-end
-namespace: f64
-  proc( f64 -> bool ) =>: export isNaN
-    c.isnan i32 cast ?
-  end
-  proc( f64 -> bool ) =>: export isInfinite
-    c.isinf i32 cast ?
-  end
-  proc( f64 -> bool ) =>: export isFinite
-    c.isfinite i32 cast ?
   end
 end

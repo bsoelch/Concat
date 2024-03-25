@@ -1,3 +1,4 @@
+import numbers/float
 namespace: i32
   -0x8000_0000 i32 =: export MIN
    0x7fff_ffff i32 =: export MAX
@@ -9,28 +10,4 @@ end
 namespace: i64
   -0x8000_0000_0000_0000 i64 =: export MIN
    0x7fff_ffff_ffff_ffff i64 =: export MAX
-end
-namespace: f32
-  ## XXX min/max/eps
-  proc( -> f32 ) =>: export Infinity #:opt:!fold
-    1 f32 cast 0 f32 cast / return
-  end
-  proc( -> f32 ) =>: export -Infinity #:opt:!fold
-    -1 f32 cast 0 f32 cast / return
-  end
-  proc( -> f32 ) =>: export NaN #:opt:!fold
-    0 f32 cast 0 f32 cast / return
-  end
-end
-namespace: f64
-  ## XXX min/max/eps
-  proc( -> f64 ) =>: export Infinity #:opt:!fold
-    1 f64 cast 0 f64 cast / return
-  end
-  proc( -> f64 ) =>: export -Infinity #:opt:!fold
-    -1 f64 cast 0 f64 cast / return
-  end
-  proc( -> f64 ) =>: export NaN #:opt:!fold
-    0 f64 cast 0 f64 cast / return
-  end
 end

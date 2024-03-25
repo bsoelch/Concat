@@ -1,4 +1,6 @@
 ## XXX? bit-cast operation
+
+## TODO include floating point limits
 namespace: f32
   union( f32  : f i32 : i ) =:: Converter
   proc( f32 -> i32 ) =>: export bits
@@ -15,5 +17,31 @@ namespace: f64
   end
   proc( i64 -> f64 ) =>: export fromBits
     Converter cast .d return
+  end
+  0x8000'0000'0000'0000u =:: SIGN_FLAG
+  0x7ff0'0000'0000'0000u =:: EXP_MASK
+  0x000f'ffff'ffff'ffffu =:: MANTISSA_MASK
+  52 =:: EXP_SHIFT
+  0x7ff =:: SHIFTED_EXP_MASK
+  1023 =:: EXP_BIAS
+  proc( -> f64 ) =>: export NaN
+    0x7fff'ffff'ffff'ffffu fromBits
+  end
+  proc( -> f64 ) =>: export Infinity
+    0x7ff0'0000'0000'0000u fromBits
+  end
+  proc( -> f64 ) =>: export -Infinity
+    0xfff0'0000'0000'0000u fromBits
+  end
+  proc( f64 : x -> bool ) =>: export isNaN
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 !=
+  end
+  proc( f64 : x -> bool ) =>: export isInfinite
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 ==
+  end
+  proc( f64 : x -> bool ) =>: export isFinite
+    x bits EXP_MASK & EXP_MASK !=
   end
 end
