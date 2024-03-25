@@ -1,0 +1,19 @@
+## XXX? bit-cast operation
+namespace: f32
+  union( f32  : f i32 : i ) =:: Converter
+  proc( f32 -> i32 ) =>: export bits
+    Converter cast .i return
+  end
+  proc( i32 -> f32 ) =>: export fromBits
+    Converter cast .f return
+  end
+end
+namespace: f64
+  union( f64  : d i64 : i ) =:: Converter
+  proc( f64 -> i64 ) =>: export bits
+    Converter cast .i return
+  end
+  proc( i64 -> f64 ) =>: export fromBits
+    Converter cast .d return
+  end
+end
