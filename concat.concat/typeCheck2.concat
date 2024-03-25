@@ -379,9 +379,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state -> Type ) =>: popType
   1 pos state checkStackSize if Type .undefined return end
   state [] .stack @ branchTree.peek .data =:: typeInfo
   typeInfo [] .valueType =:: mut valType
-  valType typeContext types.isReference if ## unwrap references
-    valType typeContext types.getBaseType valType =
-  end
+  valType typeContext types.unwrapReference valType =
   valType types.primitive.TYPE != if
     "expected type got " sb.wrap
       valType labelContext typeContext sb.appendType
@@ -973,9 +971,8 @@ proc(
       state [] .stack @ branchTree.peek =:: value?
       value? optional.hasData if
         value? .data [] .valueType
-        ..dup typeContext types.isReference if
-          typeContext types.getBaseType ## unwrap reference
-        end
+          typeContext
+        types.unwrapReference
       else
         "missing type for declaration" sb.wrap op [] .pos errors appendError
         return
@@ -1181,6 +1178,11 @@ proc(
     op [] .val .getId .labelId
   else op [] .val .getName ?? _if
     op [] .val .getName
+  else op [] .val .Constant ?? _if
+      op [] .val .Constant =:: constVal
+      constVal .typeId ?? _if
+      constVal .typeId types.isNamedType _if
+    constVal .typeId typeContext types.namedTypeName
   else
     "unsupported operation for switch label of type " sb.wrap
       switchType labelContext typeContext sb.appendType
@@ -1769,12 +1771,9 @@ proc(
       state [] .stack @ branchTree.itr.start while
         branchTree.itr.hasNext
       do branchTree.itr.peekNext =:: typeInfo ## don't consume value
-        typeInfo [] .valueType typeContext types.isReference if
-          ## unwrap references
-          typeInfo [] .valueType typeContext types.getBaseType
-        else
-          typeInfo [] .valueType
-        end =:: baseType
+        typeInfo [] .valueType
+          typeContext types.unwrapReference
+        =:: baseType
         baseType typeContext types.isPointer if
           break
         end
@@ -1805,9 +1804,7 @@ proc(
         srcArray [] .copyMutableIndex =:: srcCopyMutIndex
       ..drop
       srcType
-        ..dup typeContext types.isReference if
-          typeContext types.getBaseType
-        end
+        typeContext types.unwrapReference
       =:: arrayType
       arrayType typeContext types.isArray if
         srcType
@@ -1966,11 +1963,11 @@ proc(
       end
       Type 2 array new =:: mut params
       state [] .stack @
-         0 branchTree.at .data
-      [] .valueType params @ 0 [] =
+         0 branchTree.at .data [] .valueType typeContext types.unwrapReference
+      params @ 0 [] =
       state [] .stack @
-         1 branchTree.at .data
-      [] .valueType params @ 1 [] =
+         1 branchTree.at .data [] .valueType  typeContext types.unwrapReference
+      params @ 1 [] =
       params @ 0 [] params @ 1 [] typeContext types.mergeTypes if
         ..drop
         "cannot check for equality between of values of types " sb.wrap
@@ -2854,9 +2851,7 @@ proc(
         return
       end
       value? .data [] .valueType =:: mut valType
-      valType typeContext types.isReference if ## unwrap references
-        valType typeContext types.getBaseType valType =
-      end
+      valType typeContext types.unwrapReference valType =
       valType typeContext types.isPointer valType typeContext types.isArray | if
         valType typeContext types.isFixedSize ! if
           "invalid operand for : " sb.wrap

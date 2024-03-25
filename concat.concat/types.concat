@@ -523,6 +523,26 @@ namespace: types
     unwrapNamed
     ..dup .reference ?? ..swap .mutableReference ?? | return
   end
+  proc(
+    Type : box
+    TypeContext ptr : context
+  -> Type ) =>: export unwrapReference
+    box context isReference ! if
+      box return
+    end
+    box
+      ..dup .reference ?? if
+        context [] .compositeData
+          ..swap .reference
+        list.get return
+      end
+      ..dup .mutableReference ?? if
+        context [] .compositeData
+          ..swap .mutableReference
+        list.get return
+      end
+    ..unreachable
+  end
   proc( Type TypeContext ptr -> bool ) =>: export isFixedSize
     =:: context
     context unwrapNamed

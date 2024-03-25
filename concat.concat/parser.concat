@@ -1927,34 +1927,32 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart opCallPtr state appendOp
       return
     else ..dup "new" string.wrap string.eq _if =:: opName
-      _EXPERIMENTAL_ if state [] .currentProc optional.hasData  _if
+      _EXPERIMENTAL_ if
         ## new in procedure -> determine type in type-check phase
         Type .undefined fileState [] .wordStart opNew state appendOp
         return
       end
-      state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
+      state hasConst if
         "missing parameter for \"" sb.wrap
           opName sb.appendStr
         "\" expected type or enum-label" sb.appendS fileState [] .wordStart state appendError2
         return
       end
-      state _EXPERIMENTAL_ if
-        popConst2 .valueType
-      else
-        popConst =:: const const .val const .valueType
-      end =:: valType =:: value
-        value .typeId ?? if value .typeId
-          ..dup typeContext types.isTuple ..over typeContext types.isArray | if
-            fileState [] .wordStart opNew state appendOp
-            return
-          end
-          ..drop
-        else value .enumLabel ?? _if
-          valType
-          value .enumLabel
-          fileState [] .wordStart opNewEnum state appendOp
+      state popConst =:: const
+      const .valueType =:: valType
+      const .val =:: value
+      value .typeId ?? if value .typeId
+        ..dup typeContext types.isTuple ..over typeContext types.isArray | if
+          fileState [] .wordStart opNew state appendOp
           return
         end
+        ..drop
+      else value .enumLabel ?? _if
+        valType
+        value .enumLabel
+        fileState [] .wordStart opNewEnum state appendOp
+        return
+      end
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS

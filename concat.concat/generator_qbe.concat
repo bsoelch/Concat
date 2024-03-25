@@ -2477,6 +2477,7 @@ proc(
         true isPtr =
       end
       arrayType typeContext types.getArraySize =:: sizes
+      arrayType typeContext types.getBaseType =:: baseType
       sizes .length
         arrayType typeContext types.isFixedSize if 2 - else 1 - end
       =:: mut sizeOffset
@@ -2524,6 +2525,15 @@ proc(
             '\n' sb.appendC
           end
         end
+        offsetId prevId =
+        context nextTmpId offsetId =
+        "%t" sb.appendS
+        offsetId sb.appendI
+        " =l mul %t" sb.appendS
+        prevId sb.appendI
+        ", " sb.appendS
+        baseType typeContext types.sizeOf sb.appendI
+        '\n' sb.appendC
         context popValue =:: srcId
         "%s" sb.appendS
         isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
@@ -3483,11 +3493,13 @@ proc(
         retCount 1 == if
           context popValue
           "ret %s" string.wrap
-        else
+        else retCount 0 > _if
           retType context true appendAlloc =:: tmpId
           retType tmpId op [] .pos context initializeTupleQBE
           tmpId
           "ret %t" string.wrap
+        else
+          -1i64  string.empty ## values will be ignored
         end =:: retStr =:: retId
         outTypes .length 1 - while ..dup 0 >= do =:: i
           outTypes i array.get =:: elt
