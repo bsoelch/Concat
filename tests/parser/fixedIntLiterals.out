@@ -1,32 +1,32 @@
 -----------------
 identifier "a":
- - local variable (0) "a" ( i64 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:2:34
+ - global variable "a" ( i64 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:1:32
 -----------------
 -----------------
 identifier "b":
- - local variable (1) "b" ( i64 [ integer: -1 ] ) declared at fixedIntLiterals.concat:3:30
+ - global variable "b" ( i64 [ integer: -1 ] ) declared at fixedIntLiterals.concat:2:28
 -----------------
 -----------------
 identifier "c":
- - local variable (2) "c" ( i32 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:4:33
+ - global variable "c" ( i32 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:3:31
 -----------------
 -----------------
 identifier "d":
- - local variable (3) "d" ( i32 [ integer: 4294967295 ] ) declared at fixedIntLiterals.concat:5:20
+ - global variable "d" ( i32 [ integer: 4294967295 ] ) declared at fixedIntLiterals.concat:4:18
 -----------------
 -----------------
 identifier "e":
- - local variable (4) "e" ( i32 [ integer: -1 ] ) declared at fixedIntLiterals.concat:6:10
+ - global variable "e" ( i32 [ integer: -1 ] ) declared at fixedIntLiterals.concat:5:8
 -----------------
 -----------------
 identifier "f":
- - local variable (5) "f" ( i16 [ integer: 1234 ] ) declared at fixedIntLiterals.concat:7:15
+ - global variable "f" ( i16 [ integer: 1234 ] ) declared at fixedIntLiterals.concat:6:13
 -----------------
 -----------------
 identifier "g":
- - local variable (6) "g" ( i8 [ integer: -2 ] ) declared at fixedIntLiterals.concat:8:12
+ - global variable "g" ( i8 [ integer: -2 ] ) declared at fixedIntLiterals.concat:7:10
 -----------------
 -----------------
 identifier "h":
- - local variable (7) "h" ( i8 [ integer: 3 ] ) declared at fixedIntLiterals.concat:9:11
+ - global variable "h" ( i8 [ integer: 3 ] ) declared at fixedIntLiterals.concat:8:9
 -----------------

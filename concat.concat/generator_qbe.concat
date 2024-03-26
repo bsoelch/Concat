@@ -707,11 +707,45 @@ namespace: sb
       value switch
         boolean case
           value .boolean if '1' else '0' end sb.appendC return
-        int case value .int sb.appendI return
+        int case
+          t typeContext types.numberSize =:: numSize
+          numSize types.primitive.I8
+              typeContext types.numberSize == if
+            value .int i8 cast sb.appendI
+          else numSize types.primitive.I16
+              typeContext types.numberSize == _if
+            value .int i16 cast sb.appendI
+          else numSize types.primitive.I32
+              typeContext types.numberSize == _if
+            value .int i32 cast sb.appendI
+          else numSize types.primitive.I64
+              typeContext types.numberSize == _if
+            value .int sb.appendI
+          else numSize types.primitive.FLOAT32
+              typeContext types.numberSize == _if
+            value .int f32 cast f32.bits sb.appendI
+          else numSize types.primitive.FLOAT64
+              typeContext types.numberSize == _if
+            value .int f64 cast f64.bits sb.appendI
+          else
+            ..unreachable ## unknown number type
+          end
+          return
         break
         chr case value .chr sb.appendI return
         break
-        Float case value .Float f64.bits sb.appendI return
+        Float case
+          t typeContext types.numberPrecision =:: numPrec
+          numPrec types.primitive.FLOAT32
+              typeContext types.numberPrecision == if
+            value .Float f32 cast f32.bits sb.appendI
+          else numPrec types.primitive.FLOAT64
+              typeContext types.numberPrecision == _if
+            value .Float f64.bits sb.appendI
+          else
+            ..unreachable ## unknown number type
+          end
+          return
         enumLabel case break
         genericArg case
           context [] .currentProc

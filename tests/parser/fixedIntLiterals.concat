@@ -1,18 +1,18 @@
-proc( -> ) =>: main
-  10_000_000_000_000_000i256 =:: a
-  0xffff_ffff_ffff_ffffu =:: b
-  10_000_000_000_000_000i32 =:: c
-  0xffff_ffffu =:: d
-  -1 =:: e
-  1234i16 =:: f
-  -2i1 =:: g
-  3u1 =:: h
-  ..?parser.find.a
-  ..?parser.find.b
-  ..?parser.find.c
-  ..?parser.find.d
-  ..?parser.find.e
-  ..?parser.find.f
-  ..?parser.find.g
-  ..?parser.find.h
-end
+10_000_000_000_000_000i256 =:: a
+0xffff_ffff_ffff_ffffu =:: b
+10_000_000_000_000_000i32 =:: c
+0xffff_ffffu =:: d
+-1 =:: e
+1234i16 =:: f
+-2i1 =:: g
+3u1 =:: h
+..?parser.find.a
+..?parser.find.b
+..?parser.find.c
+..?parser.find.d
+..?parser.find.e
+..?parser.find.f
+..?parser.find.g
+..?parser.find.h
+
+proc( -> ) =>: main end

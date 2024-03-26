@@ -621,13 +621,30 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
       isGlobal target prog constEnd
       return
     int case
+      constType typeContext types.numberSize =:: numSize
+      const .int =:: mut constVal
+      numSize types.primitive.I8
+          typeContext types.numberSize == if
+        constVal i8 cast constVal =
+        i8.MIN i64 cast
+      else numSize types.primitive.I16
+          typeContext types.numberSize == _if
+        constVal i16 cast constVal =
+        i16.MIN i64 cast
+      else numSize types.primitive.I32
+          typeContext types.numberSize == _if
+        constVal i32 cast constVal =
+        i32.MIN i64 cast
+      else
+        i64.MIN
+      end =:: minVal
       constType isGlobal target prog constStart
-        const .int i64.MIN == if
+        constVal minVal == if
           '(' sb.appendC
-          const .int 1 + sb.appendI
+          constVal 1 + sb.appendI
           "-1)" sb.appendS
         else
-          const .int sb.appendI
+          constVal sb.appendI
         end
       isGlobal target prog constEnd
       return
