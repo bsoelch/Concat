@@ -165,7 +165,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: freezeInterpreter
     constInfo [] .valueId state replaceLabel
     1 +
   end ..drop
-  ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initilizer)
+  ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initializer)
   ##  -> reset interpreter
   interpreter resetContext
   false state [] .interpreterActive =
@@ -1613,8 +1613,8 @@ proc(
             ..drop return
           end ..drop
           ## update constant value in identifier if stack-value is constant
-          idInfo .idType .GLOBAL_VAR ?? if constVal .none ?? ! _if
-              idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! _if
+          idInfo .idType .GLOBAL_VAR ?? if
+              constVal .none ?? ! _if
             ## getIdentifier
               idInfo .labelId
               idContext
