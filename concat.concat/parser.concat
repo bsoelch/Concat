@@ -3085,6 +3085,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state -> FileId io.IOError 
         FILE_ID_NONE ..swap return
       end
     end ..drop
+    state [] .openBlocks .length =:: blockCount
     fileState @
       fileBody sb.asStr while
         ..over nextToken ..over.2 state parseOperation
@@ -3094,5 +3095,15 @@ proc( stringBuilder : fileName ParserState ptr mut : state -> FileId io.IOError 
     fileBody sb.free ..drop
     state [] .currentFile ..swap
   state [] .currentFile =
+  state [] .openBlocks .length blockCount > if
+    ## XXX? print start of last block
+    "unclosed block at end of file" sb.wrap
+      fileState .currentPos
+    state appendError2
+  else state [] .openBlocks .length blockCount < _if
+    "file closed additional code block" sb.wrap
+      fileState .currentPos
+    state appendError2
+  end
   io.FILE_ERROR_NONE return
 end
