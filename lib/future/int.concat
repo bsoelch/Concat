@@ -84,7 +84,7 @@ namespace: int
     254803968i64 282475249i64 312500000i64 345025251i64 380204032i64 418195493i64 459165024i64 503284375i64
     550731776i64 601692057i64 656356768i64 714924299i64 777600000i64 844596301i64 916132832i64
   } =:: maxSafeI32Pow
-  maxSafeI32Pow ..length number.MAX_BASE 1 + == "maxSafeI32Pow.length==maxBase+1" ..assert 
+  maxSafeI32Pow ..length number.MAX_BASE 1 + == assert  "maxSafeI32Pow.length==maxBase+1"
   {
     0 0 32 20 16 13 12 11 10 10
     9 9 8 8 8 8 8 7 7 7
@@ -94,7 +94,7 @@ namespace: int
     5 5 5 5 5 5 5 5 5 5
     5 5 5
   } =:: maxSafeI32Digits
-  maxSafeI32Digits ..length number.MAX_BASE 1 + == "maxSafeI32Digits.length==maxBase+1" ..assert 
+  maxSafeI32Digits ..length number.MAX_BASE 1 + ==  assert "maxSafeI32Digits.length==maxBase+1"
   { ## bits per digits in base given by index, multiplied by 1024 and rounded up
     0 0 1024 1624 2048 2378 2648 2875 3072 3247
     3402 3543 3672 3790 3899 4001 4096 4186 4271 4350
@@ -104,7 +104,7 @@ namespace: int
     5780 5809 5838 5866 5894 5921 5947 5973 5999 6024
     6049 6074 6098
   } =:: bitsPerDigit
-  bitsPerDigit ..length number.MAX_BASE 1 + == "bitsPerDigit.length==maxBase+1" ..assert 
+  bitsPerDigit ..length number.MAX_BASE 1 + ==  assert "bitsPerDigit.length==maxBase+1"
   proc( i64 : auto k i8 k ptr : data -> int ) =>: export fromStr ## XXX better name
     data string.wrap 0 fromString ..drop return ## TODO error handling
   end

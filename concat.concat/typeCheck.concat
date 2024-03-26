@@ -3029,7 +3029,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       break
     hasName hasElement builtIn
     typeModifier implementProcedure
-    checkEnumLabel checkArrayIndex setEnumLabel getArgLen call call_old case
+    checkEnumLabel checkArrayIndex setEnumLabel getArgLen
+    call call_old Assert case
       "operation " sb.wrap
         op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS

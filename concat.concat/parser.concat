@@ -2838,33 +2838,31 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "\" does not exist" sb.appendS fileState [] .wordStart state appendError2
       else ..drop end
       return
-    else ..dup "..assert" string.wrap string.eq _if =:: opName
-      state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
-        "missing message string for assertion, message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2
+    else ..dup "assert" string.wrap string.eq _if =:: opName
+      fileState nextToken
+      ..dup .STRING ?? ! if ..drop
+        "assertion message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2
+        return
+      end .STRING  =:: message
+      _EXPERIMENTAL_ if
+        ## opAssert
+          message labelContext id.wrapStringConstant
+          fileState [] .wordStart
+        opAssert state appendOp
         return
       end
-      state _EXPERIMENTAL_ if popConst2 ..drop else popConst .val end
-        ..dup .str ?? ! if
-          "expected message string got: " sb.wrap
-            ..swap constContext typeContext sb.appendConstant
-          fileState [] .wordStart state appendError2
-          return
-        end .str
-      =:: message
-      state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
-        ## TODO local assertions
+      state hasConst ! if
         "unimplemented: dynamic assertions" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      state _EXPERIMENTAL_ if popConst2 ..drop else popConst .val end
-        ..dup .boolean ?? ! if
+      state popConst .val  ..dup .boolean ?? ! if
           "expected boolean got " sb.wrap
             ..swap constContext typeContext sb.appendConstant
           fileState [] .wordStart state appendWarning2
           false
         else .boolean end ! if
           "assertion failed \"" sb.wrap
-            message labelContext sb.appendStringConst
+            message sb.appendStr
             "\" " sb.appendS
           fileState [] .wordStart state appendError2
         end

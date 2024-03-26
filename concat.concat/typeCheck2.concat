@@ -1640,6 +1640,7 @@ proc(
       op state appendOp ..drop
       op .dataType BlockInfo .Procedure state openBlock
       true state [] .reachable =
+      state resetInterpreter
       op .dataType typeContext types.getProcIn if ..drop
         "wrong type for procedure initialization: " sb.wrap
           op .dataType typeContext sb.appendType
@@ -3119,8 +3120,9 @@ proc(
         op .pos errors appendError
       end
       return
-    setId setLabel setElement setArrayElement autoCast copy call_old case
-      "unsupported operation" sb.wrap
+    setId setLabel setElement setArrayElement autoCast
+    copy call_old Assert case
+      "unsupported operation: " sb.wrap
         op program sb.appendOp
       op .pos errors appendError
       return

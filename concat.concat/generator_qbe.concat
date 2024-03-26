@@ -3678,11 +3678,12 @@ proc(
     Print case
       context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
       break
-    setId autoTypedInitializeId
+    setId autoTypedInitializeId Assert
     setElement setArrayElement callPtr call_old
     argc getArg getArgLen unaryOperator
     setEnumLabel checkArrayIndex typeInfo
-    compilerInfo getName setName @Name getLabel setLabel @Label length size typeModifier hasLabel hasName case
+    compilerInfo getName setName @Name getLabel setLabel
+    @Label length size typeModifier hasLabel hasName case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap

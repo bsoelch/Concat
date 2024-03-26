@@ -101,6 +101,7 @@ enum(
             LabelId : mut @Name
             LabelId : mut hasName
        TypeModifier : mut typeModifier
+     StringConstant : Assert
      TypeMemoryInfo : typeInfo
                       unreachable
        CompilerInfo : compilerInfo
@@ -262,6 +263,12 @@ proc( TypeModifier FilePosition  -> Operation ) =>: export opTypeModifier
 end
 proc( FilePosition : pos -> Operation ) =>: export opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
+end
+proc(
+  StringConstant : message
+  FilePosition : pos
+-> Operation ) =>: export opAssert
+  message OpValue .Assert Type .empty pos Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export opTypesInfo
   count CompilerInfo .typeInfo OpValue .compilerInfo Type .undefined  pos Operation new return
@@ -735,6 +742,11 @@ namespace: sb
         hasName case
           "has name: " sb.appendS
           ..over .val .hasName labelContext sb.appendLabelName
+          break
+        Assert case
+          "assert \"" sb.appendS
+          ..over .val .Assert labelContext sb.appendStringConst
+          '"' sb.appendC
           break
         unreachable case
           "unreachable " sb.appendS

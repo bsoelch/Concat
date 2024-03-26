@@ -482,7 +482,9 @@ proc(
         end
         1 -
       end ..drop
-      "return outside procedure" sb.wrap op [] .pos errors appendError
+      showErrorMessages if
+        "return outside procedure" sb.wrap op [] .pos errors appendError
+      end
       true return
     block case
       op [] .val .block .blockType switch
@@ -1023,6 +1025,30 @@ proc(
         op [] .pos
         context
       pushValue
+      false return
+    Assert case
+      showErrorMessages op [] .pos context popValue if
+        ..drop.2
+        showErrorMessages if
+          "missing argument for assert, expected boolean" sb.wrap
+          op [] .pos errors appendError
+        end
+        true return
+      end =:: value =:: valInfo
+      value .boolean ?? ! if
+        showErrorMessages if
+          "wrong constant value for assert, expected boolean got: " sb.wrap
+            value constContext typeContext sb.appendConstant
+          op [] .pos errors appendError
+        end
+        value valInfo context unpopValue
+        true return
+      end
+      value .boolean ! if
+        "assertion failed: " sb.wrap
+          op [] .val .Assert labelContext sb.appendStringConst
+        op [] .pos errors appendError
+      end
       false return
     setId @Id initializeId autoTypedInitializeId
     getLabel setLabel @Label
