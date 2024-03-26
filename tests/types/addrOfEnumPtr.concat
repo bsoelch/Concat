@@ -1,9 +1,9 @@
-struct( i32 : A i32 : B ) =:: A
-enum( i32 : A A : mut B ) =:: B
-struct( i32 : A B : mut B ) =:: C
+struct( i32 : a i32 : b ) =:: A
+enum( i32 : a A : mut b ) =:: B
+struct( i32 : a B : mut b ) =:: C
 
 proc( -> ) =>: main
-  1 2 3 A new B .B C new =:: mut struct
+  1 2 3 A new B .b C new =:: mut struct
   struct @ =:: structPtr
-  structPtr [] .B .B @ =:: iPtr
+  structPtr [] .b .b @ =:: iPtr
 end
