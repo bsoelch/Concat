@@ -227,6 +227,58 @@ proc( TypeCheckState ptr mut : state -> ) =>: resetInterpreter
   true state [] .interpreterActive =
 end
 
+
+proc(
+  bool : printValues
+  i32 : maxCount
+  TypeCheckState ptr mut : state
+-> ) =>: printTypes
+  state [] .program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  maxCount =:: mut remaining
+  printValues if
+    "stack:\n" sb.wrap
+  else
+    "types:\n" sb.wrap
+  end
+    "-----------------\n" sb.appendS
+  =:: mut sb
+  state [] .stack @ branchTree.itr.start while
+    branchTree.itr.hasNext do branchTree.itr.next =:: val
+    remaining 0 > if
+        remaining 1 - remaining =
+        remaining 0 == _if
+      break
+    end
+    sb
+      printValues if val [] .valueId id.LABEL_ID_NONE != _if
+        val [] .valueId labelContext sb.appendLabelName
+        ": " sb.appendS
+      end
+      val [] .valueType typeContext sb.appendType
+      printValues if
+        val [] .value .none ?? ! if
+          " { " sb.appendS
+          val [] .value
+            constContext
+            typeContext
+          sb.appendConstant
+          " }" sb.appendS
+        end
+        " pushed at " sb.appendS
+        val [] .pushedAt sb.appendPos
+      end
+      '\n' sb.appendC
+    sb =
+  end ..drop
+  sb
+    "-----------------\n" sb.appendS
+    io.stdOut ..over io.fputSb ..drop
+  sb.free ..drop
+end
+
 proc(
   i64 : count
   FilePosition : pos
@@ -2970,8 +3022,7 @@ proc(
     unaryOperator
     checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
-    hasName hasElement
-    compilerInfo case
+    hasName hasElement case
       break
     Print case
       1 op .pos state checkStackSize if
@@ -3073,6 +3124,20 @@ proc(
         op program sb.appendOp
       op .pos errors appendError
       return
+    compilerInfo case
+      op .val .compilerInfo switch
+        typeInfo case
+          false op .val .compilerInfo .typeInfo state printTypes
+          return
+        stackInfo case
+          true op .val .compilerInfo .stackInfo state printTypes
+          return
+        compiledOps case
+          return ## TODO print ops
+        find case
+          return ## TODO find
+      end
+      break
   end
   "type-checking for operation: " sb.wrap
     op program sb.appendOp
