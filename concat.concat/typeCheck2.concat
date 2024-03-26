@@ -292,9 +292,9 @@ proc(
 -> i64 #+argOffset+# bool ) =>: requireTypes
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .constContext @ =:: constContext
-  state [] .program [] .idContext .typeContext @ =:: typeContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .childIds .length =:: argOffset
   1 while ..dup types .length <= do =:: i
     types types .length i - array.get =:: expectedType
@@ -345,9 +345,9 @@ proc(
     "wrong type for " sb.wrap
       name sb.appendStr
       " expected " sb.appendS
-      expectedType labelContext typeContext sb.appendType
+      expectedType typeContext sb.appendType
       " got " sb.appendS
-      typeInfo .valueType labelContext typeContext sb.appendType
+      typeInfo .valueType typeContext sb.appendType
     pos errors appendError
     i 1 +
   end ..drop
@@ -373,28 +373,28 @@ proc( FilePosition : pos TypeCheckState ptr mut : state -> Type ) =>: popType
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .constContext @ =:: constContext
-  state [] .program [] .idContext .typeContext @ =:: typeContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   1 pos state checkStackSize if Type .undefined return end
   state [] .stack @ branchTree.peek .data =:: typeInfo
   typeInfo [] .valueType =:: mut valType
   valType typeContext types.unwrapReference valType =
   valType types.primitive.TYPE != if
     "expected type got " sb.wrap
-      valType labelContext typeContext sb.appendType
+      valType typeContext sb.appendType
     pos errors appendError
     Type .undefined return
   end
   typeInfo [] .value .typeId ?? ! if
     "expected type-constant got " sb.wrap
-      typeInfo [] .value constContext labelContext typeContext sb.appendConstant
+      typeInfo [] .value constContext typeContext sb.appendConstant
     pos errors appendError
     Type .undefined return
   end
   typeInfo [] .opIndex state currentBlockStart < if
     "type-constant " sb.wrap
-      typeInfo [] .value constContext labelContext typeContext sb.appendConstant
+      typeInfo [] .value constContext typeContext sb.appendConstant
       " at " sb.appendS
       typeInfo [] .pushedAt sb.appendPos
       " was declared outside current block" sb.appendS
@@ -676,9 +676,9 @@ proc(
   mergePoint .state [] .program =:: program
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
-  program [] .idContext .constContext @ =:: constContext
-  program [] .idContext .typeContext @ =:: typeContext
-  program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   toMerge .length 1 == if
     toMerge 0 array.get [] return
   end
@@ -696,11 +696,11 @@ proc(
           "cannot merge the branches of " sb.wrap
             mergePoint .blockName sb.appendStr
             "\n cannot merge types " sb.appendS
-            mergedType labelContext typeContext sb.appendType
+            mergedType typeContext sb.appendType
             " ( pushed at " sb.appendS
             root [] .pushedAt sb.appendPos
             " )\n and " sb.appendS
-            current [] .valueType labelContext typeContext sb.appendType
+            current [] .valueType typeContext sb.appendType
             " ( pushed at " sb.appendS
             current [] .pushedAt sb.appendPos
             " )\n" sb.appendS
@@ -721,11 +721,11 @@ proc(
           "cannot merge the branches of " sb.wrap
             mergePoint .blockName sb.appendStr
             "\n expected: " sb.appendS
-            mergedType labelContext typeContext sb.appendType
+            mergedType typeContext sb.appendType
             " ( pushed at " sb.appendS
             root [] .pushedAt sb.appendPos
             " )\n got: " sb.appendS
-            current [] .valueType labelContext typeContext sb.appendType
+            current [] .valueType typeContext sb.appendType
             " ( pushed at " sb.appendS
             current [] .pushedAt sb.appendPos
             " )\n" sb.appendS
@@ -805,9 +805,9 @@ proc(
   state [] .program =:: program
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
-  program [] .idContext .constContext @ =:: constContext
-  program [] .idContext .typeContext @ =:: typeContext
-  program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   "unreachable operation: " sb.wrap
     op [] program sb.appendOp
   op [] .pos errors appendError
@@ -1055,13 +1055,13 @@ proc(
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .currentProcType =:: procType
   procType op [] .dataType =
   procType typeContext types.isProcedure ! if
     "unexpected type for return: " sb.wrap
-      procType labelContext typeContext sb.appendType
+      procType typeContext sb.appendType
       " expected procedure" sb.appendS
     op [] .pos errors appendError
     return
@@ -1089,7 +1089,7 @@ proc(
   state [] .stack branchTree.depth 0 > if
     state [] .stack @ branchTree.pop .data =:: val
     "extra value at the end of procedure" sb.wrap
-       val [] .valueType labelContext typeContext sb.appendType
+       val [] .valueType typeContext sb.appendType
        " ( pushed at " sb.appendS
        val [] .pushedAt sb.appendPos
        " )" sb.appendS
@@ -1106,9 +1106,9 @@ proc(
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .constContext @ =:: constContext
-  state [] .program [] .idContext .typeContext @ =:: typeContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   program [] .switchData
     switchId list.at .data
   =:: switchData
@@ -1129,7 +1129,6 @@ proc(
         else
           label
             constContext
-            labelContext
             typeContext
           sb.appendConstant
         end
@@ -1154,9 +1153,9 @@ proc(
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .constContext @ =:: constContext
-  state [] .program [] .idContext .typeContext @ =:: typeContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .interpreter .stack =:: labels
   state [] .interpreter .stackInfo =:: stackInfo
   0 while ..dup labels .length < do =:: i
@@ -1166,9 +1165,9 @@ proc(
     labelInfo [] .valueType switchType types.typeEquals ! if
       label .int ?? ! if
         "invalid constant for switch label of type " sb.wrap
-          switchType labelContext typeContext sb.appendType
+          switchType typeContext sb.appendType
           " : " sb.appendS
-          label constContext labelContext typeContext sb.appendConstant
+          label constContext typeContext sb.appendConstant
         labelInfo [] .pushedAt errors appendError
       end
       ## XXX ensure correct size of int label
@@ -1186,9 +1185,9 @@ proc(
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .constContext @ =:: constContext
-  state [] .program [] .idContext .typeContext @ =:: typeContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state peekBlock .data [] .Switch @ =:: switchBlock
   switchBlock [] .switchType =:: switchType
   switchBlock [] .blockId =:: switchId
@@ -1240,7 +1239,7 @@ proc(
     constVal .typeId typeContext types.namedTypeName
   else
     "unsupported operation for switch label of type " sb.wrap
-      switchType labelContext typeContext sb.appendType
+      switchType typeContext sb.appendType
       " : " sb.appendS
       op [] program sb.appendOp
       " expected identifier" sb.appendS
@@ -1250,11 +1249,10 @@ proc(
   ## compositeFindLabel
     switchType
     labelId
-    labelContext
   typeContext types.compositeFindLabel =:: labelIndex
   labelIndex 0 < if
     "enum " sb.wrap
-      switchType labelContext typeContext sb.appendType
+      switchType typeContext sb.appendType
       " does not have a label " sb.appendS
       labelId labelContext sb.appendLabelName
     op [] .pos errors appendError
@@ -1277,7 +1275,7 @@ proc(
 -> IdentifierInfo optional ) =>: resolveIdentifer
   state [] .program =:: program
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
   label labelContext id.inLabelNamespace
   label state [] .currentFile idContext id.findIdentifierByLabel if
     ..drop.2 IdentifierInfo optional.empty return
@@ -1293,9 +1291,9 @@ proc(
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
-  state [] .program [] .idContext .constContext @ =:: constContext
-  state [] .program [] .idContext .typeContext @ =:: typeContext
-  state [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   op .dataType .autoType ?? if ## try resolving auto-types
     op .dataType types.getTypeId =:: id
     id 0 >= id program [] .autoTypes .length < & if
@@ -1592,7 +1590,7 @@ proc(
       true state [] .reachable =
       op .dataType typeContext types.getProcIn if ..drop
         "wrong type for procedure initialization: " sb.wrap
-          op .dataType labelContext typeContext sb.appendType
+          op .dataType typeContext sb.appendType
           " expected procedure" sb.appendS
         op .pos errors appendError
         return
@@ -1626,7 +1624,7 @@ proc(
       target [] .valueType typeContext types.isReference =:: isReference
       isReference target [] .valueType typeContext types.isPointer | ! if
         "can only assign to pointers or references got: " sb.wrap
-          target [] .valueType labelContext typeContext sb.appendType
+          target [] .valueType typeContext sb.appendType
         op .pos errors appendError
         return
       end
@@ -1634,14 +1632,14 @@ proc(
         target [] .valueId id.LABEL_ID_NONE != if
           ## TODO? resolve reference path from operation
           "cannot assign to immutable value of type " sb.wrap
-            target [] .valueType labelContext typeContext sb.appendType
+            target [] .valueType typeContext sb.appendType
             " in \"" sb.appendS
             target [] .valueId labelContext sb.appendLabelName
             '"' sb.appendC
           op .pos errors appendError
         else
           "cannot assign to immutable type: " sb.wrap
-            target [] .valueType labelContext typeContext sb.appendType
+            target [] .valueType typeContext sb.appendType
           op .pos errors appendError
         end
         return
@@ -1704,7 +1702,6 @@ proc(
       ## compositeFindLabel
         containerType
         labelId
-        labelContext
         typeContext
       types.compositeFindLabel =:: elementIndex
       elementIndex 0 < if
@@ -1715,7 +1712,7 @@ proc(
           return
         end
         "type " sb.wrap
-          containerType labelContext typeContext sb.appendType
+          containerType typeContext sb.appendType
           " does not have a label \"" sb.appendS
           labelId labelContext sb.appendLabelName
           '"' sb.appendC
@@ -1751,7 +1748,7 @@ proc(
           "cannot take address of enum-creator \"" sb.wrap
           labelId labelContext sb.appendLabelName
           "\" in " sb.appendS
-          containerType labelContext typeContext sb.appendType
+          containerType typeContext sb.appendType
           op .pos errors appendError
           return
         end
@@ -1774,7 +1771,7 @@ proc(
       end
       isAddr if srcType typeContext types.isPointer srcType typeContext types.isReference | ! _if
         "can only take address of pointers or references got: \"" sb.wrap
-        srcType labelContext typeContext sb.appendType
+        srcType typeContext sb.appendType
         op .pos errors appendError
         return
       end
@@ -1847,7 +1844,7 @@ proc(
           "invalid type for operation " sb.wrap
             op program sb.appendOp
             " " sb.appendS
-            typeInfo [] .valueType labelContext typeContext sb.appendType
+            typeInfo [] .valueType typeContext sb.appendType
             " is not a pointer or integer" sb.appendS
           op .pos errors appendError
           return
@@ -1976,9 +1973,9 @@ proc(
         .Cast! ??
       typeContext types.canCast ! if
         "cannot cast " sb.wrap
-          value .valueType labelContext typeContext sb.appendType
+          value .valueType typeContext sb.appendType
           " to " sb.appendS
-          op .dataType labelContext typeContext sb.appendType
+          op .dataType typeContext sb.appendType
         op .pos errors appendError
       end
       ## XXX try cast constant on stack
@@ -2034,9 +2031,9 @@ proc(
       params @ 0 [] params @ 1 [] typeContext types.mergeTypes if
         ..drop
         "cannot check for equality between of values of types " sb.wrap
-          params @ 0 [] labelContext typeContext sb.appendType
+          params @ 0 [] typeContext sb.appendType
           " and " sb.appendS
-          params @ 1 [] labelContext typeContext sb.appendType
+          params @ 1 [] typeContext sb.appendType
         op .pos errors appendError
         return
       end =:: argType
@@ -2221,7 +2218,7 @@ proc(
           switchType typeContext types.isInt ! if
             switchType typeContext types.isEnum ! _if
             "cannot switch values of type " sb.wrap
-              switchType labelContext typeContext sb.appendType
+              switchType typeContext sb.appendType
             op .pos errors appendError
           end
           switchType op .dataType =
@@ -2607,7 +2604,7 @@ proc(
               labels  .length eltCount < if
                 "switch statement does not cover all labels in enum " sb.wrap
                   switchBlock [] .switchType
-                    labelContext typeContext
+                    typeContext
                   sb.appendType
                   "\nmissing labels:\n" sb.appendS
                   0 while ..dup eltCount < do =:: i
@@ -2898,7 +2895,7 @@ proc(
           "invalid operand for : " sb.wrap
             op program sb.appendOp
             " cannot get the length of " sb.appendS
-            valType labelContext typeContext sb.appendType
+            valType typeContext sb.appendType
           op .pos errors appendError
           return
         end
@@ -2963,7 +2960,7 @@ proc(
       end ## XXX? support length on structs/tuples/enums
       "unsupported argument type for " sb.wrap
         op program sb.appendOp
-        valType labelContext typeContext sb.appendType
+        valType typeContext sb.appendType
       op .pos errors appendError
       return
       break
@@ -3164,9 +3161,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   TypeCheckState new =:: mut state
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
-  program [] .idContext .constContext @ =:: constContext
-  program [] .idContext .typeContext @ =:: typeContext
-  program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ## global code
   0 while ..dup program [] .progFiles .length < do
     ..dup state .currentFile =

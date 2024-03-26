@@ -56,6 +56,9 @@ namespace: id
     NamespaceInfo new
     LabelContext new return
   end
+  proc( LabelContext -> LabelContext ) =>: export freeLabelContext
+    ## TODO free label context
+  end
 
   proc( LabelContext ptr -> LabelId ) =>: export labelOffset
     [] .labels .length LabelId cast return
@@ -168,7 +171,7 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  proc( i64 : id LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export newDummyLabel
+  proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export newDummyLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       id sb.appendI
@@ -180,7 +183,7 @@ namespace: id
         pos
         context [] .namespaceInfo
         srcFile
-        flags
+        id.FLAG_DUMMY id.FLAG_MUTABLE |
       Label new list.append
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return

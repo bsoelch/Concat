@@ -74,7 +74,7 @@ proc(
 -> Type ) =>: replaceGenerics
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  idContext [] .labelContext @ =:: labelContext
+  typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   src typeContext types.containsGeneric | ! if
     src return
@@ -255,7 +255,6 @@ proc(
         generatorName
         generatorArgs
         typeContext
-        labelContext
         constContext
       types.findGeneratedType
         if ## new generated type
@@ -287,7 +286,7 @@ proc(
 -> bool ) =>: resolveGenerics
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  idContext [] .labelContext @ =:: labelContext
+  typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   target typeContext types.containsGeneric | ! if
     false return
@@ -670,7 +669,7 @@ proc(
 -> ProcedureCallInfo optional Type ) =>: export resolveCall
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  idContext [] .labelContext @ =:: labelContext
+  typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   procedureIds .length 0 == if
     ProcedureCallInfo optional.empty Type .undefined return
@@ -879,10 +878,10 @@ proc(
         "no matching signature for arguments ( " sb.appendS
         stackValues .length 1 - while ..dup 0 >= do =:: i
           stackValues i array.at .data =:: val
-          val [] .valType labelContext typeContext sb.appendType
+          val [] .valType typeContext sb.appendType
           val [] .value .none ?? ! if
             " { " sb.appendS
-            val [] .value constContext labelContext typeContext sb.appendConstant
+            val [] .value constContext typeContext sb.appendConstant
             " }" sb.appendS
           end
           "  " sb.appendS
@@ -895,7 +894,7 @@ proc(
             current [] .procId list.at .data
           =:: procInfo
           "  * " sb.appendS
-          procInfo [] .procType labelContext typeContext sb.appendType
+          procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
           procInfo [] .labelId labelContext sb.appendLabelName
           '\n' sb.appendC
@@ -918,10 +917,10 @@ proc(
         "multiple matching signature for arguments ( " sb.appendS
         stackValues .length 1 - while ..dup 0 >= do =:: i
           stackValues i array.at .data =:: val
-          val [] .valType labelContext typeContext sb.appendType
+          val [] .valType typeContext sb.appendType
           val [] .value .none ?? ! if
             " { " sb.appendS
-            val [] .value constContext labelContext typeContext sb.appendConstant
+            val [] .value constContext typeContext sb.appendConstant
             " }" sb.appendS
           end
           "  " sb.appendS
@@ -943,7 +942,7 @@ proc(
             false isEquivalent =
           end
           "  * " sb.appendS
-          procInfo [] .procType labelContext typeContext sb.appendType
+          procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
           procInfo [] .labelId labelContext sb.appendLabelName
           '\n' sb.appendC

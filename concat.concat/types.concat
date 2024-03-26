@@ -705,6 +705,7 @@ namespace: types
     bool : makeMutable
     TypeContext ptr mut : context
   -> Type bool ) =>: export newArrayType
+    context [] .labelContext @ =:: labelContext
     isPtr if makeMutable else false end =:: mutable
     isPtr ! sizes .length 0 == & if
       Type .undefined true return
@@ -876,7 +877,12 @@ namespace: types
     end
     context [] .elementLabels offset index + list.get return
   end
-  proc( Type : composite LabelId : name LabelContext ptr : labelContext TypeContext ptr : context -> i32 ) =>: export compositeFindLabel
+  proc(
+    Type : composite
+    LabelId : name
+    TypeContext ptr : context
+  -> i32 ) =>: export compositeFindLabel
+    context [] .labelContext @ =:: labelContext
     composite context unwrapNamed
       ..dup switch
         struct enum union procIn procOut case
@@ -907,7 +913,12 @@ namespace: types
     end ..drop
     id.LABEL_ID_NONE return
   end
-  proc( Type : union Type : elt LabelContext ptr : labelContext TypeContext ptr : context -> i32 bool ) =>: export findUnionTypeIndex
+  proc(
+    Type : union
+    Type : elt
+    TypeContext ptr : context
+  -> i32 bool ) =>: export findUnionTypeIndex
+    context [] .labelContext @ =:: labelContext
     union context compositeElts =:: elts
     0 while ..dup elts .length < do
       elt elts ..over.2 compositeElts.get typeEquals if
@@ -1016,7 +1027,8 @@ namespace: types
     .data [] .flags return
   end
 
-  proc( Type ptr : a Type ptr : b -> bool ) =>: typePtrEq
+  ## XXX remove i32 parameter once new call resolver is implemented
+  proc( Type ptr : a Type ptr : b i32 : ignore -> bool ) =>: typePtrEq
     a [] b [] typeEquals
   end
   proc(
@@ -1050,6 +1062,7 @@ namespace: types
     context [] .compositeData list.asArray
       elts
       typePtrEq @
+      0
     array.indexOfArrayStart =:: mut offset
     offset elts .length + context [] .compositeData .length < if
       offset flags return
@@ -1061,7 +1074,11 @@ namespace: types
     context [] .compositeData =
     offset flags return
   end
-  proc( LabelId ptr : a LabelId ptr : b -> bool ) =>: labelPtrEq
+  proc(
+    LabelId ptr : a
+    LabelId ptr : b
+    LabelContext ptr mut : labelContext
+  -> bool ) =>: labelPtrEq
     ## XXX? switch from labelId equality to name equality
     a [] b [] ==
   end
@@ -1069,6 +1086,7 @@ namespace: types
     LabelId arrayView optional : labels?
     TypeContext ptr mut : context
   -> LabelOffset ) =>: computeLabelOffset
+    context [] .labelContext @ =:: labelContext
     labels? optional.isEmpty if
       UNLABELED return
     end
@@ -1087,6 +1105,7 @@ namespace: types
     context [] .elementLabels list.asArray
       labels
       labelPtrEq @
+      labelContext
     array.indexOfArrayStart =:: mut offset
     offset labels .length + context [] .elementLabels .length < if
       offset LabelOffset cast return
@@ -1105,6 +1124,7 @@ namespace: types
     CompositeFlags : flags0
     TypeContext ptr mut : context
   -> TupleId ) =>: export findTupleInfo ## XXX exported only for access from identifier.concat
+    context [] .labelContext @ =:: labelContext
     ## TODO sort types by alignment
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
@@ -1164,7 +1184,11 @@ namespace: types
     newId return
   end
   ## creates struct
-  proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context -> Type bool ) =>: export newTuple
+  proc(
+    Type arrayView : elts
+    LabelId arrayView optional : labels
+    TypeContext ptr mut : context
+  -> Type bool ) =>: export newTuple
     elts .length 0 == if
       labels optional.isEmpty _EXPERIMENTAL_ ! & if ## new version detects empty types in parser
         Type .empty false return ## 0 element tuple -> empty type
@@ -1179,7 +1203,12 @@ namespace: types
       context
     findTupleInfo Type .struct false return
   end
-  proc( Type arrayView : elts LabelId arrayView optional : labels bool : isOut TypeContext ptr mut : context -> Type ) =>: export newProcArgs
+  proc(
+    Type arrayView : elts
+    LabelId arrayView optional : labels
+    bool : isOut
+    TypeContext ptr mut : context
+  -> Type ) =>: export newProcArgs
     ## findTupleInfo
       elts
       labels
@@ -1189,7 +1218,12 @@ namespace: types
     isOut if Type .procOut else Type .procIn end
     return
   end
-  proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context bool : isTagged -> UnionId ) =>: export findEnumOrUnion ## XXX exported only for access from identifiers.concat
+  proc(
+    Type arrayView : elts
+    LabelId arrayView optional : labels
+    TypeContext ptr mut : context
+    bool : isTagged
+  -> UnionId ) =>: export findEnumOrUnion ## XXX exported only for access from identifiers.concat
     elts context computeEltsOffset =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
     1i64 =:: mut alignment
@@ -1260,59 +1294,77 @@ namespace: types
     end
     unionId return
   end
-  proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context -> Type bool ) =>: export newEnum
+  proc(
+    Type arrayView : elts
+    LabelId arrayView optional : labels
+    TypeContext ptr mut : context
+  -> Type bool ) =>: export newEnum
     elts .length 0 ==  labels optional.isEmpty | if
       Type .undefined true return
     end
-    elts labels context true findEnumOrUnion Type .enum false return
+    ## findEnumOrUnion
+      elts
+      labels
+      context
+      true
+    findEnumOrUnion Type .enum false return
   end
-  proc( Type arrayView : elts LabelId arrayView optional : labels TypeContext ptr mut : context -> Type bool ) =>: export newUnion
+  proc(
+    Type arrayView : elts
+    LabelId arrayView optional : labels
+    TypeContext ptr mut : context
+  -> Type bool ) =>: export newUnion
     elts .length 0 == labels optional.isEmpty | if
       Type .undefined true return
     end
-    elts labels context false findEnumOrUnion Type .union false return
+    ## findEnumOrUnion
+      elts
+      labels
+      context
+      false
+    findEnumOrUnion Type .union false return
   end
 end
 namespace: sb
   proc(
     stringBuilder : sb
     Type : t
-    LabelContext ptr : labelContext
     TypeContext ptr : context
   -> stringBuilder ) =>: appendComposite
+    context [] .labelContext @ =:: labelContext
     sb
-    t context types.compositeData .data =:: comp
-    comp [] .labelOffset types.UNLABELED == =:: unlabeled
-    0 while ..dup comp [] .eltCount < do
-      ..swap
-        t ..over.2 context types.compositeGetElement =:: eltType
-        unlabeled if
-          eltType labelContext context false appendTypeRecursive
-          ' ' appendC
-          ..swap 1 + continue
-        end
-        t ..over.2 context types.compositeGetLabel =:: label
-        eltType context types.isEmpty ! if
-          eltType labelContext context false appendTypeRecursive
+      t context types.compositeData .data =:: comp
+      comp [] .labelOffset types.UNLABELED == =:: unlabeled
+      0 while ..dup comp [] .eltCount < do
+        ..swap
+          t ..over.2 context types.compositeGetElement =:: eltType
+          unlabeled if
+            eltType context false appendTypeRecursive
+            ' ' appendC
+            ..swap 1 + continue
+          end
+          t ..over.2 context types.compositeGetLabel =:: label
+          eltType context types.isEmpty ! if
+            eltType context false appendTypeRecursive
+            label id.LABEL_ID_NONE != if
+              " : " appendS
+            else
+              ' ' appendC
+            end
+          end
           label id.LABEL_ID_NONE != if
-            " : " appendS
-          else
+            label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+              "mut " appendS
+            end
+            label labelContext id.labelFlags id.FLAG_STATIC & ? if
+              "static " appendS
+            end
+            label labelContext appendLabelName
             ' ' appendC
           end
-        end
-        label id.LABEL_ID_NONE != if
-          label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-            "mut " appendS
-          end
-          label labelContext id.labelFlags id.FLAG_STATIC & ? if
-            "static " appendS
-          end
-          label labelContext appendLabelName
-          ' ' appendC
-        end
-      ..swap
-      1 +
-    end ..drop
+        ..swap
+        1 +
+      end ..drop
     return
   end
 end
@@ -1403,7 +1455,10 @@ namespace: types
     procs [] .length 1 - ProcId cast Type .procedure
     false return
   end
-  proc( Type : proc TypeContext ptr mut : context -> Type bool ) =>: export asUnlabeledProc
+  proc(
+    Type : proc
+    TypeContext ptr mut : context
+  -> Type bool ) =>: export asUnlabeledProc
     proc context unwrapNamed
       ..dup context isCallable ! if ..drop
         proc true return
@@ -1419,7 +1474,15 @@ namespace: types
     inType .labelOffset UNLABELED == if
       proc false return
     end
-    context [] .compositeData inType .eltsOffset inType .eltCount list.slice LabelId arrayView optional.empty false context newProcArgs
+    ## newProcArgs
+      context [] .compositeData
+        inType .eltsOffset
+        inType .eltCount
+      list.slice
+      LabelId arrayView optional.empty
+      false
+      context
+    newProcArgs
     procData .out procData .callingConvention context newProcedure if ..drop proc true return end
     isPtr if
       true ArraySize array.empty true false context newArrayType return
@@ -1536,16 +1599,23 @@ namespace: types
 end
 
 namespace: sb
-  proc( stringBuilder types.NamedType LabelContext ptr TypeContext ptr bool -> stringBuilder ) =>: appendNamedType
-    =:: allowRecurse
-    =:: context
-    =:: labelContext
-    ..swap
+  proc(
+    stringBuilder : sb
+    types.NamedType : named
+    TypeContext ptr : context
+    bool : allowRecurse
+  -> stringBuilder ) =>: appendNamedType
+    context [] .labelContext @ =:: labelContext
+    sb
       '"' sb.appendC
-      ..over .name labelContext sb.appendLabelName
+      named .name labelContext sb.appendLabelName
       '"' sb.appendC
       " [ " sb.appendS
-      ..swap .data context types.flatUnwrapNamed labelContext context allowRecurse appendTypeRecursive
+      ## appendTypeRecursive
+        named .data context types.flatUnwrapNamed
+        context
+        allowRecurse
+      appendTypeRecursive
       " ]"  sb.appendS
     return
   end
@@ -1554,7 +1624,11 @@ namespace: types
 
   ## generated types
 
-  struct( LabelId : generator ConstantArray : arguments Type : mut generated ) =:: GeneratedType
+  struct(
+    LabelId : generator
+    ConstantArray : arguments
+    Type : mut generated
+  ) =:: GeneratedType
 
 
   proc( Type -> bool ) =>: export isGeneratedType
@@ -1566,9 +1640,9 @@ namespace: types
     LabelId : generator
     ConstValue arrayView : arguments
     TypeContext ptr mut : typeContext
-    LabelContext ptr : labelContext
     ConstantContext ptr mut : constContext
   -> Type bool ) =>: export findGeneratedType
+    typeContext [] .labelContext @ =:: labelContext
     typeContext [] .generatedTypes =:: genTypes
     0 while ..dup genTypes .length < do
       genTypes ..over list.at .data =:: candidate
@@ -1612,14 +1686,12 @@ namespace: types
     ConstValue arrayView : arguments
     Type : value
     TypeContext ptr mut : typeContext
-    LabelContext ptr : labelContext
     ConstantContext ptr mut : constContext
   -> bool ) =>: export initializeGeneratedType
     ## findGeneratedType
       base
       arguments
       typeContext
-      labelContext
       constContext
     findGeneratedType ..drop .generatedType =:: id
     typeContext [] .generatedTypes id list.at .data =:: prevType
@@ -2001,6 +2073,7 @@ namespace: types
 end
 ## type context
 struct(
+  LabelContext             : mut labelContext
   types.ArrayType     list : mut arrayTypes
   types.ArraySize     list : mut arraySizes
   types.TupleInfo     list : mut tupleTypes
@@ -2014,30 +2087,33 @@ struct(
 ) TypeContext =
 namespace: types
   proc( -> TypeContext ) =>: export newTypeContext
-    128 ArrayType     list.create ## arrayTypes
-    128 ArraySize     list.create ## arraySizes
-    128 TupleInfo     list.create ## tupleTypes
-    128 UnionInfo     list.create ## unionTypes
-    128 Type          list.create ## compositeData
-    128 i64           list.create ## tupleOffsets
-    128 ProcType      list.create ## procTypes
-    128 NamedType     list.create ## namedTypes
-    128 GeneratedType list.create ## generatedTypes
-    128 LabelId       list.create ## elementLabels
+    ## TypeContext
+      id.newLabelContext
+      128 ArrayType     list.create ## arrayTypes
+      128 ArraySize     list.create ## arraySizes
+      128 TupleInfo     list.create ## tupleTypes
+      128 UnionInfo     list.create ## unionTypes
+      128 Type          list.create ## compositeData
+      128 i64           list.create ## tupleOffsets
+      128 ProcType      list.create ## procTypes
+      128 NamedType     list.create ## namedTypes
+      128 GeneratedType list.create ## generatedTypes
+      128 LabelId       list.create ## elementLabels
     TypeContext new return
   end
-  proc( TypeContext : context -> TypeContext ) =>: export clearTypeContent
-    context
-      ..dup .arrayTypes     list.free ..over .arrayTypes =
-      ..dup .arraySizes     list.free ..over .arraySizes =
-      ..dup .tupleTypes     list.free ..over .tupleTypes =
-      ..dup .unionTypes     list.free ..over .unionTypes =
-      ..dup .compositeData  list.free ..over .compositeData =
-      ..dup .tupleOffsets   list.free ..over .tupleOffsets =
-      ..dup .procTypes      list.free ..over .procTypes =
-      ..dup .namedTypes     list.free ..over .namedTypes =
-      ..dup .elementLabels  list.free ..over .elementLabels =
-    return
+  proc( TypeContext : context -> TypeContext ) =>: export freeTypeContent
+    context =:: mut cleared
+      cleared .labelContext id.freeLabelContext cleared .labelContext =
+      cleared .arrayTypes     list.free cleared .arrayTypes =
+      cleared .arraySizes     list.free cleared .arraySizes =
+      cleared .tupleTypes     list.free cleared .tupleTypes =
+      cleared .unionTypes     list.free cleared .unionTypes =
+      cleared .compositeData  list.free cleared .compositeData =
+      cleared .tupleOffsets   list.free cleared .tupleOffsets =
+      cleared .procTypes      list.free cleared .procTypes =
+      cleared .namedTypes     list.free cleared .namedTypes =
+      cleared .elementLabels  list.free cleared .elementLabels =
+    cleared return
   end
 end
 namespace: sb
@@ -2126,130 +2202,162 @@ namespace: sb
       end ..drop
     return
   end
-  proc( stringBuilder Type LabelContext ptr TypeContext ptr bool -> stringBuilder ) =>: export appendTypeRecursive
-    =:: allowRecurse
-    =:: context
-    =:: labelContext
-    ..dup switch
-      undefined case ..drop
-        "undefined" appendS return
-      empty case ..drop
-        "empty" appendS return
+  proc(
+    stringBuilder : sb
+    Type : t
+    TypeContext ptr : context
+    bool : allowRecurse
+  -> stringBuilder ) =>: export appendTypeRecursive
+    context [] .labelContext @ =:: labelContext
+    t switch
+      undefined case
+        sb "undefined" appendS return
+      empty case
+        sb "empty" appendS return
       primitiveType case
-        .primitiveType appendPrimitiveType return
+        sb t .primitiveType appendPrimitiveType return
       cType case
-        .cType appendCType return
-      arrayIndex case .arrayIndex =:: sizeIndex
-        "index(" appendS
-        context [] .arraySizes sizeIndex list.get appendArraySize
-        " )" appendS
+        sb t .cType appendCType return
+      arrayIndex case
+        t .arrayIndex =:: sizeIndex
+        sb
+          "index(" appendS
+          context [] .arraySizes sizeIndex list.get appendArraySize
+          " )" appendS
         return
-      pointer case =:: t
-        t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-        t context types.getArraySize appendArraySizes
-        t context types.isFixedSize if
-          " ptr" appendS
-        else
-          " _ ptr" appendS
-        end
-        t context types.isMutable if
-          " mut" appendS
-        end
+      pointer case
+        sb
+          ## appendTypeRecursive
+            t context types.getBaseType
+            context
+            allowRecurse
+          appendTypeRecursive
+          t context types.getArraySize appendArraySizes
+          t context types.isFixedSize if
+            " ptr" appendS
+          else
+            " _ ptr" appendS
+          end
+          t context types.isMutable if
+            " mut" appendS
+          end
         return
-      arrayType case =:: t
-        t context types.getBaseType labelContext context allowRecurse appendTypeRecursive
-        t context types.getArraySize appendArraySizes
-        " array" appendS return
-      struct enum union case =:: data
-        data .struct ?? if
-          "struct[" appendS
-        else data .union ?? _if
-          "union[" appendS
-        else
-          "enum[" appendS
-        end
-        data types.getTypeId appendI
-        "]( "    appendS
-        allowRecurse if
-          data labelContext context appendComposite
-        else
-          "... " appendS
-        end
-       ")" appendS
-       return
-      procIn case
-        labelContext context appendComposite return
-      procOut case
-        labelContext context appendComposite return
-      procedure case
-        .procedure
-        ..swap
-          "proc[" appendS
-          ..over    appendI
+      arrayType case
+        sb
+          ## appendTypeRecursive
+            t context types.getBaseType
+            context
+            allowRecurse
+          appendTypeRecursive
+          t context types.getArraySize appendArraySizes
+          " array" appendS
+        return
+      struct enum union case
+        sb
+          t .struct ?? if
+            "struct[" appendS
+          else t .union ?? _if
+            "union[" appendS
+          else
+            "enum[" appendS
+          end
+          t types.getTypeId appendI
           "]( "    appendS
-        ..swap
           allowRecurse if
-            context [] .procTypes ..swap list.get =:: procType
-            procType .in labelContext context allowRecurse appendTypeRecursive
-            "-> " appendS
-            procType .out labelContext context allowRecurse appendTypeRecursive
-          else ..drop
+            t context appendComposite
+          else
             "... " appendS
           end
          ")" appendS
-         return
+       return
+      procIn case
+        sb t context appendComposite return
+      procOut case
+        sb t context appendComposite return
+      procedure case
+        sb
+          "proc["      appendS
+          t .procedure appendI
+          "]( "        appendS
+          allowRecurse if
+            context [] .procTypes t .procedure list.get =:: procType
+            procType .in context allowRecurse appendTypeRecursive
+            "-> " appendS
+            procType .out context allowRecurse appendTypeRecursive
+          else
+            "... " appendS
+          end
+          ")" appendS
+        return
       namedType case
-        .namedType
-        ..swap
+        sb
           "named[" appendS
-          ..over    appendI
+          t .namedType    appendI
           "]( "    appendS
-        ..swap
-        context [] .namedTypes ..swap list.get labelContext context allowRecurse appendNamedType
+          ## appendNamedType
+            context [] .namedTypes t .namedType list.get
+            context
+            allowRecurse
+          appendNamedType
         " )" appendS
         return
       autoType case
-        ..swap "auto["     appendS
-          ..swap .autoType appendI
-                  "]"     appendS
+        sb
+          "auto["     appendS
+          t .autoType appendI
+          "]"         appendS
         return
-      genericType case .genericType =:: labelId
-        _EXPERIMENTAL_ if
-          labelId labelContext appendLabelName
-          "[generic " appendS
-        else
-          "generic[" appendS
-        end
-        labelId  appendI
-        "]"  appendS
+      genericType case
+        t .genericType =:: labelId
+        sb
+          _EXPERIMENTAL_ if
+            labelId labelContext appendLabelName
+            "[generic " appendS
+          else
+            "generic[" appendS
+          end
+          labelId  appendI
+          "]"  appendS
         return
       templateType case
-        ..swap "template["     appendS
-          ..swap .templateType appendI
-                      "]"     appendS
+        sb
+          "template["     appendS
+          t .templateType appendI
+          "]"             appendS
         return
       generatedType case
-        .generatedType
+        t .generatedType
         context [] .generatedTypes ..swap list.at .data =:: typeData
-        "? " appendS ## TODO append arguments
-        typeData [] .generator labelContext sb.appendLabelName
-        allowRecurse if
-          " [ "     appendS
-            typeData [] .generated labelContext context allowRecurse appendTypeRecursive
-          " ]"     appendS
-        end
+        sb
+          "? " appendS ## TODO append arguments
+          typeData [] .generator labelContext sb.appendLabelName
+          allowRecurse if
+            " [ "     appendS
+              typeData [] .generated context allowRecurse appendTypeRecursive
+            " ]"     appendS
+          end
         return
       reference case
-        context [] .compositeData ..swap .reference list.get labelContext context allowRecurse appendTypeRecursive
+        sb
+          ## appendTypeRecursive
+            context [] .compositeData t .reference list.get
+            context
+            allowRecurse
+          appendTypeRecursive
         " reference" appendS
         return
       mutableReference case
-        context [] .compositeData ..swap .mutableReference list.get labelContext context allowRecurse appendTypeRecursive
+        sb
+          ## appendTypeRecursive
+            context [] .compositeData t .mutableReference list.get
+            context
+            allowRecurse
+          appendTypeRecursive
         " reference mut" appendS
         return
     end
   end
-  proc( stringBuilder Type LabelContext ptr TypeContext ptr -> stringBuilder ) =>: export appendType
+  proc( stringBuilder Type TypeContext ptr -> stringBuilder ) =>: export appendType
     true appendTypeRecursive return
   end
 end

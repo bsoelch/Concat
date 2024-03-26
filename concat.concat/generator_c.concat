@@ -36,7 +36,7 @@ namespace: sb
   end
 end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog -> ) =>: printGlobalName
-  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext .labelContext @ =:: labelContext
   128 sb.create
     label labelContext id.labelFlags id.FLAG_EXTERN & ? if ## use unmodified name for extern values
       label labelContext sb.appendLabelName
@@ -66,7 +66,7 @@ proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : pro
   sb.free ..drop
 end
 proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : prog -> ) =>: printArgName
-  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext .labelContext @ =:: labelContext
   64 sb.create
     "arg" sb.appendS
     index sb.appendI
@@ -79,7 +79,7 @@ proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : pr
   sb.free ..drop
 end
 proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : prog -> ) =>: printOutArgName
-  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext .labelContext @ =:: labelContext
   64 sb.create
     "out" sb.appendS
     index sb.appendI
@@ -92,7 +92,7 @@ proc( i32 : index LabelId : labelId io.FILE : target ProgramContext ptr mut : pr
   sb.free ..drop
 end
 proc( IdentifierInfo : idInfo io.FILE : target ProgramContext ptr mut : prog -> ) =>: printIdName
-  prog [] .idContext .labelContext @ =:: labelContext
+  prog [] .idContext .typeContext .labelContext @ =:: labelContext
   idInfo .idType switch
     PROCEDURE GLOBAL_VAR case
       idInfo .labelId idInfo .id target prog printGlobalName return
@@ -130,8 +130,8 @@ proc( string : name i32 : id io.FILE : target -> ) =>: printCompositeName
   sb.free ..drop
 end
 proc( Type : t io.FILE : target ProgramContext ptr mut : prog -> ) =>: printTypeName
-  prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   t switch
     undefined empty templateType genericType case ## no global type necessary
       target "void" io.fputs ..drop
@@ -238,8 +238,8 @@ proc( Type : t io.FILE : target ProgramContext ptr mut : prog -> ) =>: printUnsi
   end
 end
 proc( Type : t bool : argNames io.FILE : target ProgramContext ptr mut : prog -> ) =>: printProcArgs
-  prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   t typeContext types.getCallConvention ..drop =:: callConvention
   t typeContext types.getProcIn ..drop =:: inType
   inType typeContext types.compositeElts =:: args
@@ -305,8 +305,8 @@ proc( string : name i32 : id string : cName io.FILE : target -> ) =>: printCompo
   sb.free ..drop
 end
 proc( Type : composite i32 : index io.FILE : target ProgramContext ptr mut : prog -> ) =>: printEltName
-  prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   64 sb.create
     "e" sb.appendS
     index sb.appendI
@@ -481,8 +481,8 @@ proc( BinaryOperator -> bool ) =>: isArithimeticOp
 end
 ## XXX? compiler context
 proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog -> ) =>:  compileCall
-  prog [] .idContext .labelContext @ =:: labelContext
   prog [] .idContext .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   t typeContext types.getProcRet ..drop =:: retType
   retType typeContext types.isProcOut if
    retType typeContext types.compositeEltCount
@@ -605,8 +605,8 @@ end
 
 proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target ProgramContext ptr mut : prog -> ) =>: compileConstant
   prog [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   const switch
     boolean case
       const .boolean if
@@ -687,8 +687,8 @@ end
 proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FILE : target ProgramContext ptr mut : prog -> ) =>: compileOp
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   Operation ptr : mut op
   while
     index [] operations .length >= if
@@ -899,11 +899,11 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
           target ")" io.fputs ..drop
         end
         target "{." io.fputs ..drop
-        op [] .dataType src labelContext typeContext types.findUnionTypeIndex if
+        op [] .dataType src typeContext types.findUnionTypeIndex if
           "cannot store values of type \"" sb.wrap
-            src labelContext typeContext sb.appendType
+            src typeContext sb.appendType
             "\" in " sb.appendS
-            op [] .dataType labelContext typeContext sb.appendType
+            op [] .dataType typeContext sb.appendType
           op [] .pos prog [] .errors @ appendError
         end
         op [] .dataType ..swap target prog printEltName
@@ -1442,8 +1442,8 @@ end
 
 proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
   prog [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   target printHeader
   target prog printTypes
   ## TODO initialize string data

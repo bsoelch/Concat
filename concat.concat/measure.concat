@@ -12,7 +12,7 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
   visited declared map.at ..dup optional.hasData if .data []
     ptrLevel == if
       0 sb.create
-        declared prog [] .idContext .labelContext @ prog [] .idContext .typeContext @ sb.appendType
+        declared prog [] .idContext .typeContext @ sb.appendType
         "! \n" sb.appendS
       io.stdOut ..swap io.fputSb ..drop
       ## TODO add to error messages instead of printing to console

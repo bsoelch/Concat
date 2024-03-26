@@ -114,8 +114,8 @@ proc(
   ProgramContext ptr mut : context
 -> Type Type Type Type Type ) =>: ptrSignatures
   context [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ## newLabel
     "T" string.wrap
     id.FLAG_AUTO id.FLAG_STATIC | id.FLAG_BUILT_IN |
@@ -228,7 +228,7 @@ proc(
   ProgramContext ptr mut : context
 -> LabelId ProcBundleId bool ) =>: newBuiltInBundle
   context [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
   context [] .procBundles
     ..dup .length =:: bundleId
     newProcBundle list.append
@@ -304,7 +304,7 @@ proc(
 -> Type Type Type Type Type ) =>: operatorProcTypes
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  idContext [] .labelContext @ =:: labelContext
+  typeContext [] .labelContext @ =:: labelContext
   ## TODO? own calling convention for built-ins
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut args

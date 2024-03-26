@@ -39,8 +39,8 @@ namespace: sb
   proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state -> stringBuilder ) =>: appendTypeStack
     state [] .progContext =:: progContext
     progContext [] .idContext @ =:: idContext
-    idContext [] .labelContext @ =:: labelContext
     idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     state [] .opStack .length =:: mut offset
     maxTypes =:: mut remaining
     sb
@@ -54,7 +54,7 @@ namespace: sb
           elt [] .writable if
             "writable " sb.appendS
           end
-          elt [] .valType labelContext typeContext sb.appendType
+          elt [] .valType typeContext sb.appendType
           printOps ! if
             '\n' sb.appendC
             ..swap 1 - continue
@@ -145,7 +145,7 @@ proc( Type : valType -> TypeInfo ) =>: newTypeInfo
 end
 proc( bool : mutable FilePosition : pos TypeCheckState ptr mut : state -> IdentifierInfo ) =>: newTmpVar
   state [] .progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
   id.FLAG_NONE mutable if id.FLAG_MUTABLE | LabelFlag cast end =:: flags
   ## IdInfo
     IdentifierType .TMP_VAR
@@ -463,8 +463,8 @@ end
 
 proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState ptr mut : state -> ) =>: requireTypes
   state [] .progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .typeStack .length types .length < if
     "not enough types for " sb.wrap
       opName sb.appendStr
@@ -499,9 +499,9 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
     "wrong type for " sb.wrap
       opName sb.appendStr
       " expected " sb.appendS
-      expected labelContext typeContext sb.appendType
+      expected typeContext sb.appendType
       " got " sb.appendS
-      src [] .valType labelContext typeContext sb.appendType
+      src [] .valType typeContext sb.appendType
     pos state appendError2
     true isError =
     1 +
@@ -542,8 +542,8 @@ end
 
 proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) =>: storeStack
   state [] .progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   0 =:: mut opOffset
   state [] .typeStack .length
     keepTop if 1 - end
@@ -586,8 +586,8 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) 
 end
 proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create BlockType : blockName i64 : blockStart bool : ignoreLast FilePosition : pos TypeCheckState ptr mut : state -> ) =>: storeOutTypes
   state [] .progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .typeStack .length
     ignoreLast if 1 - end
   =:: nTypes
@@ -670,9 +670,9 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
               blockName sb.appendBlockType
             end
             "-statement expected " sb.appendS
-            out [] .dataType labelContext typeContext sb.appendType
+            out [] .dataType typeContext sb.appendType
             " got " sb.appendS
-            typeInfo [] .valType labelContext typeContext sb.appendType
+            typeInfo [] .valType typeContext sb.appendType
           pos state appendError2
       end
     end
@@ -759,8 +759,8 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   op [] .dataType =:: mut calledType
   callType .POINTER ?? if
     state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
@@ -773,7 +773,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   end
   calledType typeContext isCallable ! if
     "cannot call values of type " sb.wrap
-      calledType labelContext typeContext sb.appendType
+      calledType typeContext sb.appendType
     op [] .pos state appendError2
     return
   end
@@ -828,9 +828,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           state [] .typeStack =
           argValue [] .dataType templateArgs ..over.2 types.compositeElts.get false typeContext canCast ! if
             "cannot cast " sb.wrap
-                argValue [] .dataType labelContext typeContext sb.appendType
+                argValue [] .dataType typeContext sb.appendType
                 " to " sb.appendS
-                templateArgs ..over.2 types.compositeElts.get labelContext typeContext sb.appendType
+                templateArgs ..over.2 types.compositeElts.get typeContext sb.appendType
             op [] .pos state appendError2
             1 - continue
           end
@@ -874,9 +874,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         state [] .opStack opOffset list.at .data =:: argValue
         argValue [] .dataType inTypes ..over.2 types.compositeElts.get false typeContext types.canCast ! if
           "cannot cast " sb.wrap
-              argValue [] .dataType labelContext typeContext sb.appendType
+              argValue [] .dataType typeContext sb.appendType
               " to " sb.appendS
-              inTypes ..over.2 types.compositeElts.get labelContext typeContext sb.appendType
+              inTypes ..over.2 types.compositeElts.get typeContext sb.appendType
           op [] .pos state appendError2
           1 - continue
         end
@@ -899,7 +899,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         op [] progContext sb.appendOp
         0 while ..dup templateCount < do
           ..swap
-            argValues [] ..over.2 argBufferOffset + list.get idContext [] .constContext @ labelContext typeContext sb.appendConstant
+            argValues [] ..over.2 argBufferOffset + list.get idContext [] .constContext @ typeContext sb.appendConstant
             '\n' sb.appendC
           ..swap 1 +
         end ..drop
@@ -1122,8 +1122,8 @@ end
 proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =>: typeCheckGetId
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   idInfo .idType switch
     LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT case
       op [] .dataType types.isAutoType if
@@ -1204,8 +1204,8 @@ end
 proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : state -> ) =>: typeCheckDeclareId
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   idInfo .idType switch
     LOCAL_VAR GLOBAL_VAR TMP_VAR case
       op [] .val .initializeId ?? if
@@ -1256,7 +1256,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
           op [] .pos
           state [] .compiledOps .length
           -1
-          idInfo .labelId idContext [] .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & ? if
+          idInfo .labelId labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? if
            BlockType .EXPERIMENTAL_PROCEDURE
           else
            BlockType .PROCEDURE
@@ -1300,8 +1300,8 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   using types
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .typeStack .length =:: mut offset
   0 =:: mut indexCount
   state [] .typeStack .length 0 == if
@@ -1319,7 +1319,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
       "invalid type for operation " sb.wrap
         op [] progContext sb.appendOp
         " " sb.appendS
-        state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
+        state [] .typeStack offset list.at .data [] .valType typeContext sb.appendType
         " is not a pointer" sb.appendS
       op [] .pos state appendError2
       return
@@ -1330,7 +1330,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     "invalid type for operation " sb.wrap
       op [] progContext sb.appendOp
       " " sb.appendS
-      state [] .typeStack offset list.at .data [] .valType labelContext typeContext sb.appendType
+      state [] .typeStack offset list.at .data [] .valType typeContext sb.appendType
       " is not a pointer" sb.appendS
     op [] .pos state appendError2
     return
@@ -1339,7 +1339,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   state [] .typeStack offset list.at .data [] .valType =:: pointerType
   pointerType typeContext isCallable if
     "cannot deference procedure pointer" sb.wrap
-       pointerType labelContext typeContext sb.appendType
+       pointerType typeContext sb.appendType
      op [] .pos state appendError2 return
   end
   pointerType typeContext getBaseType =:: baseType
@@ -1387,7 +1387,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   op [] .val .setArrayElement ?? if ## SET_ARRAY_ELEMENT <array> <value>
     pointerType typeContext isMutable ! if
       0 sb.create
-        pointerType labelContext typeContext sb.appendType
+        pointerType typeContext sb.appendType
         " is not mutable" sb.appendS
       op [] .pos state appendError2
     end
@@ -1409,8 +1409,8 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
   using types
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
     "not enough operands for : " sb.wrap
       op [] progContext sb.appendOp
@@ -1421,7 +1421,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
   end .data =:: typeInfo
   typeInfo [] .valType typeContext isTuple ! typeInfo [] .valType typeContext isUnion ! & if ## TODO element access through pointers
     0 sb.create
-      typeInfo [] .valType labelContext typeContext sb.appendType
+      typeInfo [] .valType typeContext sb.appendType
       " is not a tuple or union type" sb.appendS
     op [] .pos state appendError2
     return
@@ -1451,7 +1451,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
           elementLabel labelContext sb.appendLabelName
         end
         " in " sb.appendS
-        typeInfo [] .valType labelContext typeContext sb.appendType
+        typeInfo [] .valType typeContext sb.appendType
         " is not mutable" sb.appendS
       op [] .pos state appendError2
     end
@@ -1483,8 +1483,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
   using types
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   label labelContext id.isLabelEmpty if
     "missing label name " sb.wrap op [] .pos state appendError2
     return
@@ -1503,7 +1503,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
   end
   targetType typeContext isTuple if
     targetType typeContext unwrapNamed =:: tupleType
-    tupleType label labelContext typeContext compositeFindLabel =:: index
+    tupleType label typeContext compositeFindLabel =:: index
     index 0 >= if
       op [] .val switch
         getLabel case
@@ -1527,14 +1527,14 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
   end
   targetType typeContext isEnum if
     targetType typeContext unwrapNamed =:: enumType
-    enumType label labelContext typeContext compositeFindLabel =:: index
+    enumType label typeContext compositeFindLabel =:: index
     index 0 >= if
       enumType index typeContext compositeGetElement =:: mut eltType
        op [] .val .hasLabel ?? ! if eltType typeContext isEmpty _if
         "element " sb.wrap
           label labelContext sb.appendLabelName
           " in enum " sb.appendS
-          targetType labelContext typeContext sb.appendType
+          targetType typeContext sb.appendType
           " does not hold a value" sb.appendS
         op [] .pos state appendError2
       end
@@ -1569,7 +1569,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
           "element " sb.wrap
             label labelContext sb.appendLabelName
             " in enum " sb.appendS
-            targetType labelContext typeContext sb.appendType
+            targetType typeContext sb.appendType
             " is not mutable" sb.appendS
           op [] .pos state appendError2
         end
@@ -1605,7 +1605,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
   end
   targetType typeContext isUnion if
     targetType typeContext unwrapNamed =:: unionType
-    unionType label labelContext typeContext compositeFindLabel =:: index
+    unionType label typeContext compositeFindLabel =:: index
     index 0 >= if
       op [] .val switch
         getLabel case
@@ -1628,7 +1628,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
     end
   end
   0 sb.create
-    typeInfo [] .valType labelContext typeContext sb.appendType
+    typeInfo [] .valType typeContext sb.appendType
     " does not have a label " sb.appendS
     label labelContext sb.appendLabelName
   op [] .pos state appendError2
@@ -1636,11 +1636,11 @@ end
 proc( Operation ptr : op TypeCheckState ptr mut : state -> ) =>: typeCheckReturn
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   op [] .dataType typeContext types.isProcedure ! if
     "unexpected type for return: " sb.wrap
-      op [] .dataType labelContext typeContext sb.appendType
+      op [] .dataType typeContext sb.appendType
       " expected procedure" sb.appendS
     op [] .pos state appendError2
     return
@@ -1686,8 +1686,8 @@ end
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> bool ) =>: resolveEnumSwitchLabel
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .openBlocks list.peek =:: openBlock?
   openBlock? optional.isEmpty state [] .reachable | if
     false return
@@ -1737,8 +1737,8 @@ end
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIdentifiers
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   op state resolveEnumSwitchLabel if
     return
   end
@@ -1782,8 +1782,8 @@ end
 proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
   state [] .progContext =:: progContext
   progContext [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state checkSync if
     "type-stack out of sync " sb.wrap
       " at " sb.appendS
@@ -1807,7 +1807,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                   op [] .dataType op [] .val .Constant .enumLabel typeContext types.compositeGetLabel
                 labelContext sb.appendLabelName
                "\" in " sb.appendS
-               op [] .dataType labelContext typeContext sb.appendType
+               op [] .dataType typeContext sb.appendType
                " use \"new\" to create enum values" sb.appendS
              op [] .pos state appendError2
             end
@@ -1825,9 +1825,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           op [] .val .Constant =:: constant
           op [] .dataType switchType typeContext types.canAutoCast ! if
             "wrong type for switch label: expected " sb.wrap
-               switchType labelContext typeContext sb.appendType
+               switchType typeContext sb.appendType
                " got " sb.appendS
-               op [] .dataType labelContext typeContext sb.appendType
+               op [] .dataType typeContext sb.appendType
              op [] .pos state appendError2
           end
           0 while ..dup labels [] .length < do
@@ -1836,7 +1836,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 switchType typeContext types.isEnum if
                   switchType constant .enumLabel typeContext types.compositeGetLabel labelContext sb.appendLabelName
                 else
-                  constant idContext [] .constContext @ labelContext typeContext sb.appendConstant
+                  constant idContext [] .constContext @ typeContext sb.appendConstant
                 end
                 " in switch-case" sb.appendS
               op [] .pos state appendError2
@@ -1874,7 +1874,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             "wrong operand for unary operator " sb.wrap
               op [] .val .unaryOperator sb.appendUnaryOperator
               " expected number got " sb.appendS
-              ..swap labelContext typeContext sb.appendType
+              ..swap typeContext sb.appendType
             op [] .pos state appendError2
           else ..drop end
           break
@@ -1884,7 +1884,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             "wrong operand for unary operator " sb.wrap
               op [] .val .unaryOperator sb.appendUnaryOperator
               " expected integer got " sb.appendS
-              ..swap labelContext typeContext sb.appendType
+              ..swap typeContext sb.appendType
             op [] .pos state appendError2
           else ..drop end
           break
@@ -1894,7 +1894,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             "wrong operand for unary operator " sb.wrap
               op [] .val .unaryOperator sb.appendUnaryOperator
               " expected boolean got " sb.appendS
-              ..swap labelContext typeContext sb.appendType
+              ..swap typeContext sb.appendType
             op [] .pos state appendError2
           else ..drop end
           break
@@ -1904,7 +1904,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             "wrong operand for unary operator " sb.wrap
               op [] .val .unaryOperator sb.appendUnaryOperator
               " expected integer got " sb.appendS
-              ..swap labelContext typeContext sb.appendType
+              ..swap typeContext sb.appendType
             op [] .pos state appendError2
           else ..drop end
           types.primitive.BOOL op [] .dataType =
@@ -2035,9 +2035,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         "no version of binary operator " sb.wrap
           op [] .val .binaryOperator sb.appendBinaryOperator
           " accepts types " sb.appendS
-          left [] .valType labelContext typeContext sb.appendType
+          left [] .valType typeContext sb.appendType
           " and " sb.appendS
-          right [] .valType labelContext typeContext sb.appendType
+          right [] .valType typeContext sb.appendType
         op [] .pos state appendError2
       end
       "binary operator " sb.wrap op [] .val .binaryOperator sb.appendBinaryOperator
@@ -2267,7 +2267,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             switchType op [] .dataType =
           else
             "cannot switch values of type " sb.wrap
-              switchType labelContext typeContext sb.appendType
+              switchType typeContext sb.appendType
             op [] .pos state appendError2
           end
           true op [] .pos state storeStack =:: newLength
@@ -2508,7 +2508,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             switchBlock [] .switchType typeContext types.compositeEltCount =:: eltCount
             labels .length eltCount < if
               "switch statement does not cover all labels in enum " sb.wrap
-                switchBlock [] .switchType labelContext typeContext sb.appendType
+                switchBlock [] .switchType typeContext sb.appendType
                 "\nmissing labels:\n" sb.appendS
                 0 while ..dup eltCount < do
                   ..swap
@@ -2690,7 +2690,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       op [] .dataType typeContext types.isEnum ! if
         "unexpected type for newEnum: " sb.wrap
-          op [] .dataType labelContext typeContext sb.appendType
+          op [] .dataType typeContext sb.appendType
         op [] .pos state appendError2
         return
       end
@@ -2726,7 +2726,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       1 false op [] .pos state extractCompositeOps
       argIndex [] .valType typeContext types.isInt ! if
         "wrong type for argument index : " sb.wrap
-          argIndex [] .valType labelContext typeContext sb.appendType
+          argIndex [] .valType typeContext sb.appendType
           " expected integer" sb.appendS
         op [] .pos state appendError2
         return
@@ -2774,7 +2774,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           "invalid operand for : " sb.wrap
             op [] progContext sb.appendOp
             " cannot get the length of " sb.appendS
-            src [] .valType labelContext typeContext sb.appendType
+            src [] .valType typeContext sb.appendType
           op [] .pos state appendError2
           return
         end
@@ -2834,7 +2834,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           "invalid operand for : " sb.wrap
             op [] progContext sb.appendOp
             " cannot get the length of " sb.appendS
-            src [] .valType labelContext typeContext sb.appendType
+            src [] .valType typeContext sb.appendType
           op [] .pos state appendError2
           return
         end
@@ -2904,9 +2904,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end =:: forceCast
       src [] .valType op [] .dataType forceCast typeContext types.canCast ! if
         "cannot cast " sb.wrap
-          src [] .valType labelContext typeContext sb.appendType
+          src [] .valType typeContext sb.appendType
           " to " sb.appendS
-          op [] .dataType labelContext typeContext sb.appendType
+          op [] .dataType typeContext sb.appendType
         op [] .pos state appendError2
       end
       op state checkReachable

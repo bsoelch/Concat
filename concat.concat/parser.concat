@@ -347,7 +347,7 @@ end
 proc( FileState ptr mut : fileState ParserState ptr mut : state -> types.ArraySize arrayView bool #+fixed-size+# ) =>: popArraySize
   state [] .progContext [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
   state [] .constants .length state [] .constOffset <= if
     types.ArraySize array.empty true return
@@ -377,7 +377,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state -> types.ArraySi
             constVal .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
-              constVal constContext labelContext typeContext sb.appendConstant
+              constVal constContext typeContext sb.appendConstant
             constant [] .pos state appendError2
           end
       ..swap
@@ -488,7 +488,7 @@ end
 proc( string : name ParserState ptr mut : state -> StaticArgument optional ) =>: getStaticArg
   0 while ..dup state [] .staticArgs .length < do
     state [] .staticArgs ..over list.get =:: arg
-    name arg .labelId state [] .progContext [] .idContext .labelContext @ id.labelNameEq if
+    name arg .labelId state [] .progContext [] .idContext .typeContext .labelContext @ id.labelNameEq if
       ..drop arg optional.wrap return
     end
     1 +
@@ -641,7 +641,7 @@ proc(
         .IDENTIFIER
       end
     end
-  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .labelContext @ id.newLabel return
+  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .typeContext .labelContext @ id.newLabel return
 end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state -> string LabelId ) =>: readLabel
   code start fileState state 0 readLabelAddFlags
@@ -670,7 +670,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
           state [] .labelBuffer .length labelOffset - - ..dup 0 > if
             "too many types for label" sb.wrap fileState [] .wordStart state appendError2
             while ..dup 0 > do
-              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
+              "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .typeContext .labelContext @ id.newLabel
                 state [] .labelBuffer ..swap list.append
               state [] .labelBuffer =
               1 -
@@ -708,7 +708,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         state [] .labelBuffer .length labelOffset - - ..dup 0 > if
           "too many types for label" sb.wrap fileState [] .wordStart state appendError2
           while ..dup 0 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .typeContext .labelContext @ id.newLabel
               state [] .labelBuffer ..swap list.append
             state [] .labelBuffer =
             1 -
@@ -735,7 +735,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         end
         readLabelAddFlags
           state [] .labelBuffer ..over list.append state [] .labelBuffer =
-          ..dup idContext [] .labelContext @ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC |  & ? if
+          ..dup idContext [] .typeContext .labelContext @ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC |  & ? if
              labelType .PROC_IN ?? ! labelType .NONE ?? ! & if
                "unexpected label: `static` and `auto` can only be used in procedure arguments\n  values of type `type` are labeled `static` by default" sb.wrap fileState [] .wordStart state appendError2
              end
@@ -757,7 +757,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         state [] .labelBuffer .length labelOffset - - ..dup 0 > if
           "unexpected label in enum, expected ':' " sb.wrap fileState [] .wordStart state appendError2
           while ..dup 1 > do
-            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
+            "" string.wrap id.FLAG_EMPTY fileState [] .wordStart state [] .currentFile idContext [] .typeContext .labelContext @ id.newLabel
               state [] .labelBuffer ..swap list.append
             state [] .labelBuffer =
             1 -
@@ -773,7 +773,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
             1 +
           end
         end ..drop
-      id.FLAG_NONE fileState [] .wordStart state [] .currentFile idContext [] .labelContext @ id.newLabel
+      id.FLAG_NONE fileState [] .wordStart state [] .currentFile idContext [] .typeContext .labelContext @ id.newLabel
         state [] .labelBuffer ..swap list.append
       state [] .labelBuffer =
       Type .empty fileState [] .wordStart newTypeConst  state pushConst
@@ -867,7 +867,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   state [] .progContext =:: progContext
   state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
   code
     token switch
       EMPTY case
@@ -1182,7 +1182,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   state [] .progContext =:: progContext
   state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  idContext [] .labelContext @ =:: labelContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   code
     token fileState state tryParseConstant if
@@ -1292,7 +1292,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "unexpected type for \"" sb.wrap
           opName sb.appendStr
           "\" expected procedure got: " sb.appendS
-          valType labelContext typeContext sb.appendType
+          valType typeContext sb.appendType
         fileState [] .wordStart state appendError2
         return
       end
@@ -1300,7 +1300,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## make pre-declared variables mutable by default
         isInit forceConst | if id.FLAG_NONE else id.FLAG_MUTABLE end
       readLabelAddFlags =:: label
-      label idContext [] .labelContext @ id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
+      label labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       label
         valType
         idType
@@ -1320,9 +1320,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state popConst
             ..dup .valueType valType false typeContext types.canCast ! if
               "cannot cast " sb.wrap
-                ..over .valueType labelContext typeContext sb.appendType
+                ..over .valueType typeContext sb.appendType
                 " to " sb.appendS
-                valType labelContext typeContext sb.appendType
+                valType typeContext sb.appendType
               fileState [] .wordStart state appendError2
             end
             ..dup constantToOp state appendOp
@@ -1331,9 +1331,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state peekConst2 .data =:: info .data =:: value
             info [] .valueType valType false typeContext types.canCast ! if
               "cannot cast " sb.wrap
-                info [] .valueType labelContext typeContext sb.appendType
+                info [] .valueType typeContext sb.appendType
                 " to " sb.appendS
-                valType labelContext typeContext sb.appendType
+                valType typeContext sb.appendType
               fileState [] .wordStart state appendError2
             end
           value []
@@ -1895,7 +1895,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             end ..drop
           end
           "constant "                    sb.wrap
-            constVal .val constContext labelContext typeContext sb.appendConstant
+            constVal .val constContext typeContext sb.appendConstant
             " does not have a field: \"" sb.appendS
             label                        sb.appendStr
           '"' sb.appendC fileState [] .wordStart state appendError2
@@ -1956,7 +1956,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        value constContext labelContext typeContext sb.appendConstant
+        value constContext typeContext sb.appendConstant
       " expected composite-type or enum-label" sb.appendS fileState [] .wordStart state appendError2
       return
     else ..dup "cast" string.wrap string.eq ..over "cast!" string.wrap string.eq | _if =:: opName
@@ -1987,7 +1987,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
         "\": " sb.appendS
-        target constContext labelContext typeContext sb.appendConstant
+        target constContext typeContext sb.appendConstant
         " expected type" sb.appendS fileState [] .wordStart state appendError2
         return
       end
@@ -2500,7 +2500,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             ..drop
           end
         "cannot determine the length of constant " sb.wrap
-          ..swap .val constContext labelContext typeContext sb.appendConstant
+          ..swap .val constContext typeContext sb.appendConstant
         fileState [] .wordStart state appendError2
         return
       end
@@ -2524,7 +2524,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         constant .val .typeId ?? ! if
           "expected type got: " sb.wrap
             constant .val
-              constContext labelContext typeContext
+              constContext typeContext
             sb.appendConstant
           fileState [] .wordStart state appendError2
         end
@@ -2573,7 +2573,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           constContext
         newArrayConst =:: value
         arrayType Type .undefined types.typeEquals if
-          types LabelId arrayView optional.empty typeContext types.newTuple if ## TODO handle empty array
+          ## newTuple
+            types
+            LabelId arrayView optional.empty
+            typeContext
+          types.newTuple if ## TODO handle empty array
             "could not create array-constant type" sb.wrap fileState [] .wordStart state appendError2
           end
         else ## TODO array of arrays -> 2D array
@@ -2842,7 +2846,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state _EXPERIMENTAL_ if popConst2 ..drop else popConst .val end
         ..dup .str ?? ! if
           "expected message string got: " sb.wrap
-            ..swap idContext [] .constContext @ labelContext typeContext sb.appendConstant
+            ..swap constContext typeContext sb.appendConstant
           fileState [] .wordStart state appendError2
           return
         end .str
@@ -2855,7 +2859,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state _EXPERIMENTAL_ if popConst2 ..drop else popConst .val end
         ..dup .boolean ?? ! if
           "expected boolean got " sb.wrap
-            ..swap idContext [] .constContext @ labelContext typeContext sb.appendConstant
+            ..swap constContext typeContext sb.appendConstant
           fileState [] .wordStart state appendWarning2
           false
         else .boolean end ! if
@@ -2918,10 +2922,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             " - " sb.appendS
             idData id.asIdInfo labelContext sb.appendIdInfo
             " ( " sb.appendS
-            idData [] .valueType labelContext typeContext sb.appendType
+            idData [] .valueType typeContext sb.appendType
             idData [] .constValue .none ?? ! if
               " [ " sb.appendS
-              idData [] .constValue idContext [] .constContext @ labelContext typeContext sb.appendConstant
+              idData [] .constValue constContext typeContext sb.appendConstant
               " ]" sb.appendS
             end
             " ) declared at " sb.appendS

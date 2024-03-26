@@ -108,9 +108,9 @@ proc(
 -> bool ) =>: closedTypeBlock
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext @ =:: idContext
-  context [] .program [] .idContext .constContext @ =:: constContext
-  context [] .program [] .idContext .typeContext @ =:: typeContext
-  context [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   closedBlock [] .stackOffset =:: offset
   context [] .stack .length offset - =:: elementCount
   context [] .typeBuffer
@@ -131,7 +131,7 @@ proc(
     list.at .data =:: stackInfo
     stackInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
       "unsupported type in composite type, expected type got " sb.wrap
-        stackInfo [] .valueType labelContext typeContext sb.appendType
+        stackInfo [] .valueType typeContext sb.appendType
       stackInfo [] .pushedAt errors appendError
       true error =
       1 + continue
@@ -148,7 +148,6 @@ proc(
       createDummyLables if
         ## newDummyLabel
           ..dup
-          id.FLAG_DUMMY ## TODO? flags
           stackInfo [] .pushedAt
           -1 ## TODO resolve current file
           labelContext
@@ -185,9 +184,9 @@ proc(
 ) =>: closedInitializer
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext @ =:: idContext
-  context [] .program [] .idContext .constContext @ =:: constContext
-  context [] .program [] .idContext .typeContext @ =:: typeContext
-  context [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   closedBlock [] .stackOffset =:: offset
   context [] .stack .length offset - =:: elementCount
   context [] .typeBuffer
@@ -308,9 +307,9 @@ proc(
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
-  context [] .program [] .idContext .constContext @ =:: constContext
-  context [] .program [] .idContext .typeContext @ =:: typeContext
-  context [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ## popValue
     showErrorMessages
     pos
@@ -323,9 +322,9 @@ proc(
   end
   showErrorMessages if
     "expected type got: " sb.wrap
-      valInfo .valueType labelContext typeContext sb.appendType
+      valInfo .valueType typeContext sb.appendType
       " ( " sb.appendS
-      value constContext labelContext typeContext sb.appendConstant
+      value constContext typeContext sb.appendConstant
       " )" sb.appendS
     pos errors appendError
   end
@@ -345,9 +344,9 @@ namespace: interpreter
   -> ConstValue bool ) =>: export computeTypeInfo
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
-    program [] .idContext .constContext @ =:: constContext
-    program [] .idContext .typeContext @ =:: typeContext
-    program [] .idContext .labelContext @ =:: labelContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     t typeContext types.containsGeneric | if
       0 ConstValue .int true return
     end
@@ -375,8 +374,8 @@ namespace: interpreter
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
     idContext [] .constContext @ =:: constContext
-    idContext [] .labelContext @ =:: labelContext
     idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     generatorProc pos context evaluateCall if
       "could not initialize type-generator " sb.wrap
         generatorName labelContext sb.appendLabelName
@@ -388,7 +387,6 @@ namespace: interpreter
       args
       context [] .stack list.peek .data [] .typeId ## return value of call
       typeContext
-      labelContext
       constContext
     types.initializeGeneratedType if
       "could not initialize type-generator " sb.wrap
@@ -407,8 +405,8 @@ namespace: interpreter
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
     idContext [] .constContext @ =:: constContext
-    idContext [] .labelContext @ =:: labelContext
     idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     generatorName idContext id.getIdentifier if ..drop
       "could not find procedure " sb.wrap
         generatorName labelContext sb.appendLabelName
@@ -458,9 +456,9 @@ proc(
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
-  context [] .program [] .idContext .constContext @ =:: constContext
-  context [] .program [] .idContext .typeContext @ =:: typeContext
-  context [] .program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   op [] .val switch
     NOP case
       false return
@@ -744,7 +742,7 @@ proc(
         valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
           showErrorMessages if
             "wrong argument type for declartion expected type got " sb.wrap
-              valInfo [] .valueType labelContext typeContext sb.appendType
+              valInfo [] .valueType typeContext sb.appendType
             op [] .pos errors appendError
           end
           true return
@@ -805,7 +803,6 @@ proc(
             "unexpected value for procedure constant: " sb.wrap
               idInfo [] .constValue
                 constContext
-                labelContext
                 typeContext
               sb.appendConstant
             op [] .pos errors appendError
@@ -834,7 +831,6 @@ proc(
               label
               context [] .stack list.asArray offset array.tail
               typeContext
-              labelContext
               constContext
             types.findGeneratedType if ## newType
               idContext [] .templateArgBuffer .length =:: argOffset
@@ -944,7 +940,7 @@ proc(
             idContext [] .arraySizeBuffer =
           else
             "unexpected constant for array size: " sb.wrap
-              intArg constContext labelContext typeContext sb.appendConstant
+              intArg constContext typeContext sb.appendConstant
             context [] .stackInfo ..over.2 list.at .data [] .pushedAt errors appendError
           end
           1 +
@@ -960,7 +956,7 @@ proc(
           "unexpected constant parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
             " expected type got " sb.appendS
-            typeConstant constContext labelContext typeContext sb.appendConstant
+            typeConstant constContext typeContext sb.appendConstant
           op [] .pos errors appendError
           true return
         end
@@ -1087,8 +1083,8 @@ proc(
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext @ =:: idContext
-  context [] .program [] .idContext .labelContext @ =:: labelContext
-  context [] .program [] .idContext .typeContext @ =:: typeContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   program [] .procedures procId list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType

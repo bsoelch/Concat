@@ -292,9 +292,9 @@ proc(
   context [] .program =:: program
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
-  program [] .idContext .constContext @ =:: constContext
-  program [] .idContext .typeContext @ =:: typeContext
-  program [] .idContext .labelContext @ =:: labelContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   toMerge 0 array.get =:: rootValue
   rootValue [] .varId =:: rootId
   true =:: mut isMerged
@@ -436,7 +436,7 @@ namespace: sb
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendGlobalName
     context [] .program =:: prog
-    prog [] .idContext .labelContext @ =:: labelContext
+    prog [] .idContext .typeContext .labelContext @ =:: labelContext
     sb
       '$' sb.appendC
       label labelContext id.labelFlags id.FLAG_EXTERN & ? if
@@ -491,8 +491,8 @@ namespace: sb
   -> stringBuilder ) =>: appendTypeNameQBE
     context [] .program =:: prog
     prog [] .errors @ =:: errors
-    prog [] .idContext .labelContext @ =:: labelContext
     prog [] .idContext .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     t switch
       namedType case
         sb
@@ -602,8 +602,6 @@ namespace: sb
     LabelId : labelId
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendArgName
-    context [] .program =:: prog
-    prog [] .idContext .labelContext @ =:: labelContext
     sb
       "%a" sb.appendS
       index sb.appendI
@@ -614,8 +612,6 @@ namespace: sb
     i64 : index
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendOutArgName
-    context [] .program =:: prog
-    prog [] .idContext .labelContext @ =:: labelContext
     sb
       "%o" sb.appendS
       index sb.appendI
@@ -628,8 +624,8 @@ namespace: sb
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendProcArgs
     context [] .program =:: prog
-    prog [] .idContext .labelContext @ =:: labelContext
     prog [] .idContext .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     procType typeContext types.getCallConvention ..drop =:: callConvention
     procType typeContext types.getProcIn ..drop =:: inType
     inType typeContext types.compositeElts =:: args
@@ -677,7 +673,7 @@ namespace: sb
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendStringConstQBE
     context [] .program =:: prog
-    prog [] .idContext .labelContext @ =:: labelContext
+    prog [] .idContext .typeContext .labelContext @ =:: labelContext
     sb
       0 while ..dup value .length < do =:: i
         "b " sb.appendS
@@ -698,8 +694,8 @@ namespace: sb
   -> stringBuilder ) =>: appendConstQBE
     context [] .program =:: prog
     prog [] .errors @ =:: errors
-    prog [] .idContext .labelContext @ =:: labelContext
     prog [] .idContext .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     prog [] .idContext .constContext @ =:: constContext
     sb
       isGlobal if
@@ -723,7 +719,6 @@ namespace: sb
           =:: progIn
           progIn
             value .genericArg
-            labelContext
             typeContext
           types.compositeFindLabel =:: index
           index id.LABEL_ID_NONE != if
@@ -806,7 +801,7 @@ namespace: sb
       end
       isGlobal if
         "unsupported constant: " sb.wrap
-          value constContext labelContext typeContext sb.appendConstant
+          value constContext typeContext sb.appendConstant
         pos errors appendError
         return
       end
@@ -897,8 +892,8 @@ namespace: sb
   -> stringBuilder ) =>: appendTypeDeclarationQBE
     context [] .program =:: prog
     prog [] .errors @ =:: errors
-    prog [] .idContext .labelContext @ =:: labelContext
     prog [] .idContext .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     prog [] .idContext .constContext @ =:: constContext
     t types.isNamedType t types.isGeneratedType | if
       sb return ## ignore named types
@@ -1117,8 +1112,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   size .sizeType .int ?? ! if
     "unsupported size type for array element" sb.wrap
       size sb.appendArraySize
@@ -1236,8 +1231,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   sb
     ## loadEnumLabel
       enumType
@@ -1269,8 +1264,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ## BranchId
     BranchType .ERROR
     context nextJumpLabelId
@@ -1588,8 +1583,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ValType : valType
   i64 : tmpId
   labels labelCmp @ context list.sort
@@ -1622,7 +1617,7 @@ proc(
       '\n' sb.appendC
     else
       "unsupported type in switch: " sb.wrap
-        switchType labelContext typeContext sb.appendType
+        switchType typeContext sb.appendType
       pos errors appendError
       return
     end
@@ -1754,8 +1749,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   opType typeContext types.getProcIn ..drop =:: inType
   inType 0 typeContext types.compositeGetLabel
       labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -2075,8 +2070,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   src typeContext types.primitiveValue =:: fromVal
   target typeContext types.primitiveValue =:: toVal
   sb
@@ -2156,8 +2151,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ## XXX? better cType <-> type conversion
   src0 typeContext types.unwrapNamed
     ..dup .cType ?? if .cType types.cTypeAsType end
@@ -2285,9 +2280,9 @@ proc(
     return
   end
   "casting from " sb.wrap
-    src labelContext typeContext sb.appendType
+    src typeContext sb.appendType
     " to " sb.appendS
-    target labelContext typeContext sb.appendType
+    target typeContext sb.appendType
     " is not implemented" sb.appendS
   pos errors appendError
   sb return
@@ -2326,8 +2321,8 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   op [] .val switch
     NOP case
       sb return
@@ -2416,7 +2411,7 @@ proc(
         "function " sb.appendS
         op [] .dataType typeContext types.getProcRet if ..drop
           "wrong type for procedure initialization: " sb.wrap
-            op [] .dataType labelContext typeContext sb.appendType
+            op [] .dataType typeContext sb.appendType
             " expected procedure" sb.appendS
           op [] .pos errors appendError
           return
@@ -2774,7 +2769,6 @@ proc(
         else op [] .dataType typeContext types.isArray ! _if
           "unsupported type for new:" sb.wrap
             op [] .dataType
-              labelContext
               typeContext
             sb.appendType
           op [] .pos errors appendError
@@ -3556,7 +3550,7 @@ proc(
     Return case
       op [] .dataType typeContext types.isProcedure ! if
         "unexpected type for return: " sb.wrap
-          op [] .dataType labelContext typeContext sb.appendType
+          op [] .dataType typeContext sb.appendType
           " expected procedure" sb.appendS
         op [] .pos errors appendError
         sb return
@@ -3670,8 +3664,8 @@ proc( CompilerContext ptr mut : context -> ) =>: cleanupCompilerContext
 end
 proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQBE
   prog [] .idContext @ =:: idContext
-  idContext [] .labelContext @ =:: labelContext
   idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   ## CompilerContext
     prog
     StackElement branchTree.create

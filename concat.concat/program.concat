@@ -418,7 +418,7 @@ namespace: sb
   proc( stringBuilder Operation ProgramContext ptr -> stringBuilder ) =>: export appendOp
     =:: progContext
     progContext [] .idContext .typeContext @ =:: typeContext
-    progContext [] .idContext .labelContext @ =:: labelContext
+    progContext [] .idContext .typeContext .labelContext @ =:: labelContext
     progContext [] .idContext .constContext @ =:: constContext
     ..swap
       ..over .val switch
@@ -427,9 +427,9 @@ namespace: sb
           break
         Constant case
           "constant ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .Constant constContext labelContext typeContext sb.appendConstant
+          ..over .val .Constant constContext typeContext sb.appendConstant
           break
         block case
           "Block: " sb.appendS
@@ -447,20 +447,20 @@ namespace: sb
           break
         getId case
           "get ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .getId labelContext sb.appendIdInfo
           break
         call_old case
           "call ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .call_old .idInfo labelContext sb.appendIdInfo
           break
         call case ..over =:: op
           op .val .call @ =:: callInfo
           "call ( " sb.appendS
-          op .dataType  labelContext typeContext sb.appendType
+          op .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           progContext [] .procedures
             callInfo [] .procId list.at .data
@@ -476,32 +476,32 @@ namespace: sb
           break
         builtIn case ..over =:: op
           "built-in ( " sb.appendS
-          op .dataType  labelContext typeContext sb.appendType
+          op .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           op .val .builtIn sb.appendBuiltIn
           break
         setId case
           "set ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setId labelContext sb.appendIdInfo
           break
         @Id case
           "address ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .@Id labelContext sb.appendIdInfo
           break
         initializeId case
           "initialize ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .initializeId labelContext sb.appendIdInfo
           break
         implementProcedure case ..over =:: op
           op .val .implementProcedure @ =:: implInfo
           "implement ( " sb.appendS
-          op .dataType  labelContext typeContext sb.appendType
+          op .dataType typeContext sb.appendType
           " ) : " sb.appendS
           progContext [] .procedures
             implInfo [] .procId list.at .data
@@ -516,37 +516,37 @@ namespace: sb
           break
         autoTypedInitializeId case
           "auto-typed initialize ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .autoTypedInitializeId labelContext sb.appendIdInfo
           break
         declareId case
           "declare ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .declareId labelContext sb.appendIdInfo
           break
         getLabel case
           "get label ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .getLabel labelContext sb.appendLabelName
           break
         setLabel case
           "set label ( " sb.appendS
-          ..over .dataType labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setLabel labelContext sb.appendLabelName
           break
         @Label case
           "label address ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .@Label labelContext sb.appendLabelName
           break
         hasLabel case
           "has label ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .hasLabel labelContext sb.appendLabelName
           break
@@ -557,135 +557,135 @@ namespace: sb
           break
         getElement case
           "get element ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .getElement sb.appendI
           break
         setElement case
           "set element ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setElement sb.appendI
           break
         @Element case
           "element address ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .@Element sb.appendI
           break
         hasElement case
           "has element ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .hasElement sb.appendI
           break
         getArrayElement case
           "get array element ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .getArrayElement sb.appendI
           break
         setArrayElement case
           "set array element ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setArrayElement sb.appendI
           break
         @ArrayElement case
           "array element address ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .@ArrayElement sb.appendI
           break
         setValue case
           "set value ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         Return case
           "Return( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) " sb.appendS
           break
         binaryOperator case
           "binary Operator ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .binaryOperator sb.appendBinaryOperator
           break
         unaryOperator case
           "unary Operator ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .unaryOperator sb.appendUnaryOperator
           break
         Print case
           "print: " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           break
         New case
           "new: " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           break
         newEnum case
           "new enum ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .newEnum sb.appendI
           break
         autoCast case
           "autoCast ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) src: " sb.appendS
-          ..over .val .autoCast .src labelContext typeContext sb.appendType
+          ..over .val .autoCast .src typeContext sb.appendType
           " at " sb.appendS
           ..over .val .autoCast .offset sb.appendI
           break
         Cast case
           "cast ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) src: " sb.appendS
-          ..over .val .Cast  labelContext typeContext sb.appendType
+          ..over .val .Cast typeContext sb.appendType
           break
         Cast! case
           "cast! ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) src: " sb.appendS
-          ..over .val .Cast!  labelContext typeContext sb.appendType
+          ..over .val .Cast! typeContext sb.appendType
           break
         callPtr case
           "call pointer ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         argc case
           "get program argument count ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         getArg case
           "get program argument ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         getArgLen case
           "get program argument length ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         length case
           "length ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         size case
           "size ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         typeInfo case
           "typeInfo ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ): " sb.appendS
           ..over .val .typeInfo switch
             ALIGNMENT case "alignment" sb.appendS break
@@ -695,19 +695,19 @@ namespace: sb
           break
         checkEnumLabel case
           "check enum label ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .checkEnumLabel sb.appendI
           break
         setEnumLabel case
           "set enum label ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setEnumLabel sb.appendI
           break
         checkArrayIndex case
           "check array index ( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .checkArrayIndex sb.appendI
           break
@@ -717,7 +717,7 @@ namespace: sb
           break
         copy case
           "copy( " sb.appendS
-          ..over .dataType  labelContext typeContext sb.appendType
+          ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
         getName case

@@ -129,12 +129,15 @@ namespace: sb
       end ..drop
     return
   end
-  proc( stringBuilder ConstValue ConstantContext ptr LabelContext ptr TypeContext ptr -> stringBuilder ) =>: export appendConstant
-    =:: typeContext
-    =:: labelContext
-    =:: constContext
-    ..swap
-      ..over switch
+  proc(
+    stringBuilder : sb
+    ConstValue : val
+    ConstantContext ptr : constContext
+    TypeContext ptr : typeContext
+  -> stringBuilder ) =>: export appendConstant
+    typeContext [] .labelContext @ =:: labelContext
+    sb
+      val switch
         none case
           "none"  sb.appendS
           break
@@ -143,62 +146,62 @@ namespace: sb
           break
         boolean case
           "bool: " sb.appendS
-          ..over .boolean if "true" sb.appendS else "false" sb.appendS end
+          val .boolean if "true" sb.appendS else "false" sb.appendS end
           break
         int case
-          "integer: "  sb.appendS
-          ..over .int sb.appendI
+          "integer: " sb.appendS
+          val .int    sb.appendI
           break
         Float case
-          "float: "    sb.appendS
-          ..over .Float sb.appendF
+          "float: "  sb.appendS
+          val .Float sb.appendF
           break
         str case
-          "string: \""  sb.appendS
-          ..over .str labelContext sb.appendEscapedStr
+          "string: \"" sb.appendS
+          val .str labelContext sb.appendEscapedStr
                  '\"'  sb.appendC
           break
         chr case
-          "char: \'"  sb.appendS
-          ..over .chr sb.appendEscapedChr
+          "char: \'" sb.appendS
+          val .chr   sb.appendEscapedChr
                '\''  sb.appendC
           break
         typeId case
           "type: "     sb.appendS
-          ..over .typeId labelContext typeContext sb.appendType
+          val .typeId typeContext sb.appendType
           break
         enumLabel case
-          "enum label: ("   sb.appendS
-          ..over .enumLabel sb.appendI
-                   ')'     sb.appendC
+          "enum label: (" sb.appendS
+          val .enumLabel  sb.appendI
+                   ')'    sb.appendC
           break
-        arrayConstant case ..over .arrayConstant =:: mArray
+        arrayConstant case
+          val .arrayConstant =:: mArray
           "{ " sb.appendS
-          0 while ..dup mArray .length < do
-            ..swap
-              mArray ..over.2 constContext constArrayGet constContext labelContext typeContext appendConstant
-              ' ' sb.appendC
-            ..swap 1 +
+          0 while ..dup mArray .length < do =:: i
+            mArray i constContext constArrayGet constContext typeContext appendConstant
+            ' ' sb.appendC
+            i 1 +
           end ..drop
           "}" sb.appendS
           break
         procedure case
           "procedure: "  sb.appendS
-          ..over .procedure sb.appendI
+          val .procedure sb.appendI
           break
         procedureBundle case
           "procedure bundle: "  sb.appendS
-          ..over .procedureBundle sb.appendI
+          val .procedureBundle sb.appendI
           break
         genericArg case
           "generic argument: "  sb.appendS
-          ..over .genericArg sb.appendI
+          val .genericArg sb.appendI
           break
         templateArg case
           "template argument: "  sb.appendS
-          ..over .templateArg sb.appendI
+          val .templateArg sb.appendI
           break
       end
-     ..swap ..drop return
+    return
   end
 end

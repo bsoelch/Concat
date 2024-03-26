@@ -105,9 +105,8 @@ namespace: id
   end
 end
   struct(
-    ConstantContext : mut constContext
-    LabelContext : mut labelContext
     TypeContext : mut typeContext
+    ConstantContext : mut constContext
     id.Scope : mut globalScope
     id.Scope list : mut openScopes
     LabelId IdentifierData hashMap : mut identifierData
@@ -122,9 +121,8 @@ end
 namespace: id
 
   proc( -> IdentifierContext ) =>: export newIdentifierContext
-    newConstContext
-    newLabelContext
     types.newTypeContext
+    newConstContext
     false Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     labelHash @ labelEq @ 128 IdentifierData map.create
@@ -158,7 +156,7 @@ namespace: id
          procType
          staticArgsOffset
          experimental
-         context [] .labelContext .namespaceInfo .imports
+         context [] .typeContext .labelContext .namespaceInfo .imports
        newScope list.append
     context [] .openScopes =
   end
@@ -169,7 +167,7 @@ namespace: id
       context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental
     end =:: experimental =:: currentProc
     context [] .openScopes
-       false currentProc -1 experimental context [] .labelContext .namespaceInfo .imports newScope
+       false currentProc -1 experimental context [] .typeContext .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
   end
@@ -224,7 +222,7 @@ namespace: id
     context [] .openScopes =
     closed .scopeStrings freeScopeStrings closed .scopeStrings =
     closed .identifierNames @ map.free
-    closed .prevImports context [] .labelContext .namespaceInfo .imports =
+    closed .prevImports context [] .typeContext .labelContext .namespaceInfo .imports =
     closed .isProcScope if
       0 context [] .localVarCount = ## XXX handle nested procedures
     end
@@ -232,7 +230,7 @@ namespace: id
   end
 
   proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName LabelId bool ) =>: export searchIdentifier
-    context [] .labelContext .namespaceInfo .current =:: mut mNamespace
+    context [] .typeContext .labelContext .namespaceInfo .current =:: mut mNamespace
     NamespaceId : mut relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
@@ -249,7 +247,7 @@ namespace: id
     LabelId optional : idLabel?
     LabelId : idLabel
     ## 1. search in local scopes
-    mNamespace path  context [] .labelContext @ findNamespace relSpace =
+    mNamespace path  context [] .typeContext .labelContext @ findNamespace relSpace =
     name relSpace fileId IdentifierName new =:: mut idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .openScopes .length 1 -
@@ -272,7 +270,7 @@ namespace: id
     ## 2. search global variable in current&parent namespaces
     name relSpace FILE_ID_NONE IdentifierName new =:: mut globalName
     while mNamespace NAMESPACE_ID_NONE != do
-      mNamespace path  context [] .labelContext @ findNamespace relSpace =
+      mNamespace path  context [] .typeContext .labelContext @ findNamespace relSpace =
       relSpace idName .namespace =
       relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
@@ -301,15 +299,15 @@ namespace: id
           matches .data [] =
         end
       end
-      context [] .labelContext .namespaces mNamespace list.get .parent mNamespace =
+      context [] .typeContext .labelContext .namespaces mNamespace list.get .parent mNamespace =
     end
     ## 3. search imports
     false =:: mut multiMatch
     LabelId optional.empty =:: mut match
     false =:: mut matchGlobal
-    context [] .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
-      context [] .labelContext .namespaceImports ..swap list.get
-        ..dup .imported path  context [] .labelContext @ findNamespace relSpace =
+    context [] .typeContext .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
+      context [] .typeContext .labelContext .namespaceImports ..swap list.get
+        ..dup .imported path  context [] .typeContext .labelContext @ findNamespace relSpace =
         relSpace idName .namespace =
         relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
@@ -360,7 +358,7 @@ namespace: id
       context [] .templateInfos context [] .currentTemplate list.get =:: template
       template .templateType
         0 while ..dup ..over.2 context [] .typeContext @ types.compositeEltCount < do =:: tId
-            id ..over tId context [] .typeContext @ types.compositeGetLabel context [] .labelContext @ labelNameEq if
+            id ..over tId context [] .typeContext @ types.compositeGetLabel context [] .typeContext .labelContext @ labelNameEq if
               =:: tType
               tType tId context [] .typeContext @ types.compositeGetElement =:: eType
               eType
@@ -375,7 +373,7 @@ namespace: id
               tId
               IdentifierType .TEMPLATE_ARG
               IdentifierData new ID_TMP_DATA =
-              name context [] .labelContext .namespaceInfo .current fileId IdentifierName new LABEL_ID_TMP false return
+              name context [] .typeContext  .labelContext .namespaceInfo .current fileId IdentifierName new LABEL_ID_TMP false return
             end
           tId 1 +
         end ..drop
@@ -399,7 +397,7 @@ namespace: id
   proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export findIdentifierByLabel
     context [] .nameBuffer
       ..dup .length 0 != if ..unreachable end ## TODO error message
-      nameId context [] .labelContext @ sb.appendLabelName
+      nameId context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
     ## searchIdentifier
@@ -456,7 +454,7 @@ namespace: id
     IdentifierContext ptr mut : context
     CompilerError list ptr mut : errors
   ->  IdentifierName IdentifierData bool ) =>: export declareIdentifier
-    context [] .labelContext @ =:: labelContext
+    context [] .typeContext  .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
       ID_NONE ID_NONE_DATA true return
@@ -464,7 +462,7 @@ namespace: id
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
       ..dup .length 0 != if ..unreachable end ## TODO error message
-      label context [] .labelContext @ sb.appendLabelName
+      label context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
     context id.isTopLevel flags FLAG_EXPORT & ? & if ## exported global -> ignore fileId
@@ -643,44 +641,44 @@ end
 namespace: id
   proc( LabelId : name IdentifierContext ptr mut : context -> ) =>: export beginNamespace
     context [] .prevImports
-      context [] .labelContext .namespaceInfo .imports list.append
+      context [] .typeContext  .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
     context [] .nameBuffer
        ..dup .length 0 != if ..unreachable end ## TODO error message
-       name context [] .labelContext @ sb.appendLabelName
+       name context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: nameAsStr
-    context [] .labelContext .namespaceInfo .current
-      nameAsStr true context [] .labelContext @ childId
-    context [] .labelContext .namespaceInfo .current =
+    context [] .typeContext  .labelContext .namespaceInfo .current
+      nameAsStr true context [] .typeContext  .labelContext @ childId
+    context [] .typeContext  .labelContext .namespaceInfo .current =
     context [] .nameBuffer list.clear context [] .nameBuffer =
   end
   proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =>: export importNamespace
     context [] .nameBuffer
        ..dup .length 0 != if ..unreachable end ## TODO error message
-       name context [] .labelContext @ sb.appendLabelName
+       name context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: nameAsStr
-    0 NamespaceId cast nameAsStr context [] .labelContext @ findNamespace
+    0 NamespaceId cast nameAsStr context [] .typeContext  .labelContext @ findNamespace
     context [] .nameBuffer list.clear context [] .nameBuffer =
     ..dup NAMESPACE_ID_NONE == if ..drop
       true return
     end
-    context [] .labelContext .namespaceInfo .imports
-      ..swap context [] .labelContext @ getNamespaceImportId
-    context [] .labelContext .namespaceInfo .imports =
+    context [] .typeContext  .labelContext .namespaceInfo .imports
+      ..swap context [] .typeContext  .labelContext @ getNamespaceImportId
+    context [] .typeContext  .labelContext .namespaceInfo .imports =
     false return
   end
   proc( IdentifierContext ptr mut : context -> bool ) =>: export endNamespace
-    context [] .labelContext .namespaceInfo .current 0 == if
+    context [] .typeContext  .labelContext .namespaceInfo .current 0 == if
       true return
     end
-    context [] .labelContext .namespaceInfo .current context [] .labelContext @ parentNamespace
-    context [] .labelContext .namespaceInfo .current =
+    context [] .typeContext  .labelContext .namespaceInfo .current context [] .typeContext  .labelContext @ parentNamespace
+    context [] .typeContext  .labelContext .namespaceInfo .current =
     context [] .prevImports
       list.pop ..swap
     context [] .prevImports =
-    context [] .labelContext .namespaceInfo .imports =
+    context [] .typeContext  .labelContext .namespaceInfo .imports =
     false
   end
 
@@ -912,7 +910,7 @@ namespace: types
           templateInfo [] .implementations ..over list.get
             true 0 while ..dup ..over.3 .argValues .length < do
               ..swap ..drop
-                ..over .argValues ..over context [] .constContext @ constArrayGet args ..over.2 context argBufferGet context [] .labelContext @ constantEquals ..dup ! if
+                ..over .argValues ..over context [] .constContext @ constArrayGet args ..over.2 context argBufferGet context [] .typeContext  .labelContext @ constantEquals ..dup ! if
                   ..swap break
                 end
               ..swap 1 +
