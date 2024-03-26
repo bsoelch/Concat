@@ -2800,7 +2800,14 @@ proc(
           end
         else op [] .dataType typeContext types.isTuple _if
           op [] .dataType dataPtrId op [] .pos context initializeTupleQBE
-        else op [] .dataType typeContext types.isArray ! _if
+        else op [] .dataType typeContext types.isArray _if
+          ## zero-initialize array
+          "call $memset(l %t" sb.appendS
+          dataPtrId sb.appendI
+          ",w 0,l " sb.appendS
+          op [] .dataType typeContext types.sizeOf sb.appendI
+          ")\n" sb.appendS
+        else
           "unsupported type for new:" sb.wrap
             op [] .dataType
               typeContext
