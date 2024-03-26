@@ -611,6 +611,54 @@ proc( TypeCheckState ptr mut : state -> ) =>: endBranch
   end
 end
 
+
+proc(
+  bool : clearConst
+  i32 : offset
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+-> ) =>: clearReferences
+  state [] .program [] .idContext .typeContext @ =:: typeContext
+  ## list.create
+    state [] .stack branchTree.depth
+  TypeInfo list.create =:: mut stackElements
+  while state [] .stack @ branchTree.pop =:: next?
+      next? optional.hasData do
+    stackElements
+      next? .data list.appendP
+    stackElements =
+  end
+  while stackElements .length 0 > do
+    stackElements
+      list.pop =:: mut elt
+    stackElements =
+    clearConst if
+      ConstValue .none elt .value =
+      id.LABEL_ID_NONE elt .valueId =
+    end
+    -1 elt .opIndex =
+    elt .valueType typeContext types.isReference if
+      elt .valueType =:: srcType
+      elt .valueType
+        typeContext types.getBaseType
+      elt .valueType =
+      ## update stack value
+      ## opAutoCast
+        srcType
+        stackElements .length i32 cast offset +
+        elt .valueType
+        pos
+      opAutoCast state appendOp ..drop
+      ## remove possibility to overwrite copy
+      -1 elt .copyMutableIndex =
+    end
+    state [] .stack @
+      elt
+    branchTree.push
+  end
+  stackElements list.free stackElements =
+end
+
 enum( MERGE MERGE_ROOT NO_CAST ) =:: MergeType
 struct(
   string : blockName
@@ -764,6 +812,7 @@ proc(
     op [] program sb.appendOp
   op [] .pos errors appendError
 end
+
 
 proc(
   Operation : op
@@ -2034,6 +2083,7 @@ proc(
           state requireTypes if
             ..drop return
           end ..drop
+          false 1 op .pos state clearReferences
           state [] .blockCount =:: mut blockId
           state [] .blockCount 1 + state [] .blockCount =
           blockId op .val .block .blockId =
@@ -2061,6 +2111,7 @@ proc(
           state requireTypes if
             ..drop return
           end ..drop
+          false 1 op .pos state clearReferences
           currentBlock [] .If .ififBranches
             ## BranchPoint
               state [] .stack @ branchTree.startBranch
@@ -2087,6 +2138,7 @@ proc(
             "unexpected else-statement, if-else block can only contain one else statement" sb.wrap
             op .pos errors appendError
           end
+          false 0 op .pos state clearReferences
           currentBlock [] .If .blockId op .val .block .blockId =
           state [] .stack @
             currentBlock [] .If .branchRoot
@@ -2173,6 +2225,7 @@ proc(
             op .pos errors appendError
           end
           switchType op .dataType =
+          false 1 op .pos state clearReferences
           op state appendOp ..drop
           ## XXX? pull constants into branches
           state [] .stack @ branchTree.startBranch =:: switchBranch
@@ -2273,6 +2326,7 @@ proc(
           breakBlock? optional.isEmpty if
             return ## error message handled by findBreakableBlock
           end
+          false 0 op .pos state clearReferences
           breakBlock? .data =:: breakBlock
           breakBlock [] .Switch ?? if
             breakBlock [] .Switch @ =:: switchBlock
@@ -2347,37 +2401,9 @@ proc(
             WhileData new list.append
           program [] .whileData =
           whileId op .val .block .blockId =
+          true 0 op .pos state clearReferences
           op state appendOp ..drop
           state [] .stack @ branchTree.startBranch =:: whileBranch
-          ## list.create
-            state [] .stack branchTree.depth
-          TypeInfo list.create =:: mut stackElements
-          while state [] .stack @ branchTree.pop =:: next?
-              next? optional.hasData do
-            stackElements
-              next? .data list.appendP
-            stackElements =
-          end
-          while stackElements .length 0 > do
-            stackElements
-              list.pop =:: mut elt
-            stackElements =
-            ## remove constant values (op can be overwritten by later value )
-            ConstValue .none elt .value =
-            id.LABEL_ID_NONE elt .valueId =
-            -1 elt .opIndex =
-            elt .valueType typeContext types.isReference if
-              ## remove possibility to overwrite copy
-              elt .valueType
-                typeContext types.getBaseType
-              elt .valueType =
-              -1 elt .copyMutableIndex =
-            end
-            state [] .stack @
-              elt
-            branchTree.push
-          end
-          stackElements list.free stackElements =
           ## newWhileBlock
             whileBranch
             whileId
@@ -2406,6 +2432,7 @@ proc(
           state requireTypes if
             ..drop return
           end ..drop
+          false 1 op .pos state clearReferences
           ## remember that cast-offsets are off by one
           currentBlock [] .While .blockId op .val .block .blockId =
           currentBlock [] .While
