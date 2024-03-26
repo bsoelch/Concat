@@ -716,7 +716,7 @@ namespace: types
     end
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
-      isPtr ! fixedSize ! | sizes .length 0 > | if
+      isPtr ! sizes .length 0 > | if
         Type .undefined true return
       end
       base

@@ -2494,8 +2494,7 @@ proc(
       op [] .val .@Id ?? =:: isAddr
       idInfo .idType switch
         PROCEDURE GLOBAL_VAR case
-          idInfo .idType .PROCEDURE ?? if
-            ## XXX handle procedure-pointers via separate instruction
+          isAddr ! if idInfo .idType .PROCEDURE ?? _if
             break ## calls are handled by call instruction
           end
           sb
