@@ -162,18 +162,21 @@ namespace: array
   ## find lowest index of array,
   ## if the array is not a sub-sequence contain the smallest possible start index
   #:ifnot:exp
-  #template type : T #end
+  #template type : T type : C #end
   proc(
     T arrayView : a
     T arrayView : b
-    proc( T ptr T ptr -> bool ) ptr : eq
+    proc( T ptr T ptr C -> bool ) ptr : eq
+    C : context
   -> i64 ) =>: export indexOfArrayStart
   #:else
   proc(
     type : auto T
+    type : auto C
     T arrayView : a
     T arrayView : b
-    proc( T ptr T ptr -> bool ) ptr : eq
+    proc( T ptr T ptr C -> bool ) ptr : eq
+    C : context
   -> i64 ) =>: export indexOfArrayStart
   #:end
     ## TODO? use faster algorithm
@@ -186,6 +189,7 @@ namespace: array
         ## eq
           a i j + array.at .data
           b j array.at .data
+          context
         eq () ! if
           false match =
           j break

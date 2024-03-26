@@ -1079,8 +1079,16 @@ namespace: types
     LabelId ptr : b
     LabelContext ptr mut : labelContext
   -> bool ) =>: labelPtrEq
-    ## XXX? switch from labelId equality to name equality
-    a [] b [] ==
+    ## XXX? treat labels with same name and flags as equal
+    a [] b [] == if
+      true return
+    end
+    a [] labelContext id.labelFlags id.FLAG_DUMMY & ? if
+        b [] labelContext id.labelFlags id.FLAG_DUMMY & ? _if
+        ## treat dummy labels with same name as equal
+        a [] b [] labelContext id.labelNamesEq return
+    end
+    false return
   end
   proc(
     LabelId arrayView optional : labels?
