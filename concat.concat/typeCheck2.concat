@@ -347,7 +347,7 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  state [] .childIds .length =:: argOffset
+  types .length i64 list.create =:: mut argOffsets
   1 while ..dup types .length <= do =:: i
     types types .length i - array.get =:: expectedType
     state [] .stack branchTree.depth 0 <= if
@@ -357,8 +357,12 @@ proc(
       "not enough types for " sb.wrap
         name sb.appendStr
       pos errors appendError
-      argOffset true return
+      state [] .childIds .length true return
     end
+    ## append dummy value for argument offset
+    argOffsets
+      -1 list.append
+    argOffsets =
     expectedType .empty ?? if
       state [] .stack @ branchTree.peek .data =:: typeInfo
       typeInfo [] .valueType typeContext types.isEmpty ! if
@@ -366,9 +370,8 @@ proc(
       end
     end
     state [] .stack @ branchTree.pop .data [] =:: typeInfo
-    state [] .childIds
-      typeInfo .opIndex list.append
-    state [] .childIds =
+    ## set argument offset to correct value
+    typeInfo .opIndex argOffsets list.peek .data [] =
     typeInfo .valueType expectedType types.typeEquals if
       i 1 + continue
     end
@@ -382,16 +385,32 @@ proc(
       expectedType .arrayIndex ?? if
         true state [] .program [] .hasCheckIndex =
       end
-      state [] .childIds
-        ..dup .length =:: argId
-        typeInfo .opIndex list.append
-      state [] .childIds =
       ## opAutoCast
         typeInfo .valueType
         i 1 -
         expectedType
         pos
-      opAutoCast state appendOp ..drop
+      opAutoCast state appendOp =:: opId
+      typeInfo .opIndex -1 == if
+        ## no index update neccessary
+        i 1 + continue
+      end
+      state [] .childIds
+        ..dup .length =:: argId
+        typeInfo .opIndex list.append
+      state [] .childIds =
+      state [] .opInfo
+        typeInfo .opIndex list.at .data
+      =:: opData
+      ## updateOpInfo
+        opData [] .canMove
+        opData [] .canDelete
+        1
+        argId
+        state
+      updateOpInfo_noStack
+      ## update argument offset
+      opId argOffsets list.peek .data [] =
       i 1 + continue
     end
     "wrong type for " sb.wrap
@@ -403,7 +422,12 @@ proc(
     pos errors appendError
     i 1 +
   end ..drop
-  argOffset false return
+  state [] .childIds
+    ..dup .length =:: argsOffset
+    argOffsets list.appendAll
+  state [] .childIds =
+  argOffsets list.free ..drop
+  argsOffset false return
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =>: discardValues
   count pos state checkStackSize if return end
@@ -552,6 +576,9 @@ proc(
   TypeCheckState ptr mut : state
   i64 : opIndex
 -> ) =>: updateOpInfoIndex
+  opIndex -1 == if
+    return ## no operation to update
+  end
   state [] .opInfo opIndex list.at .data =:: opInfo
   argCount i32.MAX > if
     ..unreachable ## XXX handle case of too many arguments
