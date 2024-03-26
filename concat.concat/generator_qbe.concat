@@ -2261,6 +2261,29 @@ proc(
       end
     return
   end
+  target typeContext types.isUnion if
+    ## TODO check if source is subset of union
+    sb
+      "%s" sb.appendS
+      targetId sb.appendI
+      target context false appendAlloc ..drop
+      src context referenceOnly if
+        "blit %s" sb.appendS
+      else
+        "store" sb.appendS
+        src StorageType .STORE pos context sb.appendTypeNameQBE
+        " %s" sb.appendS
+      end
+      srcId sb.appendI
+      ", %s" sb.appendS
+      targetId sb.appendI
+      src context referenceOnly if
+        ", " sb.appendS
+        src typeContext types.sizeOf sb.appendI
+      end
+      '\n' sb.appendC
+    return
+  end
   "casting from " sb.wrap
     src labelContext typeContext sb.appendType
     " to " sb.appendS
@@ -2654,7 +2677,7 @@ proc(
             op [] .pos
             context
           sb.appendTypeNameQBE
-          "%s" sb.appendS
+          " %s" sb.appendS
           srcId sb.appendI
           '\n' sb.appendC
         end
