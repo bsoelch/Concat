@@ -707,9 +707,6 @@ namespace: types
   -> Type bool ) =>: export newArrayType
     context [] .labelContext @ =:: labelContext
     isPtr if makeMutable else false end =:: mutable
-    isPtr ! sizes .length 0 == & if
-      Type .undefined true return
-    end
     target =:: mut base
     base .undefined ?? if
       Type .undefined true return
