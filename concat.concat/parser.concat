@@ -1107,16 +1107,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart newTypeConst  state pushConst
       "" string.wrap true return
     end
-    _EXPERIMENTAL_ ! if
-      ..dup state getStaticArg ..dup optional.hasData if .data
-          ..dup .argType
-          ..swap .val
-          IdentifierInfo optional.empty ## XXX? id-info
-          fileState [] .wordStart
-        Constant new state pushConst
-        true return
-      else ..drop end
+    _EXPERIMENTAL_ if
+      false return
     end
+    ..dup state getStaticArg ..dup optional.hasData if .data
+        ..dup .argType
+        ..swap .val
+        IdentifierInfo optional.empty ## XXX? id-info
+        fileState [] .wordStart
+      Constant new state pushConst
+      true return
+    else ..drop end
     ..dup state [] .currentFile idContext id.findIdentifierByName if
       ..drop.2 false return ## unknown identifier
     end
@@ -1124,8 +1125,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ..drop.2 false return ## not a constant
     end
     ..dup [] .constValue .procedure ??
-        ..over [] .constValue .procedureBundle ?? |
-        ..over [] .constValue .genericArg ?? _EXPERIMENTAL_ & |  if
+        ..over [] .constValue .procedureBundle ?? |  if
       ..drop.2 false return ## ignore procedure constants
     end
     ..dup [] .constValue =:: mut constVal
@@ -3055,12 +3055,13 @@ proc( stringBuilder : fileName ParserState ptr mut : state -> FileId io.IOError 
       ..dup .length 1 - sb.setLength ## ensure there is a zero-terminator after the last character
     end
     ..dup sb.asStr 0 1 FilePosition new ..dup FileState new =:: mut fileState
+    progContext [] .progFiles .length FileId cast =:: fileId
     progContext [] .progFiles
-      ..over progContext [] .progFiles .length FileId cast progContext [] .idContext @ newProgFile list.append
+      ..over fileId progContext [] .idContext @ newProgFile list.append
     progContext [] .progFiles =
     state [] .globalInterpreters
       ## InterpreterInfo
-        progContext wrapProgram
+        progContext fileId wrapProgram
         0
       InterpreterInfo new list.append
     state [] .globalInterpreters =

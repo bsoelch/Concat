@@ -29,6 +29,7 @@ struct(
   BlockInfo  list : mut openBlocks
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
+  FileId : mut currentFile
 ) =:: export InterpreterContext
 
 proc( i64 : count InterpreterContext ptr mut : context -> bool ) =>: checkStack
@@ -421,11 +422,12 @@ namespace: interpreter
     end
     idData [] .constValue .procedure =:: procId
     program [] .procedures
-      procId list.at .data [] .procType
-    =:: procType
+      procId list.at .data
+    =:: procData
+    procData [] .procType =:: procType
     procType typeContext types.getProcIn ..drop =:: inType
     inType typeContext types.compositeElts =:: inTypes
-    program wrapProgram =:: mut context
+    program procData [] .fileId wrapProgram =:: mut context
       ## push arguments
       0 while ..dup inTypes .length < do =:: i
         inTypes i types.compositeElts.get =:: argType
@@ -887,7 +889,29 @@ proc(
           value? .data =:: value ## TODO? wrap local variable in reference?
           value .value value .info .valueType label op [] .pos context pushValue
           false return
-        TYPE TEMPLATE_ARG GLOBAL_VAR TMP_VAR PROCEDURE_BUNDLE case
+        TYPE GLOBAL_VAR case
+          label
+            idContext
+          id.getIdentifier if ..drop
+            showErrorMessages if
+              "could not find identifier: " sb.wrap
+                label labelContext sb.appendLabelName
+              op [] .pos errors appendError
+            end
+            true return ## unknown identifier
+          end =:: idData
+          idData [] .constValue .none ?? if
+            showErrorMessages if
+              "identifier " sb.wrap
+                label labelContext sb.appendLabelName
+                " has not been initialized" sb.appendS
+              op [] .pos errors appendError
+            end
+            true return
+          end
+          idData [] .constValue idData [] .valueType label op [] .pos context pushValue
+          false return
+        TEMPLATE_ARG TMP_VAR PROCEDURE_BUNDLE case
         showErrorMessages if
           "unsupported operation in constant evaluation: " sb.wrap
             op [] program sb.appendOp
@@ -1174,6 +1198,8 @@ proc(
     end
     1 +
   end ..drop
+  context [] .currentFile =:: oldFile
+  procData [] .fileId context [] .currentFile =
   BlockType .PROCEDURE context openBlock
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
@@ -1187,6 +1213,7 @@ proc(
     context [] .stackInfo =
     true return
   else
+    oldFile context [] .currentFile =
     context [] .stack .length stackOffset - =:: nReturn
     ## mem.copy
       context [] .stack .data argsOffset +
@@ -1215,6 +1242,7 @@ end
 
 proc(
   ProgramContext ptr mut : progContext
+  FileId : fileId
 ->
   InterpreterContext
 ) =>: export wrapProgram
@@ -1226,6 +1254,7 @@ proc(
     64 BlockInfo  list.create
     64 Type       list.create
     64 LabelId    list.create
+    fileId
   InterpreterContext new
 end
 

@@ -1463,9 +1463,9 @@ proc(
       op .val .getId =:: idInfo
       idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: mutable
       mutable if
-        idInfo .constValue
-      else
         ConstValue .none
+      else
+        idInfo .constValue
       end =:: constValue
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR case
@@ -3305,6 +3305,7 @@ proc(
   program [] .procedures procId list.at .data =:: currentProc
   ## compile procedures to local code of given file
   currentProc [] .fileId state [] .currentFile =
+  currentProc [] .fileId state [] .interpreter .currentFile =
   program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
   state clearOps
   currentProc [] .implementation .code @ =:: codeImpl
@@ -3346,7 +3347,7 @@ end
 proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   ## TypeCheckState
     program
-    program wrapProgram
+    program -1 wrapProgram
     labelHash @ labelEq @ 64 TypedValue map.create
     Type .undefined
     true
@@ -3366,9 +3367,10 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   ## global code
-  0 while ..dup program [] .progFiles .length < do
-    ..dup state .currentFile =
-    program [] .progFiles ..over list.at .data =:: progFile
+  0 while ..dup program [] .progFiles .length < do =:: fileId
+    fileId state .currentFile =
+    fileId state .interpreter .currentFile =
+    program [] .progFiles fileId list.at .data =:: progFile
     state @ clearOps
     0 while ..dup progFile [] .globalOps .length < do
       progFile [] .globalOps ..over list.get state @ typeCheckOp
@@ -3379,7 +3381,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     state .compiledOps =
     state @ resetInterpreter
     state .stack @ branchTree.clear ## TODO error on unhandled values
-    1 +
+    fileId 1 +
   end ..drop
   state @ clearOps
   state .compiledOps =:: originalOps
