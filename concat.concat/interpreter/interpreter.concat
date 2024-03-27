@@ -821,7 +821,7 @@ proc(
           outTypes .length 1 == if outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals _if
             ## type-generator (procedure returning type)
             op [] .dataType typeContext types.getProcIn ..drop =:: procIn
-            procOut typeContext types.compositeElts =:: inTypes
+            procIn typeContext types.compositeElts =:: inTypes
             inTypes .length context checkStack if
               "not enough arguments for type-generator " sb.wrap
                 label labelContext sb.appendLabelName
