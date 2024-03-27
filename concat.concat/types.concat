@@ -208,10 +208,12 @@ namespace: types
     t0 context unwrapNamed =:: t
     t switch
        empty case true return
-       pointer arrayType case ## arrays of / pointers to empty values are empty
+       arrayType reference mutableReference case
+         ## arrays/reference of empty values are empty
          t context getBaseType context isEmpty return
-       undefined primitiveType procedure reference mutableReference cType
-         namedType autoType genericType templateType generatedType arrayIndex enum case false return
+       undefined primitiveType procedure cType pointer
+         namedType autoType genericType templateType
+         generatedType arrayIndex enum case false return
        procIn procOut struct union case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
     end

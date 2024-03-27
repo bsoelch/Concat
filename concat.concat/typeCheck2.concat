@@ -29,6 +29,9 @@ struct(
   bool : mut canDelete ## XXX flags are not independent -> combine to single modifier
 ) =:: OpInfo
 
+-1i64 =:: OP_UNLINKED
+-2i64 =:: OP_EMPTY
+
 struct(
   branchTree.NodeId : node
   FilePosition : pos
@@ -363,7 +366,7 @@ proc(
     end
     ## append dummy value for argument offset
     argOffsets
-      -1 list.append
+      OP_UNLINKED list.append
     argOffsets =
     expectedType .empty ?? if
       state [] .stack @ branchTree.peek .data =:: typeInfo
@@ -393,8 +396,8 @@ proc(
         expectedType
         pos
       opAutoCast state appendOp =:: opId
-      typeInfo .opIndex -1 == if
-        ## no index update neccessary
+      typeInfo .opIndex 0 < if
+        ## no index update necessary
         i 1 + continue
       end
       state [] .childIds
@@ -432,10 +435,16 @@ proc(
   argsOffset false return
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =>: discardValues
+  state [] .program =:: program
+  state [] .program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
   count pos state checkStackSize if return end
   0 =:: mut toDrop
   0 while ..dup count < do
     state [] .stack @ branchTree.pop .data =:: typeInfo
+    typeInfo [] .valueType typeContext types.isEmpty if
+      1 + continue
+    end
     typeInfo [] .opIndex state tryDeleteOp if
       toDrop 1 + toDrop =
     end
@@ -471,6 +480,9 @@ proc( FilePosition : pos TypeCheckState ptr mut : state -> Type ) =>: popType
     Type .undefined return
   end
   typeInfo [] .opIndex state currentBlockStart < if
+    typeInfo [] .opIndex ..debug.print
+    state currentBlockStart ..debug.print
+    state [] .compiledOps .length ..debug.print
     "type-constant " sb.wrap
       typeInfo [] .value constContext typeContext sb.appendConstant
       " at " sb.appendS
@@ -491,6 +503,14 @@ proc(
   FilePosition : pos
   TypeCheckState ptr mut : state
 -> ) =>: pushConstant
+    state [] .program =:: program
+    program [] .idContext @ =:: idContext
+    idContext [] .typeContext @ =:: typeContext
+    valType typeContext types.isEmpty if
+      OP_EMPTY
+    else
+      state [] .compiledOps .length
+    end =:: opIndex
     ## branchTree.push
       state [] .stack @
       ## TypeInfo
@@ -498,11 +518,14 @@ proc(
         value
         id.LABEL_ID_NONE
         pos
-        state [] .compiledOps .length
-        -1
-        -1
+        opIndex
+        OP_UNLINKED
+        OP_UNLINKED
       TypeInfo new
     branchTree.push
+    opIndex 0 < if
+      return
+    end
     state [] .compiledOps
       value valType pos opConst list.append
     state [] .compiledOps =
@@ -516,22 +539,34 @@ proc(
     state [] .opInfo =
 end
 proc(
+  Type : valType
   ConstValue : value
   Operation : op
   TypeCheckState ptr mut : state
 -> ) =>: pushValue
+    state [] .program =:: program
+    program [] .idContext @ =:: idContext
+    idContext [] .typeContext @ =:: typeContext
+    valType typeContext types.isEmpty if
+      OP_EMPTY
+    else
+      state [] .compiledOps .length
+    end =:: opIndex
     ## branchTree.push
       state [] .stack @
       ## TypeInfo
-        op .dataType
+        valType
         value
         id.LABEL_ID_NONE
         op .pos
-        state [] .compiledOps .length
-        -1
-        -1
+        opIndex
+        OP_UNLINKED
+        OP_UNLINKED
       TypeInfo new
     branchTree.push
+    opIndex 0 < if
+      return
+    end
     state [] .compiledOps
       op list.append
     state [] .compiledOps =
@@ -563,9 +598,9 @@ proc(
         ConstValue .none
         id.LABEL_ID_NONE
         pos
-        -1
-        -1
-        -1
+        OP_UNLINKED
+        OP_UNLINKED
+        OP_UNLINKED
       TypeInfo new
     branchTree.push
     i 1 +
@@ -581,10 +616,12 @@ proc(
   state [] .program [] .errors @ =:: errors
   state [] .stack @ branchTree.peek .data =:: typeInfo
   typeInfo [] .opIndex =:: opIndex
-  opIndex 0 < if
+  opIndex OP_UNLINKED == if
     "cannot update information of operations pushed outside current block" sb.wrap
     typeInfo [] .pushedAt errors appendError
     return
+  else opIndex OP_EMPTY == _if
+    return ## no need to update empty operation
   end
   canMove canDelete argCount argOffset state opIndex updateOpInfoIndex
 end
@@ -605,7 +642,7 @@ proc(
   TypeCheckState ptr mut : state
   i64 : opIndex
 -> ) =>: updateOpInfoIndex
-  opIndex -1 == if
+  opIndex 0 < if
     return ## no operation to update
   end
   state [] .opInfo opIndex list.at .data =:: opInfo
@@ -636,11 +673,6 @@ end
 proc( LabelId : label TypeCheckState ptr mut : state -> ) =>: replaceLabel
   state [] .stack @ branchTree.pop .data [] =:: mut top
   label top .valueId =
-  state [] .stack @ top branchTree.push
-end
-proc( Type : newType TypeCheckState ptr mut : state -> ) =>: replaceType
-  state [] .stack @ branchTree.pop .data [] =:: mut top
-  newType top .valueType =
   state [] .stack @ top branchTree.push
 end
 
@@ -744,7 +776,7 @@ proc(
       ConstValue .none elt .value =
       id.LABEL_ID_NONE elt .valueId =
     end
-    -1 elt .opIndex =
+    OP_UNLINKED elt .opIndex =
     elt .valueType typeContext types.isReference if
       elt .valueType =:: srcType
       elt .valueType
@@ -758,7 +790,7 @@ proc(
         pos
       opAutoCast state appendOp ..drop
       ## remove possibility to overwrite copy
-      -1 elt .copyMutableIndex =
+      OP_UNLINKED elt .copyMutableIndex =
     end
     state [] .stack @
       elt
@@ -879,9 +911,9 @@ proc(
     ConstValue .none ## XXX merge constants
     id.LABEL_ID_NONE
     mergePoint .mergePoint
-    -1
-    -1
-    -1
+    OP_UNLINKED
+    OP_UNLINKED
+    OP_UNLINKED
   TypeInfo new return
 end
 proc(
@@ -926,6 +958,12 @@ proc(
   Operation : op
   TypeCheckState ptr mut : state
 -> i64 #+opIndex+# ) =>: appendOp
+  state [] .program =:: program
+  program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  op .dataType typeContext types.isEmpty if
+    OP_EMPTY return
+  end
   state [] .compiledOps .length =:: index
   state [] .compiledOps
     op list.append
@@ -970,7 +1008,13 @@ proc(
   offset return
 end
 proc( TypeCheckState ptr mut : state -> ) =>: wrapCopy
+  state [] .program =:: program
+  program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
   state [] .stack @ branchTree.pop .data [] =:: mut topValue
+  topValue .valueType typeContext types.isEmpty if
+    return
+  end
   state [] .childIds
     topValue .opIndex list.append
   state [] .childIds =
@@ -995,7 +1039,7 @@ proc(
   i64 : copyMutableIndex
   TypeCheckState ptr mut : state
 -> ) =>: removeCopy
-  copyMutableIndex -1 != if
+  copyMutableIndex OP_UNLINKED != if
     ## no copy when writing to value
     opValNOP state [] .compiledOps copyMutableIndex list.at .data [] .val =
   end
@@ -1469,8 +1513,13 @@ proc(
       end =:: constValue
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR case
-          constValue op state pushValue
-          op .dataType mutable typeContext types.newReferenceType state replaceType
+          ## pushValue
+            op .dataType
+              mutable
+            typeContext types.newReferenceType
+            constValue
+            op
+          state pushValue
           op .val .getId .labelId state replaceLabel
           mutable ! true 0 0 state updateOpInfo
           mutable if ## insert copy for mutable values
@@ -1478,7 +1527,7 @@ proc(
           end
           return
         TYPE TEMPLATE_ARG case
-          constValue op state pushValue
+          op .dataType constValue op state pushValue
           op .val .getId .labelId state replaceLabel
           true true 0 0 state updateOpInfo
           return
@@ -1490,7 +1539,7 @@ proc(
             argData? .data [] .valType op .dataType =
             argData? .data [] .value argValue =
           end
-          argValue op state pushValue
+          op .dataType argValue op state pushValue
           label state replaceLabel
           true true 0 0 state updateOpInfo
           return
@@ -1576,7 +1625,7 @@ proc(
           +#
           ## requireTypes
             inTypes typeContext types.compositeEltArray
-            "procedure arguments" string.wrap
+            "procedure argument" string.wrap
             0
             op .pos
             state
@@ -1638,7 +1687,7 @@ proc(
       =:: inTypes
       ## requireTypes
         inTypes typeContext types.compositeEltArray
-        "procedure arguments" string.wrap
+        "procedure argument" string.wrap
         1
         op .pos
         state
@@ -1674,10 +1723,13 @@ proc(
               OpValue .procPtr
             op .val =
           end
-          ConstValue .none op state pushValue
-          op .dataType
-            mutable typeContext types.getAddressType
-          state replaceType
+          ## pushValue
+            op .dataType
+              mutable
+            typeContext types.getAddressType
+            ConstValue .none
+            op
+          state pushValue
           labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
           return
@@ -1777,9 +1829,9 @@ proc(
               ConstValue .none
               id.LABEL_ID_NONE
               op .pos
-              -1
-              -1
-              -1
+              OP_UNLINKED
+              OP_UNLINKED
+              OP_UNLINKED
             TypeInfo new
           branchTree.push
         end
@@ -1814,7 +1866,9 @@ proc(
         end
         return
       end
-      isReference if target [] .opIndex state currentBlockStart < _if
+      isReference if
+          target [] .opIndex OP_EMPTY != _if
+          target [] .opIndex state currentBlockStart < _if
         "cannot assign value to reference on different branch" sb.wrap
           "( pushed at" sb.appendS
           target [] .pushedAt sb.appendPos
@@ -1822,7 +1876,7 @@ proc(
         op .pos errors appendError
         return
       end
-      target [] .readCheckIndex -1 != if
+      target [] .readCheckIndex OP_UNLINKED != if
         target [] .readCheckIndex state tryDeleteOp if ## no read check when writing to value
           "cannot remove enum index check" sb.wrap
           op .pos errors appendError
@@ -1913,8 +1967,11 @@ proc(
           container .opIndex list.append
         state [] .childIds =
         ## XXX? compute constant value
-        ConstValue .none srcType elementIndex op .pos opHasElement state pushValue
-        types.primitive.BOOL state replaceType
+        ## pushValue
+          types.primitive.BOOL
+          ConstValue .none
+          srcType elementIndex op .pos opHasElement
+        state pushValue
         elementLabel state replaceLabel
         mutable ! true 1 childOffset state updateOpInfo
         return
@@ -1930,7 +1987,7 @@ proc(
           return
         end
         eltType .empty ?? if
-          -1i64
+          OP_UNLINKED
         else
           ## requireTypes
             eltType @ array.wrap
@@ -1941,6 +1998,7 @@ proc(
           ..drop return
         end =:: argOffset
         ## pushValue
+          containerType
           ConstValue .none ## XXX compute constant value
           containerType elementIndex op .pos opNewEnum
         state pushValue
@@ -1957,9 +2015,8 @@ proc(
         op .pos errors appendError
         return
       end
-      state [] .stack @ branchTree.pop ..drop ## remove container from stack
       1 =:: mut childCount
-      -1i64 =:: mut onRead
+      OP_UNLINKED =:: mut onRead
       state [] .childIds
         ..dup .length =:: childOffset
         container .opIndex list.append
@@ -1971,7 +2028,23 @@ proc(
           true program [] .hasCheckEnum =
         end
       state [] .childIds =
+      ## can only take address of reference or pointer
+      isAddr srcType typeContext types.isPointer | if
+        eltType mutable typeContext types.getAddressType
+      else srcType typeContext types.isReference _if
+        eltType mutable typeContext types.newReferenceType
+      else
+        eltType
+      end =:: targetType
+      targetType typeContext types.isEmpty if
+        ## discard container from stack and operations
+        1 op .pos state discardValues
+      else
+        ## remove container from stack
+        state [] .stack @ branchTree.pop ..drop
+      end
       ## pushValue
+        targetType
         ConstValue .none ## XXX compute constant value
         srcType
         elementIndex
@@ -1982,20 +2055,14 @@ proc(
           opGetElement
         end
       state pushValue
-      ## can only take address of reference or pointer
-      isAddr srcType typeContext types.isPointer | if
-        eltType mutable typeContext types.getAddressType
-      else srcType typeContext types.isReference _if
-        eltType mutable typeContext types.newReferenceType
-      else
-        eltType
-      end =:: targetType
-      targetType state replaceType
       elementLabel state replaceLabel
       state [] .stack @ branchTree.pop .data [] =:: mut topValue
       onRead topValue .readCheckIndex =
       ## updateOpInfo info needs to value -> push then pop again
       state [] .stack @ topValue branchTree.push
+      targetType typeContext types.isEmpty if
+        return
+      end
       mutable ! true childCount childOffset state updateOpInfo
       isAddr if
         container .copyMutableIndex state removeCopy
@@ -2094,7 +2161,6 @@ proc(
         ..drop return
       end =:: opOffset
       typeBuffer list.free ..drop
-      ConstValue .none op state pushValue
       indexCount 0 == if
         dimensions 1 -
       else
@@ -2119,7 +2185,9 @@ proc(
         isAddr ! if
           #+eltType+# mutable typeContext types.newReferenceType
         end
-      state replaceType
+        ConstValue .none
+        op
+      state pushValue
       fixedSize isAddr | ..dup indexCount 1 + opOffset state updateOpInfo
       isAddr if
         srcCopyMutIndex state removeCopy
@@ -2162,7 +2230,7 @@ proc(
         op .pos errors appendError
       end
       ## XXX try cast constant on stack
-      value .value op state pushValue
+      op .dataType value .value op state pushValue
       state [] .childIds
         ..dup .length =:: offset
         value .opIndex list.append
@@ -2178,7 +2246,7 @@ proc(
         op .dataType typeContext types.isFixedSize ! if
           "variable size arrays are not supported" sb.wrap op .pos errors appendError
         end
-        ConstValue .none op state pushValue
+        op .dataType ConstValue .none op state pushValue
         true true 0 0 state updateOpInfo
         return
       end
@@ -2192,7 +2260,7 @@ proc(
         state requireTypes if
           ..drop return
         end =:: opOffset
-        ConstValue .none op state pushValue
+        op .dataType ConstValue .none op state pushValue
         false true count opOffset state updateOpInfo
         return
       end
@@ -2232,8 +2300,7 @@ proc(
       state requireTypes if
         ..drop return
       end =:: argOffset
-      ConstValue .none op state pushValue
-      types.primitive.BOOL state replaceType
+      types.primitive.BOOL ConstValue .none op state pushValue
       true true 2 argOffset state updateOpInfo
       return
     block case
@@ -2249,6 +2316,7 @@ proc(
         TYPE_COMPOSITE
         INITIALIZER case
           state unfreezeInterpreter
+          state [] .compiledOps .length state [] .blockStart =
           ## type-blocks and initializers are handled by the interpreter
           op @ state [] .interpreter @ true evaluateOperation if
             "could not evaluate " sb.wrap
@@ -2624,7 +2692,7 @@ proc(
             .breakCastOffsets .length
           currentBlock [] .While .doBranchIndex =
           currentBlock [] .While .breakCastOffsets
-            -1 list.append ## merge should not change operations at do
+            OP_UNLINKED list.append ## merge should not change operations at do
           currentBlock [] .While .breakCastOffsets =
           currentBlock [] .While .breakBranches
             ## BranchPoint
@@ -2964,7 +3032,7 @@ proc(
             state [] .stack @ branchTree.startBranch list.append
           branchPoints =
           i64 2 array new =:: mut castOffsets
-          -1 castOffsets @ 0 [] =
+          OP_UNLINKED castOffsets @ 0 [] =
           ## reserveOps
             state [] .stack branchTree.depth
             op .pos
@@ -3191,15 +3259,17 @@ proc(
             copied .valueType
               typeContext types.getBaseType
             copied .valueType =
-            -1 copied .copyMutableIndex = ## remove possibility to overwrite copy
+            OP_UNLINKED copied .copyMutableIndex = ## remove possibility to overwrite copy
           end
           op .pos copied .pushedAt =
-          ## copy value in code
-          copied .opIndex state tryCopyOp if ..drop
-            ## copied operation can no longer be deleted
-            copied .opIndex state freezeOp
-            op state appendOp
-          end copied .opIndex =
+          copied .valueType typeContext types.isEmpty ! if
+            ## copy value in code
+            copied .opIndex state tryCopyOp if ..drop
+              ## copied operation can no longer be deleted
+              copied .opIndex state freezeOp
+              op state appendOp
+            end copied .opIndex =
+          end
           state [] .stack @ copied branchTree.push
           return
         SWAP case
@@ -3208,19 +3278,22 @@ proc(
           end
           state [] .stack @ branchTree.pop .data [] =:: upper
           state [] .stack @ branchTree.pop .data [] =:: mut lower
-          ## swap values in code
-          lower .opIndex state canCopyOp if
-              lower .opIndex state canDeleteOp _if
-            ## copy lower value to to, the discard lower value
-            ## discard old operations for lower value
-            lower .opIndex state tryCopyOp =:: isError =:: newIndex
-            lower .opIndex state tryDeleteOp isError | if
-              "internal compiler error: could not move operation" sb.wrap
-              op .pos errors appendError
+          lower .valueType typeContext types.isEmpty ! if
+          upper .valueType typeContext types.isEmpty ! _if
+            ## swap values in code
+            lower .opIndex state canCopyOp if
+                lower .opIndex state canDeleteOp _if
+              ## copy lower value above upper
+              ## discard old operations for lower value
+              lower .opIndex state tryCopyOp =:: isError =:: newIndex
+              lower .opIndex state tryDeleteOp isError | if
+                "internal compiler error: could not move operation" sb.wrap
+                op .pos errors appendError
+              end
+              newIndex lower .opIndex =
+            else
+              op state appendOp ..drop
             end
-            newIndex lower .opIndex =
-          else
-            op state appendOp ..drop
           end
           ## swap values on stack
           state [] .stack @ upper branchTree.push

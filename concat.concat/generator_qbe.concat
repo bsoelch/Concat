@@ -592,7 +592,8 @@ namespace: sb
       procIn procOut case
         break
     end
-    "unsupported type" sb.wrap
+    "unsupported type " sb.wrap
+      t typeContext sb.appendType
     pos errors appendError
     sb return
   end
@@ -636,7 +637,8 @@ namespace: sb
       0 while ..dup args .length < do =:: i
         args i types.compositeElts.get =:: arg
         inType i typeContext types.compositeGetLabel =:: label
-        arg typeContext types.isEmpty if ## skip empty arguments
+        arg typeContext types.isEmpty if
+          ## skip empty arguments
           i 1 + continue
         end
         label labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -653,7 +655,8 @@ namespace: sb
       end ..drop
       0 while ..dup outArgs .length < do =:: i
           outArgs i array.get =:: arg
-          arg typeContext types.isEmpty if ## skip empty arguments
+          arg typeContext types.isEmpty if
+            ## skip empty arguments
             i 1 + continue
           end
           hasArgs if
@@ -933,7 +936,7 @@ namespace: sb
       sb return ## ignore named types
     end
     t typeContext types.isEmpty if
-      sb return ## ignore empy types
+      sb return ## ignore empty types
     end
     t typeContext types.containsGeneric | if
       sb return ## ignore generic types
@@ -982,13 +985,18 @@ namespace: sb
     t typeContext types.isTuple if
       t typeContext types.compositeElts =:: elts
       0i64 =:: mut offset
+      false =:: mut hasElt
       sb t pos context startTypeDeclaration
         0 while ..dup elts .length < do =:: i
           elts i types.compositeElts.get =:: elt
+          elt typeContext types.isEmpty if
+            i 1 + continue
+          end
           t i typeContext types.tupleElementOffset =:: eltOffset
-          i 0 > if
+          hasElt if
             ',' sb.appendC
           end
+          true hasElt =
           offset eltOffset < if
             "b " sb.appendS
             eltOffset offset - sb.appendI
@@ -2356,8 +2364,12 @@ proc(
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  calledType typeContext types.getProcOutArgs ..drop =:: outArgs
-  calledType typeContext types.getProcRet ..drop =:: retType
+  calledType typeContext types.getProcOutArgs
+    if ..unreachable end
+  =:: outArgs
+  calledType typeContext types.getProcRet
+    if ..unreachable end
+  =:: retType
   sb =:: mut newSb
   ## allocate output arguments
   0 while ..dup outArgs .length < do =:: i
@@ -2396,8 +2408,12 @@ proc(
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  calledType typeContext types.getProcOutArgs ..drop =:: outArgs
-  calledType typeContext types.getProcRet ..drop =:: retType
+  calledType typeContext types.getProcOutArgs
+    if ..unreachable end
+  =:: outArgs
+  calledType typeContext types.getProcRet
+    if ..unreachable end
+  =:: retType
   sb
     " (" sb.appendS
     0 while ..dup argIndices [] .length < do =:: i
@@ -2571,6 +2587,9 @@ proc(
         0 while ..dup args .length < do =:: i
           inType i typeContext types.compositeGetLabel =:: label
           args i types.compositeElts.get =:: argType
+          argType typeContext types.isEmpty if
+            i 1 + continue ## skip empty arguments
+          end
           label id.LABEL_ID_NONE == if ## push argument
             argType context referenceOnly if
               ValType .REFERENCE
@@ -3028,6 +3047,9 @@ proc(
       0 while ..dup argCount < do =:: i
         inTypes i typeContext types.compositeGetElement =:: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
+        arg typeContext types.isEmpty if
+          i 1 + continue ## skip empty arguments
+        end
         argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
           i 1 + continue ## skip static arguments
         end
@@ -3086,22 +3108,23 @@ proc(
       =:: inTypes
       inTypes typeContext types.compositeEltCount =:: argCount
       argCount TypedValId list.create =:: mut argIndices
-      ## store popped arguments in reverse order
-      argIndices
-        argCount list.setLength
-      argIndices =
       0 while ..dup argCount < do =:: i
         inTypes
           i typeContext types.compositeGetElement
         =:: arg
-        ## TypedValId
-          arg
-          context popValue
-        TypedValId new argIndices
-          argCount 1 - i -
-        list.at .data [] =
+        arg typeContext types.isEmpty if
+          i 1 + continue ## skip empty arguments
+        end
+        argIndices
+          ## TypedValId
+            arg
+            context popValue
+          TypedValId new list.append
+        argIndices =
         i 1 +
       end ..drop
+      ## arguments are popped in reverse order
+      argIndices list.reverse
       argIndices .length =:: outArgOffset
       sb
         calledType
@@ -3776,6 +3799,11 @@ proc(
           branchTree.push
           sb return
         SWAP case
+          context [] .stackInfo branchTree.depth 2 < if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
+            sb return
+          end
           context [] .stackInfo @ branchTree.swap
           sb return
       end

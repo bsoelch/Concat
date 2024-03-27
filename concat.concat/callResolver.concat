@@ -703,10 +703,6 @@ proc(
       ## add dummy type below stack to ensure auto-arguments get matched
       Type .undefined
     end =:: stackType
-    stackType typeContext types.isEmpty if
-      ## XXX allow empty to terminate multi-argument arguments
-      stackIndex 1 + continue ## skip empty arguments
-    end
     0 while ..dup currentSignatures .length < do =:: i
       currentSignatures i list.at .data =:: mut current
       current [] .argsMatch ! current [] .needsParam ! | if
