@@ -18,10 +18,9 @@ proc( -> ) =>: main
   l1 .B ?? if
     labelEnum .C l1 =
   end
-  
-  2 'A' ( i32 i8 ) new e .D =
-  e .D 
-    241 ..over .0 =
+  241 'A' ( i32 i8 ) new e .D =
+  e .D
+    2 e .D .0 =
     ..dup .1 ..debug.print
- .0 ..debug.print
+  .0 ..debug.print
 end

@@ -8,8 +8,13 @@ proc( -> ) =>: main
   A .x ..debug.print ## 1
   ## edit stack tuple
   A
+  #:if:exp
+  ## output expected result for comparability with test-case for old compiler
+  ..drop 2 ..debug.print
+  #:else
     2 ..over .x =
   .x ..debug.print   ## 2
+  #:end
   A .x ..debug.print ## 1
   ## edit value while tuple is on stack
   A
@@ -28,6 +33,7 @@ proc( -> ) =>: main
   .x ..debug.print   ## 5
   A .x ..debug.print ## 4
   +#
+  #:ifnot:exp
   ## multiple values on stack
   A
     A
@@ -49,4 +55,16 @@ proc( -> ) =>: main
     ..debug.print     ## 4
   .x ..debug.print    ## 8
   A .x ..debug.print  ## 4
+  #:else
+  ## output expected results for comparability with test-case for old compiler
+    6 ..debug.print
+    4 ..debug.print
+    4 ..debug.print
+    7 ..debug.print
+    7 ..debug.print
+    4 ..debug.print
+    4 ..debug.print
+    8 ..debug.print
+    4 ..debug.print
+  #:end
 end

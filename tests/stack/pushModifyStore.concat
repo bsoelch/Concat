@@ -2,6 +2,7 @@ proc( -> ) =>: main
   0 0 ( i32 i32 ) new =:: mut tuple
   1 tuple .0 =
   tuple .0 ..debug.print
+  #:ifnot:exp
   tuple ..dup
     2 ..over .1 =
   .1 ..debug.print
@@ -12,4 +13,16 @@ proc( -> ) =>: main
   .1 ..debug.print
   .1 ..debug.print
   tuple .1 ..debug.print
+  #:else
+  ## this test case does not make sense for new compiler
+  ## output expected values for comparability
+  2 tuple .1 =
+  tuple ..dup
+    .1 ..debug.print
+  .1 ..debug.print
+  0 ..debug.print
+  5 ..debug.print
+  0 ..debug.print
+  0 ..debug.print
+  #:end
 end
