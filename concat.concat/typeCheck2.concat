@@ -339,6 +339,8 @@ end
 proc(
   Type arrayView : types
   string : name
+  ## number of values already popped by instruction
+  i32 : stackCastOffset
   FilePosition : pos
   TypeCheckState ptr mut : state
 -> i64 #+argOffset+# bool ) =>: requireTypes
@@ -387,7 +389,7 @@ proc(
       end
       ## opAutoCast
         typeInfo .valueType
-        i 1 -
+        i 1 - stackCastOffset +
         expectedType
         pos
       opAutoCast state appendOp =:: opId
@@ -541,6 +543,33 @@ proc(
         false
       OpInfo new list.append
     state [] .opInfo =
+end
+proc(
+  Type : calledType
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+-> ) =>: pushOutTypes
+  state [] .program [] .idContext
+    .typeContext @
+  =:: typeContext
+  ## push return values
+  calledType typeContext types.getProcOut ..drop
+    typeContext types.compositeElts
+  =:: outTypes
+  0 while ..dup outTypes .length < do =:: i
+    state [] .stack @
+      ## TypeInfo
+        outTypes i types.compositeElts.get
+        ConstValue .none
+        id.LABEL_ID_NONE
+        pos
+        -1
+        -1
+        -1
+      TypeInfo new
+    branchTree.push
+    i 1 +
+  end ..drop
 end
 proc(
   bool : canMove
@@ -1159,7 +1188,12 @@ proc(
     ## XXX report position of lowest stack value
     return
   end
-  procOut typeContext types.compositeEltArray "return statement" string.wrap op [] .pos state requireTypes if
+  ## requireTypes
+    procOut typeContext types.compositeEltArray
+    "return statement" string.wrap
+    0
+    op [] .pos
+  state requireTypes if
     ..drop return
   end =:: argsOffset
   op [] state appendOp ..drop
@@ -1543,14 +1577,12 @@ proc(
           ## requireTypes
             inTypes typeContext types.compositeEltArray
             "procedure arguments" string.wrap
+            0
             op .pos
             state
           requireTypes if ..drop
             return
           end =:: argOffset
-          calledType typeContext types.getProcOut ..drop
-            typeContext types.compositeElts
-          =:: outTypes
           program [] .procedures
             calledProc .procId list.at .data
           =:: calledProcData
@@ -1565,26 +1597,55 @@ proc(
             break
           end
           op state appendOp ..drop
-          ## push return values
-          0 while ..dup outTypes .length < do =:: i
-            state [] .stack @
-              ## TypeInfo
-                outTypes i types.compositeElts.get
-                ConstValue .none
-                id.LABEL_ID_NONE
-                op .pos
-                -1
-                -1
-                -1
-              TypeInfo new
-            branchTree.push
-            i 1 +
-          end ..drop
+          calledType op .pos state pushOutTypes
           return
         LABEL case
           break
       end
       break
+    callPtr case
+      state [] .stack @ branchTree.peek =:: value?
+      value? optional.isEmpty if
+        ## TODO? print instruction name instead of 'call'
+        "missing argument for call, expected procedure pointer" sb.wrap
+        op .pos errors appendError
+        return
+      end
+      value? .data [] .valueType
+        typeContext types.unwrapReference
+      =:: calledType
+      calledType typeContext types.isCallable ! if
+        "cannot call values of type " sb.wrap
+          calledType typeContext sb.appendType
+        op .pos errors appendError
+        return
+      end
+      ## requireTypes
+        calledType @ array.wrap
+        "procedure pointer" string.wrap
+        0
+        op .pos
+        state
+      requireTypes if ..drop return end ..drop
+      calledType op .dataType =
+      calledType typeContext types.isPointer if
+        calledType typeContext types.getBaseType
+      else
+        calledType
+      end =:: procType
+      procType typeContext types.getProcIn
+        if ..unreachable end ## XXX replace with assertion
+      =:: inTypes
+      ## requireTypes
+        inTypes typeContext types.compositeEltArray
+        "procedure arguments" string.wrap
+        1
+        op .pos
+        state
+      requireTypes if ..drop return end ..drop
+      op state appendOp ..drop
+      procType op .pos state pushOutTypes
+      return
     @Id case
       op .val .@Id .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE case
@@ -1660,7 +1721,12 @@ proc(
           constVal? optional.hasData if
             constVal? .data [] .value
           else ConstValue .none end =:: constVal
-          op .dataType @ array.wrap "initialization" string.wrap op .pos state requireTypes if
+          ## requireTypes
+            op .dataType @ array.wrap
+            "initialization" string.wrap
+            0
+            op .pos
+          state requireTypes if
             ..drop return
           end ..drop
           ## update constant value in identifier if stack-value is constant
@@ -1720,7 +1786,6 @@ proc(
         i 1 +
       end ..drop
       return
-    procPtr case break
     setValue case
       1 op .pos state checkStackSize if
         return
@@ -1765,13 +1830,20 @@ proc(
         end
       end
       target [] .copyMutableIndex state removeCopy
-      target [] .valueType typeContext types.getBaseType =:: base
+      target [] .valueType
+        typeContext types.getBaseType
+      =:: base
       base op .dataType =
       Type 2 array new =:: mut argData
       argData @ =:: args
       base args 0 [] =
       target [] .valueType args 1 [] =
-      args array.wrap "assignment" string.wrap op .pos state requireTypes if
+      ## requireTypes
+        args array.wrap
+        "assignment" string.wrap
+        0
+        op .pos
+      state requireTypes if
         ..drop return
       end ..drop
       op state appendOp ..drop
@@ -1860,7 +1932,12 @@ proc(
         eltType .empty ?? if
           -1i64
         else
-          eltType @ array.wrap "enum-creation" string.wrap op .pos state requireTypes _if
+          ## requireTypes
+            eltType @ array.wrap
+            "enum-creation" string.wrap
+            0
+            op .pos
+          state requireTypes _if
           ..drop return
         end =:: argOffset
         ## pushValue
@@ -2011,6 +2088,7 @@ proc(
       ## requireTypes
         typeBuffer list.asArray
         "index" string.wrap
+        0
         op .pos
       state requireTypes if
         ..drop return
@@ -2109,6 +2187,7 @@ proc(
         ## requireTypes
           op .dataType typeContext types.compositeEltArray
           "tuple element" string.wrap
+          0
           op .pos
         state requireTypes if
           ..drop return
@@ -2148,6 +2227,7 @@ proc(
       ## requireTypes
         params @ array.wrap
         "equality-check" string.wrap
+        0
         op .pos
       state requireTypes if
         ..drop return
@@ -2181,6 +2261,7 @@ proc(
           ## requireTypes
             types.primitive.BOOL @ array.wrap
             "if-condition" string.wrap
+            0
             op .pos
           state requireTypes if
             ..drop return
@@ -2209,6 +2290,7 @@ proc(
           ## requireTypes
             types.primitive.BOOL @ array.wrap
             "if-condition" string.wrap
+            0
             op .pos
           state requireTypes if
             ..drop return
@@ -2530,6 +2612,7 @@ proc(
           ## requireTypes
             types.primitive.BOOL @ array.wrap
             "while-condition" string.wrap
+            0
             op .pos
           state requireTypes if
             ..drop return
@@ -3069,9 +3152,8 @@ proc(
       op .pos errors appendError
       return
       break
-    getName builtIn
-    newEnum call callPtr
-    argc getArg getArgLen
+    getName builtIn procPtr
+    newEnum call argc getArg getArgLen
     unaryOperator
     checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name

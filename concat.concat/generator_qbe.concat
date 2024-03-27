@@ -622,7 +622,7 @@ namespace: sb
     Type : procType
     FilePosition : pos
     CompilerContext ptr mut : context
-  -> stringBuilder ) =>: appendProcArgs
+  -> stringBuilder ) =>: appendProcSignature
     context [] .program =:: prog
     prog [] .idContext .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
@@ -2348,6 +2348,110 @@ end
 
 proc(
   stringBuilder : sb
+  Type : calledType
+  TypedValId list ptr mut : argIndices
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: prepareCall
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  calledType typeContext types.getProcOutArgs ..drop =:: outArgs
+  calledType typeContext types.getProcRet ..drop =:: retType
+  sb =:: mut newSb
+  ## allocate output arguments
+  0 while ..dup outArgs .length < do =:: i
+    outArgs i array.get =:: outArg
+    ValType .REFERENCE context pushValue =:: argId
+    newSb
+      "%s" sb.appendS
+      argId sb.appendI
+      outArg context false appendAlloc ..drop
+    newSb =
+    argIndices []
+      outArg argId TypedValId new list.append
+    argIndices [] =
+    i 1 +
+  end ..drop
+  newSb
+    retType typeContext types.isEmpty ! if
+      retType context toValType context pushValue =:: retId
+      "%s" sb.appendS
+      retId sb.appendI
+      " =" sb.appendS
+      retType StorageType .LOAD pos context sb.appendTypeNameQBE
+      ' ' sb.appendC
+    end
+    "call " sb.appendS
+  return
+end
+proc(
+  stringBuilder : sb
+  Type : calledType
+  TypedValId list ptr mut : argIndices
+  i64 : outArgsOffset
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: finishCall
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  calledType typeContext types.getProcOutArgs ..drop =:: outArgs
+  calledType typeContext types.getProcRet ..drop =:: retType
+  sb
+    " (" sb.appendS
+    0 while ..dup argIndices [] .length < do =:: i
+      argIndices [] i list.at .data =:: arg
+      i 0 > if
+        ',' sb.appendC
+      end
+      i outArgsOffset < if
+        arg [] .valType
+          StorageType .LOAD
+          pos
+          context
+        sb.appendTypeNameQBE
+      else
+        'l' sb.appendC
+      end
+      " %s" sb.appendS
+      arg [] .valId sb.appendI
+      i 1 +
+    end ..drop
+    ")\n" sb.appendS
+    retType typeContext types.isProcOut if
+      ## flattenTupleQBE
+        retType context popValue
+        pos
+      context flattenTupleQBE
+    end
+    0 while ..dup outArgs .length < do =:: i
+      argIndices []
+        i outArgsOffset +
+      list.at .data [] .valType =:: outArg
+      outArg context referenceOnly if
+        i 1 + continue
+      end
+      ## compileCast
+        true
+        outArg
+          false
+          typeContext
+        types.newReferenceType
+        ## (len-1-i) +1 for return value
+        outArgs .length i - i32 cast
+        outArg
+        pos
+        context
+      compileCast
+      i 1 +
+    end ..drop
+    argIndices [] list.free argIndices [] =
+  return
+end
+
+proc(
+  stringBuilder : sb
   Operation ptr : op
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: compileOp
@@ -2455,7 +2559,7 @@ proc(
           ' ' sb.appendC
         end
         procInfo [] .labelId implInfo .implementationId context sb.appendGlobalName
-        op [] .dataType op [] .pos context sb.appendProcArgs
+        op [] .dataType op [] .pos context sb.appendProcSignature
         "{\n" sb.appendS
         ## BranchId
           BranchType .START
@@ -2955,77 +3059,62 @@ proc(
         context popValue arg [] .valId =
       end
       argIndices .length =:: outArgOffset
-      ## allocate output arguments
-      0 while ..dup outArgs .length < do =:: i
-        outArgs i array.get =:: outArg
-        ValType .REFERENCE context pushValue =:: argId
-        newSb
-          "%s" sb.appendS
-          argId sb.appendI
-          outArg context false appendAlloc ..drop
-        newSb =
-        argIndices
-          outArg argId TypedValId new list.append
-        argIndices =
+      newSb
+        calledType
+          argIndices @
+          op [] .pos
+        context prepareCall
+        procData [] .labelId
+          callInfo [] .implementationId
+        context sb.appendGlobalName
+        calledType
+          argIndices @
+          outArgOffset
+          op [] .pos
+        context finishCall
+      return
+    callPtr case
+      context popValue =:: calledId
+      op [] .dataType =:: mut calledType
+      calledType typeContext types.isPointer if
+        calledType
+          typeContext types.getBaseType
+        calledType =
+      end
+      calledType typeContext types.getProcIn
+        if ..unreachable end ## XXX replace with assert
+      =:: inTypes
+      inTypes typeContext types.compositeEltCount =:: argCount
+      argCount TypedValId list.create =:: mut argIndices
+      ## store popped arguments in reverse order
+      argIndices
+        argCount list.setLength
+      argIndices =
+      0 while ..dup argCount < do =:: i
+        inTypes
+          i typeContext types.compositeGetElement
+        =:: arg
+        ## TypedValId
+          arg
+          context popValue
+        TypedValId new argIndices
+          argCount 1 - i -
+        list.at .data [] =
         i 1 +
       end ..drop
-      -1i64 =:: mut retId
-      newSb
-        retType typeContext types.isEmpty ! if
-          retType context toValType context pushValue retId =
-          "%s" sb.appendS
-          retId sb.appendI
-          " =" sb.appendS
-          retType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
-          ' ' sb.appendC
-        end
-        "call " sb.appendS
-        procData [] .labelId callInfo [] .implementationId context sb.appendGlobalName
-        " (" sb.appendS
-        0 while ..dup argIndices .length < do =:: i
-          argIndices i list.at .data =:: arg
-          i 0 > if
-            ',' sb.appendC
-          end
-          i outArgOffset < if
-            arg [] .valType
-              StorageType .LOAD
-              op [] .pos
-              context
-            sb.appendTypeNameQBE
-          else
-            'l' sb.appendC
-          end
-          " %s" sb.appendS
-          arg [] .valId sb.appendI
-          i 1 +
-        end ..drop
-        ")\n" sb.appendS
-        retType typeContext types.isProcOut if
-          retType context popValue op [] .pos context flattenTupleQBE
-        end
-        0 while ..dup outArgs .length < do =:: i
-          argIndices
-            i outArgOffset +
-          list.at .data [] .valType =:: outArg
-          outArg context referenceOnly if
-            i 1 + continue
-          end
-          ## compileCast
-            true
-            outArg
-              false
-              typeContext
-            types.newReferenceType
-            ## (len-1-i) +1 for return value
-            outArgs .length i - i32 cast
-            outArg
-            op [] .pos
-            context
-          compileCast
-          i 1 +
-        end ..drop
-        argIndices list.free argIndices =
+      argIndices .length =:: outArgOffset
+      sb
+        calledType
+          argIndices @
+          op [] .pos
+        context prepareCall
+        "%s" sb.appendS
+        calledId sb.appendI
+        calledType
+          argIndices @
+          outArgOffset
+          op [] .pos
+        context finishCall
       return
     builtIn case
       sb
@@ -3695,7 +3784,7 @@ proc(
       context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
       break
     setId autoTypedInitializeId Assert
-    setElement setArrayElement callPtr call_old
+    setElement setArrayElement call_old
     argc getArg getArgLen unaryOperator
     setEnumLabel checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel

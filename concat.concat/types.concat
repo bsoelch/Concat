@@ -1384,6 +1384,7 @@ namespace: types
   proc( Type : mType TypeContext ptr : context -> bool ) =>: export isCallable
     mType context unwrapNamed
       ..dup context isPointer if
+      ..dup context isFixedSize _if
         context getBaseType
       end
     .procedure ?? return
