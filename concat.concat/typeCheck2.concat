@@ -1588,7 +1588,8 @@ proc(
     @Id case
       op .val .@Id .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE case
-          op .val .@Id .labelId
+          op .val .@Id .labelId =:: labelId
+          labelId
             labelContext id.labelFlags
           id.FLAG_MUTABLE & ? =:: mutable
           op .val .@Id .idType .PROCEDURE ?? if
@@ -1596,19 +1597,27 @@ proc(
             program [] .procedures
               procId list.at .data
             =:: procData
+            -1 =:: mut implId
+            procData [] .procType op .dataType =
             procData [] .hasStaticArg if
-              ## TODO implement pointer to generic procedure
+              ## TODO resolve implementation id
               ##  -> get static args from stack
               ##  -> replace op with generic-procedure pointer
               ##  -> generic proc ptr : ( procId, implId )
               break
             end
+            ## ProcedureImpl
+              procId
+              implId
+            ProcedureImpl new
+              OpValue .procPtr
+            op .val =
           end
           ConstValue .none op state pushValue
           op .dataType
             mutable typeContext types.getAddressType
           state replaceType
-          op .val .@Id .labelId state replaceLabel
+          labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
           return
         TYPE ARGUMENT LABEL TEMPLATE_ARG PROCEDURE_BUNDLE case
@@ -1711,6 +1720,7 @@ proc(
         i 1 +
       end ..drop
       return
+    procPtr case break
     setValue case
       1 op .pos state checkStackSize if
         return

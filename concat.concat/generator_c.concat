@@ -1410,7 +1410,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     compilerInfo case
       break
     getName setName @Name getLabel setLabel @Label length size
-    stackMod copy builtIn
+    stackMod copy builtIn procPtr
     typeModifier autoCast hasLabel hasName
     call implementProcedure Assert case
       break ## XXX error message

@@ -61,6 +61,7 @@ enum(
      IdentifierInfo : mut autoTypedInitializeId
      IdentifierInfo : mut declareId
       ProcedureImpl : mut implementProcedure
+      ProcedureImpl : mut procPtr
             LabelId : getLabel
             LabelId : mut setLabel
             LabelId : mut @Label
@@ -508,6 +509,22 @@ namespace: sb
         implementProcedure case ..over =:: op
           op .val .implementProcedure @ =:: implInfo
           "implement ( " sb.appendS
+          op .dataType typeContext sb.appendType
+          " ) : " sb.appendS
+          progContext [] .procedures
+            implInfo [] .procId list.at .data
+          =:: procInfo
+          procInfo [] .labelId labelContext sb.appendLabelName
+          implInfo [] .implementationId 0 >= if
+            ## XXX append static args instead of impl id
+            " (" sb.appendS
+            implInfo [] .implementationId sb.appendI
+            ')' sb.appendC
+          end
+          break
+        procPtr case ..over =:: op
+          op .val .procPtr @ =:: implInfo
+          "procedure pointer ( " sb.appendS
           op .dataType typeContext sb.appendType
           " ) : " sb.appendS
           progContext [] .procedures
