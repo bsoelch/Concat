@@ -17,6 +17,10 @@ proc( -> ) =>: main
   1 tupleArray @ 0 [] .0 =
   
   i32 2 3 array new =:: mut matrix
+  #:if:exp ## new compiler changes the order of array arguments
+  -14121 matrix @ 1 2 [] = ##  0 1  2 3  4 5
+  #:else
   -14121 matrix @ 2 1 [] = ##  0 1  2 3  4 5
+  #:end
   matrix @ i32 _ ptr cast 5 [] ..debug.print
 end
