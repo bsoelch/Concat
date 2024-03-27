@@ -92,4 +92,27 @@ namespace: array
     data buffer 0 size cmp context 0 mergeSortRec
     buffer mem.free
   end
+  #:ifnot:exp
+  #template type : T #end
+  proc(
+    T _ ptr mut : data
+    i64 : size
+  -> ) =>: export reverse
+  #:else
+  proc(
+    type : auto T
+    T _ ptr mut : data
+    i64 : size
+  -> ) =>: export reverse
+  #:end
+    size 1 - =:: last
+    size 2 / =:: mid
+    0 while ..dup mid < do =:: i
+      data i []
+        data last i - []
+        data i [] =
+      data last i - [] =
+      i 1 +
+    end ..drop
+  end
 end

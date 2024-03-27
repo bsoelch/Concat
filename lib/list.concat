@@ -455,4 +455,20 @@ namespace: list
       context
     array.sort
   end
+  #:ifnot:exp
+  #template type : T #end
+  proc(
+    T list : elts
+  -> ) =>: export reverse
+  #:else
+  proc(
+    type : auto T
+    T list : elts
+  -> ) =>: export reverse
+  #:end
+    ## sort
+      elts .data
+      elts .length
+    array.reverse
+  end
 end
