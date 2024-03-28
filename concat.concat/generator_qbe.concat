@@ -230,11 +230,16 @@ proc( ValType : valType i32 : offset CompilerContext ptr mut : context -> i64 ) 
   valType stackElt [] .valType =
   newId return
 end
-proc( CompilerContext ptr mut : context -> i64 ) =>: popValue
+proc(
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> i64 ) =>: popValue
   context [] .stackInfo @ branchTree.pop =:: tmp
   tmp .data ?? if
     tmp .data [] .varId return
   end
+  "stack underflow" sb.wrap
+  pos context [] .program [] .errors @ appendError
   -1 return
 end
 proc( CompilerContext ptr mut : context -> i64 ) =>: nextTmpId
@@ -1264,6 +1269,39 @@ end
 proc(
   stringBuilder : sb
   Type : enumType
+  i8  : stackType
+  i64 : valId
+  i64 : newLabel
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: storeEnumLabel
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  enumType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+  labelType typeContext types.numberSize =:: numSize
+  context nextTmpId =:: labelPtr
+  sb
+    "%t" sb.appendS
+    labelPtr sb.appendI
+    " =l add %" sb.appendS
+    stackType sb.appendC
+    valId sb.appendI
+    ", " sb.appendS
+    labelOffset sb.appendI
+    "\nstore" sb.appendS
+    labelType StorageType .STORE pos context sb.appendTypeNameQBE
+    ' ' sb.appendC
+    newLabel sb.appendI
+    ", %t" sb.appendS
+    labelPtr sb.appendI
+    '\n' sb.appendC
+  return
+end
+proc(
+  stringBuilder : sb
+  Type : enumType
   i64 : valId
   i64 : expectedIndex
   FilePosition : pos
@@ -1438,7 +1476,7 @@ proc(
         eltType StorageType .STORE pos context sb.appendTypeNameQBE
         " %s" sb.appendS
       end
-      context popValue sb.appendI
+      pos context popValue sb.appendI
       ", %t" sb.appendS
       eltPtrId sb.appendI
       eltType context referenceOnly if
@@ -1679,9 +1717,10 @@ proc(
   stringBuilder : sb
   string : name
   ValType : valType
+  FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: appendUnaryOperator
-  context popValue =:: arg
+  pos context popValue =:: arg
   sb
     "%s" sb.appendS
     valType context pushValue sb.appendI
@@ -1698,10 +1737,11 @@ proc(
   stringBuilder : sb
   string : name
   ValType : valType
+  FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: appendBinaryOperator
-  context popValue =:: arg2
-  context popValue =:: arg1
+  pos context popValue =:: arg2
+  pos context popValue =:: arg1
   sb
     "%s" sb.appendS
     valType context pushValue sb.appendI
@@ -1720,10 +1760,11 @@ proc(
   stringBuilder : sb
   string : cmpType
   ValType : valType
+  FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: appendComparisonOperator
-  context popValue =:: arg2
-  context popValue =:: arg1
+  pos context popValue =:: arg2
+  pos context popValue =:: arg1
   sb
     "%s" sb.appendS
     ValType .I32 context pushValue sb.appendI
@@ -1763,8 +1804,8 @@ proc(
      types.primitive.I32 typeContext types.numberPrecision >= if
     sb return
   end
-  context popValue args @ 1 [] =
-  context popValue args @ 0 [] =
+  pos context popValue args @ 1 [] =
+  pos context popValue args @ 0 [] =
   sb
     0 while ..dup 2 < do =:: i
       "%s" sb.appendS
@@ -1804,14 +1845,14 @@ proc(
   baseType context toValType =:: baseVal
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
-      sb "neg" string.wrap baseVal context appendUnaryOperator
+      sb "neg" string.wrap baseVal pos context appendUnaryOperator
       return
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
-      sb "add" string.wrap baseVal context appendBinaryOperator
+      sb "add" string.wrap baseVal pos context appendBinaryOperator
       return
     ADD_PTR ADD_PTR_MUT case
       baseType typeContext types.getBaseType =:: valueType
-      context popValue =:: offsetId
+      pos context popValue =:: offsetId
       sb
         ## correctly scale offset
         "%s" sb.appendS
@@ -1821,16 +1862,16 @@ proc(
         ", " sb.appendS
         valueType typeContext types.sizeOf sb.appendI
         '\n' sb.appendC
-       "add" string.wrap ValType .PTR context appendBinaryOperator
+       "add" string.wrap ValType .PTR pos context appendBinaryOperator
       return
     SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
-      sb "sub" string.wrap baseVal context appendBinaryOperator
+      sb "sub" string.wrap baseVal pos context appendBinaryOperator
       return
     PTR_DIFF case
       baseType typeContext types.getBaseType =:: valueType
       sb
-        "sub" string.wrap baseVal context appendBinaryOperator
-        context popValue =:: resId
+        "sub" string.wrap baseVal pos context appendBinaryOperator
+        pos context popValue =:: resId
         ## correctly scale offset
         "%s" sb.appendS
         ValType .I64 context pushValue sb.appendI
@@ -1841,55 +1882,55 @@ proc(
         '\n' sb.appendC
       return
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
-      sb "mul" string.wrap baseVal context appendBinaryOperator
+      sb "mul" string.wrap baseVal pos context appendBinaryOperator
       return
     DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
-      sb "div" string.wrap baseVal context appendBinaryOperator
+      sb "div" string.wrap baseVal pos context appendBinaryOperator
       return
     MOD_I32 MOD_I64 MOD_F32 MOD_F64 case
-      sb "rem" string.wrap baseVal context appendBinaryOperator
+      sb "rem" string.wrap baseVal pos context appendBinaryOperator
       return
     UDIV_I32 UDIV_I64 case
-      sb "udiv" string.wrap baseVal context appendBinaryOperator
+      sb "udiv" string.wrap baseVal pos context appendBinaryOperator
       return
     UMOD_I32 UMOD_I64 case
-      sb "urem" string.wrap baseVal context appendBinaryOperator
+      sb "urem" string.wrap baseVal pos context appendBinaryOperator
       return
     NOT_BOOL case
-      context popValue =:: arg
+      pos context popValue =:: arg
       sb
         "%s" sb.appendS
         baseVal context pushValue sb.appendI
         " =w extub %s" sb.appendS
         arg sb.appendI
         '\n' sb.appendC
-        "ceqw 0," string.wrap baseVal context appendUnaryOperator
+        "ceqw 0," string.wrap baseVal pos context appendUnaryOperator
       return
     FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
       sb
-        "xor -1," string.wrap baseVal context appendUnaryOperator
+        "xor -1," string.wrap baseVal pos context appendUnaryOperator
       return
     AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
-      sb "and" string.wrap baseVal context appendBinaryOperator
+      sb "and" string.wrap baseVal pos context appendBinaryOperator
       return
     OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64 case
-      sb "or" string.wrap baseVal context appendBinaryOperator
+      sb "or" string.wrap baseVal pos context appendBinaryOperator
       return
     XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
-      sb "xor" string.wrap baseVal context appendBinaryOperator
+      sb "xor" string.wrap baseVal pos context appendBinaryOperator
       return
     LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
       sb
         baseType false pos context extendArguments
-        "shr" string.wrap baseVal context appendBinaryOperator
+        "shr" string.wrap baseVal pos context appendBinaryOperator
       return
     ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
       sb
         baseType true pos context extendArguments
-        "sar" string.wrap baseVal context appendBinaryOperator
+        "sar" string.wrap baseVal pos context appendBinaryOperator
       return
     SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
-      sb "shl" string.wrap baseVal context appendBinaryOperator
+      sb "shl" string.wrap baseVal pos context appendBinaryOperator
       return
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
       sb
@@ -1899,67 +1940,67 @@ proc(
         baseVal sb.appendValTypeQBE
         " copy 0\n" sb.appendS
         baseType false pos context extendArguments
-        "ne" string.wrap baseVal context appendComparisonOperator
+        "ne" string.wrap baseVal pos context appendComparisonOperator
       return
     LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR case
       sb
         baseType true pos context extendArguments
-        "slt" string.wrap baseVal context appendComparisonOperator
+        "slt" string.wrap baseVal pos context appendComparisonOperator
       return
     LE_I8 LE_I16 LE_I32 LE_I64 LE_PTR case
       sb
         baseType true pos context extendArguments
-        "sle" string.wrap baseVal context appendComparisonOperator
+        "sle" string.wrap baseVal pos context appendComparisonOperator
       return
     GE_I8 GE_I16 GE_I32 GE_I64 GE_PTR case
       sb
         baseType true pos context extendArguments
-        "sge" string.wrap baseVal context appendComparisonOperator
+        "sge" string.wrap baseVal pos context appendComparisonOperator
       return
     GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR  case
       sb
         baseType true pos context extendArguments
-        "sgt" string.wrap baseVal context appendComparisonOperator
+        "sgt" string.wrap baseVal pos context appendComparisonOperator
       return
     LT_F32 LT_F64 case
       sb
         baseType true pos context extendArguments
-        "lt" string.wrap baseVal context appendComparisonOperator
+        "lt" string.wrap baseVal pos context appendComparisonOperator
       return
     LE_F32 LE_F64 case
       sb
         baseType true pos context extendArguments
-        "le" string.wrap baseVal context appendComparisonOperator
+        "le" string.wrap baseVal pos context appendComparisonOperator
       return
     GE_F32 GE_F64 case
       sb
         baseType true pos context extendArguments
-        "ge" string.wrap baseVal context appendComparisonOperator
+        "ge" string.wrap baseVal pos context appendComparisonOperator
       return
     GT_F32 GT_F64  case
       sb
         baseType true pos context extendArguments
-        "gt" string.wrap baseVal context appendComparisonOperator
+        "gt" string.wrap baseVal pos context appendComparisonOperator
       return
     ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
       sb
         baseType false pos context extendArguments
-        "ult" string.wrap baseVal context appendComparisonOperator
+        "ult" string.wrap baseVal pos context appendComparisonOperator
       return
     ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
       sb
         baseType false pos context extendArguments
-        "ule" string.wrap baseVal context appendComparisonOperator
+        "ule" string.wrap baseVal pos context appendComparisonOperator
       return
     UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
       sb
         baseType false pos context extendArguments
-        "uge" string.wrap baseVal context appendComparisonOperator
+        "uge" string.wrap baseVal pos context appendComparisonOperator
       return
     UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
       sb
         baseType false pos context extendArguments
-        "ugt" string.wrap baseVal context appendComparisonOperator
+        "ugt" string.wrap baseVal pos context appendComparisonOperator
       return
     PRINT_BOOL case
       sb
@@ -1967,7 +2008,7 @@ proc(
         context nextTmpId =:: tmp1
         tmp1 sb.appendI
         " =l extub %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         "\n%t" sb.appendS
         context nextTmpId =:: tmp2
         tmp2 sb.appendI
@@ -1984,7 +2025,7 @@ proc(
       return
     PRINT_I8 case
       sb
-        context popValue =:: charId
+        pos context popValue =:: charId
         "%t" sb.appendS
         context nextTmpId =:: tmp1
         tmp1 sb.appendI
@@ -2012,7 +2053,7 @@ proc(
         context nextTmpId =:: tmp1
         tmp1 sb.appendI
         " =w extsh %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         "\ncall $printf(l $PRINT_I32_STR,...,w %t" sb.appendS
         tmp1 sb.appendI
         ")\n" sb.appendS
@@ -2020,13 +2061,13 @@ proc(
     PRINT_I32 case
       sb
         "call $printf(l $PRINT_I32_STR,...,w %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         ")\n" sb.appendS
       return
     PRINT_I64 case
       sb
         "call $printf(l $PRINT_I64_STR,...,l %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         ")\n" sb.appendS
       return
     PRINT_F32 case
@@ -2035,7 +2076,7 @@ proc(
         context nextTmpId =:: tmp1
         tmp1 sb.appendI
         " =d exts %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         "\ncall $printf(l $PRINT_FLOAT_STR,...,d %t" sb.appendS
         tmp1 sb.appendI
         ")\n" sb.appendS
@@ -2043,13 +2084,13 @@ proc(
     PRINT_F64 case
       sb
         "call $printf(l $PRINT_FLOAT_STR,...,d %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         ")\n" sb.appendS
       return
     PRINT_PTR case
       sb
         "call $printf(l $PRINT_PTR_STR,...,l %s" sb.appendS
-        context popValue sb.appendI
+        pos context popValue sb.appendI
         ")\n" sb.appendS
       return
   end
@@ -2215,7 +2256,7 @@ proc(
     context [] .stackInfo @ offset branchTree.at .data [] .varId
   else
     context [] .stackInfo @ offset branchTree.at .data [] .valType
-    context popValue
+    pos context popValue
   end =:: srcId =:: valType
   autoCast if
     target context toValType offset context replaceValue
@@ -2437,7 +2478,8 @@ proc(
     ")\n" sb.appendS
     retType typeContext types.isProcOut if
       ## flattenTupleQBE
-        retType context popValue
+        retType
+        pos context popValue
         pos
       context flattenTupleQBE
     end
@@ -2525,7 +2567,7 @@ proc(
                 "blit" sb.appendS ## XXX call memcopy for large structs
               end
               " %s" sb.appendS
-              context popValue sb.appendI
+              op [] .pos context popValue sb.appendI
               ',' sb.appendC
               idInfo .idType .LOCAL_VAR ?? if
                 "%l" sb.appendS
@@ -2689,8 +2731,8 @@ proc(
         "\n" sb.appendS
       return
     setValue case
-      context popValue =:: targetId
-      context popValue =:: valId
+      op [] .pos context popValue =:: targetId
+      op [] .pos context popValue =:: valId
       op [] .dataType =:: valType
       sb
         op [] .pos sb.appendPosQBE
@@ -2739,7 +2781,7 @@ proc(
         else
           argCount 1 - argCount =
           " =l copy %s" sb.appendS
-          context popValue sb.appendI
+          op [] .pos context popValue sb.appendI
         end
         '\n' sb.appendC
         while sizeOffset 0 >= do
@@ -2768,7 +2810,7 @@ proc(
             " =l add %t" sb.appendS
             prevId sb.appendI
             ", %s" sb.appendS
-            context popValue sb.appendI
+            op [] .pos context popValue sb.appendI
             '\n' sb.appendC
           end
         end
@@ -2781,7 +2823,7 @@ proc(
         ", " sb.appendS
         baseType typeContext types.sizeOf sb.appendI
         '\n' sb.appendC
-        context popValue =:: srcId
+        op [] .pos context popValue =:: srcId
         "%s" sb.appendS
         isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
         " =l add %s" sb.appendS
@@ -2816,7 +2858,7 @@ proc(
         eltType context toValType
       end =:: valType
       containerType typeContext types.isTuple if
-        context popValue =:: srcId
+        op [] .pos context popValue =:: srcId
         sb
           op [] .pos sb.appendPosQBE
           "%s" sb.appendS
@@ -2833,7 +2875,7 @@ proc(
         break ## unsupported type
       end
         isPtr ! if eltType context referenceOnly ! _if
-          context popValue =:: srcId
+          op [] .pos context popValue =:: srcId
           op [] .pos sb.appendPosQBE
           "%s" sb.appendS
           valType context pushValue sb.appendI
@@ -2867,7 +2909,7 @@ proc(
         srcVal [] .valType .REFERENCE ?? ! if
           sb return ## value is not a reference -> no copy necessary
         end
-        context popValue =:: srcId
+        op [] .pos context popValue =:: srcId
         sb
           op [] .pos sb.appendPosQBE
           "%s" sb.appendS
@@ -2886,7 +2928,7 @@ proc(
         ## prepare memory
         baseType context true appendAlloc =:: dataPtrId
         "blit %s" sb.appendS
-        context popValue sb.appendI
+        op [] .pos context popValue sb.appendI
         ", %t" sb.appendS
         dataPtrId sb.appendI
         ", " sb.appendS
@@ -2903,23 +2945,16 @@ proc(
         ## prepare memory
         op [] .dataType context true appendAlloc =:: dataPtrId
         op [] .val .newEnum ?? if ## TODO store enums without values as integer
-          op [] .dataType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
           op [] .val .newEnum =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
-          "%t" sb.appendS
-            context nextTmpId =:: labelPtrId
-          labelPtrId sb.appendI
-          " =l add %t" sb.appendS
-          dataPtrId sb.appendI
-          ", " sb.appendS
-          labelOffset sb.appendI
-          "\nstore" sb.appendS
-          labelType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-          ' ' sb.appendC
-          index sb.appendI
-          ", %t" sb.appendS
-          labelPtrId sb.appendI
-          '\n' sb.appendC
+          ## storeEnumLabel
+            op [] .dataType
+            't'
+            dataPtrId
+            index
+            op [] .pos
+            context
+          storeEnumLabel
           eltType typeContext types.isEmpty ! if
             eltType context referenceOnly if
               "blit %s" sb.appendS
@@ -2928,7 +2963,7 @@ proc(
               eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
               " %s" sb.appendS
             end
-            context popValue sb.appendI
+            op [] .pos context popValue sb.appendI
             ", %t" sb.appendS
             dataPtrId sb.appendI
             eltType context referenceOnly if
@@ -2977,6 +3012,24 @@ proc(
           context
         appendEnumCheck
       return
+    setEnumLabel case
+      context [] .stackInfo @ branchTree.peek =:: srcVal?
+      srcVal? optional.isEmpty if
+        "stack underflow" sb.wrap
+        op [] .pos errors appendError
+        sb return
+      end
+      sb
+        op [] .pos sb.appendPosQBE
+        ## storeEnumLabel
+          op [] .dataType
+          's'
+          srcVal? .data [] .varId
+          op [] .val .setEnumLabel
+          op [] .pos
+          context
+        storeEnumLabel
+      return
     hasElement case
       op [] .dataType
         ..dup typeContext types.isReference if
@@ -2986,7 +3039,7 @@ proc(
       containerType typeContext types.isEnum ! if
         break
       end
-      context popValue =:: srcId
+      op [] .pos context popValue =:: srcId
       sb
         op [] .pos sb.appendPosQBE
         containerType srcId op [] .val .hasElement op [] .pos context checkEnumIndex ..drop.2 =:: c
@@ -3061,7 +3114,7 @@ proc(
               arg argVal op [] .pos context pushConstant
             newSb =
             argIndices
-              arg context popValue TypedValId new list.append
+              arg op [] .pos context popValue TypedValId new list.append
             argIndices =
             i 1 + continue
           end
@@ -3078,7 +3131,7 @@ proc(
         end
         ## get argument from stack
         argIndices argIndex list.at .data =:: arg
-        context popValue arg [] .valId =
+        op [] .pos context popValue arg [] .valId =
       end
       argIndices .length =:: outArgOffset
       newSb
@@ -3096,7 +3149,7 @@ proc(
         context finishCall
       return
     callPtr case
-      context popValue =:: calledId
+      op [] .pos context popValue =:: calledId
       op [] .dataType =:: mut calledType
       calledType typeContext types.isPointer if
         calledType
@@ -3118,7 +3171,7 @@ proc(
         argIndices
           ## TypedValId
             arg
-            context popValue
+            op [] .pos context popValue
           TypedValId new list.append
         argIndices =
         i 1 +
@@ -3166,13 +3219,14 @@ proc(
           ## appendComparisonOperator
             cmpName
             valType
+            op [] .pos
             context
           appendComparisonOperator
         return
       end
       op [] .dataType typeContext types.isEnum if
-        context popValue =:: arg1
-        context popValue =:: arg2
+        op [] .pos context popValue =:: arg1
+        op [] .pos context popValue =:: arg2
         sb
           op [] .dataType
             arg1
@@ -3206,7 +3260,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "jnz %s" sb.appendS
-            context popValue sb.appendI
+            op [] .pos context popValue sb.appendI
             ", " sb.appendS
             ifBranch sb.appendBranchId
             ", " sb.appendS
@@ -3230,7 +3284,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "jnz %s" sb.appendS
-            context popValue sb.appendI
+            op [] .pos context popValue sb.appendI
             ", " sb.appendS
             ifBranch sb.appendBranchId
             ", " sb.appendS
@@ -3304,7 +3358,7 @@ proc(
             op [] .pos sb.appendPosQBE
             ## appendSwitchTable
               switchData [] .switchType
-              context popValue
+              op [] .pos context popValue
               switchId
               switchData [] .labels
               op [] .pos
@@ -3439,7 +3493,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "jnz %s" sb.appendS
-            context popValue sb.appendI
+            op [] .pos context popValue sb.appendI
             ", " sb.appendS
             doBranch sb.appendBranchId
             ", " sb.appendS
@@ -3733,7 +3787,7 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         retCount 1 == if
-          context popValue
+          op [] .pos context popValue
           "ret %s" string.wrap
         else retCount 0 > _if
           retType context true appendAlloc =:: tmpId
@@ -3755,7 +3809,7 @@ proc(
             elt StorageType .STORE op [] .pos context sb.appendTypeNameQBE
           end
           " %s" sb.appendS
-          context popValue sb.appendI
+          op [] .pos context popValue sb.appendI
           ", " sb.appendS
           i context sb.appendOutArgName
           elt context referenceOnly if
@@ -3814,7 +3868,7 @@ proc(
     setId autoTypedInitializeId Assert
     setElement setArrayElement call_old
     argc getArg getArgLen unaryOperator
-    setEnumLabel checkArrayIndex typeInfo
+    checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel
     @Label length size typeModifier hasLabel hasName case
       break ## XXX error message

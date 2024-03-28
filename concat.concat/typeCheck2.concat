@@ -18,7 +18,7 @@ struct(
   LabelId      : mut valueId
   FilePosition : mut pushedAt
   i64          : mut opIndex
-  i64          : mut readCheckIndex
+  i64          : mut readEnumCheckIndex
   i64          : mut copyMutableIndex
 ) =:: TypeInfo
 
@@ -1876,9 +1876,19 @@ proc(
         op .pos errors appendError
         return
       end
-      target [] .readCheckIndex OP_UNLINKED != if
-        target [] .readCheckIndex state tryDeleteOp if ## no read check when writing to value
-          "cannot remove enum index check" sb.wrap
+      target [] .readEnumCheckIndex 0 >= if
+        target [] .readEnumCheckIndex =:: index
+        index state currentBlockStart < if
+          "cannot write to enum pushed on different branch" sb.wrap
+          op .pos errors appendError
+          return
+        end
+        index state [] .compiledOps .length < if
+            state [] .compiledOps index list.at .data =:: enumCheck
+            enumCheck [] .val .checkEnumLabel ?? _if
+          enumCheck [] .val .checkEnumLabel enumCheck [] .val .setEnumLabel =
+        else
+          "could not update enum index" sb.wrap
           op .pos errors appendError
           return
         end
@@ -2057,7 +2067,7 @@ proc(
       state pushValue
       elementLabel state replaceLabel
       state [] .stack @ branchTree.pop .data [] =:: mut topValue
-      onRead topValue .readCheckIndex =
+      onRead topValue .readEnumCheckIndex =
       ## updateOpInfo info needs to value -> push then pop again
       state [] .stack @ topValue branchTree.push
       targetType typeContext types.isEmpty if

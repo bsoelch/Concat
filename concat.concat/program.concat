@@ -93,7 +93,7 @@ enum(
       UnaryOperator : unaryOperator
      BinaryOperator : binaryOperator
                 i32 : checkEnumLabel
-                i32 : setEnumLabel
+                i32 : mut setEnumLabel
                 i64 : checkArrayIndex
                       copy
   StackModification : stackMod
