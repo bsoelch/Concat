@@ -1,5 +1,5 @@
 type : selfPtr 
-( i32 selfPtr ptr ) selfPtr =
+( i32 selfPtr ptr ) =:: selfPtr
 
 proc( -> ) =>: main
   ..?parser.find.selfPtr

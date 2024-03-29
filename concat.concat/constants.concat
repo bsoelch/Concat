@@ -6,7 +6,7 @@ import "types.concat"
 
 i64 =:: export ProcId
 i64 =:: export ProcBundleId
-struct( i64 : offset i64 : length ) ConstantArray =
+struct( i64 : offset i64 : length ) =:: export ConstantArray
 enum(
   none
   bool : boolean
@@ -22,9 +22,9 @@ enum(
   i32 : templateArg
   ProcId : procedure
   ProcBundleId : procedureBundle
-) ConstValue =
+) =:: export ConstValue
 
-struct( ConstValue list : mut arrayValues ) ConstantContext =
+struct( ConstValue list : mut arrayValues ) =:: export ConstantContext
 
 proc( -> ConstantContext ) =>: export newConstContext
  128 ConstValue list.create

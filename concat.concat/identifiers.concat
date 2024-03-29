@@ -39,11 +39,12 @@ struct(
 struct(
   Type : mut valueType
   ConstValue : mut constValue
-  FilePosition : declaredAt
+  FilePosition : mut declaredAt
   LabelId : labelId
-  TemplateId : templateId
-  i32 : id
+  TemplateId : mut templateId
+  i32 : mut id
   IdentifierType : idType
+  bool : mut declarationOnly
 ) =:: IdentifierData
 struct(
   IdentifierType : idType
@@ -64,10 +65,34 @@ struct(
 ) =:: export IdentifierMatch
 
 namespace: id
-  "" 0 string new NAMESPACE_ID_NONE FILE_ID_NONE IdentifierName new =:: ID_NONE
-  Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: ID_NONE_DATA
-  Type .undefined ConstValue .none "" 0 string new 0 0 FilePosition new LABEL_ID_NONE TEMPLATE_ID_NONE -1 IdentifierType .GLOBAL_VAR  IdentifierData new =:: mut ID_TMP_DATA
--2 LabelId =: LABEL_ID_TMP
+  ## IdentifierName
+    "" 0 string new
+    NAMESPACE_ID_NONE
+    FILE_ID_NONE
+  IdentifierName new =:: ID_NONE
+  ## IdentifierData
+    Type .undefined
+    ConstValue .none
+    "" 0 string new
+    0 0 FilePosition new
+    LABEL_ID_NONE
+    TEMPLATE_ID_NONE
+    -1
+    IdentifierType .GLOBAL_VAR
+    false
+  IdentifierData new =:: ID_NONE_DATA
+  ## IdentifierData
+    Type .undefined
+    ConstValue .none
+    "" 0 string new
+    0 0 FilePosition new
+    LABEL_ID_NONE
+    TEMPLATE_ID_NONE
+    -1
+    IdentifierType .GLOBAL_VAR
+    false
+  IdentifierData new =:: mut ID_TMP_DATA
+  -2 LabelId =: LABEL_ID_TMP
 
   proc( IdentifierName : a -> i32 ) =>: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
@@ -361,17 +386,19 @@ namespace: id
             id ..over tId context [] .typeContext @ types.compositeGetLabel context [] .typeContext .labelContext @ labelNameEq if
               =:: tType
               tType tId context [] .typeContext @ types.compositeGetElement =:: eType
-              eType
-              eType types.primitive.TYPE types.typeEquals if
-                tId types.newTemplateType ConstValue .typeId
-              else
-                tId ConstValue .templateArg
-              end
-              template .declaredAt
-              tType tId context [] .typeContext @ types.compositeGetLabel
-              context [] .currentTemplate
-              tId
-              IdentifierType .TEMPLATE_ARG
+              ## IdentifierData
+                eType
+                eType types.primitive.TYPE types.typeEquals if
+                  tId types.newTemplateType ConstValue .typeId
+                else
+                  tId ConstValue .templateArg
+                end
+                template .declaredAt
+                tType tId context [] .typeContext @ types.compositeGetLabel
+                context [] .currentTemplate
+                tId
+                IdentifierType .TEMPLATE_ARG
+                false
               IdentifierData new ID_TMP_DATA =
               name context [] .typeContext  .labelContext .namespaceInfo .current fileId IdentifierName new LABEL_ID_TMP false return
             end
@@ -449,15 +476,17 @@ namespace: id
     IdentifierType : idType
     i32 : id
     ConstValue : constVal
+    bool : isInit
     FilePosition : declaredAt
     FileId : currentFile
     IdentifierContext ptr mut : context
     CompilerError list ptr mut : errors
-  ->  IdentifierName IdentifierData bool ) =>: export declareIdentifier
-    context [] .typeContext  .labelContext @ =:: labelContext
+  ->  LabelId IdentifierData bool ) =>: export declareIdentifier
+    context [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
-      ID_NONE ID_NONE_DATA true return
+      LABEL_ID_NONE ID_NONE_DATA true return
     end
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
@@ -474,24 +503,24 @@ namespace: id
       idType .TYPE ?? if
         context [] .nameBuffer list.clear context [] .nameBuffer =
         "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
-        ID_NONE ID_NONE_DATA true return
+        LABEL_ID_NONE ID_NONE_DATA true return
       end
       idType .PROCEDURE ?? if
         context [] .nameBuffer list.clear context [] .nameBuffer =
         "procedures cannot be mutable" sb.wrap declaredAt errors appendError
-        ID_NONE ID_NONE_DATA true return
+        LABEL_ID_NONE ID_NONE_DATA true return
       end
       idType .ARGUMENT ??  if
         context [] .nameBuffer list.clear context [] .nameBuffer =
         "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
-        ID_NONE ID_NONE_DATA true return
+        LABEL_ID_NONE ID_NONE_DATA true return
       end
     end
     ## don't check names of built-in identifiers
     flags FLAG_BUILT_IN & ? ! if
         name declaredAt errors checkIdentifier _if
       context [] .nameBuffer list.clear context [] .nameBuffer =
-      ID_NONE ID_NONE_DATA true return
+      LABEL_ID_NONE ID_NONE_DATA true return
     end
     context [] .openScopes .length 0 > if
       context [] .openScopes ..dup .length 1 - list.at .data
@@ -503,18 +532,76 @@ namespace: id
         ..over .data list.append ## remember allocated string
       mScope [] .scopeStrings =
     sb.asStr
+    
     labelContext [] .namespaceInfo .current fileId IdentifierName new =:: mut idName
     mScope [] .identifierNames @ idName map.get =:: prevId?
     prevId? optional.hasData if
       prevId? .data =:: prevId
       context [] .identifierData @ prevId map.at .data =:: prevDec
+      ## initialization for declaration / declaration for initialized identifier
+      prevDec [] .declarationOnly isInit ! | if
+        idType .GLOBAL_VAR ?? idType .TYPE ?? |
+        idType .PROCEDURE ?? | idType .PROCEDURE_BUNDLE ?? | _if
+        ## remove procedure labels before comparing types
+        valType typeContext types.asUnlabeledProc ..drop
+            prevDec [] .valueType  typeContext types.asUnlabeledProc ..drop
+            types.typeEquals ! if
+          "incompatible types for declaration and initialization of \"" sb.wrap
+            label labelContext sb.appendLabelName
+            "\":\n  * " sb.appendS
+            prevDec [] .valueType typeContext sb.appendType
+            " at " sb.appendS
+            prevDec [] .declaredAt sb.appendPos
+            "\n  * " sb.appendS
+            valType typeContext sb.appendType
+          declaredAt errors appendError
+          context [] .nameBuffer list.clear context [] .nameBuffer =
+          LABEL_ID_NONE ID_NONE_DATA true return
+        end
+        prevDec [] .idType idType != if
+          "declaration and initialization of \"" sb.wrap
+            label labelContext sb.appendLabelName
+            "\" are not compatible " sb.appendS
+            ## TODO? print identifier types
+            " ( declaration at " sb.appendS
+            prevDec [] .declaredAt sb.appendPos
+            " )" sb.appendS
+          declaredAt errors appendError
+          context [] .nameBuffer list.clear context [] .nameBuffer =
+          LABEL_ID_NONE ID_NONE_DATA true return
+        end
+        prevDec [] .labelId labelContext labelFlags flags != if
+          "flags for declaration and initialization of \"" sb.wrap
+            label labelContext sb.appendLabelName
+            "\" differ: " sb.appendS
+            ## TODO? print flags
+            " ( declaration at " sb.appendS
+            prevDec [] .declaredAt sb.appendPos
+            " )" sb.appendS
+          declaredAt errors appendWarning
+        end
+        isInit if
+          valType prevDec [] .valueType =
+          constVal prevDec [] .constValue =
+          idType .LOCAL_VAR ?? idType .ARGUMENT ?? | idType .TMP_VAR ?? | if
+            TEMPLATE_ID_NONE
+          else
+            context [] .currentTemplate
+          end prevDec [] .templateId =
+          id prevDec [] .id =
+          declaredAt prevDec [] .declaredAt =
+          false prevDec [] .declarationOnly =
+        end
+        context [] .nameBuffer list.clear context [] .nameBuffer =
+        prevDec [] .labelId prevDec [] false return
+      end
       "re declaration of identifier \"" sb.wrap
         label labelContext sb.appendLabelName
         '\"' sb.appendC
       declaredAt errors appendWarning
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
       context [] .nameBuffer list.clear context [] .nameBuffer =
-      ID_NONE ID_NONE_DATA true return
+      LABEL_ID_NONE ID_NONE_DATA true return
     end
     name fileId context findIdentifierByName ! if
       "declaration of identifier \"" sb.wrap
@@ -529,7 +616,7 @@ namespace: id
     map.put ..drop ## previous entry is always empty
     ## IdentifierData
       valType
-      flags FLAG_MUTABLE & ? if ConstValue .none else constVal end
+      flags FLAG_MUTABLE & ? _EXPERIMENTAL_ ! & if ConstValue .none else constVal end
       declaredAt
       label
       idType .LOCAL_VAR ?? idType .ARGUMENT ?? | idType .TMP_VAR ?? | if
@@ -544,13 +631,14 @@ namespace: id
         id
       end
       idType
+      isInit !
     IdentifierData new =:: idData
     context [] .identifierData @
       label
       idData
     map.put ..drop ## previous entry is always empty
     context [] .nameBuffer list.clear context [] .nameBuffer =
-    idName idData false return
+    label idData false return
   end
 end
 namespace: sb
@@ -926,8 +1014,12 @@ namespace: types
           1 +
         end ..drop
         ## create implementation
-        Type .undefined typeData .name typeData .templateId context [] .typeContext @ newNamedType =:: newType
         templateInfo [] .implementations .length i32 cast =:: newId
+        ## findNamedType
+          typeData .name
+          typeData .templateId
+          newId
+        context [] .typeContext @ declareNamedTypeImpl =:: newType
         templateInfo [] .implementations
             newType
             args context argBufferAsArray context [] .constContext @ constArray
@@ -937,7 +1029,6 @@ namespace: types
         ## compute value
         newType
           typeData .data templateArgs genericArgs implPos context replaceGenericsType
-          newId
           context [] .typeContext @
         setNamedType ..drop
         context [] .templateArgBuffer

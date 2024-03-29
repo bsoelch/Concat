@@ -1299,69 +1299,95 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState state nextWord fileState state
         ## make pre-declared variables mutable by default
         isInit forceConst | if id.FLAG_NONE else id.FLAG_MUTABLE end
-      readLabelAddFlags =:: label
+      readLabelAddFlags =:: mut label
       label labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       label
         valType
         idType
         -1 ## id
-        idType .TYPE ?? if
-          isInit if
-            fileState state popTypeConstant ..drop ## ignore error code and use default value
-          else
-            Type .undefined
-          end
-          ..over.4 idContext [] .currentTemplate typeContext types.newNamedType fileState [] .wordStart newTypeConst .val
-        else idType .PROCEDURE ?? _if
-          progContext [] .procedures .length ConstValue .procedure
-        else isInit ! _if
-          ConstValue .none
-        else state hasConst _EXPERIMENTAL_ ! & _if
-          state popConst
-            ..dup .valueType valType false typeContext types.canCast ! if
-              "cannot cast " sb.wrap
-                ..over .valueType typeContext sb.appendType
-                " to " sb.appendS
-                valType typeContext sb.appendType
-              fileState [] .wordStart state appendError2
-            end
-            ..dup constantToOp state appendOp
-          .val
-        else state hasConst2 _EXPERIMENTAL_ & _if
-          state peekConst2 .data =:: info .data =:: value
-            info [] .valueType valType false typeContext types.canCast ! if
-              "cannot cast " sb.wrap
-                info [] .valueType typeContext sb.appendType
-                " to " sb.appendS
-                valType typeContext sb.appendType
-              fileState [] .wordStart state appendError2
-            end
-          value []
-        else
-          ConstValue .none
-        end
-      fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if ..drop
-        .name 0 sb.create ..swap sb.appendStr fileState [] .wordStart state appendError2
+        ConstValue .none
+        isInit
+        fileState [] .wordStart
+        state [] .currentFile
+        idContext
+        progContext [] .errors @
+      id.declareIdentifier if ..drop =:: labelId
+        64 sb.create
+          labelId labelContext sb.appendLabelName
+        fileState [] .wordStart state appendError2
         return
-      end =:: idData =:: idName
+      end =:: idData label =
+      idType .TYPE ?? if
+        isInit if
+          fileState state popTypeConstant if ..unreachable end ## XXX use assertion?
+          label
+          idContext [] .currentTemplate
+          typeContext types.initializeNamedType if
+            "re-initialization of named type" sb.wrap
+            fileState [] .wordStart state appendError2
+          end
+        else
+          label
+          idContext [] .currentTemplate
+          typeContext types.declareNamedType
+        end
+        fileState [] .wordStart newTypeConst .val
+      else idType .PROCEDURE ?? _if
+        progContext [] .procedures .length ConstValue .procedure
+      else isInit ! _if
+        ConstValue .none
+      else state hasConst _EXPERIMENTAL_ ! & _if
+        state popConst
+          ..dup .valueType valType false typeContext types.canCast ! if
+            "cannot cast " sb.wrap
+              ..over .valueType typeContext sb.appendType
+              " to " sb.appendS
+              valType typeContext sb.appendType
+            fileState [] .wordStart state appendError2
+          end
+          ..dup constantToOp state appendOp
+        .val
+      else state hasConst2 _EXPERIMENTAL_ & _if
+        state peekConst2 .data =:: info .data =:: value
+          info [] .valueType valType false typeContext types.canCast ! if
+            "cannot cast " sb.wrap
+              info [] .valueType typeContext sb.appendType
+              " to " sb.appendS
+              valType typeContext sb.appendType
+            fileState [] .wordStart state appendError2
+          end
+        value []
+      else
+        ConstValue .none
+      end 
+        _EXPERIMENTAL_ ! if
+           label labelContext id.labelFlags id.FLAG_MUTABLE & ? _if
+          ## old compiler does not support const-values on mutable identifiers
+          ..drop ConstValue .none
+        end
+        label idContext id.getIdentifier
+        if ..unreachable end
+      [] .constValue =
       state [] .currentProc optional.isEmpty if
         idData .idType .PROCEDURE ?? ! isInit ! | if
           progContext [] .templateOps .length idContext  id.endOpenTemplate
         end
       end
-      localDeclaration ! if idName .name MAIN_NAME string.wrap string.eq _if ## main
+      localDeclaration ! if
+          MAIN_NAME string.wrap label labelContext id.labelNameEq _if ## main
         idType .PROCEDURE ?? ! if
           "main has to be a procedure got: " sb.wrap
             idData @ id.asIdInfo labelContext sb.appendIdInfo
           fileState [] .wordStart state appendError2
         end
         true =:: mut validMain
-        idName .fileId 0 != if idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
+        label labelContext id.getLabelFile 0 != if
+          idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
           "main procedure is not visible from root file" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
         end
-        idName .namespace 0 != if
+        label labelContext id.getLabelNamespace 0 != if
           "main procedure not in global namespace" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
@@ -1482,15 +1508,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   else
                     ConstValue .none
                   end
+                  true
                   fileState [] .wordStart
                   state [] .currentFile
                   idContext
                   progContext [] .errors @
-                id.declareIdentifier if
+                id.declareIdentifier if ..drop.2 
                   64 sb.create
-                    idName .name sb.appendStr
+                    label labelContext sb.appendLabelName
                   fileState [] .wordStart state appendError2
-                  ..drop.2 return
+                  return
                 end ..drop.2
               end
               _EXPERIMENTAL_ ! if
@@ -1521,83 +1548,93 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       _EXPERIMENTAL_ if
         state tryInterpretGlobal ## try to interpret global operations before each declaration
       end
-      fileState state nextWord fileState state readLabel
-        state hasConst _EXPERIMENTAL_ ! & if
+      fileState state nextWord fileState state readLabel =:: mut labelId
+      _EXPERIMENTAL_ ! if state hasConst _if
           state popConst =:: const
           const .valueType
-            ..dup typeContext types.isProcedure if
-              "unexpected procedure" sb.wrap fileState [] .wordStart state appendError2
-              ..drop.2 return
-            else ..dup types.primitive.TYPE types.typeEquals _if
-              IdentifierType .TYPE
-            else state [] .currentProc optional.isEmpty _if
-              IdentifierType .GLOBAL_VAR
-            else
-              IdentifierType .LOCAL_VAR
-            end
-          -1 ## id
           const .val
-          ..over.2 .TYPE ?? if .typeId
-            ..dup typeContext types.isProcedure if
-              "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
-                "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
-              fileState [] .wordStart state appendWarning2
-            end
-            ..over.4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId
-          else
-            const constantToOp state appendOp
-          end
-        else state hasConst2 _EXPERIMENTAL_ & _if
-          state peekConst2 =:: info =:: value
-          info .data [] .valueType
-            ..dup typeContext types.isProcedure if
-              "unexpected procedure" sb.wrap fileState [] .wordStart state appendError2
-              ..drop.2 return
-            else ..dup types.primitive.TYPE types.typeEquals _if
-              IdentifierType .TYPE
-            else state [] .currentProc optional.isEmpty _if
-              IdentifierType .GLOBAL_VAR
-            else
-              IdentifierType .LOCAL_VAR
-            end
-          -1 ## id
-          value .data []
-          ..over.2 .TYPE ?? if .typeId
-            state popConst2 ..drop.2
-            ..dup typeContext types.isProcedure if
-              "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
-                "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
-              fileState [] .wordStart state appendWarning2
-            end
-            ..over.4 idContext []  .currentTemplate typeContext types.newNamedType ConstValue .typeId
-          end
-        else
-          progContext [] .autoTypes .length i32 cast types.newAutoType
-          progContext [] .autoTypes
-            Type .undefined list.append
-          progContext [] .autoTypes =
-          state [] .currentProc optional.isEmpty if
-            IdentifierType .GLOBAL_VAR
-          else
-            IdentifierType .LOCAL_VAR
-          end
-          -1
-          ConstValue .none
-        end
-        fileState [] .wordStart state [] .currentFile idContext progContext [] .errors @ id.declareIdentifier if ..drop
-          .name 0 sb.create ..swap sb.appendStr fileState [] .wordStart state appendError2
-          return
-        end =:: idData =:: idName
-        state [] .currentProc optional.isEmpty if
-          progContext [] .templateOps .length idContext  id.endOpenTemplate
-        end
-        idData .idType .TYPE ?? if
-          return
-        end
-        Operation ptr optional.empty state resetGlobalInterpreter
-        idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
-        state skipGlobalInterpreter
+      else _EXPERIMENTAL_ _if state hasConst2 _if
+        state peekConst2 =:: info =:: value
+        info .data [] .valueType
+        value .data []
+      else
+        progContext [] .autoTypes .length i32 cast types.newAutoType
+        progContext [] .autoTypes
+          Type .undefined list.append
+        progContext [] .autoTypes =
+        ConstValue .none
+      end =:: constValue =:: constType
+      constType typeContext types.isProcedure if
+        "unexpected procedure" sb.wrap fileState [] .wordStart state appendError2
         return
+      else constType types.primitive.TYPE types.typeEquals _if
+        IdentifierType .TYPE
+      else state [] .currentProc optional.isEmpty _if
+        IdentifierType .GLOBAL_VAR
+      else
+        IdentifierType .LOCAL_VAR
+      end =:: idType
+      ## declareIdentifier
+        labelId
+        constType
+        idType
+        -1 ## id
+        ConstValue .none
+        true
+        fileState [] .wordStart
+        state [] .currentFile
+        idContext
+        progContext [] .errors @
+      id.declareIdentifier if ..drop labelId =
+        64 sb.create
+          labelId labelContext sb.appendLabelName
+        fileState [] .wordStart state appendError2
+        return
+      end =:: idData labelId =
+      ## create constant value after creating declaration
+      idType .TYPE ?? if
+        constValue .typeId =:: typeConst
+        _EXPERIMENTAL_ if
+          state popConst2 ..drop.2
+        end
+        typeConst typeContext types.isProcedure if
+          "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
+            "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
+          fileState [] .wordStart state appendWarning2
+        end
+        ## initializeNamedType
+          typeConst
+          labelId
+          idContext []  .currentTemplate
+          typeContext
+        types.initializeNamedType if
+          "re-initialization of named type" sb.wrap
+          fileState [] .wordStart state appendError2
+        end ConstValue .typeId
+      else
+        _EXPERIMENTAL_ ! if constType types.isAutoType ! _if
+          constValue constType fileState [] .wordStart opConst state appendOp
+        end
+        constValue
+      end
+        _EXPERIMENTAL_ ! if
+           labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? _if
+          ## old compiler does not support const-values on mutable identifiers
+          ..drop ConstValue .none
+        end
+        labelId idContext id.getIdentifier
+        if ..unreachable end
+      [] .constValue =
+      state [] .currentProc optional.isEmpty if
+        progContext [] .templateOps .length idContext  id.endOpenTemplate
+      end
+      idData .idType .TYPE ?? if
+        return
+      end
+      Operation ptr optional.empty state resetGlobalInterpreter
+      idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
+      state skipGlobalInterpreter
+      return
     else ..dup "=" string.wrap string.eq _if ..drop
       _EXPERIMENTAL_ if
         fileState [] .wordStart opSetValue state appendOp
@@ -1607,10 +1644,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         .val ..dup .typeId ?? if .typeId
           ..dup types.isNamedType if
             fileState state popTypeConstant ! if
-              -1 typeContext types.setNamedType ! if
+              typeContext types.setNamedType ! if
                 state [] .currentProc optional.isEmpty if
                   progContext [] .templateOps .length idContext  id.endOpenTemplate
                 end
+                "type-overwriting will be removed in a future version, to initialize a declared using the `=:` or `=::` operator" sb.wrap
+                 fileState [] .wordStart progContext [] .errors @ appendWarning
                 return
               end
             else ..drop.2 end

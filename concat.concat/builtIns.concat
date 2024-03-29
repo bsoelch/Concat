@@ -38,7 +38,7 @@ enum(
  ## XXX? more built-in operations
  PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
    PRINT_F32 PRINT_F64 PRINT_PTR                 ## ..debug.print
-) BuiltIn =
+) =:: export BuiltIn
 
 namespace: sb
   proc( stringBuilder BuiltIn -> stringBuilder ) =>: export appendBuiltIn
@@ -245,6 +245,7 @@ proc(
     IdentifierType .PROCEDURE_BUNDLE
     -1
     bundleId ConstValue .procedureBundle
+    true
     pos
     FILE_ID_BUILT_IN
     idContext

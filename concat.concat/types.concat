@@ -51,7 +51,7 @@ enum(
     types.GeneratedId : generatedType
          types.SizeId : arrayIndex
           types.CType : cType
-) Type =
+) =:: export Type
 
 namespace: types
   proc( Type : a Type : b -> bool ) =>: export typeEquals
@@ -1523,12 +1523,77 @@ namespace: types
   end
 
   ## named types
-  struct( Type : mut data LabelId : name TemplateId : templateId i32 : mut implId ) =:: NamedType
+  struct( Type : mut data LabelId : name TemplateId : templateId i32 : implId ) =:: NamedType
   ## XXX templateId used by old replace generic procedure
-  ## XXX? prevent recreation of named type with same type and id
-  proc( Type LabelId TemplateId TypeContext ptr mut -> Type ) =>: export newNamedType
-    =:: context
-    -1 NamedType new context [] .namedTypes ..swap list.append context [] .namedTypes =
+  proc( 
+    LabelId : label
+    TemplateId : templateId
+    i32 : implId
+    TypeContext ptr mut : context
+  -> types.NamedTypeId ) =>: findNamedType
+    0 while ..dup context [] .namedTypes .length < do =:: i
+      context [] .namedTypes i list.at .data =:: elt
+      elt [] .name label == if
+          elt [] .templateId templateId == _if
+          elt [] .implId implId == _if
+        i return
+      end
+      i 1 +
+    end ..drop
+    context [] .namedTypes
+      ## NamedType
+        Type .undefined
+        label
+        templateId
+        implId
+      NamedType new list.append
+    context [] .namedTypes =
+    context [] .namedTypes .length 1 - NamedTypeId cast return
+  end
+  proc(
+    LabelId : label
+    TemplateId : templateId
+    TypeContext ptr mut : context
+  -> Type ) =>: export declareNamedType
+    label templateId -1 context findNamedType Type .namedType return
+  end
+  proc(
+    LabelId : label
+    TemplateId : templateId
+    i32 : implId
+    TypeContext ptr mut : context
+  -> Type ) =>: export declareNamedTypeImpl
+    label templateId implId context findNamedType Type .namedType return
+  end
+  proc(
+    Type : value
+    LabelId : label
+    TemplateId : templateId
+    TypeContext ptr mut : context
+  -> Type bool ) =>: export initializeNamedType
+    label templateId -1 context findNamedType =:: id
+    context [] .namedTypes id list.at .data =:: named
+    named [] .data Type .undefined typeEquals ! if
+      id Type .namedType true return
+    end
+    value named [] .data =
+    id Type .namedType false return
+  end
+  proc(
+    Type : value
+    LabelId : label
+    TemplateId : templateId
+    TypeContext ptr mut : context
+  -> Type ) =>: export newNamedType
+    ## TODO? find better way to handle generic named types in new compiler
+    context [] .namedTypes
+      ## NamedType
+        value
+        label
+        templateId
+        -1
+      NamedType new list.append
+    context [] .namedTypes =
     context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType return
   end
   proc( Type -> bool ) =>: export isNamedType
@@ -1592,15 +1657,13 @@ namespace: types
     end
     ..drop -1 return
   end
-  proc( Type : named Type : value i32 : implId TypeContext ptr mut : context -> bool ) =>: export setNamedType
+  proc( Type : named Type : value TypeContext ptr mut : context -> bool ) =>: export setNamedType
     named .namedType ?? if
-      context [] .namedTypes named .namedType list.at .data
-        ..dup [] .data Type .undefined typeEquals if
-          value ..over [] .data =
-          implId ..swap [] .implId =
-          false return
-        end
-      ..drop
+      context [] .namedTypes named .namedType list.at .data =:: elt
+      elt [] .data Type .undefined typeEquals if
+        value elt [] .data =
+        false return
+      end
     end
     true return
   end
@@ -2092,7 +2155,7 @@ struct(
   types.NamedType     list : mut namedTypes
   types.GeneratedType list : mut generatedTypes
   LabelId             list : mut elementLabels
-) TypeContext =
+) =:: export TypeContext
 namespace: types
   proc( -> TypeContext ) =>: export newTypeContext
     ## TypeContext
