@@ -714,6 +714,7 @@ proc(
           end
           true return
       end
+      break
     declareId case
       context inTypeOrInitializer ! if
         showErrorMessages if
