@@ -1271,20 +1271,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state appendError2
         return
       end
-      false =:: mut forceConst
+      false =:: mut allowImmutableDeclaration
+      false =:: mut forceImmutable
       state [] .constantBlocks .length 0 > if
         IdentifierType .LABEL
-        true forceConst =
+        true allowImmutableDeclaration =
       else localDeclaration _EXPERIMENTAL_ & _if
         IdentifierType .LOCAL_VAR
       else isProc isInit ! | _if valType typeContext types.isProcedure _if
         IdentifierType .PROCEDURE
-        true forceConst =
+        true forceImmutable =
+        true allowImmutableDeclaration =
       else valType types.primitive.TYPE types.typeEquals _if
         IdentifierType .TYPE
-        true forceConst =
+        true forceImmutable =
+        true allowImmutableDeclaration =
       else state [] .currentProc optional.isEmpty _if ## for comparability with old parser
         IdentifierType .GLOBAL_VAR
+        true allowImmutableDeclaration =
       else
         IdentifierType .LOCAL_VAR
       end =:: idType
@@ -1298,8 +1302,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       fileState state nextWord fileState state
         ## make pre-declared variables mutable by default
-        isInit forceConst | if id.FLAG_NONE else id.FLAG_MUTABLE end
+        isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
       readLabelAddFlags =:: mut label
+      forceImmutable if label labelContext id.labelFlags id.FLAG_MUTABLE & ? _if
+        "identifiers of type " sb.wrap
+          idType sb.appendIdType
+         " cannot be mutable" sb.appendS
+        fileState [] .wordStart state appendError2
+      end
       label labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       label
         valType

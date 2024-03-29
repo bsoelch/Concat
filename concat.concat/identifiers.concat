@@ -642,6 +642,38 @@ namespace: id
   end
 end
 namespace: sb
+  proc( stringBuilder : sb IdentifierType : idType -> stringBuilder ) =>: export appendIdType
+    sb
+    idType switch
+      TYPE case
+        "type" sb.appendS
+        return
+      PROCEDURE case
+        "procedure" sb.appendS
+        return
+      PROCEDURE_BUNDLE case
+        "procedure bundle" sb.appendS
+        return
+      GLOBAL_VAR case
+        "global variable" sb.appendS
+        return
+      LABEL case
+        "label " sb.appendS
+        return
+      LOCAL_VAR case
+        "local variable" sb.appendS
+        return
+      ARGUMENT case
+        "procedure argument" sb.appendS
+        return
+      TMP_VAR case
+        "temporary variable" sb.appendS
+        return
+      TEMPLATE_ARG case
+        "template argument" sb.appendS
+        return
+    end
+  end
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =>: export appendIdInfo
     sb
       id .labelId labelContext id.labelFlags ..swap

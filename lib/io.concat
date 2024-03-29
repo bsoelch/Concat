@@ -69,7 +69,7 @@ namespace: io
     c.concatIOHelper_stderr
   end
 
-  i8 4096 array : fileNameBuffer ## XXX make buffer thread safe
+  i8 4096 array : mut fileNameBuffer ## XXX make buffer thread safe
   proc(
     i8 _ ptr : fileName
     i64 : nameLength
