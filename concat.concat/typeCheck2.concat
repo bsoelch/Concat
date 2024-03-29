@@ -770,6 +770,7 @@ proc(
   BlockType .BREAK_SWITCH pos opBlock =:: mut breakOp
   switchBlock [] .blockId breakOp .val .block .blockId =
   breakOp state appendOp ..drop
+  false state [] .reachable =
 end
 ## terminate current switch branch
 proc( FilePosition : pos TypeCheckState ptr mut : state -> ) =>: endSwitchBranch
