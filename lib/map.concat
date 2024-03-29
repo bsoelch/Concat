@@ -15,7 +15,7 @@ namespace: map
 end
 
 #:if:exp
-( type : K type : V -> type ) =>: hashMap
+( type : K type : V -> type ) =>: export hashMap
   struct(
     K V map.Node list : mut nodeBuffer
     map.NodeId _ ptr mut : mut data
