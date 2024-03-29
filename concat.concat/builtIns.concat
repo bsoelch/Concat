@@ -5,7 +5,8 @@ enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
  ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ADD_PTR ADD_PTR_MUT ## +
- SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 PTR_DIFF ## -
+ SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
+     SUB_PTR SUB_PTR_MUT PTR_DIFF  ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
  DIV_I32 DIV_I64 DIV_F32 DIV_F64                ## /
  MOD_I32 MOD_I64 MOD_F32 MOD_F64                ## %
@@ -48,7 +49,8 @@ namespace: sb
       ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64
           ADD_PTR ADD_PTR_MUT case
         "+" sb.appendS break
-      SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 PTR_DIFF case
+      SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
+          SUB_PTR SUB_PTR_MUT PTR_DIFF case
         "-" sb.appendS break
       MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
         "*" sb.appendS break
@@ -442,6 +444,8 @@ proc(
   BuiltIn .SUB_I64 label i64i64_i64 bundle context addBuiltIn
   BuiltIn .SUB_F32 label f32f32_f32 bundle context addBuiltIn
   BuiltIn .SUB_F64 label f64f64_f64 bundle context addBuiltIn
+  BuiltIn .SUB_PTR label ptrAdd        bundle context addGenericBuiltIn
+  BuiltIn .SUB_PTR_MUT label ptrMutAdd bundle context addGenericBuiltIn
   BuiltIn .PTR_DIFF label ptrDiff   bundle context addGenericBuiltIn
   "*" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end

@@ -1855,7 +1855,7 @@ proc(
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
       sb "add" string.wrap baseVal pos context appendBinaryOperator
       return
-    ADD_PTR ADD_PTR_MUT case
+    ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT case
       baseType typeContext types.getBaseType =:: valueType
       pos context popValue =:: offsetId
       sb
@@ -1867,7 +1867,11 @@ proc(
         ", " sb.appendS
         valueType typeContext types.sizeOf sb.appendI
         '\n' sb.appendC
-       "add" string.wrap ValType .PTR pos context appendBinaryOperator
+        builtIn .SUB_PTR ?? builtIn .SUB_PTR_MUT ?? | if
+         "sub" string.wrap
+        else
+         "add" string.wrap
+        end ValType .PTR pos context appendBinaryOperator
       return
     SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
       sb "sub" string.wrap baseVal pos context appendBinaryOperator
