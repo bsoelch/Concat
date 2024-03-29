@@ -400,8 +400,16 @@ proc(
       targetFixed if srcFixed ! _if
         true return ## cannot assign unknown-size to fixed-size
       end
-      src typeContext types.getArraySize =:: srcSizes
-      target typeContext types.getArraySize =:: targetSizes
+      src typeContext types.getArraySize =:: mut srcSizes
+      target typeContext types.getArraySize =:: mut targetSizes
+      ## treat 0D fixed arrays as 1D array of length 1
+      1i64 types.ArraySizeType .int types.ArraySize new =:: one
+      srcFixed if srcSizes .length 0 == _if
+        one @ array.wrap srcSizes =
+      end
+      targetFixed if targetSizes .length 0 == _if
+        one @ array.wrap targetSizes =
+      end
       srcSizes .length targetSizes .length < if
         true return ## target sizes have to be matched
       end
