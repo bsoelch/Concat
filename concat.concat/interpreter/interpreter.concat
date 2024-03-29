@@ -321,14 +321,12 @@ proc(
   value .typeId ?? if
     valInfo value .typeId false return
   end
-  showErrorMessages if
-    "expected type got: " sb.wrap
-      valInfo .valueType typeContext sb.appendType
-      " ( " sb.appendS
-      value constContext typeContext sb.appendConstant
-      " )" sb.appendS
-    pos errors appendError
-  end
+  "expected type got: " sb.wrap
+    valInfo .valueType typeContext sb.appendType
+    " ( " sb.appendS
+    value constContext typeContext sb.appendConstant
+    " )" sb.appendS
+  pos errors appendError
   ## restore stack
   value valInfo context unpopValue
   valInfo Type .undefined true return
@@ -558,9 +556,7 @@ proc(
               context [] .typeBuffer list.asArray
               context [] .labelBuffer list.asArray optional.wrap
             typeContext types.newTuple if ..drop
-              showErrorMessages if
-                "could not create structure-type" sb.wrap op [] .pos errors appendError
-              end
+              "could not create structure-type" sb.wrap op [] .pos errors appendError
               true return
             end
           end =:: tupleType
@@ -577,9 +573,7 @@ proc(
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newEnum if ..drop
-            showErrorMessages if
-              "could not create enum" sb.wrap op [] .pos errors appendError
-            end
+            "could not create enum" sb.wrap op [] .pos errors appendError
             true return
           end =:: enumType
           ## pushValue
@@ -595,9 +589,7 @@ proc(
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
           typeContext types.newUnion if ..drop
-            showErrorMessages if
-              "could not create union-type" sb.wrap op [] .pos errors appendError
-            end
+            "could not create union-type" sb.wrap op [] .pos errors appendError
             true return
           end =:: unionType
           ## pushValue
@@ -619,9 +611,7 @@ proc(
               context [] .typeBuffer
                 ..dup .length 1 -
               list.get .procOut ?? ! _if
-            showErrorMessages if
-              "missing return type for procedure" sb.wrap op [] .pos errors appendError
-            end
+            "missing return type for procedure" sb.wrap op [] .pos errors appendError
             true return
           end
           context [] .typeBuffer .length
@@ -634,9 +624,7 @@ proc(
           typeContext types.newProcArgs =:: procIn
           context [] .typeBuffer nArgs list.get =:: procOut
           procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
-            showErrorMessages if
-              "could not create procedure-type" sb.wrap op [] .pos errors appendError
-            end
+            "could not create procedure-type" sb.wrap op [] .pos errors appendError
             true return
           end =:: newType
           ## pushValue
@@ -744,11 +732,9 @@ proc(
       context [] .stackInfo list.peek .data =:: valInfo
       context inInitializer ! if
         valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
-          showErrorMessages if
-            "wrong argument type for declartion expected type got " sb.wrap
-              valInfo [] .valueType typeContext sb.appendType
-            op [] .pos errors appendError
-          end
+          "wrong argument type for declaration expected type got " sb.wrap
+            valInfo [] .valueType typeContext sb.appendType
+          op [] .pos errors appendError
           true return
         end
       end
@@ -893,15 +879,13 @@ proc(
           label
             idContext
           id.getIdentifier if ..drop
-            showErrorMessages if
-              "could not find identifier: " sb.wrap
-                label labelContext sb.appendLabelName
-              op [] .pos errors appendError
-            end
+            "could not find identifier: " sb.wrap
+              label labelContext sb.appendLabelName
+            op [] .pos errors appendError
             true return ## unknown identifier
           end =:: idData
           idData [] .constValue .none ?? if
-            showErrorMessages if
+            showErrorMessages idInfo [] .idType .TYPE ?? | if
               "identifier " sb.wrap
                 label labelContext sb.appendLabelName
                 " has not been initialized" sb.appendS
@@ -1060,11 +1044,9 @@ proc(
         true return
       end =:: value =:: valInfo
       value .boolean ?? ! if
-        showErrorMessages if
-          "wrong constant value for assert, expected boolean got: " sb.wrap
-            value constContext typeContext sb.appendConstant
-          op [] .pos errors appendError
-        end
+        "wrong constant value for assert, expected boolean got: " sb.wrap
+          value constContext typeContext sb.appendConstant
+        op [] .pos errors appendError
         value valInfo context unpopValue
         true return
       end
