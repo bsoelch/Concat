@@ -1115,14 +1115,14 @@ proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
   FILE_ID_NONE return
 end
 
-
+enum( i64 : constant i64 : stackId i64 : localId i64 : tmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
   i8 : valStackType
   i64 : valId
   string : cmpType
-  i64 : value
+  IntValue : value
   BranchId : ifBranch
   BranchId : elseBranch
   CompilerContext ptr mut : context
@@ -1138,7 +1138,12 @@ proc(
     valStackType sb.appendC
     valId sb.appendI
     ", " sb.appendS
-    value sb.appendI
+    value switch
+      constant case value .constant sb.appendI break
+      stackId case "%s" sb.appendS value .stackId sb.appendI break
+      localId case "%l" sb.appendS value .stackId sb.appendI break
+      tmpId case "%t" sb.appendS value .tmpId sb.appendI break
+    end
     "\njnz %t" sb.appendS
     tmpId sb.appendI
     ", " sb.appendS
@@ -1150,7 +1155,7 @@ proc(
 end
 proc(
   stringBuilder : sb
-  types.ArraySize : size
+  IntValue : size
   i64 : valId
   FilePosition : pos
   CompilerContext ptr mut : context
@@ -1161,11 +1166,6 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  size .sizeType .int ?? ! if
-    "unsupported size type for array element" sb.wrap
-      size sb.appendArraySize
-    pos errors appendError
-  end
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
@@ -1189,7 +1189,7 @@ proc(
       ValType .I64
       's' valId
       "slt" string.wrap
-      0
+      0 IntValue .constant
       errorBranch
       check1Branch
     context appendCmpInt
@@ -1199,7 +1199,7 @@ proc(
       ValType .I64
       's' valId
       "sge" string.wrap
-      size .value
+      size
       errorBranch
       okBranch
     context appendCmpInt
@@ -1209,7 +1209,12 @@ proc(
     ", ...,l %s" sb.appendS
     valId sb.appendI
     ",l " sb.appendS
-    size .value sb.appendI
+    size switch
+      constant case size .constant sb.appendI break
+      stackId case "%s" sb.appendS size .stackId sb.appendI break
+      localId case "%l" sb.appendS size .stackId sb.appendI break
+      tmpId case "%t" sb.appendS size .tmpId sb.appendI break
+    end
     ",l " sb.appendS
     pos .fileName .length sb.appendI
     ",l $" sb.appendS
@@ -1558,7 +1563,7 @@ proc(
           valType
           't' valId
           "eq" string.wrap
-          cmpVal
+          cmpVal IntValue .constant
           caseBranch
           nextBranch
         context appendCmpInt
@@ -1602,7 +1607,7 @@ proc(
       valType
       't' valId
       "slt" string.wrap
-      cmpVal
+      cmpVal IntValue .constant
       ltBranch
       geBranch
     context appendCmpInt
@@ -2273,7 +2278,16 @@ proc(
         types.primitive.I_SIZE
         targetId
       pos context castNumbers
-      target typeContext types.getArraySize 0 array.get targetId pos context appendIndexCheck
+      target typeContext types.getArraySize 0 array.get =:: size
+      ## appendIndexCheck
+        size .sizeType switch
+          int case size .value IntValue .constant break
+          staticArg case size .value IntValue .localId break
+          templateArg case ..unreachable
+        end
+        targetId
+        pos
+      context appendIndexCheck
     return
   end
   src typeContext types.isNumber target typeContext types.isNumber & if
@@ -3249,6 +3263,64 @@ proc(
         return
       end
       break
+    argc case
+      sb
+        op [] .pos sb.appendPosQBE
+        "%s" sb.appendS
+        ValType .I64 context pushValue sb.appendI
+        " =l loadl $" sb.appendS
+        CONCAT_ARGC_NAME sb.appendS
+        '\n' sb.appendC
+      return
+    getArg case
+      op [] .pos context popValue =:: argIndexId
+      context nextTmpId =:: argcId
+      context nextTmpId =:: argvId
+      context nextTmpId =:: eltOffsetId
+      context nextTmpId =:: argvEltId
+      ValType .I64 context pushValue =:: argPtr
+      sb
+        op [] .pos sb.appendPosQBE
+        "%t" sb.appendS
+        argcId sb.appendI
+        " =l loadl $" sb.appendS
+        CONCAT_ARGC_NAME sb.appendS
+        '\n' sb.appendC
+        ## appendIndexCheck
+          argcId IntValue .tmpId
+          argIndexId
+          op [] .pos
+          context
+        appendIndexCheck
+        "%t" sb.appendS
+        argvId sb.appendI
+        " =l loadl $" sb.appendS
+        CONCAT_ARGV_NAME sb.appendS
+        '\n' sb.appendC
+        ## scale offset by size of pointer
+        "%t" sb.appendS
+        eltOffsetId sb.appendI
+        " =l mul %s" sb.appendS
+        argIndexId sb.appendI
+        ", 8\n%t" sb.appendS
+        argvEltId sb.appendI
+        " =l add %t" sb.appendS
+        argvId sb.appendI
+        ", %t" sb.appendS
+        eltOffsetId sb.appendI
+        '\n' sb.appendC
+        "%s" sb.appendS
+        argPtr sb.appendI
+        " =l loadl %t" sb.appendS
+        argvEltId sb.appendI
+        '\n' sb.appendC
+        ## push length of string
+        "%s" sb.appendS
+        ValType .I64 context pushValue sb.appendI
+        " =l call $strlen(l %s" sb.appendS
+        argPtr sb.appendI
+        ")\n" sb.appendS
+      return
     block case
       op [] .val .block .blockType switch
         IF case
@@ -3867,7 +3939,7 @@ proc(
       break
     setId autoTypedInitializeId Assert
     setElement setArrayElement call_old
-    argc getArg getArgLen unaryOperator
+    getArgLen unaryOperator
     checkArrayIndex typeInfo
     compilerInfo getName setName @Name getLabel setLabel
     @Label length size typeModifier hasLabel hasName case
@@ -4030,13 +4102,13 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     prog [] .hasGetArgs if
       "data $" sb.appendS
       CONCAT_ARGC_NAME sb.appendS
-      " = { l 0 }" sb.appendS
+      " = { l 0 }\n" sb.appendS
       "data $" sb.appendS
       CONCAT_ARGV_NAME sb.appendS
-      " = { l 0 }" sb.appendS
+      " = { l 0 }\n" sb.appendS
       "data $" sb.appendS
       CONCAT_ENVP_NAME sb.appendS
-      " = { l 0 }" sb.appendS
+      " = { l 0 }\n" sb.appendS
       "export function w $main(l %argc,l %argv,l %envp){\n@start\n" sb.appendS
       "storel %argc,$" sb.appendS
       CONCAT_ARGC_NAME sb.appendS

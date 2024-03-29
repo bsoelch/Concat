@@ -580,24 +580,21 @@ proc(
     state [] .opInfo =
 end
 proc(
-  Type : calledType
+  Type arrayView : types
   FilePosition : pos
   TypeCheckState ptr mut : state
--> ) =>: pushOutTypes
+-> ) =>: pushTypes
   state [] .program [] .idContext
     .typeContext @
   =:: typeContext
-  ## push return values
-  calledType typeContext types.getProcOut ..drop
-    typeContext types.compositeElts
-  =:: outTypes
-  0 while ..dup outTypes .length < do =:: i
+  0 while ..dup types .length < do =:: i
     state [] .stack @
       ## TypeInfo
-        outTypes i types.compositeElts.get
+        types i array.get
         ConstValue .none
         id.LABEL_ID_NONE
         pos
+        ## multiple types from one op -> cannot modify op to modify types
         OP_UNLINKED
         OP_UNLINKED
         OP_UNLINKED
@@ -1646,7 +1643,11 @@ proc(
             break
           end
           op state appendOp ..drop
-          calledType op .pos state pushOutTypes
+          calledType typeContext types.getProcOut ..drop
+            typeContext types.compositeEltArray
+            op .pos
+            state
+          pushTypes
           return
         LABEL case
           break
@@ -1693,7 +1694,11 @@ proc(
         state
       requireTypes if ..drop return end ..drop
       op state appendOp ..drop
-      procType op .pos state pushOutTypes
+      procType typeContext types.getProcOut ..drop
+        typeContext types.compositeEltArray
+        op .pos
+        state
+      pushTypes
       return
     @Id case
       op .val .@Id .idType switch
@@ -2212,6 +2217,39 @@ proc(
           state [] .stack @ topValue branchTree.push
         end
       end
+      return
+    argc case
+      true program [] .hasGetArgs =
+      ## pushValue
+        op .dataType
+        ConstValue .none
+        op
+      state pushValue
+      true true 0 0 state updateOpInfo
+      return
+    getArg case
+      true program [] .hasGetArgs =
+      ## requireTypes
+        types.primitive.I_SIZE @ array.wrap
+        "program argument index" string.wrap
+        0
+        op .pos
+      state requireTypes if ..drop
+        return
+      end ..drop
+      op state appendOp ..drop ## ignore id
+      Type 2 array new =:: mut typeData
+      typeData @ =:: outTypes
+      types.primitive.I8
+        true
+        types.ArraySize array.empty
+        false
+        false
+      typeContext types.newArrayType
+        if ..unreachable end ## XXX use assertion
+      outTypes 0 [] =
+      types.primitive.I_SIZE outTypes 1 [] =
+      outTypes array.wrap op .pos state pushTypes
       return
     Cast Cast! case
       op .dataType .undefined ?? if
@@ -3231,7 +3269,7 @@ proc(
       return
       break
     getName builtIn procPtr
-    newEnum call argc getArg getArgLen
+    newEnum call getArgLen
     unaryOperator
     checkEnumLabel setEnumLabel
     checkArrayIndex setName @Name
