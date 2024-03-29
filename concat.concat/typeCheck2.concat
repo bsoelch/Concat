@@ -309,6 +309,9 @@ proc(
   src .value .none ?? if
     true return
   end
+  src .opIndex 0 < if ## XXX? why is this reachable
+    true return
+  end
   state [] .compiledOps src .opIndex list.at .data =:: srcOp
   srcOp [] .val .Constant ?? ! if
     true return
@@ -737,14 +740,46 @@ proc(
   pos errors appendError
   BlockInfo ptr mut optional.empty return
 end
-proc( TypeCheckState ptr mut : state -> ) =>: endBranch
+
+## break from current switch-branch, but don't terminate the branch
+proc(
+  SwitchBlockInfo ptr mut : switchBlock
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+-> ) =>: breakSwitch
+  state [] .stack @
+    switchBlock [] .branchRoot
+  branchTree.reset =:: caseBranch
+  state [] .reachable if
+    ## add space for casts of values on stack
+    switchBlock [] .castOffsets
+      ## reserveOps
+        state [] .stack branchTree.depth
+        pos
+      state reserveOps list.append
+    switchBlock [] .castOffsets =
+    ## reset stack to start of if statement
+    switchBlock [] .caseBranches
+      ## BranchPoint
+        caseBranch
+        pos
+      BranchPoint new list.append
+    switchBlock [] .caseBranches =
+  end
+  BlockType .BREAK_SWITCH pos opBlock =:: mut breakOp
+  switchBlock [] .blockId breakOp .val .block .blockId =
+  breakOp state appendOp ..drop
+end
+## terminate current switch branch
+proc( FilePosition : pos TypeCheckState ptr mut : state -> ) =>: endSwitchBranch
   state peekBlock =:: currentBlock?
   currentBlock? optional.hasData if
       currentBlock? .data =:: currentBlock
       currentBlock [] .Switch ?? _if
-    ## return directly in switch branch
-    ##   -> end of current branch
-    true currentBlock? .data [] .Switch .inLabel =
+      currentBlock? .data [] .Switch @ =:: switchBlock
+      switchBlock [] .inLabel ! _if
+    true switchBlock [] .inLabel =
+    switchBlock pos state breakSwitch
   end
 end
 
@@ -2501,13 +2536,29 @@ proc(
           end
           return
         SWITCH case
-          state [] .stack @ branchTree.pop =:: value?
+          state [] .stack @ branchTree.peek =:: value?
           value? optional.isEmpty if
             "missing argument for switch-statement" sb.wrap
             op .pos errors appendError
             return
           end
-          value? .data [] .valueType =:: switchType
+          value? .data [] .valueType
+            typeContext types.unwrapReference
+          =:: switchType
+          switchType typeContext types.isInt ! if
+            switchType typeContext types.isEnum ! _if
+            "cannot switch values of type " sb.wrap
+              switchType typeContext sb.appendType
+            op .pos errors appendError
+          end
+          ## requireTypes
+            switchType @ array.wrap
+            "switch value" string.wrap
+            0
+            op .pos
+          state requireTypes if ..drop
+            return
+          end ..drop
           program [] .switchData .length i32 cast =:: switchId
           program [] .switchData
             ## SwitchData
@@ -2518,12 +2569,6 @@ proc(
             SwitchData new list.append
           program [] .switchData =
           switchId op .val .block .blockId =
-          switchType typeContext types.isInt ! if
-            switchType typeContext types.isEnum ! _if
-            "cannot switch values of type " sb.wrap
-              switchType typeContext sb.appendType
-            op .pos errors appendError
-          end
           switchType op .dataType =
           false 1 op .pos state clearReferences
           op state appendOp ..drop
@@ -2630,11 +2675,6 @@ proc(
           breakBlock? .data =:: breakBlock
           breakBlock [] .Switch ?? if
             breakBlock [] .Switch @ =:: switchBlock
-            ## BlockId
-              BlockType .BREAK_SWITCH
-              switchBlock [] .blockId
-              0
-            BlockId new op .val .block =
             state peekBlock .data =:: currentBlock
             currentBlock [] .Switch ?? if
                 currentBlock [] .Switch .blockId
@@ -2643,27 +2683,9 @@ proc(
               true switchBlock [] .inLabel =
               false switchBlock [] .allowBreak =
             end
-            state [] .stack @
-              switchBlock [] .branchRoot
-            branchTree.reset =:: caseBranch
-            state [] .reachable if
-              ## add space for casts of values on stack
-              switchBlock [] .castOffsets
-                ## reserveOps
-                  state [] .stack branchTree.depth
-                  op .pos
-                state reserveOps list.append
-              switchBlock [] .castOffsets =
-              ## reset stack to start of if statement
-              switchBlock [] .caseBranches
-                ## BranchPoint
-                  caseBranch
-                  op .pos
-                BranchPoint new list.append
-              switchBlock [] .caseBranches =
-            end
+            switchBlock op .pos state breakSwitch
+            return
           else breakBlock [] .While ?? _if
-            state endBranch
             breakBlock [] .While @ =:: whileBlock
             blockType .CONTINUE ?? if
               whileBlock [] .continueCastOffsets @
@@ -2680,19 +2702,20 @@ proc(
                 op .pos
               state reserveOps list.append
             castOffsets [] =
-            ## reset stack to start of if statement
+            ## remember while branch
             branches []
               ## BranchPoint
                 state [] .stack @ branchTree.startBranch
                 op .pos
               BranchPoint new list.append
             branches [] =
-          else
-            break
+            false state [] .reachable =
+            op state appendOp ..drop
+            ## end of switch branch not reachable
+            op .pos state endSwitchBranch
+            return
           end
-          op state appendOp ..drop
-          false state [] .reachable =
-          return
+          break
         WHILE case
           program [] .whileData .length i32 cast =:: whileId
           program [] .whileData
@@ -2877,6 +2900,8 @@ proc(
           op state appendOp ..drop
           return
         CASE DEFAULT case
+          ## break current branch
+          op .pos state endSwitchBranch
           op .pos state closeBlock =:: closed
           closed .Switch ?? ! if
             "unexpected end of " sb.wrap
@@ -2886,12 +2911,8 @@ proc(
               "-block" sb.appendS
             op .pos errors appendError
           end
+          ## XXX? check for stray labels
           closed .Switch @ =:: switchBlock
-          ## XXX? allow omitting break of last branch
-          switchBlock [] .inLabel ! if
-            "missing break statement at end of switch branch" sb.wrap
-            op .pos errors appendError
-          end
           switchBlock [] .caseBranches =:: mut caseBranches
           op .val .blockEnd .blockType .CASE ?? if
             BlockType .DEFAULT op .pos opBlock =:: mut tmp
@@ -3180,8 +3201,8 @@ proc(
       end
       break
     Return case
-      state endBranch
       op @ state typeCheckReturn
+      op .pos state endSwitchBranch
       return
     length size case
       state [] .stack @ branchTree.peek =:: value?
@@ -3284,9 +3305,9 @@ proc(
       op state appendOp ..drop
       return
     unreachable case
-      state endBranch
       false state [] .reachable =
       op state appendOp ..drop
+      op .pos state endSwitchBranch
       return
     stackMod case
       op .val .stackMod .modType switch

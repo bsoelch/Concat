@@ -3480,12 +3480,13 @@ proc(
                 breakBlock [] sb.appendBlockInfo
               op [] .pos errors appendError
             end
+            context [] .stackInfo @
+              breakBlock [] .Switch .branchRoot
+            branchTree.reset =:: caseBranchId
             ## remember break (if reachable)
             context [] .reachable if
               breakBlock [] .Switch .caseBranches
-                context [] .stackInfo @
-                  breakBlock [] .Switch .branchRoot
-                branchTree.reset list.append
+                caseBranchId list.append
               breakBlock [] .Switch .caseBranches =
               breakBlock [] .Switch .caseBranchIds
                 context [] .currentBranch list.append
