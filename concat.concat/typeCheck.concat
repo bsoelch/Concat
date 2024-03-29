@@ -379,10 +379,10 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       ## opArrayGet
         0
         pos
-      opArrayGet
-        stackHead [] .valType ..over .dataType =
-        0 ..over .val .getArrayElement =
-      state [] .opStack .data newOffset [] =
+      opArrayGet =:: mut tmp
+        stackHead [] .valType tmp .dataType =
+        0 tmp .val .getArrayElement =
+      tmp state [] .opStack .data newOffset [] =
       newOffset 1 + newOffset =
       ## opGet
         stackHead [] .valType
@@ -1058,8 +1058,8 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         return
       end
       state ensureStackHeadIsValue
-      0 while ..dup resCount < do
-        retType ..over typeContext compositeGetElement =:: eltType
+      0 while ..dup resCount < do =:: i
+        retType i typeContext compositeGetElement =:: eltType
           eltType typeContext types.isMultiValueType
           op [] .pos
           state
@@ -1069,9 +1069,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
             eltId
             op [] .pos
           opInitializeId list.append
-          ..over op [] .pos opTupleGet
-            retType ..over .dataType =
-          list.append
+          i op [] .pos opTupleGet =:: mut getElt
+            retType getElt .dataType =
+          getElt list.append
             retType
             retId
             op [] .pos
@@ -1082,7 +1082,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
           op [] .pos
         opGet =:: tmp tmp @ state pushValue
         eltType typeContext types.isMultiValueType state [] .typeStack list.peek .data [] .writable =
-        1 +
+        i 1 +
       end ..drop
     break
     POINTER case
