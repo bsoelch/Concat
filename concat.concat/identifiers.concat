@@ -561,11 +561,13 @@ namespace: id
         prevDec [] .idType idType != if
           "declaration and initialization of \"" sb.wrap
             label labelContext sb.appendLabelName
-            "\" are not compatible " sb.appendS
-            ## TODO? print identifier types
-            " ( declaration at " sb.appendS
+            "\" are not compatible expected: " sb.appendS
+            prevDec [] .idType sb.appendIdType
+            " ( declared at " sb.appendS
             prevDec [] .declaredAt sb.appendPos
             " )" sb.appendS
+            " got: " sb.appendS
+            idType sb.appendIdType
           declaredAt errors appendError
           context [] .nameBuffer list.clear context [] .nameBuffer =
           LABEL_ID_NONE ID_NONE_DATA true return

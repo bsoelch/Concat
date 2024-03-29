@@ -1336,6 +1336,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : t
+    bool : printEmptyTypes
     TypeContext ptr : context
   -> stringBuilder ) =>: appendComposite
     context [] .labelContext @ =:: labelContext
@@ -1351,15 +1352,18 @@ namespace: sb
             ..swap 1 + continue
           end
           t ..over.2 context types.compositeGetLabel =:: label
-          eltType context types.isEmpty ! if
+          label id.LABEL_ID_NONE !=
+            label labelContext id.labelFlags id.FLAG_DUMMY & ? ! &
+          =:: printLabel
+          printEmptyTypes eltType context types.isEmpty ! | if
             eltType context false appendTypeRecursive
-            label id.LABEL_ID_NONE != if
+            printLabel if
               " : " appendS
             else
               ' ' appendC
             end
           end
-          label id.LABEL_ID_NONE != if
+          printLabel if
             label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
               "mut " appendS
             end
@@ -2335,16 +2339,16 @@ namespace: sb
           t types.getTypeId appendI
           "]( "    appendS
           allowRecurse if
-            t context appendComposite
+            t t .enum ?? ! context appendComposite
           else
             "... " appendS
           end
          ")" appendS
        return
       procIn case
-        sb t context appendComposite return
+        sb t true context appendComposite return
       procOut case
-        sb t context appendComposite return
+        sb t true context appendComposite return
       procedure case
         sb
           "proc["      appendS

@@ -1321,10 +1321,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .currentFile
         idContext
         progContext [] .errors @
-      id.declareIdentifier if ..drop =:: labelId
-        64 sb.create
-          labelId labelContext sb.appendLabelName
-        fileState [] .wordStart state appendError2
+      id.declareIdentifier if ..drop.2
         return
       end =:: idData label =
       idType .TYPE ?? if
@@ -1369,7 +1366,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         value []
       else
         ConstValue .none
-      end 
+      end
         _EXPERIMENTAL_ ! if
            label labelContext id.labelFlags id.FLAG_MUTABLE & ? _if
           ## old compiler does not support const-values on mutable identifiers
@@ -1402,19 +1399,21 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendWarning2
           false validMain =
         end
-        idData .valueType typeContext types.getProcIn ..swap =:: inTypes
-        idData .valueType typeContext types.getProcOut ..swap =:: outTypes
-        #+no inTypes+# #+no outTypes+# | if
-          "could not resolve signature of main" sb.wrap
-          fileState [] .wordStart state appendError2
-        end
-        inTypes typeContext types.compositeEltCount 0 > if
-          "main procedure should not take arguments" sb.wrap
-           fileState [] .wordStart state validMain if appendError2 else appendWarning2 end
-        end
-        outTypes typeContext types.compositeEltCount 0 > if
-          "main procedure should not return a value" sb.wrap
-           fileState [] .wordStart state appendWarning2
+        validMain if
+          idData .valueType typeContext types.getProcIn ..swap =:: inTypes
+          idData .valueType typeContext types.getProcOut ..swap =:: outTypes
+          #+no inTypes+# #+no outTypes+# | if
+            "could not resolve signature of main" sb.wrap
+            fileState [] .wordStart state appendError2
+          end
+          inTypes typeContext types.compositeEltCount 0 > if
+            "main procedure should not take arguments" sb.wrap
+             fileState [] .wordStart state appendError2
+          end
+          outTypes typeContext types.compositeEltCount 0 > if
+            "main procedure should not return a value" sb.wrap
+             fileState [] .wordStart state appendWarning2
+          end
         end
       end
       idData .idType .TYPE ?? if
@@ -1523,10 +1522,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                   state [] .currentFile
                   idContext
                   progContext [] .errors @
-                id.declareIdentifier if ..drop.2 
-                  64 sb.create
-                    label labelContext sb.appendLabelName
-                  fileState [] .wordStart state appendError2
+                id.declareIdentifier if ..drop.2
                   return
                 end ..drop.2
               end
@@ -1595,10 +1591,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state [] .currentFile
         idContext
         progContext [] .errors @
-      id.declareIdentifier if ..drop labelId =
-        64 sb.create
-          labelId labelContext sb.appendLabelName
-        fileState [] .wordStart state appendError2
+      id.declareIdentifier if ..drop.2
         return
       end =:: idData labelId =
       ## create constant value after creating declaration
