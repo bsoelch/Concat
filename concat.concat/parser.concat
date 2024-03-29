@@ -2003,8 +2003,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else ..dup "cast" string.wrap string.eq ..over "cast!" string.wrap string.eq | _if =:: opName
       opName "cast!" string.wrap string.eq =:: forceCast
-      _EXPERIMENTAL_ if state [] .currentProc optional.hasData _if
-        Type .undefined ## correct type will be determined in type-check phase
+      _EXPERIMENTAL_ if ## correct type will be determined in type-check phase
+        Type .undefined
           fileState [] .wordStart
           forceCast if
             opCast!
@@ -2014,17 +2014,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state appendOp
         return
       end
-      state _EXPERIMENTAL_ if hasConst2 else hasConst end ! if
+      state hasConst ! if
         "missing parameter for \"" sb.wrap
           opName sb.appendStr
         "\" expected type" sb.appendS fileState [] .wordStart state appendError2
         return
       end
-      _EXPERIMENTAL_ if
-        state popConst2 ..drop
-      else
-        state popConst .val
-      end =:: target
+      state popConst .val =:: target
       target .typeId ?? ! if
         "wrong constant parameter for \"" sb.wrap
           opName sb.appendStr
