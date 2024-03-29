@@ -747,6 +747,7 @@ proc(
   FilePosition : pos
   TypeCheckState ptr mut : state
 -> ) =>: breakSwitch
+  state [] .stack branchTree.depth =:: caseTypes
   state [] .stack @
     switchBlock [] .branchRoot
   branchTree.reset =:: caseBranch
@@ -754,7 +755,7 @@ proc(
     ## add space for casts of values on stack
     switchBlock [] .castOffsets
       ## reserveOps
-        state [] .stack branchTree.depth
+        caseTypes
         pos
       state reserveOps list.append
     switchBlock [] .castOffsets =
@@ -924,7 +925,7 @@ proc(
               opAutoCast castPoint [] =
               i 1 + continue
             end
-            "operation is not a NO-OP" sb.wrap
+            "operation is not a NO-OP: " sb.wrap
               castPoint [] program sb.appendOp
             mergePoint .mergePoint errors appendError
           end
@@ -2475,6 +2476,7 @@ proc(
           end
           false 0 op .pos state clearReferences
           currentBlock [] .If .blockId op .val .block .blockId =
+          state [] .stack branchTree.depth =:: ifTypes
           state [] .stack @
             currentBlock [] .If .branchRoot
           branchTree.reset =:: ifBranch
@@ -2482,7 +2484,7 @@ proc(
             ## add space for casts of values on stack
             ## ifCastsOffset
               ## reserveOps
-                state [] .stack branchTree.depth
+                ifTypes
                 op .pos
               state reserveOps
             currentBlock [] .If .ifCastsOffset =
