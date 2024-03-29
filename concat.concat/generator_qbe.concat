@@ -2664,13 +2664,13 @@ proc(
         end ..drop
         true context [] .reachable =
       return
-    getId @Id case
+    getId atId case
       op [] .val .getId ?? if
         op [] .val .getId
       else
-        op [] .val .@Id
+        op [] .val .atId
       end =:: idInfo
-      op [] .val .@Id ?? =:: isAddr
+      op [] .val .atId ?? =:: isAddr
       idInfo .idType switch
         PROCEDURE GLOBAL_VAR case
           idInfo .idType .PROCEDURE ?? if
@@ -2766,13 +2766,13 @@ proc(
         end
         '\n' sb.appendC
       return
-    getArrayElement @ArrayElement case
+    getArrayElement atArrayElement case
       op [] .val .getArrayElement ?? if
         op [] .val .getArrayElement
       else
-        op [] .val .@ArrayElement
+        op [] .val .atArrayElement
       end =:: mut argCount
-      op [] .val .@ArrayElement ?? =:: isAddr
+      op [] .val .atArrayElement ?? =:: isAddr
       op [] .dataType =:: mut arrayType
       arrayType typeContext types.isPointer =:: mut isPtr
       arrayType typeContext types.isReference if
@@ -2846,13 +2846,13 @@ proc(
         offsetId sb.appendI
         '\n' sb.appendC
       return
-    getElement @Element case
+    getElement atElement case
       op [] .val .getElement ?? if
         op [] .val .getElement
       else
-        op [] .val .@Element
+        op [] .val .atElement
       end =:: index
-      op [] .val .@Element ?? =:: isAddr
+      op [] .val .atElement ?? =:: isAddr
       op [] .dataType =:: mut containerType
       false =:: mut isPtr
       containerType typeContext types.isPointer
@@ -3941,8 +3941,8 @@ proc(
     setElement setArrayElement call_old
     getArgLen unaryOperator
     checkArrayIndex typeInfo
-    compilerInfo getName setName @Name getLabel setLabel
-    @Label length size typeModifier hasLabel hasName case
+    compilerInfo getName setName atName getLabel setLabel
+    atLabel length size typeModifier hasLabel hasName case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap

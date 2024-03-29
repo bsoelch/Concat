@@ -56,7 +56,7 @@ enum(
             BlockId : mut blockEnd
      IdentifierInfo : mut getId
      IdentifierInfo : mut setId
-     IdentifierInfo : mut @Id
+     IdentifierInfo : mut atId
      IdentifierInfo : mut initializeId
      IdentifierInfo : mut autoTypedInitializeId
      IdentifierInfo : mut declareId
@@ -64,15 +64,15 @@ enum(
       ProcedureImpl : mut procPtr
             LabelId : getLabel
             LabelId : mut setLabel
-            LabelId : mut @Label
+            LabelId : mut atLabel
             LabelId : mut hasLabel
                 i32 : mut getElement
                 i32 : mut setElement
-                i32 : mut @Element
+                i32 : mut atElement
                 i32 : mut hasElement
                 i32 : mut getArrayElement
                 i32 : mut setArrayElement
-                i32 : mut @ArrayElement
+                i32 : mut atArrayElement
                       setValue
                       Print
                       Return
@@ -99,7 +99,7 @@ enum(
   StackModification : stackMod
             LabelId : getName
             LabelId : mut setName
-            LabelId : mut @Name
+            LabelId : mut atName
             LabelId : mut hasName
        TypeModifier : mut typeModifier
      StringConstant : Assert
@@ -136,9 +136,9 @@ proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opSet
   =:: pos
   OpValue .setId ..swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export op@Id
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opAtId
   =:: pos
-  OpValue .@Id ..swap pos Operation new return
+  OpValue .atId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opInitializeId
   =:: pos
@@ -166,8 +166,8 @@ end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export opGetElement
   index OpValue .getElement base pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export op@Element
-  index OpValue .@Element base pos Operation new return
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export opAtElement
+  index OpValue .atElement base pos Operation new return
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export opHasElement
   index OpValue .hasElement base pos Operation new return
@@ -494,11 +494,11 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .setId labelContext sb.appendIdInfo
           break
-        @Id case
+        atId case
           "address ( " sb.appendS
           ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .@Id labelContext sb.appendIdInfo
+          ..over .val .atId labelContext sb.appendIdInfo
           break
         initializeId case
           "initialize ( " sb.appendS
@@ -562,11 +562,11 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .setLabel labelContext sb.appendLabelName
           break
-        @Label case
+        atLabel case
           "label address ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .@Label labelContext sb.appendLabelName
+          ..over .val .atLabel labelContext sb.appendLabelName
           break
         hasLabel case
           "has label ( " sb.appendS
@@ -591,11 +591,11 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .setElement sb.appendI
           break
-        @Element case
+        atElement case
           "element address ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .@Element sb.appendI
+          ..over .val .atElement sb.appendI
           break
         hasElement case
           "has element ( " sb.appendS
@@ -615,11 +615,11 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .setArrayElement sb.appendI
           break
-        @ArrayElement case
+        atArrayElement case
           "array element address ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .@ArrayElement sb.appendI
+          ..over .val .atArrayElement sb.appendI
           break
         setValue case
           "set value ( " sb.appendS
@@ -752,9 +752,9 @@ namespace: sb
           "set: " sb.appendS
           ..over .val .setName labelContext sb.appendLabelName
           break
-        @Name case
+        atName case
           "address of: " sb.appendS
-          ..over .val .@Name labelContext sb.appendLabelName
+          ..over .val .atName labelContext sb.appendLabelName
           break
         hasName case
           "has name: " sb.appendS

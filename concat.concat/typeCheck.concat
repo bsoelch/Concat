@@ -346,16 +346,16 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       state [] .typeStack list.peek .data =:: stackHead
       opHead [] .val switch
         getId case ## writable getId -> access to writable variable
-          opHead [] .val .getId opHead [] .val .@Id =
+          opHead [] .val .getId opHead [] .val .atId =
           opHead [] .dataType true typeContext types.getAddressType opHead [] .dataType =
           opHead [] .dataType stackHead [] .valType =
           break
         getElement case
-          opHead [] .val .getElement opHead [] .val .@Element =
+          opHead [] .val .getElement opHead [] .val .atElement =
           stackHead [] .valType true typeContext types.getAddressType stackHead [] .valType =
           break
         getArrayElement case
-          opHead [] .val .getArrayElement opHead [] .val .@ArrayElement =
+          opHead [] .val .getArrayElement opHead [] .val .atArrayElement =
           stackHead [] .valType true typeContext types.getAddressType stackHead [] .valType =
           break
         default
@@ -1097,7 +1097,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
               eltType true typeContext types.getAddressType
               eltId
               op [] .pos
-            op@Id list.append
+            opAtId list.append
           state [] .compiledOps =
         end
         1 +
@@ -1157,7 +1157,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         return
       end
       ## keep empty values to preserve code structure
-      op [] .val .@Id ?? if
+      op [] .val .atId ?? if
         ## getAddressType
           op [] .dataType
           idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ?
@@ -1179,7 +1179,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         state typeCheckCall
         return
       end
-      op [] .val .@Id ?? if ## TODO? store calling convention in procedure (pointer) type
+      op [] .val .atId ?? if ## TODO? store calling convention in procedure (pointer) type
         ## getAddressType
           op [] .dataType
           false
@@ -1377,7 +1377,7 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
     end ..drop
   end
   pointerType op [] .dataType =
-  op [] .val .@ArrayElement ?? if
+  op [] .val .atArrayElement ?? if
     ## TODO compute correct type for partial array access
     ## <i32 3 3 ptr> 1 [] @ -> <i32 3 ptr>
     baseType pointerType typeContext isMutable typeContext getAddressType
@@ -1438,7 +1438,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
   compositeType eltIndex typeContext compositeGetElement =:: mut elementType
   compositeType eltIndex typeContext compositeGetLabel =:: elementLabel
   typeInfo [] .writable elementLabel id.LABEL_ID_NONE == elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? | & =:: mutable
-  op [] .val .@Element ?? if
+  op [] .val .atElement ?? if
     elementType mutable typeContext getAddressType elementType =
   end
   compositeType op [] .dataType =
@@ -1512,8 +1512,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
         setLabel case
           index op [] .val .setElement =
           break
-        @Label case
-          index op [] .val .@Element =
+        atLabel case
+          index op [] .val .atElement =
           break
         default
           "unexpected operation for get label: " sb.wrap
@@ -1539,7 +1539,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
         op [] .pos state appendError2
       end
       enumType index typeContext compositeGetLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? typeInfo [] .writable & =:: mutable
-      op [] .val .@Label ?? if
+      op [] .val .atLabel ?? if
         eltType mutable typeContext getAddressType eltType =
       end
       enumType op [] .dataType =
@@ -1550,8 +1550,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
         setLabel case
           index op [] .val .setElement =
           break
-        @Label case
-          index op [] .val .@Element =
+        atLabel case
+          index op [] .val .atElement =
           break
         hasLabel case
           index op [] .val .hasElement =
@@ -1614,8 +1614,8 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
         setLabel case
           index op [] .val .setElement =
           break
-        @Label case
-          index op [] .val .@Element =
+        atLabel case
+          index op [] .val .atElement =
           break
         default
           "unexpected operation for get label: " sb.wrap
@@ -1749,8 +1749,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIden
     setName case
       op [] .val .setName
       break
-    @Name case
-      op [] .val .@Name
+    atName case
+      op [] .val .atName
       break
     default
       return
@@ -1771,8 +1771,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIden
     setName case
       id.asIdInfo op [] .val .setId =
       break
-    @Name case
-      id.asIdInfo op [] .val .@Id =
+    atName case
+      id.asIdInfo op [] .val .atId =
       break
     default ..drop
       break
@@ -2589,9 +2589,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       op op [] .val .setId state typeCheckGetId
       return
-    @Id case
+    atId case
       op state checkReachable
-      op op [] .val .@Id state typeCheckGetId
+      op op [] .val .atId state typeCheckGetId
       return
    setValue case
      break ## TODO implement type-checking for setId
@@ -2619,9 +2619,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       op op [] .val .setLabel state typeCheckGetLabel
       return
-    @Label case
+    atLabel case
       op state checkReachable
-      op op [] .val .@Label state typeCheckGetLabel
+      op op [] .val .atLabel state typeCheckGetLabel
       return
     hasLabel case
       op state checkReachable
@@ -2635,9 +2635,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       op op [] .val .setElement state typeCheckGetElement
       return
-    @Element case
+    atElement case
       op state checkReachable
-      op op [] .val .@Element state typeCheckGetElement
+      op op [] .val .atElement state typeCheckGetElement
       return
     getArrayElement case
       op state checkReachable
@@ -2647,9 +2647,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op state checkReachable
       op op [] .val .setArrayElement @ state typeCheckGetArrayElement
       return
-    @ArrayElement case
+    atArrayElement case
       op state checkReachable
-      op op [] .val .@ArrayElement @ state typeCheckGetArrayElement
+      op op [] .val .atArrayElement @ state typeCheckGetArrayElement
       return
     Print case
       op state checkReachable
@@ -3048,9 +3048,9 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         '"' sb.appendC
       op [] .pos state appendError2
       return
-    @Name case
+    atName case
       "unresolved identifier: \"" sb.wrap
-        op [] .val .@Name labelContext sb.appendLabelName
+        op [] .val .atName labelContext sb.appendLabelName
         '"' sb.appendC
       op [] .pos state appendError2
       return
@@ -3120,8 +3120,8 @@ proc(
     op op [] .val .getId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val .setId ?? _if
     op op [] .val .setId template impl implId argsIndices state resolveTemplateGetIdentifer
-  else op [] .val .@Id ?? _if
-    op op [] .val .@Id template impl implId argsIndices state resolveTemplateGetIdentifer
+  else op [] .val .atId ?? _if
+    op op [] .val .atId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val .initializeId ?? _if
     op op [] .val .initializeId template impl implId argsIndices state resolveTemplateGetIdentifer
   else op [] .val .declareId ?? _if

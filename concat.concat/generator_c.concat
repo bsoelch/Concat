@@ -993,8 +993,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       operations index isGlobal target prog compileOp
       op [] .dataType op [] .val .callPtr operations index isGlobal target prog compileCall
       return
-    @Id case
-      op [] .val .@Id =:: idInfo
+    atId case
+      op [] .val .atId =:: idInfo
       idInfo .idType switch
         LOCAL_VAR GLOBAL_VAR TMP_VAR ARGUMENT PROCEDURE case
           target "(&" io.fputs ..drop
@@ -1111,13 +1111,13 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       operations index isGlobal target prog compileOp
       target ";\n" io.fputs ..drop
       return
-    @ArrayElement case
+    atArrayElement case
       target "(&" io.fputs ..drop
       op [] .dataType typeContext types.getBaseType =:: eltType
       eltType typeContext types.getArrayDims 0 > if
         target "(" io.fputs ..drop
       end
-      op [] .dataType op [] .val .@ArrayElement operations index isGlobal target prog compileGetIndex
+      op [] .dataType op [] .val .atArrayElement operations index isGlobal target prog compileGetIndex
       eltType typeContext types.getArrayDims 0 > if
         target ".data[0])" io.fputs ..drop
       end
@@ -1132,13 +1132,13 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       operations index isGlobal target prog compileOp
       target ";\n" io.fputs ..drop
       return
-    @Element case
+    atElement case
       target "(&" io.fputs ..drop
-      op [] .dataType op [] .val .@Element typeContext types.compositeGetElement =:: eltType
+      op [] .dataType op [] .val .atElement typeContext types.compositeGetElement =:: eltType
       eltType typeContext types.getArrayDims 0 > if
         target "(" io.fputs ..drop
       end
-      op [] .dataType op [] .val .@Element operations index isGlobal target prog compileGetElt
+      op [] .dataType op [] .val .atElement operations index isGlobal target prog compileGetElt
       eltType typeContext types.getArrayDims 0 > if
         target ".data[0])" io.fputs ..drop
       end
@@ -1409,7 +1409,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     compilerInfo case
       break
-    getName setName @Name getLabel setLabel @Label length size
+    getName setName atName getLabel setLabel atLabel length size
     stackMod copy builtIn procPtr
     typeModifier autoCast hasLabel hasName
     call implementProcedure Assert case

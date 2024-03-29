@@ -1056,17 +1056,17 @@ proc(
         op [] .pos errors appendError
       end
       false return
-    setId @Id initializeId autoTypedInitializeId
-    getLabel setLabel @Label
-    getElement setElement @Element
-    getArrayElement setArrayElement @ArrayElement setValue
+    setId atId initializeId autoTypedInitializeId
+    getLabel setLabel atLabel
+    getElement setElement atElement
+    getArrayElement setArrayElement atArrayElement setValue
     Print New newEnum call callPtr call_old
     argc getArg getArgLen implementProcedure procPtr
     length size Cast Cast! autoCast
     unaryOperator binaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
     hasLabel hasName hasElement
-    stackMod setName @Name copy builtIn
+    stackMod setName atName copy builtIn
     compilerInfo unreachable case
       showErrorMessages if
         "unsupported operation in constant evaluation: " sb.wrap

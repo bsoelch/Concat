@@ -1700,7 +1700,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "cannot get address of constant value" sb.wrap fileState [] .wordStart state appendError2
             return ## XXX? allow getting address of constants via temporary variable
           end
-          mConst .valueType mConst .idInfo .data fileState [] .wordStart op@Id state appendOp
+          mConst .valueType mConst .idInfo .data fileState [] .wordStart opAtId state appendOp
           return
         end
       end
@@ -1716,23 +1716,23 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end .data
       ..dup [] .val .getId ?? if
-        ..dup [] .val .getId ..over [] .val .@Id =
+        ..dup [] .val .getId ..over [] .val .atId =
         fileState [] .wordStart ..swap [] .pos =
         return
       else ..dup [] .val .getLabel ?? _if
-        ..dup [] .val .getLabel ..over [] .val .@Label =
+        ..dup [] .val .getLabel ..over [] .val .atLabel =
         fileState [] .wordStart ..swap [] .pos =
         return
       else ..dup [] .val .getElement ?? _if
-        ..dup [] .val .getElement ..over [] .val .@Element =
+        ..dup [] .val .getElement ..over [] .val .atElement =
         fileState [] .wordStart ..swap [] .pos =
         return
       else ..dup [] .val .getArrayElement ?? _if
-        ..dup [] .val .getArrayElement ..over [] .val .@ArrayElement =
+        ..dup [] .val .getArrayElement ..over [] .val .atArrayElement =
         fileState [] .wordStart ..swap [] .pos =
         return
       else ..dup [] .val .getName ?? _if
-        ..dup [] .val .getName ..over [] .val .@Name =
+        ..dup [] .val .getName ..over [] .val .atName =
         fileState [] .wordStart ..swap [] .pos =
         return
       else

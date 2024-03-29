@@ -1466,11 +1466,11 @@ proc(
     ..dup optional.hasData if
       .data op .val .getId =
     else ..drop end
-  else op .val .@Name ?? _if
-    op .val .@Name
+  else op .val .atName ?? _if
+    op .val .atName
       op @ state resolveIdentifer
     ..dup optional.hasData if
-      .data op .val .@Id =
+      .data op .val .atId =
     else ..drop end
   else op .val .getId ?? _if ## convert static arguments to constants
       op .val .getId .labelId =:: label
@@ -1700,15 +1700,15 @@ proc(
         state
       pushTypes
       return
-    @Id case
-      op .val .@Id .idType switch
+    atId case
+      op .val .atId .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE case
-          op .val .@Id .labelId =:: labelId
+          op .val .atId .labelId =:: labelId
           labelId
             labelContext id.labelFlags
           id.FLAG_MUTABLE & ? =:: mutable
-          op .val .@Id .idType .PROCEDURE ?? if
-            op .val .@Id .constValue .procedure =:: procId
+          op .val .atId .idType .PROCEDURE ?? if
+            op .val .atId .constValue .procedure =:: procId
             program [] .procedures
               procId list.at .data
             =:: procData
@@ -1740,7 +1740,7 @@ proc(
           return
         TYPE ARGUMENT LABEL TEMPLATE_ARG PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.wrap
-            op .val .@Id labelContext sb.appendIdInfo
+            op .val .atId labelContext sb.appendIdInfo
             " is not supported" sb.appendS
           op .pos errors appendError
           return
@@ -1917,7 +1917,7 @@ proc(
       end ..drop
       op state appendOp ..drop
       return
-    getLabel @Label hasLabel case
+    getLabel atLabel hasLabel case
       false =:: mut checkOnly
       op .val .hasLabel ?? if
         true checkOnly =
@@ -1925,7 +1925,7 @@ proc(
       else op .val .getLabel ?? _if
         op .val .getLabel false
       else
-        op .val .@Label true
+        op .val .atLabel true
       end =:: isAddr =:: labelId
       1 op .pos state checkStackSize if
         return
@@ -2065,7 +2065,7 @@ proc(
         elementIndex
         op .pos
         isAddr if
-          op@Element
+          opAtElement
         else
           opGetElement
         end
@@ -2087,10 +2087,10 @@ proc(
         state [] .stack @ topValue branchTree.push
       end
       return
-    getElement @Element case
+    getElement atElement case
       break
-    getArrayElement @ArrayElement case ## TODO? extract to procedure
-      op .val .@ArrayElement ?? =:: isAddr
+    getArrayElement atArrayElement case ## TODO? extract to procedure
+      op .val .atArrayElement ?? =:: isAddr
       0 =:: mut indexCount
       state [] .stack @ branchTree.itr.start while
         branchTree.itr.hasNext
@@ -2149,7 +2149,7 @@ proc(
       arrayType typeContext types.getArraySize =:: size
       indexCount fixedSize ! if 1 - end =:: checkedIndices
       isAddr if
-        indexCount op .val .@ArrayElement =
+        indexCount op .val .atArrayElement =
       else
         indexCount op .val .getArrayElement =
       end
@@ -3272,7 +3272,7 @@ proc(
     newEnum call getArgLen
     unaryOperator
     checkEnumLabel setEnumLabel
-    checkArrayIndex setName @Name
+    checkArrayIndex setName atName
     hasName hasElement case
       break
     Print case
