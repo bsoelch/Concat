@@ -75,9 +75,6 @@ proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockIn
     branchRoot
     -1 pos BranchPoint new ## dummy value
     8 BranchPoint list.create
-      branchRoot
-      pos
-    BranchPoint new list.append
     -1
     blockId
     false
@@ -2426,7 +2423,13 @@ proc(
           op state appendOp ..drop
           ## XXX? pull constants into if branches
           state [] .stack @ branchTree.startBranch =:: ifBranch
-          ifBranch blockId op .pos newIfBlock state openBlock
+          ifBranch blockId op .pos newIfBlock =:: mut ifBlock
+          ifBlock .If .ififBranches
+              state [] .stack @ branchTree.startBranch
+              op .pos
+            BranchPoint new list.append
+          ifBlock .If .ififBranches =
+          ifBlock state openBlock
           return
         IFIF case
           state peekBlock =:: currentBlock?
@@ -2500,7 +2503,7 @@ proc(
           op state appendOp ..drop
           true state [] .reachable =
           ## current branch is on of the if_if branches, so case = 1 does not need to be handled
-          currentBlock [] .If .ififBranches .length 1 > if
+          currentBlock [] .If .ififBranches .length 1 >= if
             currentBlock [] .If .ififBranches .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
               0 while ..dup nodeCount < do =:: i

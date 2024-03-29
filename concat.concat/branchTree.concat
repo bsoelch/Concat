@@ -39,7 +39,33 @@ struct(
 ) =:: export BranchTree
 #:end
 
+
 namespace: branchTree
+  ## check if childCount > 0 for all nodes on current branch
+  #:ifnot:exp
+  #template type : T #end
+  proc(  T BranchTree ptr : tree -> ) =>: export check
+  #:else
+  proc( type : auto T T BranchTree ptr : tree -> ) =>: export check
+  #:end
+    tree tree [] .branchHead checkNode
+  end
+  #:ifnot:exp
+  #template type : T #end
+  proc(  T BranchTree ptr : tree NodeId : root -> ) =>: export checkNode
+  #:else
+  proc( type : auto T T BranchTree ptr : tree NodeId : root -> ) =>: export checkNode
+  #:end
+    root =:: mut nodeId
+    while nodeId 0 >= do
+      tree [] .nodes nodeId list.at .data =:: node
+      node [] .childCount 0 <= if
+        ..unreachable
+      end
+      node [] .parent nodeId =
+    end
+  end
+
   #:ifnot:exp
   #template type : T #end
   proc( -> T BranchTree ) =>: export create
@@ -163,7 +189,9 @@ namespace: branchTree
       end
       i 1 -
     end 1 + =:: newLength
-    newLength tree [] .nodes .length =
+    tree [] .nodes
+      newLength list.setLength
+    tree [] .nodes =
   end
   #:ifnot:exp
   #template type : T #end
@@ -202,6 +230,7 @@ namespace: branchTree
     T BranchTree ptr mut : tree
   -> NodeId ) =>: export startBranch
   #:end
+    tree check
     tree [] .branchHead -1 != if
       tree [] .nodes tree [] .branchHead list.at .data =:: node
       node [] .childCount
@@ -253,6 +282,7 @@ namespace: branchTree
     NodeId : branchPoint
   -> NodeId ) =>: export reset
   #:end
+    tree check
     tree [] .branchHead =:: oldHead
       branchPoint tree [] .branchHead =
       branchPoint -1 != if
@@ -261,6 +291,7 @@ namespace: branchTree
           1 +
         node [] .childCount =
       end
+      tree check
     oldHead return
   end
   #:ifnot:exp
@@ -404,6 +435,7 @@ namespace: branchTree
   -> T ptr optional ) =>: export pop
   #:end
     tree [] .branchHead =:: nodeId
+    tree check
     nodeId 0 < nodeId tree [] .nodes .length >= | if
       T ptr optional.empty return
     end
@@ -418,6 +450,7 @@ namespace: branchTree
       end
     end
     tree nodeId unlinkNode
+    tree check
     popped [] .data @ T ptr cast optional.wrap return
   end
   #:ifnot:exp
@@ -429,10 +462,12 @@ namespace: branchTree
     T BranchTree ptr mut : tree
   -> ) =>: export swap
   #:end
+    tree check
     tree pop .data [] =:: upper
     tree pop .data [] =:: lower
     tree upper push
     tree lower push
+    tree check
   end
 
   enum( error i32 : success ) =:: MergeResult
@@ -454,6 +489,7 @@ namespace: branchTree
     C : context
   -> MergeResult ) =>: export merge
   #:end
+    tree check
     branchHeads .length 0 <= if
       MergeResult .error return
     end
@@ -462,6 +498,7 @@ namespace: branchTree
     branchHeads .length 1 == if
       ## move head to first branch
       branchHeads 0 array.get tree [] .branchHead =
+      tree check
       0 MergeResult .success return ## nothing to merge
     end
     -1i64 =:: mut initDepth
@@ -500,6 +537,16 @@ namespace: branchTree
     needMerge ! if
       ## move head to first branch
       branchHeads 0 array.get tree [] .branchHead =
+      ## remember link to head in node
+      tree [] .branchHead -1 != if
+        tree [] .nodes
+          tree [] .branchHead
+        list.at .data =:: newHead
+        newHead [] .childCount
+          1 +
+        newHead [] .childCount =
+      end
+      tree check
       ## heads identical -> no merge necessary
       0 MergeResult .success return
     end
@@ -555,6 +602,7 @@ namespace: branchTree
     ## cleanup
     buffer mem.free
     heads mem.free
+    tree check
     offset MergeResult .success return
   end
 end

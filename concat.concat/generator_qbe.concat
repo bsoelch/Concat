@@ -357,15 +357,14 @@ proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
 end
 proc(
   i32 : blockId
-  branchTree.NodeId : branchRoot
   CompilerContext ptr mut : context
 -> ) =>: openIfBlock
   ## IfBlockInfo
     8 branchTree.NodeId list.create
-      branchRoot list.append
+      context [] .stackInfo @ branchTree.startBranch list.append
     8 BranchId list.create
       context [] .currentBranch list.append
-    branchRoot
+    context [] .stackInfo @ branchTree.startBranch
     -1
     context [] .currentBranch
     blockId
@@ -374,19 +373,17 @@ proc(
 end
 proc(
   i32 : blockId
-  branchTree.NodeId : branchRoot
   CompilerContext ptr mut : context
 -> ) =>: openSwitchBlock
   ## SwitchBlockInfo
     16 branchTree.NodeId list.create
     16 BranchId list.create
-    branchRoot
+    context [] .stackInfo @ branchTree.startBranch
     blockId
   SwitchBlockInfo new BlockInfo .Switch context openBlock
 end
 proc(
   i32 : blockId
-  branchTree.NodeId : branchRoot
   CompilerContext ptr mut : context
 -> ) =>: openWhileBlock
   ## WhileBlockInfo
@@ -395,7 +392,7 @@ proc(
     16 branchTree.NodeId list.create
     16 BranchId list.create
     context [] .tmpCount
-    branchRoot
+    context [] .stackInfo @ branchTree.startBranch
     blockId
   WhileBlockInfo new BlockInfo .While context openBlock
   context [] .tmpCount
@@ -736,7 +733,11 @@ namespace: sb
               typeContext types.numberSize == _if
             value .int f64 cast f64.bits sb.appendI
           else
-            ..unreachable ## unknown number type
+            "unexpected size for integer type: " sb.wrap
+              numSize sb.appendI
+              " type: " sb.appendS
+              t typeContext sb.appendType
+            pos errors appendError
           end
           return
         break
@@ -3346,8 +3347,7 @@ proc(
               0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
-            context [] .stackInfo @ branchTree.startBranch =:: branchRoot
-            op [] .val .block .blockId branchRoot context openIfBlock
+            op [] .val .block .blockId context openIfBlock
             ifBranch context startBranch
           return
         IFIF case
@@ -3406,7 +3406,7 @@ proc(
             startBranch
             true context [] .reachable =
           =:: mut newSb
-          ifBlock [] .If .ififBranches .length 1 > if
+          ifBlock [] .If .ififBranches .length 1 >= if
             ## mergeValues
               context [] .stackInfo @
               ifBlock [] .If .ififBranches list.asArray
@@ -3440,8 +3440,7 @@ proc(
               op [] .pos
               context
             appendSwitchTable
-            context [] .stackInfo @ branchTree.startBranch =:: branchRoot
-            switchId branchRoot context openSwitchBlock
+            switchId context openSwitchBlock
             false context [] .reachable =
           return
         CASE case
@@ -3519,9 +3518,7 @@ proc(
               whileId
               0
             BranchId new =:: branchId
-            whileId
-              context [] .stackInfo @ branchTree.startBranch
-            context openWhileBlock
+            whileId context openWhileBlock
             context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
             prog [] .whileData whileId list.at .data =:: whileData
             context [] .currentBranch =:: prevBranch
