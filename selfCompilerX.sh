@@ -1,5 +1,5 @@
 #!/bin/sh
-baseCompiler="./concat"
+baseCompiler="./concatX"
 compilerSrc="./concat.concat/compiler.concat"
 codeQBETarget="./build/concat2.ssa"
 codeAsmTarget="./build/concat2.s"
