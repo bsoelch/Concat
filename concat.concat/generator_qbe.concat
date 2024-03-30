@@ -1544,7 +1544,8 @@ proc(
     false =:: mut contiguous
     labels .length =:: mut loopCount
     lower optional.hasData if upper optional.hasData _if
-      upper .data lower .data - labels .length == contiguous =
+        upper .data lower .data - labels .length == contiguous =
+        contiguous _if
       loopCount 1 - loopCount =
     end
     sb

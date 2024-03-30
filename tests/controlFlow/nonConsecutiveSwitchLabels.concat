@@ -1,0 +1,37 @@
+
+proc( i8 -> bool ) =>: check
+  switch
+    'h' case
+      break
+    'o' case
+      break
+    'p' case
+      break
+    't' case
+      break
+    'l' case
+      break
+    'e' case
+      break
+    'W' case
+      break
+    'X' case
+      break
+    'q' case
+      break
+    default
+      false return
+  end
+  true return
+end
+
+proc( -> ) =>: main
+  'n' check ..debug.print
+  'o' check ..debug.print
+  'p' check ..debug.print
+  'q' check ..debug.print
+  'r' check ..debug.print
+  's' check ..debug.print
+  't' check ..debug.print
+  'u' check ..debug.print
+end
