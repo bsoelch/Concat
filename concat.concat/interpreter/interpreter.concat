@@ -885,6 +885,10 @@ proc(
             op [] .pos errors appendError
             true return ## unknown identifier
           end =:: idData
+          idData [] .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+            ## compile-time evaluation of mutable global variables not supported
+            true return
+          end
           idData [] .constValue .none ?? if
             showErrorMessages idInfo [] .idType .TYPE ?? | if
               "identifier " sb.wrap
