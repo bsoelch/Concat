@@ -3,6 +3,7 @@
 *.zip
 *.ll
 *.bc
+*.ssa
 tmp/*
 build/*
 *.out
@@ -11,12 +12,7 @@ concat
 concatX
 code
 code.c
-code.ssa
 code.concat
-concat.sh
-cconcat.sh
-concat.concat/*.c
-concat.concat/*.txt
 featureMap.concat
 !tests/*/*.out
 lib/future/*
