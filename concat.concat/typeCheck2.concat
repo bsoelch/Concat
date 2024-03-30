@@ -152,16 +152,38 @@ proc( TypeCheckState ptr mut : state -> ) =>: freezeInterpreter
     return
   end
   state [] .program =:: progContext
+  progContext [] .errors @ =:: errors
+  progContext [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
   state [] .interpreter @ =:: interpreter
   ##  -> store computed constants
   0 while ..dup interpreter [] .stack .length < do
     interpreter [] .stack ..over list.at .data =:: constant
     interpreter [] .stackInfo ..over list.at .data =:: constInfo
-    ## pushConstant
-      constant  []
+    constInfo [] .valueType typeContext types.isReference if
+      constInfo [] .valueId idContext id.getIdentifier if
+        "cannot find identifier: " sb.wrap
+          constInfo [] .valueId
+            labelContext
+          sb.appendLabelName
+        constInfo [] .pushedAt errors appendError
+      end id.asIdInfo =:: idInfo
       constInfo [] .valueType
-      constInfo [] .pushedAt
-    state pushConstant
+      idInfo
+      constInfo [] .pushedAt opGet =:: tmp
+      ## pushValue
+        constInfo [] .valueType
+        constant  []
+        tmp
+      state pushValue
+    else
+      ## pushConstant
+        constant  []
+        constInfo [] .valueType
+        constInfo [] .pushedAt
+      state pushConstant
+    end
     constInfo [] .valueId state replaceLabel
     1 +
   end ..drop
@@ -1634,35 +1656,37 @@ proc(
           calledProc? .data =:: calledProc
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
-          ## remove static arguments from stack
-          0 while ..dup argCount < do =:: i
+          #+ XXX? try interpreting call,
+            if all arguments const-value and
+            called procedure compile-time evaluateable
+          +#
+          0 =:: mut offset
+          argCount i32 cast 1 - while ..dup 0 >= do =:: i
             inTypes i typeContext types.compositeGetLabel =:: eltLabel
+            inTypes i typeContext types.compositeGetElement =:: elt
             eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-              state [] .stack @
-                argCount 1 - i - i32 cast
-              branchTree.at .data =:: opData
+              ## remove static arguments from stack
+              state [] .stack @ branchTree.pop .data =:: opData
               opData [] .opIndex state tryDeleteOp if
                 "could not remove static argument ( pushed at " sb.wrap
                   opData [] .pushedAt sb.appendPos
                   " )" sb.appendS
                 op .pos errors appendError
               end
+            else ## next argument at top of stack
+              ## requireTypes
+                elt @ array.wrap
+                "procedure argument" string.wrap
+                offset
+                op .pos
+                state
+              requireTypes if ..drop
+                return
+              end =:: argOffset
+              offset 1 + offset =
             end
-            i 1 +
+            i 1 -
           end ..drop
-          #+ XXX? try interpreting call,
-            if all arguments const-value and
-            called procedure compile-time evaluateable
-          +#
-          ## requireTypes
-            inTypes typeContext types.compositeEltArray
-            "procedure argument" string.wrap
-            0
-            op .pos
-            state
-          requireTypes if ..drop
-            return
-          end =:: argOffset
           program [] .procedures
             calledProc .procId list.at .data
           =:: calledProcData

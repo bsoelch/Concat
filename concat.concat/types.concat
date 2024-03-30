@@ -870,8 +870,12 @@ namespace: types
       ..dup optional.isEmpty if ..drop
         id.LABEL_ID_NONE return
       end
-    .data [] .labelOffset =:: offset
+    .data =:: typeData
+    typeData [] .labelOffset =:: offset
     offset UNLABELED == if
+      id.LABEL_ID_NONE return
+    end
+    index 0 < index typeData [] .eltCount >= | if
       id.LABEL_ID_NONE return
     end
     context [] .elementLabels offset index + list.get return
