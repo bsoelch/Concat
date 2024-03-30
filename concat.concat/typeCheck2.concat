@@ -1152,7 +1152,7 @@ proc( i64 : index TypeCheckState ptr mut : state -> i64 ) =>: copyOp
   state [] .compiledOps =
   state [] .compiledOps list.peek .data =:: newOp
   newOp [] .val .autoCast ?? if
-    1 newOp [] .val .autoCast .offset = ## update to head of stack moving operation and arguments
+    0 newOp [] .val .autoCast .offset = ## update to head of stack moving operation and arguments
   end
   state [] .opInfo
     ..dup index list.at .data list.appendP
@@ -2089,7 +2089,7 @@ proc(
           constValue
           containerType elementIndex op .pos opNewEnum
         state pushValue
-        true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo
+        true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo ## gohere
         elementLabel state replaceLabel
         return
       end
@@ -2275,7 +2275,7 @@ proc(
         ConstValue .none
         op
       state pushValue
-      fixedSize isAddr | ..dup indexCount 1 + opOffset state updateOpInfo
+      mutable ! isAddr | ..dup indexCount 1 + opOffset state updateOpInfo
       isAddr if
         srcCopyMutIndex state removeCopy
       else mutable _if
@@ -3368,14 +3368,36 @@ proc(
             offset
           branchTree.at .data [] =:: mut copied
           copied .valueType typeContext types.isReference if
+            copied .valueType =:: srcType
             ## copying converts reference to value
             copied .valueType
               typeContext types.getBaseType
             copied .valueType =
+            ## update value in stack & code
+            copied .valueType
+              state [] .stack @ offset
+            branchTree.replaceAt .data =:: baseValue
+            baseValue [] .valueType =
+            ## opAutoCast
+              srcType
+              offset
+              copied .valueType
+              op .pos
+            opAutoCast state appendOp =:: castIndex
+            copied .opIndex -1 != if
+              state [] .childIds
+                ..dup .length =:: argOffset
+                copied .opIndex list.append
+              state [] .childIds =
+              true true 1 argOffset state updateOpInfo_noStack
+              castIndex copied .opIndex =
+              castIndex baseValue [] .opIndex =
+            end
             OP_UNLINKED copied .copyMutableIndex = ## remove possibility to overwrite copy
           end
           op .pos copied .pushedAt =
           copied .valueType typeContext types.isEmpty ! if
+            ## TODO? don't copy composite operations
             ## copy value in code
             copied .opIndex state tryCopyOp if ..drop
               ## copied operation can no longer be deleted
