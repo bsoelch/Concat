@@ -10,6 +10,7 @@ build/*
 syntaxHighlighting/update.sh
 concat
 concatX
+concatXX
 code
 code.c
 code.concat
