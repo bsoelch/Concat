@@ -1095,8 +1095,8 @@ namespace: types
     src switch
       none wildCard boolean int enumLabel chr str Float case
         src return
-      arrayConstant case
-        src return ## TODO array constants
+      arrayConstant union case
+        src return ## TODO array/union constants
       procedure procedureBundle case
         src return
       typeId case

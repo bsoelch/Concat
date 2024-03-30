@@ -4,14 +4,14 @@ namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
     a switch
       boolean case a .boolean false return
-      none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle case false true return
+      none chr int Float enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle union case false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
     a switch
       chr case a .chr i64 cast false return
       int case a .int i64 cast false return
-      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure procedureBundle case 0i64 true return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure procedureBundle union case 0i64 true return
     end
   end
   proc( ConstValue : a -> f32 bool ) =>: constAsF32
@@ -19,7 +19,7 @@ namespace: interpreter
       chr case a .chr f32 cast false return
       int case a .int f32 cast false return
       Float case a .Float f32 cast false return
-      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle case 0 f32 cast true return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle union case 0 f32 cast true return
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsF64
@@ -27,19 +27,19 @@ namespace: interpreter
       chr case a .chr f64 cast false return
       int case a .int f64 cast false return
       Float case a .Float f64 cast false return
-      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle case 0 f64 cast true return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle union case 0 f64 cast true return
     end
   end
   proc( ConstValue : a -> i32 bool ) =>: constAsEnumLabel
     a switch
       enumLabel case a .enumLabel false return
-      none boolean chr int Float str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle case 0 true return
+      none boolean chr int Float str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle union case 0 true return
     end
   end
   proc( ConstValue : a -> Type bool ) =>: constAsType
     a switch
       typeId case a .typeId false return
-      none boolean chr int enumLabel Float str arrayConstant  wildCard genericArg templateArg procedure procedureBundle case Type .undefined true return
+      none boolean chr int enumLabel Float str arrayConstant  wildCard genericArg templateArg procedure procedureBundle union case Type .undefined true return
     end
   end
 

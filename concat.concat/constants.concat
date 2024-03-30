@@ -6,7 +6,9 @@ import "types.concat"
 
 i64 =:: export ProcId
 i64 =:: export ProcBundleId
-struct( i64 : offset i64 : length ) =:: export ConstantArray
+i64 =:: export ConstantId
+struct( ConstantId : offset i64 : length ) =:: export ConstantArray
+struct( ConstantId : value i32 : eltIndex ) =:: export UnionConstant
 enum(
   none
   bool : boolean
@@ -22,6 +24,7 @@ enum(
   i32 : templateArg
   ProcId : procedure
   ProcBundleId : procedureBundle
+  UnionConstant : union
 ) =:: export ConstValue
 
 struct( ConstValue list : mut arrayValues ) =:: export ConstantContext
@@ -55,6 +58,17 @@ end
 
 proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export newArrayConst
   elts context constArray ConstValue .arrayConstant return
+end
+
+proc( ConstValue : value i32 : index ConstantContext ptr mut : context -> ConstValue ) =>: export newUnionConst
+  context [] .arrayValues
+    ..dup .length =:: valueId
+    value list.append
+  context [] .arrayValues =
+  valueId index UnionConstant new ConstValue .union return
+end
+proc( ConstValue : union ConstantContext ptr : context -> ConstValue ) =>: export constUnionElement
+  context [] .arrayValues union .union .value list.get return
 end
 
 proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export constantEquals
@@ -101,6 +115,12 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       a .templateArg b .templateArg == return
     genericArg case
       a .genericArg b .genericArg == return
+    union case
+      a .union .eltIndex b .union .eltIndex != if
+        false return
+      end
+      ## TODO check equality of value
+      a .union .value b .union .value == return
   end
 end
 
@@ -200,6 +220,17 @@ namespace: sb
         templateArg case
           "template argument: "  sb.appendS
           val .templateArg sb.appendI
+          break
+        union case
+          "union element ("  sb.appendS
+          val .union .eltIndex sb.appendI
+          "):" sb.appendS
+            constContext [] .arrayValues
+              val .union .value
+            list.get
+            constContext
+            typeContext
+          sb.appendConstant
           break
       end
     return

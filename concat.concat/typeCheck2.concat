@@ -2059,9 +2059,22 @@ proc(
           op .pos errors appendError
           return
         end
+        ConstValue .none =:: mut constValue
         eltType .empty ?? if
           OP_UNLINKED
+          ## newUnionConst
+            ConstValue .none
+            elementIndex
+          constContext newUnionConst constValue =
         else
+          state [] .stack @ branchTree.peek =:: value?
+          value? optional.hasData if
+              value? .data [] .value .none ?? ! _if
+            ## newUnionConst
+              value? .data [] .value
+              elementIndex
+            constContext newUnionConst constValue =
+          end
           ## requireTypes
             eltType @ array.wrap
             "enum-creation" string.wrap
@@ -2070,9 +2083,10 @@ proc(
           state requireTypes _if
           ..drop return
         end =:: argOffset
+        ## XXX discard operation and push constant if there is a constant value
         ## pushValue
           containerType
-          ConstValue .none ## XXX compute constant value
+          constValue
           containerType elementIndex op .pos opNewEnum
         state pushValue
         true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo

@@ -838,6 +838,58 @@ namespace: sb
             return
           end
         break
+        union case
+          isGlobal ! if
+            break ## XXX? support small unions as local constants
+          end
+          t typeContext types.isEnum ! if
+              t typeContext types.isUnion ! _if
+            "unsupported type for union constant: " sb.wrap
+              t typeContext sb.appendType
+              " expected enum or union" sb.appendS
+            pos errors appendError
+            return
+          end
+          t typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+          value .union .eltIndex =:: eltIndex
+          eltIndex 0 < if break end
+          eltIndex t typeContext types.compositeEltCount >= if
+            break
+          end
+          t eltIndex typeContext types.compositeGetElement =:: eltType
+          0i64 =:: mut offset
+          false =:: mut needComma
+          eltType typeContext types.isEmpty ! if
+            ## appendConstQBE
+              eltType
+              value constContext constUnionElement
+              isGlobal
+              pos
+              context
+            appendConstQBE
+            offset
+              eltType typeContext types.sizeOf +
+            offset =
+            true needComma =
+          end
+          t typeContext types.sizeOf =:: size
+          offset labelOffset < if
+            needComma if ',' sb.appendC end
+            "z " sb.appendS
+            labelOffset offset - sb.appendI
+            true needComma =
+          end
+          labelType typeContext types.isEmpty ! if
+            needComma if ',' sb.appendC end
+            ## appendConstQBE
+              labelType
+              eltIndex ConstValue .int
+              isGlobal
+              pos
+              context
+            appendConstQBE
+          end
+          return
         none wildCard templateArg typeId
             procedure procedureBundle case
         break

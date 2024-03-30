@@ -60,7 +60,7 @@ proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
       types.ArraySize new return
     none boolean enumLabel chr Float str
     arrayConstant typeId wildCard templateArg
-    procedure procedureBundle case ..unreachable
+    procedure procedureBundle union case ..unreachable
   end
 end
 
@@ -227,7 +227,7 @@ proc(
         argBuffer []
           arg switch
             none boolean enumLabel chr int Float
-            str arrayConstant wildCard procedure procedureBundle case
+            str arrayConstant wildCard procedure procedureBundle union case
               arg break ## argument not generic
             typeId case
               arg .typeId

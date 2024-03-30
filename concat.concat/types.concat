@@ -436,8 +436,10 @@ namespace: types
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr : context -> i64 ) =>: export alignOf
     t switch
-      undefined empty autoType genericType templateType case
+      undefined autoType genericType templateType case
         0 return
+      empty case
+        1 return
       primitiveType case
         t .primitiveType sizeOfPrimitive return
       cType case
@@ -960,7 +962,9 @@ namespace: types
     tuple context unwrapNamed ..dup switch
       enum case
         .enum break
-      struct procIn procOut union undefined empty primitiveType pointer arrayType procedure
+      union case
+        .union break
+      struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
         reference mutableReference arrayIndex cType case ..drop
          Type .empty 0 return
