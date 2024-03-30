@@ -123,6 +123,9 @@ namespace: mem
     i64 : n
   -> T _ ptr mut ) =>: export clear
   #:end
+    n 0 <= if
+      src return
+    end
     ## memset
       src ..ctype.void _ ptr mut cast!
       0
@@ -140,6 +143,9 @@ namespace: mem
     i64 : n
   -> T _ ptr mut ) =>: export copy
   #:end
+    n 0 <= if
+      target return
+    end
     ## memcpy
       target ..ctype.void _ ptr mut cast!
       src ..ctype.void _ ptr cast!
@@ -157,6 +163,9 @@ namespace: mem
     i64 : n
   -> T _ ptr mut ) =>: export move
   #:end
+    n 0 <= if
+      target return
+    end
     ## memmove
       target ..ctype.void _ ptr mut cast!
       src ..ctype.void _ ptr cast!
@@ -174,6 +183,9 @@ namespace: mem
     i64 : n
   -> i32 ) =>: export compare
   #:end
+    n 0 <= if
+      0 return
+    end
     ## memcmp
       a ..ctype.void _ ptr cast!
       b ..ctype.void _ ptr cast!
