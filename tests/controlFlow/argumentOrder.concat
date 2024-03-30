@@ -1,0 +1,17 @@
+proc(
+  i64 : a
+  i64 : b
+  ( i64 i64 i8 -> i64 ) ptr : f
+  i8 : c
+-> i64 ) =>: apply
+  a b c f ()
+end
+
+proc( i64 : x i64 : y i8 : ignore -> i64 ) =>: add
+  x y +
+end
+
+proc( -> ) =>: main
+  1 2  add @ 0i8 apply ..debug.print
+  3i64 4i64  0i8 add ..debug.print
+end

@@ -3180,12 +3180,12 @@ proc(
       =:: inTypes
       inTypes typeContext types.compositeEltCount =:: argCount
       argCount TypedValId list.create =:: mut argIndices
-      0 while ..dup argCount < do =:: i
+      argCount 1 - while ..dup 0 >= do =:: i
         inTypes
           i typeContext types.compositeGetElement
         =:: arg
         arg typeContext types.isEmpty if
-          i 1 + continue ## skip empty arguments
+          i 1 - continue ## skip empty arguments
         end
         argIndices
           ## TypedValId
@@ -3193,7 +3193,7 @@ proc(
             op [] .pos context popValue
           TypedValId new list.append
         argIndices =
-        i 1 +
+        i 1 -
       end ..drop
       ## arguments are popped in reverse order
       argIndices list.reverse
