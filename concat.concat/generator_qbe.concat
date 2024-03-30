@@ -1897,8 +1897,28 @@ proc(
     DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
       sb "div" string.wrap baseVal pos context appendBinaryOperator
       return
-    MOD_I32 MOD_I64 MOD_F32 MOD_F64 case
+    MOD_I32 MOD_I64 case
       sb "rem" string.wrap baseVal pos context appendBinaryOperator
+      return
+    MOD_F32 MOD_F64 case
+      pos context popValue =:: arg2
+      pos context popValue =:: arg1
+      sb
+        "%s" sb.appendS
+        baseVal context pushValue sb.appendI
+        " =" sb.appendS
+        baseVal sb.appendValTypeQBE
+        " call $fmod" sb.appendS
+        builtIn .MOD_F32 ?? if 'f' sb.appendC end
+        " (" sb.appendS
+        baseVal sb.appendValTypeQBE
+        " %s" sb.appendS
+        arg1 sb.appendI
+        ',' sb.appendC
+        baseVal sb.appendValTypeQBE
+        " %s" sb.appendS
+        arg2 sb.appendI
+        ")\n" sb.appendS
       return
     UDIV_I32 UDIV_I64 case
       sb "udiv" string.wrap baseVal pos context appendBinaryOperator

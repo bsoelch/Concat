@@ -1,0 +1,6 @@
+proc( -> ) =>: main
+  1.5 1 % ..debug.print
+  -1.4 1 % ..debug.print
+  1e3 42 % ..debug.print
+  1024 f32 cast 10 % ..debug.print
+end
