@@ -168,6 +168,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
   end
 end
 
+
 namespace: sb
   proc( stringBuilder : sb BranchId : branch -> stringBuilder ) =>: appendBranchId
     sb
@@ -278,6 +279,93 @@ proc( Type : t CompilerContext ptr mut : context -> bool ) =>: referenceOnly
   end
   ## XXX allow empty enums as value-type
   true return
+end
+proc(
+  types.TypeSize : size
+  Type : t
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> i64 ) =>: typeSizeAsInt
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext .typeContext @ =:: typeContext
+  size switch
+    fixed case size .fixed return
+    dynamicArray case
+      "dynamic arrays are not supported in this context: " sb.wrap
+         t typeContext sb.appendType
+      pos errors appendError
+      0 return
+    unknown case
+      "could not determine size of type: " sb.wrap
+         t typeContext sb.appendType
+      pos errors appendError
+      0 return
+  end
+end
+proc(
+  Type : t
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> i64 ) =>: typeAlignmentInt
+  context [] .program =:: program
+  program [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.alignOf t pos context typeSizeAsInt return
+end
+proc(
+  Type : t
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> i64 ) =>: typeSizeInt
+  context [] .program =:: program
+  program [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.sizeOf t pos context typeSizeAsInt return
+end
+proc(
+  Type : t
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> i64 ) =>: typeStrideInt
+  context [] .program =:: program
+  program [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.strideOf t pos context typeSizeAsInt return
+end
+proc(
+  Type : t
+  i64 : i
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> i64 ) =>: tupleEltOffsetInt
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext .typeContext @ =:: typeContext
+  t i typeContext types.tupleElementOffset =:: eltOffset?
+  eltOffset? optional.hasData if
+    eltOffset? .data return
+  end
+  "could not compute offset of element " sb.wrap
+    i sb.appendI
+    " in tuple " sb.appendS
+    t typeContext sb.appendType
+  pos errors appendError
+  0 return
+end
+proc(
+  Type : t
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> Type i64 ) =>: enumLabelInfoInt
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext .typeContext @ =:: typeContext
+  t typeContext types.enumLabelInfo =:: labelOffset? =:: labelType
+  labelOffset? optional.hasData if
+    labelType labelOffset? .data return
+  end
+  "could not compute offset of label in enum " sb.wrap
+    t typeContext sb.appendType
+  pos errors appendError
+  labelType 0 return
 end
 
 struct(
@@ -787,8 +875,8 @@ namespace: sb
           end
           t typeContext types.isArray if
             t typeContext types.getBaseType =:: base
-            base typeContext types.sizeOf =:: baseSize
-            base typeContext types.strideOf =:: baseStride
+            base pos context typeSizeInt =:: baseSize
+            base pos context typeStrideInt =:: baseStride
             value .arrayConstant constContext constArrayAsArray =:: elts
             0 while ..dup elts .length < do =:: i
               i 0 > if
@@ -809,7 +897,7 @@ namespace: sb
             0i64 =:: mut offset
             0 while ..dup elts .length < do =:: i
               types i types.compositeElts.get =:: elt
-              t i typeContext types.tupleElementOffset =:: eltOffset
+              t i pos context tupleEltOffsetInt =:: eltOffset
               i 0 > if
                 ',' sb.appendC
               end
@@ -826,11 +914,11 @@ namespace: sb
                 pos
               context appendConstQBE
               offset
-                elt typeContext types.sizeOf +
+                elt pos context typeSizeInt +
               offset =
               i 1 +
             end ..drop
-            t typeContext types.sizeOf =:: size
+            t pos context typeSizeInt =:: size
             offset size < if
               ",z " sb.appendS
               size offset - sb.appendI
@@ -850,7 +938,7 @@ namespace: sb
             pos errors appendError
             return
           end
-          t typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+          t pos context enumLabelInfoInt =:: labelOffset =:: labelType
           value .union .eltIndex =:: eltIndex
           eltIndex 0 < if break end
           eltIndex t typeContext types.compositeEltCount >= if
@@ -868,11 +956,11 @@ namespace: sb
               context
             appendConstQBE
             offset
-              eltType typeContext types.sizeOf +
+              eltType pos context typeSizeInt +
             offset =
             true needComma =
           end
-          t typeContext types.sizeOf =:: size
+          t pos context typeSizeInt =:: size
           offset labelOffset < if
             needComma if ',' sb.appendC end
             "z " sb.appendS
@@ -916,6 +1004,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
+    FilePosition : pos
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendLocalConstants
     context [] .program [] .idContext .typeContext @ =:: typeContext
@@ -926,7 +1015,7 @@ namespace: sb
         LOCAL_CONST_NAME sb.appendS
         constant [] .id sb.appendI
         " = align " sb.appendS
-        constant [] .valType typeContext types.alignOf sb.appendI
+        constant [] .valType pos context typeAlignmentInt sb.appendI
         " {" sb.appendS
         constant [] .valType constant [] .value true constant [] .pos context appendConstQBE
         "}\n" sb.appendS
@@ -1012,8 +1101,8 @@ namespace: sb
         i 1 +
       end ..drop
       t typeContext types.getBaseType =:: baseType
-      baseType typeContext types.sizeOf =:: baseSize
-      baseType typeContext types.strideOf =:: baseStride
+      baseType pos context typeSizeInt =:: baseSize
+      baseType pos context typeStrideInt =:: baseStride
       sb
         baseSize baseStride < if
           t pos context startEltTypeDeclaration
@@ -1050,11 +1139,12 @@ namespace: sb
           elt typeContext types.isEmpty if
             i 1 + continue
           end
-          t i typeContext types.tupleElementOffset =:: eltOffset
+          t i pos context tupleEltOffsetInt =:: eltOffset
           hasElt if
             ',' sb.appendC
           end
           true hasElt =
+          offset eltOffset > if ..unreachable end ## XXX use assertion
           offset eltOffset < if
             "b " sb.appendS
             eltOffset offset - sb.appendI
@@ -1067,13 +1157,13 @@ namespace: sb
             pos
           context sb.appendTypeNameQBE
           offset
-            elt typeContext types.sizeOf +
+            elt pos context typeSizeInt +
           offset =
           i 1 +
         end ..drop
-        t typeContext types.sizeOf =:: size
+        t pos context typeSizeInt =:: size
         offset size < if
-          ",z " sb.appendS
+          ",b " sb.appendS
           size offset - sb.appendI
         end
       endTypeDeclaration return
@@ -1096,7 +1186,7 @@ namespace: sb
             elt typeContext types.isEmpty if
               i 1 + continue
             end
-            elt typeContext types.sizeOf =:: eltSize
+            elt pos context typeSizeInt =:: eltSize
             eltSize bodySize > if
               eltSize bodySize =
             end
@@ -1113,7 +1203,7 @@ namespace: sb
           endTypeDeclaration
         end
       isTagged ! if return end
-      t typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+      t pos context enumLabelInfoInt =:: labelOffset =:: labelType
       t pos context startTypeDeclaration
         t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
           t pos context eltTypeName
@@ -1294,7 +1384,7 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  enumType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+  enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
   labelType typeContext types.numberSize =:: numSize
   context nextTmpId =:: labelPtr
   context nextTmpId =:: mut label
@@ -1337,7 +1427,7 @@ proc(
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  enumType typeContext types.enumLabelInfo =:: labelOffset =:: labelType
+  enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
   labelType typeContext types.numberSize =:: numSize
   context nextTmpId =:: labelPtr
   sb
@@ -1463,7 +1553,7 @@ proc(
     0 while ..dup elts .length < do =:: i
       elts i types.compositeElts.get =:: eltType
       eltType context toValType =:: eltValType
-      tupleType i typeContext types.tupleElementOffset =:: eltOffset
+      tupleType i pos context tupleEltOffsetInt =:: eltOffset
       eltType typeContext types.isEmpty if
         i 1 - continue
       end
@@ -1479,7 +1569,7 @@ proc(
       "%s" sb.appendS
       eltId sb.appendI
       eltType context referenceOnly if
-        eltType context false appendAlloc ..drop
+        eltType pos context false appendAlloc ..drop
         "blit %t" sb.appendS
       else
         " =" sb.appendS
@@ -1494,7 +1584,7 @@ proc(
         eltId
         sb.appendI
         ',' sb.appendC
-        eltType typeContext types.sizeOf sb.appendI
+        eltType pos context typeSizeInt sb.appendI
       end
       '\n' sb.appendC
       i 1 +
@@ -1515,7 +1605,7 @@ proc(
   sb
     elts .length 1 - while ..dup 0 >= do =:: i
       elts i types.compositeElts.get =:: eltType
-      tupleType i typeContext types.tupleElementOffset =:: eltOffset
+      tupleType i pos context tupleEltOffsetInt =:: eltOffset
       eltType typeContext types.isEmpty if
         i 1 - continue
       end
@@ -1539,7 +1629,7 @@ proc(
       eltPtrId sb.appendI
       eltType context referenceOnly if
         ',' sb.appendC
-        eltType typeContext types.sizeOf sb.appendI
+        eltType pos context typeSizeInt sb.appendI
       end
       '\n' sb.appendC
       i 1 -
@@ -1549,6 +1639,7 @@ end
 proc(
   stringBuilder : sb
   Type : valType
+  FilePosition : pos
   CompilerContext ptr mut : context
   bool : createId
 -> stringBuilder i64 ) =>: appendAlloc
@@ -1563,9 +1654,9 @@ proc(
       tmpId sb.appendI
     end
     " =l alloc" sb.appendS
-    valType typeContext types.alignOf 4 i64.max sb.appendI
+    valType pos context typeAlignmentInt 4 i64.max sb.appendI
     ' ' sb.appendC
-    valType typeContext types.sizeOf  4 i64.max sb.appendI
+    valType pos context typeSizeInt  4 i64.max sb.appendI
     '\n' sb.appendC
   tmpId return
 end
@@ -1919,7 +2010,7 @@ proc(
         " =l mul %s" sb.appendS
         offsetId sb.appendI
         ", " sb.appendS
-        valueType typeContext types.sizeOf sb.appendI
+        valueType pos context typeSizeInt sb.appendI
         '\n' sb.appendC
         builtIn .SUB_PTR ?? builtIn .SUB_PTR_MUT ?? | if
          "sub" string.wrap
@@ -1941,7 +2032,7 @@ proc(
         " =l udiv %s" sb.appendS
         resId sb.appendI
         ", " sb.appendS
-        valueType typeContext types.sizeOf sb.appendI
+        valueType pos context typeSizeInt sb.appendI
         '\n' sb.appendC
       return
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
@@ -2436,7 +2527,7 @@ proc(
     sb
       "%s" sb.appendS
       targetId sb.appendI
-      target context false appendAlloc ..drop
+      target pos context false appendAlloc ..drop
       src context referenceOnly if
         "blit %s" sb.appendS
       else
@@ -2449,7 +2540,7 @@ proc(
       targetId sb.appendI
       src context referenceOnly if
         ", " sb.appendS
-        src typeContext types.sizeOf sb.appendI
+        src pos context typeSizeInt sb.appendI
       end
       '\n' sb.appendC
     return
@@ -2511,7 +2602,7 @@ proc(
     newSb
       "%s" sb.appendS
       argId sb.appendI
-      outArg context false appendAlloc ..drop
+      outArg pos context false appendAlloc ..drop
     newSb =
     argIndices []
       outArg argId TypedValId new list.append
@@ -2650,7 +2741,7 @@ proc(
               "%tmp" sb.appendS
               idInfo .id sb.appendI
             end
-            valType context false appendAlloc ..drop
+            valType op [] .pos context false appendAlloc ..drop
             assignValue if
               isValue if
                 "store" sb.appendS
@@ -2670,7 +2761,7 @@ proc(
               end
               isValue ! if
                 ',' sb.appendC
-                op [] .dataType typeContext types.sizeOf sb.appendI
+                op [] .dataType op [] .pos context typeSizeInt sb.appendI
               end
               '\n' sb.appendC
             end
@@ -2840,7 +2931,7 @@ proc(
         targetId sb.appendI
         valType context referenceOnly if
           ',' sb.appendC
-          valType typeContext types.sizeOf sb.appendI
+          valType op [] .pos context typeSizeInt sb.appendI
         end
         '\n' sb.appendC
       return
@@ -2913,7 +3004,9 @@ proc(
         " =l mul %t" sb.appendS
         prevId sb.appendI
         ", " sb.appendS
-        baseType typeContext types.sizeOf sb.appendI
+        baseType op [] .pos context typeSizeInt sb.appendI
+        " ## " sb.appendS
+        baseType typeContext sb.appendType
         '\n' sb.appendC
         op [] .pos context popValue =:: srcId
         "%s" sb.appendS
@@ -2958,7 +3051,7 @@ proc(
           " =l add %s" sb.appendS
           srcId sb.appendI
           "," sb.appendS
-          containerType index typeContext types.tupleElementOffset sb.appendI
+          containerType index op [] .pos context tupleEltOffsetInt sb.appendI
           '\n' sb.appendC
       else containerType typeContext types.isUnion
           containerType typeContext types.isEnum | _if
@@ -3018,13 +3111,13 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
-        baseType context true appendAlloc =:: dataPtrId
+        baseType op [] .pos context true appendAlloc =:: dataPtrId
         "blit %s" sb.appendS
         op [] .pos context popValue sb.appendI
         ", %t" sb.appendS
         dataPtrId sb.appendI
         ", " sb.appendS
-        baseType typeContext types.sizeOf sb.appendI
+        baseType op [] .pos context typeSizeInt sb.appendI
         "\n%s" sb.appendS
         ValType .REFERENCE context pushValue sb.appendI
         " =l copy %t" sb.appendS
@@ -3035,7 +3128,7 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
-        op [] .dataType context true appendAlloc =:: dataPtrId
+        op [] .dataType op [] .pos context true appendAlloc =:: dataPtrId
         op [] .val .newEnum ?? if ## TODO store enums without values as integer
           op [] .val .newEnum =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
@@ -3060,7 +3153,7 @@ proc(
             dataPtrId sb.appendI
             eltType context referenceOnly if
               ',' sb.appendC
-              eltType typeContext types.sizeOf sb.appendI
+              eltType op [] .pos context typeSizeInt sb.appendI
             end
             '\n' sb.appendC
           end
@@ -3071,7 +3164,7 @@ proc(
           "call $memset(l %t" sb.appendS
           dataPtrId sb.appendI
           ",w 0,l " sb.appendS
-          op [] .dataType typeContext types.sizeOf sb.appendI
+          op [] .dataType op [] .pos context typeSizeInt sb.appendI
           ")\n" sb.appendS
         else
           "unsupported type for new:" sb.wrap
@@ -3716,7 +3809,7 @@ proc(
             ## end of procedure block always unreachable
             ## ( type-checker ensures there is a return before end )
             "@end\nhlt\n}\n" sb.appendS
-            context sb.appendLocalConstants
+            op [] .pos context sb.appendLocalConstants
           return
         ELSE case
           context [] .openBlocks
@@ -3937,7 +4030,7 @@ proc(
           op [] .pos context popValue
           "ret %s" string.wrap
         else retCount 0 > _if
-          retType context true appendAlloc =:: tmpId
+          retType op [] .pos context true appendAlloc =:: tmpId
           retType tmpId op [] .pos context initializeTupleQBE
           tmpId
           "ret %t" string.wrap
@@ -3961,7 +4054,7 @@ proc(
           i context sb.appendOutArgName
           elt context referenceOnly if
             ", " sb.appendS
-            elt typeContext types.sizeOf sb.appendI
+            elt op [] .pos context typeSizeInt sb.appendI
           end
           '\n' sb.appendC
         i 1 -
@@ -4116,13 +4209,13 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       "data " sb.appendS
       labelId -1 context sb.appendGlobalName
       " = align " sb.appendS
-      valType typeContext types.alignOf sb.appendI
+      valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
       idData [] .constValue ConstValue .none != if
         valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
       else
         "z " sb.appendS
-        valType typeContext types.sizeOf sb.appendI
+        valType idData [] .declaredAt context typeSizeInt sb.appendI
       end
       "}\n" sb.appendS
       target ..over io.fputSb ..drop

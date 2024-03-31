@@ -347,7 +347,7 @@ namespace: interpreter
     idContext [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
     t typeContext types.containsGeneric | if
-      0 ConstValue .int true return
+      ConstValue .none true return
     end
     infoType switch
       ALIGNMENT case
@@ -359,8 +359,15 @@ namespace: interpreter
       STRIDE case
         t typeContext types.strideOf
         break
+    end =:: sizeValue
+    sizeValue switch
+      fixed case
+        sizeValue .fixed ConstValue .int false return
+      dynamicArray case
+        ConstValue .none true return ## XXX? support generic array size
+      unknown case ## XXX? error message for unknown size
+        ConstValue .none true return
     end
-    ConstValue .int false return
   end
   proc(
     LabelId : generatorName
@@ -1009,10 +1016,14 @@ proc(
       pushValue
       false return
     typeInfo case
+      Type : poppedType
+      ValueInfo : valInfo
+      false =:: mut poppedValue
       op [] .dataType .undefined ?? if
         showErrorMessages op [] .pos context popType if ..drop.2
           true return
-        end =:: poppedType =:: valInfo
+        end poppedType = valInfo =
+        true poppedValue =
         poppedType typeContext types.containsGeneric | if
           ## computing size not possible, reset stack
           ## unpopValue
@@ -1031,6 +1042,13 @@ proc(
           op [] .val .typeInfo
           true ## don't hide errors ( operation modifies stack )
         program computeTypeInfo if ..drop
+          ## computing size not possible, reset stack
+          poppedValue if
+            ## unpopValue
+              poppedType ConstValue .typeId
+              valInfo
+            context unpopValue
+          end
           true return
         end
         types.primitive.I_SIZE

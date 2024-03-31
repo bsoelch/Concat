@@ -502,9 +502,6 @@ proc( FilePosition : pos TypeCheckState ptr mut : state -> Type ) =>: popType
     Type .undefined return
   end
   typeInfo [] .opIndex state currentBlockStart < if
-    typeInfo [] .opIndex ..debug.print
-    state currentBlockStart ..debug.print
-    state [] .compiledOps .length ..debug.print
     "type-constant " sb.wrap
       typeInfo [] .value constContext typeContext sb.appendConstant
       " at " sb.appendS
@@ -3447,6 +3444,9 @@ proc(
           op .val .typeInfo
           true
         program interpreter.computeTypeInfo if ..drop
+          "could no compute size of type " sb.wrap
+            valType typeContext sb.appendType
+          op .pos errors appendError
           return
         end
         types.primitive.I_SIZE

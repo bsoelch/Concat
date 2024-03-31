@@ -12,7 +12,6 @@ namespace: types
   i32 =:: ArrayId
   i32 =:: export TupleId ## exported for access from identifiers.concat
   i32 =:: export UnionId
-  i32 =:: EnumId
   i32 =:: ProcId
   i32 =:: NamedTypeId
   i32 =:: GeneratedId
@@ -404,6 +403,11 @@ namespace: types
   end
 
   ## size and alignment
+  enum( unknown i64 : fixed i64 : dynamicArray ) =:: export TypeSize
+  8 =:: PTR_SIZE
+  8 =:: PTR_ALIGN
+  8 =:: I_SIZE_SIZE
+  8 =:: I_SIZE_ALIGN
   proc( PrimitiveType -> i32 ) =>: sizeOfPrimitive
     switch
       TYPE case
@@ -429,30 +433,152 @@ namespace: types
       DOUBLE case 8 return
     end
   end
-  8 =:: PTR_SIZE
-  8 =:: PTR_ALIGN
-  8 =:: I_SIZE_SIZE
-  8 =:: I_SIZE_ALIGN
+
+  ## FIXME some tuples have misaligned/overlapping element offsets
+  proc(
+    Type : t
+    TupleId : tupleId
+    TypeContext ptr mut : typeContext
+  -> bool ) =>: tryComputeTupleSize
+    typeContext [] .tupleTypes
+      tupleId
+    list.at .data =:: tupleInfo
+    tupleInfo [] .compositeInfo .flags COMP_SIZE_KNOWN & ? if
+      false return ## size already known
+    end
+    t typeContext compositeElts  =:: elts
+    ## TODO sort elements by alignment
+    1i64 =:: mut alignment
+    0i64 =:: mut size
+    elts .length i64 list.create =:: mut offsetBuffer ## XXX? store buffer in context
+    0 while ..dup elts .length < do =:: i
+      elts i compositeElts.get =:: elt
+      ## size and alignment
+      elt typeContext alignOf =:: eltAlignData
+      elt typeContext sizeOf =:: eltSizeData
+      eltAlignData .fixed ?? ! eltSizeData .fixed ?? ! | if
+        offsetBuffer list.free ..drop
+        true return ## elements are not fixed size
+      end
+      eltAlignData .fixed =:: eltAlign
+      eltSizeData .fixed =:: eltSize
+      eltAlign alignment > if
+        eltAlign alignment =
+      end
+      size eltAlign alignSize =:: eltOffset
+      eltOffset eltSize + size =
+      offsetBuffer
+        eltOffset list.append
+      offsetBuffer =
+      i 1 +
+    end ..drop
+    ## XXX? compress tupleOffsets list ( search for previous occurrence of current elements )
+    typeContext [] .tupleOffsets
+      ..dup .length tupleInfo [] .offsetsStart =
+      offsetBuffer list.appendAll
+    typeContext [] .tupleOffsets =
+    offsetBuffer list.free ..drop
+    alignment tupleInfo [] .compositeInfo .alignment =
+    size tupleInfo [] .compositeInfo .size =
+    tupleInfo [] .compositeInfo .flags
+      COMP_SIZE_KNOWN |
+    tupleInfo [] .compositeInfo .flags =
+    false return
+  end
+  proc(
+    Type : t
+    UnionId : unionId
+    TypeContext ptr mut : typeContext
+  -> bool ) =>: tryComputeUnionSize
+    typeContext [] .unionTypes
+      unionId
+    list.at .data =:: unionInfo
+    unionInfo [] .compositeInfo .flags COMP_SIZE_KNOWN & ? if
+      false return ## size already known
+    end
+    t typeContext compositeElts =:: elts
+    1i64 =:: mut alignment
+    0i64 =:: mut size
+    0 while ..dup elts .length < do =:: i
+      elts i compositeElts.get =:: elt
+      ## size and alignment
+      elt typeContext sizeOf =:: eltSizeData
+      elt typeContext alignOf =:: eltAlignData
+      eltAlignData .fixed ?? ! eltSizeData .fixed ?? ! | if
+        true return ## elements are not fixed size
+      end
+      eltAlignData .fixed =:: eltAlign
+      eltSizeData .fixed =:: eltSize
+      eltAlign alignment > if
+        eltAlign alignment =
+      end
+      eltSize size > if
+        eltSize size =
+      end
+      i 1 +
+    end ..drop
+    unionInfo [] .labelType typeContext isEmpty ! if
+      unionInfo [] .labelType typeContext alignOf .fixed =:: labelAlign
+      labelAlign alignment > if
+        labelAlign alignment =
+      end
+      size
+        labelAlign alignSize
+        ..dup unionInfo [] .enumLabelOffset =
+        unionInfo [] .labelType typeContext sizeOf .fixed +
+      size =
+    end
+    alignment unionInfo [] .compositeInfo .alignment =
+    size unionInfo [] .compositeInfo .size =
+    unionInfo [] .compositeInfo .flags
+      COMP_SIZE_KNOWN |
+    unionInfo [] .compositeInfo .flags =
+    false return
+  end
+  proc(
+    Type : composite
+    TypeContext ptr mut : typeContext
+  -> bool ) =>: tryComputeSize
+    composite switch
+      struct case
+        composite composite .struct typeContext tryComputeTupleSize return
+      procIn case
+        composite composite .procIn typeContext tryComputeTupleSize return
+      procOut case
+        composite composite .procOut typeContext tryComputeTupleSize return
+      enum case
+        composite composite .enum typeContext tryComputeUnionSize return
+      union case
+        composite composite .union typeContext tryComputeUnionSize return
+      undefined empty autoType genericType templateType
+      primitiveType cType arrayIndex arrayType
+      pointer reference mutableReference procedure
+      namedType generatedType case ..unreachable ## XXX? use assertion
+    end
+  end
   ## alignment of type in bytes, will be a power of two
-  proc( Type : t TypeContext ptr : context -> i64 ) =>: export alignOf
+  proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export alignOf
     t switch
       undefined autoType genericType templateType case
-        0 return
+        TypeSize .unknown return
       empty case
-        1 return
+        1 TypeSize .fixed return
       primitiveType case
-        t .primitiveType sizeOfPrimitive return
+        t .primitiveType sizeOfPrimitive TypeSize .fixed return
       cType case
-        t .cType sizeOfCType return
+        t .cType sizeOfCType TypeSize .fixed return
       arrayIndex case
-        I_SIZE_SIZE return
+        I_SIZE_SIZE TypeSize .fixed return
       pointer reference mutableReference procedure case
-        PTR_SIZE return
+        PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getBaseType context alignOf return
       struct enum union procIn procOut case
+        t context tryComputeSize if
+          TypeSize .unknown return
+        end
         t context compositeData .data =:: compData
-        compData [] .alignment return
+        compData [] .alignment TypeSize .fixed return
       namedType case
         t context unwrapNamed context alignOf return
       generatedType case
@@ -466,38 +592,51 @@ namespace: types
       a 1 - ~ &
     return
   end
-  proc( Type : t bool : aligned TypeContext ptr : context -> i64 ) =>: computeSize
+  proc(
+    Type : t
+    bool : aligned
+    TypeContext ptr mut : context
+  -> TypeSize ) =>: computeSize
     t switch
-      empty undefined autoType genericType templateType case
-        0 return
+      undefined autoType genericType templateType case
+        TypeSize .unknown return
+      empty case
+        0 TypeSize .fixed return
       primitiveType case
-        t .primitiveType sizeOfPrimitive return
+        t .primitiveType sizeOfPrimitive TypeSize .fixed return
       cType case
-        t .cType sizeOfCType return
+        t .cType sizeOfCType TypeSize .fixed return
       arrayIndex case
-        I_SIZE_SIZE return
+        I_SIZE_SIZE TypeSize .fixed return
       pointer reference mutableReference procedure case
-        PTR_SIZE return
+        PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getArraySize =:: dims
-        t context getBaseType context strideOf =:: mut size
-        0 while ..dup dims .length < do
-          dims ..over array.get =:: dim
+        t context getBaseType context strideOf =:: baseSize
+        baseSize .fixed ?? ! if
+          TypeSize .unknown return
+        end
+        baseSize .fixed =:: mut size
+        0 while ..dup dims .length < do =:: i
+          dims i array.get =:: dim
           dim .sizeType .int ?? if
             size dim .value * size =
-          else ..drop
-            0 return ## XXX? better result for dynamic size arrays
+          else
+            baseSize .fixed TypeSize .dynamicArray return
           end
-          1 +
+          i 1 +
         end ..drop
-        size return
+        size TypeSize .fixed return
       struct enum union procIn procOut case
+        t context tryComputeSize if
+          TypeSize .unknown return
+        end
         t context compositeData .data =:: compData
         compData [] .size
           aligned if
             compData [] .alignment alignSize
           end
-        return
+        TypeSize .fixed return
       namedType case
         t context unwrapNamed aligned context computeSize return
       generatedType case
@@ -505,13 +644,14 @@ namespace: types
     end
   end
   ## size of value in bytes
-  proc( Type : t TypeContext ptr : context -> i64 ) =>: export sizeOf
+  proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export sizeOf
     t false context computeSize ## TODO dependent on backend: C:aligned=true, QBE/ASM:aligned=false
   end
   ## size padded to next multiple of alignment
-  proc( Type : t TypeContext ptr : context -> i64 ) =>: export strideOf
+  proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export strideOf
     t true context computeSize
   end
+
   ## array & pointer types
   enum( int templateArg staticArg ) =:: export ArraySizeType
   struct( i64 : value ArraySizeType : sizeType ) =:: export ArraySize
@@ -765,32 +905,33 @@ namespace: types
 
   ## composite types
   i32 =:: export CompositeFlags
-   0 =:: export COMP_FLAG_NONE
-   1 =:: export COMP_FLAG_EMPTY
-   2 =:: export COMP_FLAG_ONLY_EMPTY
-   3 =:: export COMP_MASK_ONLY_EMPTY
-   4 =:: export COMP_FLAG_STATIC_ARGS
-   8 =:: export COMP_FLAG_TEMPLATE
-  15 =:: export COMP_MASK_COMMON_FLAGS
-  12 =:: export COMP_GENERIC_MASK
-  16 =:: export TUPLE_FLAG_IS_STRUCT
-  32 =:: export TUPLE_FLAG_IS_PROC_IN
-  64 =:: export TUPLE_FLAG_IS_PROC_OUT
+    0 =:: export COMP_FLAG_NONE
+    1 =:: export COMP_FLAG_EMPTY
+    2 =:: export COMP_FLAG_ONLY_EMPTY
+    3 =:: export COMP_MASK_ONLY_EMPTY
+    4 =:: export COMP_FLAG_STATIC_ARGS
+    8 =:: export COMP_FLAG_TEMPLATE
+   12 =:: export COMP_GENERIC_MASK
+   16 =:: export COMP_SIZE_KNOWN
+   31 =:: export COMP_MASK_COMMON_FLAGS
+   32 =:: export TUPLE_FLAG_IS_STRUCT
+   64 =:: export TUPLE_FLAG_IS_PROC_IN
+  128 =:: export TUPLE_FLAG_IS_PROC_OUT
   struct(
     i64 : eltCount
     i64 : eltsOffset
     LabelOffset : labelOffset
-    i64 : alignment
-    i64 : size
+    i64 : mut alignment
+    i64 : mut size
     CompositeFlags : mut flags
   ) =:: export CompositeInfo
   struct(
     CompositeInfo : mut compositeInfo
-    i64  : offsetsStart
+    i64  : mut offsetsStart
   ) =:: TupleInfo
   struct(
-    CompositeInfo : compositeInfo
-    i64 : enumLabelOffset
+    CompositeInfo : mut compositeInfo
+    i64 : mut enumLabelOffset
     Type  : labelType
   ) =:: UnionInfo
 
@@ -939,8 +1080,12 @@ namespace: types
     end ..drop
     -1 true return
   end
-  proc( Type : tuple i64 : index TypeContext ptr : context -> i64 ) =>: export tupleElementOffset
-    tuple context unwrapNamed ..dup switch
+  proc(
+    Type : tuple
+    i64 : index
+    TypeContext ptr mut : typeContext
+  -> i64 optional ) =>: export tupleElementOffset
+    tuple typeContext unwrapNamed ..dup switch
       struct case
         .struct break
       procIn case
@@ -950,16 +1095,24 @@ namespace: types
       enum union undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
         reference mutableReference arrayIndex cType case ..drop
-         0 return
+         i64 optional.empty return
     end =:: tupleId
-    context [] .tupleTypes tupleId list.at .data =:: tupleInfo
-    index 0 < index tupleInfo [] .compositeInfo .eltCount >= | if
-      -1 return ## XXX error handling
+    tuple tupleId typeContext tryComputeTupleSize if
+      i64 optional.empty return
     end
-    context [] .tupleOffsets index tupleInfo [] .offsetsStart + list.get return
+    typeContext [] .tupleTypes tupleId list.at .data =:: tupleInfo
+    index 0 < index tupleInfo [] .compositeInfo .eltCount >= | if
+      i64 optional.empty return
+    end
+    typeContext [] .tupleOffsets
+      index tupleInfo [] .offsetsStart +
+    list.get optional.wrap return
   end
-  proc( Type : tuple TypeContext ptr : context -> Type i64 ) =>: export enumLabelInfo
-    tuple context unwrapNamed ..dup switch
+  proc(
+    Type : enum
+    TypeContext ptr mut : typeContext
+  -> Type i64 optional ) =>: export enumLabelInfo
+    enum typeContext unwrapNamed ..dup switch
       enum case
         .enum break
       union case
@@ -967,10 +1120,17 @@ namespace: types
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType templateType generatedType
         reference mutableReference arrayIndex cType case ..drop
-         Type .empty 0 return
+         Type .empty i64 optional.empty return
     end =:: enumId
-    context [] .unionTypes enumId list.at .data =:: enumInfo
-    enumInfo [] .labelType enumInfo [] .enumLabelOffset return
+    enum enumId typeContext tryComputeUnionSize =:: isError
+    typeContext [] .unionTypes enumId list.at .data =:: enumInfo
+    enumInfo [] .labelType
+      isError if
+        i64 optional.empty
+      else
+        enumInfo [] .enumLabelOffset optional.wrap
+      end
+    return
   end
   proc( Type : composite i64 : index TypeContext ptr : context -> Type ) =>: export compositeGetElement
     composite context compositeData =:: compData?
@@ -1140,40 +1300,14 @@ namespace: types
     TypeContext ptr mut : context
   -> TupleId ) =>: export findTupleInfo ## XXX exported only for access from identifier.concat
     context [] .labelContext @ =:: labelContext
-    ## TODO sort types by alignment
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
-    1i64 =:: mut alignment
-    0i64 =:: mut size
-    context [] .tupleOffsets
-      ..dup .length =:: offsetsStart
-      offsetsStart elts .length + list.ensureCap
-    context [] .tupleOffsets =
-    0 while ..dup elts .length < do
-      elts ..over array.get =:: elt
-      ## size and alignment
-      elt context alignOf =:: eltAlign
-      eltAlign alignment > if
-        eltAlign alignment =
-      end
-      size eltAlign alignSize =:: eltOffset
-      eltOffset elt context sizeOf + size =
-      context [] .tupleOffsets
-        eltOffset list.append
-      context [] .tupleOffsets =
-      1 +
-    end ..drop
-    ## XXX? compress tupleOffsets list ( search for previous occurrence of current elements )
     context [] .tupleTypes =:: tuples
     0 while ..dup tuples .length < do
       tuples ..over list.at .data =:: t
       t [] .compositeInfo .eltCount elts .length == if
       t [] .compositeInfo .eltsOffset eltsOffset == _if
       t [] .compositeInfo .labelOffset labelOffset == _if
-      ## XXX check for equality of offsets once offsets are guaranteed to be unique
-      ## t [] .offsetsStart offsetsStart == _if
-      t [] .compositeInfo .size size == _if
-      t [] .compositeInfo .alignment alignment == _if
       t [] .compositeInfo .flags COMP_MASK_COMMON_FLAGS &
         flags COMP_MASK_COMMON_FLAGS &
       == _if
@@ -1189,11 +1323,11 @@ namespace: types
           elts .length
           eltsOffset
           labelOffset
-          alignment
-          size
+          -1
+          -1
           flags
         CompositeInfo new
-        offsetsStart
+        -1
       TupleInfo new list.append
     context [] .tupleTypes =
     newId return
@@ -1241,21 +1375,6 @@ namespace: types
   -> UnionId ) =>: export findEnumOrUnion ## XXX exported only for access from identifiers.concat
     elts context computeEltsOffset =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
-    1i64 =:: mut alignment
-    0i64 =:: mut size
-    0 while ..dup elts .length < do
-      elts ..over array.get =:: elt
-      ## size and alignment
-      elt context sizeOf =:: eltSize
-      elt context alignOf =:: eltAlign
-      eltAlign alignment > if
-        eltAlign alignment =
-      end
-      eltSize size > if
-        eltSize size =
-      end
-      1 +
-    end ..drop
     isTagged ! if
       Type .empty
     else elts .length 0x80 < _if
@@ -1266,25 +1385,12 @@ namespace: types
       primitive.I32
     end =:: labelType
     0i64 =:: mut enumLabelOffset
-    isTagged if
-      labelType context alignOf =:: labelAlign
-      labelAlign alignment > if
-        labelAlign alignment =
-      end
-      size
-        labelAlign alignSize
-        ..dup enumLabelOffset =
-        labelType context sizeOf +
-      size =
-    end
     context [] .unionTypes =:: unions
     0 while ..dup unions .length < do
       unions ..over list.at .data =:: t
       t [] .compositeInfo .eltCount elts .length == if
       t [] .compositeInfo .eltsOffset eltsOffset == _if
       t [] .compositeInfo .labelOffset labelOffset == _if
-      t [] .compositeInfo .size size == _if
-      t [] .compositeInfo .alignment alignment == _if
       t [] .labelType labelType typeEquals _if
       t [] .compositeInfo .flags flags == _if
         break
@@ -1298,11 +1404,11 @@ namespace: types
           elts .length
           eltsOffset
           labelOffset
-          alignment
-          size
+          -1
+          -1
           flags
         CompositeInfo new
-        enumLabelOffset
+        0
         labelType
        UnionInfo new list.append
      context [] .unionTypes =
@@ -1538,7 +1644,7 @@ namespace: types
   ## named types
   struct( Type : mut data LabelId : name TemplateId : templateId i32 : implId ) =:: NamedType
   ## XXX templateId used by old replace generic procedure
-  proc( 
+  proc(
     LabelId : label
     TemplateId : templateId
     i32 : implId
