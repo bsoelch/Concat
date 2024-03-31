@@ -1345,6 +1345,7 @@ namespace: sb
     stringBuilder : sb
     Type : t
     bool : printEmptyTypes
+    i32 : depth
     TypeContext ptr : context
   -> stringBuilder ) =>: appendComposite
     context [] .labelContext @ =:: labelContext
@@ -1355,7 +1356,7 @@ namespace: sb
         ..swap
           t ..over.2 context types.compositeGetElement =:: eltType
           unlabeled if
-            eltType context false appendTypeRecursive
+            eltType context depth appendTypeRecursive
             ' ' appendC
             ..swap 1 + continue
           end
@@ -1364,7 +1365,7 @@ namespace: sb
             label labelContext id.labelFlags id.FLAG_DUMMY & ? ! &
           =:: printLabel
           printEmptyTypes eltType context types.isEmpty ! | if
-            eltType context false appendTypeRecursive
+            eltType context depth appendTypeRecursive
             printLabel if
               " : " appendS
             else
@@ -1686,20 +1687,22 @@ namespace: sb
     stringBuilder : sb
     types.NamedType : named
     TypeContext ptr : context
-    bool : allowRecurse
+    i32 : depth
   -> stringBuilder ) =>: appendNamedType
     context [] .labelContext @ =:: labelContext
     sb
       '"' sb.appendC
       named .name labelContext sb.appendLabelName
       '"' sb.appendC
-      " [ " sb.appendS
-      ## appendTypeRecursive
-        named .data context types.flatUnwrapNamed
-        context
-        allowRecurse
-      appendTypeRecursive
-      " ]"  sb.appendS
+      depth 0 > if
+        " [ " sb.appendS
+        ## appendTypeRecursive
+          named .data context types.flatUnwrapNamed
+          context
+          depth 1 -
+        appendTypeRecursive
+        " ]"  sb.appendS
+      end
     return
   end
 end
@@ -2289,7 +2292,7 @@ namespace: sb
     stringBuilder : sb
     Type : t
     TypeContext ptr : context
-    bool : allowRecurse
+    i32 : depth
   -> stringBuilder ) =>: export appendTypeRecursive
     context [] .labelContext @ =:: labelContext
     t switch
@@ -2313,7 +2316,7 @@ namespace: sb
           ## appendTypeRecursive
             t context types.getBaseType
             context
-            allowRecurse
+            depth
           appendTypeRecursive
           t context types.getArraySize appendArraySizes
           t context types.isFixedSize if
@@ -2330,7 +2333,7 @@ namespace: sb
           ## appendTypeRecursive
             t context types.getBaseType
             context
-            allowRecurse
+            depth
           appendTypeRecursive
           t context types.getArraySize appendArraySizes
           " array" appendS
@@ -2346,27 +2349,27 @@ namespace: sb
           end
           t types.getTypeId appendI
           "]( "    appendS
-          allowRecurse if
-            t t .enum ?? ! context appendComposite
+          depth 0 > if
+            t t .enum ?? ! depth context appendComposite
           else
             "... " appendS
           end
          ")" appendS
        return
       procIn case
-        sb t true context appendComposite return
+        sb t true depth context appendComposite return
       procOut case
-        sb t true context appendComposite return
+        sb t true depth context appendComposite return
       procedure case
         sb
           "proc["      appendS
           t .procedure appendI
           "]( "        appendS
-          allowRecurse if
+          depth 0 > if
             context [] .procTypes t .procedure list.get =:: procType
-            procType .in context allowRecurse appendTypeRecursive
+            procType .in context depth 1 - appendTypeRecursive
             "-> " appendS
-            procType .out context allowRecurse appendTypeRecursive
+            procType .out context depth 1 - appendTypeRecursive
           else
             "... " appendS
           end
@@ -2380,7 +2383,7 @@ namespace: sb
           ## appendNamedType
             context [] .namedTypes t .namedType list.get
             context
-            allowRecurse
+            depth
           appendNamedType
         " )" appendS
         return
@@ -2414,9 +2417,9 @@ namespace: sb
         sb
           "? " appendS ## TODO append arguments
           typeData [] .generator labelContext sb.appendLabelName
-          allowRecurse if
+          depth 0 > if
             " [ "     appendS
-              typeData [] .generated context allowRecurse appendTypeRecursive
+              typeData [] .generated context depth 1 - appendTypeRecursive
             " ]"     appendS
           end
         return
@@ -2425,7 +2428,7 @@ namespace: sb
           ## appendTypeRecursive
             context [] .compositeData t .reference list.get
             context
-            allowRecurse
+            depth
           appendTypeRecursive
         " reference" appendS
         return
@@ -2434,13 +2437,15 @@ namespace: sb
           ## appendTypeRecursive
             context [] .compositeData t .mutableReference list.get
             context
-            allowRecurse
+            depth
           appendTypeRecursive
         " reference mut" appendS
         return
     end
   end
   proc( stringBuilder Type TypeContext ptr -> stringBuilder ) =>: export appendType
-    true appendTypeRecursive return
+    ## depth of two passes test cases
+    ## XXX change default depth to 0, add option to ..?types for higher depth
+    2 appendTypeRecursive return
   end
 end
