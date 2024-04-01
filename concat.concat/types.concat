@@ -1569,9 +1569,10 @@ namespace: types
     end
     context [] .procTypes @ =:: procs
     0 while ..dup procs [] .length < do =:: i
-      procs [] i list.get .in in typeEquals
-      procs [] i list.get .out out typeEquals &
-      procs [] i list.get .callingConvention callConvention == & if
+      procs [] i list.at .data =:: elt
+      elt [] .in in typeEquals
+      elt [] .out out typeEquals &
+      elt [] .callingConvention callConvention == & if
         i ProcId cast Type .procedure false return
       end
       i 1 +
