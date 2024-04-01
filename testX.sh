@@ -5,9 +5,9 @@ nPassed=0
 nFailed=0
 
 if [[ "$@" == *"-X"* ]]; then ## if X in arguments
-    concatPath="../../concatX"
+    concatPath="../../concatXX"
 else
-    concatPath="../../concat"
+    concatPath="../../concatX"
 fi
 
 clear

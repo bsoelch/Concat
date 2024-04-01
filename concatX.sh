@@ -8,7 +8,7 @@ cArgs=( "-g" "-std=c17" "-lm" )
 concatArgs=( -X -W -q -l $libPath )
 
 if [[ "$@" == *"-R"* ]]; then
-  "./selfCompilerX.sh" -X
+  "./selfCompilerX.sh" -X || exit 1
   baseCompiler="./concatXX"
 else
   baseCompiler="./concatX"

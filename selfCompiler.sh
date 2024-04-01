@@ -1,5 +1,6 @@
 #!/bin/sh
 baseCompiler="./concat"
+tmpCompiler="./concatXX"
 compilerSrc="./concat.concat/compiler.concat"
 codeCTarget="./build/concat2.c"
 codeTarget="./build/concat2"
@@ -22,6 +23,11 @@ echo "-----------------------------------------" && {
   echo "compile generated C-code"
   echo "-----------------------------------------"
   gcc ${cArgs[@]} -Wno-unused $codeCTarget ${externCFiles[@]} -o $codeTarget
+} && {
+  if [[ "$@" == *"-X"* ]]; then
+    mv $codeTarget $tmpCompiler
+    exit 0
+  fi
 } && {
   echo "compile compiler with compiler"
   echo "-----------------------------------------"
