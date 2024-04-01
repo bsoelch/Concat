@@ -2668,6 +2668,19 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       state [] .compiledOps =
       1 op [] .pos state addCompiledStackOps
       return
+    Assert case
+      op state checkLocal
+      1 false op [] .pos state extractCompositeOps
+      ## requireTypes
+        types.primitive.BOOL @ array.wrap
+        "if condition" string.wrap
+        op [] .pos
+      state requireTypes
+      state [] .compiledOps
+        op list.appendP
+      state [] .compiledOps =
+      1 op [] .pos state addCompiledStackOps
+      return
     Return case
       op state checkReachable
       op state typeCheckReturn
@@ -3030,7 +3043,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
     hasName hasElement builtIn
     typeModifier implementProcedure procPtr
     checkEnumLabel checkArrayIndex setEnumLabel getArgLen
-    call call_old Assert case
+    call call_old case
       "operation " sb.wrap
         op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS

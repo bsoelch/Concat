@@ -3261,6 +3261,18 @@ proc(
       op @ state typeCheckReturn
       op .pos state endSwitchBranch
       return
+    Assert case
+      ## XXX try to evaluate at compile time
+      ## requireTypes
+        types.primitive.BOOL @ array.wrap
+        "assertion" string.wrap
+        0
+        op .pos
+      state requireTypes if ..drop
+        return
+      end ..drop
+      op state appendOp ..drop
+      return
     length size case
       state [] .stack @ branchTree.peek =:: value?
       value? optional.isEmpty if
@@ -3479,7 +3491,7 @@ proc(
       end
       return
     setId setLabel setElement setArrayElement autoCast
-    copy call_old Assert case
+    copy call_old case
       "unsupported operation: " sb.wrap
         op program sb.appendOp
       op .pos errors appendError

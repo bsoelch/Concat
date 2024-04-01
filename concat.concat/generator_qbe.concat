@@ -14,6 +14,7 @@ import "branchTree.concat"
 "stringConstant" =:: STRING_CONST_NAME
 "checkIndexFormat" =:: CHECK_INDEX_FORMAT
 "checkEnumFormat" =:: CHECK_ENUM_FORMAT
+"assertFormat" =:: ASSERT_FORMAT
 "fileName" =:: FILE_NAME_NAME
 
 enum(
@@ -779,6 +780,21 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
+    StringConstant : value
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: appendStringPtrConstQBE
+    sb
+      '$' sb.appendC
+      STRING_CONST_NAME sb.appendS
+      context [] .stringConstants
+        ..dup .length =:: strId
+        value list.append
+      context [] .stringConstants =
+      strId sb.appendI
+    return
+  end
+  proc(
+    stringBuilder : sb
     Type : t
     ConstValue : value
     bool : isGlobal
@@ -861,13 +877,10 @@ namespace: sb
           end
           break
         str case
-          '$' sb.appendC
-          STRING_CONST_NAME sb.appendS
-          context [] .stringConstants
-            ..dup .length =:: strId
-            value .str list.append
-          context [] .stringConstants =
-          strId sb.appendI
+          ## appendStringPtrConstQBE
+            value .str
+            context
+          appendStringPtrConstQBE
           return
         arrayConstant case
           isGlobal ! if
@@ -1258,6 +1271,24 @@ proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
   FILE_ID_NONE return
 end
 
+proc(
+  stringBuilder : sb
+  FilePosition : pos
+  ProgramContext ptr : prog
+-> stringBuilder ) =>: appendPosPrintfArgs
+  sb
+    ",l " sb.appendS
+    pos .fileName .length sb.appendI
+    ",l $" sb.appendS
+    FILE_NAME_NAME sb.appendS
+    pos .fileName prog findFileId sb.appendI
+    ",w " sb.appendS
+    pos .line sb.appendI
+    ",w " sb.appendS
+    pos .posInLine sb.appendI
+  return
+end
+
 enum( i64 : constant i64 : stackId i64 : localId i64 : tmpId ) =:: IntValue
 proc(
   stringBuilder : sb
@@ -1358,15 +1389,7 @@ proc(
       localId case "%l" sb.appendS size .stackId sb.appendI break
       tmpId case "%t" sb.appendS size .tmpId sb.appendI break
     end
-    ",l " sb.appendS
-    pos .fileName .length sb.appendI
-    ",l $" sb.appendS
-    FILE_NAME_NAME sb.appendS
-    pos .fileName prog findFileId sb.appendI
-    ",w " sb.appendS
-    pos .line sb.appendI
-    ",w " sb.appendS
-    pos .posInLine sb.appendI
+    pos prog appendPosPrintfArgs
     ")\n" sb.appendS
     "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
     okBranch context startBranch
@@ -1523,15 +1546,7 @@ proc(
     label sb.appendI
     ",w " sb.appendS
     expectedIndex sb.appendI
-    ",l " sb.appendS
-    pos .fileName .length sb.appendI
-    ",l $" sb.appendS
-    FILE_NAME_NAME sb.appendS
-    pos .fileName prog findFileId sb.appendI
-    ",w " sb.appendS
-    pos .line sb.appendI
-    ",w " sb.appendS
-    pos .posInLine sb.appendI
+    pos prog appendPosPrintfArgs
     ")\n" sb.appendS
     "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
     okBranch context startBranch
@@ -4067,6 +4082,40 @@ proc(
         retId sb.appendI
         '\n' sb.appendC
       return
+    Assert case
+      ## BranchId
+        BranchType .NEXT
+        context nextJumpLabelId
+        0
+      BranchId new =:: successBranch
+      ## BranchId
+        BranchType .ERROR
+        context nextJumpLabelId
+        0
+      BranchId new =:: errorBranch
+      sb
+        op [] .pos sb.appendPosQBE
+        "## assert\n" sb.appendS
+        "jnz %s" sb.appendS
+        op [] .pos context popValue sb.appendI
+        " ," sb.appendS
+        successBranch sb.appendBranchId
+        " ," sb.appendS
+        errorBranch sb.appendBranchId
+        '\n' sb.appendC
+        errorBranch sb.appendBranchId
+        '\n' sb.appendC
+        "call $printf(l $" sb.appendS
+        ASSERT_FORMAT sb.appendS
+        ",l " sb.appendS
+        op [] .val .Assert .length sb.appendI
+        ",l " sb.appendS
+        op [] .val .Assert context sb.appendStringPtrConstQBE
+        op [] .pos prog appendPosPrintfArgs
+        ")\ncall $exit(w 1)\n" sb.appendS
+        successBranch sb.appendBranchId
+        '\n' sb.appendC
+      return
     unreachable case
       false context [] .reachable =
       sb
@@ -4105,7 +4154,7 @@ proc(
     Print case
       context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
       break
-    setId autoTypedInitializeId Assert
+    setId autoTypedInitializeId
     setElement setArrayElement call_old
     getArgLen unaryOperator
     checkArrayIndex typeInfo
@@ -4176,6 +4225,9 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
       CHECK_ENUM_FORMAT sb.appendS
       " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     end
+    "data $" sb.appendS
+    ASSERT_FORMAT sb.appendS
+    " = { b \"assertion failed: \\\"%.*s\\\" at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     appendPrintConstants
   =:: mut sb
   idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next

@@ -2890,7 +2890,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
       state hasConst ! if
-        "unimplemented: dynamic assertions" sb.wrap fileState [] .wordStart state appendError2
+        ## opAssert
+          message labelContext id.wrapStringConstant
+          fileState [] .wordStart
+        opAssert state appendOp
         return
       end
       state popConst .val  ..dup .boolean ?? ! if

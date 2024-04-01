@@ -269,7 +269,7 @@ proc(
   StringConstant : message
   FilePosition : pos
 -> Operation ) =>: export opAssert
-  message OpValue .Assert Type .empty pos Operation new return
+  message OpValue .Assert Type .undefined pos Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export opTypesInfo
   count CompilerInfo .typeInfo OpValue .compilerInfo Type .undefined  pos Operation new return

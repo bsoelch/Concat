@@ -1399,6 +1399,18 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         target ..over io.fputSb ..drop
       sb.free ..drop
       return
+    Assert case
+      target "if(!(" io.fputs ..drop
+      operations index isGlobal target prog compileOp
+      ")){\nprintf(\"assertion failed: \\\"" sb.wrap
+        op [] .val .Assert labelContext sb.appendEscapedStrC
+        "\\\" at " sb.appendS
+        op [] .pos sb.appendPos
+        "\\n\");\n" sb.appendS
+        target ..over io.fputSb ..drop
+      sb.free ..drop
+      target "exit(1);\n}\n" io.fputs ..drop
+      return
     unreachable case
       "fprintf(stderr,\"reached unreachable statement at " sb.wrap
         op [] .pos sb.appendPos
@@ -1412,7 +1424,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     getName setName atName getLabel setLabel atLabel length size
     stackMod copy builtIn procPtr
     typeModifier autoCast hasLabel hasName
-    call implementProcedure Assert case
+    call implementProcedure case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap
