@@ -1,6 +1,4 @@
 #!/bin/sh
-#!/bin/sh
-baseCompiler="./concatX"
 codeSrc="./code.concat"
 codeQBETarget="./code.ssa"
 codeAsmTarget="./code.s"
@@ -10,12 +8,12 @@ cArgs=( "-g" "-std=c17" "-lm" )
 concatArgs=( -X -W -q -l $libPath )
 
 if [[ "$@" == *"-R"* ]]; then
-  "./selfCompilerX.sh"
-else  
-  # clear console
-  clear
-  echo "-----------------------------------------" 
-fi && {
+  "./selfCompilerX.sh" -X
+  baseCompiler="./concatXX"
+else
+  baseCompiler="./concatX"
+fi
+{
   echo "compile code.concat"
   echo "-----------------------------------------"
   $baseCompiler "$codeSrc" -o "$codeQBETarget" -p "./parser.out" -t "./typeCheck.out" ${concatArgs[@]}

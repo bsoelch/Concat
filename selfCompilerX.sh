@@ -1,5 +1,6 @@
 #!/bin/sh
 baseCompiler="./concatX"
+tmpCompiler="./concatXX"
 compilerSrc="./concat.concat/compiler.concat"
 codeQBETarget="./build/concat2.ssa"
 codeAsmTarget="./build/concat2.s"
@@ -15,7 +16,7 @@ concatArgs=( -X -W -q -l $libPath )
 bootstrapQBE="./bootstrap/latest.ssa"
 
 # clear console
-ulimit -s 65536 ## increase stack size
+ulimit -S -s 16384 ## increase stack size
 clear
 echo "-----------------------------------------" && {
   echo "recompile compiler"
@@ -29,6 +30,11 @@ echo "-----------------------------------------" && {
   echo "compile generated Assembly-code"
   echo "-----------------------------------------"
   gcc ${cArgs[@]} "$codeAsmTarget" ${externCFiles[@]} -o "$codeTarget"
+} && {
+  if [[ "$@" == *"-X"* ]]; then
+    mv $codeTarget $tmpCompiler
+    exit 0
+  fi
 } && {
   echo "compiler compiler with itself"
   echo "-----------------------------------------"
