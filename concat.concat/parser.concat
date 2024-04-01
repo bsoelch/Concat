@@ -2912,10 +2912,28 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
        ..over "..?types." string.wrap string.startsWith | _if =:: mut opName
       opName "..?types." ..length string.tail =:: params
       "..?types" string.wrap opName =
+      -1 =:: mut count
+      0 =:: mut depth
       params .length 0 > if
-        params opName fileState [] .wordStart state getCompilerOpParam
-      else -1 end
-      fileState [] .wordStart opTypesInfo state appendOp
+        params '.' string.split =:: head =:: tail
+        head .length 0 > if
+          head
+            opName
+            fileState [] .wordStart
+          state getCompilerOpParam count =
+        end
+        tail .length 0 > if
+          tail
+            opName
+            fileState [] .wordStart
+          state getCompilerOpParam depth =
+        end
+      end
+      ## opTypesInfo
+        count
+        depth
+        fileState [] .wordStart
+      opTypesInfo state appendOp
       return
     else ..dup "..?stack" string.wrap string.eq
        ..over "..?stack." string.wrap string.startsWith | _if =:: mut opName

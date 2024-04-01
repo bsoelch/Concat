@@ -1,5 +1,9 @@
 -----------------
 identifier "selfPtr":
- - type "selfPtr" ( type [ type: named[0]( "selfPtr" [ struct[0]( i32 named[0]( "selfPtr" [ struct[0]( ... ) ] ) ptr ) ] ) ] ) declared at selfPtr.concat:1:8
+ - type "selfPtr" ( type [ type: named[0]( "selfPtr" ) ] ) declared at selfPtr.concat:1:8
+-----------------
+types:
+-----------------
+writable named[0]( "selfPtr" [ struct[0]( i32 named[0]( "selfPtr" [ struct[0]( i32 named[0]( "selfPtr" [ struct[0]( i32 named[0]( "selfPtr" [ struct[0]( ... ) ] ) ptr ) ] ) ptr ) ] ) ptr ) ] )
 -----------------
 true

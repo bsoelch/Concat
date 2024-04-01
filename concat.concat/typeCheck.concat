@@ -36,7 +36,13 @@ struct(
 ) =:: TypeCheckState
 
 namespace: sb
-  proc( stringBuilder : sb bool : printOps i64 : maxTypes TypeCheckState ptr mut : state -> stringBuilder ) =>: appendTypeStack
+  proc(
+    stringBuilder : sb
+    bool : printOps
+    i64 : maxTypes
+    i32 : depth
+    TypeCheckState ptr mut : state
+  -> stringBuilder ) =>: appendTypeStack
     state [] .progContext =:: progContext
     progContext [] .idContext @ =:: idContext
     idContext [] .typeContext @ =:: typeContext
@@ -54,7 +60,10 @@ namespace: sb
           elt [] .writable if
             "writable " sb.appendS
           end
-          elt [] .valType typeContext sb.appendType
+          elt [] .valType
+            typeContext
+            depth
+          sb.appendTypeRecursive
           printOps ! if
             '\n' sb.appendC
             ..swap 1 - continue
@@ -77,17 +86,22 @@ namespace: sb
     return
   end
 end
-proc( bool : printOps i32 : maxTypes TypeCheckState ptr mut : state -> ) =>: printTypes
+proc(
+  bool : printOps
+  i32 : maxTypes
+  i32 : depth
+  TypeCheckState ptr mut : state
+-> ) =>: printTypes
   printOps if "stack:\n" sb.wrap else "types:\n" sb.wrap end
     "-----------------\n" sb.appendS
-    printOps maxTypes state sb.appendTypeStack
+    printOps maxTypes depth state sb.appendTypeStack
     "-----------------\n" sb.appendS
   io.stdOut ..swap io.fputSb ..drop
 end
-proc( TypeCheckState ptr mut : state -> ) =>: printTypesDebug
+proc( i32 : depth TypeCheckState ptr mut : state -> ) =>: printTypesDebug
   0 sb.create
     "-----------------\n" sb.appendS
-    true -1 state sb.appendTypeStack
+    true -1 depth state sb.appendTypeStack
   io.stdOut ..swap io.fputSb ..drop
 end
 
@@ -3029,10 +3043,11 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
     compilerInfo case
       op [] .val .compilerInfo switch
         typeInfo case
-          false op [] .val .compilerInfo .typeInfo state printTypes
+          op [] .val .compilerInfo .typeInfo =:: info
+          false info .count info .depth state printTypes
           return
         stackInfo case
-          true op [] .val .compilerInfo .stackInfo state printTypes
+          true op [] .val .compilerInfo .stackInfo 0 state printTypes
           return
         compiledOps case
           return ## TODO print ops

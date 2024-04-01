@@ -2550,8 +2550,6 @@ namespace: sb
     end
   end
   proc( stringBuilder Type TypeContext ptr -> stringBuilder ) =>: export appendType
-    ## depth of two passes test cases
-    ## XXX change default depth to 0, add option to ..?types for higher depth
-    2 appendTypeRecursive return
+    0 appendTypeRecursive return
   end
 end

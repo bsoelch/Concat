@@ -9,7 +9,8 @@ enum( NEGATE TO_BOOL NOT FLIP ) =:: export UnaryOperator
 enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export BinaryOperator
 enum( COPY SWAP DROP ) =:: export StackModType
 struct( i32 : n StackModType : modType ) =:: export StackModification
-enum( i32 : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export CompilerInfo
+struct( i32 : count i32 : depth ) =:: StackTypesInfo
+enum( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export CompilerInfo
 struct( IdentifierInfo : idInfo i64 : argCount ) =:: export CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: export TypeModifier
 struct( Type : src i32 : mut offset ) =:: export CastInfo ## offset: zero-indexed from top of stack
@@ -271,8 +272,18 @@ proc(
 -> Operation ) =>: export opAssert
   message OpValue .Assert Type .undefined pos Operation new return
 end
-proc( i32 : count FilePosition : pos -> Operation ) =>: export opTypesInfo
-  count CompilerInfo .typeInfo OpValue .compilerInfo Type .undefined  pos Operation new return
+proc(
+  i32 : count
+  i32 : depth
+  FilePosition : pos
+-> Operation ) =>: export opTypesInfo
+  ## Operation
+    count depth StackTypesInfo new
+      CompilerInfo .typeInfo
+    OpValue .compilerInfo
+    Type .undefined
+    pos
+  Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export opStackInfo
   count CompilerInfo .stackInfo OpValue .compilerInfo Type .undefined  pos Operation new return
@@ -790,9 +801,13 @@ namespace: sb
     info switch
       typeInfo case
         "..?types" sb.appendS
-        info .typeInfo 0 > if
+        info .typeInfo .count 0 > if
           '.' sb.appendC
-          info .typeInfo sb.appendI
+          info .typeInfo .count sb.appendI
+        end
+        info .typeInfo .depth 0 > if
+          '.' sb.appendC
+          info .typeInfo .depth sb.appendI
         end
         break
       stackInfo case
