@@ -434,7 +434,6 @@ namespace: types
     end
   end
 
-  ## FIXME some tuples have misaligned/overlapping element offsets
   proc(
     Type : t
     TupleId : tupleId
