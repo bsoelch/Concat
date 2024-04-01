@@ -1,32 +1,24 @@
 #!/bin/sh
 #!/bin/sh
-baseCompiler="./concat"
-compilerSrc="./concat.concat/compiler.concat"
-compilerCTarget="./build/concatX.c"
-compilerTarget="./concatX"
+baseCompiler="./concatX"
 codeSrc="./code.concat"
 codeQBETarget="./code.ssa"
 codeAsmTarget="./code.s"
 codeTarget="./code"
 libPath="./lib/"
-externCFiles=( "./extern.c" )
-cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
-concatArgs=( -W -q -l $libPath )
+cArgs=( "-g" "-std=c17" "-lm" )
+concatArgs=( -X -W -q -l $libPath )
 
-# clear console
-clear
-echo "-----------------------------------------" && {
-  echo "recompile experimental compiler"
+if [[ "$@" == *"-R"* ]]; then
+  "./selfCompilerX.sh"
+else  
+  # clear console
+  clear
+  echo "-----------------------------------------" 
+fi && {
+  echo "compile code.concat"
   echo "-----------------------------------------"
-  $baseCompiler "$compilerSrc" -o "$compilerCTarget" ${concatArgs[@]}
-} && {
-  echo "compile generated C-code"
-  echo "-----------------------------------------"
-  gcc ${cArgs[@]} -Wno-unused $compilerCTarget ${externCFiles[@]} -o $compilerTarget
-} && {
-  echo "compile code with experimental compiler"
-  echo "-----------------------------------------"
-  $compilerTarget "$codeSrc" -o "$codeQBETarget" -X -W -p "./parser.out" -t "./typeCheck.out"
+  $baseCompiler "$codeSrc" -o "$codeQBETarget" -p "./parser.out" -t "./typeCheck.out" ${concatArgs[@]}
 } && {
   echo "compile generated QBE-code"
   echo "-----------------------------------------"
@@ -34,7 +26,7 @@ echo "-----------------------------------------" && {
 } && {
   echo "compile generated Assembly-code"
   echo "-----------------------------------------"
-  gcc -g $codeAsmTarget "extern.c" -lm -o $codeTarget
+  gcc ${cArgs[@]} $codeAsmTarget "extern.c" -o $codeTarget
 } && {
   echo "run compiled code"
   echo "-----------------------------------------"
