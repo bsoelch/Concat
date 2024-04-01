@@ -2086,7 +2086,7 @@ proc(
           constValue
           containerType elementIndex op .pos opNewEnum
         state pushValue
-        true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo ## gohere
+        true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo
         elementLabel state replaceLabel
         return
       end
@@ -2127,6 +2127,9 @@ proc(
         ## remove container from stack
         state [] .stack @ branchTree.pop ..drop
       end
+      container .copyMutableIndex
+        state [] .compiledOps .length 1 - ==
+      =:: directCopy ## operation before get element is copy
       ## pushValue
         targetType
         ConstValue .none ## XXX compute constant value
@@ -2150,6 +2153,11 @@ proc(
       mutable ! true childCount childOffset state updateOpInfo
       isAddr if
         container .copyMutableIndex state removeCopy
+      else directCopy _if
+        ## copy is operation directly before get element
+        ## -> copy element instead of tuple
+        container .copyMutableIndex state removeCopy
+        state wrapCopy
       else
         state [] .stack @ branchTree.pop .data [] topValue =
         container .copyMutableIndex topValue .copyMutableIndex =
@@ -2195,6 +2203,9 @@ proc(
         branchTree.itr.next =:: srcArray
         srcArray [] .valueType =:: srcType
         srcArray [] .copyMutableIndex =:: srcCopyMutIndex
+        srcCopyMutIndex
+          state [] .compiledOps .length 1 - ==
+        =:: directCopy ## operation before get element is copy
       ..drop
       srcType
         typeContext types.unwrapReference
@@ -2277,6 +2288,11 @@ proc(
         srcCopyMutIndex state removeCopy
       else mutable _if
         arrayType typeContext types.isPointer if
+          state wrapCopy
+        else directCopy _if
+          ## copy is operation directly before get element
+          ## -> copy element instead of tuple
+          srcCopyMutIndex state removeCopy
           state wrapCopy
         else
           state [] .stack @
