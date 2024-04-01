@@ -67,11 +67,11 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
       false return ## positive number fits in unsigned number of one smaller size
     end
   else
-    value 1 i64 cast preferedSize << -_ < if
+    value 1i64 preferedSize << -_ < if
       true return
     end
   end
-  value 1 i64 cast unsigned if preferedSize 1 + else preferedSize end << >= return
+  value 1i64 unsigned if preferedSize else preferedSize 1 - end << >= return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> Constant ) =>: newIntConstant
    ## TODO? sign extend unsigned constants of smaller types

@@ -1,0 +1,74 @@
+
+## number literals
+
+All number literals start with a digit.
+A number literal consists of a sequence of digits, `'` and `_` can be used as separators between digits.
+Optionally the digits can be proceeded by a sign and or a base-modifier.
+Integer literals can be followed by a size specifier.
+If the number contains a `.` or one of `eExX#` followed by and exponent it will be parsed as a float ( `eE` only up to base 14, `xX` only for bases between 11 and 33 ).
+
+base modifiers:
+
+* `0b` `0B` binary
+* `0o` `0O` octal
+* `0x` `0X` hexadecimal
+* `<n>b` for integer `<n>` given in base 10 -> base n literal
+
+digits for bases greater than 10:
+For bases between 10 and 36 `a`-`z` and `A` - `Z` are used for the digits 10 to 35
+starting at base 37 `a` to `z` will represent digits 36 to 61,
+while `A` to `Z` preserve their previous values
+
+integer sizes:
+By default integer literals are parsed as `i32`, or `i64` if the number does not fit in a signed 32-bit integer.
+
+To specify a fixed size for the given literal it is possible to append a size modifier to the integer literal:
+* `i<n>` parses the number as an `n` bit signed integer ( using twos complement)
+* `u<n>` parses the number as an `n` bit unsigned integer
+in both cases `n` can be any (base 10) integer between 1 and the maximal integer size
+Remark: The size specifier will be parsed before determining the base of a number, for numbers in bases where `I` or `U` are digits, it is recommenced to always append a size specifier to prevent parts of the number body from being mistaken with the size.
+
+floating point literals:
+`.` is used to separate the integer part of the number form its fractional part.
+If an exponent is specified the fractional part will be multiplied with the base take to the power of the exponent
+All digits of a base-n float  including the exponent are given as digits in the same base.
+
+C-style hex-float literals: <!-- XXX? remove C-style literals-->
+For convenience reason C-style hexadecimal float literals of the form `0x[0-9a-fA-F]+(.[0-9a-fA-F]+)?[pP][+-]?[0-9]+`
+The exponent of these literals is written in base 10 and will multiply the number by the given power of two (instead of 16).
+
+Examples:
+
+```
+1           ## the integer 1 as i32
+1.0         ## 1 as (64-bit) float
+-12i8       ## -12 as 8-bit integer
+0xffffu16   ## a 16-bit integer with all bits set to 1
+12345678987654321 ## a decimal 64-bit integer
+4b100       ## 16 in base 4
+05          ## decimal 5, leading zeros are allowed
+0x1'0000    ## 65536 given in base-16
+62bBaseNInt ## 40832636929509 written in base 62
+0b11.0010010000111111011010101 ## pi in binary
+1E9         ## 10^9 as float
+0x1E2       ## 482 as base-16 integer
+0x1X2       ## 256 as base-16 float
+0xffffffff  ## 4294967295 as i64
+0xffffffffu ## -1 (4294967295u) as i32
+0x3         ## 3
+1x3         ## -> not a number
+5u3         ## 5 as 3-bit integer
+5i3         ## parser error: 5 does not fit in three signed bits
+5u2         ## parser error: 5 does not fit in two bits
+```
+
+edge cases:
+```
+0x0x0       ## 0 as float
+62b1u32     ## 1 as 32-bit integer ( u32 parsed as size )
+62b1u'32    ## 453780 as 32-bit integer ( size cannot contain separators )
+62b1u32u32  ## 453780 as 32-bit integer
+```
+
+
+

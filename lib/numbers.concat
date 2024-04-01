@@ -70,18 +70,22 @@ namespace: number
     ..dup .length 2 < if
       10 return
     end
-    ## XXX? support #... for hex numbers
     ..dup 0 string.charAt '0' == if
-      ..dup 1 string.charAt 'x' == if
-        2 string.tail 16 return
-      else ..dup 1 string.charAt 'o' == _if
-        2 string.tail 8 return
-      else ..dup 1 string.charAt 'b' == _if
-        2 string.tail 2 return
+      ..dup 1 string.charAt switch
+        'b' 'B' case
+          2 string.tail 2 return
+        'o' 'O' case
+          2 string.tail 8 return
+        'x' 'X' case
+          2 string.tail 16 return
+        default
+          ## default case needed due to bug in old compiler
+          break
       end
     end
     ## arbitrary base numbers <BASE>b<NUMBER>
-    ..dup 1 string.charAt 'b' == if
+    ..dup 1 string.charAt 'b' ==
+        ..over 1 string.charAt 'B' ==  | if
       ..dup 0 string.charAt '0' - i32 =: mut b
       b 2 < b 9 > | if
         10 return ## invalid base -> return unmodified string
@@ -171,7 +175,7 @@ namespace: number
       'e' 'E' case
         base 15 < return
       'x' 'X' case
-        base 34 < return
+        base 10 > base 34 < & return
       '#' case
         true return
       default

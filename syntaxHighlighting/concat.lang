@@ -24,6 +24,7 @@
     <style id="char-escape"  name="Escaped Character" map-to="def:special-char"/>
     <style id="float"        name="Float"        map-to="def:floating-point"/>
     <style id="decimal"      name="Decimal"      map-to="def:decimal"/>
+    <style id="baseN"        name="BaseN"        map-to="def:base-n-integer"/>
     <style id="binary"       name="Binary"       map-to="def:base-n-integer"/>
     <style id="hexadecimal"  name="Hex"          map-to="def:base-n-integer"/>
     <style id="boolean"      name="Boolean value"         map-to="def:boolean"/>
@@ -31,7 +32,7 @@
   </styles>
 
   <definitions>
-  
+
     <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>(\A|(?&lt;=[[:space:]]))\#\#</start>
       <include>
@@ -65,11 +66,12 @@
           default         |
           return          |
           namespace\:     |
-          end             
+          end             |
+          assert
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="declaration" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -77,11 +79,11 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="operators" style-ref="operator">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          \+                  | 
+          \+                  |
           -                   |
           \*                  |
           /                   |
@@ -120,11 +122,11 @@
           \.\.length          |
           \.\.size            |
           \.\.unreachable     |
-          \.\.debug\.print          
+          \.\.debug\.print
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="compile-time" style-ref="compile-time">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))((( # start of file or white-space
@@ -139,7 +141,6 @@
                 drop(\.[0-9]+)?    |
                 swap               |
                 over(\.[0-9]+)?    |
-                assert |
                 \?(
                   types(\.[0-9]+)?   |
                   stack(\.[0-9]+)?   |
@@ -150,12 +151,12 @@
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space
           )|
-          \.\.type\.(alignment|size|stride)
+          \.\.type\.(alignment|size|stride) |
           \.\.\?(parser\.)?find\.(?=([^[:space:]\.]+(\.[^[:space:]\.]+)*(\Z|[[:space:]])))
         )
       </match>
     </context>
-    
+
     <context id="annotation" style-ref="annotation">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -163,7 +164,7 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="field-access" style-ref="field">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -171,11 +172,11 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="type-keywords" style-ref="type-keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          \(|\)                        | 
+          \(|\)                        |
           tuple\(                      |
           proc\(                       |
           -&gt;                        |
@@ -197,7 +198,7 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="primitiveType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -208,7 +209,7 @@
           i64             |
           f32             |
           f64             |
-          type         
+          type
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -272,15 +273,7 @@
         </context>
       </include>
     </context>
-<!--
-    <context id="float" style-ref="float">
-      <match extended="true">
-          [0-9]+ \. [0-9]+ ([eE][+-]?[0-9]+)?
-        | [0-9]+            [eE][+-]?[0-9]+
-      </match>
-    </context>
--->
-    
+
     <context id="binary" style-ref="binary">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -296,7 +289,7 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
     <context id="decimal" style-ref="decimal">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -304,7 +297,41 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    
+
+    <context id="baseN" style-ref="baseN">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          -?([2-9]|([0-9][0-9]))b[0-9a-zA-Z]([_']*[0-9a-zA-Z])*(u|U|((u|U|i|I)[0-9]+))?
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+
+    <context id="float" style-ref="float">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+        [+-]?(
+          [0-9]+ \. [0-9]+ ([eE\#][+-]?[0-9]+)?
+          | [0-9]+ [eE\#][+-]?[0-9]+
+        )
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+    <context id="baseN-float" style-ref="float">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+        [+-]?(([2-9]|([0-9][0-9])[bB])|0[bBoOxX])(
+          [0-9a-zA-Z]([_']*[0-9a-zA-Z])*
+          (
+          \. [0-9a-zA-Z] ([_']*[0-9a-zA-Z])*
+          ([eExX\#][+-]?[0-9a-zA-Z]([_']*[0-9a-zA-Z])*)?
+          |
+          [eExX\#][+-]?[0-9a-zA-Z]([_']*[0-9a-zA-Z])*
+          )
+        )
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+
     <context id="boolean" style-ref="boolean">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -328,10 +355,12 @@
         <context ref="libtype-keywords"/>
         <context ref="string"/>
         <context ref="char"/>
-    <!--    <context ref="float"/> -->
         <context ref="hexadecimal"/>
         <context ref="binary"/>
         <context ref="decimal"/>
+        <context ref="baseN"/>
+        <context ref="float"/>
+        <context ref="baseN-float"/>
         <context ref="operators"/>
         <context ref="field-access"/>
         <context ref="compile-time"/>
