@@ -1239,7 +1239,7 @@ namespace: sb
   proc( stringBuilder : sb string : str -> stringBuilder ) =>: appendEscapedString
     sb
       0 while ..dup str .length < do =:: i
-          str i string.charAt appendEscapedChr
+          str i string.charAt appendEscapedChrC
         i 1 +
       end ..drop
     return

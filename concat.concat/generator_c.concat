@@ -24,17 +24,6 @@ proc( io.FILE : target -> ) =>: printHeader
   ..drop
 end
 
-namespace: sb
-  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export appendEscapedStrC
-    sb
-      0 while ..dup str .length < do =:: i
-        str i labelContext id.scCharAt appendEscapedChr
-        "\"\"" appendS
-        i 1 +
-      end ..drop
-    return
-  end
-end
 proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : prog -> ) =>: printGlobalName
   prog [] .idContext .typeContext .labelContext @ =:: labelContext
   128 sb.create

@@ -149,6 +149,36 @@ namespace: sb
       end ..drop
     return
   end
+  ## C-style string escaping, use octal sequences as hex-sequences may consume following characters
+  proc( stringBuilder i8 -> stringBuilder ) =>: export appendEscapedChrC
+    =:: chr
+    chr 0x20 < chr 0x7f == | if
+      ## non-printable ASCII-characters
+      "\\" sb.appendS
+      chr 0xff &
+        ..dup 0o10 < if
+          ..swap "00" sb.appendS ..swap
+        else ..dup 0o100 < _if
+          ..swap '0' sb.appendC ..swap
+        end
+      8 sb.appendI?
+      return
+    end
+    chr '\\' == chr '\'' == | chr '\"' == | if
+      '\\' sb.appendC
+      chr  sb.appendC
+      return
+    end
+    chr  sb.appendC
+  end
+  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export appendEscapedStrC
+    sb
+      0 while ..dup str .length < do =:: i
+        str i labelContext id.scCharAt appendEscapedChrC
+        i 1 +
+      end ..drop
+    return
+  end
   proc(
     stringBuilder : sb
     ConstValue : val
