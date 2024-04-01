@@ -1,0 +1,10 @@
+type : later
+struct( later : x later : y ) =:: point
+
+proc( -> ) =>: main
+  1 2 point new =:: p
+  p @ =:: pointPointer
+  pointPointer [] .y ..debug.print
+  point ..type.size ..debug.print
+end
+i32 =:: later

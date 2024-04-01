@@ -1,0 +1,13 @@
+enum( A B C ) =:: elt
+
+enum( elt : x i32 : y ( i64 i32 ) : z ) =:: container
+
+elt .A container .x container =: Ax
+elt .B container .x =:: Bx
+5 container .y =:: y
+
+proc( -> ) =>: main
+  Ax .x .A ?? ..debug.print
+  Bx .x .B ?? ..debug.print
+  y .y ..debug.print
+end
