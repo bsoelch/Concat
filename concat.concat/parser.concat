@@ -211,7 +211,7 @@ proc( Operation ptr optional : next? ParserState ptr mut : state -> ) =>: resetG
     ops [] =
   end
   ##  -> reset interpreter
-  interpreter [] .context @ resetContext
+  interpreter [] .context @ InterpreterType .PARSER interpreter.resetContext
 end
 proc( ParserState ptr mut : state -> ) =>: tryInterpretGlobal
   state [] .progContext =:: progContext
@@ -225,7 +225,7 @@ proc( ParserState ptr mut : state -> ) =>: tryInterpretGlobal
   interpreter [] .offset =:: offset
   offset while ..dup state [] .globalOpBuffer .length < do
     state [] .globalOpBuffer ..over list.at .data =:: op
-    op interpreter [] .context @ false evaluateOperation if
+    op interpreter [] .context @ evaluateOperation if
       ## interpreter failed
       op Operation ptr cast optional.wrap state resetGlobalInterpreter
     end
@@ -3100,7 +3100,9 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
   state .staticArgs list.free ..drop
   state .constantBlocks list.free ..drop
   0 while ..dup state .globalInterpreters .length < do
-    state .globalInterpreters ..over list.at .data [] .context @ cleanupContext
+    state .globalInterpreters
+      ..over list.at .data [] .context @
+    interpreter.cleanupContext
     1 +
   end ..drop
   state .globalInterpreters list.free ..drop
@@ -3120,7 +3122,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state -> FileId io.IOError 
     progContext [] .progFiles =
     state [] .globalInterpreters
       ## InterpreterInfo
-        progContext fileId wrapProgram
+        progContext fileId InterpreterType .PARSER interpreter.wrapProgram
         0
       InterpreterInfo new list.append
     state [] .globalInterpreters =

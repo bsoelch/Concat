@@ -21,6 +21,8 @@ struct(
   i64 : stackOffset
 ) =:: BlockInfo
 
+enum( PARSER GLOBAL FOLD_LOCAL INTERPRET ) =:: export InterpreterType
+
 struct(
   ProgramContext ptr mut : program
   LabelId Constant hashMap : mut variables
@@ -30,6 +32,7 @@ struct(
   Type list : mut typeBuffer
   LabelId list : mut labelBuffer
   FileId : mut currentFile
+  InterpreterType : mut evalType
 ) =:: export InterpreterContext
 
 proc( i64 : count InterpreterContext ptr mut : context -> bool ) =>: checkStack
@@ -261,14 +264,20 @@ proc(
   context [] .stackInfo =
 end
 proc(
-  bool : showErrorMessages
   FilePosition : pos
   InterpreterContext ptr mut : context
 -> ValueInfo ConstValue bool ) =>: popValue
   context [] .stack .length 0 == if
-    showErrorMessages if
-      "stack underflow " sb.wrap
-      pos context [] .program [] .errors @ appendError
+    context [] .evalType switch
+      INTERPRET case
+        "stack underflow " sb.wrap
+        pos context [] .program [] .errors @ appendError
+      break
+      GLOBAL case ## XXX merge with INTERPRET once interpreter is complete
+        "stack underflow " sb.wrap
+        pos context [] .program [] .errors @ appendInfo
+      break
+      PARSER FOLD_LOCAL case break ## allow underflow
     end
     ## return
       ## ValueInfo
@@ -301,7 +310,6 @@ proc(
 end
 
 proc(
-  bool : showErrorMessages
   FilePosition : pos
   InterpreterContext ptr mut : context
 -> ValueInfo Type bool ) =>: popType
@@ -311,10 +319,7 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  ## popValue
-    showErrorMessages
-    pos
-  context popValue =:: isError =:: value =:: valInfo
+  pos context popValue =:: isError =:: value =:: valInfo
   isError if
     valInfo Type .undefined true return
   end
@@ -336,9 +341,52 @@ end
 
 namespace: interpreter
   proc(
+    ProgramContext ptr mut : progContext
+    FileId : fileId
+    InterpreterType : evalType
+  ->
+    InterpreterContext
+  ) =>: export wrapProgram
+    ## InterpreterContext
+      progContext
+      labelHash @ labelEq @ 32 Constant map.create
+      64 ConstValue list.create
+      64 ValueInfo  list.create
+      64 BlockInfo  list.create
+      64 Type       list.create
+      64 LabelId    list.create
+      fileId
+      evalType
+    InterpreterContext new
+  end
+
+  proc(
+    InterpreterContext ptr mut : context
+    InterpreterType : evalType
+  -> ) =>: export resetContext
+    ## TODO? clear local variables in map
+    context [] .stackInfo   list.clear context [] .stackInfo =
+    context [] .openBlocks  list.clear context [] .openBlocks =
+    context [] .typeBuffer  list.clear context [] .typeBuffer =
+    context [] .labelBuffer list.clear context [] .labelBuffer =
+    context [] .stack       list.clear context [] .stack =
+    evalType context [] .evalType =
+  end
+
+  proc(
+    InterpreterContext ptr mut : context
+  -> ) =>: export cleanupContext
+    context [] .variables @ map.free
+    context [] .stackInfo   list.free context [] .stackInfo =
+    context [] .openBlocks  list.free context [] .openBlocks =
+    context [] .typeBuffer  list.free context [] .typeBuffer =
+    context [] .labelBuffer list.free context [] .labelBuffer =
+    context [] .stack list.free context [] .stack =
+  end
+
+  proc(
     Type : t
     TypeMemoryInfo : infoType
-    bool : showErrors
     ProgramContext ptr mut : program
   -> ConstValue bool ) =>: export computeTypeInfo
     program [] .errors @ =:: errors
@@ -432,7 +480,10 @@ namespace: interpreter
     procData [] .procType =:: procType
     procType typeContext types.getProcIn ..drop =:: inType
     inType typeContext types.compositeElts =:: inTypes
-    program procData [] .fileId wrapProgram =:: mut context
+    program
+      procData [] .fileId
+      InterpreterType .GLOBAL
+    wrapProgram =:: mut context
       ## push arguments
       0 while ..dup inTypes .length < do =:: i
         inTypes i types.compositeElts.get =:: argType
@@ -455,7 +506,6 @@ end
 proc(
   Operation ptr : op
   InterpreterContext ptr mut : context
-  bool : showErrorMessages ## TODO distinguish non-interpretable operations and errors
 ->
   bool
 ) =>: export evaluateOperation
@@ -489,8 +539,11 @@ proc(
         end
         1 -
       end ..drop
-      showErrorMessages if
-        "return outside procedure" sb.wrap op [] .pos errors appendError
+      context [] .evalType switch
+        INTERPRET GLOBAL case
+          "return outside procedure" sb.wrap op [] .pos errors appendError
+          break
+        PARSER FOLD_LOCAL case break
       end
       true return
     block case
@@ -520,22 +573,27 @@ proc(
         DEFAULT
         UNKNOWN
         NAMESPACE case
-          showErrorMessages if
-            "unsupported block-type in constant evaluation: " sb.wrap
-              op [] .val .block .blockType sb.appendBlockType
-            op [] .pos errors appendError
+          context [] .evalType switch
+            INTERPRET GLOBAL case break
+            PARSER FOLD_LOCAL case true return
           end
+          "unsupported block-type in constant evaluation: " sb.wrap
+            op [] .val .block .blockType sb.appendBlockType
+          op [] .pos errors appendError
           true return
       end
       break
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .openBlocks .length 0 == if
-        showErrorMessages if
-          "unexpected end of " sb.wrap
-           blockType sb.appendBlockType
-           "-block" sb.appendS
-          op [] .pos errors appendError
+        context [] .evalType switch
+          INTERPRET GLOBAL case
+            "unexpected end of " sb.wrap
+             blockType sb.appendBlockType
+             "-block" sb.appendS
+            op [] .pos errors appendError
+          break
+          PARSER FOLD_LOCAL case break
         end
         true return
       end
@@ -543,13 +601,11 @@ proc(
         list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
       context [] .openBlocks =
       closedBlock .blockType blockType != if
-        showErrorMessages if
-          "unexpected end of " sb.wrap
-           blockType sb.appendBlockType
-           "-block expected " sb.appendS
-           closedBlock .blockType sb.appendBlockType
-          op [] .pos errors appendError
-        end
+        "unexpected end of " sb.wrap
+         blockType sb.appendBlockType
+         "-block expected " sb.appendS
+         closedBlock .blockType sb.appendBlockType
+        op [] .pos errors appendError
         true return
       end
       blockType switch
@@ -714,27 +770,34 @@ proc(
         DEFAULT
         UNKNOWN
         NAMESPACE case
-          showErrorMessages if
-            "unsupported block-end in constant evaluation: " sb.wrap
-              op [] .val .blockEnd .blockType sb.appendBlockType
-            op [] .pos errors appendError
+          context [] .evalType switch
+            INTERPRET GLOBAL case break
+            PARSER FOLD_LOCAL case true return
           end
+          "unsupported block-end in constant evaluation: " sb.wrap
+            op [] .val .blockEnd .blockType sb.appendBlockType
+          op [] .pos errors appendError
           true return
       end
       break
     declareId case
       context inTypeOrInitializer ! if
-        showErrorMessages if
-          "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
-          op [] .pos errors appendError
+        context [] .evalType switch
+          INTERPRET case
+            "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
+            op [] .pos errors appendError
+          break
+          GLOBAL case ## XXX merge with INTERPRET once interpreter complete
+            "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
+            op [] .pos errors appendInfo
+          break
+          PARSER FOLD_LOCAL case break
         end
         true return
       end
       1 context checkStack if
-        showErrorMessages if
-          "not enough arguments for declaration, expected 1 got 0" sb.wrap
-          op [] .pos errors appendError
-        end
+        "not enough arguments for declaration, expected 1 got 0" sb.wrap
+        op [] .pos errors appendError
         true return
       end
       context [] .stackInfo list.peek .data =:: valInfo
@@ -786,11 +849,17 @@ proc(
         context [] .stackInfo =
         false return
       end
-      showErrorMessages if
-        "unsupported operation in constant evaluation: " sb.wrap
-          op [] program sb.appendOp
-        op [] .pos errors appendError
+      context [] .evalType switch
+        INTERPRET GLOBAL case break
+        PARSER FOLD_LOCAL case
+          context inTypeOrInitializer ! if
+            true return
+          end
+        break
       end
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] program sb.appendOp
+      op [] .pos errors appendError
       true return
     getId case
       op [] .val .getId @ =:: idInfo
@@ -873,11 +942,13 @@ proc(
         LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if
-            showErrorMessages if
-              "missing value for " sb.wrap
-                op [] .val .getId labelContext sb.appendIdInfo
-              op [] .pos errors appendError
+            context [] .evalType switch
+              INTERPRET GLOBAL case break
+              PARSER FOLD_LOCAL case true return
             end
+            "missing value for " sb.wrap
+              op [] .val .getId labelContext sb.appendIdInfo
+            op [] .pos errors appendError
             true return
           end
           value? .data =:: value ## TODO? wrap local variable in reference?
@@ -897,25 +968,50 @@ proc(
             true return
           end
           idData [] .constValue .none ?? if
-            showErrorMessages idInfo [] .idType .TYPE ?? | if
-              "identifier " sb.wrap
-                label labelContext sb.appendLabelName
-                " has not been initialized" sb.appendS
-              op [] .pos errors appendError
+            context [] .evalType switch
+              INTERPRET GLOBAL case break
+              PARSER FOLD_LOCAL case
+                idInfo [] .idType .TYPE ?? ! if
+                  true return
+                end
+              break
             end
+            "identifier " sb.wrap
+              label labelContext sb.appendLabelName
+              " has not been initialized" sb.appendS
+            op [] .pos errors appendError
             true return
           end
           idData [] .constValue idData [] .valueType label op [] .pos context pushValue
           false return
         TEMPLATE_ARG TMP_VAR PROCEDURE_BUNDLE case
-        showErrorMessages if
-          "unsupported operation in constant evaluation: " sb.wrap
-            op [] program sb.appendOp
-          op [] .pos errors appendError
-        end
-        true return
+          context [] .evalType switch
+            INTERPRET case
+              "unsupported operation in constant evaluation: " sb.wrap
+                op [] program sb.appendOp
+              op [] .pos errors appendError
+              break
+            GLOBAL case ## XXX merge with INTERPRET once interpreter complete
+              "unsupported operation in constant evaluation: " sb.wrap
+                op [] program sb.appendOp
+              op [] .pos errors appendInfo
+              break
+            PARSER FOLD_LOCAL case break
+          end
+          true return
       end
       break
+    initializeId autoTypedInitializeId case
+      context [] .evalType switch
+        INTERPRET case break
+        PARSER FOLD_LOCAL GLOBAL case
+          ## global initialization handled by type-checker
+          true return
+      end
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] program sb.appendOp
+      op [] .pos errors appendError
+      true return
     typeModifier case
         true =:: mut fixedSize
         context minStackOffset =:: minOffset
@@ -1020,7 +1116,7 @@ proc(
       ValueInfo : valInfo
       false =:: mut poppedValue
       op [] .dataType .undefined ?? if
-        showErrorMessages op [] .pos context popType if ..drop.2
+        op [] .pos context popType if ..drop.2
           true return
         end poppedType = valInfo =
         true poppedValue =
@@ -1040,7 +1136,6 @@ proc(
         ## computeTypeInfo
           targetType
           op [] .val .typeInfo
-          true ## don't hide errors ( operation modifies stack )
         program computeTypeInfo if ..drop
           ## computing size not possible, reset stack
           poppedValue if
@@ -1058,11 +1153,18 @@ proc(
       pushValue
       false return
     Assert case
-      showErrorMessages op [] .pos context popValue if
+      op [] .pos context popValue if
         ..drop.2
-        showErrorMessages if
-          "missing argument for assert, expected boolean" sb.wrap
-          op [] .pos errors appendError
+        context [] .evalType switch
+          INTERPRET case
+            "missing argument for assert, expected boolean" sb.wrap
+            op [] .pos errors appendError
+            break
+          GLOBAL case ## XXX merge with INTERPRET once interpreter complete
+            "missing argument for assert, expected boolean" sb.wrap
+            op [] .pos errors appendInfo
+            break
+          PARSER FOLD_LOCAL case break
         end
         true return
       end =:: value =:: valInfo
@@ -1079,8 +1181,19 @@ proc(
         op [] .pos errors appendError
       end
       false return
-    setId atId initializeId autoTypedInitializeId
-    getLabel setLabel atLabel
+    getLabel atLabel atName hasLabel hasName case
+      context [] .evalType switch
+        INTERPRET case break
+        PARSER FOLD_LOCAL GLOBAL case
+          ## label/name resolving handled by type-checker
+          true return
+      end
+      ## label/name should have been resolved in type-checker
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] program sb.appendOp
+      op [] .pos errors appendError
+      true return
+    setId atId setLabel
     getElement setElement atElement
     getArrayElement setArrayElement atArrayElement setValue
     Print New newEnum call callPtr call_old
@@ -1088,13 +1201,20 @@ proc(
     length size Cast Cast! autoCast
     unaryOperator binaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
-    hasLabel hasName hasElement
-    stackMod setName atName copy builtIn
+    hasElement stackMod setName copy builtIn
     compilerInfo unreachable case
-      showErrorMessages if
-        "unsupported operation in constant evaluation: " sb.wrap
-          op [] program sb.appendOp
-        op [] .pos errors appendError
+      context [] .evalType switch
+        INTERPRET case
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendError
+          break
+        GLOBAL case ## XXX merge with INTERPRET once interpreter complete
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendInfo
+          break
+        PARSER FOLD_LOCAL case break
       end
       true return
   end
@@ -1116,7 +1236,7 @@ proc(
   end =:: procBlockIndex
   while offset ops .length < do
     ops offset array.at .data =:: op
-      op context true evaluateOperation if
+      op context evaluateOperation if
         true return
       end
       context [] .openBlocks .length procBlockIndex < if
@@ -1243,44 +1363,4 @@ proc(
     end ..drop
     false return
   end
-end
-
-proc(
-  ProgramContext ptr mut : progContext
-  FileId : fileId
-->
-  InterpreterContext
-) =>: export wrapProgram
-  ## InterpreterContext
-    progContext
-    labelHash @ labelEq @ 32 Constant map.create
-    64 ConstValue list.create
-    64 ValueInfo  list.create
-    64 BlockInfo  list.create
-    64 Type       list.create
-    64 LabelId    list.create
-    fileId
-  InterpreterContext new
-end
-
-proc(
-  InterpreterContext ptr mut : context
--> ) =>: export resetContext
-  ## TODO? clear local variables in map
-  context [] .stackInfo   list.clear context [] .stackInfo =
-  context [] .openBlocks  list.clear context [] .openBlocks =
-  context [] .typeBuffer  list.clear context [] .typeBuffer =
-  context [] .labelBuffer list.clear context [] .labelBuffer =
-  context [] .stack       list.clear context [] .stack =
-end
-
-proc(
-  InterpreterContext ptr mut : context
--> ) =>: export cleanupContext
-  context [] .variables @ map.free
-  context [] .stackInfo   list.free context [] .stackInfo =
-  context [] .openBlocks  list.free context [] .openBlocks =
-  context [] .typeBuffer  list.free context [] .typeBuffer =
-  context [] .labelBuffer list.free context [] .labelBuffer =
-  context [] .stack list.free context [] .stack =
 end

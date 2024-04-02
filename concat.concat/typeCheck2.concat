@@ -138,6 +138,7 @@ struct(
   i64 list : mut childIds
   FileId : mut currentFile
   bool : mut reachable
+  bool : mut isGlobal
   ## TODO flags:
   ## * disable reorganizing of operations (excluding types)
   ## * is it allowed to optimize out reading from variables
@@ -189,7 +190,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: freezeInterpreter
   end ..drop
   ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initializer)
   ##  -> reset interpreter
-  interpreter resetContext
+  state resetInterpreter
   false state [] .interpreterActive =
 end
 proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
@@ -220,7 +221,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
     state [] .stack @ branchTree.pop ..drop
   end
   ##  -> reset interpreter
-  interpreter resetContext
+  state resetInterpreter
   ##  -> copy values to interpreter
   buffer .length 1 - while ..dup 0 >= do
     buffer ..over list.at .data =:: typeInfo
@@ -245,7 +246,13 @@ end
 
 proc( TypeCheckState ptr mut : state -> ) =>: resetInterpreter
   state [] .interpreter @ =:: interpreter
-  interpreter resetContext
+  interpreter
+    state [] .isGlobal if
+      InterpreterType .GLOBAL
+    else
+      InterpreterType .FOLD_LOCAL
+    end 
+  interpreter.resetContext
   true state [] .interpreterActive =
 end
 
@@ -1387,7 +1394,7 @@ proc(
     switchId label labelInfo [] .pushedAt state newSwitchLabel
     i 1 +
   end ..drop
-  state [] .interpreter @ resetContext
+  state resetInterpreter
 end
 proc(
   Operation ptr : op
@@ -1431,7 +1438,7 @@ proc(
   ## operation after switch -> don't allow break statement
   false switchBlock [] .allowBreak =
   switchType typeContext types.isEnum ! if
-    op state [] .interpreter @ false evaluateOperation if
+    op state [] .interpreter @ evaluateOperation if
       "unsupported operation in switch label:\n " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError
@@ -1538,7 +1545,7 @@ proc(
     argData? .data [] .valType op .dataType =
     argData? .data [] .value op .val .Constant =
   end
-  state [] .interpreterActive if op @ state [] .interpreter @ false evaluateOperation ! _if
+  state [] .interpreterActive if op @ state [] .interpreter @ evaluateOperation ! _if
     return ## evaluate constants
   end
   state freezeInterpreter
@@ -1548,7 +1555,7 @@ proc(
     Constant case
       op .dataType types.primitive.TYPE types.typeEquals if
         state unfreezeInterpreter
-        op @ state [] .interpreter @ true evaluateOperation if
+        op @ state [] .interpreter @ evaluateOperation if
           "could not evaluate " sb.wrap
             op program sb.appendOp
           op .pos errors appendError
@@ -1614,7 +1621,7 @@ proc(
             =:: procData
             procData [] .isStatic if
               state unfreezeInterpreter
-              op @ state [] .interpreter @ true evaluateOperation if
+              op @ state [] .interpreter @ evaluateOperation if
                 "could not evaluate " sb.wrap
                   op program sb.appendOp
                 op .pos errors appendError
@@ -2455,7 +2462,7 @@ proc(
           state unfreezeInterpreter
           state [] .compiledOps .length state [] .blockStart =
           ## type-blocks and initializers are handled by the interpreter
-          op @ state [] .interpreter @ true evaluateOperation if
+          op @ state [] .interpreter @ evaluateOperation if
             "could not evaluate " sb.wrap
               blockType sb.appendBlockType
               " block" sb.appendS
@@ -3474,7 +3481,6 @@ proc(
         ## computeTypeInfo
           valType
           op .val .typeInfo
-          true
         program interpreter.computeTypeInfo if ..drop
           "could no compute size of type " sb.wrap
             valType typeContext sb.appendType
@@ -3488,7 +3494,7 @@ proc(
     typeModifier case
       state unfreezeInterpreter
       ## type-modifiers are handled by the interpreter
-      op @ state [] .interpreter @ true evaluateOperation if
+      op @ state [] .interpreter @ evaluateOperation if
         "could not evaluate type modifier " sb.wrap
           op .val .typeModifier sb.appendTypeModifier
         op .pos errors appendError
@@ -3557,6 +3563,7 @@ proc(
   currentProc [] .fileId state [] .interpreter .currentFile =
   program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
   state clearOps
+  state resetInterpreter
   currentProc [] .implementation .code @ =:: codeImpl
   program [] .templateOps
      codeImpl [] .codeStart list.at .data
@@ -3583,7 +3590,6 @@ proc(
   procFile [] .localOps
     state [] .compiledOps list.appendAll
   procFile [] .localOps =
-  state resetInterpreter
   state [] .program [] .autoTypes
     list.free ..drop
     globalAutoTypes ## reset local auto-types
@@ -3596,7 +3602,7 @@ end
 proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   ## TypeCheckState
     program
-    program -1 wrapProgram
+    program -1 InterpreterType .GLOBAL interpreter.wrapProgram
     labelHash @ labelEq @ 64 TypedValue map.create
     Type .undefined
     true
@@ -3608,6 +3614,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     128 OpInfo    list.create
     128 i64       list.create
     FILE_ID_NONE
+    true
     true
   TypeCheckState new =:: mut state
   program [] .errors @ =:: errors
@@ -3621,6 +3628,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     fileId state .interpreter .currentFile =
     program [] .progFiles fileId list.at .data =:: progFile
     state @ clearOps
+    state @ resetInterpreter
     0 while ..dup progFile [] .globalOps .length < do
       progFile [] .globalOps ..over list.get state @ typeCheckOp
       1 +
@@ -3628,12 +3636,12 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     progFile [] .globalOps list.clear
       state .compiledOps progFile [] .globalOps =
     state .compiledOps =
-    state @ resetInterpreter
     state .stack @ branchTree.clear ## TODO error on unhandled values
     fileId 1 +
   end ..drop
   state @ clearOps
   state .compiledOps =:: originalOps
+  false state .isGlobal =
   ## procedures
   0 while ..dup program [] .procedures .length < do =:: procId
     program [] .procedures procId list.at .data =:: currentProc
@@ -3719,6 +3727,6 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
   do end
   state @ freeOps
   state .stack @ branchTree.free
-  state .interpreter @ cleanupContext
+  state .interpreter @ interpreter.cleanupContext
   state .argData @ map.free
 end
