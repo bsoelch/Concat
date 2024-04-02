@@ -3,7 +3,7 @@ import arrayView
 import "constants.concat"
 import "types.concat"
 import "program.concat"
-import "interpreter/interpreter.concat"
+import "interpreter.concat"
 
 enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
 

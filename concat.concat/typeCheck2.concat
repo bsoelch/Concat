@@ -8,7 +8,7 @@ type-checked code in post-fix notation.
 import "program.concat"
 import "types.concat"
 import "identifiers.concat"
-import "interpreter/interpreter.concat"
+import "interpreter.concat"
 import "branchTree.concat"
 import "callResolver.concat"
 

@@ -11,9 +11,9 @@ import "constants.concat"
 import "codeBlocks.concat"
 import "identifiers.concat"
 import "builtIns.concat"
+import "interpreter.concat"
 
 import "interpreter/operators.concat"
-import "interpreter/interpreter.concat"
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
