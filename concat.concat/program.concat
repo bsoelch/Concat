@@ -20,6 +20,7 @@ enum( EMPTY RESERVED ) =:: NopType
 struct(
   Type : procType
   ConstantArray : staticArgs
+  FilePosition : firstUse
   i64 : codeStart
   i64 : mut codeLength
 ) =:: export ProcImplementation

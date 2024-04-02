@@ -3674,6 +3674,12 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
         codeImpl [] .implementations
           implId list.at .data
         =:: implData
+        depth MAX_STATIC_RECURSION >= if
+          "exceeded maximum static recursion depth (" sb.wrap
+            MAX_STATIC_RECURSION sb.appendI
+            ')' sb.appendC
+          implData [] .firstUse errors appendError
+        end
         implData [] .procType typeContext types.getProcIn ..drop =:: procIn
         procIn typeContext types.compositeElts =:: inTypes
         0 =:: mut staticArgCount
@@ -3704,9 +3710,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export typeCheckProgram2
     compiledImplementation if
       depth 1 + depth =
       depth MAX_STATIC_RECURSION > if
-        ## TODO error message (need position)
-        #+"exceeded maximum static recursion depth" sb.wrap
-        pos errors appendError+#
+        ## error message appended in implementation
         break
       end
       continue

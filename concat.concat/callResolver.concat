@@ -1019,6 +1019,7 @@ proc(
             progContext
           replaceGenerics
           constArgs list.asArray constContext constArray
+          pos
           -1
           -1
         ProcImplementation new list.append
