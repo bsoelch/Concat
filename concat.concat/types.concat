@@ -1461,7 +1461,7 @@ namespace: sb
         ..swap
           t ..over.2 context types.compositeGetElement =:: eltType
           unlabeled if
-            eltType context depth appendTypeRecursive
+            eltType context depth 1 - appendTypeRecursive
             ' ' appendC
             ..swap 1 + continue
           end
@@ -1470,7 +1470,7 @@ namespace: sb
             label labelContext id.labelFlags id.FLAG_DUMMY & ? ! &
           =:: printLabel
           printEmptyTypes eltType context types.isEmpty ! | if
-            eltType context depth appendTypeRecursive
+            eltType context depth 1 - appendTypeRecursive
             printLabel if
               " : " appendS
             else
@@ -2471,14 +2471,10 @@ namespace: sb
           "proc["      appendS
           t .procedure appendI
           "]( "        appendS
-          depth 0 > if
-            context [] .procTypes t .procedure list.get =:: procType
-            procType .in context depth 1 - appendTypeRecursive
-            "-> " appendS
-            procType .out context depth 1 - appendTypeRecursive
-          else
-            "... " appendS
-          end
+          context [] .procTypes t .procedure list.get =:: procType
+          procType .in context depth appendTypeRecursive
+          "-> " appendS
+          procType .out context depth appendTypeRecursive
           ")" appendS
         return
       namedType case
