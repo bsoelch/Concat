@@ -817,7 +817,12 @@ namespace: sb
         boolean case
           value .boolean if '1' else '0' end sb.appendC return
         int case
-          t typeContext types.numberSize =:: numSize
+          t typeContext types.isPointer if
+            ## treat pointer constants as integers of type iPtr
+            types.primitive.I_PTR
+          else
+            t
+          end typeContext types.numberSize =:: numSize
           numSize types.primitive.I8
               typeContext types.numberSize == if
             value .int i8 cast sb.appendI

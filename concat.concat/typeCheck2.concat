@@ -2364,8 +2364,7 @@ proc(
       ## canCast
         value .valueType
         op .dataType
-        op .val
-        .Cast! ??
+        op .val .Cast! ??
       typeContext types.canCast ! if
         "cannot cast " sb.wrap
           value .valueType typeContext sb.appendType
@@ -2978,6 +2977,7 @@ proc(
               SWITCH_BLOCK_INFO_NAME sb.appendS
               "-block" sb.appendS
             op .pos errors appendError
+            return
           end
           ## XXX? check for stray labels
           closed .Switch @ =:: switchBlock

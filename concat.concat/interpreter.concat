@@ -35,11 +35,34 @@ struct(
   InterpreterType : mut evalType
 ) =:: export InterpreterContext
 
-proc( i64 : count InterpreterContext ptr mut : context -> bool ) =>: checkStack
+proc(
+  i64 : count
+  string : name
+  bool : canIgnoreErrorMessage
+  FilePosition : pos
+  InterpreterContext ptr mut : context
+-> bool ) =>: checkStack
   context [] .openBlocks .length 0 > if
     context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
   else 0i64 end =:: offset
-  context [] .stack .length offset - count <
+  offset 0 >= assert "offset is non-negative"
+  context [] .stack .length offset - count < if
+    canIgnoreErrorMessage if
+      context [] .evalType switch
+        INTERPRET GLOBAL case break
+        PARSER FOLD_LOCAL case true return
+      end
+    end
+    "not enough arguments for " sb.wrap
+      name sb.appendStr
+      " expected: " sb.appendS
+      count sb.appendI
+      " got: " sb.appendS
+      context [] .stack .length offset - sb.appendI
+    pos context [] .program [] .errors @ appendError
+    true return
+  end
+  false return
 end
 proc( InterpreterContext ptr mut : context -> i64 ) =>: minStackOffset
   context [] .openBlocks .length 0 > if
@@ -269,13 +292,9 @@ proc(
 -> ValueInfo ConstValue bool ) =>: popValue
   context [] .stack .length 0 == if
     context [] .evalType switch
-      INTERPRET case
+      INTERPRET GLOBAL case
         "stack underflow " sb.wrap
         pos context [] .program [] .errors @ appendError
-      break
-      GLOBAL case ## XXX merge with INTERPRET once interpreter is complete
-        "stack underflow " sb.wrap
-        pos context [] .program [] .errors @ appendInfo
       break
       PARSER FOLD_LOCAL case break ## allow underflow
     end
@@ -663,8 +682,6 @@ proc(
           context pushValue
           false return
         TYPE_PROC_IN case
-          ## TODO? distinguish tuple and proc in parser
-          ##  -> removes need to create labels for procIn
           op closedBlock @
             false
             false
@@ -783,21 +800,15 @@ proc(
     declareId case
       context inTypeOrInitializer ! if
         context [] .evalType switch
-          INTERPRET case
+          INTERPRET GLOBAL case
             "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
             op [] .pos errors appendError
-          break
-          GLOBAL case ## XXX merge with INTERPRET once interpreter complete
-            "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
-            op [] .pos errors appendInfo
           break
           PARSER FOLD_LOCAL case break
         end
         true return
       end
-      1 context checkStack if
-        "not enough arguments for declaration, expected 1 got 0" sb.wrap
-        op [] .pos errors appendError
+      1 "field-declaration" string.wrap false op [] .pos context checkStack if
         true return
       end
       context [] .stackInfo list.peek .data =:: valInfo
@@ -887,10 +898,7 @@ proc(
             ## type-generator (procedure returning type)
             op [] .dataType typeContext types.getProcIn ..drop =:: procIn
             procIn typeContext types.compositeElts =:: inTypes
-            inTypes .length context checkStack if
-              "not enough arguments for type-generator " sb.wrap
-                label labelContext sb.appendLabelName
-              op [] .pos errors appendError
+            inTypes .length "type-generator" string.wrap false op [] .pos context checkStack if
               true return
             end
             context [] .stack .length inTypes .length - =:: offset
@@ -986,15 +994,10 @@ proc(
           false return
         TEMPLATE_ARG TMP_VAR PROCEDURE_BUNDLE case
           context [] .evalType switch
-            INTERPRET case
+            INTERPRET GLOBAL case
               "unsupported operation in constant evaluation: " sb.wrap
                 op [] program sb.appendOp
               op [] .pos errors appendError
-              break
-            GLOBAL case ## XXX merge with INTERPRET once interpreter complete
-              "unsupported operation in constant evaluation: " sb.wrap
-                op [] program sb.appendOp
-              op [] .pos errors appendInfo
               break
             PARSER FOLD_LOCAL case break
           end
@@ -1078,38 +1081,166 @@ proc(
           op [] .pos errors appendError
           true return
         end
-      op [] .val .typeModifier .ARRAY ?? ! =:: isPtr
-      fixedSize ! isPtr ! & if
-        "array types must have a fixed size" sb.wrap op [] .pos errors appendError
+        op [] .val .typeModifier .ARRAY ?? ! =:: isPtr
+        fixedSize ! isPtr ! & if
+          "array types must have a fixed size" sb.wrap op [] .pos errors appendError
+        end
+        ## newArrayType
+          typeConstant .typeId
+          isPtr
+          idContext [] .arraySizeBuffer list.asArray
+          fixedSize
+          op [] .val .typeModifier .PTR_MUT ??
+          typeContext
+        types.newArrayType if ..drop
+          isPtr if
+            "could not create pointer type" sb.wrap op [] .pos errors appendError
+          else
+            "could not create array type" sb.wrap op [] .pos errors appendError
+          end
+          true return
+        end =:: ptrType
+        context [] .stack
+          offset list.setLength
+        context [] .stack =
+        context [] .stackInfo
+          offset list.setLength
+        context [] .stackInfo =
+        ## pushValue
+          ptrType ConstValue .typeId
+          types.primitive.TYPE
+          id.LABEL_ID_NONE
+          op [] .pos
+          context
+        pushValue
+        false return
+    getLabel atLabel atName hasLabel hasName case
+      context [] .evalType switch
+        INTERPRET case break
+        PARSER FOLD_LOCAL GLOBAL case
+          ## label/name resolving handled by type-checker
+          true return
       end
-      ## newArrayType
-        typeConstant .typeId
-        isPtr
-        idContext [] .arraySizeBuffer list.asArray
-        fixedSize
-        op [] .val .typeModifier .PTR_MUT ??
-        typeContext
-      types.newArrayType if ..drop
-        isPtr if
-          "could not create pointer type" sb.wrap op [] .pos errors appendError
-        else
-          "could not create array type" sb.wrap op [] .pos errors appendError
+      ## label/name should have been resolved in type-checker
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] program sb.appendOp
+      op [] .pos errors appendError
+      true return
+    New case
+      Type : poppedType
+      ValueInfo : valInfo
+      false =:: mut poppedValue
+      op [] .dataType .undefined ?? if
+        op [] .pos context popType if ..drop.2
+          true return
+        end poppedType = valInfo =
+        poppedType typeContext types.containsGeneric | if
+          ## creating tuple not possible, reset stack
+          ## unpopValue
+            poppedType ConstValue .typeId
+            valInfo
+          context unpopValue
+          true return
+        end
+        true poppedValue =
+        poppedType
+      else
+        op [] .dataType
+      end =:: targetType
+      targetType typeContext types.isArray if
+        ## TODO support constant evaluation of new array
+      else targetType typeContext types.isTuple _if
+        ## separate if block to avoid printing general error message on failure
+        targetType op [] .pos context newTuple ! if
+          false return
+        end
+      else
+        "unsupported operation in constant evaluation: " sb.wrap
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+      end
+      poppedValue if
+        ## unpopValue
+          poppedType ConstValue .typeId
+          valInfo
+        context unpopValue
+      end
+      true return
+    Cast Cast! case
+      Type : poppedType
+      ValueInfo : valInfo
+      false =:: mut isPoppedType
+      op [] .dataType .undefined ?? if
+        op [] .pos context popType if ..drop.2
+          true return
+        end poppedType = valInfo =
+        true isPoppedType =
+        poppedType typeContext types.containsGeneric | if
+          ## casting to genetic value not possible, reset stack
+          ## unpopValue
+            poppedType ConstValue .typeId
+            valInfo
+          context unpopValue
+          true return
+        end
+        poppedType
+      else
+        op [] .dataType
+      end =:: targetType
+      op [] .pos context popValue if ..drop.2
+        isPoppedType if
+          ## unpopValue
+            poppedType ConstValue .typeId
+            valInfo
+          context unpopValue
         end
         true return
-      end =:: ptrType
-      context [] .stack
-        offset list.setLength
-      context [] .stack =
-      context [] .stackInfo
-        offset list.setLength
-      context [] .stackInfo =
+      end =:: oldValue valInfo = ## can overwrite value info
+      ## canCast
+        valInfo .valueType
+        targetType
+        op [] .val .Cast! ??
+      typeContext types.canCast ! if
+        "cannot cast " sb.wrap
+          valInfo .valueType typeContext sb.appendType
+          " to " sb.appendS
+          targetType typeContext sb.appendType
+        op [] .pos errors appendError
+        true return
+      end
+      ## XXX? cast value
       ## pushValue
-        ptrType ConstValue .typeId
-        types.primitive.TYPE
+        oldValue
+        targetType
         id.LABEL_ID_NONE
         op [] .pos
         context
       pushValue
+      false return
+    Assert case
+      op [] .pos context popValue if
+        ..drop.2
+        context [] .evalType switch
+          INTERPRET GLOBAL case
+            "missing argument for assert, expected boolean" sb.wrap
+            op [] .pos errors appendError
+            break
+          PARSER FOLD_LOCAL case break
+        end
+        true return
+      end =:: value =:: valInfo
+      value .boolean ?? ! if
+        "wrong constant value for assert, expected boolean got: " sb.wrap
+          value constContext typeContext sb.appendConstant
+        op [] .pos errors appendError
+        value valInfo context unpopValue
+        true return
+      end
+      value .boolean ! if
+        "assertion failed: " sb.wrap
+          op [] .val .Assert labelContext sb.appendStringConst
+        op [] .pos errors appendError
+      end
       false return
     typeInfo case
       Type : poppedType
@@ -1152,67 +1283,21 @@ proc(
         context
       pushValue
       false return
-    Assert case
-      op [] .pos context popValue if
-        ..drop.2
-        context [] .evalType switch
-          INTERPRET case
-            "missing argument for assert, expected boolean" sb.wrap
-            op [] .pos errors appendError
-            break
-          GLOBAL case ## XXX merge with INTERPRET once interpreter complete
-            "missing argument for assert, expected boolean" sb.wrap
-            op [] .pos errors appendInfo
-            break
-          PARSER FOLD_LOCAL case break
-        end
-        true return
-      end =:: value =:: valInfo
-      value .boolean ?? ! if
-        "wrong constant value for assert, expected boolean got: " sb.wrap
-          value constContext typeContext sb.appendConstant
-        op [] .pos errors appendError
-        value valInfo context unpopValue
-        true return
-      end
-      value .boolean ! if
-        "assertion failed: " sb.wrap
-          op [] .val .Assert labelContext sb.appendStringConst
-        op [] .pos errors appendError
-      end
-      false return
-    getLabel atLabel atName hasLabel hasName case
-      context [] .evalType switch
-        INTERPRET case break
-        PARSER FOLD_LOCAL GLOBAL case
-          ## label/name resolving handled by type-checker
-          true return
-      end
-      ## label/name should have been resolved in type-checker
-      "unsupported operation in constant evaluation: " sb.wrap
-        op [] program sb.appendOp
-      op [] .pos errors appendError
-      true return
     setId atId setLabel
     getElement setElement atElement
     getArrayElement setArrayElement atArrayElement setValue
-    Print New newEnum call callPtr call_old
+    Print newEnum call callPtr call_old
     argc getArg getArgLen implementProcedure procPtr
-    length size Cast Cast! autoCast
+    length size autoCast
     unaryOperator binaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
     hasElement stackMod setName copy builtIn
     compilerInfo unreachable case
       context [] .evalType switch
-        INTERPRET case
+        INTERPRET GLOBAL case
           "unsupported operation in constant evaluation: " sb.wrap
             op [] program sb.appendOp
           op [] .pos errors appendError
-          break
-        GLOBAL case ## XXX merge with INTERPRET once interpreter complete
-          "unsupported operation in constant evaluation: " sb.wrap
-            op [] program sb.appendOp
-          op [] .pos errors appendInfo
           break
         PARSER FOLD_LOCAL case break
       end
@@ -1247,6 +1332,55 @@ proc(
   ## XXX error if unwanted open blocks
   false return
 end
+
+proc(
+  Type : tupleType
+  FilePosition : pos
+  InterpreterContext ptr mut : context
+-> bool ) =>: newTuple
+  context [] .program [] .errors @ =:: errors
+  context [] .program =:: program
+  context [] .program [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  tupleType typeContext types.compositeElts =:: elts
+  elts .length "tuple-creation" string.wrap true pos context checkStack if
+    true return
+  end
+  context [] .stack .length elts .length - =:: offset
+  0 while ..dup elts .length < do =:: i
+    context [] .stackInfo offset i + list.at .data =:: stackInfo
+    stackInfo [] .valueType elts i types.compositeElts.get typeContext types.canAutoCast ! if
+      "wrong argument for tuple creation expected: " sb.wrap
+        elts i types.compositeElts.get typeContext sb.appendType
+        " got: " sb.appendS
+        stackInfo [] .valueType typeContext sb.appendType
+      pos errors appendError
+      true return
+    end
+    i 1 +
+  end ..drop
+  context [] .stack list.asArray
+    offset array.tail
+  constContext newArrayConst =:: tupleConst
+  ## remove arguments and push tuple
+  context [] .stack
+    offset list.setLength
+    tupleConst list.append
+  context [] .stack =
+  context [] .stackInfo
+    offset list.setLength
+    ## ValueInfo
+      tupleType
+      id.LABEL_ID_NONE
+      id.LABEL_ID_NONE
+      pos
+    ValueInfo new list.append
+  context [] .stackInfo =
+  false return
+end
+
 #+evaluate procedure body with the given arguments+#
 proc(
   ProcId : procId
@@ -1264,10 +1398,7 @@ proc(
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
   inType typeContext types.compositeElts =:: args
-  args .length context checkStack if
-    "not enough arguments for procedure " sb.wrap
-      ## TODO print procedure label
-    pos errors appendError
+  args .length "procedure" string.wrap true pos context checkStack if
     true return
   end
   context [] .stack .length args .length - =:: argsOffset
