@@ -43,6 +43,180 @@ namespace: interpreter
     end
   end
 
+  proc( ConstValue : a -> ConstValue bool ) =>: export operatorNegate
+    a switch
+      chr case a .chr -_ ConstValue .int false return
+      int case a .int -_ ConstValue .int false return
+      Float case a .Float -_ ConstValue .Float false return
+      none boolean enumLabel str arrayConstant wildCard genericArg templateArg procedure procedureBundle union typeId case
+        a true return
+    end
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorAddInt
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m + ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorAddF32
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y + ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorAddF64
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y + ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorSubInt
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m - ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorSubF32
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y - ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorSubF64
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y - ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorMulInt
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m * ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorMulF32
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y * ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorMulF64
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y * ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivI32
+    a constAsInt if ..drop a true return end i32 cast =:: n
+    b constAsInt if ..drop a true return end i32 cast =:: m
+    n m / ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUDivI32
+    a constAsInt if ..drop a true return end i32 cast =:: n
+    b constAsInt if ..drop a true return end i32 cast =:: m
+    n m ..udiv ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivI64
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m / ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUDivI64
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m ..udiv ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivF32
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y * ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivF64
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y * ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModI32
+    a constAsInt if ..drop a true return end i32 cast =:: n
+    b constAsInt if ..drop a true return end i32 cast =:: m
+    n m % ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUModI32
+    a constAsInt if ..drop a true return end i32 cast =:: n
+    b constAsInt if ..drop a true return end i32 cast =:: m
+    n m ..umod ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModI64
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m % ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUModI64
+    a constAsInt if ..drop a true return end =:: n
+    b constAsInt if ..drop a true return end =:: m
+    n m ..umod ConstValue .int false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModF32
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y % ConstValue .Float false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModF64
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y % ConstValue .Float false return
+  end
+
+  proc(
+    ConstValue : a
+    ConstValue : b
+    Type : valType0
+    TypeContext ptr : typeContext
+  -> bool  bool ) =>: export operatorEq
+    valType0 typeContext types.unwrapNamed =:: valType
+    valType .primitiveType ?? if
+      valType .primitiveType switch
+        BOOL case
+          a constAsBool if ..drop false true return end =:: x
+          b constAsBool if ..drop false true return end =:: y
+          x y == false return
+        I8 case
+          a constAsInt if ..drop false true return end i8 cast =:: x
+          b constAsInt if ..drop false true return end i8 cast =:: y
+          x y == false return
+        I16 case
+          a constAsInt if ..drop false true return end i16 cast =:: x
+          b constAsInt if ..drop false true return end i16 cast =:: y
+          x y == false return
+        I32 case
+          a constAsInt if ..drop false true return end i32 cast =:: x
+          b constAsInt if ..drop false true return end i32 cast =:: y
+          x y == false return
+        I64 case
+          a constAsInt if ..drop false true return end i64 cast =:: x
+          b constAsInt if ..drop false true return end i64 cast =:: y
+          x y == false return
+        FLOAT32 case
+          a constAsF32 if ..drop false true return end =:: x
+          b constAsF32 if ..drop false true return end =:: y
+          x y == false return
+        FLOAT64 case
+          a constAsF64 if ..drop false true return end =:: x
+          b constAsF64 if ..drop false true return end =:: y
+          x y == false return
+        TYPE case
+          a constAsType if ..drop false true return end =:: x
+          b constAsType if ..drop false true return end =:: y
+          x y types.typeEquals false
+        return
+      end
+    end
+    valType typeContext types.isPointer if
+      a .str ?? b .str ?? & if
+        ## a and b are the same string constant
+        a .str .offset b .str .offset ==
+        a .str .length b .str .length == &
+        false return
+      end
+      a constAsInt if ..drop false true return end =:: x
+      b constAsInt if ..drop false true return end =:: y
+      x y == false return
+    end
+    false true return
+  end
+
+  ## old operator functions, for comparability
 
   proc( Type : opType ConstValue : a -> Type ConstValue bool ) =>: export operator-_
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation

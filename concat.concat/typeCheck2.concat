@@ -209,10 +209,11 @@ proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
     typeInfo? .data =:: typeInfo
     typeInfo [] .value .none ?? if
       break
+    else typeInfo [] .opIndex 0 < _if
+      break
     else typeInfo [] .opIndex minEditableIndex < _if
-      state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
-      opInfo [] .canMove ! opInfo [] .childCount 0 != |
-    _if
+        state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
+        opInfo [] .canMove ! opInfo [] .childCount 0 != | _if
       break
     end
     buffer
@@ -1427,8 +1428,6 @@ proc(
         break
     end
   else op [] .val .blockEnd ?? _if
-      op [] .val .blockEnd .blockType .CASE ??
-      op [] .val .blockEnd .blockType .DEFAULT ?? | _if
     ## resolveSwitchLabels
       switchId
       switchType
@@ -1635,9 +1634,16 @@ proc(
               bundleId list.at .data [] .procedures
             list.asArray
           end =:: procedures
+          0 =:: mut stackConstants
+          true =:: mut headConstant
           state [] .stack branchTree.depth StackValue list.create =:: mut stackValues
           state [] .stack @ branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
+            headConstant if val [] .value .none ?? ! _if
+              stackConstants 1 + stackConstants =
+            else
+              false headConstant =
+            end
             stackValues
               ## StackValue
                 val [] .valueType
@@ -1662,12 +1668,30 @@ proc(
           end
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
+          program [] .procedures
+            calledProc .procId list.at .data
+          =:: calledProcData
+          calledType op .dataType =
+          calledProcData [] .implementation switch
+            code case
+              calledProc OpValue .call op .val =
+            break
+            builtIn case
+              calledProcData [] .implementation .builtIn
+                OpValue .builtIn op .val =
+            break
+          end
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
-          #+ XXX? try interpreting call,
-            if all arguments const-value and
-            called procedure compile-time evaluateable
-          +#
+          stackConstants argCount >= if ## enough arguments for interpreting call
+              calledProcData [] .isStatic ## only try interpreting static and built-ins
+              calledProcData [] .implementation .builtIn ?? | _if
+            state unfreezeInterpreter
+            op @ state [] .interpreter @ evaluateOperation ! if
+              return
+            end
+            state freezeInterpreter ## constant evaluation failed
+          end
           0 =:: mut offset
           argCount i32 cast 1 - while ..dup 0 >= do =:: i
             inTypes i typeContext types.compositeGetLabel =:: eltLabel
@@ -1695,19 +1719,6 @@ proc(
             end
             i 1 -
           end ..drop
-          program [] .procedures
-            calledProc .procId list.at .data
-          =:: calledProcData
-          calledType op .dataType =
-          calledProcData [] .implementation switch
-            code case
-              calledProc OpValue .call op .val =
-            break
-            builtIn case
-              calledProcData [] .implementation .builtIn
-                OpValue .builtIn op .val =
-            break
-          end
           op state appendOp ..drop
           calledType typeContext types.getProcOut ..drop
             typeContext types.compositeEltArray
