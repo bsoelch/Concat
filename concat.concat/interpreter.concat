@@ -453,6 +453,136 @@ namespace: interpreter
     end
   end
   proc(
+    Type : t
+    ConstValue : value
+    bool : isLength
+    FilePosition : pos
+    ProgramContext ptr mut : program
+  -> Type ConstValue bool ) =>: export sizeOfValue
+    program [] .errors @ =:: errors
+    program [] .idContext @ =:: idContext
+    idContext [] .typeContext @ =:: typeContext
+    idContext [] .constContext @ =:: constContext
+    false =:: mut isType
+    t typeContext types.unwrapReference =:: mut valType
+    valType types.primitive.TYPE types.typeEquals if
+      value .typeId ?? ! if
+        "unexpected constant value for type type: " sb.wrap
+          value constContext typeContext sb.appendConstant
+        pos errors appendError
+        Type .undefined ConstValue .none true return
+      end
+      value .typeId valType =
+      true isType =
+    end
+    valType typeContext types.isPointer
+        valType typeContext types.isArray | if
+      valType typeContext types.isFixedSize ! if
+        "cannot get the " sb.wrap
+          isLength if
+            "length" sb.appendS
+          else
+            "size" sb.appendS
+          end
+          " of : " sb.appendS
+          valType typeContext sb.appendType
+        pos errors appendError
+        Type .undefined ConstValue .none true return
+      end
+      valType typeContext types.getArraySize =:: sizes
+      isLength if
+        sizes .length 0 == if
+          ## return
+            types.primitive.I_SIZE
+            1 ConstValue .int
+            false
+          return
+        end
+        sizes
+          ..dup .length 1 -
+        array.get =:: outerSize
+        outerSize .sizeType .int ?? if
+          ## return
+            types.primitive.I_SIZE
+            outerSize .value ConstValue .int
+            false
+          return
+        else outerSize .sizeType .staticArg ?? _if
+          ## return
+            types.primitive.I_SIZE
+            outerSize .value
+              i32 cast
+            ConstValue .genericArg
+            false
+          return
+        else
+          "unsupported array-size type: " sb.wrap
+            ## XXX? print array-size type name
+          pos errors appendError
+          Type .undefined ConstValue .none true return
+        end
+      else
+        idContext [] .templateArgBuffer .length =:: offset
+        0 while ..dup sizes .length < do =:: i
+          sizes i array.get =:: current
+          idContext [] .templateArgBuffer
+            current .sizeType .int ?? if
+              current .value ConstValue .int list.append
+            else current .sizeType .staticArg ?? _if
+              current .value i32 cast ConstValue .genericArg list.append
+            else ..drop
+              "unsupported array-size type: " sb.wrap
+                ## XXX? print array-size type name
+              pos errors appendError
+              Type .undefined ConstValue .none true return
+            end
+          idContext [] .templateArgBuffer =
+          i 1 +
+        end ..drop
+        sizes .length
+          types.ArraySizeType .int
+          types.ArraySize new
+        =:: sizeLength
+        ## return
+          ## newArrayType
+            types.primitive.I_SIZE
+            false
+            sizeLength @
+            array.wrap
+            true false
+          typeContext types.newArrayType ..drop
+          ## newArrayConst
+            idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
+            idContext [] .constContext @
+          newArrayConst
+          idContext [] .templateArgBuffer
+            offset list.setLength
+          idContext [] .templateArgBuffer =
+          false
+        return
+      end
+    else isLength _if isType _if
+        valType typeContext types.isComposite _if
+      ## return
+        types.primitive.I_SIZE
+        valType
+          typeContext types.compositeEltCount
+        ConstValue .int
+        false
+      return
+    end
+    "unsupported argument type for " sb.wrap
+      isLength if
+        "length" sb.appendS
+      else
+        "size" sb.appendS
+      end
+      "-computation: " sb.appendS
+      valType typeContext sb.appendType
+    pos errors appendError
+    Type .undefined ConstValue .none true return
+  end
+  proc(
     LabelId : generatorName
     ProcId : generatorProc
     ConstValue arrayView : args
@@ -1258,6 +1388,28 @@ proc(
         op [] .pos errors appendError
       end
       false return
+    length size case
+      op [] .pos context popValue if ..drop.2
+        true return
+      end =:: value =:: valInfo
+      ## sizeOfValue
+        valInfo .valueType
+        value
+        op [] .val .length ??
+        op [] .pos
+        program
+      interpreter.sizeOfValue if ..drop.2
+        value valInfo context unpopValue
+        true return
+      end =:: constVal =:: constType
+      ## pushValue
+        constVal
+        constType
+        id.LABEL_ID_NONE
+        op [] .pos
+        context
+      pushValue
+      false return
     typeInfo case
       Type : poppedType
       ValueInfo : valInfo
@@ -1355,7 +1507,7 @@ proc(
     getArrayElement setArrayElement atArrayElement setValue
     Print newEnum call callPtr call_old
     argc getArg getArgLen implementProcedure procPtr
-    length size autoCast
+    autoCast
     unaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
     hasElement stackMod setName copy

@@ -3304,82 +3304,21 @@ proc(
         op .pos errors appendError
         return
       end
-      value? .data [] .valueType =:: mut valType
-      valType typeContext types.unwrapReference valType =
-      valType typeContext types.isPointer valType typeContext types.isArray | if
-        valType typeContext types.isFixedSize ! if
-          "invalid operand for : " sb.wrap
-            op program sb.appendOp
-            " cannot get the length of " sb.appendS
-            valType typeContext sb.appendType
-          op .pos errors appendError
-          return
-        end
-        1 op .pos state discardValues ## remove value from stack
-        valType typeContext types.getArraySize =:: sizes
-        op .val .length ?? if
-          sizes .length 0 == if
-            1 ConstValue .int types.primitive.I_SIZE op .pos state pushConstant
-            return
-          else sizes 0 array.get .sizeType .int ?? _if
-            ## pushConstant
-              sizes 0 array.get .value ConstValue .int
-              types.primitive.I_SIZE
-              op .pos
-            state pushConstant
-            return
-          else sizes 0 array.get .sizeType .staticArg ?? _if
-            ## pushConstant
-              sizes 0 array.get .value i32 cast ConstValue .genericArg
-              types.primitive.I_SIZE
-              op .pos
-            state pushConstant
-            return
-          else
-            "unsupported array-size type for " sb.wrap
-              op program sb.appendOp
-            op .pos errors appendError
-            return
-          end
-        else
-          idContext [] .templateArgBuffer .length =:: offset
-          0 while ..dup sizes .length < do
-            sizes ..over array.get =:: current
-            idContext [] .templateArgBuffer
-              current .sizeType .int ?? if
-                current .value ConstValue .int list.append
-              else current .sizeType .staticArg ?? _if
-                current .value i32 cast ConstValue .genericArg list.append
-              else ..drop.2
-                "unsupported array-size type for " sb.wrap
-                  op program sb.appendOp
-                op .pos errors appendError
-                return
-              end
-            idContext [] .templateArgBuffer =
-            1 +
-          end ..drop
-          sizes .length types.ArraySizeType .int types.ArraySize new =:: sizeLength
-          ## pushConstant
-            ## newArrayConst
-              idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
-              idContext [] .constContext @
-            newArrayConst
-            types.primitive.I_SIZE false sizeLength @ array.wrap true false typeContext types.newArrayType ..drop
-            op .pos
-          state pushConstant
-          idContext [] .templateArgBuffer
-            offset list.setLength
-          idContext [] .templateArgBuffer =
-          return
-        end
-      end ## XXX? support length on structs/tuples/enums
-      "unsupported argument type for " sb.wrap
-        op program sb.appendOp
-        valType typeContext sb.appendType
-      op .pos errors appendError
+        value? .data [] .valueType
+        value? .data [] .value
+        op .val .length ??
+        op .pos
+        program
+      interpreter.sizeOfValue if ..drop.2
+        return
+      end =:: constVal =:: constType
+      1 op .pos state discardValues ## remove value from stack
+      ## pushConstant
+        constVal
+        constType
+        op .pos
+      state pushConstant
       return
-      break
     getName builtIn procPtr
     newEnum call getArgLen
     unaryOperator
