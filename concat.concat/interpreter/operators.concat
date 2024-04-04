@@ -1,4 +1,5 @@
 import "constants.concat"
+import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
@@ -14,6 +15,15 @@ namespace: interpreter
       none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure procedureBundle union case 0i64 true return
     end
   end
+  proc( ConstValue : a -> f64 bool ) =>: constAsFloat
+    a switch
+      chr case a .chr f64 cast false return
+      int case a .int f64 cast false return
+      Float case a .Float f64 cast false return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg procedure procedureBundle union case 0 f64 cast true return
+    end
+  end
+  ## backwards compatability
   proc( ConstValue : a -> f32 bool ) =>: constAsF32
     a switch
       chr case a .chr f32 cast false return
@@ -43,120 +53,396 @@ namespace: interpreter
     end
   end
 
-  proc( ConstValue : a -> ConstValue bool ) =>: export operatorNegate
+
+  enum( success argumentError unimplemented ) =:: export OperatorResult
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( bool -> bool ) ptr : op
+  -> ConstValue OperatorResult ) =>: unaryOperatorBool
+    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    args 0 [] constAsBool if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end =:: a
+    a op () ConstValue .boolean OperatorResult .success return
+  end
+  #:if:exp
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    type : T
+  -> ConstValue OperatorResult ) =>: unaryOperatorToBool
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+  -> ConstValue OperatorResult ) =>: unaryOperatorToBool
+  #:end
+    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    args 0 [] =:: a
     a switch
-      chr case a .chr -_ ConstValue .int false return
-      int case a .int -_ ConstValue .int false return
-      Float case a .Float -_ ConstValue .Float false return
-      none boolean enumLabel str arrayConstant wildCard genericArg templateArg procedure procedureBundle union typeId case
-        a true return
+      boolean case a OperatorResult .success return
+      chr case a .chr T cast ? ConstValue .boolean OperatorResult .success return
+      int case a .int T cast ? ConstValue .boolean OperatorResult .success return
+      Float case a .Float T cast ? ConstValue .boolean OperatorResult .success return
+      none enumLabel str arrayConstant typeId wildCard genericArg
+          templateArg procedure procedureBundle union case
+        ConstValue .none OperatorResult .argumentError return
     end
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorAddInt
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m + ConstValue .int false return
+  #:if:exp
+  proc(
+    type : auto T
+    ConstValue _ ptr : args
+    i32 : k
+    ( T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: unaryOperatorInt
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: unaryOperatorInt
+  #:end
+    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    args 0 [] constAsInt if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: n
+    n op () ConstValue .int OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorAddF32
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y + ConstValue .Float false return
+  #:if:exp
+  proc(
+    type : auto T
+    ConstValue _ ptr : args
+    i32 : k
+    ( T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: unaryOperatorFloat
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: unaryOperatorFloat
+  #:end
+    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    args 0 [] constAsFloat if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: n
+    n op () ConstValue .Float OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorAddF64
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y + ConstValue .Float false return
+
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( bool bool -> bool ) ptr : op
+  -> ConstValue OperatorResult ) =>: binaryOperatorBool
+    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    args 0 [] constAsBool  if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end =:: a
+    args 1 [] constAsBool  if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end =:: b
+    a b op () ConstValue .boolean OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorSubInt
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m - ConstValue .int false return
+
+  #:if:exp
+  proc(
+    type : auto T
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: binaryOperatorInt
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: binaryOperatorInt
+  #:end
+    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    args 0 [] constAsInt if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: n
+    args 1 [] constAsInt if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: m
+    n m op () ConstValue .int OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorSubF32
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y - ConstValue .Float false return
+  #:if:exp
+  proc(
+    type : auto T
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: binaryOperatorFloat
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> T ) ptr : op
+  -> ConstValue OperatorResult ) =>: binaryOperatorFloat
+  #:end
+    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    args 0 [] constAsFloat if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: x
+    args 1 [] constAsFloat if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: y
+    x y op () ConstValue .Float OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorSubF64
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y - ConstValue .Float false return
+  #:if:exp
+  proc(
+    type : auto T
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> bool ) ptr : op
+  -> ConstValue OperatorResult ) =>: cmpOperatorInt
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> bool ) ptr : op
+  -> ConstValue OperatorResult ) =>: cmpOperatorInt
+  #:end
+    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    args 0 [] constAsInt if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: n
+    args 1 [] constAsInt if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: m
+    n m op () ConstValue .boolean OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorMulInt
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m * ConstValue .int false return
+  #:if:exp
+  proc(
+    type : auto T
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> bool ) ptr : op
+  -> ConstValue OperatorResult ) =>: cmpOperatorFloat
+  #:else
+  #template type : T #end
+  proc(
+    ConstValue _ ptr : args
+    i32 : k
+    ( T T -> bool ) ptr : op
+  -> ConstValue OperatorResult ) =>: cmpOperatorFloat
+  #:end
+    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    args 0 [] constAsFloat if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: x
+    args 1 [] constAsFloat if ..drop
+      ConstValue .none OperatorResult .argumentError return
+    end T cast =:: y
+    x y op () ConstValue .boolean OperatorResult .success return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorMulF32
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y * ConstValue .Float false return
+
+  proc(
+    BuiltIn : builtIn
+    ConstValue _ ptr : args
+    i32 : k
+  -> ConstValue OperatorResult ) =>: export evaluateBuiltIn
+    builtIn switch
+      NEG_I8 NEG_I16 NEG_I32 NEG_I64 case
+         args k negI64 @ unaryOperatorInt return
+      NEG_F32 case args k negF32 @ unaryOperatorFloat return
+      NEG_F64 case args k negF64 @ unaryOperatorFloat return
+      ADD_I8 ADD_I16 ADD_I32 ADD_I64 case
+        args k addI64 @ binaryOperatorInt return
+      ADD_F32 case args k addF32 @ binaryOperatorFloat return
+      ADD_F64 case args k addF64 @ binaryOperatorFloat return
+      ADD_PTR ADD_PTR_MUT case break
+      SUB_I8 SUB_I16 SUB_I32 SUB_I64 case
+        args k subI64 @ binaryOperatorInt return
+      SUB_F32 case args k subF32 @ binaryOperatorFloat return
+      SUB_F64 case  args k subF64 @ binaryOperatorFloat return
+      SUB_PTR SUB_PTR_MUT case break
+      PTR_DIFF case break
+      MUL_I32 MUL_I64 case args k mulI64 @ binaryOperatorInt return
+      MUL_F32 case args k mulF32 @ binaryOperatorFloat return
+      MUL_F64 case args k mulF64 @ binaryOperatorFloat return
+      DIV_I32 case args k divI32 @ binaryOperatorInt return
+      DIV_I64 case args k divI64 @ binaryOperatorInt return
+      DIV_F32 case args k divF32 @ binaryOperatorFloat return
+      DIV_F64 case args k divF64 @ binaryOperatorFloat return
+      UDIV_I32 case args k udivI32 @ binaryOperatorInt return
+      UDIV_I64 case args k udivI64 @ binaryOperatorInt return
+      MOD_I32 case args k modI32 @ binaryOperatorInt return
+      MOD_I64 case args k modI64 @ binaryOperatorInt return
+      MOD_F32 case args k modF32 @ binaryOperatorFloat return
+      MOD_F64 case args k modF64 @ binaryOperatorFloat return
+      UMOD_I32 case args k umodI32 @ binaryOperatorInt return
+      UMOD_I64 case args k umodI64 @ binaryOperatorInt return
+      NOT_BOOL case
+         args k notBool @ unaryOperatorBool return
+      FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+         args k flipI64 @ unaryOperatorInt return
+      BOOL_I8 case args k i8 unaryOperatorToBool return
+      BOOL_I16 case args k i16 unaryOperatorToBool return
+      BOOL_I32 case args k i32 unaryOperatorToBool return
+      BOOL_I64 case args k i64 unaryOperatorToBool return
+      BOOL_F32 case args k f32 unaryOperatorToBool return
+      BOOL_F64 case args k f64 unaryOperatorToBool return
+      AND_BOOL case args k andBool @ binaryOperatorBool return
+      AND_I8 AND_I16 AND_I32 AND_I64 case
+        args k andI64 @ binaryOperatorInt return
+      OR_BOOL case args k orBool @ binaryOperatorBool return
+      OR_I8 OR_I16 OR_I32 OR_I64 case
+        args k orI64 @ binaryOperatorInt return
+      XOR_BOOL case args k xorBool @ binaryOperatorBool return
+      XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+        args k xorI64 @ binaryOperatorInt return
+      LSHR_I8 case args k lshrI8 @ binaryOperatorInt return
+      LSHR_I16 case args k lshrI16 @ binaryOperatorInt return
+      LSHR_I32 case args k lshrI32 @ binaryOperatorInt return
+      LSHR_I64 case args k lshrI64 @ binaryOperatorInt return
+      ASHR_I8 case args k ashrI8 @ binaryOperatorInt return
+      ASHR_I16 case args k ashrI16 @ binaryOperatorInt return
+      ASHR_I32 case args k ashrI32 @ binaryOperatorInt return
+      ASHR_I64 case args k ashrI64 @ binaryOperatorInt return
+      SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+        args k shlI64 @ binaryOperatorInt return
+      LT_I8 case args k ltI8 @ cmpOperatorInt return
+      LT_I16 case args k ltI16 @ cmpOperatorInt return
+      LT_I32 case args k ltI32 @ cmpOperatorInt return
+      LT_I64 case args k ltI64 @ cmpOperatorInt return
+      LT_F32 case args k ltF32 @ cmpOperatorFloat return
+      LT_F64 case args k ltF64 @ cmpOperatorFloat return
+      LT_PTR case break
+      LE_I8 case args k leI8 @ cmpOperatorInt return
+      LE_I16 case args k leI16 @ cmpOperatorInt return
+      LE_I32 case args k leI32 @ cmpOperatorInt return
+      LE_I64 case args k leI64 @ cmpOperatorInt return
+      LE_F32 case args k leF32 @ cmpOperatorFloat return
+      LE_F64 case args k leF64 @ cmpOperatorFloat return
+      LE_PTR case break
+      GE_I8 case args k geI8 @ cmpOperatorInt return
+      GE_I16 case args k geI16 @ cmpOperatorInt return
+      GE_I32 case args k geI32 @ cmpOperatorInt return
+      GE_I64 case args k geI64 @ cmpOperatorInt return
+      GE_F32 case args k geF32 @ cmpOperatorFloat return
+      GE_F64 case args k geF64 @ cmpOperatorFloat return
+      GE_PTR case break
+      GT_I8 case args k gtI8 @ cmpOperatorInt return
+      GT_I16 case args k gtI16 @ cmpOperatorInt return
+      GT_I32 case args k gtI32 @ cmpOperatorInt return
+      GT_I64 case args k gtI64 @ cmpOperatorInt return
+      GT_F32 case args k gtF32 @ cmpOperatorFloat return
+      GT_F64 case args k gtF64 @ cmpOperatorFloat return
+      GT_PTR case break
+      ULT_I8 case args k ultI8 @ cmpOperatorInt return
+      ULT_I16 case args k ultI16 @ cmpOperatorInt return
+      ULT_I32 case args k ultI32 @ cmpOperatorInt return
+      ULT_I64 case args k ultI64 @ cmpOperatorInt return
+      ULE_I8 case args k uleI8 @ cmpOperatorInt return
+      ULE_I16 case args k uleI16 @ cmpOperatorInt return
+      ULE_I32 case args k uleI32 @ cmpOperatorInt return
+      ULE_I64 case args k uleI64 @ cmpOperatorInt return
+      UGE_I8 case args k ugeI8 @ cmpOperatorInt return
+      UGE_I16 case args k ugeI16 @ cmpOperatorInt return
+      UGE_I32 case args k ugeI32 @ cmpOperatorInt return
+      UGE_I64 case args k ugeI64 @ cmpOperatorInt return
+      UGT_I8 case args k ugtI8 @ cmpOperatorInt return
+      UGT_I16 case args k ugtI16 @ cmpOperatorInt return
+      UGT_I32 case args k ugtI32 @ cmpOperatorInt return
+      UGT_I64 case args k ugtI64 @ cmpOperatorInt return
+      PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
+      PRINT_F32 PRINT_F64 PRINT_PTR case break
+    end
+    ConstValue .none  OperatorResult .unimplemented return
   end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorMulF64
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y * ConstValue .Float false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivI32
-    a constAsInt if ..drop a true return end i32 cast =:: n
-    b constAsInt if ..drop a true return end i32 cast =:: m
-    n m / ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUDivI32
-    a constAsInt if ..drop a true return end i32 cast =:: n
-    b constAsInt if ..drop a true return end i32 cast =:: m
-    n m ..udiv ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivI64
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m / ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUDivI64
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m ..udiv ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivF32
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y / ConstValue .Float false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivF64
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y / ConstValue .Float false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModI32
-    a constAsInt if ..drop a true return end i32 cast =:: n
-    b constAsInt if ..drop a true return end i32 cast =:: m
-    n m % ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUModI32
-    a constAsInt if ..drop a true return end i32 cast =:: n
-    b constAsInt if ..drop a true return end i32 cast =:: m
-    n m ..umod ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModI64
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m % ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorUModI64
-    a constAsInt if ..drop a true return end =:: n
-    b constAsInt if ..drop a true return end =:: m
-    n m ..umod ConstValue .int false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModF32
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y % ConstValue .Float false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModF64
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y % ConstValue .Float false return
-  end
+
+  ## TODO allow creating pointer to built-in function
+  proc( i64 -> i64 ) =>: negI64 -_ end
+  proc( f32 -> f32 ) =>: negF32 -_ end
+  proc( f64 -> f64 ) =>: negF64 -_ end
+  proc( i64 i64 -> i64 ) =>: addI64 + end
+  proc( f32 f32 -> f32 ) =>: addF32 + end
+  proc( f64 f64 -> f64 ) =>: addF64 + end
+  proc( i64 i64 -> i64 ) =>: subI64 - end
+  proc( f32 f32 -> f32 ) =>: subF32 - end
+  proc( f64 f64 -> f64 ) =>: subF64 - end
+  proc( i64 i64 -> i64 ) =>: mulI64 * end
+  proc( f32 f32 -> f32 ) =>: mulF32 * end
+  proc( f64 f64 -> f64 ) =>: mulF64 * end
+  proc( i32 i32 -> i32 ) =>: divI32 / end
+  proc( i64 i64 -> i64 ) =>: divI64 / end
+  proc( f32 f32 -> f32 ) =>: divF32 / end
+  proc( f64 f64 -> f64 ) =>: divF64 / end
+  proc( i32 i32 -> i32 ) =>: udivI32 ..udiv end
+  proc( i64 i64 -> i64 ) =>: udivI64 ..udiv end
+  proc( i32 i32 -> i32 ) =>: modI32 % end
+  proc( i64 i64 -> i64 ) =>: modI64 % end
+  proc( f32 f32 -> f32 ) =>: modF32 % end
+  proc( f64 f64 -> f64 ) =>: modF64 % end
+  proc( i32 i32 -> i32 ) =>: umodI32 ..umod end
+  proc( i64 i64 -> i64 ) =>: umodI64 ..umod end
+  proc( i8 i8 -> bool ) =>: ltI8 < end
+  proc( i16 i16 -> bool ) =>: ltI16 < end
+  proc( i32 i32 -> bool ) =>: ltI32 < end
+  proc( i64 i64 -> bool ) =>: ltI64 < end
+  proc( f32 f32 -> bool ) =>: ltF32 < end
+  proc( f64 f64 -> bool ) =>: ltF64 < end
+  proc( i8 i8 -> bool ) =>: leI8 <= end
+  proc( i16 i16 -> bool ) =>: leI16 <= end
+  proc( i32 i32 -> bool ) =>: leI32 <= end
+  proc( i64 i64 -> bool ) =>: leI64 <= end
+  proc( f32 f32 -> bool ) =>: leF32 <= end
+  proc( f64 f64 -> bool ) =>: leF64 <= end
+  proc( i8 i8 -> bool ) =>: geI8 >= end
+  proc( i16 i16 -> bool ) =>: geI16 >= end
+  proc( i32 i32 -> bool ) =>: geI32 >= end
+  proc( i64 i64 -> bool ) =>: geI64 >= end
+  proc( f32 f32 -> bool ) =>: geF32 >= end
+  proc( f64 f64 -> bool ) =>: geF64 >= end
+  proc( i8 i8 -> bool ) =>: gtI8 > end
+  proc( i16 i16 -> bool ) =>: gtI16 > end
+  proc( i32 i32 -> bool ) =>: gtI32 > end
+  proc( i64 i64 -> bool ) =>: gtI64 > end
+  proc( f32 f32 -> bool ) =>: gtF32 > end
+  proc( f64 f64 -> bool ) =>: gtF64 > end
+  proc( i8 i8 -> bool ) =>: ultI8 ..u< end
+  proc( i16 i16 -> bool ) =>: ultI16 ..u< end
+  proc( i32 i32 -> bool ) =>: ultI32 ..u< end
+  proc( i64 i64 -> bool ) =>: ultI64 ..u< end
+  proc( i8 i8 -> bool ) =>: uleI8 ..u<= end
+  proc( i16 i16 -> bool ) =>: uleI16 ..u<= end
+  proc( i32 i32 -> bool ) =>: uleI32 ..u<= end
+  proc( i64 i64 -> bool ) =>: uleI64 ..u<= end
+  proc( i8 i8 -> bool ) =>: ugeI8 ..u>= end
+  proc( i16 i16 -> bool ) =>: ugeI16 ..u>= end
+  proc( i32 i32 -> bool ) =>: ugeI32 ..u>= end
+  proc( i64 i64 -> bool ) =>: ugeI64 ..u>= end
+  proc( i8 i8 -> bool ) =>: ugtI8 ..u> end
+  proc( i16 i16 -> bool ) =>: ugtI16 ..u> end
+  proc( i32 i32 -> bool ) =>: ugtI32 ..u> end
+  proc( i64 i64 -> bool ) =>: ugtI64 ..u> end
+  proc( bool -> bool ) =>: notBool ! end
+  proc( i64 -> i64 ) =>: flipI64 ~ end
+  proc( bool bool -> bool ) =>: andBool & end
+  proc( i64 i64 -> i64 ) =>: andI64 & end
+  proc( bool bool -> bool ) =>: orBool | end
+  proc( i64 i64 -> i64 ) =>: orI64 | end
+  proc( bool bool -> bool ) =>: xorBool ^ end
+  proc( i64 i64 -> i64 ) =>: xorI64 ^ end
+  proc( i64 i64 -> i64 ) =>: shlI64 << end
+  proc( i8  i8  -> i8  ) =>: ashrI8 >> end
+  proc( i16 i16 -> i16 ) =>: ashrI16 >> end
+  proc( i32 i32 -> i32 ) =>: ashrI32 >> end
+  proc( i64 i64 -> i64 ) =>: ashrI64 >> end
+  proc( i8  i8  -> i8  ) =>: lshrI8 ..lshr end
+  proc( i16 i16 -> i16 ) =>: lshrI16 ..lshr end
+  proc( i32 i32 -> i32 ) =>: lshrI32 ..lshr end
+  proc( i64 i64 -> i64 ) =>: lshrI64 ..lshr end
 
   proc(
     ConstValue : a
@@ -188,12 +474,12 @@ namespace: interpreter
           b constAsInt if ..drop false true return end i64 cast =:: y
           x y == false return
         FLOAT32 case
-          a constAsF32 if ..drop false true return end =:: x
-          b constAsF32 if ..drop false true return end =:: y
+          a constAsFloat if ..drop false true return end f32 cast =:: x
+          b constAsFloat if ..drop false true return end f32 cast =:: y
           x y == false return
         FLOAT64 case
-          a constAsF64 if ..drop false true return end =:: x
-          b constAsF64 if ..drop false true return end =:: y
+          a constAsFloat if ..drop false true return end f64 cast =:: x
+          b constAsFloat if ..drop false true return end f64 cast =:: y
           x y == false return
         TYPE case
           a constAsType if ..drop false true return end =:: x
@@ -214,121 +500,6 @@ namespace: interpreter
       x y == false return
     end
     false true return
-  end
-  proc(
-    ConstValue : a
-    ConstValue : b
-    Type : valType0
-    TypeContext ptr : typeContext
-  -> i32  bool ) =>: export operatorCompare
-    valType0 typeContext types.unwrapNamed =:: valType
-    valType .primitiveType ?? if
-      valType .primitiveType switch
-        BOOL case
-          a constAsBool if ..drop 0 true return end =:: x
-          b constAsBool if ..drop 0 true return end =:: y
-          x y == if 0 else x _if 1 else -1 end false return
-        I8 case
-          a constAsInt if ..drop 0 true return end i8 cast =:: x
-          b constAsInt if ..drop 0 true return end i8 cast =:: y
-          x y == if 0 else x y > _if 1 else -1 end false return
-        I16 case
-          a constAsInt if ..drop 0 true return end i16 cast =:: x
-          b constAsInt if ..drop 0 true return end i16 cast =:: y
-          x y == if 0 else x y > _if 1 else -1 end false return
-        I32 case
-          a constAsInt if ..drop 0 true return end i32 cast =:: x
-          b constAsInt if ..drop 0 true return end i32 cast =:: y
-          x y == if 0 else x y > _if 1 else -1 end false return
-        I64 case
-          a constAsInt if ..drop 0 true return end i64 cast =:: x
-          b constAsInt if ..drop 0 true return end i64 cast =:: y
-          x y == if 0 else x y > _if 1 else -1 end false return
-        FLOAT32 FLOAT64 case
-          0 true return ## TODO support compare for floats
-        TYPE case
-          0 true return
-      end
-    end
-    valType typeContext types.isPointer if
-      ## cannot compare string-pointers in constant evaluation
-      a constAsInt if ..drop 0 true return end =:: x
-      b constAsInt if ..drop 0 true return end =:: y
-      x y == if 0 else x y > _if 1 else -1 end false return
-    end
-    0 true return
-  end
-  proc(
-    ConstValue : a
-    ConstValue : b
-    Type : valType0
-    TypeContext ptr : typeContext
-  -> i32  bool ) =>: export operatorUnsignedCompare
-    valType0 typeContext types.unwrapNamed =:: valType
-    valType .primitiveType ?? if
-      valType .primitiveType switch
-        I8 case
-          a constAsInt if ..drop 0 true return end i8 cast =:: x
-          b constAsInt if ..drop 0 true return end i8 cast =:: y
-          x y == if 0 else x y ..u> _if 1 else -1 end false return
-        I16 case
-          a constAsInt if ..drop 0 true return end i16 cast =:: x
-          b constAsInt if ..drop 0 true return end i16 cast =:: y
-          x y == if 0 else x y ..u> _if 1 else -1 end false return
-        I32 case
-          a constAsInt if ..drop 0 true return end i32 cast =:: x
-          b constAsInt if ..drop 0 true return end i32 cast =:: y
-          x y == if 0 else x y ..u> _if 1 else -1 end false return
-        I64 case
-          a constAsInt if ..drop 0 true return end i64 cast =:: x
-          b constAsInt if ..drop 0 true return end i64 cast =:: y
-          x y == if 0 else x y ..u> _if 1 else -1 end false return
-        BOOL FLOAT32 FLOAT64 TYPE case
-          0 true return
-      end
-    end
-    0 true return
-  end
-
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32LT
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y < ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64LT
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y < ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32LE
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y <= ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64LE
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y <= ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32GE
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y >= ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64GE
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y >= ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32GT
-    a constAsF32 if ..drop a true return end =:: x
-    b constAsF32 if ..drop a true return end =:: y
-    x y > ConstValue .boolean false return
-  end
-  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64GT
-    a constAsF64 if ..drop a true return end =:: x
-    b constAsF64 if ..drop a true return end =:: y
-    x y > ConstValue .boolean false return
   end
 
   ## old operator functions, for comparability

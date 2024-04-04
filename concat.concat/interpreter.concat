@@ -1524,58 +1524,6 @@ proc(
   end
 end
 
-
-proc(
-  BuiltIn : builtIn
-  ConstValue _ ptr : args
-  i64 : argCount
-  FilePosition : pos
-  InterpreterContext ptr mut : context
--> ) =>: printBuiltError
-  context [] .program [] .errors @ =:: errors
-  context [] .program =:: program
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  "invalid arguments for built-in " sb.wrap
-    builtIn sb.appendBuiltIn
-    ": " sb.appendS
-    0 while ..dup argCount < do =:: i
-      args i [] constContext typeContext sb.appendConstant
-      i 1 +
-    end ..drop
-  pos errors appendError
-end
-
-proc(
-  ConstValue : value
-  bool : isError
-  BuiltIn : builtIn
-  Type : calledType
-  ConstValue _ ptr : values
-  ValueInfo _ ptr : valInfos
-  i64 : argCount
-  FilePosition : pos
-  InterpreterContext ptr mut : context
--> bool ) =>: processBuiltInResult
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  isError if
-    builtIn values argCount pos context printBuiltError
-    values valInfos argCount context unpopValues
-    true return
-  end
-  value
-    calledType typeContext types.getProcRet
-      ! assert "has return type"
-    id.LABEL_ID_NONE
-    pos
-    context
-  pushValue
-  false return
-end
-
 proc(
   Type : calledType
   BuiltIn : builtIn
@@ -1624,203 +1572,41 @@ proc(
     nArgs 1 + nArgs =
     i 1 -
   end ..drop
-  builtIn switch
-    NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
-      values 0 [] interpreter.operatorNegate
-        builtIn calledType values valInfos 1
-      pos context processBuiltInResult return
-    ADD_I8 ADD_I16 ADD_I32 ADD_I64 case
-      values 1 [] values 0 [] interpreter.operatorAddInt
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    ADD_F32 case
-      values 1 [] values 0 [] interpreter.operatorAddF32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    ADD_F64 case
-      values 1 [] values 0 [] interpreter.operatorAddF64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    ADD_PTR ADD_PTR_MUT case break
-    SUB_I8 SUB_I16 SUB_I32 SUB_I64 case
-      values 1 [] values 0 [] interpreter.operatorSubInt
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    SUB_F32 case
-      values 1 [] values 0 [] interpreter.operatorSubF32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    SUB_F64 case
-      values 1 [] values 0 [] interpreter.operatorSubF64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    SUB_PTR SUB_PTR_MUT PTR_DIFF case break
-    MUL_I32 MUL_I64 case
-      values 1 [] values 0 [] interpreter.operatorMulInt
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    MUL_F32 case
-      values 1 [] values 0 [] interpreter.operatorMulF32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    MUL_F64 case
-      values 1 [] values 0 [] interpreter.operatorMulF64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    DIV_I32 case
-      values 1 [] values 0 [] interpreter.operatorDivI32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    DIV_I64 case
-      values 1 [] values 0 [] interpreter.operatorDivI64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    DIV_F32 case
-      values 1 [] values 0 [] interpreter.operatorDivF32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    DIV_F64 case
-      values 1 [] values 0 [] interpreter.operatorDivF64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    UDIV_I32 case
-      values 1 [] values 0 [] interpreter.operatorUDivI32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    UDIV_I64 case
-      values 1 [] values 0 [] interpreter.operatorUDivI64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    MOD_I32 case
-      values 1 [] values 0 [] interpreter.operatorModI32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    MOD_I64 case
-      values 1 [] values 0 [] interpreter.operatorModI64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    MOD_F32 case
-      values 1 [] values 0 [] interpreter.operatorModF32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    MOD_F64 case
-      values 1 [] values 0 [] interpreter.operatorModF64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    UMOD_I32 case
-      values 1 [] values 0 [] interpreter.operatorUModI32
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    UMOD_I64 case
-      values 1 [] values 0 [] interpreter.operatorUModI64
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    NOT_BOOL FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case break
-    AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case break
-    OR_BOOL OR_I8 OR_I16 OR_I32 OR_I64 case break
-    XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case break
-    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case break
-    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case break
-    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case break
-    BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorCompare
-        ..swap 0 < ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    LT_F32 case
-      values 1 [] values 0 [] interpreter.operatorF32LT
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    LT_F64 case
-      values 1 [] values 0 [] interpreter.operatorF64LT
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_PTR case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorCompare
-        ..swap 0 <= ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    LE_F32 case
-      values 1 [] values 0 [] interpreter.operatorF32LE
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    LE_F64 case
-      values 1 [] values 0 [] interpreter.operatorF64LE
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_PTR case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorCompare
-        ..swap 0 >= ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    GE_F32 case
-      values 1 [] values 0 [] interpreter.operatorF32GE
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    GE_F64 case
-      values 1 [] values 0 [] interpreter.operatorF64GE
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorCompare
-        ..swap 0 > ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    GT_F32 case
-      values 1 [] values 0 [] interpreter.operatorF32GT
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    GT_F64 case
-      values 1 [] values 0 [] interpreter.operatorF64GT
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorUnsignedCompare
-        ..swap 0 < ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorUnsignedCompare
-        ..swap 0 <= ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorUnsignedCompare
-        ..swap 0 >= ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
-      values 1 [] values 0 []
-        valInfos 1 [] .valueType typeContext
-      interpreter.operatorUnsignedCompare
-        ..swap 0 > ConstValue .boolean ..swap
-        builtIn calledType values valInfos 2
-      pos context processBuiltInResult return
-    PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
-        PRINT_F32 PRINT_F64 PRINT_PTR case break
+  ## bring arguments in correct order
+  values nArgs array.reverse
+  valInfos nArgs array.reverse
+  ## XXX ensure type arguments for pointer built-ins are present
+  builtIn values nArgs interpreter.evaluateBuiltIn =:: resultType =:: value
+  resultType switch
+    success case
+      value
+        calledType typeContext types.getProcRet
+          ! assert "has return type"
+        id.LABEL_ID_NONE
+        pos
+        context
+      pushValue
+      false return
+    argumentError case
+      "invalid arguments for built-in " sb.wrap
+        builtIn sb.appendBuiltIn
+        ": " sb.appendS
+        0 while ..dup nArgs < do =:: i
+          values i [] constContext typeContext sb.appendConstant
+          i 1 +
+        end ..drop
+      pos errors appendError
+      values valInfos nArgs context unpopValues
+      true return
+    unimplemented case
+      showErrors if
+        "unsupported built-in in constant evaluation: " sb.wrap
+          builtIn sb.appendBuiltIn
+        pos errors appendError
+      end
+      values valInfos nArgs context unpopValues
+      true return
   end
-  showErrors if
-    "unsupported built-in in constant evaluation: " sb.wrap
-      builtIn sb.appendBuiltIn
-    pos errors appendError
-  end
-  values valInfos nArgs context unpopValues
-  true return
 end
 
 proc(

@@ -1914,7 +1914,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           break
         TO_BOOL case
           src [] .valType
-          ..dup typeContext types.isInt ! if
+          ..dup typeContext types.isNumber ! if
             "wrong operand for unary operator " sb.wrap
               op [] .val .unaryOperator sb.appendUnaryOperator
               " expected integer got " sb.appendS
