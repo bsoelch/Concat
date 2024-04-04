@@ -120,12 +120,12 @@ namespace: interpreter
   proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivF32
     a constAsF32 if ..drop a true return end =:: x
     b constAsF32 if ..drop a true return end =:: y
-    x y * ConstValue .Float false return
+    x y / ConstValue .Float false return
   end
   proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorDivF64
     a constAsF64 if ..drop a true return end =:: x
     b constAsF64 if ..drop a true return end =:: y
-    x y * ConstValue .Float false return
+    x y / ConstValue .Float false return
   end
   proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorModI32
     a constAsInt if ..drop a true return end i32 cast =:: n
@@ -214,6 +214,121 @@ namespace: interpreter
       x y == false return
     end
     false true return
+  end
+  proc(
+    ConstValue : a
+    ConstValue : b
+    Type : valType0
+    TypeContext ptr : typeContext
+  -> i32  bool ) =>: export operatorCompare
+    valType0 typeContext types.unwrapNamed =:: valType
+    valType .primitiveType ?? if
+      valType .primitiveType switch
+        BOOL case
+          a constAsBool if ..drop 0 true return end =:: x
+          b constAsBool if ..drop 0 true return end =:: y
+          x y == if 0 else x _if 1 else -1 end false return
+        I8 case
+          a constAsInt if ..drop 0 true return end i8 cast =:: x
+          b constAsInt if ..drop 0 true return end i8 cast =:: y
+          x y == if 0 else x y > _if 1 else -1 end false return
+        I16 case
+          a constAsInt if ..drop 0 true return end i16 cast =:: x
+          b constAsInt if ..drop 0 true return end i16 cast =:: y
+          x y == if 0 else x y > _if 1 else -1 end false return
+        I32 case
+          a constAsInt if ..drop 0 true return end i32 cast =:: x
+          b constAsInt if ..drop 0 true return end i32 cast =:: y
+          x y == if 0 else x y > _if 1 else -1 end false return
+        I64 case
+          a constAsInt if ..drop 0 true return end i64 cast =:: x
+          b constAsInt if ..drop 0 true return end i64 cast =:: y
+          x y == if 0 else x y > _if 1 else -1 end false return
+        FLOAT32 FLOAT64 case
+          0 true return ## TODO support compare for floats
+        TYPE case
+          0 true return
+      end
+    end
+    valType typeContext types.isPointer if
+      ## cannot compare string-pointers in constant evaluation
+      a constAsInt if ..drop 0 true return end =:: x
+      b constAsInt if ..drop 0 true return end =:: y
+      x y == if 0 else x y > _if 1 else -1 end false return
+    end
+    0 true return
+  end
+  proc(
+    ConstValue : a
+    ConstValue : b
+    Type : valType0
+    TypeContext ptr : typeContext
+  -> i32  bool ) =>: export operatorUnsignedCompare
+    valType0 typeContext types.unwrapNamed =:: valType
+    valType .primitiveType ?? if
+      valType .primitiveType switch
+        I8 case
+          a constAsInt if ..drop 0 true return end i8 cast =:: x
+          b constAsInt if ..drop 0 true return end i8 cast =:: y
+          x y == if 0 else x y ..u> _if 1 else -1 end false return
+        I16 case
+          a constAsInt if ..drop 0 true return end i16 cast =:: x
+          b constAsInt if ..drop 0 true return end i16 cast =:: y
+          x y == if 0 else x y ..u> _if 1 else -1 end false return
+        I32 case
+          a constAsInt if ..drop 0 true return end i32 cast =:: x
+          b constAsInt if ..drop 0 true return end i32 cast =:: y
+          x y == if 0 else x y ..u> _if 1 else -1 end false return
+        I64 case
+          a constAsInt if ..drop 0 true return end i64 cast =:: x
+          b constAsInt if ..drop 0 true return end i64 cast =:: y
+          x y == if 0 else x y ..u> _if 1 else -1 end false return
+        BOOL FLOAT32 FLOAT64 TYPE case
+          0 true return
+      end
+    end
+    0 true return
+  end
+
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32LT
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y < ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64LT
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y < ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32LE
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y <= ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64LE
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y <= ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32GE
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y >= ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64GE
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y >= ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF32GT
+    a constAsF32 if ..drop a true return end =:: x
+    b constAsF32 if ..drop a true return end =:: y
+    x y > ConstValue .boolean false return
+  end
+  proc( ConstValue : a ConstValue : b -> ConstValue bool ) =>: export operatorF64GT
+    a constAsF64 if ..drop a true return end =:: x
+    b constAsF64 if ..drop a true return end =:: y
+    x y > ConstValue .boolean false return
   end
 
   ## old operator functions, for comparability

@@ -1723,14 +1723,94 @@ proc(
     ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case break
     SHL_I8 SHL_I16 SHL_I32 SHL_I64 case break
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR case break
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR case break
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR case break
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR case break
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case break
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case break
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case break
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case break
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorCompare
+        ..swap 0 < ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    LT_F32 case
+      values 1 [] values 0 [] interpreter.operatorF32LT
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    LT_F64 case
+      values 1 [] values 0 [] interpreter.operatorF64LT
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_PTR case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorCompare
+        ..swap 0 <= ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    LE_F32 case
+      values 1 [] values 0 [] interpreter.operatorF32LE
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    LE_F64 case
+      values 1 [] values 0 [] interpreter.operatorF64LE
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_PTR case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorCompare
+        ..swap 0 >= ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    GE_F32 case
+      values 1 [] values 0 [] interpreter.operatorF32GE
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    GE_F64 case
+      values 1 [] values 0 [] interpreter.operatorF64GE
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorCompare
+        ..swap 0 > ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    GT_F32 case
+      values 1 [] values 0 [] interpreter.operatorF32GT
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    GT_F64 case
+      values 1 [] values 0 [] interpreter.operatorF64GT
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorUnsignedCompare
+        ..swap 0 < ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorUnsignedCompare
+        ..swap 0 <= ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorUnsignedCompare
+        ..swap 0 >= ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
+      values 1 [] values 0 []
+        valInfos 1 [] .valueType typeContext
+      interpreter.operatorUnsignedCompare
+        ..swap 0 > ConstValue .boolean ..swap
+        builtIn calledType values valInfos 2
+      pos context processBuiltInResult return
     PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
         PRINT_F32 PRINT_F64 PRINT_PTR case break
   end
