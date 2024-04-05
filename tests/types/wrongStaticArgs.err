@@ -1,3 +1,9 @@
-wrong type for procedure call expected template[0] staticArg(1) ptr got i32 at wrongStaticArgs.concat:5:15
-wrong type for procedure call expected named[6]( "list" ) got i8 5 ptr at wrongStaticArgs.concat:5:15
-wrong number of return values at the end of procedure expected: 0 got 2 at wrongStaticArgs.concat:7:1
+no matching signature for arguments ( ? list  i8 5 ptr { string: "Hello" }  i32 { integer: 3 }  )
+candidates: 
+  * proc[104]( type : static T ? list : a i64 : k T[generic 355] staticArg(357) ptr : b -> ? list ) appendP
+ at wrongStaticArgs.concat:5:15
+no matching signature for arguments ( ? list  i8 5 ptr { string: "Hello" }  i32 { integer: 3 }  )
+candidates: 
+  * proc[97]( type : static T ? list : elts -> ? list ) free
+ at wrongStaticArgs.concat:6:3
+wrong number of return values at the end of procedure expected: 0 got: 3 at wrongStaticArgs.concat:7:1

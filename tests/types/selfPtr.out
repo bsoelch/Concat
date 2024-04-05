@@ -4,6 +4,6 @@ identifier "selfPtr":
 -----------------
 types:
 -----------------
-writable named[0]( "selfPtr" [ struct[0]( i32 named[0]( "selfPtr" [ struct[0]( i32 named[0]( "selfPtr" ) ptr ) ] ) ptr ) ] )
+named[0]( "selfPtr" [ struct[21]( i32 named[0]( "selfPtr" [ struct[21]( i32 named[0]( "selfPtr" ) ptr ) ] ) ptr ) ] ) reference mut
 -----------------
 true

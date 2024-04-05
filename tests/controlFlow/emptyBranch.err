@@ -1,1 +1,3 @@
-wrong number of types at the end of if-statement expected 1 got 0 at emptyBranch.concat:5:3
+different numbers of types at the end of if-else block
+  * ifBranch: 1 at emptyBranch.concat:4:3
+  * elseBranch: 0 at emptyBranch.concat:5:3
