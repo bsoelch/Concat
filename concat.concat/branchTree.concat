@@ -564,11 +564,17 @@ namespace: branchTree
     heads branchHeads .data headCount mem.copy ..drop
     headCount T ptr mem.alloc =:: buffer
     0 =:: mut: offset
-    while
+    while ## FIXME is there something wrong with the parent counts at the end of this loop?
       tree [] .nodes heads 0 [] list.at .data =:: root
       root [] .parent parentId =
       root [] .data @ buffer 0 [] =
       parentId heads 0 [] =
+      ## TODO ensure head is correctly unlinked
+      heads 0 [] 0 >= if
+        tree [] .nodes heads 0 [] list.get optional.wrap
+      else
+        T Node optional.empty
+      end =:: parentNode
       false needMerge =
       1 =:: mut: i while i headCount < do
         tree [] .nodes heads i [] list.at .data =:: next
@@ -592,9 +598,7 @@ namespace: branchTree
     needMerge do
       tree [] .nodes .length currentNode [] .parent =
       tree [] .nodes
-         tree [] .nodes
-           heads 0 []
-         list.at .data list.appendP
+         parentNode .data list.append
       tree [] .nodes =
       tree [] .nodes list.peek .data currentNode =
       1 currentNode [] .childCount =
