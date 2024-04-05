@@ -179,6 +179,10 @@ proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
   =:: pos
   OpValue .getLabel Type .undefined pos Operation new return
 end
+proc( LabelId FilePosition  -> Operation ) =>: export: opAtLabel
+  =:: pos
+  OpValue .atLabel Type .undefined pos Operation new return
+end
 proc( Type FilePosition -> Operation ) =>: export: opReturn
   =:: pos
   OpValue .Return ..swap pos Operation new return
@@ -263,6 +267,10 @@ end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetName
   =:: pos
   OpValue .getName Type .undefined pos Operation new return
+end
+proc( LabelId FilePosition  -> Operation ) =>: export: opAtName
+  =:: pos
+  OpValue .atName Type .undefined pos Operation new return
 end
 proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
   =:: pos

@@ -1692,7 +1692,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state appendError2
         return
       end
-    else ..dup "@" string.wrap string.eq ..over "addrOf" string.wrap string.eq | _if =:: opName
+    else ..dup "@" string.wrap string.eq _if =:: opName
       _EXPERIMENTAL_ ! if
         state hasConst if
           state popConst =:: mConst
@@ -1703,11 +1703,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           mConst .valueType mConst .idInfo .data fileState [] .wordStart opAtId state appendOp
           return
         end
-      end
-      opName "addrOf" string.wrap string.eq if
-        "addrOf is deprecated use @ instead" sb.wrap
-          fileState [] .wordStart
-         state appendWarning2
       end
       state peekOp ..dup optional.isEmpty if ..drop
         "unexpected \"" sb.wrap
@@ -1914,7 +1909,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       return
     else ..dup .length 1 > _if ..dup 0 string.charAt '.' == _if ..dup 1 string.charAt '.' != _if
-      1 string.tail =:: label
+      1 string.tail
+        ..dup "@" string.wrap string.endsWith =:: isAddr
+        isAddr if
+          ..dup .length 1 - string.head
+        end
+      =:: label
       _EXPERIMENTAL_ ! if
         state hasConst if
           state popConst =:: constVal
@@ -1957,7 +1957,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         else ..drop end
       end
       label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-      fileState [] .wordStart opGetLabel state appendOp
+      fileState [] .wordStart
+      isAddr if opAtLabel else opGetLabel end
+      state appendOp
       return
     else ..dup "..debug.print" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
       fileState [] .wordStart opPrint state appendOp
@@ -3017,18 +3019,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart state appendError2
       return
     end
+    ..dup "@" string.wrap string.endsWith =:: isAddr
+    isAddr if
+      ..dup .length 1 - string.head
+    end
   =:: idName
   idName
     state [] .currentFile
   idContext id.findIdentifierByName ! if ## try parsing as identifier
-    ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart opGet state appendOp
-    ..drop
-    return
+    ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart
+      isAddr if opAtId else opGet end
+    state appendOp
+    ..drop return
   end ..drop.2
   idName
     id.FLAG_NONE fileState [] .wordStart state [] .currentFile
   labelContext id.newLabel =:: labelId
-  labelId fileState [] .wordStart opGetName  state appendOp
+  labelId fileState [] .wordStart
+  isAddr if opAtName else opGetName end
+  state appendOp
   return
 end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr mut : state -> ) =>: checkIOError

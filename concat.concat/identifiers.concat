@@ -456,8 +456,8 @@ namespace: id
       "identifier names cannot start with '#'" sb.wrap pos errors appendError
       true return
     end
-    id 0 string.charAt '@' == if
-      "identifier names cannot start with '@'" sb.wrap pos errors appendError
+    id id .length 1 - string.charAt '@' == if
+      "identifier names cannot end with '@'" sb.wrap pos errors appendError
       true return
     end
     id '.' string.contains if
