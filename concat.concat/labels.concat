@@ -102,6 +102,9 @@ namespace: id
     end
     context [] .labels id list.at .data [] .namespaceInfo context [] .namespaceInfo =
   end
+  proc( LabelContext ptr mut : context -> ) =>: export: resetNamespace
+    0 NAMESPACE_IMPORT_NONE NamespaceInfo new context [] .namespaceInfo =
+  end
   proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
     id 0 < id context [] .labels .length >= | if
       false return
@@ -165,6 +168,30 @@ namespace: id
         offset str .length StringConstant new
         pos
         context [] .namespaceInfo
+        srcFile
+        flags
+      Label new list.append
+    context [] .labels =
+    context [] .labels .length 1 - LabelId cast return
+  end
+  proc(
+    string : namespaceName
+    string : labelName
+    LabelFlag : flags
+    FilePosition : pos
+    FileId : srcFile
+    LabelContext ptr mut : context
+  -> LabelId ) =>: export: newLabelInNamespace
+    0 namespaceName context createNamespace =:: namespaceId
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer
+      labelName .data labelName .length array.create list.appendArray
+    context [] .nameBuffer =
+    context [] .labels
+      ## Label
+        offset labelName .length StringConstant new
+        pos
+        namespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new
         srcFile
         flags
       Label new list.append
@@ -364,18 +391,37 @@ namespace: id
       ..swap [] .children =
     return
   end
-  proc( NamespaceId : base string : path  LabelContext ptr mut : context -> NamespaceId ) =>: export: findNamespace
+  proc(
+    NamespaceId : base
+    string : path
+    LabelContext ptr mut : context
+    bool : create
+  -> NamespaceId ) =>: export: findNamespace_internal
     base NamespaceId =: mut: id
     path
       while ..dup .length 0 > do
         '.' string.split
-        id ..swap false context childId id =
+        id ..swap create context childId id =
         id NAMESPACE_ID_NONE == if
           break
         end
       end
     ..drop
     id return
+  end
+  proc(
+    NamespaceId : base
+    string : path
+    LabelContext ptr mut : context
+  -> NamespaceId ) =>: export: findNamespace
+    base path context false findNamespace_internal
+  end
+  proc(
+    NamespaceId : base
+    string : path
+    LabelContext ptr mut : context
+  -> NamespaceId ) =>: export: createNamespace
+    base path context true findNamespace_internal
   end
   proc( NamespaceId : id LabelContext ptr mut : context -> StringConstant ) =>: export: namespaceName
     id NAMESPACE_ID_NONE == if
