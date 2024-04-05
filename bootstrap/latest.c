@@ -541,7 +541,7 @@ typedef struct concat_tuple1260 concat_tuple1260;
 typedef struct concat_tuple1263 concat_tuple1263;
 typedef struct concat_tuple1265 concat_tuple1265;
 typedef struct concat_tuple1298 concat_tuple1298;
-typedef struct concat_tuple1371 concat_tuple1371;
+typedef struct concat_tuple1372 concat_tuple1372;
 typedef struct concat_tuple1552 concat_tuple1552;
 typedef struct concat_tuple1574 concat_tuple1574;
 typedef struct concat_tuple1626 concat_tuple1626;
@@ -2259,7 +2259,7 @@ struct concat_tuple1298{
 concat_list_I41 e0;
 concat_2_FBlockInfo e1;
 };
-struct concat_tuple1371{
+struct concat_tuple1372{
 concat_list_I44 e0;
 concat_2_FCompositeConstantOffset e1;
 };
@@ -6814,7 +6814,7 @@ concat_string tmp1 = arg1/*start*/;
 do{
 l1_isModifier = false;
 concat_string tmp2;
-concat_string_dwrap(((int64_t)3),((int8_t const*)"mut"),(&tmp2));
+concat_string_dwrap(((int64_t)4),((int8_t const*)"mut:"),(&tmp2));
 bool const tmp3 = concat_string_deq(tmp1,tmp2);
 if(tmp3){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)1)|l0_flags));
@@ -6822,7 +6822,7 @@ l1_isModifier = true;
 }else{
 else_label97:;
 concat_string tmp4;
-concat_string_dwrap(((int64_t)4),((int8_t const*)"auto"),(&tmp4));
+concat_string_dwrap(((int64_t)5),((int8_t const*)"auto:"),(&tmp4));
 bool const tmp5 = concat_string_deq(tmp1,tmp4);
 if(tmp5){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)2)|l0_flags));
@@ -6830,7 +6830,7 @@ l1_isModifier = true;
 }else{
 else_label98:;
 concat_string tmp6;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"static"),(&tmp6));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"static:"),(&tmp6));
 bool const tmp7 = concat_string_deq(tmp1,tmp6);
 if(tmp7){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)16)|l0_flags));
@@ -6838,7 +6838,7 @@ l1_isModifier = true;
 }else{
 else_label99:;
 concat_string tmp8;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"extern"),(&tmp8));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"extern:"),(&tmp8));
 bool const tmp9 = concat_string_deq(tmp1,tmp8);
 if(tmp9){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)4)|l0_flags));
@@ -6846,7 +6846,7 @@ l1_isModifier = true;
 }else{
 else_label100:;
 concat_string tmp10;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"export"),(&tmp10));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"export:"),(&tmp10));
 bool const tmp11 = concat_string_deq(tmp1,tmp10);
 if(tmp11){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)8)|l0_flags));
@@ -6854,7 +6854,7 @@ l1_isModifier = true;
 }else{
 else_label101:;
 concat_string tmp12;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"inline"),(&tmp12));
+concat_string_dwrap(((int64_t)7),((int8_t const*)"inline:"),(&tmp12));
 bool const tmp13 = concat_string_deq(tmp1,tmp12);
 if(tmp13){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)32)|l0_flags));
@@ -6862,7 +6862,7 @@ l1_isModifier = true;
 }else{
 else_label102:;
 concat_string tmp14;
-concat_string_dwrap(((int64_t)14),((int8_t const*)"#:experimental"),(&tmp14));
+concat_string_dwrap(((int64_t)15),((int8_t const*)"#:experimental:"),(&tmp14));
 bool const tmp15 = concat_string_deq(tmp1,tmp14);
 if(tmp15){
 l0_flags = ((concat_LabelFlag)(((concat_LabelFlag)1073741824)|l0_flags));
@@ -6870,8 +6870,8 @@ l1_isModifier = true;
 }else{
 else_label103:;
 concat_string tmp16;
-concat_string_dwrap(((int64_t)2),((int8_t const*)"#:"),(&tmp16));
-bool const tmp17 = concat_string_dstartsWith(tmp1,tmp16);
+concat_string_dwrap(((int64_t)1),((int8_t const*)":"),(&tmp16));
+bool const tmp17 = concat_string_dendsWith(tmp1,tmp16);
 if(tmp17){
 l1_isModifier = true;
 }else{
@@ -31612,7 +31612,7 @@ concat_LabelFlag const tmp20 = concat_id_dlabelFlags(l4_label,l0_labelContext);
 bool const tmp21 = (!!((concat_LabelFlag)(tmp20&((concat_LabelFlag)1))));
 if(tmp21){
 concat_stringBuilder tmp22;
-concat_sb_dappendS(tmp0,((int64_t)4),((int8_t const*)"mut "),(&tmp22));
+concat_sb_dappendS(tmp0,((int64_t)5),((int8_t const*)"mut: "),(&tmp22));
 tmp0 = tmp22;
 }else{
 else_label972:;
@@ -31621,7 +31621,7 @@ concat_LabelFlag const tmp23 = concat_id_dlabelFlags(l4_label,l0_labelContext);
 bool const tmp24 = (!!((concat_LabelFlag)(tmp23&((concat_LabelFlag)16))));
 if(tmp24){
 concat_stringBuilder tmp25;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"static "),(&tmp25));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"static: "),(&tmp25));
 tmp0 = tmp25;
 }else{
 else_label973:;
@@ -35142,7 +35142,7 @@ bool const tmp2 = (!!((concat_LabelFlag)(tmp1&((concat_LabelFlag)8))));
 concat_LabelFlag tmp3 = tmp1;
 if(tmp2){
 concat_stringBuilder tmp4;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"export "),(&tmp4));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"export: "),(&tmp4));
 tmp0 = tmp4;
 }else{
 else_label1148:;
@@ -35150,7 +35150,7 @@ else_label1148:;
 bool const tmp5 = (!!((concat_LabelFlag)(tmp3&((concat_LabelFlag)4))));
 if(tmp5){
 concat_stringBuilder tmp6;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"extern "),(&tmp6));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"extern: "),(&tmp6));
 tmp0 = tmp6;
 }else{
 else_label1149:;
@@ -35158,7 +35158,7 @@ else_label1149:;
 bool const tmp7 = (!!((concat_LabelFlag)(tmp3&((concat_LabelFlag)1))));
 if(tmp7){
 concat_stringBuilder tmp8;
-concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"mutable "),(&tmp8));
+concat_sb_dappendS(tmp0,((int64_t)9),((int8_t const*)"mutable: "),(&tmp8));
 tmp0 = tmp8;
 }else{
 else_label1150:;
@@ -35166,7 +35166,7 @@ else_label1150:;
 bool const tmp9 = (!!((concat_LabelFlag)(tmp3&((concat_LabelFlag)16))));
 if(tmp9){
 concat_stringBuilder tmp10;
-concat_sb_dappendS(tmp0,((int64_t)7),((int8_t const*)"static "),(&tmp10));
+concat_sb_dappendS(tmp0,((int64_t)8),((int8_t const*)"static: "),(&tmp10));
 tmp0 = tmp10;
 }else{
 else_label1151:;
