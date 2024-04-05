@@ -2,7 +2,7 @@ import utf8
 
 proc( -> ) =>: main
   "ACBÄÖÜ°?ℂ💻!0\xc2\x80\xc1\xbf\xec\x3a\xf0" string.wrap =:: str
-  str .length sb.create =:: mut copy
+  str .length sb.create =:: mut: copy
   str 0 i64 cast while ..dup str .length < do
     utf8.nextCodepoint ..dup ..debug.print
     copy ..swap sb.appendCodepoint copy =

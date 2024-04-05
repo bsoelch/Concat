@@ -10,11 +10,11 @@ enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
 struct(
   Type : valType
   ConstValue : value
-) =:: export StackValue
+) =:: export: StackValue
 
 struct(
   i32 : argOffset
-  i32 : mut argCount
+  i32 : mut: argCount
   MatchType : matchType
 ) =:: ParameterInfo
 
@@ -26,14 +26,14 @@ enum(
 
 struct(
   ProcId : procId
-  ParameterInfo list : mut paramInfo
-  LabelId GenericArg hashMap : mut genericValues
-  i32 : mut nEmpty
-  i32 : mut nRenames
-  i32 : mut nCasts
-  i32 : mut nGenerics
-  bool : mut argsMatch
-  bool : mut needsParam
+  ParameterInfo list : mut: paramInfo
+  LabelId GenericArg hashMap : mut: genericValues
+  i32 : mut: nEmpty
+  i32 : mut: nRenames
+  i32 : mut: nCasts
+  i32 : mut: nGenerics
+  bool : mut: argsMatch
+  bool : mut: needsParam
 ) =:: CallSignatureInfo
 
 
@@ -291,7 +291,7 @@ proc(
   target typeContext types.containsGeneric | ! if
     false return
   end
-  src0 =:: mut src
+  src0 =:: mut: src
   ## unwrap reference in src argument if target is not a reference
   src typeContext types.isReference if
     target typeContext types.isReference ! _if
@@ -344,8 +344,8 @@ proc(
       map.put ..drop
       false return
     namedType case
-      src =:: mut unwrapSrc
-      target =:: mut unwrapTarget
+      src =:: mut: unwrapSrc
+      target =:: mut: unwrapTarget
       while
         unwrapSrc types.isNamedType if
           unwrapSrc typeContext types.flatUnwrapNamed unwrapSrc =
@@ -400,8 +400,8 @@ proc(
       targetFixed if srcFixed ! _if
         true return ## cannot assign unknown-size to fixed-size
       end
-      src typeContext types.getArraySize =:: mut srcSizes
-      target typeContext types.getArraySize =:: mut targetSizes
+      src typeContext types.getArraySize =:: mut: srcSizes
+      target typeContext types.getArraySize =:: mut: targetSizes
       ## treat 0D fixed arrays as 1D array of length 1
       1i64 types.ArraySizeType .int types.ArraySize new =:: one
       srcFixed if srcSizes .length 0 == _if
@@ -674,7 +674,7 @@ proc(
   stringBuilder ptr mut optional : errorMessage
   FilePosition : pos
   ProgramContext ptr mut : progContext
--> ProcedureCallInfo optional Type ) =>: export resolveCall
+-> ProcedureCallInfo optional Type ) =>: export: resolveCall
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
@@ -682,7 +682,7 @@ proc(
   procedureIds .length 0 == if
     ProcedureCallInfo optional.empty Type .undefined return
   end
-  procedureIds .length CallSignatureInfo list.create =:: mut currentSignatures
+  procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   0 while ..dup procedureIds .length < do =:: i
     procedureIds i array.get =:: procId
     progContext [] .procedures procId list.at .data =:: procInfo
@@ -712,7 +712,7 @@ proc(
       Type .undefined
     end =:: stackType
     0 while ..dup currentSignatures .length < do =:: i
-      currentSignatures i list.at .data =:: mut current
+      currentSignatures i list.at .data =:: mut: current
       current [] .argsMatch ! current [] .needsParam ! | if
         ## don't continue checking if first arguments were no match / all params matched
         i 1 + continue
@@ -722,9 +722,9 @@ proc(
       [] .procType typeContext types.getProcIn ..drop =:: inTypes
       inTypes typeContext types.compositeEltCount 1 -
         current [] .paramInfo .length -
-      i32 cast =:: mut paramIndex
-      inTypes paramIndex typeContext types.compositeGetElement =:: mut paramType
-      inTypes paramIndex typeContext types.compositeGetLabel =:: mut paramLabel
+      i32 cast =:: mut: paramIndex
+      inTypes paramIndex typeContext types.compositeGetElement =:: mut: paramType
+      inTypes paramIndex typeContext types.compositeGetLabel =:: mut: paramLabel
       ## XXX? allow passing arrays as individual elements
       while ## skip empty parameters if stack-value is non-empty
         paramType typeContext types.isEmpty if
@@ -761,7 +761,7 @@ proc(
       stackIndex stackValues .length >= if
         i 1 + continue ## no value present
       end
-      MatchType .NONE =:: mut matchType
+      MatchType .NONE =:: mut: matchType
       paramType typeContext types.isGeneric if
           paramType
             typeContext types.unwrapNamed
@@ -821,7 +821,7 @@ proc(
       end
       ## try matching type
       paramType typeContext types.containsGeneric | if
-        false =:: mut needCast
+        false =:: mut: needCast
           ## resolveGenerics
             stackType
             paramType
@@ -839,7 +839,7 @@ proc(
         MatchType .MATCH matchType =
       else stackType paramType typeContext types.canAutoCast _if
         MatchType .CAST matchType =
-        stackType =:: mut fromType
+        stackType =:: mut: fromType
         ## count conversion reference -> value as separate cast
         stackType typeContext types.isReference
             paramType typeContext types.isReference ! & if
@@ -893,7 +893,7 @@ proc(
         end ..drop
         ")\ncandidates: \n" sb.appendS
         0 while ..dup currentSignatures .length < do =:: i
-          currentSignatures i list.at .data =:: mut current
+          currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId list.at .data
           =:: procInfo
@@ -931,9 +931,9 @@ proc(
           i 1 -
         end ..drop
         ")\npossible matches: \n" sb.appendS
-        true =:: mut isEquivalent
+        true =:: mut: isEquivalent
         0 while ..dup currentSignatures .length < do =:: i
-          currentSignatures i list.at .data =:: mut current
+          currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId list.at .data
           =:: procInfo
@@ -963,7 +963,7 @@ proc(
   procInfo [] .procType typeContext types.getProcIn ..drop =:: inType
   procInfo [] .procType typeContext types.getProcOut ..drop =:: outType
   inType typeContext types.compositeEltCount =:: eltCount
-  eltCount ConstValue list.create =:: mut constArgs
+  eltCount ConstValue list.create =:: mut: constArgs
   0 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -973,16 +973,16 @@ proc(
     end
     i 1 +
   end ..drop
-  -1i64 =:: mut implId
-  eltCount Type list.create =:: mut typeBuffer
-  eltCount LabelId list.create =:: mut labelBuffer
+  -1i64 =:: mut: implId
+  eltCount Type list.create =:: mut: typeBuffer
+  eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0 > if
       progContext [] .procedures
         candidate [] .procId list.at .data
       [] .implementation @ =:: implData
       implData [] .code ?? _if
     implData [] .code .implementations @ =:: impls
-    false =:: mut isMatch
+    false =:: mut: isMatch
     0 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
       impl [] .staticArgs .length constArgs .length != if
@@ -1032,7 +1032,7 @@ proc(
   0 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags
-    true =:: mut needArg
+    true =:: mut: needArg
     flags id.FLAG_AUTO & ? if
       candidate [] .genericValues @ eltLabel getValueOrNone =:: value
       value .none ?? ! if

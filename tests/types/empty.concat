@@ -3,9 +3,9 @@
 proc( L : x proc( L R -> O ) ptr : f R : data -> O ) =>: test
 #:else
 proc(
-  type : auto L
-  type : auto R
-  type : auto O
+  type : auto: L
+  type : auto: R
+  type : auto: O
   L : x
   proc( L R -> O ) ptr : f
   R : data
@@ -19,7 +19,7 @@ proc( i32 i32 -> i32 ) =>: f1
 end
 proc( i32 ( ) -> ( ) ) =>: f2 ..swap ..drop end
 
-struct( ( ) : mut empty i32 : nonEmpty ) =:: testStruct 
+struct( ( ) : mut: empty i32 : nonEmpty ) =:: testStruct 
 
 proc( ( ) : v testStruct ptr mut : S -> ( ( ) ) ( ) ) =>: assignEmpty
   S [] .empty =:: p
@@ -29,7 +29,7 @@ end
 
 proc( -> ) =>: main
   5 f1 @ 3 test ..debug.print
-  testStruct : mut aStruct
+  testStruct : mut: aStruct
   ( ) : X
   X aStruct @ assignEmpty ..drop.2
 end

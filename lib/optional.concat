@@ -1,39 +1,39 @@
 #:if:exp
-( type : V -> type ) =>: export optional
+( type : V -> type ) =>: export: optional
   enum( empty V : data )
 end
 namespace: optional
-  proc( type : auto V V optional -> bool ) =>: export isEmpty
+  proc( type : auto: V V optional -> bool ) =>: export: isEmpty
     .empty ?? return
   end
-  proc( type : auto V  V optional -> bool ) =>: export hasData
+  proc( type : auto: V  V optional -> bool ) =>: export: hasData
     .data ?? return
   end
-  proc( type : V -> V optional ) =>: export empty
+  proc( type : V -> V optional ) =>: export: empty
     V optional .empty return
   end
-  proc( type : auto V  V -> V optional ) =>: export wrap
+  proc( type : auto: V  V -> V optional ) =>: export: wrap
     V optional .data return
   end
 end
 #:else
 #template type : V #end
-enum( empty V : data ) =:: export optional
+enum( empty V : data ) =:: export: optional
 namespace: optional
   #template type : V #end
-  proc( V optional -> bool ) =>: export isEmpty
+  proc( V optional -> bool ) =>: export: isEmpty
     .empty ?? return
   end
   #template type : V #end
-  proc( V optional -> bool ) =>: export hasData
+  proc( V optional -> bool ) =>: export: hasData
     .data ?? return
   end
   #template type : V #end
-  proc( -> V optional ) =>: export empty
+  proc( -> V optional ) =>: export: empty
     V optional .empty return
   end
   #template type : V #end
-  proc( V -> V optional ) =>: export wrap
+  proc( V -> V optional ) =>: export: wrap
     V optional .data return
   end
 end

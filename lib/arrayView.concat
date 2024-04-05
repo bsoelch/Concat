@@ -2,12 +2,12 @@ import mem
 import optional
 
 #:if:exp
-( type : T -> type ) =>: export arrayView
+( type : T -> type ) =>: export: arrayView
   struct( T _ ptr : data i64 : length )
 end
 #:else
 #template type : T #end
-struct( T _ ptr : data i64 : length ) =:: export arrayView
+struct( T _ ptr : data i64 : length ) =:: export: arrayView
 #:end
 
 ## TODO writable array view
@@ -15,38 +15,38 @@ struct( T _ ptr : data i64 : length ) =:: export arrayView
 namespace: array
   #:ifnot:exp
   #template type : T #end
-  proc( -> T arrayView ) =>: export empty
+  proc( -> T arrayView ) =>: export: empty
     0 T mem.alloc 0 T arrayView new return
   end
   #template type : T #end
-  proc( T _ ptr  i64 -> T arrayView ) =>: export create
+  proc( T _ ptr  i64 -> T arrayView ) =>: export: create
     T arrayView new return
   end
   #template type : T #end
-  proc( i64 : auto k  T k ptr : elts -> T arrayView ) =>: export wrap
+  proc( i64 : auto: k  T k ptr : elts -> T arrayView ) =>: export: wrap
     elts k create return
   end
   #:else
-  proc( type : T -> T arrayView ) =>: export empty
+  proc( type : T -> T arrayView ) =>: export: empty
     0 T mem.alloc 0 T arrayView new return
   end
-  proc( type : auto T T _ ptr  i64 -> T arrayView ) =>: export create
+  proc( type : auto: T T _ ptr  i64 -> T arrayView ) =>: export: create
     T arrayView new return
   end
   proc(
-    type : auto T
-    i64 : auto k
+    type : auto: T
+    i64 : auto: k
     T k ptr : elts
-  -> T arrayView ) =>: export wrap
+  -> T arrayView ) =>: export: wrap
     elts k create return
   end
   #:end
 
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : index -> T ) =>: export get
+  proc( T arrayView : elts i64 : index -> T ) =>: export: get
   #:else
-  proc( type : auto T T arrayView : elts i64 : index -> T ) =>: export get
+  proc( type : auto: T T arrayView : elts i64 : index -> T ) =>: export: get
   #:end
     index 0 < index elts .length >= | if
       ## TODO error handling
@@ -56,13 +56,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : index -> T ptr optional ) =>: export at
+  proc( T arrayView : elts i64 : index -> T ptr optional ) =>: export: at
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     i64 : index
-  -> T ptr optional ) =>: export at
+  -> T ptr optional ) =>: export: at
   #:end
     index 0 < index elts .length >= | if
       T ptr optional.empty return
@@ -71,13 +71,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts T : elt -> i64 ) =>: export indexOf
+  proc( T arrayView : elts T : elt -> i64 ) =>: export: indexOf
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     T : elt
-  -> i64 ) =>: export indexOf
+  -> i64 ) =>: export: indexOf
   #:end
     0 ## index
     while ..dup elts .length < do
@@ -91,13 +91,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts T : elt -> i64 ) =>: export lastIndexOf
+  proc( T arrayView : elts T : elt -> i64 ) =>: export: lastIndexOf
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     T : elt
-  -> i64 ) =>: export lastIndexOf
+  -> i64 ) =>: export: lastIndexOf
   #:end
     elts .length 1 - ## index
     while ..dup 0 >= do
@@ -110,13 +110,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts T : elt -> bool ) =>: export contains
+  proc( T arrayView : elts T : elt -> bool ) =>: export: contains
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     T : elt
-  -> bool ) =>: export contains
+  -> bool ) =>: export: contains
   #:end
     elts elt indexOf -1 != return
   end
@@ -127,21 +127,21 @@ namespace: array
     T arrayView : a
     T arrayView : b
     proc( T ptr T ptr -> bool ) ptr : eq
-  -> i64 ) =>: export indexOfArray
+  -> i64 ) =>: export: indexOfArray
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : a
     T arrayView : b
     proc( T ptr T ptr -> bool ) ptr : eq
-  -> i64 ) =>: export indexOfArray
+  -> i64 ) =>: export: indexOfArray
   #:end
     a .length b .length < if
       -1 return
     end
     ## TODO? use faster algorithm
     0 while ..dup a .length b .length - <= do =:: i
-      true =:: mut match
+      true =:: mut: match
       0 while ..dup b .length < do =:: j
         ## eq
           a i j + array.at .data
@@ -168,20 +168,20 @@ namespace: array
     T arrayView : b
     proc( T ptr T ptr C -> bool ) ptr : eq
     C : context
-  -> i64 ) =>: export indexOfArrayStart
+  -> i64 ) =>: export: indexOfArrayStart
   #:else
   proc(
-    type : auto T
-    type : auto C
+    type : auto: T
+    type : auto: C
     T arrayView : a
     T arrayView : b
     proc( T ptr T ptr C -> bool ) ptr : eq
     C : context
-  -> i64 ) =>: export indexOfArrayStart
+  -> i64 ) =>: export: indexOfArrayStart
   #:end
     ## TODO? use faster algorithm
     0 while ..dup a .length <= do =:: i
-      true =:: mut match
+      true =:: mut: match
       0 while ..dup b .length < do =:: j
         i j + a .length >= if
           j break
@@ -207,13 +207,13 @@ namespace: array
   ## first n characters
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : n -> T arrayView ) =>: export head
+  proc( T arrayView : elts i64 : n -> T arrayView ) =>: export: head
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     i64 : n
-  -> T arrayView ) =>: export head
+  -> T arrayView ) =>: export: head
   #:end
     n 0 <= if
       T empty return
@@ -226,13 +226,13 @@ namespace: array
   ## everything excluding the first n characters
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : n -> T arrayView ) =>: export tail
+  proc( T arrayView : elts i64 : n -> T arrayView ) =>: export: tail
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     i64 : n
-  -> T arrayView ) =>: export tail
+  -> T arrayView ) =>: export: tail
   #:end
     n 0 <= if
       elts return
@@ -245,14 +245,14 @@ namespace: array
   ## equivalent to:  <from> tail <len> head
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : from i64 : len -> T arrayView ) =>: export slice
+  proc( T arrayView : elts i64 : from i64 : len -> T arrayView ) =>: export: slice
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     i64 : from
     i64 : len
-  -> T arrayView ) =>: export slice
+  -> T arrayView ) =>: export: slice
   #:end
     len 0 <= if
       T empty return
@@ -270,13 +270,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : index -> T arrayView T arrayView ) =>: export cutIndex
+  proc( T arrayView : elts i64 : index -> T arrayView T arrayView ) =>: export: cutIndex
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     i64 : index
-  -> T arrayView T arrayView ) =>: export cutIndex
+  -> T arrayView T arrayView ) =>: export: cutIndex
   #:end
     elts index tail
     elts index head
@@ -284,13 +284,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts i64 : index -> T arrayView T arrayView ) =>: export splitIndex
+  proc( T arrayView : elts i64 : index -> T arrayView T arrayView ) =>: export: splitIndex
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     i64 : index
-  -> T arrayView T arrayView ) =>: export splitIndex
+  -> T arrayView T arrayView ) =>: export: splitIndex
   #:end
     index 0 < if
       T empty elts return
@@ -301,13 +301,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export split
+  proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export: split
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     T : elt
-  -> T arrayView T arrayView ) =>: export split
+  -> T arrayView T arrayView ) =>: export: split
   #:end
     elts
       elts elt indexOf
@@ -315,13 +315,13 @@ namespace: array
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export splitLast
+  proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export: splitLast
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T arrayView : elts
     T : elt
-  -> T arrayView T arrayView ) =>: export splitLast
+  -> T arrayView T arrayView ) =>: export: splitLast
   #:end
     elts
       elts elt lastIndexOf

@@ -5,24 +5,24 @@ import numbers/float
 import string
 
 namespace: i32
-  proc( i32 : a i32 : b -> i32 ) =>: export min
+  proc( i32 : a i32 : b -> i32 ) =>: export: min
     a b < if a else b end
   end
-  proc( i32 : a i32 : b -> i32 ) =>: export max
+  proc( i32 : a i32 : b -> i32 ) =>: export: max
     a b > if a else b end
   end
-  proc( i32 : a -> i32 ) =>: export abs
+  proc( i32 : a -> i32 ) =>: export: abs
     a 0 < if a -_ else a end
   end
 end
 namespace: i64
-  proc( i64 : a i64 : b -> i64 ) =>: export min
+  proc( i64 : a i64 : b -> i64 ) =>: export: min
     a b < if a else b end
   end
-  proc( i64 : a i64 : b -> i64 ) =>: export max
+  proc( i64 : a i64 : b -> i64 ) =>: export: max
     a b > if a else b end
   end
-  proc( i64 : a -> i64 ) =>: export abs
+  proc( i64 : a -> i64 ) =>: export: abs
     a 0 < if a -_ else a end
   end
 end
@@ -30,16 +30,16 @@ end
 namespace: number
   #:ifnot:exp
   #template type : T #end
-  proc( T : x i64 : p -> T ) =>: export powI
+  proc( T : x i64 : p -> T ) =>: export: powI
   #:else
-  proc( type : auto T  T : x i64 : p -> T ) =>: export powI
+  proc( type : auto: T  T : x i64 : p -> T ) =>: export: powI
   #:end
     p 0 == if
       1 T cast return
     else p 0 < _if
       1 T cast x / p -_ powI return
     end
-    x =:: mut xPow
+    x =:: mut: xPow
     1 T cast
       p while ..dup 0 != do
         ..dup 1 & 0 != if
@@ -52,9 +52,9 @@ namespace: number
       end ..drop
     return
   end
-  2 =:: export MIN_BASE
-  62 =:: export MAX_BASE
-  proc( i8 : chr i32 : base -> i32 ) =>: export parseDigit
+  2 =:: export: MIN_BASE
+  62 =:: export: MAX_BASE
+  proc( i8 : chr i32 : base -> i32 ) =>: export: parseDigit
     chr '0' >= chr '9' <= & if
       chr '0' - return
     else chr 'A' >= chr 'Z' <= & _if
@@ -66,7 +66,7 @@ namespace: number
     end
     -1 return
   end
-  proc( string -> string i32 ) =>: export resolveBase
+  proc( string -> string i32 ) =>: export: resolveBase
     ..dup .length 2 < if
       10 return
     end
@@ -86,15 +86,15 @@ namespace: number
     ## arbitrary base numbers <BASE>b<NUMBER>
     ..dup 1 string.charAt 'b' ==
         ..over 1 string.charAt 'B' ==  | if
-      ..dup 0 string.charAt '0' - i32 =: mut b
+      ..dup 0 string.charAt '0' - i32 =: mut: b
       b 2 < b 9 > | if
         10 return ## invalid base -> return unmodified string
       end
       2 string.tail b return
     end
     ..dup .length 3 > if ..dup 2 string.charAt 'b' == if ## two digits before b
-      ..dup 0 string.charAt '0' - =:: mut b1
-      ..dup 1 string.charAt '0' - =:: mut b2
+      ..dup 0 string.charAt '0' - =:: mut: b1
+      ..dup 1 string.charAt '0' - =:: mut: b2
       b1 0 < b1 9 > | b2 0 < b2 9 > | | if
         10 return ## invalid base -> return unmodified string
       end
@@ -106,15 +106,15 @@ namespace: number
     end end
     10 return
   end
-  enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR OVERFLOW ) =:: export ParserError
+  enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR OVERFLOW ) =:: export: ParserError
   proc( string : str  i32 : base bool : unsigned -> i64 ParserError ) =>: tryParseIntInternal
-    false =:: mut sign
-    base =:: mut mBase
+    false =:: mut: sign
+    base =:: mut: mBase
     base 0 != base 2 < base 62 > | & if
       0 ParserError .INVALID_BASE return
     end
-    0 i64 =: mut res
-    false =:: mut overflow
+    0 i64 =: mut: res
+    false =:: mut: overflow
     str
       ..dup .length 0 == if
         ..drop 0 ParserError .EMPTY return
@@ -164,10 +164,10 @@ namespace: number
     overflow if ParserError .OVERFLOW return end
     ParserError .NONE return
   end
-  proc( string : str  i32 : base -> i64 ParserError ) =>: export tryParseInt
+  proc( string : str  i32 : base -> i64 ParserError ) =>: export: tryParseInt
     str base false tryParseIntInternal
   end
-  proc( string : str  i32 : base -> i64 ParserError ) =>: export tryParseUInt
+  proc( string : str  i32 : base -> i64 ParserError ) =>: export: tryParseUInt
     str base true tryParseIntInternal
   end
   proc( i8 : chr i32 : base -> bool ) =>: isExpChar
@@ -182,18 +182,18 @@ namespace: number
         false return
     end
   end
-  proc( string : str i32 : base -> f64 ParserError ) =>: export tryParseFloat
-    false =:: mut sign
-    base =:: mut mBase
+  proc( string : str i32 : base -> f64 ParserError ) =>: export: tryParseFloat
+    false =:: mut: sign
+    base =:: mut: mBase
     base 0 != base 2 < base 62 > | & if
       f64.NaN ParserError .INVALID_BASE return
     end
-    0 i64 =: mut c
-    false bool =: mut d
-    0 i64 =: mut e
-    0 i64 =: mut val
-    1 i64 cast 56 << i64 =: mut maxVal ## higher precision than f64, no overflow in base 62
-    false =:: mut cStyleHex
+    0 i64 =: mut: c
+    false bool =: mut: d
+    0 i64 =: mut: e
+    0 i64 =: mut: val
+    1 i64 cast 56 << i64 =: mut: maxVal ## higher precision than f64, no overflow in base 62
+    false =:: mut: cStyleHex
     str
       ..dup .length 0 == if
         ..drop 0 f64 cast ParserError .EMPTY return

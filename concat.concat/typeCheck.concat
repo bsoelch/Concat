@@ -4,35 +4,35 @@ import "program.concat"
 import "types.concat"
 import "labels.concat"
 
-struct( Type : mut valType i32 : mut opCount bool : mut writable ) =:: TypeInfo
-struct( Operation list : mut opStack TypeInfo list : mut typeStack ) =:: StackState
-struct( StackState : mut inTypes StackState : mut outTypes i64 : mut elsePos i32 : mut openIfIfs bool : mut elseReachable ) =:: IfBlockData
-struct( StackState : inTypes StackState : mut outTypes Type : switchType bool : mut endReachable bool : mut explicitBreak ) =:: SwitchBlockData
-struct( StackState : mut inTypes StackState : mut outTypes bool : mut hasOutTypes bool : mut doesLoop ) =:: WhileBlockData
-enum( empty IfBlockData : mut ifBlock WhileBlockData : mut whileBlock SwitchBlockData : mut switchBlock Type : procBlock ) =:: BlockData
-struct( BlockData : mut blockData FilePosition : startPos i64 : blockStart i32 : blockId BlockType : mut blockType ) =:: BlockInfo
+struct( Type : mut: valType i32 : mut: opCount bool : mut: writable ) =:: TypeInfo
+struct( Operation list : mut: opStack TypeInfo list : mut: typeStack ) =:: StackState
+struct( StackState : mut: inTypes StackState : mut: outTypes i64 : mut: elsePos i32 : mut: openIfIfs bool : mut: elseReachable ) =:: IfBlockData
+struct( StackState : inTypes StackState : mut: outTypes Type : switchType bool : mut: endReachable bool : mut: explicitBreak ) =:: SwitchBlockData
+struct( StackState : mut: inTypes StackState : mut: outTypes bool : mut: hasOutTypes bool : mut: doesLoop ) =:: WhileBlockData
+enum( empty IfBlockData : mut: ifBlock WhileBlockData : mut: whileBlock SwitchBlockData : mut: switchBlock Type : procBlock ) =:: BlockData
+struct( BlockData : mut: blockData FilePosition : startPos i64 : blockStart i32 : blockId BlockType : mut: blockType ) =:: BlockInfo
 struct(
-  ProgramContext ptr mut : mut progContext
+  ProgramContext ptr mut : mut: progContext
 
-  Operation list : mut compiledOps
+  Operation list : mut: compiledOps
 
-  Operation list : mut opStack
-  TypeInfo list : mut typeStack
-  BlockInfo list : mut openBlocks
+  Operation list : mut: opStack
+  TypeInfo list : mut: typeStack
+  BlockInfo list : mut: openBlocks
 
-  Type list : mut autoTypes
-  SwitchData list : mut switchData
-  CompilerError list : mut errors
+  Type list : mut: autoTypes
+  SwitchData list : mut: switchData
+  CompilerError list : mut: errors
 
-  FileId : mut fileId
-  i32 : mut tmpCount
-  i32 : mut ifCount
-  i32 : mut whileCount
+  FileId : mut: fileId
+  i32 : mut: tmpCount
+  i32 : mut: ifCount
+  i32 : mut: whileCount
 
-  bool : mut reachable
-  bool : mut hasCheckIndex
-  bool : mut hasCheckEnum
-  bool : mut hasGetArgs
+  bool : mut: reachable
+  bool : mut: hasCheckIndex
+  bool : mut: hasCheckEnum
+  bool : mut: hasGetArgs
 ) =:: TypeCheckState
 
 namespace: sb
@@ -47,8 +47,8 @@ namespace: sb
     progContext [] .idContext @ =:: idContext
     idContext [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
-    state [] .opStack .length =:: mut offset
-    maxTypes =:: mut remaining
+    state [] .opStack .length =:: mut: offset
+    maxTypes =:: mut: remaining
     sb
       state [] .typeStack .length 1 - while ..dup 0 >= do
         ..swap
@@ -136,7 +136,7 @@ end
 ## returns the number of elements in the opStack corresponding to the elements starting at index from in the typeStack
 ##  ( with 0 being the index of the top stack element )
 proc( i64 : from i64 : len TypeCheckState ptr mut : state -> i64 ) =>: countStackOps
-  0 =:: mut count
+  0 =:: mut: count
   state [] .typeStack .length from - =:: offset
   1 while ..dup len <= do
     state [] .typeStack offset ..over.2 - list.at ..dup optional.hasData if .data
@@ -340,8 +340,8 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
         state [] .typeStack ..over.2 list.get .opCount -
       ..swap 1 +
     end ..drop
-  =:: mut opOffset
-  opOffset =:: mut newOffset
+  =:: mut: opOffset
+  opOffset =:: mut: newOffset
   typeOffset while ..dup state [] .typeStack .length < do
     state [] .typeStack ..over list.at .data =:: typeInfo
     typeInfo [] .opCount 0 <= if
@@ -393,7 +393,7 @@ proc( i64 : count bool : keepWritable FilePosition : pos TypeCheckState ptr mut 
       ## opArrayGet
         0
         pos
-      opArrayGet =:: mut tmp
+      opArrayGet =:: mut: tmp
         stackHead [] .valType tmp .dataType =
         0 tmp .val .getArrayElement =
       tmp state [] .opStack .data newOffset [] =
@@ -489,9 +489,9 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
     pos state appendError2
     return
   end
-  0 =:: mut nCasts
-  false =:: mut isError
-  state [] .opStack .length =:: mut opOffset
+  0 =:: mut: nCasts
+  false =:: mut: isError
+  state [] .opStack .length =:: mut: opOffset
   1 while ..dup types .length <= do
     state [] .typeStack ..dup .length ..over.2 - list.at .data =:: src
     types ..dup .length ..over.2 - array.get =:: expected
@@ -523,8 +523,8 @@ proc( Type arrayView : types string : opName FilePosition : pos TypeCheckState p
   nCasts 0 == isError | if
     return
   end
-  state [] .opStack .length =:: mut offset
-  0 =:: mut shiftCount
+  state [] .opStack .length =:: mut: offset
+  0 =:: mut: shiftCount
   state [] .opStack ..dup .length nCasts + list.ensureCap state [] .opStack =
   state [] .opStack
     ..dup .length nCasts + list.setLength
@@ -558,7 +558,7 @@ proc( bool : keepTop FilePosition : pos TypeCheckState ptr mut : state -> i64 ) 
   state [] .progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  0 =:: mut opOffset
+  0 =:: mut: opOffset
   state [] .typeStack .length
     keepTop if 1 - end
   =:: count
@@ -606,7 +606,7 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
     ignoreLast if 1 - end
   =:: nTypes
   create if
-    nTypes =:: mut newTypes
+    nTypes =:: mut: newTypes
     outTypes [] .opStack
       inTypes [] .opStack .length list.ensureCap
     outTypes [] .opStack =
@@ -651,9 +651,9 @@ proc( StackState ptr : inTypes StackState ptr mut : outTypes bool : create Block
       return
     end
   end
-  IdentifierInfo : mut tmpId
-  0 =::  mut opOffset
-  blockStart =:: mut newBlockStart
+  IdentifierInfo : mut: tmpId
+  0 =:: mut: opOffset
+  blockStart =:: mut: newBlockStart
   0 while ..dup nTypes < do
     state [] .typeStack ..over list.at .data =:: typeInfo
     state [] .opStack opOffset list.at .data =:: op
@@ -775,7 +775,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  op [] .dataType =:: mut calledType
+  op [] .dataType =:: mut: calledType
   callType .POINTER ?? if
     state [] .typeStack list.peek ..dup optional.isEmpty if ..drop
       "missing argument for operation" sb.wrap
@@ -794,9 +794,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   calledType ..dup typeContext isPointer if
     typeContext getBaseType
   end typeContext unwrapNamed calledType =
-  calledType typeContext getProcIn ..drop =:: mut inType
-  calledType typeContext getProcOut ..drop =:: mut outType
-  calledType typeContext getCallConvention ..drop =:: mut callConvention
+  calledType typeContext getProcIn ..drop =:: mut: inType
+  calledType typeContext getProcOut ..drop =:: mut: outType
+  calledType typeContext getCallConvention ..drop =:: mut: callConvention
   inType typeContext compositeEltCount =:: argCount
   outType typeContext compositeEltCount =:: resCount
   templateId id.TEMPLATE_ID_NONE != calledType typeContext hasStaticArgs | if
@@ -853,8 +853,8 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
         1 -
       end ..drop
     end
-    state [] .typeStack .length =:: mut typeOffset
-    state [] .opStack .length =:: mut opOffset
+    state [] .typeStack .length =:: mut: typeOffset
+    state [] .opStack .length =:: mut: opOffset
     inType typeContext compositeElts =:: inTypes
     argCount i32 cast 1 - while ..dup 0 >= do
       inTypes ..over types.compositeElts.get =:: argType
@@ -924,8 +924,8 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
     inType outType callConvention typeContext newProcedure ..drop calledType =
     calledType op [] .dataType =
     templateInfo optional.hasData if templateInfo .data =:: templateData
-      -1 =:: mut mImpl
-      false =:: mut match
+      -1 =:: mut: mImpl
+      false =:: mut: match
       0 while ..dup templateData [] .implementations .length < do
         templateData [] .implementations ..over list.at .data [] .argValues idContext [] .constContext @ constArrayAsArray =:: implArgs
         true match =
@@ -965,9 +965,9 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
       argBufferOffset list.setLength
     idContext [] .templateArgBuffer = ## reset argument buffer
   end
-  Type .undefined =:: mut retType
-  IdentifierInfo : mut retId
-  IdentifierInfo list : mut retIds
+  Type .undefined =:: mut: retType
+  IdentifierInfo : mut: retId
+  IdentifierInfo list : mut: retIds
   resCount 0 == if 0i64 else
     resCount outType resCount 1 - typeContext compositeGetElement typeContext types.isSmallType if 1 - end
   end =:: outArgCount
@@ -978,7 +978,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
      inTypes ..over.2 types.compositeElts.get typeContext types.isEmpty if 1 - end
     ..swap 1 +
    end ..drop
-  =:: mut totalArgs ## only count non-empty arguments
+  =:: mut: totalArgs ## only count non-empty arguments
   callConvention switch
     STRUCT case
       resCount 1 == if
@@ -1083,7 +1083,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
             eltId
             op [] .pos
           opInitializeId list.append
-          i op [] .pos opTupleGet =:: mut getElt
+          i op [] .pos opTupleGet =:: mut: getElt
             retType getElt .dataType =
           getElt list.append
             retType
@@ -1282,7 +1282,7 @@ proc( Operation ptr mut : op IdentifierInfo : idInfo TypeCheckState ptr mut : st
         op list.appendP
       state [] .compiledOps =
       op [] .dataType typeContext types.getProcIn ..drop =:: inTypes
-      Operation : mut tmp
+      Operation : mut: tmp
       0 while ..dup inTypes typeContext types.compositeEltCount < do
         inTypes ..over typeContext types.compositeGetLabel =:: label
         label labelContext id.isLabelEmpty if
@@ -1316,8 +1316,8 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  state [] .typeStack .length =:: mut offset
-  0 =:: mut indexCount
+  state [] .typeStack .length =:: mut: offset
+  0 =:: mut: indexCount
   state [] .typeStack .length 0 == if
     "missing argument for operation " sb.wrap
       op [] progContext sb.appendOp
@@ -1368,8 +1368,8 @@ proc( Operation ptr mut : op i32 ptr mut : sizeCount TypeCheckState ptr mut : st
   pointerType typeContext isFixedSize if
     pointerType typeContext getArraySize =:: sizes
     indexCount 1 + false op [] .pos state extractCompositeOps ## extract elements
-    state [] .typeStack .length =:: mut typeOffset
-    state [] .opStack .length =:: mut opOffset
+    state [] .typeStack .length =:: mut: typeOffset
+    state [] .opStack .length =:: mut: opOffset
     indexCount 0 > if
       true state [] .hasCheckIndex =
     end
@@ -1449,7 +1449,7 @@ proc( Operation ptr mut : op i32  : eltIndex TypeCheckState ptr mut : state -> )
     op [] .pos state appendError2
     return
   end
-  compositeType eltIndex typeContext compositeGetElement =:: mut elementType
+  compositeType eltIndex typeContext compositeGetElement =:: mut: elementType
   compositeType eltIndex typeContext compositeGetLabel =:: elementLabel
   typeInfo [] .writable elementLabel id.LABEL_ID_NONE == elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? | & =:: mutable
   op [] .val .atElement ?? if
@@ -1511,7 +1511,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
     op [] .pos state appendError2
     return
   end .data =:: typeInfo
-  typeInfo [] .valType =:: mut targetType
+  typeInfo [] .valType =:: mut: targetType
   targetType typeContext isPointer if
     targetType typeContext getBaseType targetType =
   end
@@ -1543,7 +1543,7 @@ proc( Operation ptr mut : op LabelId  : label TypeCheckState ptr mut : state -> 
     targetType typeContext unwrapNamed =:: enumType
     enumType label typeContext compositeFindLabel =:: index
     index 0 >= if
-      enumType index typeContext compositeGetElement =:: mut eltType
+      enumType index typeContext compositeGetElement =:: mut: eltType
        op [] .val .hasLabel ?? ! if eltType typeContext isEmpty _if
         "element " sb.wrap
           label labelContext sb.appendLabelName
@@ -1938,8 +1938,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       end
       state [] .typeStack ..dup .length 1 - list.at .data =:: right
       state [] .typeStack ..dup .length 2 - list.at .data =:: left
-      Type 2 array new =:: mut inTypes
-      Type .undefined =:: mut outType
+      Type 2 array new =:: mut: inTypes
+      Type .undefined =:: mut: outType
       left [] .valType  inTypes @ 0 [] =
       right [] .valType inTypes @ 1 [] =
       op state checkLocal
@@ -2065,7 +2065,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
       op [] .val .block .blockType switch
         IF IFIF case
           op state checkReachable
-          state [] .ifCount =:: mut blockId
+          state [] .ifCount =:: mut: blockId
           op [] .val .block .blockType .IF ?? if
             state [] .ifCount 1 + state [] .ifCount =
           end
@@ -2127,7 +2127,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             ifBlock op [] .pos state storeIfOutTypes
             true ifBlock [] .blockData .ifBlock .elseReachable =
           end
-          BlockType .IFIF op [] .pos opEndBlock =:: mut closeIfIf
+          BlockType .IFIF op [] .pos opEndBlock =:: mut: closeIfIf
           ifBlock [] .blockData .ifBlock .openIfIfs while ..dup 0 > do
             ifBlock [] .blockId closeIfIf .val .blockEnd .blockId =
             state [] .compiledOps
@@ -2205,7 +2205,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
             return
           end .data =:: breakBlock
           breakBlock [] .blockId op [] .val .block .blockId =
-          false =:: mut match
+          false =:: mut: match
           breakBlock [] .blockType ..dup .WHILE ?? ..swap .DO ?? | if
             op state checkReachable
             breakBlock false op [] .pos state storeLoopOutTypes
@@ -2453,7 +2453,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           else
             closed [] .blockData .ifBlock .outTypes @ state resetStack
           end
-          BlockType .IFIF op [] .pos opEndBlock =:: mut closeIfIf
+          BlockType .IFIF op [] .pos opEndBlock =:: mut: closeIfIf
           closed [] .blockData .ifBlock .openIfIfs while ..dup 0 > do
             closed [] .blockId closeIfIf .val .blockEnd .blockId =
             state [] .compiledOps
@@ -2526,7 +2526,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
                 "\nmissing labels:\n" sb.appendS
                 0 while ..dup eltCount < do
                   ..swap
-                  false =:: mut  match
+                  false =:: mut:  match
                   0 while ..dup labels .length < do
                     labels ..over list.get .value .enumLabel ..over.3 == if
                       true match =
@@ -2749,7 +2749,7 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           state [] .typeStack .length sb.appendI
         op [] .pos state appendError2
         return
-      end .data =:: mut argIndex
+      end .data =:: mut: argIndex
       1 false op [] .pos state extractCompositeOps
       argIndex [] .valType typeContext types.isInt ! if
         "wrong type for argument index : " sb.wrap
@@ -3169,8 +3169,8 @@ proc(
 end
 
 128 =:: MAX_TEMPLATE_DEPTH
-proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
-  =:: mut prog
+proc( ProgramContext ptr mut -> ) =>: export: typeCheckProgram
+  =:: mut: prog
   ## TypeCheckState
     prog
     128 Operation list.create
@@ -3188,9 +3188,9 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
     prog [] .hasCheckIndex
     prog [] .hasCheckEnum
     prog [] .hasGetArgs
-  TypeCheckState new =:: mut state
+  TypeCheckState new =:: mut: state
   prog [] .idContext @ =:: idContext
-  0 =:: mut globalTmpCount
+  0 =:: mut: globalTmpCount
   0 while ..dup prog [] .progFiles .length < do
     ..dup state .fileId =
     prog [] .progFiles ..over list.at .data
@@ -3233,16 +3233,16 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
   end ..drop
   state .compiledOps list.free state .compiledOps =
   prog [] .templateOps .length 0 > if
-    0 =:: mut depth
-    false =:: mut compiledImpl
+    0 =:: mut: depth
+    false =:: mut: compiledImpl
     while
       false compiledImpl =
       depth 1 + depth =
       0 while ..dup idContext [] .templateInfos .length < do
-        idContext [] .templateInfos ..over list.at .data =:: mut template
+        idContext [] .templateInfos ..over list.at .data =:: mut: template
         template [] .codeLength 0 > template [] .implementations .length template [] .compiledImpls > & if
           true compiledImpl =
-          template [] .implementations .length =:: mut prevImpl
+          template [] .implementations .length =:: mut: prevImpl
           template [] .srcFile state .fileId =
           prog [] .progFiles template [] .srcFile list.at .data [] .templateOps state .compiledOps =
           template [] .compiledImpls while ..dup template [] .implementations .length < do
@@ -3251,7 +3251,7 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
             state .opStack list.clear state .opStack =
             template [] .implementations ..over list.at .data =:: impl
             impl [] .argValues idContext [] .constContext @ constArrayAsArray =:: argArray
-            false =:: mut isTemplate
+            false =:: mut: isTemplate
             0 while ..dup argArray .length < do =:: i
               argArray i array.at .data =:: arg
               arg [] .typeId ?? if arg [] .typeId prog [] .idContext .typeContext @ types.containsGeneric ..drop _if
@@ -3271,7 +3271,7 @@ proc( ProgramContext ptr mut -> ) =>: export typeCheckProgram
             idContext [] .templateArgBuffer =
             argBufferOffset idContext [] .templateArgBuffer .length argBufferOffset - ConstantArray new =:: argsIndices
             0 while ..dup template [] .codeLength < do
-              prog [] .templateOps template [] .codeOffset ..over.2 + list.get =:: mut op ## copy by value to allow modification
+              prog [] .templateOps template [] .codeOffset ..over.2 + list.get =:: mut: op ## copy by value to allow modification
               op @ template impl ..over.4 argsIndices state @ resolveTemplateOp
               op @ state @ typeCheckOp
               idContext [] .templateInfos ..over.3 list.at .data template = ## compiling operation can change template list

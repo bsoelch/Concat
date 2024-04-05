@@ -1,30 +1,30 @@
 import arrayView
 import mem
 
-i8 arrayView =:: export string
+i8 arrayView =:: export: string
 
 namespace: string
   #:ifnot:exp
   "" 0 string new =:: EMPTY
-  proc( -> string ) =>: export empty
+  proc( -> string ) =>: export: empty
     EMPTY return
   end
   #:else
   ## TODO use constant initializer (when fully implemented)
   ## { "" : data 0 : length } string =: empty
-  proc( -> string ) =>: export empty
+  proc( -> string ) =>: export: empty
     "" 0 string new return
   end
   #:end
 
-  proc( i8 _ ptr  i64 -> string ) =>: export create
+  proc( i8 _ ptr  i64 -> string ) =>: export: create
     string new return
   end
-  proc( i64 : auto k  i8 k ptr : str -> string ) =>: export wrap
+  proc( i64 : auto: k  i8 k ptr : str -> string ) =>: export: wrap
     str k create return
   end
 
-  proc( string : s1 string : s2 -> i32 ) =>: export compare
+  proc( string : s1 string : s2 -> i32 ) =>: export: compare
     s1 .length s2 .length < if s1 .length else s2 .length end =:: l
     s1 .data s2 .data l mem.compare
     ..dup 0 != if
@@ -39,10 +39,10 @@ namespace: string
        0 return
     end
   end
-  proc( string string -> bool ) =>: export eq
+  proc( string string -> bool ) =>: export: eq
     compare 0 == return
   end
-  proc( string : str -> i32 ) =>: export hash
+  proc( string : str -> i32 ) =>: export: hash
     0 ## hash
       0 ## index
       while ..dup str .length < do
@@ -56,16 +56,16 @@ namespace: string
     return
   end
 
-  proc( string : str i64 : index -> i8 ) =>: export charAt
+  proc( string : str i64 : index -> i8 ) =>: export: charAt
     str index array.get return
   end
-  proc( string : str i8 : chr -> i64 ) =>: export indexOf
+  proc( string : str i8 : chr -> i64 ) =>: export: indexOf
     str chr array.indexOf return
   end
-  proc( string : str i8 : chr -> i64 ) =>: export lastIndexOf
+  proc( string : str i8 : chr -> i64 ) =>: export: lastIndexOf
     str chr array.lastIndexOf return
   end
-  proc( string : base string : subStr -> i64 ) =>: export indexOfStr ## XXX move to arrayView
+  proc( string : base string : subStr -> i64 ) =>: export: indexOfStr ## XXX move to arrayView
     subStr .length base .length > if
       -1 return
     end
@@ -80,7 +80,7 @@ namespace: string
     ..drop
     -1 return
   end
-  proc( string : base string : subStr -> i64 ) =>: export lastIndexOfStr
+  proc( string : base string : subStr -> i64 ) =>: export: lastIndexOfStr
     subStr .length base .length > if
       -1 return
     end
@@ -93,48 +93,48 @@ namespace: string
       end
     return
   end
-  proc( string : base string : subStr -> bool ) =>: export startsWith
+  proc( string : base string : subStr -> bool ) =>: export: startsWith
     subStr .length base .length > if
       false return
     end
     base .data subStr .length create subStr compare 0 == return
   end
-  proc( string : base string : subStr -> bool ) =>: export endsWith
+  proc( string : base string : subStr -> bool ) =>: export: endsWith
     subStr .length base .length > if
       false return
     end
     base .data base .length subStr .length - + subStr .length create subStr compare 0 == return
   end
 
-  proc( string : str i8 : chr -> bool ) =>: export contains
+  proc( string : str i8 : chr -> bool ) =>: export: contains
     str chr array.indexOf -1 != return
   end
-  proc( string : base string : subStr -> bool ) =>: export isSubstring
+  proc( string : base string : subStr -> bool ) =>: export: isSubstring
     base subStr indexOfStr -1 != return
   end
 
   ## first n characters
-  proc( string : str i64 : n -> string ) =>: export head
+  proc( string : str i64 : n -> string ) =>: export: head
     str n array.head return
   end
   ## everything excluding the first n characters
-  proc( string : str i64 : n -> string ) =>: export tail
+  proc( string : str i64 : n -> string ) =>: export: tail
     str n array.tail return
   end
   ## equivalent to:  <from> tail <len> head
-  proc( string : str i64 : from i64 : len -> string ) =>: export slice
+  proc( string : str i64 : from i64 : len -> string ) =>: export: slice
     str from len array.slice return
   end
-  proc( string : str i64 : index -> string string ) =>: export cutIndex
+  proc( string : str i64 : index -> string string ) =>: export: cutIndex
     str index array.cutIndex return
   end
-  proc( string : str i64 : index -> string string ) =>: export splitIndex
+  proc( string : str i64 : index -> string string ) =>: export: splitIndex
     str index array.splitIndex return
   end
-  proc( string : str i8 : chr -> string string ) =>: export split
+  proc( string : str i8 : chr -> string string ) =>: export: split
     str chr array.split return
   end
-  proc( string : str i8 : chr -> string string ) =>: export splitLast
+  proc( string : str i8 : chr -> string string ) =>: export: splitLast
     str chr array.splitLast return
   end
 end

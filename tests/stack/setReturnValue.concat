@@ -1,4 +1,4 @@
-struct( i32 : a i32 : mut b ) =:: aStruct
+struct( i32 : a i32 : mut: b ) =:: aStruct
 
 proc( aStruct ptr -> aStruct ) =>: get
   []

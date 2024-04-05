@@ -18,31 +18,31 @@ import "interpreter/operators.concat"
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
 struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
-struct( InterpreterContext : mut context i64 : mut offset ) =:: InterpreterInfo
+struct( InterpreterContext : mut: context i64 : mut: offset ) =:: InterpreterInfo
 
 struct(
-  BlockType : mut blockType
-  i64  : mut blockStart
-  bool : mut autoClose
+  BlockType : mut: blockType
+  i64  : mut: blockStart
+  bool : mut: autoClose
   bool : hasScope
 ) =:: BlockInfo
 
 struct(
-  string : mut basePath
-  string : mut libPath
+  string : mut: basePath
+  string : mut: libPath
   ProgramContext ptr mut : progContext
-  BlockInfo list : mut openBlocks
-  Operation list : mut globalOpBuffer
-  Constant list : mut constants
-  i64 : mut constOffset
-  Type list : mut typeBuffer
-  StaticArgument list : mut staticArgs
-  i64 : mut staticArgsOffset
-  FileId : mut currentFile
-  ProcId optional : mut currentProc
-  CompositeConstantOffset list : mut constantBlocks
-  InterpreterInfo list : mut globalInterpreters
-  LabelId list : mut labelBuffer
+  BlockInfo list : mut: openBlocks
+  Operation list : mut: globalOpBuffer
+  Constant list : mut: constants
+  i64 : mut: constOffset
+  Type list : mut: typeBuffer
+  StaticArgument list : mut: staticArgs
+  i64 : mut: staticArgsOffset
+  FileId : mut: currentFile
+  ProcId optional : mut: currentProc
+  CompositeConstantOffset list : mut: constantBlocks
+  InterpreterInfo list : mut: globalInterpreters
+  LabelId list : mut: labelBuffer
 ) =:: ParserState
 
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
@@ -441,8 +441,8 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state -> Typ
     "no enough constants for array" sb.wrap fileState [] .wordStart state appendError2
      Type array.empty ConstValue array.empty Type .undefined return
   end
-  Type .undefined =:: mut arrayType
-  true =:: mut hasArrayType
+  Type .undefined =:: mut: arrayType
+  true =:: mut: hasArrayType
   state [] .typeBuffer list.clear state [] .typeBuffer =
   idContext [] .templateArgBuffer .length =:: offset
   state [] .constants .length len - =:: newLength
@@ -571,7 +571,7 @@ proc(
   state [] .openBlocks
     list.pop =:: closed
   state [] .openBlocks =
-  false =:: mut isError
+  false =:: mut: isError
   closed .hasScope if
     state [] .progContext [] .idContext @ id.closeScope
       isError =
@@ -600,33 +600,33 @@ proc(
   ParserState ptr mut : state
   LabelFlag : initFlags
 -> string LabelId ) =>: readLabelAddFlags
-  0 LabelFlag =: mut flags
-  false =:: mut isModifier
+  0 LabelFlag =: mut: flags
+  false =:: mut: isModifier
   code start
     while
       false isModifier =
-      ..dup "mut" string.wrap string.eq if
+      ..dup "mut:" string.wrap string.eq if
         id.FLAG_MUTABLE flags | flags =
         true isModifier =
-      else ..dup "auto" string.wrap string.eq _if
+      else ..dup "auto:" string.wrap string.eq _if
         id.FLAG_AUTO flags | flags =
         true isModifier =
-      else ..dup "static" string.wrap string.eq _if
+      else ..dup "static:" string.wrap string.eq _if
         id.FLAG_STATIC flags | flags =
         true isModifier =
-      else ..dup "extern" string.wrap string.eq _if
+      else ..dup "extern:" string.wrap string.eq _if
         id.FLAG_EXTERN flags | flags =
         true isModifier =
-      else ..dup "export" string.wrap string.eq _if
+      else ..dup "export:" string.wrap string.eq _if
         id.FLAG_EXPORT flags | flags =
         true isModifier =
-      else ..dup "inline" string.wrap string.eq _if
+      else ..dup "inline:" string.wrap string.eq _if
         id.FLAG_INLINE flags | flags =
         true isModifier =
-      else ..dup "#:experimental" string.wrap string.eq _if
+      else ..dup "#:experimental:" string.wrap string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags =
         true isModifier =
-      else ..dup "#:" string.wrap string.startsWith _if
+      else ..dup ":" string.wrap string.endsWith _if
         true isModifier =
       end
       isModifier ! if
@@ -786,8 +786,8 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
   str .length 0 == if
     false return
   end
-  false =:: mut unsigned
-  0 =:: mut size
+  false =:: mut: unsigned
+  0 =:: mut: size
   str
     str .length 1 - while ..dup 0 > do
       ..swap
@@ -1012,7 +1012,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         Type .undefined fileState [] .wordStart newTypeConst  state pushConst
         true return
       end
-      =:: mut t
+      =:: mut: t
       t typeContext types.isMutable if
         "type is already mutable" sb.wrap fileState [] .wordStart state appendError2
       end
@@ -1128,7 +1128,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ..over [] .constValue .procedureBundle ?? |  if
       ..drop.2 false return ## ignore procedure constants
     end
-    ..dup [] .constValue =:: mut constVal
+    ..dup [] .constValue =:: mut: constVal
     ..dup [] .templateId -1 != ..over [] .idType .TEMPLATE_ARG ?? ! & if
       idContext [] .templateArgBuffer .length =:: offset
       ..dup [] .templateId idContext id.templateArgs fileState state popTemplateArguments if
@@ -1252,7 +1252,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
        ..over "=>:" string.wrap string.eq | _if =:: opName
       opName ":" string.wrap string.eq ! =:: isInit
       opName "=>:" string.wrap string.eq =:: isProc
-      false =:: mut localDeclaration
+      false =:: mut: localDeclaration
       _EXPERIMENTAL_ ! if
         fileState state popTypeConstant ..drop ## comparability with old parser
       else state [] .constantBlocks .length 0 == state [] .currentProc optional.isEmpty & _if
@@ -1265,14 +1265,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           Type .undefined list.append
         progContext [] .autoTypes =
         true localDeclaration =
-      end =:: mut valType
+      end =:: mut: valType
       isProc localDeclaration & if
         "procedures can only be declared at global level" sb.wrap
         fileState [] .wordStart state appendError2
         return
       end
-      false =:: mut allowImmutableDeclaration
-      false =:: mut forceImmutable
+      false =:: mut: allowImmutableDeclaration
+      false =:: mut: forceImmutable
       state [] .constantBlocks .length 0 > if
         IdentifierType .LABEL
         true allowImmutableDeclaration =
@@ -1303,7 +1303,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState state nextWord fileState state
         ## make pre-declared variables mutable by default
         isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
-      readLabelAddFlags =:: mut label
+      readLabelAddFlags =:: mut: label
       forceImmutable if label labelContext id.labelFlags id.FLAG_MUTABLE & ? _if
         "identifiers of type " sb.wrap
           idType sb.appendIdType
@@ -1387,7 +1387,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             idData @ id.asIdInfo labelContext sb.appendIdInfo
           fileState [] .wordStart state appendError2
         end
-        true =:: mut validMain
+        true =:: mut: validMain
         label labelContext id.getLabelFile 0 != if
           idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
           "main procedure is not visible from root file" sb.wrap
@@ -1425,7 +1425,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end
         valType typeContext types.getProcIn ..drop =:: procIn
         procIn typeContext types.compositeEltCount =:: inCount
-        false =:: mut hasStaticArg
+        false =:: mut: hasStaticArg
         0 while ..dup inCount < do =:: i
           procIn i typeContext types.compositeGetLabel
               labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -1434,7 +1434,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           i 1 +
         end ..drop
-        label labelContext id.labelFlags id.FLAG_STATIC & ? =:: mut isStatic
+        label labelContext id.labelFlags id.FLAG_STATIC & ? =:: mut: isStatic
         valType typeContext types.getProcOut ..drop =:: procOut
         procOut typeContext types.compositeEltCount =:: outCount
         0 while ..dup outCount < do =:: i
@@ -1554,7 +1554,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       _EXPERIMENTAL_ if
         state tryInterpretGlobal ## try to interpret global operations before each declaration
       end
-      fileState state nextWord fileState state readLabel =:: mut labelId
+      fileState state nextWord fileState state readLabel =:: mut: labelId
       _EXPERIMENTAL_ ! if state hasConst _if
           state popConst =:: const
           const .valueType
@@ -1891,7 +1891,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             "unexpected end of procedure" sb.wrap fileState [] .wordStart state appendError2
             return
           end
-          state [] .currentProc .data =:: mut currentProcId
+          state [] .currentProc .data =:: mut: currentProcId
           progContext [] .procedures
             currentProcId list.at .data
           =:: currentProc
@@ -2808,7 +2808,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       0 StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
     else ..dup "..over" string.wrap string.eq
-         ..over "..over." string.wrap string.startsWith |  _if =:: mut opName
+         ..over "..over." string.wrap string.startsWith |  _if =:: mut: opName
       opName "..over." ..length string.tail =:: params
       "..over" string.wrap opName =
       params opName fileState [] .wordStart state getCompilerOpParam ## :offset
@@ -2818,7 +2818,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
       return
     else ..dup "..drop" string.wrap string.eq
-         ..over "..drop." string.wrap string.startsWith |  _if =:: mut opName
+         ..over "..drop." string.wrap string.startsWith |  _if =:: mut: opName
       opName "..drop." ..length string.tail =:: params
       "..drop" string.wrap opName =
       params opName fileState [] .wordStart state getCompilerOpParam ## :count
@@ -2914,11 +2914,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end
       return
     else ..dup "..?types" string.wrap string.eq
-       ..over "..?types." string.wrap string.startsWith | _if =:: mut opName
+       ..over "..?types." string.wrap string.startsWith | _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params
       "..?types" string.wrap opName =
-      -1 =:: mut count
-      0 =:: mut depth
+      -1 =:: mut: count
+      0 =:: mut: depth
       params .length 0 > if
         params '.' string.split =:: head =:: tail
         head .length 0 > if
@@ -2941,7 +2941,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       opTypesInfo state appendOp
       return
     else ..dup "..?stack" string.wrap string.eq
-       ..over "..?stack." string.wrap string.startsWith | _if =:: mut opName
+       ..over "..?stack." string.wrap string.startsWith | _if =:: mut: opName
       opName "..?stack." ..length string.tail =:: params
       "..?stack" string.wrap opName =
       params .length 0 > if
@@ -2950,7 +2950,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart opStackInfo state appendOp
       return
     else ..dup "..?ops" string.wrap string.eq
-       ..over "..?ops." string.wrap string.startsWith | _if =:: mut opName
+       ..over "..?ops." string.wrap string.startsWith | _if =:: mut: opName
       opName "..?ops." ..length string.tail =:: params
       "..?ops" string.wrap opName =
       params .length 0 > if
@@ -2959,7 +2959,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState [] .wordStart opPrintCompiledOps state appendOp
       return
     ## XXX ..?parser.ops
-    else ..dup "..?find." string.wrap string.startsWith _if =:: mut opName
+    else ..dup "..?find." string.wrap string.startsWith _if =:: mut: opName
       opName "..?find." ..length string.tail =:: idName
       ## opPrintIdentifierMatches
         idName
@@ -2970,9 +2970,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart
       opPrintIdentifierMatches state appendOp
       return
-    else ..dup "..?parser.find." string.wrap string.startsWith _if =:: mut opName
+    else ..dup "..?parser.find." string.wrap string.startsWith _if =:: mut: opName
         opName "..?parser.find." ..length string.tail =:: idName
-        16 IdentifierMatch list.create =:: mut matches
+        16 IdentifierMatch list.create =:: mut: matches
         idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.wrap
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
@@ -3046,7 +3046,7 @@ proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState p
 end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state -> ) =>: importFile
   state [] .progContext =:: progContext
-  FILE_ID_NONE =:: mut imported
+  FILE_ID_NONE =:: mut: imported
   0 while ..dup progContext [] .progFiles .length < do
     progContext [] .progFiles ..over list.get .fileName sb.asStr fileName sb.asStr string.eq if
       ..dup imported =
@@ -3066,8 +3066,8 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state ->
 end
 
 
-proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramContext ) =>: export parseProgram
-  newProgramContext =:: mut programContext
+proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramContext ) =>: export: parseProgram
+  newProgramContext =:: mut: programContext
   ## FilePosition
     rootFile sb.asStr
     0
@@ -3097,7 +3097,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     128 CompositeConstantOffset list.create
     0   InterpreterInfo         list.create
     128 LabelId                 list.create
-  ParserState new =:: mut state
+  ParserState new =:: mut: state
   rootFile state @ parseFile rootFile rootPos state @ checkIOError ..drop
   ## cleanup parser memory
   state .constants list.free ..drop
@@ -3120,7 +3120,7 @@ proc( stringBuilder : fileName ParserState ptr mut : state -> FileId io.IOError 
       '\x00' sb.appendC ## ensure file-name is zero terminated
       ..dup .length 1 - sb.setLength ## ensure there is a zero-terminator after the last character
     end
-    ..dup sb.asStr 0 1 FilePosition new ..dup FileState new =:: mut fileState
+    ..dup sb.asStr 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles .length FileId cast =:: fileId
     progContext [] .progFiles
       ..over fileId progContext [] .idContext @ newProgFile list.append

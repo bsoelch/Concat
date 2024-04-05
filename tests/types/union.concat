@@ -1,4 +1,4 @@
-union( i32 : mut a i32 : mut b ) =:: anUnion
+union( i32 : mut: a i32 : mut: b ) =:: anUnion
 
 proc( -> ) =>: main
   anUnion : u

@@ -1,4 +1,4 @@
-struct( i32 : mut a i32 : b ) =:: struct
+struct( i32 : mut: a i32 : b ) =:: struct
 
 proc( -> ) =>: main
   0 0 struct new =:: s
@@ -9,7 +9,7 @@ proc( -> ) =>: main
   s .a ..debug.print
   s .b ..debug.print
 
-  0 0 struct new =:: mut mutS
+  0 0 struct new =:: mut: mutS
   mutS .a @
   mutS .b @
   ..?types

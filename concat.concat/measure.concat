@@ -96,9 +96,9 @@ proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut 
   end
 end
 
-proc( ProgramContext ptr mut : prog -> Type list ) =>: export getDeclaredTypes
-  types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut visited ## XXX start with power of two closest to total type count as capacity
-  128 Type list.create =:: mut types
+proc( ProgramContext ptr mut : prog -> Type list ) =>: export: getDeclaredTypes
+  types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut: visited ## XXX start with power of two closest to total type count as capacity
+  128 Type list.create =:: mut: types
   prog [] .idContext @ =:: idContext 
   idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## XXX find out which declarations are actually used

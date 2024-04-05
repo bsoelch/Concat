@@ -3,40 +3,40 @@ import arrayView
 import list
 
 namespace: branchTree
-  i64 =:: export NodeId
+  i64 =:: export: NodeId
 #:if:exp
-  ( type : T -> type ) =>: export Node
+  ( type : T -> type ) =>: export: Node
     struct(
-      T : mut data
-      NodeId : mut parent
+      T : mut: data
+      NodeId : mut: parent
       i64 : level
-      i32 : mut childCount
+      i32 : mut: childCount
     )
   end
 #:else
   #template type : T #end
   struct(
-    T : mut data
-    NodeId : mut parent
+    T : mut: data
+    NodeId : mut: parent
     i64 : level
-    i32 : mut childCount
-  ) =:: export Node
+    i32 : mut: childCount
+  ) =:: export: Node
 #:end
 end
 
 #:if:exp
-( type : T -> type ) =>: export BranchTree
+( type : T -> type ) =>: export: BranchTree
   struct(
-    branchTree.NodeId : mut branchHead
-    T branchTree.Node list : mut nodes
+    branchTree.NodeId : mut: branchHead
+    T branchTree.Node list : mut: nodes
   )
 end
 #:else
 #template type : T #end
 struct(
-  branchTree.NodeId : mut branchHead
-  T branchTree.Node list : mut nodes
-) =:: export BranchTree
+  branchTree.NodeId : mut: branchHead
+  T branchTree.Node list : mut: nodes
+) =:: export: BranchTree
 #:end
 
 
@@ -44,19 +44,19 @@ namespace: branchTree
   ## check if childCount > 0 for all nodes on current branch
   #:ifnot:exp
   #template type : T #end
-  proc(  T BranchTree ptr : tree -> ) =>: export check
+  proc(  T BranchTree ptr : tree -> ) =>: export: check
   #:else
-  proc( type : auto T T BranchTree ptr : tree -> ) =>: export check
+  proc( type : auto: T T BranchTree ptr : tree -> ) =>: export: check
   #:end
     tree tree [] .branchHead checkNode
   end
   #:ifnot:exp
   #template type : T #end
-  proc(  T BranchTree ptr : tree NodeId : root -> ) =>: export checkNode
+  proc(  T BranchTree ptr : tree NodeId : root -> ) =>: export: checkNode
   #:else
-  proc( type : auto T T BranchTree ptr : tree NodeId : root -> ) =>: export checkNode
+  proc( type : auto: T T BranchTree ptr : tree NodeId : root -> ) =>: export: checkNode
   #:end
-    root =:: mut nodeId
+    root =:: mut: nodeId
     while nodeId 0 >= do
       tree [] .nodes nodeId list.at .data =:: node
       node [] .childCount 0 <= if
@@ -68,9 +68,9 @@ namespace: branchTree
 
   #:ifnot:exp
   #template type : T #end
-  proc( -> T BranchTree ) =>: export create
+  proc( -> T BranchTree ) =>: export: create
   #:else
-  proc( type : T -> T BranchTree ) =>: export create
+  proc( type : T -> T BranchTree ) =>: export: create
   #:end
     ## BranchTree
       -1
@@ -79,9 +79,9 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> ) =>: export clear
+  proc( T BranchTree ptr mut : tree -> ) =>: export: clear
   #:else
-  proc( type : auto T T BranchTree ptr mut : tree -> ) =>: export clear
+  proc( type : auto: T T BranchTree ptr mut : tree -> ) =>: export: clear
   #:end
     -1 tree [] .branchHead =
     tree [] .nodes
@@ -90,9 +90,9 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> ) =>: export free
+  proc( T BranchTree ptr mut : tree -> ) =>: export: free
   #:else
-  proc( type : auto T T BranchTree ptr mut : tree -> ) =>: export free
+  proc( type : auto: T T BranchTree ptr mut : tree -> ) =>: export: free
   #:end
     -1 tree [] .branchHead =
     tree [] .nodes
@@ -101,7 +101,7 @@ namespace: branchTree
   end
 
   #:if:exp
-  ( type : T -> type ) =>: export BranchItr
+  ( type : T -> type ) =>: export: BranchItr
     struct(
       T BranchTree ptr mut : tree
       NodeId : id
@@ -112,23 +112,23 @@ namespace: branchTree
   struct(
     T BranchTree ptr mut : tree
     NodeId : id
-  ) =:: export BranchItr
+  ) =:: export: BranchItr
   #:end
 
   namespace: itr
     #:ifnot:exp
     #template type : T #end
-    proc( T BranchTree ptr mut : tree -> T BranchItr ) =>: export start
+    proc( T BranchTree ptr mut : tree -> T BranchItr ) =>: export: start
     #:else
-    proc( type : auto T T BranchTree ptr mut : tree -> T BranchItr ) =>: export start
+    proc( type : auto: T T BranchTree ptr mut : tree -> T BranchItr ) =>: export: start
     #:end
       tree tree [] .branchHead T BranchItr new
     end
     #:ifnot:exp
     #template type : T #end
-    proc( T BranchItr : itr -> T BranchItr bool ) =>: export hasNext
+    proc( T BranchItr : itr -> T BranchItr bool ) =>: export: hasNext
     #:else
-    proc( type : auto T T BranchItr : itr -> T BranchItr bool ) =>: export hasNext
+    proc( type : auto: T T BranchItr : itr -> T BranchItr bool ) =>: export: hasNext
     #:end
       itr .id 0 < itr .id itr .tree [] .nodes .length >= | if
         itr false return
@@ -137,9 +137,9 @@ namespace: branchTree
     end
     #:ifnot:exp
     #template type : T #end
-    proc( T BranchItr : itr -> T BranchItr T ptr ) =>: export next
+    proc( T BranchItr : itr -> T BranchItr T ptr ) =>: export: next
     #:else
-    proc( type : auto T T BranchItr : itr -> T BranchItr T ptr ) =>: export next
+    proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr ) =>: export: next
     #:end
       itr .tree [] .nodes itr .id list.at .data =:: node
       ## return
@@ -148,18 +148,18 @@ namespace: branchTree
     end
     #:ifnot:exp
     #template type : T #end
-    proc( T BranchItr : itr -> T BranchItr T ptr ) =>: export peekNext
+    proc( T BranchItr : itr -> T BranchItr T ptr ) =>: export: peekNext
     #:else
-    proc( type : auto T T BranchItr : itr -> T BranchItr T ptr ) =>: export peekNext
+    proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr ) =>: export: peekNext
     #:end
       itr .tree [] .nodes itr .id list.at .data =:: node
       itr node [] .data @ return
     end
     #:ifnot:exp
     #template type : T #end
-    proc( T BranchItr : itr -> T BranchItr ) =>: export skipNext
+    proc( T BranchItr : itr -> T BranchItr ) =>: export: skipNext
     #:else
-    proc( type : auto T T BranchItr : itr -> T BranchItr ) =>: export skipNext
+    proc( type : auto: T T BranchItr : itr -> T BranchItr ) =>: export: skipNext
     #:end
       itr .tree [] .nodes itr .id list.at .data =:: node
       itr .tree node [] .parent T BranchItr new return
@@ -168,13 +168,13 @@ namespace: branchTree
 
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export unlinkNode
+  proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export: unlinkNode
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
     NodeId : id
-  -> ) =>: export unlinkNode
+  -> ) =>: export: unlinkNode
   #:end
     tree [] .nodes id list.at .data =:: node
     node [] .childCount
@@ -195,24 +195,24 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree : tree -> i64 ) =>: export depth
+  proc( T BranchTree : tree -> i64 ) =>: export: depth
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree : tree
-  -> i64 ) =>: export depth
+  -> i64 ) =>: export: depth
   #:end
     tree tree .branchHead depthFrom return
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree : tree NodeId : root -> i64 ) =>: export depthFrom
+  proc( T BranchTree : tree NodeId : root -> i64 ) =>: export: depthFrom
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree : tree
     NodeId : root
-  -> i64 ) =>: export depthFrom
+  -> i64 ) =>: export: depthFrom
   #:end
     root -1 == if
       0 return
@@ -223,12 +223,12 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> NodeId ) =>: export startBranch
+  proc( T BranchTree ptr mut : tree -> NodeId ) =>: export: startBranch
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
-  -> NodeId ) =>: export startBranch
+  -> NodeId ) =>: export: startBranch
   #:end
     tree check
     tree [] .branchHead -1 != if
@@ -242,27 +242,27 @@ namespace: branchTree
   ## remove all nodes from current branch
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> ) =>: export prune
+  proc( T BranchTree ptr mut : tree -> ) =>: export: prune
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
-  -> ) =>: export prune
+  -> ) =>: export: prune
   #:end
     tree tree [] .branchHead endBranch
     -1 tree [] .branchHead =
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export endBranch
+  proc( T BranchTree ptr mut : tree NodeId : id -> ) =>: export: endBranch
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
     NodeId : id
-  -> ) =>: export endBranch
+  -> ) =>: export: endBranch
   #:end
-    id =:: mut nodeId
+    id =:: mut: nodeId
     while nodeId 0 >= nodeId tree [] .nodes .length < & do
       tree [] .nodes nodeId list.at .data =:: node
       tree nodeId unlinkNode
@@ -274,13 +274,13 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree NodeId : branchPoint -> NodeId ) =>: export reset
+  proc( T BranchTree ptr mut : tree NodeId : branchPoint -> NodeId ) =>: export: reset
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
     NodeId : branchPoint
-  -> NodeId ) =>: export reset
+  -> NodeId ) =>: export: reset
   #:end
     tree check
     tree [] .branchHead =:: oldHead
@@ -296,13 +296,13 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree T : value -> ) =>: export push
+  proc( T BranchTree ptr mut : tree T : value -> ) =>: export: push
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
     T : value
-  -> ) =>: export push
+  -> ) =>: export: push
   #:end
     tree [] .branchHead -1 == if
       1i64
@@ -322,27 +322,27 @@ namespace: branchTree
 
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> T ptr optional ) =>: export peek
+  proc( T BranchTree ptr mut : tree -> T ptr optional ) =>: export: peek
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
-  -> T ptr optional ) =>: export peek
+  -> T ptr optional ) =>: export: peek
   #:end
     tree 0 at return
   end
   ## returns a pointer to the stack element at the given index (0-indexed from top)
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree i32 : index -> T ptr optional ) =>: export at
+  proc( T BranchTree ptr mut : tree i32 : index -> T ptr optional ) =>: export: at
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
     i32 : index
-  -> T ptr optional ) =>: export at
+  -> T ptr optional ) =>: export: at
   #:end
-    tree [] .branchHead =:: mut nodeId
+    tree [] .branchHead =:: mut: nodeId
     index while
       nodeId 0 < nodeId tree [] .nodes .length >= | if ..drop
         T ptr optional.empty return
@@ -358,16 +358,16 @@ namespace: branchTree
   ## returns a mutable pointer to the stack element at the given index (0-indexed from top), writing to the returned pointer will only modify the current branch
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree i32 : index -> T ptr mut optional ) =>: export replaceAt
+  proc( T BranchTree ptr mut : tree i32 : index -> T ptr mut optional ) =>: export: replaceAt
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
     i32 : index
-  -> T ptr mut optional ) =>: export replaceAt
+  -> T ptr mut optional ) =>: export: replaceAt
   #:end
-    tree [] .branchHead =:: mut nodeId
-    false =:: mut needCopy
+    tree [] .branchHead =:: mut: nodeId
+    false =:: mut: needCopy
     index while
       nodeId 0 < nodeId tree [] .nodes .length >= | if ..drop
         T ptr mut optional.empty return
@@ -391,8 +391,8 @@ namespace: branchTree
     tree [] .branchHead =:: oldHead
     tree [] .nodes
       tree [] .branchHead
-    list.at .data =:: mut currentNode
-    currentNode [] =:: mut newNode
+    list.at .data =:: mut: currentNode
+    currentNode [] =:: mut: newNode
     tree [] .nodes .length tree [] .branchHead =
     1 newNode .childCount =
     tree [] .nodes .length nodeId =
@@ -427,12 +427,12 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> T ptr optional ) =>: export pop
+  proc( T BranchTree ptr mut : tree -> T ptr optional ) =>: export: pop
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
-  -> T ptr optional ) =>: export pop
+  -> T ptr optional ) =>: export: pop
   #:end
     tree [] .branchHead =:: nodeId
     tree check
@@ -455,12 +455,12 @@ namespace: branchTree
   end
   #:ifnot:exp
   #template type : T #end
-  proc( T BranchTree ptr mut : tree -> ) =>: export swap
+  proc( T BranchTree ptr mut : tree -> ) =>: export: swap
   #:else
   proc(
-    type : auto T
+    type : auto: T
     T BranchTree ptr mut : tree
-  -> ) =>: export swap
+  -> ) =>: export: swap
   #:end
     tree check
     tree pop .data [] =:: upper
@@ -478,16 +478,16 @@ namespace: branchTree
     NodeId arrayView : branchHeads ## should be non-empty
     proc( T ptr arrayView : types i64 : offset C : context -> T ) ptr : mergeValues
     C : context
-  -> MergeResult ) =>: export merge
+  -> MergeResult ) =>: export: merge
   #:else
   proc(
-    type : auto T
-    type : auto C
+    type : auto: T
+    type : auto: C
     T BranchTree ptr mut : tree
     NodeId arrayView : branchHeads ## should be non-empty
     proc( T ptr arrayView : types i64 : offset C : context -> T ) ptr : mergeValues
     C : context
-  -> MergeResult ) =>: export merge
+  -> MergeResult ) =>: export: merge
   #:end
     tree check
     branchHeads .length 0 <= if
@@ -501,9 +501,9 @@ namespace: branchTree
       tree check
       0 MergeResult .success return ## nothing to merge
     end
-    -1i64 =:: mut initDepth
-    -1i64 =:: mut parentId
-    false =:: mut needMerge
+    -1i64 =:: mut: initDepth
+    -1i64 =:: mut: parentId
+    false =:: mut: needMerge
     0 while ..dup branchHeads .length < do
       branchHeads ..over array.get =:: nodeId
       nodeId -1 < nodeId tree [] .nodes .length >= | if ## id=-1 or 0 <= id < length
@@ -556,21 +556,21 @@ namespace: branchTree
          branchHeads 0 array.get
        list.at .data list.appendP
     tree [] .nodes =
-    tree [] .nodes list.peek .data =:: mut currentNode
+    tree [] .nodes list.peek .data =:: mut: currentNode
     1 currentNode [] .childCount =
     ## create mutable copy of heads
     branchHeads .length =:: headCount
     headCount NodeId mem.alloc =:: heads
     heads branchHeads .data headCount mem.copy ..drop
     headCount T ptr mem.alloc =:: buffer
-    0 =:: mut offset
+    0 =:: mut: offset
     while
       tree [] .nodes heads 0 [] list.at .data =:: root
       root [] .parent parentId =
       root [] .data @ buffer 0 [] =
       parentId heads 0 [] =
       false needMerge =
-      1 =:: mut i while i headCount < do
+      1 =:: mut: i while i headCount < do
         tree [] .nodes heads i [] list.at .data =:: next
         next [] .parent parentId != if
           true needMerge =

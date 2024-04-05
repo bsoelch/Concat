@@ -38,7 +38,7 @@ proc( LabelId : label i32 : implId io.FILE : target ProgramContext ptr mut : pro
       label labelContext id.getLabelFile sb.appendI
       "_F" sb.appendS
     end
-    label labelContext id.getLabelNamespace =:: mut mNamespace
+    label labelContext id.getLabelNamespace =:: mut: mNamespace
     while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
       mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
       "." string.wrap sb.appendAsciified
@@ -234,7 +234,7 @@ proc( Type : t bool : argNames io.FILE : target ProgramContext ptr mut : prog ->
   inType typeContext types.compositeElts =:: args
   t typeContext types.getProcOut ..drop =:: outType
   outType typeContext types.compositeElts =:: outTypes
-  false =:: mut hasArgs
+  false =:: mut: hasArgs
   target "(" io.fputs ..drop
   0 while ..dup args .length < do
     args ..over types.compositeElts.get typeContext types.isEmpty if ## skip empty arguments
@@ -252,7 +252,7 @@ proc( Type : t bool : argNames io.FILE : target ProgramContext ptr mut : prog ->
     1 +
   end ..drop
   callConvention .POINTER ?? if
-    outTypes .length =:: mut N
+    outTypes .length =:: mut: N
     N 0 > if outTypes N 1 - types.compositeElts.get typeContext types.isSmallType if
       N 1 - N =
     end end
@@ -397,7 +397,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: printTypes
         32 sb.create
           " data[" sb.appendS
           t typeContext types.getArraySize =:: sizes
-          1 i64 =: mut totalSize
+          1 i64 =: mut: totalSize
           0 while ..dup sizes .length < do
             ..swap
               sizes ..over.2 array.get
@@ -611,7 +611,7 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
       return
     int case
       constType typeContext types.numberSize =:: numSize
-      const .int =:: mut constVal
+      const .int =:: mut: constVal
       numSize types.primitive.I8
           typeContext types.numberSize == if
         constVal i8 cast constVal =
@@ -695,7 +695,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  Operation ptr : mut op
+  Operation ptr : mut: op
   while
     index [] operations .length >= if
       ## TODO error: missing operation
@@ -1459,14 +1459,14 @@ proc( stringBuilder -> stringBuilder ) =>: appendCharNames
   "\";\n"          sb.appendS
 end
 
-proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
+proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToC
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   target printHeader
   target prog printTypes
   ## TODO initialize string data
-  id.LABEL_ID_NONE =:: mut mainId
+  id.LABEL_ID_NONE =:: mut: mainId
   MAIN_NAME string.wrap 0 idContext id.findIdentifierByName ! if =:: data =:: name
     name .namespace 0 != if
       ..unreachable ## assert that namespace is always top level
@@ -1526,7 +1526,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
     labelId idContext id.getIdentifier
       if ..unreachable end ## XXX replace with assertion
     =:: idData
-    idData [] .valueType =:: mut mType
+    idData [] .valueType =:: mut: mType
     idData [] .labelId labelContext id.labelFlags =:: labelFlags
     idData [] .idType .PROCEDURE_BUNDLE ?? if
       continue
@@ -1602,7 +1602,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToC
     f [] .globalOps .length 0 > if
       target "//global\n" io.fputs ..drop
     end
-    0 =:: mut index
+    0 =:: mut: index
     while index f [] .globalOps .length < do
       f [] .globalOps list.asArray index @ true target prog compileOp
     end

@@ -2,62 +2,62 @@
 import stringBuilder
 import list
 
-"main" =:: export MAIN_NAME ## name of main procedure
+"main" =:: export: MAIN_NAME ## name of main procedure
 
-i32 =:: export FileId
--1 FileId =: export FILE_ID_NONE
--2 FileId =: export FILE_ID_BUILT_IN
+i32 =:: export: FileId
+-1 FileId =: export: FILE_ID_NONE
+-2 FileId =: export: FILE_ID_BUILT_IN
 
-struct( string : mut fileName i64 : mut line i64 : mut posInLine ) =:: export FilePosition
-enum( ERROR WARNING INFO ) =:: export ErrorType
-struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export CompilerError
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =>: export appendError
+struct( string : mut: fileName i64 : mut: line i64 : mut: posInLine ) =:: export: FilePosition
+enum( ERROR WARNING INFO ) =:: export: ErrorType
+struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export: CompilerError
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =>: export: appendError
   errors []
     message ErrorType .ERROR pos CompilerError new list.append
   errors [] =
 end
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =>: export appendWarning
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =>: export: appendWarning
   errors []
     message ErrorType .WARNING pos CompilerError new list.append
   errors [] =
 end
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =>: export appendInfo
+proc( stringBuilder : message FilePosition : pos CompilerError list ptr mut : errors -> ) =>: export: appendInfo
   errors []
     message ErrorType .INFO pos CompilerError new list.append
   errors [] =
 end
 
-i32 =:: export LabelId
+i32 =:: export: LabelId
 
-proc( LabelId -> i32 ) =>: export labelHash end
-proc( LabelId LabelId -> bool ) =>: export labelEq == end
+proc( LabelId -> i32 ) =>: export: labelHash end
+proc( LabelId LabelId -> bool ) =>: export: labelEq == end
 
-i32 =:: export NamespaceId
-i32 =:: export NamespaceImportId
-i32 =:: export TemplateId
+i32 =:: export: NamespaceId
+i32 =:: export: NamespaceImportId
+i32 =:: export: TemplateId
 namespace: id
-  -1 LabelId =: export LABEL_ID_NONE
-  -1 NamespaceId =: export NAMESPACE_ID_NONE
-  -1 NamespaceImportId =: export NAMESPACE_IMPORT_NONE
-  -1 TemplateId =: export TEMPLATE_ID_NONE
+  -1 LabelId =: export: LABEL_ID_NONE
+  -1 NamespaceId =: export: NAMESPACE_ID_NONE
+  -1 NamespaceImportId =: export: NAMESPACE_IMPORT_NONE
+  -1 TemplateId =: export: TEMPLATE_ID_NONE
 end
 
-enum( STRUCT POINTER ) =:: export CallingConvention
+enum( STRUCT POINTER ) =:: export: CallingConvention
 namespace: CallingConvention
-  CallingConvention .POINTER =:: export DEFAULT
+  CallingConvention .POINTER =:: export: DEFAULT
 end
 
-type : export BuiltIn
+type : export: BuiltIn
 
 ## declare Type and ConstValue to allow mutual inclusion of types.concat and constants.concat
-type : export Type
-type : export ConstValue
-type : export ConstantArray
-type : export ConstantContext
+type : export: Type
+type : export: ConstValue
+type : export: ConstantArray
+type : export: ConstantContext
 
 
 namespace: sb
-  proc( stringBuilder string -> stringBuilder ) =>: export appendAsciified
+  proc( stringBuilder string -> stringBuilder ) =>: export: appendAsciified
     =:: str
     0 while ..dup str .length < do
       ..swap

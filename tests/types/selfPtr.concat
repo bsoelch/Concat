@@ -3,7 +3,7 @@ type : selfPtr
 
 proc( -> ) =>: main
   ..?parser.find.selfPtr
-  selfPtr : mut X
+  selfPtr : mut: X
   1 X @ selfPtr new X =
   X ..?types..4 .1  X .1 [] .1 == ..debug.print
 end

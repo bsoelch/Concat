@@ -35,13 +35,13 @@ struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 
 struct(
-  i64 : mut varId
-  ValType : mut valType
+  i64 : mut: varId
+  ValType : mut: valType
 ) =:: StackElement
 
 struct(
-  Type : mut valType
-  i64 : mut valId
+  Type : mut: valType
+  i64 : mut: valId
 ) =:: TypedValId
 
 struct(
@@ -52,34 +52,34 @@ struct(
 ) =:: LocalConst
 
 struct(
-  branchTree.NodeId list : mut ififBranches
-  BranchId list : mut ififBranchIds
+  branchTree.NodeId list : mut: ififBranches
+  BranchId list : mut: ififBranchIds
   branchTree.NodeId : branchRoot
-  branchTree.NodeId : mut ifBranch
-  BranchId : mut ifBranchId
+  branchTree.NodeId : mut: ifBranch
+  BranchId : mut: ifBranchId
   i32 : blockId
-  bool : mut ifBranchTerminates
+  bool : mut: ifBranchTerminates
 ) =:: IfBlockInfo
 struct(
-  branchTree.NodeId list : mut caseBranches
-  BranchId list : mut caseBranchIds
+  branchTree.NodeId list : mut: caseBranches
+  BranchId list : mut: caseBranchIds
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: SwitchBlockInfo
 struct(
-  branchTree.NodeId list : mut continueBranches
-  BranchId list : mut continueBranchIds
-  branchTree.NodeId list : mut breakBranches
-  BranchId list : mut breakBranchIds
+  branchTree.NodeId list : mut: continueBranches
+  BranchId list : mut: continueBranchIds
+  branchTree.NodeId list : mut: breakBranches
+  BranchId list : mut: breakBranchIds
   i64 : loopValOffset
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: WhileBlockInfo
 
 enum(
-  IfBlockInfo : mut If
-  SwitchBlockInfo : mut Switch
-  WhileBlockInfo : mut While
+  IfBlockInfo : mut: If
+  SwitchBlockInfo : mut: Switch
+  WhileBlockInfo : mut: While
 ) =:: BlockInfo
 
 namespace: sb
@@ -94,17 +94,17 @@ end
 
 struct(
   ProgramContext ptr mut : program
-  StackElement BranchTree : mut stackInfo
-  BranchId : mut currentBranch
-  BlockInfo list : mut openBlocks
-  LocalConst list : mut localConstants
-  StringConstant list : mut stringConstants
-  Type : mut currentProc
-  i64 : mut localConstCount
-  i64 : mut stackCount
-  i64 : mut tmpCount
-  i32 : mut jumpLabelCount
-  bool : mut reachable
+  StackElement BranchTree : mut: stackInfo
+  BranchId : mut: currentBranch
+  BlockInfo list : mut: openBlocks
+  LocalConst list : mut: localConstants
+  StringConstant list : mut: stringConstants
+  Type : mut: currentProc
+  i64 : mut: localConstCount
+  i64 : mut: stackCount
+  i64 : mut: tmpCount
+  i32 : mut: jumpLabelCount
+  bool : mut: reachable
 ) =:: CompilerContext
 
 namespace: sb
@@ -391,7 +391,7 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   toMerge 0 array.get =:: rootValue
   rootValue [] .varId =:: rootId
-  true =:: mut isMerged
+  true =:: mut: isMerged
   1 while ..dup toMerge .length < do =:: i
     toMerge i array.get [] .varId rootId != if
       false isMerged =
@@ -540,7 +540,7 @@ namespace: sb
         label labelContext id.getLabelFile sb.appendI
         "_F" sb.appendS
       end
-      label labelContext id.getLabelNamespace =:: mut mNamespace
+      label labelContext id.getLabelNamespace =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
         mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
         "." string.wrap sb.appendAsciified
@@ -722,7 +722,7 @@ namespace: sb
     procType typeContext types.getProcIn ..drop =:: inType
     inType typeContext types.compositeElts =:: args
     procType typeContext types.getProcOutArgs ..drop =:: outArgs
-    false =:: mut hasArgs
+    false =:: mut: hasArgs
     sb
       "(" sb.appendS
       0 while ..dup args .length < do =:: i
@@ -912,7 +912,7 @@ namespace: sb
             ## TODO ensure elements are ordered by memory location
             t typeContext types.compositeElts =:: types
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0i64 =:: mut offset
+            0i64 =:: mut: offset
             0 while ..dup elts .length < do =:: i
               types i types.compositeElts.get =:: elt
               t i pos context tupleEltOffsetInt =:: eltOffset
@@ -963,8 +963,8 @@ namespace: sb
             break
           end
           t eltIndex typeContext types.compositeGetElement =:: eltType
-          0i64 =:: mut offset
-          false =:: mut needComma
+          0i64 =:: mut: offset
+          false =:: mut: needComma
           eltType typeContext types.isEmpty ! if
             ## appendConstQBE
               eltType
@@ -1109,7 +1109,7 @@ namespace: sb
     t typeContext types.isArray if
       t typeContext types.isFixedSize _if
       t typeContext types.getArraySize =:: sizes
-      1i64 =:: mut S
+      1i64 =:: mut: S
       0 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
         size .sizeType .int ?? ! if
@@ -1149,8 +1149,8 @@ namespace: sb
     end
     t typeContext types.isTuple if
       t typeContext types.compositeElts =:: elts
-      0i64 =:: mut offset
-      false =:: mut hasElt
+      0i64 =:: mut: offset
+      false =:: mut: hasElt
       sb t pos context startTypeDeclaration
         0 while ..dup elts .length < do =:: i
           elts i types.compositeElts.get =:: elt
@@ -1190,8 +1190,8 @@ namespace: sb
     t typeContext types.isEnum | if
       t typeContext types.isEnum =:: isTagged
       t typeContext types.compositeElts =:: elts
-      false =:: mut hasElt
-      0i64 =:: mut bodySize
+      false =:: mut: hasElt
+      0i64 =:: mut: bodySize
       sb
         t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
           isTagged if
@@ -1415,7 +1415,7 @@ proc(
   enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
   labelType typeContext types.numberSize =:: numSize
   context nextTmpId =:: labelPtr
-  context nextTmpId =:: mut label
+  context nextTmpId =:: mut: label
   sb
     "%t" sb.appendS
     labelPtr sb.appendI
@@ -1666,7 +1666,7 @@ proc(
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  -1i64 =:: mut tmpId
+  -1i64 =:: mut: tmpId
   sb
     createId if
       context nextTmpId tmpId =
@@ -1704,8 +1704,8 @@ proc(
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: appendSwitchJumpTree
   labels .length 3 <= if
-    false =:: mut contiguous
-    labels .length =:: mut loopCount
+    false =:: mut: contiguous
+    labels .length =:: mut: loopCount
     lower optional.hasData if upper optional.hasData _if
         upper .data lower .data - labels .length == contiguous =
         contiguous _if
@@ -1955,7 +1955,7 @@ proc(
   FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: extendArguments
-  i64 2 array new =:: mut args
+  i64 2 array new =:: mut: args
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -2466,10 +2466,10 @@ proc(
       '\n' sb.appendC
     return
   end
-  's' srcIndex StackVal new =:: mut current
-  's' targetIndex StackVal new =:: mut last
-  last =:: mut next
-  0 =:: mut nSteps
+  's' srcIndex StackVal new =:: mut: current
+  's' targetIndex StackVal new =:: mut: last
+  last =:: mut: next
+  0 =:: mut: nSteps
   src typeContext types.isFloat if nSteps 1 + nSteps = end
   fromSize toSize != if
     nSteps 1 + nSteps =
@@ -2729,7 +2729,7 @@ proc(
   calledType typeContext types.getProcRet
     if ..unreachable end
   =:: retType
-  sb =:: mut newSb
+  sb =:: mut: newSb
   ## allocate output arguments
   0 while ..dup outArgs .length < do =:: i
     outArgs i array.get =:: outArg
@@ -3075,10 +3075,10 @@ proc(
         op [] .val .getArrayElement
       else
         op [] .val .atArrayElement
-      end =:: mut argCount
+      end =:: mut: argCount
       op [] .val .atArrayElement ?? =:: isAddr
-      op [] .dataType =:: mut arrayType
-      arrayType typeContext types.isPointer =:: mut isPtr
+      op [] .dataType =:: mut: arrayType
+      arrayType typeContext types.isPointer =:: mut: isPtr
       arrayType typeContext types.isReference if
         arrayType typeContext types.getBaseType arrayType =
         true isPtr =
@@ -3087,9 +3087,9 @@ proc(
       arrayType typeContext types.getBaseType =:: baseType
       sizes .length
         arrayType typeContext types.isFixedSize if 2 - else 1 - end
-      =:: mut sizeOffset
-      context nextTmpId =:: mut offsetId
-      offsetId =:: mut prevId
+      =:: mut: sizeOffset
+      context nextTmpId =:: mut: offsetId
+      offsetId =:: mut: prevId
       sb
         op [] .pos sb.appendPosQBE
         "%t" sb.appendS
@@ -3159,8 +3159,8 @@ proc(
         op [] .val .atElement
       end =:: index
       op [] .val .atElement ?? =:: isAddr
-      op [] .dataType =:: mut containerType
-      false =:: mut isPtr
+      op [] .dataType =:: mut: containerType
+      false =:: mut: isPtr
       containerType typeContext types.isPointer
           containerType typeContext types.isReference | if
         containerType typeContext types.getBaseType containerType =
@@ -3415,12 +3415,12 @@ proc(
       calledType typeContext types.getProcOutArgs ..drop =:: outArgs
       calledType typeContext types.getProcRet ..drop =:: retType
       inTypes typeContext types.compositeEltCount =:: argCount
-      argCount TypedValId list.create =:: mut argIndices
+      argCount TypedValId list.create =:: mut: argIndices
       sb
         op [] .pos sb.appendPosQBE
-      =:: mut newSb
+      =:: mut: newSb
       ## index of current auto-argument
-      0i64 =:: mut argIndex
+      0i64 =:: mut: argIndex
       0 while ..dup argCount < do =:: i
         inTypes i typeContext types.compositeGetElement =:: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
@@ -3474,7 +3474,7 @@ proc(
       return
     callPtr case
       op [] .pos context popValue =:: calledId
-      op [] .dataType =:: mut calledType
+      op [] .dataType =:: mut: calledType
       calledType typeContext types.isPointer if
         calledType
           typeContext types.getBaseType
@@ -3484,7 +3484,7 @@ proc(
         if ..unreachable end ## XXX replace with assert
       =:: inTypes
       inTypes typeContext types.compositeEltCount =:: argCount
-      argCount TypedValId list.create =:: mut argIndices
+      argCount TypedValId list.create =:: mut: argIndices
       argCount 1 - while ..dup 0 >= do =:: i
         inTypes
           i typeContext types.compositeGetElement
@@ -3710,7 +3710,7 @@ proc(
               context
             startBranch
             true context [] .reachable =
-          =:: mut newSb
+          =:: mut: newSb
           ifBlock [] .If .ififBranches .length 1 >= if
             ## mergeValues
               context [] .stackInfo @
@@ -3828,7 +3828,7 @@ proc(
             prog [] .whileData whileId list.at .data =:: whileData
             context [] .currentBranch =:: prevBranch
             whileData [] .modifiedTypes =:: loopEltCount
-            loopEltCount StackElement list.create =:: mut loopElts
+            loopEltCount StackElement list.create =:: mut: loopElts
             0 while ..dup loopEltCount < do 1 +
               loopElts
                 context [] .stackInfo @ branchTree.pop .data list.appendP
@@ -3954,9 +3954,9 @@ proc(
           context [] .openBlocks
             list.pop .If =:: ifBlock
           context [] .openBlocks =
-          branchTree.NodeId 2 array new =:: mut branches
-          BranchId 2 array new =:: mut branchIds
-          0 =:: mut nBranches
+          branchTree.NodeId 2 array new =:: mut: branches
+          BranchId 2 array new =:: mut: branchIds
+          0 =:: mut: nBranches
           ifBlock .ifBranchTerminates if
             ifBlock .ifBranch branches @ nBranches [] =
             ifBlock .ifBranchId branchIds @ nBranches [] =
@@ -3977,7 +3977,7 @@ proc(
               BranchId new
               context
             startBranch
-          =:: mut newSb
+          =:: mut: newSb
           nBranches 1 >= if
             ## mergeValues
               context [] .stackInfo @
@@ -4016,7 +4016,7 @@ proc(
               BranchId new
               context
             startBranch
-          =:: mut newSb
+          =:: mut: newSb
           caseBranches .length 1 >= if
             caseBranches .length =:: nodeCount
             ## mergeValues
@@ -4042,9 +4042,9 @@ proc(
           newSb return
         WHILE case
           context [] .openBlocks
-            list.pop .While =:: mut whileBlock
+            list.pop .While =:: mut: whileBlock
           context [] .openBlocks =
-          whileBlock .continueBranches =:: mut continueBranches
+          whileBlock .continueBranches =:: mut: continueBranches
           context [] .reachable if
             whileBlock .continueBranchIds
               context [] .currentBranch list.append
@@ -4063,7 +4063,7 @@ proc(
               BranchId new
               context
             startBranch
-          =:: mut newSb
+          =:: mut: newSb
           continueBranches .length 1 >= if
             continueBranches .length =:: nodeCount
             ## mergeValues
@@ -4304,7 +4304,7 @@ proc( CompilerContext ptr mut : context -> ) =>: cleanupCompilerContext
     list.free
   context [] .stringConstants =
 end
-proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQBE
+proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQBE
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
@@ -4321,9 +4321,9 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     0
     0
     true
-  CompilerContext new =:: mut contextData
+  CompilerContext new =:: mut: contextData
   contextData @ =:: context
-  id.LABEL_ID_NONE =:: mut mainId
+  id.LABEL_ID_NONE =:: mut: mainId
   MAIN_NAME string.wrap 0 idContext id.findIdentifierByName ! if =:: data =:: name
     name .namespace 0 != if
       ..unreachable ## assert that namespace is always top level
@@ -4353,7 +4353,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     ASSERT_FORMAT sb.appendS
     " = { b \"assertion failed: \\\"%.*s\\\" at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     appendPrintConstants
-  =:: mut sb
+  =:: mut: sb
   idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] =:: labelId
@@ -4365,7 +4365,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export compileToQB
     idData [] .idType .PROCEDURE_BUNDLE ?? | if
       continue
     end
-    idData [] .valueType =:: mut valType
+    idData [] .valueType =:: mut: valType
     labelId labelContext id.labelFlags =:: labelFlags
     valType types.isAutoType if
       prog [] .autoTypes

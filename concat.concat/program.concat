@@ -5,16 +5,16 @@ import "codeBlocks.concat"
 import "identifiers.concat"
 import "common.concat"
 
-enum( NEGATE TO_BOOL NOT FLIP ) =:: export UnaryOperator
-enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export BinaryOperator
-enum( COPY SWAP DROP ) =:: export StackModType
-struct( i32 : n StackModType : modType ) =:: export StackModification
+enum( NEGATE TO_BOOL NOT FLIP ) =:: export: UnaryOperator
+enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: BinaryOperator
+enum( COPY SWAP DROP ) =:: export: StackModType
+struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
-enum( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export CompilerInfo
-struct( IdentifierInfo : idInfo i64 : argCount ) =:: export CallInfo
-enum( PTR ARRAY PTR_MUT ) =:: export TypeModifier
-struct( Type : src i32 : mut offset ) =:: export CastInfo ## offset: zero-indexed from top of stack
-enum( ALIGNMENT SIZE STRIDE ) =:: export TypeMemoryInfo
+enum( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
+struct( IdentifierInfo : idInfo i64 : argCount ) =:: export: CallInfo
+enum( PTR ARRAY PTR_MUT ) =:: export: TypeModifier
+struct( Type : src i32 : mut: offset ) =:: export: CastInfo ## offset: zero-indexed from top of stack
+enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 
 struct(
@@ -22,59 +22,59 @@ struct(
   ConstantArray : staticArgs
   FilePosition : firstUse
   i64 : codeStart
-  i64 : mut codeLength
-) =:: export ProcImplementation
+  i64 : mut: codeLength
+) =:: export: ProcImplementation
 struct(
-  ProcImplementation list : mut implementations
+  ProcImplementation list : mut: implementations
   i64 : codeStart
-  i64 : mut codeLength
-) =:: export CodeProcData
+  i64 : mut: codeLength
+) =:: export: CodeProcData
 enum(
   BuiltIn : builtIn
-  CodeProcData : mut code
-) =:: export ProcImplType
+  CodeProcData : mut: code
+) =:: export: ProcImplType
 struct(
   FileId : fileId
   Type : procType
   LabelId : labelId
-  ProcImplType : mut implementation
+  ProcImplType : mut: implementation
   bool : hasStaticArg
   bool : isStatic
-) =:: export ProcedureInfo
+) =:: export: ProcedureInfo
 struct(
   ProcId : procId
   i64 : implementationId
   ConstantArray : autoArgs
-) =:: export ProcedureCallInfo
+) =:: export: ProcedureCallInfo
 struct(
   ProcId : procId
   i64 : implementationId
-) =:: export ProcedureImpl
+) =:: export: ProcedureImpl
 
 enum(
             NopType : NOP
-         ConstValue : mut Constant
-            BlockId : mut block
-            BlockId : mut blockEnd
-     IdentifierInfo : mut getId
-     IdentifierInfo : mut setId
-     IdentifierInfo : mut atId
-     IdentifierInfo : mut initializeId
-     IdentifierInfo : mut autoTypedInitializeId
-     IdentifierInfo : mut declareId
-      ProcedureImpl : mut implementProcedure
-      ProcedureImpl : mut procPtr
+         ConstValue : mut: Constant
+            BlockId : mut: block
+            BlockId : mut: blockEnd
+     IdentifierInfo : mut: getId
+     IdentifierInfo : mut: setId
+     IdentifierInfo : mut: atId
+     IdentifierInfo : mut: initializeId
+     IdentifierInfo : mut: autoTypedInitializeId
+     IdentifierInfo : mut: declareId
+      ProcedureImpl : mut: implementProcedure
+      ProcedureImpl : mut: procPtr
             LabelId : getLabel
-            LabelId : mut setLabel
-            LabelId : mut atLabel
-            LabelId : mut hasLabel
-                i32 : mut getElement
-                i32 : mut setElement
-                i32 : mut atElement
-                i32 : mut hasElement
-                i32 : mut getArrayElement
-                i32 : mut setArrayElement
-                i32 : mut atArrayElement
+            LabelId : mut: setLabel
+            LabelId : mut: atLabel
+            LabelId : mut: hasLabel
+                i32 : mut: getElement
+                i32 : mut: setElement
+                i32 : mut: atElement
+                i32 : mut: hasElement
+                i32 : mut: getArrayElement
+                i32 : mut: setArrayElement
+                i32 : mut: atArrayElement
                       setValue
                       Print
                       Return
@@ -83,205 +83,205 @@ enum(
            CallInfo : call_old ## backwards comparability
   ProcedureCallInfo : call
             BuiltIn : builtIn
-                i64 : mut callPtr
+                i64 : mut: callPtr
                       argc
                       getArg
                       getArgLen
                       length
                       size
-           CastInfo : mut autoCast
-               Type : mut Cast
-               Type : mut Cast!
-               Type : mut bitCast
+           CastInfo : mut: autoCast
+               Type : mut: Cast
+               Type : mut: Cast!
+               Type : mut: bitCast
       UnaryOperator : unaryOperator
      BinaryOperator : binaryOperator
                 i32 : checkEnumLabel
-                i32 : mut setEnumLabel
+                i32 : mut: setEnumLabel
                 i64 : checkArrayIndex
                       copy
   StackModification : stackMod
             LabelId : getName
-            LabelId : mut setName
-            LabelId : mut atName
-            LabelId : mut hasName
-       TypeModifier : mut typeModifier
+            LabelId : mut: setName
+            LabelId : mut: atName
+            LabelId : mut: hasName
+       TypeModifier : mut: typeModifier
      StringConstant : Assert
      TypeMemoryInfo : typeInfo
                       unreachable
        CompilerInfo : compilerInfo
-) =:: export OpValue
-struct( OpValue : mut val Type : mut dataType FilePosition : mut pos ) =:: export Operation
-proc( -> OpValue ) =>: export opValNOP
+) =:: export: OpValue
+struct( OpValue : mut: val Type : mut: dataType FilePosition : mut: pos ) =:: export: Operation
+proc( -> OpValue ) =>: export: opValNOP
   NopType .EMPTY OpValue .NOP return
 end
-proc( FilePosition : pos -> Operation ) =>: export opNOP
+proc( FilePosition : pos -> Operation ) =>: export: opNOP
   NopType .EMPTY OpValue .NOP Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export reserveOp
+proc( FilePosition : pos -> Operation ) =>: export: reserveOp
   NopType .RESERVED OpValue .NOP Type .undefined pos Operation new return
 end
-proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export opConst
+proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opConst
   constValue OpValue .Constant constType pos Operation new return
 end
-proc( BlockType FilePosition -> Operation ) =>: export opBlock
+proc( BlockType FilePosition -> Operation ) =>: export: opBlock
   =:: pos
   -1 -1 BlockId new OpValue .block Type .undefined pos Operation new return
 end
-proc( BlockType FilePosition -> Operation ) =>: export opEndBlock
+proc( BlockType FilePosition -> Operation ) =>: export: opEndBlock
   =:: pos
   -1 -1 BlockId new OpValue .blockEnd Type .undefined pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opGet
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGet
   =:: pos
   OpValue .getId ..swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opSet
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opSet
   =:: pos
   OpValue .setId ..swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opAtId
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opAtId
   =:: pos
   OpValue .atId ..swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opInitializeId
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opInitializeId
   =:: pos
   OpValue .initializeId ..swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opAutoTypedInitializeId
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opAutoTypedInitializeId
   =:: pos
   OpValue .autoTypedInitializeId ..swap pos Operation new return
 end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export opDeclareId
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opDeclareId
   =:: pos
   OpValue .declareId ..swap pos Operation new return
 end
-proc( FilePosition : pos  -> Operation ) =>: export opSetValue
+proc( FilePosition : pos  -> Operation ) =>: export: opSetValue
   OpValue .setValue Type .undefined pos Operation new return
 end
-proc( i32 FilePosition  -> Operation ) =>: export opArrayGet
+proc( i32 FilePosition  -> Operation ) =>: export: opArrayGet
   =:: pos
   OpValue .getArrayElement Type .undefined pos Operation new return
 end
-proc( i32 FilePosition  -> Operation ) =>: export opTupleGet
+proc( i32 FilePosition  -> Operation ) =>: export: opTupleGet
   =:: pos
   OpValue .getElement Type .undefined pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export opGetElement
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetElement
   index OpValue .getElement base pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export opAtElement
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opAtElement
   index OpValue .atElement base pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export opHasElement
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHasElement
   index OpValue .hasElement base pos Operation new return
 end
-proc( LabelId FilePosition  -> Operation ) =>: export opGetLabel
+proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
   =:: pos
   OpValue .getLabel Type .undefined pos Operation new return
 end
-proc( Type FilePosition -> Operation ) =>: export opReturn
+proc( Type FilePosition -> Operation ) =>: export: opReturn
   =:: pos
   OpValue .Return ..swap pos Operation new return
 end
-proc( BinaryOperator FilePosition -> Operation ) =>: export opBinOp
+proc( BinaryOperator FilePosition -> Operation ) =>: export: opBinOp
   =:: pos
   OpValue .binaryOperator Type .undefined pos Operation new return
 end
-proc( UnaryOperator FilePosition -> Operation ) =>: export opUnaryOp
+proc( UnaryOperator FilePosition -> Operation ) =>: export: opUnaryOp
   =:: pos
   OpValue .unaryOperator Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opPrint
+proc( FilePosition : pos -> Operation ) =>: export: opPrint
   OpValue .Print Type .undefined pos Operation new return
 end
-proc( Type FilePosition -> Operation ) =>: export opNew
+proc( Type FilePosition -> Operation ) =>: export: opNew
   =:: pos
   OpValue .New ..swap pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export opNewEnum
+proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnum
   =:: pos
   OpValue .newEnum ..swap pos Operation new return
 end
-proc( Type : target FilePosition : pos -> Operation ) =>: export opCast
+proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast
    Type .undefined OpValue .Cast target pos Operation new return
 end
-proc( Type : target FilePosition : pos -> Operation ) =>: export opCast!
+proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast!
    Type .undefined OpValue .Cast! target pos Operation new return
 end
-proc( Type : target FilePosition : pos -> Operation ) =>: export opBitCast
+proc( Type : target FilePosition : pos -> Operation ) =>: export: opBitCast
    Type .undefined OpValue .bitCast target pos Operation new return
 end
-proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export opCastFrom
+proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export: opCastFrom
    src OpValue .Cast target pos Operation new return
 end
-proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export opCast!From
+proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export: opCast!From
    src OpValue .Cast! target pos Operation new return
 end
-proc( Type : src i32 : offset Type : target FilePosition : pos -> Operation ) =>: export opAutoCast
+proc( Type : src i32 : offset Type : target FilePosition : pos -> Operation ) =>: export: opAutoCast
    src offset CastInfo new OpValue .autoCast target pos Operation new return
 end
-proc( i32 StackModType FilePosition -> Operation ) =>: export opStackMod
+proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
   =:: pos
   StackModification new OpValue .stackMod Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opCallPtr
+proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
   -1 OpValue .callPtr Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opArgc
+proc( FilePosition : pos -> Operation ) =>: export: opArgc
   OpValue .argc types.primitive.I_SIZE pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opGetArg
+proc( FilePosition : pos -> Operation ) =>: export: opGetArg
   OpValue .getArg Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opGetArgLen
+proc( FilePosition : pos -> Operation ) =>: export: opGetArgLen
   OpValue .getArgLen types.primitive.I_SIZE pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opLength
+proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.primitive.I_SIZE pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opSize
+proc( FilePosition : pos -> Operation ) =>: export: opSize
   OpValue .size Type .undefined pos Operation new return
 end
-proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export opTypeInfo
+proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .typeInfo t pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export opCheckEnum
+proc( Type i32 FilePosition -> Operation ) =>: export: opCheckEnum
   =:: pos
   OpValue .checkEnumLabel ..swap pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export opSetEnumLabel
+proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumLabel
   =:: pos
   OpValue .setEnumLabel ..swap pos Operation new return
 end
-proc( Type i64 FilePosition -> Operation ) =>: export opCheckIndex
+proc( Type i64 FilePosition -> Operation ) =>: export: opCheckIndex
   =:: pos
   OpValue .checkArrayIndex ..swap pos Operation new return
 end
-proc( Type : t FilePosition : pos -> Operation ) =>: export opCopy
+proc( Type : t FilePosition : pos -> Operation ) =>: export: opCopy
   OpValue .copy t pos Operation new return
 end
-proc( LabelId FilePosition  -> Operation ) =>: export opGetName
+proc( LabelId FilePosition  -> Operation ) =>: export: opGetName
   =:: pos
   OpValue .getName Type .undefined pos Operation new return
 end
-proc( TypeModifier FilePosition  -> Operation ) =>: export opTypeModifier
+proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
   =:: pos
   OpValue .typeModifier Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export opUnreachable
+proc( FilePosition : pos -> Operation ) =>: export: opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
 end
 proc(
   StringConstant : message
   FilePosition : pos
--> Operation ) =>: export opAssert
+-> Operation ) =>: export: opAssert
   message OpValue .Assert Type .undefined pos Operation new return
 end
 proc(
   i32 : count
   i32 : depth
   FilePosition : pos
--> Operation ) =>: export opTypesInfo
+-> Operation ) =>: export: opTypesInfo
   ## Operation
     count depth StackTypesInfo new
       CompilerInfo .typeInfo
@@ -290,59 +290,59 @@ proc(
     pos
   Operation new return
 end
-proc( i32 : count FilePosition : pos -> Operation ) =>: export opStackInfo
+proc( i32 : count FilePosition : pos -> Operation ) =>: export: opStackInfo
   count CompilerInfo .stackInfo OpValue .compilerInfo Type .undefined  pos Operation new return
 end
-proc( i32 : count FilePosition : pos -> Operation ) =>: export opPrintCompiledOps
+proc( i32 : count FilePosition : pos -> Operation ) =>: export: opPrintCompiledOps
   count CompilerInfo .compiledOps OpValue .compilerInfo Type .undefined  pos Operation new return
 end
-proc( LabelId : name FilePosition : pos -> Operation ) =>: export opPrintIdentifierMatches
+proc( LabelId : name FilePosition : pos -> Operation ) =>: export: opPrintIdentifierMatches
   name CompilerInfo .find OpValue .compilerInfo Type .undefined  pos Operation new return
 end
 
-struct( FileId : id FilePosition : includePos ) =:: export IncludedFile
+struct( FileId : id FilePosition : includePos ) =:: export: IncludedFile
 
 struct(
-     Operation list : mut globalOps
-     Operation list : mut localOps
-     Operation list : mut templateOps
-  IncludedFile list : mut includedFiles
+     Operation list : mut: globalOps
+     Operation list : mut: localOps
+     Operation list : mut: templateOps
+  IncludedFile list : mut: includedFiles
 
-      stringBuilder : mut fileName
+      stringBuilder : mut: fileName
              FileId : id
-) =:: export ProgramFile
+) =:: export: ProgramFile
 
-struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export LabelData
-struct( LabelData list : mut labels Type : switchType i32 : mut caseCount bool : mut hasDefault ) =:: export SwitchData
-struct( i32 : mut modifiedTypes ) =:: export WhileData
+struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
+struct( LabelData list : mut: labels Type : switchType i32 : mut: caseCount bool : mut: hasDefault ) =:: export: SwitchData
+struct( i32 : mut: modifiedTypes ) =:: export: WhileData
 
 
 struct(
-  ProcId list : mut procedures
-) =:: export ProcedureBundle
+  ProcId list : mut: procedures
+) =:: export: ProcedureBundle
 
-proc( -> ProcedureBundle ) =>: export newProcBundle
+proc( -> ProcedureBundle ) =>: export: newProcBundle
   ## ProcedureBundle
     8 ProcId list.create
   ProcedureBundle new
 end
 
 struct(
-    IdentifierContext : mut idContext
-     ProgramFile list : mut progFiles
-   ProcedureInfo list : mut procedures
- ProcedureBundle list : mut procBundles
-            Type list : mut autoTypes
-       Operation list : mut templateOps
-      SwitchData list : mut switchData
-       WhileData list : mut whileData
-   CompilerError list : mut errors
-                 bool : mut hasCheckIndex
-                 bool : mut hasCheckEnum
-                 bool : mut hasGetArgs
-) =:: export ProgramContext
+    IdentifierContext : mut: idContext
+     ProgramFile list : mut: progFiles
+   ProcedureInfo list : mut: procedures
+ ProcedureBundle list : mut: procBundles
+            Type list : mut: autoTypes
+       Operation list : mut: templateOps
+      SwitchData list : mut: switchData
+       WhileData list : mut: whileData
+   CompilerError list : mut: errors
+                 bool : mut: hasCheckIndex
+                 bool : mut: hasCheckEnum
+                 bool : mut: hasGetArgs
+) =:: export: ProgramContext
 
-proc( -> ProgramContext ) =>: export newProgramContext
+proc( -> ProgramContext ) =>: export: newProgramContext
   ## ProgramContext
     id.newIdentifierContext
     16  ProgramFile           list.create
@@ -359,7 +359,7 @@ proc( -> ProgramContext ) =>: export newProgramContext
   ProgramContext new
 end
 
-proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext -> ProgramFile ) =>: export newProgFile
+proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext -> ProgramFile ) =>: export: newProgFile
   128 Operation list.create
   128 Operation list.create
   128 Operation list.create
@@ -370,7 +370,7 @@ proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext
 end
 
 namespace: sb
-  proc( stringBuilder UnaryOperator -> stringBuilder ) =>: export appendUnaryOperator
+  proc( stringBuilder UnaryOperator -> stringBuilder ) =>: export: appendUnaryOperator
     switch
       NEGATE case "NEGATE" sb.appendS return
       NOT case "NOT" sb.appendS return
@@ -378,7 +378,7 @@ namespace: sb
       FLIP case "FLIP" sb.appendS return
     end
   end
-  proc( stringBuilder BinaryOperator -> stringBuilder ) =>: export appendBinaryOperator
+  proc( stringBuilder BinaryOperator -> stringBuilder ) =>: export: appendBinaryOperator
     switch
       ADD case "ADD" sb.appendS return
       SUBTRACT case "SUBTRACT" sb.appendS return
@@ -405,7 +405,7 @@ namespace: sb
       URSHIFT case "URSHIFT" sb.appendS return
     end
   end
-  proc( stringBuilder : sb StackModification : mod -> stringBuilder ) =>: export appendStackMod
+  proc( stringBuilder : sb StackModification : mod -> stringBuilder ) =>: export: appendStackMod
     sb
       mod .modType switch
         COPY case
@@ -426,7 +426,7 @@ namespace: sb
       end
     return
   end
-  proc( stringBuilder TypeModifier -> stringBuilder ) =>: export appendTypeModifier
+  proc( stringBuilder TypeModifier -> stringBuilder ) =>: export: appendTypeModifier
     switch
       PTR case
         "ptr" sb.appendS
@@ -439,7 +439,7 @@ namespace: sb
         break
     end
   end
-  proc( stringBuilder Operation ProgramContext ptr -> stringBuilder ) =>: export appendOp
+  proc( stringBuilder Operation ProgramContext ptr -> stringBuilder ) =>: export: appendOp
     =:: progContext
     progContext [] .idContext .typeContext @ =:: typeContext
     progContext [] .idContext .typeContext .labelContext @ =:: labelContext
@@ -799,14 +799,14 @@ namespace: sb
       '\n' sb.appendC
     return
   end
-  proc( stringBuilder CompilerError -> stringBuilder ) =>: export appendCompilerError
+  proc( stringBuilder CompilerError -> stringBuilder ) =>: export: appendCompilerError
     =:: err
     err .message sb.appendSb
     " at "       sb.appendS
     err .pos     sb.appendPos
     '\n'         sb.appendC
   end
-  proc( stringBuilder CompilerInfo LabelContext ptr -> stringBuilder ) =>: export appendCompilerInfo
+  proc( stringBuilder CompilerInfo LabelContext ptr -> stringBuilder ) =>: export: appendCompilerInfo
     =:: labelContext
     =:: info
     info switch
@@ -841,7 +841,7 @@ namespace: sb
         break
     end
   end
-  proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export appendProgram
+  proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export: appendProgram
     =:: prog
       "## errors:\n" sb.appendS
       0 while ..dup prog [] .errors .length < do

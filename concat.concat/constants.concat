@@ -4,11 +4,11 @@ import "files.concat"
 import "labels.concat"
 import "types.concat"
 
-i64 =:: export ProcId
-i64 =:: export ProcBundleId
-i64 =:: export ConstantId
-struct( ConstantId : offset i64 : length ) =:: export ConstantArray
-struct( ConstantId : value i32 : eltIndex ) =:: export UnionConstant
+i64 =:: export: ProcId
+i64 =:: export: ProcBundleId
+i64 =:: export: ConstantId
+struct( ConstantId : offset i64 : length ) =:: export: ConstantArray
+struct( ConstantId : value i32 : eltIndex ) =:: export: UnionConstant
 enum(
   none
   bool : boolean
@@ -25,28 +25,28 @@ enum(
   ProcId : procedure
   ProcBundleId : procedureBundle
   UnionConstant : union
-) =:: export ConstValue
+) =:: export: ConstValue
 
-struct( ConstValue list : mut arrayValues ) =:: export ConstantContext
+struct( ConstValue list : mut: arrayValues ) =:: export: ConstantContext
 
-proc( -> ConstantContext ) =>: export newConstContext
+proc( -> ConstantContext ) =>: export: newConstContext
  128 ConstValue list.create
  ConstantContext new return
 end
-proc( -> ConstantArray ) =>: export emptyConstArray
+proc( -> ConstantArray ) =>: export: emptyConstArray
   0 0 ConstantArray new
 end
-proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: export constArray
+proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: export: constArray
   context [] .arrayValues .length
     context [] .arrayValues
       elts list.appendArray
     context [] .arrayValues =
   elts .length ConstantArray new return
 end
-proc( ConstantArray : elts i64 : index ConstantContext ptr : context -> ConstValue ) =>: export constArrayGet
+proc( ConstantArray : elts i64 : index ConstantContext ptr : context -> ConstValue ) =>: export: constArrayGet
   context [] .arrayValues elts .offset index + list.get return
 end
-proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView ) =>: export constArrayAsArray
+proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView ) =>: export: constArrayAsArray
   elts .offset 0 < if
     ConstValue array.empty return
   end
@@ -56,22 +56,22 @@ proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView
   context [] .arrayValues .data elts .offset + elts .length array.create return
 end
 
-proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export newArrayConst
+proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newArrayConst
   elts context constArray ConstValue .arrayConstant return
 end
 
-proc( ConstValue : value i32 : index ConstantContext ptr mut : context -> ConstValue ) =>: export newUnionConst
+proc( ConstValue : value i32 : index ConstantContext ptr mut : context -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
     ..dup .length =:: valueId
     value list.append
   context [] .arrayValues =
   valueId index UnionConstant new ConstValue .union return
 end
-proc( ConstValue : union ConstantContext ptr : context -> ConstValue ) =>: export constUnionElement
+proc( ConstValue : union ConstantContext ptr : context -> ConstValue ) =>: export: constUnionElement
   context [] .arrayValues union .union .value list.get return
 end
 
-proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export constantEquals
+proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export: constantEquals
   a b != if ##different constant types
     false return
   end
@@ -125,7 +125,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
 end
 
 namespace: sb
-  proc( stringBuilder i8 -> stringBuilder ) =>: export appendEscapedChr
+  proc( stringBuilder i8 -> stringBuilder ) =>: export: appendEscapedChr
     =:: chr
     chr 0x20 < chr 0x7f == | if ## non-printable ASCII-characters + hex-codes for multi-char characters
       "\\x" sb.appendS
@@ -141,7 +141,7 @@ namespace: sb
     end
     chr  sb.appendC
   end
-  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export appendEscapedStr
+  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendEscapedStr
     sb
       0 while ..dup str .length < do =:: i
           str i labelContext id.scCharAt appendEscapedChr
@@ -150,7 +150,7 @@ namespace: sb
     return
   end
   ## C-style string escaping, use octal sequences as hex-sequences may consume following characters
-  proc( stringBuilder i8 -> stringBuilder ) =>: export appendEscapedChrC
+  proc( stringBuilder i8 -> stringBuilder ) =>: export: appendEscapedChrC
     =:: chr
     chr 0x20 < chr 0x7f == | if
       ## non-printable ASCII-characters
@@ -171,7 +171,7 @@ namespace: sb
     end
     chr  sb.appendC
   end
-  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export appendEscapedStrC
+  proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendEscapedStrC
     sb
       0 while ..dup str .length < do =:: i
         str i labelContext id.scCharAt appendEscapedChrC
@@ -184,7 +184,7 @@ namespace: sb
     ConstValue : val
     ConstantContext ptr : constContext
     TypeContext ptr : typeContext
-  -> stringBuilder ) =>: export appendConstant
+  -> stringBuilder ) =>: export: appendConstant
     typeContext [] .labelContext @ =:: labelContext
     sb
       val switch

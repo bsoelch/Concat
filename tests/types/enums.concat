@@ -1,5 +1,5 @@
 
-enum( A B i32 : C  ( i32 i8 ) : mut D ) type =: anEnum
+enum( A B i32 : C  ( i32 i8 ) : mut: D ) type =: anEnum
 enum( A B C ) type =: labelEnum 
 enum( empty i64 ptr : data ) type =: optionalI64
 
@@ -8,13 +8,13 @@ anEnum .B =:: e2
 2 anEnum .C =:: e3
 
 proc( -> ) =>: main
-  -32141 anEnum .C =:: mut e
+  -32141 anEnum .C =:: mut: e
   anEnum .A anEnum =: f
   e .A ?? ..debug.print
   e .C ?? ..debug.print
   e .C ..debug.print
   
-  labelEnum .A =:: mut l1
+  labelEnum .A =:: mut: l1
   l1 .B ?? if
     labelEnum .C l1 =
   end

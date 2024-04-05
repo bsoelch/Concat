@@ -8,41 +8,41 @@ import utf8
 import "files.concat"
 import "common.concat"
 
-struct( NamespaceId : mut current NamespaceImportId : mut imports ) =:: export NamespaceInfo
+struct( NamespaceId : mut: current NamespaceImportId : mut: imports ) =:: export: NamespaceInfo
 
-struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut firstChild NamespaceImportId : mut next ) =:: export NamespaceImport
+struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut: firstChild NamespaceImportId : mut: next ) =:: export: NamespaceImport
 
-struct( i64 : offset i64 : length ) =:: export StringConstant
+struct( i64 : offset i64 : length ) =:: export: StringConstant
 
-i32 =:: export LabelFlag
+i32 =:: export: LabelFlag
 namespace: id
-  0   LabelFlag =: export FLAG_NONE
-  1   LabelFlag =: export FLAG_MUTABLE
-  2   LabelFlag =: export FLAG_AUTO
-  4   LabelFlag =: export FLAG_EXTERN
-  8   LabelFlag =: export FLAG_EXPORT
-  16  LabelFlag =: export FLAG_STATIC
-  32  LabelFlag =: export FLAG_INLINE
-  64  LabelFlag =: export FLAG_EMPTY
-  128 LabelFlag =: export FLAG_BUILT_IN
-  256 LabelFlag =: export FLAG_DUMMY
+  0   LabelFlag =: export: FLAG_NONE
+  1   LabelFlag =: export: FLAG_MUTABLE
+  2   LabelFlag =: export: FLAG_AUTO
+  4   LabelFlag =: export: FLAG_EXTERN
+  8   LabelFlag =: export: FLAG_EXPORT
+  16  LabelFlag =: export: FLAG_STATIC
+  32  LabelFlag =: export: FLAG_INLINE
+  64  LabelFlag =: export: FLAG_EMPTY
+  128 LabelFlag =: export: FLAG_BUILT_IN
+  256 LabelFlag =: export: FLAG_DUMMY
 
-  0x40000000u32 LabelFlag =: export FLAG_EXPERIMENTAL
+  0x40000000u32 LabelFlag =: export: FLAG_EXPERIMENTAL
 end
 
-struct( StringConstant : name NamespaceId list : mut children NamespaceId : parent ) =:: Namespace
-struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : mut flags ) =:: Label
+struct( StringConstant : name NamespaceId list : mut: children NamespaceId : parent ) =:: Namespace
+struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : mut: flags ) =:: Label
 
 struct(
-  i8 list : mut nameBuffer
-  Label list : mut labels
-  Namespace list : mut namespaces
-  NamespaceImport list : mut namespaceImports
-  NamespaceInfo : mut namespaceInfo
-) =:: export LabelContext
+  i8 list : mut: nameBuffer
+  Label list : mut: labels
+  Namespace list : mut: namespaces
+  NamespaceImport list : mut: namespaceImports
+  NamespaceInfo : mut: namespaceInfo
+) =:: export: LabelContext
 namespace: id
 
-  proc( -> LabelContext ) =>: export newLabelContext
+  proc( -> LabelContext ) =>: export: newLabelContext
     1024            i8 list.create
     128          Label list.create
     32       Namespace list.create
@@ -56,23 +56,23 @@ namespace: id
     NamespaceInfo new
     LabelContext new return
   end
-  proc( LabelContext -> LabelContext ) =>: export freeLabelContext
+  proc( LabelContext -> LabelContext ) =>: export: freeLabelContext
     ## TODO free label context
   end
 
-  proc( LabelContext ptr -> LabelId ) =>: export labelOffset
+  proc( LabelContext ptr -> LabelId ) =>: export: labelOffset
     [] .labels .length LabelId cast return
   end
-  proc( StringConstant : const i64 : index LabelContext ptr : context -> i8 ) =>: export scCharAt
+  proc( StringConstant : const i64 : index LabelContext ptr : context -> i8 ) =>: export: scCharAt
     context [] .nameBuffer .data const .offset + const .length string.create index string.charAt return
   end
-  proc( string : a StringConstant : b LabelContext ptr : context -> bool ) =>: export scEqualTo
+  proc( string : a StringConstant : b LabelContext ptr : context -> bool ) =>: export: scEqualTo
     ## string.eq
       a
       context [] .nameBuffer .data b .offset + b .length string.create
     string.eq return
   end
-  proc( StringConstant : a StringConstant : b LabelContext ptr : context -> bool ) =>: export scEqual
+  proc( StringConstant : a StringConstant : b LabelContext ptr : context -> bool ) =>: export: scEqual
     a .length b .length != if
       false return
     end
@@ -84,25 +84,25 @@ namespace: id
       context [] .nameBuffer .data b .offset + b .length string.create
     string.eq return
   end
-  proc( LabelId : id LabelContext ptr mut : context -> NamespaceId ) =>: export getLabelNamespace
+  proc( LabelId : id LabelContext ptr mut : context -> NamespaceId ) =>: export: getLabelNamespace
     id 0 < id context [] .labels .length >= | if
       NAMESPACE_ID_NONE return
     end
     context [] .labels id list.at .data [] .namespaceInfo .current return
   end
-  proc( LabelId : id LabelContext ptr mut : context -> FileId ) =>: export getLabelFile
+  proc( LabelId : id LabelContext ptr mut : context -> FileId ) =>: export: getLabelFile
     id 0 < id context [] .labels .length >= | if
       FILE_ID_NONE return
     end
     context [] .labels id list.at .data [] .srcFile return
   end
-  proc( LabelId : id LabelContext ptr mut : context -> ) =>: export inLabelNamespace
+  proc( LabelId : id LabelContext ptr mut : context -> ) =>: export: inLabelNamespace
     id 0 < id context [] .labels .length >= | if
       return
     end
     context [] .labels id list.at .data [] .namespaceInfo context [] .namespaceInfo =
   end
-  proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export labelNameEq
+  proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
     id 0 < id context [] .labels .length >= | if
       false return
     end
@@ -111,7 +111,7 @@ namespace: id
       name .length
     string.create str string.eq return
   end
-  proc( LabelId : a LabelId : b LabelContext ptr : context -> bool ) =>: export labelNamesEq
+  proc( LabelId : a LabelId : b LabelContext ptr : context -> bool ) =>: export: labelNamesEq
     a b == if
       true return
     end
@@ -130,13 +130,13 @@ namespace: id
       string.create
     string.eq return
   end
-  proc( LabelId : id LabelContext ptr : context -> LabelFlag ) =>: export labelFlags
+  proc( LabelId : id LabelContext ptr : context -> LabelFlag ) =>: export: labelFlags
     id 0 < id context [] .labels .length >= | if
       0 LabelFlag cast return
     end
     context [] .labels id list.get .flags return
   end
-  proc( LabelId : id LabelFlag : newFlags LabelContext ptr : context -> ) =>: export addLabelFlags
+  proc( LabelId : id LabelFlag : newFlags LabelContext ptr : context -> ) =>: export: addLabelFlags
     id 0 < id context [] .labels .length >= | if
       return
     end
@@ -145,19 +145,19 @@ namespace: id
       newFlags | 
     flags [] =
   end
-  proc( LabelId : id LabelContext ptr : context -> bool ) =>: export isLabelEmpty
+  proc( LabelId : id LabelContext ptr : context -> bool ) =>: export: isLabelEmpty
     id 0 < id context [] .labels .length >= | if
       true return
     end
     context [] .labels id list.get .flags FLAG_EMPTY & 0 != return
   end
-  proc( LabelId : id LabelContext ptr : context -> FilePosition optional ) =>: export labelPos
+  proc( LabelId : id LabelContext ptr : context -> FilePosition optional ) =>: export: labelPos
     id 0 < id context [] .labels .length >= | if
       FilePosition optional.empty return
     end
     context [] .labels id list.get .pos optional.wrap return
   end
-  proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export newLabel
+  proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export: newLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer  str .data str .length array.create list.appendArray context [] .nameBuffer =
     context [] .labels
@@ -171,7 +171,7 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export newDummyLabel
+  proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export: newDummyLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       id sb.appendI
@@ -188,18 +188,18 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  proc( string : str LabelContext ptr mut : context -> StringConstant ) =>: export wrapStringConstant
+  proc( string : str LabelContext ptr mut : context -> StringConstant ) =>: export: wrapStringConstant
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       str sb.appendStr
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
-  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export parseStringConstant
-    stringStart =:: mut pos
+  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseStringConstant
+    stringStart =:: mut: pos
     '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset
-    6 sb.create =:: mut uft8Buff
+    6 sb.create =:: mut: uft8Buff
     context [] .nameBuffer
       ..dup .length str .length + list.ensureCap
       0 while ..dup str .length < do
@@ -339,7 +339,7 @@ namespace: id
     context [] .namespaces =
     id NamespaceId cast return
   end
-  proc( NamespaceId : base string : childName bool : create  LabelContext ptr mut : context  -> NamespaceId ) =>: export childId
+  proc( NamespaceId : base string : childName bool : create  LabelContext ptr mut : context  -> NamespaceId ) =>: export: childId
     base NAMESPACE_ID_NONE == childName .length 0 == | if
       NAMESPACE_ID_NONE return
     end
@@ -364,8 +364,8 @@ namespace: id
       ..swap [] .children =
     return
   end
-  proc( NamespaceId : base string : path  LabelContext ptr mut : context -> NamespaceId ) =>: export findNamespace
-    base NamespaceId =: mut id
+  proc( NamespaceId : base string : path  LabelContext ptr mut : context -> NamespaceId ) =>: export: findNamespace
+    base NamespaceId =: mut: id
     path
       while ..dup .length 0 > do
         '.' string.split
@@ -377,19 +377,19 @@ namespace: id
     ..drop
     id return
   end
-  proc( NamespaceId : id LabelContext ptr mut : context -> StringConstant ) =>: export namespaceName
+  proc( NamespaceId : id LabelContext ptr mut : context -> StringConstant ) =>: export: namespaceName
     id NAMESPACE_ID_NONE == if
       0 0 StringConstant new return
     end
     context [] .namespaces id list.get .name return
   end
-  proc( NamespaceId : id LabelContext ptr mut : context -> NamespaceId ) =>: export parentNamespace
+  proc( NamespaceId : id LabelContext ptr mut : context -> NamespaceId ) =>: export: parentNamespace
     id NAMESPACE_ID_NONE == if
       NAMESPACE_ID_NONE return
     end
     context [] .namespaces id list.get .parent return
   end
-  proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr mut : context -> NamespaceImportId ) =>: export getNamespaceImportId
+  proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr mut : context -> NamespaceImportId ) =>: export: getNamespaceImportId
     context [] .namespaceImports .length 0 > if
       parent NAMESPACE_IMPORT_NONE == if
         0 NamespaceImportId cast
@@ -424,7 +424,7 @@ namespace: id
 end
 
 namespace: sb
-  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export appendLabelName
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendLabelName
     id 0 < id context [] .labels .length >= | if
       sb return
     end
@@ -435,7 +435,7 @@ namespace: sb
       string.create
     sb.appendStr return
   end
-  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export appendAsciifiedLabelName
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedLabelName
     id 0 < id context [] .labels .length >= | if
       sb return
     end
@@ -446,14 +446,14 @@ namespace: sb
       string.create
     sb.appendAsciified return
   end
-  proc( stringBuilder : sb StringConstant : const LabelContext ptr : context -> stringBuilder ) =>: export appendStringConst
+  proc( stringBuilder : sb StringConstant : const LabelContext ptr : context -> stringBuilder ) =>: export: appendStringConst
     sb
       context [] .nameBuffer .data const .offset +
         const .length
       string.create
     sb.appendStr return
   end
-  proc( stringBuilder : sb StringConstant : const LabelContext ptr : context -> stringBuilder ) =>: export appendAsciifiedStringConst
+  proc( stringBuilder : sb StringConstant : const LabelContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedStringConst
     sb
       context [] .nameBuffer .data const .offset +
         const .length

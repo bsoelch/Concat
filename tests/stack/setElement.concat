@@ -1,7 +1,7 @@
-struct( i32 : mut x ) =:: s
+struct( i32 : mut: x ) =:: s
 
 proc( -> ) =>: main
-  0 s new =:: mut A
+  0 s new =:: mut: A
   A .x ..debug.print
   ## direct edit
   1 A .x =

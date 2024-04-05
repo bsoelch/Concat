@@ -1,10 +1,10 @@
-struct( i32 : mut a i32 : b ) =:: struct
+struct( i32 : mut: a i32 : b ) =:: struct
 
 proc( -> ) =>: main
   0 0 struct new =:: s
   s .a @
   s .b @
-  s =:: mut mutS
+  s =:: mut: mutS
   mutS .a @
   mutS .b @
   ..drop.4

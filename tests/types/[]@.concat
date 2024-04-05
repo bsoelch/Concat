@@ -1,5 +1,5 @@
 proc( -> ) =>: main
-  i32 5 array new =:: mut a
+  i32 5 array new =:: mut: a
   a @ 3 [] @ =:: p
   3 p [] =
   a @ 0 [] ..debug.print

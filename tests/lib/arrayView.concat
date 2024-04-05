@@ -4,7 +4,7 @@ import arrayView
 #template type : T #end
 proc( T arrayView : l -> ) =>: printArray
 #:else
-proc( type : auto T  T arrayView : l -> ) =>: printArray
+proc( type : auto: T  T arrayView : l -> ) =>: printArray
 #:end
   0 while ..dup l .length < do
     l .data ..over [] ..debug.print
@@ -21,7 +21,7 @@ proc( -> ) =>: main
   str 'A' lastIndexOf ..debug.print
   str 'o' lastIndexOf ..debug.print
   str 'c' contains ..debug.print
-  i32 10 array new =:: mut a
+  i32 10 array new =:: mut: a
   0 while ..dup a ..length < do
     ..dup ..dup * a @ ..over.2 [] =
     1 +

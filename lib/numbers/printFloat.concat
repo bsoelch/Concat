@@ -13,8 +13,8 @@ end
 
 namespace: sb
   ## appends the C-style hexadecimal representation of an IEEE double to a stringBuilder
-  proc( stringBuilder : sb f64 : f -> stringBuilder ) =>: export appendIeeeDouble
-    f =:: mut value
+  proc( stringBuilder : sb f64 : f -> stringBuilder ) =>: export: appendIeeeDouble
+    f =:: mut: value
     -1022 =:: MIN_POW
     1023 =:: MAX_POW
     13 =:: DIGIT_COUNT
@@ -39,15 +39,15 @@ namespace: sb
         value -_ value =
       end
       "0x" sb.appendS
-      value math.log2 math.floor i64 cast =:: mut e
+      value math.log2 math.floor i64 cast =:: mut: e
       e MIN_POW < if
         MIN_POW e =
       else e MAX_POW > _if
         MAX_POW e =
       end
-      2 e f64 cast math.pow =:: mut p
+      2 e f64 cast math.pow =:: mut: p
       value p / value =
-      value math.floor =:: mut d
+      value math.floor =:: mut: d
       d i32 cast getDigit sb.appendC
       '.' sb.appendC
       0 while ..dup DIGIT_COUNT < do
@@ -61,8 +61,8 @@ namespace: sb
       e sb.appendI
     return
   end
-  proc( stringBuilder : sb f64 : f i32 : precision i32 : base bool : sci -> stringBuilder ) =>: export appendFloat???
-    f =:: mut value
+  proc( stringBuilder : sb f64 : f i32 : precision i32 : base bool : sci -> stringBuilder ) =>: export: appendFloat???
+    f =:: mut: value
     base 2 < base 62 > | if 
       ## TODO error handling
       sb return
@@ -83,12 +83,12 @@ namespace: sb
         '-' sb.appendC
         value -_ value =
       end
-      value math.log base math.log / math.floor i64 cast =:: mut e
-      e =:: mut e_max
-      base e f64 cast math.pow =:: mut p
-      i32 64 array new =:: mut buff
-      0 =:: mut n
-      0b1e-110100 #+2^-52+# value * =:: mut eps ##XXX? better implementation of eps
+      value math.log base math.log / math.floor i64 cast =:: mut: e
+      e =:: mut: e_max
+      base e f64 cast math.pow =:: mut: p
+      i32 64 array new =:: mut: buff
+      0 =:: mut: n
+      0b1e-110100 #+2^-52+# value * =:: mut: eps ##XXX? better implementation of eps
       eps 0 == if ## adjust size of small numbers
         base e 1 + f64 cast math.pow p =
         value p / base * value =
@@ -116,8 +116,8 @@ namespace: sb
       end n =
       n 0 == if 1 n = end
       buff @ n [] base 2 / >= if
-        n 1 - =:: mut j
-        true =:: mut inc
+        n 1 - =:: mut: j
+        true =:: mut: inc
         while inc j 0 >= & do
           buff @ j [] 1 +  buff @ j [] =
           buff @ j [] base >= if
@@ -177,40 +177,40 @@ namespace: sb
       end
     return
   end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendF
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendF
     0 10 false appendFloat???
   end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendF?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendF?
     10 false appendFloat???
   end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendE
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendE
     0 10 true appendFloat???
   end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendE?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendE?
     10 true appendFloat???
   end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendXF
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendXF
     0 16 false appendFloat???
   end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendXF?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendXF?
     16 false appendFloat???
   end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendXE
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendXE
     0 16 true appendFloat???
   end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendXE?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendXE?
     16 true appendFloat???
   end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendBF
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendBF
     0 2 false appendFloat???
   end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendBF?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendBF?
     2 false appendFloat???
   end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export appendBE
+  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendBE
     0 2 true appendFloat???
   end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export appendBE?
+  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendBE?
     2 true appendFloat???
   end
 end

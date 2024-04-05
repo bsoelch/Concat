@@ -39,10 +39,10 @@ enum(
  ## XXX? more built-in operations
  PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
    PRINT_F32 PRINT_F64 PRINT_PTR                 ## ..debug.print
-) =:: export BuiltIn
+) =:: export: BuiltIn
 
 namespace: sb
-  proc( stringBuilder BuiltIn -> stringBuilder ) =>: export appendBuiltIn
+  proc( stringBuilder BuiltIn -> stringBuilder ) =>: export: appendBuiltIn
     switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
         "-_" sb.appendS break
@@ -127,9 +127,9 @@ proc(
   genericLabel types.newGenericType =:: genericType
   genericType false typeContext wrapPtr =:: genericPtr
   genericType true  typeContext wrapPtr =:: genericPtrMut
-  Type 3 array new =:: mut typeArray
+  Type 3 array new =:: mut: typeArray
   typeArray @ =:: types
-  LabelId 3 array new =:: mut labelArray
+  LabelId 3 array new =:: mut: labelArray
   labelArray @ =:: labels
   genericLabel labels 0 [] =
   id.LABEL_ID_NONE labels 1 [] =
@@ -310,7 +310,7 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   ## TODO? own calling convention for built-ins
   LabelId arrayView optional.empty =:: argLabels
-  Type 2 array new =:: mut args
+  Type 2 array new =:: mut: args
   t args @ 0 [] =
   t args @ 1 [] =
   ## newProcArgs
@@ -318,12 +318,12 @@ proc(
     argLabels
     false
     typeContext
-  types.newProcArgs =:: mut procIn
+  types.newProcArgs =:: mut: procIn
   ## newProcArgs
     Type array.empty
     argLabels
     true
-  typeContext types.newProcArgs =:: mut procOut
+  typeContext types.newProcArgs =:: mut: procOut
   ## newProcedure
     procIn
     procOut
@@ -386,7 +386,7 @@ end
 proc(
   FilePosition : pos
   ProgramContext ptr mut : context
--> bool ) =>: export initBuiltInProcs
+-> bool ) =>: export: initBuiltInProcs
   types.primitive.BOOL
     context operatorProcTypes
   =:: consume_bool =:: bool_bool =:: boolbool_bool ..drop.2
@@ -417,7 +417,7 @@ proc(
   =:: consume_ptr =:: ptrCmp =:: ptrDiff =:: ptrAdd =:: ptrMutAdd
   "-_" string.wrap pos context newBuiltInBundle
     if ..drop.2 true return end
-  =:: mut bundle =:: mut label
+  =:: mut: bundle =:: mut: label
   BuiltIn .NEG_I8  label i8_i8   bundle context addBuiltIn
   BuiltIn .NEG_I16 label i16_i16 bundle context addBuiltIn
   BuiltIn .NEG_I32 label i32_i32 bundle context addBuiltIn

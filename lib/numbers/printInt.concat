@@ -3,12 +3,12 @@ import stringBuilder
 namespace: sb
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: stringChars
 
-  proc( stringBuilder : buffer i64 : i i32 : base bool : signed -> stringBuilder ) =>: export appendI??
+  proc( stringBuilder : buffer i64 : i i32 : base bool : signed -> stringBuilder ) =>: export: appendI??
     base 2 < base 62 > | if
       ## TODO error handling
       buffer return
     end
-    i8 64 array new =:: mut chrBuff
+    i8 64 array new =:: mut: chrBuff
     buffer
       i
       ..dup 0 < signed & if
@@ -34,25 +34,25 @@ namespace: sb
       ..drop
     return
   end
-  proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export appendI?
+  proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export: appendI?
     true appendI??
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export appendBin
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendBin
     2  appendI?
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export appendI
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendI
     10 appendI?
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export appendX
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendX
     16 appendI?
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export appendUBin
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUBin
     2 false appendI??
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export appendU
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendU
     10 false appendI??
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export appendUHex
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUHex
     16 false appendI??
   end
 end

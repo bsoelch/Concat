@@ -2,12 +2,12 @@ import stringBuilder
 import io
 
 namespace: io
-  proc( string : fileName  OpenMode : mode -> FILE IOError ) =>: export fopenStr
+  proc( string : fileName  OpenMode : mode -> FILE IOError ) =>: export: fopenStr
     fileName .data fileName .length mode fopen return
   end
-  proc( FILE : file string : str -> IOError ) =>: export fputStr
-    0 i64 =: mut off
-    str .length i64 =: mut count
+  proc( FILE : file string : str -> IOError ) =>: export: fputStr
+    0 i64 =: mut: off
+    str .length i64 =: mut: count
     str .data =:: data
     while count 0 > do
       file data off count fwrite
@@ -20,16 +20,16 @@ namespace: io
     end
     FILE_ERROR_NONE return
   end
-  proc( FILE : file stringBuilder : str -> IOError ) =>: export fputSb
+  proc( FILE : file stringBuilder : str -> IOError ) =>: export: fputSb
     file  str sb.asStr fputStr return
   end
-  proc( FILE : file IOError : err string : str -> FILE  IOError ) =>: export fappendStr
+  proc( FILE : file IOError : err string : str -> FILE  IOError ) =>: export: fappendStr
     err FILE_ERROR_NONE != if
       file err return
     end
     file ..dup str fputStr return
   end
-  proc( FILE : file IOError : err stringBuilder : str -> FILE  IOError ) =>: export fappendSb
+  proc( FILE : file IOError : err stringBuilder : str -> FILE  IOError ) =>: export: fappendSb
     err FILE_ERROR_NONE != if
       file err return
     end
@@ -38,9 +38,9 @@ namespace: io
 end
 namespace: sb
   using io
-  proc( stringBuilder : sb FILE : file -> stringBuilder IOError ) =>: export appendFile
-    16 =:: mut delta
-    FILE_ERROR_NONE IOError =: mut err
+  proc( stringBuilder : sb FILE : file -> stringBuilder IOError ) =>: export: appendFile
+    16 =:: mut: delta
+    FILE_ERROR_NONE IOError =: mut: err
     sb
       while err FILE_ERROR_NONE == do
         ..dup .length delta + ensureCap

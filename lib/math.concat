@@ -1,134 +1,134 @@
 import numbers/float
 namespace: c
-  proc( ..ctype.double -> ..ctype.double ) : extern floor
-  proc( ..ctype.double -> ..ctype.double ) : extern ceil
+  proc( ..ctype.double -> ..ctype.double ) : extern: floor
+  proc( ..ctype.double -> ..ctype.double ) : extern: ceil
   proc(
     ..ctype.double
     ..ctype.double
-  -> ..ctype.double ) : extern remainder
-  proc( ..ctype.double -> ..ctype.double ) : extern fabs
+  -> ..ctype.double ) : extern: remainder
+  proc( ..ctype.double -> ..ctype.double ) : extern: fabs
 
   proc(
     ..ctype.double
     ..ctype.double
-  -> ..ctype.double ) : extern fmin
+  -> ..ctype.double ) : extern: fmin
   proc(
     ..ctype.double
     ..ctype.double
-  -> ..ctype.double ) : extern fmax
+  -> ..ctype.double ) : extern: fmax
 
-  proc( ..ctype.double -> ..ctype.double ) : extern log2
-  proc( ..ctype.double -> ..ctype.double ) : extern log
-  proc( ..ctype.double -> ..ctype.double ) : extern exp
+  proc( ..ctype.double -> ..ctype.double ) : extern: log2
+  proc( ..ctype.double -> ..ctype.double ) : extern: log
+  proc( ..ctype.double -> ..ctype.double ) : extern: exp
 
-  proc( ..ctype.double -> ..ctype.double ) : extern sqrt
-  proc( ..ctype.double -> ..ctype.double ) : extern cbrt
+  proc( ..ctype.double -> ..ctype.double ) : extern: sqrt
+  proc( ..ctype.double -> ..ctype.double ) : extern: cbrt
   proc(
     ..ctype.double
     ..ctype.double
-  -> ..ctype.double ) : extern pow
+  -> ..ctype.double ) : extern: pow
   ## XXX gamma function
 
-  proc( ..ctype.double -> ..ctype.double ) : extern sin
-  proc( ..ctype.double -> ..ctype.double ) : extern cos
-  proc( ..ctype.double -> ..ctype.double ) : extern tan
-  proc( ..ctype.double -> ..ctype.double ) : extern asin
-  proc( ..ctype.double -> ..ctype.double ) : extern acos
-  proc( ..ctype.double -> ..ctype.double ) : extern atan
-  proc( ..ctype.double -> ..ctype.double ) : extern sinh
-  proc( ..ctype.double -> ..ctype.double ) : extern cosh
-  proc( ..ctype.double -> ..ctype.double ) : extern tanh
-  proc( ..ctype.double -> ..ctype.double ) : extern asinh
-  proc( ..ctype.double -> ..ctype.double ) : extern acosh
-  proc( ..ctype.double -> ..ctype.double ) : extern atanh
+  proc( ..ctype.double -> ..ctype.double ) : extern: sin
+  proc( ..ctype.double -> ..ctype.double ) : extern: cos
+  proc( ..ctype.double -> ..ctype.double ) : extern: tan
+  proc( ..ctype.double -> ..ctype.double ) : extern: asin
+  proc( ..ctype.double -> ..ctype.double ) : extern: acos
+  proc( ..ctype.double -> ..ctype.double ) : extern: atan
+  proc( ..ctype.double -> ..ctype.double ) : extern: sinh
+  proc( ..ctype.double -> ..ctype.double ) : extern: cosh
+  proc( ..ctype.double -> ..ctype.double ) : extern: tanh
+  proc( ..ctype.double -> ..ctype.double ) : extern: asinh
+  proc( ..ctype.double -> ..ctype.double ) : extern: acosh
+  proc( ..ctype.double -> ..ctype.double ) : extern: atanh
   proc(
     ..ctype.double : y
     ..ctype.double : x
-  -> ..ctype.double ) : extern atan2
+  -> ..ctype.double ) : extern: atan2
 end
 namespace: math
-  proc( f64 -> f64 ) =>: export floor
+  proc( f64 -> f64 ) =>: export: floor
     c.floor
   end
-  proc( f64 -> f64 ) =>: export ceil
+  proc( f64 -> f64 ) =>: export: ceil
     c.ceil
   end
-  proc( f64 -> f64 ) =>: export round
+  proc( f64 -> f64 ) =>: export: round
     ..dup f64.isFinite ! if
       return ## no change for non-finite number
     end
     ## remainder(x,1) = x - roundeven(x)
     ..dup 1.0 c.remainder f64 cast -
   end
-  proc( f64 -> f64 ) =>: export abs
+  proc( f64 -> f64 ) =>: export: abs
     c.fabs
   end
 
-  proc( f64 f64 -> f64 ) =>: export min
+  proc( f64 f64 -> f64 ) =>: export: min
     c.fmin
   end
-  proc( f64 f64 -> f64 ) =>: export max
+  proc( f64 f64 -> f64 ) =>: export: max
     c.fmax
   end
 
-  proc( f64 -> f64 ) =>: export log2
+  proc( f64 -> f64 ) =>: export: log2
     c.log2
   end
-  proc( f64 -> f64 ) =>: export log
+  proc( f64 -> f64 ) =>: export: log
     c.log
   end
-  proc( f64 -> f64 ) =>: export exp
+  proc( f64 -> f64 ) =>: export: exp
     c.exp
   end
 
-  proc( f64 -> f64 ) =>: export sqrt
+  proc( f64 -> f64 ) =>: export: sqrt
     c.sqrt
   end
-  proc( f64 -> f64 ) =>: export cbrt
+  proc( f64 -> f64 ) =>: export: cbrt
     c.cbrt
   end
-  proc( f64 : base f64 : power -> f64 ) =>: export pow
+  proc( f64 : base f64 : power -> f64 ) =>: export: pow
     base power c.pow
   end
   ## XXX gamma function
 
-  proc( f64 -> f64 ) =>: export sin
+  proc( f64 -> f64 ) =>: export: sin
     c.sin
   end
-  proc( f64 -> f64 ) =>: export cos
+  proc( f64 -> f64 ) =>: export: cos
     c.cos
   end
-  proc( f64 -> f64 ) =>: export tan
+  proc( f64 -> f64 ) =>: export: tan
     c.tan
   end
-  proc( f64 -> f64 ) =>: export asin
+  proc( f64 -> f64 ) =>: export: asin
     c.asin
   end
-  proc( f64 -> f64 ) =>: export acos
+  proc( f64 -> f64 ) =>: export: acos
     c.acos
   end
-  proc( f64 -> f64 ) =>: export atan
+  proc( f64 -> f64 ) =>: export: atan
     c.atan
   end
-  proc( f64 -> f64 ) =>: export sinh
+  proc( f64 -> f64 ) =>: export: sinh
     c.sinh
   end
-  proc( f64 -> f64 ) =>: export cosh
+  proc( f64 -> f64 ) =>: export: cosh
     c.cosh
   end
-  proc( f64 -> f64 ) =>: export tanh
+  proc( f64 -> f64 ) =>: export: tanh
     c.tanh
   end
-  proc( f64 -> f64 ) =>: export asinh
+  proc( f64 -> f64 ) =>: export: asinh
     c.asinh
   end
-  proc( f64 -> f64 ) =>: export acosh
+  proc( f64 -> f64 ) =>: export: acosh
     c.acosh
   end
-  proc( f64 -> f64 ) =>: export atanh
+  proc( f64 -> f64 ) =>: export: atanh
     c.atanh
   end
-  proc( f64 f64 -> f64 ) =>: export atan2
+  proc( f64 f64 -> f64 ) =>: export: atan2
     c.atan2
   end
 end

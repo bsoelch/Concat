@@ -12,7 +12,7 @@ proc( -> ) =>: main
 end
 
 proc( string : str i8 : chr -> ) =>: printSplit
-  0 =:: mut i
+  0 =:: mut: i
   str 
   while
     chr string.split printStr

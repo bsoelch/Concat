@@ -6,17 +6,17 @@ import "typeCheck2.concat"
 import "generator_c.concat"
 import "generator_qbe.concat"
 
-stringBuilder : mut srcFile
-stringBuilder : mut outFile
-string : mut basePath
-string : mut libPath
-string optional : mut parserTokensFile
-string optional : mut compilerTokensFile
-string optional : mut errorFile
-false =:: mut wError
+stringBuilder : mut: srcFile
+stringBuilder : mut: outFile
+string : mut: basePath
+string : mut: libPath
+string optional : mut: parserTokensFile
+string optional : mut: compilerTokensFile
+string optional : mut: errorFile
+false =:: mut: wError
 ## enable constant-folding
-true =:: mut export _FOLD_CONSTANTS_
-false =:: mut export _EXPERIMENTAL_
+true =:: mut: export: _FOLD_CONSTANTS_
+false =:: mut: export: _EXPERIMENTAL_
 
 proc( string : path -> ) =>: printUsage
   "usage: " sb.wrap
@@ -36,17 +36,17 @@ proc( string : path -> ) =>: printUsage
 end
 enum( NONE IN OUT TOKENS_PARSER TOKENS_COMPILER LIB_PATH ERR_PATH ) =:: ArgParserState
 proc( -> ) =>: parseArgs
-  false =:: mut printedUsage
-  false =:: mut hasSrc
-  false =:: mut hasOut
-  false =:: mut hasLib
+  false =:: mut: printedUsage
+  false =:: mut: hasSrc
+  false =:: mut: hasOut
+  false =:: mut: hasLib
   0 sb.create srcFile =
   0 sb.create outFile =
   string optional.empty parserTokensFile =
   string optional.empty compilerTokensFile =
   string optional.empty errorFile =
   0 ..getArg string.create =:: path
-  ArgParserState .IN =:: mut state
+  ArgParserState .IN =:: mut: state
   1 while ..dup ..argc < do
     ..dup ..getArg string.create =:: arg
     arg .length 0 == if
@@ -145,7 +145,7 @@ proc( -> ) =>: parseArgs
     1 sys.exit
     ..unreachable
   end
-  srcFile sb.asStr '.' string.lastIndexOf =:: mut iDot
+  srcFile sb.asStr '.' string.lastIndexOf =:: mut: iDot
   srcFile sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
   iDot iSlash < if
     -1 iDot =
@@ -181,7 +181,7 @@ proc( CompilerError list ptr mut : errors -> ) =>: checkErrors
   errors [] .length 0 == if
     return
   end
-  false =:: mut hasError
+  false =:: mut: hasError
   1024 sb.create
     0 while ..dup errors [] .length < do
       ..swap
@@ -208,7 +208,7 @@ end
 proc( -> ) =>: main ## TODO check return value of fopen
   parseArgs
   ## TODO cleanup program memory after compilation
-  srcFile libPath basePath parseProgram =:: mut prog
+  srcFile libPath basePath parseProgram =:: mut: prog
   parserTokensFile optional.hasData if
     1024 sb.create
       prog @ sb.appendProgram
