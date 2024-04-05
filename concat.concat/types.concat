@@ -408,7 +408,7 @@ namespace: types
   8 =:: PTR_ALIGN
   8 =:: I_SIZE_SIZE
   8 =:: I_SIZE_ALIGN
-  proc( PrimitiveType -> i32 ) =>: sizeOfPrimitive
+  proc( PrimitiveType -> i32 ) =>: export sizeOfPrimitive
     switch
       TYPE case
         0 return

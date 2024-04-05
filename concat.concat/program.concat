@@ -92,6 +92,7 @@ enum(
            CastInfo : mut autoCast
                Type : mut Cast
                Type : mut Cast!
+               Type : mut bitCast
       UnaryOperator : unaryOperator
      BinaryOperator : binaryOperator
                 i32 : checkEnumLabel
@@ -206,6 +207,9 @@ proc( Type : target FilePosition : pos -> Operation ) =>: export opCast
 end
 proc( Type : target FilePosition : pos -> Operation ) =>: export opCast!
    Type .undefined OpValue .Cast! target pos Operation new return
+end
+proc( Type : target FilePosition : pos -> Operation ) =>: export opBitCast
+   Type .undefined OpValue .bitCast target pos Operation new return
 end
 proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export opCastFrom
    src OpValue .Cast target pos Operation new return
@@ -688,6 +692,12 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) src: " sb.appendS
           ..over .val .Cast! typeContext sb.appendType
+          break
+        bitCast case
+          "bitCast ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " ) src: " sb.appendS
+          ..over .val .bitCast typeContext sb.appendType
           break
         callPtr case
           "call pointer ( " sb.appendS

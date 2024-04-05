@@ -2048,6 +2048,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       state appendOp
       return
+    else ..dup "..bitcast" string.wrap string.eq _if =:: opName
+      Type .undefined
+        fileState [] .wordStart
+      opBitCast state appendOp
+      return
     else ..dup "-_" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
       idContext id.foldConsts _EXPERIMENTAL_ ! & if
         state hasConst if

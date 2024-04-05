@@ -1,0 +1,10 @@
+
+proc( -> ) =>: main
+  42.0 i64 ..bitcast ..debug.print
+  3.14159264358979 f32 ..bitcast ..debug.print
+  0x7f7fffff f32 ..bitcast ..debug.print
+  0xff800000i64 f32 ..bitcast ..debug.print
+  1i8 f64 ..bitcast ..debug.print
+  -1i8 i16 ..bitcast ..debug.print
+  0xffff i8 ..bitcast ..debug.print
+end

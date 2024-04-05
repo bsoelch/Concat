@@ -1507,7 +1507,7 @@ proc(
     getArrayElement setArrayElement atArrayElement setValue
     Print newEnum call callPtr call_old
     argc getArg getArgLen implementProcedure procPtr
-    autoCast
+    autoCast bitCast
     unaryOperator
     checkEnumLabel setEnumLabel checkArrayIndex
     hasElement stackMod setName copy

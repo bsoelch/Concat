@@ -1412,7 +1412,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       break
     getName setName atName getLabel setLabel atLabel length size
     stackMod copy builtIn procPtr
-    typeModifier autoCast hasLabel hasName
+    typeModifier autoCast bitCast hasLabel hasName
     call implementProcedure case
       break ## XXX error message
   end

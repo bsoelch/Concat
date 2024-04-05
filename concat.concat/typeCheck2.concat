@@ -2358,7 +2358,7 @@ proc(
       types.primitive.I_SIZE outTypes 1 [] =
       outTypes array.wrap op .pos state pushTypes
       return
-    Cast Cast! case
+    Cast Cast! bitCast case
       op .dataType .undefined ?? if
         ## resolve data type
         op .pos state popType op .dataType =
@@ -2369,13 +2369,16 @@ proc(
       state [] .stack @ branchTree.pop .data [] =:: value
       op .val .Cast ?? if
         value .valueType op .val .Cast =
+      else op .val .bitCast ?? _if
+        value .valueType op .val .bitCast =
       else
         value .valueType op .val .Cast! =
       end
+      ## XXX? different cast-check for bit-casts
       ## canCast
         value .valueType
         op .dataType
-        op .val .Cast! ??
+        op .val .Cast ?? !
       typeContext types.canCast ! if
         "cannot cast " sb.wrap
           value .valueType typeContext sb.appendType
@@ -2384,7 +2387,12 @@ proc(
         op .pos errors appendError
       end
       ## XXX try cast constant on stack
-      op .dataType value .value op state pushValue
+      op .val .bitCast ?? if
+        ConstValue .none
+      else
+        value .value
+      end =:: newValue
+      op .dataType newValue op state pushValue
       state [] .childIds
         ..dup .length =:: offset
         value .opIndex list.append

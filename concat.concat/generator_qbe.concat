@@ -2219,12 +2219,17 @@ proc(
       return
     PRINT_I8 case
       sb
-        pos context popValue =:: charId
+        pos context popValue =:: srcId
         "%t" sb.appendS
+        context nextTmpId =:: charId
+        charId sb.appendI
+        " =l extsb %s" sb.appendS
+        srcId sb.appendI
+        "\n%t" sb.appendS
         context nextTmpId =:: tmp1
         tmp1 sb.appendI
         " =l extub %s" sb.appendS
-        charId sb.appendI
+        srcId sb.appendI
         "\n%t" sb.appendS
         context nextTmpId =:: tmp2
         tmp2 sb.appendI
@@ -2235,7 +2240,7 @@ proc(
         tmp3 sb.appendI
         " =l add $PRINT_CHAR_STRS, %t" sb.appendS
         tmp2 sb.appendI
-        "\ncall $printf(l $PRINT_CHAR_STR,...,sb %s" sb.appendS
+        "\ncall $printf(l $PRINT_CHAR_STR,...,sb %t" sb.appendS
         charId sb.appendI
         ",l %t" sb.appendS
         tmp3 sb.appendI
@@ -2415,9 +2420,120 @@ proc(
   return
 end
 
+
+struct( i8 : varType i64 : varId ) =:: StackVal
+namespace: sb
+  proc(
+    stringBuilder : sb
+    StackVal : val
+  -> stringBuilder ) =>: appendStackVal
+    sb
+      '%' sb.appendC
+      val .varType sb.appendC
+      val .varId sb.appendI
+    return
+  end
+end
 proc(
   stringBuilder : sb
-  bool : autoCast
+  Type : src
+  i64 : srcIndex
+  Type : target
+  i64 : targetIndex
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: bitcastNumbers
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  src typeContext types.primitiveValue =:: fromVal
+  target typeContext types.primitiveValue =:: toVal
+  ## sizes of arguments scaled to bits
+  fromVal types.sizeOfPrimitive 8 * =:: fromSize
+  toVal types.sizeOfPrimitive 8 * =:: toSize
+  fromVal toVal == if
+    sb
+      "%s" sb.appendS
+      targetIndex sb.appendI
+      ## copy necessary to update value id
+      " =" sb.appendS
+      target StorageType .STACK pos context sb.appendTypeNameQBE
+      " copy %s" sb.appendS
+      srcIndex sb.appendI
+      '\n' sb.appendC
+    return
+  end
+  's' srcIndex StackVal new =:: mut current
+  's' targetIndex StackVal new =:: mut last
+  last =:: mut next
+  0 =:: mut nSteps
+  src typeContext types.isFloat if nSteps 1 + nSteps = end
+  fromSize toSize != if
+    nSteps 1 + nSteps =
+  end
+  target typeContext types.isFloat if nSteps 1 + nSteps = end
+  nSteps 0 > assert "bit-cast casts non-equal types"
+  nSteps 1 > if
+    't' context nextTmpId StackVal new next =
+  end
+  sb
+    ## 1. convert floats to int
+    src typeContext types.isFloat if
+      next sb.appendStackVal
+      " =" sb.appendS
+      fromSize 32 <= if 'w' else 'l' end sb.appendC
+      " cast " sb.appendS
+      current sb.appendStackVal
+      '\n' sb.appendC
+      nSteps 1 - nSteps =
+      next current =
+      nSteps 1 > if 't' context nextTmpId StackVal new else last end next =
+    end
+    ## 2. zero-extend small values to correct size
+    fromSize toSize != if
+      next sb.appendStackVal
+      " =" sb.appendS
+      toSize 32 <= if 'w' else 'l' end sb.appendC
+      fromSize toSize < if
+        fromVal switch
+          BOOL TYPE FLOAT32 FLOAT64 case break
+          I8  case " extub" sb.appendS break
+          I16 case " extuh" sb.appendS break
+          I32 case " extuw" sb.appendS break
+          I64 case " extul" sb.appendS break
+        end
+      else
+        ## copy to smaller type truncates
+        " copy " sb.appendS
+      end
+      current sb.appendStackVal
+      '\n' sb.appendC
+      nSteps 1 - nSteps =
+      next current =
+      nSteps 1 > if 't' context nextTmpId StackVal new else last end next =
+    end
+    ## 3. convert int to float
+    target typeContext types.isFloat if
+      next sb.appendStackVal
+      " =" sb.appendS
+      toSize 32 == if 's' else 'd' end sb.appendC
+      " cast " sb.appendS
+      current sb.appendStackVal
+      '\n' sb.appendC
+      nSteps 1 - nSteps =
+    end
+    nSteps 0 == assert "correct step estimate in bit-cast"
+  return
+end
+
+enum( autoCast Cast Cast! bitCast ) =:: CastType
+
+proc(
+  stringBuilder : sb
+  CastType : castType
   Type : src0
   i32 : offset
   Type : target0
@@ -2440,7 +2556,7 @@ proc(
   src target types.typeEquals if
     sb return ## nothing to do
   end
-  autoCast if
+  castType .autoCast ?? if
     offset context [] .stackInfo branchTree.depth >= if
       "stack underflow" sb.wrap
       pos errors appendError
@@ -2452,21 +2568,20 @@ proc(
     context [] .stackInfo @ offset branchTree.at .data [] .valType
     pos context popValue
   end =:: srcId =:: valType
-  autoCast if
+  castType .autoCast ?? if
     target context toValType offset context replaceValue
   else
     target context toValType context pushValue
   end =:: targetId
+  ## TODO? different behavior for bit-casts
   src typeContext types.isNumber target .arrayIndex ?? & if
     ## isNumber returns true for array index
     ##   -> have to check for cast to array index before checking for cast to number
     sb
       ## castNumbers
-        src
-        srcId
-        types.primitive.I_SIZE
-        targetId
-      pos context castNumbers
+        src srcId
+        types.primitive.I_SIZE targetId
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
       target typeContext types.getArraySize 0 array.get =:: size
       ## appendIndexCheck
         size .sizeType switch
@@ -2480,7 +2595,11 @@ proc(
     return
   end
   src typeContext types.isNumber target typeContext types.isNumber & if
-    sb src srcId target targetId pos context castNumbers return
+    sb
+      src srcId
+      target targetId
+    pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
   end
   src typeContext types.isPointer target typeContext types.isPointer & if
     sb
@@ -2495,22 +2614,18 @@ proc(
     ## src -> I_PTR ~ ptr
     sb
       ## castNumbers
-        src
-        srcId
-        types.primitive.I_PTR
-        targetId
-      pos context castNumbers
+        src srcId
+        types.primitive.I_PTR targetId
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
     return
   end
   src typeContext types.isPointer target typeContext types.isInt & if
     ## ptr ~ I_PTR -> target
     sb
       ## castNumbers
-        types.primitive.I_PTR
-        srcId
-        target
-        targetId
-      pos context castNumbers
+        types.primitive.I_PTR srcId
+        target targetId
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
     return
   end
   src typeContext types.isReference if target typeContext types.isReference ! _if
@@ -2532,7 +2647,7 @@ proc(
       ## cast value
       baseType target types.typeEquals ! if
         ## compileCast
-          autoCast
+          castType
           baseType
           offset
           target
@@ -2694,7 +2809,7 @@ proc(
         i 1 + continue
       end
       ## compileCast
-        true
+        CastType .autoCast
         outArg
           false
           typeContext
@@ -3257,7 +3372,7 @@ proc(
     autoCast case
       sb
         op [] .pos sb.appendPosQBE
-        true
+        CastType .autoCast
         op [] .val .autoCast .src
         op [] .val .autoCast .offset
         op [] .dataType
@@ -3265,14 +3380,18 @@ proc(
         context
       compileCast return
       break
-    Cast Cast! case ## XXX? make cast! bit-cast
+    Cast Cast! bitCast case
       sb
         op [] .pos sb.appendPosQBE
-        false
-        op [] .val .Cast! ?? if
-          op [] .val .Cast!
-        else
+        op [] .val .Cast ?? if
+          CastType .Cast
           op [] .val .Cast
+        else op [] .val .bitCast ?? _if
+          CastType .bitCast
+          op [] .val .bitCast
+        else
+          CastType .Cast!
+          op [] .val .Cast!
         end
         0 ## no offset
         op [] .dataType
