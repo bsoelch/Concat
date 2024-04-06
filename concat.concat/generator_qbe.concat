@@ -2696,20 +2696,51 @@ proc(
   FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: pushConstant
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  false =:: mut: needCast
+  constType =:: mut: srcType
+  value .genericArg ?? if
+    context [] .currentProc
+      typeContext types.getProcIn ! assert "procedure has argumentes"
+    =:: progIn
+    progIn
+      value .genericArg
+      typeContext
+    types.compositeFindLabel =:: index
+    index id.LABEL_ID_NONE != if
+      progIn index typeContext types.compositeGetElement srcType =
+      srcType typeContext types.unwrapNamed
+        constType typeContext types.unwrapNamed
+      types.typeEquals ! needCast =
+    end
+  end
+  i64 : valId
   sb
     pos sb.appendPosQBE
     "%s" sb.appendS
-    constType context referenceOnly ! if
-      constType context toValType context pushValue sb.appendI
+    srcType context referenceOnly ! if
+      srcType context toValType context pushValue sb.appendI
       " =" sb.appendS
-      constType StorageType .STACK pos context sb.appendTypeNameQBE
+      srcType StorageType .STACK pos context sb.appendTypeNameQBE
       " copy " sb.appendS
     else
       ValType .REFERENCE context pushValue sb.appendI
       " =l copy " sb.appendS
     end
-    constType value false pos context sb.appendConstQBE
+    srcType value false pos context sb.appendConstQBE
     '\n' sb.appendC
+    needCast if
+      ## compileCast
+        CastType .autoCast
+        srcType
+        0
+        constType
+        pos
+        context
+      compileCast
+    end
   return
 end
 
