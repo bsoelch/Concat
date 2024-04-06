@@ -1677,7 +1677,7 @@ proc(
               calledProc OpValue .call op .val =
             break
             builtIn case
-              calledProcData [] .implementation .builtIn
+              calledProcData [] .implementation .builtIn .builtIn
                 OpValue .builtIn op .val =
             break
           end
@@ -1797,6 +1797,10 @@ proc(
               ##  -> replace op with generic-procedure pointer
               ##  -> generic proc ptr : ( procId, implId )
               break
+            end
+            procData [] .implementation .builtIn ?? if
+              true procData [] .implementation .builtIn .hasPtr =
+              ## TODO? implementations for built-in generics
             end
             ## ProcedureImpl
               procId
@@ -3327,7 +3331,7 @@ proc(
         op .pos
       state pushConstant
       return
-    getName builtIn procPtr
+    getName procPtr builtIn
     newEnum call getArgLen
     unaryOperator
     checkEnumLabel setEnumLabel
@@ -3683,6 +3687,36 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
     end
     false ## break loop while reaching condition
   do end
+  ## create implementations for built-in procedure-pointers
+  0 while ..dup program [] .procedures .length < do =:: procId
+    program [] .procedures procId list.at .data =:: currentProc
+    currentProc [] .implementation .builtIn ?? ! if
+      procId break ## built-ins at start of procedure list
+    end
+    currentProc [] .implementation .builtIn .hasPtr ! if
+      procId 1 + continue
+    end
+    program [] .progFiles 0 list.at .data =:: procFile ## XXX? use separate "file" for built-ins
+    currentProc [] .labelId labelContext id.labelPos .data =:: pos
+    procFile [] .localOps
+      ## opImplementProc
+        currentProc [] .procType
+        ## ProcedureImpl
+          procId
+          -1
+        ProcedureImpl new
+        pos
+      opImplementProc list.append
+      ## opBuiltIn
+        currentProc [] .procType
+        currentProc [] .implementation .builtIn .builtIn
+        pos
+      opBuiltIn list.append
+      currentProc [] .procType pos opReturn list.append
+      BlockType .PROCEDURE pos opEndBlock list.append
+    procFile [] .localOps =
+    procId 1 +
+  end ..drop
   state @ freeOps
   state .stack @ branchTree.free
   state .interpreter @ interpreter.cleanupContext

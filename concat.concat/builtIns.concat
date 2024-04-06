@@ -275,7 +275,7 @@ proc(
       FILE_ID_BUILT_IN
       procType
       procLabel
-      buildIn ProcImplType .builtIn
+      buildIn false BuiltInData new ProcImplType .builtIn
       hasStaticArgs
       isStatic
     ProcedureInfo new list.append

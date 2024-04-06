@@ -29,8 +29,12 @@ struct(
   i64 : codeStart
   i64 : mut: codeLength
 ) =:: export: CodeProcData
-enum(
+struct(
   BuiltIn : builtIn
+  bool : mut: hasPtr
+) =:: export: BuiltInData
+enum(
+  BuiltInData : mut: builtIn
   CodeProcData : mut: code
 ) =:: export: ProcImplType
 struct(
@@ -157,6 +161,14 @@ proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opDeclareId
 end
 proc( FilePosition : pos  -> Operation ) =>: export: opSetValue
   OpValue .setValue Type .undefined pos Operation new return
+end
+proc( Type ProcedureImpl FilePosition  -> Operation ) =>: export: opImplementProc
+  =:: pos
+  OpValue .implementProcedure ..swap pos Operation new return
+end
+proc( Type BuiltIn FilePosition  -> Operation ) =>: export: opBuiltIn
+  =:: pos
+  OpValue .builtIn ..swap pos Operation new return
 end
 proc( i32 FilePosition  -> Operation ) =>: export: opArrayGet
   =:: pos
