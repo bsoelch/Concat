@@ -1495,8 +1495,8 @@ proc(
   idContext [] .typeContext .labelContext @ =:: labelContext
   label labelContext id.inLabelNamespace
   label state [] .currentFile idContext id.findIdentifierByLabel if
-    ..drop.2 IdentifierInfo optional.empty return
-  end =:: idData ..drop
+    ..drop IdentifierInfo optional.empty return
+  end =:: idData
   idData [] .valueType op [] .dataType =
   idData id.asIdInfo optional.wrap return
 end

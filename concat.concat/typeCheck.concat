@@ -1774,9 +1774,8 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: resolveIden
   end
   label labelContext id.inLabelNamespace
   label state [] .fileId idContext id.findIdentifierByLabel if
-    ..drop.2 return
+    ..drop return
   end
-  ..swap ..drop
   ..dup [] .valueType op [] .dataType =
   op [] .val switch
     getName case

@@ -421,9 +421,13 @@ namespace: id
     end
     data? .data false return
   end
-  proc( LabelId : nameId FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export: findIdentifierByLabel
+  proc(
+    LabelId : nameId
+    FileId : fileId
+    IdentifierContext ptr mut : context
+  -> IdentifierData ptr mut bool ) =>: export: findIdentifierByLabel
     context [] .nameBuffer
-      ..dup .length 0 != if ..unreachable end ## TODO error message
+      ..dup .length 0 == assert "name buffer is empty"
       nameId context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
@@ -432,20 +436,24 @@ namespace: id
       fileId
       context
       IdentifierMatch list ptr mut optional.empty
-    searchIdentifier =:: isError =:: label =:: idName
+    searchIdentifier =:: isError =:: label ..drop
     context [] .nameBuffer
       list.clear
     context [] .nameBuffer =
-    idName label context getIdentifier isError | return
+    label context getIdentifier isError | return
   end
-  proc( string : name FileId : fileId IdentifierContext ptr mut : context -> IdentifierName IdentifierData ptr mut bool ) =>: export: findIdentifierByName
+  proc(
+    string : name
+    FileId : fileId
+    IdentifierContext ptr mut : context
+  -> IdentifierData ptr mut bool ) =>: export: findIdentifierByName
     ## searchIdentifier
       name
       fileId
       context
       IdentifierMatch list ptr mut optional.empty
     searchIdentifier =:: isError =:: label =:: idName
-    idName label context getIdentifier isError | return
+    label context getIdentifier isError | return
   end
   proc( string : id FilePosition : pos CompilerError list ptr mut : errors -> bool ) =>: export: checkIdentifier
     id .length 0 == if
@@ -611,7 +619,7 @@ namespace: id
         '\"' sb.appendC
       declaredAt errors appendWarning
       "shadows previous declaration " sb.wrap ..over [] .declaredAt errors appendInfo
-    end ..drop.2
+    end ..drop
     mScope [] .identifierNames @
       idName
       label

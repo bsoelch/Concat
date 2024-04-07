@@ -1118,25 +1118,25 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Constant new state pushConst
       true return
     else ..drop end
-    ..dup state [] .currentFile idContext id.findIdentifierByName if
-      ..drop.2 false return ## unknown identifier
+    ..dup state [] .currentFile idContext id.findIdentifierByName if ..drop
+      false return ## unknown identifier
+    end =:: idData
+    idData [] .constValue .none ?? if
+      false return ## not a constant
     end
-    ..dup [] .constValue .none ?? if
-      ..drop.2 false return ## not a constant
+    idData [] .constValue .procedure ??
+        idData [] .constValue .procedureBundle ?? |  if
+      false return ## ignore procedure constants
     end
-    ..dup [] .constValue .procedure ??
-        ..over [] .constValue .procedureBundle ?? |  if
-      ..drop.2 false return ## ignore procedure constants
-    end
-    ..dup [] .constValue =:: mut: constVal
-    ..dup [] .templateId -1 != ..over [] .idType .TEMPLATE_ARG ?? ! & if
+    idData [] .constValue =:: mut: constVal
+    idData [] .templateId -1 != idData [] .idType .TEMPLATE_ARG ?? ! & if
       idContext [] .templateArgBuffer .length =:: offset
-      ..dup [] .templateId idContext id.templateArgs fileState state popTemplateArguments if
+      idData [] .templateId idContext id.templateArgs fileState state popTemplateArguments if ..drop
         "could not get template arguments" sb.wrap fileState [] .wordStart state appendError2
         idContext [] .templateArgBuffer
           offset list.setLength
         idContext [] .templateArgBuffer = ## reset template arguments
-        ..drop.3 true return
+        true return
       end =:: args
       constVal args 0 0 ConstantArray new fileState [] .wordStart idContext types.replaceGenerics constVal =
       idContext [] .templateArgBuffer
@@ -1144,12 +1144,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       idContext [] .templateArgBuffer = ## reset template arguments
     end
     ## newIdentifierConstant
-      ..dup [] .valueType
+      idData [] .valueType
       constVal
-      ..over.2 id.asIdInfo optional.wrap
+      idData id.asIdInfo optional.wrap
       fileState [] .wordStart
     Constant new state pushConst
-  ..drop.2 true return
+  true return
 end
 proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut -> i32 ) =>: getCompilerOpParam
   =:: state
@@ -3030,8 +3030,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart
       isAddr if opAtId else opGet end
     state appendOp
-    ..drop return
-  end ..drop.2
+    return
+  end ..drop
   idName
     id.FLAG_NONE fileState [] .wordStart state [] .currentFile
   labelContext id.newLabel =:: labelId
