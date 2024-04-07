@@ -2915,6 +2915,73 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
         end
       return
+    else ..dup "overload:" string.wrap string.eq _if =:: opName
+      fileState state nextWord fileState state readLabel =:: mut: labelId
+      labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop
+        progContext [] .procBundles
+          ..dup .length ProcBundleId =: bundleId
+          newProcBundle list.append
+        progContext [] .procBundles =
+        ## declareIdentifier
+          labelId
+          Type .undefined
+          IdentifierType .PROCEDURE_BUNDLE
+          -1
+          bundleId ConstValue .procedureBundle
+          true
+          fileState [] .wordStart
+          state [] .currentFile
+          idContext
+          progContext [] .errors @
+        id.declareIdentifier if ..drop.2
+          return
+        end ..drop labelId =
+        bundleId
+      else =:: idData
+        idData [] .idType .PROCEDURE_BUNDLE ?? ! if
+          "cannot overload \"" sb.wrap
+            labelId labelContext sb.appendLabelName
+            "\", incompatible id-type for previous declaration: " sb.appendS
+            idData [] .idType sb.appendIdType
+            " ( declared at " sb.appendS
+            idData [] .declaredAt sb.appendPos
+            " ) expected: " sb.appendS
+            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
+          fileState [] .wordStart state appendError2
+          return
+        end
+        ## XXX? warn for incompatible flags
+        ## XXX? warn if overloads in different name-spaces are merged
+        idData [] .constValue .procedureBundle
+      end =:: bundleId
+      progContext [] .procBundles bundleId list.at .data =:: bundleData
+      while fileState state nextWord =:: procName
+        procName "end" string.wrap string.eq !
+      do
+        procName state [] .currentFile idContext id.findIdentifierByName if ..drop
+          "could not find procedure \"" sb.wrap
+            procName sb.appendStr
+            '"' sb.appendC
+          fileState [] .wordStart state appendError2
+          continue
+        end =:: idData
+        idData [] .idType .PROCEDURE ?? ! if
+          256 sb.create
+            idData [] .idType sb.appendIdType
+            " \"" sb.appendS
+            idData [] .labelId labelContext sb.appendLabelName
+            "\" ( declared at " sb.appendS
+            idData [] .declaredAt sb.appendPos
+            " ) is not a procedure" sb.appendS
+            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
+          fileState [] .wordStart state appendError2
+          return
+        end
+        bundleData [] .procedures
+          idData [] .constValue .procedure list.append
+        bundleData [] .procedures =
+      end
+      return
     else ..dup "..?types" string.wrap string.eq
        ..over "..?types." string.wrap string.startsWith | _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params

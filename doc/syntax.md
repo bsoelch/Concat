@@ -71,4 +71,24 @@ edge cases:
 ```
 
 
+## overloads
 
+overloads can be used to define an overloaded name bundling multiple procedures
+
+An overload is defined by using the keyword `overload:` followed by the name of that overload and a list of procedure names terminated by `end`
+
+When an overload is defined the parser tries to find an existing overload with the same name in the current scope and if successful merges the current overload into that overload.
+If no existing overload with the given name is found a new overload is created using the same rules used for identifier declarations.
+
+Most built-in functions, including all arithmetic operators, are overloaded names that can be extened by user defined functions.
+
+Example:
+```
+## internal declaration of built-in multiplication ( * )
+overload: export: *
+  i32.mult
+  i64.mult
+  f32.mult
+  f64.mult
+end
+```

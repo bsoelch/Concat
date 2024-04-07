@@ -1,0 +1,46 @@
+struct( i32 : x i32 : y ) =:: Vector
+struct( i32 : x i32 : y i32 : z ) =:: Vector3
+
+namespace: Vector
+  proc( Vector : u Vector : v -> Vector ) =>: add
+    ## Vector
+      u .x v .x +
+      u .y v .y +
+    Vector new
+  end
+  proc( Vector : u Vector : v -> Vector ) =>: subt
+    ## Vector
+      u .x v .x -
+      u .y v .y -
+    Vector new
+  end
+  proc( Vector : u Vector : v -> i32 ) =>: dot2
+    u .x v .x * u .y v .y * +
+  end
+  proc( Vector3 : u Vector3 : v -> i32 ) =>: dot3
+    u .x v .x * u .y v .y * + u .z v .z * +
+  end
+  overload: dot
+    dot2
+    dot3
+  end
+  overload: export: -
+    subt
+  end
+end
+
+overload: export: +
+  Vector.add
+end
+
+proc( -> ) =>: main
+  1 2 Vector new =:: v1
+  3 4 Vector new =:: v2
+  v1 v2 + =:: v3
+  v3 .x ..debug.print
+  v3 .y ..debug.print
+  v1 v2 - =:: v4
+  v4 .x ..debug.print
+  v4 .y ..debug.print
+  v1 v2 Vector.dot ..debug.print
+end
