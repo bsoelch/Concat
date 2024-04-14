@@ -29426,25 +29426,25 @@ ret
 @else_1269
 dbgloc 2341,16 ## ./concat.concat/parser.concat
 %s4327 =l copy $stringConstant301
-dbgloc 2341,25 ## ./concat.concat/parser.concat
-dbgloc 2341,25 ## ./concat.concat/parser.concat
-%s4328 =l copy 6
+dbgloc 2341,22 ## ./concat.concat/parser.concat
+dbgloc 2341,22 ## ./concat.concat/parser.concat
+%s4328 =l copy 3
 %s4329 =l alloc8 16
 call $cct_string_dwrap (l %s4328,l %s4327,l %s4329)
-dbgloc 2341,37 ## ./concat.concat/parser.concat
+dbgloc 2341,34 ## ./concat.concat/parser.concat
 %s4330 =ub call $cct_string_deq (:struct198 %s30,:struct198 %s4329)
-dbgloc 2341,47 ## ./concat.concat/parser.concat
+dbgloc 2341,44 ## ./concat.concat/parser.concat
 %s4331 =l copy $cct___EXPERIMENTAL__
-dbgloc 2341,47 ## ./concat.concat/parser.concat
+dbgloc 2341,44 ## ./concat.concat/parser.concat
 %s4332 =w loadub %s4331
-dbgloc 2341,62 ## ./concat.concat/parser.concat
+dbgloc 2341,59 ## ./concat.concat/parser.concat
 %s4333 =w copy %s4332
-dbgloc 2341,62 ## ./concat.concat/parser.concat
+dbgloc 2341,59 ## ./concat.concat/parser.concat
 %s4334 =w extub %s4333
 %s4335 =w ceqw 0, %s4334
-dbgloc 2341,64 ## ./concat.concat/parser.concat
+dbgloc 2341,61 ## ./concat.concat/parser.concat
 %s4336 =w and %s4330, %s4335
-dbgloc 2341,66 ## ./concat.concat/parser.concat
+dbgloc 2341,63 ## ./concat.concat/parser.concat
 jnz %s4336, @if_1274, @else_1274
 @if_1274
 dbgloc 2342,7 ## ./concat.concat/parser.concat
@@ -103801,9 +103801,9 @@ dbgloc 82,14 ## ./lib/utf8.concat
 %s67 =w copy %s65
 dbgloc 82,14 ## ./lib/utf8.concat
 %s68 =w shr %s67, %s66
-dbgloc 82,21 ## ./lib/utf8.concat
+dbgloc 82,18 ## ./lib/utf8.concat
 %s69 =l copy %l1331
-dbgloc 82,26 ## ./lib/utf8.concat
+dbgloc 82,23 ## ./lib/utf8.concat
 storew %s68, %s69
 dbgloc 83,7 ## ./lib/utf8.concat
 %s70 =l copy %l1332
@@ -141300,12 +141300,12 @@ jmp @endSwitch_55
 @case_55_13
 dbgloc 73,9 ## ./concat.concat/builtIns.concat
 %s41 =l copy $stringConstant814
-dbgloc 73,18 ## ./concat.concat/builtIns.concat
-dbgloc 73,18 ## ./concat.concat/builtIns.concat
-%s42 =l copy 6
+dbgloc 73,15 ## ./concat.concat/builtIns.concat
+dbgloc 73,15 ## ./concat.concat/builtIns.concat
+%s42 =l copy 3
 %s43 =l alloc8 24
 call $cct_sb_dappendS (:struct221 %s0,l %s42,l %s41,l %s43)
-dbgloc 73,29 ## ./concat.concat/builtIns.concat
+dbgloc 73,26 ## ./concat.concat/builtIns.concat
 jmp @endSwitch_55
 @case_55_14
 dbgloc 75,9 ## ./concat.concat/builtIns.concat
@@ -145919,16 +145919,16 @@ dbgloc 787,15 ## ./concat.concat/builtIns.concat
 call $cct_29_FaddBuiltIn (:enum39 %s1131,w %s1139,:enum16 %s1146,l %s1145,:struct293 %s1143,l %s1144)
 dbgloc 788,3 ## ./concat.concat/builtIns.concat
 %s1147 =l copy $stringConstant959
-dbgloc 788,12 ## ./concat.concat/builtIns.concat
-dbgloc 788,12 ## ./concat.concat/builtIns.concat
-%s1148 =l copy 6
+dbgloc 788,9 ## ./concat.concat/builtIns.concat
+dbgloc 788,9 ## ./concat.concat/builtIns.concat
+%s1148 =l copy 3
 %s1149 =l alloc8 16
 call $cct_string_dwrap (l %s1148,l %s1147,l %s1149)
-dbgloc 788,24 ## ./concat.concat/builtIns.concat
+dbgloc 788,21 ## ./concat.concat/builtIns.concat
 %s1150 =l copy %a0
-dbgloc 788,28 ## ./concat.concat/builtIns.concat
+dbgloc 788,25 ## ./concat.concat/builtIns.concat
 %s1151 =l copy %a1
-dbgloc 788,36 ## ./concat.concat/builtIns.concat
+dbgloc 788,33 ## ./concat.concat/builtIns.concat
 %s1152 =l alloc8 8
 %s1153 =ub call $cct_29_FnewBuiltInBundle (:struct198 %s1149,:struct293 %s1150,l %s1151,l %s1152)
 %s1154 =l loadl %s1152
@@ -168484,7 +168484,7 @@ dbgloc 442,37 ## ./concat.concat/interpreter/operators.concat
 %s2 =w extub %s0
 %s3 =w extub %s1
 %s4 =w shr %s2, %s3
-dbgloc 442,44 ## ./concat.concat/interpreter/operators.concat
+dbgloc 442,41 ## ./concat.concat/interpreter/operators.concat
 ret %s4
 @end
 hlt
@@ -168497,7 +168497,7 @@ dbgloc 443,38 ## ./concat.concat/interpreter/operators.concat
 %s2 =w extuh %s0
 %s3 =w extuh %s1
 %s4 =w shr %s2, %s3
-dbgloc 443,45 ## ./concat.concat/interpreter/operators.concat
+dbgloc 443,42 ## ./concat.concat/interpreter/operators.concat
 ret %s4
 @end
 hlt
@@ -168508,7 +168508,7 @@ function w $cct_31_Finterpreter_dlshrI32(w %a0,w %a1){
 %s1 =w copy %a1
 dbgloc 444,38 ## ./concat.concat/interpreter/operators.concat
 %s2 =w shr %s0, %s1
-dbgloc 444,45 ## ./concat.concat/interpreter/operators.concat
+dbgloc 444,42 ## ./concat.concat/interpreter/operators.concat
 ret %s2
 @end
 hlt
@@ -168519,7 +168519,7 @@ function l $cct_31_Finterpreter_dlshrI64(l %a0,l %a1){
 %s1 =l copy %a1
 dbgloc 445,38 ## ./concat.concat/interpreter/operators.concat
 %s2 =l shr %s0, %s1
-dbgloc 445,45 ## ./concat.concat/interpreter/operators.concat
+dbgloc 445,42 ## ./concat.concat/interpreter/operators.concat
 ret %s2
 @end
 hlt
@@ -172826,25 +172826,25 @@ dbgloc 812,9 ## ./concat.concat/interpreter/operators.concat
 %s19 =l extsb %s18
 dbgloc 812,9 ## ./concat.concat/interpreter/operators.concat
 %s20 =l shr %s13, %s19
-dbgloc 812,27 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,24 ## ./concat.concat/interpreter/operators.concat
 %t24 =l alloc8 17
 %t25 =l add %t24, 16
 storeb 4, %t25
 storel %s20, %t24
 %s21 =l copy %t24
-dbgloc 812,32 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,29 ## ./concat.concat/interpreter/operators.concat
 %s22 =l copy %a0
-dbgloc 812,46 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,43 ## ./concat.concat/interpreter/operators.concat
 %s23 =l copy %l7498
-dbgloc 812,49 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,46 ## ./concat.concat/interpreter/operators.concat
 %s24 =l copy %l7499
-dbgloc 812,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,49 ## ./concat.concat/interpreter/operators.concat
 %s25 =w loadub %s24
-dbgloc 812,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,49 ## ./concat.concat/interpreter/operators.concat
 %s26 =w loadub %s23
-dbgloc 812,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,49 ## ./concat.concat/interpreter/operators.concat
 %s27 =w or %s26, %s25
-dbgloc 812,54 ## ./concat.concat/interpreter/operators.concat
+dbgloc 812,51 ## ./concat.concat/interpreter/operators.concat
 blit %s21, %o1, 17
 blit %s22, %o0, 5
 ret %s27
@@ -172877,25 +172877,25 @@ dbgloc 816,9 ## ./concat.concat/interpreter/operators.concat
 %s39 =l extsh %s38
 dbgloc 816,9 ## ./concat.concat/interpreter/operators.concat
 %s40 =l shr %s33, %s39
-dbgloc 816,27 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,24 ## ./concat.concat/interpreter/operators.concat
 %t26 =l alloc8 17
 %t27 =l add %t26, 16
 storeb 4, %t27
 storel %s40, %t26
 %s41 =l copy %t26
-dbgloc 816,32 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,29 ## ./concat.concat/interpreter/operators.concat
 %s42 =l copy %a0
-dbgloc 816,46 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,43 ## ./concat.concat/interpreter/operators.concat
 %s43 =l copy %l7502
-dbgloc 816,49 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,46 ## ./concat.concat/interpreter/operators.concat
 %s44 =l copy %l7503
-dbgloc 816,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,49 ## ./concat.concat/interpreter/operators.concat
 %s45 =w loadub %s44
-dbgloc 816,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,49 ## ./concat.concat/interpreter/operators.concat
 %s46 =w loadub %s43
-dbgloc 816,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,49 ## ./concat.concat/interpreter/operators.concat
 %s47 =w or %s46, %s45
-dbgloc 816,54 ## ./concat.concat/interpreter/operators.concat
+dbgloc 816,51 ## ./concat.concat/interpreter/operators.concat
 blit %s41, %o1, 17
 blit %s42, %o0, 5
 ret %s47
@@ -172928,25 +172928,25 @@ dbgloc 820,9 ## ./concat.concat/interpreter/operators.concat
 %s59 =l extsw %s58
 dbgloc 820,9 ## ./concat.concat/interpreter/operators.concat
 %s60 =l shr %s53, %s59
-dbgloc 820,27 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,24 ## ./concat.concat/interpreter/operators.concat
 %t28 =l alloc8 17
 %t29 =l add %t28, 16
 storeb 4, %t29
 storel %s60, %t28
 %s61 =l copy %t28
-dbgloc 820,32 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,29 ## ./concat.concat/interpreter/operators.concat
 %s62 =l copy %a0
-dbgloc 820,46 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,43 ## ./concat.concat/interpreter/operators.concat
 %s63 =l copy %l7506
-dbgloc 820,49 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,46 ## ./concat.concat/interpreter/operators.concat
 %s64 =l copy %l7507
-dbgloc 820,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,49 ## ./concat.concat/interpreter/operators.concat
 %s65 =w loadub %s64
-dbgloc 820,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,49 ## ./concat.concat/interpreter/operators.concat
 %s66 =w loadub %s63
-dbgloc 820,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,49 ## ./concat.concat/interpreter/operators.concat
 %s67 =w or %s66, %s65
-dbgloc 820,54 ## ./concat.concat/interpreter/operators.concat
+dbgloc 820,51 ## ./concat.concat/interpreter/operators.concat
 blit %s61, %o1, 17
 blit %s62, %o0, 5
 ret %s67
@@ -172971,25 +172971,25 @@ dbgloc 823,26 ## ./concat.concat/interpreter/operators.concat
 storeb %s74,%l7511
 dbgloc 824,9 ## ./concat.concat/interpreter/operators.concat
 %s76 =l shr %s71, %s75
-dbgloc 824,27 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,24 ## ./concat.concat/interpreter/operators.concat
 %t30 =l alloc8 17
 %t31 =l add %t30, 16
 storeb 4, %t31
 storel %s76, %t30
 %s77 =l copy %t30
-dbgloc 824,32 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,29 ## ./concat.concat/interpreter/operators.concat
 %s78 =l copy %a0
-dbgloc 824,46 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,43 ## ./concat.concat/interpreter/operators.concat
 %s79 =l copy %l7510
-dbgloc 824,49 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,46 ## ./concat.concat/interpreter/operators.concat
 %s80 =l copy %l7511
-dbgloc 824,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,49 ## ./concat.concat/interpreter/operators.concat
 %s81 =w loadub %s80
-dbgloc 824,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,49 ## ./concat.concat/interpreter/operators.concat
 %s82 =w loadub %s79
-dbgloc 824,52 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,49 ## ./concat.concat/interpreter/operators.concat
 %s83 =w or %s82, %s81
-dbgloc 824,54 ## ./concat.concat/interpreter/operators.concat
+dbgloc 824,51 ## ./concat.concat/interpreter/operators.concat
 blit %s77, %o1, 17
 blit %s78, %o0, 5
 ret %s83
@@ -326188,7 +326188,7 @@ data $stringConstant297 = {b 124,b 0} ## "|"
 data $stringConstant298 = {b 94,b 0} ## "^"
 data $stringConstant299 = {b 60,b 60,b 0} ## "<<"
 data $stringConstant300 = {b 62,b 62,b 0} ## ">>"
-data $stringConstant301 = {b 46,b 46,b 108,b 115,b 104,b 114,b 0} ## "..lshr"
+data $stringConstant301 = {b 62,b 62,b 62,b 0} ## ">>>"
 data $stringConstant302 = {b 61,b 61,b 0} ## "=="
 data $stringConstant303 = {b 33,b 61,b 0} ## "!="
 data $stringConstant304 = {b 60,b 0} ## "<"
@@ -326701,7 +326701,7 @@ data $stringConstant810 = {b 126,b 0} ## "~"
 data $stringConstant811 = {b 38,b 0} ## "&"
 data $stringConstant812 = {b 124,b 0} ## "|"
 data $stringConstant813 = {b 94,b 0} ## "^"
-data $stringConstant814 = {b 46,b 46,b 108,b 115,b 104,b 114,b 0} ## "..lshr"
+data $stringConstant814 = {b 62,b 62,b 62,b 0} ## ">>>"
 data $stringConstant815 = {b 62,b 62,b 0} ## ">>"
 data $stringConstant816 = {b 60,b 60,b 0} ## "<<"
 data $stringConstant817 = {b 63,b 0} ## "?"
@@ -326846,7 +326846,7 @@ data $stringConstant955 = {b 105,b 51,b 50,b 0} ## "i32"
 data $stringConstant956 = {b 120,b 111,b 114,b 0} ## "xor"
 data $stringConstant957 = {b 105,b 54,b 52,b 0} ## "i64"
 data $stringConstant958 = {b 120,b 111,b 114,b 0} ## "xor"
-data $stringConstant959 = {b 46,b 46,b 108,b 115,b 104,b 114,b 0} ## "..lshr"
+data $stringConstant959 = {b 62,b 62,b 62,b 0} ## ">>>"
 data $stringConstant960 = {b 105,b 56,b 0} ## "i8"
 data $stringConstant961 = {b 108,b 115,b 104,b 114,b 0} ## "lshr"
 data $stringConstant962 = {b 105,b 49,b 54,b 0} ## "i16"

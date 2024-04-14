@@ -12014,7 +12014,7 @@ return;
 }else{
 else_label471:;
 concat_string tmp1280;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..lshr"),(&tmp1280));
+concat_string_dwrap(((int64_t)3),((int8_t const*)">>>"),(&tmp1280));
 bool const tmp1281 = concat_string_deq(tmp4,tmp1280);
 bool const tmp1282 = ((bool)(tmp1281&(!concat___EXPERIMENTAL__)));
 if(tmp1282){
@@ -37593,7 +37593,7 @@ tmp0 = tmp13;
 break;
 case 59:case 60:case 61:case 62:;
 concat_stringBuilder tmp14;
-concat_sb_dappendS(tmp0,((int64_t)6),((int8_t const*)"..lshr"),(&tmp14));
+concat_sb_dappendS(tmp0,((int64_t)3),((int8_t const*)">>>"),(&tmp14));
 tmp0 = tmp14;
 break;
 case 63:case 64:case 65:case 66:;
@@ -38701,7 +38701,7 @@ concat_ProcBundleId tmp465 = l41_bundle;
 concat_FilePosition tmp466 = arg0/*pos*/;
 concat_29_FaddBuiltIn(tmp461,tmp463,tmp464,tmp465,tmp466,arg1/*context*/);
 concat_string tmp467;
-concat_string_dwrap(((int64_t)6),((int8_t const*)"..lshr"),(&tmp467));
+concat_string_dwrap(((int64_t)3),((int8_t const*)">>>"),(&tmp467));
 concat_FilePosition tmp468 = arg0/*pos*/;
 concat_ProcBundleId tmp469;
 bool const tmp470 = concat_29_FnewBuiltInBundle(tmp467,tmp468,arg1/*context*/,(&tmp469));
