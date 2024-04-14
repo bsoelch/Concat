@@ -2338,7 +2338,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .RSHIFT fileState [] .wordStart opBinOp state appendOp
       return
-    else ..dup "..lshr" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
+    else ..dup ">>>" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
       idContext id.foldConsts _EXPERIMENTAL_ ! & if
         state [] .constants .length 2 >= if
           state popConst =:: b

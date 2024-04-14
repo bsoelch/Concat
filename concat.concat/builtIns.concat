@@ -18,7 +18,7 @@ enum(
  AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64        ## &
  OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64            ## |
  XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64        ## ^
- LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64             ## ..lshr
+ LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64             ## >>>
  ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64             ## >>
  SHL_I8 SHL_I16 SHL_I32 SHL_I64                 ## <<
  ## comparison
@@ -70,7 +70,7 @@ namespace: sb
       XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
         "^" sb.appendS break
       LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
-        "..lshr" sb.appendS break
+        ">>>" sb.appendS break
       ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
         ">>" sb.appendS break
       SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
@@ -785,7 +785,7 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
-  "..lshr" string.wrap pos context newBuiltInBundle
+  ">>>" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
   BuiltIn .LSHR_I8

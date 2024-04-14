@@ -113,7 +113,7 @@
           \?\?                |
           &lt;&lt;            |
           &gt;&gt;            |
-          \.\.lshr            |
+          &gt;&gt;&gt;        |
           addrOf              |
           new                 |
           cast                |

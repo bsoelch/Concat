@@ -439,10 +439,10 @@ namespace: interpreter
   proc( i16 i16 -> i16 ) =>: ashrI16 >> end
   proc( i32 i32 -> i32 ) =>: ashrI32 >> end
   proc( i64 i64 -> i64 ) =>: ashrI64 >> end
-  proc( i8  i8  -> i8  ) =>: lshrI8 ..lshr end
-  proc( i16 i16 -> i16 ) =>: lshrI16 ..lshr end
-  proc( i32 i32 -> i32 ) =>: lshrI32 ..lshr end
-  proc( i64 i64 -> i64 ) =>: lshrI64 ..lshr end
+  proc( i8  i8  -> i8  ) =>: lshrI8 >>> end
+  proc( i16 i16 -> i16 ) =>: lshrI16 >>> end
+  proc( i32 i32 -> i32 ) =>: lshrI32 >>> end
+  proc( i64 i64 -> i64 ) =>: lshrI64 >>> end
 
   proc(
     ConstValue : a
@@ -809,19 +809,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 0xff &
         b constAsInt =:: e2 i8 cast
-        ..lshr ConstValue .int opType ..swap e1 e2 | return
+        >>> ConstValue .int opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 0xffff &
         b constAsInt =:: e2 i16 cast
-        ..lshr ConstValue .int opType ..swap e1 e2 | return
+        >>> ConstValue .int opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 0xffff_ffff &
         b constAsInt =:: e2 i32 cast
-        ..lshr ConstValue .int opType ..swap e1 e2 | return
+        >>> ConstValue .int opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ..lshr ConstValue .int opType ..swap e1 e2 | return
+        >>> ConstValue .int opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end

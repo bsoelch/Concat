@@ -79,7 +79,7 @@ namespace: utf8
     0x80 =:: mut: mask
     0 =:: mut: count
     while c mask & 0 != do
-      mask 1 ..lshr mask =
+      mask 1 >>> mask =
       count 1 + count =
     end
     c mask 1 - & =:: mut: cp
