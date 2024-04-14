@@ -222,6 +222,31 @@ namespace: id
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
+  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseRawStringConstant
+    stringStart =:: mut: pos
+    '`' pos @ updateFilePos ## string content starts after `
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer
+      ..dup .length str .length + list.ensureCap
+      0 while ..dup str .length < do =:: i
+        str i string.charAt =:: c
+        c pos @ updateFilePos
+        c '`' != if
+          c list.append
+          i 1 + continue
+        end
+        i 1 + str .length >= if
+          "unexpected end of raw string" sb.wrap
+          pos errors appendError
+        end
+        str i 1 + string.charAt
+          ..dup pos @ updateFilePos
+        list.append
+        i 2 +
+      end ..drop
+    context [] .nameBuffer =
+    offset context [] .nameBuffer .length offset - StringConstant new return
+  end
   proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseStringConstant
     stringStart =:: mut: pos
     '"' pos @ updateFilePos ## string content starts after "

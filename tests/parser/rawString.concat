@@ -1,0 +1,8 @@
+import io
+
+proc( -> ) =>: main
+ `surrounding test with `` creates a raw-string.
+ Raw strings will not escape their contents, with the exception, that ```` will be replaced by ``.
+ This allows to use to freely use "' or \ in string-literals
+ ` io.puts ..drop
+end

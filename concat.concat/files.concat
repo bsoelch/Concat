@@ -6,7 +6,13 @@ import "common.concat"
 
 struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: export: FileState
 
-enum( EMPTY string : IDENTIFIER string : STRING string : CHAR ) =:: export: Token
+enum(
+  EMPTY
+  string : IDENTIFIER
+  string : STRING
+  string : RAW_STRING
+  string : CHAR
+) =:: export: Token
 
 namespace: sb
   proc( stringBuilder : sb Token : token -> stringBuilder ) =>: export: appendToken
@@ -24,6 +30,12 @@ namespace: sb
           "string \"" sb.appendS
           token .STRING sb.appendStr
           '\"' sb.appendC
+        return
+      RAW_STRING case
+        sb
+          "raw string `" sb.appendS
+          token .STRING sb.appendStr
+          '`' sb.appendC
         return
       CHAR case
         sb "char \"" sb.appendS
@@ -137,6 +149,22 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
       end
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .STRING return
+    end
+    ..dup 0 string.charAt '`' == if ## raw-string
+      1 string.tail =:: chars
+      0 while ..dup chars .length < do
+        chars ..over string.charAt '`' == if ##escape characters
+          ..dup 1 + chars .length < if
+              chars ..over 1 + string.charAt '`' == _if
+            chars ..over string.charAt fileState [] .currentPos @ updateFilePos
+            1 +
+          else break end
+        end
+        chars ..over string.charAt fileState [] .currentPos @ updateFilePos
+        1 +
+      end
+      chars ..over string.charAt fileState [] .currentPos @ updateFilePos
+      chars ..swap string.splitIndex Token .RAW_STRING return
     end
     ..dup 0 string.charAt '\'' == if ## char
       1 string.tail

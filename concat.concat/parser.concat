@@ -884,6 +884,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           typeContext
         newStringConstant state pushConst
         "" string.wrap true return
+      RAW_STRING case
+        ## newStringConstant
+          ## parseRawStringConstant
+            token .RAW_STRING
+            fileState [] .wordStart
+            progContext [] .errors @
+            labelContext
+          id.parseRawStringConstant
+          fileState [] .wordStart
+          typeContext
+        newStringConstant state pushConst
+        "" string.wrap true return
       CHAR case
         token .CHAR
           fileState [] .wordStart progContext [] .errors @  labelContext id.parseStringConstant ## escape character

@@ -20,6 +20,7 @@
     <style id="operator"     name="Operator"      map-to="def:keyword"/>
     <style id="type"         name="Data Type"    map-to="def:type"/>
     <style id="string"       name="String"       map-to="def:string"/>
+    <style id="raw-string"   name="raw string"    map-to="def:string"/>
     <style id="character"    name="Character"    map-to="def:character"/>
     <style id="char-escape"  name="Escaped Character" map-to="def:special-char"/>
     <style id="float"        name="Float"        map-to="def:floating-point"/>
@@ -258,6 +259,17 @@
       </include>
     </context>
 
+    <context id="raw-string" style-ref="raw-string" end-at-line-end="false" class="string" class-disabled="no-spell-check">
+      <start>(\A|(?&lt;=[[:space:]]))`</start>
+      <end>`</end>
+      <include>
+        <context ref="def:line-continue"/>
+        <context style-ref="char-escape">
+          <match>``</match>
+        </context>
+      </include>
+    </context>
+
     <context id="char" style-ref="character" end-at-line-end="false">
       <start>(\A|(?&lt;=[[:space:]]))'</start>
       <end>'</end>
@@ -353,6 +365,7 @@
         <context ref="cType"/>
         <context ref="libType"/>
         <context ref="libtype-keywords"/>
+        <context ref="raw-string"/>
         <context ref="string"/>
         <context ref="char"/>
         <context ref="hexadecimal"/>
