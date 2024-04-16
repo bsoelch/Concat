@@ -3,29 +3,6 @@ import numbers/printInt
 import numbers/limits
 import string
 
-namespace: i32
-  proc( i32 : a i32 : b -> i32 ) =>: export: min
-    a b < if a else b end
-  end
-  proc( i32 : a i32 : b -> i32 ) =>: export: max
-    a b > if a else b end
-  end
-  proc( i32 : a -> i32 ) =>: export: abs
-    a 0 < if a -_ else a end
-  end
-end
-namespace: i64
-  proc( i64 : a i64 : b -> i64 ) =>: export: min
-    a b < if a else b end
-  end
-  proc( i64 : a i64 : b -> i64 ) =>: export: max
-    a b > if a else b end
-  end
-  proc( i64 : a -> i64 ) =>: export: abs
-    a 0 < if a -_ else a end
-  end
-end
-
 namespace: number
   #:ifnot:exp
   #template type : T #end

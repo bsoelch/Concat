@@ -1,2 +1,2 @@
-import numbers/floats
 import numbers/integers
+import numbers/floats

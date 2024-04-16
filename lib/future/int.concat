@@ -1,26 +1,8 @@
 #+big-integer implementation+#
 import numbers
-
 import stringIO ## debug
 
-namespace: i64
-  proc( i64 i64 -> i64 ) =>: max
-    ..over ..over > if
-      ..drop return
-    else
-      ..swap ..drop return
-    end
-  end
-  proc( i64 i64 -> i64 ) =>: min
-    ..over ..over < if
-      ..drop return
-    else
-      ..swap ..drop return
-    end
-  end
-end
-namespace: u32
-  0xffff_ffffi64 =:: MASK
+namespace: i32 ## XXX move to numbers/integer
   proc( i32 -> i32 ) =>: leadingZeros
     =:: mut: i
     i 0 < if 0 return end
@@ -251,9 +233,9 @@ namespace: int
   end
   proc( int : #:const src i32 _ ptr mut : target -> ) =>: copyData
     src .cap 0 == if
-      src .data .i u32.MASK & i32 cast target 0 [] =
+      src .data .i i32.MASK & i32 cast target 0 [] =
       src .size 1 > if
-        src .data .i 32 >>> u32.MASK & i32 cast target 1 [] =
+        src .data .i 32 >>> i32.MASK & i32 cast target 1 [] =
       end
       return
     end
@@ -278,7 +260,7 @@ namespace: int
       true =:: mut: first
       i .size 1 - while ..dup 0 >= do
         ..swap
-          i .data .p ..over.2 [] u32.MASK & =:: D
+          i .data .p ..over.2 [] i32.MASK & =:: D
           first ! if
             '\'' sb.appendC
             D 0 == if
@@ -302,7 +284,7 @@ namespace: int
       true =:: mut: first
       data .length 1 - while ..dup 0 >= do
         ..swap
-          data ..over.2 array.get u32.MASK & =:: D
+          data ..over.2 array.get i32.MASK & =:: D
           first ! if
             '\'' sb.appendC
             D 0 == if
@@ -334,7 +316,7 @@ namespace: int
       end
     end
     a .length 1 - while ..dup 0 >= do
-      a ..over array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast - ## no overflow (values cast to i64)
+      a ..over array.get i32.MASK & i64 cast b ..over.2 array.get i32.MASK & i64 cast - ## no overflow (values cast to i64)
       ..dup 0 != if ..swap ..drop
         0 < if
           -1 return
@@ -357,14 +339,14 @@ namespace: int
     i32 arrayView : bData
     i32 4 array new =:: mut: intValues
     a .cap 0 == if
-      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i i32.MASK & i32 cast intValues @ 0 [] =
       a .data .i 32 >>> i32 cast intValues @ 1 [] =
       intValues @ 0 [] @ a .size array.create aData =
     else
       a .data .p a .size array.create aData =
     end
     b .cap 0 == if
-      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i i32.MASK & i32 cast intValues @ 2 [] =
       b .data .i 32 >>> i32 cast intValues @ 3 [] =
       intValues @ 2 [] @ b .size array.create bData =
     else
@@ -665,13 +647,13 @@ namespace: int
       target offset mem.clear ..drop
       newLen return
     end
-    a a .length 1 - array.get u32.MASK & i64 cast bitShift << i64 =: mut: buffer
+    a a .length 1 - array.get i32.MASK & i64 cast bitShift << i64 =: mut: buffer
     buffer 32 >>> i32 cast
       ..dup 0 != =:: extend
     extend if target newLen [] = else ..drop end
     buffer 32 << buffer =
     a .length 1 - while ..dup 0 > do
-      a ..over 1 - array.get u32.MASK & i64 cast bitShift << buffer | buffer =
+      a ..over 1 - array.get i32.MASK & i64 cast bitShift << buffer | buffer =
       buffer 32 >>> i32 cast target ..over.2 offset + [] =
       buffer 32 << buffer =
       1 -
@@ -717,15 +699,15 @@ namespace: int
     isNegative if
       a offset array.get reverseShift << 0 != needIncrement | needIncrement =
     end
-    a offset array.get u32.MASK & i64 cast bitShift >>> =:: mut: buffer
+    a offset array.get i32.MASK & i64 cast bitShift >>> =:: mut: buffer
     1 while ..dup newLen < do
-      a ..over offset + array.get u32.MASK & i64 cast reverseShift << buffer | buffer =
-      buffer u32.MASK & i32 cast target ..over.2 1 - [] =
+      a ..over offset + array.get i32.MASK & i64 cast reverseShift << buffer | buffer =
+      buffer i32.MASK & i32 cast target ..over.2 1 - [] =
       buffer 32 >>> buffer =
       1 +
     end ..drop
     buffer 0 != if
-      buffer u32.MASK & i32 cast target newLen 1 - [] =
+      buffer i32.MASK & i32 cast target newLen 1 - [] =
     else
       newLen 1 - newLen =
     end
@@ -749,7 +731,7 @@ namespace: int
           a .data .i amount << a .sign uwrap return
         end
       end
-      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i i32.MASK & i32 cast intValues @ 0 [] =
       a .data .i 32 >>> i32 cast intValues @ 1 [] =
       intValues @ 0 [] @ a .size array.create aData =
       resCap i32 mem.alloc resData =
@@ -835,15 +817,15 @@ namespace: int
       carry 0 == if
         break
       end
-      a ..over array.get u32.MASK & i64 cast carry + carry =
-      carry u32.MASK & i32 cast target ..over.2 [] =
+      a ..over array.get i32.MASK & i64 cast carry + carry =
+      carry i32.MASK & i32 cast target ..over.2 [] =
       carry 32 >>> carry =
       1 +
     end ..drop
     carry 0 == if
       a .length return
     end
-    carry u32.MASK & i32 cast target a .length [] =
+    carry i32.MASK & i32 cast target a .length [] =
     a .length 1 + return
   end
   #+assumes, target has cap at least max{a.length,b.length}+1+#
@@ -852,20 +834,20 @@ namespace: int
     0 i64 =: mut: carry
     0
       while ..dup commonPart < do
-        a ..over array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast + carry + =:: tmp
-        tmp u32.MASK & i32 cast target ..over.2 [] =
+        a ..over array.get i32.MASK & i64 cast b ..over.2 array.get i32.MASK & i64 cast + carry + =:: tmp
+        tmp i32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >>> carry =
         1 +
       end
       while ..dup a .length < do
-        a ..over array.get u32.MASK & i64 cast carry + =:: tmp
-        tmp u32.MASK & i32 cast target ..over.2 [] =
+        a ..over array.get i32.MASK & i64 cast carry + =:: tmp
+        tmp i32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >>> carry =
         1 +
       end
       while ..dup b .length < do
-        b ..over array.get u32.MASK & i64 cast carry + =:: tmp
-        tmp u32.MASK & i32 cast target ..over.2 [] =
+        b ..over array.get i32.MASK & i64 cast carry + =:: tmp
+        tmp i32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >>> carry =
         1 +
       end
@@ -904,7 +886,7 @@ namespace: int
     i32 _ ptr mut : resData
     i32 4 array new =:: mut: intValues
     a .cap 0 == if
-      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i i32.MASK & i32 cast intValues @ 0 [] =
       a .data .i 32 >>> i32 cast intValues @ 1 [] =
       intValues @ 0 [] @ a .size array.create aData =
       resCap i32 mem.alloc resData =
@@ -922,7 +904,7 @@ namespace: int
       resData resSize resCap a .sign int new return
     end
     b .cap 0 == if
-      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i i32.MASK & i32 cast intValues @ 2 [] =
       b .data .i 32 >>> i32 cast intValues @ 3 [] =
       intValues @ 2 [] @ b .size array.create bData =
     else
@@ -938,14 +920,14 @@ namespace: int
     0 i64 =: mut: carry
     0
       while ..dup b .length < do
-        a ..over array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast - carry + =:: tmp
-        tmp u32.MASK & i32 cast target ..over.2 [] =
+        a ..over array.get i32.MASK & i64 cast b ..over.2 array.get i32.MASK & i64 cast - carry + =:: tmp
+        tmp i32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >> carry = ## keep sign
         1 +
       end
       while ..dup a .length < do
-        a ..over array.get u32.MASK & i64 cast carry + =:: tmp
-        tmp u32.MASK & i32 cast target ..over.2 [] =
+        a ..over array.get i32.MASK & i64 cast carry + =:: tmp
+        tmp i32.MASK & i32 cast target ..over.2 [] =
         tmp 32 >> carry = ## keep sign
         1 +
       end
@@ -994,7 +976,7 @@ namespace: int
     i32 _ ptr mut : resData
     i32 4 array new =:: mut: intValues
     a .cap 0 == if
-      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i i32.MASK & i32 cast intValues @ 0 [] =
       a .data .i 32 >>> i32 cast intValues @ 1 [] =
       intValues @ 0 [] @ a .size array.create aData =
       resCap i32 mem.alloc resData =
@@ -1008,7 +990,7 @@ namespace: int
       resData a .size array.create aData =
     end
     b .cap 0 == if
-      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i i32.MASK & i32 cast intValues @ 2 [] =
       b .data .i 32 >>> i32 cast intValues @ 3 [] =
       intValues @ 2 [] @ b .size array.create bData =
     else
@@ -1025,38 +1007,38 @@ namespace: int
 
   #+assumes, target is large enough to hold the result of the addition +#
   proc( i32 arrayView : a i32 : val i32 _ ptr mut : target -> i64 ) =>: multU32
-    val u32.MASK &  i64 cast =:: scale
+    val i32.MASK &  i64 cast =:: scale
     0 i64 =: mut: carry
     0 while ..dup a .length < do
-      a ..over array.get u32.MASK & i64 cast scale * carry + carry = ## i32*i32+i32 fits in i64
-      carry u32.MASK & i32 cast target ..over.2 [] =
+      a ..over array.get i32.MASK & i64 cast scale * carry + carry = ## i32*i32+i32 fits in i64
+      carry i32.MASK & i32 cast target ..over.2 [] =
       carry 32 >>> carry =
       1 +
     end ..drop
     carry 0 == if
       a .length return
     end
-    carry u32.MASK & i32 cast target a .length [] =
+    carry i32.MASK & i32 cast target a .length [] =
     a .length 1 + return
   end
   proc( i32 _ ptr mut : target i64 : i i64 : resLow i64 : resHi -> ) =>: inplaceSquareOverflow
     resLow =:: mut: buffer
     resHi 32 << =:: mut: overflow
     i =:: mut: pos
-    buffer u32.MASK & i32 cast target pos [] =
+    buffer i32.MASK & i32 cast target pos [] =
     pos 1 + pos =
     buffer 32 >>> buffer =
     while overflow 0 != do
-      buffer overflow u32.MASK & + buffer =
+      buffer overflow i32.MASK & + buffer =
       overflow 32 >>> overflow =
-      buffer target pos [] u32.MASK & i64 cast + buffer =
-      buffer u32.MASK & i32 cast target pos [] =
+      buffer target pos [] i32.MASK & i64 cast + buffer =
+      buffer i32.MASK & i32 cast target pos [] =
       pos 1 + pos =
       buffer 32 >>> buffer =
     end
     while buffer 0 != do
-      buffer target pos [] u32.MASK & i64 cast + buffer =
-      buffer u32.MASK & i32 cast target pos [] =
+      buffer target pos [] i32.MASK & i64 cast + buffer =
+      buffer i32.MASK & i32 cast target pos [] =
       pos 1 + pos =
       buffer 32 >>> buffer =
     end
@@ -1079,7 +1061,7 @@ namespace: int
       0 overflow =
       0 =:: mut: i
       while i s  <= do
-        a N i - array.get u32.MASK & i64 cast  a N s i - - array.get u32.MASK & i64 cast * tmp =
+        a N i - array.get i32.MASK & i64 cast  a N s i - - array.get i32.MASK & i64 cast * tmp =
         buffer 0 < tmp 0 < & willOverflow =
         buffer 0 < tmp 0 < | canOverflow =
         buffer tmp + buffer =
@@ -1099,7 +1081,7 @@ namespace: int
       0 overflow =
       0 =:: mut: i
       while i s <= do
-        a i array.get u32.MASK & i64 cast  a s i - array.get u32.MASK & i64 cast * tmp =
+        a i array.get i32.MASK & i64 cast  a s i - array.get i32.MASK & i64 cast * tmp =
         buffer 0 < tmp 0 < & willOverflow =
         buffer 0 < tmp 0 < | canOverflow =
         buffer tmp + buffer =
@@ -1136,17 +1118,17 @@ namespace: int
     i64 : i
     a .length 1 - while ..dup 0 >= do
       b .length 1 - while ..dup 0 >= do
-        a ..over.2 array.get u32.MASK & i64 cast b ..over.2 array.get u32.MASK & i64 cast * buffer =
+        a ..over.2 array.get i32.MASK & i64 cast b ..over.2 array.get i32.MASK & i64 cast * buffer =
         ..over ..over + i =
         ..dup 0 != ..over.2 a .length 1 - != & if
-          buffer target i [] u32.MASK & i64 cast + buffer = ## i32*i32+i32 fits in i64
+          buffer target i [] i32.MASK & i64 cast + buffer = ## i32*i32+i32 fits in i64
         end
-        buffer u32.MASK & i32 cast target i [] =
+        buffer i32.MASK & i32 cast target i [] =
         i 1 + i =
         buffer 32 >>> buffer =
         while buffer 0 != do
-          buffer target i [] u32.MASK & i64 cast + buffer =
-          buffer u32.MASK & i32 cast target i [] =
+          buffer target i [] i32.MASK & i64 cast + buffer =
+          buffer i32.MASK & i32 cast target i [] =
           i 1 + i =
           buffer 32 >>> buffer =
         end
@@ -1281,7 +1263,7 @@ namespace: int
     i32 4 array new =:: mut: intValues
     a .size KARATSUBA_THRESHOLD <= b .size KARATSUBA_THRESHOLD <= | =:: simpleMult
     a .cap 0 == if
-      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i i32.MASK & i32 cast intValues @ 0 [] =
       a .data .i 32 >>> i32 cast intValues @ 1 [] =
       intValues @ 0 [] @ a .size array.create aData =
       resCap i32 mem.alloc resData =
@@ -1308,7 +1290,7 @@ namespace: int
       resData resSize resCap sign int new return
     end
     b .cap 0 == if
-      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i i32.MASK & i32 cast intValues @ 2 [] =
       b .data .i 32 >>> i32 cast intValues @ 3 [] =
       intValues @ 2 [] @ b .size array.create bData =
     else
@@ -1330,13 +1312,13 @@ namespace: int
     a .length 0 == if 0 return end ## replace with assertion
     val 0 == if 0 return end ## replace with assertion
     val 1 == if 0 return end
-    val u32.MASK &  i64 cast =:: div
+    val i32.MASK &  i64 cast =:: div
     0 i64 =: mut: carry
     a .length 1 - while ..dup 0 >= do
       carry 32 << carry =
-      a ..over array.get u32.MASK & i64 cast carry + carry =
+      a ..over array.get i32.MASK & i64 cast carry + carry =
       computeDivision if
-        carry div / u32.MASK & i32 cast target ..over.2 [] =
+        carry div / i32.MASK & i32 cast target ..over.2 [] =
       end
       carry div % carry =
       1 -
@@ -1348,7 +1330,7 @@ namespace: int
         end
       tSize [] =
     end
-    carry u32.MASK & i32 cast return
+    carry i32.MASK & i32 cast return
   end
   #+
   assumes that b. data!= a, b.length<=aSize, res has capacity at least a .length - b.length+1
@@ -1370,10 +1352,10 @@ namespace: int
     end
     ## compute upper bound for division
     b b .length 1 - array.get =:: hiB ## assert nonzero
-    32 hiB u32.leadingZeros 1 + - =:: shift
+    32 hiB i32.leadingZeros 1 + - =:: shift
     b .length 1 + i32 mem.alloc =:: mut: buff
     0 i64 =: mut: buffSize
-    hiB u32.MASK & i64 cast 32 shift - << b b .length 2 - array.get u32.MASK & i64 cast shift >>> | 1 + =:: div ## XXX? overflow if hiB==-1
+    hiB i32.MASK & i64 cast 32 shift - << b b .length 2 - array.get i32.MASK & i64 cast shift >>> | 1 + =:: div ## XXX? overflow if hiB==-1
     i64 : mut: hiA
     i32 : mut: f
     i64 : mut: offset
@@ -1382,10 +1364,10 @@ namespace: int
     while aSize [] b .length >= do
       aSize [] 2 -
         ## take highest two digits
-        a ..over [] u32.MASK & i64 cast hiA =
-        a ..over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
+        a ..over [] i32.MASK & i64 cast hiA =
+        a ..over 1 + [] i32.MASK & i64 cast 32 << hiA | hiA =
       ..drop
-      hiA div ..udiv shift >>> u32.MASK & i32 cast f =
+      hiA div ..udiv shift >>> i32.MASK & i32 cast f =
       b f buff multU32 buffSize =
       computeDivision if
         f carry + res offset [] =
@@ -1412,10 +1394,10 @@ namespace: int
       offset 0 == if break end
       aSize [] 2 -
         ## take highest two digits
-        a ..over [] u32.MASK & i64 cast hiA =
-        a ..over 1 + [] u32.MASK & i64 cast 32 << hiA | hiA =
+        a ..over [] i32.MASK & i64 cast hiA =
+        a ..over 1 + [] i32.MASK & i64 cast 32 << hiA | hiA =
       ..drop
-      hiA hiB u32.MASK & i64 cast 1 + ..udiv u32.MASK & i32 cast f = ## XXX? use low bits of first division to calculate better approximation [multiply than shift, store low bits in carry]
+      hiA hiB i32.MASK & i64 cast 1 + ..udiv i32.MASK & i32 cast f = ## XXX? use low bits of first division to calculate better approximation [multiply than shift, store low bits in carry]
       f carry =
       b f buff multU32 buffSize =
       offset 1 - offset =
@@ -1466,7 +1448,7 @@ namespace: int
     i32 4 array new =:: mut: intValues
     ## XXX check which division method should be used
     a .cap 0 == if
-      a .data .i u32.MASK & i32 cast intValues @ 0 [] =
+      a .data .i i32.MASK & i32 cast intValues @ 0 [] =
       a .data .i 32 >>> i32 cast intValues @ 1 [] =
       intValues @ 0 [] @ aData =
     else
@@ -1474,7 +1456,7 @@ namespace: int
     end
     a .size aSize =
     b .cap 0 == if
-      b .data .i u32.MASK & i32 cast intValues @ 2 [] =
+      b .data .i i32.MASK & i32 cast intValues @ 2 [] =
       b .data .i 32 >>> i32 cast intValues @ 3 [] =
       intValues @ 2 [] @ b .size array.create bData =
     else
@@ -1482,11 +1464,11 @@ namespace: int
     end
     ## TODO improve computations by using shifts to handle powers of two
     a .size 2 <= b .size 2 <= & if ## integer division
-      a .size 2 == if aData 1 [] u32.MASK & i64 cast 32 <<  else 0i64 end
-      aData 0 [] u32.MASK & i64 cast | =:: aVal
+      a .size 2 == if aData 1 [] i32.MASK & i64 cast 32 <<  else 0i64 end
+      aData 0 [] i32.MASK & i64 cast | =:: aVal
       a free
-      b .size 2 == if bData 1 array.get u32.MASK & i64 cast 32 <<  else 0i64 end
-      bData 0 array.get u32.MASK & i64 cast | =:: bVal
+      b .size 2 == if bData 1 array.get i32.MASK & i64 cast 32 <<  else 0i64 end
+      bData 0 array.get i32.MASK & i64 cast | =:: bVal
       aVal bVal ..umod sign uwrap  aVal bVal ..udiv sign uwrap return
     end
     b .size 1 == if ## division by u32
@@ -1494,9 +1476,9 @@ namespace: int
       aData aSize array.create bData 0 array.get computeDiv aData aSize @ divideU32 =:: R
       computeDiv ! if
         a free
-        R u32.MASK & sign uwrap ZERO return
+        R i32.MASK & sign uwrap ZERO return
       end
-      R u32.MASK & sign uwrap a return
+      R i32.MASK & sign uwrap a return
     end
     computeDiv if resCap else 0i64 end i32 mem.alloc resData =
     aData aSize @ bData computeDiv resData simpleDivide =:: resSize
@@ -1609,7 +1591,7 @@ namespace: sb
     ## TODO check base
     ## XXX efficient int to string algorithm for large bases
     int.maxSafeI32Digits @ base [] =:: n
-    int.maxSafeI32Pow @ base [] u32.MASK & i32 cast =:: B
+    int.maxSafeI32Pow @ base [] i32.MASK & i32 cast =:: B
     sb
       i .sign 0 < if
         '-' sb.appendC

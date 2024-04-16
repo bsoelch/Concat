@@ -77,7 +77,7 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
    ## TODO? sign extend unsigned constants of smaller types
   preferedSize 0 <= if
    unsigned if
-     value 0 < value u32.MAX > | if types.primitive.I64 else types.primitive.I32 end
+     value 0 < value i32.UMAX ..u> | if types.primitive.I64 else types.primitive.I32 end
    else
      value i32.MIN < value i32.MAX > | if types.primitive.I64 else types.primitive.I32 end
    end
