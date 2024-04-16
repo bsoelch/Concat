@@ -90,7 +90,7 @@
           /                   |
           %                   |
           \.\.udiv            |
-          \.\.umod            |
+          \.\.urem            |
           \&amp;              |
           \|                  |
           \^                  |
@@ -118,6 +118,7 @@
           new                 |
           cast                |
           cast!               |
+          \.\.bitcast         |
           \.\.argc            |
           \.\.getArg          |
           \.\.length          |
