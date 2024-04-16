@@ -280,8 +280,8 @@ namespace: interpreter
       UDIV_I64 case args k i64.udiv @ binaryOperatorInt return
       REM_I32 case args k i32.rem @ binaryOperatorInt return
       REM_I64 case args k i64.rem @ binaryOperatorInt return
-      UREM_I32 case args k i32.urem @ binaryOperatorInt return
-      UREM_I64 case args k i64.urem @ binaryOperatorInt return
+      UMOD_I32 case args k i32.umod @ binaryOperatorInt return
+      UMOD_I64 case args k i64.umod @ binaryOperatorInt return
       NOT_BOOL case
          args k bool.not @ unaryOperatorBool return
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
@@ -396,7 +396,7 @@ namespace: interpreter
     proc( i32 i32 -> i32 ) =>: div / end
     proc( i32 i32 -> i32 ) =>: udiv ..udiv end
     proc( i32 i32 -> i32 ) =>: rem % end
-    proc( i32 i32 -> i32 ) =>: urem ..urem end
+    proc( i32 i32 -> i32 ) =>: umod ..umod end
     proc( i32 i32 -> bool ) =>: ge >= end
     proc( i32 i32 -> bool ) =>: gt > end
     proc( i32 i32 -> bool ) =>: le <= end
@@ -416,7 +416,7 @@ namespace: interpreter
     proc( i64 i64 -> i64 ) =>: div / end
     proc( i64 i64 -> i64 ) =>: udiv ..udiv end
     proc( i64 i64 -> i64 ) =>: rem % end
-    proc( i64 i64 -> i64 ) =>: urem ..urem end
+    proc( i64 i64 -> i64 ) =>: umod ..umod end
     proc( i64 i64 -> bool ) =>: ge >= end
     proc( i64 i64 -> bool ) =>: gt > end
     proc( i64 i64 -> bool ) =>: le <= end
@@ -708,19 +708,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 0xff &
         b constAsInt =:: e2 0xff &
-        ..urem ConstValue .int opType ..swap e1 e2 | return
+        ..umod ConstValue .int opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 0xffff &
         b constAsInt =:: e2 0xffff &
-        ..urem ConstValue .int opType ..swap e1 e2 | return
+        ..umod ConstValue .int opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 0xffff_ffff &
         b constAsInt =:: e2 0xffff_ffff &
-        ..urem ConstValue .int opType ..swap e1 e2 | return
+        ..umod ConstValue .int opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ..urem ConstValue .int opType ..swap e1 e2 | return
+        ..umod ConstValue .int opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end

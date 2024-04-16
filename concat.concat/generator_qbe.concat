@@ -2067,7 +2067,7 @@ proc(
     UDIV_I32 UDIV_I64 case
       sb "udiv" string.wrap baseVal pos context appendBinaryOperator
       return
-    UREM_I32 UREM_I64 case
+    UMOD_I32 UMOD_I64 case
       sb "urem" string.wrap baseVal pos context appendBinaryOperator
       return
     NOT_BOOL case

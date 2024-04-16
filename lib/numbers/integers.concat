@@ -42,6 +42,24 @@ namespace: i32
   proc( i32 : a -> i32 ) =>: export: abs
     a 0 < if a -_ else a end
   end
+  proc( i32 : a i32 : b -> i32 ) =>: export: floorDiv
+    a b /
+      a b % ? if a 0 < b 0 < ^ _if
+        1 -
+      end
+    return
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: mod
+    b 0 > if
+      a b %
+        ..dup 0 < if b + end
+      return
+    else
+      a b %
+        ..dup 0 > if b + end
+      return
+    end
+  end
 end
 namespace: i64
   -0x8000_0000_0000_0000 i64 =: export: MIN
@@ -56,4 +74,33 @@ namespace: i64
   proc( i64 : a -> i64 ) =>: export: abs
     a 0 < if a -_ else a end
   end
+  proc( i64 : a i64 : b -> i64 ) =>: export: floorDiv
+    a b /
+      a b % ? if a 0 < b 0 < ^ _if
+        1 -
+      end
+    return
+  end
+  proc( i64 : a i64 : b -> i64 ) =>: export: mod
+    b 0 > if
+      a b %
+        ..dup 0 < if b + end
+      return
+    else
+      a b %
+        ..dup 0 > if b + end
+      return
+    end
+  end
 end
+
+#:if:exp
+overload: export: //
+  i32.floorDiv
+  i64.floorDiv
+end
+overload: export: %%
+  i32.mod
+  i64.mod
+end
+#:end

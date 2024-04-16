@@ -10,7 +10,7 @@ enum(
  DIV_I32 DIV_I64 DIV_F32 DIV_F64                ## /
  REM_I32 REM_I64                                ## %
  UDIV_I32 UDIV_I64                              ## ..udiv
- UREM_I32 UREM_I64                              ## ..urem
+ UMOD_I32 UMOD_I64                              ## ..umod
  ## logic
  NOT_BOOL                                       ## !
  FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64             ## ~
@@ -58,7 +58,7 @@ namespace: sb
       REM_I32 REM_I64 case
         "%" sb.appendS break
       UDIV_I32 UDIV_I64 case "..udiv" sb.appendS break
-      UREM_I32 UREM_I64 case "..urem" sb.appendS break
+      UMOD_I32 UMOD_I64 case "..umod" sb.appendS break
       NOT_BOOL case "!" sb.appendS break
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
         "~" sb.appendS break
@@ -647,16 +647,16 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
-  "..urem" string.wrap pos context newBuiltInBundle
+  "..umod" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
-  BuiltIn .UREM_I32
-    "i32" "urem" pos labelContext createLabel
+  BuiltIn .UMOD_I32
+    "i32" "umod" pos labelContext createLabel
     i32i32_i32
     bundle
   pos context addBuiltIn
-  BuiltIn .UREM_I64
-    "i64" "urem" pos labelContext createLabel
+  BuiltIn .UMOD_I64
+    "i64" "umod" pos labelContext createLabel
     i64i64_i64
     bundle
   pos context addBuiltIn
