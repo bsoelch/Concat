@@ -1,4 +1,4 @@
-import numbers/float
+import numbers/floats
 namespace: c
   proc( ..ctype.double -> ..ctype.double ) : extern: floor
   proc( ..ctype.double -> ..ctype.double ) : extern: ceil

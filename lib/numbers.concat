@@ -1,7 +1,6 @@
 import numbers/printFloat
 import numbers/printInt
 import numbers/limits
-import numbers/float
 import string
 
 namespace: i32

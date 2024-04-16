@@ -2221,7 +2221,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BinaryOperator .MOD fileState [] .wordStart opBinOp state appendOp
       return
-    else ..dup "..umod" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
+    else ..dup "..urem" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
       idContext id.foldConsts _EXPERIMENTAL_ ! & if
         state [] .constants .length 2 >= if
           state popConst =:: b

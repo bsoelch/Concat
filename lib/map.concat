@@ -133,7 +133,7 @@ namespace: map
     data [] .cap 0 == if ## TODO ensure cap/ error message
        0 return
     end
-    key data [] .hash () data [] .cap ..umod  NodeId cast ## sync types in loop
+    key data [] .hash () data [] .cap ..urem  NodeId cast ## sync types in loop
       data [] .data ..over []
         ..dup 0 == if ..drop
           newNode if

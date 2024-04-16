@@ -1,3 +1,5 @@
+import numbers/floats
+
 import "constants.concat"
 import "builtIns.concat"
 
@@ -253,196 +255,207 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
     builtIn switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 case
-         args k negI64 @ unaryOperatorInt return
-      NEG_F32 case args k negF32 @ unaryOperatorFloat return
-      NEG_F64 case args k negF64 @ unaryOperatorFloat return
+         args k i64.neg @ unaryOperatorInt return
+      NEG_F32 case args k f32.neg @ unaryOperatorFloat return
+      NEG_F64 case args k f64.neg @ unaryOperatorFloat return
       ADD_I8 ADD_I16 ADD_I32 ADD_I64 case
-        args k addI64 @ binaryOperatorInt return
-      ADD_F32 case args k addF32 @ binaryOperatorFloat return
-      ADD_F64 case args k addF64 @ binaryOperatorFloat return
+        args k i64.add @ binaryOperatorInt return
+      ADD_F32 case args k f32.add @ binaryOperatorFloat return
+      ADD_F64 case args k f64.add @ binaryOperatorFloat return
       ADD_PTR ADD_PTR_MUT case break
       SUB_I8 SUB_I16 SUB_I32 SUB_I64 case
-        args k subI64 @ binaryOperatorInt return
-      SUB_F32 case args k subF32 @ binaryOperatorFloat return
-      SUB_F64 case  args k subF64 @ binaryOperatorFloat return
+        args k i64.sub @ binaryOperatorInt return
+      SUB_F32 case args k f32.sub @ binaryOperatorFloat return
+      SUB_F64 case  args k f64.sub @ binaryOperatorFloat return
       SUB_PTR SUB_PTR_MUT case break
       PTR_DIFF case break
-      MUL_I32 MUL_I64 case args k mulI64 @ binaryOperatorInt return
-      MUL_F32 case args k mulF32 @ binaryOperatorFloat return
-      MUL_F64 case args k mulF64 @ binaryOperatorFloat return
-      DIV_I32 case args k divI32 @ binaryOperatorInt return
-      DIV_I64 case args k divI64 @ binaryOperatorInt return
-      DIV_F32 case args k divF32 @ binaryOperatorFloat return
-      DIV_F64 case args k divF64 @ binaryOperatorFloat return
-      UDIV_I32 case args k udivI32 @ binaryOperatorInt return
-      UDIV_I64 case args k udivI64 @ binaryOperatorInt return
-      MOD_I32 case args k modI32 @ binaryOperatorInt return
-      MOD_I64 case args k modI64 @ binaryOperatorInt return
-      MOD_F32 case args k modF32 @ binaryOperatorFloat return
-      MOD_F64 case args k modF64 @ binaryOperatorFloat return
-      UMOD_I32 case args k umodI32 @ binaryOperatorInt return
-      UMOD_I64 case args k umodI64 @ binaryOperatorInt return
+      MUL_I32 MUL_I64 case args k i64.mul @ binaryOperatorInt return
+      MUL_F32 case args k f32.mul @ binaryOperatorFloat return
+      MUL_F64 case args k f64.mul @ binaryOperatorFloat return
+      DIV_I32 case args k i32.div @ binaryOperatorInt return
+      DIV_I64 case args k i64.div @ binaryOperatorInt return
+      DIV_F32 case args k f32.div @ binaryOperatorFloat return
+      DIV_F64 case args k f64.div @ binaryOperatorFloat return
+      UDIV_I32 case args k i32.udiv @ binaryOperatorInt return
+      UDIV_I64 case args k i64.udiv @ binaryOperatorInt return
+      REM_I32 case args k i32.rem @ binaryOperatorInt return
+      REM_I64 case args k i64.rem @ binaryOperatorInt return
+      UREM_I32 case args k i32.urem @ binaryOperatorInt return
+      UREM_I64 case args k i64.urem @ binaryOperatorInt return
       NOT_BOOL case
-         args k notBool @ unaryOperatorBool return
+         args k bool.not @ unaryOperatorBool return
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
-         args k flipI64 @ unaryOperatorInt return
+         args k i64.flip @ unaryOperatorInt return
       BOOL_I8 case args k i8 unaryOperatorToBool return
       BOOL_I16 case args k i16 unaryOperatorToBool return
       BOOL_I32 case args k i32 unaryOperatorToBool return
       BOOL_I64 case args k i64 unaryOperatorToBool return
       BOOL_F32 case args k f32 unaryOperatorToBool return
       BOOL_F64 case args k f64 unaryOperatorToBool return
-      AND_BOOL case args k andBool @ binaryOperatorBool return
+      AND_BOOL case args k bool.and @ binaryOperatorBool return
       AND_I8 AND_I16 AND_I32 AND_I64 case
-        args k andI64 @ binaryOperatorInt return
-      OR_BOOL case args k orBool @ binaryOperatorBool return
+        args k i64.and @ binaryOperatorInt return
+      OR_BOOL case args k bool.or @ binaryOperatorBool return
       OR_I8 OR_I16 OR_I32 OR_I64 case
-        args k orI64 @ binaryOperatorInt return
-      XOR_BOOL case args k xorBool @ binaryOperatorBool return
+        args k i64.or @ binaryOperatorInt return
+      XOR_BOOL case args k bool.xor @ binaryOperatorBool return
       XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
-        args k xorI64 @ binaryOperatorInt return
-      LSHR_I8 case args k lshrI8 @ binaryOperatorInt return
-      LSHR_I16 case args k lshrI16 @ binaryOperatorInt return
-      LSHR_I32 case args k lshrI32 @ binaryOperatorInt return
-      LSHR_I64 case args k lshrI64 @ binaryOperatorInt return
-      ASHR_I8 case args k ashrI8 @ binaryOperatorInt return
-      ASHR_I16 case args k ashrI16 @ binaryOperatorInt return
-      ASHR_I32 case args k ashrI32 @ binaryOperatorInt return
-      ASHR_I64 case args k ashrI64 @ binaryOperatorInt return
+        args k i64.xor @ binaryOperatorInt return
+      LSHR_I8 case args k i8.lshr @ binaryOperatorInt return
+      LSHR_I16 case args k i16.lshr @ binaryOperatorInt return
+      LSHR_I32 case args k i32.lshr @ binaryOperatorInt return
+      LSHR_I64 case args k i64.lshr @ binaryOperatorInt return
+      ASHR_I8 case args k i8.ashr @ binaryOperatorInt return
+      ASHR_I16 case args k i16.ashr @ binaryOperatorInt return
+      ASHR_I32 case args k i32.ashr @ binaryOperatorInt return
+      ASHR_I64 case args k i64.ashr @ binaryOperatorInt return
       SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
-        args k shlI64 @ binaryOperatorInt return
-      LT_I8 case args k ltI8 @ cmpOperatorInt return
-      LT_I16 case args k ltI16 @ cmpOperatorInt return
-      LT_I32 case args k ltI32 @ cmpOperatorInt return
-      LT_I64 case args k ltI64 @ cmpOperatorInt return
-      LT_F32 case args k ltF32 @ cmpOperatorFloat return
-      LT_F64 case args k ltF64 @ cmpOperatorFloat return
+        args k i64.shl @ binaryOperatorInt return
+      LT_I8 case args k i8.lt @ cmpOperatorInt return
+      LT_I16 case args k i16.lt @ cmpOperatorInt return
+      LT_I32 case args k i32.lt @ cmpOperatorInt return
+      LT_I64 case args k i64.lt @ cmpOperatorInt return
+      LT_F32 case args k f32.lt @ cmpOperatorFloat return
+      LT_F64 case args k f64.lt @ cmpOperatorFloat return
       LT_PTR case break
-      LE_I8 case args k leI8 @ cmpOperatorInt return
-      LE_I16 case args k leI16 @ cmpOperatorInt return
-      LE_I32 case args k leI32 @ cmpOperatorInt return
-      LE_I64 case args k leI64 @ cmpOperatorInt return
-      LE_F32 case args k leF32 @ cmpOperatorFloat return
-      LE_F64 case args k leF64 @ cmpOperatorFloat return
+      LE_I8 case args k i8.le @ cmpOperatorInt return
+      LE_I16 case args k i16.le @ cmpOperatorInt return
+      LE_I32 case args k i32.le @ cmpOperatorInt return
+      LE_I64 case args k i64.le @ cmpOperatorInt return
+      LE_F32 case args k f32.le @ cmpOperatorFloat return
+      LE_F64 case args k f64.le @ cmpOperatorFloat return
       LE_PTR case break
-      GE_I8 case args k geI8 @ cmpOperatorInt return
-      GE_I16 case args k geI16 @ cmpOperatorInt return
-      GE_I32 case args k geI32 @ cmpOperatorInt return
-      GE_I64 case args k geI64 @ cmpOperatorInt return
-      GE_F32 case args k geF32 @ cmpOperatorFloat return
-      GE_F64 case args k geF64 @ cmpOperatorFloat return
+      GE_I8 case args k i8.ge @ cmpOperatorInt return
+      GE_I16 case args k i16.ge @ cmpOperatorInt return
+      GE_I32 case args k i32.ge @ cmpOperatorInt return
+      GE_I64 case args k i64.ge @ cmpOperatorInt return
+      GE_F32 case args k f32.ge @ cmpOperatorFloat return
+      GE_F64 case args k f64.ge @ cmpOperatorFloat return
       GE_PTR case break
-      GT_I8 case args k gtI8 @ cmpOperatorInt return
-      GT_I16 case args k gtI16 @ cmpOperatorInt return
-      GT_I32 case args k gtI32 @ cmpOperatorInt return
-      GT_I64 case args k gtI64 @ cmpOperatorInt return
-      GT_F32 case args k gtF32 @ cmpOperatorFloat return
-      GT_F64 case args k gtF64 @ cmpOperatorFloat return
+      GT_I8 case args k i8.gt @ cmpOperatorInt return
+      GT_I16 case args k i16.gt @ cmpOperatorInt return
+      GT_I32 case args k i32.gt @ cmpOperatorInt return
+      GT_I64 case args k i64.gt @ cmpOperatorInt return
+      GT_F32 case args k f32.gt @ cmpOperatorFloat return
+      GT_F64 case args k f64.gt @ cmpOperatorFloat return
       GT_PTR case break
-      ULT_I8 case args k ultI8 @ cmpOperatorInt return
-      ULT_I16 case args k ultI16 @ cmpOperatorInt return
-      ULT_I32 case args k ultI32 @ cmpOperatorInt return
-      ULT_I64 case args k ultI64 @ cmpOperatorInt return
-      ULE_I8 case args k uleI8 @ cmpOperatorInt return
-      ULE_I16 case args k uleI16 @ cmpOperatorInt return
-      ULE_I32 case args k uleI32 @ cmpOperatorInt return
-      ULE_I64 case args k uleI64 @ cmpOperatorInt return
-      UGE_I8 case args k ugeI8 @ cmpOperatorInt return
-      UGE_I16 case args k ugeI16 @ cmpOperatorInt return
-      UGE_I32 case args k ugeI32 @ cmpOperatorInt return
-      UGE_I64 case args k ugeI64 @ cmpOperatorInt return
-      UGT_I8 case args k ugtI8 @ cmpOperatorInt return
-      UGT_I16 case args k ugtI16 @ cmpOperatorInt return
-      UGT_I32 case args k ugtI32 @ cmpOperatorInt return
-      UGT_I64 case args k ugtI64 @ cmpOperatorInt return
+      ULT_I8 case args k i8.ult @ cmpOperatorInt return
+      ULT_I16 case args k i16.ult @ cmpOperatorInt return
+      ULT_I32 case args k i32.ult @ cmpOperatorInt return
+      ULT_I64 case args k i64.ult @ cmpOperatorInt return
+      ULE_I8 case args k i8.ule @ cmpOperatorInt return
+      ULE_I16 case args k i16.ule @ cmpOperatorInt return
+      ULE_I32 case args k i32.ule @ cmpOperatorInt return
+      ULE_I64 case args k i64.ule @ cmpOperatorInt return
+      UGE_I8 case args k i8.uge @ cmpOperatorInt return
+      UGE_I16 case args k i16.uge @ cmpOperatorInt return
+      UGE_I32 case args k i32.uge @ cmpOperatorInt return
+      UGE_I64 case args k i64.uge @ cmpOperatorInt return
+      UGT_I8 case args k i8.ugt @ cmpOperatorInt return
+      UGT_I16 case args k i16.ugt @ cmpOperatorInt return
+      UGT_I32 case args k i32.ugt @ cmpOperatorInt return
+      UGT_I64 case args k i64.ugt @ cmpOperatorInt return
       PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
       PRINT_F32 PRINT_F64 PRINT_PTR case break
     end
     ConstValue .none  OperatorResult .unimplemented return
   end
 
-  ## TODO allow creating pointer to built-in function
-  proc( i64 -> i64 ) =>: negI64 -_ end
-  proc( f32 -> f32 ) =>: negF32 -_ end
-  proc( f64 -> f64 ) =>: negF64 -_ end
-  proc( i64 i64 -> i64 ) =>: addI64 + end
-  proc( f32 f32 -> f32 ) =>: addF32 + end
-  proc( f64 f64 -> f64 ) =>: addF64 + end
-  proc( i64 i64 -> i64 ) =>: subI64 - end
-  proc( f32 f32 -> f32 ) =>: subF32 - end
-  proc( f64 f64 -> f64 ) =>: subF64 - end
-  proc( i64 i64 -> i64 ) =>: mulI64 * end
-  proc( f32 f32 -> f32 ) =>: mulF32 * end
-  proc( f64 f64 -> f64 ) =>: mulF64 * end
-  proc( i32 i32 -> i32 ) =>: divI32 / end
-  proc( i64 i64 -> i64 ) =>: divI64 / end
-  proc( f32 f32 -> f32 ) =>: divF32 / end
-  proc( f64 f64 -> f64 ) =>: divF64 / end
-  proc( i32 i32 -> i32 ) =>: udivI32 ..udiv end
-  proc( i64 i64 -> i64 ) =>: udivI64 ..udiv end
-  proc( i32 i32 -> i32 ) =>: modI32 % end
-  proc( i64 i64 -> i64 ) =>: modI64 % end
-  proc( f32 f32 -> f32 ) =>: modF32 % end
-  proc( f64 f64 -> f64 ) =>: modF64 % end
-  proc( i32 i32 -> i32 ) =>: umodI32 ..umod end
-  proc( i64 i64 -> i64 ) =>: umodI64 ..umod end
-  proc( i8 i8 -> bool ) =>: ltI8 < end
-  proc( i16 i16 -> bool ) =>: ltI16 < end
-  proc( i32 i32 -> bool ) =>: ltI32 < end
-  proc( i64 i64 -> bool ) =>: ltI64 < end
-  proc( f32 f32 -> bool ) =>: ltF32 < end
-  proc( f64 f64 -> bool ) =>: ltF64 < end
-  proc( i8 i8 -> bool ) =>: leI8 <= end
-  proc( i16 i16 -> bool ) =>: leI16 <= end
-  proc( i32 i32 -> bool ) =>: leI32 <= end
-  proc( i64 i64 -> bool ) =>: leI64 <= end
-  proc( f32 f32 -> bool ) =>: leF32 <= end
-  proc( f64 f64 -> bool ) =>: leF64 <= end
-  proc( i8 i8 -> bool ) =>: geI8 >= end
-  proc( i16 i16 -> bool ) =>: geI16 >= end
-  proc( i32 i32 -> bool ) =>: geI32 >= end
-  proc( i64 i64 -> bool ) =>: geI64 >= end
-  proc( f32 f32 -> bool ) =>: geF32 >= end
-  proc( f64 f64 -> bool ) =>: geF64 >= end
-  proc( i8 i8 -> bool ) =>: gtI8 > end
-  proc( i16 i16 -> bool ) =>: gtI16 > end
-  proc( i32 i32 -> bool ) =>: gtI32 > end
-  proc( i64 i64 -> bool ) =>: gtI64 > end
-  proc( f32 f32 -> bool ) =>: gtF32 > end
-  proc( f64 f64 -> bool ) =>: gtF64 > end
-  proc( i8 i8 -> bool ) =>: ultI8 ..u< end
-  proc( i16 i16 -> bool ) =>: ultI16 ..u< end
-  proc( i32 i32 -> bool ) =>: ultI32 ..u< end
-  proc( i64 i64 -> bool ) =>: ultI64 ..u< end
-  proc( i8 i8 -> bool ) =>: uleI8 ..u<= end
-  proc( i16 i16 -> bool ) =>: uleI16 ..u<= end
-  proc( i32 i32 -> bool ) =>: uleI32 ..u<= end
-  proc( i64 i64 -> bool ) =>: uleI64 ..u<= end
-  proc( i8 i8 -> bool ) =>: ugeI8 ..u>= end
-  proc( i16 i16 -> bool ) =>: ugeI16 ..u>= end
-  proc( i32 i32 -> bool ) =>: ugeI32 ..u>= end
-  proc( i64 i64 -> bool ) =>: ugeI64 ..u>= end
-  proc( i8 i8 -> bool ) =>: ugtI8 ..u> end
-  proc( i16 i16 -> bool ) =>: ugtI16 ..u> end
-  proc( i32 i32 -> bool ) =>: ugtI32 ..u> end
-  proc( i64 i64 -> bool ) =>: ugtI64 ..u> end
-  proc( bool -> bool ) =>: notBool ! end
-  proc( i64 -> i64 ) =>: flipI64 ~ end
-  proc( bool bool -> bool ) =>: andBool & end
-  proc( i64 i64 -> i64 ) =>: andI64 & end
-  proc( bool bool -> bool ) =>: orBool | end
-  proc( i64 i64 -> i64 ) =>: orI64 | end
-  proc( bool bool -> bool ) =>: xorBool ^ end
-  proc( i64 i64 -> i64 ) =>: xorI64 ^ end
-  proc( i64 i64 -> i64 ) =>: shlI64 << end
-  proc( i8  i8  -> i8  ) =>: ashrI8 >> end
-  proc( i16 i16 -> i16 ) =>: ashrI16 >> end
-  proc( i32 i32 -> i32 ) =>: ashrI32 >> end
-  proc( i64 i64 -> i64 ) =>: ashrI64 >> end
-  proc( i8  i8  -> i8  ) =>: lshrI8 >>> end
-  proc( i16 i16 -> i16 ) =>: lshrI16 >>> end
-  proc( i32 i32 -> i32 ) =>: lshrI32 >>> end
-  proc( i64 i64 -> i64 ) =>: lshrI64 >>> end
+#:ifnot:exp
+  namespace: bool
+    proc( bool -> bool ) =>: not ! end
+    proc( bool bool -> bool ) =>: and & end
+    proc( bool bool -> bool ) =>: or | end
+    proc( bool bool -> bool ) =>: xor ^ end
+  end
+  namespace: i8
+    proc( i8 i8 -> bool ) =>: ge >= end
+    proc( i8 i8 -> bool ) =>: gt > end
+    proc( i8 i8 -> bool ) =>: le <= end
+    proc( i8 i8 -> bool ) =>: lt < end
+    proc( i8 i8 -> bool ) =>: uge ..u>= end
+    proc( i8 i8 -> bool ) =>: ugt ..u> end
+    proc( i8 i8 -> bool ) =>: ule ..u<= end
+    proc( i8 i8 -> bool ) =>: ult ..u< end
+    proc( i8  i8  -> i8  ) =>: ashr >> end
+    proc( i8  i8  -> i8  ) =>: lshr >>> end
+  end
+  namespace: i16
+    proc( i16 i16 -> bool ) =>: ge >= end
+    proc( i16 i16 -> bool ) =>: gt > end
+    proc( i16 i16 -> bool ) =>: le <= end
+    proc( i16 i16 -> bool ) =>: lt < end
+    proc( i16 i16 -> bool ) =>: uge ..u>= end
+    proc( i16 i16 -> bool ) =>: ugt ..u> end
+    proc( i16 i16 -> bool ) =>: ule ..u<= end
+    proc( i16 i16 -> bool ) =>: ult ..u< end
+    proc( i16 i16 -> i16 ) =>: ashr >> end
+    proc( i16 i16 -> i16 ) =>: lshr >>> end
+  end
+  namespace: i32
+    proc( i32 i32 -> i32 ) =>: div / end
+    proc( i32 i32 -> i32 ) =>: udiv ..udiv end
+    proc( i32 i32 -> i32 ) =>: rem % end
+    proc( i32 i32 -> i32 ) =>: urem ..urem end
+    proc( i32 i32 -> bool ) =>: ge >= end
+    proc( i32 i32 -> bool ) =>: gt > end
+    proc( i32 i32 -> bool ) =>: le <= end
+    proc( i32 i32 -> bool ) =>: lt < end
+    proc( i32 i32 -> bool ) =>: uge ..u>= end
+    proc( i32 i32 -> bool ) =>: ugt ..u> end
+    proc( i32 i32 -> bool ) =>: ule ..u<= end
+    proc( i32 i32 -> bool ) =>: ult ..u< end
+    proc( i32 i32 -> i32 ) =>: ashr >> end
+    proc( i32 i32 -> i32 ) =>: lshr >>> end
+  end
+  namespace: i64
+    proc( i64 -> i64 ) =>: neg -_ end
+    proc( i64 i64 -> i64 ) =>: add + end
+    proc( i64 i64 -> i64 ) =>: sub - end
+    proc( i64 i64 -> i64 ) =>: mul * end
+    proc( i64 i64 -> i64 ) =>: div / end
+    proc( i64 i64 -> i64 ) =>: udiv ..udiv end
+    proc( i64 i64 -> i64 ) =>: rem % end
+    proc( i64 i64 -> i64 ) =>: urem ..urem end
+    proc( i64 i64 -> bool ) =>: ge >= end
+    proc( i64 i64 -> bool ) =>: gt > end
+    proc( i64 i64 -> bool ) =>: le <= end
+    proc( i64 i64 -> bool ) =>: lt < end
+    proc( i64 i64 -> bool ) =>: uge ..u>= end
+    proc( i64 i64 -> bool ) =>: ugt ..u> end
+    proc( i64 i64 -> bool ) =>: ule ..u<= end
+    proc( i64 i64 -> bool ) =>: ult ..u< end
+    proc( i64 -> i64 ) =>: flip ~ end
+    proc( i64 i64 -> i64 ) =>: and & end
+    proc( i64 i64 -> i64 ) =>: or | end
+    proc( i64 i64 -> i64 ) =>: xor ^ end
+    proc( i64 i64 -> i64 ) =>: shl << end
+    proc( i64 i64 -> i64 ) =>: ashr >> end
+    proc( i64 i64 -> i64 ) =>: lshr >>> end
+  end
+  namespace: f32
+    proc( f32 -> f32 ) =>: neg -_ end
+    proc( f32 f32 -> f32 ) =>: add + end
+    proc( f32 f32 -> f32 ) =>: sub - end
+    proc( f32 f32 -> f32 ) =>: mul * end
+    proc( f32 f32 -> f32 ) =>: div / end
+    proc( f32 f32 -> bool ) =>: ge >= end
+    proc( f32 f32 -> bool ) =>: gt > end
+    proc( f32 f32 -> bool ) =>: le <= end
+    proc( f32 f32 -> bool ) =>: lt < end
+  end
+  namespace: f64
+    proc( f64 -> f64 ) =>: neg -_ end
+    proc( f64 f64 -> f64 ) =>: add + end
+    proc( f64 f64 -> f64 ) =>: sub - end
+    proc( f64 f64 -> f64 ) =>: mul * end
+    proc( f64 f64 -> f64 ) =>: div / end
+    proc( f64 f64 -> bool ) =>: ge >= end
+    proc( f64 f64 -> bool ) =>: gt > end
+    proc( f64 f64 -> bool ) =>: le <= end
+    proc( f64 f64 -> bool ) =>: lt < end
+  end
+#:end
 
   proc(
     ConstValue : a
@@ -695,19 +708,19 @@ namespace: interpreter
       I8 case
         a constAsInt =:: e1 0xff &
         b constAsInt =:: e2 0xff &
-        ..umod ConstValue .int opType ..swap e1 e2 | return
+        ..urem ConstValue .int opType ..swap e1 e2 | return
       I16 case
         a constAsInt =:: e1 0xffff &
         b constAsInt =:: e2 0xffff &
-        ..umod ConstValue .int opType ..swap e1 e2 | return
+        ..urem ConstValue .int opType ..swap e1 e2 | return
       I32 case
         a constAsInt =:: e1 0xffff_ffff &
         b constAsInt =:: e2 0xffff_ffff &
-        ..umod ConstValue .int opType ..swap e1 e2 | return
+        ..urem ConstValue .int opType ..swap e1 e2 | return
       I64 case
         a constAsInt =:: e1
         b constAsInt =:: e2
-        ..umod ConstValue .int opType ..swap e1 e2 | return
+        ..urem ConstValue .int opType ..swap e1 e2 | return
       FLOAT32 FLOAT64 BOOL TYPE case
         Type .undefined ConstValue .none true return
     end

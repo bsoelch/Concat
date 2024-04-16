@@ -1,0 +1,119 @@
+## XXX? bit-cast operation
+
+## TODO include floating point limits
+namespace: f32
+  union( f32  : f i32 : i ) =:: Converter
+  proc( f32 -> i32 ) =>: export: bits
+    Converter cast .i return
+  end
+  proc( i32 -> f32 ) =>: export: fromBits
+    Converter cast .f return
+  end
+  0x8000'0000u =:: SIGN_FLAG
+  0x7f80'0000u =:: EXP_MASK
+  0x007f'ffffu =:: MANTISSA_MASK
+  23 =:: MANTISSA_BITS
+  23 =:: EXP_SHIFT
+  0xff =:: SHIFTED_EXP_MASK
+  127 =:: EXP_BIAS
+  proc( -> f32 ) =>: export: NaN
+    EXP_MASK MANTISSA_MASK | fromBits
+  end
+  proc( -> f32 ) =>: export: Infinity
+    EXP_MASK fromBits
+  end
+  proc( -> f32 ) =>: export: -Infinity
+    SIGN_FLAG EXP_MASK | fromBits
+  end
+  proc( f32 : x -> bool ) =>: export: isNaN
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 !=
+  end
+  proc( f32 : x -> bool ) =>: export: isInfinite
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 ==
+  end
+  proc( f32 : x -> bool ) =>: export: isFinite
+    x bits EXP_MASK & EXP_MASK !=
+  end
+  proc( f32 : x -> f32 ) =>: export: truncate
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e 0 < if ## absolute value < 1
+      i SIGN_FLAG & fromBits return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits return
+  end
+  proc( f32 : a f32 : b -> f32 ) =>: export: rem
+    a b / truncate =:: d
+    a d b * - return
+  end
+end
+namespace: f64
+  union( f64  : d i64 : i ) =:: Converter
+  proc( f64 -> i64 ) =>: export: bits
+    Converter cast .i return
+  end
+  proc( i64 -> f64 ) =>: export: fromBits
+    Converter cast .d return
+  end
+  0x8000'0000'0000'0000u =:: SIGN_FLAG
+  0x7ff0'0000'0000'0000u =:: EXP_MASK
+  0x000f'ffff'ffff'ffffu =:: MANTISSA_MASK
+  52 =:: MANTISSA_BITS
+  52 =:: EXP_SHIFT
+  0x7ff =:: SHIFTED_EXP_MASK
+  1023 =:: EXP_BIAS
+  proc( -> f64 ) =>: export: NaN
+    EXP_MASK MANTISSA_MASK | fromBits
+  end
+  proc( -> f64 ) =>: export: Infinity
+    EXP_MASK fromBits
+  end
+  proc( -> f64 ) =>: export: -Infinity
+    SIGN_FLAG EXP_MASK | fromBits
+  end
+  proc( f64 : x -> bool ) =>: export: isNaN
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 !=
+  end
+  proc( f64 : x -> bool ) =>: export: isInfinite
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 ==
+  end
+  proc( f64 : x -> bool ) =>: export: isFinite
+    x bits EXP_MASK & EXP_MASK !=
+  end
+  proc( f64 : x -> f64 ) =>: export: truncate
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e 0 < if ## absolute value < 1
+      i SIGN_FLAG & fromBits return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits return
+  end
+  proc( f64 : a f64 : b -> f64 ) =>: export: rem
+    a b / truncate =:: d
+    a d b * - return
+  end
+end
+#:if:exp
+overload: %
+  f32.rem
+  f64.rem
+end
+#:end

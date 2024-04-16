@@ -1,0 +1,20 @@
+namespace: i8
+  -0x80i8 i8 =: export: MIN
+   0x7fi8 i8 =: export: MAX
+end
+namespace: i16
+  -0x8000i16 i16 =: export: MIN
+   0x7fffi16 i16 =: export: MAX
+end
+namespace: i32
+  -0x8000_0000 i32 =: export: MIN
+   0x7fff_ffff i32 =: export: MAX
+end
+namespace: u32
+   0 i32 =: export: MIN
+   0xffff_ffff i64 =: export: MAX
+end
+namespace: i64
+  -0x8000_0000_0000_0000 i64 =: export: MIN
+   0x7fff_ffff_ffff_ffff i64 =: export: MAX
+end

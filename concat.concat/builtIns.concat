@@ -1,6 +1,5 @@
 import "program.concat"
 
-## TODO distinguish mod and remainder
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
@@ -9,9 +8,9 @@ enum(
      SUB_PTR SUB_PTR_MUT PTR_DIFF  ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
  DIV_I32 DIV_I64 DIV_F32 DIV_F64                ## /
- MOD_I32 MOD_I64 MOD_F32 MOD_F64                ## %
+ REM_I32 REM_I64                                ## %
  UDIV_I32 UDIV_I64                              ## ..udiv
- UMOD_I32 UMOD_I64                              ## ..umod
+ UREM_I32 UREM_I64                              ## ..urem
  ## logic
  NOT_BOOL                                       ## !
  FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64             ## ~
@@ -56,10 +55,10 @@ namespace: sb
         "*" sb.appendS break
       DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
         "/" sb.appendS break
-      MOD_I32 MOD_I64 MOD_F32 MOD_F64 case
+      REM_I32 REM_I64 case
         "%" sb.appendS break
       UDIV_I32 UDIV_I64 case "..udiv" sb.appendS break
-      UMOD_I32 UMOD_I64 case "..umod" sb.appendS break
+      UREM_I32 UREM_I64 case "..urem" sb.appendS break
       NOT_BOOL case "!" sb.appendS break
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
         "~" sb.appendS break
@@ -624,26 +623,17 @@ proc(
   "%" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
-  BuiltIn .MOD_I32
-    "i32" "mod" pos labelContext createLabel
+  BuiltIn .REM_I32
+    "i32" "rem" pos labelContext createLabel
     i32i32_i32
     bundle
   pos context addBuiltIn
-  BuiltIn .MOD_I64
-    "i64" "mod" pos labelContext createLabel
+  BuiltIn .REM_I64
+    "i64" "rem" pos labelContext createLabel
     i64i64_i64
     bundle
   pos context addBuiltIn
-  BuiltIn .MOD_F32
-    "f32" "mod" pos labelContext createLabel
-    f32f32_f32
-    bundle
-  pos context addBuiltIn
-  BuiltIn .MOD_F64
-    "f64" "mod" pos labelContext createLabel
-    f64f64_f64
-    bundle
-  pos context addBuiltIn
+  ## float remainder defined in standard library (numbers/float)
   "..udiv" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -657,16 +647,16 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
-  "..umod" string.wrap pos context newBuiltInBundle
+  "..urem" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
-  BuiltIn .UMOD_I32
-    "i32" "umod" pos labelContext createLabel
+  BuiltIn .UREM_I32
+    "i32" "urem" pos labelContext createLabel
     i32i32_i32
     bundle
   pos context addBuiltIn
-  BuiltIn .UMOD_I64
-    "i64" "umod" pos labelContext createLabel
+  BuiltIn .UREM_I64
+    "i64" "urem" pos labelContext createLabel
     i64i64_i64
     bundle
   pos context addBuiltIn
