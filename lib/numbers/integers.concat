@@ -1,7 +1,7 @@
 namespace: i8
   -0x80i8 i8 =: export: MIN
    0x7fi8 i8 =: export: MAX
-   0xffu8 i8 =: export: UMAX
+   0xffu16 i16 =: export: UMAX
    0xffi16 i16 =: export: MASK
   proc( i8 : a i8 : b -> i8 ) =>: export: min
     a b < if a else b end
@@ -16,7 +16,7 @@ end
 namespace: i16
   -0x8000i16 i16 =: export: MIN
    0x7fffi16 i16 =: export: MAX
-   0xffffu16 i16 =: export: UMAX
+   0xffffu32 i32 =: export: UMAX
    0xffff    i32 =: export: MASK
   proc( i16 : a i16 : b -> i16 ) =>: export: min
     a b < if a else b end
@@ -31,8 +31,8 @@ end
 namespace: i32
   -0x8000_0000 i32 =: export: MIN
    0x7fff_ffff i32 =: export: MAX
-   0xffff_ffffu i32 =: export: UMAX
-   0xffff_ffff  i64 =: export: MASK
+   0xffff_ffffu64 i64 =: export: UMAX
+   0xffff_ffff    i64 =: export: MASK
   proc( i32 : a i32 : b -> i32 ) =>: export: min
     a b < if a else b end
   end
