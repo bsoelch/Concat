@@ -12,6 +12,7 @@ namespace: f32
   0x8000'0000u =:: SIGN_FLAG
   0x7f80'0000u =:: EXP_MASK
   0x007f'ffffu =:: MANTISSA_MASK
+  0x0080'0000u =:: HIDDENT_BIT
   23 =:: MANTISSA_BITS
   23 =:: EXP_SHIFT
   0xff =:: SHIFTED_EXP_MASK
@@ -36,6 +37,7 @@ namespace: f32
   proc( f32 : x -> bool ) =>: export: isFinite
     x bits EXP_MASK & EXP_MASK !=
   end
+
   proc( f32 : x -> f32 ) =>: export: truncate
     x bits =:: i
     i MANTISSA_MASK & =:: m
@@ -65,6 +67,48 @@ namespace: f32
     end
     y return
   end
+  ## half-even rounding
+  proc( f32 : x -> f32 ) =>: export: round
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e -1 < if ## absolute value < 0.5
+      i SIGN_FLAG & fromBits return
+    else e -1 == _if ## 1 < |x| <= 0.5
+      m 0 == if ## |x|=0.5
+        i SIGN_FLAG & fromBits return
+      end
+      x 0 < if -1.0 f32 cast else 1.0 f32 cast end return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    m -1i32 32 MANTISSA_BITS - e + >>> & =:: fract
+    1u32 MANTISSA_BITS 1 - e - << =:: half
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits =:: trunc
+    fract 0 == if
+      trunc return ## already an integer
+    end
+    x 0 < if -1.0 f32 cast else 1.0 f32 cast end =:: delta
+    fract half < if
+      trunc return
+    end
+    fract half > if
+      trunc delta + return
+    end
+    m HIDDENT_BIT | half 1 << & 0 != if ## half and odd
+      trunc delta + return
+    end
+    trunc return
+  end
+
+  proc( f32 : a -> f32 ) =>: export: abs
+    a bits SIGN_FLAG ~ & fromBits return
+  end
+
   proc( f32 : a f32 : b -> f32 ) =>: export: rem
     a b / truncate =:: d
     a d b * - return
@@ -88,6 +132,7 @@ namespace: f64
   0x8000'0000'0000'0000u =:: SIGN_FLAG
   0x7ff0'0000'0000'0000u =:: EXP_MASK
   0x000f'ffff'ffff'ffffu =:: MANTISSA_MASK
+  0x0010'0000'0000'0000u =:: HIDDENT_BIT
   52 =:: MANTISSA_BITS
   52 =:: EXP_SHIFT
   0x7ff =:: SHIFTED_EXP_MASK
@@ -112,6 +157,7 @@ namespace: f64
   proc( f64 : x -> bool ) =>: export: isFinite
     x bits EXP_MASK & EXP_MASK !=
   end
+
   proc( f64 : x -> f64 ) =>: export: truncate
     x bits =:: i
     i MANTISSA_MASK & =:: m
@@ -141,6 +187,48 @@ namespace: f64
     end
     y return
   end
+  ## half-even rounding
+  proc( f64 : x -> f64 ) =>: export: round
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e -1 < if ## absolute value < 0.5
+      i SIGN_FLAG & fromBits return
+    else e -1 == _if ## 1 < |x| <= 0.5
+      m 0 == if ## |x|=0.5
+        i SIGN_FLAG & fromBits return
+      end
+      x 0 < if -1.0 else 1.0 end return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    m -1i64 64 MANTISSA_BITS - e + >>> & =:: fract
+    1u64 MANTISSA_BITS 1 - e - << =:: half
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits =:: trunc
+    fract 0 == if
+      trunc return ## already an integer
+    end
+    x 0 < if -1.0 else 1.0 end =:: delta
+    fract half < if
+      trunc return
+    end
+    fract half > if
+      trunc delta + return
+    end
+    m HIDDENT_BIT | half 1 << & 0 != if ## half and odd
+      trunc delta + return
+    end
+    trunc return
+  end
+
+  proc( f64 : a -> f64 ) =>: export: abs
+    a bits SIGN_FLAG ~ & fromBits return
+  end
+
   proc( f64 : a f64 : b -> f64 ) =>: export: rem
     a b / truncate =:: d
     a d b * - return
