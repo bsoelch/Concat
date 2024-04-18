@@ -164,7 +164,7 @@ namespace: sb
         end ..drop
       else
         "0." sb.appendS
-        1 e_max - while ..dup 0 > do
+        -1 e_max - while ..dup 0 > do
           ..swap
             '0' sb.appendC
           ..swap 1 -
