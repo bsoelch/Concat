@@ -123,8 +123,7 @@
           \.\.getArg          |
           \.\.length          |
           \.\.size            |
-          \.\.unreachable     |
-          \.\.debug\.print
+          \.\.unreachable
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
