@@ -355,8 +355,6 @@ namespace: interpreter
       UGT_I16 case args k i16.ugt @ cmpOperatorInt return
       UGT_I32 case args k i32.ugt @ cmpOperatorInt return
       UGT_I64 case args k i64.ugt @ cmpOperatorInt return
-      PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
-      PRINT_F32 PRINT_F64 PRINT_PTR case break
     end
     ConstValue .none  OperatorResult .unimplemented return
   end

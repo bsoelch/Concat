@@ -713,7 +713,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       return
     Print case
       op [] .dataType typeContext types.unwrapNamed =:: printType
-      target "{//..debug.print\n" io.fputs ..drop
+      target "{//debug.print\n" io.fputs ..drop
       printType target prog printTypeName
       target " tmpPrint = " io.fputs ..drop
       operations index isGlobal target prog compileOp

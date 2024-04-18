@@ -1,4 +1,4 @@
-
+import debug
 enum( i32 : mut: x i32 : y ) =:: anEnum
 struct( anEnum : mut: a i32 : mut: b ) =:: aStruct
 
@@ -10,5 +10,5 @@ end
 proc( -> ) =>: main
  0 anEnum .x 0 aStruct new =:: mut: s
  1 s @ test [] =
- s .a .x ..debug.print
+ s .a .x debug.print
 end

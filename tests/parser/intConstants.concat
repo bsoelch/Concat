@@ -1,12 +1,13 @@
+import debug
 proc( -> ) =>: main
-  0b11'00'10'01 ..debug.print
-  0x123_4567_89ab_cdef ..debug.print
-  -0xff ..debug.print
-  0x7fff_ffff_ffff_ffff ..debug.print
-  -0x8000_0000_0000_0000 ..debug.print
-  1_000_000_000 ..debug.print
-  -412974129741247194 ..debug.print
-  3b100 ..debug.print
-  10b42 ..debug.print
-  62bTest ..debug.print
+  0b11'00'10'01 debug.print
+  0x123_4567_89ab_cdef debug.print
+  -0xff debug.print
+  0x7fff_ffff_ffff_ffff debug.print
+  -0x8000_0000_0000_0000 debug.print
+  1_000_000_000 debug.print
+  -412974129741247194 debug.print
+  3b100 debug.print
+  10b42 debug.print
+  62bTest debug.print
 end

@@ -1,4 +1,4 @@
-
+import debug
 proc( i8 -> bool ) =>: check
   switch
     'h' case
@@ -26,12 +26,12 @@ proc( i8 -> bool ) =>: check
 end
 
 proc( -> ) =>: main
-  'n' check ..debug.print
-  'o' check ..debug.print
-  'p' check ..debug.print
-  'q' check ..debug.print
-  'r' check ..debug.print
-  's' check ..debug.print
-  't' check ..debug.print
-  'u' check ..debug.print
+  'n' check debug.print
+  'o' check debug.print
+  'p' check debug.print
+  'q' check debug.print
+  'r' check debug.print
+  's' check debug.print
+  't' check debug.print
+  'u' check debug.print
 end

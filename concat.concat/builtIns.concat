@@ -36,8 +36,6 @@ enum(
  UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## ..u>=
  UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## ..u>
  ## XXX? more built-in operations
- PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
-   PRINT_F32 PRINT_F64 PRINT_PTR                 ## ..debug.print
 ) =:: export: BuiltIn
 
 namespace: sb
@@ -88,9 +86,6 @@ namespace: sb
       ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
       UGE_I8 UGE_I16 UGE_I32 UGE_I64 case "..u>=" sb.appendS break
       UGT_I8 UGT_I16 UGT_I32 UGT_I64 case "..u>" sb.appendS break
-      PRINT_BOOL PRINT_I8 PRINT_I16 PRINT_I32 PRINT_I64
-          PRINT_F32 PRINT_F64 PRINT_PTR case
-        "..debug.print" sb.appendS break
     end
   end
 end
@@ -1121,49 +1116,6 @@ proc(
     i64i64_bool
     bundle
   pos context addBuiltIn
-  "..debug.print" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
-  BuiltIn .PRINT_BOOL
-    "bool.debug" "print" pos labelContext createLabel
-    consume_bool
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_I8
-    "i8.debug" "print" pos labelContext createLabel
-    consume_i8
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_I16
-    "i16.debug" "print" pos labelContext createLabel
-    consume_i16
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_I32
-    "i32.debug" "print" pos labelContext createLabel
-    consume_i32
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_I64
-    "i64.debug" "print" pos labelContext createLabel
-    consume_i64
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_F32
-    "f32.debug" "print" pos labelContext createLabel
-    consume_f32
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_F64
-    "f64.debug" "print" pos labelContext createLabel
-    consume_f64
-    bundle
-  pos context addBuiltIn
-  BuiltIn .PRINT_PTR
-    "ptr.debug" "print" pos labelContext createLabel
-    consume_ptr
-    bundle
-  pos context addGenericBuiltIn
   labelContext id.resetNamespace
   false return
 end

@@ -1,3 +1,4 @@
+import debug
 proc(
   i64 : auto: l i8 l ptr : p
 -> i64 ) =>: len
@@ -11,5 +12,5 @@ proc(
 end
 
 proc( -> ) =>: export: main
-  "Test" len2 ..debug.print
+  "Test" len2 debug.print
 end

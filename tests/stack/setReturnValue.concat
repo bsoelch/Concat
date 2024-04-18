@@ -1,3 +1,4 @@
+import debug
 struct( i32 : a i32 : mut: b ) =:: aStruct
 
 proc( aStruct ptr -> aStruct ) =>: get
@@ -9,10 +10,10 @@ proc( -> ) =>: main
   X @ get
   #:ifnot:exp
     0 ..over .b  =
-  .b ..debug.print
+  .b debug.print
   -115 X @ get .b =
   #:else
-  ..drop 0 ..debug.print
+  ..drop 0 debug.print
   #:end
-  X @ get .b ..debug.print
+  X @ get .b debug.print
 end

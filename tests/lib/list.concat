@@ -1,4 +1,5 @@
 import list
+import debug
 
 #:ifnot:exp
 #template type : T #end
@@ -7,7 +8,7 @@ proc( T list : l -> ) =>: printList
 proc( type : auto: T  T list : l -> ) =>: printList
 #:end
   0 while ..dup l .length < do
-    l .data ..over [] ..debug.print
+    l .data ..over [] debug.print
     1 +
   end ..drop
 end
@@ -29,7 +30,7 @@ proc( -> ) =>: main
     l       list.appendAll
   printList
  
-  l 0 list.get ..debug.print
+  l 0 list.get debug.print
   '\x2a' l 3 list.set
-  l 3 list.get ..debug.print
+  l 3 list.get debug.print
 end

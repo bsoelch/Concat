@@ -1973,7 +1973,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       isAddr if opAtLabel else opGetLabel end
       state appendOp
       return
-    else ..dup "..debug.print" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
+    else ..dup "debug.print" string.wrap string.eq _EXPERIMENTAL_ ! & _if ..drop
       fileState [] .wordStart opPrint state appendOp
       return
     else ..dup "[]" string.wrap string.eq _if ..drop

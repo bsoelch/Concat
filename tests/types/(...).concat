@@ -1,3 +1,4 @@
+import debug
 ( i32 -> i64 ) =>: procedure
 
 end
@@ -11,8 +12,8 @@ end
 ( i32 : x ) =:: struct
 
 proc( -> ) =>: main
-  0 procedure ..debug.print
-  1 labledPrcoedure ..debug.print
-  2 tuple new .0 ..debug.print
-  3 struct new .x ..debug.print
+  0 procedure debug.print
+  1 labledPrcoedure debug.print
+  2 tuple new .0 debug.print
+  3 struct new .x debug.print
 end

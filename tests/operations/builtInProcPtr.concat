@@ -1,6 +1,7 @@
+import debug
 proc( -> ) =>: main
-  1i8 1i8 i32.add@ ..?types () ..debug.print
-  1i8 2i16 f32.lt@ () ..debug.print
-  i32.add@ i32.add@ == ..debug.print
-  1 1 i32.add@ () ..debug.print
+  1i8 1i8 i32.add@ ..?types () debug.print
+  1i8 2i16 f32.lt@ () debug.print
+  i32.add@ i32.add@ == debug.print
+  1 1 i32.add@ () debug.print
 end

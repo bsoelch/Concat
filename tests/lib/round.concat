@@ -1,36 +1,38 @@
 import math
+import debug
+
 proc( f64 : x -> ) =>: testRound
-  x ..debug.print
-  x math.round ..debug.print
+  x debug.print
+  x math.round debug.print
 end
 
 proc( -> ) =>: main
-  -1e400 math.round ..debug.print
-  -1e308 math.round ..debug.print
-  -1e10 0.5 + math.round ..debug.print
-  -2.5 math.round ..debug.print
-  -2.0 math.round ..debug.print
-  -1.5 math.round ..debug.print
-  -1.25 math.round ..debug.print
-  -1.0 math.round ..debug.print
-  -0.75 math.round ..debug.print
-  -0.5 1e-15 - math.round ..debug.print
-  -0.5 math.round ..debug.print
-  -0.25 math.round ..debug.print
-  -5e-324 math.round ..debug.print
-  -0.0 math.round ..debug.print
-  0.0 math.round ..debug.print
-  5e-324 math.round ..debug.print
-  0.25 math.round ..debug.print
-  0.5 math.round ..debug.print
-  0.75 math.round ..debug.print
-  1.0 math.round ..debug.print
-  1.25 math.round ..debug.print
-  1.5 1e-15 - math.round ..debug.print
-  1.5 math.round ..debug.print
-  2.0 math.round ..debug.print
-  2.5 math.round ..debug.print
-  1e10 0.5 + math.round ..debug.print
-  1e308 math.round ..debug.print
-  1e400 math.round ..debug.print
+  -1e400 math.round debug.print
+  -1e308 math.round debug.print
+  -1e10 0.5 + math.round debug.print
+  -2.5 math.round debug.print
+  -2.0 math.round debug.print
+  -1.5 math.round debug.print
+  -1.25 math.round debug.print
+  -1.0 math.round debug.print
+  -0.75 math.round debug.print
+  -0.5 1e-15 - math.round debug.print
+  -0.5 math.round debug.print
+  -0.25 math.round debug.print
+  -5e-324 math.round debug.print
+  -0.0 math.round debug.print
+  0.0 math.round debug.print
+  5e-324 math.round debug.print
+  0.25 math.round debug.print
+  0.5 math.round debug.print
+  0.75 math.round debug.print
+  1.0 math.round debug.print
+  1.25 math.round debug.print
+  1.5 1e-15 - math.round debug.print
+  1.5 math.round debug.print
+  2.0 math.round debug.print
+  2.5 math.round debug.print
+  1e10 0.5 + math.round debug.print
+  1e308 math.round debug.print
+  1e400 math.round debug.print
 end

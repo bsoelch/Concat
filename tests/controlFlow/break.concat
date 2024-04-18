@@ -1,3 +1,4 @@
+import debug
 proc( -> ) =>: main
   0
     while true do
@@ -6,7 +7,7 @@ proc( -> ) =>: main
         break
       end
     end
-  ..debug.print
+  debug.print
   0
     while
       ..dup 5 > if
@@ -16,7 +17,7 @@ proc( -> ) =>: main
     do
       1 + 
     end
-  ..debug.print
+  debug.print
   0
     true while do
       1 + 
@@ -25,7 +26,7 @@ proc( -> ) =>: main
       end
       false
     end
-  ..debug.print
+  debug.print
   0
     while 
       1 + 
@@ -34,5 +35,5 @@ proc( -> ) =>: main
       end
       false
     do end
-  ..debug.print
+  debug.print
 end

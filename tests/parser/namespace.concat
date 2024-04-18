@@ -1,3 +1,4 @@
+import debug
 namespace: mut
   namespace: subspace
    1 i32 =: spaceVar
@@ -10,10 +11,10 @@ namespace: i32
 end
 proc( -> ) =>: spaceTest
   using mut
-  spaceVar ..debug.print
+  spaceVar debug.print
   using mut.subspace
-  spaceVar ..debug.print
-  subspace.subspaceVar ..debug.print
+  spaceVar debug.print
+  subspace.subspaceVar debug.print
 end
 namespace: mut
   namespace: subspace

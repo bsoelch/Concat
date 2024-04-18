@@ -1,3 +1,4 @@
+import debug
 struct( i32 : x i32 : y ) =:: Vector
 struct( i32 : x i32 : y i32 : z ) =:: Vector3
 
@@ -37,10 +38,10 @@ proc( -> ) =>: main
   1 2 Vector new =:: v1
   3 4 Vector new =:: v2
   v1 v2 + =:: v3
-  v3 .x ..debug.print
-  v3 .y ..debug.print
+  v3 .x debug.print
+  v3 .y debug.print
   v1 v2 - =:: v4
-  v4 .x ..debug.print
-  v4 .y ..debug.print
-  v1 v2 Vector.dot ..debug.print
+  v4 .x debug.print
+  v4 .y debug.print
+  v1 v2 Vector.dot debug.print
 end

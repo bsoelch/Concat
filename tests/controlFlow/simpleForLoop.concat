@@ -1,7 +1,8 @@
+import debug
 proc( -> ) =>: main
   5
     true while do
-      ..dup ..debug.print 
+      ..dup debug.print 
       
       1 -  
       ..dup 0 > 

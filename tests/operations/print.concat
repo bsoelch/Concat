@@ -1,7 +1,8 @@
+import debug
 proc( -> ) =>: main
-  1 ..debug.print
-  'A' ..debug.print
-  0x123456789abcdef ..debug.print
-  true ..debug.print
-  0x12345678 i8 8 ptr cast! ..debug.print
+  1 debug.print
+  'A' debug.print
+  0x123456789abcdef debug.print
+  true debug.print
+  0x12345678 i8 _ ptr cast! debug.print
 end

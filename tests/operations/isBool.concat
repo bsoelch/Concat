@@ -1,5 +1,6 @@
+import debug
 proc( -> ) =>: main
-    42 ? ..debug.print
-     0 ? ..debug.print
-  -117 ? ..debug.print
+    42 ? debug.print
+     0 ? debug.print
+  -117 ? debug.print
 end

@@ -1,3 +1,4 @@
+import debug
 proc( i8 : x -> i8 ) =>: f
   5 while ..dup 0 >= do
     x ..dup switch
@@ -9,7 +10,7 @@ proc( i8 : x -> i8 ) =>: f
 end
 
 proc( -> ) =>: main
-  'a' f ..debug.print
-  'x' f ..debug.print
-  'z' f ..debug.print
+  'a' f debug.print
+  'x' f debug.print
+  'z' f debug.print
 end

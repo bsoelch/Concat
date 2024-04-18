@@ -1,3 +1,4 @@
+import debug
 enum( A B i32 : C i8 : D ) =:: anEnum
 
 proc( i32 : i anEnum : e i8 : c -> ) =>: switchTest
@@ -17,10 +18,10 @@ proc( i32 : i anEnum : e i8 : c -> ) =>: switchTest
     A B case
       break
     C case
-      e .C ..debug.print
+      e .C debug.print
       break
     D case
-      e .D ..debug.print
+      e .D debug.print
       break
   end
   c switch ## switch character
@@ -31,7 +32,7 @@ proc( i32 : i anEnum : e i8 : c -> ) =>: switchTest
     false
     break
   end =:: isSpace
-  isSpace ..debug.print
+  isSpace debug.print
 end
 
 proc( -> ) =>: main

@@ -1,3 +1,4 @@
+import debug
 #:if:exp
 ( type : T -> type ) =>: box
   T ptr mut
@@ -24,5 +25,5 @@ proc( -> ) =>: main
     two @ i32 box cast 
     res @ i32 box cast
   boxAdd
-  res ..debug.print
+  res debug.print
 end

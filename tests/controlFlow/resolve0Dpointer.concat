@@ -1,7 +1,8 @@
+import debug
 proc( i32 : auto: k i32 k ptr : p -> i32 ) =>: length
   k
 end
 proc( -> ) =>: main
   0 =:: x
-  x @ length ..debug.print
+  x @ length debug.print
 end

@@ -1,36 +1,37 @@
-
 import numbers/integers
 import numbers/floats
+import debug
+
 proc( -> ) =>: main
-  3 4 // ..debug.print
-  3 -4 // ..debug.print
-  -3 4 // ..debug.print
-  -3 -4 // ..debug.print
-  9 3 // ..debug.print
-  9 -3 // ..debug.print
-  -9 3 // ..debug.print
-  -9 -3 // ..debug.print
+  3 4 // debug.print
+  3 -4 // debug.print
+  -3 4 // debug.print
+  -3 -4 // debug.print
+  9 3 // debug.print
+  9 -3 // debug.print
+  -9 3 // debug.print
+  -9 -3 // debug.print
 
-  3 4 %% ..debug.print
-  3 -4 %% ..debug.print
-  -3 4 %% ..debug.print
-  -3 -4 %% ..debug.print
-  31415 27182i64 %% ..debug.print
-  31415 -27182i64 %% ..debug.print
-  -31415 27182i64 %% ..debug.print
-  -31415 -27182i64 %% ..debug.print
+  3 4 %% debug.print
+  3 -4 %% debug.print
+  -3 4 %% debug.print
+  -3 -4 %% debug.print
+  31415 27182i64 %% debug.print
+  31415 -27182i64 %% debug.print
+  -31415 27182i64 %% debug.print
+  -31415 -27182i64 %% debug.print
 
-  1.5 1.0 %% ..debug.print
-  -1.6 1.0 %% ..debug.print
-  1.5 -1.0 %% ..debug.print
-  -1.6 -1.0 %% ..debug.print
+  1.5 1.0 %% debug.print
+  -1.6 1.0 %% debug.print
+  1.5 -1.0 %% debug.print
+  -1.6 -1.0 %% debug.print
 
-  2.0 3.0 // ..debug.print
-  2.0 3.0 %% ..debug.print
-  2.0 -3.0 // ..debug.print
-  2.0 -3.0 %% ..debug.print
-  -2.0 3.0 // ..debug.print
-  -2.0 3.0 %% ..debug.print
-  -2.0 -3.0 // ..debug.print
-  -2.0 -3.0 %% ..debug.print
+  2.0 3.0 // debug.print
+  2.0 3.0 %% debug.print
+  2.0 -3.0 // debug.print
+  2.0 -3.0 %% debug.print
+  -2.0 3.0 // debug.print
+  -2.0 3.0 %% debug.print
+  -2.0 -3.0 // debug.print
+  -2.0 -3.0 %% debug.print
 end

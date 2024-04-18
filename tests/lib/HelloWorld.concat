@@ -1,5 +1,6 @@
 import io
+import debug
 
 proc( -> ) =>: main
-  "Hello World!" io.puts ..debug.print
+  "Hello World!" io.puts debug.print
 end

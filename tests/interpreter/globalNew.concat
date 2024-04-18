@@ -1,3 +1,4 @@
+import debug
 struct( i32 : x i32 : y ) =:: Point
 
 1 2 Point new =:: p
@@ -7,17 +8,17 @@ struct( i32 : x i32 : y ) =:: Point
 #:end
 
 proc( -> ) =>: main
-  p .x ..debug.print
-  p .y ..debug.print
+  p .x debug.print
+  p .y debug.print
   ..argc i32 cast 5 Point new =:: dynamicPoint
-  dynamicPoint .x ..debug.print
-  dynamicPoint .y ..debug.print
+  dynamicPoint .x debug.print
+  dynamicPoint .y debug.print
   
 #:if:exp
-  sizedPointer .data ..debug.print
-  sizedPointer .length ..debug.print
+  sizedPointer .data debug.print
+  sizedPointer .length debug.print
 #:else ## print expected result fro comparability with test-case
-  42 Point _ ptr cast! ..debug.print
-  5 ..debug.print
+  42 Point _ ptr cast! debug.print
+  5 debug.print
 #:end
 end

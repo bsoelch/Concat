@@ -1,9 +1,10 @@
+import debug
 union( i32 : mut: a i32 : mut: b ) =:: anUnion
 
 proc( -> ) =>: main
   anUnion : u
   1 u .a =
-  u .b ..debug.print
+  u .b debug.print
   2 u .b =
-  u .a ..debug.print
+  u .a debug.print
 end

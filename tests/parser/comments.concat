@@ -1,7 +1,8 @@
+import debug
 proc( -> ) =>: main
 ## end
 ## this is a comment
-1 #+ inline comment +# 1 + 2 == ..debug.print
+1 #+ inline comment +# 1 + 2 == debug.print
 #+
   comments
   #+ can #+ be #+nested +#

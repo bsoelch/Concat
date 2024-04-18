@@ -1,4 +1,5 @@
 import arrayView
+import debug
 
 #:ifnot:exp
 #template type : T #end
@@ -7,7 +8,7 @@ proc( T arrayView : l -> ) =>: printArray
 proc( type : auto: T  T arrayView : l -> ) =>: printArray
 #:end
   0 while ..dup l .length < do
-    l .data ..over [] ..debug.print
+    l .data ..over [] debug.print
     1 +
   end ..drop
 end
@@ -15,12 +16,12 @@ end
 using array 
 proc( -> ) =>: main
   "Hello World" array.wrap =:: str
-  str 5 get ..debug.print
-  str 'A' indexOf ..debug.print
-  str 'o' indexOf ..debug.print
-  str 'A' lastIndexOf ..debug.print
-  str 'o' lastIndexOf ..debug.print
-  str 'c' contains ..debug.print
+  str 5 get debug.print
+  str 'A' indexOf debug.print
+  str 'o' indexOf debug.print
+  str 'A' lastIndexOf debug.print
+  str 'o' lastIndexOf debug.print
+  str 'c' contains debug.print
   i32 10 array new =:: mut: a
   0 while ..dup a ..length < do
     ..dup ..dup * a @ ..over.2 [] =
@@ -28,18 +29,18 @@ proc( -> ) =>: main
   end ..drop
   a @ 8 array.create
     ..dup 3 head printArray
-    -141516511 ..debug.print
+    -141516511 debug.print
     ..dup 5 tail printArray
-    -34731715 ..debug.print
+    -34731715 debug.print
     ..dup 1 4 slice printArray
-    -82745267 ..debug.print
+    -82745267 debug.print
     ..dup -1 12 slice printArray
-    -125136145 ..debug.print
-    ..dup 4 cutIndex printArray -313123 ..debug.print printArray
-    -991749124 ..debug.print
-    ..dup 3 split printArray -112414 ..debug.print printArray
-    -124151151 ..debug.print
-    ..dup 16 split printArray -112414 ..debug.print printArray
-    -434262161 ..debug.print
+    -125136145 debug.print
+    ..dup 4 cutIndex printArray -313123 debug.print printArray
+    -991749124 debug.print
+    ..dup 3 split printArray -112414 debug.print printArray
+    -124151151 debug.print
+    ..dup 16 split printArray -112414 debug.print printArray
+    -434262161 debug.print
   printArray
 end

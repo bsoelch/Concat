@@ -1,6 +1,7 @@
+import debug
 struct( i32 : x i32 : y ) =:: Pair
 
 proc( -> ) =>: main
   1 2 Pair new =:: elts
-  elts .x ..dup + ..debug.print
+  elts .x ..dup + debug.print
 end

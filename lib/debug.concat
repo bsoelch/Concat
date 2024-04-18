@@ -1,0 +1,112 @@
+import io
+import numbers
+import stringBuilder
+import stringIO
+
+namespace: sb
+  proc( stringBuilder : sb i8 : c -> stringBuilder ) =>: export: appendEscapedChar
+    c switch
+     '\'' case sb "\\'" sb.appendS return
+     '\"' case sb "\\\"" sb.appendS return
+     '\\' case sb "\\\\" sb.appendS return
+     '\n' case sb "\\n" sb.appendS return
+     '\t' case sb "\\t" sb.appendS return
+     '\b' case sb "\\b" sb.appendS return
+     '\r' case sb "\\r" sb.appendS return
+     '\f' case sb "\\f" sb.appendS return
+     '\v' case sb "\\v" sb.appendS return
+    end
+    c 0x20 >= c 0x7f < & if
+      sb c sb.appendC return
+    end
+    sb
+      "\\x" sb.appendS
+      c 0xff & 0x10 < if '0' sb.appendC end
+      c 0xff & sb.appendX
+    return
+  end
+end
+namespace: debug
+  proc( bool : b -> ) =>: export: printB
+    b if
+      io.stdOut "true\n" io.fputs ..drop
+    else
+      io.stdOut "false\n" io.fputs ..drop
+    end
+  end
+  proc( i8 : c -> ) =>: export: printC
+    8 sb.create
+      c sb.appendI
+      " ('" sb.appendS
+      c sb.appendEscapedChar
+      "')\n" sb.appendS
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+  proc( i64 : i -> ) =>: export: printI
+    8 sb.create
+      i sb.appendI
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+  ## XXX? rule prioritizing conversion: i32 -> i64 over i32-> f64
+  proc( i16 -> ) =>: export: printI16  printI  end
+  proc( i32 -> ) =>: export: printI32  printI  end
+  proc( i64 : i -> ) =>: export: printX
+    8 sb.create
+      i sb.appendX
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+  proc( i64 : i -> ) =>: export: printU
+    8 sb.create
+      i sb.appendU
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+  proc( f64 : x -> ) =>: export: printF
+    8 sb.create
+      x sb.appendF
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+  proc( type : auto: T T _ ptr : p -> ) =>: export: printP
+    8 sb.create
+      p i64 cast! 0 == if
+        "(nil)" sb.appendS
+      else
+        "0x" sb.appendS
+        p i64 cast! sb.appendX
+      end
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+  proc( i32 : auto: k  i8 k ptr : s -> ) =>: export: printS
+    8 sb.create
+      '"' sb.appendC
+      s sb.appendS
+      "\" at 0x" sb.appendS
+      s i64 cast! sb.appendX
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
+
+#:if:exp
+  overload: export: print
+    printB
+    printC
+    printI16
+    printI32
+    printI
+    printF
+    printS
+    printP
+  end
+#:end
+end
