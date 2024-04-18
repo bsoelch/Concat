@@ -32,10 +32,10 @@ struct(
   i32 : mut: nRenames
   i32 : mut: nCasts
   i32 : mut: nGenerics
+  i32 : mut: nDynamicPtrs
   bool : mut: argsMatch
   bool : mut: needsParam
 ) =:: CallSignatureInfo
-
 
 proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   size .sizeType switch
@@ -289,7 +289,7 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   target typeContext types.containsGeneric | ! if
-    false return
+    src0 target typeContext types.canAutoCast ! return
   end
   src0 =:: mut: src
   ## unwrap reference in src argument if target is not a reference
@@ -587,6 +587,7 @@ proc(
   newVal return
 end
 
+## TODO? prioritize conversion int -> int over conversion int -> float
 proc(
   CallSignatureInfo : a
   CallSignatureInfo : b
@@ -623,6 +624,10 @@ proc(
   a .nGenerics b .nGenerics != if
     ## prefer less generics
     a .nGenerics b .nGenerics < if -1  else 1 end return
+  end
+  a .nDynamicPtrs b .nDynamicPtrs != if
+    ## prefer less dynamic pointers
+    a .nDynamicPtrs b .nDynamicPtrs < if -1  else 1 end return
   end
   a .nRenames b .nRenames != if
     ## prefer less renames
@@ -694,6 +699,7 @@ proc(
         procId
         argCount ParameterInfo list.create
         labelHash @ labelEq @ argCount GenericArg map.create
+        0
         0
         0
         0
@@ -818,6 +824,11 @@ proc(
             stackVal GenericArg .fixed
           map.put ..drop
         end
+      end
+      paramType typeContext types.isPointer if
+          paramType typeContext types.isFixedSize ! _if
+        ## XXX? count number of lost pointer dimensions instead of general check for dynamic size
+        current [] .nDynamicPtrs 1 + current [] .nDynamicPtrs =
       end
       ## try matching type
       paramType typeContext types.containsGeneric | if
