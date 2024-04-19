@@ -14,7 +14,7 @@ namespace: interpreter
     a switch
       chr case a .chr i64 cast false return
       int case a .int i64 cast false return
-      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure procedureBundle union case 0i64 true return
+      none boolean enumLabel str arrayConstant typeId wildCard genericArg templateArg Float procedure procedureBundle union case 0:i64 true return
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
@@ -927,110 +927,110 @@ namespace: interpreter
   end
   proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =>: operator_compare
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      0i8 true return
+      0:i8 true return
     end
     opType .primitiveType switch
       I8 case
         a constAsInt =:: e1 i8 cast =:: x
         b constAsInt =:: e2 i8 cast =:: y
-        x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
       I16 case
         a constAsInt =:: e1 i16 cast =:: x
         b constAsInt =:: e2 i16 cast =:: y
-        x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
       I32 case
         a constAsInt =:: e1 i32 cast =:: x
         b constAsInt =:: e2 i32 cast =:: y
-        x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
       I64 case
         a constAsInt =:: e1 =:: x
         b constAsInt =:: e2 =:: y
-        x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
       FLOAT32 case
         a constAsF32 =:: e1 =:: x
         b constAsF32 =:: e2 =:: y
-        x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
       FLOAT64 case
         a constAsF64 =:: e1 =:: x
         b constAsF64 =:: e2 =:: y
-        x y == if 0i8 else x y > _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
       BOOL TYPE case
-        0i8 true return
+        0:i8 true return
     end
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator<
     opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 < ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 < ConstValue .boolean types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator<=
     opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 <= ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 <= ConstValue .boolean types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator>
     opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 > ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 > ConstValue .boolean types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator>=
     opType a b operator_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 >= ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 >= ConstValue .boolean types.primitive.BOOL ..swap false return
   end
 
   proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =>: operator_unsigned_compare
     opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      0i8 true return
+      0:i8 true return
     end
     opType .primitiveType switch
       I8 case
         a constAsInt =:: e1 i8 cast =:: x
         b constAsInt =:: e2 i8 cast =:: y
-        x y == if 0i8 else x y ..u> _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
       I16 case
         a constAsInt =:: e1 i16 cast =:: x
         b constAsInt =:: e2 i16 cast =:: y
-        x y == if 0i8 else x y ..u> _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
       I32 case
         a constAsInt =:: e1 i32 cast =:: x
         b constAsInt =:: e2 i32 cast =:: y
-        x y == if 0i8 else x y ..u> _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
       I64 case
         a constAsInt =:: e1 =:: x
         b constAsInt =:: e2 =:: y
-        x y == if 0i8 else x y ..u> _if 1i8 else -1i8 end e1 e2 | return
+        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
       BOOL FLOAT32 FLOAT64 TYPE case
-        0i8 true return
+        0:i8 true return
     end
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned<
     opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 < ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 < ConstValue .boolean types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned<=
     opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 <= ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 <= ConstValue .boolean types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned>
     opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 > ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 > ConstValue .boolean types.primitive.BOOL ..swap false return
   end
   proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned>=
     opType a b operator_unsigned_compare if ..drop
       Type .undefined ConstValue .none true return
     end
-    0i8 >= ConstValue .boolean types.primitive.BOOL ..swap false return
+    0:i8 >= ConstValue .boolean types.primitive.BOOL ..swap false return
   end
 
 end

@@ -911,7 +911,7 @@ namespace: sb
             ## TODO ensure elements are ordered by memory location
             t typeContext types.compositeElts =:: types
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0i64 =:: mut: offset
+            0:i64 =:: mut: offset
             0 while ..dup elts .length < do =:: i
               types i types.compositeElts.get =:: elt
               t i pos context tupleEltOffsetInt =:: eltOffset
@@ -962,7 +962,7 @@ namespace: sb
             break
           end
           t eltIndex typeContext types.compositeGetElement =:: eltType
-          0i64 =:: mut: offset
+          0:i64 =:: mut: offset
           false =:: mut: needComma
           eltType typeContext types.isEmpty ! if
             ## appendConstQBE
@@ -1108,7 +1108,7 @@ namespace: sb
     t typeContext types.isArray if
       t typeContext types.isFixedSize _if
       t typeContext types.getArraySize =:: sizes
-      1i64 =:: mut: S
+      1:i64 =:: mut: S
       0 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
         size .sizeType .int ?? ! if
@@ -1148,7 +1148,7 @@ namespace: sb
     end
     t typeContext types.isTuple if
       t typeContext types.compositeElts =:: elts
-      0i64 =:: mut: offset
+      0:i64 =:: mut: offset
       false =:: mut: hasElt
       sb t pos context startTypeDeclaration
         0 while ..dup elts .length < do =:: i
@@ -1190,7 +1190,7 @@ namespace: sb
       t typeContext types.isEnum =:: isTagged
       t typeContext types.compositeElts =:: elts
       false =:: mut: hasElt
-      0i64 =:: mut: bodySize
+      0:i64 =:: mut: bodySize
       sb
         t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
           isTagged if
@@ -1665,7 +1665,7 @@ proc(
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
-  -1i64 =:: mut: tmpId
+  -1:i64 =:: mut: tmpId
   sb
     createId if
       context nextTmpId tmpId =
@@ -3290,7 +3290,7 @@ proc(
         op [] .pos sb.appendPosQBE
       =:: mut: newSb
       ## index of current auto-argument
-      0i64 =:: mut: argIndex
+      0:i64 =:: mut: argIndex
       0 while ..dup argCount < do =:: i
         inTypes i typeContext types.compositeGetElement =:: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
@@ -4031,7 +4031,7 @@ proc(
       op [] .dataType typeContext types.getProcOutArgs ..drop =:: outTypes
       retType typeContext types.isProcOut if
           retType typeContext types.compositeEltCount
-        else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
+        else retType typeContext types.isEmpty _if 0:i64 else 1:i64 end =:: retCount
       false context [] .reachable =
       sb
         op [] .pos sb.appendPosQBE
@@ -4044,7 +4044,7 @@ proc(
           tmpId
           "ret %t" string.wrap
         else
-          -1i64  string.empty ## values will be ignored
+          -1:i64  string.empty ## values will be ignored
         end =:: retStr =:: retId
         outTypes .length 1 - while ..dup 0 >= do =:: i
           outTypes i array.get =:: elt

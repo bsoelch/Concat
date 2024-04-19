@@ -1,8 +1,8 @@
 namespace: i8
-  -0x80i8 i8 =: export: MIN
-   0x7fi8 i8 =: export: MAX
-   0xffu16 i16 =: export: UMAX
-   0xffi16 i16 =: export: MASK
+  -0x80:i8 i8 =: export: MIN
+   0x7f:i8 i8 =: export: MAX
+   0xff:u16 i16 =: export: UMAX
+   0xff:i16 i16 =: export: MASK
   proc( i8 : a i8 : b -> i8 ) =>: export: min
     a b < if a else b end
   end
@@ -14,9 +14,9 @@ namespace: i8
   end
 end
 namespace: i16
-  -0x8000i16 i16 =: export: MIN
-   0x7fffi16 i16 =: export: MAX
-   0xffffu32 i32 =: export: UMAX
+  -0x8000:i16 i16 =: export: MIN
+   0x7fff:i16 i16 =: export: MAX
+   0xffff:u32 i32 =: export: UMAX
    0xffff    i32 =: export: MASK
   proc( i16 : a i16 : b -> i16 ) =>: export: min
     a b < if a else b end
@@ -31,7 +31,7 @@ end
 namespace: i32
   -0x8000_0000 i32 =: export: MIN
    0x7fff_ffff i32 =: export: MAX
-   0xffff_ffffu64 i64 =: export: UMAX
+   0xffff_ffff:u64 i64 =: export: UMAX
    0xffff_ffff    i64 =: export: MASK
   proc( i32 : a i32 : b -> i32 ) =>: export: min
     a b < if a else b end
@@ -64,7 +64,7 @@ end
 namespace: i64
   -0x8000_0000_0000_0000 i64 =: export: MIN
    0x7fff_ffff_ffff_ffff i64 =: export: MAX
-   0xffff_ffff_ffff_ffffu i64 =: export: UMAX
+   0xffff_ffff_ffff_ffff:u i64 =: export: UMAX
   proc( i64 : a i64 : b -> i64 ) =>: export: min
     a b < if a else b end
   end

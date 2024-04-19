@@ -19,10 +19,10 @@ end
 struct( union( i32 _ ptr mut : mut: p i64 : mut: i ) : mut: data i64 : mut: size i64 : mut: cap i8 : mut: sign ) =:: export: int
 
 namespace: int
-  0 0 0  0i8 int new int =: export: ZERO
-  1 1 0  1i8 int new int =: export: ONE
-  2 1 0  1i8 int new int =: export: TWO
-  1 1 0 -1i8 int new int =: export: MINUS_ONE
+  0 0 0  0:i8 int new int =: export: ZERO
+  1 1 0  1:i8 int new int =: export: ONE
+  2 1 0  1:i8 int new int =: export: TWO
+  1 1 0 -1:i8 int new int =: export: MINUS_ONE
 
   ## XXX? from/to byte
   proc( i64 : i -> int ) =>: export: #:alloc:int wrap
@@ -31,17 +31,17 @@ namespace: int
         i -_
         ..dup 32 >>> 0 == if 1 else 2 end
         0
-        -1i8
+        -1:i8
       int new
     else i 0 > _if
       ## int
         i
         ..dup 32 >>> 0 == if 1 else 2 end
         0
-        1i8
+        1:i8
       int new
     else
-       0 0 0 0i8 int new
+       0 0 0 0:i8 int new
     end
   end
   proc( i64 : i i8 : sgn -> int ) =>: export: #:alloc:int uwrap
@@ -53,18 +53,23 @@ namespace: int
         sgn
       int new
     else
-       0 0 0 0i8 int new
+       0 0 0 0:i8 int new
     end
   end
   {
-    0i64 0i64 4294967296i64 3486784401i64 4294967296i64 1220703125i64 2176782336i64 1977326743i64
-    1073741824i64 3486784401i64 1000000000i64 2357947691i64 429981696i64 815730721i64 1475789056i64 2562890625i64
-    4294967296i64 410338673i64 612220032i64 893871739i64 1280000000i64 1801088541i64 2494357888i64 3404825447i64
-    191102976i64 244140625i64 308915776i64 387420489i64 481890304i64 594823321i64 729000000i64 887503681i64
-    1073741824i64 1291467969i64 1544804416i64 1838265625i64 2176782336i64 2565726409i64 3010936384i64 3518743761i64
-    4096000000i64 115856201i64 130691232i64 147008443i64 164916224i64 184528125i64 205962976i64 229345007i64
-    254803968i64 282475249i64 312500000i64 345025251i64 380204032i64 418195493i64 459165024i64 503284375i64
-    550731776i64 601692057i64 656356768i64 714924299i64 777600000i64 844596301i64 916132832i64
+    0:i64 0:i64 4294967296:i64 3486784401:i64 4294967296:i64 1220703125:i64
+    2176782336:i64 1977326743:i64 1073741824:i64 3486784401:i64 1000000000:i64
+    2357947691:i64 429981696:i64 815730721:i64 1475789056:i64 2562890625:i64
+    4294967296:i64 410338673:i64 612220032:i64 893871739:i64 1280000000:i64
+    1801088541:i64 2494357888:i64 3404825447:i64 191102976:i64 244140625:i64
+    308915776:i64 387420489:i64 481890304:i64 594823321:i64 729000000:i64
+    887503681:i64 1073741824:i64 1291467969:i64 1544804416:i64 1838265625:i64
+    2176782336:i64 2565726409:i64 3010936384:i64 3518743761:i64 4096000000:i64
+    115856201:i64 130691232:i64 147008443:i64 164916224:i64 184528125:i64
+    205962976:i64 229345007:i64 254803968:i64 282475249:i64 312500000:i64
+    345025251:i64 380204032:i64 418195493:i64 459165024:i64 503284375:i64
+    550731776:i64 601692057:i64 656356768:i64 714924299:i64 777600000:i64
+    844596301:i64 916132832:i64
   } =:: maxSafeI32Pow
   maxSafeI32Pow ..length number.MAX_BASE 1 + == assert  "maxSafeI32Pow.length==maxBase+1"
   {
@@ -97,7 +102,7 @@ namespace: int
   +#
   proc( string : str i32 : base -> int number.ParserError ) =>: export: fromString
     using number
-    1i8 =:: mut: sign
+    1:i8 =:: mut: sign
     base =:: mut: mBase
     base 0 != base 2 < base 62 > | & if
       ZERO ParserError .INVALID_BASE return
@@ -107,7 +112,7 @@ namespace: int
         ..drop ZERO ParserError .EMPTY return
       end
       ..dup 0 string.charAt '-' == if
-        -1i8 sign =
+        -1:i8 sign =
         1 string.tail
       else ..dup 0 string.charAt '+' == _if
         1 string.tail
@@ -394,13 +399,13 @@ namespace: int
     end
     a .cap 0 == if
       a .sign 0 < if
-        a .data .i 1 - 1i8 uwrap return
+        a .data .i 1 - 1:i8 uwrap return
       end
       a .data .i -1 != if
-        a .data .i 1 + -1i8 uwrap return
+        a .data .i 1 + -1:i8 uwrap return
       end
       a free
-      2POW64_data @ -1i8 fromArray return
+      2POW64_data @ -1:i8 fromArray return
     end
     a .sign 0 < if
       a .data .p a .size decrementInternal if
@@ -411,7 +416,7 @@ namespace: int
       a .data .p newSize 1 - [] 0 == if
         newSize 1 - newSize =
       end
-      a .data .p newSize a .cap 1i8 int new return
+      a .data .p newSize a .cap 1:i8 int new return
     end
     a .data .p a .size incrementInternal if
       i32 _ ptr mut : newData
@@ -424,9 +429,9 @@ namespace: int
         a .data .p newCap mem.realloc newData =
       end
       1 newData a .size [] =
-      newData a .size 1 + newCap -1i8 int new return
+      newData a .size 1 + newCap -1:i8 int new return
     end
-    a .data .p a .size a .cap -1i8 int new return
+    a .data .p a .size a .cap -1:i8 int new return
   end
 
   struct(  i32 arrayView : data i8 : sign i64 : mut: index bool : mut: hadNonzero ) =:: IntIterator
@@ -465,7 +470,7 @@ namespace: int
       x y & target index [] =
     end
     aSign 0 < bSign 0 < & if ## decode twos complement if result is negative
-      target resLen array.create -1i8 0 false IntIterator new aItr =
+      target resLen array.create -1:i8 0 false IntIterator new aItr =
       while aItr .index resLen < do
         aItr nextInt
           target aItr .index [] =
@@ -493,7 +498,7 @@ namespace: int
       x y | target index [] =
     end
     aSign 0 < bSign 0 < | if ## decode twos complement if result is negative
-      target resLen array.create -1i8 0 false IntIterator new aItr =
+      target resLen array.create -1:i8 0 false IntIterator new aItr =
       while aItr .index resLen < do
         aItr nextInt
           target aItr .index [] =
@@ -521,7 +526,7 @@ namespace: int
       x y ^ target index [] =
     end
     aSign bSign * 0 < if ## decode twos complement if result is negative
-      target resLen array.create -1i8 0 false IntIterator new aItr =
+      target resLen array.create -1:i8 0 false IntIterator new aItr =
       while aItr .index resLen < do
         aItr nextInt
           target aItr .index [] =
@@ -547,7 +552,7 @@ namespace: int
     a .cap 0 == b .cap 0 == & if
       a .data .i a .sign 0 < if -_ end
       b .data .i b .sign 0 < if -_ end
-       & a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end uwrap return
+       & a .sign 0 < b .sign 0 < & if -1:i8 else 1:i8 end uwrap return
     end
     a .data .p b .data .p == if
       a return
@@ -565,7 +570,7 @@ namespace: int
     resData a .size array.create aData =
     b .data .p b .size array.create bData =
     aData a .sign bData b .sign resData andInternal =:: resSize
-    resData resSize resCap a .sign 0 < b .sign 0 < & if -1i8 else 1i8 end int new return
+    resData resSize resCap a .sign 0 < b .sign 0 < & if -1:i8 else 1:i8 end int new return
   end
   ## consumes a, keeps b unchanged
   proc( int : #:consume a int : #:const b -> int ) =>: export: #:alloc:int orWith
@@ -579,7 +584,7 @@ namespace: int
     a .cap 0 == b .cap 0 == & if
       a .data .i a .sign 0 < if -_ end
       b .data .i b .sign 0 < if -_ end
-       | a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end uwrap return
+       | a .sign 0 < b .sign 0 < | if -1:i8 else 1:i8 end uwrap return
     end
     a .data .p b .data .p == if
       a return
@@ -597,7 +602,7 @@ namespace: int
     resData a .size array.create aData =
     b .data .p b .size array.create bData =
     aData a .sign bData b .sign resData orInternal =:: resSize
-    resData resSize resCap a .sign 0 < b .sign 0 < | if -1i8 else 1i8 end int new return
+    resData resSize resCap a .sign 0 < b .sign 0 < | if -1:i8 else 1:i8 end int new return
   end
   ## consumes a, keeps b unchanged
   proc( int : #:consume a int : #:const b -> int ) =>: export: #:alloc:int xorWith
@@ -768,7 +773,7 @@ namespace: int
     end
     a .data .p resData =
     a .data .p a .size array.create aData =
-    aData amount resData a .sign 0i8 < rightShiftInternal =:: resSize
+    aData amount resData a .sign 0:i8 < rightShiftInternal =:: resSize
     resData resSize resCap a .sign int new return
   end
   proc( int : #:consume a i32 : amount -> int ) =>: export: #:alloc:int shiftLeftBy
@@ -1055,7 +1060,7 @@ namespace: int
     bool : willOverflow
     a .length 1 - =:: N
     0 target a .length 2 * 1 - [] =
-    0i64 =:: mut: s
+    0:i64 =:: mut: s
     while s N < do ## iterate through all pair (i,j) 0<=i,j<=N in order of descending i+j
       0 buffer =
       0 overflow =
@@ -1464,10 +1469,10 @@ namespace: int
     end
     ## TODO improve computations by using shifts to handle powers of two
     a .size 2 <= b .size 2 <= & if ## integer division
-      a .size 2 == if aData 1 [] i32.MASK & i64 cast 32 <<  else 0i64 end
+      a .size 2 == if aData 1 [] i32.MASK & i64 cast 32 <<  else 0:i64 end
       aData 0 [] i32.MASK & i64 cast | =:: aVal
       a free
-      b .size 2 == if bData 1 array.get i32.MASK & i64 cast 32 <<  else 0i64 end
+      b .size 2 == if bData 1 array.get i32.MASK & i64 cast 32 <<  else 0:i64 end
       bData 0 array.get i32.MASK & i64 cast | =:: bVal
       aVal bVal ..umod sign uwrap  aVal bVal ..udiv sign uwrap return
     end
@@ -1480,11 +1485,11 @@ namespace: int
       end
       R i32.MASK & sign uwrap a return
     end
-    computeDiv if resCap else 0i64 end i32 mem.alloc resData =
+    computeDiv if resCap else 0:i64 end i32 mem.alloc resData =
     aData aSize @ bData computeDiv resData simpleDivide =:: resSize
     ## return
       aData aSize a .cap sign int new
-      resData resSize resCap 1i8 int new
+      resData resSize resCap 1:i8 int new
     return
   end
   ## consumes a, keeps b unchanged
@@ -1532,7 +1537,7 @@ namespace: int
     a dataX int.copyData
     dataX a .size cap a .sign int new =:: mut: x
     1 dataP 0 [] =
-    dataP 1 cap 1i8 int new =:: mut: p
+    dataP 1 cap 1:i8 int new =:: mut: p
     ## XXX? calculate on arrays for higher efficiency
     n while ..dup 0 != do
       ..dup 1 & 1 == if

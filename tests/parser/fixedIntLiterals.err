@@ -1,2 +1,2 @@
-size of integer literal (256) exceeds maximum integer size (64) at fixedIntLiterals.concat:1:1
-integer value overflows given size: 10000000000000000i32 at fixedIntLiterals.concat:3:1
+integer size 256 outside allowed range (1 to 64) at fixedIntLiterals.concat:1:1
+integer value overflows given size: 10000000000000000:i32 at fixedIntLiterals.concat:3:1

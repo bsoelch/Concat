@@ -67,11 +67,11 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
       false return ## positive number fits in unsigned number of one smaller size
     end
   else
-    value 1i64 preferedSize << -_ < if
+    value 1:i64 preferedSize << -_ < if
       true return
     end
   end
-  value 1i64 unsigned if preferedSize else preferedSize 1 - end << >= return
+  value 1:i64 unsigned if preferedSize else preferedSize 1 - end << >= return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> Constant ) =>: newIntConstant
    ## TODO? sign extend unsigned constants of smaller types
@@ -88,7 +88,7 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
   value unsigned preferedSize pos state checkIntSize if
     "integer value overflows given size: " sb.wrap
       value unsigned if sb.appendU else sb.appendI end
-      unsigned if 'u' else 'i' end sb.appendC
+      unsigned if ":u" else ":i" end sb.appendS
       preferedSize sb.appendU
     pos state appendWarning2
   end
@@ -112,9 +112,17 @@ proc( Type i32 FilePosition -> Constant ) =>: newEnumConstant
   =:: pos
   ConstValue .enumLabel IdentifierInfo optional.empty pos Constant new return
 end
-proc( f64 FilePosition -> Constant ) =>: newFloatConst
-  =:: pos
-  types.primitive.FLOAT64 ..swap ConstValue .Float IdentifierInfo optional.empty pos Constant new return
+proc( f64 : value bool : isF32 FilePosition : pos -> Constant ) =>: newFloatConst
+  ## Constant
+    isF32 if
+      types.primitive.FLOAT32
+    else
+      types.primitive.FLOAT64
+    end
+    value ConstValue .Float
+    IdentifierInfo optional.empty
+    pos
+  Constant new return
 end
 
 proc( Constant : const -> Operation ) =>: constantToOp
@@ -782,77 +790,113 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
   "unexpected end of file" sb.wrap fileState [] .wordStart state appendError2
   Type array.empty LabelId arrayView optional.empty labelType true return
 end
+
+proc(
+  string : literal
+  bool : unsigned
+  i32 : size
+  FileState ptr mut : fileState
+  ParserState ptr mut : state
+-> bool ) =>: tryParseIntConstant
+  unsigned if
+    literal 0 number.tryParseUInt
+  else
+    literal 0 number.tryParseInt
+  end switch
+    NONE case
+      unsigned size fileState [] .wordStart state newIntConstant  state pushConst
+      true return
+    SIGN case ..drop
+      "unsigned value is marked as negative: " sb.wrap
+        literal sb.appendStr
+      fileState [] .wordStart state appendError2
+      true return
+    OVERFLOW case ..drop
+      "integer value outside allowed range: " sb.wrap
+        literal sb.appendStr
+      fileState [] .wordStart state appendError2
+      true return
+    INT INVALID_BASE case ..unreachable
+    INVALID_CHAR EMPTY case ..drop
+      false return
+  end
+end
 proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state -> bool ) =>: tryParseNumberLiteral
   str .length 0 == if
     false return
   end
+  str 0 string.charAt '#' == if
+    false return ## annotations
+  end
   false =:: mut: unsigned
   0 =:: mut: size
-  str
-    str .length 1 - while ..dup 0 > do
-      ..swap
-        ..dup ..over.2 string.charAt
-          ..dup 'u' == ..over 'U' == | if ..drop
-            true unsigned =
-            ..over string.splitIndex ..swap 10 number.tryParseInt ..dup .EMPTY ?? if
-              ..drop.2
-            else .NONE ?? ! _if
-              ..drop.3 false return
-            else ..dup types.MAX_INT_WIDTH > _if
-              "size of integer literal (" sb.wrap
-                ..swap sb.appendI
-                ") exceeds maximum integer size (" sb.appendS
-                types.MAX_INT_WIDTH sb.appendI
-                ")" sb.appendS
-              fileState [] .wordStart state appendWarning2
-              64 size =
-            else
-              i32 cast size =
-            end
-            ..swap break
-          else ..dup 'i' == ..over 'I' == | _if ..drop
-            ..over string.splitIndex ..swap 10 number.tryParseInt .NONE ?? ! if
-              ..drop.3 false return
-            else ..dup types.MAX_INT_WIDTH > _if
-              "size of integer literal (" sb.wrap
-                ..swap sb.appendI
-                ") exceeds maximum integer size (" sb.appendS
-                types.MAX_INT_WIDTH sb.appendI
-                ")" sb.appendS
-              fileState [] .wordStart state appendWarning2
-              64 size =
-            else
-              i32 cast size =
-            end
-            ..swap break
-          else char.isDigit ! _if ## integer literal has to end with digit or u,U,i or I followed by digits
-            ..swap break
-          end
-      ..swap 1 -
-    end ..drop
-  unsigned if
-    0 number.tryParseUInt
-  else
-    0 number.tryParseInt
-  end
-    ..dup .NONE ?? if ..drop
-      unsigned size fileState [] .wordStart state newIntConstant  state pushConst
-      true return
-    else ..dup .SIGN ?? _if ..drop.2
-      "unsigned value is marked as negative: " sb.wrap
-        str sb.appendStr
-      fileState [] .wordStart state appendError2
-      true return
-    else ..dup .OVERFLOW ?? _if ..drop.2
-      "integer value outside allowed range: " sb.wrap
-        str sb.appendStr
-      fileState [] .wordStart state appendError2
-      true return
+  str ':' string.lastIndexOf =:: i
+  i 0 > if i str .length 1 - < _if
+    str i string.splitIndex =:: literal =:: literalType
+    literal ':'  string.contains if
+      false return ## literal cannot contain :
     end
-  ..drop.2
-  str 0 number.tryParseFloat ## XXX? float32 constants
+    literalType 0 string.charAt switch
+      'u' 'i' case
+        literalType 0 string.charAt 'u' == unsigned =
+        literalType .length 1 > if
+          literalType 1 string.tail 10 number.tryParseInt .NONE ?? ! if
+            ..drop break
+          end =:: numberWidth
+          numberWidth 1 < numberWidth types.MAX_INT_WIDTH > | if
+            "integer size " sb.wrap
+              numberWidth sb.appendI
+              " outside allowed range (1 to " sb.appendS
+              types.MAX_INT_WIDTH sb.appendI
+              ")" sb.appendS
+            fileState [] .wordStart state appendWarning2
+          end
+          numberWidth
+            0 i64.max
+            types.MAX_INT_WIDTH i64.min
+          i32 cast size =
+        end
+        literal unsigned size fileState state tryParseIntConstant ! if
+          "invalid integer constant: `" sb.wrap
+            literal sb.appendStr
+            '`' sb.appendC
+          fileState [] .wordStart state appendWarning2
+        end
+        true return
+      'f' case
+        literalType "f64" string.wrap string.eq if
+          false
+        else literalType "f32" string.wrap string.eq _if
+          true
+        else
+          break
+        end =:: isF32
+        literal 0 number.tryParseFloat =:: errCode
+        errCode .NONE ?? if
+          isF32 fileState [] .wordStart newFloatConst state pushConst
+          true return
+        else errCode .INT ?? _if
+          isF32 fileState [] .wordStart newFloatConst state pushConst
+          true return
+        else ..drop
+          "invalid float constant: `" sb.wrap
+            literal sb.appendStr
+            '`' sb.appendC
+          fileState [] .wordStart state appendWarning2
+        end
+        true return
+    end
+    "unexpected number type: " sb.wrap
+      literalType sb.appendStr
+    fileState [] .wordStart state appendError2
+    true return
+  end
+  str unsigned size fileState state tryParseIntConstant if
+    true return
+  end
+  str 0 number.tryParseFloat
     ..dup .NONE ?? if ..drop
-      fileState [] .wordStart newFloatConst state pushConst
+      false fileState [] .wordStart newFloatConst state pushConst
       true return
     else ..dup .INT ?? _if ..drop.2
       "integer value outside allowed range: " sb.wrap
@@ -1473,7 +1517,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 state [] .currentFile
               list.at .data [] .localOps .length
             end
-          else -1i64 end =:: procStart
+          else -1:i64 end =:: procStart
           ## ProcedureInfo
             state [] .currentFile
             valType
@@ -2547,7 +2591,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
                 ..drop return
               else ..dup typeContext types.isFixedSize _if
                 typeContext types.getArraySize =:: dims
-                1i64 0 while ..dup dims .length < do
+                1:i64 0 while ..dup dims .length < do
                   ..swap
                     dims ..over.2 array.get .value *
                   ..swap 1 +
@@ -2752,6 +2796,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       blockType .TYPE_COMPOSITE ?? if
         state [] .openBlocks list.peek .data [] @ =:: currentBlock
         currentBlock [] .blockStart =:: blockStart
+        blockStart 0 <  blockStart state currentOps [] .length >= | if
+          "operations and blocks are out of sync, could not determine start of current block" sb.wrap
+          fileState [] .wordStart state appendError2
+          return
+        end
         state currentOps [] blockStart list.at .data =:: startOp
         startOp [] .val .block ?? if
           startOp [] .val .block .blockType .TYPE_COMPOSITE ?? _if

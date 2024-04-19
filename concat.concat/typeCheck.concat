@@ -968,7 +968,7 @@ proc( Operation ptr mut : op TemplateId : templateId i32 ptr mut optional : temp
   Type .undefined =:: mut: retType
   IdentifierInfo : mut: retId
   IdentifierInfo list : mut: retIds
-  resCount 0 == if 0i64 else
+  resCount 0 == if 0:i64 else
     resCount outType resCount 1 - typeContext compositeGetElement typeContext types.isSmallType if 1 - end
   end =:: outArgCount
   inType typeContext types.compositeElts =:: inTypes

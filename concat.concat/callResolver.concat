@@ -403,7 +403,7 @@ proc(
       src typeContext types.getArraySize =:: mut: srcSizes
       target typeContext types.getArraySize =:: mut: targetSizes
       ## treat 0D fixed arrays as 1D array of length 1
-      1i64 types.ArraySizeType .int types.ArraySize new =:: one
+      1:i64 types.ArraySizeType .int types.ArraySize new =:: one
       srcFixed if srcSizes .length 0 == _if
         one @ array.wrap srcSizes =
       end
@@ -984,7 +984,7 @@ proc(
     end
     i 1 +
   end ..drop
-  -1i64 =:: mut: implId
+  -1:i64 =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0 > if

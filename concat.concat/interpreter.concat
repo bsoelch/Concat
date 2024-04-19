@@ -44,7 +44,7 @@ proc(
 -> bool ) =>: checkStack
   context [] .openBlocks .length 0 > if
     context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
-  else 0i64 end =:: offset
+  else 0:i64 end =:: offset
   offset 0 >= assert "offset is non-negative"
   context [] .stack .length offset - count < if
     canIgnoreErrorMessage if

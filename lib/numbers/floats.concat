@@ -9,10 +9,10 @@ namespace: f32
   proc( i32 -> f32 ) =>: export: fromBits
     Converter cast .f return
   end
-  0x8000'0000u =:: SIGN_FLAG
-  0x7f80'0000u =:: EXP_MASK
-  0x007f'ffffu =:: MANTISSA_MASK
-  0x0080'0000u =:: HIDDENT_BIT
+  0x8000'0000:u =:: SIGN_FLAG
+  0x7f80'0000:u =:: EXP_MASK
+  0x007f'ffff:u =:: MANTISSA_MASK
+  0x0080'0000:u =:: HIDDENT_BIT
   23 =:: MANTISSA_BITS
   23 =:: EXP_SHIFT
   0xff =:: SHIFTED_EXP_MASK
@@ -84,8 +84,8 @@ namespace: f32
       ## smallest bit has magnitude > 1
       x return
     end
-    m -1i32 32 MANTISSA_BITS - e + >>> & =:: fract
-    1u32 MANTISSA_BITS 1 - e - << =:: half
+    m -1:i32 32 MANTISSA_BITS - e + >>> & =:: fract
+    1:u32 MANTISSA_BITS 1 - e - << =:: half
     i MANTISSA_MASK ~ &
       m MANTISSA_MASK MANTISSA_BITS e - << & |
     fromBits =:: trunc
@@ -129,10 +129,10 @@ namespace: f64
   proc( i64 -> f64 ) =>: export: fromBits
     Converter cast .d return
   end
-  0x8000'0000'0000'0000u =:: SIGN_FLAG
-  0x7ff0'0000'0000'0000u =:: EXP_MASK
-  0x000f'ffff'ffff'ffffu =:: MANTISSA_MASK
-  0x0010'0000'0000'0000u =:: HIDDENT_BIT
+  0x8000'0000'0000'0000:u =:: SIGN_FLAG
+  0x7ff0'0000'0000'0000:u =:: EXP_MASK
+  0x000f'ffff'ffff'ffff:u =:: MANTISSA_MASK
+  0x0010'0000'0000'0000:u =:: HIDDENT_BIT
   52 =:: MANTISSA_BITS
   52 =:: EXP_SHIFT
   0x7ff =:: SHIFTED_EXP_MASK
@@ -204,8 +204,8 @@ namespace: f64
       ## smallest bit has magnitude > 1
       x return
     end
-    m -1i64 64 MANTISSA_BITS - e + >>> & =:: fract
-    1u64 MANTISSA_BITS 1 - e - << =:: half
+    m -1:i64 64 MANTISSA_BITS - e + >>> & =:: fract
+    1:u64 MANTISSA_BITS 1 - e - << =:: half
     i MANTISSA_MASK ~ &
       m MANTISSA_MASK MANTISSA_BITS e - << & |
     fromBits =:: trunc

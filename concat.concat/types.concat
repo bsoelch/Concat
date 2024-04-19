@@ -444,8 +444,8 @@ namespace: types
     end
     t typeContext compositeElts  =:: elts
     ## TODO sort elements by alignment
-    1i64 =:: mut: alignment
-    0i64 =:: mut: size
+    1:i64 =:: mut: alignment
+    0:i64 =:: mut: size
     elts .length i64 list.create =:: mut: offsetBuffer ## XXX? store buffer in context
     0 while ..dup elts .length < do =:: i
       elts i compositeElts.get =:: elt
@@ -493,8 +493,8 @@ namespace: types
       false return ## size already known
     end
     t typeContext compositeElts =:: elts
-    1i64 =:: mut: alignment
-    0i64 =:: mut: size
+    1:i64 =:: mut: alignment
+    0:i64 =:: mut: size
     0 while ..dup elts .length < do =:: i
       elts i compositeElts.get =:: elt
       ## size and alignment
@@ -1380,7 +1380,7 @@ namespace: types
     else
       primitive.I32
     end =:: labelType
-    0i64 =:: mut: enumLabelOffset
+    0:i64 =:: mut: enumLabelOffset
     context [] .unionTypes =:: unions
     0 while ..dup unions .length < do
       unions ..over list.at .data =:: t
@@ -2099,9 +2099,9 @@ namespace: types
     end ..drop
     true return
   end
-  1i8 =:: NAMED_UNWRAP_SRC
-  0i8 =:: NAMED_UNWRAP_NONE
-  -1i8 =:: NAMED_UNWRAP_TARGET
+  1:i8 =:: NAMED_UNWRAP_SRC
+  0:i8 =:: NAMED_UNWRAP_NONE
+  -1:i8 =:: NAMED_UNWRAP_TARGET
   proc( Type : src Type : to TypeContext ptr : context -> bool ) =>: export: canAutoCast
     src to context NAMED_UNWRAP_NONE canAutoCast_internal
   end

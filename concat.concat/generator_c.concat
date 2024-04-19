@@ -475,7 +475,7 @@ proc( Type : t i64 : argCount Operation arrayView : operations i32 ptr mut : ind
   t typeContext types.getProcRet ..drop =:: retType
   retType typeContext types.isProcOut if
    retType typeContext types.compositeEltCount
-  else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
+  else retType typeContext types.isEmpty _if 0:i64 else 1:i64 end =:: retCount
   target "(" io.fputs ..drop
   0 while ..dup argCount < do
     ..dup 0 > if
@@ -1271,7 +1271,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       end
       retType typeContext types.isProcOut if
        retType typeContext types.compositeEltCount
-      else retType typeContext types.isEmpty _if 0i64 else 1i64 end =:: retCount
+      else retType typeContext types.isEmpty _if 0:i64 else 1:i64 end =:: retCount
       retCount 0 == if
         target "return;\n" io.fputs ..drop
         return

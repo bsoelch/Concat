@@ -29,8 +29,8 @@ struct(
   bool : mut: canDelete ## XXX flags are not independent -> combine to single modifier
 ) =:: OpInfo
 
--1i64 =:: OP_UNLINKED
--2i64 =:: OP_EMPTY
+-1:i64 =:: OP_UNLINKED
+-2:i64 =:: OP_EMPTY
 
 struct(
   branchTree.NodeId : node

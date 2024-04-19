@@ -308,7 +308,7 @@ namespace: branchTree
   -> ) =>: export: push
   #:end
     tree [] .branchHead -1 == if
-      1i64
+      1:i64
     else
       tree [] .nodes
         tree [] .branchHead
@@ -504,8 +504,8 @@ namespace: branchTree
       tree check
       0 MergeResult .success return ## nothing to merge
     end
-    -1i64 =:: mut: initDepth
-    -1i64 =:: mut: parentId
+    -1:i64 =:: mut: initDepth
+    -1:i64 =:: mut: parentId
     false =:: mut: needMerge
     0 while ..dup branchHeads .length < do
       branchHeads ..over array.get =:: nodeId
@@ -514,7 +514,7 @@ namespace: branchTree
         MergeResult .error return ## nodeId invalid
       end
       nodeId -1 == if
-        0i64
+        0:i64
       else
         tree [] .nodes nodeId list.at .data =:: nodeData
         nodeData [] .childCount

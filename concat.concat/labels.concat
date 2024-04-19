@@ -27,7 +27,7 @@ namespace: id
   128 LabelFlag =: export: FLAG_BUILT_IN
   256 LabelFlag =: export: FLAG_DUMMY
 
-  0x40000000u32 LabelFlag =: export: FLAG_EXPERIMENTAL
+  0x40000000:u32 LabelFlag =: export: FLAG_EXPERIMENTAL
 end
 
 struct( StringConstant : name NamespaceId list : mut: children NamespaceId : parent ) =:: Namespace
