@@ -821,31 +821,28 @@ namespace: sb
             ## treat pointer constants as integers of type iPtr
             types.primitive.I_PTR
           else
-            t
-          end typeContext types.numberSize =:: numSize
-          numSize types.primitive.I8
-              typeContext types.numberSize == if
+            t typeContext types.unwrapNamed
+            ..dup .arrayIndex ?? if ..drop
+              types.primitive.I_SIZE
+            end
+          end =:: numType
+          numType types.primitive.I8 types.typeEquals if
             value .int i8 cast sb.appendI
-          else numSize types.primitive.I16
-              typeContext types.numberSize == _if
+          else numType types.primitive.I16 types.typeEquals _if
             value .int i16 cast sb.appendI
-          else numSize types.primitive.I32
-              typeContext types.numberSize == _if
+          else numType types.primitive.I32 types.typeEquals _if
             value .int i32 cast sb.appendI
-          else numSize types.primitive.I64
-              typeContext types.numberSize == _if
+          else numType types.primitive.I64 types.typeEquals _if
             value .int sb.appendI
-          else numSize types.primitive.FLOAT32
-              typeContext types.numberSize == _if
+          else numType types.primitive.FLOAT32 types.typeEquals _if
             value .int f32 cast f32.bits sb.appendI
-          else numSize types.primitive.FLOAT64
-              typeContext types.numberSize == _if
+          else numType types.primitive.FLOAT64 types.typeEquals  _if
             value .int f64 cast f64.bits sb.appendI
           else
-            "unexpected size for integer type: " sb.wrap
-              numSize sb.appendI
-              " type: " sb.appendS
+            "unexpected type for integer: " sb.wrap
               t typeContext sb.appendType
+              " number-type: " sb.appendS
+              numType typeContext sb.appendType
             pos errors appendError
           end
           return
@@ -853,15 +850,17 @@ namespace: sb
         chr case value .chr sb.appendI return
         break
         Float case
-          t typeContext types.numberPrecision =:: numPrec
-          numPrec types.primitive.FLOAT32
-              typeContext types.numberPrecision == if
+          t typeContext types.unwrapNamed =:: numType
+          numType types.primitive.FLOAT32 types.typeEquals if
             value .Float f32 cast f32.bits sb.appendI
-          else numPrec types.primitive.FLOAT64
-              typeContext types.numberPrecision == _if
+          else numType types.primitive.FLOAT64 types.typeEquals _if
             value .Float f64.bits sb.appendI
           else
-            ..unreachable ## unknown number type
+            "unexpected type for float: " sb.wrap
+              t typeContext sb.appendType
+              " number-type: " sb.appendS
+              numType typeContext sb.appendType
+            pos errors appendError
           end
           return
         enumLabel case break
@@ -1970,8 +1969,8 @@ proc(
   src typeContext types.isInt ! if
     sb return
   end
-  src typeContext types.numberPrecision
-     types.primitive.I32 typeContext types.numberPrecision >= if
+  src typeContext types.numberSize
+     types.primitive.I32 typeContext types.numberSize >= if
     sb return
   end
   pos context popValue args @ 1 [] =
@@ -2208,8 +2207,8 @@ proc(
       " copy" sb.appendS
     ## case 1: integer extension/narrowing
     else src typeContext types.isInt target typeContext types.isInt & _if
-      src typeContext types.numberPrecision =:: srcPrec
-      target typeContext types.numberPrecision =:: targetPrec
+      src typeContext types.numberSize =:: srcPrec
+      target typeContext types.numberSize =:: targetPrec
       targetPrec srcPrec <= if
         " =" sb.appendS
         target StorageType .STACK pos context sb.appendTypeNameQBE

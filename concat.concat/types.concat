@@ -277,6 +277,7 @@ namespace: types
       undefined namedType autoType genericType templateType generatedType case false return
     end
   end
+  #+largest integer k s.t. 1+2^-k > 1+#
   proc( Type TypeContext ptr -> i32 ) =>: export: numberPrecision
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
@@ -287,18 +288,12 @@ namespace: types
       switch
         BOOL TYPE case
           -1 return
-        I8 case
-          7 return
-        I16 case
-          15 return
-        I32 case
-          31 return
-        I64 case
-          63 return
+        I8 I16 I32 I64 case
+          0 return
         FLOAT32 case
-          24 return ## IEEE binary-32
+          23 return ## IEEE binary-32
         FLOAT64 case
-          53 return ## IEEE binary-64
+          52 return ## IEEE binary-64
       end
   end
   64 =:: export: MAX_INT_WIDTH
@@ -328,22 +323,22 @@ namespace: types
       end
   end
   proc( i32 : size i32 : precission -> Type bool ) =>: findNumberType
-    size 7 <= precission 7 <= & if
+    size 7 <= precission 0 == & if
       primitive.I8 false return
     end
-    size 15 <= precission 15 <= & if
+    size 15 <= precission 0 == & if
       primitive.I16 false return
     end
-    size 31 <= precission 31 <= & if
+    size 31 <= precission 0 == & if
       primitive.I32 false return
     end
-    size 63 <= precission 63 <= & if
+    size 63 <= precission 0 == & if
       primitive.I64 false return
     end
-    size 127 <= precission 24 <= & if
+    size 127 <= precission 23 <= & if
       primitive.FLOAT32 false return
     end
-    size 1023 <= precission 53 <= & if
+    size 1023 <= precission 52 <= & if
       primitive.FLOAT64 false return
     end
     Type .undefined true return
@@ -352,7 +347,7 @@ namespace: types
     a context types.isInt ! b context types.isInt ! | if
       Type .undefined true return
     end
-    a context numberPrecision b context numberPrecision < if
+    a context numberSize b context numberSize < if
       b false return
     else
       a false return
@@ -362,12 +357,14 @@ namespace: types
     a context types.isNumber ! b context types.isNumber ! | if
       Type .undefined true return
     end
-    a context types.numberPrecision b context types.numberPrecision
-      ..over ..over < if ..swap end ..drop
-    =:: minPrecision
-    a context types.numberSize b context types.numberSize
-      ..over ..over < if ..swap end ..drop
-    =:: minSize
+    ## max
+      a context types.numberPrecision
+      b context types.numberPrecision
+    i32.max =:: minPrecision
+    ## max
+      a context types.numberSize
+      b context types.numberSize
+    i32.max  =:: minSize
     minSize minPrecision findNumberType return
   end
   ## ctypes
