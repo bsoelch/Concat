@@ -2992,6 +2992,7 @@ proc(
               BlockType .IF sb.appendBlockType
               "-blocks" sb.appendS
             op .pos errors appendError
+            return
           end
           currentBlock? .data =:: currentBlock
           currentBlock [] .If .blockId op .val .blockEnd .blockId =
@@ -3125,6 +3126,7 @@ proc(
               WHILE_BLOCK_INFO_NAME sb.appendS
               "-block" sb.appendS
             op .pos errors appendError
+            return
           end
           closed .While @ =:: whileBlock
           whileBlock [] .breakBranches =:: breakBranches
