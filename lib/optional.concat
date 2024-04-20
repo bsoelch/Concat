@@ -1,4 +1,4 @@
-#:if:exp
+#:ifnot:old
 ( type : V -> type ) =>: export: optional
   enum( empty V : data )
 end

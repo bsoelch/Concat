@@ -97,7 +97,7 @@ namespace: debug
     sb.free ..drop
   end
 
-#:if:exp
+#:ifnot:old
   overload: export: print
     printB
     printC

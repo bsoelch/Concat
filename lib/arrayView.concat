@@ -1,7 +1,7 @@
 import mem
 import optional
 
-#:if:exp
+#:ifnot:old
 ( type : T -> type ) =>: export: arrayView
   struct( T _ ptr : data i64 : length )
 end
@@ -13,7 +13,7 @@ struct( T _ ptr : data i64 : length ) =:: export: arrayView
 ## TODO writable array view
 
 namespace: array
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( -> T arrayView ) =>: export: empty
     0 T mem.alloc 0 T arrayView new return
@@ -42,7 +42,7 @@ namespace: array
   end
   #:end
 
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : index -> T ) =>: export: get
   #:else
@@ -54,7 +54,7 @@ namespace: array
     end
     elts .data index [] return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : index -> T ptr optional ) =>: export: at
   #:else
@@ -69,7 +69,7 @@ namespace: array
     end
     elts .data index + T ptr cast! optional.wrap return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts T : elt -> i64 ) =>: export: indexOf
   #:else
@@ -89,7 +89,7 @@ namespace: array
     ..drop
     -1 return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts T : elt -> i64 ) =>: export: lastIndexOf
   #:else
@@ -108,7 +108,7 @@ namespace: array
     end
     return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts T : elt -> bool ) =>: export: contains
   #:else
@@ -121,7 +121,7 @@ namespace: array
     elts elt indexOf -1 != return
   end
 
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc(
     T arrayView : a
@@ -161,7 +161,7 @@ namespace: array
   end
   ## find lowest index of array,
   ## if the array is not a sub-sequence contain the smallest possible start index
-  #:ifnot:exp
+  #:if:old
   #template type : T type : C #end
   proc(
     T arrayView : a
@@ -205,7 +205,7 @@ namespace: array
   end
 
   ## first n characters
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : n -> T arrayView ) =>: export: head
   #:else
@@ -224,7 +224,7 @@ namespace: array
     elts .data  n create return
   end
   ## everything excluding the first n characters
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : n -> T arrayView ) =>: export: tail
   #:else
@@ -243,7 +243,7 @@ namespace: array
     elts .data n +  elts .length n -  create return
   end
   ## equivalent to:  <from> tail <len> head
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : from i64 : len -> T arrayView ) =>: export: slice
   #:else
@@ -268,7 +268,7 @@ namespace: array
     end
     elts .data from +  len  create return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : index -> T arrayView T arrayView ) =>: export: cutIndex
   #:else
@@ -282,7 +282,7 @@ namespace: array
     elts index head
     return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts i64 : index -> T arrayView T arrayView ) =>: export: splitIndex
   #:else
@@ -299,7 +299,7 @@ namespace: array
     elts index head
     return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export: split
   #:else
@@ -313,7 +313,7 @@ namespace: array
       elts elt indexOf
     splitIndex return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T arrayView : elts T : elt -> T arrayView T arrayView ) =>: export: splitLast
   #:else

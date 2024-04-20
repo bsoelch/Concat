@@ -1,5 +1,5 @@
 import debug
-#:ifnot:exp
+#:if:old
 #template type : L type : R type : O #end
 proc( L : x proc( L R -> O ) ptr : f R : data -> O ) =>: test
 #:else

@@ -94,7 +94,7 @@ namespace: i64
   end
 end
 
-#:if:exp
+#:ifnot:old
 overload: export: //
   i32.floorDiv
   i64.floorDiv

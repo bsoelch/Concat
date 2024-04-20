@@ -241,7 +241,7 @@ namespace: f64
     a d b * - return
   end
 end
-#:if:exp
+#:ifnot:old
 overload: %
   f32.rem
   f64.rem

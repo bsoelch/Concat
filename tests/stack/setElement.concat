@@ -9,7 +9,7 @@ proc( -> ) =>: main
   A .x debug.print ## 1
   ## edit stack tuple
   A
-  #:if:exp
+  #:ifnot:old
   ## output expected result for comparability with test-case for old compiler
   ..drop 2 debug.print
   #:else
@@ -27,7 +27,7 @@ proc( -> ) =>: main
     4 A .x =
   debug.print      ## 3
   A .x debug.print ## 4
-  #:ifnot:exp
+  #:if:old
   ## multiple values on stack
   A
     A

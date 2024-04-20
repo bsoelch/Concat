@@ -1,7 +1,7 @@
 import list
 import debug
 
-#:ifnot:exp
+#:if:old
 #template type : T #end
 proc( T list : l -> ) =>: printList
 #:else

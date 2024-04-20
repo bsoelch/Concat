@@ -1,7 +1,7 @@
 import mem
 
 namespace: array
-  #:ifnot:exp
+  #:if:old
   #template type : T type : C #end
   proc(
     T _ ptr mut : src
@@ -70,7 +70,7 @@ namespace: array
       k 1 + k =
     end
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T type : C #end
   proc(
     T _ ptr mut : data
@@ -92,7 +92,7 @@ namespace: array
     data buffer 0 size cmp context 0 mergeSortRec
     buffer mem.free
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc(
     T _ ptr mut : data

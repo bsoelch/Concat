@@ -4,7 +4,7 @@ import mem
 i8 arrayView =:: export: string
 
 namespace: string
-  #:ifnot:exp
+  #:if:old
   "" 0 string new =:: EMPTY
   proc( -> string ) =>: export: empty
     EMPTY return

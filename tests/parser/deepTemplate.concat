@@ -1,4 +1,4 @@
-#:ifnot:exp
+#:if:old
 #template type : T #end
 proc( -> ) =>: infiniteExpand
 #:else

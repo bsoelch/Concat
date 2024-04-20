@@ -1,5 +1,5 @@
 import debug
-#:if:exp
+#:ifnot:old
 proc( i64 : c type : T -> i64 ) =>: test
 #:else
 #template type : T #end

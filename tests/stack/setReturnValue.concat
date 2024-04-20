@@ -8,7 +8,7 @@ end
 proc( -> ) =>: main
   37 42 aStruct new =:: X
   X @ get
-  #:ifnot:exp
+  #:if:old
     0 ..over .b  =
   .b debug.print
   -115 X @ get .b =

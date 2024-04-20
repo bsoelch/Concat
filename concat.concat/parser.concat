@@ -1254,14 +1254,14 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           id.SCOPE_FLAG_NO_CONST_FOLD true idContext id.setScopeFlag
         else "opt:fold" string.wrap ..over string.eq _if
           id.SCOPE_FLAG_NO_CONST_FOLD false idContext id.setScopeFlag
-        else "if:exp" string.wrap ..over string.eq _CCONCAT_ & _if ..drop
+        else "if:old" string.wrap ..over string.eq _CCONCAT_ ! & _if ..drop
           while
             fileState nextToken =:: next
             next .IDENTIFIER ?? ! if continue end
           next .IDENTIFIER "#:end" string.wrap string.eq !
           next .IDENTIFIER "#:else" string.wrap string.eq ! & do end
           return
-        else "ifnot:exp" string.wrap ..over string.eq _CCONCAT_ ! & _if ..drop
+        else "ifnot:old" string.wrap ..over string.eq _CCONCAT_ & _if ..drop
           while
             fileState nextToken =:: next
             next .IDENTIFIER ?? ! if continue end
@@ -1278,6 +1278,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return ## ignore unknown annotations
       end
       ':' string.split
+      _CCONCAT_ if
         "template" string.wrap ..over string.eq if ..drop
           state [] .currentProc optional.isEmpty ! if
             "#" sb.wrap
@@ -1293,8 +1294,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           return
         end
+      end
       64 sb.create
-        "unknown compiler command \"" sb.appendS
+        "unsupported compiler command \"" sb.appendS
         ..swap                         sb.appendStr
         ..over .length 0 > if
           ':'                         sb.appendC

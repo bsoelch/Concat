@@ -4,7 +4,7 @@ import numbers/limits
 import string
 
 namespace: number
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc( T : x i64 : p -> T ) =>: export: powI
   #:else

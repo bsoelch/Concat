@@ -121,7 +121,7 @@ namespace: io
   -> FILE IOError ) =>: export: fopenS
     fileName k mode fopen return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc(
     FILE : file
@@ -158,7 +158,7 @@ namespace: io
       end
     FILE_ERROR_NONE return
   end
-  #:ifnot:exp
+  #:if:old
   #template type : T #end
   proc(
     FILE : file
