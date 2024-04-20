@@ -716,6 +716,7 @@ namespace: sb
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendProcSignature
     context [] .program =:: prog
+    prog [] .errors @ =:: errors
     prog [] .idContext .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
     procType typeContext types.getCallConvention ..drop =:: callConvention
@@ -727,6 +728,17 @@ namespace: sb
       "(" sb.appendS
       0 while ..dup args .length < do =:: i
         args i types.compositeElts.get =:: arg
+        arg typeContext types.containsGeneric | if
+          arg typeContext types.isArray if
+            "generic arrays are not supported: " sb.wrap
+              arg typeContext sb.appendType
+            pos errors appendError
+          else arg typeContext types.isPointer ! _if
+            "unexpected generic argument: " sb.wrap
+              arg typeContext sb.appendType
+            pos errors appendError
+          end
+        end
         inType i typeContext types.compositeGetLabel =:: label
         arg typeContext types.isEmpty if
           ## skip empty arguments
@@ -1319,7 +1331,7 @@ proc(
     value switch
       constant case value .constant sb.appendI break
       stackId case "%s" sb.appendS value .stackId sb.appendI break
-      localId case "%l" sb.appendS value .stackId sb.appendI break
+      localId case "%l" sb.appendS value .localId sb.appendI break
       tmpId case "%t" sb.appendS value .tmpId sb.appendI break
     end
     "\njnz %t" sb.appendS
@@ -1390,7 +1402,7 @@ proc(
     size switch
       constant case size .constant sb.appendI break
       stackId case "%s" sb.appendS size .stackId sb.appendI break
-      localId case "%l" sb.appendS size .stackId sb.appendI break
+      localId case "%l" sb.appendS size .localId sb.appendI break
       tmpId case "%t" sb.appendS size .tmpId sb.appendI break
     end
     pos prog appendPosPrintfArgs
@@ -2977,7 +2989,7 @@ proc(
           sizeOffset 1 - sizeOffset =
           size .sizeType .int ?? ! if
             "unsupported size type for array element" sb.wrap
-              size sb.appendArraySize
+              size labelContext sb.appendArraySize
             op [] .pos errors appendError
           end
           offsetId prevId =

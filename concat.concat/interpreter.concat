@@ -1354,9 +1354,13 @@ proc(
         op [] .pos errors appendError
         true return
       end
-      ## XXX? cast value
+      oldValue =:: mut: newValue
+      ## XXX? cast value in more cases
+      oldValue .Float ?? if targetType typeContext types.isInt _if
+        oldValue .Float i64 cast ConstValue .int newValue =
+      end
       ## pushValue
-        oldValue
+        newValue
         targetType
         id.LABEL_ID_NONE
         op [] .pos

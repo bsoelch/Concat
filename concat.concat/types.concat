@@ -2362,7 +2362,11 @@ namespace: sb
         "..ctype.double" appendS return
     end
   end
-  proc( stringBuilder : sb types.ArraySize : size -> stringBuilder  ) =>: export: appendArraySize
+  proc(
+    stringBuilder : sb
+    types.ArraySize : size
+    LabelContext ptr : labelContext
+  -> stringBuilder  ) =>: export: appendArraySize
     sb
       size .sizeType switch
         int case
@@ -2370,9 +2374,17 @@ namespace: sb
           size .value sb.appendI
           break
         staticArg case
-          " staticArg(" sb.appendS
-          size .value sb.appendI
-          ")" sb.appendS
+          _EXPERIMENTAL_ if
+            ' ' sb.appendC
+            size .value LabelId cast labelContext appendLabelName
+            "[generic " sb.appendS
+            size .value sb.appendI
+            "]" sb.appendS
+          else
+            " staticArg(" sb.appendS
+            size .value sb.appendI
+            ")" sb.appendS
+          end
           break
         templateArg case
           " templateArg(" sb.appendS
@@ -2382,11 +2394,15 @@ namespace: sb
       end
     return
   end
-  proc( stringBuilder : sb types.ArraySize arrayView : sizes -> stringBuilder  ) =>: export: appendArraySizes
+  proc(
+    stringBuilder : sb
+    types.ArraySize arrayView : sizes
+    LabelContext ptr : labelContext
+  -> stringBuilder  ) =>: export: appendArraySizes
     sb
       0 while ..dup sizes .length < do
         ..swap
-          sizes ..over.2 array.get appendArraySize
+          sizes ..over.2 array.get labelContext appendArraySize
         ..swap 1 +
       end ..drop
     return
@@ -2411,7 +2427,7 @@ namespace: sb
         t .arrayIndex =:: sizeIndex
         sb
           "index(" appendS
-          context [] .arraySizes sizeIndex list.get appendArraySize
+          context [] .arraySizes sizeIndex list.get labelContext appendArraySize
           " )" appendS
         return
       pointer case
@@ -2421,7 +2437,7 @@ namespace: sb
             context
             depth
           appendTypeRecursive
-          t context types.getArraySize appendArraySizes
+          t context types.getArraySize labelContext appendArraySizes
           t context types.isFixedSize if
             " ptr" appendS
           else
@@ -2438,7 +2454,7 @@ namespace: sb
             context
             depth
           appendTypeRecursive
-          t context types.getArraySize appendArraySizes
+          t context types.getArraySize labelContext appendArraySizes
           " array" appendS
         return
       struct enum union case

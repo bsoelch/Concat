@@ -1,0 +1,7 @@
+import debug
+proc( -> ) =>: main
+  -1.8:f32 i32 cast debug.print
+  2.75 i64 cast debug.print
+  3.141592 i16 cast debug.print
+  1024.0:f32 i8 cast debug.print
+end

@@ -1,0 +1,6 @@
+enum( A B C ) =:: e
+
+proc( -> ) =>: main
+  e .A .A ?? assert "e .A .A ??"
+  e .A .D ?? ! assert "e does not have D"
+end

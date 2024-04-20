@@ -1,0 +1,14 @@
+import debug
+proc( i64 : auto: D i32 D array : varArray -> i32 ) =>: sum
+  0
+    0 while ..dup D < do =:: i
+      varArray i [] +
+      i 1 +
+    end ..drop
+  return
+end
+
+proc( -> ) =>: main
+  { 1 2 3 } sum debug.print
+  { 1 2 3 4 5 } sum debug.print
+end

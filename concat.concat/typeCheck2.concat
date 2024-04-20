@@ -2033,6 +2033,14 @@ proc(
       types.compositeFindLabel =:: elementIndex
       elementIndex 0 < if
         checkOnly if
+          containerType typeContext types.isEnum if
+            "enum-type " sb.wrap
+              containerType typeContext sb.appendType
+              " does not have a label \"" sb.appendS
+              labelId labelContext sb.appendLabelName
+              '"' sb.appendC
+            op .pos errors appendWarning
+          end
           ## label does not exists
           1 op .pos state discardValues ## remove container
           false ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
