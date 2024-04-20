@@ -141,10 +141,10 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     primitiveType case
       t .primitiveType switch
         TYPE case ValType .EMPTY return
-        BOOL I8 I16 I32 case ValType .I32 return
-        I64     case ValType .I64 return
-        FLOAT32 case ValType .FLOAT return
-        FLOAT64 case ValType .DOUBLE return
+        BOOL I8 I16 I32 S8 S16 S32 U8 U16 U32 case ValType .I32 return
+        I64 S64 U64 case ValType .I64 return
+        F32 case ValType .FLOAT return
+        F64 case ValType .DOUBLE return
       end
       break
     cType case
@@ -605,7 +605,7 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I8 case
+          I8 S8 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sb" sb.appendS return
@@ -613,7 +613,14 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I16 case
+          U8 case
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD ULOAD case sb "ub" sb.appendS return
+              STORE case sb "b" sb.appendS return
+            end
+            break
+          I16 S16 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sh" sb.appendS return
@@ -621,10 +628,17 @@ namespace: sb
               STORE case sb "h" sb.appendS return
             end
             break
-          I32     case sb "w" sb.appendS return
-          I64     case sb "l" sb.appendS return
-          FLOAT32 case sb "s" sb.appendS return
-          FLOAT64 case sb "d" sb.appendS return
+          U16 case
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD ULOAD case sb "sh" sb.appendS return
+              STORE case sb "h" sb.appendS return
+            end
+            break
+          I32 S32 U32 case sb "w" sb.appendS return
+          I64 S64 U64 case sb "l" sb.appendS return
+          F32 case sb "s" sb.appendS return
+          F64 case sb "d" sb.appendS return
         end
         break
       cType case
@@ -838,34 +852,31 @@ namespace: sb
               types.primitive.I_SIZE
             end
           end =:: numType
-          numType types.primitive.I8 types.typeEquals if
-            value .int i8 cast sb.appendI
-          else numType types.primitive.I16 types.typeEquals _if
-            value .int i16 cast sb.appendI
-          else numType types.primitive.I32 types.typeEquals _if
-            value .int i32 cast sb.appendI
-          else numType types.primitive.I64 types.typeEquals _if
-            value .int sb.appendI
-          else numType types.primitive.FLOAT32 types.typeEquals _if
-            value .int f32 cast f32.bits sb.appendI
-          else numType types.primitive.FLOAT64 types.typeEquals  _if
-            value .int f64 cast f64.bits sb.appendI
-          else
-            "unexpected type for integer: " sb.wrap
-              t typeContext sb.appendType
-              " number-type: " sb.appendS
-              numType typeContext sb.appendType
-            pos errors appendError
+          numType types.isPrimitive if
+            numType typeContext types.primitiveValue switch
+              I8  S8  U8  case value .int i8  cast sb.appendI return
+              I16 S16 U16 case value .int i16 cast sb.appendI return
+              I32 S32 U32 case value .int i32 cast sb.appendI return
+              I64 S64 U64 case value .int sb.appendI return
+              F32 case value .int f32 cast f32.bits sb.appendI return
+              F64 case value .int f64 cast f64.bits sb.appendI return
+              BOOL TYPE case break
+            end
           end
+          "unexpected type for integer: " sb.wrap
+            t typeContext sb.appendType
+            " number-type: " sb.appendS
+            numType typeContext sb.appendType
+          pos errors appendError
           return
         break
         chr case value .chr sb.appendI return
         break
         Float case
           t typeContext types.unwrapNamed =:: numType
-          numType types.primitive.FLOAT32 types.typeEquals if
+          numType types.primitive.F32 types.typeEquals if
             value .Float f32 cast f32.bits sb.appendI
-          else numType types.primitive.FLOAT64 types.typeEquals _if
+          else numType types.primitive.F64 types.typeEquals _if
             value .Float f64.bits sb.appendI
           else
             "unexpected type for float: " sb.wrap
@@ -1424,7 +1435,7 @@ proc(
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
-  labelType typeContext types.numberSize =:: numSize
+  labelType typeContext types.primitiveValue types.sizeOfPrimitive =:: numBytes
   context nextTmpId =:: labelPtr
   context nextTmpId =:: mut: label
   sb
@@ -1440,7 +1451,7 @@ proc(
     labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
     " %t" sb.appendS
     labelPtr sb.appendI
-    numSize types.primitive.I32 typeContext types.numberSize < if
+    numBytes 4 < if
       label =:: oldLabel
       context nextTmpId label =
       "\n%t" sb.appendS
@@ -1467,7 +1478,6 @@ proc(
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
-  labelType typeContext types.numberSize =:: numSize
   context nextTmpId =:: labelPtr
   sb
     "%t" sb.appendS
@@ -1858,14 +1868,16 @@ proc(
         pos
       context loadEnumLabel valType = tmpId =
     else switchType typeContext types.isInt _if
-      switchType typeContext types.numberSize =:: numSize
+      switchType
+        typeContext types.primitiveValue
+      types.sizeOfPrimitive =:: numBytes
       context nextTmpId tmpId =
       switchType context toValType valType =
       "%t" sb.appendS
       tmpId sb.appendI
       " =" sb.appendS
       valType sb.appendValTypeQBE
-      numSize types.primitive.I32 typeContext types.numberSize < if
+      numBytes 4 < if
         " ext" sb.appendS
         switchType
           StorageType .ULOAD
@@ -1981,8 +1993,7 @@ proc(
   src typeContext types.isInt ! if
     sb return
   end
-  src typeContext types.numberSize
-     types.primitive.I32 typeContext types.numberSize >= if
+  src typeContext types.primitiveValue types.sizeOfPrimitive 4 >= if
     sb return
   end
   pos context popValue args @ 1 [] =
@@ -2219,8 +2230,8 @@ proc(
       " copy" sb.appendS
     ## case 1: integer extension/narrowing
     else src typeContext types.isInt target typeContext types.isInt & _if
-      src typeContext types.numberSize =:: srcPrec
-      target typeContext types.numberSize =:: targetPrec
+      src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
+      target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
       targetPrec srcPrec <= if
         " =" sb.appendS
         target StorageType .STACK pos context sb.appendTypeNameQBE
@@ -2228,42 +2239,61 @@ proc(
       else
         " =" sb.appendS
         target StorageType .STACK pos context sb.appendTypeNameQBE
-        " exts" sb.appendS
+        " ext" sb.appendS
+        src typeContext types.isUnsignedInt if ## u -> i,s,u
+          'u' sb.appendC
+        else src typeContext types.isSignedInt ! _if ## i -> u
+            target typeContext types.isUnsignedInt _if
+          'u' sb.appendC
+        else ## s -> i,s,u / i -> i,s
+          's' sb.appendC
+        end
         fromVal switch
-          BOOL TYPE FLOAT32 FLOAT64 case break
-          I8  case "b" sb.appendS break
-          I16 case "h" sb.appendS break
-          I32 case "w" sb.appendS break
-          I64 case "l" sb.appendS break
+          I8  S8  U8 case "b" sb.appendS break
+          I16 S16 U16 case "h" sb.appendS break
+          I32 S32 U32 case "w" sb.appendS break
+          I64 S64 U64 case "l" sb.appendS break
+          BOOL TYPE F32 F64 case ..unreachable
         end
       end
     ## case 2: float -> float/int
-    else fromVal .FLOAT32 ?? fromVal .FLOAT64 ?? | _if
-      toVal switch
-        BOOL TYPE case break
-        FLOAT32 case
+    else fromVal .F32 ?? fromVal .F64 ?? | _if
+      toVal switch ## TODO handle overflow in float->int conversion
+        F32 case
           " =s truncd" sb.appendS break
-        FLOAT64 case
+        F64 case
           " =d exts" sb.appendS break
-        I8 I16 I32 I64 case
+        I8 I16 I32 I64 S8 S16 S32 S64 case
           " =" sb.appendS
           target StorageType .STACK pos context sb.appendTypeNameQBE
-          fromVal .FLOAT32 ?? if
+          fromVal .F32 ?? if
             " stosi" sb.appendS
           else
             " dtosi" sb.appendS
           end
           break
+        U8 U16 U32 U64 case
+          " =" sb.appendS
+          target StorageType .STACK pos context sb.appendTypeNameQBE
+          fromVal .F32 ?? if
+            " stoui" sb.appendS
+          else
+            " dtoui" sb.appendS
+          end
+          break
+        BOOL TYPE case ..unreachable
       end
     ## case 3: int -> float
-    else fromVal .I64 ?? _if
+    else ## TODO sign/zero extend 8&16 bit types before conversion
       " =" sb.appendS
       target StorageType .STACK pos context sb.appendTypeNameQBE
-      " sltof" sb.appendS
-    else
-      " =" sb.appendS
-      target StorageType .STACK pos context sb.appendTypeNameQBE
-      " swtof" sb.appendS
+      fromVal switch
+        I64 S16 case " sltof" sb.appendS break
+        U64 case " ultof" sb.appendS break
+        I8 I16 I32 S8 S32 S64 case " swtof" sb.appendS break
+        U8 U16 U32 case " uwtof" sb.appendS break
+        BOOL TYPE F32 F64 case ..unreachable
+      end
     end
     " %s" sb.appendS
     srcIndex sb.appendI
@@ -2349,12 +2379,13 @@ proc(
       " =" sb.appendS
       toSize 32 <= if 'w' else 'l' end sb.appendC
       fromSize toSize < if
+        ## TODO? use same sign rules as cast, now that zero extend is supported for normal cast
         fromVal switch
-          BOOL TYPE FLOAT32 FLOAT64 case break
-          I8  case " extub" sb.appendS break
-          I16 case " extuh" sb.appendS break
-          I32 case " extuw" sb.appendS break
-          I64 case " extul" sb.appendS break
+          BOOL TYPE F32 F64 case break
+          I8  S8  U8  case " extub" sb.appendS break
+          I16 S16 U16 case " extuh" sb.appendS break
+          I32 S32 U32 case " extuw" sb.appendS break
+          I64 S64 U64 case " extul" sb.appendS break
         end
       else
         ## copy to smaller type truncates

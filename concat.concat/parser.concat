@@ -74,7 +74,7 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
   value 1:i64 unsigned if preferedSize else preferedSize 1 - end << >= return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> Constant ) =>: newIntConstant
-   ## TODO? sign extend unsigned constants of smaller types
+   ## TODO use unsigned types for unsigned constants
   preferedSize 0 <= if
    unsigned if
      value 0 < value i32.UMAX ..u> | if types.primitive.I64 else types.primitive.I32 end
@@ -115,9 +115,9 @@ end
 proc( f64 : value bool : isF32 FilePosition : pos -> Constant ) =>: newFloatConst
   ## Constant
     isF32 if
-      types.primitive.FLOAT32
+      types.primitive.F32
     else
-      types.primitive.FLOAT64
+      types.primitive.F64
     end
     value ConstValue .Float
     IdentifierInfo optional.empty
@@ -837,7 +837,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
       false return ## literal cannot contain :
     end
     literalType 0 string.charAt switch
-      'u' 'i' case
+      'u' 'i' case ## XXX? :sN -> force signed
         literalType 0 string.charAt 'u' == unsigned =
         literalType .length 1 > if
           literalType 1 string.tail 10 number.tryParseInt .NONE ?? ! if
@@ -980,11 +980,35 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "i64" string.wrap string.eq _if
       types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
       true return
+    else ..dup "s8" string.wrap string.eq _if
+      types.primitive.S8 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "s16" string.wrap string.eq _if
+      types.primitive.S16 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "s32" string.wrap string.eq _if
+      types.primitive.S32 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "s64" string.wrap string.eq _if
+      types.primitive.S64 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "u8" string.wrap string.eq _if
+      types.primitive.U8 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "u16" string.wrap string.eq _if
+      types.primitive.U16 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "u32" string.wrap string.eq _if
+      types.primitive.U32 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "u64" string.wrap string.eq _if
+      types.primitive.U64 fileState [] .wordStart newTypeConst  state pushConst
+      true return
     else ..dup "f32" string.wrap string.eq _if
-      types.primitive.FLOAT32 fileState [] .wordStart newTypeConst  state pushConst
+      types.primitive.F32 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else ..dup "f64" string.wrap string.eq _if
-      types.primitive.FLOAT64 fileState [] .wordStart newTypeConst  state pushConst
+      types.primitive.F64 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else ..dup "type" string.wrap string.eq _if
       types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst

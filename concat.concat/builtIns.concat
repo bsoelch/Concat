@@ -435,11 +435,11 @@ proc(
     context operatorProcTypes
   =:: consume_i64 =:: i64_bool =:: i64i64_bool
       =:: i64_i64 =:: i64i64_i64
-  types.primitive.FLOAT32
+  types.primitive.F32
     context operatorProcTypes
   =:: consume_f32 =:: f32_bool =:: f32f32_bool
       =:: f32_f32 =:: f32f32_f32
-  types.primitive.FLOAT64
+  types.primitive.F64
     context operatorProcTypes
   =:: consume_f64 =:: f64_bool =:: f64f64_bool
       =:: f64_f64 =:: f64f64_f64

@@ -8,7 +8,15 @@ import "constants.concat"
 
 
 namespace: types
-  enum( BOOL I8 I16 I32 I64 FLOAT32 FLOAT64 TYPE ) =:: PrimitiveType
+  enum(
+    BOOL
+    I8 S8 U8
+    I16 S16 U16
+    I32 S32 U32
+    I64 S64 U64
+    F32 F64
+    TYPE
+  ) =:: PrimitiveType
   i32 =:: ArrayId
   i32 =:: export: TupleId ## exported for access from identifiers.concat
   i32 =:: export: UnionId
@@ -103,12 +111,20 @@ namespace: types
     switch
       BOOL case 1 return
       I8 case 2 return
-      I16 case 3 return
-      I32 case 4 return
-      I64 case 5 return
-      FLOAT32 case 6 return
-      FLOAT64 case 7 return
-      TYPE case 8 return
+      S8 case 3 return
+      U8 case 4 return
+      I16 case 5 return
+      S16 case 6 return
+      U16 case 7 return
+      I32 case 8 return
+      S32 case 9 return
+      U32 case 10 return
+      I64 case 11 return
+      S64 case 12 return
+      U64 case 13 return
+      F32 case 14 return
+      F64 case 15 return
+      TYPE case 16 return
     end
   end
   proc( CType -> i32 ) =>: cTypeId
@@ -181,17 +197,25 @@ type : export: TypeContext
 namespace: types
   ## primitive types
   namespace: primitive
-    PrimitiveType .BOOL      Type .primitiveType Type =: export: BOOL
-    PrimitiveType .I8        Type .primitiveType Type =: export: I8
-    PrimitiveType .I16       Type .primitiveType Type =: export: I16
-    PrimitiveType .I32       Type .primitiveType Type =: export: I32
-    PrimitiveType .I64       Type .primitiveType Type =: export: I64
-    PrimitiveType .FLOAT32   Type .primitiveType Type =: export: FLOAT32
-    PrimitiveType .FLOAT64   Type .primitiveType Type =: export: FLOAT64
-    PrimitiveType .TYPE      Type .primitiveType Type =: export: TYPE
+    PrimitiveType .BOOL Type .primitiveType Type =: export: BOOL
+    PrimitiveType .I8   Type .primitiveType Type =: export: I8
+    PrimitiveType .S8   Type .primitiveType Type =: export: S8
+    PrimitiveType .U8   Type .primitiveType Type =: export: U8
+    PrimitiveType .I16  Type .primitiveType Type =: export: I16
+    PrimitiveType .S16  Type .primitiveType Type =: export: S16
+    PrimitiveType .U16  Type .primitiveType Type =: export: U16
+    PrimitiveType .I32  Type .primitiveType Type =: export: I32
+    PrimitiveType .S32  Type .primitiveType Type =: export: S32
+    PrimitiveType .U32  Type .primitiveType Type =: export: U32
+    PrimitiveType .I64  Type .primitiveType Type =: export: I64
+    PrimitiveType .S64  Type .primitiveType Type =: export: S64
+    PrimitiveType .U64  Type .primitiveType Type =: export: U64
+    PrimitiveType .F32  Type .primitiveType Type =: export: F32
+    PrimitiveType .F64  Type .primitiveType Type =: export: F64
+    PrimitiveType .TYPE Type .primitiveType Type =: export: TYPE
     ## compiler internal type-aliases for special purpose types
-    PrimitiveType .I64       Type .primitiveType Type =: export: I_SIZE ## size-off memory-sections
-    PrimitiveType .I64       Type .primitiveType Type =: export: I_PTR  ## integer that can hold a pointer
+    PrimitiveType .I64  Type .primitiveType Type =: export: I_SIZE ## size-off memory-sections
+    PrimitiveType .I64  Type .primitiveType Type =: export: I_PTR  ## integer that can hold a pointer
   end
   proc( Type -> bool ) =>: export: isPrimitive
     .primitiveType ?? return
@@ -201,6 +225,7 @@ namespace: types
       ..dup .arrayIndex ?? if ..drop
         primitive.I_SIZE .primitiveType return
       end
+      ## XXX? unwrap c-types
     .primitiveType return
   end
   proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isEmpty ## TODO? should pointer to empty be empty
@@ -225,6 +250,30 @@ namespace: types
       end .primitiveType
       .BOOL ?? return
   end
+  proc( PrimitiveType -> bool ) =>: isIntPrimitive
+    switch
+      BOOL F32 F64 TYPE case
+        false return
+      I8 I16 I32 I64 S8 S16 S32 S64  U8 U16 U32 U64 case
+        true return
+    end
+  end
+  proc( PrimitiveType -> bool ) =>: isSignedIntPrimitive
+    switch
+      BOOL F32 F64 TYPE I8 I16 I32 I64 U8 U16 U32 U64 case
+        false return
+      S8 S16 S32 S64 case
+        true return
+    end
+  end
+  proc( PrimitiveType -> bool ) =>: isUnsignedIntPrimitive
+    switch
+      BOOL F32 F64 TYPE I8 I16 I32 I64 S8 S16 S32 S64 case
+        false return
+      U8 U16 U32 U64 case
+        true return
+    end
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isInt
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
@@ -232,13 +281,25 @@ namespace: types
       end
       ..dup isPrimitive ! if ..drop
         false return
-      end .primitiveType
-      switch
-        BOOL FLOAT32 FLOAT64 TYPE case
-          false return
-        I8 I16 I32 I64 case
-          true return
+      end .primitiveType isIntPrimitive
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isSignedInt
+    unwrapNamed
+      ..dup .arrayIndex ?? if ..drop
+        true return
       end
+      ..dup isPrimitive ! if ..drop
+        false return
+      end .primitiveType isSignedIntPrimitive
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isUnsignedInt
+    unwrapNamed
+      ..dup .arrayIndex ?? if ..drop
+        true return
+      end
+      ..dup isPrimitive ! if ..drop
+        false return
+      end .primitiveType isUnsignedIntPrimitive
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isFloat
     unwrapNamed
@@ -246,9 +307,9 @@ namespace: types
         false return
       end .primitiveType
       switch
-        BOOL I8 I16 I32 I64 TYPE case
+        BOOL I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 TYPE case
           false return
-        FLOAT32 FLOAT64 case
+        F32 F64 case
           true return
       end
   end
@@ -263,7 +324,7 @@ namespace: types
       switch
         BOOL TYPE case
           false return
-        I8 I16 I32 I64 FLOAT32 FLOAT64 case
+        I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 F32 F64 case
           true return
       end
   end
@@ -277,8 +338,9 @@ namespace: types
       undefined namedType autoType genericType templateType generatedType case false return
     end
   end
+  64 =:: export: MAX_INT_WIDTH
   #+largest integer k s.t. 1+2^-k > 1+#
-  proc( Type TypeContext ptr -> i32 ) =>: export: numberPrecision
+  proc( Type TypeContext ptr -> i32 ) =>: numberPrecision
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
         primitive.I_SIZE
@@ -288,17 +350,16 @@ namespace: types
       switch
         BOOL TYPE case
           -1 return
-        I8 I16 I32 I64 case
+        I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
           0 return
-        FLOAT32 case
+        F32 case
           23 return ## IEEE binary-32
-        FLOAT64 case
+        F64 case
           52 return ## IEEE binary-64
       end
   end
-  64 =:: export: MAX_INT_WIDTH
-  #+largest integer n s.t. 2^n-1 fits in the type+#
-  proc( Type TypeContext ptr -> i32 ) =>: export: numberSize
+  #+number of bits used to represent the magnitude of a type+#
+  proc( Type TypeContext ptr -> i32 ) =>: numberSize
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
         primitive.I_SIZE
@@ -308,38 +369,76 @@ namespace: types
       switch
         BOOL TYPE case
           -1 return
-        I8 case
-          7 return
-        I16 case
-          15 return
-        I32 case
-          31 return
-        I64 case
-          63 return
-        FLOAT32 case
-          127 return ## IEEE binary-32
-        FLOAT64 case
-          1023 return ## IEEE binary-64
+        I8 S8 U8 case
+          8 return
+        I16 S16 U16 case
+          16 return
+        I32 S32 U32 case
+          32 return
+        I64 S64 U64 case
+          64 return
+        F32 case
+          23 return ## IEEE binary-32
+        F64 case
+          52 return ## IEEE binary-64
       end
   end
   proc( i32 : size i32 : precission -> Type bool ) =>: findNumberType
-    size 7 <= precission 0 == & if
+    size 8 <= precission 0 == & if
       primitive.I8 false return
     end
-    size 15 <= precission 0 == & if
+    size 16 <= precission 0 == & if
       primitive.I16 false return
     end
-    size 31 <= precission 0 == & if
+    size 32 <= precission 0 == & if
       primitive.I32 false return
     end
-    size 63 <= precission 0 == & if
+    size 64 <= precission 0 == & if
       primitive.I64 false return
     end
-    size 127 <= precission 23 <= & if
-      primitive.FLOAT32 false return
+    size 23 <= precission 23 <= & if
+      primitive.F32 false return
     end
-    size 1023 <= precission 52 <= & if
-      primitive.FLOAT64 false return
+    size 52 <= precission 52 <= & if
+      primitive.F64 false return
+    end
+    Type .undefined true return
+  end
+  proc( PrimitiveType : a PrimitiveType : b -> Type bool ) =>: commonIntPrimitive
+    a isSignedIntPrimitive =:: aSigned
+    a isUnsignedIntPrimitive =:: aUnsigned
+    a sizeOfPrimitive =:: aBytes
+    b isSignedIntPrimitive =:: bSigned
+    b isUnsignedIntPrimitive =:: bUnsigned
+    b sizeOfPrimitive =:: bBytes
+    aSigned aUnsigned | if bSigned bUnsigned | _if
+      ## both explicitly signed
+      aSigned bSigned == if ## same sign -> pick larger size
+        aBytes bBytes i64.max switch
+          1 case aSigned if primitive.S8  else primitive.U8  end false return
+          2 case aSigned if primitive.S16 else primitive.U16 end false return
+          4 case aSigned if primitive.S32 else primitive.U32 end false return
+          8 case aSigned if primitive.S64 else primitive.U64 end false return
+        end
+        Type .undefined true return
+      end
+      ## different signs -> pick smallest signed type that can represent both
+      ## i64.max
+        aSigned if aBytes else aBytes 2 * end
+        bSigned if bBytes else bBytes 2 * end
+      i64.max switch
+        1 case primitive.S8  false return
+        2 case primitive.S16 false return
+        4 case primitive.S32 false return
+        8 case primitive.S64 false return
+      end
+      Type .undefined true return
+    end
+    aBytes bBytes i64.max switch
+      1 case primitive.I8  false return
+      2 case primitive.I16 false return
+      4 case primitive.I32 false return
+      8 case primitive.I64 false return
     end
     Type .undefined true return
   end
@@ -347,15 +446,22 @@ namespace: types
     a context types.isInt ! b context types.isInt ! | if
       Type .undefined true return
     end
-    a context numberSize b context numberSize < if
-      b false return
-    else
-      a false return
-    end
+    ## commonIntPrimitive
+      a context primitiveValue
+      b context primitiveValue
+    commonIntPrimitive return
   end
   proc( Type : a Type : b TypeContext ptr : context -> Type bool ) =>: export: commonNumberType
     a context types.isNumber ! b context types.isNumber ! | if
       Type .undefined true return
+    end
+    a context primitiveValue =:: aPrimitive
+    b context primitiveValue =:: bPrimitive
+    aPrimitive isIntPrimitive if bPrimitive isIntPrimitive _if
+      ## commonIntPrimitive
+        aPrimitive
+        bPrimitive
+      commonIntPrimitive return
     end
     ## max
       a context types.numberPrecision
@@ -366,6 +472,34 @@ namespace: types
       b context types.numberSize
     i32.max  =:: minSize
     minSize minPrecision findNumberType return
+  end
+  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastNumber
+    src context types.isNumber ! target context types.isNumber ! | if
+      true return
+    end
+    src context primitiveValue =:: srcPrimitive
+    target context primitiveValue =:: targetPrimitive
+    srcPrimitive isIntPrimitive if targetPrimitive isIntPrimitive _if
+      srcPrimitive isSignedIntPrimitive =:: srcSigned
+      srcPrimitive isUnsignedIntPrimitive =:: srcUnsigned
+      srcPrimitive sizeOfPrimitive =:: srcBytes
+      targetPrimitive isSignedIntPrimitive =:: targetSigned
+      targetPrimitive isUnsignedIntPrimitive =:: targetUnsigned
+      targetPrimitive sizeOfPrimitive =:: targetBytes
+      srcSigned if targetUnsigned _if
+        false return ## conversion signed -> unsigned by not be lossless
+      end
+      srcUnsigned if targetSigned _if
+        ## unsigned -> signed : may need size increase
+        srcBytes targetBytes < return
+      end
+      ## same or undetermined signs
+      srcBytes targetBytes <= return
+    end
+    src context types.numberPrecision target context types.numberPrecision > if
+      false return
+    end
+    src context types.numberSize target context types.numberSize <= return
   end
   ## ctypes
   namespace: ctype
@@ -390,12 +524,17 @@ namespace: types
     switch
       VOID case Type .empty return
       BOOL case primitive.BOOL return
-      CHAR S_CHAR U_CHAR case primitive.I8 return
-      SHORT U_SHORT case primitive.I16 return
-      INT U_INT case primitive.I32 return
-      LONG U_LONG LONGLONG U_LONGLONG SIZE case primitive.I64 return
-      FLOAT case primitive.FLOAT32 return
-      DOUBLE case primitive.FLOAT64 return
+      CHAR case primitive.I8 return
+      S_CHAR case primitive.S8 return
+      U_CHAR case primitive.U8 return
+      SHORT case primitive.S16 return
+      U_SHORT case primitive.U16 return
+      INT case primitive.S32 return
+      U_INT case primitive.U32 return
+      LONG LONGLONG case primitive.S64 return
+      U_LONG U_LONGLONG SIZE case primitive.U64 return
+      FLOAT case primitive.F32 return
+      DOUBLE case primitive.F64 return
     end
   end
 
@@ -409,13 +548,13 @@ namespace: types
     switch
       TYPE case
         0 return
-      BOOL I8 case
+      BOOL I8 S8 U8 case
         1 return
-      I16 case
+      I16 S16 U16 case
         2 return
-      I32 FLOAT32 case
+      I32 S32 U32 F32 case
         4 return
-      I64 FLOAT64 case
+      I64 S64 U64 F64 case
         8 return
     end
   end
@@ -2126,9 +2265,9 @@ namespace: types
     src .cType ?? if
       src .cType cTypeAsType target context namedDirection canAutoCast_internal return
     end
+    ## TODO update casting for numbers
     src context types.isNumber target context types.isNumber & if
-      src context types.numberPrecision target context types.numberPrecision <=
-      src context types.numberSize target context types.numberSize <= & return
+      src target context types.canAutoCastNumber return
     end
     src context types.isPointer target context types.isPointer & if
     src context types.isMutable target context types.isMutable ! | src context types.getBaseType target context types.getBaseType types.typeEquals & if
@@ -2308,22 +2447,22 @@ end
 namespace: sb
   proc( stringBuilder types.PrimitiveType -> stringBuilder ) =>: appendPrimitiveType
     switch
-      BOOL case
-        "bool" appendS return
-      I8 case
-        "i8" appendS return
-      I16 case
-        "i16" appendS return
-      I32 case
-        "i32" appendS return
-      I64 case
-        "i64" appendS return
-      FLOAT32 case
-        "f32" appendS return
-      FLOAT64 case
-        "f64" appendS return
-      TYPE case
-        "type" appendS return
+      BOOL case "bool" appendS return
+      I8   case "i8"   appendS return
+      S8   case "s8"   appendS return
+      U8   case "u8"   appendS return
+      I16  case "i16"  appendS return
+      S16  case "s16"  appendS return
+      U16  case "u16"  appendS return
+      I32  case "i32"  appendS return
+      S32  case "s32"  appendS return
+      U32  case "u32"  appendS return
+      I64  case "i64"  appendS return
+      S64  case "s64"  appendS return
+      U64  case "u64"  appendS return
+      F32  case "f32"  appendS return
+      F64  case "f64"  appendS return
+      TYPE case "type" appendS return
     end
   end
   proc( stringBuilder types.CType -> stringBuilder ) =>: appendCType
