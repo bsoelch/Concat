@@ -1,48 +1,59 @@
 #!/bin/sh
 baseCompiler="./concat"
-tmpCompiler="./concatXX"
+tmpCompiler="./concatX"
 compilerSrc="./concat.concat/compiler.concat"
-codeCTarget="./build/concat2.c"
+codeQBETarget="./build/concat2.ssa"
+codeAsmTarget="./build/concat2.s"
 codeTarget="./build/concat2"
-codeCTarget2="./build/concat3.c"
+codeQBETarget2="./build/concat3.ssa"
+codeAsmTarget2="./build/concat3.s"
 codeTarget2="./build/concat3"
-codeCTarget3="./build/concat3_2.c"
+codeQBETarget3="./build/concat4.ssa"
 libPath="./lib/"
 externCFiles=( "./extern.c" )
-cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
+cArgs=( "-g" "-std=c17" "-lm" )
 concatArgs=( -W -q -l $libPath )
-bootstrapC="./bootstrap/latest.c"
+bootstrapQBE="./bootstrap/latest.ssa"
 
 # clear console
+ulimit -S -s 16384 ## increase stack size
 clear
 echo "-----------------------------------------" && {
   echo "recompile compiler"
   echo "-----------------------------------------"
-  $baseCompiler "$compilerSrc" -o "$codeCTarget" ${concatArgs[@]}
+  $baseCompiler "$compilerSrc" -o "$codeQBETarget" ${concatArgs[@]}
 } && {
-  echo "compile generated C-code"
+  echo "compile generated QBE-code"
   echo "-----------------------------------------"
-  gcc ${cArgs[@]} -Wno-unused $codeCTarget ${externCFiles[@]} -o $codeTarget
+  qbe "$codeQBETarget" -o "$codeAsmTarget"
+} && {
+  echo "compile generated Assembly-code"
+  echo "-----------------------------------------"
+  gcc ${cArgs[@]} "$codeAsmTarget" ${externCFiles[@]} -o "$codeTarget"
 } && {
   if [[ "$@" == *"-X"* ]]; then
     mv $codeTarget $tmpCompiler
     exit 0
   fi
 } && {
-  echo "compile compiler with compiler"
+  echo "compiler compiler with itself"
   echo "-----------------------------------------"
-  $codeTarget "$compilerSrc" -o "$codeCTarget2" ${concatArgs[@]}
+  $codeTarget "$compilerSrc" -o "$codeQBETarget2" ${concatArgs[@]}
 } && {
-  echo "compile generated C-code"
+  echo "compile generated QBE-code"
   echo "-----------------------------------------"
-  gcc ${cArgs[@]} -Wno-unused $codeCTarget2 ${externCFiles[@]} -o $codeTarget2
+  qbe "$codeQBETarget2" -o "$codeAsmTarget2"
+} && {
+  echo "compile generated Assembly-code"
+  echo "-----------------------------------------"
+  gcc ${cArgs[@]} "$codeAsmTarget2" ${externCFiles[@]} -o "$codeTarget2"
 } && {
   echo "check if compiler output is stable under recompilation"
   echo "-----------------------------------------"
-  $codeTarget2 "$compilerSrc" -o "$codeCTarget3" ${concatArgs[@]}
+  $codeTarget2 "$compilerSrc" -o "$codeQBETarget3" ${concatArgs[@]}
 } && {
-  diff $codeCTarget2 $codeCTarget3 && {
+  diff $codeQBETarget2 $codeQBETarget3 && {
     mv $codeTarget2 $baseCompiler
-    mv $codeCTarget2 $bootstrapC
+    mv $codeQBETarget3 $bootstrapQBE
   }
 }

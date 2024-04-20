@@ -626,7 +626,7 @@ namespace: id
     map.put ..drop ## previous entry is always empty
     ## IdentifierData
       valType
-      flags FLAG_MUTABLE & ? _EXPERIMENTAL_ ! & if ConstValue .none else constVal end
+      flags FLAG_MUTABLE & ? _CCONCAT_ & if ConstValue .none else constVal end
       declaredAt
       label
       idType .LOCAL_VAR ?? idType .ARGUMENT ?? | idType .TMP_VAR ?? | if

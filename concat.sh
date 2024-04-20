@@ -1,24 +1,35 @@
 #!/bin/sh
-baseCompiler="./concat"
 codeSrc="./code.concat"
-codeCTarget="./code.c"
+codeQBETarget="./code.ssa"
+codeAsmTarget="./code.s"
 codeTarget="./code"
-cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
+libPath="./lib/"
+cArgs=( "-g" "-std=c17" "-lm" )
+concatArgs=( -W -q -l $libPath )
 
 if [[ "$@" == *"-R"* ]]; then
   "./selfCompiler.sh" -X || exit 1
-  baseCompiler="./concatXX"
+  baseCompiler="./concatX"
+  concatArgs=( -X -l $libPath )
+elif [[ "$@" == *"-X"* ]]; then
+  baseCompiler="./concatX"
+  concatArgs=( -X -l $libPath )
 else
   baseCompiler="./concat"
+  concatArgs=( -W -l $libPath )
 fi
 {
-  echo "compile program"
+  echo "compile code.concat"
   echo "-----------------------------------------"
-  $baseCompiler "$codeSrc" -o "$codeCTarget" -W -p "./parser.out" -t "./typeCheck.out"
+  $baseCompiler "$codeSrc" -o "$codeQBETarget" -p "./parser.out" -t "./typeCheck.out" ${concatArgs[@]}
 } && {
-  echo "compile generated C-code"
+  echo "compile generated QBE-code"
   echo "-----------------------------------------"
-  gcc ${cArgs[@]} -Wno-unused $codeCTarget "./extern.c" -o $codeTarget
+  qbe $codeQBETarget -o $codeAsmTarget
+} && {
+  echo "compile generated Assembly-code"
+  echo "-----------------------------------------"
+  gcc ${cArgs[@]} $codeAsmTarget "extern.c" -o $codeTarget
 } && {
   echo "run compiled code"
   echo "-----------------------------------------"

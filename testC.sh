@@ -1,13 +1,13 @@
-cArgs=( "-g" "-lm" )
+cArgs=( "-g" "-Wall" "-Wextra" "-Wshadow" "-Wold-style-definition" "-Wcast-qual" "-Werror" "-pedantic" "-lm" )
 
 nTested=0
 nPassed=0
 nFailed=0
 
 if [[ "$@" == *"-X"* ]]; then ## if X in arguments
-    concatPath="../../concatXX"
-else
     concatPath="../../concatX"
+else
+    concatPath="../../concatC"
 fi
 
 clear
@@ -31,9 +31,8 @@ for f in *.concat; do ## go through all concat files in the test directory
     mapfile -t args < "${f%.*}.args"
   fi
   
-  $concatPath -X "$f" -o "${f%.*}.ssa" -l "../../lib/" -q > ".${f%.*}.out" 2> ".${f%.*}.err" &&
-  qbe "${f%.*}.ssa" -o "${f%.*}.s" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
-  cc ${cArgs[@]} "${f%.*}.s" "../../extern.c" -o "${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
+  $concatPath -C "$f" -o "${f%.*}.c" -l "../../lib/" -q > ".${f%.*}.out" 2> ".${f%.*}.err" &&
+  gcc ${cArgs[@]} -Wno-unused "${f%.*}.c" "../../extern.c" -o "${f%.*}" >> ".${f%.*}.out" 2>> ".${f%.*}.err" &&
   ( [ -f "${f%.*}.in" ] && cat "${f%.*}.in" || echo "" ) | # use ${f%.*}.in as input if it exists otherwise use empty stdin
     "./${f%.*}" "${args[@]}" >> ".${f%.*}.out" 2>> ".${f%.*}.err"
   nTested=$((nTested+1))
@@ -67,8 +66,7 @@ for f in *.concat; do ## go through all concat files in the test directory
   ## remove temporary files, if they exist
   [ -f ".${f%.*}.out" ] && rm ".${f%.*}.out"
   [ -f ".${f%.*}.err" ] && rm ".${f%.*}.err"
-  [ -f "${f%.*}.ssa" ] && rm "${f%.*}.ssa"
-  [ -f "${f%.*}.s" ] && rm "${f%.*}.s"
+  [ -f "${f%.*}.c" ] && rm "${f%.*}.c"
   [ -f "${f%.*}" ] && rm "${f%.*}"
 done
 cd ..

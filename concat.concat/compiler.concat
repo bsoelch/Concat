@@ -1,8 +1,8 @@
 import sys
 
 import "parser.concat"
+import "typeCheckC.concat"
 import "typeCheck.concat"
-import "typeCheck2.concat"
 import "generator_c.concat"
 import "generator_qbe.concat"
 
@@ -17,6 +17,7 @@ false =:: mut: wError
 ## enable constant-folding
 true =:: mut: export: _FOLD_CONSTANTS_
 false =:: mut: export: _EXPERIMENTAL_
+false =:: mut: export: _CCONCAT_
 
 proc( string : path -> ) =>: printUsage
   "usage: " sb.wrap
@@ -83,6 +84,9 @@ proc( -> ) =>: parseArgs
           break
         'X' case ## experimental features
           true _EXPERIMENTAL_ =
+          break
+        'C' case ## C-concat
+          true _CCONCAT_ =
           break
         'q' case
           break
@@ -219,26 +223,8 @@ proc( -> ) =>: main ## TODO check return value of fopen
     parsedOps sb.free ..drop
   end
   prog .errors @ checkErrors
-  _EXPERIMENTAL_ if
-    ## new type-checker
-    prog @ typeCheckProgram2
-    compilerTokensFile optional.hasData if ## XXX separate file for each compilation step
-      1024 sb.create
-        prog @ sb.appendProgram
-      =:: parsedOps
-      compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
-        ..dup parsedOps io.fputSb ..drop
-      io.fclose ..drop
-      parsedOps sb.free ..drop
-    end
-    prog .errors @ checkErrors
-    ## QBE backend
-    outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-      ..dup prog @ compileToQBE
-    io.fclose ..drop
-    prog .errors @ checkErrors
-  else
-    ## C backend
+  _CCONCAT_ if
+    ## old C backend
     prog @ typeCheckProgram
     compilerTokensFile optional.hasData if
       1024 sb.create
@@ -254,5 +240,23 @@ proc( -> ) =>: main ## TODO check return value of fopen
       ..dup prog @ compileToC
     io.fclose ..drop
     prog .errors @ checkErrors
+    return
   end
+  ## new type-checker
+  prog @ typeCheckProgram2
+  compilerTokensFile optional.hasData if
+    1024 sb.create
+      prog @ sb.appendProgram
+    =:: parsedOps
+    compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+      ..dup parsedOps io.fputSb ..drop
+    io.fclose ..drop
+    parsedOps sb.free ..drop
+  end
+  prog .errors @ checkErrors
+  ## QBE backend
+  outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
+    ..dup prog @ compileToQBE
+  io.fclose ..drop
+  prog .errors @ checkErrors
 end

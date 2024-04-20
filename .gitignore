@@ -9,6 +9,7 @@ build/*
 *.out
 syntaxHighlighting/update.sh
 concat
+concatC
 concatX
 concatXX
 code
