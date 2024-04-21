@@ -1,0 +1,10 @@
+import debug
+
+proc( -> ) =>: main
+  10'000'000'000'000'000'000:u64 u64 =: x
+  x i64 cast f32 cast debug.print
+  x f32 cast debug.print
+  10'000'000'000'000'000'000:u64 f64 cast debug.print
+  1e19 i64 cast debug.print
+  1e19 u64 cast debug.print
+end

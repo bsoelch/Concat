@@ -1357,7 +1357,16 @@ proc(
       oldValue =:: mut: newValue
       ## XXX? cast value in more cases
       oldValue .Float ?? if targetType typeContext types.isInt _if
-        oldValue .Float i64 cast ConstValue .int newValue =
+        targetType typeContext types.isUnsignedInt if
+          oldValue .Float u64 cast ConstValue .int newValue =
+        else
+          oldValue .Float i64 cast ConstValue .int newValue =
+        end
+      end
+      oldValue .int ?? if
+          valInfo .valueType typeContext types.isUnsignedInt _if
+          targetType typeContext types.isFloat _if
+        oldValue .int u64 cast f64 cast ConstValue .Float newValue =
       end
       ## pushValue
         newValue
