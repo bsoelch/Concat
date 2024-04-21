@@ -74,17 +74,21 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
   value 1:i64 unsigned if preferedSize else preferedSize 1 - end << >= return
 end
 proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> Constant ) =>: newIntConstant
-   ## TODO use unsigned types for unsigned constants
   preferedSize 0 <= if
    unsigned if
-     value 0 < value i32.UMAX ..u> | if types.primitive.I64 else types.primitive.I32 end
+     value 0 < value i32.UMAX ..u> | if types.primitive.U64 else types.primitive.U32 end
    else
      value i32.MIN < value i32.MAX > | if types.primitive.I64 else types.primitive.I32 end
    end
-  else preferedSize 8 <= _if types.primitive.I8
-  else preferedSize 16 <= _if types.primitive.I16
-  else preferedSize 32 <= _if types.primitive.I32
-  else types.primitive.I64 end
+  else preferedSize 8 <= _if
+    unsigned if types.primitive.U8 else types.primitive.I8 end
+  else preferedSize 16 <= _if
+    unsigned if types.primitive.U16 else types.primitive.I16 end
+  else preferedSize 32 <= _if
+    unsigned if types.primitive.U32 else types.primitive.I32 end
+  else
+    unsigned if types.primitive.U64 else types.primitive.I64 end
+  end
   value unsigned preferedSize pos state checkIntSize if
     "integer value overflows given size: " sb.wrap
       value unsigned if sb.appendU else sb.appendI end
