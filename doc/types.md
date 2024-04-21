@@ -11,10 +11,9 @@
 * `f64` 64-bit IEEE binary float
 * `type` a type ( can only exist at compile time )
 
-The integer types can be interpreted as signed (represented as two's complement) or unsigned numbers.
+The integer types can be interpreted as signed (represented as two's complement) or unsigned numbers, for each integer type `iN` there are corresponding explicitly signed types `sN` and `uN` for signed/unsigned value. These explicitly signed types are mainly intended to specify whether to sign or zero extend a smaller value, all built-in operators treat `sN` and `uN` the same way as `iN`.
 Addition, subtraction an multiplication of integers are calculated modulo `2^N` where `N` is the number of bits.
-For operations that have different effects for signed and unsigned numbers there is both a signed and unsigned version.
-
+For operations that have different effects for signed and unsigned numbers there is both a signed and unsigned version, the signedness of the integer type has no effect on the operation
 
 ## pointers & arrays
 
@@ -167,7 +166,7 @@ explicit casts allowed between any two named types with same source type
 
 <genrated-type> := <procedure: static, returns type> <!--TODO? make grammar explicit-->
 
-<primitive-type> := `bool` | `i8` | `i16` | `i32` | `i64` | `f32` | `f64` | `type`
+<primitive-type> := `bool` | (`i`|`s`|`u`)(`8`|`16`|`32`|`64`) | `f32` | `f64` | `type`
 <C-type> := `..ctype.` (
                 `void`  |
                 `bool`  |

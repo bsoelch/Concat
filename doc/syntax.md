@@ -66,7 +66,7 @@ Examples:
 edge cases:
 ```
 0x0x0       ## 0 as float
-62b1:u32     ## 1 as 32-bit integer ( u32 parsed as size )
+62b1:u32     ## 1 as 32-bit integer
 62b1u32     ## 453780 as 32-bit integer
 ```
 
