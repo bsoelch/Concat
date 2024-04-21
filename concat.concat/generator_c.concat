@@ -1529,7 +1529,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToC
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] =:: labelId
     labelId idContext id.getIdentifier
-      if ..unreachable end ## XXX replace with assertion
+      ! assert "labelId is identifier"
     =:: idData
     idData [] .valueType =:: mut: mType
     idData [] .labelId labelContext id.labelFlags =:: labelFlags

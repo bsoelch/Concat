@@ -674,9 +674,7 @@ proc(
     return ## no operation to update
   end
   state [] .opInfo opIndex list.at .data =:: opInfo
-  argCount i32.MAX > if
-    ..unreachable ## XXX handle case of too many arguments
-  end
+  argCount i32.MAX < assert "argument count fits in int"
   argCount i32 cast opInfo [] .childCount =
   argOffset opInfo [] .childOffset =
   true =:: mut: canMoveChildren
@@ -1770,7 +1768,7 @@ proc(
         calledType
       end =:: procType
       procType typeContext types.getProcIn
-        if ..unreachable end ## XXX replace with assertion
+        ! assert "procType has arguments"
       =:: inTypes
       ## requireTypes
         inTypes typeContext types.compositeEltArray
@@ -2374,7 +2372,7 @@ proc(
         false
         false
       typeContext types.newArrayType
-        if ..unreachable end ## XXX use assertion
+        ! assert "successful array creation"
       outTypes 0 [] =
       types.primitive.I_SIZE outTypes 1 [] =
       outTypes array.wrap op .pos state pushTypes

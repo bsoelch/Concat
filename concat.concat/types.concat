@@ -1294,7 +1294,7 @@ namespace: types
   end
   namespace: compositeElts
     proc( CompositeElts : elts i64 : index -> Type ) =>: export: get
-      index 0 < index elts .length >= | if ..unreachable end ## TODO error handling
+      index 0 >= index elts .length < & assert "index in range" ## TODO error handling
       elts .onlyEmpty if
         Type .empty return
       end

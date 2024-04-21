@@ -164,7 +164,7 @@ proc(
         idContext [] .arraySizeBuffer
           sizeOffset list.setLength
         idContext [] .arraySizeBuffer =
-        if ..unreachable end ## XXX handle error
+        ! assert "can create array"
       return
     struct union procIn procOut enum case
       typeBuffer [] .length =:: typeOffset
@@ -202,7 +202,7 @@ proc(
         ## reset buffer
         typeBuffer [] typeOffset list.setLength typeBuffer [] =
         labelBuffer [] labelOffset list.setLength labelBuffer [] =
-        if ..unreachable end ## XXX check error
+        ! assert "can create composite"
       return
     procedure case
       src typeContext types.getProcIn ..drop =:: inTypes
@@ -217,7 +217,7 @@ proc(
         src typeContext types.getCallConvention ..drop
         typeContext
       types.newProcedure
-        if ..unreachable end ## XXX check error
+        ! assert "can create procedure"
       return
     generatedType case
       src typeContext types.getGeneratorArgs =:: args
@@ -1039,9 +1039,7 @@ proc(
     false =:: mut: isMatch
     0 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
-      impl [] .staticArgs .length constArgs .length != if
-        ..unreachable ## XXX? replace with assertion
-      end
+      impl [] .staticArgs .length constArgs .length == assert "correct number of static arguments"
       true isMatch =
       0 while ..dup constArgs .length < do =:: j
         ## constEquals
@@ -1142,7 +1140,7 @@ proc(
     procInfo [] .procType typeContext types.getCallConvention ..drop
     typeContext
   types.newProcedure
-    if ..unreachable end ## XXX check error
+    ! assert "can create procedure"
   =:: calledType
   ## ProcedureCallInfo
     candidate [] .procId

@@ -498,7 +498,7 @@ namespace: id
     end
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
-      ..dup .length 0 != if ..unreachable end ## TODO error message
+      ..dup .length 0 == assert "name buffer empty"
       label context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: name
@@ -774,7 +774,7 @@ namespace: id
       context [] .typeContext  .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
     context [] .nameBuffer
-       ..dup .length 0 != if ..unreachable end ## TODO error message
+       ..dup .length 0 == assert "name buffer empty"
        name context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: nameAsStr
@@ -785,7 +785,7 @@ namespace: id
   end
   proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =>: export: importNamespace
     context [] .nameBuffer
-       ..dup .length 0 != if ..unreachable end ## TODO error message
+       ..dup .length 0 == assert "name buffer empty"
        name context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer list.asArray =:: nameAsStr

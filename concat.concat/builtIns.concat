@@ -102,7 +102,7 @@ proc(
     mutable
     typeContext
   types.newArrayType
-    if ..unreachable end ## XXX use assertion ?
+    ! assert "can wrap pointer"
   return
 end
 proc(
@@ -185,35 +185,35 @@ proc(
     ptrMutAddOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX use assertion ?
+    ! assert "can create procedure"
   =:: ptrMutAdd
   ## newProcedure
     ptrAddIn
     ptrAddOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX use assertion ?
+    ! assert "can create procedure"
   =:: ptrAdd
   ## newProcedure
     ptrCmpIn
     ptrDiffOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX use assertion ?
+    ! assert "can create procedure"
   =:: ptrDiff
   ## newProcedure
     ptrCmpIn
     ptrCmpOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX use assertion ?
+    ! assert "can create procedure"
   =:: ptrCmp
   ## newProcedure
     ptrConsumeIn
     ptrConsumeOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX use assertion ?
+    ! assert "can create procedure"
   =:: ptrConsume
   ptrMutAdd ptrAdd ptrDiff ptrCmp ptrConsume
 end
@@ -356,7 +356,7 @@ proc(
     procOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX replace with assertion
+    ! assert "can create procedure"
   =:: consumeVal
   ## newProcArgs
     args @ 1 array.create
@@ -368,7 +368,7 @@ proc(
     procOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX replace with assertion
+    ! assert "can create procedure"
   =:: unOpProc
   ## newProcArgs
     args @ array.wrap
@@ -380,7 +380,7 @@ proc(
     procOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX replace with assertion
+    ! assert "can create procedure"
   =:: binOpProc
   types.primitive.BOOL args @ 0 [] =
   ## newProcArgs
@@ -393,7 +393,7 @@ proc(
     procOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX replace with assertion
+    ! assert "can create procedure"
   =:: cmpOpProc
   ## newProcArgs
     args @ 1 [] @ 1 array.create
@@ -405,7 +405,7 @@ proc(
     procOut
     CallingConvention.DEFAULT
   typeContext types.newProcedure
-    if ..unreachable end ## XXX replace with assertion
+    ! assert "can create procedure"
   =:: toBoolOpProc
   binOpProc unOpProc cmpOpProc toBoolOpProc consumeVal return
 end

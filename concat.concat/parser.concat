@@ -1412,7 +1412,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end =:: idData label =
       idType .TYPE ?? if
         isInit if
-          fileState state popTypeConstant if ..unreachable end ## XXX use assertion?
+          fileState state popTypeConstant ! assert "pop type"
           label
           idContext [] .currentTemplate
           typeContext types.initializeNamedType if
@@ -1459,7 +1459,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ..drop ConstValue .none
         end
         label idContext id.getIdentifier
-        if ..unreachable end
+        ! assert "label is identifier"
       [] .constValue =
       state [] .currentProc optional.isEmpty if
         idData .idType .PROCEDURE ?? ! isInit ! | if
@@ -1712,7 +1712,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ..drop ConstValue .none
         end
         labelId idContext id.getIdentifier
-        if ..unreachable end
+        ! assert "label is identifier"
       [] .constValue =
       state [] .currentProc optional.isEmpty if
         progContext [] .templateOps .length idContext  id.endOpenTemplate
@@ -3139,7 +3139,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           0 while ..dup matches .length < do =:: i
             matches i list.at .data =:: match
             match [] .labelId idContext id.getIdentifier
-              if ..unreachable end ## XXX replace with assertion
+              ! assert "matched identifier exists"
             =:: idData
             " - " sb.appendS
             idData id.asIdInfo labelContext sb.appendIdInfo

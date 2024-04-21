@@ -1184,7 +1184,7 @@ namespace: sb
             ',' sb.appendC
           end
           true hasElt =
-          offset eltOffset > if ..unreachable end ## XXX use assertion
+          offset eltOffset <= assert "offset <= eltOffset"
           offset eltOffset < if
             "b " sb.appendS
             eltOffset offset - sb.appendI
@@ -2637,10 +2637,10 @@ proc(
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   calledType typeContext types.getProcOutArgs
-    if ..unreachable end
+    ! assert "calledType has arguments"
   =:: outArgs
   calledType typeContext types.getProcRet
-    if ..unreachable end
+    ! assert "calledType has return value"
   =:: retType
   sb =:: mut: newSb
   ## allocate output arguments
@@ -2681,10 +2681,10 @@ proc(
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   calledType typeContext types.getProcOutArgs
-    if ..unreachable end
+    ! assert "calledType has out-arguments"
   =:: outArgs
   calledType typeContext types.getProcRet
-    if ..unreachable end
+    ! assert "calledType has return value"
   =:: retType
   sb
     " (" sb.appendS
@@ -3394,7 +3394,7 @@ proc(
         calledType =
       end
       calledType typeContext types.getProcIn
-        if ..unreachable end ## XXX replace with assert
+        ! assert "calledType has arguments"
       =:: inTypes
       inTypes typeContext types.compositeEltCount =:: argCount
       argCount TypedValId list.create =:: mut: argIndices
@@ -4238,9 +4238,8 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
   contextData @ =:: context
   id.LABEL_ID_NONE =:: mut: mainId
   MAIN_NAME string.wrap 0 idContext id.findIdentifierByName ! if =:: data
-    data [] .labelId labelContext id.getLabelNamespace 0 != if
-      ..unreachable ## assert that namespace is always top level
-    end
+    data [] .labelId labelContext id.getLabelNamespace 0 ==
+        assert "main is in global namespace"
     data [] .labelId mainId =
   else ..drop end
   1024 sb.create
@@ -4270,7 +4269,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] =:: labelId
     labelId idContext id.getIdentifier
-      if ..unreachable end ## XXX replace with assertion
+      ! assert "labelId is identifier"
     =:: idData
     idData [] .idType .TYPE ??
     idData [] .idType .PROCEDURE ?? |

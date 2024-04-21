@@ -59,9 +59,7 @@ namespace: branchTree
     root =:: mut: nodeId
     while nodeId 0 >= do
       tree [] .nodes nodeId list.at .data =:: node
-      node [] .childCount 0 <= if
-        ..unreachable
-      end
+      node [] .childCount 0 > assert "positive child count"
       node [] .parent nodeId =
     end
   end
