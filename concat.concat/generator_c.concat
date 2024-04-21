@@ -610,7 +610,13 @@ proc( Type : constType ConstValue : const bool : isGlobal io.FILE : target Progr
       isGlobal target prog constEnd
       return
     int case
-      constType
+      constType typeContext types.isPointer if
+        types.primitive.I_PTR
+      else constType typeContext types.unwrapNamed .cType ?? _if
+        constType typeContext types.unwrapNamed .cType types.cTypeAsType
+      else
+        constType
+      end
         typeContext types.primitiveValue
       types.sizeOfPrimitive =:: numBytes
       const .int =:: mut: constVal
