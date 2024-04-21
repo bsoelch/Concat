@@ -4150,7 +4150,7 @@ proc(
         op [] .val .Assert context sb.appendStringPtrConstQBE
         op [] .pos prog appendPosPrintfArgs
         ")\ncall $exit(w 1)\n" sb.appendS
-        successBranch sb.appendBranchId
+        successBranch context startBranch
         '\n' sb.appendC
       return
     unreachable case
