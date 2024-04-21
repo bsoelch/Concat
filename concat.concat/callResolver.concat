@@ -32,7 +32,8 @@ struct(
   i32 : mut: nRenames
   i32 : mut: nCasts
   i32 : mut: nGenerics
-  i32 : mut: nDynamicPtrs
+  i32 : mut: arraySizeArguments
+  i32 : mut: signatureWeigth
   bool : mut: argsMatch
   bool : mut: needsParam
 ) =:: CallSignatureInfo
@@ -587,9 +588,41 @@ proc(
   newVal return
 end
 
-## TODO prioritize matches with "smaller" number types
-## s8,u8 < i8 < s16,u16 < i16 < s32,u32 < i32 < s64,u64 < i64 < f32 < f64
-## TODO? prioritize conversion int -> int over conversion int -> float
+#+ computes the types are given weight of the given type,
+in case of a draw signatures with lower total weight will be prioritized.
+This is mainly to prioritize functions acting on smaller number types over larger number types.
++#
+proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
+  t .empty ?? if
+    0 return
+  end
+  t typeContext types.unwrapNamed types.isPrimitive if
+    t typeContext types.primitiveValue switch
+      BOOL    case 0 return
+      S8  U8  case 1 return
+      I8      case 2 return
+      S16 U16 case 3 return
+      I16     case 4 return
+      S32 U32 case 5 return
+      I32     case 6 return
+      S64 U64 case 7 return
+      I64     case 8 return
+      F32     case 9 return
+      F64     case 10 return
+      TYPE    case 11 return
+    end
+  end
+  t typeContext types.isPointer if
+    t typeContext types.isFixedSize if
+      12 return
+    end
+    16 return
+  end
+  t typeContext types.isArray if
+    20 return
+  end
+  32 return
+end
 proc(
   CallSignatureInfo : a
   CallSignatureInfo : b
@@ -627,9 +660,13 @@ proc(
     ## prefer less generics
     a .nGenerics b .nGenerics < if -1  else 1 end return
   end
-  a .nDynamicPtrs b .nDynamicPtrs != if
-    ## prefer less dynamic pointers
-    a .nDynamicPtrs b .nDynamicPtrs < if -1  else 1 end return
+  a .arraySizeArguments b .arraySizeArguments != if
+    ## prefer more array dimensions in parameters
+    a .arraySizeArguments b .arraySizeArguments > if -1  else 1 end return
+  end
+  a .signatureWeigth b .signatureWeigth != if
+    ## prefer lower weight
+    a .signatureWeigth b .signatureWeigth < if -1  else 1 end return
   end
   a .nRenames b .nRenames != if
     ## prefer less renames
@@ -701,6 +738,7 @@ proc(
         procId
         argCount ParameterInfo list.create
         labelHash @ labelEq @ argCount GenericArg map.create
+        0
         0
         0
         0
@@ -827,11 +865,14 @@ proc(
           map.put ..drop
         end
       end
-      paramType typeContext types.isPointer if
-          paramType typeContext types.isFixedSize ! _if
-        ## XXX? count number of lost pointer dimensions instead of general check for dynamic size
-        current [] .nDynamicPtrs 1 + current [] .nDynamicPtrs =
+      paramType typeContext types.isPointer paramType typeContext types.isArray | if
+        current [] .arraySizeArguments
+          paramType typeContext types.getArrayDims + i32 cast
+        current [] .arraySizeArguments =
       end
+      current [] .signatureWeigth
+        paramType typeContext computeTypeWeigth +
+      current [] .signatureWeigth =
       ## try matching type
       paramType typeContext types.containsGeneric | if
         false =:: mut: needCast
