@@ -1563,6 +1563,15 @@ proc(
       end
       op .val .Constant op .dataType op .pos state pushConstant
       return
+    getName atName case
+      "could not find identifier: " sb.wrap
+        op .val .getName ?? if
+          op .val .getName
+        else
+          op .val .atName
+        end labelContext sb.appendLabelName
+      op .pos errors appendError
+      return
     getId case
       op .val .getId =:: idInfo
       idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: mutable
@@ -3341,11 +3350,11 @@ proc(
         op .pos
       state pushConstant
       return
-    getName procPtr builtIn
+    procPtr builtIn
     newEnum call getArgLen
     unaryOperator
     checkEnumLabel setEnumLabel
-    checkArrayIndex setName atName
+    checkArrayIndex setName
     hasName hasElement case
       break
     Print case

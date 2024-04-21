@@ -1,10 +1,10 @@
 import debug
-"A" =:: s1
-"A string" =:: s2
+"A" =:: str1
+"A string" =:: str2
 
 proc( -> ) =>: main
-  ..?parser.find.s2
-  s3 ..length debug.print
+  ..?parser.find.str2
+  str3 ..length debug.print
   specialString ..length debug.print
   0 while ..dup specialString ..length < do
     specialString ..over [] debug.print
@@ -17,7 +17,7 @@ proc( -> ) =>: main
   end ..drop
 end
 
-"string" =:: s3
+"string" =:: str3
 "strings can contain other strings as substring" =:: s4
 "\"'\\\u2203\U0001F4BB\t² \x00##" =:: specialString
 "Multi

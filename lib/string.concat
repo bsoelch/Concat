@@ -24,13 +24,13 @@ namespace: string
     str k create return
   end
 
-  proc( string : s1 string : s2 -> i32 ) =>: export: compare
-    s1 .length s2 .length < if s1 .length else s2 .length end =:: l
-    s1 .data s2 .data l mem.compare
+  proc( string : a string : b -> i32 ) =>: export: compare
+    a .length b .length < if a .length else b .length end =:: l
+    a .data b .data l mem.compare
     ..dup 0 != if
       return
     else ..drop end
-    s1 .length s2 .length -
+    a .length b .length -
     ..dup 0 > if ..drop
        1 return
     else 0 < _if
