@@ -2585,7 +2585,7 @@ proc(
   constType =:: mut: srcType
   value .genericArg ?? if
     context [] .currentProc
-      typeContext types.getProcIn ! assert "procedure has argumentes"
+      typeContext types.getProcIn ! assert "procedure has arguments"
     =:: progIn
     progIn
       value .genericArg
