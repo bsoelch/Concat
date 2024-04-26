@@ -21,12 +21,12 @@ struct(
   Type : procType
   ConstantArray : staticArgs
   FilePosition : firstUse
-  i64 : codeStart
+  i64 : mut: codeStart
   i64 : mut: codeLength
 ) =:: export: ProcImplementation
 struct(
   ProcImplementation list : mut: implementations
-  i64 : codeStart
+  i64 : mut: codeStart
   i64 : mut: codeLength
 ) =:: export: CodeProcData
 struct(

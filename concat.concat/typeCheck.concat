@@ -3566,6 +3566,17 @@ proc(
     state typeCheckOp
     i 1 +
   end ..drop
+  ## remember new code position
+  implId -1 == if
+    procFile [] .localOps .length codeImpl [] .codeStart =
+    state [] .compiledOps .length codeImpl [] .codeLength =
+  else
+    codeImpl [] .implementations
+      implId list.at .data
+    =:: currentImpl
+    procFile [] .localOps .length currentImpl [] .codeStart =
+    state [] .compiledOps .length currentImpl [] .codeLength =
+  end
   procFile [] .localOps
     state [] .compiledOps list.appendAll
   procFile [] .localOps =
