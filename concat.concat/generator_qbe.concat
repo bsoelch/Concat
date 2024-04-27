@@ -148,15 +148,9 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       end
       break
     cType case
-      t .cType switch ## TODO consider sizes of c-types
-        VOID case ValType .EMPTY return
-        BOOL CHAR S_CHAR U_CHAR SHORT U_SHORT INT U_INT case ValType .I32 return
-        LONG U_LONG case ValType .I64 return
-        LONGLONG U_LONGLONG SIZE case ValType .I64 return
-        FLOAT case ValType .FLOAT return
-        DOUBLE case ValType .DOUBLE return
-      end
-      break
+      t .cType
+        types.cTypeAsType
+      context toValType return
     arrayIndex case
       ValType .I64 return
     pointer case
