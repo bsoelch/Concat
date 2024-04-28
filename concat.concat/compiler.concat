@@ -5,6 +5,7 @@ import "typeCheckC.concat"
 import "typeCheck.concat"
 import "generator_c.concat"
 import "generator_qbe.concat"
+import "generator_asmStack.concat"
 
 stringBuilder : mut: srcFile
 stringBuilder : mut: outFile
@@ -18,6 +19,7 @@ false =:: mut: wError
 true =:: mut: export: _FOLD_CONSTANTS_
 false =:: mut: export: _EXPERIMENTAL_
 false =:: mut: export: _CCONCAT_
+false =:: mut: export: _ASM_
 
 proc( string : path -> ) =>: printUsage
   "usage: " sb.wrap
@@ -87,6 +89,9 @@ proc( -> ) =>: parseArgs
           break
         'C' case ## C-concat
           true _CCONCAT_ =
+          break
+        'A' case ## (experimental) asm backend
+          true _ASM_ =
           break
         'q' case
           break
@@ -165,7 +170,14 @@ proc( -> ) =>: parseArgs
       outFile =
     end
     outFile
-      ".c\x00" sb.appendS
+      ## XXX? make back-end an enum instead of multiple independent flags
+      _CCONCAT_ if
+        ".c\x00" sb.appendS
+      else _ASM_ _if
+        ".s\x00" sb.appendS
+      else
+        ".ssa\x00" sb.appendS
+      end
     outFile =
   end
   iSlash 0 < if "./" string.wrap else srcFile .data iSlash 1 + string.create end basePath =
@@ -256,7 +268,11 @@ proc( -> ) =>: main ## TODO check return value of fopen
   prog .errors @ checkErrors
   ## QBE backend
   outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-    ..dup prog @ compileToQBE
+    _ASM_ if
+      ..dup prog @ compileToAsm
+    else
+      ..dup prog @ compileToQBE
+    end
   io.fclose ..drop
   prog .errors @ checkErrors
 end

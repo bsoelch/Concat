@@ -1,0 +1,1323 @@
+#+
+compile concat to x86 assembly
+generates stack based code, prioritizing simplicity over efficiency
++#
+import stringIO
+import numbers/floats
+
+import "program.concat"
+import "measure.concat"
+import "branchTree.concat"
+
+enum(
+  MOV MOVZX MOVSX PUSH POP
+  NEG ADD SUB MUL IMUL DIV IDIV
+  NOT AND OR XOR
+  SHL SHR SAR
+  CMP TEST
+  SETL SETLE SETGE SETG
+  SETB SETBE SETAE SETA
+  SETE SETNE
+  JNZ JZ JMP
+) =:: X64_OP
+enum(
+  NONE
+  AL
+  EAX EBX ECX EDX
+  RAX RBX RCX RDX
+  RDI RSI RSP RBP
+  R8  R9  R10 R11
+  R12 R13 R14 R15
+  XMM0  XMM1  XMM2  XMM3
+  XMM4  XMM5  XMM6  XMM7
+  XMM8  XMM9  XMM10 XMM11
+  XMM12 XMM13 XMM14 XMM15
+) =:: X64_REGISTER
+
+enum(
+  ERROR
+  ELSE END_IF
+  WHILE CONTINUE_WHILE END_WHILE
+  CASE DEFAULT END_SWITCH
+) =:: BranchType
+struct(
+  BranchType : branchType
+  i32 : blockId
+  i32 : subId
+) =:: LocalLabel
+enum(
+  EMPTY
+  X64_REGISTER : register
+  i64 : value
+  LocalLabel : localLabel
+  ## XXX globallabel
+) =:: AsmOperand
+struct(
+  AsmOperand : arg1
+  AsmOperand : arg2
+  AsmOperand : arg3
+  X64_OP : operation
+) =:: AssemblyOperation
+enum(
+  AssemblyOperation : op
+  LocalLabel : localLabel
+  ## XXX globallabel
+  ## XXX debug info
+) =:: AssemblyAtom
+namespace: asm
+  proc( X64_OP : opName AsmOperand : op1 -> AssemblyOperation ) =>: createUnary
+    ## AssemblyOperation
+      op1
+      AsmOperand .EMPTY
+      AsmOperand .EMPTY
+      opName
+    AssemblyOperation new
+  end
+  proc(
+    X64_OP : opName
+    AsmOperand : op1
+    AsmOperand : op2
+  -> AssemblyOperation ) =>: createBinary
+    ## AssemblyOperation
+      op1
+      op2
+      AsmOperand .EMPTY
+      opName
+    AssemblyOperation new
+  end
+  proc(
+    X64_OP : opName
+    AsmOperand : op1
+    AsmOperand : op2
+    AsmOperand : op3
+  -> AssemblyOperation ) =>: createTrinary
+    ## AssemblyOperation
+      op1
+      op2
+      op3
+      opName
+    AssemblyOperation new
+  end
+  proc( stringBuilder : sb X64_REGISTER : reg -> stringBuilder ) =>: appendRegister
+    sb
+      reg switch
+        NONE case "?"  sb.appendS break
+        AL  case "al"  sb.appendS break
+        EAX case "eax" sb.appendS break
+        EBX case "ebx" sb.appendS break
+        ECX case "ecx" sb.appendS break
+        EDX case "edx" sb.appendS break
+        RAX case "rax" sb.appendS break
+        RBX case "rbx" sb.appendS break
+        RCX case "rcx" sb.appendS break
+        RDX case "rdx" sb.appendS break
+        RDI case "rdi" sb.appendS break
+        RSI case "rsi" sb.appendS break
+        RSP case "rsp" sb.appendS break
+        RBP case "rbp" sb.appendS break
+        R8  case "r8"  sb.appendS break
+        R9  case "r9"  sb.appendS break
+        R10 case "r10" sb.appendS break
+        R11 case "r11" sb.appendS break
+        R12 case "r12" sb.appendS break
+        R13 case "r13" sb.appendS break
+        R14 case "r14" sb.appendS break
+        R15 case "r15" sb.appendS break
+        XMM0  case "xmm0"  sb.appendS break
+        XMM1  case "xmm1"  sb.appendS break
+        XMM2  case "xmm2"  sb.appendS break
+        XMM3  case "xmm3"  sb.appendS break
+        XMM4  case "xmm4"  sb.appendS break
+        XMM5  case "xmm5"  sb.appendS break
+        XMM6  case "xmm6"  sb.appendS break
+        XMM7  case "xmm7"  sb.appendS break
+        XMM8  case "xmm8"  sb.appendS break
+        XMM9  case "xmm9"  sb.appendS break
+        XMM10 case "xmm10" sb.appendS break
+        XMM11 case "xmm11" sb.appendS break
+        XMM12 case "xmm12" sb.appendS break
+        XMM13 case "xmm13" sb.appendS break
+        XMM14 case "xmm14" sb.appendS break
+        XMM15 case "xmm15" sb.appendS break
+      end
+    return
+  end
+  proc(
+    stringBuilder : sb
+    LocalLabel : label
+  -> stringBuilder ) =>: appendLocalLabel
+    sb
+      ## TODO prefix for current proc
+      label .branchType switch
+        ERROR case "error" sb.appendS break
+        ELSE case "else" sb.appendS break
+        END_IF case "endIf" sb.appendS break
+        WHILE case "while" sb.appendS break
+        CONTINUE_WHILE case "continueWhile" sb.appendS break
+        END_WHILE case "endWhile" sb.appendS break
+        CASE case "case" sb.appendS break
+        DEFAULT case "default" sb.appendS break
+        END_SWITCH case "endSwitch" sb.appendS break    
+      end
+      label .blockId sb.appendI
+      label .subId -1 != if
+        '_' sb.appendC
+        label .subId sb.appendI
+      end
+    return
+  end
+  proc( stringBuilder : sb AsmOperand : arg -> stringBuilder ) =>: appendOperand
+    sb
+      arg switch
+        EMPTY case break
+        register case arg .register appendRegister break
+        value case arg .value sb.appendI break
+        localLabel case arg .localLabel appendLocalLabel break
+      end
+    return
+  end
+  proc( stringBuilder : sb AssemblyOperation : op -> stringBuilder ) =>: appendOp
+    sb
+      op .operation switch
+        PUSH case "push " sb.appendS break
+        POP case "pop " sb.appendS break
+        MOV case "mov " sb.appendS break
+        MOVSX case "movsx " sb.appendS break
+        MOVZX case "movzx " sb.appendS break
+        NEG case "neg " sb.appendS break
+        ADD case "add " sb.appendS break
+        SUB case "sub " sb.appendS break
+        MUL case "mul " sb.appendS break
+        IMUL case "imul " sb.appendS break
+        DIV case "div " sb.appendS break
+        IDIV case "idiv " sb.appendS break
+        NOT case "not " sb.appendS break
+        AND case "and " sb.appendS break
+        OR  case "or " sb.appendS break
+        XOR case "xor " sb.appendS break
+        SHL case "shl " sb.appendS break
+        SHR case "shr " sb.appendS break
+        SAR case "sar " sb.appendS break
+        CMP case "cmp " sb.appendS break
+        TEST case "test " sb.appendS break
+        SETE case "sete " sb.appendS break
+        SETNE case "setne " sb.appendS break
+        SETL case "setl " sb.appendS break
+        SETLE case "setle " sb.appendS break
+        SETGE case "setge " sb.appendS break
+        SETG case "setg " sb.appendS break
+        SETB case "setb " sb.appendS break
+        SETBE case "setbe " sb.appendS break
+        SETAE case "setae " sb.appendS break
+        SETA case "seta " sb.appendS break
+        JMP case "jmp " sb.appendS break
+        JNZ case "jnz " sb.appendS break
+        JZ case "jz " sb.appendS break
+      end
+      op .arg1 .EMPTY ?? ! if
+        op .arg1 appendOperand
+      end
+      op .arg2 .EMPTY ?? ! if
+        ", " sb.appendS
+        op .arg2 appendOperand
+      end
+      op .arg3 .EMPTY ?? ! if
+        ", " sb.appendS
+        op .arg3 appendOperand
+      end
+      '\n' sb.appendC
+    return
+  end
+  proc(
+    stringBuilder : sb
+    AssemblyAtom : atom
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendToSb
+    atom switch
+      op case sb "  " sb.appendS atom .op appendOp return
+      localLabel case
+          sb atom .localLabel appendLocalLabel
+          ":\n" sb.appendS
+        return
+    end
+  end
+end
+
+## TODO allow values to spread across multiple registers
+enum( EMPTY I32 I64 F32 F64 PTR REFERENCE ) =:: ValueType
+
+namespace: sb
+  proc(
+    stringBuilder : sb
+    ValueType : val
+  -> stringBuilder ) =>: appendValueType
+    sb
+      val switch
+        EMPTY case "?" sb.appendS break
+        I32 case "i32" sb.appendS break
+        I64 case "i64" sb.appendS break
+        F32 case "f32" sb.appendS break
+        F64 case "f64" sb.appendS break
+        PTR case "pointer" sb.appendS break
+        REFERENCE case "reference" sb.appendS break
+      end
+    return
+  end
+end
+
+struct(
+  Type       : valType
+  ConstValue : value
+  FilePosition : pos
+  i64 : id
+) =:: LocalConst
+
+struct(
+  branchTree.NodeId list : mut: ififBranches
+  branchTree.NodeId : branchRoot
+  branchTree.NodeId : mut: ifBranch
+  i32 : blockId
+  bool : mut: ifBranchTerminates
+) =:: IfBlockInfo
+struct(
+  branchTree.NodeId list : mut: caseBranches
+  branchTree.NodeId : branchRoot
+  i32 : blockId
+) =:: SwitchBlockInfo
+struct(
+  branchTree.NodeId list : mut: continueBranches
+  branchTree.NodeId list : mut: breakBranches
+  branchTree.NodeId : branchRoot
+  i32 : blockId
+) =:: WhileBlockInfo
+
+enum(
+  IfBlockInfo : mut: If
+  SwitchBlockInfo : mut: Switch
+  WhileBlockInfo : mut: While
+) =:: BlockInfo
+
+namespace: sb
+  proc( stringBuilder BlockInfo -> stringBuilder ) =>: appendBlockInfo
+    switch
+      If case "if-else block" sb.appendS return
+      Switch case "switch-case block" sb.appendS return
+      While case "while block" sb.appendS return
+    end
+  end
+end
+
+struct(
+  ProgramContext ptr mut : program
+  ValueType BranchTree : mut: stackValues
+  BlockInfo list : mut: openBlocks
+  LocalConst list : mut: localConstants
+  StringConstant list : mut: stringConstants
+  Type : mut: currentProc
+  i64 : mut: localConstCount
+  i64 : mut: stackCount
+  i64 : mut: tmpCount
+  i32 : mut: jumpLabelCount
+  bool : mut: reachable
+) =:: CompilerContext
+
+
+proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
+  context [] .openBlocks
+    block list.append
+  context [] .openBlocks =
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openIfBlock
+  ## IfBlockInfo
+    8 branchTree.NodeId list.create
+      context [] .stackValues @ branchTree.startBranch list.append
+    context [] .stackValues @ branchTree.startBranch
+    -1 branchTree.NodeId cast
+    blockId
+    false
+  IfBlockInfo new BlockInfo .If context openBlock
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openSwitchBlock
+  ## SwitchBlockInfo
+    16 branchTree.NodeId list.create
+    context [] .stackValues @ branchTree.startBranch
+    blockId
+  SwitchBlockInfo new BlockInfo .Switch context openBlock
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openWhileBlock
+  ## WhileBlockInfo
+    16 branchTree.NodeId list.create
+    16 branchTree.NodeId list.create
+    context [] .stackValues @ branchTree.startBranch
+    blockId
+  WhileBlockInfo new BlockInfo .While context openBlock
+end
+
+proc(
+  BlockType : breakType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> BlockInfo ptr mut optional ) =>: findBreakableBlock
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
+    context [] .openBlocks i list.at .data =:: block
+    breakType .BREAK ?? if block [] .While ?? _if
+      block optional.wrap return
+    end
+    breakType .CONTINUE ?? if block [] .While ?? _if
+      block optional.wrap return
+    end
+    breakType .BREAK_SWITCH ?? if block [] .Switch ?? _if
+      block optional.wrap return
+    end
+    i 1 -
+  end ..drop
+  60 sb.create
+    breakType sb.appendBlockType
+    " can only appear in loops " sb.appendS
+    breakType .BREAK_SWITCH ?? if
+      "and switch-case statements" sb.appendS
+    end
+  pos errors appendError
+  BlockInfo ptr mut optional.empty return
+end
+
+struct(
+  string : blockName
+  i32 : blockId
+  FilePosition : pos
+  CompilerContext ptr mut : context
+) =:: MergePoint
+proc(
+  ValueType ptr arrayView : toMerge
+  i64 : offset
+  MergePoint : mergePoint
+-> ValueType ) =>: mergeBranches
+  mergePoint .context =:: context
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  toMerge 0 array.get [] =:: rootValue
+  true =:: mut: isMerged
+  1 while ..dup toMerge .length < do =:: i
+    toMerge i array.get [] rootValue != if
+      false isMerged =
+      i break
+    end
+    i 1 +
+  end ..drop
+  isMerged if
+    rootValue return
+  end
+  1 while ..dup toMerge .length < do =:: i
+    toMerge i array.get [] rootValue != if
+      "branches of " sb.wrap
+         mergePoint .blockName sb.appendStr
+         "-statement are out of sync expected: " sb.appendS
+         rootValue sb.appendValueType
+         " got: " sb.appendS
+         toMerge i array.get [] sb.appendValueType
+      mergePoint .pos errors appendError
+      i break
+    end
+    i 1 +
+  end ..drop
+  ValueType .EMPTY return
+end
+
+proc(
+  Type : t
+  TypeContext ptr mut : typeContext
+-> ValueType ) =>: toValueType
+  t switch
+    namedType case
+      t
+        typeContext types.unwrapNamed
+      typeContext toValueType return
+    generatedType case
+      t
+        typeContext types.getGeneratedType
+      typeContext toValueType return
+    primitiveType case
+      t .primitiveType switch
+        TYPE case ValueType .EMPTY return
+        BOOL I8 I16 I32 S8 S16 S32 U8 U16 U32 case
+          ValueType .I32 return
+        I64 S64 U64 case ValueType .I64 return
+        F32 case ValueType .F32 return
+        F64 case ValueType .F64 return
+      end
+      break
+    cType case
+      t .cType
+        types.cTypeAsType
+      typeContext toValueType return
+      break
+    arrayIndex case
+      ValueType .I64 return
+    pointer case
+      ValueType .PTR return
+    reference mutableReference procedure arrayType struct union enum case ## XXX allow saving multi-byte types in registers
+      ValueType .REFERENCE return
+    undefined empty templateType genericType autoType
+    procIn procOut case
+      ValueType .EMPTY return
+  end
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  Type : constType
+  ConstValue : value
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: pushConstant
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  context [] .stackValues @
+    constType typeContext toValueType
+  branchTree.push
+  value .int ?? if
+    ## XXX ensure value has correct size
+    asmOps
+      ## asm.createUnary
+        X64_OP .PUSH
+        value .int AsmOperand .value
+      asm.createUnary AssemblyAtom .op list.append
+    return
+  end
+  "unsupported constant " sb.wrap
+    value constContext typeContext sb.appendConstant
+  pos errors appendError
+  asmOps return
+end
+
+
+enum( PRIMARY SECONDARY MUL_H ) =:: RegisterType
+proc(
+  ValueType : valType
+  RegisterType : regType
+-> X64_REGISTER ) =>: findRegister
+  valType switch
+    EMPTY case X64_REGISTER .NONE return
+    I32 case 
+      regType switch
+        PRIMARY case X64_REGISTER .EAX return
+        SECONDARY case X64_REGISTER .EBX return
+        MUL_H case X64_REGISTER .EDX return
+      end
+      break
+    I64 PTR REFERENCE case 
+      regType switch
+        PRIMARY case X64_REGISTER .RAX return
+        SECONDARY case X64_REGISTER .RBX return
+        MUL_H case X64_REGISTER .RDX return
+      end
+      break
+    F32 F64 case 
+      regType switch
+        PRIMARY case X64_REGISTER .XMM0 return
+        SECONDARY case X64_REGISTER .XMM1 return
+        MUL_H case X64_REGISTER .NONE return
+      end
+      break
+  end
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  X64_OP : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: appendUnaryOperator
+  context [] .stackValues branchTree.depth 1 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    asmOps return
+  end
+  context [] .stackValues @ branchTree.peek .data [] =:: topVal
+  topVal RegisterType .PRIMARY findRegister =:: regId
+  asmOps
+    ## asm.createUnary
+      X64_OP .POP
+      regId AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      opType
+      regId AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .PUSH
+      regId AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+  return
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  X64_OP : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: appendBinaryOperator
+  context [] .stackValues branchTree.depth 2 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    asmOps return
+  end
+  context [] .stackValues @ branchTree.pop .data [] =:: arg2
+  context [] .stackValues @ branchTree.peek .data [] =:: arg1
+  arg1 arg2 == assert "compatible argument types"
+  arg1 RegisterType .PRIMARY findRegister =:: regId1
+  arg2 RegisterType .SECONDARY findRegister =:: regId2
+  asmOps
+    ## asm.createUnary
+      X64_OP .POP
+      regId2 AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .POP
+      regId1 AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      opType
+      regId1 AsmOperand .register
+      regId2 AsmOperand .register
+    asm.createBinary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .PUSH
+      regId1 AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+  return
+end
+
+
+proc(
+  AssemblyAtom list : asmOps
+  X64_OP : setCmpFlag
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: appendComparissonOperator
+  context [] .stackValues branchTree.depth 2 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    asmOps return
+  end
+  context [] .stackValues @ branchTree.pop .data [] =:: arg2
+  context [] .stackValues @ branchTree.peek .data [] =:: arg1
+  arg1 arg2 == assert "compatible argument types"
+  arg1 RegisterType .PRIMARY findRegister =:: regId1
+  arg2 RegisterType .SECONDARY findRegister =:: regId2
+  ValueType .I32 RegisterType .PRIMARY findRegister =:: regOut
+  asmOps
+    ## asm.createUnary
+      X64_OP .POP
+      regId2 AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .POP
+      regId1 AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .CMP
+      regId1 AsmOperand .register
+      regId2 AsmOperand .register
+    asm.createBinary AssemblyAtom .op list.append
+    ## asm.createUnary
+      setCmpFlag
+      X64_REGISTER .AL AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .MOVZX
+      regOut AsmOperand .register
+      X64_REGISTER .AL AsmOperand .register
+    asm.createBinary AssemblyAtom .op list.append
+    ## asm.createUnary
+      X64_OP .PUSH
+      regOut AsmOperand .register
+    asm.createUnary AssemblyAtom .op list.append
+  return
+end
+proc(
+  AssemblyAtom list : asmOps
+  BuiltIn : builtIn
+  Type : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: appendBuiltInAsm
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  opType typeContext types.getProcIn ..drop =:: inType
+  inType 0 typeContext types.compositeGetLabel
+      labelContext id.labelFlags id.FLAG_STATIC & ? if
+    1
+  else
+    0
+  end =:: firstArg
+  inType firstArg typeContext types.compositeGetElement =:: baseType
+  builtIn switch
+    NEG_I8 NEG_I16 NEG_I32 NEG_I64 case
+      asmOps X64_OP .NEG pos context appendUnaryOperator return
+    NEG_F32 NEG_F64 case break
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 case
+      asmOps X64_OP .ADD pos context appendBinaryOperator return
+    ADD_F32 ADD_F64 case break
+    ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT case break
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 case
+      asmOps X64_OP .SUB pos context appendBinaryOperator return
+    SUB_F32 SUB_F64 case break
+    PTR_DIFF case break
+    MUL_I32 MUL_I64 case
+      asmOps X64_OP .IMUL pos context appendBinaryOperator return
+    MUL_F32 MUL_F64 case break
+    DIV_I32 case break ## XXX special handling for div/mod
+    DIV_I64 case break
+    DIV_F32 DIV_F64 case break
+    REM_I32 REM_I64 UDIV_I32 UDIV_I64 UMOD_I32 UMOD_I64 NOT_BOOL case break
+    FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+      asmOps X64_OP .NEG pos context appendUnaryOperator return
+    AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
+      asmOps X64_OP .AND pos context appendBinaryOperator return
+    OR_BOOL OR_I8 OR_I16 OR_I32 OR_I64 case
+      asmOps X64_OP .OR pos context appendBinaryOperator return
+    XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+      asmOps X64_OP .XOR pos context appendBinaryOperator return
+    LSHR_I8 LSHR_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SHR pos context appendBinaryOperator return
+    LSHR_I32 LSHR_I64 case
+      asmOps X64_OP .SHR pos context appendBinaryOperator return
+    ASHR_I8 ASHR_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SAR pos context appendBinaryOperator return
+    ASHR_I32 ASHR_I64 case
+      asmOps X64_OP .SAR pos context appendBinaryOperator return
+    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+      asmOps X64_OP .SHL pos context appendBinaryOperator return
+    BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break
+    LT_I8 LT_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETL pos context appendComparissonOperator return
+    LT_I32 LT_I64 LT_PTR case
+      asmOps X64_OP .SETL pos context appendComparissonOperator return
+    LE_I8 LE_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETLE pos context appendComparissonOperator return
+    LE_I32 LE_I64 LE_PTR case
+      asmOps X64_OP .SETLE pos context appendComparissonOperator return
+    GE_I8 GE_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETGE pos context appendComparissonOperator return
+    GE_I32 GE_I64 GE_PTR case
+      asmOps X64_OP .SETGE pos context appendComparissonOperator return
+    GT_I8 GT_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETG pos context appendComparissonOperator return
+    GT_I32 GT_I64 GT_PTR case
+      asmOps X64_OP .SETG pos context appendComparissonOperator return
+    LT_F32 LT_F64 case break
+    LE_F32 LE_F64 case break
+    GE_F32 GE_F64 case break
+    GT_F32 GT_F64 case break
+    ULT_I8 ULT_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETB pos context appendComparissonOperator return
+    ULT_I32 ULT_I64 case
+      asmOps X64_OP .SETB pos context appendComparissonOperator return
+    ULE_I8 ULE_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETBE pos context appendComparissonOperator return
+    ULE_I32 ULE_I64 case
+      asmOps X64_OP .SETBE pos context appendComparissonOperator return
+    UGE_I8 UGE_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETAE pos context appendComparissonOperator return
+    UGE_I32 UGE_I64 case
+      asmOps X64_OP .SETAE pos context appendComparissonOperator return
+    UGT_I8 UGT_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETA pos context appendComparissonOperator return
+    UGT_I32 UGT_I64 case
+      asmOps X64_OP .SETA pos context appendComparissonOperator return
+  end
+  "unable to compile built-in: " sb.wrap
+    builtIn sb.appendBuiltIn
+  pos errors appendError
+  asmOps return
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  Operation ptr : op
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: compileOp
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  op [] .val switch
+    NOP case
+      asmOps return
+    Constant case
+      asmOps
+        op [] .dataType
+        op [] .val .Constant
+        op [] .pos
+        context
+      pushConstant
+      return
+    declareId initializeId
+    implementProcedure
+    getId atId procPtr setValue
+    getArrayElement atArrayElement
+    getElement atElement
+    copy New newEnum
+    checkEnumLabel setEnumLabel hasElement
+    autoCast Cast Cast! bitCast
+    call callPtr case break
+    builtIn case
+      asmOps
+        op [] .val .builtIn
+        op [] .dataType
+        op [] .pos
+        context
+      appendBuiltInAsm
+      return
+    binaryOperator
+    argc getArg case break
+    block case
+      op [] .val .block .blockType switch
+        IF case
+          context [] .stackValues @ branchTree.pop .data [] =:: ifCond
+          ifCond ValueType .I32 == assert "condition type"
+          ifCond RegisterType .PRIMARY findRegister =:: condRegister
+          asmOps
+            ## TODO debug position
+            ## asm.createUnary
+              X64_OP .POP
+              condRegister AsmOperand .register
+            asm.createUnary AssemblyAtom .op list.append
+            ## asm.createBinary
+              X64_OP .TEST
+              condRegister AsmOperand .register
+              condRegister AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+            ## asm.createUnary
+              X64_OP .JNZ
+              ## LocalLabel
+                BranchType .ELSE
+                op [] .val .block .blockId
+                op [] .val .block .subId
+              LocalLabel new AsmOperand .localLabel
+            asm.createUnary AssemblyAtom .op list.append
+            op [] .val .block .blockId context openIfBlock
+          return
+        IFIF case
+          context [] .openBlocks list.peek .data =:: ifBlock
+          context [] .stackValues @ branchTree.pop .data [] =:: ifCond
+          ifCond ValueType .I32 == assert "condition type"
+          ifCond RegisterType .PRIMARY findRegister =:: condRegister
+          asmOps
+            ## TODO debug position
+            ## asm.createUnary
+              X64_OP .POP
+              condRegister AsmOperand .register
+            asm.createUnary AssemblyAtom .op list.append
+            ## asm.createBinary
+              X64_OP .TEST
+              condRegister AsmOperand .register
+              condRegister AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+            ## asm.createUnary
+              X64_OP .JNZ
+              ## LocalLabel
+                BranchType .ELSE
+                op [] .val .block .blockId
+                op [] .val .block .subId
+              LocalLabel new AsmOperand .localLabel
+            asm.createUnary AssemblyAtom .op list.append
+
+            ifBlock [] .If .ififBranches
+              context [] .stackValues @ branchTree.startBranch list.append
+            ifBlock [] .If .ififBranches =
+          return
+          break
+        ELSE case
+          context [] .openBlocks list.peek .data =:: ifBlock
+          context [] .stackValues @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
+          context [] .reachable ifBlock [] .If .ifBranchTerminates =
+          ## BranchPoint
+          ifBranch ifBlock [] .If .ifBranch =
+          asmOps
+            ## asm.createUnary
+              X64_OP .JMP
+              ## LocalLabel
+                BranchType .END_IF
+                op [] .val .block .blockId
+                op [] .val .block .subId
+              LocalLabel new AsmOperand .localLabel
+            asm.createUnary AssemblyAtom .op list.append
+            ## LocalLabel
+              BranchType .ELSE
+              op [] .val .block .blockId
+              op [] .val .block .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+            true context [] .reachable =
+          =:: newOps
+          ifBlock [] .If .ififBranches .length 1 >= if
+            ## mergeValues
+              context [] .stackValues @
+              ifBlock [] .If .ififBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "if _if" string.wrap
+                ifBlock [] .If .blockId
+                op [] .pos
+                context
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge if _if branches" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          newOps return
+        SWITCH case
+          op [] .val .block .blockId =:: switchId
+          prog [] .switchData
+            switchId list.at .data
+          =:: switchData
+          asmOps
+            ## TODO appendPos
+            ## TODO switch-table
+            switchId context openSwitchBlock
+            false context [] .reachable =
+          return
+        CASE case
+          asmOps
+            ## LocalLabel
+              BranchType .CASE
+              op [] .val .block .blockId
+              op [] .val .block .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+            true context [] .reachable =
+          return
+        DEFAULT case
+          asmOps
+            ## LocalLabel
+              BranchType .DEFAULT
+              op [] .val .block .blockId
+              op [] .val .block .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+            true context [] .reachable =
+          return
+        BREAK_SWITCH case
+          ## findBreakableBlock
+            BlockType .BREAK_SWITCH
+            op [] .pos
+            context
+          findBreakableBlock =:: breakBlock?
+          breakBlock? optional.isEmpty if
+            ## error message handled by findBreakableBlock
+            asmOps return
+          end
+          breakBlock? .data =:: breakBlock
+          breakBlock [] .Switch ?? ! if
+            "unexpected block for " sb.wrap
+              BlockType .BREAK_SWITCH sb.appendBlockType
+              ": " sb.appendS
+              breakBlock [] sb.appendBlockInfo
+            op [] .pos errors appendError
+          end
+          context [] .stackValues @
+            breakBlock [] .Switch .branchRoot
+          branchTree.reset =:: caseBranchId
+          ## remember break (if reachable)
+          context [] .reachable if
+            breakBlock [] .Switch .caseBranches
+              caseBranchId list.append
+            breakBlock [] .Switch .caseBranches =
+          end
+          asmOps
+            context [] .reachable if
+              ## asm.createUnary
+                X64_OP .JMP
+                ## LocalLabel
+                  BranchType .END_SWITCH
+                  op [] .val .block .blockId
+                  op [] .val .block .subId
+                LocalLabel new AsmOperand .localLabel
+              asm.createUnary AssemblyAtom .op list.append
+            end
+            false context [] .reachable =
+          return
+        WHILE case
+          ## don't add position before label
+          op [] .val .block .blockId =:: whileId
+          whileId context openWhileBlock
+          context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          prog [] .whileData whileId list.at .data =:: whileData
+          asmOps
+            ## LocalLabel
+              BranchType .WHILE
+              op [] .val .block .blockId
+              op [] .val .block .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+          return
+        DO case
+          context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          context [] .stackValues @ branchTree.pop .data [] =:: whileCond
+          whileCond ValueType .I32 == assert "condition type"
+          whileCond RegisterType .PRIMARY findRegister =:: condRegister
+          asmOps
+            ## TODO debug position
+            ## asm.createUnary
+              X64_OP .POP
+              condRegister AsmOperand .register
+            asm.createUnary AssemblyAtom .op list.append
+            ## asm.createBinary
+              X64_OP .TEST
+              condRegister AsmOperand .register
+              condRegister AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+            ## asm.createUnary
+              X64_OP .JZ
+              ## LocalLabel
+                BranchType .END_WHILE
+                op [] .val .block .blockId
+                op [] .val .block .subId
+              LocalLabel new AsmOperand .localLabel
+            asm.createUnary AssemblyAtom .op list.append
+            whileBlock [] .breakBranches
+              context [] .stackValues @ branchTree.startBranch list.append
+            whileBlock [] .breakBranches =
+          return
+        BREAK CONTINUE case
+          op [] .val .block .blockType =:: blockType
+          ## findBreakableBlock
+            blockType
+            op [] .pos
+            context
+          findBreakableBlock =:: breakBlock?
+          breakBlock? optional.isEmpty if
+            ## error message handled by findBreakableBlock
+            asmOps return
+          end
+          breakBlock? .data =:: breakBlock
+          breakBlock [] .While ?? ! if
+            "unexpected block for " sb.wrap
+              blockType sb.appendBlockType
+              ": " sb.appendS
+              breakBlock [] sb.appendBlockInfo
+            op [] .pos errors appendError
+          end
+          blockType .CONTINUE ?? if
+            breakBlock [] .While .continueBranches @
+          else
+            breakBlock [] .While .breakBranches @
+          end  =:: branches
+          branches []
+            context [] .stackValues @ branchTree.startBranch list.append
+          branches []  =
+          asmOps
+            ## XXX appendPos
+            ## asm.createUnary
+              X64_OP .JMP
+              ## LocalLabel
+                blockType .CONTINUE ?? if BranchType .CONTINUE_WHILE else BranchType .END_WHILE end
+                op [] .val .block .blockId
+                op [] .val .block .subId
+              LocalLabel new AsmOperand .localLabel
+            asm.createUnary AssemblyAtom .op list.append
+            false context [] .reachable =
+          return
+        UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          ## XXX error message
+          break
+      end
+      break
+    blockEnd case
+      op [] .val .blockEnd .blockType switch
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          ## TODO? append debug info at end of procedure
+          asmOps return
+        ELSE case
+          context [] .openBlocks
+            list.pop .If =:: ifBlock
+          context [] .openBlocks =
+          branchTree.NodeId 2 array new =:: mut: branches
+          0 =:: mut: nBranches
+          ifBlock .ifBranchTerminates if
+            ifBlock .ifBranch branches @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          context [] .reachable if
+            context [] .stackValues @ branchTree.startBranch branches @ nBranches [] =
+            nBranches 1 + nBranches =
+          end
+          nBranches 1 >= if
+            ## mergeValues
+              context [] .stackValues @
+              branches @ nBranches array.create
+              mergeBranches @
+              ## MergeIf
+                "if" string.wrap
+                ifBlock .blockId
+                op [] .pos
+                context
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge branches of if-else block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          nBranches 0 > context [] .reachable =
+          ifBlock .ififBranches list.free ..drop
+          asmOps
+            ## LocalLabel
+              BranchType .END_IF
+              op [] .val .blockEnd .blockId
+              op [] .val .blockEnd .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+          return
+        IFIF case asmOps return ## no-op
+        SWITCH case
+          context [] .openBlocks
+            list.pop .Switch =:: switchBlock
+          context [] .openBlocks =
+          switchBlock .caseBranches =:: caseBranches
+          caseBranches .length 1 >= if
+            caseBranches .length =:: nodeCount
+            ## mergeValues
+              context [] .stackValues @
+              caseBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "switch" string.wrap
+                switchBlock .blockId
+                op [] .pos
+                context
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge branches of switch-case block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          caseBranches .length 0 > context [] .reachable =
+          caseBranches list.free ..drop
+          asmOps
+            ## LocalLabel
+              BranchType .END_SWITCH
+              op [] .val .blockEnd .blockId
+              op [] .val .blockEnd .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+          return
+        WHILE case
+          context [] .openBlocks
+            list.pop .While =:: mut: whileBlock
+          context [] .openBlocks =
+          whileBlock .continueBranches =:: mut: continueBranches
+          context [] .reachable if
+            continueBranches
+              context [] .stackValues @ branchTree.startBranch list.append
+            continueBranches =
+          end
+          asmOps
+            ## LocalLabel
+              BranchType .CONTINUE_WHILE
+              op [] .val .blockEnd .blockId
+              op [] .val .blockEnd .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+          =:: mut: newOps
+          continueBranches .length 1 >= if
+            continueBranches .length =:: nodeCount
+            ## mergeValues
+              context [] .stackValues @
+              continueBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "while" string.wrap
+                whileBlock .blockId
+                op [] .pos
+                context
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge continue branches of while block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          continueBranches list.free ..drop
+          prog [] .whileData whileBlock .blockId list.at .data =:: whileData
+          newOps
+            ## XXX update value locations?
+            ## jump to start of loop
+            ## asm.createUnary
+              X64_OP .JMP
+              ## LocalLabel
+                BranchType .WHILE
+                op [] .val .blockEnd .blockId
+                op [] .val .blockEnd .subId
+              LocalLabel new AsmOperand .localLabel
+            asm.createUnary AssemblyAtom .op list.append
+            ## LocalLabel
+              BranchType .END_WHILE
+              op [] .val .blockEnd .blockId
+              op [] .val .blockEnd .subId
+            LocalLabel new AssemblyAtom .localLabel list.append
+          newOps =
+          whileBlock .breakBranches =:: breakBranches
+          breakBranches .length 1 >= if
+            breakBranches .length =:: nodeCount
+            ## mergeValues
+              context [] .stackValues @
+              breakBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "while" string.wrap
+                whileBlock .blockId
+                op [] .pos
+                context
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge break branches of while block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          breakBranches .length 0 > context [] .reachable =
+          breakBranches list.free ..drop
+          newOps return
+        UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          ## XXX error message
+          break
+      end
+      break
+    Return Assert unreachable stackMod Print
+    setId autoTypedInitializeId
+    setElement setArrayElement call_old
+    getArgLen unaryOperator
+    checkArrayIndex typeInfo
+    compilerInfo getName setName atName getLabel setLabel
+    atLabel length size typeModifier hasLabel hasName case
+      break ## XXX error message
+  end
+  "unable to compile operation " sb.wrap
+    op [] prog sb.appendOp
+  op [] .pos errors appendError
+  asmOps return
+end
+
+proc(
+  Operation arrayView : ops
+  AssemblyAtom list ptr mut : asmOps0
+  io.FILE : target
+  CompilerContext ptr mut : context
+-> ) =>: compileProc
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  asmOps0 [] =:: mut: asmOps
+  0 while ..dup ops .length < do =:: j
+    asmOps
+       ops j array.at .data context compileOp
+    asmOps =
+    j 1 +
+  end ..drop
+  ## XXX optimize assembly ( push x, pop y -> mov x,y...  )
+  64 asmOps .length * sb.create
+    0 while ..dup asmOps .length < do =:: j
+      asmOps j list.get labelContext asm.appendToSb
+      j 1 +
+    end ..drop
+    '\n' sb.appendC
+    target ..over io.fputSb ..drop
+  sb.free ..drop ## XXX merge string builders
+  asmOps list.clear asmOps0 [] =
+end
+
+proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToAsm
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  ## CompilerContext
+    prog
+    ValueType branchTree.create
+    32 BlockInfo list.create
+    32 LocalConst list.create
+    32 StringConstant list.create
+    Type .undefined
+    0
+    0
+    0
+    0
+    true
+  CompilerContext new =:: mut: contextData
+  contextData @ =:: context
+  ## TODO find main
+  ## TODO type-declarations
+  idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
+    =:: declaration ## TODO find out which declarations are actually used
+    declaration .1 [] =:: labelId
+    labelId idContext id.getIdentifier
+      ! assert "labelId is identifier"
+    =:: idData
+    ## TODO compile global variables
+  end ..drop
+  1024 AssemblyAtom list.create =:: mut: asmOps
+  0 while ..dup prog [] .procedures .length < do =:: i
+    prog [] .procedures i list.at .data =:: currentProc
+    currentProc [] .implementation .code ?? ! if
+      i 1 + continue
+    end
+    prog [] .progFiles currentProc [] .fileId list.at .data =:: f
+    currentProc [] .implementation .code @ =:: impl
+    currentProc [] .hasStaticArg if
+      0 while ..dup impl [] .implementations .length < do =:: implId
+        impl [] .implementations implId list.at .data =:: currentImpl
+        ## compileProc
+          f [] .localOps
+            currentImpl [] .codeStart
+            currentImpl [] .codeLength
+          list.slice
+          asmOps @
+          target
+          context
+        compileProc
+        implId 1 +
+      end ..drop
+    else
+      ## compileProc
+        f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
+        asmOps @
+        target
+        context
+      compileProc
+    end
+    i 1 +
+  end ..drop
+  ## TODO string-constants
+  ## TODO compile main
+end
