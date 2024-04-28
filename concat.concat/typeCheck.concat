@@ -257,6 +257,31 @@ proc( TypeCheckState ptr mut : state -> ) =>: resetInterpreter
   true state [] .interpreterActive =
 end
 
+proc(
+  bool : mutable
+  FilePosition : pos
+  TypeCheckState ptr mut : state
+-> IdentifierInfo ) =>: newTmpVar
+  state [] .program [] .idContext @ =:: idContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
+  id.FLAG_NONE mutable if
+    id.FLAG_MUTABLE | LabelFlag cast
+  end =:: flags
+  ## newLabel
+    string.empty
+    flags ## XXX? special flag for tmp vars
+    pos
+    state [] .currentFile
+    labelContext
+  id.newLabel =:: label
+  ## IdInfo
+    IdentifierType .TMP_VAR
+    label
+    ConstValue .none
+    -1
+    label
+  IdentifierInfo new return
+end
 
 proc(
   bool : printValues
@@ -1726,6 +1751,27 @@ proc(
             end
             i 1 -
           end ..drop
+          calledType typeContext types.getProcOutArgs
+            ! assert "calledType has arguments"
+          =:: outArgs
+          0 while ..dup outArgs .length < do =:: i
+            outArgs i array.get =:: arg
+            arg typeContext types.isEmpty if
+              i 1 + continue
+            end
+            true op .pos state newTmpVar =:: tmpId
+            ## opDeclareId
+              outArgs i array.get
+              tmpId
+              op .pos
+            opDeclareId state appendOp ..drop
+            ## opAtId
+              arg
+              tmpId
+              op .pos
+            opAtId state appendOp ..drop
+            i 1 +
+          end ..drop
           op state appendOp ..drop
           calledType typeContext types.getProcOut ..drop
             typeContext types.compositeEltArray
@@ -1770,6 +1816,9 @@ proc(
       procType typeContext types.getProcIn
         ! assert "procType has arguments"
       =:: inTypes
+      procType typeContext types.getProcOutArgs
+        ! assert "procType has arguments"
+      =:: outArgs
       ## requireTypes
         inTypes typeContext types.compositeEltArray
         "procedure argument" string.wrap
@@ -1777,6 +1826,26 @@ proc(
         op .pos
         state
       requireTypes if ..drop return end ..drop
+      ## remember number of out-args in call operation
+      outArgs .length op .val .callPtr =
+      0 while ..dup outArgs .length < do =:: i
+        outArgs i array.get =:: arg
+        arg typeContext types.isEmpty if
+          i 1 + continue
+        end
+        true op .pos state newTmpVar =:: tmpId
+        ## opDeclareId
+          outArgs i array.get
+          tmpId
+          op .pos
+        opDeclareId state appendOp ..drop
+        ## opAtId
+          arg
+          tmpId
+          op .pos
+        opAtId state appendOp ..drop
+        i 1 +
+      end ..drop
       op state appendOp ..drop
       procType typeContext types.getProcOut ..drop
         typeContext types.compositeEltArray

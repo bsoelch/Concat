@@ -2624,6 +2624,7 @@ proc(
   stringBuilder : sb
   Type : calledType
   TypedValId list ptr mut : argIndices
+  i64 : outArgsOffset
   FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: prepareCall
@@ -2637,18 +2638,17 @@ proc(
     ! assert "calledType has return value"
   =:: retType
   sb =:: mut: newSb
-  ## allocate output arguments
-  0 while ..dup outArgs .length < do =:: i
-    outArgs i array.get =:: outArg
+  ## push out arguments on stack
+  outArgsOffset while ..dup argIndices [] .length < do =:: i
+    argIndices [] i list.get =:: outArg
     ValType .REFERENCE context pushValue =:: argId
     newSb
       "%s" sb.appendS
       argId sb.appendI
-      outArg pos context false appendAlloc ..drop
+      " =l copy %s" sb.appendS
+      outArg .valId sb.appendI
+      '\n' sb.appendC
     newSb =
-    argIndices []
-      outArg argId TypedValId new list.append
-    argIndices [] =
     i 1 +
   end ..drop
   newSb
@@ -2708,10 +2708,9 @@ proc(
         pos
       context flattenTupleQBE
     end
-    0 while ..dup outArgs .length < do =:: i
-      argIndices []
-        i outArgsOffset +
-      list.at .data [] .valType =:: outArg
+    ## convert out-arg references to values
+    outArgsOffset while ..dup argIndices [] .length < do =:: i
+      argIndices [] i list.at .data [] .valType =:: outArg
       outArg context referenceOnly if
         i 1 + continue
       end
@@ -2722,7 +2721,7 @@ proc(
           typeContext
         types.newReferenceType
         ## (len-1-i) +1 for return value
-        outArgs .length i - i32 cast
+        argIndices [] .length i - i32 cast
         outArg
         pos
         context
@@ -3355,6 +3354,19 @@ proc(
         argIndices =
         i 1 +
       end ..drop
+      argIndices .length =:: outArgOffset
+      ## reserve space for out-arguments
+      0 while ..dup outArgs .length < do =:: i
+        outArgs i array.get =:: arg
+        arg typeContext types.isEmpty if
+          ## skip empty arguments
+          i 1 + continue
+        end
+        argIndices
+          arg -1 TypedValId new list.append
+        argIndices =
+        i 1 +
+      end ..drop
       argIndices .length argIndex =
       while argIndex 0 > do argIndex 1 - argIndex =
         argIndices argIndex list.at .data [] .valId 0 >= if
@@ -3364,10 +3376,10 @@ proc(
         argIndices argIndex list.at .data =:: arg
         op [] .pos context popValue arg [] .valId =
       end
-      argIndices .length =:: outArgOffset
       newSb
         calledType
           argIndices @
+          outArgOffset
           op [] .pos
         context prepareCall
         procData [] .labelId
@@ -3380,6 +3392,16 @@ proc(
         context finishCall
       return
     callPtr case
+      op [] .val .callPtr TypedValId list.create =:: mut: argIndices
+      0 while ..dup op [] .val .callPtr < do =:: i
+        argIndices
+          ## TypedValId
+            Type .undefined
+            op [] .pos context popValue
+          TypedValId new list.append
+        argIndices =
+        i 1 +
+      end ..drop
       op [] .pos context popValue =:: calledId
       op [] .dataType =:: mut: calledType
       calledType typeContext types.isPointer if
@@ -3390,8 +3412,25 @@ proc(
       calledType typeContext types.getProcIn
         ! assert "calledType has arguments"
       =:: inTypes
+      calledType typeContext types.getProcOutArgs
+        ! assert "calledType has arguments"
+      =:: outArgs
+      0 =:: mut: outArgCount
+      0 while ..dup outArgs .length < do =:: i
+        outArgs i array.get =:: arg
+        arg typeContext types.isEmpty if
+          ## skip empty arguments
+          i 1 + continue
+        end
+        arg argIndices outArgCount list.at .data [] .valType =
+        outArgCount 1 + outArgCount =
+        i 1 +
+      end ..drop
+      outArgCount op [] .val .callPtr == assert "correct number of out arguments"
       inTypes typeContext types.compositeEltCount =:: argCount
-      argCount TypedValId list.create =:: mut: argIndices
+      argIndices
+        ..dup .length argCount + list.ensureCap
+      argIndices =
       argCount 1 - while ..dup 0 >= do =:: i
         inTypes
           i typeContext types.compositeGetElement
@@ -3409,10 +3448,11 @@ proc(
       end ..drop
       ## arguments are popped in reverse order
       argIndices list.reverse
-      argIndices .length =:: outArgOffset
+      argCount =:: outArgOffset
       sb
         calledType
           argIndices @
+          outArgOffset
           op [] .pos
         context prepareCall
         "%s" sb.appendS
