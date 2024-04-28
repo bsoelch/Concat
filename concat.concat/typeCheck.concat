@@ -3662,6 +3662,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
       codeImpl [] .codeStart 0 < if
         procId 1 + continue ## procedure not implemented
       end
+      currentProc [] .hasStaticArg ! if
+        procId 1 + continue ## handled by previous loop
+      end
       currentProc program nextImpl =:: nextId
       codeImpl [] .implementations .length =:: implLength
       nextId implLength >= if
