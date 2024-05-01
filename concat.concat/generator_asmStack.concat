@@ -793,7 +793,7 @@ proc(
     getId atId procPtr setValue
     getArrayElement atArrayElement
     getElement atElement
-    copy New newEnum
+    copy New NewEnum
     checkEnumLabel setEnumLabel hasElement
     autoCast Cast Cast! bitCast
     call callPtr case break
@@ -1217,8 +1217,8 @@ proc(
     Return Assert unreachable stackMod Print
     setId autoTypedInitializeId
     setElement setArrayElement call_old
-    getArgLen unaryOperator
-    checkArrayIndex typeInfo
+    getArgLen unaryOperator ConstantReference NewReference
+    checkArrayIndex typeInfo NewEnumReference
     compilerInfo getName setName atName getLabel setLabel
     atLabel length size typeModifier hasLabel hasName case
       break ## XXX error message

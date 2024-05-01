@@ -91,7 +91,13 @@ proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut 
     op [] .dataType 0 prog visited types declaredType
   else op [] .val .Constant ?? _if
     op [] .dataType 0 prog visited types declaredType
-  else op [] .val .newEnum ?? _if
+  else op [] .val .NewEnum ?? _if
+    op [] .dataType 0 prog visited types declaredType
+  else op [] .val .NewReference ?? _if
+    op [] .dataType 0 prog visited types declaredType
+  else op [] .val .NewEnumReference ?? _if
+    op [] .dataType 0 prog visited types declaredType
+  else op [] .val .ConstantReference ?? _if
     op [] .dataType 0 prog visited types declaredType
   end
 end

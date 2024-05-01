@@ -10,11 +10,12 @@ import "branchTree.concat"
 "cctI_argc" =:: CONCAT_ARGC_NAME
 "cctI_argv" =:: CONCAT_ARGV_NAME
 "cctI_envp" =:: CONCAT_ENVP_NAME
-"localConstant" =:: LOCAL_CONST_NAME
-"stringConstant" =:: STRING_CONST_NAME
-"checkIndexFormat" =:: CHECK_INDEX_FORMAT
-"checkEnumFormat" =:: CHECK_ENUM_FORMAT
-"assertFormat" =:: ASSERT_FORMAT
+"cctI_local" =:: LOCAL_CONST_NAME
+"cctI_string" =:: STRING_CONST_NAME
+"cctI_constRef" =:: CONST_REFERENCE_NAME
+"cctI_checkIndexFormat" =:: CHECK_INDEX_FORMAT
+"cctI_checkEnumFormat" =:: CHECK_ENUM_FORMAT
+"cctI_assertFormat" =:: ASSERT_FORMAT
 "fileName" =:: FILE_NAME_NAME
 
 enum(
@@ -1629,6 +1630,7 @@ end
 proc(
   stringBuilder : sb
   Type : tupleType
+  i8 : dataPtrType
   i64 : dataPtrId
   FilePosition : pos
   CompilerContext ptr mut : context
@@ -1647,7 +1649,8 @@ proc(
       "%t" sb.appendS
         context nextTmpId =:: eltPtrId
       eltPtrId sb.appendI
-      " =l add %t" sb.appendS
+      " =l add %" sb.appendS
+      dataPtrType sb.appendC
       dataPtrId sb.appendI
       ", " sb.appendS
       eltOffset sb.appendI
@@ -2754,6 +2757,16 @@ proc(
         context
       pushConstant
       return
+    ConstantReference case
+      sb
+        "%s" sb.appendS
+        ValType .REFERENCE context pushValue sb.appendI
+        " =l " sb.appendS
+        " copy $" sb.appendS
+        CONST_REFERENCE_NAME sb.appendS
+        op [] .val .ConstantReference sb.appendI
+        '\n' sb.appendC
+      return
     declareId initializeId case
       op [] .val .declareId ?? if
         op [] .val .declareId
@@ -3118,64 +3131,27 @@ proc(
           '\n' sb.appendC
         end
       return
-    copy case
-      op [] .dataType =:: srcType
-      srcType typeContext types.isReference ! if
-        break ## copy only implemented for references
-      end
-      srcType typeContext types.getBaseType =:: baseType
-      baseType context referenceOnly ! if
-        context [] .stackInfo @ branchTree.peek =:: srcVal?
-        srcVal? optional.isEmpty if
-          "stack underflow" sb.wrap
-          op [] .pos errors appendError
-          sb return
-        end
-        srcVal? .data =:: srcVal
-        srcVal [] .valType .REFERENCE ?? ! if
-          sb return ## value is not a reference -> no copy necessary
-        end
-        op [] .pos context popValue =:: srcId
-        sb
-          op [] .pos sb.appendPosQBE
-          "%s" sb.appendS
-          baseType context toValType context pushValue sb.appendI
-          " =" sb.appendS
-          baseType StorageType .STACK op [] .pos context sb.appendTypeNameQBE
-          " load" sb.appendS
-          baseType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
-          " %s" sb.appendS
-          srcId sb.appendI
-          '\n' sb.appendC
-        return
-      end
+    New NewEnum NewReference NewEnumReference case
+      op [] .val .NewReference ?? op [] .val .NewEnumReference ?? | =:: hasReference
+      op [] .val .NewEnum ?? op [] .val .NewEnumReference ?? | =:: isEnum
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
-        baseType op [] .pos context true appendAlloc =:: dataPtrId
-        "blit %s" sb.appendS
-        op [] .pos context popValue sb.appendI
-        ", %t" sb.appendS
-        dataPtrId sb.appendI
-        ", " sb.appendS
-        baseType op [] .pos context typeSizeInt sb.appendI
-        "\n%s" sb.appendS
-        ValType .REFERENCE context pushValue sb.appendI
-        " =l copy %t" sb.appendS
-        dataPtrId sb.appendI
-        '\n' sb.appendC
-      return
-    New newEnum case
-      sb
-        op [] .pos sb.appendPosQBE
-        ## prepare memory
-        op [] .dataType op [] .pos context true appendAlloc =:: dataPtrId
-        op [] .val .newEnum ?? if ## TODO store enums without values as integer
-          op [] .val .newEnum =:: index
+        hasReference if
+          op [] .pos context popValue 's'
+        else
+          op [] .dataType op [] .pos context true appendAlloc 't'
+        end =:: dataPtrType =:: dataPtrId
+        isEnum if ## TODO store enums without values as integer
+          op [] .val .NewEnum ?? if
+            op [] .val .NewEnum
+          else
+            op [] .val .NewEnumReference
+          end =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
           ## storeEnumLabel
             op [] .dataType
-            't'
+            dataPtrType
             dataPtrId
             index
             op [] .pos
@@ -3190,7 +3166,8 @@ proc(
               " %s" sb.appendS
             end
             op [] .pos context popValue sb.appendI
-            ", %t" sb.appendS
+            ", %" sb.appendS
+            dataPtrType sb.appendC
             dataPtrId sb.appendI
             eltType context referenceOnly if
               ',' sb.appendC
@@ -3199,10 +3176,11 @@ proc(
             '\n' sb.appendC
           end
         else op [] .dataType typeContext types.isTuple _if
-          op [] .dataType dataPtrId op [] .pos context initializeTupleQBE
+          op [] .dataType dataPtrType dataPtrId op [] .pos context initializeTupleQBE
         else op [] .dataType typeContext types.isArray _if
           ## zero-initialize array
-          "call $memset(l %t" sb.appendS
+          "call $memset(l %" sb.appendS
+          dataPtrType sb.appendC
           dataPtrId sb.appendI
           ",w 0,l " sb.appendS
           op [] .dataType op [] .pos context typeSizeInt sb.appendI
@@ -3217,7 +3195,8 @@ proc(
         end
         "%s" sb.appendS
         ValType .REFERENCE context pushValue sb.appendI
-        " =l copy %t" sb.appendS
+        " =l copy %" sb.appendS
+        dataPtrType sb.appendC
         dataPtrId sb.appendI
         '\n' sb.appendC
       return
@@ -4117,7 +4096,7 @@ proc(
           "ret %s" string.wrap
         else retCount 0 > _if
           retType op [] .pos context true appendAlloc =:: tmpId
-          retType tmpId op [] .pos context initializeTupleQBE
+          retType 't' tmpId op [] .pos context initializeTupleQBE
           tmpId
           "ret %t" string.wrap
         else
@@ -4222,10 +4201,7 @@ proc(
           sb return
       end
       break
-    Print case
-      context [] .stackInfo @ branchTree.pop ..drop ## keep stack synced
-      break
-    setId autoTypedInitializeId
+    Print setId autoTypedInitializeId copy
     setElement setArrayElement call_old
     getArgLen unaryOperator
     checkArrayIndex typeInfo
@@ -4251,12 +4227,12 @@ proc( CompilerContext ptr mut : context -> ) =>: cleanupCompilerContext
     list.free
   context [] .stringConstants =
 end
-proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQBE
-  prog [] .idContext @ =:: idContext
+proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compileToQBE
+  program [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   ## CompilerContext
-    prog
+    program
     StackElement branchTree.create
     BranchType .START 0 0 BranchId new
     32 BlockInfo list.create
@@ -4277,7 +4253,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
     data [] .labelId mainId =
   else ..drop end
   1024 sb.create
-    prog getDeclaredTypes =:: types
+    program getDeclaredTypes =:: types
     0 while ..dup types .length < do =:: i
       types i list.get
         ## TODO? use declaration position of type
@@ -4285,12 +4261,12 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
       context sb.appendTypeDeclarationQBE
       i 1 +
     end ..drop
-    prog [] .hasCheckIndex if
+    program [] .hasCheckIndex if
       "data $" sb.appendS
       CHECK_INDEX_FORMAT sb.appendS
       " = { b \"index out of range: %lli size: %llu at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     end
-    prog [] .hasCheckEnum if
+    program [] .hasCheckEnum if
       "data $" sb.appendS
       CHECK_ENUM_FORMAT sb.appendS
       " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
@@ -4313,7 +4289,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
     idData [] .valueType =:: mut: valType
     labelId labelContext id.labelFlags =:: labelFlags
     valType types.isAutoType if
-      prog [] .autoTypes
+      program [] .autoTypes
         valType types.getTypeId
       list.at .data []
       valType =
@@ -4344,8 +4320,20 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
     sb =
   end ..drop
   sb
-    0 while ..dup prog [] .progFiles .length < do =:: i
-      prog [] .progFiles i list.at .data =:: f
+    ## constant references
+    0 while ..dup program [] .constantReferences .length < do =:: i
+      program [] .constantReferences i list.at .data =:: constRef
+      "data $" sb.appendS
+      CONST_REFERENCE_NAME sb.appendS
+      i sb.appendI
+      " = {" sb.appendS
+        constRef [] .constType constRef [] .value true constRef [] .pos context sb.appendConstQBE
+      "} \n" sb.appendS
+      i 1 +
+    end ..drop
+    ## code
+    0 while ..dup program [] .progFiles .length < do =:: i
+      program [] .progFiles i list.at .data =:: f
         "dbgfile \"" sb.appendS
         f [] .fileName sb.appendSb
         "\"\n"    sb.appendS
@@ -4388,7 +4376,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToQ
       context cleanupCompilerContext
       return
     end
-    prog [] .hasGetArgs if
+    program [] .hasGetArgs if
       "data $" sb.appendS
       CONCAT_ARGC_NAME sb.appendS
       " = { l 0 }\n" sb.appendS

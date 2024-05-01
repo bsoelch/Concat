@@ -778,7 +778,7 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
         return
       end
       break
-    newEnum case
+    NewEnum case
       isGlobal ! if
         target "((" io.fputs ..drop
         op [] .dataType target prog printTypeName
@@ -787,12 +787,12 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
       ## TODO empty enum
       64 sb.create
         "{.label="        sb.appendS
-        op [] .val .newEnum sb.appendI
-        op [] .dataType op [] .val .newEnum typeContext types.compositeGetElement typeContext types.isEmpty ! if
+        op [] .val .NewEnum sb.appendI
+        op [] .dataType op [] .val .NewEnum typeContext types.compositeGetElement typeContext types.isEmpty ! if
           ",.data={."         sb.appendS
           target ..over io.fputSb ..drop
           sb.clear
-          op [] .dataType op [] .val .newEnum target prog printEltName
+          op [] .dataType op [] .val .NewEnum target prog printEltName
           " = "               sb.appendS
           target ..over io.fputSb ..drop
           sb.clear
@@ -1416,8 +1416,8 @@ proc( Operation arrayView : operations i32 ptr mut : index bool : isGlobal io.FI
     compilerInfo case
       break
     getName setName atName getLabel setLabel atLabel length size
-    stackMod copy builtIn procPtr
-    typeModifier autoCast bitCast hasLabel hasName
+    stackMod copy builtIn procPtr ConstantReference NewReference
+    typeModifier autoCast bitCast hasLabel hasName NewEnumReference
     call implementProcedure case
       break ## XXX error message
   end

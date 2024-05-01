@@ -1518,10 +1518,10 @@ proc(
     setId atId setLabel
     getElement setElement atElement
     getArrayElement setArrayElement atArrayElement setValue
-    Print newEnum call callPtr call_old
+    Print NewEnum call callPtr call_old
     argc getArg getArgLen implementProcedure procPtr
-    autoCast bitCast
-    unaryOperator
+    autoCast bitCast NewEnumReference
+    unaryOperator ConstantReference NewReference
     checkEnumLabel setEnumLabel checkArrayIndex
     hasElement stackMod setName copy
     compilerInfo unreachable case

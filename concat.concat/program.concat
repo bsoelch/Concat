@@ -17,6 +17,8 @@ struct( Type : src i32 : mut: offset ) =:: export: CastInfo ## offset: zero-inde
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 
+i64 =:: ConstReferenceId
+
 struct(
   Type : procType
   ConstantArray : staticArgs
@@ -58,6 +60,7 @@ struct(
 enum(
             NopType : NOP
          ConstValue : mut: Constant
+   ConstReferenceId : mut: ConstantReference
             BlockId : mut: block
             BlockId : mut: blockEnd
      IdentifierInfo : mut: getId
@@ -83,7 +86,9 @@ enum(
                       Print
                       Return
                       New
-                i32 : newEnum
+                      NewReference
+                i32 : NewEnum
+                i32 : NewEnumReference
            CallInfo : call_old ## backwards comparability
   ProcedureCallInfo : call
             BuiltIn : builtIn
@@ -127,6 +132,7 @@ end
 proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opConst
   constValue OpValue .Constant constType pos Operation new return
 end
+
 proc( BlockType FilePosition -> Operation ) =>: export: opBlock
   =:: pos
   -1 -1 BlockId new OpValue .block Type .undefined pos Operation new return
@@ -135,6 +141,7 @@ proc( BlockType FilePosition -> Operation ) =>: export: opEndBlock
   =:: pos
   -1 -1 BlockId new OpValue .blockEnd Type .undefined pos Operation new return
 end
+## XXX? rename to getId
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGet
   =:: pos
   OpValue .getId ..swap pos Operation new return
@@ -214,9 +221,17 @@ proc( Type FilePosition -> Operation ) =>: export: opNew
   =:: pos
   OpValue .New ..swap pos Operation new return
 end
+proc( Type FilePosition -> Operation ) =>: export: opNewReference
+  =:: pos
+  OpValue .NewReference ..swap pos Operation new return
+end
 proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnum
   =:: pos
-  OpValue .newEnum ..swap pos Operation new return
+  OpValue .NewEnum ..swap pos Operation new return
+end
+proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnumReference
+  =:: pos
+  OpValue .NewEnumReference ..swap pos Operation new return
 end
 proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast
    Type .undefined OpValue .Cast target pos Operation new return
@@ -347,6 +362,13 @@ proc( -> ProcedureBundle ) =>: export: newProcBundle
   ProcedureBundle new
 end
 
+## XXX rename TypeConstant -> Constant, Constant -> ConstantInfo
+struct(
+  Type : constType
+  ConstValue : value
+  FilePosition : pos
+) =:: export: TypedConstant
+
 struct(
     IdentifierContext : mut: idContext
      ProgramFile list : mut: progFiles
@@ -356,6 +378,7 @@ struct(
        Operation list : mut: templateOps
       SwitchData list : mut: switchData
        WhileData list : mut: whileData
+   TypedConstant list : mut: constantReferences
    CompilerError list : mut: errors
                  bool : mut: hasCheckIndex
                  bool : mut: hasCheckEnum
@@ -372,12 +395,14 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     128 Operation             list.create
     0   SwitchData            list.create
     0   WhileData             list.create
+    32  TypedConstant         list.create
     32  CompilerError         list.create
     false ## hasCheckIndex
     false ## hasCheckEnum
     false ## has getArgs
   ProgramContext new
 end
+## TODO free Program context
 
 proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext -> ProgramFile ) =>: export: newProgFile
   128 Operation list.create
@@ -387,6 +412,25 @@ proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext
   fileName
   id
   ProgramFile new return
+end
+
+
+proc(
+  ConstValue : constValue
+  Type : constType
+  FilePosition : pos
+  ProgramContext ptr mut : program
+-> Operation ) =>: export: opConstReference
+  program [] .constantReferences
+    ..dup .length =:: refId
+    constType constValue pos TypedConstant new list.append
+  program [] .constantReferences =
+  program [] .idContext .typeContext @ =:: typeContext
+  ## Operation
+    refId OpValue .ConstantReference
+    constType false typeContext types.newReferenceType
+    pos
+  Operation new return
 end
 
 namespace: sb
@@ -474,6 +518,16 @@ namespace: sb
           ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .Constant constContext typeContext sb.appendConstant
+          break
+        ConstantReference case
+          ..over .val .ConstantReference =:: refId
+          progContext [] .constantReferences refId list.at .data =:: constData
+          "constant reference ( " sb.appendS
+          constData [] .constType typeContext sb.appendType
+          " )[" sb.appendS
+          refId sb.appendI
+          "] : " sb.appendS
+          constData [] .value constContext typeContext sb.appendConstant
           break
         block case
           "Block: " sb.appendS
@@ -687,11 +741,21 @@ namespace: sb
           "new: " sb.appendS
           ..over .dataType typeContext sb.appendType
           break
-        newEnum case
+        NewReference case
+          "new reference: " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          break
+        NewEnum case
           "new enum ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .newEnum sb.appendI
+          ..over .val .NewEnum sb.appendI
+          break
+        NewEnumReference case
+          "new enum reference ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .NewEnumReference sb.appendI
           break
         autoCast case
           "autoCast ( " sb.appendS

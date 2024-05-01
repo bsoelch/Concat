@@ -3,6 +3,7 @@ import sys
 import "parser.concat"
 import "typeCheckC.concat"
 import "typeCheck.concat"
+import "prepareCompile.concat"
 import "generator_c.concat"
 import "generator_qbe.concat"
 import "generator_asmStack.concat"
@@ -261,6 +262,19 @@ proc( -> ) =>: main ## TODO check return value of fopen
       prog @ sb.appendProgram
     =:: parsedOps
     compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+      ..dup parsedOps io.fputSb ..drop
+    io.fclose ..drop
+    parsedOps sb.free ..drop
+  end
+  prog .errors @ checkErrors
+  prog @ prepareCompile
+  ## TODO own flag&file for dumping tokens
+  compilerTokensFile optional.hasData if
+    1024 sb.create
+      prog @ sb.appendProgram
+    =:: parsedOps
+    compilerTokensFile .data io.OPEN_APPEND io.fopenStr ..drop
+      ..dup "\n-----------------\n" io.fputs ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop

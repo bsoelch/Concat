@@ -1,0 +1,297 @@
+#+
+converts code from pure stack code to code targeting a "real" machine as a
+common first step for all compiler back-ends:
+* limit size of stack-values
+* explicitly create temporary variables for copy/output arguments
++#
+import stringIO
+import numbers/floats
+
+import "program.concat"
+import "measure.concat"
+import "branchTree.concat"
+
+struct(
+  ProgramContext ptr mut : program
+  FileId : mut: currentFile
+) =:: ConverterContext
+
+proc(
+  bool : mutable
+  FilePosition : pos
+  ConverterContext ptr mut : context
+-> IdentifierInfo ) =>: newTmpVar
+  context [] .program [] .idContext @ =:: idContext
+  idContext [] .typeContext .labelContext @ =:: labelContext
+  id.FLAG_NONE mutable if
+    id.FLAG_MUTABLE | LabelFlag cast
+  end =:: flags
+  ## newLabel
+    string.empty
+    flags ## XXX? special flag for tmp vars
+    pos
+    context [] .currentFile
+    labelContext
+  id.newLabel =:: label
+  ## IdInfo
+    IdentifierType .TMP_VAR
+    label
+    ConstValue .none
+    -1
+    label
+  IdentifierInfo new return
+end
+
+proc(
+  Operation list : newOps
+  Operation : op0
+  ConverterContext ptr mut : context
+-> Operation list ) =>: compileOp
+  op0 =:: mut: op
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  op .val switch
+    NOP case
+      newOps return ## ignore nops
+    builtIn binaryOperator argc getArg unreachable procPtr implementProcedure
+    checkEnumLabel hasElement declareId initializeId getId atId setValue
+    atArrayElement atElement Assert stackMod getArrayElement getElement setEnumLabel
+    autoCast Cast Cast! bitCast Return case
+      newOps
+        op list.append ## nothing to change
+      return
+    Constant case
+      op .dataType typeContext types.referenceOnly ! if
+        newOps
+          op list.append
+        return
+      end
+      newOps
+        op .val .Constant op .dataType op .pos program opConstReference list.append
+      return
+    copy case
+      true op .pos context newTmpVar =:: tmpId
+      op .dataType typeContext types.unwrapReference =:: baseType
+      newOps
+        ## opAutoCast
+          op .dataType
+          0
+          baseType
+          op .pos
+        opAutoCast list.append
+        ## XXX only create tmp variable from reference-only types,
+        ##   once multi-value types are supported by back-end
+        ## opInitializeId
+          baseType
+          tmpId
+          op .pos
+        opInitializeId list.append
+        ## opGet
+          baseType
+          tmpId
+          op .pos
+        opGet list.append
+      return
+    New NewEnum case
+      op .dataType typeContext types.referenceOnly ! if
+        newOps
+          op list.append
+        return
+      end
+      true op .pos context newTmpVar =:: tmpId
+      newOps
+        ## opInitializeId
+          op .dataType
+          tmpId
+          op .pos
+        opDeclareId list.append
+        ## opAtId
+          op .dataType
+          tmpId
+          op .pos
+        opAtId list.append
+        op .val .NewEnum ?? if
+          op .dataType op .val .NewEnum op .pos opNewEnumReference list.append
+        else
+          op .dataType op .pos opNewReference list.append
+        end
+      return
+    call callPtr case
+      op .dataType
+        ..dup typeContext types.isPointer if
+          typeContext types.getBaseType
+        end
+      typeContext types.getProcOutArgs
+        ! assert "calledType has arguments"
+      =:: outArgs
+      op .val .callPtr ?? if
+        ## remember number of out-args in call operation
+        outArgs .length op .val .callPtr =
+      end
+      newOps
+        0 while ..dup outArgs .length < do =:: i
+          outArgs i array.get =:: arg
+          arg typeContext types.isEmpty if
+            i 1 + continue
+          end
+          true op .pos context newTmpVar =:: tmpId
+          ## opDeclareId
+            outArgs i array.get
+            tmpId
+            op .pos
+          opDeclareId list.append
+          ## opAtId
+            arg
+            tmpId
+            op .pos
+          opAtId list.append
+          i 1 +
+        end ..drop
+        op list.append
+      return
+    ## XXX merge identical variables on independent branches
+    block case
+      op .val .block .blockType switch
+        IF IFIF ELSE SWITCH CASE
+        DEFAULT BREAK_SWITCH WHILE
+        DO BREAK CONTINUE case
+          newOps
+            op list.append ## nothing to change
+          return
+        UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
+      end
+      break
+    blockEnd case
+      op .val .blockEnd .blockType switch
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          newOps
+            op list.append ## nothing to change
+          return
+        ELSE IFIF
+        SWITCH WHILE UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE case
+          newOps
+            op list.append
+          return
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
+      end
+      break
+    Print setId autoTypedInitializeId
+    setElement setArrayElement call_old
+    getArgLen unaryOperator ConstantReference NewReference
+    checkArrayIndex typeInfo NewEnumReference
+    compilerInfo getName setName atName getLabel setLabel
+    atLabel length size typeModifier hasLabel hasName case
+      break ## XXX error message
+  end
+  "unsupported operation " sb.wrap
+    op program sb.appendOp
+  op .pos errors appendError
+  newOps return
+end
+
+proc(
+  Operation arrayView : ops
+  Operation list ptr mut : newOps
+  ConverterContext ptr mut : context
+-> ) =>: convertProc
+  context [] .program =:: program
+  program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  newOps []
+    0 while ..dup ops .length < do =:: j
+      ops j array.at .data [] context compileOp
+      j 1 +
+    end ..drop
+  newOps [] =
+end
+
+## TODO better name for file&procedure, find good description of compilation-step
+proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
+  program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  ## ConverterContext
+    program
+    -1
+  ConverterContext new =:: mut: contextData
+  contextData @ =:: context
+  0 while ..dup program [] .progFiles .length < do =:: i
+    program [] .progFiles i list.at .data =:: f
+    f [] .templateOps list.clear f [] .templateOps =
+    i 1 +
+  end ..drop
+  0 while ..dup program [] .procedures .length < do =:: i
+    program [] .procedures i list.at .data =:: currentProc
+    currentProc [] .implementation .code ?? ! if
+      i 1 + continue
+    end
+    currentProc [] .fileId context [] .currentFile =
+    program [] .progFiles currentProc [] .fileId list.at .data =:: f
+    currentProc [] .implementation .code @ =:: impl
+    currentProc [] .hasStaticArg if
+      0 while ..dup impl [] .implementations .length < do =:: implId
+        impl [] .implementations implId list.at .data =:: currentImpl
+        ## convertProc
+          f [] .localOps
+            currentImpl [] .codeStart
+            currentImpl [] .codeLength
+          list.slice
+          f [] .templateOps @
+          context
+        convertProc
+        implId 1 +
+      end ..drop
+    else
+      ## convertProc
+        f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
+        f [] .templateOps @
+        context
+      convertProc
+    end
+    i 1 +
+  end ..drop
+  0 while ..dup program [] .progFiles .length < do =:: i
+    program [] .progFiles i list.at .data =:: f
+    f [] .localOps list.clear
+      f [] .templateOps
+      f [] .localOps =
+    f [] .templateOps =
+    i 1 +
+  end ..drop
+  ## create implementations for built-in procedure-pointers
+  0 while ..dup program [] .procedures .length < do =:: procId
+    program [] .procedures procId list.at .data =:: currentProc
+    currentProc [] .implementation .builtIn ?? ! if
+      procId break ## built-ins at start of procedure list
+    end
+    currentProc [] .implementation .builtIn .hasPtr ! if
+      procId 1 + continue
+    end
+    program [] .progFiles 0 list.at .data =:: procFile ## XXX? use separate "file" for built-ins
+    currentProc [] .labelId labelContext id.labelPos .data =:: pos
+    procFile [] .localOps
+      ## opImplementProc
+        currentProc [] .procType
+        ## ProcedureImpl
+          procId
+          -1
+        ProcedureImpl new
+        pos
+      opImplementProc list.append
+      ## opBuiltIn
+        currentProc [] .procType
+        currentProc [] .implementation .builtIn .builtIn
+        pos
+      opBuiltIn list.append
+      currentProc [] .procType pos opReturn list.append
+      BlockType .PROCEDURE pos opEndBlock list.append
+    procFile [] .localOps =
+    procId 1 +
+  end ..drop
+end

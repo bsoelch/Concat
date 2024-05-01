@@ -2709,15 +2709,15 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
         op count state insertStackOp
       end
       return
-    newEnum case
+    NewEnum case
       op state checkReachable
       op [] .dataType typeContext types.isEnum ! if
-        "unexpected type for newEnum: " sb.wrap
+        "unexpected type for NewEnum: " sb.wrap
           op [] .dataType typeContext sb.appendType
         op [] .pos state appendError2
         return
       end
-      op [] .dataType op [] .val .newEnum typeContext types.compositeGetElement =:: labelType
+      op [] .dataType op [] .val .NewEnum typeContext types.compositeGetElement =:: labelType
       labelType typeContext types.isEmpty if
         op state pushValue ## XXX? convert to constant
         return
@@ -3053,10 +3053,10 @@ proc( Operation ptr mut : op TypeCheckState ptr mut : state -> ) =>: typeCheckOp
           return ## TODO find
       end
       break
-    hasName hasElement builtIn
+    hasName hasElement builtIn NewEnumReference
     typeModifier implementProcedure procPtr
     checkEnumLabel checkArrayIndex setEnumLabel getArgLen
-    call call_old case
+    call call_old ConstantReference NewReference case
       "operation " sb.wrap
         op [] progContext sb.appendOp
         " should not exist at this stage of compilation" sb.appendS

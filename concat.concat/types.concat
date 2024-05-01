@@ -328,6 +328,7 @@ namespace: types
           true return
       end
   end
+  ## XXX backwards compatability
   proc( Type TypeContext ptr -> bool ) =>: export: isSmallType
     unwrapNamed
     switch
@@ -338,6 +339,27 @@ namespace: types
       undefined namedType autoType genericType templateType generatedType case false return
     end
   end
+
+  proc( Type TypeContext ptr mut -> bool ) =>: export: canReturn
+    sizeOf =:: size
+    size switch
+      fixed case ## XXX check for underalligned values
+        size .fixed 16 > return ## more than 2*i64
+      dynamicArray case true return
+      unknown case ..unreachable ## TODO error message
+    end
+  end
+  ## can value be pushed onto stack
+  proc( Type TypeContext ptr mut -> bool ) =>: export: referenceOnly
+    sizeOf =:: size
+    size switch
+      fixed case ## XXX check for underalligned values
+        size .fixed 24 > return ## more than 3*i64
+      dynamicArray case true return
+      unknown case ..unreachable ## TODO error message
+    end
+  end
+
   64 =:: export: MAX_INT_WIDTH
   #+largest integer k s.t. 1+2^-k > 1+#
   proc( Type TypeContext ptr -> i32 ) =>: numberPrecision
