@@ -1,0 +1,75 @@
+proc( -> f64 3 array ) =>: arrayTest1
+  { 1.0 2.0 3.0 } =:: stackArray
+  stackArray
+end
+proc( -> i8 24 array ) =>: arrayTest2
+  i8 24 array new =:: constArray
+  constArray
+end
+proc( -> ( i32 f32 i64 f64 ) ) =>: stackStruct
+  1 2:f32 3 4.0 ( i32 f32 i64 f64 ) new =:: v
+  v
+end
+proc( -> ( ( i32 i32 ) ( f32 f32 ) ( i32 f32 ) ) ) =>: nestedStruct
+  ## nestedStruct
+    1 2 ( i32 i32 ) new
+    3:f32 4:f32 ( f32 f32 ) new
+    5 6:f32 ( i32 f32 ) new
+  ( ( i32 i32 ) ( f32 f32 ) ( i32 f32 ) ) new =:: v
+  v
+end
+proc( -> ( i32 ( i32 i32 ) ( i16 i16 i16 i16 ) i32 ) ) =>: misalignedElement
+  ## misalignedElement
+    0
+    1 2 ( i32 i32 ) new
+    3:i16 4:i16 5:i16 6:i16 ( i16 i16 i16 i16 ) new
+    7
+  ( i32 ( i32 i32 ) ( i16 i16 i16 i16 ) i32 ) new =:: v
+  v
+end
+proc( -> i32 10 array i64 64 array ) =>: refOnlyArray
+  { 1 2 3 4 5 6 7 8 9 10 } =:: arrayInit
+  i64 64 array new =:: newArray
+  arrayInit newArray
+end
+proc( ->
+  ( ( i32 i32 ) ( f32 f32 ) ( i64 i64 ) ( f64 f64 ) )
+) =>: refOnlyStruct
+  ## refOnlyStruct
+    1 2 ( i32 i32 ) new
+    3:f32 4:f32 ( f32 f32 ) new
+    5 6 ( i64 i64 ) new
+    7:f64 8:f64 ( f64 f64 ) new
+  ( ( i32 i32 ) ( f32 f32 ) ( i64 i64 ) ( f64 f64 ) ) new =:: v
+  v
+end
+
+proc( i32 : i f32 : f i64 : i2 f64 : f2 ->
+  ( ( ( i32 i32 ) ( i32 f32 ) ( f32 f32 ) ) ( i64 i64 i64 f64 f64 f64 ) )
+  ( ( i32 i32 ) ( i32 f32 ) ( f32 f32 ) )
+) =>: testRefOnlyNew
+  ## ( ( i32 i32 ) ( i32 f32 ) ( f32 f32 ) )
+    i i ( i32 i32 ) new
+    i f ( i32 f32 ) new
+    f f ( f32 f32 ) new
+  ( ( i32 i32 ) ( i32 f32 ) ( f32 f32 ) ) new =:: t1
+  i2 i2 i2 f2 f2 f2 ( i64 i64 i64 f64 f64 f64 ) new =:: t2
+  t1 t2 ( ( ( i32 i32 ) ( i32 f32 ) ( f32 f32 ) ) ( i64 i64 i64 f64 f64 f64 ) ) new =:: t3
+  t3 t1 return
+end
+
+enum( A B C D E ) =:: enum1
+enum( i32 : A f32 : B i64 : C f64 : D ) =:: enum2
+enum( ( i32 f32 ) : A ( i32 i32 ) : B ( f32 f32 ) : C ( i8 _ ptr i64 ) : D ) =:: enum3
+enum( i64 5 array : A i8 32 array : B i64 : C ) =:: enum4
+
+proc( -> enum1 enum2 ) =>: testEnum12
+  enum1 .A
+  3.75:f32 enum2 .B
+end
+proc( -> enum4 enum3  ) =>: testEnum43
+  5 enum4 .C
+  1 1.5:f32 ( i32 f32 ) new enum3 .A
+end
+
+proc( -> ) =>: main end
