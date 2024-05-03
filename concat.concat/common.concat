@@ -8,6 +8,11 @@ i32 =:: export: FileId
 -1 FileId =: export: FILE_ID_NONE
 -2 FileId =: export: FILE_ID_BUILT_IN
 
+enum(
+  QBE
+  ASM
+) =:: export: BackEnd
+
 struct( string : mut: fileName i64 : mut: line i64 : mut: posInLine ) =:: export: FilePosition
 enum( ERROR WARNING INFO ) =:: export: ErrorType
 struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export: CompilerError

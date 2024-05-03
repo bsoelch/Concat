@@ -19,8 +19,8 @@ false =:: mut: wError
 ## enable constant-folding
 true =:: mut: export: _FOLD_CONSTANTS_
 false =:: mut: export: _EXPERIMENTAL_
-false =:: mut: export: _CCONCAT_
-false =:: mut: export: _ASM_
+false =:: mut: export: _CCONCAT_ ## XXX remove backward compatibility with old C compiler
+BackEnd .QBE =:: mut: export: _BACKEND_
 
 proc( string : path -> ) =>: printUsage
   "usage: " sb.wrap
@@ -92,7 +92,7 @@ proc( -> ) =>: parseArgs
           true _CCONCAT_ =
           break
         'A' case ## (experimental) asm backend
-          true _ASM_ =
+          BackEnd .ASM _BACKEND_ =
           break
         'q' case
           break
@@ -171,13 +171,13 @@ proc( -> ) =>: parseArgs
       outFile =
     end
     outFile
-      ## XXX? make back-end an enum instead of multiple independent flags
       _CCONCAT_ if
         ".c\x00" sb.appendS
-      else _ASM_ _if
-        ".s\x00" sb.appendS
       else
-        ".ssa\x00" sb.appendS
+        _BACKEND_ switch
+          ASM case ".s\x00" sb.appendS break
+          QBE case ".ssa\x00" sb.appendS break
+        end
       end
     outFile =
   end
@@ -282,10 +282,9 @@ proc( -> ) =>: main ## TODO check return value of fopen
   prog .errors @ checkErrors
   ## QBE backend
   outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-    _ASM_ if
-      ..dup prog @ compileToAsm
-    else
-      ..dup prog @ compileToQBE
+    _BACKEND_ switch
+      ASM case ..dup prog @ compileToAsm break
+      QBE case ..dup prog @ compileToQBE break
     end
   io.fclose ..drop
   prog .errors @ checkErrors
