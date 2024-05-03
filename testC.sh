@@ -4,14 +4,15 @@ nTested=0
 nPassed=0
 nFailed=0
 
+clear
+
 if [[ "$@" == *"-X"* ]]; then ## if X in arguments
     concatPath="../../concatX"
+    echo "running tests in experimental mode"
 else
     concatPath="../../concatC"
 fi
 
-clear
-echo "running tests in experimental mode"
 ## TODO? recompile compiler
 cd "./tests/"
 for d in */; do ## go through all directories in tests folder 
