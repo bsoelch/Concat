@@ -1071,6 +1071,7 @@ proc(
             progContext
           replaceGenerics
           constArgs list.asArray constContext constArray
+          0 VariableInfo list.create
           pos
           -1
           -1

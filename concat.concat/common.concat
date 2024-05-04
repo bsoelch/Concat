@@ -8,7 +8,7 @@ i32 =:: export: FileId
 -1 FileId =: export: FILE_ID_NONE
 -2 FileId =: export: FILE_ID_BUILT_IN
 
-enum(
+enum( ## XXX more precise names
   QBE
   ASM
 ) =:: export: BackEnd

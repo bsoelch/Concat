@@ -743,7 +743,7 @@ namespace: types
     end
   end
   ## return next multiple of a >= s, assumes that a is a power of 2
-  proc( i64 : s i64 : a -> i64 ) =>: alignSize
+  proc( i64 : s i64 : a -> i64 ) =>: export: alignSize
     s
       a 1 - +
       a 1 - ~ &

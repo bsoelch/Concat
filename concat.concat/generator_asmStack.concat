@@ -45,12 +45,16 @@ struct(
   i32 : blockId
   i32 : subId
 ) =:: LocalLabel
+struct(
+  LabelId : baseLabel
+  i64 : implId
+) =:: GlobalLabel
 enum(
   EMPTY
   X64_REGISTER : register
   i64 : value
   LocalLabel : localLabel
-  ## XXX globallabel
+  GlobalLabel : globalLabel
 ) =:: AsmOperand
 struct(
   AsmOperand : arg1
@@ -61,7 +65,7 @@ struct(
 enum(
   AssemblyOperation : op
   LocalLabel : localLabel
-  ## XXX globallabel
+  GlobalLabel : globalLabel
   ## XXX debug info
 ) =:: AssemblyAtom
 namespace: asm
@@ -157,7 +161,7 @@ namespace: asm
         END_WHILE case "endWhile" sb.appendS break
         CASE case "case" sb.appendS break
         DEFAULT case "default" sb.appendS break
-        END_SWITCH case "endSwitch" sb.appendS break    
+        END_SWITCH case "endSwitch" sb.appendS break
       end
       label .blockId sb.appendI
       label .subId -1 != if
@@ -166,17 +170,36 @@ namespace: asm
       end
     return
   end
-  proc( stringBuilder : sb AsmOperand : arg -> stringBuilder ) =>: appendOperand
+  proc(
+    stringBuilder : sb
+    GlobalLabel : label
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendGlobalLabel
+    sb ## TODO escaping, namespace
+      label .baseLabel labelContext sb.appendLabelName
+      ## XXX TODO implementation id
+    return
+  end
+  proc(
+    stringBuilder : sb
+    AsmOperand : arg
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendOperand
     sb
       arg switch
         EMPTY case break
         register case arg .register appendRegister break
         value case arg .value sb.appendI break
         localLabel case arg .localLabel appendLocalLabel break
+        globalLabel case arg .globalLabel labelContext appendGlobalLabel break
       end
     return
   end
-  proc( stringBuilder : sb AssemblyOperation : op -> stringBuilder ) =>: appendOp
+  proc(
+    stringBuilder : sb
+    AssemblyOperation : op
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendOp
     sb
       op .operation switch
         PUSH case "push " sb.appendS break
@@ -215,15 +238,15 @@ namespace: asm
         JZ case "jz " sb.appendS break
       end
       op .arg1 .EMPTY ?? ! if
-        op .arg1 appendOperand
+        op .arg1 labelContext appendOperand
       end
       op .arg2 .EMPTY ?? ! if
         ", " sb.appendS
-        op .arg2 appendOperand
+        op .arg2 labelContext appendOperand
       end
       op .arg3 .EMPTY ?? ! if
         ", " sb.appendS
-        op .arg3 appendOperand
+        op .arg3 labelContext appendOperand
       end
       '\n' sb.appendC
     return
@@ -234,9 +257,13 @@ namespace: asm
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendToSb
     atom switch
-      op case sb "  " sb.appendS atom .op appendOp return
+      op case sb "  " sb.appendS atom .op labelContext appendOp return
       localLabel case
           sb atom .localLabel appendLocalLabel
+          ":\n" sb.appendS
+        return
+      globalLabel case
+          sb atom .globalLabel labelContext appendGlobalLabel
           ":\n" sb.appendS
         return
     end
@@ -309,6 +336,7 @@ end
 
 struct(
   ProgramContext ptr mut : program
+  LabelId i64 hashMap : mut: variableOffset
   ValueType BranchTree : mut: stackValues
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
@@ -517,21 +545,21 @@ proc(
 -> X64_REGISTER ) =>: findRegister
   valType switch
     EMPTY case X64_REGISTER .NONE return
-    I32 case 
+    I32 case
       regType switch
         PRIMARY case X64_REGISTER .EAX return
         SECONDARY case X64_REGISTER .EBX return
         MUL_H case X64_REGISTER .EDX return
       end
       break
-    I64 PTR REFERENCE case 
+    I64 PTR REFERENCE case
       regType switch
         PRIMARY case X64_REGISTER .RAX return
         SECONDARY case X64_REGISTER .RBX return
         MUL_H case X64_REGISTER .RDX return
       end
       break
-    F32 F64 case 
+    F32 F64 case
       regType switch
         PRIMARY case X64_REGISTER .XMM0 return
         SECONDARY case X64_REGISTER .XMM1 return
@@ -788,15 +816,78 @@ proc(
         context
       pushConstant
       return
-    declareId initializeId
-    implementProcedure
+    implementProcedure case
+      op [] .val .implementProcedure =:: implId
+      prog [] .procedures implId .procId list.at .data =:: procData
+      implId .implementationId 0 >= if
+        procData [] .implementation .code .implementations
+          implId .implementationId list.at .data
+        [] .variables
+      else
+        procData [] .implementation .code .variables
+      end =:: variables
+      0:i64 =:: mut: offset
+      0 while ..dup variables .length < do =:: i
+        variables i list.get =:: varInfo
+        varInfo .varType typeContext types.alignOf =:: varAlignment
+        varInfo .varType typeContext types.sizeOf =:: varSize
+        varSize switch
+          fixed case
+            offset
+              varAlignment .fixed types.alignSize
+            offset =
+            context [] .variableOffset @ varInfo .label offset map.put ..drop
+            offset
+              varSize .fixed +
+            offset =
+            break
+          dynamicArray case ## XXX? store dynamic arrays no separate stack
+            "dymnamic-size arrays are not supported" sb.wrap
+            op [] .pos errors appendError
+            break
+          unknown case
+            "could not determine size of type:" sb.wrap
+              varInfo .varType typeContext sb.appendType
+            op [] .pos errors appendError
+            break
+        end
+        i 1 +
+      end ..drop
+      asmOps
+        ## GlobalLabel
+          procData [] .labelId
+          implId .implementationId
+        GlobalLabel new AssemblyAtom .globalLabel list.append
+        ## asm.createUnary
+          X64_OP .PUSH
+          X64_REGISTER .RBP AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createBinary
+          X64_OP .MOV
+          X64_REGISTER .RBP AsmOperand .register
+          X64_REGISTER .RSP AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+        ## XXX store callee saved registers
+        offset 0 > if
+          ## asm.createBinary
+            X64_OP .SUB
+            X64_REGISTER .RSP AsmOperand .register
+            offset AsmOperand .value
+          asm.createBinary AssemblyAtom .op list.append
+        end
+        ## XXX initialize program stack & argument variables
+      return
+    declareId case
+      ## all variables declarations are handled at start of procedure
+      asmOps return
+    initializeId
     getId atId procPtr setValue
     getArrayElement atArrayElement
     getElement atElement
     copy New NewEnum
     checkEnumLabel setEnumLabel hasElement
     autoCast Cast Cast! bitCast
-    call callPtr case break
+    call callPtr case break ## ! align stack to multiple of 16 when calling
     builtIn case
       asmOps
         op [] .val .builtIn
@@ -1239,6 +1330,9 @@ proc(
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
+  ops 0 array.at .data [] .val .implementProcedure ??
+      assert "procedure starts with correct operation"
+  ## XXX? reset offset map
   asmOps0 [] =:: mut: asmOps
   0 while ..dup ops .length < do =:: j
     asmOps
@@ -1264,6 +1358,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToA
   typeContext [] .labelContext @ =:: labelContext
   ## CompilerContext
     prog
+    labelHash @ labelEq @ 64 i64 map.create
     ValueType branchTree.create
     32 BlockInfo list.create
     32 LocalConst list.create
@@ -1320,4 +1415,5 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToA
   end ..drop
   ## TODO string-constants
   ## TODO compile main
+  ## TODO cleanup context
 end

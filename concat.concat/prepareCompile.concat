@@ -13,10 +13,12 @@ import "branchTree.concat"
 
 struct(
   ProgramContext ptr mut : program
+  VariableInfo list : mut: variables
   FileId : mut: currentFile
 ) =:: ConverterContext
 
 proc(
+  Type : varType
   bool : mutable
   FilePosition : pos
   ConverterContext ptr mut : context
@@ -33,6 +35,9 @@ proc(
     context [] .currentFile
     labelContext
   id.newLabel =:: label
+  context [] .variables
+    varType label VariableInfo new list.append
+  context [] .variables =
   ## IdInfo
     IdentifierType .TMP_VAR
     label
@@ -58,9 +63,24 @@ proc(
     NOP case
       newOps return ## ignore nops
     builtIn binaryOperator argc getArg unreachable procPtr implementProcedure
-    checkEnumLabel hasElement declareId initializeId getId atId setValue
+    checkEnumLabel hasElement getId atId setValue
     atArrayElement atElement Assert stackMod getArrayElement getElement setEnumLabel
     autoCast Cast Cast! bitCast Return case
+      newOps
+        op list.append ## nothing to change
+      return
+    declareId initializeId case
+      op .val .declareId ?? if
+        op .val .declareId
+      else
+        op .val .initializeId
+      end =:: idInfo
+      context [] .variables
+        ## VariableInfo
+          op .dataType
+          idInfo .labelId
+        VariableInfo new list.append
+      context [] .variables =
       newOps
         op list.append ## nothing to change
       return
@@ -74,8 +94,16 @@ proc(
         op .val .Constant op .dataType op .pos program opConstReference list.append
       return
     copy case
-      true op .pos context newTmpVar =:: tmpId
       op .dataType typeContext types.unwrapReference =:: baseType
+      ## TODO change to check for reference only once composite stack values are supported by QBE back-end
+      ## baseType typeContext types.referenceOnly ! if
+      baseType typeContext types.unwrapNamed types.isPrimitive
+          baseType typeContext types.isPointer | if
+        newOps
+          op list.append ## values fits on stack, no variable needed
+        return
+      end
+      baseType true op .pos context newTmpVar =:: tmpId
       newOps
         ## opAutoCast
           op .dataType
@@ -83,8 +111,6 @@ proc(
           baseType
           op .pos
         opAutoCast list.append
-        ## XXX only create tmp variable from reference-only types,
-        ##   once multi-value types are supported by back-end
         ## opInitializeId
           baseType
           tmpId
@@ -102,7 +128,7 @@ proc(
           op list.append
         return
       end
-      true op .pos context newTmpVar =:: tmpId
+      op .dataType true op .pos context newTmpVar =:: tmpId
       newOps
         ## opInitializeId
           op .dataType
@@ -138,9 +164,9 @@ proc(
           arg typeContext types.isEmpty if
             i 1 + continue
           end
-          true op .pos context newTmpVar =:: tmpId
+          arg true op .pos context newTmpVar =:: tmpId
           ## opDeclareId
-            outArgs i array.get
+            arg
             tmpId
             op .pos
           opDeclareId list.append
@@ -197,18 +223,25 @@ end
 proc(
   Operation arrayView : ops
   Operation list ptr mut : newOps
+  VariableInfo list ptr mut : variables
+  i64 ptr mut : codeStart
+  i64 ptr mut : codeLength
   ConverterContext ptr mut : context
 -> ) =>: convertProc
   context [] .program =:: program
   program [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
+  variables [] context [] .variables =
   newOps []
+    ..dup .length codeStart [] =
     0 while ..dup ops .length < do =:: j
       ops j array.at .data [] context compileOp
       j 1 +
     end ..drop
+    ..dup .length codeStart [] - codeLength [] =
   newOps [] =
+  context [] .variables variables [] =
 end
 
 ## TODO better name for file&procedure, find good description of compilation-step
@@ -218,6 +251,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
   typeContext [] .labelContext @ =:: labelContext
   ## ConverterContext
     program
+    0 VariableInfo list.create
     -1
   ConverterContext new =:: mut: contextData
   contextData @ =:: context
@@ -243,6 +277,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
             currentImpl [] .codeLength
           list.slice
           f [] .templateOps @
+          currentImpl [] .variables @
+          currentImpl [] .codeStart @
+          currentImpl [] .codeLength @
           context
         convertProc
         implId 1 +
@@ -251,6 +288,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
       ## convertProc
         f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
         f [] .templateOps @
+        impl [] .variables @
+        impl [] .codeStart @
+        impl [] .codeLength @
         context
       convertProc
     end

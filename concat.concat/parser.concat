@@ -1553,7 +1553,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             valType
             label
             ## CodeProcData
-              8 ProcImplementation list.create
+              0 ProcImplementation list.create
+              0 VariableInfo list.create
               procStart
               -1
             CodeProcData new ProcImplType .code

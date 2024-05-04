@@ -20,14 +20,21 @@ enum( EMPTY RESERVED ) =:: NopType
 i64 =:: ConstReferenceId
 
 struct(
+  Type : varType
+  LabelId : label
+) =:: export: VariableInfo
+
+struct(
   Type : procType
   ConstantArray : staticArgs
+  VariableInfo list : mut: variables
   FilePosition : firstUse
   i64 : mut: codeStart
   i64 : mut: codeLength
 ) =:: export: ProcImplementation
 struct(
   ProcImplementation list : mut: implementations
+  VariableInfo list : mut: variables ## for single implementation in no-generic case
   i64 : mut: codeStart
   i64 : mut: codeLength
 ) =:: export: CodeProcData

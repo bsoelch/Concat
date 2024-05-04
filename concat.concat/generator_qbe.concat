@@ -3254,6 +3254,17 @@ proc(
         c sb.appendI
         '\n' sb.appendC
       return
+    copy case
+      sb
+        op [] .pos sb.appendPosQBE
+        CastType .autoCast
+        op [] .dataType
+        0
+        op [] .dataType typeContext types.unwrapReference
+        op [] .pos
+        context
+      compileCast return
+      break
     autoCast case
       sb
         op [] .pos sb.appendPosQBE
@@ -4201,7 +4212,7 @@ proc(
           sb return
       end
       break
-    Print setId autoTypedInitializeId copy
+    Print setId autoTypedInitializeId
     setElement setArrayElement call_old
     getArgLen unaryOperator
     checkArrayIndex typeInfo

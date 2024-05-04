@@ -3539,6 +3539,9 @@ proc(
   program [] .templateOps
      codeImpl [] .codeStart list.at .data
   =:: procStart
+  procStart [] .val .implementProcedure ??
+      procStart [] .val .initializeId ?? |
+      assert "procedure starts with correct operation"
   ## ProcedureImpl
     procId
     implId
