@@ -62,10 +62,31 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore nops
-    builtIn binaryOperator argc getArg unreachable procPtr implementProcedure
+    builtIn binaryOperator argc getArg unreachable procPtr
     checkEnumLabel hasElement getId atId setValue
     atArrayElement atElement Assert stackMod getArrayElement getElement setEnumLabel
     autoCast Cast Cast! bitCast Return case
+      newOps
+        op list.append ## nothing to change
+      return
+    implementProcedure case
+      op .dataType typeContext types.getProcIn
+        ! assert "procedure has arguments"
+      =:: args
+      args typeContext types.compositeEltCount =:: argCount
+      context [] .variables
+        0 while ..dup argCount < do =:: i
+          args i typeContext types.compositeGetLabel =:: label
+          label id.LABEL_ID_NONE == if
+            i 1 + continue
+          end
+          ## VariableInfo
+            args i typeContext types.compositeGetElement
+            label
+          VariableInfo new list.append
+          i 1 +
+        end ..drop
+      context [] .variables =
       newOps
         op list.append ## nothing to change
       return
