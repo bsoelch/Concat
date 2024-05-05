@@ -665,13 +665,28 @@ proc(
           ValueType .BITS192H target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       valType return
-    I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
+    I64 PTR REFERENCE BITS64
         BITS128L BITS128H BITS192L BITS192M BITS192H case
       asmOps
         ## asm.createUnary
           X64_OP .POP
           valType target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
+      valType return
+    I32 BITS32 case ## there is no 32-bit pop
+      asmOps
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .I64 target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      valType return
+    F64 F32 case
+      asmOps
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .I64 target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## TODO move to correct float register
       valType return
   end
 end
@@ -712,12 +727,27 @@ proc(
           ValueType .BITS192L target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       return
-    I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
+    I64 PTR REFERENCE BITS64
         BITS128L BITS128H BITS192L BITS192M BITS192H case
       asmOps
         ## asm.createUnary
           X64_OP .PUSH
           valType target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      return
+    I32 BITS32 case ## there is no 32-bit push
+      asmOps
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .I64 target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      return
+    F32 F64 case
+      asmOps
+        ## TODO move float to int register
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .I64 target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       return
   end
@@ -1092,11 +1122,9 @@ proc(
           fixed case
             offset
               varAlignment .fixed types.alignSize
-            offset =
-            context [] .variableOffset @ varInfo .label offset map.put ..drop
-            offset
               varSize .fixed +
             offset =
+            context [] .variableOffset @ varInfo .label offset map.put ..drop
             break
           dynamicArray case ## XXX? store dynamic arrays no separate stack
             "dymnamic-size arrays are not supported" sb.wrap
@@ -1149,7 +1177,6 @@ proc(
             context popValue =:: valueType
             op [] .dataType typeContext toValueType valueType == assert "stack-val=op-val"
             ## XXX extract to function for getting variable offset
-            ## XXX? is the address correct
             ## asm.createTrinary
               X64_OP .LEA
               ValueType .PTR RegisterType .SECONDARY findRegister AsmOperand .register
@@ -1293,10 +1320,6 @@ proc(
             RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
             ifCond ValueType .I32 == assert "if-condition is bool"
             ifCond RegisterType .PRIMARY findRegister =:: condRegister
-            ## asm.createUnary
-              X64_OP .POP
-              condRegister AsmOperand .register
-            asm.createUnary AssemblyAtom .op list.append
             ## asm.createBinary
               X64_OP .TEST
               condRegister AsmOperand .register
@@ -1750,7 +1773,23 @@ proc(
           return
       end
       break
-    Return Assert unreachable
+    Return case
+      asmOps
+        ## TODO handle multiple return values
+        RegisterType .PRIMARY op [] .pos context popValue =:: valType
+        ## TODO handle return values >2*i64
+        ## asm.createBinary
+          X64_OP .MOV
+          X64_REGISTER .RSP AsmOperand .register
+          X64_REGISTER .RBP AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+        ## XXX restore callee saved registers
+        ## asm.createUnary
+          X64_OP .POP
+          X64_REGISTER .RBP AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      return
+    Assert unreachable
     Print setId autoTypedInitializeId
     setElement setArrayElement call_old
     getArgLen unaryOperator ConstantReference NewReference

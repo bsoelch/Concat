@@ -343,7 +343,7 @@ namespace: types
   proc( Type TypeContext ptr mut -> bool ) =>: export: canReturn
     sizeOf =:: size
     size switch
-      fixed case ## XXX check for underalligned values
+      fixed case
         size .fixed 16 > return ## more than 2*i64
       dynamicArray case true return
       unknown case ..unreachable ## TODO error message
@@ -353,8 +353,8 @@ namespace: types
   proc( Type TypeContext ptr mut -> bool ) =>: export: referenceOnly
     sizeOf =:: size
     size switch
-      fixed case ## XXX check for underalligned values
-        size .fixed 24 > return ## more than 3*i64
+      fixed case
+        size .fixed 24 > return ## allow up to 3*i64 XXX? go up to 4*i64
       dynamicArray case true return
       unknown case ..unreachable ## TODO error message
     end
