@@ -10,7 +10,7 @@ import "measure.concat"
 import "branchTree.concat"
 
 enum(
-  MOV MOVZX MOVSX PUSH POP
+  MOV MOVZX MOVSX LEA PUSH POP
   NEG ADD SUB MUL IMUL DIV IDIV
   NOT AND OR XOR
   SHL SHR SAR
@@ -52,14 +52,14 @@ struct(
 enum(
   EMPTY
   X64_REGISTER : register
+  X64_REGISTER : registerPtr
+  X64_REGISTER : registerPtrOffset
   i64 : value
   LocalLabel : localLabel
   GlobalLabel : globalLabel
 ) =:: AsmOperand
 struct(
-  AsmOperand : arg1
-  AsmOperand : arg2
-  AsmOperand : arg3
+  AsmOperand 3 array : args
   X64_OP : operation
 ) =:: AssemblyOperation
 enum(
@@ -70,10 +70,10 @@ enum(
 ) =:: AssemblyAtom
 namespace: asm
   proc( X64_OP : opName AsmOperand : op1 -> AssemblyOperation ) =>: createUnary
+    AsmOperand 3 array new =:: mut: args
+    op1 args @ 0 [] =
     ## AssemblyOperation
-      op1
-      AsmOperand .EMPTY
-      AsmOperand .EMPTY
+      args
       opName
     AssemblyOperation new
   end
@@ -82,10 +82,11 @@ namespace: asm
     AsmOperand : op1
     AsmOperand : op2
   -> AssemblyOperation ) =>: createBinary
+    AsmOperand 3 array new =:: mut: args
+    op1 args @ 0 [] =
+    op2 args @ 1 [] =
     ## AssemblyOperation
-      op1
-      op2
-      AsmOperand .EMPTY
+      args
       opName
     AssemblyOperation new
   end
@@ -95,10 +96,12 @@ namespace: asm
     AsmOperand : op2
     AsmOperand : op3
   -> AssemblyOperation ) =>: createTrinary
+    AsmOperand 3 array new =:: mut: args
+    op1 args @ 0 [] =
+    op2 args @ 1 [] =
+    op3 args @ 2 [] =
     ## AssemblyOperation
-      op1
-      op2
-      op3
+      args
       opName
     AssemblyOperation new
   end
@@ -182,21 +185,6 @@ namespace: asm
   end
   proc(
     stringBuilder : sb
-    AsmOperand : arg
-    LabelContext ptr : labelContext
-  -> stringBuilder ) =>: appendOperand
-    sb
-      arg switch
-        EMPTY case break
-        register case arg .register appendRegister break
-        value case arg .value sb.appendI break
-        localLabel case arg .localLabel appendLocalLabel break
-        globalLabel case arg .globalLabel labelContext appendGlobalLabel break
-      end
-    return
-  end
-  proc(
-    stringBuilder : sb
     AssemblyOperation : op
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendOp
@@ -207,6 +195,7 @@ namespace: asm
         MOV case "mov " sb.appendS break
         MOVSX case "movsx " sb.appendS break
         MOVZX case "movzx " sb.appendS break
+        LEA case "lea " sb.appendS break
         NEG case "neg " sb.appendS break
         ADD case "add " sb.appendS break
         SUB case "sub " sb.appendS break
@@ -237,17 +226,49 @@ namespace: asm
         JNZ case "jnz " sb.appendS break
         JZ case "jz " sb.appendS break
       end
-      op .arg1 .EMPTY ?? ! if
-        op .arg1 labelContext appendOperand
-      end
-      op .arg2 .EMPTY ?? ! if
-        ", " sb.appendS
-        op .arg2 labelContext appendOperand
-      end
-      op .arg3 .EMPTY ?? ! if
-        ", " sb.appendS
-        op .arg3 labelContext appendOperand
-      end
+      false =:: mut: needComma
+      false =:: mut: isPtrOffset
+      op .args =:: args
+      0 while ..dup args ..length < do =:: i
+        args @ i [] =:: arg
+        arg .EMPTY ?? if
+          i 1 + continue
+        end
+        needComma if
+          isPtrOffset if
+            '+' sb.appendC
+          else
+            ", " sb.appendS
+          end
+          false needComma =
+        end
+        isPtrOffset =:: wasPtrOffset
+        false isPtrOffset =
+        arg switch
+          register case arg .register appendRegister break
+          registerPtr case
+            '[' sb.appendC
+            arg .registerPtr appendRegister
+            ']' sb.appendC
+            break
+          registerPtrOffset case
+            wasPtrOffset ! if
+              '[' sb.appendC
+            end
+            arg .registerPtrOffset appendRegister
+            true isPtrOffset =
+            break
+          value case arg .value sb.appendI break
+          localLabel case arg .localLabel appendLocalLabel break
+          globalLabel case arg .globalLabel labelContext appendGlobalLabel break
+          EMPTY case ..unreachable
+        end
+        wasPtrOffset if isPtrOffset ! _if
+          ']' sb.appendC
+        end
+        true needComma =
+        i 1 +
+      end ..drop
       '\n' sb.appendC
     return
   end
@@ -270,8 +291,11 @@ namespace: asm
   end
 end
 
-## TODO allow values to spread across multiple registers
-enum( EMPTY I32 I64 F32 F64 PTR REFERENCE ) =:: ValueType
+enum(
+  EMPTY I32 I64 F32 F64 PTR REFERENCE
+  BITS32 BITS64 BITS128 BITS192
+  BITS128L BITS128H BITS192L BITS192M BITS192H
+) =:: ValueType
 
 namespace: sb
   proc(
@@ -287,6 +311,15 @@ namespace: sb
         F64 case "f64" sb.appendS break
         PTR case "pointer" sb.appendS break
         REFERENCE case "reference" sb.appendS break
+        BITS32 case "bits32" sb.appendS break
+        BITS64 case "bits64" sb.appendS break
+        BITS128 case "bits128" sb.appendS break
+        BITS128L case "bits128:L" sb.appendS break
+        BITS128H case "bits128:H" sb.appendS break
+        BITS192 case "bits192" sb.appendS break
+        BITS192L case "bits192:L" sb.appendS break
+        BITS192M case "bits192:M" sb.appendS break
+        BITS192H case "bits192:H" sb.appendS break
       end
     return
   end
@@ -498,7 +531,21 @@ proc(
       ValueType .I64 return
     pointer case
       ValueType .PTR return
-    reference mutableReference procedure arrayType struct union enum case ## XXX allow saving multi-byte types in registers
+    arrayType struct union enum case
+      t typeContext types.sizeOf =:: size
+      size .fixed ?? if
+        size .fixed 4 <= if
+          ValueType .BITS32 return
+        else size .fixed 8 <= _if
+          ValueType .BITS64 return
+        else size .fixed 16 <= _if
+          ValueType .BITS128 return
+        else size .fixed 24 <= _if
+          ValueType .BITS192 return
+        end
+      end
+      ValueType .REFERENCE return
+    reference mutableReference procedure case
       ValueType .REFERENCE return
     undefined empty templateType genericType autoType
     procIn procOut case
@@ -538,34 +585,261 @@ proc(
 end
 
 
-enum( PRIMARY SECONDARY MUL_H ) =:: RegisterType
+enum( PRIMARY SECONDARY ) =:: RegisterType
 proc(
   ValueType : valType
   RegisterType : regType
 -> X64_REGISTER ) =>: findRegister
   valType switch
     EMPTY case X64_REGISTER .NONE return
-    I32 case
+    I32 BITS32 case
       regType switch
         PRIMARY case X64_REGISTER .EAX return
         SECONDARY case X64_REGISTER .EBX return
-        MUL_H case X64_REGISTER .EDX return
       end
       break
-    I64 PTR REFERENCE case
+    I64 PTR REFERENCE BITS64 BITS128 BITS128L BITS192 BITS192L case
       regType switch
         PRIMARY case X64_REGISTER .RAX return
         SECONDARY case X64_REGISTER .RBX return
-        MUL_H case X64_REGISTER .RDX return
+      end
+      break
+    BITS128H BITS192M case
+      regType switch
+        PRIMARY case X64_REGISTER .RDX return
+        SECONDARY case X64_REGISTER .RCX return
+      end
+      break
+    BITS192H case
+      regType switch
+        PRIMARY case X64_REGISTER .R8 return
+        SECONDARY case X64_REGISTER .R9 return
       end
       break
     F32 F64 case
       regType switch
         PRIMARY case X64_REGISTER .XMM0 return
         SECONDARY case X64_REGISTER .XMM1 return
-        MUL_H case X64_REGISTER .NONE return
       end
       break
+  end
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  RegisterType : target
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ValueType ) =>: popValue
+  context [] .stackValues branchTree.depth 1 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    asmOps ValueType .EMPTY return
+  end
+  context [] .stackValues @ branchTree.pop .data [] =:: valType
+  valType switch
+    EMPTY case asmOps valType return
+    BITS128 case
+      asmOps
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .BITS128H target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .BITS128L target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      valType return
+    BITS192 case
+      asmOps
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .BITS192H target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .BITS192M target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createUnary
+          X64_OP .POP
+          ValueType .BITS192L target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      valType return
+    I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
+        BITS128L BITS128H BITS192L BITS192M BITS192H case
+      asmOps
+        ## asm.createUnary
+          X64_OP .POP
+          valType target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      valType return
+  end
+end
+## TODO? push value-type with value
+proc(
+  AssemblyAtom list : asmOps
+  ValueType : valType
+  RegisterType : target
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: pushValue
+  context .stackValues @ valType branchTree.push
+  valType switch
+    EMPTY case asmOps return
+    BITS128 case
+      asmOps
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .BITS128L target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .BITS128H target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      return
+    BITS192 case
+      asmOps
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .BITS192L target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .BITS192M target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createUnary
+          X64_OP .PUSH
+          ValueType .BITS192H target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      return
+    I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
+        BITS128L BITS128H BITS192L BITS192M BITS192H case
+      asmOps
+        ## asm.createUnary
+          X64_OP .PUSH
+          valType target findRegister AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+      return
+  end
+end
+proc(
+  AssemblyAtom list : asmOps
+  RegisterType : ptrRegister
+  ValueType : valType
+  RegisterType : valueRegister
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: loadValue
+  ValueType .PTR ptrRegister findRegister =:: src
+  valType switch
+    EMPTY case asmOps return
+    BITS128 case
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          ValueType .BITS128L valueRegister findRegister AsmOperand .register
+          src AsmOperand .registerPtr
+        asm.createBinary AssemblyAtom .op list.append
+        ## asm.createTrinary
+          X64_OP .MOV
+          ValueType .BITS128H valueRegister findRegister AsmOperand .register
+          src AsmOperand .registerPtrOffset
+          8 AsmOperand .value
+        asm.createTrinary AssemblyAtom .op list.append
+      return
+    BITS192 case
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          ValueType .BITS192L valueRegister findRegister AsmOperand .register
+          src AsmOperand .registerPtr
+        asm.createBinary AssemblyAtom .op list.append
+        ## asm.createTrinary
+          X64_OP .MOV
+          ValueType .BITS192M valueRegister findRegister AsmOperand .register
+          src AsmOperand .registerPtrOffset
+          8 AsmOperand .value
+        asm.createTrinary AssemblyAtom .op list.append
+        ## asm.createTrinary
+          X64_OP .MOV
+          ValueType .BITS192H valueRegister findRegister AsmOperand .register
+          src AsmOperand .registerPtrOffset
+          16 AsmOperand .value
+        asm.createTrinary AssemblyAtom .op list.append
+      return
+    I32 I64 PTR REFERENCE BITS32 BITS64
+        BITS128L BITS128H BITS192L BITS192M BITS192H case
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          valType valueRegister findRegister AsmOperand .register
+          src AsmOperand .registerPtr
+        asm.createBinary AssemblyAtom .op list.append
+      return
+    F32 F64 case
+      "loading/storing floats is not implemented" sb.wrap
+      pos context [] .program [] .errors @ appendError
+      asmOps return
+  end
+end
+proc(
+  AssemblyAtom list : asmOps
+  RegisterType : ptrRegister
+  ValueType : valType
+  RegisterType : valueRegister
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: storeValue
+  ValueType .PTR ptrRegister findRegister =:: target
+  valType switch
+    EMPTY case asmOps return
+    BITS128 case
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          target AsmOperand .registerPtr
+          ValueType .BITS128L valueRegister findRegister AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+        ## asm.createTrinary
+          X64_OP .MOV
+          target AsmOperand .registerPtrOffset
+          8 AsmOperand .value
+          ValueType .BITS128H valueRegister findRegister AsmOperand .register
+        asm.createTrinary AssemblyAtom .op list.append
+      return
+    BITS192 case
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          target AsmOperand .registerPtr
+          ValueType .BITS192L valueRegister findRegister AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+        ## asm.createTrinary
+          X64_OP .MOV
+          target AsmOperand .registerPtrOffset
+          8 AsmOperand .value
+          ValueType .BITS192M valueRegister findRegister AsmOperand .register
+        asm.createTrinary AssemblyAtom .op list.append
+        ## asm.createTrinary
+          X64_OP .MOV
+          target AsmOperand .registerPtrOffset
+          16 AsmOperand .value
+          ValueType .BITS192H valueRegister findRegister AsmOperand .register
+        asm.createTrinary AssemblyAtom .op list.append
+      return
+    I32 I64 PTR REFERENCE BITS32 BITS64
+        BITS128L BITS128H BITS192L BITS192M BITS192H case
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          target AsmOperand .registerPtr
+          valType valueRegister findRegister AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+      return
+    F32 F64 case
+      "loading/storing floats is not implemented" sb.wrap
+      pos context [] .program [] .errors @ appendError
+      asmOps return
   end
 end
 
@@ -580,21 +854,14 @@ proc(
     pos context [] .program [] .errors @ appendError
     asmOps return
   end
-  context [] .stackValues @ branchTree.peek .data [] =:: topVal
-  topVal RegisterType .PRIMARY findRegister =:: regId
   asmOps
-    ## asm.createUnary
-      X64_OP .POP
-      regId AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
+    RegisterType .PRIMARY pos context popValue =:: topVal
+    topVal RegisterType .PRIMARY findRegister =:: regId
     ## asm.createUnary
       opType
       regId AsmOperand .register
     asm.createUnary AssemblyAtom .op list.append
-    ## asm.createUnary
-      X64_OP .PUSH
-      regId AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
+    topVal RegisterType .PRIMARY pos context pushValue
   return
 end
 
@@ -609,29 +876,24 @@ proc(
     pos context [] .program [] .errors @ appendError
     asmOps return
   end
-  context [] .stackValues @ branchTree.pop .data [] =:: arg2
-  context [] .stackValues @ branchTree.peek .data [] =:: arg1
-  arg1 arg2 == assert "compatible argument types"
-  arg1 RegisterType .PRIMARY findRegister =:: regId1
-  arg2 RegisterType .SECONDARY findRegister =:: regId2
   asmOps
-    ## asm.createUnary
-      X64_OP .POP
-      regId2 AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
-    ## asm.createUnary
-      X64_OP .POP
-      regId1 AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
+    RegisterType .SECONDARY pos context popValue =:: arg2
+    RegisterType .PRIMARY pos context popValue =:: arg1
+    arg1 arg2 != if
+      "incompatible argument types: " sb.wrap
+        arg1 sb.appendValueType
+        " and " sb.appendS
+        arg2 sb.appendValueType
+      pos context [] .program [] .errors @ appendError
+    end
+    arg1 RegisterType .PRIMARY findRegister =:: regId1
+    arg2 RegisterType .SECONDARY findRegister =:: regId2
     ## asm.createUnary
       opType
       regId1 AsmOperand .register
       regId2 AsmOperand .register
     asm.createBinary AssemblyAtom .op list.append
-    ## asm.createUnary
-      X64_OP .PUSH
-      regId1 AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
+    arg1 RegisterType .PRIMARY pos context pushValue
   return
 end
 
@@ -647,21 +909,19 @@ proc(
     pos context [] .program [] .errors @ appendError
     asmOps return
   end
-  context [] .stackValues @ branchTree.pop .data [] =:: arg2
-  context [] .stackValues @ branchTree.peek .data [] =:: arg1
-  arg1 arg2 == assert "compatible argument types"
-  arg1 RegisterType .PRIMARY findRegister =:: regId1
-  arg2 RegisterType .SECONDARY findRegister =:: regId2
   ValueType .I32 RegisterType .PRIMARY findRegister =:: regOut
   asmOps
-    ## asm.createUnary
-      X64_OP .POP
-      regId2 AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
-    ## asm.createUnary
-      X64_OP .POP
-      regId1 AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
+    RegisterType .SECONDARY pos context popValue =:: arg2
+    RegisterType .PRIMARY pos context popValue =:: arg1
+    arg1 arg2 != if
+      "incompatible argument types: " sb.wrap
+        arg1 sb.appendValueType
+        " and " sb.appendS
+        arg2 sb.appendValueType
+      pos context [] .program [] .errors @ appendError
+    end
+    arg1 RegisterType .PRIMARY findRegister =:: regId1
+    arg2 RegisterType .SECONDARY findRegister =:: regId2
     ## asm.createUnary
       X64_OP .CMP
       regId1 AsmOperand .register
@@ -676,10 +936,7 @@ proc(
       regOut AsmOperand .register
       X64_REGISTER .AL AsmOperand .register
     asm.createBinary AssemblyAtom .op list.append
-    ## asm.createUnary
-      X64_OP .PUSH
-      regOut AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
+    ValueType .I32 RegisterType .PRIMARY pos context pushValue
   return
 end
 proc(
@@ -880,8 +1137,86 @@ proc(
     declareId case
       ## all variables declarations are handled at start of procedure
       asmOps return
-    initializeId
-    getId atId procPtr setValue
+    initializeId case
+      op [] .val .initializeId =:: idInfo
+      idInfo .idType switch
+        LOCAL_VAR TMP_VAR case
+          context [] .variableOffset @ idInfo .labelId map.get .data =:: offset
+          asmOps
+            ## popValue
+              RegisterType .PRIMARY
+              op [] .pos
+            context popValue =:: valueType
+            op [] .dataType typeContext toValueType valueType == assert "stack-val=op-val"
+            ## asm.createTrinary
+              X64_OP .LEA
+              ValueType .PTR RegisterType .SECONDARY findRegister AsmOperand .register
+              X64_REGISTER .RBP AsmOperand .registerPtrOffset
+              offset AsmOperand .value
+            asm.createTrinary AssemblyAtom .op list.append
+            ## storeValue
+              RegisterType .SECONDARY
+              valueType
+              RegisterType .PRIMARY
+              op [] .pos
+              context
+            storeValue
+          return
+        break
+        ARGUMENT GLOBAL_VAR TYPE PROCEDURE PROCEDURE_BUNDLE
+            TEMPLATE_ARG LABEL case break
+      end
+      break
+    atId getId case
+      op [] .val .atId ?? =:: isPtr
+      isPtr if
+        op [] .val .atId
+      else
+        op [] .val .getId
+      end =:: idInfo
+      idInfo .idType switch
+        LOCAL_VAR TMP_VAR ARGUMENT case
+          context [] .variableOffset @ idInfo .labelId map.get =:: offset?
+          offset? optional.hasData if
+            offset? .data
+          else
+            "missing offset for " sb.wrap
+               idInfo .idType sb.appendIdType
+               ": " sb.appendS
+               idInfo .labelId labelContext sb.appendLabelName
+             op [] .pos errors appendError
+            -1:i64
+          end =:: offset
+          asmOps
+            ## asm.createTrinary
+              X64_OP .LEA
+              ValueType .PTR RegisterType .PRIMARY findRegister AsmOperand .register
+              X64_REGISTER .RBP AsmOperand .registerPtrOffset
+              offset AsmOperand .value
+            asm.createTrinary AssemblyAtom .op list.append
+            isPtr ! if
+              op [] .dataType typeContext toValueType =:: valueType
+              ## loadValue
+                RegisterType .PRIMARY
+                valueType
+                RegisterType .SECONDARY
+                op [] .pos
+                context
+              loadValue
+              ## pushValue
+                valueType
+                RegisterType .SECONDARY
+                op [] .pos
+                context
+              pushValue
+            end
+          return
+        break
+        GLOBAL_VAR case break
+        TYPE PROCEDURE PROCEDURE_BUNDLE TEMPLATE_ARG LABEL case break
+      end
+      break
+    procPtr setValue
     getArrayElement atArrayElement
     getElement atElement
     copy New NewEnum
@@ -901,15 +1236,11 @@ proc(
     block case
       op [] .val .block .blockType switch
         IF case
-          context [] .stackValues @ branchTree.pop .data [] =:: ifCond
-          ifCond ValueType .I32 == assert "condition type"
-          ifCond RegisterType .PRIMARY findRegister =:: condRegister
           asmOps
             ## TODO debug position
-            ## asm.createUnary
-              X64_OP .POP
-              condRegister AsmOperand .register
-            asm.createUnary AssemblyAtom .op list.append
+            RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
+            ifCond ValueType .I32 == assert "if-condition is bool"
+            ifCond RegisterType .PRIMARY findRegister =:: condRegister
             ## asm.createBinary
               X64_OP .TEST
               condRegister AsmOperand .register
@@ -927,11 +1258,11 @@ proc(
           return
         IFIF case
           context [] .openBlocks list.peek .data =:: ifBlock
-          context [] .stackValues @ branchTree.pop .data [] =:: ifCond
-          ifCond ValueType .I32 == assert "condition type"
-          ifCond RegisterType .PRIMARY findRegister =:: condRegister
           asmOps
             ## TODO debug position
+            RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
+            ifCond ValueType .I32 == assert "if-condition is bool"
+            ifCond RegisterType .PRIMARY findRegister =:: condRegister
             ## asm.createUnary
               X64_OP .POP
               condRegister AsmOperand .register
@@ -1078,15 +1409,11 @@ proc(
           return
         DO case
           context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
-          context [] .stackValues @ branchTree.pop .data [] =:: whileCond
-          whileCond ValueType .I32 == assert "condition type"
-          whileCond RegisterType .PRIMARY findRegister =:: condRegister
           asmOps
             ## TODO debug position
-            ## asm.createUnary
-              X64_OP .POP
-              condRegister AsmOperand .register
-            asm.createUnary AssemblyAtom .op list.append
+            RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
+            ifCond ValueType .I32 == assert "while-condition is bool"
+            ifCond RegisterType .PRIMARY findRegister =:: condRegister
             ## asm.createBinary
               X64_OP .TEST
               condRegister AsmOperand .register
@@ -1350,6 +1677,7 @@ proc(
     target ..over io.fputSb ..drop
   sb.free ..drop ## XXX merge string builders
   asmOps list.clear asmOps0 [] =
+  context [] .stackValues @ branchTree.clear
 end
 
 proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToAsm
