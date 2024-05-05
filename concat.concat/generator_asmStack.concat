@@ -643,18 +643,18 @@ proc(
       asmOps
         ## asm.createUnary
           X64_OP .POP
-          ValueType .BITS128H target findRegister AsmOperand .register
+          ValueType .BITS128L target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createUnary
           X64_OP .POP
-          ValueType .BITS128L target findRegister AsmOperand .register
+          ValueType .BITS128H target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       valType return
     BITS192 case
       asmOps
         ## asm.createUnary
           X64_OP .POP
-          ValueType .BITS192H target findRegister AsmOperand .register
+          ValueType .BITS192L target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createUnary
           X64_OP .POP
@@ -662,7 +662,7 @@ proc(
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createUnary
           X64_OP .POP
-          ValueType .BITS192L target findRegister AsmOperand .register
+          ValueType .BITS192H target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       valType return
     I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
@@ -675,7 +675,7 @@ proc(
       valType return
   end
 end
-## TODO? push value-type with value
+
 proc(
   AssemblyAtom list : asmOps
   ValueType : valType
@@ -690,18 +690,18 @@ proc(
       asmOps
         ## asm.createUnary
           X64_OP .PUSH
-          ValueType .BITS128L target findRegister AsmOperand .register
+          ValueType .BITS128H target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createUnary
           X64_OP .PUSH
-          ValueType .BITS128H target findRegister AsmOperand .register
+          ValueType .BITS128L target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       return
     BITS192 case
       asmOps
         ## asm.createUnary
           X64_OP .PUSH
-          ValueType .BITS192L target findRegister AsmOperand .register
+          ValueType .BITS192H target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createUnary
           X64_OP .PUSH
@@ -709,7 +709,7 @@ proc(
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createUnary
           X64_OP .PUSH
-          ValueType .BITS192H target findRegister AsmOperand .register
+          ValueType .BITS192L target findRegister AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
       return
     I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
@@ -1129,7 +1129,7 @@ proc(
           ## asm.createBinary
             X64_OP .SUB
             X64_REGISTER .RSP AsmOperand .register
-            offset AsmOperand .value
+            offset 8 types.alignSize AsmOperand .value
           asm.createBinary AssemblyAtom .op list.append
         end
         ## XXX initialize program stack & argument variables
@@ -1148,12 +1148,15 @@ proc(
               op [] .pos
             context popValue =:: valueType
             op [] .dataType typeContext toValueType valueType == assert "stack-val=op-val"
+            ## XXX extract to function for getting variable offset
+            ## XXX? is the address correct
             ## asm.createTrinary
               X64_OP .LEA
               ValueType .PTR RegisterType .SECONDARY findRegister AsmOperand .register
               X64_REGISTER .RBP AsmOperand .registerPtrOffset
-              offset AsmOperand .value
+              offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
+            ## TODO handle reference only values
             ## storeValue
               RegisterType .SECONDARY
               valueType
@@ -1192,34 +1195,61 @@ proc(
               X64_OP .LEA
               ValueType .PTR RegisterType .PRIMARY findRegister AsmOperand .register
               X64_REGISTER .RBP AsmOperand .registerPtrOffset
-              offset AsmOperand .value
+              offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
-            isPtr ! if
-              op [] .dataType typeContext toValueType =:: valueType
-              ## loadValue
-                RegisterType .PRIMARY
-                valueType
-                RegisterType .SECONDARY
-                op [] .pos
-                context
-              loadValue
-              ## pushValue
-                valueType
-                RegisterType .SECONDARY
-                op [] .pos
-                context
-              pushValue
-            end
+            isPtr if
+              ValueType .PTR
+            else
+              ValueType .REFERENCE
+            end RegisterType .PRIMARY op [] .pos context pushValue
           return
         break
         GLOBAL_VAR case break
         TYPE PROCEDURE PROCEDURE_BUNDLE TEMPLATE_ARG LABEL case break
       end
       break
-    procPtr setValue
+    setValue case
+      asmOps
+        RegisterType .PRIMARY op [] .pos context popValue =:: refValue
+        refValue ValueType .REFERENCE == assert "copy argument is reference"
+        ## popValue
+          RegisterType .SECONDARY
+          op [] .pos
+          context
+        popValue =:: valueType
+        ## TODO add assertion back in once compiler is stable
+        ## op [] .dataType typeContext toValueType valueType == assert "stack-value=op-value"
+        ## storeValue
+          RegisterType .PRIMARY
+          valueType
+          RegisterType .SECONDARY
+          op [] .pos
+          context
+        storeValue
+      return
+    procPtr
     getArrayElement atArrayElement
-    getElement atElement
-    copy New NewEnum
+    getElement atElement case break
+    copy case
+      asmOps
+        RegisterType .PRIMARY op [] .pos context popValue =:: refValue
+        refValue ValueType .REFERENCE == assert "copy argument is reference"
+        op [] .dataType typeContext toValueType =:: valueType
+        ## loadValue
+          RegisterType .PRIMARY
+          valueType
+          RegisterType .SECONDARY
+          op [] .pos
+          context
+        loadValue
+        ## pushValue
+          valueType
+          RegisterType .SECONDARY
+          op [] .pos
+          context
+        pushValue
+      return
+    New NewEnum
     checkEnumLabel setEnumLabel hasElement
     autoCast Cast Cast! bitCast
     call callPtr case break ## ! align stack to multiple of 16 when calling
@@ -1632,8 +1662,96 @@ proc(
           break
       end
       break
-    Return Assert unreachable stackMod Print
-    setId autoTypedInitializeId
+    stackMod case
+      op [] .val .stackMod .modType switch
+        DROP case
+          op [] .val .stackMod .n =:: mut: count
+          0
+            count while ..dup 0 > do =:: i
+              context [] .stackValues @ branchTree.pop =:: val?
+              val? optional.isEmpty if
+                "stack underflow" sb.wrap op [] .pos errors appendError
+                i break
+              end
+              val? .data [] switch
+                EMPTY case 0 + break
+                I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
+                    BITS128L BITS128H BITS192L BITS192M BITS192H case 8 + break
+                BITS128 case 16 + break
+                BITS192 case 24 + break
+              end
+              i 1 -
+            end ..drop
+          =:: offset
+          asmOps
+            ## asm.createBinary
+              X64_OP .ADD
+              X64_REGISTER .RSP AsmOperand .register
+              offset AsmOperand .value
+            asm.createBinary AssemblyAtom .op list.append
+          return
+        COPY case
+          op [] .val .stackMod .n =:: offset
+          context [] .stackValues branchTree.depth offset 1 + < if
+            "stack underflow" sb.wrap op [] .pos errors appendError
+            asmOps return
+          end
+          offset 0 == if
+            asmOps
+              RegisterType .PRIMARY op [] .pos context popValue =:: valType
+              valType RegisterType .PRIMARY op [] .pos context pushValue
+              valType RegisterType .PRIMARY op [] .pos context pushValue
+            return
+          end
+          0 =:: mut: valueOffset
+          ValueType : valueType
+          context [] .stackValues @ branchTree.itr.start =:: mut: stackItr
+          0 while ..dup offset <= do 1 +
+            stackItr
+              branchTree.itr.next [] valueType =
+            stackItr =
+            valueOffset
+              valueType switch
+                EMPTY case 0 + break
+                I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
+                    BITS128L BITS128H BITS192L BITS192M BITS192H case 8 + break
+                BITS128 case 16 + break
+                BITS192 case 24 + break
+              end
+            valueOffset =
+          end ..drop
+          asmOps
+            ## asm.createTrinary
+              X64_OP .LEA
+              ValueType .PTR RegisterType .PRIMARY findRegister AsmOperand .register
+              X64_REGISTER .RSP AsmOperand .registerPtrOffset
+              valueOffset AsmOperand .value
+            asm.createTrinary AssemblyAtom .op list.append
+            ## loadValue
+              RegisterType .PRIMARY
+              valueType
+              RegisterType .SECONDARY
+              op [] .pos
+              context
+            loadValue
+            ## pushValue
+              valueType
+              RegisterType .SECONDARY
+              op [] .pos
+              context
+            pushValue
+          return
+        SWAP case
+          asmOps
+            RegisterType .PRIMARY op [] .pos context popValue =:: val1
+            RegisterType .SECONDARY op [] .pos context popValue =:: val2
+            val1 RegisterType .PRIMARY op [] .pos context pushValue
+            val2 RegisterType .SECONDARY op [] .pos context pushValue
+          return
+      end
+      break
+    Return Assert unreachable
+    Print setId autoTypedInitializeId
     setElement setArrayElement call_old
     getArgLen unaryOperator ConstantReference NewReference
     checkArrayIndex typeInfo NewEnumReference
