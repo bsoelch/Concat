@@ -9,6 +9,9 @@ import "program.concat"
 import "measure.concat"
 import "branchTree.concat"
 
+## XXX? change intermediate assembly to simplified version of X64 syntax
+##  * only one move, choose correct move instruction depending on argument types
+##  * make assembly more or less platform independent between AMD64 and aarch64
 enum(
   MOV MOVZX MOVSX LEA PUSH POP
   NEG ADD SUB MUL IMUL DIV IDIV
@@ -20,6 +23,8 @@ enum(
   SETE SETNE
   JNZ JZ JMP
 ) =:: X64_OP
+## XXX? find way to split register into register+size(i8,i16,i32,i64) / (f32,f64,sse128)
+## XXX? allow overwriting register names for different architectures
 enum(
   NONE
   AL
@@ -55,6 +60,8 @@ enum(
   X64_REGISTER : registerPtr
   X64_REGISTER : registerPtrOffset
   i64 : value
+  i64 : stackMemoryInt
+  i64 : stackMemoryFloat
   LocalLabel : localLabel
   GlobalLabel : globalLabel
 ) =:: AsmOperand
@@ -63,6 +70,7 @@ struct(
   X64_OP : operation
 ) =:: AssemblyOperation
 enum(
+  empty
   AssemblyOperation : op
   LocalLabel : localLabel
   GlobalLabel : globalLabel
@@ -259,6 +267,10 @@ namespace: asm
             true isPtrOffset =
             break
           value case arg .value sb.appendI break
+          stackMemoryInt case
+            "%stackInt" sb.appendS arg .stackMemoryInt sb.appendI break
+          stackMemoryFloat case
+            "%stackFloat" sb.appendS arg .stackMemoryFloat sb.appendI break
           localLabel case arg .localLabel appendLocalLabel break
           globalLabel case arg .globalLabel labelContext appendGlobalLabel break
           EMPTY case ..unreachable
@@ -278,6 +290,7 @@ namespace: asm
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendToSb
     atom switch
+      empty case sb "  ## empty\n" sb.appendS return
       op case sb "  " sb.appendS atom .op labelContext appendOp return
       localLabel case
           sb atom .localLabel appendLocalLabel
@@ -325,15 +338,34 @@ namespace: sb
   end
 end
 
+
+15 =:: REGISTER_LIST_MAX_LENGTH
 struct(
-  Type       : valType
-  ConstValue : value
-  FilePosition : pos
-  i64 : id
-) =:: LocalConst
+  X64_REGISTER REGISTER_LIST_MAX_LENGTH array : mut: registers
+  i8 : mut: count
+) =:: RegisterList
 
 struct(
+  i32 : intOffset
+  i32 : floatOffset
+  ValueType : valType
+) =:: StackRegisterValue
+
+struct(
+  i32 : mut: stackCountInt
+  i32 : mut: stackCountFloat
+  bool REGISTER_LIST_MAX_LENGTH array : mut: activeStackRegistersInt
+  bool REGISTER_LIST_MAX_LENGTH array : mut: activeStackRegistersFloat
+) =:: StackRegisterState
+
+## FIXME merge stack registers at end of branch
+## reserve space for operations min(number of stack-values,number of stack-registers) slots
+## when merging add operations in reserved space
+struct(
   branchTree.NodeId list : mut: ififBranches
+  StackRegisterState : mut: rootStackRegs
+  StackRegisterState : mut: ifBranchRegs
+  i64 : mut: ifBranchCodeOffset
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut: ifBranch
   i32 : blockId
@@ -341,12 +373,20 @@ struct(
 ) =:: IfBlockInfo
 struct(
   branchTree.NodeId list : mut: caseBranches
+  StackRegisterState list : mut: caseStackRegs
+  i64 list : mut: caseCodeOffsets
+  StackRegisterState : mut: rootStackRegs
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: SwitchBlockInfo
 struct(
   branchTree.NodeId list : mut: continueBranches
+  StackRegisterState list : mut: continueStackRegs
+  i64 list : mut: continueCodeOffsets
   branchTree.NodeId list : mut: breakBranches
+  StackRegisterState list : mut: breakStackRegs
+  i64 list : mut: breakCodeOffsets
+  StackRegisterState : rootStackRegs
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: WhileBlockInfo
@@ -368,12 +408,24 @@ namespace: sb
 end
 
 struct(
+  Type       : valType
+  ConstValue : value
+  FilePosition : pos
+  i64 : id
+) =:: LocalConst
+
+struct(
   ProgramContext ptr mut : program
   LabelId i64 hashMap : mut: variableOffset
-  ValueType BranchTree : mut: stackValues
+  StackRegisterValue BranchTree : mut: stackValues
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
   StringConstant list : mut: stringConstants
+  RegisterList : mut: stackRegistersInt
+  RegisterList : mut: stackRegistersFloat
+  RegisterList : mut: tmpRegistersInt
+  RegisterList : mut: tmpRegistersFloat
+  StackRegisterState : mut: stackRegState
   Type : mut: currentProc
   i64 : mut: localConstCount
   i64 : mut: stackCount
@@ -381,7 +433,6 @@ struct(
   i32 : mut: jumpLabelCount
   bool : mut: reachable
 ) =:: CompilerContext
-
 
 proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
   context [] .openBlocks
@@ -395,6 +446,9 @@ proc(
   ## IfBlockInfo
     8 branchTree.NodeId list.create
       context [] .stackValues @ branchTree.startBranch list.append
+    context [] .stackRegState ## root
+    context [] .stackRegState ## placeholder for if-branch
+    -1
     context [] .stackValues @ branchTree.startBranch
     -1 branchTree.NodeId cast
     blockId
@@ -407,6 +461,9 @@ proc(
 -> ) =>: openSwitchBlock
   ## SwitchBlockInfo
     16 branchTree.NodeId list.create
+    16 StackRegisterState list.create
+    16 i64 list.create
+    context [] .stackRegState
     context [] .stackValues @ branchTree.startBranch
     blockId
   SwitchBlockInfo new BlockInfo .Switch context openBlock
@@ -416,8 +473,13 @@ proc(
   CompilerContext ptr mut : context
 -> ) =>: openWhileBlock
   ## WhileBlockInfo
-    16 branchTree.NodeId list.create
-    16 branchTree.NodeId list.create
+    8 branchTree.NodeId  list.create
+    8 StackRegisterState list.create
+    8 i64 list.create
+    8 branchTree.NodeId  list.create
+    8 StackRegisterState list.create
+    8 i64 list.create
+    context [] .stackRegState ## root
     context [] .stackValues @ branchTree.startBranch
     blockId
   WhileBlockInfo new BlockInfo .While context openBlock
@@ -460,10 +522,10 @@ struct(
   CompilerContext ptr mut : context
 ) =:: MergePoint
 proc(
-  ValueType ptr arrayView : toMerge
+  StackRegisterValue ptr arrayView : toMerge
   i64 : offset
   MergePoint : mergePoint
--> ValueType ) =>: mergeBranches
+-> StackRegisterValue ) =>: mergeBranches
   mergePoint .context =:: context
   context [] .program =:: program
   program [] .errors @ =:: errors
@@ -471,32 +533,33 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  toMerge 0 array.get [] =:: rootValue
+  toMerge 0 array.get [] =:: rootElement
+  rootElement .valType =:: rootValue
   true =:: mut: isMerged
   1 while ..dup toMerge .length < do =:: i
-    toMerge i array.get [] rootValue != if
+    toMerge i array.get [] .valType rootValue != if
       false isMerged =
       i break
     end
     i 1 +
   end ..drop
   isMerged if
-    rootValue return
+    rootElement return
   end
   1 while ..dup toMerge .length < do =:: i
-    toMerge i array.get [] rootValue != if
+    toMerge i array.get [] .valType rootValue != if
       "branches of " sb.wrap
          mergePoint .blockName sb.appendStr
          "-statement are out of sync expected: " sb.appendS
          rootValue sb.appendValueType
          " got: " sb.appendS
-         toMerge i array.get [] sb.appendValueType
+         toMerge i array.get [] .valType sb.appendValueType
       mergePoint .pos errors appendError
       i break
     end
     i 1 +
   end ..drop
-  ValueType .EMPTY return
+  rootElement return
 end
 
 proc(
@@ -566,310 +629,739 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  context [] .stackValues @
-    constType typeContext toValueType
-  branchTree.push
-  value .int ?? if
-    ## XXX ensure value has correct size
-    asmOps
-      ## asm.createUnary
-        X64_OP .PUSH
+  constType typeContext toValueType =:: valType
+  asmOps
+    valType pos context preparePushValue =:: valueRegister
+    value .int ?? if
+      ## XXX ensure value has correct size
+      valueRegister .registerCount 1 == assert "correct register-count for value"
+      ## asm.createBinary
+        X64_OP .MOV
+        valueRegister .registers @ 0 [] AsmOperand .register
         value .int AsmOperand .value
-      asm.createUnary AssemblyAtom .op list.append
-    return
+      asm.createBinary AssemblyAtom .op list.append
+      return
+    end
+    "unsupported constant " sb.wrap
+      value constContext typeContext sb.appendConstant
+    pos errors appendError
+  return
+end
+
+3 =:: MAX_VALUE_REGISTERS
+## XXX? make maximum number of slots a program wide constant
+struct(
+  X64_REGISTER MAX_VALUE_REGISTERS array : registers
+  i8 : registerCount
+) =:: RegisterValue
+
+## XXX? store 32-bit values separately to save space
+enum( INT FLOAT ) =:: StackRegisterType
+
+enum( PUSH POP DROP ) =:: StackOperation
+
+proc(
+  AssemblyAtom list : asmOps
+  StackRegisterState : toState
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: resetStackRegisters
+  context [] .program [] .errors @ =:: errors
+  context [] .stackRegState =:: current
+  current .stackCountInt =:: intCount
+  current .stackCountFloat =:: floatCount
+  intCount toState .stackCountInt != if
+    "stack out of sync" sb.wrap
+    pos errors appendError
+    asmOps return
   end
-  "unsupported constant " sb.wrap
-    value constContext typeContext sb.appendConstant
-  pos errors appendError
+  floatCount toState .stackCountFloat != if
+    "stack out of sync" sb.wrap
+    pos errors appendError
+    asmOps return
+  end
+  current .activeStackRegistersInt@ =:: currentIntRegs
+  current .activeStackRegistersFloat@ =:: currentFloatRegs
+  toState .activeStackRegistersInt =:: toIntRegValues
+  toState .activeStackRegistersFloat =:: toFloatRegValues
+  toIntRegValues @ =:: toIntRegs
+  toFloatRegValues @ =:: toFloatRegs
+  context [] .stackRegistersInt =:: intRegisters
+  intCount intRegisters .count i64.min =:: intValCount
+  context [] .stackRegistersFloat =:: floatRegisters
+  floatCount floatRegisters .count i64.min =:: floatValCount
+  asmOps
+    0 while ..dup intValCount < do =:: i
+      intCount intValCount - i + =:: valId
+      valId intRegisters .count % =:: regId
+      intRegisters .registers @ regId [] =:: regName
+      currentIntRegs regId [] toIntRegs regId [] == if
+        i 1 + continue
+      end
+      toIntRegs regId [] if
+        ## asm.createBinary
+          X64_OP .MOV
+          regName AsmOperand .register
+          valId AsmOperand .stackMemoryInt
+        asm.createBinary AssemblyAtom .op list.append
+      else
+        ## asm.createBinary
+          X64_OP .MOV
+          valId AsmOperand .stackMemoryInt
+          regName AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+      end
+      i 1 +
+    end ..drop
+    0 while ..dup floatValCount < do =:: i
+      floatCount floatValCount - i + =:: valId
+      valId floatRegisters .count % =:: regId
+      floatRegisters .registers @ regId [] =:: regName
+      currentFloatRegs regId [] toFloatRegs regId [] == if
+        i 1 + continue
+      end
+      toFloatRegs regId [] if
+        ## asm.createBinary
+          X64_OP .MOV
+          regName AsmOperand .register
+          valId AsmOperand .stackMemoryFloat
+        asm.createBinary AssemblyAtom .op list.append
+      else
+        ## asm.createBinary
+          X64_OP .MOV
+          valId AsmOperand .stackMemoryFloat
+          regName AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+      end
+      i 1 +
+    end ..drop
+    toState context [] .stackRegState =
+  return
+end
+proc(
+  AssemblyAtom list : asmOps
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: reserveStackRegSpace
+  context [] .stackRegState .stackCountInt =:: intCount
+  context [] .stackRegState .stackCountFloat =:: floatCount
+  context [] .stackRegistersInt =:: intRegisters
+  context [] .stackRegistersFloat =:: floatRegisters
+  floatCount floatRegisters .count i64.min
+    intCount intRegisters .count i64.min +
+  =:: regCount
+  asmOps
+    0 while ..dup regCount < do =:: i
+      AssemblyAtom .empty list.append
+      i 1 +
+    end ..drop
+  return
+end
+proc(
+  AssemblyAtom list : asmOps
+  StackRegisterState arrayView : states
+  i64 arrayView : codeOffsets
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: mergeStackRegisters
+  context [] .program [] .errors @ =:: errors
+  states .length 1 <= if
+    asmOps return
+  end
+  states 0 array.at .data [] .stackCountInt =:: intCount
+  states 0 array.at .data [] .stackCountFloat =:: floatCount
+  i32 REGISTER_LIST_MAX_LENGTH array new =:: mut: activeInts
+  i32 REGISTER_LIST_MAX_LENGTH array new =:: mut: activeFloats
+  0 while ..dup states .length < do =:: i
+    states i array.at .data =:: state
+    state [] .stackCountInt intCount != if
+      "stack out of sync" sb.wrap
+      pos errors appendError
+      asmOps return
+    else state [] .stackCountFloat floatCount != _if
+      "stack out of sync" sb.wrap
+      pos errors appendError
+      asmOps return
+    end
+    0 while ..dup intCount < do =:: j
+      state [] .activeStackRegistersInt@ j [] if
+        activeInts@ j []
+          1 +
+        activeInts@ j [] =
+      end
+      j 1 +
+    end ..drop
+    0 while ..dup floatCount < do =:: j
+      state [] .activeStackRegistersFloat@ j [] if
+        activeFloats@ j []
+          1 +
+        activeFloats@ j [] =
+      end
+      j 1 +
+    end ..drop
+    i 1 +
+  end ..drop
+  intCount context [] .stackRegState .stackCountInt =
+  floatCount context [] .stackRegState .stackCountFloat =
+  context [] .stackRegState .activeStackRegistersInt@ =:: newIntRegs
+  context [] .stackRegState .activeStackRegistersFloat@ =:: newFloatRegs
+  context [] .stackRegistersInt =:: intRegisters
+  intCount intRegisters .count i64.min =:: intValCount
+  context [] .stackRegistersFloat =:: floatRegisters
+  floatCount floatRegisters .count i64.min =:: floatValCount
+  0 while ..dup states .length < do =:: i
+    states i array.at .data =:: state
+    codeOffsets i array.get =:: mut: k
+    state [] .activeStackRegistersInt@ =:: currentIntRegs
+    state [] .activeStackRegistersFloat@ =:: currentFloatRegs
+    0 while ..dup intValCount < do =:: j
+      intCount intValCount - j + =:: valId
+      valId intRegisters .count % =:: regId
+      activeInts@ regId [] states .length 2 / >= =:: isActive
+      isActive newIntRegs regId [] =
+      currentIntRegs regId [] isActive == if
+        j 1 + continue
+      end
+      asmOps k list.at .data [] .empty ?? ! if
+        "unable to merge registers, not enough reserved operations" sb.wrap
+        pos errors appendError
+        asmOps return
+      end
+      intRegisters .registers @ regId [] =:: regName
+      isActive if
+        ## asm.createBinary
+          X64_OP .MOV
+          regName AsmOperand .register
+          valId AsmOperand .stackMemoryInt
+        asm.createBinary AssemblyAtom .op asmOps k list.set
+      else
+        ## asm.createBinary
+          X64_OP .MOV
+          valId AsmOperand .stackMemoryInt
+          regName AsmOperand .register
+        asm.createBinary AssemblyAtom .op asmOps k list.set
+      end
+      k 1 + k =
+      j 1 +
+    end ..drop
+    0 while ..dup floatValCount < do =:: j
+      floatCount floatValCount - j + =:: valId
+      valId floatRegisters .count % =:: regId
+      activeFloats@ regId [] states .length 2 / >= =:: isActive
+      isActive newFloatRegs regId [] =
+      currentFloatRegs regId [] isActive == if
+        j 1 + continue
+      end
+      asmOps k list.at .data [] .empty ?? ! if
+        "unable to merge registers, not enough reserved operations" sb.wrap
+        pos errors appendError
+        asmOps return
+      end
+      floatRegisters .registers @ regId [] =:: regName
+      isActive if
+        ## asm.createBinary
+          X64_OP .MOV
+          regName AsmOperand .register
+          valId AsmOperand .stackMemoryFloat
+        asm.createBinary AssemblyAtom .op asmOps k list.set
+      else
+        ## asm.createBinary
+          X64_OP .MOV
+          valId AsmOperand .stackMemoryFloat
+          regName AsmOperand .register
+        asm.createBinary AssemblyAtom .op asmOps k list.set
+      end
+      k 1 + k =
+      j 1 +
+    end ..drop
+    i 1 +
+  end ..drop
   asmOps return
 end
 
-
-enum( PRIMARY SECONDARY ) =:: RegisterType
 proc(
-  ValueType : valType
-  RegisterType : regType
--> X64_REGISTER ) =>: findRegister
-  valType switch
-    EMPTY case X64_REGISTER .NONE return
-    I32 BITS32 case
-      regType switch
-        PRIMARY case X64_REGISTER .EAX return
-        SECONDARY case X64_REGISTER .EBX return
+  StackRegisterType : registerType
+  i64 : offset
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AsmOperand ) =>: peekStackRegister
+  context [] .program [] .errors @ =:: errors
+  registerType switch
+    INT case
+      context [] .stackRegState .stackCountInt 1 - =:: maxIndex
+      maxIndex offset - =:: stackIndex
+      stackIndex 0 < if
+        "stack underflow" sb.wrap
+        pos errors appendError
+        AsmOperand .EMPTY return
       end
-      break
-    I64 PTR REFERENCE BITS64 BITS128 BITS128L BITS192 BITS192L case
-      regType switch
-        PRIMARY case X64_REGISTER .RAX return
-        SECONDARY case X64_REGISTER .RBX return
+      context [] .stackRegistersInt =:: registers
+      stackIndex maxIndex registers .count - <= if ## memory only
+        stackIndex AsmOperand .stackMemoryInt return
       end
-      break
-    BITS128H BITS192M case
-      regType switch
-        PRIMARY case X64_REGISTER .RDX return
-        SECONDARY case X64_REGISTER .RCX return
+      stackIndex registers .count % =:: regOffset
+      context [] .stackRegState .activeStackRegistersInt @ regOffset [] if
+        registers .registers @ regOffset [] AsmOperand .register return
       end
-      break
-    BITS192H case
-      regType switch
-        PRIMARY case X64_REGISTER .R8 return
-        SECONDARY case X64_REGISTER .R9 return
+      stackIndex AsmOperand .stackMemoryInt return
+    FLOAT case
+      context [] .stackRegState .stackCountFloat 1 - =:: maxIndex
+      maxIndex offset - =:: stackIndex
+      stackIndex 0 < if
+        "stack underflow" sb.wrap
+        pos errors appendError
+        AsmOperand .EMPTY return
       end
-      break
-    F32 F64 case
-      regType switch
-        PRIMARY case X64_REGISTER .XMM0 return
-        SECONDARY case X64_REGISTER .XMM1 return
+      context [] .stackRegistersFloat =:: registers
+      stackIndex maxIndex registers .count - <= if ## memory only
+        stackIndex AsmOperand .stackMemoryFloat return
       end
-      break
+      stackIndex registers .count % =:: regOffset
+      context [] .stackRegState .activeStackRegistersFloat @ regOffset [] if
+        registers .registers @ regOffset [] AsmOperand .register return
+      end
+      stackIndex AsmOperand .stackMemoryFloat return
+  end
+end
+proc(
+  AssemblyAtom list : asmOps
+  StackRegisterType : registerType
+  StackOperation : stackOp
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list X64_REGISTER ) =>: getStackRegister
+  context [] .program [] .errors @ =:: errors
+  registerType switch
+    INT case
+      context [] .stackRegState .stackCountInt
+        stackOp switch
+          DROP POP case
+            1 - ..dup context [] .stackRegState .stackCountInt = break
+          PUSH case
+            ..dup 1 + context [] .stackRegState .stackCountInt = break
+        end
+      =:: intCount
+      intCount 0 < if
+        0 context [] .stackRegState .stackCountInt =
+        "stack underflow" sb.wrap
+        pos errors appendError
+        asmOps X64_REGISTER .NONE return
+      end
+      context [] .stackRegistersInt =:: intRegisters
+      intCount intRegisters .count % =:: regOffset
+      intRegisters .registers @ regOffset [] =:: register
+      asmOps
+        context [] .stackRegState .activeStackRegistersInt @ regOffset [] if
+          stackOp switch
+            DROP POP case ## mark register as inactive
+              false context [] .stackRegState .activeStackRegistersInt @ regOffset [] =
+              break
+            PUSH case ## store previous value
+              ## asm.createBinary
+                X64_OP .MOV
+                intCount intRegisters .count - AsmOperand .stackMemoryInt
+                register AsmOperand .register
+              asm.createBinary AssemblyAtom .op list.append
+              break
+          end
+        else
+          stackOp switch
+            DROP case break
+            POP case ## load current value from memory
+              ## asm.createBinary
+                X64_OP .MOV
+                register AsmOperand .register
+                intCount AsmOperand .stackMemoryInt
+              asm.createBinary AssemblyAtom .op list.append
+              break
+            PUSH case
+              true context [] .stackRegState .activeStackRegistersInt @ regOffset [] =
+              break
+          end
+        end
+      register return
+    FLOAT case
+      context [] .stackRegState .stackCountFloat
+        stackOp switch
+          DROP POP case
+            1 - ..dup context [] .stackRegState .stackCountFloat = break
+          PUSH case
+            ..dup 1 + context [] .stackRegState .stackCountFloat = break
+        end
+      =:: floatCount
+      floatCount 0 < if
+        0 context [] .stackRegState .stackCountFloat =
+        "stack underflow" sb.wrap
+        pos errors appendError
+        asmOps X64_REGISTER .NONE return
+      end
+      context [] .stackRegistersFloat =:: floatRegisters
+      floatCount floatRegisters .count % =:: regOffset
+      floatRegisters .registers @ regOffset [] =:: register
+      asmOps
+        context [] .stackRegState .activeStackRegistersFloat @ regOffset [] if
+          stackOp switch
+            DROP POP case ## mark register as inactive
+              false context [] .stackRegState .activeStackRegistersFloat @ regOffset [] =
+              break
+            PUSH case ## store previous value
+              ## asm.createBinary
+                X64_OP .MOV
+                floatCount floatRegisters .count - AsmOperand .stackMemoryFloat
+                register AsmOperand .register
+              asm.createBinary AssemblyAtom .op list.append
+              break
+          end
+        else
+          stackOp switch
+            DROP case break
+            POP case ## load current value from memory
+              ## asm.createBinary
+                X64_OP .MOV
+                register AsmOperand .register
+                floatCount AsmOperand .stackMemoryFloat
+              asm.createBinary AssemblyAtom .op list.append
+              break
+            PUSH case
+              true context [] .stackRegState .activeStackRegistersFloat @ regOffset [] =
+              break
+          end
+        end
+      register return
   end
 end
 
 proc(
   AssemblyAtom list : asmOps
-  RegisterType : target
+  StackRegisterType : registerType
   FilePosition : pos
   CompilerContext ptr mut : context
--> AssemblyAtom list ValueType ) =>: popValue
+-> AssemblyAtom list X64_REGISTER ) =>: popRegister
+  asmOps registerType StackOperation .POP pos context getStackRegister return
+end
+proc(
+  StackRegisterType : registerType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ) =>: dropRegister
+  0 AssemblyAtom list.create
+    registerType StackOperation .DROP pos context getStackRegister ..drop =:: asmOps
+    asmOps .length 0 == assert "drop does not create operations"
+  asmOps list.free ..drop
+  return
+end
+## prepares the location for the next stack value selects next slot, stores previous value if necessary
+proc(
+  AssemblyAtom list : asmOps
+  StackRegisterType : registerType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list X64_REGISTER ) =>: preparePushRegister
+  asmOps registerType StackOperation .PUSH pos context getStackRegister return
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  StackRegisterType : registerType
+  X64_REGISTER : src
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: pushRegister
+  asmOps
+    registerType pos context preparePushRegister =:: target
+    ## asm.createBinary
+      X64_OP .MOV
+      target AsmOperand .register
+      src AsmOperand .register
+    asm.createBinary AssemblyAtom .op list.append
+  return
+end
+
+proc(
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ) =>: dropValue
   context [] .stackValues branchTree.depth 1 < if
     "stack underflow" sb.wrap
     pos context [] .program [] .errors @ appendError
-    asmOps ValueType .EMPTY return
+    return
   end
-  context [] .stackValues @ branchTree.pop .data [] =:: valType
+  context [] .stackValues @ branchTree.pop .data [] .valType =:: valType
   valType switch
-    EMPTY case asmOps valType return
+    EMPTY case return
+    ## XXX? allow storing parts of BITS... values in float registers
     BITS128 case
-      asmOps
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .BITS128L target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .BITS128H target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      valType return
+      StackRegisterType .INT pos context dropRegister
+      StackRegisterType .INT pos context dropRegister
+      return
     BITS192 case
-      asmOps
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .BITS192L target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .BITS192M target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .BITS192H target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      valType return
-    I64 PTR REFERENCE BITS64
+      StackRegisterType .INT pos context dropRegister
+      StackRegisterType .INT pos context dropRegister
+      StackRegisterType .INT pos context dropRegister
+      return
+    I32 I64 PTR REFERENCE BITS32 BITS64
         BITS128L BITS128H BITS192L BITS192M BITS192H case
-      asmOps
-        ## asm.createUnary
-          X64_OP .POP
-          valType target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      valType return
-    I32 BITS32 case ## there is no 32-bit pop
-      asmOps
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .I64 target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      valType return
+      StackRegisterType .INT pos context dropRegister
+      return
     F64 F32 case
-      asmOps
-        ## asm.createUnary
-          X64_OP .POP
-          ValueType .I64 target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## TODO move to correct float register
-      valType return
+      StackRegisterType .FLOAT pos context dropRegister
+      return
+  end
+end
+
+## XXX use val-type to registers in other value to stack procedures
+proc(
+  ValueType : valType
+-> StackRegisterType MAX_VALUE_REGISTERS array i8 ) =>: valTypeToStackRegisters
+  StackRegisterType MAX_VALUE_REGISTERS array new =:: mut: registers
+  valType switch
+    EMPTY case registers 0:i8 return
+    BITS128 case
+      StackRegisterType .INT registers @ 0 [] =
+      StackRegisterType .INT registers @ 1 [] =
+      registers 2:i8 return
+    BITS192 case
+      StackRegisterType .INT registers @ 0 [] =
+      StackRegisterType .INT registers @ 1 [] =
+      StackRegisterType .INT registers @ 2 [] =
+      registers 3:i8 return
+    I32 BITS32 I64 PTR REFERENCE BITS64
+        BITS128L BITS128H BITS192L BITS192M BITS192H case
+      StackRegisterType .INT registers @ 0 [] =
+      registers 1:i8 return
+    F32 F64 case
+      StackRegisterType .FLOAT registers @ 0 [] =
+      registers 1:i8 return
   end
 end
 
 proc(
   AssemblyAtom list : asmOps
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ValueType RegisterValue ) =>: popValue
+  X64_REGISTER MAX_VALUE_REGISTERS array new =:: mut: registers
+  context [] .stackValues branchTree.depth 1 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    asmOps ValueType .EMPTY registers 0:i8 RegisterValue new return
+  end
+  context [] .stackValues @ branchTree.pop .data [] .valType =:: valType
+  valType valTypeToStackRegisters =:: regCount =:: regTypes
+  asmOps
+    0 while ..dup regCount < do =:: i
+      regTypes @ i [] pos context popRegister registers @ i [] =
+      i 1 +
+    end ..drop
+  valType registers regCount RegisterValue new return
+end
+
+## push order chosen to simulate downwards growing stack
+proc(
+  AssemblyAtom list : asmOps
   ValueType : valType
-  RegisterType : target
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list RegisterValue ) =>: preparePushValue
+  context [] .stackValues @
+    context [] .stackRegState .stackCountInt
+    context [] .stackRegState .stackCountFloat
+    valType
+  StackRegisterValue new branchTree.push
+  X64_REGISTER MAX_VALUE_REGISTERS array new =:: mut: registers
+  valType valTypeToStackRegisters =:: regCount =:: regTypes
+  asmOps
+    regCount 1 - while ..dup 0 >= do =:: i
+      regTypes @ i [] pos context preparePushRegister registers @ i [] =
+      i 1 -
+    end ..drop
+  registers regCount RegisterValue new return
+end
+proc(
+  AssemblyAtom list : asmOps
+  ValueType : valType
+  RegisterValue : data
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ) =>: pushValue
-  context .stackValues @ valType branchTree.push
-  valType switch
-    EMPTY case asmOps return
-    BITS128 case
-      asmOps
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .BITS128H target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .BITS128L target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      return
-    BITS192 case
-      asmOps
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .BITS192H target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .BITS192M target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .BITS192L target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      return
-    I64 PTR REFERENCE BITS64
-        BITS128L BITS128H BITS192L BITS192M BITS192H case
-      asmOps
-        ## asm.createUnary
-          X64_OP .PUSH
-          valType target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      return
-    I32 BITS32 case ## there is no 32-bit push
-      asmOps
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .I64 target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      return
-    F32 F64 case
-      asmOps
-        ## TODO move float to int register
-        ## asm.createUnary
-          X64_OP .PUSH
-          ValueType .I64 target findRegister AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-      return
-  end
+  context [] .stackValues @
+    context [] .stackRegState .stackCountInt
+    context [] .stackRegState .stackCountFloat
+    valType
+  StackRegisterValue new branchTree.push
+  data .registers =:: registers
+  valType valTypeToStackRegisters =:: regCount =:: regTypes
+  asmOps
+    regCount 1 - while ..dup 0 >= do =:: i
+      regTypes @ i [] registers @ i [] pos context pushRegister
+      i 1 -
+    end ..drop
+  return
 end
+## load value stored at location given by src into the target registers
+## the source register can overlap with one of the target registers the target registers are assumed to be non-overlapping
 proc(
   AssemblyAtom list : asmOps
-  RegisterType : ptrRegister
+  X64_REGISTER : src
   ValueType : valType
-  RegisterType : valueRegister
+  RegisterValue : target
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ) =>: loadValue
-  ValueType .PTR ptrRegister findRegister =:: src
+  target .registers =:: registers
   valType switch
     EMPTY case asmOps return
     BITS128 case
+      target .registerCount 2 == assert "correct register count"
       asmOps
-        ## asm.createBinary
-          X64_OP .MOV
-          ValueType .BITS128L valueRegister findRegister AsmOperand .register
-          src AsmOperand .registerPtr
-        asm.createBinary AssemblyAtom .op list.append
+        registers @ 0 [] src != if
+          ## asm.createBinary
+            X64_OP .MOV
+            registers @ 0 [] AsmOperand .register
+            src AsmOperand .registerPtr
+          asm.createBinary AssemblyAtom .op list.append
+        end
         ## asm.createTrinary
           X64_OP .MOV
-          ValueType .BITS128H valueRegister findRegister AsmOperand .register
+          registers @ 0 [] AsmOperand .register
           src AsmOperand .registerPtrOffset
           8 AsmOperand .value
         asm.createTrinary AssemblyAtom .op list.append
+        registers @ 0 [] src == if
+          ## asm.createBinary
+            X64_OP .MOV
+            registers @ 0 [] AsmOperand .register
+            src AsmOperand .registerPtr
+          asm.createBinary AssemblyAtom .op list.append
+        end
       return
     BITS192 case
+      target .registerCount 3 == assert "correct register count"
       asmOps
-        ## asm.createBinary
-          X64_OP .MOV
-          ValueType .BITS192L valueRegister findRegister AsmOperand .register
-          src AsmOperand .registerPtr
-        asm.createBinary AssemblyAtom .op list.append
+        registers @ 0 [] src != if
+          ## asm.createTrinary
+            X64_OP .MOV
+            registers @ 0 [] AsmOperand .register
+            src AsmOperand .registerPtr
+          asm.createBinary AssemblyAtom .op list.append
+        end ## no else
+        registers @ 1 [] src != if
+          ## asm.createTrinary
+            X64_OP .MOV
+            registers @ 1 [] AsmOperand .register
+            src AsmOperand .registerPtrOffset
+            8 AsmOperand .value
+          asm.createTrinary AssemblyAtom .op list.append
+        end
         ## asm.createTrinary
           X64_OP .MOV
-          ValueType .BITS192M valueRegister findRegister AsmOperand .register
-          src AsmOperand .registerPtrOffset
-          8 AsmOperand .value
-        asm.createTrinary AssemblyAtom .op list.append
-        ## asm.createTrinary
-          X64_OP .MOV
-          ValueType .BITS192H valueRegister findRegister AsmOperand .register
+          registers @ 2 [] AsmOperand .register
           src AsmOperand .registerPtrOffset
           16 AsmOperand .value
         asm.createTrinary AssemblyAtom .op list.append
+        registers @ 0 [] src == if
+          ## asm.createTrinary
+            X64_OP .MOV
+            registers @ 0 [] AsmOperand .register
+            src AsmOperand .registerPtr
+          asm.createBinary AssemblyAtom .op list.append
+        else registers @ 1 [] src == _if
+          ## asm.createTrinary
+            X64_OP .MOV
+            registers @ 1 [] AsmOperand .register
+            src AsmOperand .registerPtrOffset
+            8 AsmOperand .value
+          asm.createTrinary AssemblyAtom .op list.append
+        end
       return
     I32 I64 PTR REFERENCE BITS32 BITS64
         BITS128L BITS128H BITS192L BITS192M BITS192H case
+      target .registerCount 1 == assert "correct register count"
       asmOps
         ## asm.createBinary
           X64_OP .MOV
-          valType valueRegister findRegister AsmOperand .register
+          registers @ 0 [] AsmOperand .register
           src AsmOperand .registerPtr
         asm.createBinary AssemblyAtom .op list.append
       return
     F32 F64 case
-      "loading/storing floats is not implemented" sb.wrap
-      pos context [] .program [] .errors @ appendError
-      asmOps return
+      target .registerCount 1 == assert "correct register count"
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          registers @ 0 [] AsmOperand .register
+          src AsmOperand .registerPtr
+        asm.createBinary AssemblyAtom .op list.append
+      return
   end
 end
+## store value in src-registers at memory location given by target register
 proc(
   AssemblyAtom list : asmOps
-  RegisterType : ptrRegister
+  RegisterValue : src
   ValueType : valType
-  RegisterType : valueRegister
+  X64_REGISTER : target
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ) =>: storeValue
-  ValueType .PTR ptrRegister findRegister =:: target
+  src .registers =:: registers
   valType switch
-    EMPTY case asmOps return
+    EMPTY case
+      src .registerCount 0 == assert "correct register count" asmOps return
     BITS128 case
+      src .registerCount 2 == assert "correct register count"
       asmOps
         ## asm.createBinary
           X64_OP .MOV
           target AsmOperand .registerPtr
-          ValueType .BITS128L valueRegister findRegister AsmOperand .register
+          registers @ 0 [] AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
         ## asm.createTrinary
           X64_OP .MOV
           target AsmOperand .registerPtrOffset
           8 AsmOperand .value
-          ValueType .BITS128H valueRegister findRegister AsmOperand .register
+          registers @ 1 [] AsmOperand .register
         asm.createTrinary AssemblyAtom .op list.append
       return
     BITS192 case
+      src .registerCount 3 == assert "correct register count"
       asmOps
         ## asm.createBinary
           X64_OP .MOV
           target AsmOperand .registerPtr
-          ValueType .BITS192L valueRegister findRegister AsmOperand .register
+          registers @ 0 [] AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
         ## asm.createTrinary
           X64_OP .MOV
           target AsmOperand .registerPtrOffset
           8 AsmOperand .value
-          ValueType .BITS192M valueRegister findRegister AsmOperand .register
+          registers @ 1 [] AsmOperand .register
         asm.createTrinary AssemblyAtom .op list.append
         ## asm.createTrinary
           X64_OP .MOV
           target AsmOperand .registerPtrOffset
           16 AsmOperand .value
-          ValueType .BITS192H valueRegister findRegister AsmOperand .register
+          registers @ 2 [] AsmOperand .register
         asm.createTrinary AssemblyAtom .op list.append
       return
     I32 I64 PTR REFERENCE BITS32 BITS64
         BITS128L BITS128H BITS192L BITS192M BITS192H case
+      src .registerCount 1 == assert "correct register count"
       asmOps
         ## asm.createBinary
           X64_OP .MOV
           target AsmOperand .registerPtr
-          valType valueRegister findRegister AsmOperand .register
+          registers @ 0 [] AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
       return
     F32 F64 case
-      "loading/storing floats is not implemented" sb.wrap
-      pos context [] .program [] .errors @ appendError
-      asmOps return
+      src .registerCount 1 == assert "correct register count"
+      asmOps
+        ## asm.createBinary
+          X64_OP .MOV
+          target AsmOperand .registerPtr
+          registers @ 0 [] AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+      return
   end
 end
 
@@ -885,13 +1377,14 @@ proc(
     asmOps return
   end
   asmOps
-    RegisterType .PRIMARY pos context popValue =:: topVal
-    topVal RegisterType .PRIMARY findRegister =:: regId
+    pos context popValue =:: regData =:: topVal
+    regData .registerCount 1 == assert "operators act on single registers"
     ## asm.createUnary
       opType
-      regId AsmOperand .register
+      regData .registers @ 0 [] AsmOperand .register
     asm.createUnary AssemblyAtom .op list.append
-    topVal RegisterType .PRIMARY pos context pushValue
+    ## TODO ensure correct output register is used
+    topVal regData pos context pushValue
   return
 end
 
@@ -907,8 +1400,10 @@ proc(
     asmOps return
   end
   asmOps
-    RegisterType .SECONDARY pos context popValue =:: arg2
-    RegisterType .PRIMARY pos context popValue =:: arg1
+    pos context popValue =:: regId2 =:: arg2
+    pos context popValue =:: regId1 =:: arg1
+    regId1 .registerCount 1 == assert "operators act on single registers"
+    regId2 .registerCount 1 == assert "operators act on single registers"
     arg1 arg2 != if
       "incompatible argument types: " sb.wrap
         arg1 sb.appendValueType
@@ -916,14 +1411,13 @@ proc(
         arg2 sb.appendValueType
       pos context [] .program [] .errors @ appendError
     end
-    arg1 RegisterType .PRIMARY findRegister =:: regId1
-    arg2 RegisterType .SECONDARY findRegister =:: regId2
-    ## asm.createUnary
+    ## asm.createBinary
       opType
-      regId1 AsmOperand .register
-      regId2 AsmOperand .register
+      regId1 .registers @ 0 [] AsmOperand .register
+      regId2 .registers @ 0 [] AsmOperand .register
     asm.createBinary AssemblyAtom .op list.append
-    arg1 RegisterType .PRIMARY pos context pushValue
+    ## XXX! determine target register of operation
+    arg1 regId1 pos context pushValue
   return
 end
 
@@ -939,10 +1433,13 @@ proc(
     pos context [] .program [] .errors @ appendError
     asmOps return
   end
-  ValueType .I32 RegisterType .PRIMARY findRegister =:: regOut
   asmOps
-    RegisterType .SECONDARY pos context popValue =:: arg2
-    RegisterType .PRIMARY pos context popValue =:: arg1
+    pos context popValue =:: regId2 =:: arg2
+    pos context popValue =:: regId1 =:: arg1
+    ValueType .I32 pos context preparePushValue =:: regOut
+    regOut .registerCount 1 == assert "correct register-count for bool"
+    regId1 .registerCount 1 == assert "operators act on single registers"
+    regId2 .registerCount 1 == assert "operators act on single registers"
     arg1 arg2 != if
       "incompatible argument types: " sb.wrap
         arg1 sb.appendValueType
@@ -950,12 +1447,10 @@ proc(
         arg2 sb.appendValueType
       pos context [] .program [] .errors @ appendError
     end
-    arg1 RegisterType .PRIMARY findRegister =:: regId1
-    arg2 RegisterType .SECONDARY findRegister =:: regId2
     ## asm.createUnary
       X64_OP .CMP
-      regId1 AsmOperand .register
-      regId2 AsmOperand .register
+      regId1 .registers @ 0 [] AsmOperand .register
+      regId2 .registers @ 0 []  AsmOperand .register
     asm.createBinary AssemblyAtom .op list.append
     ## asm.createUnary
       setCmpFlag
@@ -963,10 +1458,9 @@ proc(
     asm.createUnary AssemblyAtom .op list.append
     ## asm.createUnary
       X64_OP .MOVZX
-      regOut AsmOperand .register
+      regOut .registers @ 0 [] AsmOperand .register
       X64_REGISTER .AL AsmOperand .register
     asm.createBinary AssemblyAtom .op list.append
-    ValueType .I32 RegisterType .PRIMARY pos context pushValue
   return
 end
 proc(
@@ -1114,6 +1608,9 @@ proc(
         procData [] .implementation .code .variables
       end =:: variables
       0:i64 =:: mut: offset
+      ## TODO reserve space for/remember locations of out-arg pointers
+      ##  [variables][stackFloat][stackInt][regOutArgs][namedArguments][rbp][rip][stack-args]
+      ##                                                            ^ rbp
       0 while ..dup variables .length < do =:: i
         variables i list.get =:: varInfo
         varInfo .varType typeContext types.alignOf =:: varAlignment
@@ -1157,7 +1654,8 @@ proc(
           ## asm.createBinary
             X64_OP .SUB
             X64_REGISTER .RSP AsmOperand .register
-            offset 8 types.alignSize AsmOperand .value
+            ## stack aligned to 16 bytes for call instruction
+            offset 16 types.alignSize AsmOperand .value
           asm.createBinary AssemblyAtom .op list.append
         end
         ## XXX initialize program stack & argument variables
@@ -1172,22 +1670,21 @@ proc(
           context [] .variableOffset @ idInfo .labelId map.get .data =:: offset
           asmOps
             ## popValue
-              RegisterType .PRIMARY
               op [] .pos
-            context popValue =:: valueType
+            context popValue =:: regId =:: valueType
             op [] .dataType typeContext toValueType valueType == assert "stack-val=op-val"
             ## XXX extract to function for getting variable offset
             ## asm.createTrinary
               X64_OP .LEA
-              ValueType .PTR RegisterType .SECONDARY findRegister AsmOperand .register
+              X64_REGISTER .RAX AsmOperand .register
               X64_REGISTER .RBP AsmOperand .registerPtrOffset
               offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
             ## TODO handle reference only values
             ## storeValue
-              RegisterType .SECONDARY
+              regId
               valueType
-              RegisterType .PRIMARY
+              X64_REGISTER .RAX
               op [] .pos
               context
             storeValue
@@ -1218,17 +1715,22 @@ proc(
             -1:i64
           end =:: offset
           asmOps
+            ## preparePushValue
+              isPtr if
+                ValueType .PTR
+              else
+                ValueType .REFERENCE
+              end
+              op [] .pos
+            context preparePushValue =:: target
+            target .registerCount 1 == assert "correct register count for pointer"
             ## asm.createTrinary
               X64_OP .LEA
-              ValueType .PTR RegisterType .PRIMARY findRegister AsmOperand .register
+              target .registers @ 0 [] AsmOperand .register
               X64_REGISTER .RBP AsmOperand .registerPtrOffset
               offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
-            isPtr if
-              ValueType .PTR
-            else
-              ValueType .REFERENCE
-            end RegisterType .PRIMARY op [] .pos context pushValue
+            ## FIXME push values instead of references for procedure arguments
           return
         break
         GLOBAL_VAR case break
@@ -1237,19 +1739,19 @@ proc(
       break
     setValue case
       asmOps
-        RegisterType .PRIMARY op [] .pos context popValue =:: refValue
+        op [] .pos context popValue =:: targetReg =:: refValue
         refValue ValueType .REFERENCE == assert "copy argument is reference"
+        targetReg .registerCount 1 == assert "pointer sorted in one register"
         ## popValue
-          RegisterType .SECONDARY
           op [] .pos
           context
-        popValue =:: valueType
+        popValue =:: srcRegs =:: valueType
         ## TODO add assertion back in once compiler is stable
         ## op [] .dataType typeContext toValueType valueType == assert "stack-value=op-value"
         ## storeValue
-          RegisterType .PRIMARY
+          srcRegs
           valueType
-          RegisterType .SECONDARY
+          targetReg .registers @ 0 []
           op [] .pos
           context
         storeValue
@@ -1259,27 +1761,24 @@ proc(
     getElement atElement case break
     copy case
       asmOps
-        RegisterType .PRIMARY op [] .pos context popValue =:: refValue
+        op [] .pos context popValue =:: srcReg =:: refValue
         refValue ValueType .REFERENCE == assert "copy argument is reference"
+        srcReg .registerCount 1 == assert "pointer sorted in one register"
         op [] .dataType typeContext toValueType =:: valueType
+        ## TODO handle reference only types
+        valueType op [] .pos context preparePushValue =:: targetRegisters
         ## loadValue
-          RegisterType .PRIMARY
+          srcReg .registers @ 0 []
           valueType
-          RegisterType .SECONDARY
+          targetRegisters
           op [] .pos
           context
         loadValue
-        ## pushValue
-          valueType
-          RegisterType .SECONDARY
-          op [] .pos
-          context
-        pushValue
       return
     New NewEnum
     checkEnumLabel setEnumLabel hasElement
     autoCast Cast Cast! bitCast
-    call callPtr case break ## ! align stack to multiple of 16 when calling
+    call callPtr case break
     builtIn case
       asmOps
         op [] .val .builtIn
@@ -1295,9 +1794,10 @@ proc(
         IF case
           asmOps
             ## TODO debug position
-            RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
+            op [] .pos context popValue =:: regData =:: ifCond
             ifCond ValueType .I32 == assert "if-condition is bool"
-            ifCond RegisterType .PRIMARY findRegister =:: condRegister
+            regData .registerCount 1 == assert "bool takes one register"
+            regData .registers @ 0 [] =:: condRegister
             ## asm.createBinary
               X64_OP .TEST
               condRegister AsmOperand .register
@@ -1317,9 +1817,17 @@ proc(
           context [] .openBlocks list.peek .data =:: ifBlock
           asmOps
             ## TODO debug position
-            RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
+            op [] .pos context popValue =:: regData =:: ifCond
             ifCond ValueType .I32 == assert "if-condition is bool"
-            ifCond RegisterType .PRIMARY findRegister =:: condRegister
+            regData .registerCount 1 == assert "bool takes one register"
+            regData .registers @ 0 [] =:: condRegisterSrc
+            context [] .tmpRegistersInt .registers @ 0 [] =:: condRegister
+            ## asm.createBinary
+              X64_OP .MOV
+              condRegister AsmOperand .register
+              condRegisterSrc AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+            ifBlock [] .If .rootStackRegs op [] .pos context resetStackRegisters
             ## asm.createBinary
               X64_OP .TEST
               condRegister AsmOperand .register
@@ -1346,14 +1854,20 @@ proc(
           ## BranchPoint
           ifBranch ifBlock [] .If .ifBranch =
           asmOps
-            ## asm.createUnary
-              X64_OP .JMP
-              ## LocalLabel
-                BranchType .END_IF
-                op [] .val .block .blockId
-                op [] .val .block .subId
-              LocalLabel new AsmOperand .localLabel
-            asm.createUnary AssemblyAtom .op list.append
+            context [] .reachable if
+              ..dup .length ifBlock [] .If .ifBranchCodeOffset =
+              context reserveStackRegSpace
+              context [] .stackRegState ifBlock [] .If .ifBranchRegs =
+              ## asm.createUnary
+                X64_OP .JMP
+                ## LocalLabel
+                  BranchType .END_IF
+                  op [] .val .block .blockId
+                  op [] .val .block .subId
+                LocalLabel new AsmOperand .localLabel
+              asm.createUnary AssemblyAtom .op list.append
+            end
+            ifBlock [] .If .rootStackRegs context [] .stackRegState =
             ## LocalLabel
               BranchType .ELSE
               op [] .val .block .blockId
@@ -1385,6 +1899,7 @@ proc(
           =:: switchData
           asmOps
             ## TODO appendPos
+            op [] .pos context popValue =:: regData =:: switchVal
             ## TODO switch-table
             switchId context openSwitchBlock
             false context [] .reachable =
@@ -1424,18 +1939,23 @@ proc(
               ": " sb.appendS
               breakBlock [] sb.appendBlockInfo
             op [] .pos errors appendError
+            asmOps return
           end
           context [] .stackValues @
             breakBlock [] .Switch .branchRoot
           branchTree.reset =:: caseBranchId
-          ## remember break (if reachable)
-          context [] .reachable if
-            breakBlock [] .Switch .caseBranches
-              caseBranchId list.append
-            breakBlock [] .Switch .caseBranches =
-          end
           asmOps
             context [] .reachable if
+              breakBlock [] .Switch .caseBranches
+                caseBranchId list.append
+              breakBlock [] .Switch .caseBranches =
+              breakBlock [] .Switch .caseCodeOffsets
+                ..over .length list.append
+              breakBlock [] .Switch .caseCodeOffsets =
+              context reserveStackRegSpace
+              breakBlock [] .Switch .caseStackRegs
+                context [] .stackRegState list.append
+              breakBlock [] .Switch .caseStackRegs =
               ## asm.createUnary
                 X64_OP .JMP
                 ## LocalLabel
@@ -1445,11 +1965,14 @@ proc(
                 LocalLabel new AsmOperand .localLabel
               asm.createUnary AssemblyAtom .op list.append
             end
+            breakBlock [] .Switch .rootStackRegs context [] .stackRegState =
             false context [] .reachable =
           return
         WHILE case
           ## don't add position before label
           op [] .val .block .blockId =:: whileId
+          ## XXX ensure most values in stack state are loaded
+          ##   end of loop resets to this point
           whileId context openWhileBlock
           context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
           prog [] .whileData whileId list.at .data =:: whileData
@@ -1464,9 +1987,26 @@ proc(
           context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
           asmOps
             ## TODO debug position
-            RegisterType .PRIMARY op [] .pos context popValue =:: ifCond
+            op [] .pos context popValue =:: regData =:: ifCond
             ifCond ValueType .I32 == assert "while-condition is bool"
-            ifCond RegisterType .PRIMARY findRegister =:: condRegister
+            regData .registerCount 1 == assert "bool takes one register"
+            regData .registers @ 0 [] =:: condRegisterSrc
+            context [] .tmpRegistersInt .registers @ 0 [] =:: condRegister
+            ## asm.createBinary
+              X64_OP .MOV
+              condRegister AsmOperand .register
+              condRegisterSrc AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+            whileBlock [] .breakBranches
+              context [] .stackValues @ branchTree.startBranch list.append
+            whileBlock [] .breakBranches =
+            whileBlock [] .breakCodeOffsets
+              ..over .length list.append
+            whileBlock [] .breakCodeOffsets =
+            context reserveStackRegSpace
+            whileBlock [] .breakStackRegs
+              context [] .stackRegState list.append
+            whileBlock [] .breakStackRegs =
             ## asm.createBinary
               X64_OP .TEST
               condRegister AsmOperand .register
@@ -1480,9 +2020,6 @@ proc(
                 op [] .val .block .subId
               LocalLabel new AsmOperand .localLabel
             asm.createUnary AssemblyAtom .op list.append
-            whileBlock [] .breakBranches
-              context [] .stackValues @ branchTree.startBranch list.append
-            whileBlock [] .breakBranches =
           return
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
@@ -1504,15 +2041,26 @@ proc(
             op [] .pos errors appendError
           end
           blockType .CONTINUE ?? if
+            breakBlock [] .While .continueStackRegs @
+            breakBlock [] .While .continueCodeOffsets @
             breakBlock [] .While .continueBranches @
           else
+            breakBlock [] .While .breakStackRegs @
+            breakBlock [] .While .breakCodeOffsets @
             breakBlock [] .While .breakBranches @
-          end  =:: branches
+          end  =:: branches =:: codeOffsets =:: stackRegs
           branches []
             context [] .stackValues @ branchTree.startBranch list.append
           branches []  =
           asmOps
             ## XXX appendPos
+            codeOffsets []
+              ..over .length list.append
+            codeOffsets [] =
+            context reserveStackRegSpace
+            stackRegs []
+              context [] .stackRegState list.append
+            stackRegs [] =
             ## asm.createUnary
               X64_OP .JMP
               ## LocalLabel
@@ -1564,14 +2112,32 @@ proc(
               op [] .pos errors appendError
             end
           end
-          nBranches 0 > context [] .reachable =
-          ifBlock .ififBranches list.free ..drop
           asmOps
+            ..dup .length =:: elseCodeOffset
+            context [] .reachable if ifBlock .ifBranchTerminates _if
+              context reserveStackRegSpace
+            end
             ## LocalLabel
               BranchType .END_IF
               op [] .val .blockEnd .blockId
               op [] .val .blockEnd .subId
             LocalLabel new AssemblyAtom .localLabel list.append
+            context [] .reachable if ifBlock .ifBranchTerminates _if
+              i64 2 array new =:: mut: offsets
+              StackRegisterState 2 array new =:: mut: states
+              ifBlock .ifBranchCodeOffset offsets@ 0 [] =
+              ifBlock .ifBranchRegs states@ 0 [] =
+              elseCodeOffset offsets@ 1 [] =
+              context [] .stackRegState states@ 1 [] =
+              ## mergeStackRegisters
+                states@ array.wrap
+                offsets@ array.wrap
+                op [] .pos
+              context mergeStackRegisters
+              ## TODO set register state to merge registers
+            end
+            nBranches 0 > context [] .reachable =
+            ifBlock .ififBranches  list.free ..drop
           return
         IFIF case asmOps return ## no-op
         SWITCH case
@@ -1596,9 +2162,20 @@ proc(
               op [] .pos errors appendError
             end
           end
-          caseBranches .length 0 > context [] .reachable =
-          caseBranches list.free ..drop
           asmOps
+            switchBlock .caseStackRegs .length 1 > if
+              ## mergeStackRegisters
+                switchBlock .caseStackRegs list.asArray
+                switchBlock .caseCodeOffsets list.asArray
+                op [] .pos
+              context mergeStackRegisters
+            else switchBlock .caseStackRegs .length 1 == _if
+              switchBlock .caseStackRegs 0 list.at .data [] context [] .stackRegState =
+            end
+            caseBranches .length 0 > context [] .reachable =
+            caseBranches  list.free ..drop
+            switchBlock .caseStackRegs list.free ..drop
+            switchBlock .caseCodeOffsets list.free ..drop
             ## LocalLabel
               BranchType .END_SWITCH
               op [] .val .blockEnd .blockId
@@ -1610,17 +2187,35 @@ proc(
             list.pop .While =:: mut: whileBlock
           context [] .openBlocks =
           whileBlock .continueBranches =:: mut: continueBranches
-          context [] .reachable if
-            continueBranches
-              context [] .stackValues @ branchTree.startBranch list.append
-            continueBranches =
-          end
+          whileBlock .continueStackRegs =:: mut: continueStackRegs
+          whileBlock .continueCodeOffsets =:: mut: continueCodeOffsets
           asmOps
+            context [] .reachable if
+              continueBranches
+                context [] .stackValues @ branchTree.startBranch list.append
+              continueBranches =
+              continueCodeOffsets
+                ..dup .length list.append
+              continueCodeOffsets =
+              context reserveStackRegSpace
+              continueStackRegs
+                context [] .stackRegState list.append
+              continueStackRegs =
+            end
             ## LocalLabel
               BranchType .CONTINUE_WHILE
               op [] .val .blockEnd .blockId
               op [] .val .blockEnd .subId
             LocalLabel new AssemblyAtom .localLabel list.append
+            continueStackRegs .length 1 > if
+              ## mergeStackRegisters
+                continueStackRegs list.asArray
+                continueCodeOffsets list.asArray
+                op [] .pos
+              context mergeStackRegisters
+            else continueStackRegs .length 1 == _if
+              continueStackRegs 0 list.at .data [] context [] .stackRegState =
+            end
           =:: mut: newOps
           continueBranches .length 1 >= if
             continueBranches .length =:: nodeCount
@@ -1639,11 +2234,13 @@ proc(
               op [] .pos errors appendError
             end
           end
-          continueBranches list.free ..drop
-          prog [] .whileData whileBlock .blockId list.at .data =:: whileData
+          continueBranches  list.free ..drop
+          continueStackRegs list.free ..drop
+          continueCodeOffsets list.free ..drop
           newOps
             ## XXX update value locations?
             ## jump to start of loop
+            whileBlock .rootStackRegs op [] .pos context resetStackRegisters
             ## asm.createUnary
               X64_OP .JMP
               ## LocalLabel
@@ -1659,6 +2256,8 @@ proc(
             LocalLabel new AssemblyAtom .localLabel list.append
           newOps =
           whileBlock .breakBranches =:: breakBranches
+          whileBlock .breakStackRegs =:: breakStackRegs
+          whileBlock .breakCodeOffsets =:: breakCodeOffsets
           breakBranches .length 1 >= if
             breakBranches .length =:: nodeCount
             ## mergeValues
@@ -1677,8 +2276,19 @@ proc(
             end
           end
           breakBranches .length 0 > context [] .reachable =
-          breakBranches list.free ..drop
-          newOps return
+          newOps
+            breakStackRegs .length 1 > if
+              ## mergeStackRegisters
+                breakStackRegs list.asArray
+                breakCodeOffsets list.asArray
+                op [] .pos
+              context mergeStackRegisters
+            else breakStackRegs .length 1 == _if
+              breakStackRegs 0 list.at .data [] context [] .stackRegState =
+            end
+            breakStackRegs list.free ..drop
+            breakCodeOffsets list.free ..drop
+          return
         UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
@@ -1688,96 +2298,178 @@ proc(
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
-          op [] .val .stackMod .n =:: mut: count
-          0
-            count while ..dup 0 > do =:: i
-              context [] .stackValues @ branchTree.pop =:: val?
-              val? optional.isEmpty if
-                "stack underflow" sb.wrap op [] .pos errors appendError
-                i break
-              end
-              val? .data [] switch
-                EMPTY case 0 + break
-                I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
-                    BITS128L BITS128H BITS192L BITS192M BITS192H case 8 + break
-                BITS128 case 16 + break
-                BITS192 case 24 + break
-              end
-              i 1 -
-            end ..drop
-          =:: offset
-          asmOps
-            ## asm.createBinary
-              X64_OP .ADD
-              X64_REGISTER .RSP AsmOperand .register
-              offset AsmOperand .value
-            asm.createBinary AssemblyAtom .op list.append
-          return
+          op [] .val .stackMod .n =:: count
+          count while ..dup 0 > do 1 -
+            op [] .pos context dropValue
+          end ..drop
+          asmOps return
         COPY case
           op [] .val .stackMod .n =:: offset
-          context [] .stackValues branchTree.depth offset 1 + < if
-            "stack underflow" sb.wrap op [] .pos errors appendError
+          context [] .stackValues branchTree.depth offset <= if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
             asmOps return
           end
-          offset 0 == if
-            asmOps
-              RegisterType .PRIMARY op [] .pos context popValue =:: valType
-              valType RegisterType .PRIMARY op [] .pos context pushValue
-              valType RegisterType .PRIMARY op [] .pos context pushValue
-            return
-          end
-          0 =:: mut: valueOffset
-          ValueType : valueType
-          context [] .stackValues @ branchTree.itr.start =:: mut: stackItr
-          0 while ..dup offset <= do 1 +
-            stackItr
-              branchTree.itr.next [] valueType =
-            stackItr =
-            valueOffset
-              valueType switch
-                EMPTY case 0 + break
-                I32 I64 F32 F64 PTR REFERENCE BITS32 BITS64
-                    BITS128L BITS128H BITS192L BITS192M BITS192H case 8 + break
-                BITS128 case 16 + break
-                BITS192 case 24 + break
-              end
-            valueOffset =
-          end ..drop
+          context [] .stackValues @
+            offset
+          branchTree.at .data [] =:: sourceValue
+          sourceValue .intOffset 1 + =:: mut: intOffset
+          sourceValue .floatOffset 1 + =:: mut: floatOffset
           asmOps
-            ## asm.createTrinary
-              X64_OP .LEA
-              ValueType .PTR RegisterType .PRIMARY findRegister AsmOperand .register
-              X64_REGISTER .RSP AsmOperand .registerPtrOffset
-              valueOffset AsmOperand .value
-            asm.createTrinary AssemblyAtom .op list.append
-            ## loadValue
-              RegisterType .PRIMARY
-              valueType
-              RegisterType .SECONDARY
-              op [] .pos
-              context
-            loadValue
-            ## pushValue
-              valueType
-              RegisterType .SECONDARY
-              op [] .pos
-              context
-            pushValue
+            sourceValue .valType op [] .pos context preparePushValue =:: target
+            sourceValue .valType valTypeToStackRegisters =:: srcCount =:: srcTypes
+            target .registerCount srcCount == assert "matching register count"
+            0 while ..dup srcCount < do =:: i
+              srcTypes @ i [] =:: srcType
+              srcType
+                srcType switch
+                  INT case intOffset ..dup 1 + intOffset = break
+                  FLOAT case floatOffset ..dup 1 + floatOffset = break
+                end
+                op [] .pos
+              context peekStackRegister =:: srcRegister
+              ## asm.createBinary
+                X64_OP .MOV
+                target .registers @ i [] AsmOperand .register
+                srcRegister
+              asm.createBinary AssemblyAtom .op list.append
+              i 1 +
+            end ..drop
           return
         SWAP case
+          context [] .stackValues branchTree.depth 2 < if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
+            asmOps return
+          end
+          context [] .stackValues @ 0 branchTree.at .data [] =:: upperVal
+          context [] .stackValues @ 1 branchTree.at .data [] =:: lowerVal
+          upperVal .valType valTypeToStackRegisters =:: upperCount =:: upperTypes
+          lowerVal .valType valTypeToStackRegisters =:: lowerCount =:: lowerTypes
+          false =:: mut: hasInt
+          false =:: mut: hasFloat
+          0 while ..dup upperCount < do =:: i
+            upperTypes @ i [] switch
+              INT case true hasInt = break
+              FLOAT case true hasFloat = break
+            end
+            i 1 +
+          end ..drop
+          true =:: mut: hasCommonRegister
+          0 while ..dup lowerCount < do =:: i
+            lowerTypes @ i [] switch
+              INT case hasCommonRegister hasInt | hasCommonRegister = break
+              FLOAT case hasCommonRegister hasFloat | hasCommonRegister = break
+            end
+            i 1 +
+          end ..drop
+          hasCommonRegister ! if
+            context [] .stackValues @ branchTree.swap
+            asmOps return
+          end
+          0 =:: stackRegTypeInt
+          1 =:: stackRegTypeFloat
+          ## XXX? use initializer and make immutable
+          RegisterList ptr 2 array new =:: mut: tmpRegisters
+          context [] .tmpRegistersInt @ tmpRegisters @ stackRegTypeInt [] =
+          context [] .tmpRegistersFloat @  tmpRegisters @ stackRegTypeFloat [] =
+          0 =:: mut: tmpInts
+          0 =:: mut: tmpFloats
           asmOps
-            RegisterType .PRIMARY op [] .pos context popValue =:: val1
-            RegisterType .SECONDARY op [] .pos context popValue =:: val2
-            val1 RegisterType .PRIMARY op [] .pos context pushValue
-            val2 RegisterType .SECONDARY op [] .pos context pushValue
+            op [] .pos context popValue =:: regData1 =:: val1
+            op [] .pos context popValue =:: regData2 =:: val2
+            val1 op [] .pos context preparePushValue =:: regData3
+            val2 op [] .pos context preparePushValue =:: regData4
+            regData1 .registerCount =:: count1
+            regData2 .registerCount =:: count2
+            count1 regData3 .registerCount == assert "regs1.length==regs3.length"
+            count2 regData4 .registerCount == assert "regs2.length==regs4.length"
+            regData1 .registers @ =:: regs1
+            regData2 .registers @ =:: regs2
+            regData3 .registers @ =:: regs3
+            regData4 .registers @ =:: regs4
+            ## copy upper block to tmp registers
+            0 while ..dup count1 < do =:: i
+              regs1 i [] =:: src
+              regs3 i [] =:: target
+              src target == if i 1 + continue end
+              upperTypes @ i [] switch
+                INT case
+                  tmpRegisters @ stackRegTypeInt [] [] .registers @ tmpInts []
+                  tmpInts 1 + tmpInts =
+                  break
+                FLOAT case
+                  tmpRegisters @ stackRegTypeFloat [] [] .registers @ tmpFloats []
+                  tmpFloats 1 + tmpFloats =
+                  break
+              end =:: tmpRegister
+              ## asm.createBinary
+                X64_OP .MOV
+                tmpRegister AsmOperand .register
+                src AsmOperand .register
+              asm.createBinary AssemblyAtom .op list.append
+              i 1 +
+            end ..drop
+            ## copy lower block to upper block
+            0 while ..dup count2 < do =:: i
+              regs4 i [] =:: target
+              regs2 i [] =:: src
+              src target == if i 1 + continue end
+              ## asm.createBinary
+                X64_OP .MOV
+                target AsmOperand .register
+                src AsmOperand .register
+              asm.createBinary AssemblyAtom .op list.append
+              i 1 +
+            end ..drop
+            0 tmpInts =
+            0 tmpFloats =
+            ## copy tmp registers to lower block
+            0 while ..dup count1 < do =:: i
+              regs1 i [] =:: src
+              regs3 i [] =:: target
+              src target == if i 1 + continue end
+              upperTypes @ i [] switch
+                INT case
+                  tmpRegisters @ stackRegTypeInt [] [] .registers @ tmpInts []
+                  tmpInts 1 + tmpInts =
+                  break
+                FLOAT case
+                  tmpRegisters @ stackRegTypeFloat [] [] .registers @ tmpFloats []
+                  tmpFloats 1 + tmpFloats =
+                  break
+              end =:: tmpRegister
+              ## asm.createBinary
+                X64_OP .MOV
+                target AsmOperand .register
+                tmpRegister AsmOperand .register
+              asm.createBinary AssemblyAtom .op list.append
+              i 1 +
+            end ..drop
           return
       end
       break
     Return case
       asmOps
         ## TODO handle multiple return values
-        RegisterType .PRIMARY op [] .pos context popValue =:: valType
-        ## TODO handle return values >2*i64
+        op [] .pos context popValue =:: regData =:: valType
+        regData .registerCount 2 > if
+          ## TODO handle return values >2*i64
+        else regData .registerCount 1 >= _if
+          ## TODO handle float return values
+          ## asm.createBinary
+            X64_OP .MOV
+            X64_REGISTER .RAX AsmOperand .register
+            regData .registers @ 0 [] AsmOperand .register
+          asm.createBinary AssemblyAtom .op list.append
+          regData .registerCount 2 == if
+            ## asm.createBinary
+              X64_OP .MOV
+              X64_REGISTER .RDX AsmOperand .register
+              regData .registers @ 1 [] AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+          end
+        end
         ## asm.createBinary
           X64_OP .MOV
           X64_REGISTER .RSP AsmOperand .register
@@ -1788,6 +2480,7 @@ proc(
           X64_OP .POP
           X64_REGISTER .RBP AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
+        false context [] .reachable =
       return
     Assert unreachable
     Print setId autoTypedInitializeId
@@ -1824,7 +2517,13 @@ proc(
     asmOps =
     j 1 +
   end ..drop
-  ## XXX optimize assembly ( push x, pop y -> mov x,y...  )
+  ## XXX optimize assembly
+  ##  * replace move target with move source until one of them gets modified (forward)
+  ##      mov b, a; mov c, b  -> mov b,a; mov c, a
+  ##  * replace move source with move target until one of them gets modified (backward)
+  ##      mov b, [x]; add b, c; mov b, a; ret a -> mov a, [x]; add a, c; ret a
+  ##  * store variables (without pointer access) in registers where possible
+  ##  * permute register names ( reduce use of r8-r15 / xmm8-xmm15 )
   64 asmOps .length * sb.create
     0 while ..dup asmOps .length < do =:: j
       asmOps j list.get labelContext asm.appendToSb
@@ -1835,6 +2534,45 @@ proc(
   sb.free ..drop ## XXX merge string builders
   asmOps list.clear asmOps0 [] =
   context [] .stackValues @ branchTree.clear
+  0 context [] .stackRegState .stackCountInt =
+  0 context [] .stackRegState .stackCountFloat =
+  bool REGISTER_LIST_MAX_LENGTH array new context [] .stackRegState .activeStackRegistersInt =
+  bool REGISTER_LIST_MAX_LENGTH array new context [] .stackRegState .activeStackRegistersFloat =
+end
+
+proc( -> RegisterList ) =>: getStackRegistersInt
+  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  X64_REGISTER .RDI registers @ 0 [] =
+  X64_REGISTER .RSI registers @ 1 [] =
+  X64_REGISTER .RDX registers @ 2 [] =
+  X64_REGISTER .RCX registers @ 3 [] =
+  X64_REGISTER .R8  registers @ 4 [] =
+  X64_REGISTER .R9  registers @ 5 [] =
+  registers 6:i8 RegisterList new return
+end
+proc( -> RegisterList ) =>: getStackRegistersFloat
+  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  X64_REGISTER .XMM0 registers @ 0 [] =
+  X64_REGISTER .XMM1 registers @ 1 [] =
+  X64_REGISTER .XMM2 registers @ 2 [] =
+  X64_REGISTER .XMM3 registers @ 3 [] =
+  X64_REGISTER .XMM4 registers @ 4 [] =
+  X64_REGISTER .XMM5 registers @ 5 [] =
+  registers 6:i8 RegisterList new return
+end
+proc( -> RegisterList ) =>: getTmpRegistersInt
+  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  X64_REGISTER .RAX registers @ 0 [] =
+  X64_REGISTER .RBX registers @ 1 [] =
+  X64_REGISTER .R10 registers @ 2 [] =
+  registers 3:i8 RegisterList new return
+end
+proc( -> RegisterList ) =>: getTmpRegistersFloat
+  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  X64_REGISTER .XMM8 registers @ 0 [] =
+  X64_REGISTER .XMM9 registers @ 1 [] =
+  X64_REGISTER .XMM10 registers @ 2 [] =
+  registers 3:i8 RegisterList new return
 end
 
 proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToAsm
@@ -1844,10 +2582,20 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToA
   ## CompilerContext
     prog
     labelHash @ labelEq @ 64 i64 map.create
-    ValueType branchTree.create
+    StackRegisterValue branchTree.create
     32 BlockInfo list.create
     32 LocalConst list.create
     32 StringConstant list.create
+    getStackRegistersInt
+    getStackRegistersFloat
+    getTmpRegistersInt
+    getTmpRegistersFloat
+    ## StackRegisterState
+      0
+      0
+      bool REGISTER_LIST_MAX_LENGTH array new
+      bool REGISTER_LIST_MAX_LENGTH array new
+    StackRegisterState new
     Type .undefined
     0
     0
