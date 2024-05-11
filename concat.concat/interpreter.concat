@@ -1171,7 +1171,8 @@ proc(
         end
         0 =:: mut: intArgs
         offset while ..dup minOffset >= do
-          context [] .stackInfo ..over list.at .data [] .valueType typeContext types.isInt ! if
+          context [] .stackInfo ..over list.at .data [] .valueType
+              typeContext types.unwrapReference typeContext types.isInt ! if
             break
           end
           intArgs 1 + intArgs =
