@@ -168,13 +168,15 @@ explicit casts allowed between any two named types with same source type
 
 <primitive-type> := `bool` | (`i`|`s`|`u`)(`8`|`16`|`32`|`64`) | `f32` | `f64` | `type`
 <C-type> := `..ctype.` (
-                `void`  |
-                `bool`  |
-                `schar` |
+                `void`   |
+                `bool`   |
+                `schar`  |
                 `u`?( `char` | `short` | `int` | `long` | `longlong` ) |
-                `size`  |
-                `float` |
-                `double`
+                `size`   |
+                `float`  |
+                `double` |
+                `struct*`|
+                `union*`
              )
 ```
 

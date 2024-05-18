@@ -13,7 +13,7 @@ proc( -> ) =>: main
   stdOut buff @ 0 45 fwrite debug.print debug.print
   stdOut '\n' fputc debug.print
   "../lib" OPEN_WRITE fopenS debug.print =:: empty
-  empty debug.print
+  empty ( ) ptr cast! debug.print
   empty fclose debug.print
   "./.io.out" OPEN_READ OPEN_WRITE | fopenS debug.print =:: file
   file "Written directly to file!\n" fputs debug.print
