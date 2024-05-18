@@ -21,43 +21,38 @@ namespace: io
 end
 
 namespace: c
-  ..ctype.void =:: FILE
+  ..ctype.struct* =:: FILE
   ## wrapper functions to allow interoperability with lib-c code
-  proc( -> FILE ptr mut ) : extern: concatIOHelper_stdin
-  proc( -> FILE ptr mut ) : extern: concatIOHelper_stdout
-  proc( -> FILE ptr mut ) : extern: concatIOHelper_stderr
+  proc( -> FILE ) : extern: concatIOHelper_stdin
+  proc( -> FILE ) : extern: concatIOHelper_stdout
+  proc( -> FILE ) : extern: concatIOHelper_stderr
   proc( -> ) : extern: concatIOHelper_resetErrno
   proc( -> io.IOError ) : extern: concatIOHelper_checkErrno
   proc(
     ..ctype.char _ ptr : path
     ..ctype.char _ ptr : mode
-  -> FILE ptr mut ) : extern: concatIOHelper_fopen
-  proc( FILE ptr mut
-  -> ) : extern: concatIOHelper_clearerr
-  proc( FILE ptr mut
-  -> ..ctype.int ) : extern: concatIOHelper_feof
-  proc( FILE ptr mut
-  -> ..ctype.int ) : extern: concatIOHelper_ferror
+  -> FILE ) : extern: fopen
+  proc( FILE -> ) : extern: clearerr
+  proc( FILE -> ..ctype.int ) : extern: feof
+  proc( FILE -> ..ctype.int ) : extern: ferror
   proc(
     ..ctype.void _ ptr mut : buffer
     ..ctype.size : eltSize
     ..ctype.size : eltCount
-    FILE ptr mut : file
-  -> ..ctype.size ) : extern: concatIOHelper_fread
+    FILE : file
+  -> ..ctype.size ) : extern: fread
   proc(
     ..ctype.void _ ptr : buffer
     ..ctype.size : eltSize
     ..ctype.size : eltCount
-    FILE ptr mut : file
-  -> ..ctype.size ) : extern: concatIOHelper_fwrite
-  proc( FILE ptr mut : file
-  -> ..ctype.int ) : extern: concatIOHelper_fflush
-  proc( FILE ptr mut : file
-  -> ..ctype.int ) : extern: concatIOHelper_fclose
+    FILE : file
+  -> ..ctype.size ) : extern: fwrite
+  proc( FILE : file -> ..ctype.int ) : extern: fflush
+  proc( FILE : file -> ..ctype.int ) : extern: fclose
 end
 
 namespace: io
-  c.FILE ptr mut =:: export: FILE ## XXX ? wrapper type
+  c.FILE =:: export: FILE ## XXX ? wrapper type
 
   proc( -> FILE ) =>: export: stdIn
     c.concatIOHelper_stdin
@@ -107,8 +102,8 @@ namespace: io
     ##fopen
       path ..ctype.char ptr cast!
       openMode ..ctype.char ptr cast!
-    c.concatIOHelper_fopen
-    ..dup c.FILE ptr cast c.isNull if
+    c.fopen
+    ..dup ( ) ptr cast! c.isNull if
       c.concatIOHelper_checkErrno
     else
       FILE_ERROR_NONE
@@ -128,22 +123,22 @@ namespace: io
     i64 : off
     i64 : count
   -> i64 IOError ) =>: export: fread
-    file c.FILE ptr cast c.isNull if
+    file ( ) ptr cast! c.isNull if
       0 FILE_ERR_INVALID_FILE return
     end
-    file c.concatIOHelper_clearerr
+    file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
       buffer off + ..ctype.void ptr mut cast!
       count 1 == if T ..type.size else T ..type.stride end
       count
       file
-    c.concatIOHelper_fread
+    c.fread
       ## XXX remove explicit cast of return value
-      file c.concatIOHelper_feof i32 cast ? if
+      file c.feof i32 cast ? if
         FILE_ERR_END_OF_FILE return
       end
-      file c.concatIOHelper_ferror i32 cast ? if
+      file c.ferror i32 cast ? if
         c.concatIOHelper_checkErrno return
       end
     FILE_ERROR_NONE return
@@ -155,44 +150,44 @@ namespace: io
     i64 : off
     i64 : count
   -> i64 IOError ) =>: export: fwrite
-    file c.FILE ptr cast c.isNull if
+    file ( ) ptr cast! c.isNull if
       0 FILE_ERR_INVALID_FILE return
     end
-    file c.concatIOHelper_clearerr
+    file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
       buffer off + ..ctype.void ptr cast!
       count 1 == if T ..type.size else T ..type.stride end
       count
       file
-    c.concatIOHelper_fwrite
+    c.fwrite
       ## XXX remove explicit cast of return value
-      file c.concatIOHelper_feof i32 cast ? if
+      file c.feof i32 cast ? if
         FILE_ERR_END_OF_FILE return
       end
-      file c.concatIOHelper_ferror i32 cast ? if
+      file c.ferror i32 cast ? if
         c.concatIOHelper_checkErrno return
       end
     FILE_ERROR_NONE return
   end
   proc( FILE : file -> IOError ) =>: export: fflush
-    file c.FILE ptr cast c.isNull if
+    file ( ) ptr cast! c.isNull if
       FILE_ERR_INVALID_FILE return
     end
     c.concatIOHelper_resetErrno
     ## XXX remove explicit cast of return value
-    file c.concatIOHelper_fflush i32 cast ? if
+    file c.fflush i32 cast ? if
       c.concatIOHelper_checkErrno return
     end
     FILE_ERROR_NONE return
   end
   proc( FILE : file -> IOError ) =>: export: fclose
-    file c.FILE ptr cast c.isNull if
+    file ( ) ptr cast! c.isNull if
       FILE_ERR_INVALID_FILE return
     end
     c.concatIOHelper_resetErrno
     ## XXX remove explicit cast of return value
-    file c.concatIOHelper_fclose i32 cast ? if
+    file c.fclose i32 cast ? if
       c.concatIOHelper_checkErrno return
     end
     FILE_ERROR_NONE return
