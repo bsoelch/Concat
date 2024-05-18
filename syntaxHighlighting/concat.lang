@@ -131,10 +131,7 @@
     <context id="compile-time" style-ref="compile-time">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))((( # start of file or white-space
-            (\#(
-                end                |
-                template
-              )|
+            (
               import |
               using  |
               \.\.(
