@@ -610,7 +610,7 @@ proc(
       ValueType .REFERENCE return
     reference mutableReference procedure case
       ValueType .REFERENCE return
-    undefined empty templateType genericType autoType
+    undefined empty genericType autoType
     procIn procOut case
       ValueType .EMPTY return
   end
@@ -1691,7 +1691,7 @@ proc(
           return
         break
         ARGUMENT GLOBAL_VAR TYPE PROCEDURE PROCEDURE_BUNDLE
-            TEMPLATE_ARG LABEL case break
+            LABEL case break
       end
       break
     atId getId case
@@ -1734,7 +1734,7 @@ proc(
           return
         break
         GLOBAL_VAR case break
-        TYPE PROCEDURE PROCEDURE_BUNDLE TEMPLATE_ARG LABEL case break
+        TYPE PROCEDURE PROCEDURE_BUNDLE LABEL case break
       end
       break
     setValue case

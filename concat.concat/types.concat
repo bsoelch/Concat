@@ -54,7 +54,6 @@ enum(
     types.ReferenceId : mutableReference
                   i32 : autoType
                   i32 : genericType
-                  i32 : templateType
     types.GeneratedId : generatedType
          types.SizeId : arrayIndex
           types.CType : cType
@@ -92,8 +91,6 @@ namespace: types
         a .autoType b .autoType == return
       genericType case
         a .genericType b .genericType == return
-      templateType case
-        a .templateType b .templateType == return
       generatedType case
         a .generatedType b .generatedType == return
       reference case
@@ -177,8 +174,6 @@ namespace: types
         bigPrime 31 * a .autoType + return
       genericType case
         bigPrime 37 * a .genericType + return
-      templateType case
-        bigPrime 41 * a .templateType + return
       generatedType case
         bigPrime 43 * a .generatedType + return
       reference case
@@ -236,7 +231,7 @@ namespace: types
          ## arrays/reference of empty values are empty
          t context getBaseType context isEmpty return
        undefined primitiveType procedure cType pointer
-         namedType autoType genericType templateType
+         namedType autoType genericType
          generatedType arrayIndex enum case false return
        procIn procOut struct union case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
@@ -336,7 +331,7 @@ namespace: types
         arrayIndex enum cType case true return
       ## TODO only union with no values is small
       arrayType struct union procIn procOut procedure ## TODO? count structs/unions with size < 128 as small types
-      undefined namedType autoType genericType templateType generatedType case false return
+      undefined namedType autoType genericType generatedType case false return
     end
   end
 
@@ -707,7 +702,7 @@ namespace: types
         composite composite .enum typeContext tryComputeUnionSize return
       union case
         composite composite .union typeContext tryComputeUnionSize return
-      undefined empty autoType genericType templateType
+      undefined empty autoType genericType
       primitiveType cType arrayIndex arrayType
       pointer reference mutableReference procedure
       namedType generatedType case ..unreachable ## XXX? use assertion
@@ -716,7 +711,7 @@ namespace: types
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export: alignOf
     t switch
-      undefined autoType genericType templateType case
+      undefined autoType genericType case
         TypeSize .unknown return
       empty case
         1 TypeSize .fixed return
@@ -755,7 +750,7 @@ namespace: types
     TypeContext ptr mut : context
   -> TypeSize ) =>: computeSize
     t switch
-      undefined autoType genericType templateType case
+      undefined autoType genericType case
         TypeSize .unknown return
       empty case
         0 TypeSize .fixed return
@@ -810,7 +805,7 @@ namespace: types
   end
 
   ## array & pointer types
-  enum( int templateArg staticArg ) =:: export: ArraySizeType
+  enum( int staticArg ) =:: export: ArraySizeType
   struct( i64 : value ArraySizeType : sizeType ) =:: export: ArraySize
   struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut: ptrOnly bool : mutable ) =:: ArrayType
 
@@ -1067,7 +1062,6 @@ namespace: types
     2 =:: export: COMP_FLAG_ONLY_EMPTY
     3 =:: export: COMP_MASK_ONLY_EMPTY
     4 =:: export: COMP_FLAG_STATIC_ARGS
-    8 =:: export: COMP_FLAG_TEMPLATE
    12 =:: export: COMP_GENERIC_MASK
    16 =:: export: COMP_SIZE_KNOWN
    31 =:: export: COMP_MASK_COMMON_FLAGS
@@ -1098,7 +1092,7 @@ namespace: types
       struct enum union procIn procOut case
         true return
       undefined empty primitiveType pointer arrayType procedure
-        namedType autoType genericType templateType generatedType
+        namedType autoType genericType generatedType
         reference mutableReference arrayIndex cType case
         false return
     end
@@ -1144,7 +1138,7 @@ namespace: types
           CompositeInfo ptr cast optional.wrap return
           break
         undefined empty primitiveType pointer arrayType procedure
-         namedType autoType genericType templateType generatedType
+         namedType autoType genericType generatedType
          reference mutableReference arrayIndex cType case
           ..drop CompositeInfo ptr optional.empty return
       end
@@ -1162,7 +1156,7 @@ namespace: types
         struct enum union procIn procOut case
           break
         undefined empty primitiveType pointer arrayType procedure
-         namedType autoType genericType templateType generatedType
+         namedType autoType genericType generatedType
           reference mutableReference arrayIndex cType case
           ..drop id.LABEL_ID_NONE return
       end
@@ -1191,7 +1185,7 @@ namespace: types
         struct enum union procIn procOut case
           break
         undefined empty primitiveType pointer arrayType procedure
-         namedType autoType genericType templateType generatedType
+         namedType autoType genericType generatedType
          reference mutableReference arrayIndex cType case
           ..drop id.LABEL_ID_NONE return
       end
@@ -1250,7 +1244,7 @@ namespace: types
       procOut case
         .procOut break
       enum union undefined empty primitiveType pointer arrayType procedure
-       namedType autoType genericType templateType generatedType
+       namedType autoType genericType generatedType
         reference mutableReference arrayIndex cType case ..drop
          i64 optional.empty return
     end =:: tupleId
@@ -1275,7 +1269,7 @@ namespace: types
       union case
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
-       namedType autoType genericType templateType generatedType
+       namedType autoType genericType generatedType
         reference mutableReference arrayIndex cType case ..drop
          Type .empty i64 optional.empty return
     end =:: enumId
@@ -1362,7 +1356,6 @@ namespace: types
     true =:: mut: emptyData ## composite is empty
     true =:: mut: onlyEmpty ## composite only contains Type .empty
     COMP_FLAG_NONE =:: mut: flags
-    false =:: mut: hasTemplate
     0 while ..dup elts .length < do
       elts ..over array.get =:: elt
       elt .empty ?? ! if
@@ -1373,8 +1366,6 @@ namespace: types
       end
       elt context containsGeneric if
         flags COMP_FLAG_STATIC_ARGS | flags =
-      end #+2nd return value+# if
-        flags COMP_FLAG_TEMPLATE | flags =
       end
       1 +
     end ..drop
@@ -1797,18 +1788,15 @@ namespace: types
   end
 
   ## named types
-  struct( Type : mut: data LabelId : name TemplateId : templateId i32 : implId ) =:: NamedType
-  ## XXX templateId used by old replace generic procedure
+  struct( Type : mut: data LabelId : name i32 : implId ) =:: NamedType
   proc(
     LabelId : label
-    TemplateId : templateId
     i32 : implId
     TypeContext ptr mut : context
   -> types.NamedTypeId ) =>: findNamedType
     0 while ..dup context [] .namedTypes .length < do =:: i
       context [] .namedTypes i list.at .data =:: elt
       elt [] .name label == if
-          elt [] .templateId templateId == _if
           elt [] .implId implId == _if
         i return
       end
@@ -1818,7 +1806,6 @@ namespace: types
       ## NamedType
         Type .undefined
         label
-        templateId
         implId
       NamedType new list.append
     context [] .namedTypes =
@@ -1826,26 +1813,23 @@ namespace: types
   end
   proc(
     LabelId : label
-    TemplateId : templateId
     TypeContext ptr mut : context
   -> Type ) =>: export: declareNamedType
-    label templateId -1 context findNamedType Type .namedType return
+    label -1 context findNamedType Type .namedType return
   end
   proc(
     LabelId : label
-    TemplateId : templateId
     i32 : implId
     TypeContext ptr mut : context
   -> Type ) =>: export: declareNamedTypeImpl
-    label templateId implId context findNamedType Type .namedType return
+    label implId context findNamedType Type .namedType return
   end
   proc(
     Type : value
     LabelId : label
-    TemplateId : templateId
     TypeContext ptr mut : context
   -> Type bool ) =>: export: initializeNamedType
-    label templateId -1 context findNamedType =:: id
+    label -1 context findNamedType =:: id
     context [] .namedTypes id list.at .data =:: named
     named [] .data Type .undefined typeEquals ! if
       id Type .namedType true return
@@ -1856,7 +1840,6 @@ namespace: types
   proc(
     Type : value
     LabelId : label
-    TemplateId : templateId
     TypeContext ptr mut : context
   -> Type ) =>: export: newNamedType
     ## TODO? find better way to handle generic named types in new compiler
@@ -1864,7 +1847,6 @@ namespace: types
       ## NamedType
         value
         label
-        templateId
         -1
       NamedType new list.append
     context [] .namedTypes =
@@ -2101,7 +2083,7 @@ namespace: types
   end
 
 
-  ## generic,template & auto-types
+  ## generic & auto-types
   proc( i32 : id -> Type ) =>: export: newAutoType
     id Type .autoType return
   end
@@ -2111,15 +2093,11 @@ namespace: types
   proc( i32 : id -> Type ) =>: export: newGenericType
     id Type .genericType return
   end
-  proc( i32 : id -> Type ) =>: export: newTemplateType
-    id Type .templateType return
-  end
 
   proc( Type -> i32 ) =>: export: getTypeId
     ..dup switch
       autoType case .autoType return
       genericType case .genericType return
-      templateType case .templateType return
       generatedType case .generatedType return
       pointer case .pointer return
       arrayType case .arrayType return
@@ -2154,51 +2132,44 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isGeneric
     t0 context unwrapNamed =:: t
     t switch
-      genericType templateType case true return
+      genericType case true return
       undefined empty primitiveType procedure reference mutableReference cType
       namedType autoType generatedType arrayIndex enum pointer arrayType
         procIn procOut struct union case
          false return
     end
   end
-  proc( Type : t0 TypeContext ptr : context -> bool #+has template+# bool #+has static arg+# ) =>: export: containsGeneric
+  proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamed =:: t
     t switch
       undefined empty primitiveType autoType arrayIndex cType case
-        false false return
+        false return
       reference mutableReference case
         t context getBaseType context containsGeneric return
       pointer arrayType case
         context [] .arrayTypes t ..dup .pointer ?? if .pointer else .arrayType end list.get =:: arrayType
-        arrayType .base context containsGeneric =:: mut: isStatic =:: mut: isTemplate
-        isTemplate isStatic & arrayType .fixedSize ! | if
-          isTemplate isStatic return
-        end
+        arrayType .base context containsGeneric =:: mut: isStatic
         0 while ..dup arrayType .dims < do
-          context [] .arraySizes arrayType .sizeOffset ..over.2 + list.get .sizeType
-            ..dup .staticArg ?? if
-              true isStatic =
-            end
-          .templateArg ?? if
-              true isTemplate =
+          context [] .arraySizes
+             arrayType .sizeOffset ..over.2 +
+          list.get .sizeType .staticArg ?? if
+            true isStatic =
           end
           1 +
         end ..drop
-        isTemplate isStatic return
+        isStatic return
       struct enum union procIn procOut case
-        t context compositeData .data [] .flags ..dup COMP_FLAG_TEMPLATE & ? ..swap COMP_FLAG_STATIC_ARGS & ? return
+        t context compositeData .data [] .flags COMP_FLAG_STATIC_ARGS & ? return
       generatedType case
-        false false return ## TODO check if type contains generic
+        false return ## TODO check if type contains generic
       procedure case
         context [] .procTypes t .procedure list.get
-          ..dup .in context containsGeneric =:: isStatic =:: isTemplate
-          .out context containsGeneric isStatic | ..swap isTemplate | ..swap return
+          ..dup .in context containsGeneric =:: isStatic
+          .out context containsGeneric isStatic | return
       namedType case
         t context unwrapNamed context containsGeneric return
       genericType case
-        false true return
-      templateType case
-        true false return
+        true return
     end
   end
 
@@ -2538,11 +2509,6 @@ namespace: sb
           size .value sb.appendI
           "]" sb.appendS
           break
-        templateArg case
-          " templateArg(" sb.appendS
-          size .value sb.appendI
-          ")" sb.appendS
-          break
       end
     return
   end
@@ -2667,12 +2633,6 @@ namespace: sb
           "[generic " appendS
           labelId  appendI
           "]"  appendS
-        return
-      templateType case
-        sb
-          "template["     appendS
-          t .templateType appendI
-          "]"             appendS
         return
       generatedType case
         t .generatedType

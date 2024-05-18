@@ -64,6 +64,7 @@ struct(
   i64 : implementationId
 ) =:: export: ProcedureImpl
 
+## FIXME remove unused operations
 enum(
             NopType : NOP
          ConstValue : mut: Constant
@@ -347,7 +348,7 @@ struct( FileId : id FilePosition : includePos ) =:: export: IncludedFile
 struct(
      Operation list : mut: globalOps
      Operation list : mut: localOps
-     Operation list : mut: templateOps
+     Operation list : mut: tmpOps
   IncludedFile list : mut: includedFiles
 
       stringBuilder : mut: fileName
@@ -382,7 +383,7 @@ struct(
    ProcedureInfo list : mut: procedures
  ProcedureBundle list : mut: procBundles
             Type list : mut: autoTypes
-       Operation list : mut: templateOps
+       Operation list : mut: tmpOps
       SwitchData list : mut: switchData
        WhileData list : mut: whileData
    TypedConstant list : mut: constantReferences
@@ -961,20 +962,20 @@ namespace: sb
             ..swap
             1 +
           end ..drop
-          "## templates:\n" sb.appendS
-          0 while ..dup f .templateOps .length < do
+          "## tmp:\n" sb.appendS
+          0 while ..dup f .tmpOps .length < do
             ..swap
-              f .templateOps ..over.2 list.get prog sb.appendOp
+              f .tmpOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
         ..swap
         1 +
       end ..drop
-      "## unresolved templates:\n" sb.appendS
-      0 while ..dup prog [] .templateOps .length < do
+      "## temporary code:\n" sb.appendS
+      0 while ..dup prog [] .tmpOps .length < do
         ..swap
-          prog [] .templateOps ..over.2 list.get prog sb.appendOp
+          prog [] .tmpOps ..over.2 list.get prog sb.appendOp
         ..swap
         1 +
       end ..drop

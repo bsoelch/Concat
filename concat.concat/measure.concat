@@ -21,7 +21,7 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
   else ..drop end
   visited declared ptrLevel map.put ..drop
   declared switch
-    undefined empty primitiveType autoType templateType genericType arrayIndex cType case
+    undefined empty primitiveType autoType genericType arrayIndex cType case
       break
     pointer case
       declared typeContext types.getBaseType ptrLevel 1 + prog visited types declaredType
@@ -127,11 +127,6 @@ proc( ProgramContext ptr mut : prog -> Type list ) =>: export: getDeclaredTypes
       0 while ..dup ..over.2 [] .localOps .length < do
         ..swap
           ..dup [] .localOps ..over.2 list.at .data prog visited @ types @ addOpType
-        ..swap 1 +
-      end ..drop
-      0 while ..dup ..over.2 [] .templateOps .length < do
-        ..swap
-          ..dup [] .templateOps ..over.2 list.at .data prog visited @ types @ addOpType
         ..swap 1 +
       end ..drop
     ..drop

@@ -429,7 +429,7 @@ namespace: interpreter
     idContext [] .constContext @ =:: constContext
     idContext [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
-    t typeContext types.containsGeneric | if
+    t typeContext types.containsGeneric if
       ConstValue .none true return
     end
     infoType switch
@@ -522,10 +522,10 @@ namespace: interpreter
           Type .undefined ConstValue .none true return
         end
       else
-        idContext [] .templateArgBuffer .length =:: offset
+        idContext [] .argBuffer .length =:: offset
         0 while ..dup sizes .length < do =:: i
           sizes i array.get =:: current
-          idContext [] .templateArgBuffer
+          idContext [] .argBuffer
             current .sizeType .int ?? if
               current .value ConstValue .int list.append
             else current .sizeType .staticArg ?? _if
@@ -536,7 +536,7 @@ namespace: interpreter
               pos errors appendError
               Type .undefined ConstValue .none true return
             end
-          idContext [] .templateArgBuffer =
+          idContext [] .argBuffer =
           i 1 +
         end ..drop
         sizes .length
@@ -552,12 +552,15 @@ namespace: interpreter
             true false
           typeContext types.newArrayType ..drop
           ## newArrayConst
-            idContext [] .templateArgBuffer .data offset + idContext [] .templateArgBuffer .length offset - array.create
+            ## array.create
+              idContext [] .argBuffer .data offset +
+              idContext [] .argBuffer .length offset -
+            array.create
             idContext [] .constContext @
           newArrayConst
-          idContext [] .templateArgBuffer
+          idContext [] .argBuffer
             offset list.setLength
-          idContext [] .templateArgBuffer =
+          idContext [] .argBuffer =
           false
         return
       end
@@ -1054,25 +1057,25 @@ proc(
               typeContext
               constContext
             types.findGeneratedType if ## newType
-              idContext [] .templateArgBuffer .length =:: argOffset
-              idContext [] .templateArgBuffer
+              idContext [] .argBuffer .length =:: argOffset
+              idContext [] .argBuffer
                 ## remember procedure arguments
                 context [] .stack list.asArray
                   offset
                 array.tail list.appendArray
-              idContext [] .templateArgBuffer =
+              idContext [] .argBuffer =
               ## evalGeneratedType
                 label
                 procId
-                idContext [] .templateArgBuffer list.asArray
+                idContext [] .argBuffer list.asArray
                   argOffset
                 array.tail
                 op [] .pos
                 context
               evalGeneratedType
-                idContext [] .templateArgBuffer
+                idContext [] .argBuffer
                   argOffset list.setLength
-                idContext [] .templateArgBuffer =
+                idContext [] .argBuffer =
               if ..drop
                 true return
               end
@@ -1138,7 +1141,7 @@ proc(
           end
           idData [] .constValue idData [] .valueType label op [] .pos context pushValue
           false return
-        TEMPLATE_ARG TMP_VAR PROCEDURE_BUNDLE case
+        TMP_VAR PROCEDURE_BUNDLE case
           context [] .evalType switch
             INTERPRET case
               "unsupported operation in constant evaluation: " sb.wrap
@@ -1197,13 +1200,6 @@ proc(
               ## ArraySize
                 intArg .genericArg
                 types.ArraySizeType .staticArg
-              types.ArraySize new list.append
-            idContext [] .arraySizeBuffer =
-          else intArg .templateArg ?? _if
-            idContext [] .arraySizeBuffer
-              ## ArraySize
-                intArg .templateArg
-                types.ArraySizeType .templateArg
               types.ArraySize new list.append
             idContext [] .arraySizeBuffer =
           else
@@ -1281,7 +1277,7 @@ proc(
         op [] .pos context popType if ..drop.2
           true return
         end poppedType = valInfo =
-        poppedType typeContext types.containsGeneric | if
+        poppedType typeContext types.containsGeneric if
           ## creating tuple not possible, reset stack
           ## unpopValue
             poppedType ConstValue .typeId
@@ -1322,7 +1318,7 @@ proc(
           true return
         end poppedType = valInfo =
         true isPoppedType =
-        poppedType typeContext types.containsGeneric | if
+        poppedType typeContext types.containsGeneric if
           ## casting to genetic value not possible, reset stack
           ## unpopValue
             poppedType ConstValue .typeId
@@ -1433,7 +1429,7 @@ proc(
           true return
         end poppedType = valInfo =
         true poppedValue =
-        poppedType typeContext types.containsGeneric | if
+        poppedType typeContext types.containsGeneric if
           ## computing size not possible, reset stack
           ## unpopValue
             poppedType ConstValue .typeId
@@ -1727,9 +1723,14 @@ proc(
   end
   ## XXX resolve signature
   ## TODO check argument types
-  ## TODO interpreter modes depending on program state
-  program [] .templateOps ## -> procedures are stored in template ops until they are type-checked
-  ## program [] .progFiles procData [] .fileId list.at .data [] .localOps
+  context [] .evalType switch
+    PARSER GLOBAL FOLD_LOCAL case
+      program [] .tmpOps break
+    INTERPRET case
+      program [] .progFiles
+        procData [] .fileId
+      list.at .data [] .localOps break
+  end
     procData [] .implementation .code .codeStart
     procData [] .implementation .code .codeLength
   list.slice =:: code

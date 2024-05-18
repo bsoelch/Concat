@@ -39,12 +39,10 @@ proc( LabelId LabelId -> bool ) =>: export: labelEq == end
 
 i32 =:: export: NamespaceId
 i32 =:: export: NamespaceImportId
-i32 =:: export: TemplateId
 namespace: id
   -1 LabelId =: export: LABEL_ID_NONE
   -1 NamespaceId =: export: NAMESPACE_ID_NONE
   -1 NamespaceImportId =: export: NAMESPACE_IMPORT_NONE
-  -1 TemplateId =: export: TEMPLATE_ID_NONE
 end
 
 enum( STRUCT POINTER ) =:: export: CallingConvention

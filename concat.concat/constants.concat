@@ -21,7 +21,6 @@ enum(
   Type : typeId
   wildCard
   i32 : genericArg
-  i32 : templateArg
   ProcId : procedure
   ProcBundleId : procedureBundle
   UnionConstant : union
@@ -111,8 +110,6 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       a .procedure b .procedure == return
     procedureBundle case
       a .procedureBundle b .procedureBundle == return
-    templateArg case
-      a .templateArg b .templateArg == return
     genericArg case
       a .genericArg b .genericArg == return
     union case
@@ -246,10 +243,6 @@ namespace: sb
         genericArg case
           "generic argument: "  sb.appendS
           val .genericArg sb.appendI
-          break
-        templateArg case
-          "template argument: "  sb.appendS
-          val .templateArg sb.appendI
           break
         union case
           "union element ("  sb.appendS

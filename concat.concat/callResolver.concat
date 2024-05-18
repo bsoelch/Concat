@@ -43,8 +43,6 @@ proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
     int case size .value ConstValue .int return
     staticArg case
       size .value LabelId cast ConstValue .genericArg return
-    templateArg case
-      size .value TemplateId cast ConstValue .templateArg return
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
@@ -60,7 +58,7 @@ proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
         types.ArraySizeType .staticArg
       types.ArraySize new return
     none boolean enumLabel chr Float str
-    arrayConstant typeId wildCard templateArg
+    arrayConstant typeId wildCard
     procedure procedureBundle union case ..unreachable
   end
 end
@@ -77,7 +75,7 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
-  src typeContext types.containsGeneric | ! if
+  src typeContext types.containsGeneric ! if
     src return
   end
   src switch
@@ -108,7 +106,6 @@ proc(
           progContext
         replaceGenerics
         name
-        -1
         typeContext
       types.newNamedType return
     reference mutableReference case
@@ -139,7 +136,6 @@ proc(
               genericValues genericId map.at .data =:: val
               val [] .fixed constAsSize list.append
               break
-            templateArg case ..unreachable
           end
         idContext [] .arraySizeBuffer =
         i 1 +
@@ -221,7 +217,7 @@ proc(
       return
     generatedType case
       src typeContext types.getGeneratorArgs =:: args
-      idContext [] .templateArgBuffer @ =:: argBuffer
+      idContext [] .argBuffer@ =:: argBuffer
       argBuffer [] .length =:: argOffset
       0 while ..dup args .length < do =:: i
         args i constContext constArrayGet =:: arg
@@ -245,7 +241,6 @@ proc(
                 nonEmpty case arg break
               end
               break
-            templateArg case ..unreachable
           end list.append
         argBuffer [] =
         i 1 +
@@ -272,8 +267,6 @@ proc(
       return
     undefined empty primitiveType cType arrayIndex autoType case
       ..unreachable ## type should not contain generics
-    templateType case
-      ..unreachable ## new parser should not generate template types
   end
 end
 
@@ -289,7 +282,7 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
-  target typeContext types.containsGeneric | ! if
+  target typeContext types.containsGeneric ! if
     src0 target typeContext types.canAutoCast ! return
   end
   src0 =:: mut: src
@@ -454,7 +447,6 @@ proc(
               newValue GenericArg .fixed
             map.put ..drop
             break
-          templateArg case ..unreachable
         end
         i 1 +
       end ..drop
@@ -570,8 +562,6 @@ proc(
       false return
     undefined empty primitiveType cType arrayIndex autoType case
       ..unreachable ## type should not contain generics
-    templateType case
-      ..unreachable ## new parser should not generate template types
   end
 end
 
@@ -874,7 +864,7 @@ proc(
         paramType typeContext computeTypeWeigth +
       current [] .signatureWeigth =
       ## try matching type
-      paramType typeContext types.containsGeneric | if
+      paramType typeContext types.containsGeneric if
         false =:: mut: needCast
           ## resolveGenerics
             stackType

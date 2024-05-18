@@ -1585,7 +1585,7 @@ proc(
             state wrapCopy
           end
           return
-        TYPE TEMPLATE_ARG case
+        TYPE case
           op .dataType constValue op state pushValue
           op .val .getId .labelId state replaceLabel
           true true 0 0 state updateOpInfo
@@ -1818,7 +1818,7 @@ proc(
           labelId state replaceLabel
           mutable !  true 0 0 state updateOpInfo
           return
-        TYPE ARGUMENT LABEL TEMPLATE_ARG PROCEDURE_BUNDLE case
+        TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.wrap
             op .val .atId labelContext sb.appendIdInfo
             " is not supported" sb.appendS
@@ -1832,7 +1832,7 @@ proc(
         GLOBAL_VAR LOCAL_VAR TMP_VAR case
           op state appendOp ..drop
           return
-        PROCEDURE TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
+        PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
           "unexpected declaration of identifier " sb.wrap
             op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
@@ -1882,7 +1882,7 @@ proc(
           end
           op state appendOp ..drop
           return
-        PROCEDURE PROCEDURE_BUNDLE TYPE TEMPLATE_ARG
+        PROCEDURE PROCEDURE_BUNDLE TYPE
             LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.wrap
             idInfo labelContext sb.appendIdInfo
@@ -3445,7 +3445,7 @@ proc(
       break
     typeInfo case
       op .pos state popType =:: valType
-      valType typeContext types.containsGeneric | if
+      valType typeContext types.containsGeneric if
         break ## XXX? support var-size arrays
       end
       ## pushConstant
@@ -3511,7 +3511,7 @@ proc(
   ProcedureInfo ptr : procInfo
   ProgramContext ptr mut : program
 -> i64 ) =>: nextImpl
-  program [] .templateOps
+  program [] .tmpOps
     procInfo [] .implementation .code .codeStart list.at .data
   =:: procStart
   procStart [] .val .implementProcedure ?? ! if
@@ -3536,7 +3536,7 @@ proc(
   state clearOps
   state resetInterpreter
   currentProc [] .implementation .code @ =:: codeImpl
-  program [] .templateOps
+  program [] .tmpOps
      codeImpl [] .codeStart list.at .data
   =:: procStart
   procStart [] .val .implementProcedure ??
@@ -3556,7 +3556,7 @@ proc(
     currentProc [] .procType state [] .currentProcType =
   end
   0 while ..dup codeImpl [] .codeLength < do =:: i
-    program [] .templateOps
+    program [] .tmpOps
       i codeImpl [] .codeStart + list.get
     state typeCheckOp
     i 1 +
@@ -3713,9 +3713,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
     end
     false ## break loop while reaching condition
   do end
-  program [] .templateOps
+  program [] .tmpOps
     list.clear ## operations have been compiled
-  program [] .templateOps =
+  program [] .tmpOps =
   state @ freeOps
   state .stack @ branchTree.free
   state .interpreter @ interpreter.cleanupContext

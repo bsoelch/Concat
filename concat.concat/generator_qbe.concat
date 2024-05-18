@@ -158,7 +158,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       ValType .PTR return
     reference mutableReference procedure arrayType struct union enum case
       ValType .REFERENCE return
-    undefined empty templateType genericType autoType
+    undefined empty genericType autoType
     procIn procOut case
       ValType .EMPTY return
   end
@@ -688,7 +688,7 @@ namespace: sb
       enum case
         sb t "enum" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
         break
-      undefined empty templateType genericType autoType
+      undefined empty genericType autoType
       procIn procOut case
         break
     end
@@ -737,7 +737,7 @@ namespace: sb
       "(" sb.appendS
       0 while ..dup args .length < do =:: i
         args i types.compositeElts.get =:: arg
-        arg typeContext types.containsGeneric | if
+        arg typeContext types.containsGeneric if
           arg typeContext types.isArray if
             "generic arrays are not supported: " sb.wrap
               arg typeContext sb.appendType
@@ -1013,7 +1013,7 @@ namespace: sb
             appendConstQBE
           end
           return
-        none wildCard templateArg typeId
+        none wildCard typeId
             procedure procedureBundle case
         break
       end
@@ -1120,7 +1120,7 @@ namespace: sb
     t typeContext types.isEmpty if
       sb return ## ignore empty types
     end
-    t typeContext types.containsGeneric | if
+    t typeContext types.containsGeneric if
       sb return ## ignore generic types
     end
     t typeContext types.isArray if
@@ -2466,7 +2466,6 @@ proc(
         size .sizeType switch
           int case size .value IntValue .constant break
           staticArg case size .value IntValue .localId break
-          templateArg case ..unreachable
         end
         targetId
         pos
@@ -2820,7 +2819,7 @@ proc(
               '\n' sb.appendC
             end
           return
-        GLOBAL_VAR TYPE ARGUMENT TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
+        GLOBAL_VAR TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break
@@ -2947,7 +2946,7 @@ proc(
             idInfo .id idInfo .labelId context sb.appendArgName
             '\n' sb.appendC
           return
-       TYPE TEMPLATE_ARG LABEL PROCEDURE_BUNDLE case
+       TYPE LABEL PROCEDURE_BUNDLE case
           break ## XXX error message
       end
       break

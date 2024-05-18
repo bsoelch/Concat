@@ -135,9 +135,7 @@ end
 
 proc( ParserState ptr mut : state -> i64 ) =>: opCount
   state [] .progContext =:: progContext
-  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    progContext [] .templateOps .length return
-  else state [] .currentProc optional.isEmpty _if
+  state [] .currentProc optional.isEmpty if
     state [] .globalOpBuffer .length return
   else
     progContext [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
@@ -145,12 +143,10 @@ proc( ParserState ptr mut : state -> i64 ) =>: opCount
 end
 proc( ParserState ptr mut : state -> Operation list ptr mut ) =>: currentOps
   state [] .progContext =:: progContext
-  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    progContext [] .templateOps @ return
-  else state [] .currentProc optional.isEmpty _if
+  state [] .currentProc optional.isEmpty if
     state [] .globalOpBuffer @ return
   else
-    progContext [] .templateOps @ return
+    progContext [] .tmpOps @ return
   end
 end
 proc( Operation : op ParserState ptr mut : state -> ) =>: appendOp
@@ -233,12 +229,10 @@ proc( ParserState ptr mut : state -> ) =>: tryInterpretGlobal
 end
 proc( ParserState ptr mut : state -> Operation ptr mut optional ) =>: peekOp
   state [] .progContext =:: progContext
-  progContext [] .idContext .currentTemplate id.TEMPLATE_ID_NONE != if
-    progContext [] .templateOps
-  else state [] .currentProc optional.isEmpty _if
+  state [] .currentProc optional.isEmpty if
     state [] .globalOpBuffer
   else
-    progContext [] .templateOps
+    progContext [] .tmpOps
   end list.peek
 end
 
@@ -334,8 +328,6 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state -> types.ArraySi
             constVal .int types.ArraySizeType .int types.ArraySize new list.append
           else constVal .genericArg ?? _if
             constVal .genericArg types.ArraySizeType .staticArg types.ArraySize new list.append
-          else constVal .templateArg ?? _if
-            constVal .templateArg types.ArraySizeType .templateArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
               constVal constContext typeContext sb.appendConstant
@@ -372,30 +364,6 @@ proc( i64 : n FileState ptr mut : fileState ParserState ptr mut : state -> Type 
   state [] .constants =
   state [] .typeBuffer list.asArray false return
 end
-proc( Type : argTypes FileState ptr mut : fileState ParserState ptr mut : state -> ConstantArray bool ) =>: popTemplateArguments
-  state [] .progContext [] .idContext @ =:: idContext
-  argTypes idContext [] .typeContext @ types.compositeEltCount =:: count
-  count state [] .constants .length > if
-    "not enough arguments for template" sb.wrap fileState [] .wordStart state appendError2
-     0 0 ConstantArray new true return
-  end
-  idContext [] .templateArgBuffer .length =:: offset
-  state [] .constants
-    ..dup .length count - list.setLength
-  state [] .constants =
-  0 while ..dup count < do
-    state [] .constants .data ..over state [] .constants .length + []
-      ..dup .valueType argTypes ..over.3 idContext [] .typeContext @ types.compositeGetElement types.typeEquals ! if
-        "incompatible type for template argument" sb.wrap fileState [] .wordStart state appendError2 ## XXX print types in error message
-        ..drop.2 0 0 ConstantArray new true return
-      end
-    idContext [] .templateArgBuffer
-      ..swap .val list.append
-    idContext [] .templateArgBuffer =
-    1 +
-  end ..drop
-  offset idContext [] .templateArgBuffer .length offset - ConstantArray new false return
-end
 proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state -> Type arrayView ConstValue arrayView Type ) =>: popConstantArray
   state [] .progContext [] .idContext @ =:: idContext
   state [] .constants .length state [] .constOffset len + < if ## XXX compare size with expected size
@@ -405,13 +373,13 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state -> Typ
   Type .undefined =:: mut: arrayType
   true =:: mut: hasArrayType
   state [] .typeBuffer list.clear state [] .typeBuffer =
-  idContext [] .templateArgBuffer .length =:: offset
+  idContext [] .argBuffer .length =:: offset
   state [] .constants .length len - =:: newLength
   newLength while ..dup state [] .constants .length < do
     state [] .constants ..over list.at .data =:: const
-    idContext [] .templateArgBuffer
+    idContext [] .argBuffer
       const [] .val list.append
-    idContext [] .templateArgBuffer =
+    idContext [] .argBuffer =
     state [] .typeBuffer const [] .valueType list.append state [] .typeBuffer =
     hasArrayType if
       arrayType Type .undefined types.typeEquals if
@@ -425,12 +393,12 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state -> Typ
   state [] .constants
     newLength list.setLength
   state [] .constants =
-  idContext [] .templateArgBuffer
+  idContext [] .argBuffer
     offset list.setLength
-  idContext [] .templateArgBuffer =
+  idContext [] .argBuffer =
   ## return
     state [] .typeBuffer list.asArray
-    idContext [] .templateArgBuffer .data offset + len array.create
+    idContext [] .argBuffer .data offset + len array.create
     hasArrayType if arrayType else Type .undefined end
   return
 end
@@ -607,7 +575,7 @@ end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state -> string LabelId ) =>: readLabel
   code start fileState state 0 readLabelAddFlags
 end
-enum( NONE TUPLE STRUCT ENUM PROC_IN TEMPLATE ) =:: LabelType
+enum( NONE TUPLE STRUCT ENUM PROC_IN ) =:: LabelType
 proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state -> string Type arrayView LabelId arrayView optional LabelType bool ) =>: readCompositeType
   state offsetConstants =:: prevConstants
   state [] .constants .length =:: constOffset
@@ -691,7 +659,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         fileState state peekTypeConstant if
           "missing type for label" sb.wrap fileState [] .wordStart state appendError2
         end =:: argType
-        labelType .TEMPLATE ?? ! argType types.primitive.TYPE types.typeEquals & if
+        argType types.primitive.TYPE types.typeEquals if
           id.FLAG_STATIC else 0 LabelFlag cast
         end
         readLabelAddFlags
@@ -1150,14 +1118,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         isInit if
           fileState state popTypeConstant ! assert "pop type"
           label
-          idContext [] .currentTemplate
           typeContext types.initializeNamedType if
             "re-initialization of named type" sb.wrap
             fileState [] .wordStart state appendError2
           end
         else
           label
-          idContext [] .currentTemplate
           typeContext types.declareNamedType
         end
         fileState [] .wordStart newTypeConst .val
@@ -1181,11 +1147,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         label idContext id.getIdentifier
         ! assert "label is identifier"
       [] .constValue =
-      state [] .currentProc optional.isEmpty if
-        idData .idType .PROCEDURE ?? ! isInit ! | if
-          progContext [] .templateOps .length idContext  id.endOpenTemplate
-        end
-      end
       localDeclaration ! if
           MAIN_NAME string.wrap label labelContext id.labelNameEq _if ## main
         idType .PROCEDURE ?? ! if
@@ -1260,7 +1221,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         progContext [] .procedures
           ..dup .length ProcId cast =:: procId
           isInit if
-            progContext [] .templateOps .length
+            progContext [] .tmpOps .length
           else -1:i64 end =:: procStart
           ## ProcedureInfo
             state [] .currentFile
@@ -1378,7 +1339,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## initializeNamedType
           typeConst
           labelId
-          idContext []  .currentTemplate
           typeContext
         types.initializeNamedType if
           "re-initialization of named type" sb.wrap
@@ -1390,9 +1350,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         labelId idContext id.getIdentifier
         ! assert "label is identifier"
       [] .constValue =
-      state [] .currentProc optional.isEmpty if
-        progContext [] .templateOps .length idContext  id.endOpenTemplate
-      end
       idData .idType .TYPE ?? if
         return
       end
@@ -1587,7 +1544,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             currentProcId list.at .data
           =:: currentProc
           ProcId optional.empty state [] .currentProc =
-          progContext [] .templateOps .length
+          progContext [] .tmpOps .length
             currentProc [] .implementation .code .codeStart -
           currentProc [] .implementation .code .codeLength =
         end
@@ -1596,9 +1553,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end
         closedBlock .autoClose
       do end
-      state [] .currentProc optional.isEmpty if
-        progContext [] .templateOps .length idContext  id.endOpenTemplate
-      end
       return
     else ..dup .length 1 > _if ..dup 0 string.charAt '.' == _if ..dup 1 string.charAt '.' != _if
       1 string.tail
@@ -1917,10 +1871,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           ..swap sb.appendStr
         "\" is not a valid namespace name" sb.appendS
         fileState [] .wordStart state appendError2 return
-      end
-      idContext id.hasOpenTemplate if ..drop
-        "cannot open namespace inside template" sb.wrap fileState [] .wordStart state appendError2
-        return
       end
       id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
       idContext id.beginNamespace

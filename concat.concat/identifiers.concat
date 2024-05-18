@@ -13,7 +13,6 @@ enum(
   PROCEDURE
   PROCEDURE_BUNDLE
   GLOBAL_VAR
-  TEMPLATE_ARG
   LABEL
   LOCAL_VAR
   ARGUMENT
@@ -21,27 +20,10 @@ enum(
 ) =:: export: IdentifierType
 
 struct(
-  Type : implType
-  ConstantArray : argValues
-  FilePosition : implPos
-) =:: export: TemplateImplementation
-## XXX? ( offset length file code-Type ) -> code-position
-struct(
-  Type : templateType
-  FilePosition : declaredAt
-  i64 : codeOffset
-  i64 : mut: codeLength
-  FileId : srcFile
-  TemplateImplementation list : mut: implementations
-  i32 : mut: compiledImpls
-) =:: export: TemplateInfo
-
-struct(
   Type : mut: valueType
   ConstValue : mut: constValue
   FilePosition : mut: declaredAt
   LabelId : labelId
-  TemplateId : mut: templateId
   i32 : mut: id
   IdentifierType : idType
   bool : mut: declarationOnly
@@ -50,7 +32,6 @@ struct(
   IdentifierType : idType
   LabelId : labelId
   ConstValue : constValue
-  TemplateId : templateId
   i32 : mut: id
 ) =:: export: IdentifierInfo
 
@@ -76,7 +57,6 @@ namespace: id
     "" 0 string new
     0 0 FilePosition new
     LABEL_ID_NONE
-    TEMPLATE_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
     false
@@ -87,7 +67,6 @@ namespace: id
     "" 0 string new
     0 0 FilePosition new
     LABEL_ID_NONE
-    TEMPLATE_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
     false
@@ -135,13 +114,11 @@ end
     id.Scope : mut: globalScope
     id.Scope list : mut: openScopes
     LabelId IdentifierData hashMap : mut: identifierData
-    TemplateInfo list : mut: templateInfos
-    ConstValue list : mut: templateArgBuffer
+    ConstValue list : mut: argBuffer
     types.ArraySize list : mut: arraySizeBuffer
     stringBuilder : mut: nameBuffer
     NamespaceImportId list : mut: prevImports
     i32 : mut: localVarCount
-    TemplateId : mut: currentTemplate
   ) =:: export: IdentifierContext
 namespace: id
 
@@ -151,13 +128,11 @@ namespace: id
     false Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     labelHash @ labelEq @ 128 IdentifierData map.create
-    128 TemplateInfo      list.create
     32  ConstValue        list.create
     128 types.ArraySize   list.create
     128                     sb.create
     32  NamespaceImportId list.create
     0
-    TEMPLATE_ID_NONE
     IdentifierContext new =:: mut: newContext
     newContext return
   end
@@ -166,7 +141,6 @@ namespace: id
     idData [] .idType
     idData [] .labelId
     idData [] .constValue
-    idData [] .templateId
     idData [] .id
     IdentifierInfo new return
   end
@@ -378,34 +352,6 @@ namespace: id
     matches optional.isEmpty match optional.hasData & if ## TODO return value indicating multi-match
       matchGlobal if globalName else idName end match .data false return
     end
-    ## 4. template arguments
-    context hasOpenTemplate if
-      context [] .templateInfos context [] .currentTemplate list.get =:: template
-      template .templateType
-        0 while ..dup ..over.2 context [] .typeContext @ types.compositeEltCount < do =:: tId
-            id ..over tId context [] .typeContext @ types.compositeGetLabel context [] .typeContext .labelContext @ labelNameEq if
-              =:: tType
-              tType tId context [] .typeContext @ types.compositeGetElement =:: eType
-              ## IdentifierData
-                eType
-                eType types.primitive.TYPE types.typeEquals if
-                  tId types.newTemplateType ConstValue .typeId
-                else
-                  tId ConstValue .templateArg
-                end
-                template .declaredAt
-                tType tId context [] .typeContext @ types.compositeGetLabel
-                context [] .currentTemplate
-                tId
-                IdentifierType .TEMPLATE_ARG
-                false
-              IdentifierData new ID_TMP_DATA =
-              name context [] .typeContext  .labelContext .namespaceInfo .current fileId IdentifierName new LABEL_ID_TMP false return
-            end
-          tId 1 +
-        end ..drop
-      ..drop
-    end
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
   end
 
@@ -593,11 +539,6 @@ namespace: id
         isInit if
           valType prevDec [] .valueType =
           constVal prevDec [] .constValue =
-          idType .LOCAL_VAR ?? idType .ARGUMENT ?? | idType .TMP_VAR ?? | if
-            TEMPLATE_ID_NONE
-          else
-            context [] .currentTemplate
-          end prevDec [] .templateId =
           id prevDec [] .id =
           declaredAt prevDec [] .declaredAt =
           false prevDec [] .declarationOnly =
@@ -629,11 +570,6 @@ namespace: id
       constVal
       declaredAt
       label
-      idType .LOCAL_VAR ?? idType .ARGUMENT ?? | idType .TMP_VAR ?? | if
-        TEMPLATE_ID_NONE
-      else
-        context [] .currentTemplate
-      end
       id -1 == idType .LOCAL_VAR ?? & if
         context [] .localVarCount
           ..dup 1 + context [] .localVarCount =
@@ -679,9 +615,6 @@ namespace: sb
       TMP_VAR case
         "temporary variable" sb.appendS
         return
-      TEMPLATE_ARG case
-        "template argument" sb.appendS
-        return
     end
   end
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendIdInfo
@@ -701,16 +634,6 @@ namespace: sb
         end
       ..swap ..drop
       ## TODO print namespace
-      ## TODO print templateInfo
-      id .templateId id.TEMPLATE_ID_NONE != if
-        "template " sb.appendS
-        id .templateId sb.appendI
-        id .id -1 != if
-          ':' sb.appendC
-          id .id sb.appendI
-        end
-        ' ' sb.appendC
-      end
       id .idType switch
         TYPE case
           "type \"" sb.appendS
@@ -753,13 +676,6 @@ namespace: sb
           return
         TMP_VAR case
           "temporary variable (" sb.appendS
-          id .id sb.appendI
-          ") \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
-          "\"" sb.appendS
-          return
-        TEMPLATE_ARG case
-          "template argument (" sb.appendS
           id .id sb.appendI
           ") \"" sb.appendS
           id .labelId labelContext sb.appendLabelName
@@ -810,467 +726,6 @@ namespace: id
     context [] .prevImports =
     context [] .typeContext  .labelContext .namespaceInfo .imports =
     false
-  end
-
-  proc( IdentifierContext ptr mut : context -> bool ) =>: export: hasOpenTemplate
-    context [] .currentTemplate TEMPLATE_ID_NONE != return
-  end
-  proc( TemplateId : id IdentifierContext ptr mut : context -> TemplateInfo ptr mut optional ) =>: export: getTemplateInfo
-    id 0 < id context [] .templateInfos .length >= | if
-      TemplateInfo ptr mut optional.empty return
-    end
-    context [] .templateInfos id list.at return
-  end
-  proc( TemplateId : id IdentifierContext ptr mut : context -> Type ) =>: export: templateArgs
-    id 0 < id context [] .templateInfos .length >= | if
-      Type .undefined return
-    end
-    context [] .templateInfos id list.get .templateType return
-  end
-  proc( Type : templateTypes i64 : templateOpsOffset FileId : srcFile FilePosition : pos IdentifierContext ptr mut : context -> bool ) =>: export: beginTemplate
-    context hasOpenTemplate if
-      true return
-    end
-    context [] .templateInfos
-      ..dup .length TemplateId cast context [] .currentTemplate =
-      ## TemplateInfo
-        templateTypes
-        pos
-        templateOpsOffset
-        0
-        srcFile
-        8 TemplateImplementation list.create
-        0
-      TemplateInfo new list.append
-    context [] .templateInfos =
-    false return
-  end
-  proc( i64 : templateOpsOffset IdentifierContext ptr mut : context -> ) =>: export: endOpenTemplate
-    context hasOpenTemplate ! if
-      return
-    end
-    context [] .templateInfos context [] .currentTemplate list.at .data
-      templateOpsOffset ..over [] .codeOffset -
-      ..swap [] .codeLength =
-    TEMPLATE_ID_NONE context [] .currentTemplate =
-  end
-end
-
-## TODO find way to move generic resolving to types.concat
-namespace: types
-  proc( ConstantArray : data i64 : index IdentifierContext ptr mut : context -> ConstValue ) =>: argBufferGet
-    context [] .templateArgBuffer data .offset index + list.get return
-  end
-  proc( ConstantArray : data IdentifierContext ptr mut : context -> ConstValue arrayView ) =>: argBufferAsArray
-    context [] .templateArgBuffer .data data .offset + data .length array.create return
-  end
-  ## TODO improve code for replacing generics
-  proc( TupleId : id CompositeFlags : tupleType ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> TupleId ) =>: replaceGenericsTuple
-    context [] .typeContext .tupleTypes id list.at .data [] .compositeInfo @ =:: composite
-    composite [] .flags COMP_FLAG_EMPTY & ? composite [] .flags COMP_GENERIC_MASK & 0 == | if
-      id return ## no generic elements
-    end
-    composite [] .eltCount Type list.create
-      0 while ..dup composite [] .eltCount < do
-        ..swap ## composite index list
-          context [] .typeContext .compositeData composite [] .eltsOffset ..over.3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
-        ..swap 1 +
-      end ..drop
-      ..dup list.asArray
-      composite [] .labelOffset
-        ..dup types.UNLABELED == if ..drop
-          LabelId arrayView optional.empty
-        else
-          context [] .typeContext .elementLabels .data ..swap + composite [] .eltCount array.create optional.wrap
-        end
-      tupleType
-      context [] .typeContext @
-      findTupleInfo
-    ..swap list.free ..drop
-    return
-  end
-  proc( UnionId : id bool : isTagged ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> UnionId ) =>: replaceGenericsUnion
-    context [] .typeContext .unionTypes id list.at .data [] .compositeInfo @ =:: composite
-    composite [] .flags COMP_FLAG_EMPTY & ? composite [] .flags COMP_GENERIC_MASK & 0 == | if
-      id return ## no generic elements
-    end
-    composite [] .eltCount Type list.create
-      0 while ..dup composite [] .eltCount < do
-        ..swap ## composite index list
-          context [] .typeContext .compositeData composite [] .eltsOffset ..over.3 + list.get templateArgs genericArgs implPos context replaceGenericsType list.append
-        ..swap 1 +
-      end ..drop
-      ..dup list.asArray
-      composite [] .labelOffset
-        ..dup types.UNLABELED == if ..drop
-          LabelId arrayView optional.empty
-        else
-          context [] .typeContext .elementLabels .data ..swap + composite [] .eltCount array.create optional.wrap
-        end
-      context [] .typeContext @
-      isTagged
-      findEnumOrUnion
-    ..swap list.free ..drop
-    return
-  end
-  proc( ConstValue -> ArraySize bool ) =>: constToSize
-    ..dup .int ?? if
-      .int ArraySizeType .int ArraySize new false return
-    end
-    ..dup .genericArg ?? if
-      .genericArg ArraySizeType .staticArg ArraySize new false return
-    end
-    ..dup .templateArg ?? if
-      .templateArg ArraySizeType .templateArg ArraySize new false return
-    end
-    ..drop
-    -1 ArraySizeType .int ArraySize new true return
-  end
-  proc( ArraySize : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ArraySize ) =>: replaceGenericsSize
-    src .sizeType switch
-      int case
-        src return
-      staticArg case
-        src .value
-        ..dup 0 >= ..over genericArgs .length < & if
-          genericArgs ..swap context argBufferGet
-          constToSize if
-            #+TODO handle errors+#
-            ..drop src
-          end return
-        end ..drop
-        src return
-      templateArg case
-        src .value
-        ..dup 0 >= ..over templateArgs .length < & if
-          templateArgs ..swap context argBufferGet
-          constToSize if ..drop src end return
-        end ..drop
-        src return
-    end
-  end
-  proc( Type : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> Type ) =>: export: replaceGenericsType
-    src context [] .typeContext @ containsGeneric genericArgs .length 0 > & ..swap templateArgs .length 0 > & | ! if
-      src return ## no generics to replace
-    end
-    src switch
-      undefined empty primitiveType cType autoType case
-        src return ## no generic info
-      reference mutableReference case
-        context [] .typeContext .compositeData src types.getTypeId list.get =:: base
-        ## types.newReference
-          ## replaceGenericsType
-            base
-            templateArgs
-            genericArgs
-            implPos
-            context
-          replaceGenericsType
-        src .mutableReference ?? context [] .typeContext @ types.newReferenceType
-        return
-      arrayIndex case
-        src return ## TODO replace arrayIndex
-      pointer arrayType case
-        src .pointer ?? =:: isPtr
-        src isPtr if .pointer else .arrayType end
-        context [] .typeContext .arrayTypes ..swap list.get =:: arrayType
-          arrayType .base templateArgs genericArgs implPos context replaceGenericsType
-          isPtr
-          context [] .arraySizeBuffer .length =:: offset
-          arrayType .fixedSize if
-            context [] .typeContext .arraySizes .data arrayType .sizeOffset + arrayType .dims array.create =:: prevSizes
-            0 while ..dup prevSizes .length < do
-              prevSizes ..over array.get
-                templateArgs genericArgs implPos context replaceGenericsSize
-              context [] .arraySizeBuffer
-                ..swap list.append
-              context [] .arraySizeBuffer =
-              1 +
-            end ..drop
-            context [] .arraySizeBuffer .data offset + context [] .arraySizeBuffer .length offset - array.create
-            true
-          else
-            ArraySize array.empty
-            false
-          end
-          arrayType .mutable
-          context [] .typeContext @
-        newArrayType ..drop return
-      struct case
-        src .struct TUPLE_FLAG_IS_STRUCT templateArgs genericArgs implPos context replaceGenericsTuple Type .struct return
-      enum case
-        src .enum true templateArgs genericArgs implPos context replaceGenericsUnion Type .enum return
-      union case
-        src .union false templateArgs genericArgs implPos context replaceGenericsUnion Type .union return
-      procIn case
-        src .procIn TUPLE_FLAG_IS_PROC_IN templateArgs genericArgs implPos context replaceGenericsTuple Type .procIn return
-      procOut case
-        src .procOut TUPLE_FLAG_IS_PROC_OUT templateArgs genericArgs implPos context replaceGenericsTuple Type .procOut return
-      procedure case
-        context [] .typeContext .procTypes src .procedure list.get =:: procData
-          procData .in templateArgs genericArgs implPos context replaceGenericsType
-          procData .out templateArgs genericArgs implPos context replaceGenericsType
-          procData .callingConvention
-        context [] .typeContext @ newProcedure ..drop return
-      namedType case
-        context [] .typeContext .namedTypes
-          src .namedType
-        list.get =:: typeData
-        typeData .templateId id.TEMPLATE_ID_NONE == if
-          src return ## no template data in type
-        end
-        context [] .templateInfos typeData .templateId list.at .data =:: templateInfo
-        context [] .templateArgBuffer .length =:: offset
-        typeData .implId -1 != if ## already implemented
-          templateInfo [] .implementations typeData .implId list.get .argValues =:: argValues
-          0 while ..dup argValues .length < do
-              argValues ..over context [] .constContext @ constArrayGet
-                templateArgs genericArgs implPos context replaceGenerics
-            context [] .templateArgBuffer
-              ..swap list.append
-            context [] .templateArgBuffer =
-            1 +
-          end ..drop
-          offset context [] .templateArgBuffer .length offset - ConstantArray new
-        else
-          ## TODO check if template arguments have correct size
-          templateArgs
-        end =:: args
-        0 while ..dup templateInfo [] .implementations .length < do ## check if template arguments have already been implemented
-          templateInfo [] .implementations ..over list.get
-            true 0 while ..dup ..over.3 .argValues .length < do
-              ..swap ..drop
-                ..over .argValues ..over context [] .constContext @ constArrayGet args ..over.2 context argBufferGet context [] .typeContext  .labelContext @ constantEquals ..dup ! if
-                  ..swap break
-                end
-              ..swap 1 +
-            end ..drop
-            if ## already implemented
-              context [] .templateArgBuffer
-                offset list.setLength
-              context [] .templateArgBuffer = ## reset template buffer
-              .implType
-              ..swap ..drop return
-            end
-          ..drop
-          1 +
-        end ..drop
-        ## create implementation
-        templateInfo [] .implementations .length i32 cast =:: newId
-        ## findNamedType
-          typeData .name
-          typeData .templateId
-          newId
-        context [] .typeContext @ declareNamedTypeImpl =:: newType
-        templateInfo [] .implementations
-            newType
-            args context argBufferAsArray context [] .constContext @ constArray
-            implPos
-          TemplateImplementation new list.append
-        templateInfo [] .implementations =
-        ## compute value
-        newType
-          typeData .data templateArgs genericArgs implPos context replaceGenericsType
-          context [] .typeContext @
-        setNamedType ..drop
-        context [] .templateArgBuffer
-          offset list.setLength
-        context [] .templateArgBuffer = ## reset template buffer
-        newType return
-      genericType case
-        src .genericType
-          ..dup 0 >= ..over genericArgs .length < & if
-            genericArgs ..swap context argBufferGet ..dup .typeId ?? if
-              .typeId return
-            end ..drop
-            ## TODO error message if argument is not typeId
-        else ..drop end
-        src return
-      templateType case
-        src .templateType
-          ..dup 0 >= ..over templateArgs .length < & if
-            templateArgs ..swap context argBufferGet ..dup .typeId ?? if
-              .typeId return
-            end ..drop
-            ## error message if argument is not typeId
-        else ..drop end
-        src return
-     generatedType case
-        src return ## TODO
-    end
-  end
-  proc( ConstValue : src ConstantArray : templateArgs ConstantArray : genericArgs FilePosition : implPos IdentifierContext ptr mut : context -> ConstValue ) =>: export: replaceGenerics
-    src switch
-      none wildCard boolean int enumLabel chr str Float case
-        src return
-      arrayConstant union case
-        src return ## TODO array/union constants
-      procedure procedureBundle case
-        src return
-      typeId case
-        src .typeId templateArgs genericArgs implPos context replaceGenericsType ConstValue .typeId return
-      genericArg case
-        src .genericArg
-        ..dup 0 >= ..over genericArgs .length < & if
-          genericArgs ..swap context argBufferGet return
-        end ..drop
-        src return
-      templateArg case
-        src .templateArg
-        ..dup 0 >= ..over templateArgs .length < & if
-          templateArgs ..swap context argBufferGet return
-        end ..drop
-        src return
-    end
-  end
-
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount bool _ ptr mut : visitedValues ConstValue _ ptr mut : values i32 list ptr mut : visitedTypes IdentifierContext ptr mut : context -> ) =>: resolveGenericsTypeInternal
-    using types
-    context [] .typeContext @ =:: typeContext
-    expected .templateType ?? if
-      expected .templateType 0 < expected .templateType templateCount >= | if
-        return
-      end
-      visitedValues expected .templateType [] ! if
-        src ConstValue .typeId values expected .templateType [] =
-      end
-      true visitedValues expected .templateType [] =
-      return
-    end
-    expected .genericType ?? if
-      expected .genericType 0 < expected .genericType genericCount >= | if
-        return
-      end
-      visitedValues expected .genericType templateCount + [] ! if
-        src ConstValue .typeId values expected .genericType templateCount + [] =
-      end
-      true visitedValues expected .genericType templateCount + [] =
-      return
-    end
-    expected typeContext containsGeneric genericCount 0 > & ..swap templateCount 0 > & | ! if
-      return ## no generics to replace
-    end
-    src typeContext isComposite expected typeContext isComposite & if
-      src typeContext compositeEltCount =:: srcCount
-      expected typeContext compositeEltCount =:: expectedCount
-      srcCount expectedCount < if srcCount else expectedCount end =:: count
-      0 while ..dup count < do
-        ## resolveGenericsType
-          src ..over typeContext compositeGetElement
-          expected ..over.2 typeContext compositeGetElement
-        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
-        1 +
-      end ..drop
-      return
-    end
-    src expected != if
-      return
-    end
-    expected switch
-      undefined empty primitiveType cType autoType case
-        break
-      procedure case
-        ## resolveGenericsType
-          src typeContext getProcIn ..drop
-          expected typeContext getProcIn ..drop
-        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
-        ## resolveGenericsType
-          src typeContext getProcOut ..drop
-          expected typeContext getProcOut ..drop
-        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
-        break
-      reference mutableReference case
-        ## resolveGenericsType
-          src typeContext getBaseType
-          expected typeContext getBaseType
-        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
-        return
-      arrayIndex case
-        return ## TODO resolve arrayIndex
-      pointer arrayType case
-        ## resolveGenericsType
-          src typeContext getBaseType
-          expected typeContext getBaseType
-        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
-        src typeContext isFixedSize  expected typeContext isFixedSize & if
-          src typeContext getArraySize =:: srcSizes
-          expected typeContext getArraySize =:: sizes
-          0 while ..dup sizes .length < do
-            ..dup srcSizes .length < if
-              srcSizes ..over array.get
-              ..dup .sizeType switch
-                int case
-                  .value ConstValue .int
-                  break
-                templateArg case
-                  .value i32 cast ConstValue .templateArg
-                  break
-                staticArg case
-                  .value i32 cast ConstValue .genericArg
-                  break
-              end
-            else
-              1 ConstValue .int
-            end =:: srcVal
-            sizes ..over array.get =:: val
-            val .sizeType switch
-             int case
-               1 + continue
-             templateArg case
-              val .value 0 < val .value templateCount >= | if
-                break
-              end
-              visitedValues val .value [] ! if
-                srcVal values val .value [] =
-              end
-              true visitedValues val .value [] =
-              break
-             staticArg case
-              val .value 0 < val .value genericCount >= | if
-                break
-              end
-              visitedValues val .value templateCount + [] ! if
-                srcVal values val .value templateCount + [] =
-              end
-              true visitedValues val .value templateCount + [] =
-              break
-            end
-            1 +
-          end ..drop
-        end
-        break
-      namedType case
-        expected .namedType =:: id
-        visitedTypes [] list.asArray id array.contains if
-          return
-        end
-        visitedTypes []
-          id list.append
-        visitedTypes [] =
-        ## resolveGenericsType
-          src typeContext unwrapNamed
-          expected typeContext unwrapNamed
-        templateCount genericCount visitedValues values visitedTypes context resolveGenericsTypeInternal
-        break
-     generatedType case
-        break ## TODO
-      struct union procIn procOut enum genericType templateType case
-        io.stdErr "unreachable\n" io.fputs ..drop
-        ..unreachable
-        break
-    end
-  end
-  ## XXX resolve generics method for general constants
-
-  proc( Type : src Type : expected i32 : templateCount i32 : genericCount ConstValue list ptr mut : values i64 : valOffset IdentifierContext ptr mut : context -> ) =>: export: resolveGenericsType
-    templateCount genericCount + bool mem.calloc =:: visitedValues
-    64 i32 list.create =:: mut: visitedTypes
-    values []
-      templateCount genericCount + valOffset + list.ensureCap
-    values [] =
-    src expected templateCount genericCount visitedValues  values [] .data valOffset +  visitedTypes @ context resolveGenericsTypeInternal
-    visitedValues mem.free
-    visitedTypes list.free visitedTypes =
   end
 end
 

@@ -42,7 +42,6 @@ proc(
     IdentifierType .TMP_VAR
     label
     ConstValue .none
-    -1
     label
   IdentifierInfo new return
 end
@@ -278,7 +277,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
   contextData @ =:: context
   0 while ..dup program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
-    f [] .templateOps list.clear f [] .templateOps =
+    f [] .tmpOps list.clear f [] .tmpOps =
     i 1 +
   end ..drop
   0 while ..dup program [] .procedures .length < do =:: i
@@ -297,7 +296,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
             currentImpl [] .codeStart
             currentImpl [] .codeLength
           list.slice
-          f [] .templateOps @
+          f [] .tmpOps @
           currentImpl [] .variables @
           currentImpl [] .codeStart @
           currentImpl [] .codeLength @
@@ -308,7 +307,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
     else
       ## convertProc
         f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
-        f [] .templateOps @
+        f [] .tmpOps @
         impl [] .variables @
         impl [] .codeStart @
         impl [] .codeLength @
@@ -320,9 +319,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
   0 while ..dup program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
     f [] .localOps list.clear
-      f [] .templateOps
+      f [] .tmpOps
       f [] .localOps =
-    f [] .templateOps =
+    f [] .tmpOps =
     i 1 +
   end ..drop
   ## create implementations for built-in procedure-pointers
