@@ -5,13 +5,11 @@ import "codeBlocks.concat"
 import "identifiers.concat"
 import "common.concat"
 
-enum( NEGATE TO_BOOL NOT FLIP ) =:: export: UnaryOperator
-enum( ADD SUBTRACT MULTIPLY DIVIDE UDIVIDE MOD UMOD AND OR XOR LSHIFT RSHIFT URSHIFT EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: BinaryOperator
+enum( EQ NEQ ) =:: export: EqualityOperator
 enum( COPY SWAP DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
 enum( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
-struct( IdentifierInfo : idInfo i64 : argCount ) =:: export: CallInfo
 enum( PTR ARRAY PTR_MUT ) =:: export: TypeModifier
 struct( Type : src i32 : mut: offset ) =:: export: CastInfo ## offset: zero-indexed from top of stack
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
@@ -64,7 +62,6 @@ struct(
   i64 : implementationId
 ) =:: export: ProcedureImpl
 
-## FIXME remove unused operations
 enum(
             NopType : NOP
          ConstValue : mut: Constant
@@ -72,7 +69,6 @@ enum(
             BlockId : mut: block
             BlockId : mut: blockEnd
      IdentifierInfo : mut: getId
-     IdentifierInfo : mut: setId
      IdentifierInfo : mut: atId
      IdentifierInfo : mut: initializeId
      IdentifierInfo : mut: autoTypedInitializeId
@@ -80,45 +76,36 @@ enum(
       ProcedureImpl : mut: implementProcedure
       ProcedureImpl : mut: procPtr
             LabelId : getLabel
-            LabelId : mut: setLabel
             LabelId : mut: atLabel
             LabelId : mut: hasLabel
                 i32 : mut: getElement
-                i32 : mut: setElement
                 i32 : mut: atElement
                 i32 : mut: hasElement
                 i32 : mut: getArrayElement
-                i32 : mut: setArrayElement
                 i32 : mut: atArrayElement
                       setValue
-                      Print
                       Return
                       New
                       NewReference
                 i32 : NewEnum
                 i32 : NewEnumReference
-           CallInfo : call_old ## backwards comparability
   ProcedureCallInfo : call
             BuiltIn : builtIn
                 i64 : mut: callPtr
                       argc
                       getArg
-                      getArgLen
                       length
                       size
            CastInfo : mut: autoCast
                Type : mut: Cast
                Type : mut: Cast!
                Type : mut: bitCast
-      UnaryOperator : unaryOperator
-     BinaryOperator : binaryOperator
+   EqualityOperator : equalityOperator
                 i32 : checkEnumLabel
                 i32 : mut: setEnumLabel
-                i64 : checkArrayIndex
                       copy
   StackModification : stackMod
             LabelId : getName
-            LabelId : mut: setName
             LabelId : mut: atName
             LabelId : mut: hasName
        TypeModifier : mut: typeModifier
@@ -150,13 +137,9 @@ proc( BlockType FilePosition -> Operation ) =>: export: opEndBlock
   -1 -1 BlockId new OpValue .blockEnd Type .undefined pos Operation new return
 end
 ## XXX? rename to getId
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGet
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
   =:: pos
   OpValue .getId ..swap pos Operation new return
-end
-proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opSet
-  =:: pos
-  OpValue .setId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opAtId
   =:: pos
@@ -214,16 +197,13 @@ proc( Type FilePosition -> Operation ) =>: export: opReturn
   =:: pos
   OpValue .Return ..swap pos Operation new return
 end
-proc( BinaryOperator FilePosition -> Operation ) =>: export: opBinOp
+proc( FilePosition -> Operation ) =>: export: opEqual
   =:: pos
-  OpValue .binaryOperator Type .undefined pos Operation new return
+  EqualityOperator .EQ OpValue .equalityOperator Type .undefined pos Operation new return
 end
-proc( UnaryOperator FilePosition -> Operation ) =>: export: opUnaryOp
+proc( FilePosition -> Operation ) =>: export: opNotEqual
   =:: pos
-  OpValue .unaryOperator Type .undefined pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opPrint
-  OpValue .Print Type .undefined pos Operation new return
+  EqualityOperator .NEQ OpValue .equalityOperator Type .undefined pos Operation new return
 end
 proc( Type FilePosition -> Operation ) =>: export: opNew
   =:: pos
@@ -272,9 +252,6 @@ end
 proc( FilePosition : pos -> Operation ) =>: export: opGetArg
   OpValue .getArg Type .undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export: opGetArgLen
-  OpValue .getArgLen types.primitive.I_SIZE pos Operation new return
-end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.primitive.I_SIZE pos Operation new return
 end
@@ -291,10 +268,6 @@ end
 proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumLabel
   =:: pos
   OpValue .setEnumLabel ..swap pos Operation new return
-end
-proc( Type i64 FilePosition -> Operation ) =>: export: opCheckIndex
-  =:: pos
-  OpValue .checkArrayIndex ..swap pos Operation new return
 end
 proc( Type : t FilePosition : pos -> Operation ) =>: export: opCopy
   OpValue .copy t pos Operation new return
@@ -442,41 +415,6 @@ proc(
 end
 
 namespace: sb
-  proc( stringBuilder UnaryOperator -> stringBuilder ) =>: export: appendUnaryOperator
-    switch
-      NEGATE case "NEGATE" sb.appendS return
-      NOT case "NOT" sb.appendS return
-      TO_BOOL case "TO_BOOL" sb.appendS return
-      FLIP case "FLIP" sb.appendS return
-    end
-  end
-  proc( stringBuilder BinaryOperator -> stringBuilder ) =>: export: appendBinaryOperator
-    switch
-      ADD case "ADD" sb.appendS return
-      SUBTRACT case "SUBTRACT" sb.appendS return
-      MULTIPLY case "MULTIPLY" sb.appendS return
-      DIVIDE case "DIVIDE" sb.appendS return
-      MOD case "MOD" sb.appendS return
-      UDIVIDE case "UDIVIDE" sb.appendS return
-      UMOD case "UMOD" sb.appendS return
-      AND case "AND" sb.appendS return
-      OR case "OR" sb.appendS return
-      XOR case "XOR" sb.appendS return
-      EQ case "EQ" sb.appendS return
-      NE case "NE" sb.appendS return
-      LT case "LT" sb.appendS return
-      LE case "LE" sb.appendS return
-      GE case "GE" sb.appendS return
-      GT case "GT" sb.appendS return
-      ULT case "ULT" sb.appendS return
-      ULE case "ULE" sb.appendS return
-      UGE case "UGE" sb.appendS return
-      UGT case "UGT" sb.appendS return
-      LSHIFT case "LSHIFT" sb.appendS return
-      RSHIFT case "RSHIFT" sb.appendS return
-      URSHIFT case "URSHIFT" sb.appendS return
-    end
-  end
   proc( stringBuilder : sb StackModification : mod -> stringBuilder ) =>: export: appendStackMod
     sb
       mod .modType switch
@@ -557,12 +495,6 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getId labelContext sb.appendIdInfo
           break
-        call_old case
-          "call ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .call_old .idInfo labelContext sb.appendIdInfo
-          break
         call case ..over =:: op
           op .val .call @ =:: callInfo
           "call ( " sb.appendS
@@ -585,12 +517,6 @@ namespace: sb
           op .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           op .val .builtIn sb.appendBuiltIn
-          break
-        setId case
-          "set ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setId labelContext sb.appendIdInfo
           break
         atId case
           "address ( " sb.appendS
@@ -654,12 +580,6 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getLabel labelContext sb.appendLabelName
           break
-        setLabel case
-          "set label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setLabel labelContext sb.appendLabelName
-          break
         atLabel case
           "label address ( " sb.appendS
           ..over .dataType typeContext sb.appendType
@@ -683,12 +603,6 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getElement sb.appendI
           break
-        setElement case
-          "set element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setElement sb.appendI
-          break
         atElement case
           "element address ( " sb.appendS
           ..over .dataType typeContext sb.appendType
@@ -707,12 +621,6 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getArrayElement sb.appendI
           break
-        setArrayElement case
-          "set array element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setArrayElement sb.appendI
-          break
         atArrayElement case
           "array element address ( " sb.appendS
           ..over .dataType typeContext sb.appendType
@@ -729,21 +637,13 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) " sb.appendS
           break
-        binaryOperator case
-          "binary Operator ( " sb.appendS
+        equalityOperator case
+          ..over .val .equalityOperator switch
+            EQ case "Equal ( " sb.appendS break
+            NEQ case "Not Equal ( " sb.appendS break
+          end
           ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .binaryOperator sb.appendBinaryOperator
-          break
-        unaryOperator case
-          "unary Operator ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .unaryOperator sb.appendUnaryOperator
-          break
-        Print case
-          "print: " sb.appendS
-          ..over .dataType typeContext sb.appendType
+          " )" sb.appendS
           break
         New case
           "new: " sb.appendS
@@ -806,11 +706,6 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break
-        getArgLen case
-          "get program argument length ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
         length case
           "length ( " sb.appendS
           ..over .dataType typeContext sb.appendType
@@ -843,12 +738,6 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .setEnumLabel sb.appendI
           break
-        checkArrayIndex case
-          "check array index ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .checkArrayIndex sb.appendI
-          break
         stackMod case
           "stack modification: " sb.appendS
           ..over .val .stackMod sb.appendStackMod
@@ -861,10 +750,6 @@ namespace: sb
         getName case
           "get: " sb.appendS
           ..over .val .getName labelContext sb.appendLabelName
-          break
-        setName case
-          "set: " sb.appendS
-          ..over .val .setName labelContext sb.appendLabelName
           break
         atName case
           "address of: " sb.appendS

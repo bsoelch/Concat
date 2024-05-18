@@ -1593,10 +1593,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       opBitCast state appendOp
       return
     else ..dup "==" string.wrap string.eq _if ..drop
-      BinaryOperator .EQ fileState [] .wordStart opBinOp state appendOp
+      fileState [] .wordStart opEqual state appendOp
       return
     else ..dup "!=" string.wrap string.eq _if ..drop
-      BinaryOperator .NE fileState [] .wordStart opBinOp state appendOp
+      fileState [] .wordStart opNotEqual state appendOp
       return
     else ..dup "..argc" string.wrap string.eq _if ..drop
       fileState [] .wordStart opArgc state appendOp
@@ -2080,7 +2080,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     state [] .currentFile
   idContext id.findIdentifierByName ! if ## try parsing as identifier
     ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart
-      isAddr if opAtId else opGet end
+      isAddr if opAtId else opGetId end
     state appendOp
     return
   end ..drop

@@ -1463,13 +1463,7 @@ proc(
       false return
     builtIn case
       op [] .dataType op [] .val .builtIn op [] .pos context tryEvaluateBuiltIn return
-    binaryOperator case
-      op [] .val .binaryOperator .EQ ?? ! if op [] .val .binaryOperator .NE ?? ! _if
-        "unsupported operation: " sb.wrap
-          op [] program sb.appendOp
-        op [] .pos errors appendError
-        true return
-      end
+    equalityOperator case
       ConstValue 2 array new =:: mut: valueData
       valueData @ =:: values
       ValueInfo 2 array new =:: mut: valInfoData
@@ -1504,7 +1498,7 @@ proc(
           values valInfos nArgs context unpopValues
           true return
         end
-          op [] .val .binaryOperator .NE ?? ^ ## invert result for NE
+          op [] .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
         ConstValue .boolean
         types.primitive.BOOL
         id.LABEL_ID_NONE
@@ -1512,15 +1506,14 @@ proc(
         context
       pushValue
       false return
-    setId atId setLabel
-    getElement setElement atElement
-    getArrayElement setArrayElement atArrayElement setValue
-    Print NewEnum call callPtr call_old
-    argc getArg getArgLen implementProcedure procPtr
+    atId getElement atElement
+    getArrayElement atArrayElement setValue
+    NewEnum call callPtr
+    argc getArg implementProcedure procPtr
     autoCast bitCast NewEnumReference
-    unaryOperator ConstantReference NewReference
-    checkEnumLabel setEnumLabel checkArrayIndex
-    hasElement stackMod setName copy
+    ConstantReference NewReference
+    checkEnumLabel setEnumLabel
+    hasElement stackMod copy
     compilerInfo unreachable case
       context [] .evalType switch
         INTERPRET GLOBAL case

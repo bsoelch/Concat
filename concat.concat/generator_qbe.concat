@@ -3462,12 +3462,8 @@ proc(
           context
         appendBuiltInQBE
       return
-    binaryOperator case
-      op [] .val .binaryOperator .EQ ?? !
-      op [] .val .binaryOperator .NE ?? ! & if
-        break ## only equality operators are directly supported
-      end
-      op [] .val .binaryOperator .EQ ?? if
+    equalityOperator case
+      op [] .val .equalityOperator .EQ ?? if
         "eq" string.wrap
       else
         "ne" string.wrap
@@ -4213,11 +4209,8 @@ proc(
           sb return
       end
       break
-    Print setId autoTypedInitializeId
-    setElement setArrayElement call_old
-    getArgLen unaryOperator
-    checkArrayIndex typeInfo
-    compilerInfo getName setName atName getLabel setLabel
+    autoTypedInitializeId typeInfo
+    compilerInfo getName atName getLabel
     atLabel length size typeModifier hasLabel hasName case
       break ## XXX error message
   end

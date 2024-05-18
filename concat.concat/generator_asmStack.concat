@@ -1787,7 +1787,7 @@ proc(
         context
       appendBuiltInAsm
       return
-    binaryOperator
+    equalityOperator
     argc getArg case break
     block case
       op [] .val .block .blockType switch
@@ -2483,11 +2483,10 @@ proc(
         false context [] .reachable =
       return
     Assert unreachable
-    Print setId autoTypedInitializeId
-    setElement setArrayElement call_old
-    getArgLen unaryOperator ConstantReference NewReference
-    checkArrayIndex typeInfo NewEnumReference
-    compilerInfo getName setName atName getLabel setLabel
+    autoTypedInitializeId
+    ConstantReference NewReference
+    typeInfo NewEnumReference
+    compilerInfo getName atName getLabel
     atLabel length size typeModifier hasLabel hasName case
       break ## XXX error message
   end

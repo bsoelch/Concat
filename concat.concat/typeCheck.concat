@@ -165,7 +165,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: freezeInterpreter
       end id.asIdInfo =:: idInfo
       constInfo [] .valueType
       idInfo
-      constInfo [] .pushedAt opGet =:: tmp
+      constInfo [] .pushedAt opGetId =:: tmp
       ## pushValue
         constInfo [] .valueType
         constant  []
@@ -2438,11 +2438,7 @@ proc(
         return
       end
       break
-    binaryOperator case
-      op .val .binaryOperator .EQ ?? !
-      op .val .binaryOperator .NE ?? ! & if
-        break ## only equality operators are directly supported
-      end
+    equalityOperator case
       2 op .pos state checkStackSize if
         return
       end
@@ -3341,20 +3337,9 @@ proc(
       state pushConstant
       return
     procPtr builtIn
-    NewEnum call getArgLen
-    unaryOperator
-    checkEnumLabel setEnumLabel
-    checkArrayIndex setName
+    NewEnum call checkEnumLabel setEnumLabel
     hasName hasElement case
       break
-    Print case
-      1 op .pos state checkStackSize if
-        return
-      end
-      state [] .stack @ branchTree.pop .data [] =:: value
-      value .valueType op .dataType =
-      op state appendOp ..drop
-      return
     unreachable case
       false state [] .reachable =
       op state appendOp ..drop
@@ -3471,8 +3456,7 @@ proc(
         op .pos errors appendError
       end
       return
-    setId setLabel setElement setArrayElement autoCast
-    copy call_old ConstantReference NewReference NewEnumReference case
+    autoCast copy ConstantReference NewReference NewEnumReference case
       "unsupported operation: " sb.wrap
         op program sb.appendOp
       op .pos errors appendError
