@@ -982,6 +982,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "..ctype.double" string.wrap string.eq _if
       types.ctype.DOUBLE fileState [] .wordStart newTypeConst  state pushConst
       true return
+    else ..dup "..ctype.struct*" string.wrap string.eq _if
+      types.ctype.STRUCT_PTR fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "..ctype.union*" string.wrap string.eq _if
+      types.ctype.UNION_PTR fileState [] .wordStart newTypeConst  state pushConst
+      true return
     end
   false return
 end

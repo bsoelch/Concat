@@ -637,7 +637,7 @@ namespace: sb
         end
         break
       cType case
-        t .cType switch ## TODO consider sizes of c-types
+        t .cType switch ## TODO resolve sizes of C-types in types.concat
           BOOL U_CHAR case
             storeType switch
               STACK case sb "w" sb.appendS return
@@ -667,7 +667,8 @@ namespace: sb
             end
             break
           INT U_INT case sb "w" sb.appendS return
-          LONG LONGLONG U_LONG U_LONGLONG SIZE case
+          LONG LONGLONG U_LONG U_LONGLONG
+              SIZE STRUCT_PTR UNION_PTR case
             sb "l" sb.appendS return
           FLOAT case sb "s" sb.appendS return
           DOUBLE case sb "d" sb.appendS return

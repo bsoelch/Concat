@@ -215,7 +215,7 @@
             void | bool | char | schar | uchar |
             short | ushort | int | uint |
             long | ulong | longlong | ulonglong | size |
-            float | double
+            float | double | struct\* | union\*
           )
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
