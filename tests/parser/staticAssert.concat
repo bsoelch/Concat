@@ -5,10 +5,7 @@
 enum( A B C D E ) =:: anEnum
 
 anEnum ..length 5 == assert "enum length"
-#:ifnot:old
+
 i32 2 3 array ..length 3 == assert "multi-dim. array length"
-#:else ## old behavior
-i32 2 3 array ..length 6 == assert "multi-dim. array length"
-#:end
 
 proc( -> ) =>: main end

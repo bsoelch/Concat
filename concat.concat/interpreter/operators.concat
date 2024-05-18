@@ -68,19 +68,11 @@ namespace: interpreter
     end =:: a
     a op () ConstValue .boolean OperatorResult .success return
   end
-  #:ifnot:old
   proc(
     ConstValue _ ptr : args
     i32 : k
     type : T
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-  -> ConstValue OperatorResult ) =>: unaryOperatorToBool
-  #:end
     k 1 != if ConstValue .none OperatorResult .argumentError return end
     args 0 [] =:: a
     a switch
@@ -93,42 +85,24 @@ namespace: interpreter
         ConstValue .none OperatorResult .argumentError return
     end
   end
-  #:ifnot:old
   proc(
     type : auto: T
     ConstValue _ ptr : args
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorInt
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-    ( T -> T ) ptr : op
-  -> ConstValue OperatorResult ) =>: unaryOperatorInt
-  #:end
     k 1 != if ConstValue .none OperatorResult .argumentError return end
     args 0 [] constAsInt if ..drop
       ConstValue .none OperatorResult .argumentError return
     end T cast =:: n
     n op () ConstValue .int OperatorResult .success return
   end
-  #:ifnot:old
   proc(
     type : auto: T
     ConstValue _ ptr : args
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorFloat
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-    ( T -> T ) ptr : op
-  -> ConstValue OperatorResult ) =>: unaryOperatorFloat
-  #:end
     k 1 != if ConstValue .none OperatorResult .argumentError return end
     args 0 [] constAsFloat if ..drop
       ConstValue .none OperatorResult .argumentError return
@@ -151,21 +125,12 @@ namespace: interpreter
     a b op () ConstValue .boolean OperatorResult .success return
   end
 
-  #:ifnot:old
   proc(
     type : auto: T
     ConstValue _ ptr : args
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorInt
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-    ( T T -> T ) ptr : op
-  -> ConstValue OperatorResult ) =>: binaryOperatorInt
-  #:end
     k 2 != if ConstValue .none  OperatorResult .argumentError return end
     args 0 [] constAsInt if ..drop
       ConstValue .none OperatorResult .argumentError return
@@ -175,21 +140,12 @@ namespace: interpreter
     end T cast =:: m
     n m op () ConstValue .int OperatorResult .success return
   end
-  #:ifnot:old
   proc(
     type : auto: T
     ConstValue _ ptr : args
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorFloat
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-    ( T T -> T ) ptr : op
-  -> ConstValue OperatorResult ) =>: binaryOperatorFloat
-  #:end
     k 2 != if ConstValue .none  OperatorResult .argumentError return end
     args 0 [] constAsFloat if ..drop
       ConstValue .none OperatorResult .argumentError return
@@ -199,21 +155,12 @@ namespace: interpreter
     end T cast =:: y
     x y op () ConstValue .Float OperatorResult .success return
   end
-  #:ifnot:old
   proc(
     type : auto: T
     ConstValue _ ptr : args
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorInt
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-    ( T T -> bool ) ptr : op
-  -> ConstValue OperatorResult ) =>: cmpOperatorInt
-  #:end
     k 2 != if ConstValue .none  OperatorResult .argumentError return end
     args 0 [] constAsInt if ..drop
       ConstValue .none OperatorResult .argumentError return
@@ -223,21 +170,12 @@ namespace: interpreter
     end T cast =:: m
     n m op () ConstValue .boolean OperatorResult .success return
   end
-  #:ifnot:old
   proc(
     type : auto: T
     ConstValue _ ptr : args
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorFloat
-  #:else
-  #template type : T #end
-  proc(
-    ConstValue _ ptr : args
-    i32 : k
-    ( T T -> bool ) ptr : op
-  -> ConstValue OperatorResult ) =>: cmpOperatorFloat
-  #:end
     k 2 != if ConstValue .none  OperatorResult .argumentError return end
     args 0 [] constAsFloat if ..drop
       ConstValue .none OperatorResult .argumentError return
@@ -359,102 +297,6 @@ namespace: interpreter
     ConstValue .none  OperatorResult .unimplemented return
   end
 
-#:if:old
-  namespace: bool
-    proc( bool -> bool ) =>: not ! end
-    proc( bool bool -> bool ) =>: and & end
-    proc( bool bool -> bool ) =>: or | end
-    proc( bool bool -> bool ) =>: xor ^ end
-  end
-  namespace: i8
-    proc( i8 i8 -> bool ) =>: ge >= end
-    proc( i8 i8 -> bool ) =>: gt > end
-    proc( i8 i8 -> bool ) =>: le <= end
-    proc( i8 i8 -> bool ) =>: lt < end
-    proc( i8 i8 -> bool ) =>: uge ..u>= end
-    proc( i8 i8 -> bool ) =>: ugt ..u> end
-    proc( i8 i8 -> bool ) =>: ule ..u<= end
-    proc( i8 i8 -> bool ) =>: ult ..u< end
-    proc( i8  i8  -> i8  ) =>: ashr >> end
-    proc( i8  i8  -> i8  ) =>: lshr >>> end
-  end
-  namespace: i16
-    proc( i16 i16 -> bool ) =>: ge >= end
-    proc( i16 i16 -> bool ) =>: gt > end
-    proc( i16 i16 -> bool ) =>: le <= end
-    proc( i16 i16 -> bool ) =>: lt < end
-    proc( i16 i16 -> bool ) =>: uge ..u>= end
-    proc( i16 i16 -> bool ) =>: ugt ..u> end
-    proc( i16 i16 -> bool ) =>: ule ..u<= end
-    proc( i16 i16 -> bool ) =>: ult ..u< end
-    proc( i16 i16 -> i16 ) =>: ashr >> end
-    proc( i16 i16 -> i16 ) =>: lshr >>> end
-  end
-  namespace: i32
-    proc( i32 i32 -> i32 ) =>: div / end
-    proc( i32 i32 -> i32 ) =>: udiv ..udiv end
-    proc( i32 i32 -> i32 ) =>: rem % end
-    proc( i32 i32 -> i32 ) =>: umod ..umod end
-    proc( i32 i32 -> bool ) =>: ge >= end
-    proc( i32 i32 -> bool ) =>: gt > end
-    proc( i32 i32 -> bool ) =>: le <= end
-    proc( i32 i32 -> bool ) =>: lt < end
-    proc( i32 i32 -> bool ) =>: uge ..u>= end
-    proc( i32 i32 -> bool ) =>: ugt ..u> end
-    proc( i32 i32 -> bool ) =>: ule ..u<= end
-    proc( i32 i32 -> bool ) =>: ult ..u< end
-    proc( i32 i32 -> i32 ) =>: ashr >> end
-    proc( i32 i32 -> i32 ) =>: lshr >>> end
-  end
-  namespace: i64
-    proc( i64 -> i64 ) =>: neg -_ end
-    proc( i64 i64 -> i64 ) =>: add + end
-    proc( i64 i64 -> i64 ) =>: sub - end
-    proc( i64 i64 -> i64 ) =>: mul * end
-    proc( i64 i64 -> i64 ) =>: div / end
-    proc( i64 i64 -> i64 ) =>: udiv ..udiv end
-    proc( i64 i64 -> i64 ) =>: rem % end
-    proc( i64 i64 -> i64 ) =>: umod ..umod end
-    proc( i64 i64 -> bool ) =>: ge >= end
-    proc( i64 i64 -> bool ) =>: gt > end
-    proc( i64 i64 -> bool ) =>: le <= end
-    proc( i64 i64 -> bool ) =>: lt < end
-    proc( i64 i64 -> bool ) =>: uge ..u>= end
-    proc( i64 i64 -> bool ) =>: ugt ..u> end
-    proc( i64 i64 -> bool ) =>: ule ..u<= end
-    proc( i64 i64 -> bool ) =>: ult ..u< end
-    proc( i64 -> i64 ) =>: flip ~ end
-    proc( i64 i64 -> i64 ) =>: and & end
-    proc( i64 i64 -> i64 ) =>: or | end
-    proc( i64 i64 -> i64 ) =>: xor ^ end
-    proc( i64 i64 -> i64 ) =>: shl << end
-    proc( i64 i64 -> i64 ) =>: ashr >> end
-    proc( i64 i64 -> i64 ) =>: lshr >>> end
-  end
-  namespace: f32
-    proc( f32 -> f32 ) =>: neg -_ end
-    proc( f32 f32 -> f32 ) =>: add + end
-    proc( f32 f32 -> f32 ) =>: sub - end
-    proc( f32 f32 -> f32 ) =>: mul * end
-    proc( f32 f32 -> f32 ) =>: div / end
-    proc( f32 f32 -> bool ) =>: ge >= end
-    proc( f32 f32 -> bool ) =>: gt > end
-    proc( f32 f32 -> bool ) =>: le <= end
-    proc( f32 f32 -> bool ) =>: lt < end
-  end
-  namespace: f64
-    proc( f64 -> f64 ) =>: neg -_ end
-    proc( f64 f64 -> f64 ) =>: add + end
-    proc( f64 f64 -> f64 ) =>: sub - end
-    proc( f64 f64 -> f64 ) =>: mul * end
-    proc( f64 f64 -> f64 ) =>: div / end
-    proc( f64 f64 -> bool ) =>: ge >= end
-    proc( f64 f64 -> bool ) =>: gt > end
-    proc( f64 f64 -> bool ) =>: le <= end
-    proc( f64 f64 -> bool ) =>: lt < end
-  end
-#:end
-
   proc(
     ConstValue : a
     ConstValue : b
@@ -512,525 +354,4 @@ namespace: interpreter
     end
     false true return
   end
-
-  ## old operator functions, for comparability
-
-  proc( Type : opType ConstValue : a -> Type ConstValue bool ) =>: export: operator-_
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        -_ ConstValue .int opType ..swap e1 return
-      F32 case
-        a constAsF32 =:: e1
-        -_ ConstValue .Float opType ..swap e1 return
-      F64 case
-        a constAsF64 =:: e1
-        -_ ConstValue .Float opType ..swap e1 return
-      BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a -> Type ConstValue bool ) =>: export: operator!
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      BOOL case
-        a constAsBool =:: e1
-        ! ConstValue .boolean opType ..swap e1 return
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 F32 F64 TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a -> Type ConstValue bool ) =>: export: operator~
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 i8 cast
-        ~ ConstValue .int opType ..swap e1 return
-      I16 S16 U16 case
-        a constAsInt =:: e1 i16 cast
-        ~ ConstValue .int opType ..swap e1 return
-      I32 S32 U32 case
-        a constAsInt =:: e1 i32 cast
-        ~ ConstValue .int opType ..swap e1 return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        ~ ConstValue .int opType ..swap e1 return
-      BOOL F32 F64 TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-
-
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator+
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        + ConstValue .int opType ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        + ConstValue .Float opType ..swap e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        + ConstValue .Float opType ..swap e1 e2 | return
-      BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator-
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        - ConstValue .int opType ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        - ConstValue .Float opType ..swap e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        - ConstValue .Float opType ..swap e1 e2 | return
-      BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator*
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        * ConstValue .int opType ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        * ConstValue .Float opType ..swap e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        * ConstValue .Float opType ..swap e1 e2 | return
-      BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator/
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        / ConstValue .int opType ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        / ConstValue .Float opType ..swap e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        / ConstValue .Float opType ..swap e1 e2 | return
-      BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned/
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 0xff &
-        b constAsInt =:: e2 0xff &
-        ..udiv ConstValue .int opType ..swap e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 0xffff &
-        b constAsInt =:: e2 0xffff &
-        ..udiv ConstValue .int opType ..swap e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 0xffff_ffff &
-        b constAsInt =:: e2 0xffff_ffff &
-        ..udiv ConstValue .int opType ..swap e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        ..udiv ConstValue .int opType ..swap e1 e2 | return
-      F32 F64 BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator%
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        % ConstValue .int opType ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        % ConstValue .Float opType ..swap e1 e2 | return ##XXX? float32 constants
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        % ConstValue .Float opType ..swap e1 e2 | return
-      BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned%
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 0xff &
-        b constAsInt =:: e2 0xff &
-        ..umod ConstValue .int opType ..swap e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 0xffff &
-        b constAsInt =:: e2 0xffff &
-        ..umod ConstValue .int opType ..swap e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 0xffff_ffff &
-        b constAsInt =:: e2 0xffff_ffff &
-        ..umod ConstValue .int opType ..swap e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        ..umod ConstValue .int opType ..swap e1 e2 | return
-      F32 F64 BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator&
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        & ConstValue .int opType ..swap e1 e2 | return
-      BOOL case
-        a constAsBool =:: e1
-        b constAsBool =:: e2
-        & ConstValue .boolean opType ..swap e1 e2 | return
-      F32 F64 TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator|
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        | ConstValue .int opType ..swap e1 e2 | return
-      BOOL case
-        a constAsBool =:: e1
-        b constAsBool =:: e2
-        | ConstValue .boolean opType ..swap e1 e2 | return
-      F32 F64 TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator^
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        ^ ConstValue .int opType ..swap e1 e2 | return
-      BOOL case
-        a constAsBool =:: e1
-        b constAsBool =:: e2
-        ^ ConstValue .boolean opType ..swap e1 e2 | return
-      F32 F64 TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator<<
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 I16 I32 I64 S8 S16 S32 S64 U8 U16 U32 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        << ConstValue .int opType ..swap e1 e2 | return
-      F32 F64 BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator>>
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 i8 cast
-        b constAsInt =:: e2 i8 cast
-        >> ConstValue .int opType ..swap e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 i16 cast
-        b constAsInt =:: e2 i16 cast
-        >> ConstValue .int opType ..swap e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 i32 cast
-        b constAsInt =:: e2 i32 cast
-        >> ConstValue .int opType ..swap e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        >> ConstValue .int opType ..swap e1 e2 | return
-      F32 F64 BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned>>
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 0xff &
-        b constAsInt =:: e2 i8 cast
-        >>> ConstValue .int opType ..swap e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 0xffff &
-        b constAsInt =:: e2 i16 cast
-        >>> ConstValue .int opType ..swap e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 0xffff_ffff &
-        b constAsInt =:: e2 i32 cast
-        >>> ConstValue .int opType ..swap e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        >>> ConstValue .int opType ..swap e1 e2 | return
-      F32 F64 BOOL TYPE case
-        Type .undefined ConstValue .none true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc -> Type ConstValue bool ) =>: export: operator==
-    opType tc types.isEnum if
-      a constAsEnumLabel =:: e1
-      b constAsEnumLabel =:: e2
-      == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-    end
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      BOOL case
-        a constAsBool =:: e1
-        b constAsBool =:: e2
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I8 S8 U8 case
-        a constAsInt =:: e1 i8 cast
-        b constAsInt =:: e2 i8 cast
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 i16 cast
-        b constAsInt =:: e2 i16 cast
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 i32 cast
-        b constAsInt =:: e2 i32 cast
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        == ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      TYPE case
-        a constAsType =:: e1
-        b constAsType =:: e2
-        types.typeEquals ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b TypeContext ptr : tc -> Type ConstValue bool ) =>: export: operator!=
-    opType tc types.isEnum if
-      a constAsEnumLabel =:: e1
-      b constAsEnumLabel =:: e2
-      != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-    end
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      Type .undefined ConstValue .none true return
-    end
-    opType .primitiveType switch
-      BOOL case
-        a constAsBool =:: e1
-        b constAsBool =:: e2
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I8 S8 U8 case
-        a constAsInt =:: e1 i8 cast
-        b constAsInt =:: e2 i8 cast
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 i16 cast
-        b constAsInt =:: e2 i16 cast
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 i32 cast
-        b constAsInt =:: e2 i32 cast
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1
-        b constAsInt =:: e2
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1
-        b constAsF32 =:: e2
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1
-        b constAsF64 =:: e2
-        != ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-      TYPE case
-        a constAsType =:: e1
-        b constAsType =:: e2
-        types.typeEquals ! ConstValue .boolean types.primitive.BOOL ..swap e1 e2 | return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =>: operator_compare
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      0:i8 true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 i8 cast =:: x
-        b constAsInt =:: e2 i8 cast =:: y
-        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 i16 cast =:: x
-        b constAsInt =:: e2 i16 cast =:: y
-        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 i32 cast =:: x
-        b constAsInt =:: e2 i32 cast =:: y
-        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1 =:: x
-        b constAsInt =:: e2 =:: y
-        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
-      F32 case
-        a constAsF32 =:: e1 =:: x
-        b constAsF32 =:: e2 =:: y
-        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
-      F64 case
-        a constAsF64 =:: e1 =:: x
-        b constAsF64 =:: e2 =:: y
-        x y == if 0:i8 else x y > _if 1:i8 else -1:i8 end e1 e2 | return
-      BOOL TYPE case
-        0:i8 true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator<
-    opType a b operator_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 < ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator<=
-    opType a b operator_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 <= ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator>
-    opType a b operator_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 > ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator>=
-    opType a b operator_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 >= ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-
-  proc( Type : opType ConstValue : a ConstValue : b -> i8 bool ) =>: operator_unsigned_compare
-    opType .primitiveType ?? ! if ## unsupported type for constant evaluation
-      0:i8 true return
-    end
-    opType .primitiveType switch
-      I8 S8 U8 case
-        a constAsInt =:: e1 i8 cast =:: x
-        b constAsInt =:: e2 i8 cast =:: y
-        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
-      I16 S16 U16 case
-        a constAsInt =:: e1 i16 cast =:: x
-        b constAsInt =:: e2 i16 cast =:: y
-        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
-      I32 S32 U32 case
-        a constAsInt =:: e1 i32 cast =:: x
-        b constAsInt =:: e2 i32 cast =:: y
-        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
-      I64 S64 U64 case
-        a constAsInt =:: e1 =:: x
-        b constAsInt =:: e2 =:: y
-        x y == if 0:i8 else x y ..u> _if 1:i8 else -1:i8 end e1 e2 | return
-      BOOL F32 F64 TYPE case
-        0:i8 true return
-    end
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned<
-    opType a b operator_unsigned_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 < ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned<=
-    opType a b operator_unsigned_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 <= ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned>
-    opType a b operator_unsigned_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 > ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-  proc( Type : opType ConstValue : a ConstValue : b -> Type ConstValue bool ) =>: export: operator_unsigned>=
-    opType a b operator_unsigned_compare if ..drop
-      Type .undefined ConstValue .none true return
-    end
-    0:i8 >= ConstValue .boolean types.primitive.BOOL ..swap false return
-  end
-
 end

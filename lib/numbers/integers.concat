@@ -94,7 +94,6 @@ namespace: i64
   end
 end
 
-#:ifnot:old
 overload: export: //
   i32.floorDiv
   i64.floorDiv
@@ -103,4 +102,3 @@ overload: export: %%
   i32.mod
   i64.mod
 end
-#:end

@@ -1,4 +1,3 @@
-#:ifnot:old
 ( type : V -> type ) =>: export: optional
   enum( empty V : data )
 end
@@ -16,25 +15,3 @@ namespace: optional
     V optional .data return
   end
 end
-#:else
-#template type : V #end
-enum( empty V : data ) =:: export: optional
-namespace: optional
-  #template type : V #end
-  proc( V optional -> bool ) =>: export: isEmpty
-    .empty ?? return
-  end
-  #template type : V #end
-  proc( V optional -> bool ) =>: export: hasData
-    .data ?? return
-  end
-  #template type : V #end
-  proc( -> V optional ) =>: export: empty
-    V optional .empty return
-  end
-  #template type : V #end
-  proc( V -> V optional ) =>: export: wrap
-    V optional .data return
-  end
-end
-#:end

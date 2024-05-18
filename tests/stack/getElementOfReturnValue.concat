@@ -1,0 +1,10 @@
+struct( i32 : a i32 : mut: b ) =:: aStruct
+
+proc( aStruct ptr -> aStruct ) =>: get
+  []
+end
+
+proc( -> ) =>: main
+  37 42 aStruct new =:: X
+  X @ get .b 42 == assert "get .b 42 =="
+end

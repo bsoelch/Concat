@@ -1,10 +1,8 @@
 import sys
 
 import "parser.concat"
-import "typeCheckC.concat"
 import "typeCheck.concat"
 import "prepareCompile.concat"
-import "generator_c.concat"
 import "generator_qbe.concat"
 import "generator_asmStack.concat"
 
@@ -19,7 +17,6 @@ false =:: mut: wError
 ## enable constant-folding
 true =:: mut: export: _FOLD_CONSTANTS_
 false =:: mut: export: _EXPERIMENTAL_
-false =:: mut: export: _CCONCAT_ ## XXX remove backward compatibility with old C compiler
 BackEnd .QBE =:: mut: export: _BACKEND_
 
 proc( string : path -> ) =>: printUsage
@@ -87,9 +84,6 @@ proc( -> ) =>: parseArgs
           break
         'X' case ## experimental features
           true _EXPERIMENTAL_ =
-          break
-        'C' case ## C-concat
-          true _CCONCAT_ =
           break
         'A' case ## (experimental) asm backend
           BackEnd .ASM _BACKEND_ =
@@ -171,13 +165,9 @@ proc( -> ) =>: parseArgs
       outFile =
     end
     outFile
-      _CCONCAT_ if
-        ".c\x00" sb.appendS
-      else
-        _BACKEND_ switch
-          ASM case ".s\x00" sb.appendS break
-          QBE case ".ssa\x00" sb.appendS break
-        end
+      _BACKEND_ switch
+        ASM case ".s\x00" sb.appendS break
+        QBE case ".ssa\x00" sb.appendS break
       end
     outFile =
   end
@@ -236,25 +226,6 @@ proc( -> ) =>: main ## TODO check return value of fopen
     parsedOps sb.free ..drop
   end
   prog .errors @ checkErrors
-  _CCONCAT_ if
-    ## old C backend
-    prog @ typeCheckProgram
-    compilerTokensFile optional.hasData if
-      1024 sb.create
-        prog @ sb.appendProgram
-      =:: parsedOps
-      compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
-        ..dup parsedOps io.fputSb ..drop
-      io.fclose ..drop
-      parsedOps sb.free ..drop
-    end
-    prog .errors @ checkErrors
-    outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-      ..dup prog @ compileToC
-    io.fclose ..drop
-    prog .errors @ checkErrors
-    return
-  end
   ## new type-checker
   prog @ typeCheckProgram2
   compilerTokensFile optional.hasData if

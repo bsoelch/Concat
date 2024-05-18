@@ -1496,11 +1496,8 @@ namespace: types
     TypeContext ptr mut : context
   -> Type bool ) =>: export: newTuple
     elts .length 0 == if
-      labels optional.isEmpty _CCONCAT_ & if ## new version detects empty types in parser
-        Type .empty false return ## 0 element tuple -> empty type
-      else
-        Type .undefined true return
-      end
+      ## empty tuple -> empty type handled by parser
+      Type .undefined true return
     end
     ## findTupleInfo
       elts
@@ -2535,17 +2532,11 @@ namespace: sb
           size .value sb.appendI
           break
         staticArg case
-          _CCONCAT_ if
-            " staticArg(" sb.appendS
-            size .value sb.appendI
-            ")" sb.appendS
-          else
-            ' ' sb.appendC
-            size .value LabelId cast labelContext appendLabelName
-            "[generic " sb.appendS
-            size .value sb.appendI
-            "]" sb.appendS
-          end
+          ' ' sb.appendC
+          size .value LabelId cast labelContext appendLabelName
+          "[generic " sb.appendS
+          size .value sb.appendI
+          "]" sb.appendS
           break
         templateArg case
           " templateArg(" sb.appendS
@@ -2672,12 +2663,8 @@ namespace: sb
       genericType case
         t .genericType =:: labelId
         sb
-          _CCONCAT_ if
-            "generic[" appendS
-          else
-            labelId labelContext appendLabelName
-            "[generic " appendS
-          end
+          labelId labelContext appendLabelName
+          "[generic " appendS
           labelId  appendI
           "]"  appendS
         return

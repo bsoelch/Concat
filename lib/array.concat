@@ -1,18 +1,6 @@
 import mem
 
 namespace: array
-  #:if:old
-  #template type : T type : C #end
-  proc(
-    T _ ptr mut : src
-    T _ ptr mut : buff
-    i64 : offset
-    i64 : size
-    proc( T T C -> i32 ) ptr : cmp
-    C : context
-    i32 : depth
-  -> ) =>: mergeSortRec
-  #:else
   proc(
     type : auto: T
     type : auto: C
@@ -24,7 +12,6 @@ namespace: array
     C : context
     i32 : depth
   -> ) =>: mergeSortRec
-  #:end
     size 1 < if
       return
     end
@@ -70,15 +57,6 @@ namespace: array
       k 1 + k =
     end
   end
-  #:if:old
-  #template type : T type : C #end
-  proc(
-    T _ ptr mut : data
-    i64 : size
-    proc( T T C -> i32 ) ptr : cmp
-    C : context
-  -> ) =>: export: sort
-  #:else
   proc(
     type : auto: T
     type : auto: C
@@ -87,24 +65,15 @@ namespace: array
     proc( T T C -> i32 ) ptr : cmp
     C : context
   -> ) =>: export: sort
-  #:end
     size T mem.alloc =:: buffer
     data buffer 0 size cmp context 0 mergeSortRec
     buffer mem.free
   end
-  #:if:old
-  #template type : T #end
-  proc(
-    T _ ptr mut : data
-    i64 : size
-  -> ) =>: export: reverse
-  #:else
   proc(
     type : auto: T
     T _ ptr mut : data
     i64 : size
   -> ) =>: export: reverse
-  #:end
     size 1 - =:: last
     size 2 / =:: mid
     0 while ..dup mid < do =:: i

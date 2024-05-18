@@ -4,17 +4,11 @@ import optional
 
 namespace: map
   i64 =:: NodeId
-  #:ifnot:old
   ( type : K type : V -> type ) =>: Node
     struct( K : key V : mut: value  NodeId : mut: next )
   end
-  #:else
-  #template type : K type : V #end
-  struct( K : key V : mut: value  NodeId : mut: next ) =:: Node
-  #:end
 end
 
-#:ifnot:old
 ( type : K type : V -> type ) =>: export: hashMap
   struct(
     K V map.Node list : mut: nodeBuffer
@@ -24,22 +18,8 @@ end
     proc( K K -> bool ) ptr : eq
   )
 end
-#:else
-#template type : K type : V #end
-struct(
-  K V map.Node list : mut: nodeBuffer
-  map.NodeId _ ptr mut : mut: data
-  i64 : mut: cap
-  proc( K -> i32 ) ptr : hash
-  proc( K K -> bool ) ptr : eq
-) =:: export: hashMap
-#:end
 
 namespace: map
-  #:if:old
-  #template type : K type : V #end
-  proc( proc( K -> i32 ) ptr : hash proc( K K -> bool ) ptr : eq i64 : initCap -> K V hashMap ) =>: export: create
-  #:else
   proc(
     type : auto: K
     proc( K -> i32 ) ptr : hash
@@ -47,7 +27,6 @@ namespace: map
     i64 : initCap
     type : V
   -> K V hashMap ) =>: export: create
-  #:end
     initCap K V Node list.create
     initCap NodeId mem.calloc
     initCap ## XXX find smallest power of 2 larger than cap, store shift distance
@@ -55,16 +34,11 @@ namespace: map
     eq
     K V hashMap new return
   end
-  #:if:old
-  #template type : K type : V #end
-  proc( K V hashMap : src -> K V hashMap ) =>: export: copy
-  #:else
   proc(
     type : auto: K
     type : auto: V
     K V hashMap : src
   -> K V hashMap ) =>: export: copy
-  #:end
     ## hashMap
       src .nodeBuffer list.copy
       src .cap NodeId mem.alloc
@@ -77,26 +51,17 @@ namespace: map
     K V hashMap new return
   end
 
-  #:if:old
-  #template type : K type : V #end
-  proc( K V hashMap ptr mut : data -> ) =>: export: free
-  #:else
   proc(
     type : auto: K
     type : auto: V
     K V hashMap ptr mut : data
   -> ) =>: export: free
-  #:end
     data [] .nodeBuffer
       list.free
     data [] .nodeBuffer =
     data [] .data mem.free
     0 data [] .cap =
   end
-  #:if:old
-  #template type : K type : V #end
-  proc( proc( K -> ) ptr : freeKey  proc( V -> ) ptr : freeValue  K V hashMap ptr mut : data -> ) =>: export: freeAll
-  #:else
   proc(
     type : auto: K
     type : auto: V
@@ -104,7 +69,6 @@ namespace: map
     proc( V -> ) ptr : freeValue
     K V hashMap ptr mut : data
   -> ) =>: export: freeAll
-  #:end
     data [] .nodeBuffer
       0 while ..dup ..over.2 .length < do
         ..over ..over list.get
@@ -118,10 +82,6 @@ namespace: map
     0 data [] .cap =
   end
 
-  #:if:old
-  #template type : K type : V #end
-  proc( K V hashMap ptr mut : data  K : key bool : newNode -> NodeId ) =>: find
-  #:else
   proc(
     type : auto: K
     type : auto: V
@@ -129,7 +89,6 @@ namespace: map
     K : key
     bool : newNode
   -> NodeId ) =>: find
-  #:end
     data [] .cap 0 == if ## TODO ensure cap/ error message
        0 return
     end
@@ -160,34 +119,24 @@ namespace: map
     ..drop 0 return
   end
 
-  #:if:old
-  #template type : K type : V #end
-  proc( K V hashMap ptr mut : data  K : key -> V optional ) =>: export: get
-  #:else
   proc(
     type : auto: K
     type : auto: V
     K V hashMap ptr mut : data
     K : key
   -> V optional ) =>: export: get
-  #:end
     data key false find
       ..dup 0 == if ..drop
         V optional.empty return
       end
     data [] .nodeBuffer ..swap 1 - list.get .value optional.wrap return
   end
-  #:if:old
-  #template type : K type : V #end
-  proc( K V hashMap ptr mut : data  K : key -> V ptr mut optional ) =>: export: at
-  #:else
   proc(
     type : auto: K
     type : auto: V
     K V hashMap ptr mut : data
     K : key
   -> V ptr mut optional ) =>: export: at
-  #:end
     data key false find
       ..dup 0 == if ..drop
         V ptr mut optional.empty return
@@ -197,10 +146,6 @@ namespace: map
     end
     .data [] .value @ optional.wrap return
   end
-  #:if:old
-  #template type : K type : V #end
-  proc( K V hashMap ptr mut : data  K : key V : value -> V optional ) =>: export: put
-  #:else
   proc(
     type : auto: K
     type : auto: V
@@ -208,7 +153,6 @@ namespace: map
     K : key
     V : value
   -> V optional ) =>: export: put
-  #:end
     data key true find
       ..dup data [] .nodeBuffer .length > if ..drop
         data [] .nodeBuffer
@@ -222,25 +166,15 @@ namespace: map
     optional.wrap return
   end
 
-  #:if:old
-  #template type : K type : V #end
-  struct( K V hashMap ptr : map NodeId : mut: next i32 : mut: index ) =:: Iterator
-  #:else
   ( type : K type : V -> type ) =>: Iterator
     struct( K V hashMap ptr : map NodeId : mut: next i32 : mut: index )
   end
-  #:end
   namespace: itr
-    #:if:old
-    #template type : K type : V #end
-    proc( K V hashMap ptr mut : map -> K V Iterator ) =>: export: start
-    #:else
     proc(
       type : auto: K
       type : auto: V
       K V hashMap ptr mut : map
     -> K V Iterator ) =>: export: start
-    #:end
       0 while ..dup map [] .cap < do
         map [] .data ..over [] 0 != if
           map ..swap map [] .data ..over [] ..swap 1 + K V Iterator new return
@@ -249,28 +183,18 @@ namespace: map
       end ..drop
       map 0 map [] .cap i32 cast K V Iterator new return
     end
-    #:if:old
-    #template type : K type : V #end
-    proc( K V Iterator -> K V Iterator bool ) =>: export: hasNext
-    #:else
     proc(
       type : auto: K
       type : auto: V
       K V Iterator
     -> K V Iterator bool ) =>: export: hasNext
-    #:end
       ..dup .next 0 != return
     end
-    #:if:old
-    #template type : K type : V #end
-    proc( K V Iterator -> K V Iterator ( K ptr V ptr mut ) ) =>: export: next
-    #:else
     proc(
       type : auto: K
       type : auto: V
       K V Iterator
     -> K V Iterator ( K ptr V ptr mut ) ) =>: export: next
-    #:end
       =:: mut: itr
       itr .map [] .nodeBuffer itr .next 1 - list.at .data =:: res
       res [] .next itr .next =

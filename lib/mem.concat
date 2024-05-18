@@ -2,12 +2,7 @@ namespace: c
   proc( -> ..ctype.void _ ptr mut ) =>: export: nullPtr
     0 ..ctype.void _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr : p -> bool ) =>: export: isNull
-  #:else
   proc( type : auto: T T _ ptr : p -> bool ) =>: export: isNull
-  #:end
     ## ==
     p ..ctype.void _ ptr cast!
     nullPtr ..ctype.void _ ptr cast!
@@ -55,46 +50,26 @@ namespace: mem
     end
     p return
   end
-  #:if:old
-  #template type : T #end
-  proc( -> T _ ptr mut ) =>: export: nullPtr
-  #:else
   proc( type : T -> T _ ptr mut ) =>: export: nullPtr
-  #:end
     c.nullPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( i64 : n -> T _ ptr mut ) =>: export: alloc
-  #:else
   proc( i64 : n type : T -> T _ ptr mut ) =>: export: alloc
-  #:end
     n 0 == if
       c.nullPtr T _ ptr mut cast! return
     end
     n T ..type.stride * c.malloc checkPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( i64 : n -> T _ ptr mut ) =>: export: calloc
-  #:else
   proc( i64 : n type : T -> T _ ptr mut ) =>: export: calloc
-  #:end
     n 0 == if
       c.nullPtr T _ ptr mut cast! return
     end
     n T ..type.stride c.calloc checkPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr mut : prev i64 : n -> T _ ptr mut ) =>: export: realloc
-  #:else
   proc(
     type : auto: T
     T _ ptr mut : prev
     i64 : n
   -> T _ ptr mut ) =>: export: realloc
-  #:end
     n 0 == if
       prev free
       c.nullPtr T _ ptr mut cast! return
@@ -104,25 +79,15 @@ namespace: mem
       T ..type.stride n *
     c.realloc checkPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr mut : p -> ) =>: export: free
-  #:else
   proc( type : auto: T T _ ptr mut : p -> ) =>: export: free
-  #:end
     p ..ctype.void ptr mut cast! c.free
   end
   ## set memory to zero
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr mut : src  i64 : n -> T _ ptr mut ) =>: export: clear
-  #:else
   proc(
     type : auto: T
     T _ ptr mut : src
     i64 : n
   -> T _ ptr mut ) =>: export: clear
-  #:end
     n 0 <= if
       src return
     end
@@ -132,17 +97,12 @@ namespace: mem
       T ..type.stride n 1 - * T ..type.size +
     c.memset checkPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr mut : target T _ ptr : src i64 : n -> T _ ptr mut ) =>: export: copy
-  #:else
   proc(
     type : auto: T
     T _ ptr mut : target
     T _ ptr : src
     i64 : n
   -> T _ ptr mut ) =>: export: copy
-  #:end
     n 0 <= if
       target return
     end
@@ -152,17 +112,12 @@ namespace: mem
       T ..type.stride n 1 - * T ..type.size +
     c.memcpy checkPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr mut : target T _ ptr : src i64 : n -> T _ ptr mut ) =>: export: move
-  #:else
   proc(
     type : auto: T
     T _ ptr mut : target
     T _ ptr : src
     i64 : n
   -> T _ ptr mut ) =>: export: move
-  #:end
     n 0 <= if
       target return
     end
@@ -172,17 +127,12 @@ namespace: mem
       T ..type.stride n 1 - * T ..type.size +
     c.memmove checkPtr T _ ptr mut cast! return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr : a  T _ ptr : b  i64 : n   -> i32 ) =>: export: compare
-  #:else
   proc(
     type : auto: T
     T _ ptr : a
     T _ ptr : b
     i64 : n
   -> i32 ) =>: export: compare
-  #:end
     n 0 <= if
       0 return
     end
@@ -192,17 +142,12 @@ namespace: mem
       T ..type.stride n 1 - * T ..type.size +
     c.memcmp return
   end
-  #:if:old
-  #template type : T #end
-  proc( T _ ptr mut : data i64 : count T : elt -> ) =>: export: fill
-  #:else
   proc(
     type : auto: T
     T _ ptr mut : data
     i64 : count
     T : elt
   -> ) =>: export: fill
-  #:end
     0 while ..dup count < do
       elt data ..over.2 [] =
       1 +

@@ -3,9 +3,7 @@ struct( i32 : x i32 : y ) =:: Point
 
 1 2 Point new =:: p
 
-#:ifnot:old
 42 Point _ ptr cast! 5 ( Point _ ptr : data i64 : length ) new =:: sizedPointer
-#:end
 
 proc( -> ) =>: main
   p .x debug.print
@@ -13,12 +11,6 @@ proc( -> ) =>: main
   ..argc i32 cast 5 Point new =:: dynamicPoint
   dynamicPoint .x debug.print
   dynamicPoint .y debug.print
-  
-#:ifnot:old
   sizedPointer .data debug.print
   sizedPointer .length debug.print
-#:else ## print expected result for comparability with test-case
-  42 Point _ ptr cast! debug.print
-  5 debug.print
-#:end
 end

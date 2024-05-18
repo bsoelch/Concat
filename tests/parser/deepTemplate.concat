@@ -1,9 +1,4 @@
-#:if:old
-#template type : T #end
-proc( -> ) =>: infiniteExpand
-#:else
 proc( type : T -> ) =>: infiniteExpand
-#:end
   ( T T ) infiniteExpand
 end
 

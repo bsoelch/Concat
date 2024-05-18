@@ -253,7 +253,7 @@ namespace: f64
     a d b * - return
   end
 end
-#:ifnot:old
+
 overload: %
   f32.rem
   f64.rem
@@ -266,4 +266,3 @@ overload: export: %%
   f32.mod
   f64.mod
 end
-#:end

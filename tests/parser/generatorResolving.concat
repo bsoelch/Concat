@@ -1,20 +1,10 @@
 import debug
-#:ifnot:old
 ( type : T -> type ) =>: box
   T ptr mut
 end
 proc( type : auto: T T box : a T box : b T box : out -> ) =>: boxAdd
   a [] b [] + out [] =
 end
-#:else
-#template type : T #end
-T ptr mut =:: box
-
-#template type : T #end
-proc( T box : a T box : b T box : out -> ) =>: boxAdd
-  a [] b [] + out [] =
-end
-#:end
 
 proc( -> ) =>: main
   1 =:: mut: one

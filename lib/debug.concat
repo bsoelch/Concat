@@ -97,7 +97,6 @@ namespace: debug
     sb.free ..drop
   end
 
-#:ifnot:old
   overload: export: print
     printB
     printC
@@ -108,5 +107,4 @@ namespace: debug
     printS
     printP
   end
-#:end
 end

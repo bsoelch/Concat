@@ -121,15 +121,6 @@ namespace: io
   -> FILE IOError ) =>: export: fopenS
     fileName k mode fopen return
   end
-  #:if:old
-  #template type : T #end
-  proc(
-    FILE : file
-    T _ ptr mut : buffer
-    i64 : off
-    i64 : count
-  -> i64 IOError ) =>: export: fread
-  #:else
   proc(
     type : auto: T
     FILE : file
@@ -137,7 +128,6 @@ namespace: io
     i64 : off
     i64 : count
   -> i64 IOError ) =>: export: fread
-  #:end
     file c.FILE ptr cast c.isNull if
       0 FILE_ERR_INVALID_FILE return
     end
@@ -145,7 +135,7 @@ namespace: io
     c.concatIOHelper_resetErrno
     ## fread
       buffer off + ..ctype.void ptr mut cast!
-      T ..type.size
+      count 1 == if T ..type.size else T ..type.stride end
       count
       file
     c.concatIOHelper_fread
@@ -158,15 +148,6 @@ namespace: io
       end
     FILE_ERROR_NONE return
   end
-  #:if:old
-  #template type : T #end
-  proc(
-    FILE : file
-    T _ ptr : buffer
-    i64 : off
-    i64 : count
-  -> i64 IOError ) =>: export: fwrite
-  #:else
   proc(
     type : auto: T
     FILE : file
@@ -174,7 +155,6 @@ namespace: io
     i64 : off
     i64 : count
   -> i64 IOError ) =>: export: fwrite
-  #:end
     file c.FILE ptr cast c.isNull if
       0 FILE_ERR_INVALID_FILE return
     end
@@ -182,7 +162,7 @@ namespace: io
     c.concatIOHelper_resetErrno
     ## fread
       buffer off + ..ctype.void ptr cast!
-      T ..type.size
+      count 1 == if T ..type.size else T ..type.stride end
       count
       file
     c.concatIOHelper_fwrite

@@ -4,12 +4,7 @@ import numbers/limits
 import string
 
 namespace: number
-  #:if:old
-  #template type : T #end
-  proc( T : x i64 : p -> T ) =>: export: powI
-  #:else
   proc( type : auto: T  T : x i64 : p -> T ) =>: export: powI
-  #:end
     p 0 == if
       1 T cast return
     else p 0 < _if

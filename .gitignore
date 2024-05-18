@@ -9,11 +9,8 @@ build/*
 *.out
 syntaxHighlighting/update.sh
 concat
-concatC
 concatX
-concatXX
 code
-code.c
 code.concat
 featureMap.concat
 !tests/*/*.out
