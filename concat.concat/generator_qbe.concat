@@ -3724,6 +3724,7 @@ proc(
                 ": " sb.appendS
                 breakBlock [] sb.appendBlockInfo
               op [] .pos errors appendError
+              sb return
             end
             context [] .stackInfo @
               breakBlock [] .Switch .branchRoot
@@ -3845,6 +3846,7 @@ proc(
               ": " sb.appendS
               breakBlock [] sb.appendBlockInfo
             op [] .pos errors appendError
+            sb return
           end
           blockType .CONTINUE ?? if
             breakBlock [] .While .continueBranches @
