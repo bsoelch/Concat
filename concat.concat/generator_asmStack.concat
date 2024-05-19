@@ -378,9 +378,6 @@ struct(
   bool REGISTER_LIST_MAX_LENGTH array : mut: activeStackRegistersFloat
 ) =:: StackRegisterState
 
-## FIXME merge stack registers at end of branch
-## reserve space for operations min(number of stack-values,number of stack-registers) slots
-## when merging add operations in reserved space
 struct(
   branchTree.NodeId list : mut: ififBranches
   StackRegisterState : mut: rootStackRegs
@@ -1342,22 +1339,29 @@ proc(
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ) =>: appendBinaryOperator
+  context [] .program [] .errors @ =:: errors
   context [] .stackValues branchTree.depth 2 < if
     "stack underflow" sb.wrap
-    pos context [] .program [] .errors @ appendError
+    pos errors appendError
     asmOps return
   end
   asmOps
     pos context popValue =:: regId2 =:: arg2
     pos context popValue =:: regId1 =:: arg1
-    regId1 .registerCount 1 == assert "operators act on single registers"
-    regId2 .registerCount 1 == assert "operators act on single registers"
+    regId1 .registerCount 1 != regId2 .registerCount 1 != | if
+      "unexpected operand sizes for binary operation: " sb.wrap
+        regId1 .registerCount sb.appendI
+        " and " sb.appendS
+        regId2 .registerCount sb.appendI
+      pos errors appendError
+      return
+    end
     arg1 arg2 != if
       "incompatible argument types: " sb.wrap
         arg1 sb.appendValueType
         " and " sb.appendS
         arg2 sb.appendValueType
-      pos context [] .program [] .errors @ appendError
+      pos errors appendError
     end
     ## asm.createBinary
       opType
@@ -1677,7 +1681,20 @@ proc(
               Register.fp AsmOperand .registerPtrOffset
               offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
-            ## FIXME push values instead of references for procedure arguments
+            isPtr ! if idInfo .idType .ARGUMENT ?? _if
+              op [] .pos context popValue =:: src =:: srcType
+              srcType ValueType .REFERENCE == assert "variable is reference"
+              src .registerCount 1 == assert "correct register count for reference"
+              op [] .dataType typeContext toValueType =:: targetType
+              targetType op [] .pos context preparePushValue =:: newValue
+              ##loadValue
+                src .registers @ 0 []
+                targetType
+                newValue
+                op [] .pos
+                context
+              loadValue
+            end
           return
         break
         GLOBAL_VAR case break
