@@ -326,30 +326,20 @@ namespace: types
           true return
       end
   end
-  ## XXX backwards compatability
-  proc( Type TypeContext ptr -> bool ) =>: export: isSmallType
-    unwrapNamed
-    switch
-      primitiveType pointer empty reference mutableReference
-        arrayIndex enum cType case true return
-      ## TODO only union with no values is small
-      arrayType struct union procIn procOut procedure ## TODO? count structs/unions with size < 128 as small types
-      undefined namedType autoType genericType generatedType case false return
-    end
-  end
 
-  proc( Type TypeContext ptr mut -> bool ) =>: export: canReturn
+  ## does value fit in 2*64-bit values
+  proc( Type TypeContext ptr mut -> bool ) =>: export: isSmallType
     sizeOf =:: size
     size switch
       fixed case
-        size .fixed 16 > return ## more than 2*i64
-      dynamicArray case true return
-      unknown case ..unreachable ## TODO error message
+        size .fixed 16 <= return ## more than 2*i64
+      dynamicArray case false return
+      unknown case ..unreachable ## TODO? error message
     end
   end
   ## can value be pushed onto stack
   proc( Type TypeContext ptr mut -> bool ) =>: export: referenceOnly
-    canReturn return ## XXX ? allow larger stack values
+    isSmallType ! return ## XXX ? allow larger stack values
   end
 
   64 =:: export: MAX_INT_WIDTH
