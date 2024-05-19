@@ -1307,6 +1307,109 @@ proc(
 end
 
 
+{
+  Register.x64.rdi Register.x64.rsi Register.x64.rdx
+  Register.x64.rcx Register.x64.r8  Register.x64.r9
+} =:: SYSTEM_V_INT_ARGS
+{
+  Register.x64.xmm0 Register.x64.xmm1 Register.x64.xmm2
+  Register.x64.xmm3 Register.x64.xmm4 Register.x64.xmm5
+  Register.x64.xmm6 Register.x64.xmm7
+} =:: SYSTEM_V_FLOAT_ARGS
+struct(
+  AsmOperand MAX_VALUE_REGISTERS array : locations
+  i8 : count
+) =:: ArgumentLocation
+## get storage location of arguments when using System-V calling convention
+proc(
+  Type arrayView : inTypes
+  i32 : outArgsCount
+  Type : retType
+  TypeContext ptr mut : typeContext
+->
+  ArgumentLocation list : argLocs bool : retPtr
+) =>: getProcedureArgumentLocations
+  0 =:: mut: intArgs
+  0 =:: mut: floatArgs
+  0 =:: mut: stackOffset
+  retType typeContext types.isSmallType ! =:: ptrReturn
+  ptrReturn if
+    ## store return pointer for last return value in first argument
+    intArgs 1 + intArgs =
+  end
+  ## list.create
+    intArgs inTypes .length + outArgsCount +
+  ArgumentLocation list.create =:: mut: argLocations
+  AsmOperand MAX_VALUE_REGISTERS array new =:: mut: locations
+  0 while ..dup inTypes .length < do =:: i
+    inTypes i array.get typeContext toValueType
+      valTypeToStackRegisters
+    =:: count =:: registers
+    0 =:: mut: argInts
+    0 =:: mut: argFloats
+    0 while ..dup count < do =:: j
+      registers@ j [] switch
+        INT case
+          argInts 1 + argInts =
+          break
+        FLOAT case
+          argFloats 1 + argFloats =
+          break
+      end
+      j 1 +
+    end ..drop
+    ## argument does not fits into registers
+    intArgs argInts + SYSTEM_V_INT_ARGS ..length > if
+        floatArgs argFloats + SYSTEM_V_FLOAT_ARGS ..length > _if
+      ## XXX? handle values with higher alignment?
+      0 while ..dup count < do =:: j
+        stackOffset AsmOperand .stackArgument locations@ j [] =
+        stackOffset 8 + stackOffset =
+        j 1 +
+      end ..drop
+    else
+      0 while ..dup count < do =:: j
+        registers@ j [] switch
+          INT case
+            SYSTEM_V_INT_ARGS@ intArgs [] AsmOperand .register locations@ j [] =
+            intArgs 1 + intArgs =
+            j 1 + continue
+          FLOAT case
+            SYSTEM_V_FLOAT_ARGS@ intArgs [] AsmOperand .register locations@ j [] =
+            floatArgs 1 + floatArgs =
+            j 1 + continue
+        end
+        ..unreachable
+      end ..drop
+    end
+    argLocations
+      ## ArgumentLocation
+        locations
+        count
+      ArgumentLocation new list.append
+    argLocations =
+    i 1 +
+  end ..drop
+  ## out args
+  0 while ..dup outArgsCount < do =:: i
+    ## argument does not fits into registers
+    intArgs SYSTEM_V_INT_ARGS ..length < if
+      SYSTEM_V_INT_ARGS@ intArgs [] AsmOperand .register locations@ 0 [] =
+      intArgs 1 + intArgs =
+    else
+      stackOffset AsmOperand .stackArgument locations@ 0 [] =
+      stackOffset 8 + stackOffset =
+    end
+    argLocations
+      ## ArgumentLocation
+        locations 1:i8
+      ArgumentLocation new list.append
+    argLocations =
+    i 1 +
+  end ..drop
+  argLocations ptrReturn return
+end
+
 proc(
   AssemblyAtom list : asmOps
   X64_OP : opType
