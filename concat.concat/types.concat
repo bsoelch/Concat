@@ -1688,26 +1688,20 @@ namespace: types
         elts .length 0 == if
           Type .empty false return
         end
-        elts elts .length 1 - compositeElts.get =:: lastArg
-        lastArg context isSmallType if lastArg else Type .empty end false return
+        elts elts .length 1 - compositeElts.get false return
     end
   end
   proc( Type : proc TypeContext ptr : context -> Type arrayView bool ) =>: export: getProcOutArgs
     proc context getProcOut if ..drop Type array.empty true return end =:: outType
     proc context getCallConvention if ..drop Type array.empty true return end =:: callConvention
     callConvention switch
-      STRUCT case Type array.empty  false return
+      STRUCT case Type array.empty false return
       POINTER case
-        outType context compositeElts =:: elts
+        outType context compositeEltArray =:: elts
         elts .length 0 == if
           Type array.empty false return
         end
-        elts elts .length 1 - compositeElts.get =:: lastArg
-        lastArg context isSmallType if ## skip last return value
-          outType context compositeEltArray elts .length 1 - array.head
-        else
-          outType context compositeEltArray
-        end false return
+        elts elts .length 1 - array.head false return
     end
   end
   proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mut : context -> Type bool ) =>: export: newProcedure
