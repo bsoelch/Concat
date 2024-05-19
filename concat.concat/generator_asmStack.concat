@@ -13,6 +13,7 @@ import "branchTree.concat"
 ##  * only one move, choose correct move instruction depending on argument types
 ##  * make assembly representation (more or less) platform independent between AMD64 and aarch64
 enum(
+  ## x86-64 inspired instructions
   MOV MOVZX MOVSX LEA PUSH POP
   NEG ADD SUB MUL IMUL DIV IDIV
   NOT AND OR XOR
@@ -20,9 +21,12 @@ enum(
   CMP TEST
   SETL SETLE SETGE SETG
   SETB SETBE SETAE SETA
-  SETE SETNE
-  JNZ JZ JMP
+  SETE SETNE ## XXX? merge: SETcc target, conditionFlag
+  JNZ JZ JMP ## XXX? merge: JMPcc target, conditionFlag
+  RET
+  ## macro instructions
   ALLOC
+  COPY
 ) =:: X64_OP
 
 struct(
@@ -112,6 +116,13 @@ enum(
   ## XXX debug info
 ) =:: AssemblyAtom
 namespace: asm
+  proc( X64_OP : opName -> AssemblyOperation ) =>: createNilary
+    AsmOperand 3 array new =:: mut: args
+    ## AssemblyOperation
+      args
+      opName
+    AssemblyOperation new
+  end
   proc( X64_OP : opName AsmOperand : op1 -> AssemblyOperation ) =>: createUnary
     AsmOperand 3 array new =:: mut: args
     op1 args @ 0 [] =
@@ -262,7 +273,9 @@ namespace: asm
         JMP case "jmp " sb.appendS break
         JNZ case "jnz " sb.appendS break
         JZ case "jz " sb.appendS break
+        RET case "ret " sb.appendS break
         ALLOC case "alloc " sb.appendS break
+        COPY case "copy " sb.appendS break
       end
       false =:: mut: needComma
       false =:: mut: isPtrOffset
@@ -1374,8 +1387,8 @@ proc(
       j 1 +
     end ..drop
     ## argument does not fits into registers
-    intArgs argInts + SYSTEM_V_INT_ARGS ..length > if
-        floatArgs argFloats + SYSTEM_V_FLOAT_ARGS ..length > _if
+    intArgs argInts + SYSTEM_V_INT_ARGS ..length >
+        floatArgs argFloats + SYSTEM_V_FLOAT_ARGS ..length > | if
       ## XXX? handle values with higher alignment?
       0 while ..dup count < do =:: j
         stackOffset AsmOperand .stackArgument locations@ j [] =
@@ -1390,7 +1403,7 @@ proc(
             intArgs 1 + intArgs =
             j 1 - continue
           FLOAT case
-            SYSTEM_V_FLOAT_ARGS@ intArgs [] AsmOperand .register locations@ j [] =
+            SYSTEM_V_FLOAT_ARGS@ floatArgs [] AsmOperand .register locations@ j [] =
             floatArgs 1 + floatArgs =
             j 1 - continue
         end
@@ -1787,7 +1800,22 @@ proc(
             tmpRegister AsmOperand .register
             eltLabel AsmOperand .localVariable
           asm.createBinary AssemblyAtom .op list.append
-          ## TODO handle reference only values
+          op [] .dataType typeContext types.referenceOnly if
+            valueType .REFERENCE ?? ! if
+              "stack out of sync" sb.wrap
+              op [] .pos errors appendError
+              return
+            end
+            regId .registerCount 1 == assert "correct number of registers"
+            ## XXX? check if size is fixed
+            ## asm.createTrinary
+              X64_OP .COPY
+              tmpRegister AsmOperand .register
+              regId .registers@ 0 [] AsmOperand .register
+              op [] .dataType typeContext types.sizeOf .fixed AsmOperand .value
+            asm.createTrinary AssemblyAtom .op list.append
+            return
+          end
           ## storeValue
             regId
             valueType
@@ -1818,7 +1846,22 @@ proc(
               tmpRegister AsmOperand .register
               idInfo .labelId AsmOperand .localVariable
             asm.createBinary AssemblyAtom .op list.append
-            ## TODO handle reference only values
+            op [] .dataType typeContext types.referenceOnly if
+              valueType .REFERENCE ?? ! if
+                "stack out of sync" sb.wrap
+                op [] .pos errors appendError
+                return
+              end
+              regId .registerCount 1 == assert "correct number of registers"
+              ## XXX? check if size is fixed
+              ## asm.createTrinary
+                X64_OP .COPY
+                tmpRegister AsmOperand .register
+                regId .registers@ 0 [] AsmOperand .register
+                op [] .dataType typeContext types.sizeOf .fixed AsmOperand .value
+              asm.createTrinary AssemblyAtom .op list.append
+              return
+            end
             ## storeValue
               regId
               valueType
@@ -1903,8 +1946,10 @@ proc(
         op [] .pos context popValue =:: srcReg =:: refValue
         refValue ValueType .REFERENCE == assert "copy argument is reference"
         srcReg .registerCount 1 == assert "pointer sorted in one register"
-        op [] .dataType typeContext toValueType =:: valueType
-        ## TODO handle reference only types
+        op [] .dataType
+          typeContext types.unwrapReference
+        typeContext toValueType =:: valueType
+        valueType .REFERENCE ?? ! assert "no copy to reference"
         valueType op [] .pos context preparePushValue =:: targetRegisters
         ## loadValue
           srcReg .registers @ 0 []
@@ -2434,6 +2479,118 @@ proc(
           break
       end
       break
+    Return case
+      op [] .dataType =:: procType
+      procType typeContext types.getProcOutArgs
+        ! assert "procedure has arguments"
+      =:: outArgs
+      procType typeContext types.getProcRet
+        ! assert "procedure has arguments"
+      =:: retType
+      context [] .tmpRegistersInt .registers @ 0 [] =:: tmpRegister
+      asmOps
+        ## TODO make return value handling dependent on calling convention
+        op [] .pos context popValue =:: retData =:: retValType
+        retValType retType typeContext toValueType != if
+          "stack out of sync" sb.wrap
+          op [] .pos errors appendError
+          return
+        end
+        outArgs .length 1 - while ..dup 0 >= do =:: i
+          context [] .stackValues @ branchTree.pop .data [] =:: stackValue
+          outArgs i array.get =:: argType
+          stackValue .valType argType typeContext toValueType != if
+            "stack out of sync" sb.wrap
+            op [] .pos errors appendError
+            return
+          end
+          stackValue .intOffset =:: mut: intOffset
+          stackValue .floatOffset =:: mut: floatOffset
+          stackValue .valType valTypeToStackRegisters =:: srcCount =:: srcTypes
+          ## asm.createBinary
+            X64_OP .MOV
+            tmpRegister AsmOperand .register
+            i AsmOperand .outputArgument
+          asm.createBinary AssemblyAtom .op list.append
+          stackValue .REFERENCE ?? if
+            srcCount 1 != if
+              "stack out of sync" sb.wrap
+              op [] .pos errors appendError
+              return
+            end
+            srcTypes@ 0 [] StackRegisterType .INT == assert "correct register type"
+            ## XXX? ensure fixed size type
+            ## asm.createTrinary
+              X64_OP .COPY
+              tmpRegister AsmOperand .register
+              srcTypes@ 0 [] intOffset op [] .pos context getStackValue
+              argType typeContext types.sizeOf .fixed AsmOperand .value
+            asm.createTrinary AssemblyAtom .op list.append
+          end
+          0 while ..dup srcCount < do =:: j
+            srcTypes @ j [] =:: srcType
+            srcType
+              srcType switch
+                INT case intOffset ..dup 1 + intOffset = break
+                FLOAT case floatOffset ..dup 1 + floatOffset = break
+              end
+              op [] .pos
+            context getStackValue =:: srcRegister
+            ## asm.createTrinary
+              X64_OP .MOV
+              tmpRegister AsmOperand .registerPtrOffset
+              j 8 * AsmOperand .value
+              srcRegister
+            asm.createTrinary AssemblyAtom .op list.append
+            j 1 +
+          end ..drop
+          i 1 -
+        end ..drop
+        ## TODO make handling of return values dependent on calling convention
+        retType typeContext types.isSmallType if
+          ## asm.createBinary
+            X64_OP .MOV
+            Register.x64.rax AsmOperand .register
+            retData .registers @ 0 [] AsmOperand .register
+          asm.createBinary AssemblyAtom .op list.append
+          retData .registerCount 1 > if
+            ## asm.createBinary
+              X64_OP .MOV
+              Register.x64.rdx AsmOperand .register
+              retData .registers @ 1 [] AsmOperand .register
+            asm.createBinary AssemblyAtom .op list.append
+          end
+          ## XXX handle float return values
+        else
+          ## asm.createBinary
+            X64_OP .MOV
+            Register.x64.rax AsmOperand .register
+            outArgs .length AsmOperand .outputArgument
+          asm.createBinary AssemblyAtom .op list.append
+          ## XXX? ensure fixed size
+          ## asm.createTrinary
+            X64_OP .COPY
+            Register.x64.rax AsmOperand .register
+            retData .registers @ 0 [] AsmOperand .register
+            retType typeContext types.sizeOf .fixed AsmOperand .value
+          asm.createTrinary AssemblyAtom .op list.append
+        end
+        ## TODO make stack frame depend on calling convention
+        ## asm.createBinary
+          X64_OP .MOV
+          Register.sp AsmOperand .register
+          Register.fp AsmOperand .register
+        asm.createBinary AssemblyAtom .op list.append
+        ## XXX restore callee saved registers
+        ## asm.createUnary
+          X64_OP .POP
+          Register.fp AsmOperand .register
+        asm.createUnary AssemblyAtom .op list.append
+        ## asm.createNilary
+          X64_OP .RET
+        asm.createNilary AssemblyAtom .op list.append
+        false context [] .reachable =
+      return
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
@@ -2588,40 +2745,6 @@ proc(
           return
       end
       break
-    Return case
-      asmOps
-        ## TODO handle multiple return values
-        ## TODO make return handling dependent on calling convention
-        op [] .pos context popValue =:: regData =:: valType
-        regData .registerCount 2 <= assert "at most two return registers"
-        regData .registerCount 1 >= if
-          ## TODO handle float return values
-          ## asm.createBinary
-            X64_OP .MOV
-            Register.x64.rax AsmOperand .register
-            regData .registers @ 0 [] AsmOperand .register
-          asm.createBinary AssemblyAtom .op list.append
-          regData .registerCount 2 == if
-            ## asm.createBinary
-              X64_OP .MOV
-              Register.x64.rdx AsmOperand .register
-              regData .registers @ 1 [] AsmOperand .register
-            asm.createBinary AssemblyAtom .op list.append
-          end
-        end
-        ## TODO make stack frame depend on calling convention
-        ## asm.createBinary
-          X64_OP .MOV
-          Register.sp AsmOperand .register
-          Register.fp AsmOperand .register
-        asm.createBinary AssemblyAtom .op list.append
-        ## XXX restore callee saved registers
-        ## asm.createUnary
-          X64_OP .POP
-          Register.fp AsmOperand .register
-        asm.createUnary AssemblyAtom .op list.append
-        false context [] .reachable =
-      return
     Assert unreachable
     autoTypedInitializeId
     ConstantReference NewReference
