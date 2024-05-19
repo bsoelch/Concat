@@ -11,7 +11,7 @@ import "branchTree.concat"
 
 ## XXX? change intermediate assembly to simplified version of X64 syntax
 ##  * only one move, choose correct move instruction depending on argument types
-##  * make assembly more or less platform independent between AMD64 and aarch64
+##  * make assembly representation (more or less) platform independent between AMD64 and aarch64
 enum(
   MOV MOVZX MOVSX LEA PUSH POP
   NEG ADD SUB MUL IMUL DIV IDIV
@@ -23,21 +23,52 @@ enum(
   SETE SETNE
   JNZ JZ JMP
 ) =:: X64_OP
-## XXX? find way to split register into register+size(i8,i16,i32,i64) / (f32,f64,sse128)
-## XXX? allow overwriting register names for different architectures
-enum(
-  NONE
-  AL
-  EAX EBX ECX EDX
-  RAX RBX RCX RDX
-  RDI RSI RSP RBP
-  R8  R9  R10 R11
-  R12 R13 R14 R15
-  XMM0  XMM1  XMM2  XMM3
-  XMM4  XMM5  XMM6  XMM7
-  XMM8  XMM9  XMM10 XMM11
-  XMM12 XMM13 XMM14 XMM15
-) =:: X64_REGISTER
+
+struct(
+  i8 : id
+) =:: Register
+
+namespace: Register
+  0:i8 Register new =:: none
+  0x7f:i8 Register new =:: sp
+  0x7e:i8 Register new =:: fp
+  ## > 0 -> general purpose registers
+  ## < 0 -> float/vector registers
+  namespace: x64
+    1:i8 Register new =:: rax
+    2:i8 Register new =:: rbx
+    3:i8 Register new =:: rcx
+    4:i8 Register new =:: rdx
+    5:i8 Register new =:: rsi
+    6:i8 Register new =:: rdi
+    sp =:: rsp
+    fp =:: rbp
+     9:i8 Register new =:: r8
+    10:i8 Register new =:: r9
+    11:i8 Register new =:: r10
+    12:i8 Register new =:: r11
+    13:i8 Register new =:: r12
+    14:i8 Register new =:: r13
+    15:i8 Register new =:: r14
+    16:i8 Register new =:: r15
+    -1:i8 Register new =:: xmm0
+    -2:i8 Register new =:: xmm1
+    -3:i8 Register new =:: xmm2
+    -4:i8 Register new =:: xmm3
+    -5:i8 Register new =:: xmm4
+    -6:i8 Register new =:: xmm5
+    -7:i8 Register new =:: xmm6
+    -8:i8 Register new =:: xmm7
+    -9:i8 Register new =:: xmm8
+   -10:i8 Register new =:: xmm9
+   -11:i8 Register new =:: xmm10
+   -12:i8 Register new =:: xmm11
+   -13:i8 Register new =:: xmm12
+   -14:i8 Register new =:: xmm13
+   -15:i8 Register new =:: xmm14
+   -16:i8 Register new =:: xmm15
+  end
+end
 
 enum(
   ERROR
@@ -56,9 +87,9 @@ struct(
 ) =:: GlobalLabel
 enum(
   EMPTY
-  X64_REGISTER : register
-  X64_REGISTER : registerPtr
-  X64_REGISTER : registerPtrOffset
+  Register : register
+  Register : registerPtr
+  Register : registerPtrOffset
   i64 : value
   i64 : stackMemoryInt
   i64 : stackMemoryFloat
@@ -113,47 +144,41 @@ namespace: asm
       opName
     AssemblyOperation new
   end
-  proc( stringBuilder : sb X64_REGISTER : reg -> stringBuilder ) =>: appendRegister
-    sb
-      reg switch
-        NONE case "?"  sb.appendS break
-        AL  case "al"  sb.appendS break
-        EAX case "eax" sb.appendS break
-        EBX case "ebx" sb.appendS break
-        ECX case "ecx" sb.appendS break
-        EDX case "edx" sb.appendS break
-        RAX case "rax" sb.appendS break
-        RBX case "rbx" sb.appendS break
-        RCX case "rcx" sb.appendS break
-        RDX case "rdx" sb.appendS break
-        RDI case "rdi" sb.appendS break
-        RSI case "rsi" sb.appendS break
-        RSP case "rsp" sb.appendS break
-        RBP case "rbp" sb.appendS break
-        R8  case "r8"  sb.appendS break
-        R9  case "r9"  sb.appendS break
-        R10 case "r10" sb.appendS break
-        R11 case "r11" sb.appendS break
-        R12 case "r12" sb.appendS break
-        R13 case "r13" sb.appendS break
-        R14 case "r14" sb.appendS break
-        R15 case "r15" sb.appendS break
-        XMM0  case "xmm0"  sb.appendS break
-        XMM1  case "xmm1"  sb.appendS break
-        XMM2  case "xmm2"  sb.appendS break
-        XMM3  case "xmm3"  sb.appendS break
-        XMM4  case "xmm4"  sb.appendS break
-        XMM5  case "xmm5"  sb.appendS break
-        XMM6  case "xmm6"  sb.appendS break
-        XMM7  case "xmm7"  sb.appendS break
-        XMM8  case "xmm8"  sb.appendS break
-        XMM9  case "xmm9"  sb.appendS break
-        XMM10 case "xmm10" sb.appendS break
-        XMM11 case "xmm11" sb.appendS break
-        XMM12 case "xmm12" sb.appendS break
-        XMM13 case "xmm13" sb.appendS break
-        XMM14 case "xmm14" sb.appendS break
-        XMM15 case "xmm15" sb.appendS break
+  proc( stringBuilder : sb Register : reg -> stringBuilder ) =>: appendRegister
+    sb ## XXX? make register (? /all int-like structures) switchable
+      reg .id Register.x64.rax .id ==    if "rax"   sb.appendS else
+      reg .id Register.x64.rbx .id ==   _if "rbx"   sb.appendS else
+      reg .id Register.x64.rcx .id ==   _if "rcx"   sb.appendS else
+      reg .id Register.x64.rdx .id ==   _if "rdx"   sb.appendS else
+      reg .id Register.x64.rdi .id ==   _if "rdi"   sb.appendS else
+      reg .id Register.x64.rsi .id ==   _if "rsi"   sb.appendS else
+      reg .id Register.x64.rsp .id ==   _if "rsp"   sb.appendS else
+      reg .id Register.x64.rbp .id ==   _if "rbp"   sb.appendS else
+      reg .id Register.x64.r8  .id ==   _if "r8"    sb.appendS else
+      reg .id Register.x64.r9  .id ==   _if "r9"    sb.appendS else
+      reg .id Register.x64.r10 .id ==   _if "r10"   sb.appendS else
+      reg .id Register.x64.r11 .id ==   _if "r11"   sb.appendS else
+      reg .id Register.x64.r12 .id ==   _if "r12"   sb.appendS else
+      reg .id Register.x64.r13 .id ==   _if "r13"   sb.appendS else
+      reg .id Register.x64.r14 .id ==   _if "r14"   sb.appendS else
+      reg .id Register.x64.r15 .id ==   _if "r15"   sb.appendS else
+      reg .id Register.x64.xmm0  .id == _if "xmm0"  sb.appendS else
+      reg .id Register.x64.xmm1  .id == _if "xmm1"  sb.appendS else
+      reg .id Register.x64.xmm2  .id == _if "xmm2"  sb.appendS else
+      reg .id Register.x64.xmm3  .id == _if "xmm3"  sb.appendS else
+      reg .id Register.x64.xmm4  .id == _if "xmm4"  sb.appendS else
+      reg .id Register.x64.xmm5  .id == _if "xmm5"  sb.appendS else
+      reg .id Register.x64.xmm6  .id == _if "xmm6"  sb.appendS else
+      reg .id Register.x64.xmm7  .id == _if "xmm7"  sb.appendS else
+      reg .id Register.x64.xmm8  .id == _if "xmm8"  sb.appendS else
+      reg .id Register.x64.xmm9  .id == _if "xmm9"  sb.appendS else
+      reg .id Register.x64.xmm10 .id == _if "xmm10" sb.appendS else
+      reg .id Register.x64.xmm11 .id == _if "xmm11" sb.appendS else
+      reg .id Register.x64.xmm12 .id == _if "xmm12" sb.appendS else
+      reg .id Register.x64.xmm13 .id == _if "xmm13" sb.appendS else
+      reg .id Register.x64.xmm14 .id == _if "xmm14" sb.appendS else
+      reg .id Register.x64.xmm15 .id == _if "xmm15" sb.appendS else
+        "?"  sb.appendS
       end
     return
   end
@@ -336,7 +361,7 @@ end
 
 15 =:: REGISTER_LIST_MAX_LENGTH
 struct(
-  X64_REGISTER REGISTER_LIST_MAX_LENGTH array : mut: registers
+  Register REGISTER_LIST_MAX_LENGTH array : mut: registers
   i8 : mut: count
 ) =:: RegisterList
 
@@ -644,7 +669,7 @@ end
 3 =:: MAX_VALUE_REGISTERS
 ## XXX? make maximum number of slots a program wide constant
 struct(
-  X64_REGISTER MAX_VALUE_REGISTERS array : registers
+  Register MAX_VALUE_REGISTERS array : registers
   i8 : registerCount
 ) =:: RegisterValue
 
@@ -921,7 +946,7 @@ proc(
   StackOperation : stackOp
   FilePosition : pos
   CompilerContext ptr mut : context
--> AssemblyAtom list X64_REGISTER ) =>: getStackRegister
+-> AssemblyAtom list Register ) =>: getStackRegister
   context [] .program [] .errors @ =:: errors
   registerType switch
     INT case
@@ -937,7 +962,7 @@ proc(
         0 context [] .stackRegState .stackCountInt =
         "stack underflow" sb.wrap
         pos errors appendError
-        asmOps X64_REGISTER .NONE return
+        asmOps Register.none return
       end
       context [] .stackRegistersInt =:: intRegisters
       intCount intRegisters .count % =:: regOffset
@@ -985,7 +1010,7 @@ proc(
         0 context [] .stackRegState .stackCountFloat =
         "stack underflow" sb.wrap
         pos errors appendError
-        asmOps X64_REGISTER .NONE return
+        asmOps Register.none return
       end
       context [] .stackRegistersFloat =:: floatRegisters
       floatCount floatRegisters .count % =:: regOffset
@@ -1028,7 +1053,7 @@ proc(
   StackRegisterType : registerType
   FilePosition : pos
   CompilerContext ptr mut : context
--> AssemblyAtom list X64_REGISTER ) =>: popRegister
+-> AssemblyAtom list Register ) =>: popRegister
   asmOps registerType StackOperation .POP pos context getStackRegister return
 end
 proc(
@@ -1048,14 +1073,14 @@ proc(
   StackRegisterType : registerType
   FilePosition : pos
   CompilerContext ptr mut : context
--> AssemblyAtom list X64_REGISTER ) =>: preparePushRegister
+-> AssemblyAtom list Register ) =>: preparePushRegister
   asmOps registerType StackOperation .PUSH pos context getStackRegister return
 end
 
 proc(
   AssemblyAtom list : asmOps
   StackRegisterType : registerType
-  X64_REGISTER : src
+  Register : src
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ) =>: pushRegister
@@ -1122,7 +1147,7 @@ proc(
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ValueType RegisterValue ) =>: popValue
-  X64_REGISTER MAX_VALUE_REGISTERS array new =:: mut: registers
+  Register MAX_VALUE_REGISTERS array new =:: mut: registers
   context [] .stackValues branchTree.depth 1 < if
     "stack underflow" sb.wrap
     pos context [] .program [] .errors @ appendError
@@ -1150,7 +1175,7 @@ proc(
     context [] .stackRegState .stackCountFloat
     valType
   StackRegisterValue new branchTree.push
-  X64_REGISTER MAX_VALUE_REGISTERS array new =:: mut: registers
+  Register MAX_VALUE_REGISTERS array new =:: mut: registers
   valType valTypeToStackRegisters =:: regCount =:: regTypes
   asmOps
     regCount 1 - while ..dup 0 >= do =:: i
@@ -1184,7 +1209,7 @@ end
 ## the source register can overlap with one of the target registers the target registers are assumed to be non-overlapping
 proc(
   AssemblyAtom list : asmOps
-  X64_REGISTER : src
+  Register : src
   ValueType : valType
   RegisterValue : target
   FilePosition : pos
@@ -1196,7 +1221,7 @@ proc(
     BITS128 case
       target .registerCount 2 == assert "correct register count"
       asmOps
-        registers @ 0 [] src != if
+        registers @ 0 [] .id src .id != if
           ## asm.createBinary
             X64_OP .MOV
             registers @ 0 [] AsmOperand .register
@@ -1209,7 +1234,7 @@ proc(
           src AsmOperand .registerPtrOffset
           8 AsmOperand .value
         asm.createTrinary AssemblyAtom .op list.append
-        registers @ 0 [] src == if
+        registers @ 0 [] .id src .id == if
           ## asm.createBinary
             X64_OP .MOV
             registers @ 0 [] AsmOperand .register
@@ -1243,7 +1268,7 @@ proc(
   AssemblyAtom list : asmOps
   RegisterValue : src
   ValueType : valType
-  X64_REGISTER : target
+  Register : target
   FilePosition : pos
   CompilerContext ptr mut : context
 -> AssemblyAtom list ) =>: storeValue
@@ -1377,13 +1402,8 @@ proc(
     asm.createBinary AssemblyAtom .op list.append
     ## asm.createUnary
       setCmpFlag
-      X64_REGISTER .AL AsmOperand .register
-    asm.createUnary AssemblyAtom .op list.append
-    ## asm.createUnary
-      X64_OP .MOVZX
       regOut .registers @ 0 [] AsmOperand .register
-      X64_REGISTER .AL AsmOperand .register
-    asm.createBinary AssemblyAtom .op list.append
+    asm.createUnary AssemblyAtom .op list.append
   return
 end
 proc(
@@ -1563,20 +1583,21 @@ proc(
           procData [] .labelId
           implId .implementationId
         GlobalLabel new AssemblyAtom .globalLabel list.append
+        ## TODO make stack frame dependent on calling convention
         ## asm.createUnary
           X64_OP .PUSH
-          X64_REGISTER .RBP AsmOperand .register
+          Register.fp AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
         ## asm.createBinary
           X64_OP .MOV
-          X64_REGISTER .RBP AsmOperand .register
-          X64_REGISTER .RSP AsmOperand .register
+          Register.fp AsmOperand .register
+          Register.sp AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
         ## XXX store callee saved registers
         offset 0 > if
           ## asm.createBinary
             X64_OP .SUB
-            X64_REGISTER .RSP AsmOperand .register
+            Register.sp AsmOperand .register
             ## stack aligned to 16 bytes for call instruction
             offset 16 types.alignSize AsmOperand .value
           asm.createBinary AssemblyAtom .op list.append
@@ -1591,6 +1612,7 @@ proc(
       idInfo .idType switch
         LOCAL_VAR TMP_VAR case
           context [] .variableOffset @ idInfo .labelId map.get .data =:: offset
+          context [] .tmpRegistersInt .registers @ 0 [] =:: tmpRegister
           asmOps
             ## popValue
               op [] .pos
@@ -1599,15 +1621,16 @@ proc(
             ## XXX extract to function for getting variable offset
             ## asm.createTrinary
               X64_OP .LEA
-              X64_REGISTER .RAX AsmOperand .register
-              X64_REGISTER .RBP AsmOperand .registerPtrOffset
+              tmpRegister AsmOperand .register
+              ## TODO move assignment of variable slots to final code generation
+              Register.fp  AsmOperand .registerPtrOffset
               offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
             ## TODO handle reference only values
             ## storeValue
               regId
               valueType
-              X64_REGISTER .RAX
+              tmpRegister
               op [] .pos
               context
             storeValue
@@ -1650,7 +1673,8 @@ proc(
             ## asm.createTrinary
               X64_OP .LEA
               target .registers @ 0 [] AsmOperand .register
-              X64_REGISTER .RBP AsmOperand .registerPtrOffset
+              ## XXX move assignment of variable slots to final code generation
+              Register.fp AsmOperand .registerPtrOffset
               offset -_ AsmOperand .value
             asm.createTrinary AssemblyAtom .op list.append
             ## FIXME push values instead of references for procedure arguments
@@ -2315,7 +2339,7 @@ proc(
             0 while ..dup count1 < do =:: i
               regs1 i [] =:: src
               regs3 i [] =:: target
-              src target == if i 1 + continue end
+              src .id target .id == if i 1 + continue end
               upperTypes @ i [] switch
                 INT case
                   tmpRegisters @ stackRegTypeInt [] [] .registers @ tmpInts []
@@ -2337,7 +2361,7 @@ proc(
             0 while ..dup count2 < do =:: i
               regs4 i [] =:: target
               regs2 i [] =:: src
-              src target == if i 1 + continue end
+              src .id target .id == if i 1 + continue end
               ## asm.createBinary
                 X64_OP .MOV
                 target AsmOperand .register
@@ -2351,7 +2375,7 @@ proc(
             0 while ..dup count1 < do =:: i
               regs1 i [] =:: src
               regs3 i [] =:: target
-              src target == if i 1 + continue end
+              src .id target .id == if i 1 + continue end
               upperTypes @ i [] switch
                 INT case
                   tmpRegisters @ stackRegTypeInt [] [] .registers @ tmpInts []
@@ -2375,33 +2399,34 @@ proc(
     Return case
       asmOps
         ## TODO handle multiple return values
+        ## TODO make return handling dependent on calling convention
         op [] .pos context popValue =:: regData =:: valType
-        regData .registerCount 2 > if
-          ## TODO handle return values >2*i64
-        else regData .registerCount 1 >= _if
+        regData .registerCount 2 <= assert "at most two return registers"
+        regData .registerCount 1 >= if
           ## TODO handle float return values
           ## asm.createBinary
             X64_OP .MOV
-            X64_REGISTER .RAX AsmOperand .register
+            Register.x64.rax AsmOperand .register
             regData .registers @ 0 [] AsmOperand .register
           asm.createBinary AssemblyAtom .op list.append
           regData .registerCount 2 == if
             ## asm.createBinary
               X64_OP .MOV
-              X64_REGISTER .RDX AsmOperand .register
+              Register.x64.rdx AsmOperand .register
               regData .registers @ 1 [] AsmOperand .register
             asm.createBinary AssemblyAtom .op list.append
           end
         end
+        ## TODO make stack frame depend on calling convention
         ## asm.createBinary
           X64_OP .MOV
-          X64_REGISTER .RSP AsmOperand .register
-          X64_REGISTER .RBP AsmOperand .register
+          Register.sp AsmOperand .register
+          Register.fp AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
         ## XXX restore callee saved registers
         ## asm.createUnary
           X64_OP .POP
-          X64_REGISTER .RBP AsmOperand .register
+          Register.fp AsmOperand .register
         asm.createUnary AssemblyAtom .op list.append
         false context [] .reachable =
       return
@@ -2463,37 +2488,37 @@ proc(
 end
 
 proc( -> RegisterList ) =>: getStackRegistersInt
-  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
-  X64_REGISTER .RDI registers @ 0 [] =
-  X64_REGISTER .RSI registers @ 1 [] =
-  X64_REGISTER .RDX registers @ 2 [] =
-  X64_REGISTER .RCX registers @ 3 [] =
-  X64_REGISTER .R8  registers @ 4 [] =
-  X64_REGISTER .R9  registers @ 5 [] =
+  Register REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  Register.x64.rdi registers @ 0 [] =
+  Register.x64.rsi registers @ 1 [] =
+  Register.x64.rdx registers @ 2 [] =
+  Register.x64.rcx registers @ 3 [] =
+  Register.x64.r8  registers @ 4 [] =
+  Register.x64.r9  registers @ 5 [] =
   registers 6:i8 RegisterList new return
 end
 proc( -> RegisterList ) =>: getStackRegistersFloat
-  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
-  X64_REGISTER .XMM0 registers @ 0 [] =
-  X64_REGISTER .XMM1 registers @ 1 [] =
-  X64_REGISTER .XMM2 registers @ 2 [] =
-  X64_REGISTER .XMM3 registers @ 3 [] =
-  X64_REGISTER .XMM4 registers @ 4 [] =
-  X64_REGISTER .XMM5 registers @ 5 [] =
+  Register REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  Register.x64.xmm0 registers @ 0 [] =
+  Register.x64.xmm1 registers @ 1 [] =
+  Register.x64.xmm2 registers @ 2 [] =
+  Register.x64.xmm3 registers @ 3 [] =
+  Register.x64.xmm4 registers @ 4 [] =
+  Register.x64.xmm5 registers @ 5 [] =
   registers 6:i8 RegisterList new return
 end
 proc( -> RegisterList ) =>: getTmpRegistersInt
-  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
-  X64_REGISTER .RAX registers @ 0 [] =
-  X64_REGISTER .RBX registers @ 1 [] =
-  X64_REGISTER .R10 registers @ 2 [] =
+  Register REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  Register.x64.rax registers @ 0 [] =
+  Register.x64.rbx registers @ 1 [] =
+  Register.x64.r10 registers @ 2 [] =
   registers 3:i8 RegisterList new return
 end
 proc( -> RegisterList ) =>: getTmpRegistersFloat
-  X64_REGISTER REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
-  X64_REGISTER .XMM8 registers @ 0 [] =
-  X64_REGISTER .XMM9 registers @ 1 [] =
-  X64_REGISTER .XMM10 registers @ 2 [] =
+  Register REGISTER_LIST_MAX_LENGTH array new =:: mut: registers
+  Register.x64.xmm8  registers @ 0 [] =
+  Register.x64.xmm9  registers @ 1 [] =
+  Register.x64.xmm10 registers @ 2 [] =
   registers 3:i8 RegisterList new return
 end
 
