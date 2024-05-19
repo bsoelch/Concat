@@ -910,15 +910,14 @@ end
 
 proc(
   StackRegisterType : registerType
-  i64 : offset
+  i64 : stackIndex
   FilePosition : pos
   CompilerContext ptr mut : context
--> AsmOperand ) =>: peekStackRegister
+-> AsmOperand ) =>: getStackValue
   context [] .program [] .errors @ =:: errors
   registerType switch
     INT case
       context [] .stackRegState .stackCountInt 1 - =:: maxIndex
-      maxIndex offset - =:: stackIndex
       stackIndex 0 < if
         "stack underflow" sb.wrap
         pos errors appendError
@@ -935,7 +934,6 @@ proc(
       stackIndex AsmOperand .stackMemoryInt return
     FLOAT case
       context [] .stackRegState .stackCountFloat 1 - =:: maxIndex
-      maxIndex offset - =:: stackIndex
       stackIndex 0 < if
         "stack underflow" sb.wrap
         pos errors appendError
@@ -1327,7 +1325,7 @@ struct(
 ## get storage location of arguments when using System-V calling convention
 proc(
   Type arrayView : inTypes
-  i32 : outArgsCount
+  i64 : outArgsCount
   Type : retType
   TypeContext ptr mut : typeContext
 ->
@@ -1653,11 +1651,29 @@ proc(
       prog [] .procedures implId .procId list.at .data =:: procData
       implId .implementationId 0 >= if
         procData [] .implementation .code .implementations
-          implId .implementationId list.at .data
-        [] .variables
+          implId .implementationId list.at .data =:: impl
+        impl [] .variables
+        impl [] .procType
       else
         procData [] .implementation .code .variables
-      end =:: variables
+        procData [] .procType
+      end =:: procType =:: variables
+      procType typeContext types.getProcIn
+        ! assert "procedure has arguments"
+      =:: inType
+      procType typeContext types.getProcOutArgs
+        ! assert "procedure has arguments"
+      =:: outArgs
+      procType typeContext types.getProcRet
+        ! assert "procedure has arguments"
+      =:: retType
+      inType typeContext types.compositeEltArray =:: inTypes
+      ## getProcedureArgumentLocations
+        inTypes
+        outArgs .length
+        retType
+        typeContext
+      getProcedureArgumentLocations =:: isPtrRet =:: argLocs
       asmOps
         ## GlobalLabel
           procData [] .labelId
@@ -1674,7 +1690,7 @@ proc(
           Register.sp AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
         ## XXX store callee saved registers
-        ## XXX initialize program stack & argument variables
+        ## declare local variables
         0 while ..dup variables .length < do =:: i
           variables i list.get =:: varInfo
           varInfo .varType typeContext types.alignOf =:: varAlignment
@@ -1700,6 +1716,48 @@ proc(
           end
           i 1 +
         end ..drop
+        ## TODO remember output arguments
+        context [] .tmpRegistersInt .registers @ 0 [] =:: tmpRegister
+        ## load procedure arguments
+        0 while ..dup inTypes .length < do =:: i
+          inType i typeContext types.compositeGetLabel =:: eltLabel
+          inTypes i array.get =:: eltType
+          argLocs i list.get =:: eltLoc
+          ## preparePushValue
+            eltType typeContext toValueType
+            op [] .pos
+          context preparePushValue =:: registers
+          eltLoc .count registers .registerCount == assert "consistent number of registers"
+          0 while ..dup eltLoc .count < do =:: j
+            ## asm.createBinary
+              X64_OP .MOV
+              registers .registers@ j [] AsmOperand .register
+              eltLoc .locations@ j []
+            asm.createBinary AssemblyAtom .op list.append
+            j 1 +
+          end ..drop
+          eltLabel id.LABEL_ID_NONE == if
+            i 1 + continue
+          end
+          ## popValue
+            op [] .pos
+          context popValue =:: regId =:: valueType
+          ## asm.createTrinary
+            X64_OP .LEA
+            tmpRegister AsmOperand .register
+            eltLabel AsmOperand .localVariable
+          asm.createBinary AssemblyAtom .op list.append
+          ## TODO handle reference only values
+          ## storeValue
+            regId
+            valueType
+            tmpRegister
+            op [] .pos
+            context
+          storeValue
+          i 1 +
+        end ..drop
+        argLocs list.free ..drop
       return
     declareId case
       ## all variables declarations are handled at start of procedure
@@ -2354,8 +2412,8 @@ proc(
           context [] .stackValues @
             offset
           branchTree.at .data [] =:: sourceValue
-          sourceValue .intOffset 1 + =:: mut: intOffset
-          sourceValue .floatOffset 1 + =:: mut: floatOffset
+          sourceValue .intOffset =:: mut: intOffset
+          sourceValue .floatOffset =:: mut: floatOffset
           asmOps
             sourceValue .valType op [] .pos context preparePushValue =:: target
             sourceValue .valType valTypeToStackRegisters =:: srcCount =:: srcTypes
@@ -2368,7 +2426,7 @@ proc(
                   FLOAT case floatOffset ..dup 1 + floatOffset = break
                 end
                 op [] .pos
-              context peekStackRegister =:: srcRegister
+              context getStackValue =:: srcRegister
               ## asm.createBinary
                 X64_OP .MOV
                 target .registers @ i [] AsmOperand .register
