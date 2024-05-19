@@ -87,7 +87,7 @@ struct(
   i64 : implId
 ) =:: GlobalLabel
 enum(
-  EMPTY
+  empty
   Register : register
   Register : registerPtr
   Register : registerPtrOffset
@@ -95,6 +95,7 @@ enum(
   i64 : stackMemoryInt
   i64 : stackMemoryFloat
   i64 : stackArgument
+  i64 : outputArgument
   LabelId : localVariable
   LocalLabel : localLabel
   GlobalLabel : globalLabel
@@ -268,7 +269,7 @@ namespace: asm
       op .args =:: args
       0 while ..dup args ..length < do =:: i
         args @ i [] =:: arg
-        arg .EMPTY ?? if
+        arg .empty ?? if
           i 1 + continue
         end
         needComma if
@@ -304,9 +305,11 @@ namespace: asm
             "%stackFloat" sb.appendS arg .stackMemoryFloat sb.appendI break
           localVariable case
             "%localVar" sb.appendS arg .localVariable sb.appendI break
+          outputArgument case
+            "%outArg" sb.appendS arg .outputArgument sb.appendI break
           localLabel case arg .localLabel appendLocalLabel break
           globalLabel case arg .globalLabel labelContext appendGlobalLabel break
-          EMPTY case ..unreachable
+          empty case ..unreachable
         end
         wasPtrOffset if isPtrOffset ! _if
           ']' sb.appendC
@@ -921,7 +924,7 @@ proc(
       stackIndex 0 < if
         "stack underflow" sb.wrap
         pos errors appendError
-        AsmOperand .EMPTY return
+        AsmOperand .empty return
       end
       context [] .stackRegistersInt =:: registers
       stackIndex maxIndex registers .count - <= if ## memory only
@@ -937,7 +940,7 @@ proc(
       stackIndex 0 < if
         "stack underflow" sb.wrap
         pos errors appendError
-        AsmOperand .EMPTY return
+        AsmOperand .empty return
       end
       context [] .stackRegistersFloat =:: registers
       stackIndex maxIndex registers .count - <= if ## memory only
@@ -1329,16 +1332,19 @@ proc(
   Type : retType
   TypeContext ptr mut : typeContext
 ->
-  ArgumentLocation list : argLocs bool : retPtr
+  ArgumentLocation list : argLocs AsmOperand : retArgument
 ) =>: getProcedureArgumentLocations
+  ## XXX? return location of return pointer or .empty if return by value
   0 =:: mut: intArgs
   0 =:: mut: floatArgs
   0 =:: mut: stackOffset
-  retType typeContext types.isSmallType ! =:: ptrReturn
-  ptrReturn if
+  retType typeContext types.isSmallType if
+    AsmOperand .empty
+  else
     ## store return pointer for last return value in first argument
+    SYSTEM_V_INT_ARGS@ intArgs [] AsmOperand .register
     intArgs 1 + intArgs =
-  end
+  end =:: retArgument
   ## list.create
     intArgs inTypes .length + outArgsCount +
   ArgumentLocation list.create =:: mut: argLocations
@@ -1370,16 +1376,16 @@ proc(
         j 1 +
       end ..drop
     else
-      0 while ..dup count < do =:: j
+      count 1 - while ..dup 0 >= do =:: j
         registers@ j [] switch
           INT case
             SYSTEM_V_INT_ARGS@ intArgs [] AsmOperand .register locations@ j [] =
             intArgs 1 + intArgs =
-            j 1 + continue
+            j 1 - continue
           FLOAT case
             SYSTEM_V_FLOAT_ARGS@ intArgs [] AsmOperand .register locations@ j [] =
             floatArgs 1 + floatArgs =
-            j 1 + continue
+            j 1 - continue
         end
         ..unreachable
       end ..drop
@@ -1409,7 +1415,7 @@ proc(
     argLocations =
     i 1 +
   end ..drop
-  argLocations ptrReturn return
+  argLocations retArgument return
 end
 
 proc(
@@ -1668,12 +1674,13 @@ proc(
         ! assert "procedure has arguments"
       =:: retType
       inType typeContext types.compositeEltArray =:: inTypes
+      inTypes .length =:: argCount
       ## getProcedureArgumentLocations
         inTypes
         outArgs .length
         retType
         typeContext
-      getProcedureArgumentLocations =:: isPtrRet =:: argLocs
+      getProcedureArgumentLocations =:: retArg =:: argLocs
       asmOps
         ## GlobalLabel
           procData [] .labelId
@@ -1716,10 +1723,36 @@ proc(
           end
           i 1 +
         end ..drop
-        ## TODO remember output arguments
         context [] .tmpRegistersInt .registers @ 0 [] =:: tmpRegister
+        ## remember output arguments
+        retArg .empty ?? ! if
+          ## asm.createBinary
+            X64_OP .MOV
+            tmpRegister AsmOperand .register
+            retArg
+          asm.createBinary AssemblyAtom .op list.append
+          ## asm.createBinary
+            X64_OP .MOV
+            outArgs .length AsmOperand .outputArgument
+            tmpRegister AsmOperand .register
+          asm.createBinary AssemblyAtom .op list.append
+        end
+        0 while ..dup outArgs .length < do =:: i
+          argLocs i argCount + list.get =:: eltLoc
+          ## asm.createBinary
+            X64_OP .MOV
+            tmpRegister AsmOperand .register
+            eltLoc .locations@ 0 []
+          asm.createBinary AssemblyAtom .op list.append
+          ## asm.createBinary
+            X64_OP .MOV
+            i AsmOperand .outputArgument
+            tmpRegister AsmOperand .register
+          asm.createBinary AssemblyAtom .op list.append
+          i 1 +
+        end ..drop
         ## load procedure arguments
-        0 while ..dup inTypes .length < do =:: i
+        0 while ..dup argCount < do =:: i
           inType i typeContext types.compositeGetLabel =:: eltLabel
           inTypes i array.get =:: eltType
           argLocs i list.get =:: eltLoc
