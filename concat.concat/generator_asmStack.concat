@@ -22,6 +22,7 @@ enum(
   SETB SETBE SETAE SETA
   SETE SETNE
   JNZ JZ JMP
+  ALLOC
 ) =:: X64_OP
 
 struct(
@@ -94,6 +95,7 @@ enum(
   i64 : stackMemoryInt
   i64 : stackMemoryFloat
   i64 : stackArgument
+  LabelId : localVariable
   LocalLabel : localLabel
   GlobalLabel : globalLabel
 ) =:: AsmOperand
@@ -259,6 +261,7 @@ namespace: asm
         JMP case "jmp " sb.appendS break
         JNZ case "jnz " sb.appendS break
         JZ case "jz " sb.appendS break
+        ALLOC case "alloc " sb.appendS break
       end
       false =:: mut: needComma
       false =:: mut: isPtrOffset
@@ -294,11 +297,13 @@ namespace: asm
             break
           value case arg .value sb.appendI break
           stackArgument case
-            "%stackArg" sb.appendS arg .stackMemoryInt sb.appendI break
+            "%stackArg" sb.appendS arg .stackArgument sb.appendI break
           stackMemoryInt case
             "%stackInt" sb.appendS arg .stackMemoryInt sb.appendI break
           stackMemoryFloat case
             "%stackFloat" sb.appendS arg .stackMemoryFloat sb.appendI break
+          localVariable case
+            "%localVar" sb.appendS arg .localVariable sb.appendI break
           localLabel case arg .localLabel appendLocalLabel break
           globalLabel case arg .globalLabel labelContext appendGlobalLabel break
           EMPTY case ..unreachable
@@ -444,7 +449,6 @@ struct(
 
 struct(
   ProgramContext ptr mut : program
-  LabelId i64 hashMap : mut: variableOffset
   StackRegisterValue BranchTree : mut: stackValues
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
@@ -1654,34 +1658,6 @@ proc(
       else
         procData [] .implementation .code .variables
       end =:: variables
-      0:i64 =:: mut: offset
-      ## TODO reserve space for/remember locations of out-arg pointers
-      ##  [variables][stackFloat][stackInt][regOutArgs][namedArguments][rbp][rip][stack-args]
-      ##                                                            ^ rbp
-      0 while ..dup variables .length < do =:: i
-        variables i list.get =:: varInfo
-        varInfo .varType typeContext types.alignOf =:: varAlignment
-        varInfo .varType typeContext types.sizeOf =:: varSize
-        varSize switch
-          fixed case
-            offset
-              varAlignment .fixed types.alignSize
-              varSize .fixed +
-            offset =
-            context [] .variableOffset @ varInfo .label offset map.put ..drop
-            break
-          dynamicArray case ## XXX? store dynamic arrays no separate stack
-            "dymnamic-size arrays are not supported" sb.wrap
-            op [] .pos errors appendError
-            break
-          unknown case
-            "could not determine size of type:" sb.wrap
-              varInfo .varType typeContext sb.appendType
-            op [] .pos errors appendError
-            break
-        end
-        i 1 +
-      end ..drop
       asmOps
         ## GlobalLabel
           procData [] .labelId
@@ -1698,15 +1674,32 @@ proc(
           Register.sp AsmOperand .register
         asm.createBinary AssemblyAtom .op list.append
         ## XXX store callee saved registers
-        offset 0 > if
-          ## asm.createBinary
-            X64_OP .SUB
-            Register.sp AsmOperand .register
-            ## stack aligned to 16 bytes for call instruction
-            offset 16 types.alignSize AsmOperand .value
-          asm.createBinary AssemblyAtom .op list.append
-        end
         ## XXX initialize program stack & argument variables
+        0 while ..dup variables .length < do =:: i
+          variables i list.get =:: varInfo
+          varInfo .varType typeContext types.alignOf =:: varAlignment
+          varInfo .varType typeContext types.sizeOf =:: varSize
+          varSize switch
+            fixed case
+              ## asm.createTrinary
+                X64_OP .ALLOC
+                varInfo .label AsmOperand .localVariable
+                varAlignment .fixed AsmOperand .value
+                varSize .fixed AsmOperand .value
+              asm.createTrinary AssemblyAtom .op list.append
+              break
+            dynamicArray case ## XXX? store dynamic arrays no separate stack
+              "dymnamic-size arrays are not supported" sb.wrap
+              op [] .pos errors appendError
+              break
+            unknown case
+              "could not determine size of type:" sb.wrap
+                varInfo .varType typeContext sb.appendType
+              op [] .pos errors appendError
+              break
+          end
+          i 1 +
+        end ..drop
       return
     declareId case
       ## all variables declarations are handled at start of procedure
@@ -1715,7 +1708,6 @@ proc(
       op [] .val .initializeId =:: idInfo
       idInfo .idType switch
         LOCAL_VAR TMP_VAR case
-          context [] .variableOffset @ idInfo .labelId map.get .data =:: offset
           context [] .tmpRegistersInt .registers @ 0 [] =:: tmpRegister
           asmOps
             ## popValue
@@ -1726,10 +1718,8 @@ proc(
             ## asm.createTrinary
               X64_OP .LEA
               tmpRegister AsmOperand .register
-              ## TODO move assignment of variable slots to final code generation
-              Register.fp  AsmOperand .registerPtrOffset
-              offset -_ AsmOperand .value
-            asm.createTrinary AssemblyAtom .op list.append
+              idInfo .labelId AsmOperand .localVariable
+            asm.createBinary AssemblyAtom .op list.append
             ## TODO handle reference only values
             ## storeValue
               regId
@@ -1753,17 +1743,6 @@ proc(
       end =:: idInfo
       idInfo .idType switch
         LOCAL_VAR TMP_VAR ARGUMENT case
-          context [] .variableOffset @ idInfo .labelId map.get =:: offset?
-          offset? optional.hasData if
-            offset? .data
-          else
-            "missing offset for " sb.wrap
-               idInfo .idType sb.appendIdType
-               ": " sb.appendS
-               idInfo .labelId labelContext sb.appendLabelName
-             op [] .pos errors appendError
-            -1:i64
-          end =:: offset
           asmOps
             ## preparePushValue
               isPtr if
@@ -1777,10 +1756,8 @@ proc(
             ## asm.createTrinary
               X64_OP .LEA
               target .registers @ 0 [] AsmOperand .register
-              ## XXX move assignment of variable slots to final code generation
-              Register.fp AsmOperand .registerPtrOffset
-              offset -_ AsmOperand .value
-            asm.createTrinary AssemblyAtom .op list.append
+              idInfo .labelId AsmOperand .localVariable
+            asm.createBinary AssemblyAtom .op list.append
             isPtr ! if idInfo .idType .ARGUMENT ?? _if
               op [] .pos context popValue =:: src =:: srcType
               srcType ValueType .REFERENCE == assert "variable is reference"
@@ -2645,7 +2622,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToA
   typeContext [] .labelContext @ =:: labelContext
   ## CompilerContext
     prog
-    labelHash @ labelEq @ 64 i64 map.create
     StackRegisterValue branchTree.create
     32 BlockInfo list.create
     32 LocalConst list.create
