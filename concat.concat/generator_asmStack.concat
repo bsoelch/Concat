@@ -1244,7 +1244,7 @@ proc(
         end
         ## asm.createTrinary
           X64_OP .MOV
-          registers @ 0 [] AsmOperand .register
+          registers @ 1 [] AsmOperand .register
           src AsmOperand .registerPtrOffset
           8 AsmOperand .value
         asm.createTrinary AssemblyAtom .op list.append
@@ -1285,17 +1285,26 @@ proc(
     BITS128 BITSFF128 BITSIF128 BITSFI128 case
       src .registerCount 2 == assert "correct register count"
       asmOps
-        ## asm.createBinary
-          X64_OP .MOV
-          target AsmOperand .registerPtr
-          registers @ 0 [] AsmOperand .register
-        asm.createBinary AssemblyAtom .op list.append
+        registers @ 0 [] .id target .id != if
+          ## asm.createBinary
+            X64_OP .MOV
+            target AsmOperand .registerPtr
+            registers @ 0 [] AsmOperand .register
+          asm.createBinary AssemblyAtom .op list.append
+        end
         ## asm.createTrinary
           X64_OP .MOV
           target AsmOperand .registerPtrOffset
           8 AsmOperand .value
           registers @ 1 [] AsmOperand .register
         asm.createTrinary AssemblyAtom .op list.append
+        registers @ 0 [] .id target .id == if
+          ## asm.createBinary
+            X64_OP .MOV
+            target AsmOperand .registerPtr
+            registers @ 0 [] AsmOperand .register
+          asm.createBinary AssemblyAtom .op list.append
+        end
       return
     I32 I64 F32 F64 PTR REFERENCE
         BITS32 BITS64 BITS128L BITS128H
@@ -1310,7 +1319,6 @@ proc(
       return
   end
 end
-
 
 {
   Register.x64.rdi Register.x64.rsi Register.x64.rdx
@@ -1334,7 +1342,6 @@ proc(
 ->
   ArgumentLocation list : argLocs AsmOperand : retArgument
 ) =>: getProcedureArgumentLocations
-  ## XXX? return location of return pointer or .empty if return by value
   0 =:: mut: intArgs
   0 =:: mut: floatArgs
   0 =:: mut: stackOffset
