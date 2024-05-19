@@ -93,6 +93,7 @@ enum(
   i64 : value
   i64 : stackMemoryInt
   i64 : stackMemoryFloat
+  i64 : stackArgument
   LocalLabel : localLabel
   GlobalLabel : globalLabel
 ) =:: AsmOperand
@@ -292,6 +293,8 @@ namespace: asm
             true isPtrOffset =
             break
           value case arg .value sb.appendI break
+          stackArgument case
+            "%stackArg" sb.appendS arg .stackMemoryInt sb.appendI break
           stackMemoryInt case
             "%stackInt" sb.appendS arg .stackMemoryInt sb.appendI break
           stackMemoryFloat case
@@ -332,6 +335,7 @@ end
 enum(
   EMPTY I32 I64 F32 F64 PTR REFERENCE
   BITS32 BITS64 BITS128 BITS128L BITS128H
+  BITSF32 BITSF64 BITSFF128 BITSIF128 BITSFI128 BITSF128L BITSF128H
 ) =:: ValueType
 
 namespace: sb
@@ -349,10 +353,17 @@ namespace: sb
         PTR case "pointer" sb.appendS break
         REFERENCE case "reference" sb.appendS break
         BITS32 case "bits32" sb.appendS break
+        BITSF32 case "bitsF32" sb.appendS break
         BITS64 case "bits64" sb.appendS break
+        BITSF64 case "bitsF64" sb.appendS break
         BITS128 case "bits128" sb.appendS break
+        BITSFF128 case "bitsFF128" sb.appendS break
+        BITSIF128 case "bitsIF128" sb.appendS break
+        BITSFI128 case "bitsFI128" sb.appendS break
         BITS128L case "bits128:L" sb.appendS break
         BITS128H case "bits128:H" sb.appendS break
+        BITSF128L case "bitsF128:L" sb.appendS break
+        BITSF128H case "bitsF128:H" sb.appendS break
       end
     return
   end
@@ -613,7 +624,7 @@ proc(
       ValueType .PTR return
     arrayType struct union enum case
       t typeContext types.sizeOf =:: size
-      size .fixed ?? if
+      size .fixed ?? if ## TODO detect floats
         size .fixed 4 <= if
           ValueType .BITS32 return
         else size .fixed 8 <= _if
@@ -663,7 +674,7 @@ proc(
   return
 end
 
-3 =:: MAX_VALUE_REGISTERS
+2 =:: MAX_VALUE_REGISTERS
 ## XXX? make maximum number of slots a program wide constant
 struct(
   Register MAX_VALUE_REGISTERS array : registers
@@ -1092,34 +1103,6 @@ proc(
 end
 
 proc(
-  FilePosition : pos
-  CompilerContext ptr mut : context
--> ) =>: dropValue
-  context [] .stackValues branchTree.depth 1 < if
-    "stack underflow" sb.wrap
-    pos context [] .program [] .errors @ appendError
-    return
-  end
-  context [] .stackValues @ branchTree.pop .data [] .valType =:: valType
-  valType switch
-    EMPTY case return
-    ## XXX? allow storing parts of BITS... values in float registers
-    BITS128 case
-      StackRegisterType .INT pos context dropRegister
-      StackRegisterType .INT pos context dropRegister
-      return
-    I32 I64 PTR REFERENCE BITS32 BITS64
-        BITS128L BITS128H case
-      StackRegisterType .INT pos context dropRegister
-      return
-    F64 F32 case
-      StackRegisterType .FLOAT pos context dropRegister
-      return
-  end
-end
-
-## XXX use val-type to registers in other value to stack procedures
-proc(
   ValueType : valType
 -> StackRegisterType MAX_VALUE_REGISTERS array i8 ) =>: valTypeToStackRegisters
   StackRegisterType MAX_VALUE_REGISTERS array new =:: mut: registers
@@ -1129,15 +1112,44 @@ proc(
       StackRegisterType .INT registers @ 0 [] =
       StackRegisterType .INT registers @ 1 [] =
       registers 2:i8 return
-    I32 BITS32 I64 PTR REFERENCE BITS64
-        BITS128L BITS128H case
+    BITSFF128 case
+      StackRegisterType .FLOAT registers @ 0 [] =
+      StackRegisterType .FLOAT registers @ 1 [] =
+      registers 2:i8 return
+    BITSFI128 case
+      StackRegisterType .FLOAT registers @ 0 [] =
+      StackRegisterType .INT registers @ 1 [] =
+      registers 2:i8 return
+    BITSIF128 case
+      StackRegisterType .INT registers @ 0 [] =
+      StackRegisterType .FLOAT registers @ 1 [] =
+      registers 2:i8 return
+    I32 BITS32 I64 PTR REFERENCE BITS64 BITS128L BITS128H case
       StackRegisterType .INT registers @ 0 [] =
       registers 1:i8 return
-    F32 F64 case
+    F32 F64 BITSF32 BITSF64 BITSF128L BITSF128H case
       StackRegisterType .FLOAT registers @ 0 [] =
       registers 1:i8 return
   end
 end
+
+proc(
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ) =>: dropValue
+  context [] .stackValues branchTree.depth 1 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    return
+  end
+  context [] .stackValues @ branchTree.pop .data [] .valType =:: valType
+  valType valTypeToStackRegisters =:: regCount =:: regTypes
+  0 while ..dup regCount < do =:: i
+    regTypes @ i [] pos context dropRegister
+    i 1 +
+  end ..drop
+end
+
 
 proc(
   AssemblyAtom list : asmOps
@@ -1215,7 +1227,7 @@ proc(
   target .registers =:: registers
   valType switch
     EMPTY case asmOps return
-    BITS128 case
+    BITS128 BITSFF128 BITSIF128 BITSFI128 case
       target .registerCount 2 == assert "correct register count"
       asmOps
         registers @ 0 [] .id src .id != if
@@ -1239,17 +1251,9 @@ proc(
           asm.createBinary AssemblyAtom .op list.append
         end
       return
-    I32 I64 PTR REFERENCE BITS32 BITS64
-        BITS128L BITS128H case
-      target .registerCount 1 == assert "correct register count"
-      asmOps
-        ## asm.createBinary
-          X64_OP .MOV
-          registers @ 0 [] AsmOperand .register
-          src AsmOperand .registerPtr
-        asm.createBinary AssemblyAtom .op list.append
-      return
-    F32 F64 case
+    I32 I64 F32 F64 PTR REFERENCE
+        BITS32 BITS64 BITS128L BITS128H
+        BITSF32 BITSF64 BITSF128L BITSF128H case
       target .registerCount 1 == assert "correct register count"
       asmOps
         ## asm.createBinary
@@ -1273,7 +1277,7 @@ proc(
   valType switch
     EMPTY case
       src .registerCount 0 == assert "correct register count" asmOps return
-    BITS128 case
+    BITS128 BITSFF128 BITSIF128 BITSFI128 case
       src .registerCount 2 == assert "correct register count"
       asmOps
         ## asm.createBinary
@@ -1288,17 +1292,9 @@ proc(
           registers @ 1 [] AsmOperand .register
         asm.createTrinary AssemblyAtom .op list.append
       return
-    I32 I64 PTR REFERENCE BITS32 BITS64
-        BITS128L BITS128H case
-      src .registerCount 1 == assert "correct register count"
-      asmOps
-        ## asm.createBinary
-          X64_OP .MOV
-          target AsmOperand .registerPtr
-          registers @ 0 [] AsmOperand .register
-        asm.createBinary AssemblyAtom .op list.append
-      return
-    F32 F64 case
+    I32 I64 F32 F64 PTR REFERENCE
+        BITS32 BITS64 BITS128L BITS128H
+        BITSF32 BITSF64 BITSF128L BITSF128H case
       src .registerCount 1 == assert "correct register count"
       asmOps
         ## asm.createBinary
@@ -1309,6 +1305,7 @@ proc(
       return
   end
 end
+
 
 proc(
   AssemblyAtom list : asmOps
