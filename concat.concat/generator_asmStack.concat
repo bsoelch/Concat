@@ -306,8 +306,7 @@ end
 
 enum(
   EMPTY I32 I64 F32 F64 PTR REFERENCE
-  BITS32 BITS64 BITS128 BITS192
-  BITS128L BITS128H BITS192L BITS192M BITS192H
+  BITS32 BITS64 BITS128 BITS128L BITS128H
 ) =:: ValueType
 
 namespace: sb
@@ -329,10 +328,6 @@ namespace: sb
         BITS128 case "bits128" sb.appendS break
         BITS128L case "bits128:L" sb.appendS break
         BITS128H case "bits128:H" sb.appendS break
-        BITS192 case "bits192" sb.appendS break
-        BITS192L case "bits192:L" sb.appendS break
-        BITS192M case "bits192:M" sb.appendS break
-        BITS192H case "bits192:H" sb.appendS break
       end
     return
   end
@@ -603,8 +598,6 @@ proc(
           ValueType .BITS64 return
         else size .fixed 16 <= _if
           ValueType .BITS128 return
-        else size .fixed 24 <= _if
-          ValueType .BITS192 return
         end
       end
       ValueType .REFERENCE return
@@ -1093,13 +1086,8 @@ proc(
       StackRegisterType .INT pos context dropRegister
       StackRegisterType .INT pos context dropRegister
       return
-    BITS192 case
-      StackRegisterType .INT pos context dropRegister
-      StackRegisterType .INT pos context dropRegister
-      StackRegisterType .INT pos context dropRegister
-      return
     I32 I64 PTR REFERENCE BITS32 BITS64
-        BITS128L BITS128H BITS192L BITS192M BITS192H case
+        BITS128L BITS128H case
       StackRegisterType .INT pos context dropRegister
       return
     F64 F32 case
@@ -1119,13 +1107,8 @@ proc(
       StackRegisterType .INT registers @ 0 [] =
       StackRegisterType .INT registers @ 1 [] =
       registers 2:i8 return
-    BITS192 case
-      StackRegisterType .INT registers @ 0 [] =
-      StackRegisterType .INT registers @ 1 [] =
-      StackRegisterType .INT registers @ 2 [] =
-      registers 3:i8 return
     I32 BITS32 I64 PTR REFERENCE BITS64
-        BITS128L BITS128H BITS192L BITS192M BITS192H case
+        BITS128L BITS128H case
       StackRegisterType .INT registers @ 0 [] =
       registers 1:i8 return
     F32 F64 case
@@ -1234,47 +1217,8 @@ proc(
           asm.createBinary AssemblyAtom .op list.append
         end
       return
-    BITS192 case
-      target .registerCount 3 == assert "correct register count"
-      asmOps
-        registers @ 0 [] src != if
-          ## asm.createTrinary
-            X64_OP .MOV
-            registers @ 0 [] AsmOperand .register
-            src AsmOperand .registerPtr
-          asm.createBinary AssemblyAtom .op list.append
-        end ## no else
-        registers @ 1 [] src != if
-          ## asm.createTrinary
-            X64_OP .MOV
-            registers @ 1 [] AsmOperand .register
-            src AsmOperand .registerPtrOffset
-            8 AsmOperand .value
-          asm.createTrinary AssemblyAtom .op list.append
-        end
-        ## asm.createTrinary
-          X64_OP .MOV
-          registers @ 2 [] AsmOperand .register
-          src AsmOperand .registerPtrOffset
-          16 AsmOperand .value
-        asm.createTrinary AssemblyAtom .op list.append
-        registers @ 0 [] src == if
-          ## asm.createTrinary
-            X64_OP .MOV
-            registers @ 0 [] AsmOperand .register
-            src AsmOperand .registerPtr
-          asm.createBinary AssemblyAtom .op list.append
-        else registers @ 1 [] src == _if
-          ## asm.createTrinary
-            X64_OP .MOV
-            registers @ 1 [] AsmOperand .register
-            src AsmOperand .registerPtrOffset
-            8 AsmOperand .value
-          asm.createTrinary AssemblyAtom .op list.append
-        end
-      return
     I32 I64 PTR REFERENCE BITS32 BITS64
-        BITS128L BITS128H BITS192L BITS192M BITS192H case
+        BITS128L BITS128H case
       target .registerCount 1 == assert "correct register count"
       asmOps
         ## asm.createBinary
@@ -1322,29 +1266,8 @@ proc(
           registers @ 1 [] AsmOperand .register
         asm.createTrinary AssemblyAtom .op list.append
       return
-    BITS192 case
-      src .registerCount 3 == assert "correct register count"
-      asmOps
-        ## asm.createBinary
-          X64_OP .MOV
-          target AsmOperand .registerPtr
-          registers @ 0 [] AsmOperand .register
-        asm.createBinary AssemblyAtom .op list.append
-        ## asm.createTrinary
-          X64_OP .MOV
-          target AsmOperand .registerPtrOffset
-          8 AsmOperand .value
-          registers @ 1 [] AsmOperand .register
-        asm.createTrinary AssemblyAtom .op list.append
-        ## asm.createTrinary
-          X64_OP .MOV
-          target AsmOperand .registerPtrOffset
-          16 AsmOperand .value
-          registers @ 2 [] AsmOperand .register
-        asm.createTrinary AssemblyAtom .op list.append
-      return
     I32 I64 PTR REFERENCE BITS32 BITS64
-        BITS128L BITS128H BITS192L BITS192M BITS192H case
+        BITS128L BITS128H case
       src .registerCount 1 == assert "correct register count"
       asmOps
         ## asm.createBinary
