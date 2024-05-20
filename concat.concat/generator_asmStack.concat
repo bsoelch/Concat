@@ -28,6 +28,7 @@ enum(
   ALLOC
   COPY
 ) =:: X64_OP
+## TODO remember operand size [I8,I16,I32,I64,I128,F16,F32,F64,F128]
 
 struct(
   i8 : id
@@ -678,15 +679,40 @@ proc(
   constType typeContext toValueType =:: valType
   asmOps
     valType pos context preparePushValue =:: valueRegister
-    value .int ?? if
-      ## XXX ensure value has correct size
-      valueRegister .registerCount 1 == assert "correct register-count for value"
-      ## asm.createBinary
-        X64_OP .MOV
-        valueRegister .registers @ 0 [] AsmOperand .register
-        value .int AsmOperand .value
-      asm.createBinary AssemblyAtom .op list.append
-      return
+    value switch
+      boolean case
+        valueRegister .registerCount 1 == assert "correct register-count for value"
+        ## asm.createBinary
+          X64_OP .MOV
+          valueRegister .registers @ 0 [] AsmOperand .register
+          value .boolean if 1 else 0 end AsmOperand .value
+        asm.createBinary AssemblyAtom .op list.append
+        return
+      chr case
+        valueRegister .registerCount 1 == assert "correct register-count for value"
+        ## asm.createBinary
+          X64_OP .MOV
+          valueRegister .registers @ 0 [] AsmOperand .register
+          value .chr 0xff & AsmOperand .value
+        asm.createBinary AssemblyAtom .op list.append
+        return
+      int case
+        ## XXX ensure value has correct size
+        valueRegister .registerCount 1 == assert "correct register-count for value"
+        ## asm.createBinary
+          X64_OP .MOV
+          valueRegister .registers @ 0 [] AsmOperand .register
+          value .int AsmOperand .value
+        asm.createBinary AssemblyAtom .op list.append
+        return
+      Float case break ## TODO float,string&composite constants
+      str case break
+      arrayConstant case break
+      genericArg case break
+      union case break
+      none wildCard typeId enumLabel
+          procedure procedureBundle case
+        break
     end
     "unsupported constant " sb.wrap
       value constContext typeContext sb.appendConstant
