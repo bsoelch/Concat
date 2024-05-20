@@ -112,10 +112,6 @@ proc( Type FilePosition -> Constant ) =>: newTypeConst
   types.primitive.TYPE ..swap ConstValue .typeId IdentifierInfo optional.empty pos Constant new return
 end
 
-proc( Type i32 FilePosition -> Constant ) =>: newEnumConstant
-  =:: pos
-  ConstValue .enumLabel IdentifierInfo optional.empty pos Constant new return
-end
 proc( f64 : value bool : isF32 FilePosition : pos -> Constant ) =>: newFloatConst
   ## Constant
     isF32 if
