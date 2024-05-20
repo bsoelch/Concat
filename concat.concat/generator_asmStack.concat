@@ -9,13 +9,14 @@ import "program.concat"
 import "measure.concat"
 import "branchTree.concat"
 
-## XXX? change intermediate assembly to simplified version of X64 syntax
-##  * only one move, choose correct move instruction depending on argument types
-##  * make assembly representation (more or less) platform independent between AMD64 and aarch64
+#+
+The assembly syntax is primarily inspired by x86-64 with a few instructions/ideas taken from AArch64.
+The goal is to have a higher level intermediate assembly language that can easily concertized&optimized for output to both ADM64 and AArch64 assembly ( with possible RISC-V as additional target )
++#
 enum(
-  ## x86-64 inspired instructions
   MOV MOVZX MOVSX LEA PUSH POP
-  NEG ADD SUB MUL IMUL DIV IDIV
+  NEG ADD SUB MUL SMUL DIV SDIV REM SREM
+  DIV_REM SDIV_REM ## merged instructions
   NOT AND OR XOR
   SHL SHR SAR
   CMP TEST
@@ -249,9 +250,13 @@ namespace: asm
         ADD case "add " sb.appendS break
         SUB case "sub " sb.appendS break
         MUL case "mul " sb.appendS break
-        IMUL case "imul " sb.appendS break
+        SMUL case "smul " sb.appendS break
         DIV case "div " sb.appendS break
-        IDIV case "idiv " sb.appendS break
+        SDIV case "sdiv " sb.appendS break
+        REM case "rem " sb.appendS break
+        SREM case "srem " sb.appendS break
+        DIV_REM case "divRem " sb.appendS break
+        SDIV_REM case "sdivRem " sb.appendS break
         NOT case "not " sb.appendS break
         AND case "and " sb.appendS break
         OR  case "or " sb.appendS break
@@ -1598,12 +1603,18 @@ proc(
     SUB_F32 SUB_F64 case break
     PTR_DIFF case break
     MUL_I32 MUL_I64 case
-      asmOps X64_OP .IMUL pos context appendBinaryOperator return
+      asmOps X64_OP .SMUL pos context appendBinaryOperator return
     MUL_F32 MUL_F64 case break
-    DIV_I32 case break ## XXX special handling for div/mod
-    DIV_I64 case break
+    DIV_I32 DIV_I64 case
+      asmOps X64_OP .SDIV pos context appendBinaryOperator return
     DIV_F32 DIV_F64 case break
-    REM_I32 REM_I64 UDIV_I32 UDIV_I64 UMOD_I32 UMOD_I64 NOT_BOOL case break
+    REM_I32 REM_I64 case
+      asmOps X64_OP .SREM pos context appendBinaryOperator return
+    UDIV_I32 UDIV_I64 case
+      asmOps X64_OP .DIV pos context appendBinaryOperator return
+    UMOD_I32 UMOD_I64 case
+      asmOps X64_OP .REM pos context appendBinaryOperator return
+    NOT_BOOL case break
     FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
       asmOps X64_OP .NEG pos context appendUnaryOperator return
     AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
