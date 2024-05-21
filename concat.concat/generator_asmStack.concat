@@ -704,13 +704,62 @@ proc(
       int case
         ## XXX ensure value has correct size
         valueRegister .registerCount 1 == assert "correct register-count for value"
+        constType typeContext types.isPointer if
+          ## treat pointer constants as integers of type iPtr
+          types.primitive.I_PTR
+        else
+          constType typeContext types.unwrapNamed
+          ..dup .arrayIndex ?? if ..drop
+            types.primitive.I_SIZE
+          end
+        end =:: numType
+        numType types.isPrimitive ! if
+          "unexpected type for integer: " sb.wrap
+            constType typeContext sb.appendType
+            " number-type: " sb.appendS
+            numType typeContext sb.appendType
+          pos errors appendError
+          return
+        end
+        numType typeContext types.primitiveValue switch
+          I8  S8  U8  case value .int i8  cast break
+          I16 S16 U16 case value .int i16 cast break
+          I32 S32 U32 case value .int i32 cast break
+          I64 S64 U64 case value .int break
+          F32 case value .int f32 cast f32.bits break
+          F64 case value .int f64 cast f64.bits break
+          BOOL TYPE case
+            "unexpected type for integer: " sb.wrap
+              constType typeContext sb.appendType
+            pos errors appendError
+            return
+        end =:: intValue
         ## asm.createBinary
           X64_OP .MOV
           valueRegister .registers @ 0 [] AsmOperand .register
-          value .int AsmOperand .value
+          intValue AsmOperand .value
         asm.createBinary AssemblyAtom .op list.append
         return
-      Float case break ## TODO float,string&composite constants
+      Float case
+        constType typeContext types.unwrapNamed =:: numType
+        numType types.primitive.F32 types.typeEquals if
+          value .Float f32 cast f32.bits
+        else numType types.primitive.F64 types.typeEquals _if
+          value .Float f64.bits
+        else
+          "unexpected type for float: " sb.wrap
+            constType typeContext sb.appendType
+            " number-type: " sb.appendS
+            numType typeContext sb.appendType
+          pos errors appendError
+          return
+        end =:: floatBits
+        ## asm.createBinary
+          X64_OP .MOV
+          valueRegister .registers @ 0 [] AsmOperand .register
+          floatBits AsmOperand .value
+        asm.createBinary AssemblyAtom .op list.append
+        return
       str case break
       arrayConstant case break
       genericArg case break
