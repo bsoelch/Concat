@@ -722,11 +722,11 @@ proc(
           return
         end
         numType typeContext types.primitiveValue switch
-          I8  S8  U8  case value .int i8  cast break
-          I16 S16 U16 case value .int i16 cast break
-          I32 S32 U32 case value .int i32 cast break
+          I8  S8  U8  case value .int u8  cast break
+          I16 S16 U16 case value .int u16 cast break
+          I32 S32 U32 case value .int u32 cast break
           I64 S64 U64 case value .int break
-          F32 case value .int f32 cast f32.bits break
+          F32 case value .int f32 cast f32.bits u32 cast break
           F64 case value .int f64 cast f64.bits break
           BOOL TYPE case
             "unexpected type for integer: " sb.wrap
@@ -743,7 +743,7 @@ proc(
       Float case
         constType typeContext types.unwrapNamed =:: numType
         numType types.primitive.F32 types.typeEquals if
-          value .Float f32 cast f32.bits
+          value .Float f32 cast f32.bits u32 cast
         else numType types.primitive.F64 types.typeEquals _if
           value .Float f64.bits
         else
