@@ -2576,12 +2576,21 @@ proc(
       context [] .tmpRegistersInt .registers @ 0 [] =:: tmpRegister
       asmOps
         ## TODO make return value handling dependent on calling convention
-        op [] .pos context popValue =:: retData =:: retValType
-        retValType retType typeContext toValueType != if
-          "stack out of sync" sb.wrap
-          op [] .pos errors appendError
-          return
-        end
+        retType .empty ?? ! if
+          op [] .pos context popValue
+            =:: retData
+          retType typeContext toValueType != if
+            "stack out of sync" sb.wrap
+            op [] .pos errors appendError
+            return
+          end
+          retData
+        else
+          ## RegisterValue
+            Register MAX_VALUE_REGISTERS array new
+            0:i8
+          RegisterValue new
+        end =:: retData
         outArgs .length 1 - while ..dup 0 >= do =:: i
           context [] .stackValues @ branchTree.pop .data [] =:: stackValue
           outArgs i array.get =:: argType
@@ -2633,33 +2642,35 @@ proc(
           i 1 -
         end ..drop
         ## TODO make handling of return values dependent on calling convention
-        retType typeContext types.isSmallType if
-          ## asm.createBinary
-            X64_OP .MOV
-            Register.x64.rax AsmOperand .register
-            retData .registers @ 0 [] AsmOperand .register
-          asm.createBinary AssemblyAtom .op list.append
-          retData .registerCount 1 > if
+        retType .empty ?? ! if
+          retType typeContext types.isSmallType if
             ## asm.createBinary
               X64_OP .MOV
-              Register.x64.rdx AsmOperand .register
-              retData .registers @ 1 [] AsmOperand .register
+              Register.x64.rax AsmOperand .register
+              retData .registers @ 0 [] AsmOperand .register
             asm.createBinary AssemblyAtom .op list.append
+            retData .registerCount 1 > if
+              ## asm.createBinary
+                X64_OP .MOV
+                Register.x64.rdx AsmOperand .register
+                retData .registers @ 1 [] AsmOperand .register
+              asm.createBinary AssemblyAtom .op list.append
+            end
+            ## XXX handle float return values
+          else
+            ## asm.createBinary
+              X64_OP .MOV
+              Register.x64.rax AsmOperand .register
+              outArgs .length AsmOperand .outputArgument
+            asm.createBinary AssemblyAtom .op list.append
+            ## XXX? ensure fixed size
+            ## asm.createTrinary
+              X64_OP .COPY
+              Register.x64.rax AsmOperand .register
+              retData .registers @ 0 [] AsmOperand .register
+              retType typeContext types.sizeOf .fixed AsmOperand .value
+            asm.createTrinary AssemblyAtom .op list.append
           end
-          ## XXX handle float return values
-        else
-          ## asm.createBinary
-            X64_OP .MOV
-            Register.x64.rax AsmOperand .register
-            outArgs .length AsmOperand .outputArgument
-          asm.createBinary AssemblyAtom .op list.append
-          ## XXX? ensure fixed size
-          ## asm.createTrinary
-            X64_OP .COPY
-            Register.x64.rax AsmOperand .register
-            retData .registers @ 0 [] AsmOperand .register
-            retType typeContext types.sizeOf .fixed AsmOperand .value
-          asm.createTrinary AssemblyAtom .op list.append
         end
         ## TODO make stack frame depend on calling convention
         ## asm.createBinary
