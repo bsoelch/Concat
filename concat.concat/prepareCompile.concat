@@ -204,7 +204,8 @@ proc(
       op .val .block .blockType switch
         IF IFIF ELSE SWITCH CASE
         DEFAULT BREAK_SWITCH WHILE
-        DO BREAK CONTINUE case
+        DO BREAK CONTINUE
+        AND OR AND_IF OR_IF AND_DO OR_DO case
           newOps
             op list.append ## nothing to change
           return
@@ -218,7 +219,7 @@ proc(
           newOps
             op list.append ## nothing to change
           return
-        ELSE IFIF
+        ELSE IFIF AND OR AND_IF OR_IF AND_DO OR_DO
         SWITCH WHILE UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE case
           newOps
             op list.append

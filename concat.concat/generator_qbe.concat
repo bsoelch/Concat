@@ -3616,6 +3616,7 @@ proc(
             ifBlock [] .If .ififBranchIds =
             ifBranch context startBranch
           return
+        AND_IF OR_IF case break ## TODO and-if
         ELSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
@@ -3824,6 +3825,7 @@ proc(
             whileBlock [] .breakBranchIds =
             doBranch context startBranch
           return
+        AND_DO OR_DO case break ## TODO and-do
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
@@ -3869,8 +3871,9 @@ proc(
             '\n' sb.appendC
             false context [] .reachable =
           return
-        UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        PROCEDURE EXPERIMENTAL_PROCEDURE AND OR INITIALIZER NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
       end
@@ -4078,8 +4081,10 @@ proc(
           breakBranches list.free ..drop
           whileBlock .breakBranchIds list.free ..drop
           newSb return
-        UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
+        AND OR AND_IF OR_IF AND_DO OR_DO INITIALIZER NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
       end

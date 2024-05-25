@@ -2341,6 +2341,7 @@ proc(
             ifBlock [] .If .ififBranches =
           return
           break
+        AND_IF OR_IF case break
         ELSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context [] .stackValues @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
@@ -2515,6 +2516,7 @@ proc(
               LocalLabel new AsmOperand .localLabel
             asm.createUnary AssemblyAtom .op list.append
           return
+        AND_DO OR_DO case break
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
@@ -2565,8 +2567,9 @@ proc(
             asm.createUnary AssemblyAtom .op list.append
             false context [] .reachable =
           return
-        UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        AND OR PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
       end
@@ -2783,8 +2786,11 @@ proc(
             breakStackRegs list.free ..drop
             breakCodeOffsets list.free ..drop
           return
-        UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        UNKNOWN INITIALIZER NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break
       end

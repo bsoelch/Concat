@@ -2866,11 +2866,9 @@ proc(
           currentBlock [] .While .breakBranches =
           op state appendOp ..drop
           return
-        PROCEDURE
-        EXPERIMENTAL_PROCEDURE
-        UNKNOWN
-        NAMESPACE
-        BREAK_SWITCH case
+        AND OR AND_IF OR_IF AND_DO OR_DO case break
+        PROCEDURE EXPERIMENTAL_PROCEDURE BREAK_SWITCH
+        UNKNOWN NAMESPACE case
           break
       end
       break
@@ -3288,11 +3286,9 @@ proc(
           return
         WHILE case ## end-while should not be created by parser
           break
-        BREAK
-        CONTINUE
-        UNKNOWN
-        NAMESPACE
-        BREAK_SWITCH case
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        BREAK CONTINUE BREAK_SWITCH
+        UNKNOWN NAMESPACE case
           break
       end
       break

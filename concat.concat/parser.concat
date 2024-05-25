@@ -32,6 +32,7 @@ struct(
   string : mut: libPath
   ProgramContext ptr mut : progContext
   BlockInfo list : mut: openBlocks
+  i64 list : mut: andOrPositions
   Operation list : mut: globalOpBuffer
   Constant list : mut: constants
   i64 : mut: constOffset
@@ -134,7 +135,7 @@ proc( ParserState ptr mut : state -> i64 ) =>: opCount
   state [] .currentProc optional.isEmpty if
     state [] .globalOpBuffer .length return
   else
-    progContext [] .progFiles state [] .currentFile list.at .data [] .localOps .length return
+    progContext [] .tmpOps .length return
   end
 end
 proc( ParserState ptr mut : state -> Operation list ptr mut ) =>: currentOps
@@ -202,6 +203,8 @@ proc( Operation ptr optional : next? ParserState ptr mut : state -> ) =>: resetG
   interpreter [] .context @ InterpreterType .PARSER interpreter.resetContext
 end
 proc( ParserState ptr mut : state -> ) =>: tryInterpretGlobal
+  ## TODO only interpret code after start of current block
+  ##   preserve positions of unclosed code-blocks
   state [] .progContext =:: progContext
   state [] .currentProc optional.hasData if
     return ## don't interpret inside procedure
@@ -506,6 +509,40 @@ proc(
     end
   end
   closed false return
+end
+
+proc( BlockType : mergeWith FilePosition : pos ParserState ptr mut : state -> ) =>: convertAndOrBlock
+  state [] .progContext =:: progContext
+  state [] .andOrPositions =:: andOrPositions
+  0 while ..dup andOrPositions .length < do =:: i
+    andOrPositions i list.get =:: opPos
+    opPos 0 <  opPos state currentOps [] .length >= | if
+      "operations and blocks are out of sync, could not determine position of and/or" sb.wrap
+      pos state appendError2
+      return
+    end
+    state currentOps [] opPos list.at .data =:: opData
+    opData [] .val .block ?? ! if
+      "operations and blocks are out of sync, expected and/or got " sb.wrap
+        opData [] progContext sb.appendOp
+      pos state appendError2
+      return
+    end
+    ## opBlock
+      opData [] .val .block .blockType switch
+        AND case mergeWith .DO ?? if BlockType .AND_DO else BlockType .AND_IF end break
+        OR case mergeWith .DO ?? if BlockType .OR_DO else BlockType .OR_IF end break
+        default
+          "operations and blocks are out of sync, expected and/or got " sb.wrap
+            opData [] .val .block .blockType sb.appendBlockType
+          pos state appendError2
+        return
+      end
+      opData [] .pos
+    opBlock opData [] =
+    i 1 +
+  end ..drop
+  andOrPositions list.clear state [] .andOrPositions =
 end
 
 proc( string : code FileState ptr mut : fileState  ParserState ptr mut : state -> string string ) =>: nextWord
@@ -1429,11 +1466,40 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
       end
     else ..dup "if" string.wrap string.eq _if ..drop
+      state currentBlockType =:: currentBlock
+      currentBlock .AND ?? currentBlock .OR ?? | if
+        state closeBlock ! assert "correctly closed block"
+        .blockType currentBlock == assert "closed block matches current block"
+        BlockType .IF fileState [] .wordStart state convertAndOrBlock
+      end
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
       BlockType .IF  state openBlockScope
       return
+    else ..dup "and" string.wrap string.eq
+         ..over "or" string.wrap string.eq | _if =:: opName
+      opName "or" string.wrap string.eq =:: isOr
+      isOr if BlockType .OR else BlockType .AND end =:: blockType
+      state currentBlockType =:: outerBlock
+      outerBlock .AND ?? ! if outerBlock .OR ?? ! _if
+        ## not already within an and-or chain
+        blockType  state openBlockScope
+      end
+      ## remember position to allow changing block-type when merging with if/do
+      state [] .andOrPositions
+        state opCount list.append
+      state [] .andOrPositions =
+      blockType  fileState [] .wordStart opBlock  state appendOp
+      ## TODO automatically merge and-or-block with if, _if and do
+      return
     else ..dup "_if" string.wrap string.eq _if ..drop
-      state currentBlockType =:: currentType
+      state currentBlockType
+        ..dup .AND ?? ..over .OR ?? | if
+          state closeBlock ! assert "correctly closed block"
+          .blockType == assert "closed block matches current block"
+          BlockType .IF fileState [] .wordStart state convertAndOrBlock
+          state currentBlockType ## get new enclosing block
+        end
+      =:: currentType
       currentType .IF ?? ! currentType .ELSE ?? ! & currentType .IFIF ?? ! & if
         "'_if' is only allowed in if-else-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
@@ -1476,6 +1542,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .WHILE  state openBlockScope
       return
     else ..dup "do" string.wrap string.eq _if ..drop
+      state currentBlockType =:: currentBlock
+      currentBlock .AND ?? currentBlock .OR ?? | if
+        state closeBlock ! assert "correctly closed block"
+        .blockType currentBlock == assert "closed block matches current block"
+        BlockType .DO fileState [] .wordStart state convertAndOrBlock
+      end
       state [] .openBlocks list.peek =:: current?
       current? optional.isEmpty if true else current? .data [] .blockType .WHILE ?? ! end if
         "'do' is only allowed in while-blocks" sb.wrap fileState [] .wordStart state appendError2
@@ -1631,6 +1703,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "{" string.wrap string.eq _if ..drop
       BlockType .INITIALIZER  state openBlockScope
       ##  remember start position, constant offset
+      ## TODO ensure using declaration within initializer block does not invalidate position of operation
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
@@ -1787,7 +1860,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
           break
         TYPE_PROC_OUT case
-          state closeBlock =:: isError .blockType =:: outerType
+          state closeBlock  =:: isError .blockType =:: outerType
           isError ! if outerType .TYPE_PROC_IN ?? _if
             BlockType .TYPE_PROC_IN
               fileState [] .wordStart
@@ -1808,6 +1881,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
         IF IFIF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
+        AND OR AND_IF OR_IF AND_DO OR_DO
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
             opName sb.appendStr
@@ -2063,9 +2137,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         return
     else ..dup  "begin"     string.wrap string.eq
          ..over "defer"     string.wrap string.eq |
-         ..over "and"       string.wrap string.eq |
-         ..over "or"        string.wrap string.eq |
-         ..over "overload"  string.wrap string.eq |
       _if =:: opName
       "`" sb.wrap
         opName sb.appendStr
@@ -2147,6 +2218,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     libPath
     programContext @
     64  BlockInfo               list.create
+    32  i64                     list.create
     128 Operation               list.create
     128 Constant                list.create
     0

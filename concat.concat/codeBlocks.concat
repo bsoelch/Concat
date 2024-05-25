@@ -6,15 +6,21 @@ enum(
   EXPERIMENTAL_PROCEDURE
   IF
   IFIF
+  AND_IF
+  OR_IF
   ELSE
   WHILE
   DO
+  AND_DO
+  OR_DO
   BREAK
   CONTINUE
   SWITCH
   BREAK_SWITCH
   CASE
   DEFAULT
+  AND
+  OR
   INITIALIZER
   TYPE_TUPLE
   TYPE_STRUCT
@@ -70,6 +76,24 @@ namespace: sb
         return
       DEFAULT case
         "default" sb.appendS
+        return
+      AND case
+        "and" sb.appendS
+        return
+      OR case
+        "or" sb.appendS
+        return
+      AND_IF case
+        "and if" sb.appendS
+        return
+      OR_IF case
+        "or if" sb.appendS
+        return
+      AND_DO case
+        "and do" sb.appendS
+        return
+      OR_DO case
+        "or do" sb.appendS
         return
       INITIALIZER case
         "{initializer}" sb.appendS

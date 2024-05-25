@@ -65,6 +65,8 @@
           switch          |
           case            |
           default         |
+          and             |
+          or              |
           return          |
           namespace\:     |
           end             |

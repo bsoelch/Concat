@@ -93,7 +93,9 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
       PROCEDURE EXPERIMENTAL_PROCEDURE case
         ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT NAMESPACE case break
+       SWITCH BREAK_SWITCH CASE DEFAULT
+       AND OR AND_IF OR_IF AND_DO OR_DO
+       NAMESPACE case break
     end
     1 -
   end ..drop
@@ -110,7 +112,9 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inInitializer
        PROCEDURE EXPERIMENTAL_PROCEDURE case
          ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT NAMESPACE case break
+       SWITCH BREAK_SWITCH CASE DEFAULT
+       AND OR AND_IF OR_IF AND_DO OR_DO
+       NAMESPACE case break
     end
     1 -
   end ..drop
@@ -716,31 +720,16 @@ proc(
       true return
     block case
       op [] .val .block .blockType switch
-        TYPE_TUPLE
-        TYPE_STRUCT
-        TYPE_ENUM
-        TYPE_UNION
-        TYPE_PROC_IN
-        TYPE_PROC_OUT
-        TYPE_COMPOSITE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         INITIALIZER case
           op [] .val .block .blockType context openBlock
           false return
-        PROCEDURE
-        EXPERIMENTAL_PROCEDURE
-        IF
-        IFIF
-        ELSE
-        WHILE
-        DO
-        BREAK
-        CONTINUE
-        SWITCH
-        BREAK_SWITCH
-        CASE
-        DEFAULT
-        UNKNOWN
-        NAMESPACE case
+        PROCEDURE EXPERIMENTAL_PROCEDURE
+        IF IFIF ELSE WHILE DO BREAK CONTINUE
+        SWITCH BREAK_SWITCH CASE DEFAULT
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        UNKNOWN NAMESPACE case
           context [] .evalType switch
             INTERPRET GLOBAL case break
             PARSER FOLD_LOCAL case true return
@@ -923,19 +912,10 @@ proc(
             op [] .pos
           context pushValue
           false return
-        IF
-        IFIF
-        ELSE
-        WHILE
-        DO
-        BREAK
-        BREAK_SWITCH
-        CONTINUE
-        SWITCH
-        CASE
-        DEFAULT
-        UNKNOWN
-        NAMESPACE case
+        IF IFIF ELSE WHILE DO BREAK CONTINUE
+        SWITCH CASE BREAK_SWITCH DEFAULT
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        UNKNOWN NAMESPACE case
           context [] .evalType switch
             INTERPRET GLOBAL case break
             PARSER FOLD_LOCAL case true return
