@@ -2285,6 +2285,7 @@ proc(
     argc getArg case break
     block case
       op [] .val .block .blockType switch
+        ## TODO implement and/or
         IF case
           asmOps
             ## TODO debug position

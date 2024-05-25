@@ -29,8 +29,10 @@ enum(
   DEFAULT
   END_SWITCH
   WHILE
+  DO
   CONTINUE_WHILE
   END_WHILE
+  END_AND_OR
 ) =:: BranchType
 struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
@@ -53,12 +55,15 @@ struct(
 ) =:: LocalConst
 
 struct(
-  branchTree.NodeId list : mut: ififBranches
-  BranchId list : mut: ififBranchIds
+  branchTree.NodeId list : mut: andBranches
+  BranchId list : mut: andBranchIds
+  branchTree.NodeId list : mut: orBranches
+  BranchId list : mut: orBranchIds
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut: ifBranch
   BranchId : mut: ifBranchId
   i32 : blockId
+  bool : mut: hasIf
   bool : mut: ifBranchTerminates
 ) =:: IfBlockInfo
 struct(
@@ -72,15 +77,23 @@ struct(
   BranchId list : mut: continueBranchIds
   branchTree.NodeId list : mut: breakBranches
   BranchId list : mut: breakBranchIds
+  branchTree.NodeId list : mut: doBranches
+  BranchId list : mut: doBranchIds
   i64 : loopValOffset
   branchTree.NodeId : branchRoot
   i32 : blockId
 ) =:: WhileBlockInfo
+struct(
+  branchTree.NodeId list : mut: branches
+  BranchId list : mut: branchIds
+  i32 : blockId
+) =:: AndOrBlockInfo
 
 enum(
   IfBlockInfo : mut: If
   SwitchBlockInfo : mut: Switch
   WhileBlockInfo : mut: While
+  AndOrBlockInfo : mut: AndOr
 ) =:: BlockInfo
 
 namespace: sb
@@ -89,6 +102,7 @@ namespace: sb
       If case "if-else block" sb.appendS return
       Switch case "switch-case block" sb.appendS return
       While case "while block" sb.appendS return
+      AndOr case "and/or block" sb.appendS return
     end
   end
 end
@@ -184,8 +198,10 @@ namespace: sb
         DEFAULT case "@default" sb.appendS branch .id sb.appendI break
         END_SWITCH case "@endSwitch_" sb.appendS branch .id sb.appendI break
         WHILE case "@while_" sb.appendS branch .id sb.appendI break
+        DO case "@do_" sb.appendS branch .id sb.appendI break
         CONTINUE_WHILE case "@continueWhile_" sb.appendS branch .id sb.appendI break
         END_WHILE case "@endWhile_" sb.appendS branch .id sb.appendI break
+        END_AND_OR case "@endAndOr_" sb.appendS branch .id sb.appendI break
       end
     return
   end
@@ -445,13 +461,14 @@ proc(
 -> ) =>: openIfBlock
   ## IfBlockInfo
     8 branchTree.NodeId list.create
-      context [] .stackInfo @ branchTree.startBranch list.append
     8 BranchId list.create
-      context [] .currentBranch list.append
+    8 branchTree.NodeId list.create
+    8 BranchId list.create
     context [] .stackInfo @ branchTree.startBranch
     -1
     context [] .currentBranch
     blockId
+    false
     false
   IfBlockInfo new BlockInfo .If context openBlock
 end
@@ -475,6 +492,8 @@ proc(
     16 BranchId list.create
     16 branchTree.NodeId list.create
     16 BranchId list.create
+    16 branchTree.NodeId list.create
+    16 BranchId list.create
     context [] .tmpCount
     context [] .stackInfo @ branchTree.startBranch
     blockId
@@ -482,6 +501,16 @@ proc(
   context [] .tmpCount
     context [] .program [] .whileData blockId list.at .data [] .modifiedTypes +
   context [] .tmpCount =
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openAndOrBlock
+  ## SwitchBlockInfo
+    16 branchTree.NodeId list.create
+    16 BranchId list.create
+    blockId
+  AndOrBlockInfo new BlockInfo .AndOr context openBlock
 end
 
 proc(
@@ -3585,38 +3614,110 @@ proc(
               0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
+          =:: mut: newSb
+          context [] .openBlocks list.peek =:: ifBlock?
+          ifBlock? optional.hasData if
+              ifBlock? .data =:: ifBlock
+              ifBlock [] .If ?? _if
+              ifBlock [] .If .hasIf ! _if
+              ifBlock [] .If@
+          else ## start if block if not already open
             op [] .val .block .blockId context openIfBlock
+            context [] .openBlocks list.peek .data [] .If@
+          end =:: ifBlock
+          true ifBlock [] .hasIf =
+          ifBlock [] .andBranches
+            context [] .stackInfo @ branchTree.startBranch list.append
+          ifBlock [] .andBranches =
+          ifBlock [] .andBranchIds
+            context [] .currentBranch list.append
+          ifBlock [] .andBranchIds =
+          ifBlock [] .orBranches .length 0 > if
+            ifBlock [] .orBranches
+              context [] .stackInfo @ branchTree.startBranch list.append
+            ifBlock [] .orBranches =
+            ifBlock [] .orBranchIds
+              context [] .currentBranch list.append
+            ifBlock [] .orBranchIds =
+            ## mergeValues
+              context [] .stackInfo @
+              ifBlock [] .orBranches list.asArray
+              mergeBranches @
+              ## MergePoint
+                "or-if" string.wrap
+                ifBlock [] .blockId
+                ifBlock [] .orBranchIds list.asArray
+                op [] .pos
+                context
+                newSb @
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge or-if branches" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          newSb
             ifBranch context startBranch
           return
-        IFIF case
-          context [] .openBlocks list.peek .data =:: ifBlock
+        IFIF AND_IF OR_IF case
+          context [] .openBlocks list.peek =:: ifBlock?
+          op [] .val .block .blockType .IFIF ?? if
+            ifBlock? .data [] .If@
+          else ifBlock? optional.hasData _if
+              ifBlock? .data =:: ifBlock
+              ifBlock [] .If ?? _if
+              ifBlock [] .If .hasIf ! _if
+              ifBlock [] .If@
+          else ## start if block if not already open
+            op [] .val .block .blockId context openIfBlock
+            context [] .openBlocks list.peek .data [] .If@
+          end =:: ifBlock
+          op [] .val .block .blockType .OR_IF ?? =:: isOr
           ## appendBranchId
             BranchType .NEXT
             context nextJumpLabelId
             0
-          BranchId new =:: ifBranch
+          BranchId new =:: nextBranch
           sb
             op [] .pos sb.appendPosQBE
             "jnz %s" sb.appendS
             op [] .pos context popValue sb.appendI
             ", " sb.appendS
-            ifBranch sb.appendBranchId
-            ", " sb.appendS
-            ## appendBranchId
-              BranchType .ELSE
-              op [] .val .block .blockId
-              0
-            BranchId new sb.appendBranchId
+            isOr if
+              ## appendBranchId
+                BranchType .IF
+                op [] .val .block .blockId
+                0
+              BranchId new sb.appendBranchId
+              ", " sb.appendS
+            end
+            nextBranch sb.appendBranchId
+            isOr ! if
+              ", " sb.appendS
+              ## appendBranchId
+                BranchType .ELSE
+                op [] .val .block .blockId
+                0
+              BranchId new sb.appendBranchId
+            end
             '\n' sb.appendC
-            ifBlock [] .If .ififBranches
-              context [] .stackInfo @ branchTree.startBranch list.append
-            ifBlock [] .If .ififBranches =
-            ifBlock [] .If .ififBranchIds
-              context [] .currentBranch list.append
-            ifBlock [] .If .ififBranchIds =
-            ifBranch context startBranch
+            isOr if
+              ifBlock [] .orBranches
+                context [] .stackInfo @ branchTree.startBranch list.append
+              ifBlock [] .orBranches =
+              ifBlock [] .orBranchIds
+                context [] .currentBranch list.append
+              ifBlock [] .orBranchIds =
+            else
+              ifBlock [] .andBranches
+                context [] .stackInfo @ branchTree.startBranch list.append
+              ifBlock [] .andBranches =
+              ifBlock [] .andBranchIds
+                context [] .currentBranch list.append
+              ifBlock [] .andBranchIds =
+            end
+            nextBranch context startBranch
           return
-        AND_IF OR_IF case break ## TODO and-if
         ELSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
@@ -3645,23 +3746,22 @@ proc(
             startBranch
             true context [] .reachable =
           =:: mut: newSb
-          ifBlock [] .If .ififBranches .length 1 >= if
-            ## mergeValues
-              context [] .stackInfo @
-              ifBlock [] .If .ififBranches list.asArray
-              mergeBranches @
-              ## MergePoint
-                "if _if" string.wrap
-                ifBlock [] .If .blockId
-                ifBlock [] .If .ififBranchIds list.asArray
-                op [] .pos
-                context
-                newSb @
-              MergePoint new
-            branchTree.merge .error ?? if
-              "could not merge if _if branches" sb.wrap
-              op [] .pos errors appendError
-            end
+          ifBlock [] .If .andBranches .length 1 >= assert "if block has if branch"
+          ## mergeValues
+            context [] .stackInfo @
+            ifBlock [] .If .andBranches list.asArray
+            mergeBranches @
+            ## MergePoint
+              "and-if" string.wrap
+              ifBlock [] .If .blockId
+              ifBlock [] .If .andBranchIds list.asArray
+              op [] .pos
+              context
+              newSb @
+            MergePoint new
+          branchTree.merge .error ?? if
+            "could not merge and-if branches" sb.wrap
+            op [] .pos errors appendError
           end
           newSb return
         SWITCH case
@@ -3764,6 +3864,11 @@ proc(
             context [] .currentBranch =:: prevBranch
             whileData [] .modifiedTypes =:: loopEltCount
             loopEltCount StackElement list.create =:: mut: loopElts
+            context [] .stackInfo branchTree.depth loopEltCount < if
+              "stack underflow" sb.wrap
+              op [] .pos errors appendError
+              sb return
+            end
             0 while ..dup loopEltCount < do 1 +
               loopElts
                 context [] .stackInfo @ branchTree.pop .data list.appendP
@@ -3797,11 +3902,59 @@ proc(
               end ..drop
               loopElts list.free loopElts =
             return
-        DO case
+        AND_DO OR_DO case
           context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          op [] .val .block .blockType .OR_DO ?? =:: isOr
           ## BranchId
             BranchType .NEXT
             context nextJumpLabelId
+            0
+          BranchId new =:: nextBranch
+          sb
+            op [] .pos sb.appendPosQBE
+            "jnz %s" sb.appendS
+            op [] .pos context popValue sb.appendI
+            ", " sb.appendS
+            isOr if
+              ## appendBranchId
+                BranchType .DO
+                op [] .val .block .blockId
+                0
+              BranchId new sb.appendBranchId
+              ", " sb.appendS
+            end
+            nextBranch sb.appendBranchId
+            isOr ! if
+              ", " sb.appendS
+              ## appendBranchId
+                BranchType .END_WHILE
+                op [] .val .block .blockId
+                0
+              BranchId new sb.appendBranchId
+            end
+            '\n' sb.appendC
+            isOr if
+              whileBlock [] .doBranches
+                context [] .stackInfo @ branchTree.startBranch list.append
+              whileBlock [] .doBranches =
+              whileBlock [] .doBranchIds
+                context [] .currentBranch list.append
+              whileBlock [] .doBranchIds =
+            else
+              whileBlock [] .breakBranches
+                context [] .stackInfo @ branchTree.startBranch list.append
+              whileBlock [] .breakBranches =
+              whileBlock [] .breakBranchIds
+                context [] .currentBranch list.append
+              whileBlock [] .breakBranchIds =
+            end
+            nextBranch context startBranch
+          return
+        DO case
+          context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          ## BranchId
+            BranchType .DO
+            op [] .val .block .blockId
             0
           BranchId new =:: doBranch
           sb
@@ -3817,15 +3970,40 @@ proc(
               0
             BranchId new sb.appendBranchId
             '\n' sb.appendC
-            whileBlock [] .breakBranches
+          =:: mut: newSb
+          whileBlock [] .breakBranches
+            context [] .stackInfo @ branchTree.startBranch list.append
+          whileBlock [] .breakBranches =
+          whileBlock [] .breakBranchIds
+            context [] .currentBranch list.append
+          whileBlock [] .breakBranchIds =
+          whileBlock [] .doBranches .length 0 > if
+            whileBlock [] .doBranches
               context [] .stackInfo @ branchTree.startBranch list.append
-            whileBlock [] .breakBranches =
-            whileBlock [] .breakBranchIds
+            whileBlock [] .doBranches =
+            whileBlock [] .doBranchIds
               context [] .currentBranch list.append
-            whileBlock [] .breakBranchIds =
+            whileBlock [] .doBranchIds =
+            ## mergeValues
+            context [] .stackInfo @
+            whileBlock [] .doBranches list.asArray
+            mergeBranches @
+            ## MergePoint
+                "or-do" string.wrap
+                whileBlock [] .blockId
+                whileBlock [] .doBranchIds list.asArray
+                op [] .pos
+                context
+                newSb @
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge or-do branches" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          newSb
             doBranch context startBranch
           return
-        AND_DO OR_DO case break ## TODO and-do
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
@@ -3871,7 +4049,43 @@ proc(
             '\n' sb.appendC
             false context [] .reachable =
           return
-        PROCEDURE EXPERIMENTAL_PROCEDURE AND OR INITIALIZER NAMESPACE
+        AND OR case
+          context [] .openBlocks list.peek =:: currentBlock?
+          currentBlock? optional.hasData if
+              currentBlock? .data =:: andOrBlock
+              andOrBlock [] .AndOr ?? _if
+              andOrBlock [] .AndOr@
+          else ## start if block if not already open
+            op [] .val .block .blockId context openAndOrBlock
+            context [] .openBlocks list.peek .data [] .AndOr@
+          end =:: andOrBlock
+          andOrBlock [] .branches
+            context [] .stackInfo @ branchTree.startBranch list.append
+          andOrBlock [] .branches =
+          andOrBlock [] .branchIds
+            context [] .currentBranch list.append
+          andOrBlock [] .branchIds =
+          ## BranchId
+            BranchType .NEXT
+            context nextJumpLabelId
+            0
+          BranchId new =:: nextBranch
+          sb
+            op [] .pos sb.appendPosQBE
+            "jnz %s" sb.appendS
+            op [] .pos context popValue sb.appendI
+            ", " sb.appendS
+            nextBranch sb.appendBranchId
+            ", " sb.appendS
+            ## appendBranchId
+              BranchType .END_AND_OR
+              op [] .val .block .blockId
+              0
+            BranchId new sb.appendBranchId
+            '\n' sb.appendC
+            nextBranch context startBranch
+          return
+        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
         TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
@@ -3935,7 +4149,10 @@ proc(
             end
           end
           nBranches 0 > context [] .reachable =
-          ifBlock .ififBranches list.free ..drop
+          ifBlock .andBranches list.free ..drop
+          ifBlock .andBranchIds list.free ..drop
+          ifBlock .orBranches list.free ..drop
+          ifBlock .orBranchIds list.free ..drop
           newSb return
         IFIF case sb return ## no-op
         SWITCH case
@@ -4022,6 +4239,11 @@ proc(
             end
           end
           prog [] .whileData whileBlock .blockId list.at .data =:: whileData
+          context [] .stackInfo branchTree.depth whileData [] .modifiedTypes < if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
+            newSb return
+          end
           newSb
             ## copy values to loop vars
             0 while ..dup whileData [] .modifiedTypes < do =:: i
@@ -4080,9 +4302,50 @@ proc(
           breakBranches .length 0 > context [] .reachable =
           breakBranches list.free ..drop
           whileBlock .breakBranchIds list.free ..drop
+          whileBlock .doBranches list.free ..drop
+          whileBlock .doBranchIds list.free ..drop
+          newSb return
+        AND OR case
+          context [] .openBlocks
+            list.pop .AndOr =:: mut: andOrBlock
+          context [] .openBlocks =
+          andOrBlock .branches
+            context [] .stackInfo @ branchTree.startBranch list.append
+          andOrBlock .branches =
+          andOrBlock .branchIds
+            context [] .currentBranch list.append
+          andOrBlock .branchIds =
+          sb
+            ## startBranch
+              ## BranchId
+                BranchType .END_AND_OR
+                op [] .val .blockEnd .blockId
+                0
+              BranchId new
+              context
+            startBranch
+          =:: mut: newSb
+          ## mergeValues
+            context [] .stackInfo @
+            andOrBlock .branches list.asArray
+            mergeBranches @
+            ## MergePoint
+              "and/or" string.wrap
+              andOrBlock .blockId
+              andOrBlock .branchIds list.asArray
+              op [] .pos
+              context
+              newSb @
+            MergePoint new
+          branchTree.merge .error ?? if
+            "could not merge break branches of and/or block" sb.wrap
+            op [] .pos errors appendError
+          end
+          andOrBlock .branches list.free ..drop
+          andOrBlock .branchIds list.free ..drop
           newSb return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
-        AND OR AND_IF OR_IF AND_DO OR_DO INITIALIZER NAMESPACE
+        AND_IF OR_IF AND_DO OR_DO INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
         TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message

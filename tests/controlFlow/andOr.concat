@@ -1,0 +1,20 @@
+proc( bool : a bool : b bool : c -> i32 ) =>: andOrTest
+  a and b or c if
+    1
+  else a or b and c _if
+    2
+  else
+    0
+  end
+  while a and b if a else b end and c or c do
+    a or b end if break end
+    c if break end
+  end
+end
+
+proc( -> ) =>: main
+  false false true  andOrTest 0 == assert "f f t -> 0"
+  true  true  false andOrTest 1 == assert "t t f -> 1"
+  false true  true  andOrTest 2 == assert "f t t -> 1"
+  true  false false andOrTest 2 == assert "f f t -> 2"
+end

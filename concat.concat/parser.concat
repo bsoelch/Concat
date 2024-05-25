@@ -1468,6 +1468,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "if" string.wrap string.eq _if ..drop
       state currentBlockType =:: currentBlock
       currentBlock .AND ?? currentBlock .OR ?? | if
+        ## TODO? preserve scope, if only 'and' before 'if'
         state closeBlock ! assert "correctly closed block"
         .blockType currentBlock == assert "closed block matches current block"
         BlockType .IF fileState [] .wordStart state convertAndOrBlock
