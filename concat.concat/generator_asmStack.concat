@@ -14,7 +14,7 @@ The assembly syntax is primarily inspired by x86-64 with a few instructions/idea
 The goal is to have a higher level intermediate assembly language that can easily concertized&optimized for output to both ADM64 and AArch64 assembly ( with possible RISC-V as additional target )
 +#
 enum(
-  MOV MOVZX MOVSX LEA PUSH POP
+  MOV EXTZ EXTS LEA PUSH POP
   NEG ADD SUB MUL SMUL DIV SDIV REM SREM
   DIV_REM SDIV_REM ## merged instructions
   NOT AND OR XOR
@@ -25,6 +25,8 @@ enum(
   SETE SETNE ## XXX? merge: SETcc target, conditionFlag
   JNZ JZ JMP ## XXX? merge: JMPcc target, conditionFlag
   RET
+  UITOF ITOF FTOI FTOUI ## (u) int <-> float
+  EXTF TRUNCF ## resize float
   ## macro instructions
   ALLOC
   COPY
@@ -243,8 +245,8 @@ namespace: asm
         PUSH case "push " sb.appendS break
         POP case "pop " sb.appendS break
         MOV case "mov " sb.appendS break
-        MOVSX case "movsx " sb.appendS break
-        MOVZX case "movzx " sb.appendS break
+        EXTS case "exts " sb.appendS break
+        EXTZ case "extz " sb.appendS break
         LEA case "lea " sb.appendS break
         NEG case "neg " sb.appendS break
         ADD case "add " sb.appendS break
@@ -282,6 +284,12 @@ namespace: asm
         RET case "ret " sb.appendS break
         ALLOC case "alloc " sb.appendS break
         COPY case "copy " sb.appendS break
+        ITOF case "iTOf " sb.appendS break
+        UITOF case "uiTOf " sb.appendS break
+        FTOI case "fTOi " sb.appendS break
+        FTOUI case "fTOui " sb.appendS break
+        EXTF case "extf " sb.appendS break
+        TRUNCF case "truncf " sb.appendS break
       end
       false =:: mut: needComma
       false =:: mut: isPtrOffset
@@ -741,6 +749,7 @@ proc(
         asm.createBinary AssemblyAtom .op list.append
         return
       Float case
+        ## XXX? is int <-> floats platform independent
         constType typeContext types.unwrapNamed =:: numType
         numType types.primitive.F32 types.typeEquals if
           value .Float f32 cast f32.bits u32 cast
@@ -1516,6 +1525,221 @@ proc(
     i 1 +
   end ..drop
   argLocations retArgument return
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  Type : src
+  Type : target
+  ## TODO pass source/target registers
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: castNumbers
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  src typeContext types.primitiveValue =:: fromVal
+  target typeContext types.primitiveValue =:: toVal
+  fromVal toVal == if
+    ## TODO move value if source and target register are different
+    asmOps return ## identical types -> no change
+  end
+  src typeContext types.isInt target typeContext types.isInt & if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
+    targetPrec srcPrec <= if
+      asmOps return ## downcast -> nothing to do
+    else
+      asmOps
+        ## asm.createUnary
+          src typeContext types.isUnsignedInt if
+            X64_OP .EXTZ ## u -> i,s,u
+          else src typeContext types.isSignedInt ! _if
+              target typeContext types.isUnsignedInt _if
+            X64_OP .EXTZ ## i -> u
+          else ## s -> i,s,u / i -> i,s
+            X64_OP .EXTS
+          end
+          Register.x64.rax AsmOperand .register
+          ## TODO source&target size, remember size
+        asm.createUnary AssemblyAtom .op list.append
+      return
+    end
+  ## case 2: float -> float/int
+  else fromVal .F32 ?? fromVal .F64 ?? | _if
+    toVal switch ## TODO handle overflow in float->int conversion
+      F32 case
+        ## TODO F64 -> F32
+        ## TRUNCF
+        break
+      F64 case
+        ## TODO F32 -> F64
+        ## EXTF
+        break
+      I8 I16 I32 I64 S8 S16 S32 S64 case
+        ## TODO float -> int
+        ## 1. FTOI
+        ## 2. truncate to correct size
+        break
+      U8 U16 U32 U64 case
+        ## TODO float -> uint
+        ## 1. FTOUI
+        ## 2. truncate to correct size
+        break
+      BOOL TYPE case ..unreachable
+    end
+  ## case 3: int -> float
+  else ## TODO sign/zero extend 8&16 bit types before conversion
+    ## TODO int -> float
+    ## 1. sign/zero extend to 64-bits
+    ## 2. ITOF / UITOF
+  end
+  "unsupported cast:" sb.wrap
+  src typeContext sb.appendType
+  " to " sb.appendS
+  target typeContext sb.appendType
+  pos errors appendError
+  asmOps return
+end
+
+proc(
+  AssemblyAtom list : asmOps
+  Type : src
+  Type : target
+  ## TODO source/target register
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: bitcastNumbers
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  src typeContext types.primitiveValue =:: fromVal
+  target typeContext types.primitiveValue =:: toVal
+  ## sizes of arguments scaled to bits
+  fromVal types.sizeOfPrimitive 8 * =:: fromSize
+  toVal types.sizeOfPrimitive 8 * =:: toSize
+  ## TODO move if source and target registers are different
+  fromVal toVal == if
+    asmOps return
+  end
+  ## XXX? support for bit-casts between small structures
+  ## TODO implement bit-cast
+  ## 1. move float->int
+  ## 2. zero extend/truncate to right number of bits
+  ## 3. move int > float
+  ## XXX? is is possible to zero-extend a 32-bit float in place
+  "unsupported bit-cast:" sb.wrap
+  src typeContext sb.appendType
+  " to " sb.appendS
+  target typeContext sb.appendType
+  pos errors appendError
+  asmOps return
+end
+
+enum( autoCast Cast Cast! bitCast ) =:: CastType
+proc(
+  AssemblyAtom list : asmOps
+  CastType : castType
+  Type : src0
+  i32 : offset
+  Type : target0
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> AssemblyAtom list ) =>: compileCast
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  ## XXX? better cType <-> type conversion
+  src0 typeContext types.unwrapNamed
+    ..dup .cType ?? if .cType types.cTypeAsType end
+  =:: src
+  target0 typeContext types.unwrapNamed
+    ..dup .cType ?? if .cType types.cTypeAsType end
+  =:: target
+  src target types.typeEquals if
+    asmOps return ## nothing to do
+  end
+  ## TODO correctly update registers
+  ## ! handle stack shifts for size changes
+  src typeContext types.isNumber target .arrayIndex ?? & if
+    ## isNumber returns true for array index
+    ##   -> have to check for cast to array index before checking for cast to number
+    asmOps
+      ## castNumbers
+        src
+        types.primitive.I_SIZE
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+      target typeContext types.getArraySize 0 array.get =:: size
+      ## TODO check index
+    return
+  end
+  src typeContext types.isNumber target typeContext types.isNumber & if
+    asmOps
+      src
+      target
+    pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
+  end
+  src typeContext types.isPointer target typeContext types.isPointer & if
+    asmOps return ## nothing to do
+  end
+  src typeContext types.isInt target typeContext types.isPointer & if
+    ## src -> I_PTR ~ ptr
+    asmOps
+      ## castNumbers
+        src
+        types.primitive.I_PTR
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
+  end
+  src typeContext types.isPointer target typeContext types.isInt & if
+    ## ptr ~ I_PTR -> target
+    asmOps
+      ## castNumbers
+        types.primitive.I_PTR
+        target
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
+  end
+  src typeContext types.isReference if target typeContext types.isReference ! _if
+    src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
+    asmOps
+      ## 1. load reference
+      ## 2. cast value
+      baseType target types.typeEquals ! if
+        ## compileCast
+          castType
+          baseType
+          offset
+          target
+          pos
+          context
+        compileCast
+      end
+    return
+  end
+  target typeContext types.isUnion if
+    ## TODO check if source is subset of union
+    asmOps
+      ## TODO convert source to union
+    return
+  end
+  "casting from " sb.wrap
+    src typeContext sb.appendType
+    " to " sb.appendS
+    target typeContext sb.appendType
+    " is not implemented" sb.appendS
+  pos errors appendError
+  asmOps return
 end
 
 proc(
