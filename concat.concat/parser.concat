@@ -1467,14 +1467,19 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
     else ..dup "if" string.wrap string.eq _if ..drop
       state currentBlockType =:: currentBlock
-      currentBlock .AND ?? currentBlock .OR ?? | if
-        ## TODO? preserve scope, if only 'and' before 'if'
+      currentBlock .AND ?? if ## sequence of ands -> allow access to local variables from if-branch
+        BlockType .IF fileState [] .wordStart state convertAndOrBlock
+        state [] .openBlocks list.peek .data =:: current
+        BlockType .IF current [] .blockType =
+      else currentBlock .OR ?? _if
         state closeBlock ! assert "correctly closed block"
         .blockType currentBlock == assert "closed block matches current block"
         BlockType .IF fileState [] .wordStart state convertAndOrBlock
       end
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
-      BlockType .IF  state openBlockScope
+      currentBlock .AND ?? ! if
+        BlockType .IF  state openBlockScope
+      end
       return
     else ..dup "and" string.wrap string.eq
          ..over "or" string.wrap string.eq | _if =:: opName
@@ -1484,28 +1489,35 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       outerBlock .AND ?? ! if outerBlock .OR ?? ! _if
         ## not already within an and-or chain
         blockType  state openBlockScope
+      else isOr _if ## remember if 'or' appeared
+        state [] .openBlocks list.peek .data =:: current
+        BlockType .OR current [] .blockType =
       end
       ## remember position to allow changing block-type when merging with if/do
       state [] .andOrPositions
         state opCount list.append
       state [] .andOrPositions =
       blockType  fileState [] .wordStart opBlock  state appendOp
-      ## TODO automatically merge and-or-block with if, _if and do
       return
     else ..dup "_if" string.wrap string.eq _if ..drop
       state currentBlockType
-        ..dup .AND ?? ..over .OR ?? | if
+        ..dup .AND ?? if ## sequence of ands -> allow access to local variables from if-branch
+          BlockType .IF fileState [] .wordStart state convertAndOrBlock
+          state [] .openBlocks list.peek .data =:: current
+          BlockType .IF current [] .blockType =
+        else ..dup .OR ?? _if
           state closeBlock ! assert "correctly closed block"
           .blockType == assert "closed block matches current block"
           BlockType .IF fileState [] .wordStart state convertAndOrBlock
           state currentBlockType ## get new enclosing block
         end
       =:: currentType
-      currentType .IF ?? ! currentType .ELSE ?? ! & currentType .IFIF ?? ! & if
+      currentType .IF ?? ! currentType .ELSE ?? ! &
+          currentType .IFIF ?? ! & currentType .AND ?? ! & if
         "'_if' is only allowed in if-else-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      state currentBlockType .ELSE ?? if
+      currentType .ELSE ?? currentType .AND ?? | if
         BlockType .IF
       else
         BlockType .IFIF
@@ -1513,7 +1525,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       blockType fileState [] .wordStart opBlock  state appendOp
       blockType .IFIF ?? if ## use same scope as for if-branch
         blockType state openBlock
-      else
+      else currentType .AND ?? ! _if ## no new scope for and .. _if
         blockType state openBlockScope
       end
       state autoCloseCurrentBlock
@@ -1622,6 +1634,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           progContext [] .tmpOps .length
             currentProc [] .implementation .code .codeStart -
           currentProc [] .implementation .code .codeLength =
+        else closedType .AND ?? closedType .OR ?? | _if
+          state [] .andOrPositions list.clear state [] .andOrPositions =
         end
         closedType .NAMESPACE ?? if idContext id.endNamespace _if
           "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2

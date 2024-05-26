@@ -10,11 +10,17 @@ proc( bool : a bool : b bool : c -> i32 ) =>: andOrTest
     a or b end if break end
     c if break end
   end
+
+  a and 3 =:: x b and c if
+    x +
+  else a and 7 =:: y b _if
+    y +
+  end
 end
 
 proc( -> ) =>: main
   false false true  andOrTest 0 == assert "f f t -> 0"
-  true  true  false andOrTest 1 == assert "t t f -> 1"
+  true  true  false andOrTest 8 == assert "t t f -> 8"
   false true  true  andOrTest 2 == assert "f t t -> 1"
   true  false false andOrTest 2 == assert "f f t -> 2"
 end
