@@ -522,13 +522,13 @@ proc(
   program [] .errors @ =:: errors
   context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
     context [] .openBlocks i list.at .data =:: block
-    breakType .BREAK ?? if block [] .While ?? _if
+    breakType .BREAK ?? and block [] .While ?? if
       block optional.wrap return
     end
-    breakType .CONTINUE ?? if block [] .While ?? _if
+    breakType .CONTINUE ?? and block [] .While ?? if
       block optional.wrap return
     end
-    breakType .BREAK_SWITCH ?? if block [] .Switch ?? _if
+    breakType .BREAK_SWITCH ?? and block [] .Switch ?? if
       block optional.wrap return
     end
     i 1 -
@@ -858,9 +858,9 @@ namespace: sb
     typeContext [] .labelContext @ =:: labelContext
     prog [] .idContext .constContext @ =:: constContext
     sb
-      isGlobal if
-          t typeContext types.unwrapNamed types.isPrimitive
-          t typeContext types.isPointer | _if
+      isGlobal and
+          t typeContext types.unwrapNamed types.isPrimitive or
+          t typeContext types.isPointer if
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
@@ -995,8 +995,8 @@ namespace: sb
           isGlobal ! if
             break ## XXX? support small unions as local constants
           end
-          t typeContext types.isEnum ! if
-              t typeContext types.isUnion ! _if
+          t typeContext types.isEnum ! and
+              t typeContext types.isUnion ! if
             "unsupported type for union constant: " sb.wrap
               t typeContext sb.appendType
               " expected enum or union" sb.appendS
@@ -1153,8 +1153,8 @@ namespace: sb
     t typeContext types.containsGeneric if
       sb return ## ignore generic types
     end
-    t typeContext types.isArray if
-      t typeContext types.isFixedSize _if
+    t typeContext types.isArray and
+        t typeContext types.isFixedSize if
       t typeContext types.getArraySize =:: sizes
       1:i64 =:: mut: S
       0 while ..dup sizes .length < do =:: i
@@ -1754,9 +1754,9 @@ proc(
   labels .length 3 <= if
     false =:: mut: contiguous
     labels .length =:: mut: loopCount
-    lower optional.hasData if upper optional.hasData _if
+    lower optional.hasData and upper optional.hasData and
         upper .data lower .data - labels .length == contiguous =
-        contiguous _if
+        contiguous if
       loopCount 1 - loopCount =
     end
     sb
@@ -2256,7 +2256,7 @@ proc(
       target StorageType .STACK pos context sb.appendTypeNameQBE
       " copy" sb.appendS
     ## case 1: integer extension/narrowing
-    else src typeContext types.isInt target typeContext types.isInt & _if
+    else src typeContext types.isInt and target typeContext types.isInt _if
       src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
       target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
       targetPrec srcPrec <= if
@@ -2269,7 +2269,7 @@ proc(
         " ext" sb.appendS
         src typeContext types.isUnsignedInt if ## u -> i,s,u
           'u' sb.appendC
-        else src typeContext types.isSignedInt ! _if ## i -> u
+        else src typeContext types.isSignedInt ! and ## i -> u
             target typeContext types.isUnsignedInt _if
           'u' sb.appendC
         else ## s -> i,s,u / i -> i,s
@@ -2284,7 +2284,7 @@ proc(
         end
       end
     ## case 2: float -> float/int
-    else fromVal .F32 ?? fromVal .F64 ?? | _if
+    else fromVal .F32 ?? or fromVal .F64 ?? _if
       toVal switch ## TODO handle overflow in float->int conversion
         F32 case
           " =s truncd" sb.appendS break
@@ -2536,14 +2536,14 @@ proc(
       pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
     return
   end
-  src typeContext types.isReference if target typeContext types.isReference ! _if
+  src typeContext types.isReference and target typeContext types.isReference ! if
     src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
     sb
       "%s" sb.appendS
       targetId sb.appendI
       " =" sb.appendS
       baseType StorageType .STACK pos context sb.appendTypeNameQBE
-      baseType context referenceOnly ! if valType .REFERENCE ?? _if ## unwrap reference
+      baseType context referenceOnly ! and valType .REFERENCE ?? if ## unwrap reference
         " load" sb.appendS
         baseType StorageType .LOAD pos context sb.appendTypeNameQBE
       else
@@ -2866,8 +2866,8 @@ proc(
       0 context [] .jumpLabelCount =
       context [] .stackInfo @ branchTree.clear
       sb
-        implInfo .implementationId  0 < if
-          labelFlags id.FLAG_EXPORT & ? labelFlags id.FLAG_EXTERN & ? | _if
+        implInfo .implementationId  0 < and
+            labelFlags id.FLAG_EXPORT & ? or labelFlags id.FLAG_EXTERN & ? if
           "export " sb.appendS
         end
         "function " sb.appendS
@@ -2956,7 +2956,7 @@ proc(
             '\n' sb.appendC
           return
        ARGUMENT case
-          isAddr if op [] .dataType context referenceOnly ! _if
+          isAddr and op [] .dataType context referenceOnly ! if
             "cannot take the address of procedure argument" sb.wrap
             op [] .pos errors appendError
             sb return
@@ -3136,13 +3136,13 @@ proc(
           "," sb.appendS
           containerType index op [] .pos context tupleEltOffsetInt sb.appendI
           '\n' sb.appendC
-      else containerType typeContext types.isUnion
-          containerType typeContext types.isEnum | _if
+      else containerType typeContext types.isUnion or
+          containerType typeContext types.isEnum _if
         sb ## not change to pointer necessary
       else
         break ## unsupported type
       end
-        isPtr ! if eltType context referenceOnly ! _if
+        isPtr ! and eltType context referenceOnly ! if
           op [] .pos context popValue =:: srcId
           op [] .pos sb.appendPosQBE
           "%s" sb.appendS
@@ -3616,11 +3616,11 @@ proc(
             '\n' sb.appendC
           =:: mut: newSb
           context [] .openBlocks list.peek =:: ifBlock?
-          ifBlock? optional.hasData if
+          ifBlock? optional.hasData and
               ifBlock? .data =:: ifBlock
-              ifBlock [] .If ?? _if
-              ifBlock [] .If .hasIf ! _if
-              ifBlock [] .If@
+              ifBlock [] .If ?? and
+              ifBlock [] .If .hasIf ! if
+            ifBlock [] .If@
           else ## start if block if not already open
             op [] .val .block .blockId context openIfBlock
             context [] .openBlocks list.peek .data [] .If@
@@ -3663,11 +3663,11 @@ proc(
           context [] .openBlocks list.peek =:: ifBlock?
           op [] .val .block .blockType .IFIF ?? if
             ifBlock? .data [] .If@
-          else ifBlock? optional.hasData _if
+          else ifBlock? optional.hasData and
               ifBlock? .data =:: ifBlock
-              ifBlock [] .If ?? _if
+              ifBlock [] .If ?? and
               ifBlock [] .If .hasIf ! _if
-              ifBlock [] .If@
+            ifBlock [] .If@
           else ## start if block if not already open
             op [] .val .block .blockId context openIfBlock
             context [] .openBlocks list.peek .data [] .If@
@@ -4051,10 +4051,10 @@ proc(
           return
         AND OR case
           context [] .openBlocks list.peek =:: currentBlock?
-          currentBlock? optional.hasData if
+          currentBlock? optional.hasData and
               currentBlock? .data =:: andOrBlock
-              andOrBlock [] .AndOr ?? _if
-              andOrBlock [] .AndOr@
+              andOrBlock [] .AndOr ?? if
+            andOrBlock [] .AndOr@
           else ## start if block if not already open
             op [] .val .block .blockId context openAndOrBlock
             context [] .openBlocks list.peek .data [] .AndOr@

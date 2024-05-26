@@ -287,8 +287,8 @@ proc(
   end
   src0 =:: mut: src
   ## unwrap reference in src argument if target is not a reference
-  src typeContext types.isReference if
-    target typeContext types.isReference ! _if
+  src typeContext types.isReference and
+      target typeContext types.isReference ! if
     src typeContext types.getBaseType src =
   end
   target switch
@@ -367,16 +367,16 @@ proc(
         progContext
       resolveGenerics return
     pointer arrayType case
-      src typeContext types.isPointer ! if
-          src typeContext types.isArray ! _if
+      src typeContext types.isPointer ! and
+          src typeContext types.isArray ! if
         true return
       end
       src typeContext types.isMutable =:: srcMutable
       target typeContext types.isMutable =:: targetMutable
-      targetMutable if srcMutable ! _if
+      targetMutable and srcMutable ! if
         true return ## cannot cast immutable to mutable
       end
-      srcMutable if targetMutable ! _if
+      srcMutable and targetMutable ! if
         true needCast [] =
       end
       ## resolveGenerics
@@ -391,23 +391,23 @@ proc(
       end
       src typeContext types.isFixedSize =:: srcFixed
       target typeContext types.isFixedSize =:: targetFixed
-      targetFixed if srcFixed ! _if
+      targetFixed and srcFixed ! if
         true return ## cannot assign unknown-size to fixed-size
       end
       src typeContext types.getArraySize =:: mut: srcSizes
       target typeContext types.getArraySize =:: mut: targetSizes
       ## treat 0D fixed arrays as 1D array of length 1
       1:i64 types.ArraySizeType .int types.ArraySize new =:: one
-      srcFixed if srcSizes .length 0 == _if
+      srcFixed and srcSizes .length 0 == if
         one @ array.wrap srcSizes =
       end
-      targetFixed if targetSizes .length 0 == _if
+      targetFixed and targetSizes .length 0 == if
         one @ array.wrap targetSizes =
       end
       srcSizes .length targetSizes .length < if
         true return ## target sizes have to be matched
       end
-      targetFixed if srcSizes .length targetSizes .length != _if
+      targetFixed and srcSizes .length targetSizes .length != if
         true return ## all target sizes have to be matched
       end
       0 while ..dup targetSizes .length < do =:: i
@@ -763,8 +763,8 @@ proc(
       inTypes paramIndex typeContext types.compositeGetLabel =:: mut: paramLabel
       ## XXX? allow passing arrays as individual elements
       while ## skip empty parameters if stack-value is non-empty
-        paramType typeContext types.isEmpty if
-          stackType typeContext types.isEmpty ! _if
+        paramType typeContext types.isEmpty and
+            stackType typeContext types.isEmpty ! if
           ## empty parameter, non-empty argument
           current [] .paramInfo
             ## ParameterInfo
@@ -773,9 +773,9 @@ proc(
             ParameterInfo new list.append
           current [] .paramInfo =
           paramIndex 1 - paramIndex =
-        else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? _if
+        else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
             current [] .genericValues @ paramLabel map.at =:: autoValue
-            autoValue optional.isEmpty ! _if autoValue .data [] .nonEmpty ?? ! _if
+            autoValue optional.isEmpty ! and autoValue .data [] .nonEmpty ?? ! _if
           current [] .paramInfo
             ## ParameterInfo
               stackIndex 0
@@ -798,13 +798,13 @@ proc(
         i 1 + continue ## no value present
       end
       MatchType .NONE =:: mut: matchType
-      paramType typeContext types.isGeneric if
+      paramType typeContext types.isGeneric and
           paramType
             typeContext types.unwrapNamed
           types.getTypeId =:: paramId
           current [] .genericValues @
             paramId
-          map.at optional.isEmpty _if
+          map.at optional.isEmpty if
         ## add copy of signature with generic type set to empty
         current currentSignatures @ appendCopy =:: copySig
         copySig [] .genericValues @
@@ -830,7 +830,7 @@ proc(
         current [] .genericValues @
           paramLabel
         map.at =:: prevVal?
-        prevVal? optional.hasData if
+        prevVal? optional.hasData and
             prevVal? .data =:: prevVal
             prevVal [] switch
               nonEmpty case
@@ -846,7 +846,7 @@ proc(
               fixed case
                 prevVal [] .fixed stackVal labelContext constantEquals !
                 break
-            end _if
+            end if
           false current [] .argsMatch =
         else
           current [] .genericValues @
@@ -864,8 +864,8 @@ proc(
         paramType typeContext computeTypeWeigth +
       current [] .signatureWeigth =
       ## try matching type
-      paramType typeContext types.containsGeneric if
-        false =:: mut: needCast
+      paramType typeContext types.containsGeneric and
+          false =:: mut: needCast
           ## resolveGenerics
             stackType
             paramType
@@ -873,7 +873,7 @@ proc(
             needCast @
             current [] .genericValues @
             progContext
-          resolveGenerics ! _if
+          resolveGenerics ! if
         MatchType .GENERIC matchType =
         current [] .nGenerics 1 + current [] .nGenerics =
         needCast if ## ptr mut -> ptr
@@ -910,7 +910,7 @@ proc(
           matchType
         ParameterInfo new list.append
       current [] .paramInfo =
-      paramIndex 0 == if current [] .argsMatch _if
+      paramIndex 0 == and current [] .argsMatch if
         false current [] .needsParam =
       end
       i 1 +
@@ -953,12 +953,12 @@ proc(
     currentSignatures @ cleanupSignatures
     ProcedureCallInfo optional.empty Type .undefined return
   end
-  currentSignatures .length 1 > if
+  currentSignatures .length 1 > and
       ## cmpSignatures
         candidate []
         currentSignatures 1 list.at .data []
         progContext
-      cmpSignatures 0 == _if
+      cmpSignatures 0 == if
     ## multiple matches
     errorMessage optional.hasData if
       errorMessage .data []
@@ -981,11 +981,8 @@ proc(
           progContext [] .procedures
             current [] .procId list.at .data
           =:: procInfo
-          isEquivalent if
-                candidate []
-                current []
-                progContext
-              cmpSignatures 0 != _if
+          isEquivalent and
+              candidate [] current [] progContext cmpSignatures 0 != if
             "other signatures: \n" sb.appendS
             false isEquivalent =
           end
@@ -1020,11 +1017,11 @@ proc(
   -1:i64 =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
-  constArgs .length 0 > if
+  constArgs .length 0 > and
       progContext [] .procedures
         candidate [] .procId list.at .data
       [] .implementation @ =:: implData
-      implData [] .code ?? _if
+      implData [] .code ?? if
     implData [] .code .implementations @ =:: impls
     false =:: mut: isMatch
     0 while ..dup impls [] .length < do =:: i

@@ -44,7 +44,7 @@ namespace: i32
   end
   proc( i32 : a i32 : b -> i32 ) =>: export: floorDiv
     a b /
-      a b % ? if a 0 < b 0 < ^ _if
+      a b % ? and a 0 < b 0 < ^ if
         1 -
       end
     return
@@ -76,7 +76,7 @@ namespace: i64
   end
   proc( i64 : a i64 : b -> i64 ) =>: export: floorDiv
     a b /
-      a b % ? if a 0 < b 0 < ^ _if
+      a b % ? and a 0 < b 0 < ^ if
         1 -
       end
     return

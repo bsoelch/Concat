@@ -500,11 +500,12 @@ proc(
     list.pop =:: closed
   state [] .openBlocks =
   false =:: mut: isError
-  closed .hasScope if
-    state [] .progContext [] .idContext @ id.closeScope
-      isError =
-    =:: staticArgsOffset
-    isError ! _if staticArgsOffset 0 >= if ## staticArgsOffset is -1 if offset is unknown
+  closed .hasScope and
+      state [] .progContext [] .idContext @ id.closeScope
+        isError =
+      =:: staticArgsOffset
+      isError ! if
+    staticArgsOffset 0 >= if ## staticArgsOffset is -1 if offset is unknown
       staticArgsOffset state resetStaticArgs
     end
   end
@@ -624,8 +625,8 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         endString string.eq =:: isEnd
         labelType .TUPLE ?? if
           LabelId arrayView optional.empty
-        else labelType .PROC_IN ?? labelType .NONE ?? |
-               state [] .labelBuffer .length labelOffset == & _if
+        else state [] .labelBuffer .length labelOffset == and
+            labelType .PROC_IN ?? or labelType .NONE ?? _if
           LabelId arrayView optional.empty ## procedure with no labels
         else
           state [] .constants .length constOffset -
@@ -655,7 +656,7 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         isEnd if labelType else LabelType .PROC_IN end
         isError
         return
-      else labelType .PROC_IN ?? _if ..dup ")" string.wrap string.eq _if ..drop
+      else labelType .PROC_IN ?? and ..dup ")" string.wrap string.eq _if ..drop
         "unexpected \")\"" sb.wrap fileState [] .wordStart state appendError2
         prevConstants state resetConstants
         state [] .labelBuffer
@@ -785,7 +786,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
   false =:: mut: unsigned
   0 =:: mut: size
   str ':' string.lastIndexOf =:: i
-  i 0 > if i str .length 1 - < _if
+  i 0 > and i str .length 1 - < if
     str i string.splitIndex =:: literal =:: literalType
     literal ':'  string.contains if
       false return ## literal cannot contain :
@@ -1109,7 +1110,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         true allowImmutableDeclaration =
       else localDeclaration _if
         IdentifierType .LOCAL_VAR
-      else isProc isInit ! | _if valType typeContext types.isProcedure _if
+      else isProc isInit ! | and valType typeContext types.isProcedure _if
         IdentifierType .PROCEDURE
         true forceImmutable =
         true allowImmutableDeclaration =
@@ -1133,7 +1134,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## make pre-declared variables mutable by default
         isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
       readLabelAddFlags =:: mut: label
-      forceImmutable if label labelContext id.labelFlags id.FLAG_MUTABLE & ? _if
+      forceImmutable and label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
         "identifiers of type " sb.wrap
           idType sb.appendIdType
          " cannot be mutable" sb.appendS
@@ -1186,16 +1187,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         label idContext id.getIdentifier
         ! assert "label is identifier"
       [] .constValue =
-      localDeclaration ! if
-          MAIN_NAME string.wrap label labelContext id.labelNameEq _if ## main
+      localDeclaration ! and
+          MAIN_NAME string.wrap label labelContext id.labelNameEq if ## main
         idType .PROCEDURE ?? ! if
           "main has to be a procedure got: " sb.wrap
             idData @ id.asIdInfo labelContext sb.appendIdInfo
           fileState [] .wordStart state appendError2
         end
         true =:: mut: validMain
-        label labelContext id.getLabelFile 0 != if
-          idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! _if
+        label labelContext id.getLabelFile 0 != and
+            idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
           "main procedure is not visible from root file" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
@@ -1291,8 +1292,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
             inType index typeContext types.compositeGetLabel =:: argLabel
             inType index typeContext types.compositeGetElement =:: argType
             argLabel i32 cast =:: argId
-              argLabel labelContext id.isLabelEmpty ! if
-               argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
+              argLabel labelContext id.isLabelEmpty ! and
+                  argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! if
                 ## declareIdentifier
                   argLabel
                   argType
@@ -1486,7 +1487,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       opName "or" string.wrap string.eq =:: isOr
       isOr if BlockType .OR else BlockType .AND end =:: blockType
       state currentBlockType =:: outerBlock
-      outerBlock .AND ?? ! if outerBlock .OR ?? ! _if
+      outerBlock .AND ?? ! and outerBlock .OR ?? ! if
         ## not already within an and-or chain
         blockType  state openBlockScope
       else isOr _if ## remember if 'or' appeared
@@ -1520,6 +1521,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       currentType .ELSE ?? currentType .AND ?? | if
         BlockType .IF
       else
+        "if _if is deprecated use and if instead" sb.wrap
+        fileState [] .wordStart state appendWarning2
         BlockType .IFIF
       end =:: blockType
       blockType fileState [] .wordStart opBlock  state appendOp
@@ -1634,16 +1637,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           progContext [] .tmpOps .length
             currentProc [] .implementation .code .codeStart -
           currentProc [] .implementation .code .codeLength =
-        else closedType .AND ?? closedType .OR ?? | _if
+        else closedType .AND ?? or closedType .OR ?? _if
           state [] .andOrPositions list.clear state [] .andOrPositions =
         end
-        closedType .NAMESPACE ?? if idContext id.endNamespace _if
+        closedType .NAMESPACE ?? and idContext id.endNamespace if
           "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2
         end
         closedBlock .autoClose
       do end
       return
-    else ..dup .length 1 > _if ..dup 0 string.charAt '.' == _if ..dup 1 string.charAt '.' != _if
+    else ..dup .length 1 > and ..dup 0 string.charAt '.' == and ..dup 1 string.charAt '.' != _if
       1 string.tail
         ..dup "@" string.wrap string.endsWith =:: isAddr
         isAddr if
@@ -1665,7 +1668,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ## new in procedure -> determine type in type-check phase
       Type .undefined fileState [] .wordStart opNew state appendOp
       return
-    else ..dup "cast" string.wrap string.eq ..over "cast!" string.wrap string.eq | _if =:: opName
+    else ..dup "cast" string.wrap string.eq or ..dup "cast!" string.wrap string.eq _if =:: opName
       opName "cast!" string.wrap string.eq =:: forceCast
       Type .undefined
         fileState [] .wordStart
@@ -1699,9 +1702,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "..size" string.wrap string.eq _if ..drop
       fileState [] .wordStart opSize state appendOp
       return
-    else ..dup "..type.alignment" string.wrap string.eq
-         ..over "..type.size" string.wrap string.eq |
-         ..over "..type.stride" string.wrap string.eq | _if =:: opName
+    else ..dup "..type.alignment" string.wrap string.eq or
+         ..dup "..type.size" string.wrap string.eq or
+         ..dup "..type.stride" string.wrap string.eq _if =:: opName
      opName "..type.alignment" string.wrap string.eq if
        TypeMemoryInfo .ALIGNMENT
      else opName "..type.size" string.wrap string.eq _if
@@ -1748,11 +1751,11 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       return
     else ..dup "mut" string.wrap string.eq _if =:: opName
       state peekOp =:: prev
-      prev optional.hasData if
-        prev .data [] .val .typeModifier ?? _if
-        prev .data [] .val .typeModifier .PTR ?? _if
-          TypeModifier .PTR_MUT prev .data [] .val .typeModifier =
-          return
+      prev optional.hasData and
+          prev .data [] .val .typeModifier ?? and
+          prev .data [] .val .typeModifier .PTR ?? if
+        TypeModifier .PTR_MUT prev .data [] .val .typeModifier =
+        return
       end
       opName sb.fromStr
         " can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.appendS
@@ -1841,8 +1844,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         end
         state currentOps [] blockStart list.at .data =:: startOp
-        startOp [] .val .block ?? if
-          startOp [] .val .block .blockType .TYPE_COMPOSITE ?? _if
+        startOp [] .val .block ?? and
+            startOp [] .val .block .blockType .TYPE_COMPOSITE ?? if
           BlockType .TYPE_PROC_IN currentBlock [] .blockType =
           BlockType .TYPE_PROC_IN
             startOp [] .pos
@@ -1876,7 +1879,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           break
         TYPE_PROC_OUT case
           state closeBlock  =:: isError .blockType =:: outerType
-          isError ! if outerType .TYPE_PROC_IN ?? _if
+          isError ! and outerType .TYPE_PROC_IN ?? if
             BlockType .TYPE_PROC_IN
               fileState [] .wordStart
             opEndBlock state appendOp
@@ -1910,8 +1913,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "..dup" string.wrap string.eq _if =:: opName
       0 StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
-    else ..dup "..over" string.wrap string.eq
-         ..over "..over." string.wrap string.startsWith |  _if =:: mut: opName
+    else ..dup "..over" string.wrap string.eq or
+         ..dup "..over." string.wrap string.startsWith  _if =:: mut: opName
       opName "..over." ..length string.tail =:: params
       "..over" string.wrap opName =
       params opName fileState [] .wordStart state getCompilerOpParam ## :offset
@@ -1920,8 +1923,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "..swap" string.wrap string.eq _if =:: opName
       1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
       return
-    else ..dup "..drop" string.wrap string.eq
-         ..over "..drop." string.wrap string.startsWith |  _if =:: mut: opName
+    else ..dup "..drop" string.wrap string.eq or
+         ..dup "..drop." string.wrap string.startsWith _if =:: mut: opName
       opName "..drop." ..length string.tail =:: params
       "..drop" string.wrap opName =
       params opName fileState [] .wordStart state getCompilerOpParam ## :count
@@ -2058,8 +2061,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         bundleData [] .procedures =
       end
       return
-    else ..dup "..?types" string.wrap string.eq
-       ..over "..?types." string.wrap string.startsWith | _if =:: mut: opName
+    else ..dup "..?types" string.wrap string.eq or
+        ..dup "..?types." string.wrap string.startsWith _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params
       "..?types" string.wrap opName =
       -1 =:: mut: count
@@ -2085,8 +2088,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart
       opTypesInfo state appendOp
       return
-    else ..dup "..?stack" string.wrap string.eq
-       ..over "..?stack." string.wrap string.startsWith | _if =:: mut: opName
+    else ..dup "..?stack" string.wrap string.eq or
+        ..dup "..?stack." string.wrap string.startsWith _if =:: mut: opName
       opName "..?stack." ..length string.tail =:: params
       "..?stack" string.wrap opName =
       params .length 0 > if
@@ -2094,8 +2097,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else -1 end
       fileState [] .wordStart opStackInfo state appendOp
       return
-    else ..dup "..?ops" string.wrap string.eq
-       ..over "..?ops." string.wrap string.startsWith | _if =:: mut: opName
+    else ..dup "..?ops" string.wrap string.eq or
+        ..dup "..?ops." string.wrap string.startsWith _if =:: mut: opName
       opName "..?ops." ..length string.tail =:: params
       "..?ops" string.wrap opName =
       params .length 0 > if
@@ -2150,9 +2153,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         sb.free ..drop
         matches list.free ..drop
         return
-    else ..dup  "begin"     string.wrap string.eq
-         ..over "defer"     string.wrap string.eq |
-      _if =:: opName
+    else ..dup "begin" string.wrap string.eq or
+         ..dup "defer" string.wrap string.eq _if =:: opName
       "`" sb.wrap
         opName sb.appendStr
         "` is a reserved keyword for a future language version" sb.appendS

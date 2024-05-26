@@ -15,9 +15,9 @@ basic form:
 general form:
 
 ```
-  <condition> if <condition> _if
+  <condition> if
      <if-body>
-  else <condition> _if <condition> _if
+  else <condition> _if
      <elif-body>
   else
      <else-body>
@@ -26,10 +26,12 @@ general form:
 
 An if-block starts with the keyword `if` and ends with the matching `end` keyword.
 `else` can appear between `if` (or `_if`) and `end`
-`_if` can appear anywhere in an if-block.
+`_if` can appear after `else`, `_if` starts a new if-block that ends at the same `end` keyword as the enclosing block.
 
 When the execution reaches `if`or `_if` a boolean is popped from the stack, if the value is `true` the execution continues on the current path, otherwise execution will jump to the position directly after the next `else` statement in the current `if` block, (if there is no `else`statement the execution will jump to the end of the if-block).
 When the execution reaches an `else` keyword, the execution will jump to the end of the if-statement
+
+`and` and `or` can be used within the if-condition to short-ciruit evaluate a condition, `and` jumps directly to the `else` branch when the condition on top of the stack is false, `or` jumps directly to the `if` branch when the condition on top of the stack is true.
 
 The types at the end of all branches of the if statement have, need to the compatible (equal up to implicit casts).
 
@@ -54,7 +56,7 @@ end
 
 ```
 ## unwrap optional and cleanup data
-X optional.hasData if X .data 0 >= _if
+X optional.hasData and X .data 0 >= if
   X .data
 else
   -1
@@ -101,6 +103,7 @@ Variables declared within one `case` block are only accessible in that `case` bl
 
 Examples:
 
+```
 anInt switch
   0 2 4 6 8 case
       0 return
@@ -151,7 +154,7 @@ The types obtained by merging the `continue` branches have to be equal to the ty
 Optionally a while loop can contain a `defer` statement, the code between `while`  and `defer` will be executed after each iteration of the loop, if a `defer` statement is present the `continue` branches will jump to the start of the `defered` code.
 ( `defer` has not been implemented )
 
-
+<!-- TODO and/or blocks -->
 
 
 

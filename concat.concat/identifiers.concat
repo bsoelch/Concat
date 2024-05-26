@@ -235,7 +235,7 @@ namespace: id
       "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
     end
     id 0 string.charAt '.' == if
-      id .length 2 >= if id 1 string.charAt '.' == _if
+      id .length 2 >= and id 1 string.charAt '.' == if
         id string.empty
       else
         "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
@@ -471,8 +471,8 @@ namespace: id
       end
     end
     ## don't check names of built-in identifiers
-    flags FLAG_BUILT_IN & ? ! if
-        name declaredAt errors checkIdentifier _if
+    flags FLAG_BUILT_IN & ? ! and
+        name declaredAt errors checkIdentifier if
       context [] .nameBuffer list.clear context [] .nameBuffer =
       LABEL_ID_NONE ID_NONE_DATA true return
     end
@@ -493,9 +493,9 @@ namespace: id
       prevId? .data =:: prevId
       context [] .identifierData @ prevId map.at .data =:: prevDec
       ## initialization for declaration / declaration for initialized identifier
-      prevDec [] .declarationOnly isInit ! | if
-        idType .GLOBAL_VAR ?? idType .TYPE ?? |
-        idType .PROCEDURE ?? | idType .PROCEDURE_BUNDLE ?? | _if
+      prevDec [] .declarationOnly isInit ! | and
+          idType .GLOBAL_VAR ?? or idType .TYPE ?? or
+          idType .PROCEDURE ?? or idType .PROCEDURE_BUNDLE ?? if
         ## remove procedure labels before comparing types
         valType typeContext types.asUnlabeledProc ..drop
             prevDec [] .valueType  typeContext types.asUnlabeledProc ..drop

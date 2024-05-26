@@ -415,7 +415,7 @@ namespace: types
     b isSignedIntPrimitive =:: bSigned
     b isUnsignedIntPrimitive =:: bUnsigned
     b sizeOfPrimitive =:: bBytes
-    aSigned aUnsigned | if bSigned bUnsigned | _if
+    aSigned aUnsigned | and bSigned or bUnsigned if
       ## both explicitly signed
       aSigned bSigned == if ## same sign -> pick larger size
         aBytes bBytes i64.max switch
@@ -461,7 +461,7 @@ namespace: types
     end
     a context primitiveValue =:: aPrimitive
     b context primitiveValue =:: bPrimitive
-    aPrimitive isIntPrimitive if bPrimitive isIntPrimitive _if
+    aPrimitive isIntPrimitive and bPrimitive isIntPrimitive if
       ## commonIntPrimitive
         aPrimitive
         bPrimitive
@@ -483,17 +483,17 @@ namespace: types
     end
     src context primitiveValue =:: srcPrimitive
     target context primitiveValue =:: targetPrimitive
-    srcPrimitive isIntPrimitive if targetPrimitive isIntPrimitive _if
+    srcPrimitive isIntPrimitive and targetPrimitive isIntPrimitive if
       srcPrimitive isSignedIntPrimitive =:: srcSigned
       srcPrimitive isUnsignedIntPrimitive =:: srcUnsigned
       srcPrimitive sizeOfPrimitive =:: srcBytes
       targetPrimitive isSignedIntPrimitive =:: targetSigned
       targetPrimitive isUnsignedIntPrimitive =:: targetUnsigned
       targetPrimitive sizeOfPrimitive =:: targetBytes
-      srcSigned if targetUnsigned _if
+      srcSigned and targetUnsigned if
         false return ## conversion signed -> unsigned by not be lossless
       end
-      srcUnsigned if targetSigned _if
+      srcUnsigned and targetSigned if
         ## unsigned -> signed : may need size increase
         srcBytes targetBytes < return
       end
@@ -1390,10 +1390,10 @@ namespace: types
     a [] b [] == if
       true return
     end
-    a [] labelContext id.labelFlags id.FLAG_DUMMY & ? if
-        b [] labelContext id.labelFlags id.FLAG_DUMMY & ? _if
-        ## treat dummy labels with same name as equal
-        a [] b [] labelContext id.labelNamesEq return
+    a [] labelContext id.labelFlags id.FLAG_DUMMY & ? and
+        b [] labelContext id.labelFlags id.FLAG_DUMMY & ? if
+      ## treat dummy labels with same name as equal
+      a [] b [] labelContext id.labelNamesEq return
     end
     false return
   end
@@ -1445,12 +1445,12 @@ namespace: types
     context [] .tupleTypes =:: tuples
     0 while ..dup tuples .length < do
       tuples ..over list.at .data =:: t
-      t [] .compositeInfo .eltCount elts .length == if
-      t [] .compositeInfo .eltsOffset eltsOffset == _if
-      t [] .compositeInfo .labelOffset labelOffset == _if
-      t [] .compositeInfo .flags COMP_MASK_COMMON_FLAGS &
-        flags COMP_MASK_COMMON_FLAGS &
-      == _if
+      t [] .compositeInfo .eltCount elts .length == and
+          t [] .compositeInfo .eltsOffset eltsOffset == and
+          t [] .compositeInfo .labelOffset labelOffset == and
+          t [] .compositeInfo .flags COMP_MASK_COMMON_FLAGS &
+            flags COMP_MASK_COMMON_FLAGS &
+          == if
         t [] .compositeInfo .flags flags | t [] .compositeInfo .flags =
         TupleId cast return
       end
@@ -1525,11 +1525,11 @@ namespace: types
     context [] .unionTypes =:: unions
     0 while ..dup unions .length < do
       unions ..over list.at .data =:: t
-      t [] .compositeInfo .eltCount elts .length == if
-      t [] .compositeInfo .eltsOffset eltsOffset == _if
-      t [] .compositeInfo .labelOffset labelOffset == _if
-      t [] .labelType labelType typeEquals _if
-      t [] .compositeInfo .flags flags == _if
+      t [] .compositeInfo .eltCount elts .length == and
+      t [] .compositeInfo .eltsOffset eltsOffset == and
+      t [] .compositeInfo .labelOffset labelOffset == and
+      t [] .labelType labelType typeEquals and
+      t [] .compositeInfo .flags flags == if
         break
       end
       1 +
@@ -1641,8 +1641,8 @@ namespace: types
   end
   proc( Type : mType TypeContext ptr : context -> bool ) =>: export: isCallable
     mType context unwrapNamed
-      ..dup context isPointer if
-      ..dup context isFixedSize _if
+      ..dup context isPointer and
+      ..dup context isFixedSize if
         context getBaseType
       end
     .procedure ?? return
@@ -1782,8 +1782,8 @@ namespace: types
   -> types.NamedTypeId ) =>: findNamedType
     0 while ..dup context [] .namedTypes .length < do =:: i
       context [] .namedTypes i list.at .data =:: elt
-      elt [] .name label == if
-          elt [] .implId implId == _if
+      elt [] .name label == and
+          elt [] .implId implId == if
         i return
       end
       i 1 +
@@ -2226,12 +2226,12 @@ namespace: types
       true return
     end
     ## allow auto-cast from/to direct descendant of named type
-    src .namedType ?? if namedDirection NAMED_UNWRAP_TARGET != _if
-      src context flatUnwrapNamed target context NAMED_UNWRAP_SRC canAutoCast_internal _if
+    src .namedType ?? and namedDirection NAMED_UNWRAP_TARGET != and
+        src context flatUnwrapNamed target context NAMED_UNWRAP_SRC canAutoCast_internal if
       true return
     end
-    target .namedType ?? if namedDirection NAMED_UNWRAP_SRC != _if
-      src target context flatUnwrapNamed context NAMED_UNWRAP_TARGET canAutoCast_internal _if
+    target .namedType ?? and namedDirection NAMED_UNWRAP_SRC != and
+        src target context flatUnwrapNamed context NAMED_UNWRAP_TARGET canAutoCast_internal if
       true return
     end
     ## convert c-types to types
@@ -2264,7 +2264,7 @@ namespace: types
         1 +
       end ..drop
     end
-    src context types.isReference if src context getBaseType to context canAutoCast _if
+    src context types.isReference and src context getBaseType to context canAutoCast if
       true return
     end
     false return
@@ -2290,7 +2290,7 @@ namespace: types
       end
       src .cType cTypeAsType target forceCast context canCast return
     end
-    target .arrayIndex ?? if src context types.isInt ! _if
+    target .arrayIndex ?? and src context types.isInt ! if
       false return ## can only cast integers to index
     end
     src context types.isNumber target context types.isNumber & if
@@ -2302,7 +2302,7 @@ namespace: types
         true return
       end
     end end
-    src context types.isReference if src context getBaseType target forceCast context canCast _if
+    src context types.isReference and src context getBaseType target forceCast context canCast if
       true return
     end
     forceCast ! if
@@ -2348,8 +2348,8 @@ namespace: types
     a context types.isNumber b context types.isNumber & if
       a b context commonNumberType return
     end
-    a context types.isPointer b context types.isPointer & if
-     a context types.getBaseType b context types.getBaseType types.typeEquals _if
+    a context types.isPointer b context types.isPointer & and
+        a context types.getBaseType b context types.getBaseType types.typeEquals if
       a context types.isMutable b context types.isMutable & =:: mutable
       a context types.getArraySize =:: aSizes
       b context types.getArraySize =:: bSizes
@@ -2380,10 +2380,10 @@ namespace: types
         context
       newArrayType return
     end
-    a context types.isUnion if b a context canAutoCast _if
+    a context types.isUnion and b a context canAutoCast if
       a false return
     end
-    b context types.isUnion if a b context canAutoCast _if
+    b context types.isUnion and a b context canAutoCast if
       b false return
     end
     Type .undefined true return

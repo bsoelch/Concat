@@ -249,9 +249,9 @@ namespace: branchTree
       nodeData [] .parent nodeId =
       1 -
     end ..drop
-    needCopy ! if
+    needCopy ! and
         tree [] .nodes nodeId list.at .data =:: node
-        node [] .childCount 1 <= _if
+        node [] .childCount 1 <= if
       node [] .data @ optional.wrap return
     end
     ## copy branch to prevent modification of other branches

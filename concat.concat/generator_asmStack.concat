@@ -338,7 +338,7 @@ namespace: asm
           globalLabel case arg .globalLabel labelContext appendGlobalLabel break
           empty case ..unreachable
         end
-        wasPtrOffset if isPtrOffset ! _if
+        wasPtrOffset and isPtrOffset ! if
           ']' sb.appendC
         end
         true needComma =
@@ -556,13 +556,13 @@ proc(
   program [] .errors @ =:: errors
   context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
     context [] .openBlocks i list.at .data =:: block
-    breakType .BREAK ?? if block [] .While ?? _if
+    breakType .BREAK ?? and block [] .While ?? if
       block optional.wrap return
     end
-    breakType .CONTINUE ?? if block [] .While ?? _if
+    breakType .CONTINUE ?? and block [] .While ?? if
       block optional.wrap return
     end
-    breakType .BREAK_SWITCH ?? if block [] .Switch ?? _if
+    breakType .BREAK_SWITCH ?? and block [] .Switch ?? if
       block optional.wrap return
     end
     i 1 -
@@ -1557,7 +1557,7 @@ proc(
         ## asm.createUnary
           src typeContext types.isUnsignedInt if
             X64_OP .EXTZ ## u -> i,s,u
-          else src typeContext types.isSignedInt ! _if
+          else src typeContext types.isSignedInt ! and
               target typeContext types.isUnsignedInt _if
             X64_OP .EXTZ ## i -> u
           else ## s -> i,s,u / i -> i,s
@@ -1569,7 +1569,7 @@ proc(
       return
     end
   ## case 2: float -> float/int
-  else fromVal .F32 ?? fromVal .F64 ?? | _if
+  else fromVal .F32 ?? or fromVal .F64 ?? _if
     toVal switch ## TODO handle overflow in float->int conversion
       F32 case
         ## TODO F64 -> F32
@@ -1710,7 +1710,7 @@ proc(
       pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
     return
   end
-  src typeContext types.isReference if target typeContext types.isReference ! _if
+  src typeContext types.isReference and target typeContext types.isReference ! if
     src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
     asmOps
       ## 1. load reference
@@ -2209,7 +2209,7 @@ proc(
               target .registers @ 0 [] AsmOperand .register
               idInfo .labelId AsmOperand .localVariable
             asm.createBinary AssemblyAtom .op list.append
-            isPtr ! if idInfo .idType .ARGUMENT ?? _if
+            isPtr ! and idInfo .idType .ARGUMENT ?? if
               op [] .pos context popValue =:: src =:: srcType
               srcType ValueType .REFERENCE == assert "variable is reference"
               src .registerCount 1 == assert "correct register count for reference"
@@ -2612,7 +2612,7 @@ proc(
           end
           asmOps
             ..dup .length =:: elseCodeOffset
-            context [] .reachable if ifBlock .ifBranchTerminates _if
+            context [] .reachable and ifBlock .ifBranchTerminates if
               context reserveStackRegSpace
             end
             ## LocalLabel
@@ -2620,7 +2620,7 @@ proc(
               op [] .val .blockEnd .blockId
               op [] .val .blockEnd .subId
             LocalLabel new AssemblyAtom .localLabel list.append
-            context [] .reachable if ifBlock .ifBranchTerminates _if
+            context [] .reachable and ifBlock .ifBranchTerminates if
               i64 2 array new =:: mut: offsets
               StackRegisterState 2 array new =:: mut: states
               ifBlock .ifBranchCodeOffset offsets@ 0 [] =

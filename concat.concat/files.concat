@@ -154,8 +154,8 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
       1 string.tail =:: chars
       0 while ..dup chars .length < do
         chars ..over string.charAt '`' == if ##escape characters
-          ..dup 1 + chars .length < if
-              chars ..over 1 + string.charAt '`' == _if
+          ..dup 1 + chars .length < and
+               chars ..over 1 + string.charAt '`' == if
             chars ..over string.charAt fileState [] .currentPos @ updateFilePos
             1 +
           else break end

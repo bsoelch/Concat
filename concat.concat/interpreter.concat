@@ -568,7 +568,7 @@ namespace: interpreter
           false
         return
       end
-    else isLength _if isType _if
+    else isLength and isType and
         valType typeContext types.isComposite _if
       ## return
         types.primitive.I_SIZE
@@ -768,8 +768,8 @@ proc(
       blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case
           op closedBlock @ true false context closedTypeBlock if true return end
-          blockType .TYPE_COMPOSITE ?? if
-              context [] .typeBuffer .length 0 == _if
+          blockType .TYPE_COMPOSITE ?? and
+              context [] .typeBuffer .length 0 == if
             Type .empty
           else
             ## newTuple
@@ -824,11 +824,11 @@ proc(
             false
             false
           context closedTypeBlock if true return end
-          context [] .typeBuffer .length 1 >= if
+          context [] .typeBuffer .length 1 >= and
               ## last argument is procedure output
               context [] .typeBuffer
                 ..dup .length 1 -
-              list.get .procOut ?? ! _if
+              list.get .procOut ?? ! if
             "missing return type for procedure" sb.wrap op [] .pos errors appendError
             true return
           end
@@ -1023,7 +1023,8 @@ proc(
           ## static procedure -> no call resolving necessary
           op [] .dataType typeContext types.getProcOut ..drop =:: procOut
           procOut typeContext types.compositeElts =:: outTypes
-          outTypes .length 1 == if outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals _if
+          outTypes .length 1 == and
+              outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals if
             ## type-generator (procedure returning type)
             op [] .dataType typeContext types.getProcIn ..drop =:: procIn
             procIn typeContext types.compositeElts =:: inTypes
@@ -1148,7 +1149,7 @@ proc(
         true =:: mut: fixedSize
         context minStackOffset =:: minOffset
         context [] .stack .length 1 - =:: mut: offset
-        offset minOffset > if context [] .stack offset list.get .wildCard ?? _if
+        offset minOffset > and context [] .stack offset list.get .wildCard ?? if
           false fixedSize =
           offset 1 - offset =
         end
@@ -1333,16 +1334,16 @@ proc(
       end
       oldValue =:: mut: newValue
       ## XXX? cast value in more cases
-      oldValue .Float ?? if targetType typeContext types.isInt _if
+      oldValue .Float ?? and targetType typeContext types.isInt if
         targetType typeContext types.isUnsignedInt if
           oldValue .Float u64 cast ConstValue .int newValue =
         else
           oldValue .Float i64 cast ConstValue .int newValue =
         end
       end
-      oldValue .int ?? if
-          valInfo .valueType typeContext types.isUnsignedInt _if
-          targetType typeContext types.isFloat _if
+      oldValue .int ?? and
+          valInfo .valueType typeContext types.isUnsignedInt and
+          targetType typeContext types.isFloat if
         oldValue .int u64 cast f64 cast ConstValue .Float newValue =
       end
       ## pushValue
@@ -1722,16 +1723,8 @@ proc(
     context [] .stack ..over argsOffset + list.at .data =:: value
     context [] .stackInfo ..over argsOffset + list.at .data =:: valueInfo
     inType ..over typeContext types.compositeGetLabel =:: label
-    label id.LABEL_ID_NONE != if ## store argument as value
-     label labelContext id.labelFlags id.FLAG_DUMMY & ? ! _if
-      context [] .variables @
-        label
-        ## Constant
-          value []
-          valueInfo []
-        Constant new
-      map.put ..drop
-    else ## push argument
+    label id.LABEL_ID_NONE == or 
+        label labelContext id.labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
         value list.appendP
       context [] .stack =
@@ -1743,6 +1736,14 @@ proc(
           pos
         ValueInfo new list.append
       context [] .stackInfo =
+    else ## store argument as value
+      context [] .variables @
+        label
+        ## Constant
+          value []
+          valueInfo []
+        Constant new
+      map.put ..drop
     end
     1 +
   end ..drop

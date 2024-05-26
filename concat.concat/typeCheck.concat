@@ -226,9 +226,9 @@ proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
       break
     else typeInfo [] .opIndex 0 < _if
       break
-    else typeInfo [] .opIndex minEditableIndex < _if
+    else typeInfo [] .opIndex minEditableIndex < and
         state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
-        opInfo [] .canMove ! opInfo [] .childCount 0 != | _if
+        opInfo [] .canMove ! or opInfo [] .childCount 0 != _if
       break
     end
     buffer
@@ -292,13 +292,13 @@ proc(
   =:: mut: sb
   state [] .stack @ branchTree.itr.start while
     branchTree.itr.hasNext do branchTree.itr.next =:: val
-    remaining 0 > if
+    remaining 0 > and
         remaining 1 - remaining =
-        remaining 0 == _if
+        remaining 0 == if
       break
     end
     sb
-      printValues if val [] .valueId id.LABEL_ID_NONE != _if
+      printValues and val [] .valueId id.LABEL_ID_NONE != if
         val [] .valueId labelContext sb.appendLabelName
         ": " sb.appendS
       end
@@ -362,7 +362,7 @@ proc(
     true return
   end
   ## casting between integer constants
-  src .value .int ?? if target typeContext types.isInt _if
+  src .value .int ?? and target typeContext types.isInt if
     target .arrayIndex ?? if
       src .value .int 0 < if
         "array indices cannot be less than 0 got: " sb.wrap
@@ -766,7 +766,7 @@ proc(
     block [] .While ?? if
       block optional.wrap return
     end
-    breakType .BREAK ?? if block [] .Switch ?? _if
+    breakType .BREAK ?? and block [] .Switch ?? if
       block optional.wrap return
     end
     i 1 -
@@ -815,11 +815,11 @@ end
 ## terminate current switch branch
 proc( FilePosition : pos TypeCheckState ptr mut : state -> ) =>: endSwitchBranch
   state peekBlock =:: currentBlock?
-  currentBlock? optional.hasData if
+  currentBlock? optional.hasData and
       currentBlock? .data =:: currentBlock
-      currentBlock [] .Switch ?? _if
+      currentBlock [] .Switch ?? and
       currentBlock? .data [] .Switch @ =:: switchBlock
-      switchBlock [] .inLabel ! _if
+      switchBlock [] .inLabel ! if
     true switchBlock [] .inLabel =
     switchBlock pos state breakSwitch
   end
@@ -957,7 +957,7 @@ proc(
           mergePoint .castPointOffsets i array.get =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
-            castPoint [] .val .NOP ?? if castPoint [] .val .NOP .RESERVED ?? _if
+            castPoint [] .val .NOP ?? and castPoint [] .val .NOP .RESERVED ?? if
               ## opAutoCast
                 current [] .valueType
                 offset i32 cast
@@ -1004,8 +1004,8 @@ proc(
         ELSE CASE DEFAULT case
           return
         BREAK BREAK_SWITCH case
-          state [] .openBlocks .length 0 > if
-              state [] .openBlocks list.peek .data [] .Switch ?? _if
+          state [] .openBlocks .length 0 > and
+              state [] .openBlocks list.peek .data [] .Switch ?? if
             return ## allow break in switch
           end
           break
@@ -1461,9 +1461,9 @@ proc(
     op [] .val .getId .labelId
   else op [] .val .getName ?? _if
     op [] .val .getName
-  else op [] .val .Constant ?? _if
+  else op [] .val .Constant ?? and
       op [] .val .Constant =:: constVal
-      constVal .typeId ?? _if
+      constVal .typeId ?? and
       constVal .typeId types.isNamedType _if
     constVal .typeId typeContext types.namedTypeName
   else
@@ -1532,7 +1532,7 @@ proc(
       end
     end
   end
-  state inSwitchLabel if op @ state typeCheckSwitchLabel _if
+  state inSwitchLabel and op @ state typeCheckSwitchLabel if
     return
   end
   op .val .getName ?? if
@@ -1547,16 +1547,16 @@ proc(
     ..dup optional.hasData if
       .data op .val .atId =
     else ..drop end
-  else op .val .getId ?? _if ## convert static arguments to constants
+  else op .val .getId ?? and ## convert static arguments to constants
       op .val .getId .labelId =:: label
-      label labelContext id.labelFlags id.FLAG_STATIC & ? _if
+      label labelContext id.labelFlags id.FLAG_STATIC & ? and
       ConstValue .none =:: mut: argValue
       state [] .argData @ label map.at =:: argData?
       argData? optional.hasData _if
     argData? .data [] .valType op .dataType =
     argData? .data [] .value op .val .Constant =
   end
-  state [] .interpreterActive if op @ state [] .interpreter @ evaluateOperation ! _if
+  state [] .interpreterActive and op @ state [] .interpreter @ evaluateOperation ! if
     return ## evaluate constants
   end
   state freezeInterpreter
@@ -1660,7 +1660,7 @@ proc(
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
           state [] .stack @ branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
-            headConstant if val [] .value .none ?? ! _if
+            headConstant and val [] .value .none ?? ! if
               stackConstants 1 + stackConstants =
             else
               false headConstant =
@@ -1704,9 +1704,9 @@ proc(
           end
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
-          stackConstants argCount >= if ## enough arguments for interpreting call
+          stackConstants argCount >= and ## enough arguments for interpreting call
               calledProcData [] .isStatic ## only try interpreting static and built-ins
-              calledProcData [] .implementation .builtIn ?? | _if
+              calledProcData [] .implementation .builtIn ?? | if
             state unfreezeInterpreter
             op @ state [] .interpreter @ evaluateOperation ! if
               return
@@ -1889,8 +1889,8 @@ proc(
             ..drop return
           end ..drop
           ## update constant value in identifier if stack-value is constant
-          idInfo .idType .GLOBAL_VAR ?? if
-              constVal .none ?? ! _if
+          idInfo .idType .GLOBAL_VAR ?? and
+              constVal .none ?? ! if
             ## getIdentifier
               idInfo .labelId
               idContext
@@ -1973,9 +1973,9 @@ proc(
         end
         return
       end
-      isReference if
-          target [] .opIndex OP_EMPTY != _if
-          target [] .opIndex state currentBlockStart < _if
+      isReference and
+          target [] .opIndex OP_EMPTY != and
+          target [] .opIndex state currentBlockStart < if
         "cannot assign value to reference on different branch" sb.wrap
           "( pushed at" sb.appendS
           target [] .pushedAt sb.appendPos
@@ -1990,9 +1990,9 @@ proc(
           op .pos errors appendError
           return
         end
-        index state [] .compiledOps .length < if
+        index state [] .compiledOps .length < and
             state [] .compiledOps index list.at .data =:: enumCheck
-            enumCheck [] .val .checkEnumLabel ?? _if
+            enumCheck [] .val .checkEnumLabel ?? if
           enumCheck [] .val .checkEnumLabel enumCheck [] .val .setEnumLabel =
         else
           "could not update enum index" sb.wrap
@@ -2036,11 +2036,11 @@ proc(
       container .valueType =:: srcType
       false =:: mut: mutable
       false =:: mut: isType
-      srcType types.primitive.TYPE types.typeEquals if container .value .typeId ?? _if
+      srcType types.primitive.TYPE types.typeEquals and container .value .typeId ?? if
         true isType =
         container .value .typeId
       else ## TODO handle reference to pointer
-        srcType typeContext types.isPointer srcType typeContext types.isReference | if
+        srcType typeContext types.isPointer or srcType typeContext types.isReference if
            srcType typeContext types.isMutable mutable =
            srcType typeContext types.getBaseType
         else
@@ -2120,8 +2120,8 @@ proc(
           constContext newUnionConst constValue =
         else
           state [] .stack @ branchTree.peek =:: value?
-          value? optional.hasData if
-              value? .data [] .value .none ?? ! _if
+          value? optional.hasData and
+              value? .data [] .value .none ?? ! if
             ## newUnionConst
               value? .data [] .value
               elementIndex
@@ -2148,7 +2148,8 @@ proc(
       elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
         false mutable =
       end
-      isAddr if srcType typeContext types.isPointer srcType typeContext types.isReference | ! _if
+      ## TODO clarify message
+      isAddr and srcType typeContext types.isPointer ! and srcType typeContext types.isReference ! if
         "can only take address of pointers or references got: \"" sb.wrap
         srcType typeContext sb.appendType
         op .pos errors appendError
@@ -2527,11 +2528,10 @@ proc(
           end ..drop
           false 1 op .pos state clearReferences
           state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! if
+          currentBlock? optional.isEmpty or
               currentBlock? .data =:: currentBlock
-              currentBlock [] .If ?? _if
-              currentBlock [] .If .hasIf ! _if ## XXX swap to using or
-          else
+              currentBlock [] .If ?? ! or
+              currentBlock [] .If .hasIf if
             state [] .blockCount =:: mut: blockId
             state [] .blockCount 1 + state [] .blockCount =
             blockId op .val .block .blockId =
@@ -2565,11 +2565,10 @@ proc(
           false 1 op .pos state clearReferences
           ## XXX? pull constants into if branches
           state peekBlock =:: currentBlock?
-          currentBlock? optional.hasData if
+          currentBlock? optional.isEmpty or
               currentBlock? .data =:: currentBlock
-              currentBlock [] .If ?? _if
-              currentBlock [] .If .hasIf ! _if
-          else
+              currentBlock [] .If ?? ! or
+              currentBlock [] .If .hasIf if
             state [] .stack @ branchTree.startBranch =:: ifBranch
             state [] .blockCount =:: mut: blockId
             state [] .blockCount 1 + state [] .blockCount =
@@ -2632,12 +2631,12 @@ proc(
           return
         IFIF case
           state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! if
+          currentBlock? optional.isEmpty ! and
             currentBlock? .data =:: currentBlock
-            currentBlock [] .If ?? _if
-            currentBlock [] .If .hasElse ! _if
+            currentBlock [] .If ?? and
+            currentBlock [] .If .hasElse ! if
           else
-            "unexpected of if_if-statement, if_if can only appear in if-blocks" sb.wrap
+            "unexpected if_if-statement, if_if can only appear in if-blocks" sb.wrap
             op .pos errors appendError
             return
           end
@@ -2748,8 +2747,8 @@ proc(
           value? .data [] .valueType
             typeContext types.unwrapReference
           =:: switchType
-          switchType typeContext types.isInt ! if
-            switchType typeContext types.isEnum ! _if
+          switchType typeContext types.isInt ! and
+              switchType typeContext types.isEnum ! if
             "cannot switch values of type " sb.wrap
               switchType typeContext sb.appendType
             op .pos errors appendError
@@ -2879,9 +2878,9 @@ proc(
           breakBlock [] .Switch ?? if
             breakBlock [] .Switch @ =:: switchBlock
             state peekBlock .data =:: currentBlock
-            currentBlock [] .Switch ?? if
+            currentBlock [] .Switch ?? and
                 currentBlock [] .Switch .blockId
-                switchBlock [] .blockId == _if
+                switchBlock [] .blockId == if
               ## top-level break statement
               true switchBlock [] .inLabel =
               false switchBlock [] .allowBreak =
@@ -2938,10 +2937,9 @@ proc(
           return
         AND_DO OR_DO case
           state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! if
-            currentBlock? .data =:: currentBlock
-            currentBlock [] .While ?? _if
-          else
+          currentBlock? optional.isEmpty or
+              currentBlock? .data =:: currentBlock
+              currentBlock [] .While ?? ! if
             "unexpected " sb.wrap
               blockType sb.appendBlockType
               "-statement, " sb.appendS
@@ -2980,10 +2978,9 @@ proc(
           return
         DO case
           state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! if
-            currentBlock? .data =:: currentBlock
-            currentBlock [] .While ?? _if
-          else
+          currentBlock? optional.isEmpty or
+              currentBlock? .data =:: currentBlock
+              currentBlock [] .While ?? ! if
             "unexpected " sb.wrap
               BlockType .DO sb.appendBlockType
               "-statement, do can only appear in " sb.appendS
@@ -3066,9 +3063,9 @@ proc(
         AND OR case
           false 1 op .pos state clearReferences
           state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! if
+          currentBlock? optional.isEmpty ! and
               currentBlock? .data =:: currentBlock
-              currentBlock [] .AndOr ?? _if
+              currentBlock [] .AndOr ?? if
             currentBlock [] .AndOr .branches@ =:: branches
             branches []
                 state [] .stack @ branchTree.startBranch
@@ -3693,15 +3690,15 @@ proc(
           end
           state [] .stack @ branchTree.pop .data [] =:: upper
           state [] .stack @ branchTree.pop .data [] =:: mut: lower
-          lower .valueType typeContext types.isEmpty ! if
-          upper .valueType typeContext types.isEmpty ! _if
+          lower .valueType typeContext types.isEmpty ! and
+              upper .valueType typeContext types.isEmpty ! if
             ## swap values in code
-            lower .opIndex state canCopyOp if
-                lower .opIndex state canDeleteOp _if
+            lower .opIndex state canCopyOp and
+                lower .opIndex state canDeleteOp if
               ## copy lower value above upper
               ## discard old operations for lower value
               lower .opIndex state tryCopyOp =:: isError =:: newIndex
-              lower .opIndex state tryDeleteOp isError | if
+              lower .opIndex state tryDeleteOp or isError if
                 "internal compiler error: could not move operation" sb.wrap
                 op .pos errors appendError
               end
