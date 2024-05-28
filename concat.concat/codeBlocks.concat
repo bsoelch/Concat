@@ -1,5 +1,7 @@
 import stringBuilder
 
+import "common.concat"
+
 enum(
   UNKNOWN
   PROCEDURE
@@ -31,7 +33,12 @@ enum(
   TYPE_COMPOSITE
   NAMESPACE
 ) =:: export: BlockType
-struct( BlockType : blockType i32 : mut: blockId i32 : mut: subId ) =:: export: BlockId
+struct(
+  BlockType : blockType
+  LabelId : blockLabel
+  i32 : mut: blockId
+  i32 : mut: subId
+) =:: export: BlockId
 namespace: sb
   proc( stringBuilder BlockType -> stringBuilder ) =>: export: appendBlockType
     switch

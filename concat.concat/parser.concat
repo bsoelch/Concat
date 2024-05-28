@@ -1553,8 +1553,22 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         state autoCloseCurrentBlock
       end
       return
-    else ..dup "while" string.wrap string.eq _if ..drop
-      BlockType .WHILE  fileState [] .wordStart opBlock  state appendOp
+    else ..dup "while" string.wrap string.eq or
+        ..dup "while:" string.wrap string.eq _if =:: opName
+      opName "while:" string.wrap string.eq if
+        fileState nextToken
+          ..dup .IDENTIFIER ?? ! if
+            "expected identifier" sb.wrap fileState [] .wordStart state appendError2
+          end
+          .IDENTIFIER
+          id.FLAG_NONE
+          fileState [] .wordStart
+          state [] .currentFile
+        labelContext id.newLabel
+      else
+        id.LABEL_ID_NONE
+      end =:: blockLabel
+      BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       BlockType .WHILE  state openBlockScope
       return
     else ..dup "do" string.wrap string.eq _if ..drop
@@ -1572,14 +1586,52 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .DO  current? .data [] .blockType =
       BlockType .DO  fileState [] .wordStart opBlock  state appendOp
       return
-    else ..dup "break" string.wrap string.eq _if ..drop
-      BlockType .BREAK  fileState [] .wordStart opBlock  state appendOp
+    else ..dup "break" string.wrap string.eq or
+        ..dup "break." string.wrap string.startsWith _if =:: opName
+      opName '.' string.split ..drop =:: breakLabel
+      breakLabel .length 0 > if
+        ## newLabel
+          breakLabel
+          id.FLAG_NONE
+          fileState [] .wordStart
+          state [] .currentFile
+        labelContext id.newLabel
+      else
+        id.LABEL_ID_NONE
+      end =:: blockLabel
+      BlockType .BREAK blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
-    else ..dup "continue" string.wrap string.eq _if ..drop
-      BlockType .CONTINUE  fileState [] .wordStart opBlock  state appendOp
+    else ..dup "continue" string.wrap string.eq or
+        ..dup "continue." string.wrap string.startsWith _if =:: opName
+      opName '.' string.split ..drop =:: continueLabel
+      continueLabel .length 0 > if
+        ## newLabel
+          continueLabel
+          id.FLAG_NONE
+          fileState [] .wordStart
+          state [] .currentFile
+        labelContext id.newLabel
+      else
+        id.LABEL_ID_NONE
+      end =:: blockLabel
+      BlockType .CONTINUE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
-    else ..dup "switch" string.wrap string.eq _if ..drop
-      BlockType .SWITCH  fileState [] .wordStart opBlock  state appendOp
+    else ..dup "switch" string.wrap string.eq or
+        ..dup "switch:" string.wrap string.eq _if =:: opName
+      opName "switch:" string.wrap string.eq if
+        fileState nextToken
+          ..dup .IDENTIFIER ?? ! if
+            "expected identifier" sb.wrap fileState [] .wordStart state appendError2
+          end
+          .IDENTIFIER
+          id.FLAG_NONE
+          fileState [] .wordStart
+          state [] .currentFile
+        labelContext id.newLabel
+      else
+        id.LABEL_ID_NONE
+      end =:: blockLabel
+      BlockType .SWITCH blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       BlockType .SWITCH  state openBlockScope
       return
     else ..dup "case" string.wrap string.eq _if ..drop

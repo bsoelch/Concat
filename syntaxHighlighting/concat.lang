@@ -53,16 +53,18 @@
     <!-- XXX? match up beginning and end of block -->
     <context id="block-keyword" style-ref="keyword">
       <match extended="true">
-        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+        (\A|(?&lt;=[[:space:]]))(( # start of file or white-space
           if              |
           else            |
           _if             |
           end             |
           while           |
+          while\:         |
           do              |
           break           |
           continue        |
           switch          |
+          switch\:        |
           case            |
           default         |
           and             |
@@ -71,7 +73,10 @@
           namespace\:     |
           end             |
           assert
-        )(\Z|(?=[[:space:]])) # end of file or white-space
+        )(\Z|(?=[[:space:]])) | # end of file or white-space
+          break\.    |
+          continue\.
+        )
       </match>
     </context>
 
