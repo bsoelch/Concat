@@ -45,6 +45,7 @@ struct(
   branchTree.NodeId : branchRoot
   BranchPoint list : mut: caseBranches
   i64 list : mut: castOffsets
+  LabelId : blockLabel
   i32 : blockId
   bool : mut: inLabel
   bool : mut: allowBreak
@@ -57,6 +58,7 @@ struct(
   i64 list : mut: continueCastOffsets
   BranchPoint list : mut: doBranches
   i64 : mut: doBranchIndex ## index of do-branch in break branches
+  LabelId : blockLabel
   i32 : blockId
 ) =:: WhileBlockInfo
 struct(
@@ -84,18 +86,30 @@ proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockIn
     false
   IfBlockInfo new BlockInfo .If return
 end
-proc( Type : switchType branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockInfo ) =>: newSwitchBlock
+proc(
+  Type : switchType
+  branchTree.NodeId : branchRoot
+  LabelId : blockLabel
+  i32 : blockId
+  FilePosition : pos
+-> BlockInfo ) =>: newSwitchBlock
   ## SwitchBlockInfo
     switchType
     branchRoot
     16 BranchPoint list.create
     16 i64 list.create
+    blockLabel
     blockId
     true
     false
   SwitchBlockInfo new BlockInfo .Switch return
 end
-proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockInfo ) =>: newWhileBlock
+proc(
+  branchTree.NodeId : branchRoot
+  LabelId : blockLabel
+  i32 : blockId
+  FilePosition : pos
+-> BlockInfo ) =>: newWhileBlock
   ## WhileBlockInfo
       branchRoot
       pos
@@ -106,6 +120,7 @@ proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockIn
     16 i64 list.create
     16 BranchPoint list.create
     -1
+    blockLabel
     blockId
   WhileBlockInfo new BlockInfo .While return
 end
@@ -756,17 +771,24 @@ proc( TypeCheckState ptr : state -> bool ) =>: inSwitchLabel
 end
 proc(
   BlockType : breakType
+  LabelId : blockLabel
   FilePosition : pos
   TypeCheckState ptr mut : state
 -> BlockInfo ptr mut optional ) =>: findBreakableBlock
   state [] .program =:: program
+  program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   program [] .errors @ =:: errors
   state [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
     state [] .openBlocks i list.at .data =:: block
-    block [] .While ?? if
+    block [] .While ?? and blockLabel id.LABEL_ID_NONE == or
+        block [] .While .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
     end
-    breakType .BREAK ?? and block [] .Switch ?? if
+    breakType .BREAK ?? and block [] .Switch ?? and
+        blockLabel id.LABEL_ID_NONE == or
+        block [] .Switch .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
     end
     i 1 -
@@ -2779,6 +2801,7 @@ proc(
           ## newSwitchBlock
             switchType
             switchBranch
+            op .val .block .blockLabel
             switchId
             op .pos
           newSwitchBlock state openBlock
@@ -2867,6 +2890,7 @@ proc(
         BREAK CONTINUE case
           ## findBreakableBlock
             blockType
+            op .val .block .blockLabel
             op .pos
             state
           findBreakableBlock =:: breakBlock?
@@ -2931,6 +2955,7 @@ proc(
           state [] .stack @ branchTree.startBranch =:: whileBranch
           ## newWhileBlock
             whileBranch
+            op .val .block .blockLabel
             whileId
             op .pos
           newWhileBlock state openBlock

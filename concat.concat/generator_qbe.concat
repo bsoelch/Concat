@@ -514,7 +514,7 @@ proc(
 end
 
 proc(
-  BlockType : breakType
+  i32 : blockId
   FilePosition : pos
   CompilerContext ptr mut : context
 -> BlockInfo ptr mut optional ) =>: findBreakableBlock
@@ -522,23 +522,15 @@ proc(
   program [] .errors @ =:: errors
   context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
     context [] .openBlocks i list.at .data =:: block
-    breakType .BREAK ?? and block [] .While ?? if
+    block [] .While ?? and block [] .While .blockId blockId == if
       block optional.wrap return
     end
-    breakType .CONTINUE ?? and block [] .While ?? if
-      block optional.wrap return
-    end
-    breakType .BREAK_SWITCH ?? and block [] .Switch ?? if
+    block [] .Switch ?? and block [] .Switch .blockId blockId == if
       block optional.wrap return
     end
     i 1 -
   end ..drop
-  60 sb.create
-    breakType sb.appendBlockType
-    " can only appear in loops " sb.appendS
-    breakType .BREAK_SWITCH ?? if
-      "and switch-case statements" sb.appendS
-    end
+  "could not find target of break/continue " sb.wrap
   pos errors appendError
   BlockInfo ptr mut optional.empty return
 end
@@ -3806,7 +3798,7 @@ proc(
             return
         BREAK_SWITCH case
             ## findBreakableBlock
-              BlockType .BREAK_SWITCH
+              op [] .val .block .blockId
               op [] .pos
               context
             findBreakableBlock =:: breakBlock?
@@ -4007,7 +3999,7 @@ proc(
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
-            blockType
+            op [] .val .block .blockId
             op [] .pos
             context
           findBreakableBlock =:: breakBlock?
