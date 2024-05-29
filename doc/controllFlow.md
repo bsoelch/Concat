@@ -31,7 +31,8 @@ An if-block starts with the keyword `if` and ends with the matching `end` keywor
 When the execution reaches `if`or `_if` a boolean is popped from the stack, if the value is `true` the execution continues on the current path, otherwise execution will jump to the position directly after the next `else` statement in the current `if` block, (if there is no `else`statement the execution will jump to the end of the if-block).
 When the execution reaches an `else` keyword, the execution will jump to the end of the if-statement
 
-`and` and `or` can be used within the if-condition to short-ciruit evaluate a condition, `and` jumps directly to the `else` branch when the condition on top of the stack is false, `or` jumps directly to the `if` branch when the condition on top of the stack is true.
+`and` and `or` can be used within the if-condition to short-circuit evaluate a condition, `and` jumps directly to the `else` branch when the condition on top of the stack is false, `or` jumps directly to the `if` branch when the condition on top of the stack is true.
+Local variables declared within a chain of `and` statements will stay accessible until the end of the `if`-branch, if an `or` appears as part of the condition, the local variable declared before `if` will not be preserved
 
 The types at the end of all branches of the if statement have, need to the compatible (equal up to implicit casts).
 
@@ -154,8 +155,47 @@ The types obtained by merging the `continue` branches have to be equal to the ty
 Optionally a while loop can contain a `defer` statement, the code between `while`  and `defer` will be executed after each iteration of the loop, if a `defer` statement is present the `continue` branches will jump to the start of the `defered` code.
 ( `defer` has not been implemented )
 
-<!-- TODO and/or blocks -->
+## and / or
 
+syntax (examples, number and type of and/or can be chosen arbitrarily ):
+```
+  <condition> and <condition> or <condition> or <condition> end
+  
+  <condition> and <condition> or <condition> if
+     ...
+  end
+  
+  while <condition> and <condition> or <condition> do
+    ...
+  end
+```
 
+`and` and `or` can be used to short-circuit evaluate logical expressions.
+And/or blocks start with the first `and` or `or` statement, can contain any number of additional `and`/`or` statements and end with the matching `end` statement, for convenient use as part of conditional statements and/or blocks are automatically closed when hitting any of `if`, `_if` or `do`.
 
+When the execution reaches an `and` or `or` statement a boolean is popped from the stack, if the value is `false` ( in the case of `and` ) or `true` ( in the case of `or` ) the program jumps to the end of the and/or block otherwise the execution continues along the previous path.
 
+Examples:
+```
+  i 0 < or i x .length >= if ## C: if((i < 0) || (i >= x.length)) ...
+      ## i is < 0 or i is >= x .length
+  end
+
+  while a and b do ##  C : while(a && (b || c)) ...
+    ## both a and b are true
+  end
+
+  a  and  b or  c if  ##  C : if(a && (b || c)) ...
+    ## a is true, and at least one of b and c is true
+  else  a or b and c _if ##  C : else if(a || (b && c)) ...
+    ## a is true, or b and c are both true
+  end
+
+  ##  C : bool x = a || ( b && c );
+  a or b and c end =:: x ## x is true if a is true  or both b and c are true
+
+  ## and blocks can be used in the condition part of other and/or -chains
+  a and b end c or if ##  C : if(( a && b ) || c)
+    ## either  a and b are both true or c is true
+  end
+```
