@@ -3100,11 +3100,11 @@ proc(
       end =:: index
       op [] .val .atElement ?? =:: isAddr
       op [] .dataType =:: mut: containerType
-      false =:: mut: isPtr
-      containerType typeContext types.isPointer
-          containerType typeContext types.isReference | if
+      false =:: mut: ptrSrc
+      containerType typeContext types.isReference or
+          containerType typeContext types.isPointer if
         containerType typeContext types.getBaseType containerType =
-        true isPtr =
+        true ptrSrc =
       end
       containerType
         index
@@ -3112,7 +3112,7 @@ proc(
       types.compositeGetElement =:: eltType
       isAddr if
         ValType .PTR
-      else isPtr _if
+      else ptrSrc _if
         ValType .REFERENCE
       else
         eltType context toValType
@@ -3134,23 +3134,24 @@ proc(
       else
         break ## unsupported type
       end
-        isPtr ! and eltType context referenceOnly ! if
-          op [] .pos context popValue =:: srcId
-          op [] .pos sb.appendPosQBE
-          "%s" sb.appendS
-          valType context pushValue sb.appendI
-          " =" sb.appendS
-          valType sb.appendValTypeQBE
-          " load" sb.appendS
-          eltType
-            StorageType .LOAD
-            op [] .pos
-            context
-          sb.appendTypeNameQBE
-          " %s" sb.appendS
-          srcId sb.appendI
-          '\n' sb.appendC
+        isAddr or ptrSrc or eltType context referenceOnly if
+          return
         end
+        op [] .pos context popValue =:: srcId
+        op [] .pos sb.appendPosQBE
+        "%s" sb.appendS
+        valType context pushValue sb.appendI
+        " =" sb.appendS
+        valType sb.appendValTypeQBE
+        " load" sb.appendS
+        eltType
+          StorageType .LOAD
+          op [] .pos
+          context
+        sb.appendTypeNameQBE
+        " %s" sb.appendS
+        srcId sb.appendI
+        '\n' sb.appendC
       return
     New NewEnum NewReference NewEnumReference case
       op [] .val .NewReference ?? op [] .val .NewEnumReference ?? | =:: hasReference

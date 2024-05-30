@@ -2055,20 +2055,26 @@ proc(
         return
       end
       state [] .stack @ branchTree.peek .data [] =:: container
-      container .valueType =:: srcType
       false =:: mut: mutable
+      container .valueType =:: mut: srcType
+      false =:: mut: isPtr
       false =:: mut: isType
-      srcType types.primitive.TYPE types.typeEquals and container .value .typeId ?? if
-        true isType =
-        container .value .typeId
-      else ## TODO handle reference to pointer
-        srcType typeContext types.isPointer or srcType typeContext types.isReference if
-           srcType typeContext types.isMutable mutable =
-           srcType typeContext types.getBaseType
-        else
-           srcType
+      srcType
+         ..dup typeContext types.isReference =:: isReference
+         isReference if
+            ..dup typeContext types.isMutable mutable =
+            typeContext types.unwrapReference
+         end ## no else
+        ..dup types.primitive.TYPE types.typeEquals and container .value .typeId ?? if ..drop
+          true isType =
+          container .value .typeId
+        else ..dup typeContext types.isPointer _if
+           ..dup srcType =
+           true isPtr =
+           ..dup typeContext types.isMutable mutable =
+           typeContext types.getBaseType
         end
-      end =:: mut: containerType
+      =:: mut: containerType
       ## compositeFindLabel
         containerType
         labelId
@@ -2117,7 +2123,7 @@ proc(
         ## pushValue
           types.primitive.BOOL
           ConstValue .none
-          srcType elementIndex op .pos opHasElement
+          containerType elementIndex op .pos opHasElement
         state pushValue
         elementLabel state replaceLabel
         mutable ! true 1 childOffset state updateOpInfo
@@ -2171,7 +2177,7 @@ proc(
         false mutable =
       end
       ## TODO clarify message
-      isAddr and srcType typeContext types.isPointer ! and srcType typeContext types.isReference ! if
+      isAddr and isPtr ! and isReference ! if
         "can only take address of pointers or references got: \"" sb.wrap
         srcType typeContext sb.appendType
         op .pos errors appendError
@@ -2182,6 +2188,14 @@ proc(
       state [] .childIds
         ..dup .length =:: childOffset
         container .opIndex list.append
+        isReference and isPtr if ## unwrap reference to pointer
+          ## opAutoCast
+            container .valueType
+            0
+            srcType
+            op .pos
+          opAutoCast state appendOp list.append
+        end
         containerType typeContext types.isEnum if
           containerType elementIndex op .pos opCheckEnum state appendOp onRead =
           true true 0 0 state updateOpInfo_noStack
@@ -2191,9 +2205,9 @@ proc(
         end
       state [] .childIds =
       ## can only take address of reference or pointer
-      isAddr srcType typeContext types.isPointer | if
+      isAddr or isPtr if
         eltType mutable typeContext types.getAddressType
-      else srcType typeContext types.isReference _if
+      else isReference _if
         eltType mutable typeContext types.newReferenceType
       else
         eltType
