@@ -1,0 +1,47 @@
+
+proc( f64 -> i8 ) =>: castI8 #:no:inline
+  i8 cast
+end
+proc( f64 -> u8 ) =>: castU8 #:no:inline
+  u8 cast
+end
+proc( f64 -> i16 ) =>: castI16 #:no:inline
+  i16 cast
+end
+proc( f64 -> i32 ) =>: castI32 #:no:inline
+  i32 cast
+end
+proc( f64 -> u32 ) =>: castU32 #:no:inline
+  u32 cast
+end
+proc( f64 -> i64 ) =>: castI64 #:no:inline
+  i64 cast
+end
+proc( f64 -> u64 ) =>: castU64 #:no:inline
+  u64 cast
+end
+
+proc( -> ) =>: main
+  ## runtime evaluation
+  1e10   castI8 127:i8 == assert "1e10 -> 127:i8"
+  1e10   castU8 255:u8 == assert "1e10 -> 255:u8"
+  -1e400 castI8 -128:i8 == assert "-1e400 -> -128:i8"
+  240.0  castU8 240:u8 == assert "240.0 -> 240:u8"
+  1e100  castI32 0x7fff_ffff:i32 == assert "1e100 -> 0x7fff_ffff:i32"
+  1e100  castU32 0xffff_ffff:u32 == assert "1e100 -> 0xffff_ffff:u32"
+  -1e100 castI16 -0x8000:i16 == assert "-1e100 -> -0x8000:i16"
+  1e18   castI64 1'000'000'000'000'000'000 == assert "1e18 -> 1'000'000'000'000'000'000"
+  1e19   castI64 0x7fff'ffff'ffff'ffff == assert "1e19 -> 0x7fff'ffff'ffff'ffff"
+  -1.0   castU64 0:u64 == assert "-1.0 -> 0:u64"
+  ## constant folding
+  1e10   i8 cast 127:i8 == assert "1e10 -> 127:i8"
+  1e10   u8 cast 255:u8 == assert "1e10 -> 255:u8"
+  -1e400 i8 cast -128:i8 == assert "-1e400 -> -128:i8"
+  240.0  u8 cast 240:u8 == assert "240.0 -> 240:u8"
+  1e100  i32 cast 0x7fff_ffff:i32 == assert "1e100 -> 0x7fff_ffff:i32"
+  1e100  u32 cast 0xffff_ffff:u32 == assert "1e100 -> 0xffff_ffff:u32"
+  -1e100 i16 cast -0x8000:i16 == assert "-1e100 -> -0x8000:u32"
+  1e18   i64 cast 1'000'000'000'000'000'000 == assert "1e18 -> 1'000'000'000'000'000'000"
+  1e19   i64 cast 0x7fff'ffff'ffff'ffff == assert "1e19 -> 0x7fff'ffff'ffff'ffff"
+  -1.0   u64 cast 0:u64 == assert "-1.0 -> 0:u64"
+end

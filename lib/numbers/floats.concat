@@ -17,6 +17,9 @@ namespace: f32
   23 =:: EXP_SHIFT
   0xff =:: SHIFTED_EXP_MASK
   127 =:: EXP_BIAS
+
+  -0xf.fffffX1f:f32 =:: export: MIN
+  0xf.fffffX1f:f32 =:: export: MAX
   proc( -> f32 ) =>: export: NaN
     EXP_MASK MANTISSA_MASK | fromBits
   end
@@ -143,6 +146,9 @@ namespace: f64
   52 =:: EXP_SHIFT
   0x7ff =:: SHIFTED_EXP_MASK
   1023 =:: EXP_BIAS
+
+  -0xf.ffffffffffff8Xff =:: export: MIN
+  0xf.ffffffffffff8Xff =:: export: MAX
   proc( -> f64 ) =>: export: NaN
     EXP_MASK MANTISSA_MASK | fromBits
   end

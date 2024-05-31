@@ -16,7 +16,7 @@ namespace: types
     I64 S64 U64
     F32 F64
     TYPE
-  ) =:: PrimitiveType
+  ) =:: export: PrimitiveType
   i32 =:: ArrayId
   i32 =:: export: TupleId ## exported for access from identifiers.concat
   i32 =:: export: UnionId

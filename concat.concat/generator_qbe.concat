@@ -2220,6 +2220,184 @@ proc(
   end
 end
 
+enum( MIN MAX ) =:: BoundType
+proc(
+  stringBuilder : sb
+  types.PrimitiveType : srcType
+  BoundType : boundType
+  types.PrimitiveType : asType
+-> stringBuilder ) =>: appendNumberBound
+  false =:: mut: unsigned
+  sb
+    srcType switch
+      I8 S8 case boundType .MIN ?? if i8.MIN else i8.MAX end break
+      U8 case true unsigned = boundType .MIN ?? if 0 else i8.UMAX end break
+      I16 S16 case boundType .MIN ?? if i16.MIN else i16.MAX end break
+      U16 case true unsigned = boundType .MIN ?? if 0 else i16.UMAX end break
+      I32 S32 case boundType .MIN ?? if i32.MIN else i32.MAX end break
+      U32 case true unsigned = boundType .MIN ?? if 0 else i32.UMAX end break
+      I64 S64 case boundType .MIN ?? if i64.MIN else i64.MAX end break
+      U64 case true unsigned = boundType .MIN ?? if 0 else i64.UMAX end break
+      BOOL case boundType .MIN ?? if 0 else 1 end break
+      F32 case
+        asType switch
+          I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+            asType boundType asType appendNumberBound return
+          F32 case
+            boundType .MIN ?? if f32.MIN else f32.MAX end f32.bits sb.appendI return
+          F64 case
+            boundType .MIN ?? if f32.MIN else f32.MAX end f64.bits sb.appendI return
+          BOOL TYPE case ..unreachable
+        end
+        break
+      F64 case
+        asType switch
+          I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+            asType boundType asType appendNumberBound return
+          F32 case
+            boundType .MIN ?? if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
+          F64 case
+            boundType .MIN ?? if f64.MIN else f64.MAX end f64.bits sb.appendI return
+          BOOL TYPE case ..unreachable
+        end
+        break
+      TYPE case ..unreachable
+    end =:: intVal
+  asType switch
+    I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+      intVal sb.appendI return
+    F32 case intVal unsigned if u64 cast f32 cast else f32 cast end f32.bits sb.appendI return
+    F64 case intVal unsigned if u64 cast f64 cast else f64 cast end f64.bits sb.appendI return
+    BOOL TYPE case ..unreachable
+  end
+end
+
+proc(
+  stringBuilder : sb
+  types.PrimitiveType : srcVal
+  i64 : srcIndex
+  Type : targetType
+  types.PrimitiveType : targetVal
+  i64 : targetIndex
+  bool : unsigned
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: castFloatToInt
+  BranchId 7 array new =:: mut: branches
+  0 while ..dup 7 < do =:: i
+    ## BranchId
+      BranchType .NEXT
+      context nextJumpLabelId 0
+    BranchId new branches@ i [] =
+    i 1 +
+  end ..drop
+  context nextTmpId =:: cNaN
+  context nextTmpId =:: cMin
+  context nextTmpId =:: cMax
+  context nextTmpId =:: tCast
+  context nextTmpId =:: tNaN
+  context nextTmpId =:: tMin
+  context nextTmpId =:: tMax
+  srcVal .F32 ?? if 's'
+  else srcVal .F64 ?? _if 'd'
+  else ..unreachable end =:: srcTypeName
+  sb
+    ## isNaN?
+    "%t" sb.appendS cNaN sb.appendI
+    " =w co" sb.appendS srcTypeName sb.appendC
+    " %s" sb.appendS
+    srcIndex sb.appendI
+    ", %s" sb.appendS
+    srcIndex sb.appendI
+    '\n' sb.appendC
+    "jnz %t" sb.appendS cNaN sb.appendI
+    ", " sb.appendS branches@ 0 [] sb.appendBranchId
+    ", " sb.appendS branches@ 1 [] sb.appendBranchId
+    '\n' sb.appendC
+    branches@ 0 [] context startBranch
+    ## > min ?
+    "%t" sb.appendS cMin sb.appendI
+    " =w cgt" sb.appendS srcTypeName sb.appendC
+    " %s" sb.appendS
+    srcIndex sb.appendI
+    ", " sb.appendS
+    targetVal BoundType .MIN srcVal appendNumberBound
+    '\n' sb.appendC
+    "jnz %t" sb.appendS cMin sb.appendI
+    ", " sb.appendS branches@ 2 [] sb.appendBranchId
+    ", " sb.appendS branches@ 3 [] sb.appendBranchId
+    '\n' sb.appendC
+    branches@ 2 [] context startBranch
+    ## < max ?
+    "%t" sb.appendS cMin sb.appendI
+    " =w clt" sb.appendS srcTypeName sb.appendC
+    " %s" sb.appendS
+    srcIndex sb.appendI
+    ", " sb.appendS
+    targetVal BoundType .MAX srcVal appendNumberBound
+    '\n' sb.appendC
+    "jnz %t" sb.appendS cMin sb.appendI
+    ", " sb.appendS branches@ 4 [] sb.appendBranchId
+    ", " sb.appendS branches@ 5 [] sb.appendBranchId
+    '\n' sb.appendC
+    branches@ 4 [] context startBranch
+    ## cast value
+    "%t" sb.appendS
+    tCast sb.appendI
+    " =" sb.appendS
+    targetType StorageType .STACK pos context sb.appendTypeNameQBE
+    ' ' sb.appendC
+    srcTypeName sb.appendC
+    unsigned if "toui %s" else "tosi %s" end sb.appendS
+    srcIndex sb.appendI
+    "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
+    '\n' sb.appendC
+    ## NaN
+    branches@ 1 [] context startBranch
+    "%t" sb.appendS
+    tNaN sb.appendI
+    " =" sb.appendS
+    targetType StorageType .STACK pos context sb.appendTypeNameQBE
+    " copy 0" sb.appendS
+    "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
+    '\n' sb.appendC
+    ## <Min
+    branches@ 3 [] context startBranch
+    "%t" sb.appendS
+    tMin sb.appendI
+    " =" sb.appendS
+    targetType StorageType .STACK pos context sb.appendTypeNameQBE
+    " copy " sb.appendS
+    targetVal BoundType .MIN targetVal appendNumberBound
+    "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
+    '\n' sb.appendC
+    ## >Max
+    branches@ 5 [] context startBranch
+    "%t" sb.appendS
+    tMax sb.appendI
+    " =" sb.appendS
+    targetType StorageType .STACK pos context sb.appendTypeNameQBE
+    " copy " sb.appendS
+    targetVal BoundType .MAX targetVal appendNumberBound
+    '\n' sb.appendC
+    branches@ 6 [] context startBranch
+    "%s" sb.appendS
+    targetIndex sb.appendI
+    " =" sb.appendS
+    targetType StorageType .STACK pos context sb.appendTypeNameQBE
+    " phi " sb.appendS
+    branches@ 4 [] sb.appendBranchId
+    " %t" sb.appendS tCast sb.appendI
+    ", " sb.appendS branches@ 1 [] sb.appendBranchId
+    " %t" sb.appendS tNaN sb.appendI
+    ", " sb.appendS branches@ 3 [] sb.appendBranchId
+    " %t" sb.appendS tMin sb.appendI
+    ", " sb.appendS branches@ 5 [] sb.appendBranchId
+    " %t" sb.appendS tMax sb.appendI
+    '\n' sb.appendC
+  return
+end
+
 proc(
   stringBuilder : sb
   Type : src
@@ -2237,20 +2415,26 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   src typeContext types.primitiveValue =:: fromVal
   target typeContext types.primitiveValue =:: toVal
-  sb
-    ## common prefix
-    "%s" sb.appendS
-    targetIndex sb.appendI
-    ## case 0: identical types
-    fromVal toVal == if
+  ## case 0: identical types
+  fromVal toVal == if
+    sb
       ## copy necessary to update value id
+      "%s" sb.appendS
+      targetIndex sb.appendI
       " =" sb.appendS
       target StorageType .STACK pos context sb.appendTypeNameQBE
       " copy" sb.appendS
-    ## case 1: integer extension/narrowing
-    else src typeContext types.isInt and target typeContext types.isInt _if
-      src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
-      target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
+      " %s" sb.appendS
+      srcIndex sb.appendI
+      '\n' sb.appendC
+    return
+  ## case 1: integer extension/narrowing
+  else src typeContext types.isInt and target typeContext types.isInt _if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
+    sb
+      "%s" sb.appendS
+      targetIndex sb.appendI
       targetPrec srcPrec <= if
         " =" sb.appendS
         target StorageType .STACK pos context sb.appendTypeNameQBE
@@ -2275,35 +2459,46 @@ proc(
           BOOL TYPE F32 F64 case ..unreachable
         end
       end
-    ## case 2: float -> float/int
-    else fromVal .F32 ?? or fromVal .F64 ?? _if
+      " %s" sb.appendS
+      srcIndex sb.appendI
+      '\n' sb.appendC
+    return
+  ## case 2: float -> float/int
+  else fromVal .F32 ?? or fromVal .F64 ?? _if
       toVal switch ## TODO handle overflow in float->int conversion
         F32 case
-          " =s truncd" sb.appendS break
+          sb
+            "%s" sb.appendS
+            targetIndex sb.appendI
+            " =s truncd %s" sb.appendS
+            srcIndex sb.appendI
+            '\n' sb.appendC
+          return
         F64 case
-          " =d exts" sb.appendS break
-        I8 I16 I32 I64 S8 S16 S32 S64 case
-          " =" sb.appendS
-          target StorageType .STACK pos context sb.appendTypeNameQBE
-          fromVal .F32 ?? if
-            " stosi" sb.appendS
-          else
-            " dtosi" sb.appendS
-          end
-          break
+          sb
+            "%s" sb.appendS
+            targetIndex sb.appendI
+            " =d exts %s" sb.appendS
+            srcIndex sb.appendI
+            '\n' sb.appendC
+          return
+        I8 S8 I16 S16 I32 S32 I64 S64 case
+          sb
+            fromVal srcIndex target toVal targetIndex
+            false
+          pos context castFloatToInt return
         U8 U16 U32 U64 case
-          " =" sb.appendS
-          target StorageType .STACK pos context sb.appendTypeNameQBE
-          fromVal .F32 ?? if
-            " stoui" sb.appendS
-          else
-            " dtoui" sb.appendS
-          end
-          break
+          sb
+            fromVal srcIndex target toVal targetIndex
+            true
+          pos context castFloatToInt return
         BOOL TYPE case ..unreachable
       end
-    ## case 3: int -> float
-    else ## TODO sign/zero extend 8&16 bit types before conversion
+  ## case 3: int -> float
+  else ## TODO sign/zero extend 8&16 bit types before conversion
+    sb
+      "%s" sb.appendS
+      targetIndex sb.appendI
       " =" sb.appendS
       target StorageType .STACK pos context sb.appendTypeNameQBE
       fromVal switch
@@ -2313,11 +2508,11 @@ proc(
         U8 U16 U32 case " uwtof" sb.appendS break
         BOOL TYPE F32 F64 case ..unreachable
       end
-    end
-    " %s" sb.appendS
-    srcIndex sb.appendI
-    '\n' sb.appendC
-  return
+      " %s" sb.appendS
+      srcIndex sb.appendI
+      '\n' sb.appendC
+    return
+  end
 end
 
 
