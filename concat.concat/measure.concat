@@ -7,15 +7,22 @@ import "program.concat"
 import "types.concat"
 
 
-proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types -> ) =>: declaredType
-  prog [] .idContext .typeContext @ =:: typeContext
+proc(
+  Type : declared
+  i32 : ptrLevel
+  FilePosition : pos
+  ProgramContext ptr mut : prog
+  Type i32 hashMap ptr mut : visited
+  Type list ptr mut : types
+-> ) =>: declaredType
+  prog [] .errors@ =:: errors
+  prog [] .idContext .typeContext@ =:: typeContext
   visited declared map.at ..dup optional.hasData if .data []
     ptrLevel == if
       0 sb.create
         declared prog [] .idContext .typeContext @ sb.appendType
         "! \n" sb.appendS
-      io.stdOut ..swap io.fputSb ..drop
-      ## TODO add to error messages instead of printing to console
+      pos errors appendError
     end
     return
   else ..drop end
@@ -24,13 +31,13 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
     undefined empty primitiveType autoType genericType arrayIndex cType case
       break
     pointer case
-      declared typeContext types.getBaseType ptrLevel 1 + prog visited types declaredType
+      declared typeContext types.getBaseType ptrLevel 1 + pos prog visited types declaredType
       types []
         declared list.append
       types [] =
       break
     arrayType reference mutableReference case
-      declared typeContext types.getBaseType ptrLevel prog visited types declaredType
+      declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types [] =
@@ -38,7 +45,7 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
     struct union procIn procOut enum case
       declared typeContext types.compositeElts =:: elts
       0 while ..dup elts .length < do
-        elts ..over types.compositeElts.get ptrLevel prog visited types declaredType
+        elts ..over types.compositeElts.get ptrLevel pos prog visited types declaredType
         1 +
       end ..drop
       declared .procIn ?? if
@@ -57,19 +64,19 @@ proc( Type : declared i32 : ptrLevel ProgramContext ptr mut : prog Type i32 hash
       types [] =
       break
     procedure case
-      declared typeContext types.getProcIn ..drop ptrLevel prog visited types declaredType
-      declared typeContext types.getProcOut ..drop ptrLevel prog visited types declaredType
+      declared typeContext types.getProcIn ..drop ptrLevel pos prog visited types declaredType
+      declared typeContext types.getProcOut ..drop ptrLevel pos prog visited types declaredType
       ## don't add procedure type to list of declared types
       ## type declaration of proc-pointer will be covered by surrounding pointer type
       break
     namedType case
-      declared typeContext types.unwrapNamed ptrLevel prog visited types declaredType
+      declared typeContext types.unwrapNamed ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types [] =
       break
     generatedType case
-      declared typeContext types.getGeneratedType ptrLevel prog visited types declaredType
+      declared typeContext types.getGeneratedType ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types [] =
@@ -80,25 +87,25 @@ end
 
 proc( Operation ptr : op ProgramContext ptr mut : prog Type i32 hashMap ptr mut : visited Type list ptr mut : types -> ) =>: addOpType
   op [] .val .initializeId ?? op [] .val .declareId ?? | if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .implementProcedure ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .Cast ?? op [] .val .Cast! ?? | _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .New ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .typeInfo ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .Constant ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .NewEnum ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .NewReference ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .NewEnumReference ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   else op [] .val .ConstantReference ?? _if
-    op [] .dataType 0 prog visited types declaredType
+    op [] .dataType 0 op [] .pos prog visited types declaredType
   end
 end
 
@@ -115,7 +122,7 @@ proc( ProgramContext ptr mut : prog -> Type list ) =>: export: getDeclaredTypes
     idData [] .idType .GLOBAL_VAR ?? ! if
       continue
     end
-    idData [] .valueType 0 prog visited @ types @ declaredType
+    idData [] .valueType 0 idData [] .declaredAt prog visited @ types @ declaredType
   end ..drop
   0 while ..dup prog [] .progFiles .length < do
     prog [] .progFiles ..over list.at .data

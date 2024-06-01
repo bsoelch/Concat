@@ -279,17 +279,19 @@ end
 
 proc( Type : t CompilerContext ptr mut : context -> bool ) =>: referenceOnly
   context [] .program =:: program
-  program [] .idContext .typeContext @ =:: typeContext
-  t typeContext types.unwrapNamed types.isPrimitive if
+  program [] .idContext .typeContext@ =:: typeContext
+  t typeContext types.unwrapNamed
+    ..dup .cType ?? if
+      .cType types.cTypeAsType
+    end
+  =:: baseType
+  baseType types.isPrimitive if
     false return
   end
-  t typeContext types.isPointer if
+  baseType typeContext types.isPointer if
     false return
   end
-  t typeContext types.unwrapNamed .cType ?? if
-    false return
-  end
-  ## XXX allow empty enums as value-type
+  ## TODO allow small composites as value-type
   true return
 end
 proc(
@@ -658,44 +660,13 @@ namespace: sb
         end
         break
       cType case
-        t .cType switch ## TODO resolve sizes of C-types in types.concat
-          BOOL U_CHAR case
-            storeType switch
-              STACK case sb "w" sb.appendS return
-              LOAD ULOAD case sb "ub" sb.appendS return
-              STORE case sb "b" sb.appendS return
-            end
-            break
-          CHAR S_CHAR case
-            storeType switch
-              STACK case sb "w" sb.appendS return
-              LOAD ULOAD case sb "sb" sb.appendS return
-              STORE case sb "b" sb.appendS return
-            end
-            break
-          SHORT case
-            storeType switch
-              STACK case sb "w" sb.appendS return
-              LOAD ULOAD case sb "sh" sb.appendS return
-              STORE case sb "h" sb.appendS return
-            end
-            break
-          U_SHORT case
-            storeType switch
-              STACK case sb "w" sb.appendS return
-              LOAD ULOAD case sb "uh" sb.appendS return
-              STORE case sb "h" sb.appendS return
-            end
-            break
-          INT U_INT case sb "w" sb.appendS return
-          LONG LONGLONG U_LONG U_LONGLONG
-              SIZE STRUCT_PTR UNION_PTR case
-            sb "l" sb.appendS return
-          FLOAT case sb "s" sb.appendS return
-          DOUBLE case sb "d" sb.appendS return
-          VOID case break
-        end
-        break
+        sb
+          t .cType types.cTypeAsType
+          ..dup .undefined ?? if
+            ..drop.2 break
+          end
+        storeType pos context appendTypeNameQBE
+        return
       arrayIndex pointer reference mutableReference procedure case
         sb "l" sb.appendS return ## size or pointer
       arrayType case
@@ -2465,7 +2436,7 @@ proc(
     return
   ## case 2: float -> float/int
   else fromVal .F32 ?? or fromVal .F64 ?? _if
-      toVal switch ## TODO handle overflow in float->int conversion
+      toVal switch
         F32 case
           sb
             "%s" sb.appendS
@@ -2593,7 +2564,6 @@ proc(
       " =" sb.appendS
       toSize 32 <= if 'w' else 'l' end sb.appendC
       fromSize toSize < if
-        ## TODO? use same sign rules as cast, now that zero extend is supported for normal cast
         fromVal switch
           BOOL TYPE F32 F64 case break
           I8  S8  U8  case " extub" sb.appendS break

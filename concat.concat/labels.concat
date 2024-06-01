@@ -57,7 +57,17 @@ namespace: id
     LabelContext new return
   end
   proc( LabelContext -> LabelContext ) =>: export: freeLabelContext
-    ## TODO free label context
+    =:: mut: context
+    context .nameBuffer       list.free context .nameBuffer =
+    context .labels           list.free context .labels =
+    0 while ..dup context .namespaces .length < do =:: i
+      context .namespaces i list.at .data =:: namespace
+      namespace [] .children list.free namespace [] .children =
+      i 1 +
+    end ..drop
+    context .namespaces       list.free context .namespaces =
+    context .namespaceImports list.free context .namespaceImports =
+    context return
   end
 
   proc( LabelContext ptr -> LabelId ) =>: export: labelOffset

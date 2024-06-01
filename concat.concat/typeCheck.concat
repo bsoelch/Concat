@@ -1706,8 +1706,11 @@ proc(
             message op .pos errors appendError
             return
           else
-            io.stdOut message io.fputSb ..drop ## debug
-            message sb.free ..drop
+            message .length 0 > if
+              message op .pos errors appendInfo
+            else
+              message sb.free ..drop
+            end
           end
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
@@ -2178,7 +2181,7 @@ proc(
       end
       ## TODO clarify message
       isAddr and isPtr ! and isReference ! if
-        "can only take address of pointers or references got: \"" sb.wrap
+        "cannot take the address of a stack value: \"" sb.wrap
         srcType typeContext sb.appendType
         op .pos errors appendError
         return

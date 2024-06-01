@@ -789,7 +789,7 @@ namespace: types
   end
   ## size of value in bytes
   proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export: sizeOf
-    t false context computeSize ## TODO dependent on backend: C:aligned=true, QBE/ASM:aligned=false
+    t false context computeSize ## TODO? should size be smaller than stride
   end
   ## size padded to next multiple of alignment
   proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export: strideOf
@@ -1769,9 +1769,6 @@ namespace: types
     end
     false return
   end
-  proc( Type : proc TypeContext ptr : context -> bool ) =>: export: hasStaticArgs
-   true return ## TODO implement hasStaticArgs
-  end
 
   ## named types
   struct( Type : mut: data LabelId : name i32 : implId ) =:: NamedType
@@ -2247,7 +2244,6 @@ namespace: types
       src .cType .UNION_PTR  ?? if false return end
       src .cType cTypeAsType target context namedDirection canAutoCast_internal return
     end
-    ## TODO update casting for numbers
     src context types.isNumber target context types.isNumber & if
       src target context types.canAutoCastNumber return
     end
