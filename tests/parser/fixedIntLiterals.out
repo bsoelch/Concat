@@ -1,6 +1,6 @@
 -----------------
 identifier "a":
- - global variable "a" ( i64 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:1:33
+ - global variable "a" ( i64 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:1:28
 -----------------
 -----------------
 identifier "b":
@@ -24,9 +24,9 @@ identifier "f":
 -----------------
 -----------------
 identifier "g":
- - global variable "g" ( i8 [ integer: -2 ] ) declared at fixedIntLiterals.concat:7:11
+ - global variable "g" ( named[0]( "char" ) [ integer: -2 ] ) declared at fixedIntLiterals.concat:9:13
 -----------------
 -----------------
 identifier "h":
- - global variable "h" ( u8 [ integer: 3 ] ) declared at fixedIntLiterals.concat:8:10
+ - global variable "h" ( named[1]( "byte" ) [ integer: 3 ] ) declared at fixedIntLiterals.concat:10:12
 -----------------

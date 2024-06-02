@@ -22,12 +22,8 @@ while `A` to `Z` preserve their previous values
 integer sizes:
 By default integer literals are parsed as `i32`, or `i64` if the number does not fit in a signed 32-bit integer.
 
-To specify a fixed size for a given literal append a `:` followed by a size modifier:
-* `i<n>` parses the number as an `n` bit signed integer ( using twos complement)
-* `u<n>` parses the number as an `n` bit unsigned integer
-in both cases `n` can be any (base 10) integer between 1 and the maximal integer size
-* `f32` parses the number as 32-bit float
-* `f64` parses the number as 64-bit float
+To declare an integer literal as unsigned append `:u` at the end of the literal, the compiler will then automatically pick a matching unsigned integer type (at least `u32`).
+To specify a concrete type for a literal append a `:` followed by the name of the type
 
 floating point literals:
 `.` is used to separate the integer part of the number form its fractional part.
@@ -58,9 +54,6 @@ Examples:
 0xffffffff:u ## -1 (4294967295u) as i32
 0x3          ## 3
 1x3          ## -> not a number
-5:u3         ## 5 as 3-bit integer
-5:i3         ## parser error: 5 does not fit in three signed bits
-5:u2         ## parser error: 5 does not fit in two bits
 ```
 
 edge cases:

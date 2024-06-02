@@ -1,11 +1,13 @@
-10_000_000_000_000_000:i256 =:: a
+10_000_000_000_000_000 =:: a
 0xffff_ffff_ffff_ffff:u =:: b
 10_000_000_000_000_000:i32 =:: c
 0xffff_ffff:u =:: d
 -1 =:: e
 1234:i16 =:: f
--2:i1 =:: g
-3:u2 =:: h
+i8 =:: char
+u8 =:: byte
+-2:char =:: g
+3:byte =:: h
 ..?parser.find.a
 ..?parser.find.b
 ..?parser.find.c

@@ -53,7 +53,11 @@ proc( bool FilePosition -> Constant ) =>: newBoolConstant
   =:: pos
   types.primitive.BOOL ..swap ConstValue .boolean IdentifierInfo optional.empty pos Constant new return
 end
-proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> bool ) =>: checkIntSize
+proc(
+  i64 : value
+  bool : unsigned
+  i32 : preferedSize
+-> bool ) =>: checkIntSize
   preferedSize 0 <= if
     false return
   end
@@ -74,30 +78,41 @@ proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserSt
   end
   value 1:i64 unsigned if preferedSize else preferedSize 1 - end << >= return
 end
-proc( i64 : value bool : unsigned i32 : preferedSize FilePosition : pos ParserState ptr mut : state -> Constant ) =>: newIntConstant
-  preferedSize 0 <= if
-   unsigned if
-     value 0 < value i32.UMAX ..u> | if types.primitive.U64 else types.primitive.U32 end
-   else
-     value i32.MIN < value i32.MAX > | if types.primitive.I64 else types.primitive.I32 end
-   end
-  else preferedSize 8 <= _if
-    unsigned if types.primitive.U8 else types.primitive.I8 end
-  else preferedSize 16 <= _if
-    unsigned if types.primitive.U16 else types.primitive.I16 end
-  else preferedSize 32 <= _if
-    unsigned if types.primitive.U32 else types.primitive.I32 end
-  else
-    unsigned if types.primitive.U64 else types.primitive.I64 end
-  end
-  value unsigned preferedSize pos state checkIntSize if
-    "integer value overflows given size: " sb.wrap
-      value unsigned if sb.appendU else sb.appendI end
-      unsigned if ":u" else ":i" end sb.appendS
-      preferedSize sb.appendU
+
+enum( FIXED AUTO AUTO_UNSIGNED ) =:: IntLiteralType
+proc(
+  i64 : value
+  IntLiteralType : literalType
+  Type : intType
+  FilePosition : pos
+  ParserState ptr mut : state
+-> Constant ) =>: newIntConstant
+  state .progContext [] .idContext .typeContext@ =:: typeContext
+  literalType switch
+    FIXED case intType break
+    AUTO case
+      value i32.MIN < or value i32.MAX > if types.primitive.I64 else types.primitive.I32 end
+      break
+    AUTO_UNSIGNED case
+      value 0 < or value i32.UMAX ..u> if types.primitive.U64 else types.primitive.U32 end
+      break
+  end =:: constType
+  constType typeContext types.isUnsignedInt =:: isUnsigned
+  ## TODO? better way to get bit-size of integer
+  constType typeContext types.sizeOf .fixed i32 cast 8 * =:: bitCount
+  value isUnsigned bitCount checkIntSize if
+    "integer literal overflows maximum size for type " sb.wrap
+      constType typeContext sb.appendType
+      constType types.isPrimitive ! if
+        isUnsigned if " ( u" sb.appendS else " ( i" sb.appendS end
+        bitCount sb.appendU
+        ')' sb.appendC
+      end
+      ": " sb.appendS
+      value isUnsigned if sb.appendU else sb.appendI end
     pos state appendWarning2
   end
-  value ConstValue .int IdentifierInfo optional.empty pos Constant new return
+  constType value ConstValue .int IdentifierInfo optional.empty pos Constant new return
 end
 proc( i8 FilePosition -> Constant ) =>: newCharConstant
   =:: pos
@@ -113,13 +128,9 @@ proc( Type FilePosition -> Constant ) =>: newTypeConst
   types.primitive.TYPE ..swap ConstValue .typeId IdentifierInfo optional.empty pos Constant new return
 end
 
-proc( f64 : value bool : isF32 FilePosition : pos -> Constant ) =>: newFloatConst
+proc( f64 : value Type : constType FilePosition : pos -> Constant ) =>: newFloatConst
   ## Constant
-    isF32 if
-      types.primitive.F32
-    else
-      types.primitive.F64
-    end
+    constType
     value ConstValue .Float
     IdentifierInfo optional.empty
     pos
@@ -748,18 +759,19 @@ end
 
 proc(
   string : literal
-  bool : unsigned
-  i32 : size
+  IntLiteralType : literalType
+  Type : intType
   FileState ptr mut : fileState
   ParserState ptr mut : state
 -> bool ) =>: tryParseIntConstant
-  unsigned if
+  state .progContext [] .idContext .typeContext@ =:: typeContext
+  literalType .AUTO_UNSIGNED ?? or intType typeContext types.isUnsignedInt if
     literal 0 number.tryParseUInt
   else
     literal 0 number.tryParseInt
   end switch
     NONE case
-      unsigned size fileState [] .wordStart state newIntConstant  state pushConst
+      literalType intType fileState [] .wordStart state newIntConstant  state pushConst
       true return
     SIGN case ..drop
       "unsigned value is marked as negative: " sb.wrap
@@ -777,6 +789,8 @@ proc(
   end
 end
 proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state -> bool ) =>: tryParseNumberLiteral
+  state [] .progContext .idContext@ =:: idContext
+  idContext .typeContext@ =:: typeContext
   str .length 0 == if
     false return
   end
@@ -787,71 +801,77 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
   0 =:: mut: size
   str ':' string.lastIndexOf =:: i
   i 0 > and i str .length 1 - < if
-    str i string.splitIndex =:: literal =:: literalType
+    str i string.splitIndex =:: literal =:: literalTypeName
     literal ':'  string.contains if
       false return ## literal cannot contain :
     end
-    literalType 0 string.charAt switch
-      'u' 'i' case ## XXX? :sN -> force signed
-        literalType 0 string.charAt 'u' == unsigned =
-        literalType .length 1 > if
-          literalType 1 string.tail 10 number.tryParseInt .NONE ?? ! if
-            ..drop break
-          end =:: numberWidth
-          numberWidth 1 < numberWidth types.MAX_INT_WIDTH > | if
-            "integer size " sb.wrap
-              numberWidth sb.appendI
-              " outside allowed range (1 to " sb.appendS
-              types.MAX_INT_WIDTH sb.appendI
-              ")" sb.appendS
-            fileState [] .wordStart state appendWarning2
-          end
-          numberWidth
-            0 i64.max
-            types.MAX_INT_WIDTH i64.min
-          i32 cast size =
-        end
-        literal unsigned size fileState state tryParseIntConstant ! if
-          "invalid integer constant: `" sb.wrap
-            literal sb.appendStr
-            '`' sb.appendC
-          fileState [] .wordStart state appendWarning2
-        end
+    literalTypeName "u" string.wrap string.eq  if
+      literal IntLiteralType .AUTO_UNSIGNED Type .undefined fileState state tryParseIntConstant ! if
+        "invalid integer constant: `" sb.wrap
+          literal sb.appendStr
+          '`' sb.appendC
+        fileState [] .wordStart state appendWarning2
+      end
+      true return
+    else literalTypeName "i8"  string.wrap string.eq _if types.primitive.I8
+    else literalTypeName "s8"  string.wrap string.eq _if types.primitive.S8
+    else literalTypeName "u8"  string.wrap string.eq _if types.primitive.U8
+    else literalTypeName "i16" string.wrap string.eq _if types.primitive.I16
+    else literalTypeName "s16" string.wrap string.eq _if types.primitive.S16
+    else literalTypeName "u16" string.wrap string.eq _if types.primitive.U16
+    else literalTypeName "i32" string.wrap string.eq _if types.primitive.I32
+    else literalTypeName "s32" string.wrap string.eq _if types.primitive.S32
+    else literalTypeName "u32" string.wrap string.eq _if types.primitive.U32
+    else literalTypeName "i64" string.wrap string.eq _if types.primitive.I64
+    else literalTypeName "s64" string.wrap string.eq _if types.primitive.S64
+    else literalTypeName "u64" string.wrap string.eq _if types.primitive.U64
+    else literalTypeName "f32" string.wrap string.eq _if types.primitive.F32
+    else literalTypeName "f64" string.wrap string.eq _if types.primitive.F64
+    else literalTypeName state [] .currentFile idContext id.findIdentifierByName
+        ..swap =:: idData ! and
+        idData .idType .TYPE ?? and idData .constValue .typeId ?? _if
+      idData .constValue .typeId []
+    else
+      "unexpected type for number literal: " sb.wrap
+        literalTypeName sb.appendStr
+      fileState [] .wordStart state appendError2
+      true return
+    end =:: literalType
+    literalType typeContext types.isInt if
+      literalType typeContext types.isUnsignedInt unsigned =
+      literalType typeContext types.sizeOf .fixed i32 cast 8 * size =
+      ## TODO ensure constant has correct type
+      literal IntLiteralType .FIXED literalType fileState state tryParseIntConstant ! if
+        "invalid integer constant: `" sb.wrap
+          literal sb.appendStr
+          '`' sb.appendC
+        fileState [] .wordStart state appendWarning2
+      end
+      true return
+    else literalType typeContext types.isFloat _if
+      literal 0 number.tryParseFloat =:: errCode
+      errCode .NONE ?? or errCode .INT ?? if
+        literalType fileState [] .wordStart newFloatConst state pushConst
         true return
-      'f' case
-        literalType "f64" string.wrap string.eq if
-          false
-        else literalType "f32" string.wrap string.eq _if
-          true
-        else
-          break
-        end =:: isF32
-        literal 0 number.tryParseFloat =:: errCode
-        errCode .NONE ?? if
-          isF32 fileState [] .wordStart newFloatConst state pushConst
-          true return
-        else errCode .INT ?? _if
-          isF32 fileState [] .wordStart newFloatConst state pushConst
-          true return
-        else ..drop
-          "invalid float constant: `" sb.wrap
-            literal sb.appendStr
-            '`' sb.appendC
-          fileState [] .wordStart state appendWarning2
-        end
-        true return
+      else ..drop
+        "invalid float constant: `" sb.wrap
+          literal sb.appendStr
+          '`' sb.appendC
+        fileState [] .wordStart state appendWarning2
+      end
+    else
+      "unsupported literal type: " sb.wrap
+        literalType typeContext sb.appendType
+      fileState [] .wordStart state appendError2
+      true return
     end
-    "unexpected number type: " sb.wrap
-      literalType sb.appendStr
-    fileState [] .wordStart state appendError2
-    true return
   end
-  str unsigned size fileState state tryParseIntConstant if
+  str IntLiteralType .AUTO Type .undefined fileState state tryParseIntConstant if
     true return
   end
   str 0 number.tryParseFloat
     ..dup .NONE ?? if ..drop
-      false fileState [] .wordStart newFloatConst state pushConst
+      types.primitive.F64 fileState [] .wordStart newFloatConst state pushConst
       true return
     else ..dup .INT ?? _if ..drop.2
       "integer value outside allowed range: " sb.wrap
