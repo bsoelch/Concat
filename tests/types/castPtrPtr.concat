@@ -1,0 +1,24 @@
+proc( i32 ptr     ptr     -> i32 ptr     ptr     ) =>: ppPP end
+proc( i32 ptr mut ptr     -> i32 ptr     ptr     ) =>: mpPP end
+proc( i32 ptr     ptr mut -> i32 ptr     ptr     ) =>: pmPP end
+proc( i32 ptr mut ptr mut -> i32 ptr     ptr     ) =>: mmPP end
+proc( i32 ptr     ptr     -> i32 ptr mut ptr     ) =>: ppMP end
+proc( i32 ptr mut ptr     -> i32 ptr mut ptr     ) =>: mpMP end
+proc( i32 ptr     ptr mut -> i32 ptr mut ptr     ) =>: pmMP end
+proc( i32 ptr mut ptr mut -> i32 ptr mut ptr     ) =>: mmMP end
+proc( i32 ptr     ptr     -> i32 ptr     ptr mut ) =>: ppPM end
+proc( i32 ptr mut ptr     -> i32 ptr     ptr mut ) =>: mpPM end
+proc( i32 ptr     ptr mut -> i32 ptr     ptr mut ) =>: pmPM end
+proc( i32 ptr mut ptr mut -> i32 ptr     ptr mut ) =>: mmPM end
+proc( i32 ptr     ptr     -> i32 ptr mut ptr mut ) =>: ppMM end
+proc( i32 ptr mut ptr     -> i32 ptr mut ptr mut ) =>: mpMM end
+proc( i32 ptr     ptr mut -> i32 ptr mut ptr mut ) =>: pmMM end
+proc( i32 ptr mut ptr mut -> i32 ptr mut ptr mut ) =>: mmMM end
+
+proc( -> ) =>: main
+  0 =:: mut: x
+  x@ =:: y
+  y@ =:: mut: z
+  z@ =:: w
+  w@ i32 ptr mut ptr ptr ptr cast =:: v
+end
