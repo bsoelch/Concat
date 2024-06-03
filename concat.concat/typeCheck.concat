@@ -76,7 +76,7 @@ enum(
 proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
-    -1 pos BranchPoint new ## dummy value
+    -1:branchTree.NodeId pos BranchPoint new ## dummy value
     8 BranchPoint list.create
     8 BranchPoint list.create
     -1
@@ -1657,9 +1657,9 @@ proc(
             return
           end =:: idData
           idInfo .idType .PROCEDURE ?? if
-            idData [] .constValue .procedure @ =:: procId
+            idData [] .constValue .procedure@ =:: procId
             program [] .procedures
-              procId [] list.at .data
+              procId [] i64 cast list.at .data
             =:: procData
             procData [] .isStatic if
               state unfreezeInterpreter
@@ -1674,7 +1674,7 @@ proc(
           else  ## PROCEDURE_BUNDLE
             idData [] .constValue .procedureBundle =:: bundleId
             program [] .procBundles
-              bundleId list.at .data [] .procedures
+              bundleId i64 cast list.at .data [] .procedures
             list.asArray
           end =:: procedures
           0 =:: mut: stackConstants
@@ -1715,7 +1715,7 @@ proc(
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
           program [] .procedures
-            calledProc .procId list.at .data
+            calledProc .procId i64 cast list.at .data
           =:: calledProcData
           calledType op .dataType =
           calledProcData [] .implementation switch
@@ -1833,7 +1833,7 @@ proc(
           op .val .atId .idType .PROCEDURE ?? if
             op .val .atId .constValue .procedure =:: procId
             program [] .procedures
-              procId list.at .data
+              procId i64 cast list.at .data
             =:: procData
             -1 =:: mut: implId
             procData [] .procType op .dataType =
@@ -2176,7 +2176,7 @@ proc(
         elementLabel state replaceLabel
         return
       end
-      elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & 0 == if
+      elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
         false mutable =
       end
       ## TODO clarify message
@@ -2714,6 +2714,12 @@ proc(
           currentBlock [] .If .hasElse if
             "unexpected else-statement, if-else block can only contain one else statement" sb.wrap
             op .pos errors appendError
+            return
+          end
+          currentBlock [] .If .hasIf ! if
+            "unexpected else-statement, else has to appear after if" sb.wrap
+            op .pos errors appendError
+            return
           end
           false 0 op .pos state clearReferences
           currentBlock [] .If .blockId op .val .block .blockId =
@@ -3839,11 +3845,13 @@ proc(
 -> ) =>: typeCheckProcedure
   state [] .program [] .autoTypes list.copy =:: globalAutoTypes
   state [] .program =:: program
-  program [] .procedures procId list.at .data =:: currentProc
+  program [] .procedures procId i64 cast list.at .data =:: currentProc
   ## compile procedures to local code of given file
   currentProc [] .fileId state [] .currentFile =
   currentProc [] .fileId state [] .interpreter .currentFile =
-  program [] .progFiles currentProc [] .fileId list.at .data =:: procFile
+  program [] .progFiles
+    currentProc [] .fileId i64 cast
+  list.at .data =:: procFile
   state clearOps
   state resetInterpreter
   currentProc [] .implementation .code @ =:: codeImpl
@@ -3898,7 +3906,7 @@ end
 proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
   ## TypeCheckState
     program
-    program -1 InterpreterType .GLOBAL interpreter.wrapProgram
+    program -1:FileId InterpreterType .GLOBAL interpreter.wrapProgram
     labelHash @ labelEq @ 64 TypedValue map.create
     Type .undefined
     true
@@ -3920,8 +3928,8 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
   typeContext [] .labelContext @ =:: labelContext
   ## global code
   0 while ..dup program [] .progFiles .length < do =:: fileId
-    fileId state .currentFile =
-    fileId state .interpreter .currentFile =
+    fileId FileId cast state .currentFile =
+    fileId FileId cast state .interpreter .currentFile =
     program [] .progFiles fileId list.at .data =:: progFile
     state @ clearOps
     state @ resetInterpreter
@@ -3940,7 +3948,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
   false state .isGlobal =
   ## procedures
   0 while ..dup program [] .procedures .length < do =:: procId
-    program [] .procedures procId list.at .data =:: currentProc
+    program [] .procedures procId i64 cast list.at .data =:: currentProc
     currentProc [] .implementation .code ?? ! if
       procId 1 + continue ## procedure implementation not in code
     end
@@ -3951,7 +3959,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
     currentProc [] .hasStaticArg if
       procId 1 + continue
     end
-    procId -1 state @ typeCheckProcedure
+    procId ProcId cast -1 state @ typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures
@@ -4009,7 +4017,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
           end
           i 1 +
         end ..drop
-        procId implId state @ typeCheckProcedure
+        procId ProcId cast implId state @ typeCheckProcedure
         implId 1 +
       end ..drop
       procId 1 +

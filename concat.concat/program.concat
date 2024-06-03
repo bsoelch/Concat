@@ -406,7 +406,7 @@ proc(
   ProgramContext ptr mut : program
 -> Operation ) =>: export: opConstReference
   program [] .constantReferences
-    ..dup .length =:: refId
+    ..dup .length ConstReferenceId cast =:: refId
     constType constValue pos TypedConstant new list.append
   program [] .constantReferences =
   program [] .idContext .typeContext @ =:: typeContext
@@ -470,11 +470,11 @@ namespace: sb
           break
         ConstantReference case
           ..over .val .ConstantReference =:: refId
-          progContext [] .constantReferences refId list.at .data =:: constData
+          progContext [] .constantReferences refId i64 cast list.at .data =:: constData
           "constant reference ( " sb.appendS
           constData [] .constType typeContext sb.appendType
           " )[" sb.appendS
-          refId sb.appendI
+          refId i64 cast sb.appendI
           "] : " sb.appendS
           constData [] .value constContext typeContext sb.appendConstant
           break
@@ -504,7 +504,7 @@ namespace: sb
           op .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           progContext [] .procedures
-            callInfo [] .procId list.at .data
+            callInfo [] .procId i64 cast list.at .data
           =:: procInfo
           procInfo [] .labelId labelContext sb.appendLabelName
           callInfo [] .implementationId 0 >= if
@@ -539,7 +539,7 @@ namespace: sb
           op .dataType typeContext sb.appendType
           " ) : " sb.appendS
           progContext [] .procedures
-            implInfo [] .procId list.at .data
+            implInfo [] .procId i64 cast list.at .data
           =:: procInfo
           procInfo [] .labelId labelContext sb.appendLabelName
           implInfo [] .implementationId 0 >= if
@@ -555,7 +555,7 @@ namespace: sb
           op .dataType typeContext sb.appendType
           " ) : " sb.appendS
           progContext [] .procedures
-            implInfo [] .procId list.at .data
+            implInfo [] .procId i64 cast list.at .data
           =:: procInfo
           procInfo [] .labelId labelContext sb.appendLabelName
           implInfo [] .implementationId 0 >= if

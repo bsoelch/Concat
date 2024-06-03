@@ -50,13 +50,13 @@ namespace: string
   end
 
   proc( string : str i64 : index -> i8 ) =>: export: charAt
-    str index array.get return
+    str i8 arrayView cast index array.get return
   end
   proc( string : str i8 : chr -> i64 ) =>: export: indexOf
-    str chr array.indexOf return
+    str i8 arrayView cast chr array.indexOf return
   end
   proc( string : str i8 : chr -> i64 ) =>: export: lastIndexOf
-    str chr array.lastIndexOf return
+    str i8 arrayView cast chr array.lastIndexOf return
   end
   proc( string : base string : subStr -> i64 ) =>: export: indexOfStr ## XXX move to arrayView
     subStr .length base .length > if
@@ -100,7 +100,7 @@ namespace: string
   end
 
   proc( string : str i8 : chr -> bool ) =>: export: contains
-    str chr array.indexOf -1 != return
+    str i8 arrayView cast chr array.indexOf -1 != return
   end
   proc( string : base string : subStr -> bool ) =>: export: isSubstring
     base subStr indexOfStr -1 != return
@@ -108,26 +108,26 @@ namespace: string
 
   ## first n characters
   proc( string : str i64 : n -> string ) =>: export: head
-    str n array.head return
+    str i8 arrayView cast n array.head string cast return
   end
   ## everything excluding the first n characters
   proc( string : str i64 : n -> string ) =>: export: tail
-    str n array.tail return
+    str i8 arrayView cast n array.tail string cast return
   end
   ## equivalent to:  <from> tail <len> head
   proc( string : str i64 : from i64 : len -> string ) =>: export: slice
-    str from len array.slice return
+    str i8 arrayView cast from len array.slice string cast return
   end
   proc( string : str i64 : index -> string string ) =>: export: cutIndex
-    str index array.cutIndex return
+    str i8 arrayView cast index array.cutIndex ..swap string cast ..swap string cast return
   end
   proc( string : str i64 : index -> string string ) =>: export: splitIndex
-    str index array.splitIndex return
+    str i8 arrayView cast index array.splitIndex ..swap string cast ..swap string cast return
   end
   proc( string : str i8 : chr -> string string ) =>: export: split
-    str chr array.split return
+    str i8 arrayView cast chr array.split ..swap string cast ..swap string cast return
   end
   proc( string : str i8 : chr -> string string ) =>: export: splitLast
-    str chr array.splitLast return
+    str i8 arrayView cast chr array.splitLast ..swap string cast ..swap string cast return
   end
 end

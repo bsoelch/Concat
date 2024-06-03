@@ -227,7 +227,7 @@ proc(
   idContext [] .typeContext .labelContext @ =:: labelContext
   labelContext id.resetNamespace
   context [] .procBundles
-    ..dup .length =:: bundleId
+    ..dup .length ProcBundleId cast =:: bundleId
     newProcBundle list.append
   context [] .procBundles =
   ## newLabel
@@ -264,7 +264,7 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   context [] .procedures
-    ..dup .length =:: procId
+    ..dup .length ProcId cast =:: procId
     ## ProcedureInfo
       FILE_ID_BUILT_IN
       procType
@@ -287,7 +287,7 @@ proc(
     idContext
     context [] .errors @
   id.declareIdentifier =:: isError ..drop.2
-  context [] .procBundles bundleId list.at .data =:: bundle
+  context [] .procBundles bundleId i64 cast list.at .data =:: bundle
   bundle [] .procedures
     procId list.append
   bundle [] .procedures =

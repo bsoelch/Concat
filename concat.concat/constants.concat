@@ -7,7 +7,7 @@ import "types.concat"
 i64 =:: export: ProcId
 i64 =:: export: ProcBundleId
 i64 =:: export: ConstantId
-struct( ConstantId : offset i64 : length ) =:: export: ConstantArray
+struct( i64 : offset i64 : length ) =:: export: ConstantArray
 struct( ConstantId : value i32 : eltIndex ) =:: export: UnionConstant
 enum(
   none
@@ -20,7 +20,7 @@ enum(
   ConstantArray : arrayConstant
   Type : typeId
   wildCard
-  i32 : genericArg
+  LabelId : genericArg
   ProcId : procedure
   ProcBundleId : procedureBundle
   UnionConstant : union
@@ -61,13 +61,15 @@ end
 
 proc( ConstValue : value i32 : index ConstantContext ptr mut : context -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
-    ..dup .length =:: valueId
+    ..dup .length ConstantId cast =:: valueId
     value list.append
   context [] .arrayValues =
   valueId index UnionConstant new ConstValue .union return
 end
 proc( ConstValue : union ConstantContext ptr : context -> ConstValue ) =>: export: constUnionElement
-  context [] .arrayValues union .union .value list.get return
+  context [] .arrayValues
+    union .union .value i64 cast
+  list.get return
 end
 
 proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export: constantEquals
@@ -234,22 +236,23 @@ namespace: sb
           break
         procedure case
           "procedure: "  sb.appendS
-          val .procedure sb.appendI
+          val .procedure i64 cast sb.appendI
           break
         procedureBundle case
           "procedure bundle: "  sb.appendS
-          val .procedureBundle sb.appendI
+          val .procedureBundle i64 cast sb.appendI
           break
         genericArg case
           "generic argument: "  sb.appendS
-          val .genericArg sb.appendI
+          val .genericArg i64 cast sb.appendI
+          ## XXX? print label
           break
         union case
           "union element ("  sb.appendS
           val .union .eltIndex sb.appendI
           "):" sb.appendS
             constContext [] .arrayValues
-              val .union .value
+              val .union .value i64 cast
             list.get
             constContext
             typeContext

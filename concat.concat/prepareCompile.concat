@@ -42,7 +42,7 @@ proc(
     IdentifierType .TMP_VAR
     label
     ConstValue .none
-    label
+    -1
   IdentifierInfo new return
 end
 
@@ -271,7 +271,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
   ## ConverterContext
     program
     0 VariableInfo list.create
-    -1
+    -1:FileId
   ConverterContext new =:: mut: contextData
   contextData @ =:: context
   0 while ..dup program [] .progFiles .length < do =:: i
@@ -285,7 +285,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
       i 1 + continue
     end
     currentProc [] .fileId context [] .currentFile =
-    program [] .progFiles currentProc [] .fileId list.at .data =:: f
+    program [] .progFiles
+      currentProc [] .fileId i64 cast
+    list.at .data =:: f
     currentProc [] .implementation .code @ =:: impl
     currentProc [] .hasStaticArg if
       0 while ..dup impl [] .implementations .length < do =:: implId
@@ -338,7 +340,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
       ## opImplementProc
         currentProc [] .procType
         ## ProcedureImpl
-          procId
+          procId ProcId cast
           -1
         ProcedureImpl new
         pos

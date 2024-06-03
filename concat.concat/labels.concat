@@ -14,27 +14,40 @@ struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mu
 
 struct( i64 : offset i64 : length ) =:: export: StringConstant
 
-i32 =:: export: LabelFlag
+u32 =:: export: LabelFlag
 namespace: id
-  0   LabelFlag =: export: FLAG_NONE
-  1   LabelFlag =: export: FLAG_MUTABLE
-  2   LabelFlag =: export: FLAG_AUTO
-  4   LabelFlag =: export: FLAG_EXTERN
-  8   LabelFlag =: export: FLAG_EXPORT
-  16  LabelFlag =: export: FLAG_STATIC
-  32  LabelFlag =: export: FLAG_INLINE
-  64  LabelFlag =: export: FLAG_EMPTY
-  128 LabelFlag =: export: FLAG_BUILT_IN
-  256 LabelFlag =: export: FLAG_DUMMY
+  0:LabelFlag   =:: export: FLAG_NONE
+  1:LabelFlag   =:: export: FLAG_MUTABLE
+  2:LabelFlag   =:: export: FLAG_AUTO
+  4:LabelFlag   =:: export: FLAG_EXTERN
+  8:LabelFlag   =:: export: FLAG_EXPORT
+  16:LabelFlag  =:: export: FLAG_STATIC
+  32:LabelFlag  =:: export: FLAG_INLINE
+  64:LabelFlag  =:: export: FLAG_EMPTY
+  128:LabelFlag =:: export: FLAG_BUILT_IN
+  256:LabelFlag =:: export: FLAG_DUMMY
 
-  0x40000000:u32 LabelFlag =: export: FLAG_EXPERIMENTAL
+  0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
+
+  proc( LabelFlag : a LabelFlag : b -> LabelFlag ) =>: export: flagAnd
+    a u32 cast b u32 cast i32.and LabelFlag cast
+  end
+  proc( LabelFlag : a LabelFlag : b -> LabelFlag ) =>: export: flagOr
+    a u32 cast b u32 cast i32.or LabelFlag cast
+  end
+  proc( LabelFlag -> bool ) =>: export: flagToBool
+    u32 cast i32.toBool
+  end
+  overload: &  flagAnd    end
+  overload: |  flagOr     end
+  overload: ?  flagToBool end
 end
 
 struct( StringConstant : name NamespaceId list : mut: children NamespaceId : parent ) =:: Namespace
 struct( StringConstant : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : mut: flags ) =:: Label
 
 struct(
-  i8 list : mut: nameBuffer
+  stringBuilder : mut: nameBuffer
   Label list : mut: labels
   Namespace list : mut: namespaces
   NamespaceImport list : mut: namespaceImports
@@ -43,7 +56,7 @@ struct(
 namespace: id
 
   proc( -> LabelContext ) =>: export: newLabelContext
-    1024            i8 list.create
+    1024 sb.create
     128          Label list.create
     32       Namespace list.create
       0 0 StringConstant new
@@ -51,14 +64,14 @@ namespace: id
       NAMESPACE_ID_NONE
       Namespace new list.append ## root namespace
     32 NamespaceImport list.create
-      0
+      0:NamespaceId
       NAMESPACE_IMPORT_NONE
     NamespaceInfo new
     LabelContext new return
   end
   proc( LabelContext -> LabelContext ) =>: export: freeLabelContext
     =:: mut: context
-    context .nameBuffer       list.free context .nameBuffer =
+    context .nameBuffer sb.free context .nameBuffer =
     context .labels           list.free context .labels =
     0 while ..dup context .namespaces .length < do =:: i
       context .namespaces i list.at .data =:: namespace
@@ -94,32 +107,41 @@ namespace: id
       context [] .nameBuffer .data b .offset + b .length string.create
     string.eq return
   end
+
+  proc( LabelId : id LabelContext ptr : context -> Label ptr mut optional ) =>: getLabel
+    ## index check done by list.at
+    context [] .labels id i64 cast list.at return
+  end
   proc( LabelId : id LabelContext ptr mut : context -> NamespaceId ) =>: export: getLabelNamespace
-    id 0 < id context [] .labels .length >= | if
+    id context getLabel =:: label?
+    label? optional.isEmpty if
       NAMESPACE_ID_NONE return
     end
-    context [] .labels id list.at .data [] .namespaceInfo .current return
+    label? .data [] .namespaceInfo .current return
   end
   proc( LabelId : id LabelContext ptr mut : context -> FileId ) =>: export: getLabelFile
-    id 0 < id context [] .labels .length >= | if
+    id context getLabel =:: label?
+    label? optional.isEmpty if
       FILE_ID_NONE return
     end
-    context [] .labels id list.at .data [] .srcFile return
+    label? .data [] .srcFile return
   end
   proc( LabelId : id LabelContext ptr mut : context -> ) =>: export: inLabelNamespace
-    id 0 < id context [] .labels .length >= | if
-      return
+    id context getLabel =:: label?
+    label? optional.isEmpty if
+       return
     end
-    context [] .labels id list.at .data [] .namespaceInfo context [] .namespaceInfo =
+    label? .data [] .namespaceInfo context [] .namespaceInfo =
   end
   proc( LabelContext ptr mut : context -> ) =>: export: resetNamespace
-    0 NAMESPACE_IMPORT_NONE NamespaceInfo new context [] .namespaceInfo =
+    0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context [] .namespaceInfo =
   end
   proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
-    id 0 < id context [] .labels .length >= | if
+    id context getLabel =:: label?
+    label? optional.isEmpty if
       false return
     end
-    context [] .labels id list.at .data [] .name =:: name
+    label? .data [] .name =:: name
     context [] .nameBuffer .data name .offset +
       name .length
     string.create str string.eq return
@@ -128,12 +150,13 @@ namespace: id
     a b == if
       true return
     end
-    a 0 < a context [] .labels .length >= |
-    b 0 < b context [] .labels .length >= | | if
+    a context getLabel =:: aLabel?
+    b context getLabel =:: bLabel?
+    aLabel? optional.isEmpty or bLabel? optional.isEmpty if
       false return
     end
-    context [] .labels a list.at .data [] .name =:: aData
-    context [] .labels b list.at .data [] .name =:: bData
+    aLabel? .data [] .name =:: aData
+    bLabel? .data [] .name =:: bData
     ## string.eq
       context [] .nameBuffer .data aData .offset +
         aData .length
@@ -144,35 +167,39 @@ namespace: id
     string.eq return
   end
   proc( LabelId : id LabelContext ptr : context -> LabelFlag ) =>: export: labelFlags
-    id 0 < id context [] .labels .length >= | if
-      0 LabelFlag cast return
+    id context getLabel =:: label?
+    label? optional.isEmpty if
+      0:LabelFlag return
     end
-    context [] .labels id list.get .flags return
+    label? .data [] .flags return
   end
   proc( LabelId : id LabelFlag : newFlags LabelContext ptr : context -> ) =>: export: addLabelFlags
-    id 0 < id context [] .labels .length >= | if
+    id context getLabel =:: label?
+    label? optional.isEmpty if
       return
     end
-    context [] .labels id list.at .data [] .flags @ =:: flags
+    label? .data .flags@ =:: flags
     flags []
-      newFlags | 
+      newFlags |
     flags [] =
   end
   proc( LabelId : id LabelContext ptr : context -> bool ) =>: export: isLabelEmpty
-    id 0 < id context [] .labels .length >= | if
+    id context getLabel =:: label?
+    label? optional.isEmpty if
       true return
     end
-    context [] .labels id list.get .flags FLAG_EMPTY & 0 != return
+    label? .data [] .flags FLAG_EMPTY & ? return
   end
   proc( LabelId : id LabelContext ptr : context -> FilePosition optional ) =>: export: labelPos
-    id 0 < id context [] .labels .length >= | if
+    id context getLabel =:: label?
+    label? optional.isEmpty if
       FilePosition optional.empty return
     end
-    context [] .labels id list.get .pos optional.wrap return
+    label? .data [] .pos optional.wrap return
   end
   proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export: newLabel
     context [] .nameBuffer .length =:: offset
-    context [] .nameBuffer  str .data str .length array.create list.appendArray context [] .nameBuffer =
+    context [] .nameBuffer str sb.appendStr context [] .nameBuffer =
     context [] .labels
       ## Label
         offset str .length StringConstant new
@@ -192,10 +219,10 @@ namespace: id
     FileId : srcFile
     LabelContext ptr mut : context
   -> LabelId ) =>: export: newLabelInNamespace
-    0 namespaceName context createNamespace =:: namespaceId
+    0:NamespaceId namespaceName context createNamespace =:: namespaceId
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
-      labelName .data labelName .length array.create list.appendArray
+      labelName sb.appendStr
     context [] .nameBuffer =
     context [] .labels
       ## Label
@@ -237,12 +264,12 @@ namespace: id
     '`' pos @ updateFilePos ## string content starts after `
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
-      ..dup .length str .length + list.ensureCap
+      ..dup .length str .length + sb.ensureCap
       0 while ..dup str .length < do =:: i
         str i string.charAt =:: c
         c pos @ updateFilePos
         c '`' != if
-          c list.append
+          c sb.appendC
           i 1 + continue
         end
         i 1 + str .length >= if
@@ -251,7 +278,7 @@ namespace: id
         end
         str i 1 + string.charAt
           ..dup pos @ updateFilePos
-        list.append
+        sb.appendC
         i 2 +
       end ..drop
     context [] .nameBuffer =
@@ -261,14 +288,13 @@ namespace: id
     stringStart =:: mut: pos
     '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset
-    6 sb.create =:: mut: uft8Buff
     context [] .nameBuffer
-      ..dup .length str .length + list.ensureCap
+      ..dup .length str .length + sb.ensureCap
       0 while ..dup str .length < do
         ..swap
           str ..over.2 string.charAt ..dup '\\' != if
             ..dup pos @ updateFilePos
-            list.append
+            sb.appendC
             ..swap
               1 +
             continue
@@ -280,37 +306,37 @@ namespace: id
             '\\' '\'' '"' case
               '\\' pos @ updateFilePos
               ..dup pos @ updateFilePos
-              list.append
+              sb.appendC
               break
             'n' case
               '\\' pos @ updateFilePos
               pos @ updateFilePos
-              '\n' list.append
+              '\n' sb.appendC
               break
             't' case
               '\\' pos @ updateFilePos
               pos @ updateFilePos
-              '\t' list.append
+              '\t' sb.appendC
               break
             'b' case
               '\\' pos @ updateFilePos
               pos @ updateFilePos
-              '\b' list.append
+              '\b' sb.appendC
               break
             'r' case
               '\\' pos @ updateFilePos
               pos @ updateFilePos
-              '\r' list.append
+              '\r' sb.appendC
               break
             'f' case
               '\\' pos @ updateFilePos
               pos @ updateFilePos
-              '\f' list.append
+              '\f' sb.appendC
               break
             'v' case
               '\\' pos @ updateFilePos
               pos @ updateFilePos
-              '\v' list.append
+              '\v' sb.appendC
               break
             'x' 'u' 'U' case =:: c
               c 'x' == if 2 else c 'u' == _if 4 else 8 end =:: nChars
@@ -337,12 +363,9 @@ namespace: id
                     "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                   else
                     c 'x' == if
-                      i8 cast list.append
+                      i8 cast sb.appendC
                     else c 'u' == _if
-                      uft8Buff sb.clear
-                        ..swap i32 cast sb.appendCodepoint
-                      uft8Buff =
-                      uft8Buff sb.asArray list.appendArray
+                      utf8.Codepoint cast sb.appendCodepoint
                     else c 'U' == _if
                       ..dup i32.MAX > if
                         "hex-code for escape sequence: \"\\U" sb.wrap
@@ -357,10 +380,7 @@ namespace: id
                           ")" sb.appendS
                         pos errors appendWarning
                       end
-                      uft8Buff sb.clear
-                        ..swap i32 cast sb.appendCodepoint
-                      uft8Buff =
-                      uft8Buff sb.asArray list.appendArray
+                      utf8.Codepoint cast sb.appendCodepoint
                     else ..drop
                       "unknown hex-escape sequence: \"\\" sb.wrap c sb.appendC '\"' sb.appendC pos errors appendError
                     end
@@ -384,13 +404,12 @@ namespace: id
         1 +
       end ..drop
     context [] .nameBuffer =
-    uft8Buff sb.free ..drop
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
   proc( NamespaceId : parent string : name  LabelContext ptr mut : context -> NamespaceId ) =>: newNamespace
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
-      name .data name .length array.create list.appendArray
+      name sb.appendStr
     context [] .nameBuffer =
     context [] .namespaces .length =:: id
     context [] .namespaces
@@ -405,22 +424,22 @@ namespace: id
     base NAMESPACE_ID_NONE == childName .length 0 == | if
       NAMESPACE_ID_NONE return
     end
-    base 0 < base  context [] .namespaces .length >= | if
+    base i64 cast 0 < or base i64 cast context [] .namespaces .length >= if
       NAMESPACE_ID_NONE return ## id out of range
     end
-    context [] .namespaces base list.at .data =:: baseSpace
-    0 while ..dup baseSpace [] .children .length < do
-      baseSpace [] .children ..over list.get =:: child
-      childName context [] .namespaces child list.get .name context scEqualTo if ..drop
-        child return
+    context [] .namespaces base i64 cast list.at .data =:: baseSpace
+    0 while ..dup baseSpace [] .children .length < do =:: i
+      baseSpace [] .children i list.get i64 cast =:: child
+      childName context [] .namespaces child list.get .name context scEqualTo if
+        child NamespaceId cast return
       end
-      1 +
+      i 1 +
     end ..drop
     create ! if
       NAMESPACE_ID_NONE return
     end
     base childName context newNamespace
-      context [] .namespaces base list.at .data
+      context [] .namespaces base i64 cast list.at .data
         ..dup [] .children
           ..over.2 list.append
       ..swap [] .children =
@@ -462,35 +481,35 @@ namespace: id
     id NAMESPACE_ID_NONE == if
       0 0 StringConstant new return
     end
-    context [] .namespaces id list.get .name return
+    context [] .namespaces id i64 cast list.get .name return
   end
   proc( NamespaceId : id LabelContext ptr mut : context -> NamespaceId ) =>: export: parentNamespace
     id NAMESPACE_ID_NONE == if
       NAMESPACE_ID_NONE return
     end
-    context [] .namespaces id list.get .parent return
+    context [] .namespaces id i64 cast list.get .parent return
   end
   proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr mut : context -> NamespaceImportId ) =>: export: getNamespaceImportId
     context [] .namespaceImports .length 0 > if
       parent NAMESPACE_IMPORT_NONE == if
-        0 NamespaceImportId cast
+        0:NamespaceImportId
       else
-        context [] .namespaceImports parent list.get .firstChild
+        context [] .namespaceImports parent i64 cast list.get .firstChild
       end
       ..dup NAMESPACE_IMPORT_NONE == if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports parent list.at .data [] .firstChild =
+          context [] .namespaceImports parent i64 cast list.at .data [] .firstChild =
       end
       NAMESPACE_IMPORT_NONE ..swap
         while ..dup NAMESPACE_IMPORT_NONE != do ..swap ..drop
-          context [] .namespaceImports ..over list.get .imported importId == if
+          context [] .namespaceImports ..over i64 cast list.get .imported importId == if
             return
           end
-          context [] .namespaceImports ..over list.get .next
+          context [] .namespaceImports ..over i64 cast list.get .next
         end ..drop
       ..dup NAMESPACE_IMPORT_NONE != if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports ..over.2 list.at .data [] .next =
+          context [] .namespaceImports ..over.2 i64 cast list.at .data [] .next =
       end ..drop
     end
     context [] .namespaceImports
@@ -506,10 +525,11 @@ end
 
 namespace: sb
   proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendLabelName
-    id 0 < id context [] .labels .length >= | if
+    id context id.getLabel =:: label?
+    label? optional.isEmpty if
       sb return
     end
-    context [] .labels id list.at .data [] .name =:: name
+    label? .data [] .name =:: name
     sb
       context [] .nameBuffer .data name .offset +
         name .length
@@ -517,10 +537,11 @@ namespace: sb
     sb.appendStr return
   end
   proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedLabelName
-    id 0 < id context [] .labels .length >= | if
+    id context id.getLabel =:: label?
+    label? optional.isEmpty if
       sb return
     end
-    context [] .labels id list.at .data [] .name =:: name
+    label? .data [] .name =:: name
     sb
       context [] .nameBuffer .data name .offset +
         name .length

@@ -71,7 +71,7 @@ namespace: id
     IdentifierType .GLOBAL_VAR
     false
   IdentifierData new =:: mut: ID_TMP_DATA
-  -2 LabelId =: LABEL_ID_TMP
+  -2:LabelId =:: LABEL_ID_TMP
 
   proc( IdentifierName : a -> i32 ) =>: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
@@ -89,19 +89,17 @@ namespace: id
     i8 _ ptr mut list : mut: scopeStrings ## strings allocated for this scope
     bool : isProcScope
     Type : currentProc
-    i64 : staticArgsOffset
     bool : experimental
     NamespaceImportId : prevImports
     i32 : mut: flags
   ) =:: Scope
 
-  proc( bool : isProc Type : procType i64 : staticArgsOffset bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
+  proc( bool : isProc Type : procType bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
      ## Scope
       idHash @ idEq @ 128 LabelId map.create
       128 i8 _ ptr mut list.create
       isProc
       procType
-      staticArgsOffset
       experimental
       imports
       0
@@ -125,7 +123,7 @@ namespace: id
   proc( -> IdentifierContext ) =>: export: newIdentifierContext
     types.newTypeContext
     newConstContext
-    false Type .undefined -1 false NAMESPACE_IMPORT_NONE newScope
+    false Type .undefined false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     labelHash @ labelEq @ 128 IdentifierData map.create
     32  ConstValue        list.create
@@ -148,12 +146,11 @@ namespace: id
   proc( IdentifierContext ptr mut : context -> bool ) =>: isTopLevel
     context [] .openScopes .length 0 == return
   end
-  proc( Type : procType i64 : staticArgsOffset bool : experimental IdentifierContext ptr mut : context -> ) =>: export: openProcScope
+  proc( Type : procType bool : experimental IdentifierContext ptr mut : context -> ) =>: export: openProcScope
     context [] .openScopes
        ## newScope
          true
          procType
-         staticArgsOffset
          experimental
          context [] .typeContext .labelContext .namespaceInfo .imports
        newScope list.append
@@ -166,7 +163,7 @@ namespace: id
       context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental
     end =:: experimental =:: currentProc
     context [] .openScopes
-       false currentProc -1 experimental context [] .typeContext .labelContext .namespaceInfo .imports newScope
+       false currentProc experimental context [] .typeContext .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
   end
@@ -210,11 +207,10 @@ namespace: id
   proc(
     IdentifierContext ptr mut : context
   ->
-    i64 #+staticArgsOffset+#
     bool #+isError+#
   ) =>: export: closeScope
     context [] .openScopes .length 0 == if
-      -1 true return
+      true return
     end
     context [] .openScopes
       list.pop =:: mut: closed
@@ -225,7 +221,7 @@ namespace: id
     closed .isProcScope if
       0 context [] .localVarCount = ## XXX handle nested procedures
     end
-    closed .staticArgsOffset false return
+    false return
   end
 
   proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName LabelId bool ) =>: export: searchIdentifier
@@ -298,14 +294,14 @@ namespace: id
           matches .data [] =
         end
       end
-      context [] .typeContext .labelContext .namespaces mNamespace list.get .parent mNamespace =
+      context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace =
     end
     ## 3. search imports
     false =:: mut: multiMatch
     LabelId optional.empty =:: mut: match
     false =:: mut: matchGlobal
     context [] .typeContext .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
-      context [] .typeContext .labelContext .namespaceImports ..swap list.get
+      context [] .typeContext .labelContext .namespaceImports ..swap i64 cast list.get
         ..dup .imported path  context [] .typeContext .labelContext @ findNamespace relSpace =
         relSpace idName .namespace =
         relSpace globalName .namespace =
@@ -376,7 +372,7 @@ namespace: id
       ..dup .length 0 == assert "name buffer is empty"
       nameId context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
-    context [] .nameBuffer list.asArray =:: name
+    context [] .nameBuffer sb.asStr =:: name
     ## searchIdentifier
       name
       fileId
@@ -384,7 +380,7 @@ namespace: id
       IdentifierMatch list ptr mut optional.empty
     searchIdentifier =:: isError =:: label ..drop
     context [] .nameBuffer
-      list.clear
+      sb.clear
     context [] .nameBuffer =
     label context getIdentifier isError | return
   end
@@ -447,7 +443,7 @@ namespace: id
       ..dup .length 0 == assert "name buffer empty"
       label context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
-    context [] .nameBuffer list.asArray =:: name
+    context [] .nameBuffer sb.asStr =:: name
     context id.isTopLevel flags FLAG_EXPORT & ? & if ## exported global -> ignore fileId
       FILE_ID_NONE
     else
@@ -455,17 +451,17 @@ namespace: id
     end =:: fileId
     flags FLAG_MUTABLE & ? if
       idType .TYPE ?? if
-        context [] .nameBuffer list.clear context [] .nameBuffer =
+        context [] .nameBuffer sb.clear context [] .nameBuffer =
         "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
       idType .PROCEDURE ?? if
-        context [] .nameBuffer list.clear context [] .nameBuffer =
+        context [] .nameBuffer sb.clear context [] .nameBuffer =
         "procedures cannot be mutable" sb.wrap declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
       idType .ARGUMENT ??  if
-        context [] .nameBuffer list.clear context [] .nameBuffer =
+        context [] .nameBuffer sb.clear context [] .nameBuffer =
         "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
@@ -473,7 +469,7 @@ namespace: id
     ## don't check names of built-in identifiers
     flags FLAG_BUILT_IN & ? ! and
         name declaredAt errors checkIdentifier if
-      context [] .nameBuffer list.clear context [] .nameBuffer =
+      context [] .nameBuffer sb.clear context [] .nameBuffer =
       LABEL_ID_NONE ID_NONE_DATA true return
     end
     context [] .openScopes .length 0 > if
@@ -509,7 +505,7 @@ namespace: id
             "\n  * " sb.appendS
             valType typeContext sb.appendType
           declaredAt errors appendError
-          context [] .nameBuffer list.clear context [] .nameBuffer =
+          context [] .nameBuffer sb.clear context [] .nameBuffer =
           LABEL_ID_NONE ID_NONE_DATA true return
         end
         prevDec [] .idType idType != if
@@ -523,7 +519,7 @@ namespace: id
             " got: " sb.appendS
             idType sb.appendIdType
           declaredAt errors appendError
-          context [] .nameBuffer list.clear context [] .nameBuffer =
+          context [] .nameBuffer sb.clear context [] .nameBuffer =
           LABEL_ID_NONE ID_NONE_DATA true return
         end
         prevDec [] .labelId labelContext labelFlags flags != if
@@ -543,7 +539,7 @@ namespace: id
           declaredAt prevDec [] .declaredAt =
           false prevDec [] .declarationOnly =
         end
-        context [] .nameBuffer list.clear context [] .nameBuffer =
+        context [] .nameBuffer sb.clear context [] .nameBuffer =
         prevDec [] .labelId prevDec [] false return
       end
       "re declaration of identifier \"" sb.wrap
@@ -551,7 +547,7 @@ namespace: id
         '\"' sb.appendC
       declaredAt errors appendWarning
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
-      context [] .nameBuffer list.clear context [] .nameBuffer =
+      context [] .nameBuffer sb.clear context [] .nameBuffer =
       LABEL_ID_NONE ID_NONE_DATA true return
     end
     name fileId context findIdentifierByName ! if
@@ -583,7 +579,7 @@ namespace: id
       label
       idData
     map.put ..drop ## previous entry is always empty
-    context [] .nameBuffer list.clear context [] .nameBuffer =
+    context [] .nameBuffer sb.clear context [] .nameBuffer =
     label idData false return
   end
 end
@@ -693,20 +689,20 @@ namespace: id
        ..dup .length 0 == assert "name buffer empty"
        name context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
-    context [] .nameBuffer list.asArray =:: nameAsStr
+    context [] .nameBuffer sb.asStr =:: nameAsStr
     context [] .typeContext  .labelContext .namespaceInfo .current
       nameAsStr true context [] .typeContext  .labelContext @ childId
     context [] .typeContext  .labelContext .namespaceInfo .current =
-    context [] .nameBuffer list.clear context [] .nameBuffer =
+    context [] .nameBuffer sb.clear context [] .nameBuffer =
   end
   proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =>: export: importNamespace
     context [] .nameBuffer
        ..dup .length 0 == assert "name buffer empty"
        name context [] .typeContext  .labelContext @ sb.appendLabelName
     context [] .nameBuffer =
-    context [] .nameBuffer list.asArray =:: nameAsStr
+    context [] .nameBuffer sb.asStr =:: nameAsStr
     0 NamespaceId cast nameAsStr context [] .typeContext  .labelContext @ findNamespace
-    context [] .nameBuffer list.clear context [] .nameBuffer =
+    context [] .nameBuffer sb.clear context [] .nameBuffer =
     ..dup NAMESPACE_ID_NONE == if ..drop
       true return
     end
@@ -716,7 +712,7 @@ namespace: id
     false return
   end
   proc( IdentifierContext ptr mut : context -> bool ) =>: export: endNamespace
-    context [] .typeContext  .labelContext .namespaceInfo .current 0 == if
+    context [] .typeContext  .labelContext .namespaceInfo .current 0:NamespaceId == if
       true return
     end
     context [] .typeContext  .labelContext .namespaceInfo .current context [] .typeContext  .labelContext @ parentNamespace

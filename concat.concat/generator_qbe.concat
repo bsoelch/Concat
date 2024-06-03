@@ -467,7 +467,7 @@ proc(
     8 branchTree.NodeId list.create
     8 BranchId list.create
     context [] .stackInfo @ branchTree.startBranch
-    -1
+    -1:branchTree.NodeId
     context [] .currentBranch
     blockId
     false
@@ -554,12 +554,12 @@ namespace: sb
         return
       end
       CONCAT_PREFIX sb.appendS
-      label labelContext id.labelFlags id.FLAG_EXPORT & 0 == if
-        label labelContext id.getLabelFile sb.appendI
+      label labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
+        label labelContext id.getLabelFile i64 cast sb.appendI
         "_F" sb.appendS
       end
       label labelContext id.getLabelNamespace =:: mut: mNamespace
-      while mNamespace id.NAMESPACE_ID_NONE != mNamespace 0 > & do
+      while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
         mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
         "." string.wrap sb.appendAsciified
         mNamespace labelContext id.parentNamespace mNamespace =
@@ -883,7 +883,7 @@ namespace: sb
             value .genericArg
             typeContext
           types.compositeFindLabel =:: index
-          index id.LABEL_ID_NONE != if
+          index -1 != if
             ## appendArgName
               index
               value .genericArg
@@ -1277,9 +1277,9 @@ end
 
 proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
   0 while ..dup prog [] .progFiles .length < do =:: i
-    prog [] .progFiles i list.at .data [] .fileName list.asArray =:: currentName
+    prog [] .progFiles i list.at .data [] .fileName sb.asStr =:: currentName
     fileName currentName string.eq if
-      i return
+      i FileId cast return
     end
     i 1 +
   end ..drop
@@ -1296,7 +1296,7 @@ proc(
     pos .fileName .length sb.appendI
     ",l $" sb.appendS
     FILE_NAME_NAME sb.appendS
-    pos .fileName prog findFileId sb.appendI
+    pos .fileName prog findFileId i64 cast sb.appendI
     ",w " sb.appendS
     pos .line sb.appendI
     ",w " sb.appendS
@@ -2774,7 +2774,7 @@ proc(
       value .genericArg
       typeContext
     types.compositeFindLabel =:: index
-    index id.LABEL_ID_NONE != if
+    index -1 != if
       progIn index typeContext types.compositeGetElement srcType =
       srcType typeContext types.unwrapNamed
         constType typeContext types.unwrapNamed
@@ -2950,7 +2950,7 @@ proc(
         " =l " sb.appendS
         " copy $" sb.appendS
         CONST_REFERENCE_NAME sb.appendS
-        op [] .val .ConstantReference sb.appendI
+        op [] .val .ConstantReference i64 cast sb.appendI
         '\n' sb.appendC
       return
     declareId initializeId case
@@ -2976,10 +2976,10 @@ proc(
             op [] .pos sb.appendPosQBE
             idInfo .idType .LOCAL_VAR ?? if
               "%l" sb.appendS
-              idInfo .labelId sb.appendI
+              idInfo .labelId i64 cast sb.appendI
             else
               "%tmp" sb.appendS
-              idInfo .id sb.appendI
+              idInfo .labelId i64 cast sb.appendI
             end
             valType op [] .pos context false appendAlloc ..drop
             assignValue if
@@ -2994,10 +2994,10 @@ proc(
               ',' sb.appendC
               idInfo .idType .LOCAL_VAR ?? if
                 "%l" sb.appendS
-                idInfo .labelId sb.appendI
+                idInfo .labelId i64 cast sb.appendI
               else
                 "%tmp" sb.appendS
-                idInfo .id sb.appendI
+                idInfo .labelId i64 cast sb.appendI
               end
               isValue ! if
                 ',' sb.appendC
@@ -3013,7 +3013,7 @@ proc(
     implementProcedure case
       op [] .val .implementProcedure =:: implInfo
       prog [] .procedures
-        implInfo .procId list.at .data
+        implInfo .procId i64 cast list.at .data
       =:: procInfo
       op [] .dataType context [] .currentProc =
       procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
@@ -3100,7 +3100,7 @@ proc(
             "%s" sb.appendS
             isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy %l" sb.appendS
-            idInfo .labelId sb.appendI
+            idInfo .labelId i64 cast sb.appendI
             '\n' sb.appendC
           return
         TMP_VAR case
@@ -3109,7 +3109,7 @@ proc(
             "%s" sb.appendS
             isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
             " =l copy %tmp" sb.appendS
-            idInfo .id sb.appendI
+            idInfo .labelId i64 cast sb.appendI
             '\n' sb.appendC
           return
        ARGUMENT case
@@ -3140,7 +3140,7 @@ proc(
     procPtr case
       op [] .val .procPtr =:: procImpl
       prog [] .procedures
-        procImpl .procId
+        procImpl .procId i64 cast
       list.at .data =:: procData
       sb
         op [] .pos sb.appendPosQBE
@@ -3485,7 +3485,7 @@ proc(
     call case
       op [] .val .call @ =:: callInfo
       prog [] .procedures
-        callInfo [] .procId list.at .data
+        callInfo [] .procId i64 cast list.at .data
       =:: procData
       callInfo [] .implementationId 0 >= if
         procData [] .implementation .code .implementations
@@ -4679,8 +4679,8 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
   CompilerContext new =:: mut: contextData
   contextData @ =:: context
   id.LABEL_ID_NONE =:: mut: mainId
-  MAIN_NAME string.wrap 0 idContext id.findIdentifierByName ! if =:: data
-    data [] .labelId labelContext id.getLabelNamespace 0 ==
+  MAIN_NAME string.wrap 0:FileId idContext id.findIdentifierByName ! if =:: data
+    data [] .labelId labelContext id.getLabelNamespace 0:NamespaceId ==
         assert "main is in global namespace"
     data [] .labelId mainId =
   else ..drop end
@@ -4774,7 +4774,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
         i sb.appendI
         " = {" sb.appendS
           f [] .fileName
-            list.asArray labelContext id.wrapStringConstant
+            sb.asStr labelContext id.wrapStringConstant
             context
           sb.appendStringConstQBE
         "} \n" sb.appendS

@@ -54,7 +54,7 @@ proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
       types.ArraySize new return
     genericArg case
       ## ArraySize
-        val .genericArg
+        val .genericArg i64 cast
         types.ArraySizeType .staticArg
       types.ArraySize new return
     none boolean enumLabel chr Float str
@@ -80,7 +80,7 @@ proc(
   end
   src switch
     genericType case
-      src types.getTypeId LabelId =: genericId
+      src types.getTypeId LabelId cast =:: genericId
       genericValues genericId map.at =:: value?
       value? optional.hasData if
         value? .data [] =:: value
@@ -293,7 +293,7 @@ proc(
   end
   target switch
     genericType case
-      target types.getTypeId LabelId =: genericId
+      target types.getTypeId LabelId cast =:: genericId
       genericValues genericId map.at =:: oldValue?
       oldValue? optional.hasData if
         oldValue? .data [] =:: oldValue
@@ -719,7 +719,7 @@ proc(
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   0 while ..dup procedureIds .length < do =:: i
     procedureIds i array.get =:: procId
-    progContext [] .procedures procId list.at .data =:: procInfo
+    progContext [] .procedures procId i64 cast list.at .data =:: procInfo
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
     =:: argCount
@@ -754,7 +754,7 @@ proc(
         i 1 + continue
       end
       progContext [] .procedures
-        current [] .procId list.at .data
+        current [] .procId i64 cast list.at .data
       [] .procType typeContext types.getProcIn ..drop =:: inTypes
       inTypes typeContext types.compositeEltCount 1 -
         current [] .paramInfo .length -
@@ -801,7 +801,7 @@ proc(
       paramType typeContext types.isGeneric and
           paramType
             typeContext types.unwrapNamed
-          types.getTypeId =:: paramId
+          types.getTypeId LabelId cast =:: paramId
           current [] .genericValues @
             paramId
           map.at optional.isEmpty if
@@ -939,7 +939,7 @@ proc(
         0 while ..dup currentSignatures .length < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
-            current [] .procId list.at .data
+            current [] .procId i64 cast list.at .data
           =:: procInfo
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
@@ -979,7 +979,7 @@ proc(
         0 while ..dup currentSignatures .length < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
-            current [] .procId list.at .data
+            current [] .procId i64 cast list.at .data
           =:: procInfo
           isEquivalent and
               candidate [] current [] progContext cmpSignatures 0 != if
@@ -999,7 +999,7 @@ proc(
     ProcedureCallInfo optional.empty Type .undefined return
   end
   progContext [] .procedures
-    candidate [] .procId list.at .data
+    candidate [] .procId i64 cast list.at .data
   =:: procInfo
   procInfo [] .procType typeContext types.getProcIn ..drop =:: inType
   procInfo [] .procType typeContext types.getProcOut ..drop =:: outType
@@ -1019,7 +1019,7 @@ proc(
   eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0 > and
       progContext [] .procedures
-        candidate [] .procId list.at .data
+        candidate [] .procId i64 cast list.at .data
       [] .implementation @ =:: implData
       implData [] .code ?? if
     implData [] .code .implementations @ =:: impls

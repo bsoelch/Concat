@@ -1,26 +1,10 @@
 Written directly to file!
-0
 16
--1
 30
-Hello0
-5
-World0
-5
+Hello5
+World5
 !
-0
 Input for io.concat
-⇒Reading stdin works✓0
-45
+⇒Reading stdin works✓45
 
-0
-5
 (nil)
-8
-0
-0
-0
-0
-0
-0
-0

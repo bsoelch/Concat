@@ -331,7 +331,7 @@ namespace: asm
           stackMemoryFloat case
             "%stackFloat" sb.appendS arg .stackMemoryFloat sb.appendI break
           localVariable case
-            "%localVar" sb.appendS arg .localVariable sb.appendI break
+            "%localVar" sb.appendS arg .localVariable i64 cast sb.appendI break
           outputArgument case
             "%outArg" sb.appendS arg .outputArgument sb.appendI break
           localLabel case arg .localLabel appendLocalLabel break
@@ -1984,7 +1984,7 @@ proc(
       return
     implementProcedure case
       op [] .val .implementProcedure =:: implId
-      prog [] .procedures implId .procId list.at .data =:: procData
+      prog [] .procedures implId .procId i64 cast list.at .data =:: procData
       implId .implementationId 0 >= if
         procData [] .implementation .code .implementations
           implId .implementationId list.at .data =:: impl
@@ -3209,7 +3209,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToA
     currentProc [] .implementation .code ?? ! if
       i 1 + continue
     end
-    prog [] .progFiles currentProc [] .fileId list.at .data =:: f
+    prog [] .progFiles currentProc [] .fileId i64 cast list.at .data =:: f
     currentProc [] .implementation .code @ =:: impl
     currentProc [] .hasStaticArg if
       0 while ..dup impl [] .implementations .length < do =:: implId

@@ -1,6 +1,5 @@
 import stringIO
 import stringBuilder
-import debug
 
 proc( -> ) =>: main 
   16 sb.create
@@ -8,6 +7,6 @@ proc( -> ) =>: main
     ' '     sb.appendC
     "World" sb.appendS
     '\n'    sb.appendC
-    io.stdOut ..over io.fputSb debug.print
+    io.stdOut ..over io.fputSb io.FILE_ERROR_NONE == assert "fputSb works"
   sb.free ..drop
 end

@@ -1,11 +1,10 @@
-import debug
 type : later
 struct( later : x later : y ) =:: point
 
 proc( -> ) =>: main
-  1 2 point new =:: p
+  1 later cast 2 later cast point new =:: p
   p @ =:: pointPointer
-  pointPointer [] .y debug.print
-  point ..type.size debug.print
+  pointPointer [] .y 2 later cast == assert "pointPointer [] .y  2 =="
+  point ..type.size 8 == assert "sizeof(point) = 8"
 end
 i32 =:: later

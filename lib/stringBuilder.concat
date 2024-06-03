@@ -6,16 +6,16 @@ import arrayView
 i8 list =:: export: stringBuilder
 namespace: sb
   proc( i64 : cap -> stringBuilder ) =>: export: create
-    cap i8 list.create return
+    cap i8 list.create stringBuilder cast return
   end
   proc( stringBuilder -> stringBuilder ) =>: export: clear
-    list.clear return
+    i8 list cast list.clear stringBuilder cast return
   end
-  proc( stringBuilder i64 -> stringBuilder ) =>: export: setLength
-    list.setLength return
+  proc( stringBuilder : sb i64 : newLen -> stringBuilder ) =>: export: setLength
+    sb i8 list cast newLen list.setLength stringBuilder cast return
   end
   proc( stringBuilder -> stringBuilder ) =>: export: free
-    list.free return
+    i8 list cast list.free stringBuilder cast return
   end
   proc( i64 : auto: k  i8 k ptr : str -> stringBuilder ) =>: export: wrap
     k create
@@ -25,31 +25,31 @@ namespace: sb
   proc( string : str -> stringBuilder ) =>: export: fromStr
     str .length create
       str appendStr
-    return
+    stringBuilder cast  return
   end
   proc( stringBuilder : str i64 : index -> i8 ) =>: export: charAt
-    str index list.get return
+    str i8 list cast index list.get return
   end
   proc( stringBuilder : buffer i64 : minCap -> stringBuilder ) =>: export: ensureCap
-    buffer minCap list.ensureCap return
+    buffer i8 list cast minCap list.ensureCap stringBuilder cast return
   end
   proc( stringBuilder : buffer i8 : chr -> stringBuilder ) =>: export: appendC
-    buffer chr list.append return
+    buffer i8 list cast chr list.append stringBuilder cast return
   end
   proc( stringBuilder : buffer i64 : auto: k i8 k ptr : str -> stringBuilder ) =>: export: appendS
-    buffer str list.appendP return
+    buffer i8 list cast str list.appendP stringBuilder cast return
   end
   proc( stringBuilder : buffer string : str -> stringBuilder ) =>: export: appendStr
-    buffer str list.appendArray return
+    buffer i8 list cast str i8 arrayView cast list.appendArray stringBuilder cast return
   end
   proc( stringBuilder : buffer stringBuilder : str -> stringBuilder ) =>: export: appendSb
-    buffer str list.appendAll return
+    buffer i8 list cast str i8 list cast list.appendAll stringBuilder cast return
   end
   proc( stringBuilder -> i8 arrayView ) =>: export: asArray
     ..dup .data ..swap .length array.create return
   end
   proc( stringBuilder -> string ) =>: export: asStr
-    asArray return
+    asArray string cast return
   end
 end
 

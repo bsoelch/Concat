@@ -180,7 +180,7 @@ proc(
         ## newDummyLabel
           ..dup
           stackInfo [] .pushedAt
-          -1 ## TODO resolve current file
+          -1:FileId ## TODO resolve current file
           labelContext
         id.newDummyLabel stackInfo [] .valueName =
       end
@@ -305,7 +305,8 @@ proc(
     ## return
       ## ValueInfo
         Type .undefined
-        -1 -1
+        id.LABEL_ID_NONE
+        id.LABEL_ID_NONE
         pos
       ValueInfo new
       ConstValue .none
@@ -515,7 +516,7 @@ namespace: interpreter
           ## return
             types.primitive.I_SIZE
             outerSize .value
-              i32 cast
+              LabelId cast
             ConstValue .genericArg
             false
           return
@@ -533,7 +534,7 @@ namespace: interpreter
             current .sizeType .int ?? if
               current .value ConstValue .int list.append
             else current .sizeType .staticArg ?? _if
-              current .value i32 cast ConstValue .genericArg list.append
+              current .value LabelId cast ConstValue .genericArg list.append
             else ..drop
               "unsupported array-size type: " sb.wrap
                 ## XXX? print array-size type name
@@ -647,7 +648,7 @@ namespace: interpreter
     end
     idData [] .constValue .procedure =:: procId
     program [] .procedures
-      procId list.at .data
+      procId i64 cast list.at .data
     =:: procData
     procData [] .procType =:: procType
     procType typeContext types.getProcIn ..drop =:: inType
@@ -660,7 +661,7 @@ namespace: interpreter
       0 while ..dup inTypes .length < do =:: i
         inTypes i types.compositeElts.get =:: argType
         args i array.get =:: argValue
-        argValue argType -1 pos context @ pushValue
+        argValue argType id.LABEL_ID_NONE pos context @ pushValue
         i 1 +
       end ..drop
       ## evalGeneratedType
@@ -1016,7 +1017,7 @@ proc(
             true return
           end
           idInfo [] .constValue .procedure =:: procId
-          program [] .procedures procId list.at .data =:: procData
+          program [] .procedures procId i64 cast list.at .data =:: procData
           procData [] .isStatic ! if
             true return ## only evaluate static procedures in interpreter
           end
@@ -1179,7 +1180,7 @@ proc(
           else intArg .genericArg ?? _if
             idContext [] .arraySizeBuffer
               ## ArraySize
-                intArg .genericArg
+                intArg .genericArg i64 cast
                 types.ArraySizeType .staticArg
               types.ArraySize new list.append
             idContext [] .arraySizeBuffer =
@@ -1694,7 +1695,7 @@ proc(
   context [] .program [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  program [] .procedures procId list.at .data =:: procData
+  program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
   inType typeContext types.compositeElts =:: args
@@ -1714,7 +1715,7 @@ proc(
       program [] .tmpOps break
     INTERPRET case
       program [] .progFiles
-        procData [] .fileId
+        procData [] .fileId i64 cast
       list.at .data [] .localOps break
   end
     procData [] .implementation .code .codeStart

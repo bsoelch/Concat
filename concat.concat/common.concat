@@ -5,8 +5,8 @@ import list
 "main" =:: export: MAIN_NAME ## name of main procedure
 
 i32 =:: export: FileId
--1 FileId =: export: FILE_ID_NONE
--2 FileId =: export: FILE_ID_BUILT_IN
+-1:FileId =:: export: FILE_ID_NONE
+-2:FileId =:: export: FILE_ID_BUILT_IN
 
 enum( ## XXX more precise names
   QBE
@@ -34,15 +34,15 @@ end
 
 i32 =:: export: LabelId
 
-proc( LabelId -> i32 ) =>: export: labelHash end
+proc( LabelId -> i32 ) =>: export: labelHash i32 cast end
 proc( LabelId LabelId -> bool ) =>: export: labelEq == end
 
 i32 =:: export: NamespaceId
 i32 =:: export: NamespaceImportId
 namespace: id
-  -1 LabelId =: export: LABEL_ID_NONE
-  -1 NamespaceId =: export: NAMESPACE_ID_NONE
-  -1 NamespaceImportId =: export: NAMESPACE_IMPORT_NONE
+  -1:LabelId =:: export: LABEL_ID_NONE
+  -1:NamespaceId =:: export: NAMESPACE_ID_NONE
+  -1:NamespaceImportId =:: export: NAMESPACE_IMPORT_NONE
 end
 
 enum( STRUCT POINTER ) =:: export: CallingConvention

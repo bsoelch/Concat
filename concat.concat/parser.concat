@@ -16,7 +16,6 @@ import "interpreter.concat"
 import "interpreter/operators.concat"
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
-struct( Type : argType ConstValue : val LabelId : labelId ) =:: StaticArgument
 struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
 struct( InterpreterContext : mut: context i64 : mut: offset ) =:: InterpreterInfo
 
@@ -37,8 +36,6 @@ struct(
   Constant list : mut: constants
   i64 : mut: constOffset
   Type list : mut: typeBuffer
-  StaticArgument list : mut: staticArgs
-  i64 : mut: staticArgsOffset
   FileId : mut: currentFile
   ProcId optional : mut: currentProc
   CompositeConstantOffset list : mut: constantBlocks
@@ -177,7 +174,7 @@ proc( stringBuilder : msg FilePosition : pos ParserState ptr mut : state -> ) =>
 end
 
 proc( ParserState ptr mut : state -> ) =>: skipGlobalInterpreter
-  state [] .progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @ =:: ops
+  state [] .progContext [] .progFiles state [] .currentFile i64 cast list.at .data [] .globalOps @ =:: ops
   state [] .currentProc optional.hasData if
     return ## don't skip if inside procedure
   end
@@ -193,8 +190,8 @@ proc( ParserState ptr mut : state -> ) =>: skipGlobalInterpreter
 end
 proc( Operation ptr optional : next? ParserState ptr mut : state -> ) =>: resetGlobalInterpreter
   state [] .progContext =:: progContext
-  state [] .globalInterpreters state [] .currentFile list.at .data =:: interpreter
-  progContext [] .progFiles state [] .currentFile list.at .data [] .globalOps @ =:: ops
+  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data =:: interpreter
+  progContext [] .progFiles state [] .currentFile i64 cast list.at .data [] .globalOps @ =:: ops
   ##  -> store computed constants
   0 while ..dup interpreter [] .context .stack .length < do
     interpreter [] .context .stack ..over list.at .data =:: constant
@@ -223,7 +220,7 @@ proc( ParserState ptr mut : state -> ) =>: tryInterpretGlobal
   state [] .constantBlocks .length 0 > if
     return ## don't interpret inside constant blocks
   end
-  state [] .globalInterpreters state [] .currentFile list.at .data =:: interpreter
+  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data =:: interpreter
   interpreter [] .offset =:: offset
   offset while ..dup state [] .globalOpBuffer .length < do
     state [] .globalOpBuffer ..over list.at .data =:: op
@@ -264,7 +261,7 @@ proc( ParserState ptr mut : state -> Constant ptr mut optional ) =>: peekConst
   state [] .constants list.peek return
 end
 proc( ParserState ptr mut : state -> ConstValue ValueInfo ) =>: popConst2
-  state [] .globalInterpreters state [] .currentFile list.at .data [] .context @ =:: interpreter
+  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data [] .context @ =:: interpreter
   interpreter [] .stack
     list.pop =:: value
   interpreter [] .stack =
@@ -277,11 +274,11 @@ proc( ParserState ptr mut : state -> bool ) =>: hasConst2
   state [] .currentProc optional.hasData if
     false return ## constants only exists at global level
   end
-  state [] .globalInterpreters state [] .currentFile list.at .data [] .context @ =:: interpreter
+  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data [] .context @ =:: interpreter
   interpreter [] .stack .length 0 > return
 end
 proc( ParserState ptr mut : state -> ConstValue ptr mut optional ValueInfo ptr mut optional ) =>: peekConst2
-  state [] .globalInterpreters state [] .currentFile list.at .data [] .context @ =:: interpreter
+  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data [] .context @ =:: interpreter
   interpreter [] .stack list.peek interpreter [] .stackInfo list.peek return
 end
 
@@ -337,7 +334,7 @@ proc( FileState ptr mut : fileState ParserState ptr mut : state -> types.ArraySi
           constVal .int ?? if
             constVal .int types.ArraySizeType .int types.ArraySize new list.append
           else constVal .genericArg ?? _if
-            constVal .genericArg types.ArraySizeType .staticArg types.ArraySize new list.append
+            constVal .genericArg i64 cast types.ArraySizeType .staticArg types.ArraySize new list.append
           else
             "unexpected constant for array size: " sb.wrap
               constVal constContext typeContext sb.appendConstant
@@ -412,27 +409,8 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state -> Typ
     hasArrayType if arrayType else Type .undefined end
   return
 end
+## TODO remove newStaticArg, they are no longer used
 proc( LabelId : label Type : valType i64 : argId ParserState ptr mut : state -> ) =>: newStaticArg
-  state [] .staticArgs
-    valType
-      ..dup types.primitive.TYPE types.typeEquals if
-        argId i32 cast types.newGenericType ConstValue .typeId
-      else
-        argId i32 cast ConstValue .genericArg
-      end
-    label
-    StaticArgument new
-  list.append state [] .staticArgs =
-end
-proc( string : name ParserState ptr mut : state -> StaticArgument optional ) =>: getStaticArg
-  0 while ..dup state [] .staticArgs .length < do
-    state [] .staticArgs ..over list.get =:: arg
-    name arg .labelId state [] .progContext [] .idContext .typeContext .labelContext @ id.labelNameEq if
-      ..drop arg optional.wrap return
-    end
-    1 +
-  end ..drop
-  StaticArgument optional.empty return
 end
 
 proc( ParserState ptr mut : state -> i64 ) =>: offsetConstants
@@ -442,17 +420,6 @@ proc( ParserState ptr mut : state -> i64 ) =>: offsetConstants
 end
 proc( i64 ParserState ptr mut -> ) =>: resetConstants
   [] .constOffset =
-end
-proc( ParserState ptr mut : state -> i64 ) =>: offsetStaticArgs
-  state [] .staticArgsOffset
-    state [] .staticArgs .length state [] .staticArgsOffset =
-  return
-end
-proc( i64 : length ParserState ptr mut : state ->  ) =>: resetStaticArgs
-  length state [] .staticArgsOffset =
-  state [] .staticArgs
-    length list.setLength
-  state [] .staticArgs =
 end
 
 proc( BlockType : blockType ParserState ptr mut : state -> ) =>: openBlock
@@ -469,7 +436,6 @@ end
 proc( Type : valType bool : experimental ParserState ptr mut : state -> ) =>: openProcBlock
   ## openProcScope
     valType
-    state offsetStaticArgs
     experimental
   state [] .progContext [] .idContext @ id.openProcScope
   state [] .openBlocks
@@ -510,15 +476,10 @@ proc(
   state [] .openBlocks
     list.pop =:: closed
   state [] .openBlocks =
-  false =:: mut: isError
-  closed .hasScope and
+  closed .hasScope if
+    closed
       state [] .progContext [] .idContext @ id.closeScope
-        isError =
-      =:: staticArgsOffset
-      isError ! if
-    staticArgsOffset 0 >= if ## staticArgsOffset is -1 if offset is unknown
-      staticArgsOffset state resetStaticArgs
-    end
+    return
   end
   closed false return
 end
@@ -574,7 +535,7 @@ proc(
   ParserState ptr mut : state
   LabelFlag : initFlags
 -> string LabelId ) =>: readLabelAddFlags
-  0 LabelFlag =: mut: flags
+  0:LabelFlag =:: mut: flags
   false =:: mut: isModifier
   code start
     while
@@ -618,7 +579,7 @@ proc(
   flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .typeContext .labelContext @ id.newLabel return
 end
 proc( string : code string : start FileState ptr mut : fileState  ParserState ptr mut : state -> string LabelId ) =>: readLabel
-  code start fileState state 0 readLabelAddFlags
+  code start fileState state 0:LabelFlag readLabelAddFlags
 end
 enum( NONE TUPLE STRUCT ENUM PROC_IN ) =:: LabelType
 proc( string : code LabelType : labelType string : endString FileState ptr mut : fileState  ParserState ptr mut : state -> string Type arrayView LabelId arrayView optional LabelType bool ) =>: readCompositeType
@@ -1188,7 +1149,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end
         fileState [] .wordStart newTypeConst .val
       else idType .PROCEDURE ?? _if
-        progContext [] .procedures .length ConstValue .procedure
+        progContext [] .procedures .length ProcId cast ConstValue .procedure
       else isInit ! _if
         ConstValue .none
       else state hasConst2 _if
@@ -1215,13 +1176,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
         end
         true =:: mut: validMain
-        label labelContext id.getLabelFile 0 != and
+        label labelContext id.getLabelFile 0:FileId != and
             idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
           "main procedure is not visible from root file" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
         end
-        label labelContext id.getLabelNamespace 0 != if
+        label labelContext id.getLabelNamespace 0:NamespaceId != if
           "main procedure not in global namespace" sb.wrap
           fileState [] .wordStart state appendWarning2
           false validMain =
@@ -1703,7 +1664,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           end
           state [] .currentProc .data =:: mut: currentProcId
           progContext [] .procedures
-            currentProcId list.at .data
+            currentProcId i64 cast list.at .data
           =:: currentProc
           ProcId optional.empty state [] .currentProc =
           progContext [] .tmpOps .length
@@ -2070,7 +2031,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       fileState state nextWord fileState state readLabel =:: mut: labelId
       labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop
         progContext [] .procBundles
-          ..dup .length ProcBundleId =: bundleId
+          ..dup .length ProcBundleId cast =:: bundleId
           newProcBundle list.append
         progContext [] .procBundles =
         ## declareIdentifier
@@ -2105,7 +2066,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         ## XXX? warn if overloads in different name-spaces are merged
         idData [] .constValue .procedureBundle
       end =:: bundleId
-      progContext [] .procBundles bundleId list.at .data =:: bundleData
+      progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData
       while fileState state nextWord =:: procName
         procName "end" string.wrap string.eq !
       do
@@ -2272,7 +2233,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state ->
   FILE_ID_NONE =:: mut: imported
   0 while ..dup progContext [] .progFiles .length < do
     progContext [] .progFiles ..over list.get .fileName sb.asStr fileName sb.asStr string.eq if
-      ..dup imported =
+      ..dup FileId cast imported =
       break
     end
     1 +
@@ -2280,7 +2241,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state ->
   imported FILE_ID_NONE == if ## file has not yet been imported
     fileName state parseFile fileName pos state checkIOError imported =
   end
-  progContext [] .progFiles state [] .currentFile list.at .data
+  progContext [] .progFiles state [] .currentFile i64 cast list.at .data
   ..dup [] .includedFiles
       imported
       pos
@@ -2312,8 +2273,6 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     128 Constant                list.create
     0
     128 Type                    list.create
-    32  StaticArgument          list.create
-    0
     FILE_ID_NONE
     ProcId                   optional.empty
     128 CompositeConstantOffset list.create
@@ -2324,7 +2283,6 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
   ## cleanup parser memory
   state .constants list.free ..drop
   state .typeBuffer list.free ..drop
-  state .staticArgs list.free ..drop
   state .constantBlocks list.free ..drop
   0 while ..dup state .globalInterpreters .length < do
     state .globalInterpreters

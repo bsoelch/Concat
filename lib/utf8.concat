@@ -3,66 +3,66 @@ import stringBuilder
 
 namespace: utf8
   i32 =:: export: Codepoint
-  -1 Codepoint =: export: UNKNOWN_CODEPOINT
-  0x10FFFF Codepoint =: export: MAX_CODEPOINT
+  -1:Codepoint =:: export: UNKNOWN_CODEPOINT
+  0x10FFFF:u32 =:: export: MAX_CODEPOINT
 end
 
 namespace: sb
   proc( stringBuilder : sb utf8.Codepoint : cp -> stringBuilder ) =>: export: appendCodepoint
-    cp 0 < if ## invalid code point
-      cp -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
-        sb cp -_ i8 cast sb.appendC return
+    cp i32 cast 0 < if ## invalid code point
+      cp i32 cast -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
+        sb cp i32 cast -_ i8 cast sb.appendC return
       end
       sb return
     end
-    cp 0x80 < if ## 0*** ****
+    cp i32 cast 0x80 < if ## 0*** ****
       sb cp i8 cast sb.appendC return
     end
-    cp 0x800 < if ## 110* **** 10** ****
+    cp i32 cast 0x800 < if ## 110* **** 10** ****
       sb
-        cp 6 >>   0xc0 | i8 cast sb.appendC
-        cp 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 6 >>   0xc0 | i8 cast sb.appendC
+        cp i32 cast 0x3f & 0x80 | i8 cast sb.appendC
       return
     end
-    cp 0x10000 < if ## 1110 **** 10** **** 10** ****
+    cp i32 cast 0x10000 < if ## 1110 **** 10** **** 10** ****
       sb
-        cp 12 >>        0xe0 | i8 cast sb.appendC
-        cp  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp       0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 12 >>        0xe0 | i8 cast sb.appendC
+        cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
       return
     end
-    cp 0x200000 < if ## 1111 0*** 10** **** 10** **** 10** ****
+    cp i32 cast 0x200000 < if ## 1111 0*** 10** **** 10** **** 10** ****
       sb
-        cp 18 >>        0xf0 | i8 cast sb.appendC
-        cp 12 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp       0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 18 >>        0xf0 | i8 cast sb.appendC
+        cp i32 cast 12 >> 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
       return
     end
     ## not valid code-points but still UTF-8 encodable
-    cp 0x4000000 < if ## 1111 10** 10** **** 10** **** 10** **** 10** ****
+    cp i32 cast 0x4000000 < if ## 1111 10** 10** **** 10** **** 10** **** 10** ****
       sb
-        cp 24 >>        0xf8 | i8 cast sb.appendC
-        cp 18 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp 12 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp       0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 24 >>        0xf8 | i8 cast sb.appendC
+        cp i32 cast 18 >> 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 12 >> 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
       return
     end
     ## 1111 110* 10** **** 10** **** 10** **** 10** **** 10** ****
     sb
-      cp 30 >>        0xfc | i8 cast sb.appendC
-      cp 24 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp 18 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp 12 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp       0x3f & 0x80 | i8 cast sb.appendC
+      cp i32 cast 30 >>        0xfc | i8 cast sb.appendC
+      cp i32 cast 24 >> 0x3f & 0x80 | i8 cast sb.appendC
+      cp i32 cast 18 >> 0x3f & 0x80 | i8 cast sb.appendC
+      cp i32 cast 12 >> 0x3f & 0x80 | i8 cast sb.appendC
+      cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
+      cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
     return
   end
 end
 namespace: utf8
   proc( Codepoint -> bool ) =>: export: isValid
-    ..dup 0 >= ..swap MAX_CODEPOINT <= & return
+    i32 cast ..dup 0 >= ..swap MAX_CODEPOINT <= & return
   end
   proc( string  : str i64 : index -> string i64 Codepoint ) =>: export: nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
     index str .length >= if
@@ -86,32 +86,32 @@ namespace: utf8
     c =:: c0
     i =:: i0
     i count + str .length > if ## not enough characters
-      str i0 1 + c0 -_ return
+      str i0 1 + c0 -_ Codepoint cast return
     end
     while count 1 > do
       cp 6 << cp =
       i 1 + i =
       str i string.charAt 0xff & c =
       c 0xc0 & 0x80 != if ## invalid character in sequence
-        str i0 1 + c0 -_ return
+        str i0 1 + c0 -_ Codepoint cast return
       end
       cp c 0x3f & | cp =
       count 1 - count =
     end
     cp 0x80 < if ## overlong single char
-      str i0 1 + c0 -_ return
+      str i0 1 + c0 -_ Codepoint cast return
     end
     count 2 > cp 0x800 < & if ## overlong character
-      str i0 1 + c0 -_ return
+      str i0 1 + c0 -_ Codepoint cast return
     end
     count 3 > cp 0x10000 < & if ## overlong character
-      str i0 1 + c0 -_ return
+      str i0 1 + c0 -_ Codepoint cast return
     end
     count 4 > cp 0x200000 < & if ## overlong character
-      str i0 1 + c0 -_ return
+      str i0 1 + c0 -_ Codepoint cast return
     end
     count 5 > cp 0x4000000 < & if ## overlong character
-      str i0 1 + c0 -_ return
+      str i0 1 + c0 -_ Codepoint cast return
     end
     str i 1 + cp Codepoint cast return
   end

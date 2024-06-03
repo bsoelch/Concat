@@ -54,7 +54,7 @@ enum(
     types.ReferenceId : reference
     types.ReferenceId : mutableReference
                   i32 : autoType
-                  i32 : genericType
+              LabelId : genericType
     types.GeneratedId : generatedType
          types.SizeId : arrayIndex
           types.CType : cType
@@ -156,35 +156,35 @@ namespace: types
       primitiveType case
         bigPrime 2 * a .primitiveType primitiveId + return
       pointer case
-        bigPrime 3 * a .pointer + return
+        bigPrime 3 * a .pointer i32 cast + return
       arrayType case
-        bigPrime 5 * a .arrayType + return
+        bigPrime 5 * a .arrayType i32 cast + return
       struct case
-        bigPrime 7 * a .struct + return
+        bigPrime 7 * a .struct i32 cast + return
       procIn case
-        bigPrime 11 * a .procIn + return
+        bigPrime 11 * a .procIn i32 cast + return
       procOut case
-        bigPrime 13 * a .procOut + return
+        bigPrime 13 * a .procOut i32 cast + return
       enum case
-        bigPrime 17 * a .enum + return
+        bigPrime 17 * a .enum i32 cast + return
       union case
-        bigPrime 19 * a .union + return
+        bigPrime 19 * a .union i32 cast + return
       procedure case
-        bigPrime 23 * a .procedure + return
+        bigPrime 23 * a .procedure i32 cast + return
       namedType case
-        bigPrime 29 * a .namedType + return
+        bigPrime 29 * a .namedType i32 cast + return
       autoType case
         bigPrime 31 * a .autoType + return
       genericType case
-        bigPrime 37 * a .genericType + return
+        bigPrime 37 * a .genericType i32 cast + return
       generatedType case
-        bigPrime 43 * a .generatedType + return
+        bigPrime 43 * a .generatedType i32 cast + return
       reference case
-        bigPrime 47 * a .reference + return
+        bigPrime 47 * a .reference i32 cast + return
       mutableReference case
-        bigPrime 53 * a .mutableReference + return
+        bigPrime 53 * a .mutableReference i32 cast + return
       arrayIndex case
-        bigPrime 59 * a .arrayIndex + return
+        bigPrime 59 * a .arrayIndex i32 cast + return
       cType case
         bigPrime 61 * a .cType cTypeId + return
     end
@@ -585,7 +585,7 @@ namespace: types
     TypeContext ptr mut : typeContext
   -> bool ) =>: tryComputeTupleSize
     typeContext [] .tupleTypes
-      tupleId
+      tupleId i64 cast
     list.at .data =:: tupleInfo
     tupleInfo [] .compositeInfo .flags COMP_SIZE_KNOWN & ? if
       false return ## size already known
@@ -635,7 +635,7 @@ namespace: types
     TypeContext ptr mut : typeContext
   -> bool ) =>: tryComputeUnionSize
     typeContext [] .unionTypes
-      unionId
+      unionId i64 cast
     list.at .data =:: unionInfo
     unionInfo [] .compositeInfo .flags COMP_SIZE_KNOWN & ? if
       false return ## size already known
@@ -797,6 +797,7 @@ namespace: types
   end
 
   ## array & pointer types
+  ## TODO? merge size and sizeType ?
   enum( int staticArg ) =:: export: ArraySizeType
   struct( i64 : value ArraySizeType : sizeType ) =:: export: ArraySize
   struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut: ptrOnly bool : mutable ) =:: ArrayType
@@ -821,12 +822,12 @@ namespace: types
     box
       ..dup .reference ?? if
         context [] .compositeData
-          ..swap .reference
+          ..swap .reference i64 cast
         list.get return
       end
       ..dup .mutableReference ?? if
         context [] .compositeData
-          ..swap .mutableReference
+          ..swap .mutableReference i64 cast
         list.get return
       end
     ..unreachable
@@ -835,10 +836,10 @@ namespace: types
     =:: context
     context unwrapNamed
     ..dup .pointer ?? if
-      context [] .arrayTypes ..swap .pointer list.get .fixedSize return
+      context [] .arrayTypes ..swap .pointer i64 cast list.get .fixedSize return
     end
     ..dup .arrayType ?? if
-      context [] .arrayTypes ..swap .arrayType list.get .fixedSize return
+      context [] .arrayTypes ..swap .arrayType i64 cast list.get .fixedSize return
     end ..drop
     false return
   end
@@ -846,7 +847,7 @@ namespace: types
     =:: context
     context unwrapNamed
     ..dup .pointer ?? if
-      context [] .arrayTypes ..swap .pointer list.get .fixedSize return
+      context [] .arrayTypes ..swap .pointer i64 cast list.get .fixedSize return
     end ..drop
     false return
   end
@@ -854,23 +855,23 @@ namespace: types
     =:: context
     context unwrapNamed
     ..dup .pointer ?? if
-      context [] .arrayTypes ..swap .pointer list.get .fixedSize ! return
+      context [] .arrayTypes ..swap .pointer i64 cast list.get .fixedSize ! return
     end ..drop
     false return
   end
   proc( Type : box TypeContext ptr : context -> Type ) =>: export: getBaseType
     box context unwrapNamed
       ..dup context isPointer if
-        context [] .arrayTypes ..swap .pointer list.get .base return
+        context [] .arrayTypes ..swap .pointer i64 cast list.get .base return
       end
       ..dup context isArray if
-        context [] .arrayTypes ..swap .arrayType list.get .base return
+        context [] .arrayTypes ..swap .arrayType i64 cast list.get .base return
       end
       ..dup .reference ?? if
-        context [] .compositeData ..swap .reference list.get return
+        context [] .compositeData ..swap .reference i64 cast list.get return
       end
       ..dup .mutableReference ?? if
-        context [] .compositeData ..swap .mutableReference list.get return
+        context [] .compositeData ..swap .mutableReference i64 cast list.get return
       end
     ..drop
     Type .undefined return
@@ -878,13 +879,13 @@ namespace: types
   proc( Type : box TypeContext ptr : context -> i64 ) =>: export: getArrayDims
     box context unwrapNamed
       ..dup context isPointer if
-        context [] .arrayTypes ..swap .pointer list.get =:: arrayType
+        context [] .arrayTypes ..swap .pointer i64 cast list.get =:: arrayType
         arrayType .dims
           arrayType .fixedSize ! if 1 + end
         return
       end
       ..dup context isArray if
-        context [] .arrayTypes ..swap .arrayType list.get =:: arrayType
+        context [] .arrayTypes ..swap .arrayType i64 cast list.get =:: arrayType
         arrayType .dims
           arrayType .fixedSize ! if 1 + end
         return
@@ -895,15 +896,15 @@ namespace: types
   proc( Type : box TypeContext ptr : context -> ArraySize arrayView ) =>: export: getArraySize
     box context unwrapNamed
       ..dup context isPointer if
-        context [] .arrayTypes ..swap .pointer list.get =:: arrayType
+        context [] .arrayTypes ..swap .pointer i64 cast list.get =:: arrayType
         context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice return
       end
       ..dup context isArray if
-        context [] .arrayTypes ..swap .arrayType list.get =:: arrayType
+        context [] .arrayTypes ..swap .arrayType i64 cast list.get =:: arrayType
         context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice return
       end
       ..dup .arrayIndex ?? if
-        context [] .arraySizes ..swap .arrayIndex list.at .data array.wrap return
+        context [] .arraySizes ..swap .arrayIndex i64 cast list.at .data array.wrap return
       end
     ..drop
     ArraySize array.empty return
@@ -916,9 +917,9 @@ namespace: types
     end
     box context unwrapNamed
       ..dup context isPointer if
-        context [] .arrayTypes ..swap .pointer list.get
+        context [] .arrayTypes ..swap .pointer i64 cast list.get
       else ..dup context isArray _if
-        context [] .arrayTypes ..swap .arrayType list.get
+        context [] .arrayTypes ..swap .arrayType i64 cast list.get
       else ..drop
        Type .undefined true return
       end
@@ -941,7 +942,7 @@ namespace: types
     =:: context
     context unwrapNamed
       ..dup context isPointer if
-        context [] .arrayTypes ..swap .pointer list.get .mutable return
+        context [] .arrayTypes ..swap .pointer i64 cast list.get .mutable return
       end
     .mutableReference ?? return
   end
@@ -950,7 +951,7 @@ namespace: types
       false return
     end
     t [] .pointer ?? if
-      context [] .arrayTypes t [] .pointer list.get =:: arrayType
+      context [] .arrayTypes t [] .pointer i64 cast list.get =:: arrayType
       ## newArrayType
         t [] context getBaseType
         true
@@ -1045,21 +1046,34 @@ namespace: types
 
   ## XXX flags are exported for access from identifiers.concat
   i32 =:: LabelOffset
-  -1 LabelOffset =: export: UNLABELED
+  -1:LabelOffset =:: export: UNLABELED
 
   ## composite types
   i32 =:: export: CompositeFlags
-    0 =:: export: COMP_FLAG_NONE
-    1 =:: export: COMP_FLAG_EMPTY
-    2 =:: export: COMP_FLAG_ONLY_EMPTY
-    3 =:: export: COMP_MASK_ONLY_EMPTY
-    4 =:: export: COMP_FLAG_STATIC_ARGS
-   12 =:: export: COMP_GENERIC_MASK
-   16 =:: export: COMP_SIZE_KNOWN
-   31 =:: export: COMP_MASK_COMMON_FLAGS
-   32 =:: export: TUPLE_FLAG_IS_STRUCT
-   64 =:: export: TUPLE_FLAG_IS_PROC_IN
-  128 =:: export: TUPLE_FLAG_IS_PROC_OUT
+    0:CompositeFlags =:: export: COMP_FLAG_NONE
+    1:CompositeFlags =:: export: COMP_FLAG_EMPTY
+    2:CompositeFlags =:: export: COMP_FLAG_ONLY_EMPTY
+    3:CompositeFlags =:: export: COMP_MASK_ONLY_EMPTY
+    4:CompositeFlags =:: export: COMP_FLAG_STATIC_ARGS
+   12:CompositeFlags =:: export: COMP_GENERIC_MASK
+   16:CompositeFlags =:: export: COMP_SIZE_KNOWN
+   31:CompositeFlags =:: export: COMP_MASK_COMMON_FLAGS
+   32:CompositeFlags =:: export: TUPLE_FLAG_IS_STRUCT
+   64:CompositeFlags =:: export: TUPLE_FLAG_IS_PROC_IN
+  128:CompositeFlags =:: export: TUPLE_FLAG_IS_PROC_OUT
+  namespace: CompositeFlags
+    proc( CompositeFlags : a CompositeFlags : b -> CompositeFlags ) =>: and
+      a i32 cast b i32 cast i32.and CompositeFlags cast
+    end
+    proc( CompositeFlags : a CompositeFlags : b -> CompositeFlags ) =>: or
+      a i32 cast b i32 cast i32.or CompositeFlags cast
+    end
+    proc( CompositeFlags -> bool ) =>: toBool  i32 cast i32.toBool end
+  end
+  overload: & CompositeFlags.and    end
+  overload: | CompositeFlags.or     end
+  overload: ? CompositeFlags.toBool end
+
   struct(
     i64 : eltCount
     i64 : eltsOffset
@@ -1105,27 +1119,27 @@ namespace: types
     composite context unwrapNamed
       ..dup switch
         struct case
-          context [] .tupleTypes ..swap .struct
+          context [] .tupleTypes ..swap .struct i64 cast
             list.at .data [] .compositeInfo @
           CompositeInfo ptr cast optional.wrap return
           break
         procIn case
-          context [] .tupleTypes ..swap .procIn
+          context [] .tupleTypes ..swap .procIn i64 cast
             list.at .data [] .compositeInfo @
           CompositeInfo ptr cast optional.wrap return
           break
         procOut case
-          context [] .tupleTypes ..swap .procOut
+          context [] .tupleTypes ..swap .procOut i64 cast
             list.at .data [] .compositeInfo @
           CompositeInfo ptr cast optional.wrap return
           break
         union case
-          context [] .unionTypes ..swap .union
+          context [] .unionTypes ..swap .union i64 cast
             list.at .data [] .compositeInfo @
           CompositeInfo ptr cast optional.wrap return
           break
         enum case
-          context [] .unionTypes ..swap .enum
+          context [] .unionTypes ..swap .enum i64 cast
             list.at .data [] .compositeInfo @
           CompositeInfo ptr cast optional.wrap return
           break
@@ -1164,7 +1178,7 @@ namespace: types
     index 0 < index typeData [] .eltCount >= | if
       id.LABEL_ID_NONE return
     end
-    context [] .elementLabels offset index + list.get return
+    context [] .elementLabels offset i64 cast index + list.get return
   end
   proc(
     Type : composite
@@ -1179,28 +1193,28 @@ namespace: types
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType
          reference mutableReference arrayIndex cType case
-          ..drop id.LABEL_ID_NONE return
+          ..drop -1 return
       end
     context compositeData
       ..dup optional.isEmpty if ..drop
-        id.LABEL_ID_NONE return
+        -1 return
       end
     .data =:: labels
     labels [] .labelOffset UNLABELED == if
-      id.LABEL_ID_NONE return
+      -1 return
     end
     0 while ..dup labels [] .eltCount < do =:: i
       ## labelNamesEq
         name
         context [] .elementLabels
-          labels [] .labelOffset i +
+          labels [] .labelOffset i64 cast i +
         list.get
       labelContext id.labelNamesEq if
         i return
       end
       i 1 +
     end ..drop
-    id.LABEL_ID_NONE return
+    -1 return
   end
   proc(
     Type : union
@@ -1243,8 +1257,8 @@ namespace: types
     tuple tupleId typeContext tryComputeTupleSize if
       i64 optional.empty return
     end
-    typeContext [] .tupleTypes tupleId list.at .data =:: tupleInfo
-    index 0 < index tupleInfo [] .compositeInfo .eltCount >= | if
+    typeContext [] .tupleTypes tupleId i64 cast list.at .data =:: tupleInfo
+    index 0 < or index tupleInfo [] .compositeInfo .eltCount >= if
       i64 optional.empty return
     end
     typeContext [] .tupleOffsets
@@ -1266,7 +1280,7 @@ namespace: types
          Type .empty i64 optional.empty return
     end =:: enumId
     enum enumId typeContext tryComputeUnionSize =:: isError
-    typeContext [] .unionTypes enumId list.at .data =:: enumInfo
+    typeContext [] .unionTypes enumId i64 cast list.at .data =:: enumInfo
     enumInfo [] .labelType
       isError if
         i64 optional.empty
@@ -1332,7 +1346,7 @@ namespace: types
   proc( Type : composite TypeContext ptr : context -> CompositeFlags ) =>: export: compositeFlags
     composite context compositeData
       ..dup optional.isEmpty if ..drop
-        0 return
+        0:CompositeFlags return
       end
     .data [] .flags return
   end
@@ -1550,7 +1564,7 @@ namespace: types
        UnionInfo new list.append
      context [] .unionTypes =
     end
-    unionId return
+    unionId UnionId cast return
   end
   proc(
     Type arrayView : elts
@@ -1652,21 +1666,21 @@ namespace: types
       ..dup context isProcedure ! if ..drop
         Type .undefined true return
       end
-    context [] .procTypes ..swap .procedure list.get .in false return
+    context [] .procTypes ..swap .procedure i64 cast list.get .in false return
   end
   proc( Type : proc TypeContext ptr : context -> Type bool ) =>: export: getProcOut
     proc context unwrapNamed
       ..dup context isProcedure ! if ..drop
         Type .undefined true return
       end
-    context [] .procTypes ..swap .procedure list.get .out false return
+    context [] .procTypes ..swap .procedure i64 cast list.get .out false return
   end
   proc( Type : proc TypeContext ptr : context -> CallingConvention bool ) =>: export: getCallConvention
     proc context unwrapNamed
       ..dup context isProcedure ! if ..drop
         CallingConvention.DEFAULT true return
       end
-    context [] .procTypes ..swap .procedure list.get .callingConvention false return
+    context [] .procTypes ..swap .procedure i64 cast list.get .callingConvention false return
   end
   proc( Type : proc TypeContext ptr : context -> Type bool ) =>: export: getProcRet
     proc context getProcOut if true return end =:: outType
@@ -1728,8 +1742,8 @@ namespace: types
         true isPtr =
       end
     =:: mProc
-    context [] .procTypes mProc .procedure list.get =:: procData
-    context [] .tupleTypes procData .in .procIn list.at .data [] .compositeInfo =:: mut: inType
+    context [] .procTypes mProc .procedure i64 cast list.get =:: procData
+    context [] .tupleTypes procData .in .procIn i64 cast list.at .data [] .compositeInfo =:: mut: inType
     inType .labelOffset UNLABELED == if
       proc false return
     end
@@ -1759,7 +1773,7 @@ namespace: types
         true isPtr =
       end
     =:: mProc
-    context [] .procTypes mProc .procedure list.get =:: procData
+    context [] .procTypes mProc .procedure i64 cast list.get =:: procData
     procData .callingConvention callConvention == if
       proc false return
     end
@@ -1781,7 +1795,7 @@ namespace: types
       context [] .namedTypes i list.at .data =:: elt
       elt [] .name label == and
           elt [] .implId implId == if
-        i return
+        i types.NamedTypeId cast return
       end
       i 1 +
     end ..drop
@@ -1813,7 +1827,7 @@ namespace: types
     TypeContext ptr mut : context
   -> Type bool ) =>: export: initializeNamedType
     label -1 context findNamedType =:: id
-    context [] .namedTypes id list.at .data =:: named
+    context [] .namedTypes id i64 cast list.at .data =:: named
     named [] .data Type .undefined typeEquals ! if
       id Type .namedType true return
     end
@@ -1844,12 +1858,12 @@ namespace: types
     while
       ..dup .namedType ?? if
         context [] .namedTypes
-          ..swap .namedType
+          ..swap .namedType i64 cast
         list.at .data [] .data
         continue
       else ..dup .generatedType ?? _if
         context [] .generatedTypes
-          ..swap .generatedType
+          ..swap .generatedType i64 cast
         list.at .data [] .generated
         continue
       end
@@ -1861,7 +1875,7 @@ namespace: types
     =:: context
     ..dup .namedType ?? if
       context [] .namedTypes
-        ..swap .namedType
+        ..swap .namedType i64 cast
       list.at .data [] .data
     end
     return
@@ -1875,7 +1889,7 @@ namespace: types
     while
       ..dup .namedType ?? if
         context [] .namedTypes
-          ..swap .namedType
+          ..swap .namedType i64 cast
         list.at .data [] .data
         continue
       end
@@ -1885,20 +1899,20 @@ namespace: types
   proc( Type TypeContext ptr -> LabelId ) =>: export: namedTypeName
     =:: context
     ..dup .namedType ?? if
-      context [] .namedTypes ..swap .namedType list.get .name return
+      context [] .namedTypes ..swap .namedType i64 cast list.get .name return
     end
     ..drop id.LABEL_ID_NONE return
   end
-  proc( Type TypeContext ptr -> LabelId ) =>: export: getImplId
+  proc( Type TypeContext ptr -> i32 ) =>: export: getImplId
     =:: context
     ..dup .namedType ?? if
-      context [] .namedTypes ..swap .namedType list.get .implId return
+      context [] .namedTypes ..swap .namedType i64 cast list.get .implId return
     end
     ..drop -1 return
   end
   proc( Type : named Type : value TypeContext ptr mut : context -> bool ) =>: export: setNamedType
     named .namedType ?? if
-      context [] .namedTypes named .namedType list.at .data =:: elt
+      context [] .namedTypes named .namedType i64 cast list.at .data =:: elt
       elt [] .data Type .undefined typeEquals if
         value elt [] .data =
         false return
@@ -1978,7 +1992,7 @@ namespace: types
         1 +
       end ..drop
       match if
-        #+index+# Type .generatedType false return
+        #+index+# GeneratedId cast Type .generatedType false return
       end
       1 +
     end ..drop
@@ -1990,7 +2004,7 @@ namespace: types
         Type .undefined
       GeneratedType new list.append
     typeContext [] .generatedTypes =
-    newId Type .generatedType true return
+    newId GeneratedId cast Type .generatedType true return
   end
 
   proc(
@@ -2006,7 +2020,7 @@ namespace: types
       typeContext
       constContext
     findGeneratedType ..drop .generatedType =:: id
-    typeContext [] .generatedTypes id list.at .data =:: prevType
+    typeContext [] .generatedTypes id i64 cast list.at .data =:: prevType
     prevType [] .generated .undefined ?? ! if
       true return
     end
@@ -2022,7 +2036,7 @@ namespace: types
     t .generatedType ?? ! if
       generator return
     end
-    context [] .generatedTypes t .generatedType list.at .data =:: genData
+    context [] .generatedTypes t .generatedType i64 cast list.at .data =:: genData
     genData [] .generated return
   end
 
@@ -2034,7 +2048,7 @@ namespace: types
     t .generatedType ?? ! if
       id.LABEL_ID_NONE return
     end
-    context [] .generatedTypes t .generatedType list.at .data =:: genData
+    context [] .generatedTypes t .generatedType i64 cast list.at .data =:: genData
     genData [] .generator return
   end
   proc( Type : generator TypeContext ptr : context -> ConstantArray ) =>: export: getGeneratorArgs
@@ -2045,7 +2059,7 @@ namespace: types
     t .generatedType ?? ! if
       emptyConstArray return
     end
-    context [] .generatedTypes t .generatedType list.at .data =:: genData
+    context [] .generatedTypes t .generatedType i64 cast list.at .data =:: genData
     genData [] .arguments return
   end
 
@@ -2062,7 +2076,7 @@ namespace: types
         base list.append
       context [] .compositeData =
     end
-    id mutable if Type .mutableReference else Type .reference end return
+    id ReferenceId cast mutable if Type .mutableReference else Type .reference end return
   end
 
 
@@ -2073,27 +2087,27 @@ namespace: types
   proc( Type -> bool ) =>: export: isAutoType
     .autoType ?? return
   end
-  proc( i32 : id -> Type ) =>: export: newGenericType
+  proc( LabelId : id -> Type ) =>: export: newGenericType
     id Type .genericType return
   end
 
   proc( Type -> i32 ) =>: export: getTypeId
     ..dup switch
       autoType case .autoType return
-      genericType case .genericType return
-      generatedType case .generatedType return
-      pointer case .pointer return
-      arrayType case .arrayType return
-      struct case .struct return
-      union case .union return
-      enum case .enum return
-      procIn case .procIn return
-      procOut case .procOut return
-      procedure case .procedure return
-      namedType case .namedType return
-      reference case .reference return
-      mutableReference case .mutableReference return
-      arrayIndex case .arrayIndex return
+      genericType case .genericType i32 cast return
+      generatedType case .generatedType i32 cast return
+      pointer case .pointer i32 cast return
+      arrayType case .arrayType i32 cast return
+      struct case .struct i32 cast return
+      union case .union i32 cast return
+      enum case .enum i32 cast return
+      procIn case .procIn i32 cast return
+      procOut case .procOut i32 cast return
+      procedure case .procedure i32 cast return
+      namedType case .namedType i32 cast return
+      reference case .reference i32 cast return
+      mutableReference case .mutableReference i32 cast return
+      arrayIndex case .arrayIndex i32 cast return
       undefined empty primitiveType cType case ..drop -1 return
     end
   end
@@ -2130,7 +2144,9 @@ namespace: types
       reference mutableReference case
         t context getBaseType context containsGeneric return
       pointer arrayType case
-        context [] .arrayTypes t ..dup .pointer ?? if .pointer else .arrayType end list.get =:: arrayType
+        context [] .arrayTypes
+          t ..dup .pointer ?? if .pointer else .arrayType end i64 cast
+        list.get =:: arrayType
         arrayType .base context containsGeneric =:: mut: isStatic
         0 while ..dup arrayType .dims < do
           context [] .arraySizes
@@ -2146,7 +2162,7 @@ namespace: types
       generatedType case
         false return ## TODO check if type contains generic
       procedure case
-        context [] .procTypes t .procedure list.get
+        context [] .procTypes t .procedure i64 cast list.get
           ..dup .in context containsGeneric =:: isStatic
           .out context containsGeneric isStatic | return
       namedType case
@@ -2211,38 +2227,30 @@ namespace: types
     end ..drop
     true return
   end
-  1:i8 =:: NAMED_UNWRAP_SRC
-  0:i8 =:: NAMED_UNWRAP_NONE
-  -1:i8 =:: NAMED_UNWRAP_TARGET
   proc( Type : src Type : to TypeContext ptr : context -> bool ) =>: export: canAutoCast
-    src to context NAMED_UNWRAP_NONE canAutoCast_internal
-  end
-  proc( Type : src Type : to TypeContext ptr : context i8 : namedDirection -> bool ) =>: canAutoCast_internal
     to =:: mut: target
     src target types.typeEquals if
       true return
     end
-    ## allow auto-cast from/to direct descendant of named type
-    src .namedType ?? and namedDirection NAMED_UNWRAP_TARGET != and
-        src context flatUnwrapNamed target context NAMED_UNWRAP_SRC canAutoCast_internal if
+    src context types.isReference and src context getBaseType to context canAutoCast if
       true return
     end
-    target .namedType ?? and namedDirection NAMED_UNWRAP_SRC != and
-        src target context flatUnwrapNamed context NAMED_UNWRAP_TARGET canAutoCast_internal if
-      true return
+    src .namedType ?? or target .namedType ?? if
+      false return
     end
+    ## TODO? remove auto-cast from/to cTypes
     ## convert c-types to types
     target .cType ?? if
       ## no cast to/from struct/union pointers
       target .cType .STRUCT_PTR ?? if false return end
       target .cType .UNION_PTR  ?? if false return end
-      src target .cType cTypeAsType context namedDirection canAutoCast_internal return
+      src target .cType cTypeAsType context canAutoCast return
     end
     src .cType ?? if
       ## no cast to/from struct/union pointers
       src .cType .STRUCT_PTR ?? if false return end
       src .cType .UNION_PTR  ?? if false return end
-      src .cType cTypeAsType target context namedDirection canAutoCast_internal return
+      src .cType cTypeAsType target context canAutoCast return
     end
     src context types.isNumber target context types.isNumber & if
       src target context types.canAutoCastNumber return
@@ -2259,9 +2267,6 @@ namespace: types
         end
         1 +
       end ..drop
-    end
-    src context types.isReference and src context getBaseType to context canAutoCast if
-      true return
     end
     false return
   end
@@ -2319,17 +2324,6 @@ namespace: types
     a b types.typeEquals if
       a false return
     end
-    ## merge named types to common content type
-    a .namedType ?? if
-      a context flatUnwrapNamed b context mergeTypes ! if
-        false return
-      else ..drop end
-    end
-    b .namedType ?? if
-      a b context flatUnwrapNamed context mergeTypes ! if
-        false return
-      else ..drop end
-    end
     ## unwrap references
     a context types.isReference if
       a context getBaseType b context mergeTypes ! if
@@ -2341,10 +2335,17 @@ namespace: types
         false return
       else ..drop end
     end
-    a context types.isNumber b context types.isNumber & if
-      a b context commonNumberType return
+    a context types.isUnion and b a context canAutoCast if
+      a false return
     end
-    a context types.isPointer b context types.isPointer & and
+    b context types.isUnion and a b context canAutoCast if
+      b false return
+    end
+    ## don't merge different named types
+    a .namedType ?? or b .namedType ?? if
+      Type .undefined true return
+    end
+    a context types.isPointer and b context types.isPointer and
         a context types.getBaseType b context types.getBaseType types.typeEquals if
       a context types.isMutable b context types.isMutable & =:: mutable
       a context types.getArraySize =:: aSizes
@@ -2376,11 +2377,8 @@ namespace: types
         context
       newArrayType return
     end
-    a context types.isUnion and b a context canAutoCast if
-      a false return
-    end
-    b context types.isUnion and a b context canAutoCast if
-      b false return
+    a context types.isNumber b context types.isNumber & if
+      a b context commonNumberType return
     end
     Type .undefined true return
   end
@@ -2545,7 +2543,7 @@ namespace: sb
         t .arrayIndex =:: sizeIndex
         sb
           "index(" appendS
-          context [] .arraySizes sizeIndex list.get labelContext appendArraySize
+          context [] .arraySizes sizeIndex i64 cast list.get labelContext appendArraySize
           " )" appendS
         return
       pointer case
@@ -2600,9 +2598,9 @@ namespace: sb
       procedure case
         sb
           "proc["      appendS
-          t .procedure appendI
+          t .procedure i64 cast appendI
           "]( "        appendS
-          context [] .procTypes t .procedure list.get =:: procType
+          context [] .procTypes t .procedure i64 cast list.get =:: procType
           procType .in context depth appendTypeRecursive
           "-> " appendS
           procType .out context depth appendTypeRecursive
@@ -2611,10 +2609,10 @@ namespace: sb
       namedType case
         sb
           "named[" appendS
-          t .namedType    appendI
+          t .namedType i64 cast appendI
           "]( "    appendS
           ## appendNamedType
-            context [] .namedTypes t .namedType list.get
+            context [] .namedTypes t .namedType i64 cast list.get
             context
             depth
           appendNamedType
@@ -2631,11 +2629,11 @@ namespace: sb
         sb
           labelId labelContext appendLabelName
           "[generic " appendS
-          labelId  appendI
+          labelId  i64 cast appendI
           "]"  appendS
         return
       generatedType case
-        t .generatedType
+        t .generatedType i64 cast
         context [] .generatedTypes ..swap list.at .data =:: typeData
         sb
           "? " appendS ## TODO append arguments
@@ -2649,7 +2647,7 @@ namespace: sb
       reference case
         sb
           ## appendTypeRecursive
-            context [] .compositeData t .reference list.get
+            context [] .compositeData t .reference i64 cast list.get
             context
             depth
           appendTypeRecursive
@@ -2658,7 +2656,7 @@ namespace: sb
       mutableReference case
         sb
           ## appendTypeRecursive
-            context [] .compositeData t .mutableReference list.get
+            context [] .compositeData t .mutableReference i64 cast list.get
             context
             depth
           appendTypeRecursive
