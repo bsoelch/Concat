@@ -23,9 +23,10 @@ namespace: id
   8:LabelFlag   =:: export: FLAG_EXPORT
   16:LabelFlag  =:: export: FLAG_STATIC
   32:LabelFlag  =:: export: FLAG_INLINE
-  64:LabelFlag  =:: export: FLAG_EMPTY
-  128:LabelFlag =:: export: FLAG_BUILT_IN
-  256:LabelFlag =:: export: FLAG_DUMMY
+  64:LabelFlag  =:: export: FLAG_NO_INLINE
+  128:LabelFlag =:: export: FLAG_EMPTY
+  256:LabelFlag =:: export: FLAG_BUILT_IN
+  512:LabelFlag =:: export: FLAG_DUMMY
 
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
 

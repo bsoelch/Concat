@@ -91,7 +91,6 @@ namespace: id
     Type : currentProc
     bool : experimental
     NamespaceImportId : prevImports
-    i32 : mut: flags
   ) =:: Scope
 
   proc( bool : isProc Type : procType bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
@@ -102,7 +101,6 @@ namespace: id
       procType
       experimental
       imports
-      0
     Scope new return
   end
 end
@@ -166,30 +164,6 @@ namespace: id
        false currentProc experimental context [] .typeContext .labelContext .namespaceInfo .imports newScope
        list.append
     context [] .openScopes =
-  end
-  proc( i32 : flag bool : value IdentifierContext ptr mut : context -> ) =>: export: setScopeFlag
-    context [] .openScopes .length 0 == if
-      context [] .globalScope @
-    else
-      context [] .openScopes list.peek .data
-    end
-    value if
-      ..dup [] .flags flag | ..swap [] .flags =
-    else
-      ..dup [] .flags flag ~ & ..swap [] .flags =
-    end
-  end
-  proc( IdentifierContext ptr mut : context -> i32 ) =>: export: scopeFlags
-    context [] .openScopes .length 0 == if
-      context [] .globalScope .flags return
-    end
-    context [] .openScopes list.peek .data [] .flags return
-  end
-  proc( IdentifierContext ptr mut : context -> bool ) =>: export: foldConsts
-    _FOLD_CONSTANTS_ if
-      context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & 0 == return
-    end
-    context scopeFlags SCOPE_FLAG_NO_CONST_FOLD & ? return
   end
   proc( IdentifierContext ptr mut : context -> Type bool ) =>: export: currentScopeProc
     context [] .openScopes .length 0 == if

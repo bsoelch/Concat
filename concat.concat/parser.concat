@@ -409,9 +409,6 @@ proc( i64 : len FileState ptr mut : fileState ParserState ptr mut : state -> Typ
     hasArrayType if arrayType else Type .undefined end
   return
 end
-## TODO remove newStaticArg, they are no longer used
-proc( LabelId : label Type : valType i64 : argId ParserState ptr mut : state -> ) =>: newStaticArg
-end
 
 proc( ParserState ptr mut : state -> i64 ) =>: offsetConstants
   state [] .constOffset
@@ -558,6 +555,9 @@ proc(
       else ..dup "inline:" string.wrap string.eq _if
         id.FLAG_INLINE flags | flags =
         true isModifier =
+      else ..dup "no:inline:" string.wrap string.eq _if
+        id.FLAG_NO_INLINE flags | flags =
+        true isModifier =
       else ..dup "#:experimental:" string.wrap string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags =
         true isModifier =
@@ -670,13 +670,10 @@ proc( string : code LabelType : labelType string : endString FileState ptr mut :
         end
         readLabelAddFlags
           state [] .labelBuffer ..over list.append state [] .labelBuffer =
-          ..dup idContext [] .typeContext .labelContext @ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC |  & ? if
-             labelType .PROC_IN ?? ! labelType .NONE ?? ! & if
-               "unexpected label: `static` and `auto` can only be used in procedure arguments\n  values of type `type` are labeled `static` by default" sb.wrap fileState [] .wordStart state appendError2
-             end
-             argType
-           state [] .constants .length constOffset - 1 - state newStaticArg
-          else ..drop end
+          idContext [] .typeContext .labelContext@ id.labelFlags id.FLAG_AUTO id.FLAG_STATIC | & ? and
+              labelType .PROC_IN ?? ! and labelType .NONE ?? ! if
+             "unexpected label: `static` and `auto` can only be used in procedure arguments\n  values of type `type` are labeled `static` by default" sb.wrap fileState [] .wordStart state appendError2
+          end
         continue
       end
       labelType .ENUM ?? ! if
@@ -1049,11 +1046,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     ..dup 0 string.charAt '#' == if ## compiler command
       1 string.tail
       ..dup ":" string.wrap string.startsWith if 1 string.tail
-        "opt:!fold" string.wrap ..over string.eq if
-          id.SCOPE_FLAG_NO_CONST_FOLD true idContext id.setScopeFlag
-        else "opt:fold" string.wrap ..over string.eq _if
-          id.SCOPE_FLAG_NO_CONST_FOLD false idContext id.setScopeFlag
-        end ..drop
+        ..drop
+        ## TODO annotation for (partially) disabiling constant folding in current procedure
         return ## ignore unknown annotations
       end
       64 sb.create
