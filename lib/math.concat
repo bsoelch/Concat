@@ -48,87 +48,87 @@ namespace: c
 end
 namespace: math
   proc( f64 -> f64 ) =>: export: floor
-    c.floor
+    ..ctype.double cast c.floor f64 cast
   end
   proc( f64 -> f64 ) =>: export: ceil
-    c.ceil
+    ..ctype.double cast c.ceil f64 cast
   end
   proc( f64 -> f64 ) =>: export: round
     ..dup f64.isFinite ! if
       return ## no change for non-finite number
     end
     ## remainder(x,1) = x - roundeven(x)
-    ..dup 1.0 c.remainder f64 cast -
+    ..dup ..ctype.double cast 1.0 ..ctype.double cast c.remainder f64 cast -
   end
   proc( f64 -> f64 ) =>: export: abs
-    c.fabs
+    ..ctype.double cast c.fabs f64 cast
   end
 
-  proc( f64 f64 -> f64 ) =>: export: min
-    c.fmin
+  proc( f64 : a f64 : b -> f64 ) =>: export: min
+    a ..ctype.double cast b ..ctype.double cast c.fmin f64 cast
   end
-  proc( f64 f64 -> f64 ) =>: export: max
-    c.fmax
+  proc( f64 : a f64 : b -> f64 ) =>: export: max
+    a ..ctype.double cast b ..ctype.double cast c.fmax f64 cast
   end
 
   proc( f64 -> f64 ) =>: export: log2
-    c.log2
+    ..ctype.double cast c.log2 f64 cast
   end
   proc( f64 -> f64 ) =>: export: log
-    c.log
+    ..ctype.double cast c.log f64 cast
   end
   proc( f64 -> f64 ) =>: export: exp
-    c.exp
+    ..ctype.double cast c.exp f64 cast
   end
 
   proc( f64 -> f64 ) =>: export: sqrt
-    c.sqrt
+    ..ctype.double cast c.sqrt f64 cast
   end
   proc( f64 -> f64 ) =>: export: cbrt
-    c.cbrt
+    ..ctype.double cast c.cbrt f64 cast
   end
   proc( f64 : base f64 : power -> f64 ) =>: export: pow
-    base power c.pow
+    base ..ctype.double cast power ..ctype.double cast c.pow f64 cast
   end
   ## XXX gamma function
 
   proc( f64 -> f64 ) =>: export: sin
-    c.sin
+    ..ctype.double cast c.sin f64 cast
   end
   proc( f64 -> f64 ) =>: export: cos
-    c.cos
+    ..ctype.double cast c.cos f64 cast
   end
   proc( f64 -> f64 ) =>: export: tan
-    c.tan
+    ..ctype.double cast c.tan f64 cast
   end
   proc( f64 -> f64 ) =>: export: asin
-    c.asin
+    ..ctype.double cast c.asin f64 cast
   end
   proc( f64 -> f64 ) =>: export: acos
-    c.acos
+    ..ctype.double cast c.acos f64 cast
   end
   proc( f64 -> f64 ) =>: export: atan
-    c.atan
+    ..ctype.double cast c.atan f64 cast
   end
   proc( f64 -> f64 ) =>: export: sinh
-    c.sinh
+    ..ctype.double cast c.sinh f64 cast
   end
   proc( f64 -> f64 ) =>: export: cosh
-    c.cosh
+    ..ctype.double cast c.cosh f64 cast
   end
   proc( f64 -> f64 ) =>: export: tanh
-    c.tanh
+    ..ctype.double cast c.tanh f64 cast
   end
   proc( f64 -> f64 ) =>: export: asinh
-    c.asinh
+    ..ctype.double cast c.asinh f64 cast
   end
   proc( f64 -> f64 ) =>: export: acosh
-    c.acosh
+    ..ctype.double cast c.acosh f64 cast
   end
   proc( f64 -> f64 ) =>: export: atanh
-    c.atanh
+    ..ctype.double cast c.atanh f64 cast
   end
-  proc( f64 f64 -> f64 ) =>: export: atan2
-    c.atan2
+  proc( f64 : y f64 : x -> f64 ) =>: export: atan2
+    y ..ctype.double cast  x ..ctype.double cast c.atan2 f64 cast
   end
 end

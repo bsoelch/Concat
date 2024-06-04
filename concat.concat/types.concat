@@ -2275,19 +2275,18 @@ namespace: types
     src .namedType ?? or target .namedType ?? if
       false return
     end
-    ## TODO? remove auto-cast from/to cTypes
-    ## convert c-types to types
-    target .cType ?? if
+    ## treat casts between c-types the same way as casts between the underlying base-types
+    src .cType ?? and target .cType ?? if
       ## no cast to/from struct/union pointers
-      target .cType .STRUCT_PTR ?? if false return end
-      target .cType .UNION_PTR  ?? if false return end
-      src target .cType cTypeAsType context canAutoCast return
+      src .cType .STRUCT_PTR ?? or src .cType .UNION_PTR  ?? or
+          target .cType .STRUCT_PTR ?? or target .cType .UNION_PTR  ?? if
+        false return
+      end
+      src .cType cTypeAsType target .cType cTypeAsType context canAutoCast return
     end
-    src .cType ?? if
-      ## no cast to/from struct/union pointers
-      src .cType .STRUCT_PTR ?? if false return end
-      src .cType .UNION_PTR  ?? if false return end
-      src .cType cTypeAsType target context canAutoCast return
+    ## no auto-cast from/to c-type to minimize platform specific behaviour
+    src .cType ?? or target .cType ?? if
+      false return
     end
     src context types.isNumber target context types.isNumber & if
       src target context types.canAutoCastNumber return

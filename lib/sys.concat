@@ -3,6 +3,6 @@ namespace: c
 end
 namespace: sys
   proc( i32 -> ) =>: export: noReturn: exit
-    c.exit
+    ..ctype.int cast c.exit
   end
 end

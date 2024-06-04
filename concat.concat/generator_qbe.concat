@@ -839,6 +839,9 @@ namespace: sb
             ..dup .arrayIndex ?? if ..drop
               types.primitive.I_SIZE
             end
+            ..dup .cType ?? if
+              .cType types.cTypeAsType
+            end
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
@@ -861,7 +864,11 @@ namespace: sb
         chr case value .chr sb.appendI return
         break
         Float case
-          t typeContext types.unwrapNamed =:: numType
+          t typeContext types.unwrapNamed
+            ..dup .cType ?? if
+              .cType types.cTypeAsType
+            end
+          =:: numType
           numType types.primitive.F32 types.typeEquals if
             value .Float f32 cast f32.bits sb.appendI
           else numType types.primitive.F64 types.typeEquals _if
