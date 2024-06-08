@@ -1,0 +1,99 @@
+## math library in pure concat
+
+import debug
+
+import numbers/floats
+
+## XXX? make public in numbers/float
+namespace: f64
+  0x8000'0000'0000'0000:u =:: SIGN_FLAG
+  0x7ff0'0000'0000'0000:u =:: EXP_MASK
+  0x000f'ffff'ffff'ffff:u =:: MANTISSA_MASK
+  0x0010'0000'0000'0000:u =:: HIDDENT_BIT
+  52 =:: EXP_SHIFT
+  0x7ff =:: SHIFTED_EXP_MASK
+  1023 =:: EXP_BIAS
+end
+namespace: f64
+  proc( f64 : x -> f64 ) =>: export: sqrt
+    x 0 < if
+      NaN return
+    end
+    x 0 == if
+      x return
+    end
+    x bits =:: i
+    i MANTISSA_MASK & =:: mut: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & =:: mut: e
+    e SHIFTED_EXP_MASK == if
+      x return ## NaN or Infinity
+    end
+    e 0 == if
+      ## TODO normalize subnormal numbers
+    end
+    ## get estimate by dividing exponent by two
+    e EXP_BIAS - 1 >> EXP_BIAS + SHIFTED_EXP_MASK & =:: newE
+    newE EXP_SHIFT << m | fromBits
+      ## newton iteration for square root
+      ## 5 steps should be enough
+      #+y+# x ..over / + 0.5 *
+      #+y+# x ..over / + 0.5 *
+      #+y+# x ..over / + 0.5 *
+      #+y+# x ..over / + 0.5 *
+      #+y+# x ..over / + 0.5 *
+    return
+  end
+
+  ## XXX cbrt, exp
+
+  proc( f64 : x -> f64 ) =>: export: log
+    x 0 < if
+      NaN return
+    end
+    x 0 == if
+      x return
+    end
+    x bits =:: i
+    i MANTISSA_MASK & =:: mut: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & =:: mut: e
+    e SHIFTED_EXP_MASK == if
+      x return ## NaN or Infinity
+    end
+    e EXP_BIAS - =:: mut: k
+    e 0 == if
+      ## TODO normalize subnormal numbers
+    end
+    ## x = r* 2^k -> log x = k*log2 + log r , sqrt(2)/2 <= r <= sqrt(2)
+    m EXP_BIAS EXP_SHIFT << | ## 1. set exponent to 0
+      f64.fromBits
+       ## 2. ensure number is in correct range
+      ..dup 0x1.6a09e667f3bcc909 > if ..drop ## sqrt(2)
+        m EXP_BIAS 1 - EXP_SHIFT << | f64.fromBits
+        k 1 + k =
+      end
+    =:: r
+    r 1 - =:: t ## r = 1+t
+    t 2 t + / =:: s ## log (1+t) = log(1+s)-log(1-s)  -0.1765 <= s <= 0.1716
+    s s * =:: s2
+    ## XXX? using shorter polynomial
+    ## log(1+s)-log(1-s) = 2s+ 2/3 s**3 + .... + 2/19 s ** 19 + eps
+      0x0.0d79435e50d79435 s2 *   ## 1/19
+      0x0.0f0f0f0f0f0f0f0f + s2 * ## 1/17
+      0x0.1111111111111111 + s2 * ## 1/15
+      0x0.13b13b13b13b13b1 + s2 * ## 1/13
+      0x0.1745d1745d1745d2 + s2 * ## 1/11
+      0x0.1c71c71c71c71c72 + s2 * ## 1/9
+      0x0.2492492492492492 + s2 * ## 1/7
+      0x0.3333333333333333 + s2 * ## 1/5
+      0x0.5555555555555555 + s2 * ## 1/3
+      1 + s s + *
+      ## undo shift by 2^k
+      k 0 == if return end
+      k f64 cast 0x0.b17217f7d1cf79ab * + ## log2
+    return
+  end
+
+  ## XXX log1p, log2, pow, sin,cos,tan
+
+  ## XXX ? complex-math
+end

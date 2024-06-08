@@ -15,4 +15,5 @@ code.concat
 featureMap.concat
 !tests/*/*.out
 lib/future/*
+!lib/future/math.concat
 !bootstrap/latest.ssa
