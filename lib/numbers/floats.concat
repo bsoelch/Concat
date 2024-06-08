@@ -9,14 +9,14 @@ namespace: f32
   proc( i32 -> f32 ) =>: export: fromBits
     Converter cast .f return
   end
-  0x8000'0000:u =:: SIGN_FLAG
-  0x7f80'0000:u =:: EXP_MASK
-  0x007f'ffff:u =:: MANTISSA_MASK
-  0x0080'0000:u =:: HIDDENT_BIT
-  23 =:: MANTISSA_BITS
-  23 =:: EXP_SHIFT
-  0xff =:: SHIFTED_EXP_MASK
-  127 =:: EXP_BIAS
+  0x8000'0000:u =:: export: SIGN_FLAG
+  0x7f80'0000:u =:: export: EXP_MASK
+  0x007f'ffff:u =:: export: MANTISSA_MASK
+  0x0080'0000:u =:: export: HIDDEN_BIT
+  23 =:: export: MANTISSA_BITS
+  23 =:: export: EXP_SHIFT
+  0xff =:: export: SHIFTED_EXP_MASK
+  127 =:: export: EXP_BIAS
 
   -0xf.fffffX1f:f32 =:: export: MIN
   0xf.fffffX1f:f32 =:: export: MAX
@@ -102,7 +102,7 @@ namespace: f32
     fract half > if
       trunc delta + return
     end
-    m HIDDENT_BIT | half 1 << & 0 != if ## half and odd
+    m HIDDEN_BIT | half 1 << & 0 != if ## half and odd
       trunc delta + return
     end
     trunc return
@@ -138,14 +138,14 @@ namespace: f64
   proc( i64 -> f64 ) =>: export: fromBits
     Converter cast .d return
   end
-  0x8000'0000'0000'0000:u =:: SIGN_FLAG
-  0x7ff0'0000'0000'0000:u =:: EXP_MASK
-  0x000f'ffff'ffff'ffff:u =:: MANTISSA_MASK
-  0x0010'0000'0000'0000:u =:: HIDDENT_BIT
-  52 =:: MANTISSA_BITS
-  52 =:: EXP_SHIFT
-  0x7ff =:: SHIFTED_EXP_MASK
-  1023 =:: EXP_BIAS
+  0x8000'0000'0000'0000:u =:: export: SIGN_FLAG
+  0x7ff0'0000'0000'0000:u =:: export: EXP_MASK
+  0x000f'ffff'ffff'ffff:u =:: export: MANTISSA_MASK
+  0x0010'0000'0000'0000:u =:: export: HIDDEN_BIT
+  52 =:: export: MANTISSA_BITS
+  52 =:: export: EXP_SHIFT
+  0x7ff =:: export: SHIFTED_EXP_MASK
+  1023 =:: export: EXP_BIAS
 
   -0xf.ffffffffffff8Xff =:: export: MIN
   0xf.ffffffffffff8Xff =:: export: MAX
@@ -231,7 +231,7 @@ namespace: f64
     fract half > if
       trunc delta + return
     end
-    m HIDDENT_BIT | half 1 << & 0 != if ## half and odd
+    m HIDDEN_BIT | half 1 << & 0 != if ## half and odd
       trunc delta + return
     end
     trunc return

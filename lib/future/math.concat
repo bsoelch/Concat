@@ -4,17 +4,17 @@ import debug
 
 import numbers/floats
 
-## XXX? make public in numbers/float
 namespace: f64
-  0x8000'0000'0000'0000:u =:: SIGN_FLAG
-  0x7ff0'0000'0000'0000:u =:: EXP_MASK
-  0x000f'ffff'ffff'ffff:u =:: MANTISSA_MASK
-  0x0010'0000'0000'0000:u =:: HIDDENT_BIT
-  52 =:: EXP_SHIFT
-  0x7ff =:: SHIFTED_EXP_MASK
-  1023 =:: EXP_BIAS
-end
-namespace: f64
+  0x0.b17217f7d1cf79ac =:: export: LOG2
+  0x0.b17217f7d1c =:: LOG2_HI
+  0x0.00000000000f79abc9e3b398 =:: LOG2_LOW
+  0x1.71547652b82fe177 =:: export: LOG2_INV
+  0x1.6a09e667f3bcc909 =:: export: SQRT2
+  0x3.243f6a8885a308d3 =:: export: PI
+  0x6.487ed5110b4611a6 =:: export: TAU
+  0x2.b7e151628aed2a6b =:: export: E
+  0x1.9e3779b97f4a7c16 =:: export: PHI
+
   proc( f64 : x -> f64 ) =>: export: sqrt
     x 0 < if
       NaN return
@@ -29,8 +29,12 @@ namespace: f64
       x return ## NaN or Infinity
     end
     e 0 == if
-      ## TODO normalize subnormal numbers
+      ## normalize subnormal numbers
+      x 0x1.0XF * bits =:: i2 ## * 2^64
+      i2 MANTISSA_MASK & m =
+      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e =
     end
+    ## XXX? find more precise approach
     ## get estimate by dividing exponent by two
     e EXP_BIAS - 1 >> EXP_BIAS + SHIFTED_EXP_MASK & =:: newE
     newE EXP_SHIFT << m | fromBits
@@ -44,7 +48,90 @@ namespace: f64
     return
   end
 
-  ## XXX cbrt, exp
+  proc( f64 : x -> f64 ) =>: export: cbrt
+    x 0 == if
+      x return
+    end
+    x bits =:: i
+    i SIGN_FLAG & =:: s
+    i MANTISSA_MASK & =:: mut: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & =:: mut: e
+    e SHIFTED_EXP_MASK == if
+      x return ## NaN or Infinity
+    end
+    e 0 == if
+      ## normalize subnormal numbers
+      x 0x1.0XF * bits =:: i2 ## * 2^64
+      i2 MANTISSA_MASK & m =
+      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e =
+    end
+    ## get estimate by dividing exponent by three
+    e EXP_BIAS - 3 / EXP_BIAS + SHIFTED_EXP_MASK & =:: newE
+    newE EXP_SHIFT << m | s | fromBits =:: mut: y
+    ## TODO find more precise approach
+    ##  newton iteration for cube root ( x/y-y² = 0 )
+    ## 4 steps should be enough
+    x y y * / =:: mut: q
+    q y - y * y y + q + / y + y =
+    x y y * / q =
+    q y - y * y y + q + / y + y =
+    x y y * / q =
+    q y - y * y y + q + / y + y =
+    x y y * / q =
+    q y - y * y y + q + / y + y =
+    y return
+  end
+
+  proc( f64 : x -> f64 ) =>: export: exp
+    x isNaN if
+      x abs return
+    end
+    x 0x2c5.c85fdf473de > if ## 709.78
+      Infinity return
+    end
+    x -0x2e9.221aa5a60a2 < if ## -745.13
+      0.0 return
+    end
+    ## XXX? higher precission for large values?
+    ## x = k*log2 + r
+    x LOG2_INV * 0.5 - floor =:: k
+    x k LOG2_HI * - k LOG2_LOW * - =:: r  ## - log2_low
+    ## compute exp(r) using taylor expansion
+    r r * =:: r2
+    ## XXX precompute constants
+    ## XXX? find shorter polynomial
+    ## even terms
+      ## 1 6402373705728000.0 / r2 * ## 1/18! XXX? is term 18 needed
+      1 20922789888000.0 / r2 * ## 1/16!
+      1 87178291200.0 / + r2 * ## 1/14!
+      1 479001600.0 / + r2 * ## 1/12!
+      1 3628800.0 / + r2 * ## 1/10!
+      1 40320.0 / + r2 * ## 1/8!
+      1 720.0 / + r2 * ## 1/6!
+      1 24.0 / + r2 * ## 1/4!
+      1 2.0 / + r2 * ## 1/2!
+      1 +
+    =:: yEven
+    ## odd terms
+      1 355687428096000.0 / r2 * ## 1/17!
+      1 1307674368000.0 / + r2 * ## 1/15!
+      1 6227020800.0 / + r2 * ## 1/13!
+      1 39916800.0 / + r2 * ## 1/11!
+      1 362880.0 / + r2 * ## 1/9!
+      1 5040.0 / + r2 * ## 1/7!
+      1 120.0 / + r2 * ## 1/5!
+      1 6.0 / + r2 * ## 1/3!
+      1 + r *
+    =:: yOdd
+    yEven yOdd + bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & k i64 cast + =:: e
+    e 0 <= if ## subnormal numbers
+      ## TODO rounding
+      m HIDDEN_BIT | 1 e - >>> fromBits return
+    end
+    e EXP_SHIFT << m | fromBits return
+  end
 
   proc( f64 : x -> f64 ) =>: export: log
     x 0 < if
@@ -61,13 +148,16 @@ namespace: f64
     end
     e EXP_BIAS - =:: mut: k
     e 0 == if
-      ## TODO normalize subnormal numbers
+      ## normalize subnormal numbers
+      x 0x1.0XF * bits =:: i2 ## * 2^64
+      i2 MANTISSA_MASK & m =
+      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e =
     end
     ## x = r* 2^k -> log x = k*log2 + log r , sqrt(2)/2 <= r <= sqrt(2)
     m EXP_BIAS EXP_SHIFT << | ## 1. set exponent to 0
       f64.fromBits
        ## 2. ensure number is in correct range
-      ..dup 0x1.6a09e667f3bcc909 > if ..drop ## sqrt(2)
+      ..dup SQRT2 > if ..drop ## sqrt(2)
         m EXP_BIAS 1 - EXP_SHIFT << | f64.fromBits
         k 1 + k =
       end
@@ -75,7 +165,7 @@ namespace: f64
     r 1 - =:: t ## r = 1+t
     t 2 t + / =:: s ## log (1+t) = log(1+s)-log(1-s)  -0.1765 <= s <= 0.1716
     s s * =:: s2
-    ## XXX? using shorter polynomial
+    ## XXX? find shorter polynomial
     ## log(1+s)-log(1-s) = 2s+ 2/3 s**3 + .... + 2/19 s ** 19 + eps
       0x0.0d79435e50d79435 s2 *   ## 1/19
       0x0.0f0f0f0f0f0f0f0f + s2 * ## 1/17
@@ -89,7 +179,7 @@ namespace: f64
       1 + s s + *
       ## undo shift by 2^k
       k 0 == if return end
-      k f64 cast 0x0.b17217f7d1cf79ab * + ## log2
+      k f64 cast LOG2 * +
     return
   end
 
