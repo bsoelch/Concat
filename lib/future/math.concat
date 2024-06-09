@@ -6,12 +6,16 @@ import numbers/floats
 
 namespace: f64
   0x0.b17217f7d1cf79ac =:: export: LOG2
-  0x0.b17217f7d1c =:: LOG2_HI
-  0x0.00000000000f79abc9e3b398 =:: LOG2_LOW
+  0x0.b17217f7d1cf =:: LOG2_HI
+  0x0.00000000000079abc9e3b39803f =:: LOG2_LOW
   0x1.71547652b82fe177 =:: export: LOG2_INV
   0x1.6a09e667f3bcc909 =:: export: SQRT2
   0x3.243f6a8885a308d3 =:: export: PI
+  0x3.243f6a8885a3 =:: PI_HI
+  0x0.00000000000008d313198a2e037 =:: PI_LOW
+  0x0.517cc1b727220a95 =:: export: PI_INV
   0x6.487ed5110b4611a6 =:: export: TAU
+  0x0.28be60db9391054a =:: export: TAU_INV
   0x2.b7e151628aed2a6b =:: export: E
   0x1.9e3779b97f4a7c16 =:: export: PHI
 
@@ -92,35 +96,37 @@ namespace: f64
     x -0x2e9.221aa5a60a2 < if ## -745.13
       0.0 return
     end
-    ## XXX? higher precission for large values?
-    ## x = k*log2 + r
+    ## XXX? higher precission for redured result
+    ## using this range 0.5 ln2 <= r <= 1.5 ln2 ensure algorithm is exact for input 1
+    ##   if this can be guaraneed for -0.5 ln 2 <= r <= 0.5 ln2 use that range instead
+    ## x = k*log2 + r, 0.5 ln2 <= r <= 1.5 ln2
     x LOG2_INV * 0.5 - floor =:: k
-    x k LOG2_HI * - k LOG2_LOW * - =:: r  ## - log2_low
+    x k LOG2_HI * - k LOG2_LOW * - =:: r
     ## compute exp(r) using taylor expansion
     r r * =:: r2
-    ## XXX precompute constants
     ## XXX? find shorter polynomial
     ## even terms
-      ## 1 6402373705728000.0 / r2 * ## 1/18! XXX? is term 18 needed
-      1 20922789888000.0 / r2 * ## 1/16!
-      1 87178291200.0 / + r2 * ## 1/14!
-      1 479001600.0 / + r2 * ## 1/12!
-      1 3628800.0 / + r2 * ## 1/10!
-      1 40320.0 / + r2 * ## 1/8!
-      1 720.0 / + r2 * ## 1/6!
-      1 24.0 / + r2 * ## 1/4!
-      1 2.0 / + r2 * ## 1/2!
+     ## XXX? is term 18 needed
+     ## 0xb.413c31dcbecbbddX-E r2 * ## 1/18!
+      0xd.73f9f399dc0f88eX-C r2 * ## 1/16!
+      0xc.9cba54603e4e905X-A + r2 * ## 1/14!
+      0x8.f76c77fc6c4bdaaX-8 + r2 * ## 1/12!
+      0x4.9f93edde27d71cbX-6 + r2 * ## 1/10!
+      0x1.a01a01a01a01a01X-4 + r2 * ## 1/8!
+      0x5.b05b05b05b05b05X-3 + r2 * ## 1/6!
+      0xa.aaaaaaaaaaaaaaaX-2 + r2 * ## 1/4!
+      0x0.8 + r2 * ## 1/2!
       1 +
     =:: yEven
     ## odd terms
-      1 355687428096000.0 / r2 * ## 1/17!
-      1 1307674368000.0 / + r2 * ## 1/15!
-      1 6227020800.0 / + r2 * ## 1/13!
-      1 39916800.0 / + r2 * ## 1/11!
-      1 362880.0 / + r2 * ## 1/9!
-      1 5040.0 / + r2 * ## 1/7!
-      1 120.0 / + r2 * ## 1/5!
-      1 6.0 / + r2 * ## 1/3!
+      0xc.a963b81856a5359X-D r2 * ## 1/17!
+      0xd.73f9f399dc0f88eX-B + r2 * ## 1/15!
+      0xb.092309d43684be5X-9 + r2 * ## 1/13!
+      0x6.b99159fd5138e3fX-7 + r2 * ## 1/11!
+      0x2.e3bc74aad8e671fX-5 + r2 * ## 1/9!
+      0xd.00d00d00d00d00dX-4 + r2 * ## 1/7!
+      0x2.222222222222222X-2 + r2 * ## 1/5!
+      0x2.aaaaaaaaaaaaaaaX-1 + r2 * ## 1/3!
       1 + r *
     =:: yOdd
     yEven yOdd + bits =:: i
@@ -183,7 +189,79 @@ namespace: f64
     return
   end
 
-  ## XXX log1p, log2, pow, sin,cos,tan
+  ## XXX pow, ? exp1m, log1p, log2
+
+  proc( f64 : x -> f64 ) =>: export: sin
+    x isFinite ! if
+      NaN return
+    end
+    ## XXX? higher precission for large values?
+    0.0 =:: mut: k
+    x   =:: mut: r
+    r 1.6 > or r -1.6 < if
+      x PI_INV * 0.5 + floor k =
+      x k PI_HI * - k PI_LOW * - r =
+      r PI > or r PI -_ < if
+        ## reduction failed by more thanfactor of 2 -> no meaningfull result
+        NaN return
+      end
+    end
+    ## compute sin(r) using taylor expansion
+    r r * =:: r2
+    ## XXX? find shorter polynomial
+    ## sin(x) = x -x³/3!+x⁵/5!- ...
+      ## XXX? is term 19 needed?
+     -0x9.7a4da340a0ab926X-F r2 * ## -1/19!
+      0xc.a963b81856a5359X-D + r2 * ## 1/17!
+     -0xd.73f9f399dc0f88eX-B + r2 * ## -1/15!
+      0xb.092309d43684be5X-9 + r2 * ## 1/13!
+     -0x6.b99159fd5138e3fX-7 + r2 * ## -1/11!
+      0x2.e3bc74aad8e671fX-5 + r2 * ## 1/9!
+     -0xd.00d00d00d00d00dX-4 + r2 * ## -1/7!
+      0x2.222222222222222X-2 + r2 * ## 1/5!
+     -0x2.aaaaaaaaaaaaaaaX-1 + r2 * ## -1/3!
+      1 + r *
+      k i64 cast 1 & ? if -_ end
+    return
+  end
+  ## XXX? result for +- pi/2 is slightly off from libc
+  proc( f64 : x -> f64 ) =>: export: cos
+    x isFinite ! if
+      NaN return
+    end
+    ## XXX? higher precission for large values?
+    ## x = k*pi + r  -pi/2 <= r <= pi/2
+    0.0 =:: mut: k
+    x   =:: mut: r
+    r 1.6 > or r -1.6 < if
+      x PI_INV * 0.5 + floor k =
+      x k PI_HI * - k PI_LOW * - r =
+      r PI > or r PI -_ < if
+        ## reduction failed by more thanfactor of 2 -> no meaningfull result
+        NaN return
+      end
+    end
+    ## compute cos(r) using taylor expansion
+    r r * =:: r2
+    ## XXX? find shorter polynomial
+    ## cos(x) = 1 -x²/2!+x⁴/4!- ...
+      ## XXX? is term 20 needed?
+      ##0x7.950ae900808941fX-10 r2 * ## 1/20!
+      0x7.950ae900808941fX-10 r2 * ## 1/20!
+     -0xb.413c31dcbecbbddX-E + r2 * ## -1/18!
+      0xd.73f9f399dc0f88eX-C + r2 * ## 1/16!
+     -0xc.9cba54603e4e905X-A + r2 * ## -1/14!
+      0x8.f76c77fc6c4bdaaX-8 + r2 * ## 1/12!
+     -0x4.9f93edde27d71cbX-6 + r2 * ## -1/10!
+      0x1.a01a01a01a01a01X-4 + r2 * ## 1/8!
+     -0x5.b05b05b05b05b05X-3 + r2 * ## -1/6!
+      0xa.aaaaaaaaaaaaaaaX-2 + r2 * ## 1/4!
+     -0x0.8 + r2 * ## -1/2!
+      1 +
+      k i64 cast 1 & ? if -_ end
+    return
+  end
+  ## XXX tan, asin,acos,atan, sinh,...
 
   ## XXX ? complex-math
 end
