@@ -8,7 +8,7 @@ namespace: number
     p 0 == if
       1 T cast return
     else p 0 < _if
-      1 T cast x / p -_ powI return
+      1 T cast x p -_ powI / return
     end
     x =:: mut: xPow
     1 T cast
@@ -230,13 +230,12 @@ namespace: number
     end
     val f64 cast
       sign if -_ end
-    mBase f64 cast  c -100 < if
-       ## calculate power of 1/base instead of negative power of base and
-       ## split of last factor to prevent underflow of intermediate results
-       1 f64 cast ..swap /
-       -1 c - powI *  mBase f64 cast /
+    c -100 < if
+       ## split of factor of base^64 to prevent underflow of intermediate results
+       mBase f64 cast c 64 + powI *
+       mBase f64 cast 64 powI /
     else
-       c powI *
+       mBase f64 cast c powI *
     end
     d  e 0 > | if ParserError .NONE return else ParserError .INT return end
   end
