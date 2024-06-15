@@ -2011,6 +2011,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else ..drop end
       return
     else ..dup "assert" string.wrap string.eq _if =:: opName
+      state currentBlockType =:: currentBlock
+      currentBlock .AND ?? or currentBlock .OR ?? if
+        state closeBlock ! assert "correctly closed block"
+        .blockType currentBlock == assert "closed block matches current block"
+        currentBlock fileState [] .wordStart opEndBlock  state appendOp
+        state [] .andOrPositions list.clear state [] .andOrPositions =
+      end
       fileState nextToken
       ..dup .STRING ?? ! if ..drop
         "assertion message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2

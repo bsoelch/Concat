@@ -171,7 +171,7 @@ syntax (examples, number and type of and/or can be chosen arbitrarily ):
 ```
 
 `and` and `or` can be used to short-circuit evaluate logical expressions.
-And/or blocks start with the first `and` or `or` statement, can contain any number of additional `and`/`or` statements and end with the matching `end` statement, for convenient use as part of conditional statements and/or blocks are automatically closed when hitting any of `if`, `_if` or `do`.
+And/or blocks start with the first `and` or `or` statement, can contain any number of additional `and`/`or` statements and end with the matching `end` statement, for convenient use as part of conditional statements and/or blocks are automatically closed when hitting any of `if`, `_if`, `do` or `assert`.
 
 When the execution reaches an `and` or `or` statement a boolean is popped from the stack, if the value is `false` ( in the case of `and` ) or `true` ( in the case of `or` ) the program jumps to the end of the and/or block otherwise the execution continues along the previous path.
 
