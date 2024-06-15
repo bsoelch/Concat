@@ -4215,6 +4215,7 @@ proc(
             false context [] .reachable =
           return
         AND OR case
+          op [] .val .block .blockType .OR ?? =:: isOr
           context [] .openBlocks list.peek =:: currentBlock?
           currentBlock? optional.hasData and
               currentBlock? .data =:: andOrBlock
@@ -4240,13 +4241,19 @@ proc(
             "jnz %s" sb.appendS
             op [] .pos context popValue sb.appendI
             ", " sb.appendS
-            nextBranch sb.appendBranchId
-            ", " sb.appendS
+            isOr ! if
+              nextBranch sb.appendBranchId
+              ", " sb.appendS
+            end
             ## appendBranchId
               BranchType .END_AND_OR
               op [] .val .block .blockId
               0
             BranchId new sb.appendBranchId
+            isOr if
+              ", " sb.appendS
+              nextBranch sb.appendBranchId
+            end
             '\n' sb.appendC
             nextBranch context startBranch
           return
