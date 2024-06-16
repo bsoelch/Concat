@@ -60,6 +60,13 @@ namespace: debug
       io.stdOut ..over io.fputSb ..drop
     sb.free ..drop
   end
+  proc( i64 : i -> ) =>: export: printUX
+    8 sb.create
+      i 16 sb.appendU?
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    sb.free ..drop
+  end
   proc( i64 : i -> ) =>: export: printU
     8 sb.create
       i sb.appendU

@@ -37,6 +37,9 @@ namespace: sb
   proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export: appendI?
     true appendI??
   end
+  proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export: appendU?
+    false appendI??
+  end
   proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendBin
     2  appendI?
   end
