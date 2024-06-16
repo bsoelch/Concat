@@ -376,6 +376,8 @@ proc(
   srcOp [] .val .Constant ?? ! if
     true return
   end
+  ## XXX? casting between non-interger numbers
+  ##   completely merge with interpreter.castConstant
   ## casting between integer constants
   src .value .int ?? and target typeContext types.isInt if
     target .arrayIndex ?? if
@@ -397,6 +399,7 @@ proc(
         pos errors appendError
       end
     end
+    src .valueType src .value target typeContext interpreter.castConstant srcOp [] .val .Constant =
     target srcOp [] .dataType =
     false return
   end

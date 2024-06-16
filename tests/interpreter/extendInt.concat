@@ -1,0 +1,11 @@
+proc( u64 -> bool ) =>: isZeroExtened
+  0xffff'ffff:u64 ==
+end
+proc( i64 -> bool ) =>: isSignExtened
+  -1:i64 ==
+end
+proc( -> ) =>: main
+  -1 isZeroExtened assert "u64 arg is zero extended"
+  -1 isSignExtened assert "i64 arg is sign extended"
+  0xffff'ffff:u32 isSignExtened ! assert "u32 arg is not sign extended"
+end

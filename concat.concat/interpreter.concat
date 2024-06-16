@@ -674,6 +674,61 @@ namespace: interpreter
     context @ cleanupContext
     return
   end
+  proc(
+    Type : srcType
+    ConstValue : oldValue
+    Type : targetType
+    TypeContext ptr : typeContext
+  -> ConstValue ) =>: export: castConstant
+    ## XXX ? correctly handle 32-bit floats at compile time
+    oldValue .Float ?? and targetType typeContext types.isInt if
+      targetType typeContext types.unwrapNamed types.isPrimitive if
+        targetType typeContext types.primitiveValue switch
+          I8  S8  case oldValue .Float s8  cast ConstValue .int return
+          U8      case oldValue .Float u8  cast ConstValue .int return
+          I16 S16 case oldValue .Float s16 cast ConstValue .int return
+          U16     case oldValue .Float u16 cast ConstValue .int return
+          I32 S32 case oldValue .Float s32 cast ConstValue .int return
+          U32     case oldValue .Float u32 cast ConstValue .int return
+          I64 S64 case oldValue .Float s64 cast ConstValue .int return
+          U64     case oldValue .Float u64 cast ConstValue .int return
+          BOOL F32 F64 TYPE case ..unreachable
+        end
+      else targetType typeContext types.isUnsignedInt _if
+        oldValue .Float u64 cast ConstValue .int return
+      else
+        oldValue .Float i64 cast ConstValue .int return
+      end
+    end
+    ## XXX? zero/sign extend small types
+    oldValue .int ?? if
+      oldValue .int i64 =: mut: intVal
+      targetType typeContext types.isUnsignedInt =:: unsignedTarget
+      srcType typeContext types.unwrapNamed types.isPrimitive if
+        srcType typeContext types.primitiveValue switch
+          S8  case intVal s8  cast intVal = break
+          U8  case intVal u8  cast intVal = break
+          S16 case intVal s16 cast intVal = break
+          U16 case intVal u16 cast intVal = break
+          S32 case intVal s32 cast intVal = break
+          U32 case intVal u32 cast intVal = break
+          I8  case intVal unsignedTarget if u8  cast else s8  cast end intVal = break
+          I16 case intVal unsignedTarget if u16 cast else s16 cast end intVal = break
+          I32 case intVal unsignedTarget if u32 cast else s32 cast end intVal = break
+          F32 F64 case break ## XXX? handle precission loss due to representing int as float
+          I64 S64 U64 case break ## no change neccessary
+          BOOL TYPE case ..unreachable
+        end
+      end
+      ## uint -> float
+      srcType typeContext types.isUnsignedInt and targetType typeContext types.isFloat if
+        intVal u64 cast f64 cast ConstValue .Float return
+      else
+        intVal ConstValue .int return
+      end
+    end
+    oldValue return
+  end
 end
 
 proc(
@@ -1333,32 +1388,12 @@ proc(
         op [] .pos errors appendError
         true return
       end
-      oldValue =:: mut: newValue
-      oldValue .Float ?? and targetType typeContext types.isInt if
-        targetType typeContext types.unwrapNamed types.isPrimitive if
-          targetType typeContext types.primitiveValue switch
-            I8  S8  case oldValue .Float s8  cast ConstValue .int newValue = break
-            U8      case oldValue .Float u8  cast ConstValue .int newValue = break
-            I16 S16 case oldValue .Float s16 cast ConstValue .int newValue = break
-            U16     case oldValue .Float u16 cast ConstValue .int newValue = break
-            I32 S32 case oldValue .Float s32 cast ConstValue .int newValue = break
-            U32     case oldValue .Float u32 cast ConstValue .int newValue = break
-            I64 S64 case oldValue .Float s64 cast ConstValue .int newValue = break
-            U64     case oldValue .Float u64 cast ConstValue .int newValue = break
-            BOOL F32 F64 TYPE case ..unreachable
-          end
-        else targetType typeContext types.isUnsignedInt _if
-          oldValue .Float u64 cast ConstValue .int newValue =
-        else
-          oldValue .Float i64 cast ConstValue .int newValue =
-        end
-      end
-      ## XXX? zero/size extend small types
-      oldValue .int ?? and
-          valInfo .valueType typeContext types.isUnsignedInt and
-          targetType typeContext types.isFloat if
-        oldValue .int u64 cast f64 cast ConstValue .Float newValue =
-      end
+      ## castConstant
+        valInfo .valueType
+        oldValue
+        targetType
+        typeContext
+      castConstant =:: newValue
       ## pushValue
         newValue
         targetType
@@ -1736,7 +1771,7 @@ proc(
     context [] .stack ..over argsOffset + list.at .data =:: value
     context [] .stackInfo ..over argsOffset + list.at .data =:: valueInfo
     inType ..over typeContext types.compositeGetLabel =:: label
-    label id.LABEL_ID_NONE == or 
+    label id.LABEL_ID_NONE == or
         label labelContext id.labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
         value list.appendP
