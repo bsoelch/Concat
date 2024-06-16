@@ -1,0 +1,28 @@
+import numbers/i128
+
+proc( i128 : x i64 : hi i64 : low -> bool ) =>: check
+  x .hi hi == and x .low low == end
+end
+
+proc( -> ) =>: main
+  1 i128.fromU64 65 i128.fromU64 << ..dup 2 0 check assert "1 << 65"
+    2 i128.fromU64 i128.lshr ..dup 0 0x8000'0000'0000'0000:u64 check assert "$ >>> 2"
+    1 i128.fromU64 i128.ashr ..dup 0 0x4000'0000'0000'0000:u64 check assert "$ >> 1"
+    i128.neg ..dup -1 0xC000'0000'0000'0000:u64 check assert "-$"
+    1 i128.fromU64 i128.ashr ..dup -1 0xE000'0000'0000'0000:u64 check assert "$ >> 1"
+  1 i128.fromU64 i128.lshr 0x7fff'ffff'ffff'ffff 0xF000'0000'0000'0000:u64 check assert "$ >>> 1"
+  ## add
+    -1 i128.fromI64
+    1 i128.fromI64
+  i128.add 0 0 check assert "-1+1==0"
+  ## add
+    -1:i64 i128.fromU64
+    1 i128.fromU64
+  i128.add 1 0 check assert "U64_MAX+1"
+  ## mul
+    0x111111111111111 i128.fromU64
+    0x111111111111111 i128.fromU64
+  i128.mul ..dup 0x123456789ABCD:u64 0xEFEDCBA987654321:u64 check assert "11111111111111²"
+    0x111111111111111 i128.fromU64
+  i128.div 0 0x111111111111111:u64 check assert "11111111111111²/11111111111111²"
+end

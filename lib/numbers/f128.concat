@@ -1,0 +1,1032 @@
+import numbers
+import numbers/integers
+import numbers/i128
+
+struct(
+  i64 : hi
+  i64 : low
+) =:: export: f128
+
+namespace: f128
+  0x8000'0000'0000'0000:u64 =:: SIGN_FLAG_HI
+  0x7fff'0000'0000'0000:u64 =:: EXP_MASK_HI
+  0x0001'0000'0000'0000:u64 =:: HIDDEN_BIT_HI
+  0x0000'ffff'ffff'ffff:u64 =:: MANTISSA_MASK_HI
+  48:u64 =:: EXP_SHIFT_HI
+  0x7fff:u64 =:: SHIFTED_EXP_MASK
+  0x3fff:u64 =:: EXP_BIAS
+  112 =:: MANTISSA_BITS
+  0x7fff'ffff'ffff'ffff:u64 =:: NAN_HI
+  0xffff'ffff'ffff'ffff:u64 =:: NAN_LOW
+  EXP_MASK_HI =:: INF_HI
+  0:u64 =:: INF_LOW
+
+  ## XXX? constants
+  proc( -> f128 ) =>: export: ZERO
+    0 0 f128 new return
+  end
+  proc( -> f128 ) =>: export: ONE
+    EXP_BIAS EXP_SHIFT_HI << 0 f128 new return
+  end
+
+  ## TODO make sure to use unsigned comparisson for comparing parts of f128
+
+  ## TODO toI...
+  proc( i64 : n -> f128 ) =>: export: fromI64
+    0 n i128 new fromI128
+  end
+  proc( i128 : n -> f128 ) =>: export: fromI128
+    n .hi n .low | 0 == if
+      0 0 f128 new return
+    end
+    EXP_SHIFT_HI 64 + =:: mantiassaBits
+    n i128.highestSetBit =:: bitCount
+    bitCount mantiassaBits - =:: shift
+    n .hi 0 < =:: sign
+    n
+      sign if -_ end
+      shift 0 > if
+        shift >>>
+        ## TODO rounding
+      else shift 0 < _if
+        shift -_ <<
+      end
+    =:: scaledValue
+    ## f128
+      scaledValue .hi MANTISSA_MASK_HI & bitCount EXP_BIAS + EXP_SHIFT_HI << | sign if SIGN_FLAG_HI | end
+      scaledValue .low
+    f128 new
+  end
+  ## TODO from/to f64 , f32 ,  u...
+
+  ## XXX? bits/fromBits for bitCast from/to i128
+  proc( -> f128 ) =>: export: NaN
+    NAN_HI NAN_LOW f128 new return
+  end
+  proc( -> f128 ) =>: export: Infinity
+    INF_HI INF_LOW f128 new return
+  end
+  proc( -> f128 ) =>: export: -Infinity
+    ## f128
+      INF_HI SIGN_FLAG_HI |
+      INF_LOW
+    f128 new return
+  end
+
+  proc( f128 : x -> bool ) =>: export: isNaN
+    x .hi EXP_MASK_HI & EXP_MASK_HI == and
+      x .low ? or x .hi MANTISSA_MASK_HI & ?
+    end return
+  end
+  proc( f128 : x -> bool ) =>: export: isInfinite
+    x .hi EXP_MASK_HI & EXP_MASK_HI == and
+      x .low ? ! and x .hi MANTISSA_MASK_HI & ? !
+    end return
+  end
+  proc( f128 : x -> bool ) =>: export: isFinite
+    x .hi EXP_MASK_HI & EXP_MASK_HI != return
+  end
+
+  ## TODO truncate,floor,ceil,round
+
+  ## strictly ordered comparison of values
+  ## differences to IEEE comparison:
+  ##   * compares -0 < 0
+  ##   * NaN == NaN , NaN > Infinity
+  proc( f128 : x f128 : y -> i32 ) =>: export: compare
+    ## different signs
+    x .hi SIGN_FLAG_HI & y .hi SIGN_FLAG_HI & != if
+      x .hi SIGN_FLAG_HI & ? if -1 else 1 end return
+    end
+    x isNaN and y isNaN if
+      0 return ## treat all NaNs as equal
+    end
+    x .hi SIGN_FLAG_HI & ? if -1 else 1 end =:: sign
+    x .hi SIGN_FLAG_HI ~ & =:: xHi
+    y .hi SIGN_FLAG_HI ~ & =:: yHi
+    xHi yHi != if
+      xHi yHi ..u< if sign -_ else sign end return
+    end
+    x .low y .low ..u< if
+      sign -_
+    else x .low y .low ..u> _if
+      sign
+    else 0 end return
+  end
+  ## IEEE compliant comparison,
+  ## if x or y is NaN  the return value will be  0 false
+  ## otherwise the result of compare followed by true will be returned
+  proc( f128 : x f128 : y -> i32 bool ) =>: export: compareIEEE ## XXX? better name
+    x isNaN and y isNaN if
+      0 false return
+    end
+    x y compare true return
+  end
+
+  proc( f128 f128 -> bool ) =>: export: eq
+    compareIEEE if 0 == return end ..drop false return
+  end
+  proc( f128 f128 -> bool ) =>: export: ne
+    compareIEEE if 0 != return end ..drop false return
+  end
+  proc( f128 f128 -> bool ) =>: export: lt
+    compareIEEE if 0 < return end ..drop false return
+  end
+  proc( f128 f128 -> bool ) =>: export: le
+    compareIEEE if 0 <= return end ..drop false return
+  end
+  proc( f128 f128 -> bool ) =>: export: ge
+    compareIEEE if 0 >= return end ..drop false return
+  end
+  proc( f128 f128 -> bool ) =>: export: gt
+    compareIEEE if 0 > return end ..drop false return
+  end
+
+  ## shift mantissa of subnormal number to left until hidden bit is non-zero
+  ## returns number of shifted bits
+  proc( f128 : x -> f128 i32 ) =>: normalizeMantissa
+    x .hi EXP_MASK_HI & ? if
+      x 0 return ## already normalized
+    end
+    x .hi MANTISSA_MASK_HI & =:: mut: xHi
+    x .low =:: mut: xLow
+    0 =:: mut: shift
+    0 =:: mut: baseShift
+    xHi 0 == if
+      xLow HIDDEN_BIT_HI MANTISSA_MASK_HI | <= if
+        xLow xHi =
+        0 xLow =
+        64 baseShift =
+      else
+        xLow 16 >>> xHi =
+        xLow 48 << xLow =
+        48 baseShift =
+      end
+    end
+    ## shift high bits
+    xHi 0x1'ffff'fffe'0000 & ? ! if
+      ## nothing in high 31+1 bits of mantissa
+      xHi 32 << xHi =
+      shift 32 + shift =
+    end
+    xHi 0x1fffe00000000 & ? ! if
+      ## nothing in high 15+1 bits of mantissa
+      xHi 16 << xHi =
+      shift 16 + shift =
+    end
+    xHi 0x1fe0000000000 & ? ! if
+      ## nothing in high 7+1 bits of mantissa
+      xHi 8 << xHi =
+      shift 8 + shift =
+    end
+    xHi 0x1e00000000000 & ? ! if
+      ## nothing in high 3+1 bits of mantissa
+      xHi 4 << xHi =
+      shift 4 + shift =
+    end
+    xHi 0x1800000000000 & ? ! if
+      ## nothing in high 1+1 bits of mantissa
+      xHi 2 << xHi =
+      shift 2 + shift =
+    end
+    xHi 0x1000000000000 & ? ! if
+      ## nothing in hidden bit of mantissa
+      xHi 1 << xHi =
+      shift 1 + shift =
+    end
+    ## return
+      ## f128
+        xHi
+          shift ? if xLow 64 shift - >>> | end
+        x .hi SIGN_FLAG_HI & |
+        xLow shift <<
+      f128 new
+      baseShift shift +
+    return
+  end
+
+  proc( f128 : x -> f128 ) =>: export: neg
+    ## f128
+      x .hi SIGN_FLAG_HI ^
+      x .low
+    f128 new
+  end
+  proc( f128 : x f128 : y -> f128 ) =>: export: add
+    x .hi SIGN_FLAG_HI & ? y .hi SIGN_FLAG_HI & ? != if
+      x y neg sub return
+    end
+    x .hi SIGN_FLAG_HI & =:: sign
+    x isNaN or y isNaN if
+      ## NaN +y x+NaN -> NaN
+      sign NAN_HI | NAN_LOW f128 new return
+    else x isInfinite or y isInfinite _if
+      ## Inf +y x+Inf -> Inf
+      sign INF_HI | INF_LOW f128 new return
+    end
+    x .hi y .hi ..u< or x .hi y .hi == and x .low y .low ..u< if
+      y x
+    else
+      x y
+    end  =:: b =:: a ## a >= b
+    a .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & =:: exp0A
+    b .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & =:: exp0B
+    exp0A exp0B MANTISSA_BITS 1 + + > if
+      a return ## adding b does not change value of a
+    end
+    a .hi MANTISSA_MASK_HI &
+      exp0A ? if HIDDEN_BIT_HI | end
+    =:: aHi
+    a .low =:: mut: aLow
+    b .hi MANTISSA_MASK_HI &
+      exp0B ? if HIDDEN_BIT_HI | end
+    =:: mut: bHi
+    b .low =:: mut: bLow
+    exp0A 1 i64.max =:: mut: exp
+    exp0B 1 i64.max =:: expB
+    false =:: mut: nz
+    false =:: mut: nextBit
+    ## exp == expA >= expB
+    exp expB > if
+      exp expB - =:: shift
+      shift 64 >= if
+        1:u64 shift 64 1 - - << =:: nextBitMask
+        bLow
+          bHi nextBitMask 1 - & |
+        ? nz =
+        bHi nextBitMask & ? nextBit =
+        bHi shift 64 - >>> bLow =
+        0 bHi =
+      else
+        1:u64 shift 1 - << =:: nextBitMask
+        bLow nextBitMask 1 - & ? nz =
+        bLow nextBitMask & ? nextBit =
+        bLow shift >>>
+          bHi 64 shift - << |
+        bLow =
+        bHi shift >>> bHi =
+      end
+    end
+    false
+      aLow bLow i64.addc =:: mut: lowSum
+      aHi bHi i64.addc =:: mut: hiSum
+    ! assert "on overflow"
+    ## check for overflow of mantissa
+    hiSum HIDDEN_BIT_HI MANTISSA_MASK_HI | > if
+      nz nextBit | nz =
+      lowSum 1 & ? nextBit =
+      lowSum 1 >>>
+        hiSum 63 << |
+      lowSum =
+      hiSum 1 >>> hiSum =
+      exp 1 + exp =
+    end
+    ## rounding
+    nextBit and nz or x .low 1 & ? if
+      ## round up if next bit is 1 and lower bits nonzero or number odd
+      lowSum 1 + lowSum =
+      lowSum 0 == if
+        hiSum 1 + hiSum =
+      end
+    end
+    ## overflow due to rounding
+    hiSum HIDDEN_BIT_HI MANTISSA_MASK_HI | > if
+      ## when rounding overflows, then lowSum is zero
+      hiSum 63 << lowSum =
+      hiSum 1 >>> hiSum =
+      exp 1 + exp =
+    end
+    exp SHIFTED_EXP_MASK >= if
+      ## number overflowed
+      sign INF_HI | INF_LOW f128 new return
+    end
+    ## f128
+      sign exp EXP_SHIFT_HI << | hiSum MANTISSA_MASK_HI & |
+      lowSum
+    f128 new return
+  end
+  proc( f128 : x f128 : y -> f128 ) =>: export: sub
+    x .hi SIGN_FLAG_HI & ? y .hi SIGN_FLAG_HI & ? != if
+      x y neg add return
+    end
+    x isNaN or y isNaN if
+      NaN return
+    else x isInfinite _if
+      y isInfinite if
+        NaN return ##  Inf-Int = NaN
+      else
+        x return
+      end
+    else y isInfinite _if
+      y neg return
+    end
+    x .hi y .hi ..u< or x .hi y .hi == and x .low y .low ..u< end =:: swapped
+    swapped if y x else x y end =:: b =:: a ## a >= b
+    x .hi SIGN_FLAG_HI & =:: mut: sign
+    a .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & =:: exp0A
+    b .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & =:: exp0B
+    exp0A exp0B MANTISSA_BITS 1 + + > if
+      a
+        swapped if neg end
+      return ## subtracting b does not change value of a
+    end
+    a .hi MANTISSA_MASK_HI &
+      exp0A ? if HIDDEN_BIT_HI | end
+    =:: aHi
+    a .low =:: aLow
+    b .hi MANTISSA_MASK_HI &
+      exp0B ? if HIDDEN_BIT_HI | end
+    =:: mut: bHi
+    b .low =:: mut: bLow
+    exp0A 1 i64.max =:: mut: exp
+    exp0B 1 i64.max =:: expB
+    false =:: mut: nz
+    false =:: mut: nextBit
+    ## exp == expA >= expB
+    exp expB > if
+      exp expB - =:: shift
+      shift 64 >= if
+        1:u64 shift 64 1 - - << =:: nextBitMask
+        bLow
+          bHi nextBitMask 1 - & |
+        ? nz =
+        bHi nextBitMask & ? nextBit =
+        bHi shift 64 - >>> bLow =
+        0 bHi =
+      else
+        1:u64 shift 1 - << =:: nextBitMask
+        bLow nextBitMask 1 - & ? nz =
+        bLow nextBitMask & ? nextBit =
+        bLow shift >>>
+          bHi 64 shift - << |
+        bLow =
+        bHi shift >>> bHi =
+      end
+    end
+    aHi bHi >= or aHi bHi == and aLow bLow >= assert "a>=b"
+    aHi bHi -
+      bLow aLow > if 1 - end ## underflow
+    =:: mut: hiDiff
+    aLow bLow - =:: mut: lowDiff
+    ## rounding
+    nextBit and nz or x .low 1 & ? if
+      ## round up/down if next bit is 1 and lower bits nonzero or number odd
+      swapped if
+        lowDiff 1 + lowDiff =
+        lowDiff 0 == if
+          hiDiff 1 + hiDiff =
+        end
+      else
+        lowDiff 1 - lowDiff =
+        lowDiff 0 == if
+          hiDiff 1 - hiDiff =
+        end
+      end
+    end
+    lowDiff hiDiff | 0 == if
+      0 0 f128 new return
+    end
+    exp 0 == if
+      ## f128
+        sign hiDiff |
+        lowDiff
+      f128 new return
+    end
+    hiDiff lowDiff f128 new normalizeMantissa =:: delta =:: mag
+    exp delta - exp =
+    ## handle subnormal numbers
+    ## shifts increased by 1 to undo shifting of top bit into hidden bit
+    ## no rounding necessary as total right shift at most left shift from normalization
+    exp -64 <= if
+      ## f128
+        sign
+        mag .hi exp -_ 64 - 1 + >>>
+      f128 new return
+    else exp 0 <= _if
+      ## f128
+        sign mag .hi 1 exp - >>> |
+        mag .low 1 exp - >>>
+          mag .hi << exp 64 + 1 +
+        |
+      f128 new return
+    end
+    ## f128
+      sign exp EXP_SHIFT_HI << | mag .hi MANTISSA_MASK_HI & |
+      mag .low
+    f128 new return
+  end
+
+  proc( f128 : x f128 : y -> f128 ) =>: export: mul
+    x .hi y .hi ^ SIGN_FLAG_HI & =:: sign
+    x isNaN or y isNaN if ## NaN * y ,  x* NaN -> NaN
+      NAN_HI sign | NAN_LOW f128 new return
+    else x isInfinite or y isInfinite _if
+      x .hi SIGN_FLAG_HI ~ & x .low | ? ! or
+          y .hi  SIGN_FLAG_HI ~ & y .low | ? ! if
+        NAN_HI sign | NAN_LOW f128 new return
+      end
+      ## Inf * y ,  x* Inf -> Inf
+      INF_HI sign | INF_LOW f128 new return
+    end
+    ## normalizeMantissa is no-op if number is normal
+    x normalizeMantissa =:: shiftX =:: x1
+    y normalizeMantissa =:: shiftY =:: y1
+    shiftX x1 .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & + =:: expX
+    shiftY y1 .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & + =:: expY
+    x1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | =:: xHi
+    y1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | =:: yHi
+    xHi x1 .low | ? ! if ## 0 * y
+      sign 0 f128 new return
+    else yHi y1 .low | ? ! _if ## x * 0
+      sign 0 f128 new return
+    end
+    ## 256 bit product of mantissas
+      xHi x1 .low i128 new
+      yHi y1 .low i128 new
+    i128.umul2 =:: resLow =:: resHi
+    ## truncate result to 113 bits
+    resHi .hi 33 >>> ? =:: overflow
+    overflow if
+      resHi .hi 33 >>> 1 == assert "res < 2^226"
+      15
+    else
+      16
+    end =:: shiftR
+    ## shift number such that top 113 bits are in hi:low
+    resHi .hi  shiftR << resHi  .low 64 shiftR - >>> | =:: mut: hi
+    resHi .low shiftR << resLow .hi  64 shiftR - >>> | =:: mut: low
+    1:u64 64 shiftR - 1 - << =:: nextBitMask0
+    resLow .low
+      resLow .hi nextBitMask0 1 - & |
+    ? =:: mut: nz
+    resLow .hi nextBitMask0 & ? =:: mut: nextBit
+    ## sum contains bias twice -> subtract to compensate
+    expX expY + overflow if 1 + end EXP_BIAS - =:: exp
+    ## handle subnormal numbers
+    exp 0 <= if
+      ## + 1 for hidden bit
+      1 exp - =:: shift
+      shift 112 > if
+        sign 0 f128 new return
+      else shift 64 > _if
+        1:u64 shift 64 - 1 - << =:: nextBitMask
+        nz
+          nextBit |
+          low ? |
+          hi nextBitMask 1 - & ? |
+        nz =
+        hi nextBitMask & ? nextBit =
+        hi shift 64 - >>> low =
+        0 hi =
+      else shift 64 == _if
+        nz
+          nextBit |
+          low 1:u64 63 << 1 - & ? |
+        nz =
+        low 1:u64 63 << & ? nextBit =
+        hi low =
+        0 hi =
+      else
+        1:u64 shift 1 - << =:: nextBitMask
+        nz
+          nextBit |
+          low nextBitMask 1 - & ? |
+        nz =
+        low nextBitMask & ? nextBit =
+        low shift >>>
+          hi 64 shift - << |
+        low =
+        hi shift >>> hi =
+      end
+    end
+    ## rounding
+    nextBit and nz or low 1 & ? if
+      ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
+      low 1 + low =
+      low 0 == if ## overflow
+        hi 1 + hi =
+        hi HIDDEN_BIT_HI 1 << & ? if
+          hi 63 << low =
+          hi 1 >>> hi =
+        end
+      end
+    end
+    exp SHIFTED_EXP_MASK >= if ## overflow
+      sign INF_HI | INF_LOW f128 new return
+    else exp 0 <= _if ## subnormal number
+      ## f128
+        sign hi | MANTISSA_MASK_HI &
+        low
+      f128 new return
+    end
+    ## f128
+      sign exp EXP_SHIFT_HI << | hi MANTISSA_MASK_HI & |
+      low
+    f128 new return
+  end
+
+  ## XXX prevent double-rounding when converting result of calculation to f128
+  proc( f128 : x  -> f128 ) =>: export: inv
+    x f160.fromF128 f160.inv f160.toF128 return
+  end
+  proc( f128 : x f128 : y -> f128 ) =>: export: div
+    ## x*1/y calculated with increased precission to improve accuracy
+    x f160.fromF128
+      y f160.fromF128 f160.inv
+    f160.mul f160.toF128 return
+  end
+  ## TODO rem,mod
+
+  ## XXX replace with number.powI once cast i32 -> f128 is possible
+  proc( f128 : x i64 : p -> f128 ) =>: export: powI
+    p 0 == if
+      f128.ONE return
+    else p 0 < _if
+      f128.ONE x p -_ powI / return
+    end
+    x =:: mut: xPow
+    f128.ONE
+      p while ..dup 0 != do
+        ..dup 1 & 0 != if
+        ..swap
+          xPow *
+        ..swap
+        end
+        1 >>
+        xPow xPow * xPow =
+      end ..drop
+    return
+  end
+  proc( string : str i32 : base -> f128 number.ParserError ) =>: export: parse
+    using number
+    false =:: mut: sign
+    0:i64 =:: mut: c
+    false bool =: mut: hasDot
+    0:i64 =:: mut: e
+    0 0 i128 new =:: mut: val
+    1:u64 56 << 0 i128 new =:: mut: maxVal ## higher precision than f128, no overflow in base 62
+    false =:: mut: cStyleHex
+    str
+      ..dup .length 0 == if
+        ..drop 0 0 f128 new ParserError .EMPTY return
+      end
+      ..dup 0 string.charAt '-' == if
+        true sign =
+        1 string.tail
+      else ..dup 0 string.charAt '+' == _if
+        1 string.tail
+      end
+      ..dup .length 0 == if
+        ..drop 0 0 f128 new ParserError .EMPTY return
+      end
+      base 0 == if
+        resolveBase
+      else
+        base
+      end =:: mut: mBase
+      0 mBase i128 new =:: baseI128
+      mBase 0 < if ..drop
+        f128.NaN ParserError .INVALID_CHAR return
+      else mBase 2 < or mBase 62 > _if ..drop
+        f128.NaN ParserError .INVALID_BASE return
+      end
+      0 while ..dup ..over.2 .length < do =:: i
+        ..dup i string.charAt '.' == if
+          i 0 == or hasDot if ..drop ## . cannot be first character
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          true hasDot =
+        else ..dup i string.charAt mBase isExpChar _if
+          i 0 == if ..drop ##-exp char cannot be first character
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          i 1 + e =
+          i break
+        else ..dup i string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
+          i 0 == if ..drop ##-exp char cannot be first character
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          i 1 + e =
+          true cStyleHex =
+          10 mBase = ## exponent written in base 10
+          c 4 * c = ## scale c to power of 2
+          i break
+        else
+          ..dup i string.charAt mBase parseDigit =:: digit
+          digit 0 < or digit mBase >= if ..drop
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          val maxVal < if ## XXX? i128 * i64
+            val baseI128 * 0 digit i128 new + val =
+            hasDot if
+              c 1 - c =
+            end
+          else hasDot ! _if
+            c 1 - c =
+          end
+        end
+        i 1 +
+      end ..drop
+      e 0 > if
+        ..dup e string.tail mBase tryParseInt
+          ..dup .NONE ?? ! if =:: err
+            ..drop.2 f128.NaN err return
+          end ..drop
+        c + c =
+      end
+    ..drop
+    cStyleHex if ## calculate powers of 2 instead of powers of base
+      2 mBase =
+    end
+    val f128.fromI128
+      sign if -_ end
+    c 0 >= if
+       mBase f128.fromI64 c powI *
+    else c -100 > _if
+       mBase f128.fromI64 c -_ powI /
+    else
+       ## split of factor of base^64 to prevent underflow of intermediate results
+       mBase f128.fromI64 c 64 + -_ powI /
+       mBase f128.fromI64 64 powI /
+    end
+    hasDot or e 0 > if ParserError .NONE return else ParserError .INT return end
+  end
+end
+
+## f160: procedures for internal calculations with higher precission
+## ! uses saturating arithmetic on overflow
+## normalized number: 127+1 bit mantissa, 32 bit exponent
+struct(
+  i64 : hi
+  i64 : low
+  i32 : exp
+  bool : sign
+) =:: f160
+namespace: f160
+  15 =:: F128_SHIFT
+  proc( f128 : x -> f160 ) =>: fromF128
+    x .hi f128.SIGN_FLAG_HI & ? =:: sign
+    x .hi f128.EXP_SHIFT_HI >>> f128.SHIFTED_EXP_MASK & f128.EXP_BIAS - =:: exp
+    exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - == if ## NaN / Infinity
+      ## TODO? handle NaN/Infinity
+    else exp f128.EXP_BIAS -_ == _if ## subnormal numbers
+      x f128.normalizeMantissa =:: shift =:: x1 ## 0x0001
+      x1 .hi F128_SHIFT <<
+        x1 .low 64 F128_SHIFT - >>> |
+      =:: hi
+      x1 .low F128_SHIFT << =:: low
+      hi  low  exp shift - i32 cast  sign f160 new return
+    end
+    x .hi f128.MANTISSA_MASK_HI & f128.HIDDEN_BIT_HI | F128_SHIFT <<
+      x .low 64 F128_SHIFT - >>> |
+    =:: hi
+    x .low F128_SHIFT << =:: low
+    hi low exp i32 cast sign f160 new return
+  end
+  proc( f160 : x -> f128 ) =>: toF128
+    x .exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if ## overflow
+      x .sign if f128.-Infinity else f128.Infinity end return
+    end
+    F128_SHIFT
+      x .exp f128.EXP_BIAS -_ <= if ## underflow
+        x .exp f128.EXP_BIAS + -
+      end
+    =:: shift
+    shift 128 >= if
+      x .sign if f128.SIGN_FLAG_HI else 0 end 0 f128 new return
+    end
+    false =:: mut: nz
+    false =:: mut: nextBit
+    shift 64 >= if
+      x .hi shift 64 - >>>
+      0
+      1:u64 shift 64 - 1 - << =:: nextBitMask
+      x .low
+        x .hi nextBitMask 1 - & |
+      ? nz =
+      x .hi nextBitMask & ? nextBit =
+    else
+      x .low shift >>> x .hi 64 shift - << |
+      x .hi shift >>>
+      1:u64 shift 1 - << =:: nextBitMask
+      x .low nextBitMask 1 - & ? nz =
+      x .low nextBitMask & ? nextBit =
+    end =:: mut: hi =:: mut: low
+    ## rounding
+    nextBit and nz or low 1 & ? if
+      ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
+      low 1 + low =
+      low 0 == if ## overflow
+        hi 1 + hi =
+      end
+    end
+    hi f128.HIDDEN_BIT_HI 1 << & ? =:: overflow
+    overflow if
+      x .exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if  ## overflows finite number
+        x .sign if f128.-Infinity else f128.Infinity end return
+      end
+      hi 63 << low =
+      hi 1 >>> hi =
+    end
+    ## f128
+      hi f128.MANTISSA_MASK_HI &
+        x .exp f128.EXP_BIAS + overflow if 1 + end f128.EXP_SHIFT_HI << |
+        x .sign if f128.SIGN_FLAG_HI | end
+      low
+    f128 new return
+  end
+  ## multiply two 128 bit mantissas x and y
+  ##  returns the mantissa of x*y and a boolean indicating if the exponent increased
+  proc( f160 : x f160 : y -> f160 ) =>: mul
+    x .hi x .low | 0 == or y .hi y .low | 0 == if
+      ## f160
+        0 0 0
+        x .sign y .sign ^
+      f160 new return
+    end
+    ## 256 bit product of mantissas
+      x .hi x .low i128 new
+      y .hi y .low i128 new
+    i128.umul2 =:: resLow =:: resHi
+    ## ensure top bit is one
+    resHi .hi  =:: mut: hi
+    resHi .low =:: mut: low
+    resHi .hi 63 >>> ? =:: highBit
+    highBit if
+      resLow .hi 63 >>> ?
+      resLow .hi 1:u64 63 << 1 - & resLow .low | ?
+    else
+      hi 1 <<
+        low 63 >>> |
+      hi =
+      low 1 <<
+        resLow .hi 63 >>> |
+      low =
+      1:u64 62 << =:: nextBitMask
+      resLow .hi nextBitMask & ?
+      resLow .hi nextBitMask 1 - & resLow .low | ?
+    end =:: nz =:: nextBit
+    false =:: mut: overflow
+    ## rounding
+    nextBit and nz or low 1 & ? if
+      ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
+      low 1 + low =
+      low 0 == if ## overflow
+        hi 1 + hi =
+        hi 0 == if
+          true overflow =
+          1:u64 63 << hi =
+        end
+      end
+    end
+    x .exp s64 cast y .exp s64 cast + highBit if 1 + end overflow if 1 + end =:: exp
+    exp -0x8000'0000 < if
+      ## f160
+        0 0 0
+        x .sign y .sign ^
+      f160 new return
+    else exp 0x7fff'ffff > _if
+      ## f160
+        -1:i64 -1:i64
+        0x7fff'ffff
+        x .sign y .sign ^
+      f160 new return
+    end
+    ## f160
+      hi
+      low
+      exp i32 cast
+      x .sign y .sign ^
+    f160 new return
+  end
+  proc( f160 : x -> f160 ) =>: neg
+    x .hi x .low x .exp x .sign ! f160 new
+  end
+  proc( f160 : x  f160 : y -> f160 ) =>: add
+    x .sign y .sign != if
+      x y neg sub return
+    end
+    x .exp y .exp < if
+      y x
+    else
+      x y
+    end =:: b =:: a
+    b .hi =:: mut: bHi
+    b .low =:: mut: bLow
+    false =:: mut: nz
+    false =:: mut: nextBit
+    ## a .exp >= b .exp
+    b .exp a .exp < if
+      a .exp b .exp - =:: shift
+      shift 128 > if
+        a return
+      end
+      shift 128 == if
+        bLow
+          bHi 1:u64 63 << 1 - & |
+        ? nz =
+        bHi 63 >>> ? nextBit =
+        0 bHi =
+        0 bLow =
+      else shift 64 >= _if
+        1:u64 shift 64 1 - - << =:: nextBitMask
+        bLow
+          bHi nextBitMask 1 - & |
+        ? nz =
+        bHi nextBitMask & ? nextBit =
+        bHi shift 64 - >>> bLow =
+        0 bHi =
+      else
+        1:u64 shift 1 - << =:: nextBitMask
+        bLow nextBitMask 1 - & ? nz =
+        bLow nextBitMask & ? nextBit =
+        bLow shift >>>
+          bHi 64 shift - << |
+        bLow =
+        bHi shift >>> bHi =
+      end
+    end
+    false
+      a .low bLow i64.addc =:: mut: low
+      a .hi  bHi  i64.addc =:: mut: hi
+    =:: mut: carry
+    carry if
+      nz nextBit | nz =
+      low 1 & ? nextBit =
+      low 1 >>>
+        hi 63 << |
+      low =
+      hi 1 >>>
+        1:u64 63 << |
+      hi =
+    end
+    ## rounding
+    nextBit and nz or x .low 1 & ? if
+      low 1 + low =
+      low 0 == if
+        hi 1 + hi =
+        hi 0 == if
+          true carry =
+          1:u64 63 << hi =
+        end
+      end
+    end
+    carry and a .exp 0x7fff'ffff == if
+      ## f160
+        -1:i64 -1:i64
+        0x7fff'ffff
+        a .sign
+      f160 new return
+    end
+    ## f160
+      hi
+      low
+      a .exp carry if 1 + end
+      a .sign
+    f160 new return
+  end
+  proc( f160 : x  f160 : y -> f160 ) =>: sub
+    x .sign y .sign != if
+      x y neg add return
+    end
+    x .exp y .exp < or
+      x .exp y .exp == and x .hi y .hi ..u< or
+      x .hi y .hi == and x .low y .low ..u<
+    end =:: swapped
+    swapped if y x else x y end =:: b =:: a
+    b .low =:: mut: bLow
+    b .hi =:: mut: bHi
+    false =:: mut: nz
+    false =:: mut: nextBit
+    ## a .exp >= b .exp
+    b .exp a .exp < if
+      a .exp b .exp - =:: shift
+      shift 128 > if
+        a
+          swapped if neg end
+        return
+      end
+      shift 128 == if
+        bLow
+          bHi 1:u64 63 << 1 - & |
+        ? nz =
+        bHi 63 >>> ? nextBit =
+        0 bHi =
+        0 bLow =
+      else shift 64 >= _if
+        1:u64 shift 64 - 1 - << =:: nextBitMask
+        bLow
+          bHi nextBitMask 1 - & |
+        ? nz =
+        bHi nextBitMask & ? nextBit =
+        bHi shift 64 - >>> bLow =
+        0 bHi =
+      else
+        1:u64 shift 1 - << =:: nextBitMask
+        bLow nextBitMask 1 - & ? nz =
+        bLow nextBitMask & ? nextBit =
+        bLow shift >>>
+          bHi 64 shift - << |
+        bLow =
+        bHi shift >>> bHi =
+      end
+    end
+    a .hi bHi ..u> or a .hi bHi == and a .low bLow ..u>= assert "a>=b"
+    false
+      a .low bLow i64.subb =:: mut: low
+      a .hi  bHi  i64.subb =:: mut: hi
+    ..drop
+    ## rounding
+    nextBit and nz or x .low 1 & ? if
+      ## round up/down if next bit is 1 and lower bits nonzero or number odd
+      swapped if
+        low 1 + low =
+        low 0 == if
+          hi 1 + hi =
+          ## number cannot overflow in subtraction
+        end
+      else
+        low 1 - low =
+        low 0 == if
+          hi 1 - hi =
+        end
+      end
+    end
+    hi low | 0 == if
+      ## f160
+        0 0 0
+        a .sign
+      f160 new return
+    end
+    hi 0x8000'0000'0000'0000:u64 & ? if
+      0
+    else hi 0 == _if
+      63 low i64.highestSetBit - =:: shift
+      low shift << hi =
+      0 low =
+      64 shift +
+    else
+      63 hi i64.highestSetBit - =:: shift
+      hi shift <<
+        low 64 shift - >>> |
+      hi =
+      low shift << low =
+      shift
+    end =:: shift
+    a .exp -0x8000'0000 shift + < if ## underflow
+      ## f160
+        0 0 0
+        a .sign
+      f160 new return
+    end
+    ## f160
+      hi
+      low
+      a .exp shift -
+      a .sign
+    f160 new return
+  end
+  ## FIXME results are sigthly off
+  #+
+    Computes the inverse of x, assumes that 0.5<=x<1.
+    uses Newton-Raphson-Division (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
+  +#
+  proc( f160 : x  -> f160 ) =>: normalized_inv ## TODO check constants
+    0xb4b4'b4b4'b4b4'b4b4:u64 0xb4b4'b4b4'b4b4'b4b5:u64 1 false f160 new =:: p ## 48/17
+    0xf0f0'f0f0'f0f0'f0f0:u64 0xf0f0'f0f0'f0f0'f0f1:u64 0 false f160 new =:: q ## 32/17
+    0x8000'0000'0000'0000:u64 0:u64                     1 false f160 new =:: two ## 2
+    ## 1. estimate 1/x as 48/17 - 32/17 * x
+    p x q * -
+      ## 2. iteratate: y2 = y1(2 - y1 *x)
+      ## 5 steps should be enough
+      #+y+# two ..over x * - *
+      #+y+# two ..over x * - *
+      #+y+# two ..over x * - *
+      #+y+# two ..over x * - *
+      #+y+# two ..over x * - *
+    return
+  end
+  proc( f160 : x  -> f160 ) =>: inv
+    x .hi x .low | 0 == if ## 1/0
+      -1 -1 0x7fff'ffff x .sign f160 new return
+    end
+    ## normalize number to interval [0.5,1)
+    x .hi x .low -1 false f160 new normalized_inv =:: y
+    ## 1 / x = 2^( -1 - xExp) / ( x * 2^( -1 - xExp) ) = 2^( -1 - xExp) * y
+    y .hi y .low y .exp x .exp - 1 - x .sign f160 new return
+  end
+  ## XXX div
+end
+
+## define operator overloads
+overload: -_ f128.neg f160.neg end
+overload: + f128.add f160.add end
+overload: - f128.sub f160.sub end
+overload: * f128.mul f160.mul end
+overload: / f128.div end
+## overload: % f128.rem end
+## verload: // f128.floorDiv end
+## overload: %% f128.mod end
+overload: < f128.lt end
+overload: <= f128.le end
+overload: >= f128.ge end
+overload: > f128.gt end

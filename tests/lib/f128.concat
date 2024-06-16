@@ -1,0 +1,26 @@
+import numbers/f128
+
+proc( -> ) =>: main
+  "3.141592653589793238462643383279502884197169399375105" string.wrap 0 f128.parse ..drop =:: pi
+  "0x2.b7e151628aed2a6abf7158809cf4f3c762e716" string.wrap 0 f128.parse ..drop =:: e
+  pi e + =:: x1
+  pi e - =:: x2
+  pi e * =:: x3
+  pi e / =:: x4
+  pi .hi  0x4000921FB54442D1:u64 == assert "pi .hi"
+  pi .low 0x8469898CC51701B8:u64 == assert "pi .low"
+  e  .hi  0x40005BF0A8B14576:u64 == assert "e .hi"
+  e  .low 0x95355FB8AC404E7A:u64 == assert "e .low"
+  x1 .hi  0x400177082EFAC424:u64 == assert "pi+e .hi"
+  x1 .low 0x0CCF74A2B8ABA819:u64 == assert "pi+e .low"
+  x2 .hi  0x3FFDB1786497EAD7:u64 == assert "pi-e .hi"
+  x2 .low 0x79A14EA0C6B599F0:u64 == assert "pi-e .low"
+  x3 .hi  0x4002114580B45D47:u64 == assert "pi*e .hi"
+  x3 .low 0x49E6108579A2D0CA:u64 == assert "pi*e .low"
+  x4 .hi  0x3FFF27DDBF6271DB:u64 == assert "pi/e .hi"
+  x4 .low 0xDEFDC3B8933CC9F1:u64 == assert "pi/e .low"
+  pi e < ! assert "! pi < e"
+  pi e > assert "pi > e"
+  f128.NaN f128.NaN <= ! assert "! NaN <= NaN"
+  f128.NaN f128.Infinity f128.compare 1 == assert "cmp(NaN,Infinity)==1"
+end

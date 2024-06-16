@@ -1,0 +1,396 @@
+import numbers/integers
+import numbers
+
+struct(
+  i64 : hi
+  i64 : low
+) =:: export: i128
+
+## TODO make sure to use unsigned comparisson for comparing parts of i128
+namespace: i128
+  proc( i64 : low -> i128 ) =>: export: fromI64
+    low 0 < if -1 else 0 end low i128 new
+  end
+  proc( u64 : low -> i128 ) =>: export: fromU64
+    0 low i128 new
+  end
+
+  proc( i128 : a -> i128 ) =>: export: flip
+    ## i128
+      a .hi i64.flip
+      a .low i64.flip
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: and
+    ## i128
+      a .hi b .hi i64.and
+      a .low b .low i64.and
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: or
+    ## i128
+      a .hi b .hi i64.or
+      a .low b .low i64.or
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: xor
+    ## i128
+      a .hi b .hi i64.xor
+      a .low b .low i64.xor
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: shl
+    a b .low shl_i64
+  end
+  proc( i128 : a i64 : b -> i128 ) =>: export: shl_i64
+    b 127 & i32 cast =:: shift
+    shift 0 == if
+      a return
+    else shift 64 >= _if
+      ## i128
+        a .low shift 64 - i64.shl
+        0
+      i128 new return
+    end
+    ## i128
+      a .hi shift i64.shl a .low 64 shift - i64.lshr |
+      a .low shift i64.shl
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: lshr
+    a b .low lshr_i64
+  end
+  proc( i128 : a i64 : b -> i128 ) =>: export: lshr_i64
+    b 127 & i32 cast =:: shift
+    shift 0 == if
+      a return
+    else shift 64 >= _if
+      ## i128
+        0
+        a .hi shift 64 - i64.lshr
+      i128 new return
+    end
+    ## i128
+      a .hi shift i64.lshr
+      a .low shift i64.lshr a .hi 64 shift - i64.shl |
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: ashr
+    a b .low ashr_i64
+  end
+  proc( i128 : a i64 : b -> i128 ) =>: export: ashr_i64
+    b 127 & i32 cast =:: shift
+    shift 0 == if
+      a return
+    else shift 64 >= _if
+      ## i128
+        a .hi 0 < if -1:i64 else 0:i64 end
+        a .hi shift 64 - i64.ashr
+      i128 new return
+    end
+    ## i128
+      a .hi shift i64.ashr
+      a .low shift i64.lshr a .hi 64 shift - i64.shl |
+    i128 new
+  end
+  proc( i128 : x -> i32 ) =>: export: highestSetBit
+    x .hi 0 == if
+      x .low i64.highestSetBit return
+    end
+    x .hi i64.highestSetBit 64 + return
+  end
+  proc( i128 : a i128 : b -> i32 ) =>: export: ucmp
+    a .hi b .hi ..u< if
+      -1 return
+    else a .hi b .hi ..u> _if
+      1 return
+    end
+    a .low b .low ..u< if
+      -1 return
+    else a .low b .low ..u> _if
+      1 return
+    else
+      0 return
+    end
+  end
+  proc( i128 : a i128 : b -> i32 ) =>: export: cmp
+    a .hi 0 < b .hi 0 < == if ## same sign
+      a b ucmp return
+    end
+    a .hi 0 < if -1 else 1 end return
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: ult
+    a b ucmp 0 <
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: ule
+    a b ucmp 0 <=
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: uge
+    a b ucmp 0 >=
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: ugt
+    a b ucmp 0 >
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: lt
+    a b cmp 0 <
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: le
+    a b cmp 0 <=
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: ge
+    a b cmp 0 >=
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: gt
+    a b cmp 0 >
+  end
+  proc( i128 : a -> bool ) =>: export: toBool
+    a .hi ? a .low ? |
+  end
+  proc( i128 : a -> i128 ) =>: export: neg
+    ## i128
+      a .hi i64.flip a .low 0 == if 1 + end
+      a .low i64.neg
+    i128 new
+  end
+  ## XXX? use i64.addc for add
+  proc( i128 : a i128 : b -> i128 ) =>: export: add
+    a .low b .low i64.add =:: lowSum
+    ## i128
+      a .hi b .hi i64.add  lowSum a .low ..u< if 1 + end
+      lowSum
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: sub
+    ## i128
+      a .hi b .hi i64.sub  a .low b .low ..u< if 1 - end
+      a .low b .low i64.sub
+    i128 new
+  end
+end
+namespace: i128
+  proc( i128 : a i128 : b -> i128 ) =>: export: mul
+    ## (a+b*2^64) (c+d*2^64) = a*c+2^64*(a*d+b*c)+2^128*(b*d)
+    a .low b .low i64.umul2 =:: x00low =:: x00hi
+    ## i128
+      x00hi a .hi b .low * + a .low b .hi * +
+      x00low
+    i128 new
+  end
+  proc( i128 : a i128 : b -> i128 i128 ) =>: export: umul2
+    a .hi  b .hi  i64.umul2 =:: x11low =:: x11hi
+    a .hi  b .low i64.umul2 =:: x10low =:: x10hi
+    a .low b .hi  i64.umul2 =:: x01low =:: x01hi
+    a .low b .low i64.umul2 =:: x00low =:: x00hi
+    x00low =:: res0
+    x00hi  =:: mut: res1
+    x11low =:: mut: res2
+    x11hi  =:: mut: res3
+    false
+      res1 x01low i64.addc res1 =
+      res2 x01hi  i64.addc res2 =
+      res3 0      i64.addc res3 =
+    ..drop
+    false
+      res1 x10low i64.addc res1 =
+      res2 x10hi  i64.addc res2 =
+      res3 0      i64.addc res3 =
+    ..drop
+    res3 res2 i128 new res1 res0 i128 new return
+  end
+  proc(
+    i128 : a
+    i128 : b
+  ->
+    i128 #+remainder+#
+    i128 #+division+#
+  ) =>: export: udivmod
+    a b ucmp 0 < if
+      ## return
+        a
+        0 0 i128 new
+      return
+    end
+    a .hi 0 == if ## both fit in 64 bits
+      ## return
+        0 a .low b .low i64.umod i128 new
+        0 a .low b .low i64.udiv i128 new
+      return
+    end
+    ## TODO? handle more special cases
+    ## (b.hi=0,b.low=0,b=2^k,...)
+    a highestSetBit b highestSetBit - =:: shift
+    a =:: mut: remainderA
+    0 0 i128 new =:: mut: res
+    b shift << =:: mut: shiftedB
+    shift 64 >= if
+      ## i128
+        1:i64 shift 64 - <<
+        0
+      i128 new
+    else
+      ## i128
+        0
+        1:i64 shift <<
+      i128 new
+    end =:: mut: bit
+    while bit .hi bit .low | ? do
+      remainderA shiftedB ucmp 0 >= if
+        remainderA shiftedB - remainderA =
+        res bit | res =
+      end
+      shiftedB 1 >>> shiftedB =
+      bit 1 >>> bit =
+    end
+    remainderA res return
+  end
+  proc(
+    i128 : a
+    i128 : b
+  -> i128 ) =>: export: udiv
+    a b udivmod ..swap ..drop
+  end
+  proc(
+    i128 : a
+    i128 : b
+  -> i128 ) =>: export: umod
+    a b udivmod ..drop
+  end
+  proc(
+    i128 : a0
+    i128 : b0
+  ->
+    i128 #+remainder+#
+    i128 #+division+#
+  ) =>: export: divrem
+    false =:: mut: divSign
+    a0 .hi 0 < =:: remSign
+    a0 .hi 0 < if
+      true divSign =
+      a0 -_
+    else
+      a0
+    end =:: a
+    b0 .hi 0 < if
+      divSign ! divSign =
+      b0 -_
+    else
+      b0
+    end =:: b
+    a b udivmod =:: mut: divVal =:: mut: remVal
+    ## return
+      remVal remSign if -_ end
+      divVal divSign if -_ end
+    return
+  end
+  proc(
+    i128 : a
+    i128 : b
+  -> i128 ) =>: export: div
+    a b divrem ..swap ..drop
+  end
+  proc(
+    i128 : a
+    i128 : b
+  -> i128 ) =>: export: rem
+    a b divrem ..drop
+  end
+
+  proc(
+    string : str
+    i32 : base
+    bool : unsigned
+  -> i128 number.ParserError ) =>: export: parse
+    using number
+    false =:: mut: sign
+    false =:: mut: overflow
+    str
+      ..dup .length 0 == if
+        ..drop 0 0 i128 new ParserError .EMPTY return
+      end
+      ..dup 0 string.charAt '-' == if
+        true sign =
+        1 string.tail
+      else ..dup 0 string.charAt '+' == _if
+        1 string.tail
+      end
+      ..dup .length 0 == if ..drop
+        0 0 i128 new ParserError .EMPTY return
+      end
+      base 0 == if
+        resolveBase
+      else
+        base
+      end =:: mBase
+      mBase 0 < if ..drop
+        0 0 i128 new ParserError .INVALID_CHAR return
+      else mBase 2 < or mBase 62 > _if ..drop
+        0 0 i128 new ParserError .INVALID_BASE return
+      end
+      unsigned if
+        -1 -1 i128 new
+      else sign _if
+        -0x8000_0000_0000_0000 0 i128 new
+      else
+        0x7fff_ffff_ffff_ffff -1 i128 new
+      end =:: maxVal
+      0 0 i128 new =:: mut: res
+      0 mBase i128 new =:: baseI128
+      maxVal baseI128 ..udiv =:: maxSafe ## XXX? udiv i128 by i64
+      0 while ..dup ..over.2 .length < do =:: i
+        ..dup i string.charAt =:: c
+        i 0 > and c '_' == or c '\'' == if
+          i 1 + continue ## ignore _ and ' in numbers
+        end
+        c mBase parseDigit =:: d
+        d 0 < or d mBase >= if
+          ..drop 0 0 i128 new ParserError .INVALID_CHAR return
+        end
+        res maxSafe > if
+          true overflow =
+        end
+        res
+          baseI128 * ## XXX mul i128 by i64  ## XXX add/sub i128 to/from i64
+          res maxSafe i128.cmp 0 == and ..dup maxVal 0 d i128 new - > if
+            true overflow =
+          end
+          0 d i128 new +
+        res =
+        i 1 +
+      end ..drop
+    ..drop
+    res
+      sign and -_ unsigned if ParserError .SIGN return end
+    overflow if ParserError .OVERFLOW return end
+    ParserError .NONE return
+  end
+end
+## TODO appendI128?? ## base, signed
+
+## define operator overloads
+overload: -_ i128.neg end
+overload: + i128.add end
+overload: - i128.sub end
+overload: * i128.mul end
+overload: / i128.div end
+overload: % i128.rem end
+## overload: // i128.floorDiv end
+## overload: %% i128.mod end
+overload: ..udiv i128.udiv end
+overload: ..umod i128.umod end
+overload: ~ i128.flip end
+overload: & i128.and end
+overload: | i128.or end
+overload: ^ i128.xor end
+overload: << i128.shl i128.shl_i64 end
+overload: >>> i128.lshr i128.lshr_i64 end
+overload: >> i128.ashr i128.ashr_i64 end
+overload: ..u< i128.ult end
+overload: ..u<= i128.ule end
+overload: ..u>= i128.uge end
+overload: ..u> i128.ugt end
+overload: < i128.lt end
+overload: <= i128.le end
+overload: >= i128.ge end
+overload: > i128.gt end
+overload: ? i128.toBool end
+
