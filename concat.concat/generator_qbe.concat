@@ -4632,6 +4632,11 @@ proc(
           sb return
         COPY case
           op [] .val .stackMod .n =:: offset
+          context [] .stackInfo branchTree.depth offset <= if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
+            sb return
+          end
           ## copy value on stack
           context [] .stackInfo @
             offset
