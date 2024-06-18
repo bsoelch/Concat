@@ -8,6 +8,14 @@ struct(
 
 ## TODO make sure to use unsigned comparisson for comparing parts of i128
 namespace: i128
+  ## XXX use constants
+  proc( -> i128 ) =>: export: ZERO
+    0 0 i128 new return
+  end
+  proc( -> i128 ) =>: export: ONE
+    0 1 i128 new return
+  end
+
   proc( i64 : low -> i128 ) =>: export: fromI64
     low 0 < if -1 else 0 end low i128 new
   end
@@ -118,6 +126,13 @@ namespace: i128
       a b ucmp return
     end
     a .hi 0 < if -1 else 1 end return
+  end
+
+  proc( i128 : a i128 : b -> bool ) =>: export: eq
+    a b cmp 0 ==
+  end
+  proc( i128 : a i128 : b -> bool ) =>: export: ne
+    a b cmp 0 !=
   end
   proc( i128 : a i128 : b -> bool ) =>: export: ult
     a b ucmp 0 <

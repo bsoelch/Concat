@@ -7,6 +7,8 @@ struct(
   i64 : low
 ) =:: export: f128
 
+import debug
+
 namespace: f128
   0x8000'0000'0000'0000:u64 =:: SIGN_FLAG_HI
   0x7fff'0000'0000'0000:u64 =:: EXP_MASK_HI
@@ -30,24 +32,42 @@ namespace: f128
   end
 
   ## TODO make sure to use unsigned comparisson for comparing parts of f128
-
-  ## TODO toI...
   proc( i64 : n -> f128 ) =>: export: fromI64
-    0 n i128 new fromI128
+    n i128.fromI64 false fromI128_internal
   end
-  proc( i128 : n -> f128 ) =>: export: fromI128
+  proc( u64 : n -> f128 ) =>: export: fromU64
+    0 n i128 new false fromI128_internal
+  end
+  proc( i128 -> f128 ) =>: export: fromI128
+    true fromI128_internal
+  end
+  proc( i128 -> f128 ) =>: export: fromU128
+    false fromI128_internal
+  end
+  proc( i128 : n bool : signed -> f128 ) =>: fromI128_internal
     n .hi n .low | 0 == if
       0 0 f128 new return
     end
     EXP_SHIFT_HI 64 + =:: mantiassaBits
-    n i128.highestSetBit =:: bitCount
+    n i128.highestSetBit =:: mut: bitCount
     bitCount mantiassaBits - =:: shift
-    n .hi 0 < =:: sign
+    signed and n .hi 0 < end =:: sign
     n
       sign if -_ end
       shift 0 > if
+        ..dup .low 1 shift << 1 - & =:: lowBits
         shift >>>
-        ## TODO rounding
+        1:u64 shift 1 - << =:: half
+        lowBits debug.printUX
+        half debug.printUX
+        ..dup .low debug.printUX
+        lowBits half ..u> or lowBits half == and ..dup .low 1 & ? if
+          i128.ONE + ## round up
+        end
+        ..dup .hi 1:u64 EXP_SHIFT_HI 1 + << & ? if
+          1 >>>
+          bitCount 1 + bitCount =
+        end
       else shift 0 < _if
         shift -_ <<
       end
@@ -57,9 +77,16 @@ namespace: f128
       scaledValue .low
     f128 new
   end
-  ## TODO from/to f64 , f32 ,  u...
+  ## TODO toI..., toU...
+  ## TODO from/to f64 , f32
 
-  ## XXX? bits/fromBits for bitCast from/to i128
+  proc( i128 : n -> f128 ) =>: fromBits
+    n .hi n .low f128 new return
+  end
+  proc( f128 : x -> i128 ) =>: bits
+    x .hi x .low i128 new return
+  end
+
   proc( -> f128 ) =>: export: NaN
     NAN_HI NAN_LOW f128 new return
   end
