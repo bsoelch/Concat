@@ -7,8 +7,6 @@ struct(
   i64 : low
 ) =:: export: f128
 
-import debug
-
 namespace: f128
   0x8000'0000'0000'0000:u64 =:: SIGN_FLAG_HI
   0x7fff'0000'0000'0000:u64 =:: EXP_MASK_HI
@@ -58,9 +56,6 @@ namespace: f128
         ..dup .low 1 shift << 1 - & =:: lowBits
         shift >>>
         1:u64 shift 1 - << =:: half
-        lowBits debug.printUX
-        half debug.printUX
-        ..dup .low debug.printUX
         lowBits half ..u> or lowBits half == and ..dup .low 1 & ? if
           i128.ONE + ## round up
         end
