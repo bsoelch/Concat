@@ -1535,7 +1535,7 @@ proc(
         context
       pushValue
       false return
-    atId getElement atElement
+    atId getElement atElement getEnumLabel
     getArrayElement atArrayElement setValue
     NewEnum call callPtr
     argc getArg implementProcedure procPtr

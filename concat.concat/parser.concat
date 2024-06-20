@@ -1729,6 +1729,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "..size" string.wrap string.eq _if ..drop
       fileState [] .wordStart opSize state appendOp
       return
+    else ..dup "..label" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opGetEnumLabel state appendOp
+      return
     else ..dup "..type.alignment" string.wrap string.eq or
          ..dup "..type.size" string.wrap string.eq or
          ..dup "..type.stride" string.wrap string.eq _if =:: opName

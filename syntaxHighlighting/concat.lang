@@ -121,7 +121,6 @@
           &lt;&lt;            |
           &gt;&gt;            |
           &gt;&gt;&gt;        |
-          addrOf              |
           new                 |
           cast                |
           cast!               |
@@ -130,6 +129,7 @@
           \.\.getArg          |
           \.\.length          |
           \.\.size            |
+          \.\.label           |
           \.\.unreachable
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>

@@ -85,3 +85,11 @@ overload: export: *
   f64.mult
 end
 ```
+
+## getEnumLabel
+
+Calling the `..label` on an enum will return the currently active label of that enum,
+the returned value will be a distinct integer value for each enum-element that stays the same of the lifetime of the program.
+<b>The compiler does not make any guarantess about the concrete type or value returned by `..label`</b>
+
+The intended use of `..label` is as a way to check if two enum values use the same label for comparisson and hashing of enums.

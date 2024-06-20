@@ -3394,6 +3394,30 @@ proc(
         dataPtrId sb.appendI
         '\n' sb.appendC
       return
+    getEnumLabel case
+      context [] .stackInfo @ branchTree.pop =:: srcVal?
+      srcVal? optional.isEmpty if
+        "stack underflow" sb.wrap
+        op [] .pos errors appendError
+        sb return
+      end
+      sb
+        op [] .pos sb.appendPosQBE
+        ## loadEnumLabel
+          op [] .dataType
+          srcVal? .data [] .varId
+          op [] .pos
+        context loadEnumLabel =:: labelType =:: labelId
+        context nextTmpId =:: c
+        "%s" sb.appendS
+        labelType context pushValue sb.appendI
+        " ="  sb.appendS
+        labelType sb.appendValTypeQBE
+        " copy " sb.appendS
+        " %t" sb.appendS
+        labelId sb.appendI
+        '\n' sb.appendC
+      return
     checkEnumLabel case
       context [] .stackInfo @ branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if

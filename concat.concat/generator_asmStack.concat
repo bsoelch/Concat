@@ -3076,7 +3076,7 @@ proc(
     Assert unreachable
     autoTypedInitializeId
     ConstantReference NewReference
-    typeInfo NewEnumReference
+    typeInfo NewEnumReference getEnumLabel
     compilerInfo getName atName getLabel
     atLabel length size typeModifier hasLabel hasName case
       break ## XXX error message

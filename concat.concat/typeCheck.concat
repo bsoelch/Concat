@@ -2262,6 +2262,32 @@ proc(
         state [] .stack @ topValue branchTree.push
       end
       return
+    getEnumLabel case
+      state [] .stack @ branchTree.peek =:: label?
+      label? optional.isEmpty if
+        "missing argument for operation " sb.wrap
+          op program sb.appendOp
+          " expected enum" sb.appendS
+        op .pos errors appendError
+        return
+      end
+      label? .data =:: label
+      label [] .valueType
+        typeContext types.unwrapReference
+      =:: enumType
+      enumType typeContext types.isEnum ! if
+        "wrong argument type for getEnumLabel expected enum got " sb.wrap
+          enumType typeContext sb.appendType
+        op .pos errors appendError
+      end
+      ## XXX compile-time evaluation
+      enumType @ array.wrap "getEnumLabel" string.wrap 0 op .pos state requireTypes if
+        ..drop return
+      end =:: argOffset
+      enumType op .dataType =
+      enumType typeContext types.enumLabelInfo ..drop ConstValue .none op state pushValue
+      false true 1 argOffset state updateOpInfo
+      return
     getElement atElement case
       break
     getArrayElement atArrayElement case ## TODO? extract to procedure

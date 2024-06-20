@@ -101,6 +101,7 @@ enum(
                Type : mut: Cast!
                Type : mut: bitCast
    EqualityOperator : equalityOperator
+                      getEnumLabel
                 i32 : checkEnumLabel
                 i32 : mut: setEnumLabel
                       copy
@@ -260,6 +261,9 @@ proc( FilePosition : pos -> Operation ) =>: export: opLength
 end
 proc( FilePosition : pos -> Operation ) =>: export: opSize
   OpValue .size Type .undefined pos Operation new return
+end
+proc( FilePosition : pos -> Operation ) =>: export: opGetEnumLabel
+  OpValue .getEnumLabel Type .undefined pos Operation new return
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .typeInfo t pos Operation new return
@@ -728,6 +732,11 @@ namespace: sb
             SIZE case "size" sb.appendS break
             STRIDE case "stride" sb.appendS break
           end
+          break
+        getEnumLabel case
+          "get enum label ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " )" sb.appendS
           break
         checkEnumLabel case
           "check enum label ( " sb.appendS

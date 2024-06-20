@@ -1,0 +1,10 @@
+enum( i32 : A B i64 : C ) =:: anEnum
+
+proc( -> ) =>: main
+  1 anEnum .A =:: a1
+  3 anEnum .A =:: a2
+  1 anEnum .C =:: c1
+  a1 ..label a2 ..label == assert "a1 and a2 have same label"
+  a1 ..label anEnum .B ..label != assert "a1 and anEnum .B do not have the same label"
+  a1 ..label c1 ..label != assert "a1 and c1 do not have the same label"
+end
