@@ -454,7 +454,7 @@ proc(
     struct union procIn procOut enum case
       ## TODO? allow matching value to union/enum element
       src typeContext types.unwrapNamed src =
-      src target != if
+      src ..label target ..label != if
         true return ## src and target have to be same type of composite
       end
       target typeContext types.compositeEltCount =:: targetCount
@@ -485,7 +485,7 @@ proc(
       false return
     procedure case
       src typeContext types.unwrapNamed src =
-      src target != if
+      src ..label target ..label != if
         true return
       end
       ## separately run for in and out arguments

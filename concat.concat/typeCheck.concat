@@ -533,7 +533,7 @@ proc( FilePosition : pos TypeCheckState ptr mut : state -> Type ) =>: popType
   state [] .stack @ branchTree.peek .data =:: typeInfo
   typeInfo [] .valueType =:: mut: valType
   valType typeContext types.unwrapReference valType =
-  valType types.primitive.TYPE != if
+  valType types.primitive.TYPE types.typeEquals ! if
     "expected type got " sb.wrap
       valType typeContext sb.appendType
     pos errors appendError
@@ -2549,6 +2549,11 @@ proc(
         op .pos errors appendError
         return
       end =:: argType
+      argType typeContext types.isEnum and
+          argType typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
+        "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.wrap
+        op .pos errors appendWarning
+      end
       argType params @ 0 [] =
       argType params @ 1 [] =
       argType op .dataType =

@@ -62,7 +62,7 @@ enum(
 
 namespace: types
   proc( Type : a Type : b -> bool ) =>: export: typeEquals
-    a b != if
+    a ..label b ..label != if
       false return
     end
     a switch

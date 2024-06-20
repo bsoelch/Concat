@@ -73,7 +73,7 @@ proc( ConstValue : union ConstantContext ptr : context -> ConstValue ) =>: expor
 end
 
 proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export: constantEquals
-  a b != if ##different constant types
+  a ..label b ..label != if ##different constant types
     false return
   end
   a switch

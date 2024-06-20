@@ -4783,7 +4783,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
       " = align " sb.appendS
       valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
-      idData [] .constValue ConstValue .none != if
+      idData [] .constValue .none ?? ! if
         valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
       else
         "z " sb.appendS
