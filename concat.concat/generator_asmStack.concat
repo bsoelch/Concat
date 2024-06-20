@@ -1909,6 +1909,16 @@ proc(
     SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
       asmOps X64_OP .SHL pos context appendBinaryOperator return
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break
+    EQ_I8 EQ_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETE pos context appendComparissonOperator return
+    EQ_I32 EQ_I64 EQ_PTR case
+      asmOps X64_OP .SETE pos context appendComparissonOperator return
+    NE_I8 NE_I16 case
+      ## TODO compare small values
+      asmOps X64_OP .SETNE pos context appendComparissonOperator return
+    NE_I32 NE_I64 NE_PTR case
+      asmOps X64_OP .SETNE pos context appendComparissonOperator return
     LT_I8 LT_I16 case
       ## TODO compare small values
       asmOps X64_OP .SETL pos context appendComparissonOperator return
@@ -1929,6 +1939,8 @@ proc(
       asmOps X64_OP .SETG pos context appendComparissonOperator return
     GT_I32 GT_I64 GT_PTR case
       asmOps X64_OP .SETG pos context appendComparissonOperator return
+    EQ_F32 EQ_F64 case break
+    NE_F32 NE_F64 case break
     LT_F32 LT_F64 case break
     LE_F32 LE_F64 case break
     GE_F32 GE_F64 case break

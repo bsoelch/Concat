@@ -1717,6 +1717,12 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "!=" string.wrap string.eq _if ..drop
       fileState [] .wordStart opNotEqual state appendOp
       return
+    else ..dup "===" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opEqual state appendOp
+      return
+    else ..dup "=!=" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opNotEqual state appendOp
+      return
     else ..dup "..argc" string.wrap string.eq _if ..drop
       fileState [] .wordStart opArgc state appendOp
       return

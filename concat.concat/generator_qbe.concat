@@ -2135,6 +2135,16 @@ proc(
         baseType false pos context extendArguments
         "ne" string.wrap baseVal pos context appendComparisonOperator
       return
+    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR case
+      sb
+        baseType true pos context extendArguments
+        "eq" string.wrap baseVal pos context appendComparisonOperator
+      return
+    NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR case
+      sb
+        baseType true pos context extendArguments
+        "ne" string.wrap baseVal pos context appendComparisonOperator
+      return
     LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR case
       sb
         baseType true pos context extendArguments

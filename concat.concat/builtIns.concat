@@ -22,11 +22,9 @@ enum(
  SHL_I8 SHL_I16 SHL_I32 SHL_I64                 ## <<
  ## comparison
  BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
- #+ XXX ? special handling for ==, !=  to support enum equality
- EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64       ## ==
- NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64       ## !=
- +#
  ## XXX? are the 16bit operations necessary
+ EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR ## ==
+ NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR ## !=
  LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR ## <
  LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR ## <=
  GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR ## >=
@@ -74,6 +72,10 @@ namespace: sb
         "<<" sb.appendS break
       BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
         "?" sb.appendS break
+      EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR  case
+        "==" sb.appendS break
+      NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR  case
+        "!=" sb.appendS break
       LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR  case
         "<" sb.appendS break
       LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR  case
@@ -872,6 +874,82 @@ proc(
     f64_bool
     bundle
   pos context addBuiltIn
+  "==" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
+  BuiltIn .EQ_I8
+    "i8"  "eq" pos labelContext createLabel
+    i8i8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_I16
+    "i16" "eq" pos labelContext createLabel
+    i16i16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_I32
+    "i32" "eq" pos labelContext createLabel
+    i32i32_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_I64
+    "i64" "eq" pos labelContext createLabel
+    i64i64_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_F32
+    "f32" "eq" pos labelContext createLabel
+    f32f32_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_F64
+    "f64" "eq" pos labelContext createLabel
+    f64f64_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_PTR
+    "ptr" "eq" pos labelContext createLabel
+    ptrCmp
+    bundle
+  pos context addGenericBuiltIn
+  "!=" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
+  BuiltIn .NE_I8
+    "i8"  "ne" pos labelContext createLabel
+    i8i8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_I16
+    "i16" "ne" pos labelContext createLabel
+    i16i16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_I32
+    "i32" "ne" pos labelContext createLabel
+    i32i32_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_I64
+    "i64" "ne" pos labelContext createLabel
+    i64i64_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_F32
+    "f32" "ne" pos labelContext createLabel
+    f32f32_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_F64
+    "f64" "ne" pos labelContext createLabel
+    f64f64_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_PTR
+    "ptr" "ne" pos labelContext createLabel
+    ptrCmp
+    bundle
+  pos context addGenericBuiltIn
   "<" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =

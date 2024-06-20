@@ -249,6 +249,20 @@ namespace: interpreter
       ASHR_I64 case args k i64.ashr @ binaryOperatorInt return
       SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
         args k i64.shl @ binaryOperatorInt return
+      EQ_I8 case args k i8.eq @ cmpOperatorInt return
+      EQ_I16 case args k i16.eq @ cmpOperatorInt return
+      EQ_I32 case args k i32.eq @ cmpOperatorInt return
+      EQ_I64 case args k i64.eq @ cmpOperatorInt return
+      EQ_F32 case args k f32.eq @ cmpOperatorFloat return
+      EQ_F64 case args k f64.eq @ cmpOperatorFloat return
+      EQ_PTR case break
+      NE_I8 case args k i8.ne @ cmpOperatorInt return
+      NE_I16 case args k i16.ne @ cmpOperatorInt return
+      NE_I32 case args k i32.ne @ cmpOperatorInt return
+      NE_I64 case args k i64.ne @ cmpOperatorInt return
+      NE_F32 case args k f32.ne @ cmpOperatorFloat return
+      NE_F64 case args k f64.ne @ cmpOperatorFloat return
+      NE_PTR case break
       LT_I8 case args k i8.lt @ cmpOperatorInt return
       LT_I16 case args k i16.lt @ cmpOperatorInt return
       LT_I32 case args k i32.lt @ cmpOperatorInt return
