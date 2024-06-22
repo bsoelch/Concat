@@ -93,3 +93,10 @@ the returned value will be a distinct integer value for each enum-element that s
 <b>The compiler does not make any guarantess about the concrete type or value returned by `..label`</b>
 
 The intended use of `..label` is as a way to check if two enum values use the same label for comparisson and hashing of enums.
+
+## Stack Modifiers
+
+`$` pushes a copy of the value that is currently on top of the stack
+`$k` (where `k` is any integer) pushes the k-th value on the stack (zero indexed from top)
+
+

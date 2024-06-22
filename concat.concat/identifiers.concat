@@ -384,6 +384,10 @@ namespace: id
       "identifier names cannot end with '@'" sb.wrap pos errors appendError
       true return
     end
+    id 0 string.charAt '$' == or id "_$" string.wrap string.startsWith if
+      "identifier names cannot start with `$` or `_$`" sb.wrap pos errors appendError
+      true return
+    end
     id '.' string.contains if
       "identifier names cannot contain '.'" sb.wrap pos errors appendError
       true return
