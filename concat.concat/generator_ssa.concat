@@ -1,0 +1,1451 @@
+#+
+compile concat to intermediate SSA language
++#
+import stringIO
+import numbers/floats
+
+import "program.concat"
+import "measure.concat"
+import "branchTree.concat"
+
+## TODO move SSA data to own file
+namespace: ssa
+  enum(
+    START NEXT ERROR
+    IF ELSE END_IF
+    WHILE CONTINUE_WHILE END_WHILE
+    CASE DEFAULT END_SWITCH
+  ) =:: BranchType
+  struct(
+    BranchType : branchType
+    i32 : blockId
+    i32 : subId
+  ) =:: BranchLabel
+
+  enum(
+    EMPTY I8 I16 I32 I64 F32 F64 PTR REFERENCE
+    BITS32 BITS64 BITS128 BITS128L BITS128H
+    BITSF32 BITSF64 BITSFF128 BITSIF128 BITSFI128 BITSF128L BITSF128H
+    ## XXX? V32 V64 V128 : 32/64/128 bit vector-types
+  ) =:: ValueType
+
+  enum(
+    ## memory
+    RENAME ALLOC COPY LOAD STORE
+    ## arirthmetic&logic
+    NEG ADD SUB MUL UMUL DIV UDIV REM UREM
+    DIV_REM UDIV_REM ## merged instructions
+    NOT AND OR XOR
+    SHL SHR SAR
+    ## comparisson & controll flow
+    LT LE GE GT EQ NE ULT ULE UGE UGT
+    ## conversions
+    EXTZ EXTS EXTF TRUNCF ## resize numbers
+    UITOF ITOF FTOI FTOUI ## (u) int <-> float
+  ) =:: OperationType
+
+  i64 =:: VariableId
+  i64 =:: ArgumentId
+  enum(
+    empty
+    i64 : value
+    VariableId : variable
+    ArgumentId : argument
+    LabelId : localVariable
+    LabelId : globalVariable
+  ) =:: Operand
+  
+  proc( Operand : a Operand : b -> bool ) =>: valueEqual ## XXX? better name
+    a ..label b ..label != if false return end
+    a switch
+      empty case true return
+      value case a .value b .value == return
+      variable case a .variable b .variable == return
+      argument case a .argument b .argument == return
+      localVariable case
+        a .localVariable b .localVariable == return
+      globalVariable case
+        a .globalVariable b .globalVariable == return
+    end
+  end
+  
+  ## TODO? remember operand size [I8,I16,I32,I64,I128,F16,F32,F64,F128]
+  struct(
+    OperationType : opType
+    Operand : resultId
+    Operand 3 array : operands
+  ) =:: SSAOperation
+  
+  struct(
+    BranchLabel : label
+    Operand : value
+  ) =:: LabeledVariable
+  struct(
+    ValueType : valType
+    i64 : value ## XXX? allow 128bit values
+  ) =:: TypedValue
+  struct(
+    i64 : value
+    BranchLabel : label
+  ) =:: CaseLabel
+  struct(
+    ValueType : valType
+    Operand : value
+  ) =:: CallArgument
+  struct(
+    ## TODO global name -> GlobalValue arrayView ## list-slices of: pairs of form value: count
+    TypedValue list : mut: globalData
+    LabeledVariable list : mut: phiData
+    CallArgument list : mut: callArguments
+    CaseLabel list : mut: caseLabels
+  ) =:: SSAContext
+  proc( -> SSAContext ) =>: createContext
+    ## SSAContext
+      64 TypedValue list.create
+      64 LabeledVariable list.create
+      64 CallArgument list.create
+      64 CaseLabel list.create
+    SSAContext new
+  end
+  proc( SSAContext : context -> ) =>: freeContext
+    context .globalData list.free ..drop
+    context .phiData list.free ..drop
+    context .callArguments list.free ..drop
+    context .caseLabels list.free ..drop
+  end
+
+  enum(
+    ANY
+    LT LE GE GT EQ NE ULT ULE UGE UGT
+  ) =:: JumpType
+  struct(
+    BranchLabel : target
+    JumpType : jumpType
+  ) =:: Jump
+
+  struct(
+    BranchLabel : defaultCase
+    i64 : offset
+    i64 : argCount
+  ) =:: Switch
+
+  struct(
+    Operand : result
+    Operand : function
+    i64 : offset
+    i64 : argCount
+  ) =:: Call
+  
+  struct(
+    Operand : result
+    ValueType : valueType
+    i64 : offset
+    i64 : argCount
+  ) =:: Phi
+  
+  namespace: phi
+    proc(
+      Operand : res
+      ValueType : valueType
+      SSAContext ptr : context
+    -> Phi ) =>: create
+      ## Phi
+        res
+        valueType
+        context .phiData .length []
+        0
+      Phi new return
+    end
+    proc(
+      Phi : base
+      BranchLabel : label
+      Operand : value
+      SSAContext ptr mut : context
+    -> Phi ) =>: addBranch
+      base .offset base .argCount +
+          context .phiData .length []
+      == assert "uninterrupted memory section"
+      context .phiData []
+        ## LabeledVariable
+          label
+          value
+        LabeledVariable new list.append      
+      context .phiData [] =
+      ## Phi
+        base .result
+        base .valueType
+        base .offset
+        base .argCount 1 +
+      Phi new return
+    end
+  end
+
+  i64 =:: BranchId
+  enum(
+    empty
+    SSAOperation : operation
+    BranchLabel : branchLabel
+    Call : call
+    Jump : jump
+    Switch : switchTable
+    Phi : phi
+  ) =:: Atom
+
+  proc( OperationType : opName Operand : target -> SSAOperation ) =>: createNilary
+    Operand 3 array new =:: mut: args
+    ## SSAOperation
+      opName
+      target
+      args
+    SSAOperation new
+  end
+  proc( OperationType : opName Operand : target Operand : op1 -> SSAOperation ) =>: createUnary
+    Operand 3 array new =:: mut: args
+    op1 args @ 0 [] =
+    ## SSAOperation
+      opName
+      target
+      args
+    SSAOperation new
+  end
+  proc(
+    OperationType : opName
+    Operand : target
+    Operand : op1
+    Operand : op2
+  -> SSAOperation ) =>: createBinary
+    Operand 3 array new =:: mut: args
+    op1 args @ 0 [] =
+    op2 args @ 1 [] =
+    ## SSAOperation
+      opName
+      target
+      args
+    SSAOperation new
+  end
+  proc(
+    OperationType : opName
+    Operand : target
+    Operand : op1
+    Operand : op2
+    Operand : op3
+  -> SSAOperation ) =>: createTrinary
+    Operand 3 array new =:: mut: args
+    op1 args @ 0 [] =
+    op2 args @ 1 [] =
+    op3 args @ 2 [] =
+    ## SSAOperation
+      opName
+      target
+      args
+    SSAOperation new
+  end
+  
+  proc(
+    stringBuilder : sb
+    BranchLabel : label
+  -> stringBuilder ) =>: appendBranchLabel
+    sb
+      '@' sb.appendC
+      label .branchType switch        
+        START case "start" sb.appendS break
+        NEXT case "next" sb.appendS break
+        ERROR case "error" sb.appendS break
+        IF case "if" sb.appendS break
+        ELSE case "else" sb.appendS break
+        END_IF case "endIf" sb.appendS break
+        WHILE case "while" sb.appendS break
+        CONTINUE_WHILE case "continueWhile" sb.appendS break
+        END_WHILE case "endWhile" sb.appendS break
+        CASE case "case" sb.appendS break
+        DEFAULT case "default" sb.appendS break
+        END_SWITCH case "endSwitch" sb.appendS break
+      end
+      label .blockId -1 == if return end
+      label .blockId sb.appendI
+      label .subId -1 != if
+        '_' sb.appendC
+        label .subId sb.appendI
+      end
+    return
+  end
+  proc(
+    stringBuilder
+    Operand : arg 
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendOperand
+    arg switch
+      empty case break
+      value case arg .value sb.appendI break
+      variable case
+        "%v" sb.appendS arg .variable i64 cast sb.appendI break
+      argument case
+        "%a" sb.appendS arg .argument i64 cast sb.appendI break
+      localVariable case
+        "%l" sb.appendS arg .localVariable i64 cast sb.appendI break
+      globalVariable case ## TODO append global variables by name
+        "$g" sb.appendS arg .globalVariable i64 cast sb.appendI break
+    end
+  end
+  proc(
+    stringBuilder : sb
+    SSAOperation : op
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendOp
+    sb
+      "%v" sb.appendS
+      op .resultId labelContext appendOperand
+      " = " sb.appendS
+      op .opType switch
+        RENAME case "rename " sb.appendS break
+        ALLOC  case "alloc " sb.appendS break
+        LOAD   case "load " sb.appendS break
+        STORE  case "store " sb.appendS break
+        COPY   case "copy " sb.appendS break
+        NEG case "neg " sb.appendS break
+        ADD case "add " sb.appendS break
+        SUB case "sub " sb.appendS break
+        MUL case "mul " sb.appendS break
+        UMUL case "umul " sb.appendS break
+        DIV case "div " sb.appendS break
+        UDIV case "udiv " sb.appendS break
+        REM case "rem " sb.appendS break
+        UREM case "urem " sb.appendS break
+        DIV_REM case "divRem " sb.appendS break
+        UDIV_REM case "udivRem " sb.appendS break
+        NOT case "not " sb.appendS break
+        AND case "and " sb.appendS break
+        OR  case "or " sb.appendS break
+        XOR case "xor " sb.appendS break
+        SHL case "shl " sb.appendS break
+        SHR case "shr " sb.appendS break
+        SAR case "sar " sb.appendS break
+        LT case "lt " sb.appendS break
+        LE case "le " sb.appendS break
+        GE case "ge " sb.appendS break
+        GT case "gt " sb.appendS break
+        EQ case "eq " sb.appendS break
+        NE case "ne " sb.appendS break
+        ULT case "ult " sb.appendS break
+        ULE case "ule " sb.appendS break
+        UGE case "uge " sb.appendS break
+        UGT case "ugt " sb.appendS break
+        ITOF case "iTOf " sb.appendS break
+        UITOF case "uiTOf " sb.appendS break
+        FTOI case "fTOi " sb.appendS break
+        FTOUI case "fTOui " sb.appendS break
+        EXTZ case "extz " sb.appendS break
+        EXTS case "exts " sb.appendS break
+        EXTF case "extf " sb.appendS break
+        TRUNCF case "truncf " sb.appendS break
+      end
+      false =:: mut: needComma
+      op .operands =:: args
+      0 while ..dup args ..length < do =:: i
+        args @ i [] =:: arg
+        arg .empty ?? if
+          i 1 + continue
+        end
+        needComma if
+          ", " sb.appendS
+          false needComma =
+        end
+        arg labelContext appendOperand
+        true needComma =
+        i 1 +
+      end ..drop
+      '\n' sb.appendC
+    return
+  end
+  proc(
+    stringBuilder : sb
+    Atom : atom
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendToSb
+    atom switch
+      empty case sb "  ## empty\n" sb.appendS return
+      operation case sb "  " sb.appendS atom .operation labelContext appendOp return
+      branchLabel case
+          sb atom .branchLabel appendBranchLabel
+          ":\n" sb.appendS
+        return
+      ## TODO implement appendToSb for call,jump,switch and phi
+      call case ..unreachable
+      jump case ..unreachable
+      switchTable case ..unreachable
+      phi case ..unreachable
+    end
+  end
+end
+
+namespace: sb
+  proc(
+    stringBuilder : sb
+    ssa.ValueType : val
+  -> stringBuilder ) =>: appendValueType
+    sb
+      val switch
+        EMPTY case "?" sb.appendS break
+        I8  case "i8"  sb.appendS break
+        I16 case "i16" sb.appendS break
+        I32 case "i32" sb.appendS break
+        I64 case "i64" sb.appendS break
+        F32 case "f32" sb.appendS break
+        F64 case "f64" sb.appendS break
+        PTR case "pointer" sb.appendS break
+        REFERENCE case "reference" sb.appendS break
+        BITS32 case "bits32" sb.appendS break
+        BITSF32 case "bitsF32" sb.appendS break
+        BITS64 case "bits64" sb.appendS break
+        BITSF64 case "bitsF64" sb.appendS break
+        BITS128 case "bits128" sb.appendS break
+        BITSFF128 case "bitsFF128" sb.appendS break
+        BITSIF128 case "bitsIF128" sb.appendS break
+        BITSFI128 case "bitsFI128" sb.appendS break
+        BITS128L case "bits128:L" sb.appendS break
+        BITS128H case "bits128:H" sb.appendS break
+        BITSF128L case "bitsF128:L" sb.appendS break
+        BITSF128H case "bitsF128:H" sb.appendS break
+      end
+    return
+  end
+end
+
+struct(
+  branchTree.NodeId list : mut: ififBranches
+  i64 : mut: ifBranchCodeOffset
+  branchTree.NodeId : branchRoot
+  branchTree.NodeId : mut: ifBranch
+  i32 : blockId
+  bool : mut: ifBranchTerminates
+) =:: IfBlockInfo
+struct(
+  branchTree.NodeId list : mut: caseBranches
+  i64 list : mut: caseCodeOffsets
+  branchTree.NodeId : branchRoot
+  i32 : blockId
+) =:: SwitchBlockInfo
+struct(
+  branchTree.NodeId list : mut: continueBranches
+  i64 list : mut: continueCodeOffsets
+  branchTree.NodeId list : mut: breakBranches
+  i64 list : mut: breakCodeOffsets
+  branchTree.NodeId : branchRoot
+  i32 : blockId
+) =:: WhileBlockInfo
+
+enum(
+  IfBlockInfo : mut: If
+  SwitchBlockInfo : mut: Switch
+  WhileBlockInfo : mut: While
+) =:: BlockInfo
+
+namespace: sb
+  proc( stringBuilder BlockInfo -> stringBuilder ) =>: appendBlockInfo
+    switch
+      If case "if-else block" sb.appendS return
+      Switch case "switch-case block" sb.appendS return
+      While case "while block" sb.appendS return
+    end
+  end
+end
+
+struct(
+  Type       : valType
+  ConstValue : value
+  FilePosition : pos
+  i64 : id
+) =:: LocalConst
+
+struct(
+  ssa.Operand : varId
+  ssa.ValueType : valueType
+) =:: StackElement
+
+struct(
+  ssa.SSAContext : mut: ssaContext
+  ProgramContext ptr mut : program
+  StackElement BranchTree : mut: stackInfo
+  BlockInfo list : mut: openBlocks
+  LocalConst list : mut: localConstants
+  StringConstant list : mut: stringConstants
+  Type : mut: currentProc
+  i64 : mut: localConstCount
+  i64 : mut: stackCount
+  i64 : mut: tmpCount
+  i32 : mut: jumpLabelCount
+  bool : mut: reachable
+) =:: CompilerContext
+
+## TODO stack management
+proc( FilePosition CompilerContext ptr mut -> ssa.ValueType ssa.Operand ) =>: popValue
+  ..unreachable
+end
+proc( ssa.ValueType FilePosition CompilerContext ptr mut -> ssa.Operand ) =>: pushValue
+  ..unreachable
+end
+proc( CompilerContext ptr mut -> ssa.Operand ) =>: nextValueId
+  ..unreachable
+end
+
+struct(
+  string : blockName
+  i32 : blockId
+  ssa.BranchLabel arrayView : branchLabels
+  FilePosition : pos
+  CompilerContext ptr mut : context
+  ssa.Atom list ptr mut : out
+) =:: MergePoint
+proc(
+  StackElement ptr arrayView : toMerge
+  i64 : offset
+  MergePoint : mergePoint
+-> StackElement ) =>: mergeBranches
+  mergePoint .context =:: context
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  program [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  toMerge 0 array.get =:: rootValue
+  rootValue [] .varId =:: rootId
+  true =:: mut: isMerged
+  1 while ..dup toMerge .length < do =:: i
+    toMerge i array.get [] .varId rootId ssa.valueEqual if
+      false isMerged =
+      i break
+    end
+    i 1 +
+  end ..drop
+  isMerged if
+    rootValue [] return
+  end
+  1 while ..dup toMerge .length < do =:: i
+    toMerge i array.get [] .valueType rootValue [] .valueType != if
+      "branches of " sb.wrap
+         mergePoint .blockName sb.appendStr
+         "-statement are out of sync expected: " sb.appendS
+         rootValue [] .valueType sb.appendValueType
+         " got: " sb.appendS
+         toMerge i array.get [] .valueType sb.appendValueType
+      mergePoint .pos errors appendError
+      i break
+    end
+    i 1 +
+  end ..drop
+  context nextValueId =:: newId
+  mergePoint .out []
+    ## phi
+      newId
+      rootValue [] .valueType
+    context .ssaContext ssa.phi.create
+      0 while ..dup toMerge .length < do =:: i
+        ## phi.addBranch
+          mergePoint .branchLabels i array.get
+          toMerge i array.get [] .varId
+        context .ssaContext ssa.phi.addBranch
+        i 1 +
+      end ..drop
+    ssa.Atom .phi list.append
+  mergePoint .out [] =
+  ## StackElement
+    newId
+    rootValue [] .valueType
+  StackElement new return
+end
+
+proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
+  context [] .openBlocks
+    block list.append
+  context [] .openBlocks =
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openIfBlock
+  ## IfBlockInfo
+    8 branchTree.NodeId list.create
+      context [] .stackInfo @ branchTree.startBranch list.append
+    -1
+    context [] .stackInfo @ branchTree.startBranch
+    -1 branchTree.NodeId cast
+    blockId
+    false
+  IfBlockInfo new BlockInfo .If context openBlock
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openSwitchBlock
+  ## SwitchBlockInfo
+    16 branchTree.NodeId list.create
+    16 i64 list.create
+    context [] .stackInfo @ branchTree.startBranch
+    blockId
+  SwitchBlockInfo new BlockInfo .Switch context openBlock
+end
+proc(
+  i32 : blockId
+  CompilerContext ptr mut : context
+-> ) =>: openWhileBlock
+  ## WhileBlockInfo
+    8 branchTree.NodeId  list.create
+    8 i64 list.create
+    8 branchTree.NodeId  list.create
+    8 i64 list.create
+    context [] .stackInfo @ branchTree.startBranch
+    blockId
+  WhileBlockInfo new BlockInfo .While context openBlock
+end
+
+proc(
+  BlockType : breakType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> BlockInfo ptr mut optional ) =>: findBreakableBlock
+  context [] .program =:: program
+  program [] .errors @ =:: errors
+  context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
+    context [] .openBlocks i list.at .data =:: block
+    breakType .BREAK ?? and block [] .While ?? if
+      block optional.wrap return
+    end
+    breakType .CONTINUE ?? and block [] .While ?? if
+      block optional.wrap return
+    end
+    breakType .BREAK_SWITCH ?? and block [] .Switch ?? if
+      block optional.wrap return
+    end
+    i 1 -
+  end ..drop
+  60 sb.create
+    breakType sb.appendBlockType
+    " can only appear in loops " sb.appendS
+    breakType .BREAK_SWITCH ?? if
+      "and switch-case statements" sb.appendS
+    end
+  pos errors appendError
+  BlockInfo ptr mut optional.empty return
+end
+
+proc(
+  Type : t
+  TypeContext ptr mut : typeContext
+-> ssa.ValueType ) =>: toValueType
+  using ssa
+  t switch
+    namedType case
+      t
+        typeContext types.unwrapNamed
+      typeContext toValueType return
+    generatedType case
+      t
+        typeContext types.getGeneratedType
+      typeContext toValueType return
+    primitiveType case
+      t .primitiveType switch
+        TYPE case ValueType .EMPTY return
+        BOOL I8 I16 I32 S8 S16 S32 U8 U16 U32 case
+          ValueType .I32 return
+        I64 S64 U64 case ValueType .I64 return
+        F32 case ValueType .F32 return
+        F64 case ValueType .F64 return
+      end
+      break
+    cType case
+      t .cType
+        types.cTypeAsType
+      typeContext toValueType return
+      break
+    arrayIndex case
+      ValueType .I64 return
+    pointer case
+      ValueType .PTR return
+    arrayType struct union enum case
+      t typeContext types.sizeOf =:: size
+      size .fixed ?? if ## TODO detect floats
+        size .fixed 4 <= if
+          ValueType .BITS32 return
+        else size .fixed 8 <= _if
+          ValueType .BITS64 return
+        else size .fixed 16 <= _if
+          ValueType .BITS128 return
+        end
+      end
+      ValueType .REFERENCE return
+    reference mutableReference procedure case
+      ValueType .REFERENCE return
+    undefined empty genericType autoType
+    procIn procOut case
+      ValueType .EMPTY return
+  end
+end
+
+
+proc(
+  ssa.Atom list : asmOps
+  Type : constType
+  ConstValue : value
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: pushConstant
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  constType typeContext toValueType =:: valType
+  ..unreachable
+end
+
+proc(
+  ssa.Atom list : ops
+  Type : src
+  Type : target
+  ## TODO pass source/target registers
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: castNumbers
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  src typeContext types.primitiveValue =:: fromVal
+  target typeContext types.primitiveValue =:: toVal
+  fromVal toVal == if
+    ## TODO move value if source and target register are different
+    ops return ## identical types -> no change
+  end
+  src typeContext types.isInt target typeContext types.isInt & if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
+    targetPrec srcPrec <= if
+      ops return ## downcast -> nothing to do
+    else
+      ops
+        ## ssa.createUnary
+          src typeContext types.isUnsignedInt if
+            ssa.OperationType .EXTZ ## u -> i,s,u
+          else src typeContext types.isSignedInt ! and
+              target typeContext types.isUnsignedInt _if
+            ssa.OperationType .EXTZ ## i -> u
+          else ## s -> i,s,u / i -> i,s
+            ssa.OperationType .EXTS
+          end
+          ## TODO source&target id, sizes
+          -1:ssa.VariableId ssa.Operand .variable
+          -1:ssa.VariableId ssa.Operand .variable
+        ssa.createUnary ssa.Atom .operation list.append
+      return
+    end
+  ## case 2: float -> float/int
+  else fromVal .F32 ?? or fromVal .F64 ?? _if
+    toVal switch ## TODO handle overflow in float->int conversion
+      F32 case
+        ## TODO F64 -> F32
+        ## TRUNCF
+        break
+      F64 case
+        ## TODO F32 -> F64
+        ## EXTF
+        break
+      I8 I16 I32 I64 S8 S16 S32 S64 case
+        ## TODO float -> int
+        ## 1. FTOI
+        ## 2. truncate to correct size
+        break
+      U8 U16 U32 U64 case
+        ## TODO float -> uint
+        ## 1. FTOUI
+        ## 2. truncate to correct size
+        break
+      BOOL TYPE case ..unreachable
+    end
+  ## case 3: int -> float
+  else ## TODO sign/zero extend 8&16 bit types before conversion
+    ## TODO int -> float
+    ## 1. sign/zero extend to 64-bits
+    ## 2. ITOF / UITOF
+  end
+  "unsupported cast:" sb.wrap
+  src typeContext sb.appendType
+  " to " sb.appendS
+  target typeContext sb.appendType
+  pos errors appendError
+  ops return
+end
+
+proc(
+   ssa.Atom list : ops
+  Type : src
+  Type : target
+  ## TODO source/target register
+  FilePosition : pos
+  CompilerContext ptr mut : context
+->  ssa.Atom list ) =>: bitcastNumbers
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  src typeContext types.primitiveValue =:: fromVal
+  target typeContext types.primitiveValue =:: toVal
+  ## sizes of arguments scaled to bits
+  fromVal types.sizeOfPrimitive 8 * =:: fromSize
+  toVal types.sizeOfPrimitive 8 * =:: toSize
+  ## TODO move if source and target registers are different
+  fromVal toVal == if
+    ops return
+  end
+  ## XXX? support for bit-casts between small structures
+  ## TODO implement bit-cast
+  ## 1. move float->int
+  ## 2. zero extend/truncate to right number of bits
+  ## 3. move int > float
+  ## XXX? is is possible to zero-extend a 32-bit float in place
+  "unsupported bit-cast:" sb.wrap
+  src typeContext sb.appendType
+  " to " sb.appendS
+  target typeContext sb.appendType
+  pos errors appendError
+  ops return
+end
+
+enum( autoCast Cast Cast! bitCast ) =:: CastType
+proc(
+   ssa.Atom list : ops
+  CastType : castType
+  Type : src0
+  i32 : offset
+  Type : target0
+  FilePosition : pos
+  CompilerContext ptr mut : context
+->  ssa.Atom list ) =>: compileCast
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  ## XXX? better cType <-> type conversion
+  src0 typeContext types.unwrapNamed
+    ..dup .cType ?? if .cType types.cTypeAsType end
+  =:: src
+  target0 typeContext types.unwrapNamed
+    ..dup .cType ?? if .cType types.cTypeAsType end
+  =:: target
+  src target types.typeEquals if
+    ops return ## nothing to do
+  end
+  ## TODO correctly update registers
+  ## ! handle stack shifts for size changes
+  src typeContext types.isNumber target .arrayIndex ?? & if
+    ## isNumber returns true for array index
+    ##   -> have to check for cast to array index before checking for cast to number
+    ops
+      ## castNumbers
+        src
+        types.primitive.I_SIZE
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+      target typeContext types.getArraySize 0 array.get =:: size
+      ## TODO check index
+    return
+  end
+  src typeContext types.isNumber target typeContext types.isNumber & if
+    ops
+      src
+      target
+    pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
+  end
+  src typeContext types.isPointer target typeContext types.isPointer & if
+    ops return ## nothing to do
+  end
+  src typeContext types.isInt target typeContext types.isPointer & if
+    ## src -> I_PTR ~ ptr
+    ops
+      ## castNumbers
+        src
+        types.primitive.I_PTR
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
+  end
+  src typeContext types.isPointer target typeContext types.isInt & if
+    ## ptr ~ I_PTR -> target
+    ops
+      ## castNumbers
+        types.primitive.I_PTR
+        target
+      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    return
+  end
+  src typeContext types.isReference and target typeContext types.isReference ! if
+    src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
+    ops
+      ## 1. load reference
+      ## 2. cast value
+      baseType target types.typeEquals ! if
+        ## compileCast
+          castType
+          baseType
+          offset
+          target
+          pos
+          context
+        compileCast
+      end
+    return
+  end
+  target typeContext types.isUnion if
+    ## TODO check if source is subset of union
+    ops
+      ## TODO convert source to union
+    return
+  end
+  "casting from " sb.wrap
+    src typeContext sb.appendType
+    " to " sb.appendS
+    target typeContext sb.appendType
+    " is not implemented" sb.appendS
+  pos errors appendError
+  ops return
+end
+
+proc(
+  ssa.Atom list : ops
+  ssa.OperationType : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+->  ssa.Atom list ) =>: appendUnaryOperator
+  context [] .stackInfo branchTree.depth 1 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    ops return
+  end
+  ops
+    pos context popValue =:: varId =:: valType
+    ## ssa.createUnary
+      opType
+      valType pos context pushValue
+      varId
+    ssa.createUnary ssa.Atom .operation list.append
+  return
+end
+
+proc(
+  ssa.Atom list : ops
+  ssa.OperationType : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: appendBinaryOperator
+  context [] .program [] .errors @ =:: errors
+  context [] .stackInfo branchTree.depth 2 < if
+    "stack underflow" sb.wrap
+    pos errors appendError
+    ops return
+  end
+  ops
+    pos context popValue =:: arg2 =:: arg2Type
+    pos context popValue =:: arg1 =:: arg1Type
+    arg1Type arg2Type != if
+      "incompatible argument types: " sb.wrap
+        arg1Type sb.appendValueType
+        " and " sb.appendS
+        arg2Type sb.appendValueType
+      pos errors appendError
+    end
+    ## ssa.createBinary
+      opType
+      arg1Type pos context pushValue
+      arg1
+      arg2
+    ssa.createBinary ssa.Atom .operation list.append
+    ## XXX! determine target register of operation
+  return
+end
+
+
+proc(
+  ssa.Atom list : ops
+  ssa.OperationType : compType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: appendComparissonOperator
+  context [] .program .errors =:: errors
+  context [] .stackInfo branchTree.depth 2 < if
+    "stack underflow" sb.wrap
+    pos context [] .program [] .errors @ appendError
+    ops return
+  end
+  ops
+    pos context popValue =:: arg2 =:: arg2Type
+    pos context popValue =:: arg1 =:: arg1Type
+    arg1Type arg2Type != if
+      "incompatible argument types: " sb.wrap
+        arg1Type sb.appendValueType
+        " and " sb.appendS
+        arg2Type sb.appendValueType
+      pos errors appendError
+    end
+    ## asm.createUnary
+      compType
+      ssa.ValueType .I8 pos context pushValue
+      arg1
+      arg2
+    ssa.createBinary ssa.Atom .operation list.append
+  return
+end
+proc(
+  ssa.Atom list : ops
+  BuiltIn : builtIn
+  Type : opType
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: appendBuiltIn
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  opType typeContext types.getProcIn ..drop =:: inType
+  inType 0 typeContext types.compositeGetLabel
+      labelContext id.labelFlags id.FLAG_STATIC & ? if
+    1
+  else
+    0
+  end =:: firstArg
+  inType firstArg typeContext types.compositeGetElement =:: baseType
+  builtIn switch
+    NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
+      ops ssa.OperationType .NEG pos context appendUnaryOperator return
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+      ops ssa.OperationType .ADD pos context appendBinaryOperator return
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+      ops ssa.OperationType .SUB pos context appendBinaryOperator return
+    ## TODO pointer scaling
+    ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT PTR_DIFF case break
+    MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
+      ops ssa.OperationType .MUL pos context appendBinaryOperator return
+    DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+      ops ssa.OperationType .DIV pos context appendBinaryOperator return
+    REM_I32 REM_I64 case
+      ops ssa.OperationType .REM pos context appendBinaryOperator return
+    UDIV_I32 UDIV_I64 case
+      ops ssa.OperationType .UDIV pos context appendBinaryOperator return
+    UMOD_I32 UMOD_I64 case
+      ops ssa.OperationType .UREM pos context appendBinaryOperator return
+    FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+      ops ssa.OperationType .NOT pos context appendUnaryOperator return
+    NOT_BOOL case break ## TODO NOT <b> -> <b> xor 1
+    AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
+      ops ssa.OperationType .AND pos context appendBinaryOperator return
+    OR_BOOL OR_I8 OR_I16 OR_I32 OR_I64 case
+      ops ssa.OperationType .OR pos context appendBinaryOperator return
+    XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+      ops ssa.OperationType .XOR pos context appendBinaryOperator return
+    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+      ops ssa.OperationType .SHR pos context appendBinaryOperator return
+    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+      ops ssa.OperationType .SAR pos context appendBinaryOperator return
+    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+      ops ssa.OperationType .SHL pos context appendBinaryOperator return
+    BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break ## TODO BOOL <x> -> ne <x> 0
+    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_PTR EQ_F32 EQ_F64 case
+      ops ssa.OperationType .EQ pos context appendComparissonOperator return
+    NE_I8 NE_I16 NE_I32 NE_I64 NE_PTR NE_F32 NE_F64 case
+      ops ssa.OperationType .NE pos context appendComparissonOperator return
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR LT_F32 LT_F64 case
+      ops ssa.OperationType .LT pos context appendComparissonOperator return
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_PTR LE_F32 LE_F64 case
+      ops ssa.OperationType .LE pos context appendComparissonOperator return
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_PTR GE_F32 GE_F64 case
+      ops ssa.OperationType .GE pos context appendComparissonOperator return
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR GT_F32 GT_F64 case
+      ops ssa.OperationType .GT pos context appendComparissonOperator return
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
+      ops ssa.OperationType .ULT pos context appendComparissonOperator return
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
+      ops ssa.OperationType .ULE pos context appendComparissonOperator return
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
+      ops ssa.OperationType .UGE pos context appendComparissonOperator return
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
+      ops ssa.OperationType .UGT pos context appendComparissonOperator return
+  end
+  "unable to compile built-in: " sb.wrap
+    builtIn sb.appendBuiltIn
+  pos errors appendError
+  ops return
+end
+
+proc(
+  ssa.Atom list : ops
+  Operation ptr : op
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: compileOp
+  context [] .program =:: prog
+  prog [] .errors @ =:: errors
+  prog [] .idContext @ =:: idContext
+  idContext [] .constContext @ =:: constContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  op [] .val switch
+    NOP case
+      ops return
+    Constant case
+      ops
+        op [] .dataType
+        op [] .val .Constant
+        op [] .pos
+        context
+      pushConstant
+      return
+    implementProcedure case
+      op [] .val .implementProcedure =:: implId
+      prog [] .procedures implId .procId i64 cast list.at .data =:: procData
+      implId .implementationId 0 >= if
+        procData [] .implementation .code .implementations
+          implId .implementationId list.at .data =:: impl
+        impl [] .variables
+        impl [] .procType
+      else
+        procData [] .implementation .code .variables
+        procData [] .procType
+      end =:: procType =:: variables
+      procType typeContext types.getProcIn
+        ! assert "procedure has arguments"
+      =:: inType
+      procType typeContext types.getProcOutArgs
+        ! assert "procedure has arguments"
+      =:: outArgs
+      procType typeContext types.getProcRet
+        ! assert "procedure has arguments"
+      =:: retType
+      inType typeContext types.compositeEltArray =:: inTypes
+      inTypes .length =:: argCount
+      ops
+        ## TODO marker for procedure start
+        ## declare local variables
+        0 while ..dup variables .length < do =:: i
+          variables i list.get =:: varInfo
+          varInfo .varType typeContext types.alignOf =:: varAlignment
+          varInfo .varType typeContext types.sizeOf =:: varSize
+          varSize switch
+            fixed case
+              ## ssa.createBinary
+                ssa.OperationType .ALLOC
+                varInfo .label ssa.Operand .localVariable
+                varAlignment .fixed ssa.Operand .value
+                varSize .fixed ssa.Operand .value
+              ssa.createBinary ssa.Atom .operation list.append
+              break
+            dynamicArray case
+              "dymnamic-size arrays are not supported" sb.wrap
+              op [] .pos errors appendError
+              break
+            unknown case
+              "could not determine size of type:" sb.wrap
+                varInfo .varType typeContext sb.appendType
+              op [] .pos errors appendError
+              break
+          end
+          i 1 +
+        end ..drop
+        ## load procedure arguments
+        0 while ..dup argCount < do =:: i
+          inType i typeContext types.compositeGetLabel =:: eltLabel
+          inTypes i array.get =:: eltType
+          eltType typeContext toValueType =:: valueType
+          eltLabel id.LABEL_ID_NONE == if
+            ## ssa.createUnary
+              ssa.OperationType .RENAME
+              valueType op [] .pos context pushValue
+              i ssa.ArgumentId cast ssa.Operand .argument
+            ssa.createUnary ssa.Atom .operation list.append
+            i 1 + continue
+          end
+          ## ssa.createBinary
+            valueType .REFERENCE ?? if
+                ssa.OperationType .COPY
+            else
+                ssa.OperationType .STORE
+            end
+            ssa.Operand .empty
+            eltLabel ssa.Operand .localVariable
+            i ssa.ArgumentId cast ssa.Operand .argument
+          ssa.createBinary ssa.Atom .operation list.append
+          i 1 +
+        end ..drop
+      return
+    declareId case
+      ## all variables declarations are handled at start of procedure
+      ops return
+    initializeId case
+      op [] .val .initializeId =:: idInfo
+      ## TODO implement initializeId,atId getId  ...
+      break
+    atId getId case
+      op [] .val .atId ?? =:: isPtr
+      isPtr if
+        op [] .val .atId
+      else
+        op [] .val .getId
+      end =:: idInfo
+      break
+    setValue procPtr
+    getArrayElement atArrayElement
+    getElement atElement case break
+    copy case break
+    New NewEnum
+    checkEnumLabel setEnumLabel hasElement
+    autoCast Cast Cast! bitCast
+    call callPtr case break
+    builtIn case
+      ops
+        op [] .val .builtIn
+        op [] .dataType
+        op [] .pos
+        context
+      appendBuiltIn
+      return
+    equalityOperator
+    argc getArg case break
+    block case
+      op [] .val .block .blockType switch
+        ## TODO implement and/or
+        IF case
+          ops
+            ## TODO debug position
+            op [] .pos context popValue =:: ifCond =:: argType
+            argType ssa.ValueType .I8 == assert "if-condition is bool"
+            ## TODO create jump and label
+            op [] .val .block .blockId context openIfBlock
+          return
+        IFIF case
+          "if _if is not supported" sb.wrap
+          op [] .pos errors appendError
+          ops return
+          break
+        AND_IF OR_IF case break
+        ELSE case
+          context [] .openBlocks list.peek .data =:: ifBlock
+          context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
+          context [] .reachable ifBlock [] .If .ifBranchTerminates =
+          ## BranchPoint
+          ifBranch ifBlock [] .If .ifBranch =
+          ops
+            context [] .reachable if
+              ..dup .length ifBlock [] .If .ifBranchCodeOffset =
+              ## TODO create jump to end
+            end
+            ## TODO create else label
+            true context [] .reachable =
+          =:: newOps
+          ## TODO update branches
+          newOps return
+        SWITCH case
+          op [] .val .block .blockId =:: switchId
+          prog [] .switchData
+            switchId list.at .data
+          =:: switchData
+          ops
+            ## TODO appendPos
+            op [] .pos context popValue =:: regData =:: switchVal
+            ## TODO switch-table
+            switchId context openSwitchBlock
+            false context [] .reachable =
+          return
+        CASE case
+          ops
+            ## TODO create case label
+            true context [] .reachable =
+          return
+        DEFAULT case
+          ops
+            ## TODO create default label
+            true context [] .reachable =
+          return
+        BREAK_SWITCH case ## TODO implement break
+          break
+        WHILE case
+          ## don't add position before label
+          op [] .val .block .blockId =:: whileId
+          ## XXX ensure most values in stack state are loaded
+          ##   end of loop resets to this point
+          whileId context openWhileBlock
+          context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          prog [] .whileData whileId list.at .data =:: whileData
+          ops
+            ## TODO create label
+          return
+        DO case
+          context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
+          ops
+            ## TODO debug position
+            op [] .pos context popValue =:: whileCond =:: argType
+            argType ssa.ValueType .I8 == assert "while-condition is bool"
+            ## TODO remember stack state
+            ## TODO create jump
+          return
+        AND_DO OR_DO case break
+        BREAK CONTINUE case break ## TODO break/continue
+        AND OR PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
+          ## XXX error message
+          break
+      end
+      break
+    blockEnd case
+      op [] .val .blockEnd .blockType switch
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          ## TODO? handle end of procedure
+          ops return
+        ELSE SWITCH WHILE AND OR case
+          ## TODO block end
+          break
+        IF IFIF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
+        AND_IF OR_IF AND_DO OR_DO
+        UNKNOWN INITIALIZER NAMESPACE
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          ## XXX error message
+          break
+      end
+      break
+    Return case break
+    stackMod case
+      op [] .val .stackMod .modType switch
+        DROP case
+          op [] .val .stackMod .n =:: count
+          count while ..dup 0 > do 1 -
+             context [] .stackInfo @ branchTree.pop ..drop
+          end ..drop
+          ops return
+        COPY case
+          op [] .val .stackMod .n =:: offset
+          context [] .stackInfo branchTree.depth offset <= if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
+            ops return
+          end
+          ## copy value on stack
+          context [] .stackInfo @
+            offset
+          branchTree.at .data =:: copied
+          context [] .stackInfo @
+            copied []
+          branchTree.push
+          ops return
+        SWAP case
+          context [] .stackInfo branchTree.depth 2 < if
+            "stack underflow" sb.wrap
+            op [] .pos errors appendError
+            ops return
+          end
+          context [] .stackInfo @ branchTree.swap
+          ops return
+      end
+      break
+    Assert unreachable
+    autoTypedInitializeId
+    ConstantReference NewReference
+    typeInfo NewEnumReference getEnumLabel
+    compilerInfo getName atName getLabel
+    atLabel length size typeModifier hasLabel hasName case
+      break ## XXX error message
+  end
+  "unable to compile operation " sb.wrap
+    op [] prog sb.appendOp
+  op [] .pos errors appendError
+  ops return
+end
+
+proc(
+  ssa.Atom list : ssaOps
+  Operation arrayView : ops
+  CompilerContext ptr mut : context
+-> ssa.Atom list ) =>: compileProc
+  context [] .program =:: prog
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  ops 0 array.at .data [] .val .implementProcedure ??
+      assert "procedure starts with correct operation"
+  ssaOps
+    0 while ..dup ops .length < do =:: j
+      ops j array.at .data context compileOp
+      j 1 +
+    end ..drop
+    context [] .stackInfo @ branchTree.clear
+  return
+end
+
+
+proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToSSA
+  prog [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  ## CompilerContext
+    ssa.createContext
+    prog
+    StackElement branchTree.create
+    32 BlockInfo list.create
+    32 LocalConst list.create
+    32 StringConstant list.create
+    Type .undefined
+    0
+    0
+    0
+    0
+    true
+  CompilerContext new =:: mut: contextData
+  contextData @ =:: context
+  ## TODO find main
+  ## TODO type-declarations
+  idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
+    =:: declaration ## TODO find out which declarations are actually used
+    declaration .1 [] =:: labelId
+    labelId idContext id.getIdentifier
+      ! assert "labelId is identifier"
+    =:: idData
+    ## TODO compile global variables
+  end ..drop
+  1024 ssa.Atom list.create
+    0 while ..dup prog [] .procedures .length < do =:: i
+      prog [] .procedures i list.at .data =:: currentProc
+      currentProc [] .implementation .code ?? ! if
+        i 1 + continue
+      end
+      prog [] .progFiles currentProc [] .fileId i64 cast list.at .data =:: f
+      currentProc [] .implementation .code @ =:: impl
+      currentProc [] .hasStaticArg if
+        0 while ..dup impl [] .implementations .length < do =:: implId
+          impl [] .implementations implId list.at .data =:: currentImpl
+          ## compileProc
+            f [] .localOps
+              currentImpl [] .codeStart
+              currentImpl [] .codeLength
+            list.slice
+            context
+          compileProc
+          implId 1 +
+        end ..drop
+      else
+        ## compileProc
+          f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
+          context
+        compileProc
+      end
+      i 1 +
+    end ..drop
+  =:: ssaOps ## XXX? generate/store code seperated into procedures?
+  ## TODO string-constants
+  ## TODO compile main
+  ## TODO cleanup context
+end

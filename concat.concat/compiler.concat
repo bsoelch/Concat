@@ -4,7 +4,7 @@ import "parser.concat"
 import "typeCheck.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
-import "generator_asmStack.concat"
+import "generator_ssa.concat"
 
 stringBuilder : mut: srcFile
 stringBuilder : mut: outFile
@@ -85,8 +85,8 @@ proc( -> ) =>: parseArgs
         'X' case ## experimental features
           true _EXPERIMENTAL_ =
           break
-        'A' case ## (experimental) asm backend
-          BackEnd .ASM _BACKEND_ =
+        'S' case ## (experimental) ssa backend
+          BackEnd .SSA _BACKEND_ =
           break
         'q' case
           break
@@ -166,7 +166,7 @@ proc( -> ) =>: parseArgs
     end
     outFile
       _BACKEND_ switch
-        ASM case ".s\x00" sb.appendS break
+        SSA case ".ssa\x00" sb.appendS break
         QBE case ".ssa\x00" sb.appendS break
       end
     outFile =
@@ -254,7 +254,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
   ## QBE backend
   outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
     _BACKEND_ switch
-      ASM case ..dup prog @ compileToAsm break
+      SSA case ..dup prog @ compileToSSA break
       QBE case ..dup prog @ compileToQBE break
     end
   io.fclose ..drop

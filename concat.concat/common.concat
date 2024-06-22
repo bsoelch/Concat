@@ -10,7 +10,7 @@ i32 =:: export: FileId
 
 enum( ## XXX more precise names
   QBE
-  ASM
+  SSA
 ) =:: export: BackEnd
 
 struct( string : mut: fileName i64 : mut: line i64 : mut: posInLine ) =:: export: FilePosition
