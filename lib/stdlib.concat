@@ -1,0 +1,24 @@
+## import the complete standard library
+import array
+import arrayView
+import chars
+import debug
+import io
+import list
+import map
+import math
+import mem
+import numbers/f128
+import numbers/floats
+import numbers/i128
+import numbers/integers
+import numbers/limits
+import numbers/printFloat
+import numbers/printInt
+import numbers
+import optional
+import string
+import stringBuilder
+import stringIO
+import sys
+import utf8
