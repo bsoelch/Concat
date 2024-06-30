@@ -59,9 +59,9 @@ struct(
   BranchId list : mut: andBranchIds
   branchTree.NodeId list : mut: orBranches
   BranchId list : mut: orBranchIds
+  BranchId : mut: ifBranchId
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut: ifBranch
-  BranchId : mut: ifBranchId
   i32 : blockId
   bool : mut: hasIf
   bool : mut: ifBranchTerminates
@@ -466,9 +466,9 @@ proc(
     8 BranchId list.create
     8 branchTree.NodeId list.create
     8 BranchId list.create
+    context [] .currentBranch
     context [] .stackInfo @ branchTree.startBranch
     -1:branchTree.NodeId
-    context [] .currentBranch
     blockId
     false
     false
@@ -4237,7 +4237,6 @@ proc(
             context [] .currentBranch list.append
           branchIds [] =
           sb
-            ## don't add jump in unreachable branches
             op [] .pos sb.appendPosQBE
             "jmp " sb.appendS
             ## BlockId
