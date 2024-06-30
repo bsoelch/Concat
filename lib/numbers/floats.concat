@@ -2,12 +2,11 @@
 
 ## TODO include floating point limits
 namespace: f32
-  union( f32  : f i32 : i ) =:: Converter
   proc( f32 -> i32 ) =>: export: bits
-    Converter cast .i return
+    i32 ..bitcast
   end
   proc( i32 -> f32 ) =>: export: fromBits
-    Converter cast .f return
+    f32 ..bitcast
   end
   0x8000'0000:u =:: export: SIGN_FLAG
   0x7f80'0000:u =:: export: EXP_MASK
@@ -131,12 +130,11 @@ namespace: f32
   end
 end
 namespace: f64
-  union( f64  : d i64 : i ) =:: Converter
   proc( f64 -> i64 ) =>: export: bits
-    Converter cast .i return
+    i64 ..bitcast
   end
   proc( i64 -> f64 ) =>: export: fromBits
-    Converter cast .d return
+    f64 ..bitcast
   end
   0x8000'0000'0000'0000:u =:: export: SIGN_FLAG
   0x7ff0'0000'0000'0000:u =:: export: EXP_MASK
