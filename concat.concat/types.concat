@@ -2294,15 +2294,6 @@ namespace: types
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
     end
-    target context types.isUnion if
-      target context types.compositeElts =:: elts
-      0 while ..dup elts .length < do
-        src elts ..over.2 compositeElts.get context types.canAutoCast if ..drop
-          true return
-        end
-        1 +
-      end ..drop
-    end
     false return
   end
   proc( Type : a Type : b bool : forceCast TypeContext ptr : context -> bool ) =>: export: canCast
@@ -2367,12 +2358,6 @@ namespace: types
       a b context getBaseType context mergeTypes ! if
         false return
       else ..drop end
-    end
-    a context types.isUnion and b a context canAutoCast if
-      a false return
-    end
-    b context types.isUnion and a b context canAutoCast if
-      b false return
     end
     ## don't merge different named types
     a .namedType ?? or b .namedType ?? if
