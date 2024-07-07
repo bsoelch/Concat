@@ -51,20 +51,18 @@ namespace: ssa
     empty
     i64 : value
     VariableId : variable
-    i64 : tempVariable ## XXX? custom int type
     ArgumentId : argument
+    ## XXX compositeValue -> slice of types values
     LabelId : localVariable
     LabelId : globalVariable
   ) =:: Operand
-  
+
   proc( Operand : a Operand : b -> bool ) =>: valueEqual ## XXX? better name
     a ..label b ..label != if false return end
     a switch
       empty case true return
       value case a .value b .value == return
       variable case a .variable b .variable == return
-      tempVariable case
-        a .tempVariable b .tempVariable == return
       argument case a .argument b .argument == return
       localVariable case
         a .localVariable b .localVariable == return
@@ -72,14 +70,14 @@ namespace: ssa
         a .globalVariable b .globalVariable == return
     end
   end
-  
+
   ## TODO? remember operand size [I8,I16,I32,I64,I128,F16,F32,F64,F128]
   struct(
     OperationType : opType
     Operand : resultId
     Operand 3 array : operands
   ) =:: SSAOperation
-  
+
   struct(
     BranchLabel : label
     Operand : value
@@ -97,7 +95,7 @@ namespace: ssa
     Operand : value
   ) =:: CallArgument
   struct(
-    ## TODO global name -> GlobalValue arrayView ## list-slices of: pairs of form value: count
+    ## TODO global: name -> GlobalValue arrayView ## list-slices of: pairs of form value: count
     TypedValue list : mut: globalData
     LabeledVariable list : mut: phiData
     CallArgument list : mut: callArguments
@@ -141,14 +139,14 @@ namespace: ssa
     i64 : offset
     i64 : argCount
   ) =:: Call
-  
+
   struct(
     Operand : result
     ValueType : valueType
     i64 : offset
     i64 : argCount
   ) =:: Phi
-  
+
   namespace: phi
     proc(
       Operand : res
@@ -175,7 +173,7 @@ namespace: ssa
         ## LabeledVariable
           label
           value
-        LabeledVariable new list.append      
+        LabeledVariable new list.append
       context .phiData [] =
       ## Phi
         base .result
@@ -246,14 +244,14 @@ namespace: ssa
       args
     SSAOperation new
   end
-  
+
   proc(
     stringBuilder : sb
     BranchLabel : label
   -> stringBuilder ) =>: appendBranchLabel
     sb
       '@' sb.appendC
-      label .branchType switch        
+      label .branchType switch
         START case "start" sb.appendS break
         NEXT case "next" sb.appendS break
         ERROR case "error" sb.appendS break
@@ -279,7 +277,7 @@ namespace: ssa
   end
   proc(
     stringBuilder
-    Operand : arg 
+    Operand : arg
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendOperand
     arg switch
@@ -287,8 +285,6 @@ namespace: ssa
       value case arg .value sb.appendI break
       variable case
         "%v" sb.appendS arg .variable i64 cast sb.appendI break
-      tempVariable case
-        "%t" sb.appendS arg .tempVariable i64 cast sb.appendI break
       argument case
         "%a" sb.appendS arg .argument i64 cast sb.appendI break
       localVariable case
@@ -496,8 +492,7 @@ struct(
   ssa.BranchLabel : mut: currentBranch
   Type : mut: currentProc
   i64 : mut: localConstCount
-  i64 : mut: stackCount
-  i64 : mut: tmpCount
+  i64 : mut: varCount
   i32 : mut: jumpLabelCount
   bool : mut: reachable
 ) =:: CompilerContext
@@ -640,13 +635,13 @@ proc(
     8 ssa.BranchLabel list.create
     8 branchTree.NodeId  list.create
     8 ssa.BranchLabel list.create
-    context [] .tmpCount
+    context [] .varCount
     context [] .stackInfo @ branchTree.startBranch
     blockId
   WhileBlockInfo new BlockInfo .While context openBlock
-  context [] .tmpCount
+  context [] .varCount
     context [] .program [] .whileData blockId list.at .data [] .modifiedTypes +
-  context [] .tmpCount =
+  context [] .varCount =
 end
 proc(
   i32 : blockId
@@ -749,6 +744,19 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   constType typeContext toValueType =:: valType
+  value switch ## TODO push primitive values directly onto the stack
+    boolean case break
+    chr case break
+    int case break
+    Float case break
+    ## TODO store strings globally
+    str case break
+    ## TODO create local container value for composite values
+    arrayConstant case break
+    union case break
+    genericArg case break
+    none enumLabel procedure procedureBundle typeId wildCard case ..unreachable
+  end
   ..unreachable
 end
 
@@ -1572,7 +1580,8 @@ proc(
                     0
                   ssa.BranchLabel new
                   whileBlock [] .loopValOffset i +
-                      ssa.Operand .tempVariable
+                    ssa.VariableId cast
+                  ssa.Operand .variable
                 ssaContext ssa.phi.addBranch
               ssa.Atom .phi list.append
               i 1 -
@@ -1936,7 +1945,9 @@ proc(
             0 while ..dup whileData [] .modifiedTypes < do =:: i
               context [] .stackInfo @ branchTree.pop .data =:: elt
               ssa.OperationType .COPY
-                whileBlock .loopValOffset i + ssa.Operand .tempVariable
+                whileBlock .loopValOffset i +
+                  ssa.VariableId cast
+                ssa.Operand .variable
                 elt [] .varId
                 ## elt [] .valueType
               ssa.createUnary ssa.Atom .operation list.append
@@ -2123,7 +2134,6 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToS
     32 StringConstant list.create
     ssa.BranchType .START 0 0 ssa.BranchLabel new
     Type .undefined
-    0
     0
     0
     0
