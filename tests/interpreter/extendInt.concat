@@ -1,11 +1,18 @@
-proc( u64 -> bool ) =>: isZeroExtened
+proc( i64 -> bool ) =>: isZeroExtened
   0xffff'ffff:u64 ==
 end
 proc( i64 -> bool ) =>: isSignExtened
   -1:i64 ==
 end
+
+proc( bool : c -> ) =>: checkSignMerge
+  c if 0xffff_ffff:u ..?types else -1 ..?types end ..?types ..drop
+  c if 0x7fff_ffff:u ..?types else -1 ..?types end ..?types ..drop
+  c if 0xffff_ffff ..?types else -1 ..?types end ..?types ..drop
+end
+
 proc( -> ) =>: main
-  -1 isZeroExtened assert "u64 arg is zero extended"
-  -1 isSignExtened assert "i64 arg is sign extended"
-  0xffff'ffff:u32 isSignExtened ! assert "u32 arg is not sign extended"
+  0xffff_ffff:u ..?types isZeroExtened assert "..u32 is zero extended"
+  -1 ..?types isSignExtened assert "..s32 is sign extended"
+  true checkSignMerge
 end

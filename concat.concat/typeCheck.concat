@@ -923,15 +923,28 @@ proc(
   end
   toMerge mergePoint .rootBranch array.get =:: root
   root [] .valueType =:: mut: mergedType
+  mergedType .intLiteral ?? if
+    mergePoint .mergeType switch
+      MERGE case break
+      MERGE_ROOT NO_CAST case
+        mergedType .intLiteral types.intLiteralAsInt mergedType =
+      break
+    end
+  end
   true =:: mut: noError
   0 while ..dup toMerge .length < do =:: i
     i mergePoint .rootBranch == if
       i 1 + continue
     end
     toMerge i array.get =:: current
+    current [] .valueType
+      $ .intLiteral ?? and mergePoint .mergeType .NO_CAST ?? if
+        .intLiteral types.intLiteralAsInt
+      end
+    =:: currentType
     mergePoint .mergeType switch
       MERGE case
-        current [] .valueType mergedType typeContext types.mergeTypes if ..drop
+        currentType mergedType typeContext types.mergeTypes if ..drop
           "cannot merge the branches of " sb.wrap
             mergePoint .blockName sb.appendStr
             "\n cannot merge types " sb.appendS
@@ -939,7 +952,7 @@ proc(
             " ( pushed at " sb.appendS
             root [] .pushedAt sb.appendPos
             " )\n and " sb.appendS
-            current [] .valueType typeContext sb.appendType
+            currentType typeContext sb.appendType
             " ( pushed at " sb.appendS
             current [] .pushedAt sb.appendPos
             " )\n" sb.appendS
@@ -950,7 +963,7 @@ proc(
         end
         break
       MERGE_ROOT NO_CAST case
-        current [] .valueType mergedType
+        currentType mergedType
           mergePoint .mergeType .NO_CAST ?? if
             types.typeEquals !
           else
@@ -964,7 +977,7 @@ proc(
             " ( pushed at " sb.appendS
             root [] .pushedAt sb.appendPos
             " )\n got: " sb.appendS
-            current [] .valueType typeContext sb.appendType
+            currentType typeContext sb.appendType
             " ( pushed at " sb.appendS
             current [] .pushedAt sb.appendPos
             " )\n" sb.appendS
@@ -978,13 +991,16 @@ proc(
   noError if ## don't try casting values if merging types failed
     0 while ..dup toMerge .length < do =:: i
       toMerge i array.get =:: current
-        current [] .valueType mergedType types.typeEquals ! if
+        current [] .valueType
+          $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
+        =:: currentType
+        currentType mergedType types.typeEquals ! if
           mergePoint .castPointOffsets i array.get =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
             castPoint [] .val .NOP ?? and castPoint [] .val .NOP .RESERVED ?? if
               ## opAutoCast
-                current [] .valueType
+                currentType
                 offset i32 cast
                 mergedType
                 mergePoint .mergePoint
@@ -1279,6 +1295,9 @@ proc(
         value? .data [] .valueType
           typeContext
         types.unwrapReference
+        $ .intLiteral ?? if
+          .intLiteral types.intLiteralAsInt
+        end
       else
         "missing type for declaration" sb.wrap op [] .pos errors appendError
         return

@@ -36,12 +36,22 @@ namespace: types
     ## XXX? add support for long double
     STRUCT_PTR UNION_PTR
   ) =:: CType
+  enum(
+    U7  S8  U8  ## largest numbers castable to i8;  -> i32 by default
+    U15 S16 U16 ## largest numbers castable to i16; -> i32 by default
+    U24_ S25_   ## largest numbers castable to f32 ( -2^24 <= k <= 2^24 ); -> i32 by default
+    U31 S32 U32 ## -> i32
+    U53_ S54_   ## largest numbers castable to f64 ( -2^53 <= k <= 2^53 ); -> i64 by default
+    U63 S64 U64 ## -> i64
+    ## XXX? support for 128Bit integer literals
+  ) =:: IntLiteral
 end
 
 enum(
                         undefined
                         empty
   types.PrimitiveType : primitiveType
+     types.IntLiteral : intLiteral
         types.ArrayId : pointer
         types.ArrayId : arrayType
         types.TupleId : struct
@@ -70,6 +80,8 @@ namespace: types
         true return ## there is only one undefined/empty type
       primitiveType case
         a .primitiveType b .primitiveType == return
+      intLiteral case
+        a .intLiteral b .intLiteral == return
       pointer case
         a .pointer b .pointer == return
       arrayType case
@@ -123,6 +135,26 @@ namespace: types
       F32 case 14 return
       F64 case 15 return
       TYPE case 16 return
+    end
+  end
+  proc( IntLiteral -> i32 ) =>: intLiteralId
+    switch
+      U7   case  1 return
+      S8   case  2 return
+      U8   case  3 return
+      U15  case  4 return
+      S16  case  5 return
+      U16  case  6 return
+      U24_ case  7 return
+      S25_ case  8 return
+      U31  case  9 return
+      S32  case 10 return
+      U32  case 11 return
+      U53_ case 12 return
+      S54_ case 13 return
+      U63  case 14 return
+      S64  case 15 return
+      U64  case 16 return
     end
   end
   proc( CType -> i32 ) =>: cTypeId
@@ -187,6 +219,8 @@ namespace: types
         bigPrime 59 * a .arrayIndex i32 cast + return
       cType case
         bigPrime 61 * a .cType cTypeId + return
+      intLiteral case
+        bigPrime 67 * a .intLiteral intLiteralId + return
     end
   end
 end
@@ -215,6 +249,24 @@ namespace: types
     PrimitiveType .I64  Type .primitiveType Type =: export: I_SIZE ## size-off memory-sections
     PrimitiveType .I64  Type .primitiveType Type =: export: I_PTR  ## integer that can hold a pointer
   end
+  namespace: intLiteral
+    IntLiteral .U7   Type .intLiteral Type =: export: U7
+    IntLiteral .S8   Type .intLiteral Type =: export: S8
+    IntLiteral .U8   Type .intLiteral Type =: export: U8
+    IntLiteral .U15  Type .intLiteral Type =: export: U15
+    IntLiteral .S16  Type .intLiteral Type =: export: S16
+    IntLiteral .U16  Type .intLiteral Type =: export: U16
+    IntLiteral .U24_ Type .intLiteral Type =: export: U24_
+    IntLiteral .S25_ Type .intLiteral Type =: export: S25_
+    IntLiteral .U31  Type .intLiteral Type =: export: U31
+    IntLiteral .S32  Type .intLiteral Type =: export: S32
+    IntLiteral .U32  Type .intLiteral Type =: export: U32
+    IntLiteral .U53_ Type .intLiteral Type =: export: U53_
+    IntLiteral .S54_ Type .intLiteral Type =: export: S54_
+    IntLiteral .U63  Type .intLiteral Type =: export: U63
+    IntLiteral .S64  Type .intLiteral Type =: export: S64
+    IntLiteral .U64  Type .intLiteral Type =: export: U64
+  end
   proc( Type -> bool ) =>: export: isPrimitive
     .primitiveType ?? return
   end
@@ -234,7 +286,7 @@ namespace: types
          ## arrays/reference of empty values are empty
          t context getBaseType context isEmpty return
        undefined primitiveType procedure cType pointer
-         namedType autoType genericType
+         namedType autoType genericType intLiteral
          generatedType arrayIndex enum case false return
        procIn procOut struct union case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
@@ -277,14 +329,24 @@ namespace: types
       ..dup .arrayIndex ?? if ..drop
         true return
       end
+      ..dup .intLiteral ?? if ..drop
+        true return
+      end
       ..dup isPrimitive ! if ..drop
         false return
       end .primitiveType isIntPrimitive
   end
+  ## TODO check C-types for sign/unsigned int
   proc( Type TypeContext ptr -> bool ) =>: export: isSignedInt
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
         true return
+      end
+      ..dup .intLiteral ?? if
+        .intLiteral switch
+          U7 U15 U24_ U31 U53_ U63 S8 S16 S25_ S32 S54_ S64 case true return
+          U8 U16 U32 U64 case false return
+        end
       end
       ..dup isPrimitive ! if ..drop
         false return
@@ -294,6 +356,12 @@ namespace: types
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
         true return
+      end
+      ..dup .intLiteral ?? if
+        .intLiteral switch
+          U7 U8 U15 U16 U24_ U31 U32 U53_ U63 U64 case true return
+          S8 S16 S25_ S32 S54_ S64 case false return
+        end
       end
       ..dup isPrimitive ! if ..drop
         false return
@@ -477,6 +545,49 @@ namespace: types
     i32.max  =:: minSize
     minSize minPrecision findNumberType return
   end
+  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastIntLiteral
+    src .intLiteral ?? ! or target context types.isNumber ! if
+      true return
+    end
+    src .intLiteral switch
+      U7   case false  7 break
+      S8   case true  8 break
+      U8   case false  8 break
+      U15  case false 15 break
+      S16  case true  16 break
+      U16  case false 16 break
+      U24_ case false 24 break
+      S25_ case true  24 break
+      U31  case false 31 break
+      S32  case true  32 break
+      U32  case false 32 break
+      U53_ case false 53 break
+      S54_ case true  53 break
+      U63  case false 63 break
+      S64  case true  64 break
+      U64  case false 64 break
+    end =:: srcBits =:: srcSigned
+    target context primitiveValue =:: targetPrimitive
+    targetPrimitive isIntPrimitive if
+      targetPrimitive isSignedIntPrimitive =:: targetSigned
+      targetPrimitive isUnsignedIntPrimitive =:: targetUnsigned
+      targetPrimitive sizeOfPrimitive 8 * =:: targetBits
+      srcSigned and targetUnsigned if
+        false return ## conversion signed -> unsigned by not be lossless
+      end
+      srcSigned ! and targetSigned if
+        ## unsigned -> signed : may need size increase
+        srcBits targetBits < return
+      end      
+      ## same or undetermined signs
+      srcBits targetBits <= return
+    else targetPrimitive .F32 ?? _if
+      srcBits 24 <= return
+    else targetPrimitive .F64 ?? _if
+      srcBits 53 <= return
+    end
+    ..unreachable
+  end
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastNumber
     src context types.isNumber ! target context types.isNumber ! | if
       true return
@@ -545,6 +656,13 @@ namespace: types
       UNION_PTR case primitive.I_PTR return
     end
   end
+  proc( types.IntLiteral -> Type ) =>: export: intLiteralAsInt
+    switch
+      U7 S8 U8  U15 S16 U16 case primitive.I32 return
+      U24_ S25_ U31 S32 U32 case primitive.I32 return
+      U53_ S54_ U63 S64 U64 case primitive.I64 return
+    end
+  end
 
   ## size and alignment
   enum( unknown i64 : fixed i64 : dynamicArray ) =:: export: TypeSize
@@ -564,6 +682,13 @@ namespace: types
         4 return
       I64 S64 U64 F64 case
         8 return
+    end
+  end
+  proc( IntLiteral -> i32 ) =>: export: sizeOfIntLiteral
+    switch
+      U7 S8 U8  U15 S16 U16 case 4 return
+      U24_ S25_ U31 S32 U32 case 4 return
+      U53_ S54_ U63 S64 U64 case 8 return
     end
   end
   proc( CType -> i32 ) =>: sizeOfCType
@@ -695,7 +820,7 @@ namespace: types
       union case
         composite composite .union typeContext tryComputeUnionSize return
       undefined empty autoType genericType
-      primitiveType cType arrayIndex arrayType
+      primitiveType intLiteral cType arrayIndex arrayType
       pointer reference mutableReference procedure
       namedType generatedType case ..unreachable ## XXX? use assertion
     end
@@ -709,6 +834,8 @@ namespace: types
         1 TypeSize .fixed return
       primitiveType case
         t .primitiveType sizeOfPrimitive TypeSize .fixed return
+      intLiteral case
+        t .intLiteral sizeOfIntLiteral TypeSize .fixed return
       cType case
         t .cType sizeOfCType TypeSize .fixed return
       arrayIndex case
@@ -748,6 +875,8 @@ namespace: types
         0 TypeSize .fixed return
       primitiveType case
         t .primitiveType sizeOfPrimitive TypeSize .fixed return
+      intLiteral case
+        t .intLiteral sizeOfIntLiteral TypeSize .fixed return
       cType case
         t .cType sizeOfCType TypeSize .fixed return
       arrayIndex case
@@ -1098,7 +1227,7 @@ namespace: types
       struct enum union procIn procOut case
         true return
       undefined empty primitiveType pointer arrayType procedure
-        namedType autoType genericType generatedType
+        namedType autoType genericType generatedType intLiteral
         reference mutableReference arrayIndex cType case
         false return
     end
@@ -1144,7 +1273,7 @@ namespace: types
           CompositeInfo ptr cast optional.wrap return
           break
         undefined empty primitiveType pointer arrayType procedure
-         namedType autoType genericType generatedType
+         namedType autoType genericType generatedType intLiteral
          reference mutableReference arrayIndex cType case
           ..drop CompositeInfo ptr optional.empty return
       end
@@ -1162,7 +1291,7 @@ namespace: types
         struct enum union procIn procOut case
           break
         undefined empty primitiveType pointer arrayType procedure
-         namedType autoType genericType generatedType
+         namedType autoType genericType generatedType intLiteral
           reference mutableReference arrayIndex cType case
           ..drop id.LABEL_ID_NONE return
       end
@@ -1191,7 +1320,7 @@ namespace: types
         struct enum union procIn procOut case
           break
         undefined empty primitiveType pointer arrayType procedure
-         namedType autoType genericType generatedType
+         namedType autoType genericType generatedType intLiteral
          reference mutableReference arrayIndex cType case
           ..drop -1 return
       end
@@ -1250,7 +1379,7 @@ namespace: types
       procOut case
         .procOut break
       enum union undefined empty primitiveType pointer arrayType procedure
-       namedType autoType genericType generatedType
+       namedType autoType genericType generatedType intLiteral
         reference mutableReference arrayIndex cType case ..drop
          i64 optional.empty return
     end =:: tupleId
@@ -1275,7 +1404,7 @@ namespace: types
       union case
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
-       namedType autoType genericType generatedType
+       namedType autoType genericType generatedType intLiteral
         reference mutableReference arrayIndex cType case ..drop
          Type .empty i64 optional.empty return
     end =:: enumId
@@ -2108,7 +2237,7 @@ namespace: types
       reference case .reference i32 cast return
       mutableReference case .mutableReference i32 cast return
       arrayIndex case .arrayIndex i32 cast return
-      undefined empty primitiveType cType case ..drop -1 return
+      undefined empty primitiveType intLiteral cType case ..drop -1 return
     end
   end
 
@@ -2132,14 +2261,14 @@ namespace: types
       genericType case true return
       undefined empty primitiveType procedure reference mutableReference cType
       namedType autoType generatedType arrayIndex enum pointer arrayType
-        procIn procOut struct union case
+        procIn procOut struct union intLiteral case
          false return
     end
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamed =:: t
     t switch
-      undefined empty primitiveType autoType arrayIndex cType case
+      undefined empty primitiveType autoType arrayIndex cType intLiteral case
         false return
       reference mutableReference case
         t context getBaseType context containsGeneric return
@@ -2288,6 +2417,9 @@ namespace: types
     src .cType ?? or target .cType ?? if
       false return
     end
+    src .intLiteral ?? target context types.isNumber & if
+      src target context types.canAutoCastIntLiteral return
+    end
     src context types.isNumber target context types.isNumber & if
       src target context types.canAutoCastNumber return
     end
@@ -2320,7 +2452,7 @@ namespace: types
     target .arrayIndex ?? and src context types.isInt ! if
       false return ## can only cast integers to index
     end
-    src context types.isNumber target context types.isNumber & if
+    src context types.isNumber or src .intLiteral ?? and target context types.isNumber if
       true return
     end
     src context types.isPointer and target context types.isPointer and
@@ -2398,6 +2530,19 @@ namespace: types
     a context types.isNumber b context types.isNumber & if
       a b context commonNumberType return
     end
+    a .intLiteral ?? and b context types.isNumber and
+        a b context canAutoCastIntLiteral if
+      b false return
+    end
+    b .intLiteral ?? and a context types.isNumber and
+        b a context canAutoCastIntLiteral if
+      a false return
+    end
+    a .intLiteral ?? and b .intLiteral ?? if
+        a .intLiteral intLiteralAsInt
+        b .intLiteral intLiteralAsInt
+      context mergeTypes return
+    end
     Type .undefined true return
   end
 end
@@ -2465,6 +2610,26 @@ namespace: sb
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return
       TYPE case "type" appendS return
+    end
+  end
+  proc( stringBuilder types.IntLiteral -> stringBuilder ) =>: appendIntLiteralType
+    switch
+      U7   case "..intLiteral.u7"   appendS return
+      S8   case "..intLiteral.s8"   appendS return
+      U8   case "..intLiteral.u8"   appendS return
+      U15  case "..intLiteral.u15"  appendS return
+      S16  case "..intLiteral.s16"  appendS return
+      U16  case "..intLiteral.u16"  appendS return
+      U24_ case "..intLiteral.u24"  appendS return
+      S25_ case "..intLiteral.s25"  appendS return
+      U31  case "..intLiteral.u31"  appendS return
+      S32  case "..intLiteral.s32"  appendS return
+      U32  case "..intLiteral.u32"  appendS return
+      U53_ case "..intLiteral.u53"  appendS return
+      S54_ case "..intLiteral.s54"  appendS return
+      U63  case "..intLiteral.u63"  appendS return
+      S64  case "..intLiteral.s64"  appendS return
+      U64  case "..intLiteral.u64"  appendS return
     end
   end
   proc( stringBuilder types.CType -> stringBuilder ) =>: appendCType
@@ -2555,6 +2720,8 @@ namespace: sb
         sb "empty" appendS return
       primitiveType case
         sb t .primitiveType appendPrimitiveType return
+      intLiteral case
+        sb t .intLiteral appendIntLiteralType return
       cType case
         sb t .cType appendCType return
       arrayIndex case

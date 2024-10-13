@@ -86,29 +86,50 @@ proc(
 -> Constant ) =>: newIntConstant
   state .progContext [] .idContext .typeContext@ =:: typeContext
   literalType switch
-    FIXED case intType break
+    FIXED case
+      intType typeContext types.isUnsignedInt =:: isUnsigned
+      ## TODO? better way to get bit-size of integer
+      intType typeContext types.sizeOf .fixed i32 cast 8 * =:: bitCount
+      value isUnsigned bitCount checkIntSize if
+        "integer literal overflows maximum size for type " sb.wrap
+          intType typeContext sb.appendType
+          intType types.isPrimitive ! if
+            isUnsigned if " ( u" sb.appendS else " ( i" sb.appendS end
+            bitCount sb.appendU
+            ')' sb.appendC
+          end
+          ": " sb.appendS
+          value isUnsigned if sb.appendU else sb.appendI end
+        pos state appendWarning2
+      end
+      intType break
     AUTO case
-      value i32.MIN < or value i32.MAX > if types.primitive.I64 else types.primitive.I32 end
+      value f64.MIN_INT <  if types.intLiteral.S64 break end
+      value i32.MIN <  if types.intLiteral.S54_ break end
+      value f32.MIN_INT < if types.intLiteral.S32 break end
+      value i16.MIN <  if types.intLiteral.S25_ break end
+      value  i8.MIN <  if types.intLiteral.S16 break end
+      value       0 <  if types.intLiteral.S8  break end
+      value  i8.MAX <= if types.intLiteral.U7  break end
+      value i16.MAX <= if types.intLiteral.U15 break end
+      value f32.MAX_INT <= if types.intLiteral.U24_ break end
+      value i32.MAX <= if types.intLiteral.U31 break end
+      value f64.MAX_INT <= if types.intLiteral.U53_ break end
+      types.intLiteral.U63
       break
     AUTO_UNSIGNED case
-      value 0 < or value i32.UMAX ..u> if types.primitive.U64 else types.primitive.U32 end
+      value i8.MAX   ..u<= if types.intLiteral.U7  break end
+      value i8.UMAX  ..u<= if types.intLiteral.U8  break end
+      value i16.MAX  ..u<= if types.intLiteral.U15 break end
+      value i16.UMAX ..u<= if types.intLiteral.U16 break end
+      value f32.MAX_INT ..u<= if types.intLiteral.U24_ break end
+      value i32.MAX  ..u<= if types.intLiteral.U31 break end
+      value i32.UMAX ..u<= if types.intLiteral.U32 break end
+      value f64.MAX_INT ..u<= if types.intLiteral.U53_ break end
+      value i64.MAX  ..u<= if types.intLiteral.U63 break end
+      types.intLiteral.U64
       break
   end =:: constType
-  constType typeContext types.isUnsignedInt =:: isUnsigned
-  ## TODO? better way to get bit-size of integer
-  constType typeContext types.sizeOf .fixed i32 cast 8 * =:: bitCount
-  value isUnsigned bitCount checkIntSize if
-    "integer literal overflows maximum size for type " sb.wrap
-      constType typeContext sb.appendType
-      constType types.isPrimitive ! if
-        isUnsigned if " ( u" sb.appendS else " ( i" sb.appendS end
-        bitCount sb.appendU
-        ')' sb.appendC
-      end
-      ": " sb.appendS
-      value isUnsigned if sb.appendU else sb.appendI end
-    pos state appendWarning2
-  end
   constType value ConstValue .int IdentifierInfo optional.empty pos Constant new return
 end
 proc( i8 FilePosition -> Constant ) =>: newCharConstant
@@ -1310,6 +1331,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state hasConst2 if
         state peekConst2 =:: info =:: value
         info .data [] .valueType
+        $ .intLiteral ?? if
+          .intLiteral types.intLiteralAsInt
+        end
         value .data []
       else
         progContext [] .autoTypes .length i32 cast types.newAutoType

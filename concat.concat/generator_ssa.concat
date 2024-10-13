@@ -700,6 +700,10 @@ proc(
         F64 case ValueType .F64 return
       end
       break
+    intLiteral case
+      t .intLiteral
+        types.intLiteralAsInt
+      typeContext toValueType return
     cType case
       t .cType
         types.cTypeAsType
@@ -895,9 +899,11 @@ proc(
   ## XXX? better cType <-> type conversion
   src0 typeContext types.unwrapNamed
     ..dup .cType ?? if .cType types.cTypeAsType end
+    ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
   =:: src
   target0 typeContext types.unwrapNamed
     ..dup .cType ?? if .cType types.cTypeAsType end
+    ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
   =:: target
   src target types.typeEquals if
     ops return ## nothing to do

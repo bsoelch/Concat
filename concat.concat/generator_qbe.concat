@@ -162,6 +162,8 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
         F64 case ValType .DOUBLE return
       end
       break
+    intLiteral case
+      t .intLiteral types.intLiteralAsInt context toValType return
     cType case
       t .cType
         types.cTypeAsType
@@ -281,9 +283,8 @@ proc( Type : t CompilerContext ptr mut : context -> bool ) =>: referenceOnly
   context [] .program =:: program
   program [] .idContext .typeContext@ =:: typeContext
   t typeContext types.unwrapNamed
-    ..dup .cType ?? if
-      .cType types.cTypeAsType
-    end
+    ..dup .cType ?? if .cType types.cTypeAsType end
+    ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
   =:: baseType
   baseType types.isPrimitive if
     false return
@@ -659,6 +660,10 @@ namespace: sb
           F64 case sb "d" sb.appendS return
         end
         break
+      intLiteral case
+        sb
+          t .intLiteral types.intLiteralAsInt storeType pos context
+        appendTypeNameQBE return
       cType case
         sb
           t .cType types.cTypeAsType
@@ -839,9 +844,8 @@ namespace: sb
             ..dup .arrayIndex ?? if ..drop
               types.primitive.I_SIZE
             end
-            ..dup .cType ?? if
-              .cType types.cTypeAsType
-            end
+            ..dup .cType ?? if .cType types.cTypeAsType end
+            ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
@@ -865,9 +869,8 @@ namespace: sb
         break
         Float case
           t typeContext types.unwrapNamed
-            ..dup .cType ?? if
-              .cType types.cTypeAsType
-            end
+            ..dup .cType ?? if .cType types.cTypeAsType end
+            ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
           =:: numType
           numType types.primitive.F32 types.typeEquals if
             value .Float f32 cast f32.bits sb.appendI
@@ -1987,6 +1990,14 @@ proc(
       context
     extendArguments return
   end
+  src typeContext types.unwrapNamed .intLiteral ?? if
+    sb
+      src typeContext types.unwrapNamed .intLiteral types.intLiteralAsInt
+      signed
+      pos
+      context
+    extendArguments return
+  end
   src typeContext types.isInt ! if
     sb return
   end
@@ -2622,7 +2633,7 @@ proc(
   Type : target0
   FilePosition : pos
   CompilerContext ptr mut : context
--> stringBuilder ) =>: compileCast
+-> stringBuilder ) =>: compileCast ## FIXME cast ..u32 -> i64 should zero extend
   context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
@@ -2632,9 +2643,11 @@ proc(
   ## XXX? better cType <-> type conversion
   src0 typeContext types.unwrapNamed
     ..dup .cType ?? if .cType types.cTypeAsType end
+    ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
   =:: src
   target0 typeContext types.unwrapNamed
     ..dup .cType ?? if .cType types.cTypeAsType end
+    ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
   =:: target
   src target types.typeEquals if
     sb return ## nothing to do

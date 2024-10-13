@@ -240,7 +240,9 @@ proc(
       ..over offset +
     list.at .data =:: stackInfo
     context [] .typeBuffer
-      stackInfo [] .valueType list.append
+      stackInfo [] .valueType
+        $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
+      list.append
     context [] .typeBuffer =
     context [] .labelBuffer
       stackInfo [] .valueName list.append
@@ -268,7 +270,12 @@ proc(
   context [] .stackInfo
     offset list.setLength
   context [] .stackInfo =
-  values arrayType error return
+  ## return
+    values
+    arrayType ## XXX ? keep literal type on array & allow cast from int literal array to int array
+      $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
+    error
+  return
 end
 
 proc(

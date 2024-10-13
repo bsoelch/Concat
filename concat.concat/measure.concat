@@ -28,7 +28,7 @@ proc(
   else ..drop end
   visited declared ptrLevel map.put ..drop
   declared switch
-    undefined empty primitiveType autoType genericType arrayIndex cType case
+    undefined empty primitiveType autoType genericType arrayIndex cType intLiteral case
       break
     pointer case
       declared typeContext types.getBaseType ptrLevel 1 + pos prog visited types declaredType

@@ -20,7 +20,7 @@ struct(
 
 enum(
   ConstValue : value
-  ConstValue : fixed
+  ConstValue : fixed  ## value of generic cannot be changed
                nonEmpty
 ) =:: GenericArg
 
@@ -265,7 +265,7 @@ proc(
           argOffset list.setLength
         argBuffer [] =
       return
-    undefined empty primitiveType cType arrayIndex autoType case
+    undefined empty primitiveType cType arrayIndex autoType intLiteral case
       ..unreachable ## type should not contain generics
   end
 end
@@ -560,7 +560,7 @@ proc(
         i 1 +
       end ..drop
       false return
-    undefined empty primitiveType cType arrayIndex autoType case
+    undefined empty primitiveType cType arrayIndex autoType intLiteral case
       ..unreachable ## type should not contain generics
   end
 end
@@ -776,6 +776,18 @@ proc(
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
             current [] .genericValues @ paramLabel map.at =:: autoValue
             autoValue optional.isEmpty ! and autoValue .data [] .nonEmpty ?? ! _if
+          autoValue .data [] switch
+            fixed case autoValue .data [] .fixed@ break
+            value case autoValue .data [] .value@ break
+            nonEmpty case ..unreachable
+          end =:: value
+          ## convert intLiteral types to corresponding int-types
+          value [] .typeId ?? and value [] .typeId .intLiteral ?? if
+            current [] .genericValues @
+              paramLabel
+              value [] .typeId .intLiteral types.intLiteralAsInt ConstValue .typeId GenericArg .fixed
+            map.put ..drop
+          end
           current [] .paramInfo
             ## ParameterInfo
               stackIndex 0
@@ -891,6 +903,12 @@ proc(
           current [] .nCasts 1 + current [] .nCasts =
         end
         fromType paramType types.typeEquals ! if
+          fromType .intLiteral ?? and
+              fromType .intLiteral types.intLiteralAsInt 
+              paramType typeContext types.unwrapNamed types.typeEquals ! if
+            ## resizing int-literal counts as additional cast
+            current [] .nCasts 1 + current [] .nCasts =
+          end
           fromType typeContext types.unwrapNamed
               paramType typeContext types.unwrapNamed
               types.typeEquals if
@@ -1077,6 +1095,13 @@ proc(
       candidate [] .genericValues @ eltLabel getValueOrNone =:: value
       value .none ?? ! if
         false needArg =
+      end
+      ## convert intLiteral types to corresponding int-type
+      value .typeId ?? and value .typeId .intLiteral ?? if
+        candidate [] .genericValues @
+          eltLabel
+          value .typeId .intLiteral types.intLiteralAsInt ConstValue .typeId GenericArg .fixed
+        map.put ..drop
       end
       flags id.FLAG_STATIC & ? ! if
         constArgs

@@ -17,6 +17,9 @@ namespace: f32
   0xff =:: export: SHIFTED_EXP_MASK
   127 =:: export: EXP_BIAS
 
+  -0x100'0000:i32 =:: export: MIN_INT
+  0x100'0000:i32 =:: export: MAX_INT
+
   -0xf.fffffX1f:f32 =:: export: MIN
   0xf.fffffX1f:f32 =:: export: MAX
   proc( -> f32 ) =>: export: NaN
@@ -145,6 +148,9 @@ namespace: f64
   0x7ff =:: export: SHIFTED_EXP_MASK
   1023 =:: export: EXP_BIAS
 
+  -0x20'0000'0000'0000:i64 =:: export: MIN_INT
+  0x20'0000'0000'0000:i64 =:: export: MAX_INT
+  
   -0xf.ffffffffffff8Xff =:: export: MIN
   0xf.ffffffffffff8Xff =:: export: MAX
   proc( -> f64 ) =>: export: NaN
