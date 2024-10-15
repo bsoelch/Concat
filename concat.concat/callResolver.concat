@@ -589,17 +589,13 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
   t typeContext types.unwrapNamed types.isPrimitive if
     t typeContext types.primitiveValue switch
       BOOL    case 0 return
-      S8  U8  case 1 return
-      I8      case 2 return
-      S16 U16 case 3 return
-      I16     case 4 return
-      S32 U32 case 5 return
-      I32     case 6 return
-      S64 U64 case 7 return
-      I64     case 8 return
-      F32     case 9 return
-      F64     case 10 return
-      TYPE    case 11 return
+      I8 U8   case 1 return
+      I16 U16 case 2 return
+      I32 U32 case 3 return
+      I64 U64 case 4 return
+      F32     case 5 return
+      F64     case 6 return
+      TYPE    case 7 return
     end
   end
   t typeContext types.isPointer if

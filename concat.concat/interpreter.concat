@@ -691,14 +691,14 @@ namespace: interpreter
     oldValue .Float ?? and targetType typeContext types.isInt if
       targetType typeContext types.unwrapNamed types.isPrimitive if
         targetType typeContext types.primitiveValue switch
-          I8  S8  case oldValue .Float s8  cast ConstValue .int return
-          U8      case oldValue .Float u8  cast ConstValue .int return
-          I16 S16 case oldValue .Float s16 cast ConstValue .int return
-          U16     case oldValue .Float u16 cast ConstValue .int return
-          I32 S32 case oldValue .Float s32 cast ConstValue .int return
-          U32     case oldValue .Float u32 cast ConstValue .int return
-          I64 S64 case oldValue .Float s64 cast ConstValue .int return
-          U64     case oldValue .Float u64 cast ConstValue .int return
+          I8  case oldValue .Float i8  cast ConstValue .int return
+          U8  case oldValue .Float u8  cast ConstValue .int return
+          I16 case oldValue .Float i16 cast ConstValue .int return
+          U16 case oldValue .Float u16 cast ConstValue .int return
+          I32 case oldValue .Float i32 cast ConstValue .int return
+          U32 case oldValue .Float u32 cast ConstValue .int return
+          I64 case oldValue .Float i64 cast ConstValue .int return
+          U64 case oldValue .Float u64 cast ConstValue .int return
           BOOL F32 F64 TYPE case ..unreachable
         end
       else targetType typeContext types.isUnsignedInt _if
@@ -713,17 +713,14 @@ namespace: interpreter
       targetType typeContext types.isUnsignedInt =:: unsignedTarget
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
-          S8  case intVal s8  cast intVal = break
           U8  case intVal u8  cast intVal = break
-          S16 case intVal s16 cast intVal = break
           U16 case intVal u16 cast intVal = break
-          S32 case intVal s32 cast intVal = break
           U32 case intVal u32 cast intVal = break
-          I8  case intVal unsignedTarget if u8  cast else s8  cast end intVal = break
-          I16 case intVal unsignedTarget if u16 cast else s16 cast end intVal = break
-          I32 case intVal unsignedTarget if u32 cast else s32 cast end intVal = break
+          I8  case intVal unsignedTarget if u8  cast else i8  cast end intVal = break
+          I16 case intVal unsignedTarget if u16 cast else i16 cast end intVal = break
+          I32 case intVal unsignedTarget if u32 cast else i32 cast end intVal = break
           F32 F64 case break ## XXX? handle precission loss due to representing int as float
-          I64 S64 U64 case break ## no change neccessary
+          I64 U64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
         end
       end

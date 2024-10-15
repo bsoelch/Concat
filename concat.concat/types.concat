@@ -10,10 +10,10 @@ import "constants.concat"
 namespace: types
   enum(
     BOOL
-    I8 S8 U8
-    I16 S16 U16
-    I32 S32 U32
-    I64 S64 U64
+    I8 U8
+    I16 U16
+    I32 U32
+    I64 U64
     F32 F64
     TYPE
   ) =:: export: PrimitiveType
@@ -121,16 +121,12 @@ namespace: types
     switch
       BOOL case 1 return
       I8 case 2 return
-      S8 case 3 return
       U8 case 4 return
       I16 case 5 return
-      S16 case 6 return
       U16 case 7 return
       I32 case 8 return
-      S32 case 9 return
       U32 case 10 return
       I64 case 11 return
-      S64 case 12 return
       U64 case 13 return
       F32 case 14 return
       F64 case 15 return
@@ -231,16 +227,12 @@ namespace: types
   namespace: primitive
     PrimitiveType .BOOL Type .primitiveType Type =: export: BOOL
     PrimitiveType .I8   Type .primitiveType Type =: export: I8
-    PrimitiveType .S8   Type .primitiveType Type =: export: S8
     PrimitiveType .U8   Type .primitiveType Type =: export: U8
     PrimitiveType .I16  Type .primitiveType Type =: export: I16
-    PrimitiveType .S16  Type .primitiveType Type =: export: S16
     PrimitiveType .U16  Type .primitiveType Type =: export: U16
     PrimitiveType .I32  Type .primitiveType Type =: export: I32
-    PrimitiveType .S32  Type .primitiveType Type =: export: S32
     PrimitiveType .U32  Type .primitiveType Type =: export: U32
     PrimitiveType .I64  Type .primitiveType Type =: export: I64
-    PrimitiveType .S64  Type .primitiveType Type =: export: S64
     PrimitiveType .U64  Type .primitiveType Type =: export: U64
     PrimitiveType .F32  Type .primitiveType Type =: export: F32
     PrimitiveType .F64  Type .primitiveType Type =: export: F64
@@ -304,21 +296,13 @@ namespace: types
     switch
       BOOL F32 F64 TYPE case
         false return
-      I8 I16 I32 I64 S8 S16 S32 S64  U8 U16 U32 U64 case
-        true return
-    end
-  end
-  proc( PrimitiveType -> bool ) =>: isSignedIntPrimitive
-    switch
-      BOOL F32 F64 TYPE I8 I16 I32 I64 U8 U16 U32 U64 case
-        false return
-      S8 S16 S32 S64 case
+      I8 I16 I32 I64 U8 U16 U32 U64 case
         true return
     end
   end
   proc( PrimitiveType -> bool ) =>: isUnsignedIntPrimitive
     switch
-      BOOL F32 F64 TYPE I8 I16 I32 I64 S8 S16 S32 S64 case
+      BOOL F32 F64 TYPE I8 I16 I32 I64 case
         false return
       U8 U16 U32 U64 case
         true return
@@ -348,9 +332,7 @@ namespace: types
           U8 U16 U32 U64 case false return
         end
       end
-      ..dup isPrimitive ! if ..drop
-        false return
-      end .primitiveType isSignedIntPrimitive
+      ..drop false return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isUnsignedInt
     unwrapNamed
@@ -373,7 +355,7 @@ namespace: types
         false return
       end .primitiveType
       switch
-        BOOL I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 TYPE case
+        BOOL I8 U8 I16 U16 I32 U32 I64 U64 TYPE case
           false return
         F32 F64 case
           true return
@@ -390,7 +372,7 @@ namespace: types
       switch
         BOOL TYPE case
           false return
-        I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 F32 F64 case
+        I8 U8 I16 U16 I32 U32 I64 U64 F32 F64 case
           true return
       end
   end
@@ -422,7 +404,7 @@ namespace: types
       switch
         BOOL TYPE case
           -1 return
-        I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+        I8 U8 I16 U16 I32 U32 I64 U64 case
           0 return
         F32 case
           23 return ## IEEE binary-32
@@ -441,13 +423,13 @@ namespace: types
       switch
         BOOL TYPE case
           -1 return
-        I8 S8 U8 case
+        I8 U8 case
           8 return
-        I16 S16 U16 case
+        I16 U16 case
           16 return
-        I32 S32 U32 case
+        I32 U32 case
           32 return
-        I64 S64 U64 case
+        I64 U64 case
           64 return
         F32 case
           23 return ## IEEE binary-32
@@ -477,20 +459,20 @@ namespace: types
     Type .undefined true return
   end
   proc( PrimitiveType : a PrimitiveType : b -> Type bool ) =>: commonIntPrimitive
-    a isSignedIntPrimitive =:: aSigned
+    false =:: aSigned ## XXX rewrite int->int casting
     a isUnsignedIntPrimitive =:: aUnsigned
     a sizeOfPrimitive =:: aBytes
-    b isSignedIntPrimitive =:: bSigned
+    false =:: bSigned
     b isUnsignedIntPrimitive =:: bUnsigned
     b sizeOfPrimitive =:: bBytes
     aSigned aUnsigned | and bSigned or bUnsigned if
       ## both explicitly signed
       aSigned bSigned == if ## same sign -> pick larger size
         aBytes bBytes i64.max switch
-          1 case aSigned if primitive.S8  else primitive.U8  end false return
-          2 case aSigned if primitive.S16 else primitive.U16 end false return
-          4 case aSigned if primitive.S32 else primitive.U32 end false return
-          8 case aSigned if primitive.S64 else primitive.U64 end false return
+          1 case aSigned if primitive.I8  else primitive.U8  end false return
+          2 case aSigned if primitive.I16 else primitive.U16 end false return
+          4 case aSigned if primitive.I32 else primitive.U32 end false return
+          8 case aSigned if primitive.I64 else primitive.U64 end false return
         end
         Type .undefined true return
       end
@@ -499,10 +481,10 @@ namespace: types
         aSigned if aBytes else aBytes 2 * end
         bSigned if bBytes else bBytes 2 * end
       i64.max switch
-        1 case primitive.S8  false return
-        2 case primitive.S16 false return
-        4 case primitive.S32 false return
-        8 case primitive.S64 false return
+        1 case primitive.I8  false return
+        2 case primitive.I16 false return
+        4 case primitive.I32 false return
+        8 case primitive.I64 false return
       end
       Type .undefined true return
     end
@@ -569,7 +551,7 @@ namespace: types
     end =:: srcBits =:: srcSigned
     target context primitiveValue =:: targetPrimitive
     targetPrimitive isIntPrimitive if
-      targetPrimitive isSignedIntPrimitive =:: targetSigned
+      false =:: targetSigned
       targetPrimitive isUnsignedIntPrimitive =:: targetUnsigned
       targetPrimitive sizeOfPrimitive 8 * =:: targetBits
       srcSigned and targetUnsigned if
@@ -595,10 +577,10 @@ namespace: types
     src context primitiveValue =:: srcPrimitive
     target context primitiveValue =:: targetPrimitive
     srcPrimitive isIntPrimitive and targetPrimitive isIntPrimitive if
-      srcPrimitive isSignedIntPrimitive =:: srcSigned
+      false =:: srcSigned
       srcPrimitive isUnsignedIntPrimitive =:: srcUnsigned
       srcPrimitive sizeOfPrimitive =:: srcBytes
-      targetPrimitive isSignedIntPrimitive =:: targetSigned
+      false =:: targetSigned
       targetPrimitive isUnsignedIntPrimitive =:: targetUnsigned
       targetPrimitive sizeOfPrimitive =:: targetBytes
       srcSigned and targetUnsigned if
@@ -641,14 +623,13 @@ namespace: types
     switch
       VOID case Type .empty return
       BOOL case primitive.BOOL return
-      CHAR case primitive.I8 return
-      S_CHAR case primitive.S8 return
+      CHAR S_CHAR case primitive.I8 return
       U_CHAR case primitive.U8 return
-      SHORT case primitive.S16 return
+      SHORT case primitive.I16 return
       U_SHORT case primitive.U16 return
-      INT case primitive.S32 return
+      INT case primitive.I32 return
       U_INT case primitive.U32 return
-      LONG LONGLONG case primitive.S64 return
+      LONG LONGLONG case primitive.I64 return
       U_LONG U_LONGLONG SIZE case primitive.U64 return
       FLOAT case primitive.F32 return
       DOUBLE case primitive.F64 return
@@ -674,13 +655,13 @@ namespace: types
     switch
       TYPE case
         0 return
-      BOOL I8 S8 U8 case
+      BOOL I8 U8 case
         1 return
-      I16 S16 U16 case
+      I16 U16 case
         2 return
-      I32 S32 U32 F32 case
+      I32 U32 F32 case
         4 return
-      I64 S64 U64 F64 case
+      I64 U64 F64 case
         8 return
     end
   end
@@ -2596,16 +2577,12 @@ namespace: sb
     switch
       BOOL case "bool" appendS return
       I8   case "i8"   appendS return
-      S8   case "s8"   appendS return
       U8   case "u8"   appendS return
       I16  case "i16"  appendS return
-      S16  case "s16"  appendS return
       U16  case "u16"  appendS return
       I32  case "i32"  appendS return
-      S32  case "s32"  appendS return
       U32  case "u32"  appendS return
       I64  case "i64"  appendS return
-      S64  case "s64"  appendS return
       U64  case "u64"  appendS return
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return

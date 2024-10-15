@@ -693,9 +693,9 @@ proc(
     primitiveType case
       t .primitiveType switch
         TYPE case ValueType .EMPTY return
-        BOOL I8 I16 I32 S8 S16 S32 U8 U16 U32 case
+        BOOL I8 I16 I32 U8 U16 U32 case
           ValueType .I32 return
-        I64 S64 U64 case ValueType .I64 return
+        I64 U64 case ValueType .I64 return
         F32 case ValueType .F32 return
         F64 case ValueType .F64 return
       end
@@ -817,7 +817,7 @@ proc(
         ## TODO F32 -> F64
         ## EXTF
         break
-      I8 I16 I32 I64 S8 S16 S32 S64 case
+      I8 I16 I32 I64 case
         ## TODO float -> int
         ## 1. FTOI
         ## 2. truncate to correct size

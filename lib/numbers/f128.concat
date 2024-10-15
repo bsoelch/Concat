@@ -800,7 +800,7 @@ namespace: f160
         end
       end
     end
-    x .exp s64 cast y .exp s64 cast + highBit if 1 + end overflow if 1 + end =:: exp
+    x .exp i64 cast y .exp i64 cast + highBit if 1 + end overflow if 1 + end =:: exp
     exp -0x8000'0000 < if
       ## f160
         0 0 0

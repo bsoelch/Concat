@@ -1,5 +1,5 @@
 # Types
-
+<!-- FIXME include int-literal types--->
 ## primitive types
 
 * `bool` boolean value ( `true` or `false` )

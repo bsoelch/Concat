@@ -156,8 +156,8 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     primitiveType case
       t .primitiveType switch
         TYPE case ValType .EMPTY return
-        BOOL I8 I16 I32 S8 S16 S32 U8 U16 U32 case ValType .I32 return
-        I64 S64 U64 case ValType .I64 return
+        BOOL I8 I16 I32 U8 U16 U32 case ValType .I32 return
+        I64 U64 case ValType .I64 return
         F32 case ValType .FLOAT return
         F64 case ValType .DOUBLE return
       end
@@ -624,7 +624,7 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I8 S8 case
+          I8 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sb" sb.appendS return
@@ -639,7 +639,7 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I16 S16 case
+          I16 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sh" sb.appendS return
@@ -654,8 +654,8 @@ namespace: sb
               STORE case sb "h" sb.appendS return
             end
             break
-          I32 S32 U32 case sb "w" sb.appendS return
-          I64 S64 U64 case sb "l" sb.appendS return
+          I32 U32 case sb "w" sb.appendS return
+          I64 U64 case sb "l" sb.appendS return
           F32 case sb "s" sb.appendS return
           F64 case sb "d" sb.appendS return
         end
@@ -849,10 +849,10 @@ namespace: sb
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
-              I8  S8  U8  case value .int i8  cast sb.appendI return
-              I16 S16 U16 case value .int i16 cast sb.appendI return
-              I32 S32 U32 case value .int i32 cast sb.appendI return
-              I64 S64 U64 case value .int sb.appendI return
+              I8  U8  case value .int i8  cast sb.appendI return
+              I16 U16 case value .int i16 cast sb.appendI return
+              I32 U32 case value .int i32 cast sb.appendI return
+              I64 U64 case value .int sb.appendI return
               F32 case value .int f32 cast f32.bits sb.appendI return
               F64 case value .int f64 cast f64.bits sb.appendI return
               BOOL TYPE case break
@@ -2229,18 +2229,18 @@ proc(
   false =:: mut: unsigned
   sb
     srcType switch
-      I8 S8 case boundType .MIN ?? if i8.MIN else i8.MAX end break
-      U8 case true unsigned = boundType .MIN ?? if 0 else i8.UMAX end break
-      I16 S16 case boundType .MIN ?? if i16.MIN else i16.MAX end break
+      I8  case boundType .MIN ?? if i8.MIN else i8.MAX end break
+      U8  case true unsigned = boundType .MIN ?? if 0 else i8.UMAX end break
+      I16 case boundType .MIN ?? if i16.MIN else i16.MAX end break
       U16 case true unsigned = boundType .MIN ?? if 0 else i16.UMAX end break
-      I32 S32 case boundType .MIN ?? if i32.MIN else i32.MAX end break
+      I32 case boundType .MIN ?? if i32.MIN else i32.MAX end break
       U32 case true unsigned = boundType .MIN ?? if 0 else i32.UMAX end break
-      I64 S64 case boundType .MIN ?? if i64.MIN else i64.MAX end break
+      I64 case boundType .MIN ?? if i64.MIN else i64.MAX end break
       U64 case true unsigned = boundType .MIN ?? if 0 else i64.UMAX end break
       BOOL case boundType .MIN ?? if 0 else 1 end break
       F32 case
         asType switch
-          I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+          I8 U8 I16 U16 I32 U32 I64 U64 case
             asType boundType asType appendNumberBound return
           F32 case
             boundType .MIN ?? if f32.MIN else f32.MAX end f32.bits sb.appendI return
@@ -2251,7 +2251,7 @@ proc(
         break
       F64 case
         asType switch
-          I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+          I8 U8 I16 U16 I32 U32 I64 U64 case
             asType boundType asType appendNumberBound return
           F32 case
             boundType .MIN ?? if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
@@ -2263,7 +2263,7 @@ proc(
       TYPE case ..unreachable
     end =:: intVal
   asType switch
-    I8 S8 U8 I16 S16 U16 I32 S32 U32 I64 S64 U64 case
+    I8 U8 I16 U16 I32 U32 I64 U64 case
       intVal sb.appendI return
     F32 case intVal unsigned if u64 cast f32 cast else f32 cast end f32.bits sb.appendI return
     F64 case intVal unsigned if u64 cast f64 cast else f64 cast end f64.bits sb.appendI return
@@ -2451,10 +2451,10 @@ proc(
           's' sb.appendC
         end
         fromVal switch
-          I8  S8  U8 case "b" sb.appendS break
-          I16 S16 U16 case "h" sb.appendS break
-          I32 S32 U32 case "w" sb.appendS break
-          I64 S64 U64 case "l" sb.appendS break
+          I8  U8 case "b" sb.appendS break
+          I16 U16 case "h" sb.appendS break
+          I32 U32 case "w" sb.appendS break
+          I64 U64 case "l" sb.appendS break
           BOOL TYPE F32 F64 case ..unreachable
         end
       end
@@ -2481,7 +2481,7 @@ proc(
             srcIndex sb.appendI
             '\n' sb.appendC
           return
-        I8 S8 I16 S16 I32 S32 I64 S64 case
+        I8 I16 I32 I64 case
           sb
             fromVal srcIndex target toVal targetIndex
             false
@@ -2501,9 +2501,9 @@ proc(
       " =" sb.appendS
       target StorageType .STACK pos context sb.appendTypeNameQBE
       fromVal switch
-        I64 S16 case " sltof" sb.appendS break
+        I64 case " sltof" sb.appendS break
         U64 case " ultof" sb.appendS break
-        I8 I16 I32 S8 S32 S64 case " swtof" sb.appendS break
+        I8 I16 I32 case " swtof" sb.appendS break
         U8 U16 U32 case " uwtof" sb.appendS break
         BOOL TYPE F32 F64 case ..unreachable
       end
@@ -2594,10 +2594,10 @@ proc(
       fromSize toSize < if
         fromVal switch
           BOOL TYPE F32 F64 case break
-          I8  S8  U8  case " extub" sb.appendS break
-          I16 S16 U16 case " extuh" sb.appendS break
-          I32 S32 U32 case " extuw" sb.appendS break
-          I64 S64 U64 case " extul" sb.appendS break
+          I8  U8  case " extub" sb.appendS break
+          I16 U16 case " extuh" sb.appendS break
+          I32 U32 case " extuw" sb.appendS break
+          I64 U64 case " extul" sb.appendS break
         end
       else
         ## copy to smaller type truncates
