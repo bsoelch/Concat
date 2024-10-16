@@ -2405,6 +2405,7 @@ proc(
   i64 : targetIndex
   FilePosition : pos
   CompilerContext ptr mut : context
+  SignType : signType
 -> stringBuilder ) =>: castNumbers
   context [] .program =:: prog
   prog [] .errors @ =:: errors
@@ -2442,12 +2443,9 @@ proc(
         " =" sb.appendS
         target StorageType .STACK pos context sb.appendTypeNameQBE
         " ext" sb.appendS
-        src typeContext types.isUnsignedInt if ## u -> i,s,u
+        signType .UNSIGNED ?? if
           'u' sb.appendC
-        else src typeContext types.isSignedInt ! and ## i -> u
-            target typeContext types.isUnsignedInt _if
-          'u' sb.appendC
-        else ## s -> i,s,u / i -> i,s
+        else
           's' sb.appendC
         end
         fromVal switch
@@ -2481,15 +2479,10 @@ proc(
             srcIndex sb.appendI
             '\n' sb.appendC
           return
-        I8 I16 I32 I64 case
+        I8 I16 I32 I64 U8 U16 U32 U64 case
           sb
             fromVal srcIndex target toVal targetIndex
-            false
-          pos context castFloatToInt return
-        U8 U16 U32 U64 case
-          sb
-            fromVal srcIndex target toVal targetIndex
-            true
+            signType .UNSIGNED ??
           pos context castFloatToInt return
         BOOL TYPE case ..unreachable
       end
@@ -2500,11 +2493,10 @@ proc(
       targetIndex sb.appendI
       " =" sb.appendS
       target StorageType .STACK pos context sb.appendTypeNameQBE
+      signType .UNSIGNED ?? if " u" sb.appendS else " s" sb.appendS end
       fromVal switch
-        I64 case " sltof" sb.appendS break
-        U64 case " ultof" sb.appendS break
-        I8 I16 I32 case " swtof" sb.appendS break
-        U8 U16 U32 case " uwtof" sb.appendS break
+        I64 U64 case "ltof" sb.appendS break
+        I8 I16 I32 U8 U16 U32 case "wtof" sb.appendS break
         BOOL TYPE F32 F64 case ..unreachable
       end
       " %s" sb.appendS
@@ -2628,19 +2620,36 @@ enum( autoCast Cast Cast! bitCast ) =:: CastType
 proc(
   stringBuilder : sb
   CastType : castType
+  SignType : signType0
   Type : src0
   i32 : offset
   Type : target0
   FilePosition : pos
   CompilerContext ptr mut : context
--> stringBuilder ) =>: compileCast ## FIXME cast ..u32 -> i64 should zero extend
+-> stringBuilder ) =>: compileCast
   context [] .program =:: prog
   prog [] .errors @ =:: errors
   prog [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
+  signType0
+    $ .NONE ?? if ..drop
+      src0 typeContext types.isUnsignedInt if
+        SignType .UNSIGNED
+      else src0 typeContext types.isSignedInt _if
+        SignType .SIGNED
+      else target0 typeContext types.isUnsignedInt _if
+        SignType .UNSIGNED
+      else target0 typeContext types.isSignedInt _if
+        SignType .SIGNED
+      else
+        SignType .NONE
+      end
+    end
+  =:: signType
   ## XXX? better cType <-> type conversion
+  ## TODO update sign type when casting from/to  cType/intLiteral
   src0 typeContext types.unwrapNamed
     ..dup .cType ?? if .cType types.cTypeAsType end
     ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
@@ -2677,7 +2686,7 @@ proc(
       ## castNumbers
         src srcId
         types.primitive.I_SIZE targetId
-      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+      pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
       target typeContext types.getArraySize 0 array.get =:: size
       ## appendIndexCheck
         size .sizeType switch
@@ -2693,7 +2702,7 @@ proc(
     sb
       src srcId
       target targetId
-    pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+    pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isPointer target typeContext types.isPointer & if
@@ -2705,13 +2714,14 @@ proc(
       '\n' sb.appendC
     return ## both are pointer types
   end
+  ## XXX? sign type for cast int <-> ptr
   src typeContext types.isInt target typeContext types.isPointer & if
     ## src -> I_PTR ~ ptr
     sb
       ## castNumbers
         src srcId
         types.primitive.I_PTR targetId
-      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+      pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isPointer target typeContext types.isInt & if
@@ -2720,7 +2730,7 @@ proc(
       ## castNumbers
         types.primitive.I_PTR srcId
         target targetId
-      pos context  castType .bitCast ?? if bitcastNumbers else castNumbers end
+      pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isReference and target typeContext types.isReference ! if
@@ -2743,6 +2753,7 @@ proc(
       baseType target types.typeEquals ! if
         ## compileCast
           castType
+          signType
           baseType
           offset
           target
@@ -2829,6 +2840,7 @@ proc(
     needCast if
       ## compileCast
         CastType .autoCast
+        SignType .NONE
         srcType
         0
         constType
@@ -2935,6 +2947,7 @@ proc(
       end
       ## compileCast
         CastType .autoCast
+        SignType .NONE
         outArg
           false
           typeContext
@@ -3499,6 +3512,7 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         CastType .autoCast
+        SignType .NONE
         op [] .dataType
         0
         op [] .dataType typeContext types.unwrapReference
@@ -3510,6 +3524,7 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         CastType .autoCast
+        SignType .NONE
         op [] .val .autoCast .src
         op [] .val .autoCast .offset
         op [] .dataType
@@ -3522,12 +3537,15 @@ proc(
         op [] .pos sb.appendPosQBE
         op [] .val .Cast ?? if
           CastType .Cast
-          op [] .val .Cast
+          op [] .val .Cast .signType
+          op [] .val .Cast .src
         else op [] .val .bitCast ?? _if
           CastType .bitCast
+          SignType .UNSIGNED
           op [] .val .bitCast
         else
           CastType .Cast!
+          SignType .NONE ## XXX? use sign information for forced cast
           op [] .val .Cast!
         end
         0 ## no offset

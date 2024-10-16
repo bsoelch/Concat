@@ -320,11 +320,17 @@ namespace: types
         false return
       end .primitiveType isIntPrimitive
   end
-  ## TODO check C-types for sign/unsigned int
   proc( Type TypeContext ptr -> bool ) =>: export: isSignedInt
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
         true return
+      end
+      ..dup .cType ?? if
+        .cType switch
+          S_CHAR SHORT INT LONG LONGLONG case true return
+          VOID BOOL CHAR U_CHAR U_SHORT U_INT U_LONG U_LONGLONG SIZE
+            FLOAT DOUBLE STRUCT_PTR UNION_PTR case false return
+        end
       end
       ..dup .intLiteral ?? if
         .intLiteral switch
@@ -338,6 +344,14 @@ namespace: types
     unwrapNamed
       ..dup .arrayIndex ?? if ..drop
         true return
+      end
+      ..dup .cType ?? if
+        .cType switch
+          U_CHAR U_SHORT U_INT U_LONG U_LONGLONG SIZE
+            STRUCT_PTR UNION_PTR case true return
+          VOID BOOL CHAR S_CHAR SHORT INT LONG LONGLONG
+            FLOAT DOUBLE case false return
+        end
       end
       ..dup .intLiteral ?? if
         .intLiteral switch

@@ -11,7 +11,9 @@ struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
 enum( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
 enum( PTR ARRAY PTR_MUT ) =:: export: TypeModifier
-struct( Type : src i32 : mut: offset ) =:: export: CastInfo ## offset: zero-indexed from top of stack
+struct( Type : src i32 : mut: offset ) =:: export: AutoCastInfo ## offset: zero-indexed from top of stack
+enum( SIGNED NONE UNSIGNED ) =:: export: SignType
+struct( Type : mut: src SignType : mut: signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 
@@ -96,8 +98,8 @@ enum(
                       getArg
                       length
                       size
-           CastInfo : mut: autoCast
-               Type : mut: Cast
+       AutoCastInfo : mut: autoCast
+           CastInfo : mut: Cast
                Type : mut: Cast!
                Type : mut: bitCast
    EqualityOperator : equalityOperator
@@ -225,8 +227,8 @@ proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnumReference
   =:: pos
   OpValue .NewEnumReference ..swap pos Operation new return
 end
-proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast
-   Type .undefined OpValue .Cast target pos Operation new return
+proc( Type : target SignType : sign FilePosition : pos -> Operation ) =>: export: opCast
+   Type .undefined sign CastInfo new OpValue .Cast target pos Operation new return
 end
 proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast!
    Type .undefined OpValue .Cast! target pos Operation new return
@@ -234,14 +236,8 @@ end
 proc( Type : target FilePosition : pos -> Operation ) =>: export: opBitCast
    Type .undefined OpValue .bitCast target pos Operation new return
 end
-proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export: opCastFrom
-   src OpValue .Cast target pos Operation new return
-end
-proc( Type : src Type : target FilePosition : pos -> Operation ) =>: export: opCast!From
-   src OpValue .Cast! target pos Operation new return
-end
 proc( Type : src i32 : offset Type : target FilePosition : pos -> Operation ) =>: export: opAutoCast
-   src offset CastInfo new OpValue .autoCast target pos Operation new return
+   src offset AutoCastInfo new OpValue .autoCast target pos Operation new return
 end
 proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
   =:: pos
@@ -681,10 +677,15 @@ namespace: sb
           ..over .val .autoCast .offset sb.appendI
           break
         Cast case
+          ..over .val .Cast .signType switch
+            NONE case break
+            SIGNED case "signed" sb.appendS break
+            UNSIGNED case "unsigned" sb.appendS break
+          end
           "cast ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) src: " sb.appendS
-          ..over .val .Cast typeContext sb.appendType
+          ..over .val .Cast .src typeContext sb.appendType
           break
         Cast! case
           "cast! ( " sb.appendS

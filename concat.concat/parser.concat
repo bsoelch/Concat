@@ -1703,13 +1703,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       ## new in procedure -> determine type in type-check phase
       Type .undefined fileState [] .wordStart opNew state appendOp
       return
+    #+ TODO improve cast system +#
     else ..dup "cast" string.wrap string.eq or ..dup "cast!" string.wrap string.eq _if =:: opName
       opName "cast!" string.wrap string.eq =:: forceCast
       Type .undefined
-        fileState [] .wordStart
         forceCast if
+          fileState [] .wordStart
           opCast!
         else
+          SignType .NONE
+          fileState [] .wordStart
           opCast
         end
       state appendOp
@@ -1718,6 +1721,18 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Type .undefined
         fileState [] .wordStart
       opBitCast state appendOp
+      return
+    else ..dup "cast.s" string.wrap string.eq _if =:: opName
+      Type .undefined
+        SignType .SIGNED
+        fileState [] .wordStart
+      opCast state appendOp ## TODO remember signedness
+      return
+    else ..dup "cast.u" string.wrap string.eq _if =:: opName
+      Type .undefined
+        SignType .UNSIGNED
+        fileState [] .wordStart
+      opCast state appendOp
       return
     else ..dup "==" string.wrap string.eq _if ..drop
       fileState [] .wordStart opEqual state appendOp

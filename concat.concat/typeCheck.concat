@@ -2489,7 +2489,7 @@ proc(
       end
       state [] .stack @ branchTree.pop .data [] =:: value
       op .val .Cast ?? if
-        value .valueType op .val .Cast =
+        value .valueType op .val .Cast .src =
       else op .val .bitCast ?? _if
         value .valueType op .val .bitCast =
       else
