@@ -1,10 +1,10 @@
 import debug
 ( i32 -> i64 ) =>: procedure
-
+  i64 cast.u
 end
 
 ( i32 : a -> i64 ) =>: labledPrcoedure
-  a
+  a i64 cast.s
 end
 
 ( i32 ) =:: tuple

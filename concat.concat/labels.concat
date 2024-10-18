@@ -266,7 +266,7 @@ namespace: id
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       ..dup .length str .length + sb.ensureCap
-      0 while ..dup str .length < do =:: i
+      0:i64 while ..dup str .length < do =:: i
         str i string.charAt =:: c
         c pos @ updateFilePos
         c '`' != if
@@ -291,7 +291,7 @@ namespace: id
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       ..dup .length str .length + sb.ensureCap
-      0 while ..dup str .length < do
+      0:i64 while ..dup str .length < do
         ..swap
           str ..over.2 string.charAt ..dup '\\' != if
             ..dup pos @ updateFilePos
@@ -340,7 +340,7 @@ namespace: id
               '\v' sb.appendC
               break
             'x' 'u' 'U' case =:: c
-              c 'x' == if 2 else c 'u' == _if 4 else 8 end =:: nChars
+              c 'x' == if 2:i64 else c 'u' == _if 4:i64 else 8:i64 end =:: nChars
               ..over nChars + str .length >= if
                 "not enough characters for escape sequence \"\\" sb.wrap
                   c                     sb.appendC
@@ -368,12 +368,12 @@ namespace: id
                     else c 'u' == _if
                       utf8.Codepoint cast sb.appendCodepoint
                     else c 'U' == _if
-                      ..dup i32.MAX > if
+                      ..dup i32.MAX i64 cast.u > if
                         "hex-code for escape sequence: \"\\U" sb.wrap
                           str .data ..over.4 + nChars string.create sb.appendStr
                           "\" does not fit in a signed integer" sb.appendS
                         pos errors appendError
-                      else ..dup utf8.MAX_CODEPOINT > _if
+                      else ..dup utf8.MAX_CODEPOINT i64 cast.u > _if
                         "code-point outside allowed range: \"\\U" sb.wrap
                           str .data ..over.4 + nChars string.create sb.appendStr
                           "\" (maximum: " sb.appendS

@@ -143,10 +143,10 @@ namespace: f64
   0x7ff0'0000'0000'0000:u =:: export: EXP_MASK
   0x000f'ffff'ffff'ffff:u =:: export: MANTISSA_MASK
   0x0010'0000'0000'0000:u =:: export: HIDDEN_BIT
-  52 =:: export: MANTISSA_BITS
+  52:i64 =:: export: MANTISSA_BITS
   52 =:: export: EXP_SHIFT
-  0x7ff =:: export: SHIFTED_EXP_MASK
-  1023 =:: export: EXP_BIAS
+  0x7ff:i64 =:: export: SHIFTED_EXP_MASK
+  1023:i64 =:: export: EXP_BIAS
 
   -0x20'0000'0000'0000:i64 =:: export: MIN_INT
   0x20'0000'0000'0000:i64 =:: export: MAX_INT

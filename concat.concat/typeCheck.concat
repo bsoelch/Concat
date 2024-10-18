@@ -399,7 +399,7 @@ proc(
         pos errors appendError
       end
     end
-    src .valueType src .value target typeContext interpreter.castConstant srcOp [] .val .Constant =
+    src .valueType SignType .NONE src .value target typeContext interpreter.castConstant srcOp [] .val .Constant =
     target srcOp [] .dataType =
     false return
   end
@@ -419,7 +419,7 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   types .length i64 list.create =:: mut: argOffsets
-  1 while ..dup types .length <= do =:: i
+  1:i64 while ..dup types .length <= do =:: i
     types types .length i - array.get =:: expectedType
     state [] .stack branchTree.depth 0 <= if
       expectedType .empty ?? if
@@ -458,7 +458,7 @@ proc(
       end
       ## opAutoCast
         typeInfo .valueType
-        i 1 - stackCastOffset +
+        i 1 - i32 cast stackCastOffset +
         expectedType
         pos
       opAutoCast state appendOp =:: opId
@@ -706,7 +706,7 @@ proc(
     return ## no operation to update
   end
   state [] .opInfo opIndex list.at .data =:: opInfo
-  argCount i32.MAX < assert "argument count fits in int"
+  argCount i32.MAX i64 cast.u < assert "argument count fits in int"
   argCount i32 cast opInfo [] .childCount =
   argOffset opInfo [] .childOffset =
   true =:: mut: canMoveChildren
@@ -932,7 +932,7 @@ proc(
     end
   end
   true =:: mut: noError
-  0 while ..dup toMerge .length < do =:: i
+  0:i64 while ..dup toMerge .length < do =:: i
     i mergePoint .rootBranch == if
       i 1 + continue
     end
@@ -1306,7 +1306,7 @@ proc(
       op [] .pos state popType
     end =:: valType
     valType op [] .dataType =
-    id 0 < id autoTypes [] .length >= | if
+    id 0 < or id i64 cast.s autoTypes [] .length >= if
       "auto-type id outside allowed range:" sb.wrap
         id sb.appendI
         " maximum:" sb.appendS
@@ -1398,7 +1398,7 @@ proc(
         switchData [] .switchType typeContext types.isEnum if
           ## appendLabelName
             switchData [] .switchType
-            label .enumLabel typeContext types.compositeGetLabel
+            label .enumLabel i64 cast typeContext types.compositeGetLabel
             labelContext
           sb.appendLabelName
         else
@@ -1569,7 +1569,7 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   op .dataType .autoType ?? if ## try resolving auto-types
     op .dataType types.getTypeId =:: id
-    id 0 >= id program [] .autoTypes .length < & if
+    id 0 >= and id i64 cast.s program [] .autoTypes .length < if
       program [] .autoTypes id list.get =:: autoType
       autoType .undefined ?? ! if
         autoType op .dataType =
@@ -1699,7 +1699,7 @@ proc(
               bundleId i64 cast list.at .data [] .procedures
             list.asArray
           end =:: procedures
-          0 =:: mut: stackConstants
+          0:i64 =:: mut: stackConstants
           true =:: mut: headConstant
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
           state [] .stack @ branchTree.itr.start while
@@ -1761,7 +1761,7 @@ proc(
             state freezeInterpreter ## constant evaluation failed
           end
           0 =:: mut: offset
-          argCount i32 cast 1 - while ..dup 0 >= do =:: i
+          argCount 1 - while ..dup 0 >= do =:: i
             inTypes i typeContext types.compositeGetLabel =:: eltLabel
             inTypes i typeContext types.compositeGetElement =:: elt
             eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -1857,7 +1857,7 @@ proc(
             program [] .procedures
               procId i64 cast list.at .data
             =:: procData
-            -1 =:: mut: implId
+            -1:i64 =:: mut: implId
             procData [] .procType op .dataType =
             procData [] .hasStaticArg if
               ## TODO resolve implementation id
@@ -1973,7 +1973,7 @@ proc(
       end =:: inType
       inType typeContext types.compositeElts =:: args
       ## push unnamed arguments
-      0 while ..dup args .length < do =:: i
+      0:i64 while ..dup args .length < do =:: i
         inType i typeContext types.compositeGetLabel =:: label
         label id.LABEL_ID_NONE == if ## push argument
           args i types.compositeElts.get =:: arg
@@ -2104,7 +2104,7 @@ proc(
         containerType
         labelId
         typeContext
-      types.compositeFindLabel =:: elementIndex
+      types.compositeFindLabel i64 cast =:: elementIndex
       elementIndex 0 < if
         checkOnly if
           containerType typeContext types.isEnum if
@@ -2208,7 +2208,7 @@ proc(
         op .pos errors appendError
         return
       end
-      1 =:: mut: childCount
+      1:i64 =:: mut: childCount
       OP_UNLINKED =:: mut: onRead
       state [] .childIds
         ..dup .length =:: childOffset
@@ -2311,7 +2311,7 @@ proc(
       break
     getArrayElement atArrayElement case ## TODO? extract to procedure
       op .val .atArrayElement ?? =:: isAddr
-      0 =:: mut: indexCount
+      0:i64 =:: mut: indexCount
       state [] .stack @ branchTree.itr.start while
         branchTree.itr.hasNext
       do branchTree.itr.peekNext =:: typeInfo ## don't consume value
@@ -3353,10 +3353,10 @@ proc(
                     typeContext
                   sb.appendType
                   "\nmissing labels:\n" sb.appendS
-                  0 while ..dup eltCount < do =:: i
+                  0:i64 while ..dup eltCount < do =:: i
                     false =:: mut:  match
                     ## XXX? use array.find
-                    0 while ..dup labels .length < do =:: j
+                    0:i64 while ..dup labels .length < do =:: j
                       labels j list.get .value .enumLabel i == if
                         true match =
                         j break
@@ -3561,7 +3561,7 @@ proc(
           end
           whileBlock [] .blockId =:: whileId
           ## remember number of changed stack values ( necessary for merging values in compiled code )
-          depth .success program [] .whileData whileId list.at .data [] .modifiedTypes =
+          depth .success i64 cast.u program [] .whileData whileId list.at .data [] .modifiedTypes =
           breakBranches .length 1 >= if
             breakBranches .length =:: nodeCount
             branchPoints
@@ -3734,11 +3734,11 @@ proc(
     stackMod case
       op .val .stackMod .modType switch
         DROP case
-          op .val .stackMod .n op .pos state discardValues
+          op .val .stackMod .n i64 cast.s op .pos state discardValues
           return
         COPY case
           op .val .stackMod .n =:: offset
-          offset 1 + op .pos state checkStackSize if
+          offset 1 + i64 cast.s op .pos state checkStackSize if
             return
           end
           ## copy value on stack
@@ -3927,7 +3927,7 @@ proc(
   else
     currentProc [] .procType state [] .currentProcType =
   end
-  0 while ..dup codeImpl [] .codeLength < do =:: i
+  0:i64 while ..dup codeImpl [] .codeLength < do =:: i
     program [] .tmpOps
       i codeImpl [] .codeStart + list.get
     state typeCheckOp
@@ -4050,9 +4050,9 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
         end
         implData [] .procType typeContext types.getProcIn ..drop =:: procIn
         procIn typeContext types.compositeElts =:: inTypes
-        0 =:: mut: staticArgCount
+        0:i64 =:: mut: staticArgCount
         ## XXX? clear argument map
-        0 while ..dup inTypes .length < do =:: i
+        0:i64 while ..dup inTypes .length < do =:: i
           procIn i typeContext types.compositeGetLabel =:: labelId
           inTypes i types.compositeElts.get =:: argType
           labelId labelContext id.labelFlags id.FLAG_STATIC & ? if

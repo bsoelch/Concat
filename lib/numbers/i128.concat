@@ -16,8 +16,11 @@ namespace: i128
     0 1 i128 new return
   end
 
+  proc( i32 : low -> i128 ) =>: export: fromI32
+    low 0 < if -1:i64 else 0:i64 end low i64 cast.s i128 new
+  end
   proc( i64 : low -> i128 ) =>: export: fromI64
-    low 0 < if -1 else 0 end low i128 new
+    low 0 < if -1:i64 else 0:i64 end low i128 new
   end
   proc( u64 : low -> i128 ) =>: export: fromU64
     0 low i128 new
@@ -48,57 +51,66 @@ namespace: i128
     i128 new
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: shl
-    a b .low shl_i64
+    a b .low i32 cast.u shl_i32
   end
   proc( i128 : a i64 : b -> i128 ) =>: export: shl_i64
-    b 127 & i32 cast =:: shift
+    a b i32 cast.u shl_i32
+  end
+  proc( i128 : a i32 : b -> i128 ) =>: export: shl_i32
+    b 127 & =:: shift
     shift 0 == if
       a return
     else shift 64 >= _if
       ## i128
-        a .low shift 64 - i64.shl
+        a .low shift 64 - <<
         0
       i128 new return
     end
     ## i128
-      a .hi shift i64.shl a .low 64 shift - i64.lshr |
-      a .low shift i64.shl
+      a .hi shift << a .low 64 shift - >>> |
+      a .low shift <<
     i128 new
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: lshr
-    a b .low lshr_i64
+    a b .low i32 cast.u lshr_i32
   end
   proc( i128 : a i64 : b -> i128 ) =>: export: lshr_i64
-    b 127 & i32 cast =:: shift
+    a b i32 cast.u lshr_i32
+  end
+  proc( i128 : a i32 : b -> i128 ) =>: export: lshr_i32
+    b 127 & =:: shift
     shift 0 == if
       a return
     else shift 64 >= _if
       ## i128
         0
-        a .hi shift 64 - i64.lshr
+        a .hi shift 64 - >>>
       i128 new return
     end
     ## i128
-      a .hi shift i64.lshr
-      a .low shift i64.lshr a .hi 64 shift - i64.shl |
+      a .hi shift >>>
+      a .low shift >>> a .hi 64 shift - << |
     i128 new
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: ashr
-    a b .low ashr_i64
+    a b .low i32 cast.u ashr_i32
   end
   proc( i128 : a i64 : b -> i128 ) =>: export: ashr_i64
-    b 127 & i32 cast =:: shift
+    a b i32 cast.u ashr_i32
+  end
+  proc( i128 : a i32 : b -> i128 ) =>: export: ashr_i32
+    b 127 & =:: shift
     shift 0 == if
       a return
     else shift 64 >= _if
       ## i128
         a .hi 0 < if -1:i64 else 0:i64 end
-        a .hi shift 64 - i64.ashr
+        a .hi shift 64 - >>
       i128 new return
     end
     ## i128
-      a .hi shift i64.ashr
-      a .low shift i64.lshr a .hi 64 shift - i64.shl |
+      a .hi shift >>
+      a .low shift >>> a .hi 64 shift - << |
     i128 new
   end
   proc( i128 : x -> i32 ) =>: export: highestSetBit
@@ -349,7 +361,7 @@ namespace: i128
         0x7fff_ffff_ffff_ffff -1 i128 new
       end =:: maxVal
       0 0 i128 new =:: mut: res
-      0 mBase i128 new =:: baseI128
+      0 mBase i64 cast.u i128 new =:: baseI128
       maxVal baseI128 ..udiv =:: maxSafe ## XXX? udiv i128 by i64
       0 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt =:: c
@@ -365,10 +377,10 @@ namespace: i128
         end
         res
           baseI128 * ## XXX mul i128 by i64  ## XXX add/sub i128 to/from i64
-          res maxSafe i128.cmp 0 == and ..dup maxVal 0 d i128 new - > if
+          res maxSafe i128.cmp 0 == and ..dup maxVal 0 d i64 cast.u i128 new - > if
             true overflow =
           end
-          0 d i128 new +
+          0 d i64 cast.u i128 new +
         res =
         i 1 +
       end ..drop
@@ -396,9 +408,9 @@ overload: ~ i128.flip end
 overload: & i128.and end
 overload: | i128.or end
 overload: ^ i128.xor end
-overload: << i128.shl i128.shl_i64 end
-overload: >>> i128.lshr i128.lshr_i64 end
-overload: >> i128.ashr i128.ashr_i64 end
+overload: << i128.shl i128.shl_i64 i128.shl_i32 end
+overload: >>> i128.lshr i128.lshr_i64 i128.lshr_i32 end
+overload: >> i128.ashr i128.ashr_i64 i128.ashr_i32 end
 overload: ..u< i128.ult end
 overload: ..u<= i128.ule end
 overload: ..u>= i128.uge end

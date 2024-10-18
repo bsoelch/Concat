@@ -152,7 +152,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
     end
     ..dup 0 string.charAt '`' == if ## raw-string
       1 string.tail =:: chars
-      0 while ..dup chars .length < do
+      0:i64 while ..dup chars .length < do
         chars ..over string.charAt '`' == if ##escape characters
           ..dup 1 + chars .length < and
                chars ..over 1 + string.charAt '`' == if

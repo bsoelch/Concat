@@ -69,7 +69,7 @@ namespace: utf8
       str str .length UNKNOWN_CODEPOINT return
     end
     index =:: mut: i
-    str i string.charAt 0xff & =:: mut: c
+    str i string.charAt i32 cast.u 0xff & =:: mut: c
     c 0xc0 & 0x80 == c 0xfe >= | if ## invalid starting character
       str index 1 + c -_ Codepoint cast return
     end
@@ -85,13 +85,13 @@ namespace: utf8
     c mask 1 - & =:: mut: cp
     c =:: c0
     i =:: i0
-    i count + str .length > if ## not enough characters
+    i count i64 cast.u + str .length > if ## not enough characters
       str i0 1 + c0 -_ Codepoint cast return
     end
     while count 1 > do
       cp 6 << cp =
       i 1 + i =
-      str i string.charAt 0xff & c =
+      str i string.charAt i32 cast.u 0xff & c =
       c 0xc0 & 0x80 != if ## invalid character in sequence
         str i0 1 + c0 -_ Codepoint cast return
       end

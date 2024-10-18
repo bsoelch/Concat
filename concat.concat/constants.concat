@@ -8,11 +8,11 @@ i64 =:: export: ProcId
 i64 =:: export: ProcBundleId
 i64 =:: export: ConstantId
 struct( i64 : offset i64 : length ) =:: export: ConstantArray
-struct( ConstantId : value i32 : eltIndex ) =:: export: UnionConstant
+struct( ConstantId : value i64 : eltIndex ) =:: export: UnionConstant
 enum(
   none
   bool : boolean
-  i32 : enumLabel
+  i64 : enumLabel
   i8 : chr
   i64 : int
   f64 : Float
@@ -59,7 +59,7 @@ proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValu
   elts context constArray ConstValue .arrayConstant return
 end
 
-proc( ConstValue : value i32 : index ConstantContext ptr mut : context -> ConstValue ) =>: export: newUnionConst
+proc( ConstValue : value i64 : index ConstantContext ptr mut : context -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
     ..dup .length ConstantId cast =:: valueId
     value list.append
@@ -124,8 +124,8 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
 end
 
 namespace: sb
-  proc( stringBuilder i8 -> stringBuilder ) =>: export: appendEscapedChr
-    =:: chr
+  proc( stringBuilder i8 : c -> stringBuilder ) =>: export: appendEscapedChr
+    c i32 cast.u =:: chr
     chr 0x20 < chr 0x7f == | if ## non-printable ASCII-characters + hex-codes for multi-char characters
       "\\x" sb.appendS
       chr 0xff &
@@ -133,24 +133,24 @@ namespace: sb
       sb.appendX
       return
     end
-    chr '\\' == chr '\'' == | chr '\"' == | if
+    c '\\' == c '\'' == | c '\"' == | if
       '\\' sb.appendC
-      chr  sb.appendC
+      c sb.appendC
       return
     end
-    chr  sb.appendC
+    c sb.appendC
   end
   proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendEscapedStr
     sb
-      0 while ..dup str .length < do =:: i
+      0:i64 while ..dup str .length < do =:: i
           str i labelContext id.scCharAt appendEscapedChr
         i 1 +
       end ..drop
     return
   end
   ## C-style string escaping, use octal sequences as hex-sequences may consume following characters
-  proc( stringBuilder i8 -> stringBuilder ) =>: export: appendEscapedChrC
-    =:: chr
+  proc( stringBuilder i8 : c -> stringBuilder ) =>: export: appendEscapedChrC
+    c i32 cast.u =:: chr
     chr 0x20 < chr 0x7f == | if
       ## non-printable ASCII-characters
       "\\" sb.appendS
@@ -160,19 +160,19 @@ namespace: sb
         else ..dup 0o100 < _if
           ..swap '0' sb.appendC ..swap
         end
-      8 sb.appendI?
+      i64 cast.u 8 sb.appendI?
       return
     end
-    chr '\\' == chr '\'' == | chr '\"' == | if
+    c '\\' == c '\'' == | c '\"' == | if
       '\\' sb.appendC
-      chr  sb.appendC
+      c  sb.appendC
       return
     end
-    chr  sb.appendC
+    c  sb.appendC
   end
   proc( stringBuilder : sb StringConstant : str LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendEscapedStrC
     sb
-      0 while ..dup str .length < do =:: i
+      0:i64 while ..dup str .length < do =:: i
         str i labelContext id.scCharAt appendEscapedChrC
         i 1 +
       end ..drop
@@ -227,7 +227,7 @@ namespace: sb
         arrayConstant case
           val .arrayConstant =:: mArray
           "{ " sb.appendS
-          0 while ..dup mArray .length < do =:: i
+          0:i64 while ..dup mArray .length < do =:: i
             mArray i constContext constArrayGet constContext typeContext appendConstant
             ' ' sb.appendC
             i 1 +

@@ -697,7 +697,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    i32 : index
+    i64 : index
     LabelId : labelId
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendArgName
@@ -733,7 +733,7 @@ namespace: sb
     false =:: mut: hasArgs
     sb
       "(" sb.appendS
-      0 while ..dup args .length < do =:: i
+      0:i64 while ..dup args .length < do =:: i
         args i types.compositeElts.get =:: arg
         arg typeContext types.containsGeneric if
           arg typeContext types.isArray if
@@ -763,7 +763,7 @@ namespace: sb
         i inType i typeContext types.compositeGetLabel context appendArgName
         i 1 +
       end ..drop
-      0 while ..dup outArgs .length < do =:: i
+      0:i64 while ..dup outArgs .length < do =:: i
           outArgs i array.get =:: arg
           arg typeContext types.isEmpty if
             ## skip empty arguments
@@ -788,9 +788,9 @@ namespace: sb
     context [] .program =:: prog
     prog [] .idContext .typeContext .labelContext @ =:: labelContext
     sb
-      0 while ..dup value .length < do =:: i
+      0:i64 while ..dup value .length < do =:: i
         "b " sb.appendS
-        value i labelContext id.scCharAt 0xff & sb.appendI
+        value i labelContext id.scCharAt i32 cast.u 0xff & sb.appendI
         ',' sb.appendC
         i 1 +
       end ..drop
@@ -849,8 +849,8 @@ namespace: sb
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
-              I8  U8  case value .int i8  cast sb.appendI return
-              I16 U16 case value .int i16 cast sb.appendI return
+              I8  U8  case value .int 0xff & sb.appendI return
+              I16 U16 case value .int 0xffff & sb.appendI return
               I32 U32 case value .int i32 cast sb.appendI return
               I64 U64 case value .int sb.appendI return
               F32 case value .int f32 cast f32.bits sb.appendI return
@@ -865,7 +865,7 @@ namespace: sb
           pos errors appendError
           return
         break
-        chr case value .chr sb.appendI return
+        chr case value .chr i32 cast.u sb.appendI return
         break
         Float case
           t typeContext types.unwrapNamed
@@ -933,7 +933,7 @@ namespace: sb
             t typeContext types.compositeElts =:: types
             value .arrayConstant constContext constArrayAsArray =:: elts
             0:i64 =:: mut: offset
-            0 while ..dup elts .length < do =:: i
+            0:i64 while ..dup elts .length < do =:: i
               types i types.compositeElts.get =:: elt
               t i pos context tupleEltOffsetInt =:: eltOffset
               i 0 > if
@@ -1172,7 +1172,7 @@ namespace: sb
       0:i64 =:: mut: offset
       false =:: mut: hasElt
       sb t pos context startTypeDeclaration
-        0 while ..dup elts .length < do =:: i
+        0:i64 while ..dup elts .length < do =:: i
           elts i types.compositeElts.get =:: elt
           elt typeContext types.isEmpty if
             i 1 + continue
@@ -1589,7 +1589,7 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   tupleType typeContext types.compositeElts =:: elts
   sb
-    0 while ..dup elts .length < do =:: i
+    0:i64 while ..dup elts .length < do =:: i
       elts i types.compositeElts.get =:: eltType
       eltType context toValType =:: eltValType
       tupleType i pos context tupleEltOffsetInt =:: eltOffset
@@ -1707,7 +1707,7 @@ proc( ConstValue : label -> i64 ) =>: labelAsInt
     label .int return
   end
   label .chr ?? if
-    label .chr return
+    label .chr i64 cast.u return
   end
   label .enumLabel ?? if
     label .enumLabel return
@@ -1733,7 +1733,7 @@ proc(
       loopCount 1 - loopCount =
     end
     sb
-      0 while ..dup loopCount < do =:: i
+      0:i64 while ..dup loopCount < do =:: i
         ## BranchId
           BranchType .CASE
           switchId
@@ -1951,6 +1951,42 @@ proc(
 end
 proc(
   stringBuilder : sb
+  string : name
+  ValType : resValue
+  ValType : arg2Value
+  bool : signed
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendMixedDivisionOperator
+  pos context popValue =:: arg2
+  pos context popValue =:: arg1
+  context nextTmpId =:: tmpId
+  sb
+    "%t" sb.appendS
+    tmpId sb.appendI
+    " =" sb.appendS
+    resValue sb.appendValTypeQBE
+    " ext" sb.appendS
+    signed if 's' else 'u' end sb.appendC
+    arg2Value sb.appendValTypeQBE
+    " %s" sb.appendS
+    arg2 sb.appendI
+    '\n' sb.appendC
+    "%s" sb.appendS
+    resValue context pushValue sb.appendI
+    " =" sb.appendS
+    resValue sb.appendValTypeQBE
+    ' ' sb.appendC
+    name sb.appendStr
+    " %s" sb.appendS
+    arg1 sb.appendI
+    ", %t" sb.appendS
+    tmpId sb.appendI
+    '\n' sb.appendC
+  return
+end
+proc(
+  stringBuilder : sb
   string : cmpType
   ValType : valType
   FilePosition : pos
@@ -2037,9 +2073,9 @@ proc(
   opType typeContext types.getProcIn ..drop =:: inType
   inType 0 typeContext types.compositeGetLabel
       labelContext id.labelFlags id.FLAG_STATIC & ? if
-    1
+    1:i64
   else
-    0
+    0:i64
   end =:: firstArg
   inType firstArg typeContext types.compositeGetElement =:: baseType
   baseType context toValType =:: baseVal
@@ -2088,17 +2124,29 @@ proc(
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
       sb "mul" string.wrap baseVal pos context appendBinaryOperator
       return
-    DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+    DIV_I32  DIV_I64 DIV_F32 DIV_F64 case
       sb "div" string.wrap baseVal pos context appendBinaryOperator
+      return
+    DIV_I64I32 case
+      sb "div" string.wrap baseVal ValType .I32 true pos context appendMixedDivisionOperator
       return
     REM_I32 REM_I64 case
       sb "rem" string.wrap baseVal pos context appendBinaryOperator
       return
+    REM_I64I32 case
+      sb "rem" string.wrap baseVal ValType .I32 true pos context appendMixedDivisionOperator
+      return
     UDIV_I32 UDIV_I64 case
       sb "udiv" string.wrap baseVal pos context appendBinaryOperator
       return
+    UDIV_I64I32 case
+      sb "udiv" string.wrap baseVal ValType .I32 false pos context appendMixedDivisionOperator
+      return
     UMOD_I32 UMOD_I64 case
       sb "urem" string.wrap baseVal pos context appendBinaryOperator
+      return
+    UMOD_I64I32 case
+      sb "urem" string.wrap baseVal ValType .I32 false pos context appendMixedDivisionOperator
       return
     NOT_BOOL case
       pos context popValue =:: arg
@@ -2123,17 +2171,18 @@ proc(
     XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
       sb "xor" string.wrap baseVal pos context appendBinaryOperator
       return
-    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+    ## shift truncates second operand, no special handling for mixed size needed
+    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 case
       sb
         baseType false pos context extendArguments
         "shr" string.wrap baseVal pos context appendBinaryOperator
       return
-    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 case
       sb
         baseType true pos context extendArguments
         "sar" string.wrap baseVal pos context appendBinaryOperator
       return
-    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+    SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       sb "shl" string.wrap baseVal pos context appendBinaryOperator
       return
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
@@ -2223,36 +2272,44 @@ enum( MIN MAX ) =:: BoundType
 proc(
   stringBuilder : sb
   types.PrimitiveType : srcType
+  bool : unsigned
   BoundType : boundType
   types.PrimitiveType : asType
 -> stringBuilder ) =>: appendNumberBound
-  false =:: mut: unsigned
   sb
     srcType switch
-      I8  case boundType .MIN ?? if i8.MIN else i8.MAX end break
-      U8  case true unsigned = boundType .MIN ?? if 0 else i8.UMAX end break
-      I16 case boundType .MIN ?? if i16.MIN else i16.MAX end break
-      U16 case true unsigned = boundType .MIN ?? if 0 else i16.UMAX end break
-      I32 case boundType .MIN ?? if i32.MIN else i32.MAX end break
-      U32 case true unsigned = boundType .MIN ?? if 0 else i32.UMAX end break
-      I64 case boundType .MIN ?? if i64.MIN else i64.MAX end break
-      U64 case true unsigned = boundType .MIN ?? if 0 else i64.UMAX end break
+      I8  U8 case
+        unsigned if boundType .MIN ?? if 0 else i8.UMAX end
+          else boundType .MIN ?? _if i8.MIN else i8.MAX end
+        break
+      I16 U16 case
+        unsigned if boundType .MIN ?? if 0 else i16.UMAX end
+          else boundType .MIN ?? _if i16.MIN else i16.MAX end
+        break
+      I32 U32 case
+        unsigned if boundType .MIN ?? if 0 else i32.UMAX end
+          else boundType .MIN ?? _if i32.MIN else i32.MAX end
+        break
+      I64 U64 case
+        unsigned if boundType .MIN ?? if 0 else i64.UMAX end
+          else boundType .MIN ?? _if i64.MIN else i64.MAX end
+        break
       BOOL case boundType .MIN ?? if 0 else 1 end break
       F32 case
         asType switch
           I8 U8 I16 U16 I32 U32 I64 U64 case
-            asType boundType asType appendNumberBound return
+            asType unsigned boundType asType appendNumberBound return
           F32 case
             boundType .MIN ?? if f32.MIN else f32.MAX end f32.bits sb.appendI return
           F64 case
-            boundType .MIN ?? if f32.MIN else f32.MAX end f64.bits sb.appendI return
+            boundType .MIN ?? if f64.MIN else f64.MAX end f64.bits sb.appendI return
           BOOL TYPE case ..unreachable
         end
         break
       F64 case
         asType switch
           I8 U8 I16 U16 I32 U32 I64 U64 case
-            asType boundType asType appendNumberBound return
+            asType unsigned boundType asType appendNumberBound return
           F32 case
             boundType .MIN ?? if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
           F64 case
@@ -2265,8 +2322,8 @@ proc(
   asType switch
     I8 U8 I16 U16 I32 U32 I64 U64 case
       intVal sb.appendI return
-    F32 case intVal unsigned if u64 cast f32 cast else f32 cast end f32.bits sb.appendI return
-    F64 case intVal unsigned if u64 cast f64 cast else f64 cast end f64.bits sb.appendI return
+    F32 case intVal unsigned if f32 cast.u else f32 cast end f32.bits sb.appendI return
+    F64 case intVal unsigned if f64 cast.u else f64 cast end f64.bits sb.appendI return
     BOOL TYPE case ..unreachable
   end
 end
@@ -2320,7 +2377,7 @@ proc(
     " %s" sb.appendS
     srcIndex sb.appendI
     ", " sb.appendS
-    targetVal BoundType .MIN srcVal appendNumberBound
+    targetVal unsigned BoundType .MIN srcVal appendNumberBound
     '\n' sb.appendC
     "jnz %t" sb.appendS cMin sb.appendI
     ", " sb.appendS branches@ 2 [] sb.appendBranchId
@@ -2333,7 +2390,7 @@ proc(
     " %s" sb.appendS
     srcIndex sb.appendI
     ", " sb.appendS
-    targetVal BoundType .MAX srcVal appendNumberBound
+    targetVal unsigned BoundType .MAX srcVal appendNumberBound
     '\n' sb.appendC
     "jnz %t" sb.appendS cMin sb.appendI
     ", " sb.appendS branches@ 4 [] sb.appendBranchId
@@ -2367,7 +2424,7 @@ proc(
     " =" sb.appendS
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " copy " sb.appendS
-    targetVal BoundType .MIN targetVal appendNumberBound
+    targetVal unsigned BoundType .MIN targetVal appendNumberBound
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## >Max
@@ -2377,7 +2434,7 @@ proc(
     " =" sb.appendS
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " copy " sb.appendS
-    targetVal BoundType .MAX targetVal appendNumberBound
+    targetVal unsigned BoundType .MAX targetVal appendNumberBound
     '\n' sb.appendC
     branches@ 6 [] context startBranch
     "%s" sb.appendS
@@ -2662,7 +2719,7 @@ proc(
     sb return ## nothing to do
   end
   castType .autoCast ?? if
-    offset context [] .stackInfo branchTree.depth >= if
+    offset i64 cast.s context [] .stackInfo branchTree.depth >= if
       "stack underflow" sb.wrap
       pos errors appendError
       sb return
@@ -2913,7 +2970,7 @@ proc(
   =:: retType
   sb
     " (" sb.appendS
-    0 while ..dup argIndices [] .length < do =:: i
+    0:i64 while ..dup argIndices [] .length < do =:: i
       argIndices [] i list.at .data =:: arg
       i 0 > if
         ',' sb.appendC
@@ -3092,7 +3149,7 @@ proc(
         ## push unnamed arguments
         op [] .dataType typeContext types.getProcIn ..drop =:: inType
         inType typeContext types.compositeElts =:: args
-        0 while ..dup args .length < do =:: i
+        0:i64 while ..dup args .length < do =:: i
           inType i typeContext types.compositeGetLabel =:: label
           args i types.compositeElts.get =:: argType
           argType typeContext types.isEmpty if
@@ -3173,7 +3230,7 @@ proc(
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            idInfo .id idInfo .labelId context sb.appendArgName
+            idInfo .id i64 cast idInfo .labelId context sb.appendArgName
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
@@ -3576,7 +3633,7 @@ proc(
       =:: mut: newSb
       ## index of current auto-argument
       0:i64 =:: mut: argIndex
-      0 while ..dup argCount < do =:: i
+      0:i64 while ..dup argCount < do =:: i
         inTypes i typeContext types.compositeGetElement =:: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
         arg typeContext types.isEmpty if
@@ -3664,8 +3721,8 @@ proc(
       calledType typeContext types.getProcOutArgs
         ! assert "calledType has arguments"
       =:: outArgs
-      0 =:: mut: outArgCount
-      0 while ..dup outArgs .length < do =:: i
+      0:i64 =:: mut: outArgCount
+      0:i64 while ..dup outArgs .length < do =:: i
         outArgs i array.get =:: arg
         arg typeContext types.isEmpty if
           ## skip empty arguments
@@ -4482,10 +4539,10 @@ proc(
           end
           newSb
             ## copy values to loop vars
-            0 while ..dup whileData [] .modifiedTypes < do =:: i
+            0:i64 while ..dup whileData [] .modifiedTypes < do =:: i
               context [] .stackInfo @ branchTree.pop .data =:: elt
               "%t" sb.appendS
-              whileBlock .loopValOffset i + sb.appendI
+              whileBlock .loopValOffset i i64 cast.u + sb.appendI
               " =" sb.appendS
               elt [] .valType sb.appendValTypeQBE
               " copy %s" sb.appendS
@@ -4696,7 +4753,7 @@ proc(
           sb return
         COPY case
           op [] .val .stackMod .n =:: offset
-          context [] .stackInfo branchTree.depth offset <= if
+          context [] .stackInfo branchTree.depth offset i64 cast.u <= if
             "stack underflow" sb.wrap
             op [] .pos errors appendError
             sb return

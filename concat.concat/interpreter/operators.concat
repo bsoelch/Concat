@@ -42,7 +42,7 @@ namespace: interpreter
       none boolean enumLabel str arrayConstant typeId wildCard genericArg procedure procedureBundle union case 0 f64 cast true return
     end
   end
-  proc( ConstValue : a -> i32 bool ) =>: constAsEnumLabel
+  proc( ConstValue : a -> i64 bool ) =>: constAsEnumLabel
     a switch
       enumLabel case a .enumLabel false return
       none boolean chr int Float str arrayConstant typeId wildCard genericArg procedure procedureBundle union case 0 true return
@@ -95,7 +95,7 @@ namespace: interpreter
     args 0 [] constAsInt if ..drop
       ConstValue .none OperatorResult .argumentError return
     end T cast =:: n
-    n op () ConstValue .int OperatorResult .success return
+    n op () i64 cast ConstValue .int OperatorResult .success return
   end
   proc(
     type : auto: T
@@ -107,7 +107,7 @@ namespace: interpreter
     args 0 [] constAsFloat if ..drop
       ConstValue .none OperatorResult .argumentError return
     end T cast =:: n
-    n op () ConstValue .Float OperatorResult .success return
+    n op () f64 cast ConstValue .Float OperatorResult .success return
   end
 
   proc(
@@ -138,7 +138,7 @@ namespace: interpreter
     args 1 [] constAsInt if ..drop
       ConstValue .none OperatorResult .argumentError return
     end T cast =:: m
-    n m op () ConstValue .int OperatorResult .success return
+    n m op () i64 cast ConstValue .int OperatorResult .success return
   end
   proc(
     type : auto: T
@@ -153,7 +153,7 @@ namespace: interpreter
     args 1 [] constAsFloat if ..drop
       ConstValue .none OperatorResult .argumentError return
     end T cast =:: y
-    x y op () ConstValue .Float OperatorResult .success return
+    x y op () f64 cast ConstValue .Float OperatorResult .success return
   end
   proc(
     type : auto: T
@@ -186,6 +186,7 @@ namespace: interpreter
     x y op () ConstValue .boolean OperatorResult .success return
   end
 
+  ## XXX? do I need differnet handling for i64i32 operations
   proc(
     BuiltIn : builtIn
     ConstValue _ ptr : args
@@ -211,15 +212,15 @@ namespace: interpreter
       MUL_F32 case args k f32.mul @ binaryOperatorFloat return
       MUL_F64 case args k f64.mul @ binaryOperatorFloat return
       DIV_I32 case args k i32.div @ binaryOperatorInt return
-      DIV_I64 case args k i64.div @ binaryOperatorInt return
+      DIV_I64I32 DIV_I64 case args k i64.div @ binaryOperatorInt return
       DIV_F32 case args k f32.div @ binaryOperatorFloat return
       DIV_F64 case args k f64.div @ binaryOperatorFloat return
       UDIV_I32 case args k i32.udiv @ binaryOperatorInt return
-      UDIV_I64 case args k i64.udiv @ binaryOperatorInt return
+      UDIV_I64I32 UDIV_I64 case args k i64.udiv @ binaryOperatorInt return
       REM_I32 case args k i32.rem @ binaryOperatorInt return
-      REM_I64 case args k i64.rem @ binaryOperatorInt return
+      REM_I64I32 REM_I64 case args k i64.rem @ binaryOperatorInt return
       UMOD_I32 case args k i32.umod @ binaryOperatorInt return
-      UMOD_I64 case args k i64.umod @ binaryOperatorInt return
+      UMOD_I64I32 UMOD_I64 case args k i64.umod @ binaryOperatorInt return
       NOT_BOOL case
          args k bool.not @ unaryOperatorBool return
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
@@ -242,12 +243,12 @@ namespace: interpreter
       LSHR_I8 case args k i8.lshr @ binaryOperatorInt return
       LSHR_I16 case args k i16.lshr @ binaryOperatorInt return
       LSHR_I32 case args k i32.lshr @ binaryOperatorInt return
-      LSHR_I64 case args k i64.lshr @ binaryOperatorInt return
+      LSHR_I64I32 LSHR_I64 case args k i64.lshr @ binaryOperatorInt return
       ASHR_I8 case args k i8.ashr @ binaryOperatorInt return
       ASHR_I16 case args k i16.ashr @ binaryOperatorInt return
       ASHR_I32 case args k i32.ashr @ binaryOperatorInt return
-      ASHR_I64 case args k i64.ashr @ binaryOperatorInt return
-      SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+      ASHR_I64I32 ASHR_I64 case args k i64.ashr @ binaryOperatorInt return
+      SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
         args k i64.shl @ binaryOperatorInt return
       EQ_I8 case args k i8.eq @ cmpOperatorInt return
       EQ_I16 case args k i16.eq @ cmpOperatorInt return

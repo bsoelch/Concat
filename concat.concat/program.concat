@@ -80,17 +80,17 @@ enum(
             LabelId : getLabel
             LabelId : mut: atLabel
             LabelId : mut: hasLabel
-                i32 : mut: getElement
-                i32 : mut: atElement
-                i32 : mut: hasElement
-                i32 : mut: getArrayElement
-                i32 : mut: atArrayElement
+                i64 : mut: getElement
+                i64 : mut: atElement
+                i64 : mut: hasElement
+                i64 : mut: getArrayElement
+                i64 : mut: atArrayElement
                       setValue
                       Return
                       New
                       NewReference
-                i32 : NewEnum
-                i32 : NewEnumReference
+                i64 : NewEnum
+                i64 : NewEnumReference
   ProcedureCallInfo : call
             BuiltIn : builtIn
                 i64 : mut: callPtr
@@ -104,8 +104,8 @@ enum(
                Type : mut: bitCast
    EqualityOperator : equalityOperator
                       getEnumLabel
-                i32 : checkEnumLabel
-                i32 : mut: setEnumLabel
+                i64 : checkEnumLabel
+                i64 : mut: setEnumLabel
                       copy
   StackModification : stackMod
             LabelId : getName
@@ -174,21 +174,21 @@ proc( Type BuiltIn FilePosition  -> Operation ) =>: export: opBuiltIn
   =:: pos
   OpValue .builtIn ..swap pos Operation new return
 end
-proc( i32 FilePosition  -> Operation ) =>: export: opArrayGet
+proc( i64 FilePosition  -> Operation ) =>: export: opArrayGet
   =:: pos
   OpValue .getArrayElement Type .undefined pos Operation new return
 end
-proc( i32 FilePosition  -> Operation ) =>: export: opTupleGet
+proc( i64 FilePosition  -> Operation ) =>: export: opTupleGet
   =:: pos
   OpValue .getElement Type .undefined pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetElement
+proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opGetElement
   index OpValue .getElement base pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opAtElement
+proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opAtElement
   index OpValue .atElement base pos Operation new return
 end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHasElement
+proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opHasElement
   index OpValue .hasElement base pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
@@ -219,11 +219,11 @@ proc( Type FilePosition -> Operation ) =>: export: opNewReference
   =:: pos
   OpValue .NewReference ..swap pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnum
+proc( Type i64 FilePosition -> Operation ) =>: export: opNewEnum
   =:: pos
   OpValue .NewEnum ..swap pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnumReference
+proc( Type i64 FilePosition -> Operation ) =>: export: opNewEnumReference
   =:: pos
   OpValue .NewEnumReference ..swap pos Operation new return
 end
@@ -264,11 +264,11 @@ end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .typeInfo t pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opCheckEnum
+proc( Type i64 FilePosition -> Operation ) =>: export: opCheckEnum
   =:: pos
   OpValue .checkEnumLabel ..swap pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumLabel
+proc( Type i64 FilePosition -> Operation ) =>: export: opSetEnumLabel
   =:: pos
   OpValue .setEnumLabel ..swap pos Operation new return
 end
@@ -333,7 +333,7 @@ struct(
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
 struct( LabelData list : mut: labels Type : switchType i32 : mut: caseCount bool : mut: hasDefault ) =:: export: SwitchData
-struct( i32 : mut: modifiedTypes ) =:: export: WhileData
+struct( i64 : mut: modifiedTypes ) =:: export: WhileData
 
 
 struct(

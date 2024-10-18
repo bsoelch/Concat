@@ -92,7 +92,7 @@ namespace: map
     data [] .cap 0 == if ## TODO ensure cap/ error message
        0:NodeId return
     end
-    key data [] .hash () data [] .cap ..umod ## sync types in loop
+    key data [] .hash () i64 cast.u data [] .cap ..umod ## sync types in loop
       data [] .data ..over []
         ..dup 0:NodeId == if ..drop
           newNode if
@@ -154,20 +154,20 @@ namespace: map
     V : value
   -> V optional ) =>: export: put
     data key true find
-      ..dup i32 cast data [] .nodeBuffer .length > if ..drop
+      ..dup i64 cast data [] .nodeBuffer .length > if ..drop
         data [] .nodeBuffer
           key value 0:NodeId K V Node new list.append
         data [] .nodeBuffer =
         V optional.empty return
       end
-    data [] .nodeBuffer ..swap i32 cast 1 - list.at .data
+    data [] .nodeBuffer ..swap i64 cast 1 - list.at .data
       ..dup [] .value ..swap
       value ..swap [] .value =
     optional.wrap return
   end
 
   ( type : K type : V -> type ) =>: Iterator
-    struct( K V hashMap ptr : map NodeId : mut: next i32 : mut: index )
+    struct( K V hashMap ptr : map i64 : mut: index NodeId : mut: next )
   end
   namespace: itr
     proc(
@@ -175,13 +175,13 @@ namespace: map
       type : auto: V
       K V hashMap ptr mut : map
     -> K V Iterator ) =>: export: start
-      0 while ..dup map [] .cap < do
-        map [] .data ..over [] 0:NodeId != if
-          map ..swap map [] .data ..over i64 cast [] ..swap i32 cast 1 + K V Iterator new return
+      0:i64 while ..dup map [] .cap < do =:: i
+        map [] .data i [] 0:NodeId != if
+          map i 1 + map [] .data i [] K V Iterator new return
         end
-        1 +
+        i 1 +
       end ..drop
-      map 0:NodeId map [] .cap i32 cast K V Iterator new return
+      map map [] .cap 0:NodeId K V Iterator new return
     end
     proc(
       type : auto: K

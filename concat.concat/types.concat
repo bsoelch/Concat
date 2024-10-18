@@ -546,22 +546,22 @@ namespace: types
       true return
     end
     src .intLiteral switch
-      U7   case false  7 break
-      S8   case true  8 break
-      U8   case false  8 break
-      U15  case false 15 break
-      S16  case true  16 break
-      U16  case false 16 break
-      U24_ case false 24 break
-      S25_ case true  24 break
-      U31  case false 31 break
-      S32  case true  32 break
-      U32  case false 32 break
-      U53_ case false 53 break
-      S54_ case true  53 break
-      U63  case false 63 break
-      S64  case true  64 break
-      U64  case false 64 break
+      U7   case false  7:i64 break
+      S8   case true   8:i64 break
+      U8   case false  8:i64 break
+      U15  case false 15:i64 break
+      S16  case true  16:i64 break
+      U16  case false 16:i64 break
+      U24_ case false 24:i64 break
+      S25_ case true  24:i64 break
+      U31  case false 31:i64 break
+      S32  case true  32:i64 break
+      U32  case false 32:i64 break
+      U53_ case false 53:i64 break
+      S54_ case true  53:i64 break
+      U63  case false 63:i64 break
+      S64  case true  64:i64 break
+      U64  case false 64:i64 break
     end =:: srcBits =:: srcSigned
     target context primitiveValue =:: targetPrimitive
     targetPrimitive isIntPrimitive if
@@ -590,27 +590,18 @@ namespace: types
     end
     src context primitiveValue =:: srcPrimitive
     target context primitiveValue =:: targetPrimitive
+    srcPrimitive targetPrimitive == if
+      true return
+    end
     srcPrimitive isIntPrimitive and targetPrimitive isIntPrimitive if
-      false =:: srcSigned
-      srcPrimitive isUnsignedIntPrimitive =:: srcUnsigned
       srcPrimitive sizeOfPrimitive =:: srcBytes
-      false =:: targetSigned
-      targetPrimitive isUnsignedIntPrimitive =:: targetUnsigned
       targetPrimitive sizeOfPrimitive =:: targetBytes
-      srcSigned and targetUnsigned if
-        false return ## conversion signed -> unsigned by not be lossless
+      target .arrayIndex ?? if ## can cast small integer types to array-index
+        srcBytes targetBytes <= return
       end
-      srcUnsigned and targetSigned if
-        ## unsigned -> signed : may need size increase
-        srcBytes targetBytes < return
-      end
-      ## same or undetermined signs
-      srcBytes targetBytes <= return
+      srcBytes targetBytes == return ## cast I... <-> U...
     end
-    src context types.numberPrecision target context types.numberPrecision > if
-      false return
-    end
-    src context types.numberSize target context types.numberSize <= return
+    false return
   end
   ## ctypes
   namespace: ctype
@@ -661,11 +652,11 @@ namespace: types
 
   ## size and alignment
   enum( unknown i64 : fixed i64 : dynamicArray ) =:: export: TypeSize
-  8 =:: PTR_SIZE
-  8 =:: PTR_ALIGN
-  8 =:: I_SIZE_SIZE
-  8 =:: I_SIZE_ALIGN
-  proc( PrimitiveType -> i32 ) =>: export: sizeOfPrimitive
+  8:i64 =:: PTR_SIZE
+  8:i64 =:: PTR_ALIGN
+  8:i64 =:: I_SIZE_SIZE
+  8:i64 =:: I_SIZE_ALIGN
+  proc( PrimitiveType -> i64 ) =>: export: sizeOfPrimitive
     switch
       TYPE case
         0 return
@@ -679,14 +670,14 @@ namespace: types
         8 return
     end
   end
-  proc( IntLiteral -> i32 ) =>: export: sizeOfIntLiteral
+  proc( IntLiteral -> i64 ) =>: export: sizeOfIntLiteral
     switch
       U7 S8 U8  U15 S16 U16 case 4 return
       U24_ S25_ U31 S32 U32 case 4 return
       U53_ S54_ U63 S64 U64 case 8 return
     end
   end
-  proc( CType -> i32 ) =>: sizeOfCType
+  proc( CType -> i64 ) =>: sizeOfCType
     switch ## sizes for linux-x86-gcc
       VOID case 0 return
       BOOL CHAR S_CHAR U_CHAR case 1 return
@@ -1035,7 +1026,7 @@ namespace: types
   end
   ## type of the n-th array index (counted from left to right, zero indexed)
   ## the returned bool is true if no index has been found
-  proc( Type : box i32 : n TypeContext ptr : context -> Type bool ) =>: export: getIndexType
+  proc( Type : box i64 : n TypeContext ptr : context -> Type bool ) =>: export: getIndexType
     n 0 < if
       Type .undefined true return
     end
@@ -1280,7 +1271,7 @@ namespace: types
       end
     .data [] .eltCount return
   end
-  proc( Type : composite i32 : index TypeContext ptr : context -> LabelId ) =>: export: compositeGetLabel
+  proc( Type : composite i64 : index TypeContext ptr : context -> LabelId ) =>: export: compositeGetLabel
     composite context unwrapNamed
       ..dup switch
         struct enum union procIn procOut case
@@ -1299,7 +1290,7 @@ namespace: types
     offset UNLABELED == if
       id.LABEL_ID_NONE return
     end
-    index 0 < index typeData [] .eltCount >= | if
+    index 0 < index i64 cast.s typeData [] .eltCount >= | if
       id.LABEL_ID_NONE return
     end
     context [] .elementLabels offset i64 cast index + list.get return
@@ -1308,7 +1299,7 @@ namespace: types
     Type : composite
     LabelId : name
     TypeContext ptr : context
-  -> i32 ) =>: export: compositeFindLabel
+  -> i64 ) =>: export: compositeFindLabel
     context [] .labelContext @ =:: labelContext
     composite context unwrapNamed
       ..dup switch
@@ -1327,7 +1318,7 @@ namespace: types
     labels [] .labelOffset UNLABELED == if
       -1 return
     end
-    0 while ..dup labels [] .eltCount < do =:: i
+    0:i64 while ..dup labels [] .eltCount < do =:: i
       ## labelNamesEq
         name
         context [] .elementLabels
@@ -1439,13 +1430,17 @@ namespace: types
     CompositeElts new return
   end
   namespace: compositeElts
-    proc( CompositeElts : elts i64 : index -> Type ) =>: export: get
+    proc( CompositeElts : elts i32 : index -> Type ) =>: export: get_32
+      elts index i64 cast.s get_64
+    end
+    proc( CompositeElts : elts i64 : index -> Type ) =>: export: get_64
       index 0 >= index elts .length < & assert "index in range" ## TODO error handling
       elts .onlyEmpty if
         Type .empty return
       end
       elts .context [] .compositeData index elts .offset + list.get return
     end
+    overload: export: get get_32 get_64 end
   end
   0 Type ptr mut cast! 0 0 Type list new =:: mut: emptyTypeBuffer ## XXX find better way to initialize empty list
   proc( Type : composite TypeContext ptr : context -> Type arrayView ) =>: export: compositeEltArray
@@ -1661,7 +1656,7 @@ namespace: types
     end =:: labelType
     0:i64 =:: mut: enumLabelOffset
     context [] .unionTypes =:: unions
-    0 while ..dup unions .length < do
+    0:i64 while ..dup unions .length < do
       unions ..over list.at .data =:: t
       t [] .compositeInfo .eltCount elts .length == and
       t [] .compositeInfo .eltsOffset eltsOffset == and
@@ -2188,7 +2183,7 @@ namespace: types
   end
 
   proc( Type : base bool : mutable TypeContext ptr mut : context -> Type ) =>: export: newReferenceType
-    0 while ..dup context [] .compositeData .length < do
+    0:i64 while ..dup context [] .compositeData .length < do
       context [] .compositeData ..over list.get =:: typeData
       base typeData typeEquals if
         break
@@ -2399,15 +2394,6 @@ namespace: types
     src .namedType ?? or target .namedType ?? if
       false return
     end
-    ## treat casts between c-types the same way as casts between the underlying base-types
-    src .cType ?? and target .cType ?? if
-      ## no cast to/from struct/union pointers
-      src .cType .STRUCT_PTR ?? or src .cType .UNION_PTR  ?? or
-          target .cType .STRUCT_PTR ?? or target .cType .UNION_PTR  ?? if
-        false return
-      end
-      src .cType cTypeAsType target .cType cTypeAsType context canAutoCast return
-    end
     ## no auto-cast from/to c-type to minimize platform specific behaviour
     src .cType ?? or target .cType ?? if
       false return
@@ -2499,7 +2485,7 @@ namespace: types
         aSizes .length bSizes .length == &
       =:: mut: fixedSize
       aSizes .length bSizes .length < if aSizes .length else bSizes .length end =:: s
-      0 =:: mut: commonPrefix
+      0:i64 =:: mut: commonPrefix
       while commonPrefix s < do
         aSizes commonPrefix array.get =:: aElt
         bSizes commonPrefix array.get =:: bElt

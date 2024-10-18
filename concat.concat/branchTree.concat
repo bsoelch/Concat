@@ -428,7 +428,7 @@ namespace: branchTree
       end
       parentId heads 0 [] =
       false needMerge =
-      1 =:: mut: i while i headCount < do
+      1:i64 =:: mut: i while i headCount < do
         tree [] .nodes heads i [] i64 cast list.at .data =:: next
         next [] .parent parentId != if
           true needMerge =
@@ -443,7 +443,7 @@ namespace: branchTree
       end
       ## mergeValues
         buffer headCount array.create
-        offset
+        offset i64 cast.s
         context
       mergeValues () currentNode [] .data =
       offset 1 + offset =

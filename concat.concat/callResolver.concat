@@ -166,7 +166,7 @@ proc(
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
-      0 while ..dup eltCount < do =:: i
+      0:i64 while ..dup eltCount < do =:: i
         ## replaceGenerics
           src i typeContext types.compositeGetElement
           typeBuffer
@@ -219,7 +219,7 @@ proc(
       src typeContext types.getGeneratorArgs =:: args
       idContext [] .argBuffer@ =:: argBuffer
       argBuffer [] .length =:: argOffset
-      0 while ..dup args .length < do =:: i
+      0:i64 while ..dup args .length < do =:: i
         args i constContext constArrayGet =:: arg
         argBuffer []
           arg switch
@@ -463,7 +463,7 @@ proc(
         true return ## all types in source have to be matched to type in target
       end
       ## resolve generics for all elements of composite type
-      0 while ..dup targetCount < do =:: i
+      0:i64 while ..dup targetCount < do =:: i
         target i typeContext types.compositeGetElement =:: targetElt
         i srcCount < if
           src i typeContext types.compositeGetElement
@@ -521,7 +521,7 @@ proc(
       end
       src typeContext types.getGeneratorArgs =:: srcArgs
       target typeContext types.getGeneratorArgs =:: targetArgs
-      0 while ..dup targetArgs .length < do =:: i
+      0:i64 while ..dup targetArgs .length < do =:: i
         srcArgs i constContext constArrayGet =:: srcArg
         targetArgs i constContext constArrayGet =:: targetArg
         targetArg .typeId ?? if
@@ -736,14 +736,14 @@ proc(
     currentSignatures =
     i 1 +
   end ..drop
-  0 while ..dup stackValues .length <= do =:: stackIndex
+  0:i64 while ..dup stackValues .length <= do =:: stackIndex
     stackIndex stackValues .length < if
       stackValues stackIndex array.at .data [] .valType
     else
       ## add dummy type below stack to ensure auto-arguments get matched
       Type .undefined
     end =:: stackType
-    0 while ..dup currentSignatures .length < do =:: i
+    0:i64 while ..dup currentSignatures .length < do =:: i
       currentSignatures i list.at .data =:: mut: current
       current [] .argsMatch ! current [] .needsParam ! | if
         ## don't continue checking if first arguments were no match / all params matched
@@ -754,7 +754,7 @@ proc(
       [] .procType typeContext types.getProcIn ..drop =:: inTypes
       inTypes typeContext types.compositeEltCount 1 -
         current [] .paramInfo .length -
-      i32 cast =:: mut: paramIndex
+      =:: mut: paramIndex
       inTypes paramIndex typeContext types.compositeGetElement =:: mut: paramType
       inTypes paramIndex typeContext types.compositeGetLabel =:: mut: paramLabel
       ## XXX? allow passing arrays as individual elements
@@ -764,7 +764,7 @@ proc(
           ## empty parameter, non-empty argument
           current [] .paramInfo
             ## ParameterInfo
-              stackIndex 0
+              stackIndex i32 cast 0
               MatchType .EMPTY
             ParameterInfo new list.append
           current [] .paramInfo =
@@ -786,7 +786,7 @@ proc(
           end
           current [] .paramInfo
             ## ParameterInfo
-              stackIndex 0
+              stackIndex i32 cast 0
               MatchType .AUTO
             ParameterInfo new list.append
           current [] .paramInfo =
@@ -865,7 +865,7 @@ proc(
       end
       paramType typeContext types.isPointer paramType typeContext types.isArray | if
         current [] .arraySizeArguments
-          paramType typeContext types.getArrayDims + i32 cast
+          paramType typeContext types.getArrayDims i32 cast +
         current [] .arraySizeArguments =
       end
       current [] .signatureWeigth
@@ -919,7 +919,7 @@ proc(
       end
       current [] .paramInfo
         ## ParameterInfo
-          stackIndex
+          stackIndex i32 cast
           1
           matchType
         ParameterInfo new list.append
@@ -1019,7 +1019,7 @@ proc(
   procInfo [] .procType typeContext types.getProcOut ..drop =:: outType
   inType typeContext types.compositeEltCount =:: eltCount
   eltCount ConstValue list.create =:: mut: constArgs
-  0 while ..dup eltCount < do =:: i
+  0:i64 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
       constArgs
@@ -1038,11 +1038,11 @@ proc(
       implData [] .code ?? if
     implData [] .code .implementations @ =:: impls
     false =:: mut: isMatch
-    0 while ..dup impls [] .length < do =:: i
+    0:i64 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
       impl [] .staticArgs .length constArgs .length == assert "correct number of static arguments"
       true isMatch =
-      0 while ..dup constArgs .length < do =:: j
+      0:i64 while ..dup constArgs .length < do =:: j
         ## constEquals
           impl [] .staticArgs j constContext constArrayGet
           constArgs j list.get
@@ -1083,7 +1083,7 @@ proc(
   constArgs
     list.clear
   constArgs =
-  0 while ..dup eltCount < do =:: i
+  0:i64 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags
     true =:: mut: needArg

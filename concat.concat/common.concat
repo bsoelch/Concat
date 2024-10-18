@@ -86,10 +86,10 @@ namespace: sb
           ..swap 1 + continue
         end
         "_X" sb.appendS
-        c 0xff & 0x10 < if
+        c i32 cast.u 0xff & 0x10 < if
           '0' sb.appendC
         end
-        c 0xff & sb.appendI
+        c i32 cast.u 0xff & sb.appendI
       ..swap 1 +
     end ..drop
   end

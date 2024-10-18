@@ -2,7 +2,7 @@ import stringBuilder
 import stringIO
 
 proc( i8 : a i8 : b i32 : C -> i32 ) =>: cmp
-  a i32 cast b -
+  a i32 cast.u b i32 cast.u -
 end
 
 proc( -> ) =>: main

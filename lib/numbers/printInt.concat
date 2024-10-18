@@ -43,19 +43,51 @@ namespace: sb
   proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendBin
     2  appendI?
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendI
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendI64
     10 appendI?
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendX
-    16 appendI?
+  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendI32
+    i64 cast.s 10 appendI?
+  end
+  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendX32
+    i64 cast.u 16 appendI?
+  end
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendX64
+    i64 cast.s 16 appendI?
   end
   proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUBin
     2 false appendI??
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendU
+  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendU32
+    i64 cast.u 10 false appendI??
+  end
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendU64
     10 false appendI??
   end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUHex
+  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendUX32
+    i64 cast.u 16 false appendI??
+  end
+  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUX64
     16 false appendI??
+  end
+  overload: export: appendI
+    appendI32
+    appendI64
+  end
+  overload: export: appendU
+    appendU32
+    appendU64
+  end
+  overload: export: appendX
+    appendX32
+    appendX64
+  end
+  overload: export: appendUX
+    appendUX32
+    appendUX64
+  end
+  overload: export: appendUHex
+    appendUX32
+    appendUX64
   end
 end

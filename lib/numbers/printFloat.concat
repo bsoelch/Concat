@@ -15,8 +15,8 @@ namespace: sb
   ## appends the C-style hexadecimal representation of an IEEE double to a stringBuilder
   proc( stringBuilder : sb f64 : f -> stringBuilder ) =>: export: appendIeeeDouble
     f =:: mut: value
-    -1022 =:: MIN_POW
-    1023 =:: MAX_POW
+    -1022:i64 =:: MIN_POW
+    1023:i64 =:: MAX_POW
     13 =:: DIGIT_COUNT
     sb
       value f64.isFinite ! if
@@ -83,30 +83,31 @@ namespace: sb
         '-' sb.appendC
         value -_ value =
       end
-      value math.log base math.log / math.floor i64 cast =:: mut: e
+      base f64 cast =:: baseF
+      value math.log baseF math.log / math.floor i32 cast =:: mut: e
       e =:: mut: e_max
-      base e f64 cast math.pow =:: mut: p
+      baseF e f64 cast math.pow =:: mut: p
       i32 64 array new =:: mut: buff
       0 =:: mut: n
       0b1e-110100 #+2^-52+# value * =:: mut: eps ##XXX? better implementation of eps
       eps 0 == if ## adjust size of small numbers
-        base e 1 + f64 cast math.pow p =
-        value p / base * value =
+        baseF e 1 + f64 cast math.pow p =
+        value p / baseF * value =
         f64.MIN_POSITIVE p / eps =
         1 p =
       end
       p f64.isInfinite if ## adjust size for big numbers
-        base e 1 - f64 cast math.pow p =
-        value base / value =
-        eps base / eps =
+        baseF e 1 - f64 cast math.pow p =
+        value baseF / value =
+        eps baseF / eps =
       end
       while p eps > do
-        value p / math.floor i32 cast =:: d
-        d buff @ n [] =
+        value p / math.floor =:: d
+        d i32 cast buff @ n [] =
         n 1 + n =
         ## XXX break loop if n large enough
         value d p * - value =
-        p base / p =
+        p baseF / p =
         e 1 + e =
       end
       precision 0 <= precision n >= | if
@@ -128,7 +129,7 @@ namespace: sb
           j 1 - j =
         end
         inc if
-          buff @ i32 _ ptr mut cast 1 + buff @ n mem.move ..drop
+          buff @ i32 _ ptr mut cast 1 + buff @ n i64 cast.u mem.move ..drop
           1 buff @ 0 [] =
           n 1 + n =
           e_max 1 + e_max =
@@ -152,7 +153,7 @@ namespace: sb
         end
         base 10 <= if 'E' else base 30 <= _if 'X' else '#' end sb.appendC
         e_max 0 >= if '+' sb.appendC end
-        e_max  base appendI?
+        e_max i64 cast.s base appendI?
       else e_max 0 >= _if
         0 while ..dup n < do
           ..swap

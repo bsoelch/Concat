@@ -10,9 +10,13 @@ import array
 end
 
 namespace: list
-  proc( i64 : k type : T -> T list ) =>: export: create
+  proc( i32 : k type : T -> T list ) =>: export: create_32
+    k i64 cast.s T create_64
+  end
+  proc( i64 : k type : T -> T list ) =>: export: create_64
     k T mem.alloc  0 k  T list new return
   end
+  overload: export: create create_32 create_64 end
 
   ## creates zero-initialized list of the given length
   proc( i64 : k type : T -> T list ) =>: export: createZeroInit
@@ -61,8 +65,15 @@ namespace: list
   proc(
     type : auto: T
     T list : elts0
+    i32 : minCap
+  -> T list ) =>: export: ensureCap_32
+    elts0 minCap i64 cast.s ensureCap_64
+  end
+  proc(
+    type : auto: T
+    T list : elts0
     i64 : minCap
-  -> T list ) =>: export: ensureCap
+  -> T list ) =>: export: ensureCap_64
     elts0 .cap minCap > if
       elts0 return
     end
@@ -74,6 +85,7 @@ namespace: list
       newCap elts .cap =
     elts return
   end
+  overload: export: ensureCap ensureCap_32 ensureCap_64 end
   proc( type : auto: T T list : elts -> T list ) =>: export: free
     elts .data mem.free
     T mem.nullPtr 0 0 T list new return
@@ -103,35 +115,66 @@ namespace: list
   proc(
     type : auto: T
     T list : elts
-    i64 : index
-  -> T ) =>: export: get
-    index 0 < index elts .length >= | if
-      ## TODO error handling
-      ..unreachable
-    end
-    elts .data index [] return
+    i32 : index
+  -> T ) =>: export: get_32
+    elts index i64 cast.s get_64
   end
   proc(
     type : auto: T
     T list : elts
     i64 : index
-  -> T ptr mut optional ) =>: export: at
+  -> T ) =>: export: get_64
+    index 0 < or index elts .length >= if
+      ## TODO error handling
+      ..unreachable
+    end
+    elts .data index [] return
+  end
+  overload: export: get
+    get_32 get_64
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i32 : index
+  -> T ptr mut optional ) =>: export: at_32
+    elts index i64 cast.s at_64
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i64 : index
+  -> T ptr mut optional ) =>: export: at_64
     index 0 < index elts .length >= | if
       T ptr mut optional.empty return
     end
     elts .data index + T ptr mut cast! optional.wrap return
+  end
+  overload: export: at
+    at_32 at_64
+  end
+  proc(
+    type : auto: T
+    T : elt
+    T list : elts
+    i32 : index
+  -> ) =>: export: set_32
+    elt elts index i64 cast.s set_64
   end
   proc(
     type : auto: T
     T : elt
     T list : elts
     i64 : index
-  -> ) =>: export: set
+  -> ) =>: export: set_64
     index 0 < index elts .length >= | if
       ## TODO error handling
       ..unreachable
     end
     elt elts .data index [] =
+  end
+  overload: export: set
+    set_32 set_64
   end
   proc(
     type : auto: T

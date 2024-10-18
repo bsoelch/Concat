@@ -21,8 +21,8 @@ namespace: sb
     end
     sb
       "\\x" sb.appendS
-      c 0xff & 0x10 < if '0' sb.appendC end
-      c 0xff & sb.appendX
+      c i64 cast.u 0xff & 0x10 < if '0' sb.appendC end
+      c i64 cast.u 0xff & sb.appendX
     return
   end
 end
@@ -36,7 +36,7 @@ namespace: debug
   end
   proc( i8 : c -> ) =>: export: printC
     8 sb.create
-      c sb.appendI
+      c i64 cast.u sb.appendI
       " ('" sb.appendS
       c sb.appendEscapedChar
       "')\n" sb.appendS
@@ -51,8 +51,8 @@ namespace: debug
     sb.free ..drop
   end
   ## XXX? rule prioritizing conversion: i32 -> i64 over i32-> f64
-  proc( i16 -> ) =>: export: printI16  printI  end
-  proc( i32 -> ) =>: export: printI32  printI  end
+  proc( i16 -> ) =>: export: printI16  i64 cast.s printI  end
+  proc( i32 -> ) =>: export: printI32  i64 cast.s printI  end
   proc( i64 : i -> ) =>: export: printX
     8 sb.create
       i sb.appendX
@@ -73,6 +73,9 @@ namespace: debug
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
     sb.free ..drop
+  end
+  proc( f32 : x -> ) =>: export: printF32
+    x f64 cast printF
   end
   proc( f64 : x -> ) =>: export: printF
     8 sb.create
@@ -111,6 +114,7 @@ namespace: debug
     printI32
     printI
     printF
+    printF32
     printS
     printP
   end

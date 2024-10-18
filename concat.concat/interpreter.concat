@@ -683,50 +683,60 @@ namespace: interpreter
   end
   proc(
     Type : srcType
+    SignType : signType
     ConstValue : oldValue
     Type : targetType
     TypeContext ptr : typeContext
   -> ConstValue ) =>: export: castConstant
+    signType .UNSIGNED ?? or
+      targetType typeContext types.isUnsignedInt
+    end =:: unsignedTarget
     ## XXX ? correctly handle 32-bit floats at compile time
     oldValue .Float ?? and targetType typeContext types.isInt if
       targetType typeContext types.unwrapNamed types.isPrimitive if
         targetType typeContext types.primitiveValue switch
-          I8  case oldValue .Float i8  cast ConstValue .int return
-          U8  case oldValue .Float u8  cast ConstValue .int return
-          I16 case oldValue .Float i16 cast ConstValue .int return
-          U16 case oldValue .Float u16 cast ConstValue .int return
-          I32 case oldValue .Float i32 cast ConstValue .int return
-          U32 case oldValue .Float u32 cast ConstValue .int return
-          I64 case oldValue .Float i64 cast ConstValue .int return
-          U64 case oldValue .Float u64 cast ConstValue .int return
+          I8  U8  case
+            oldValue .Float unsignedTarget if i8  cast.u i64 cast.u else i8  cast.s i64 cast.s end
+            ConstValue .int return
+          I16 U16 case
+            oldValue .Float unsignedTarget if i16 cast.u i64 cast.u else i16 cast.s i64 cast.s end
+            ConstValue .int return
+          I32 U32 case
+            oldValue .Float unsignedTarget if i32 cast.u i64 cast.u else i32 cast.s i64 cast.s end
+            ConstValue .int return
+          I64 U64 case
+            oldValue .Float unsignedTarget if i64 cast.u else i64 cast.s end
+            ConstValue .int return
           BOOL F32 F64 TYPE case ..unreachable
         end
-      else targetType typeContext types.isUnsignedInt _if
-        oldValue .Float u64 cast ConstValue .int return
+      else unsignedTarget _if
+        oldValue .Float i64 cast.u ConstValue .int return
       else
-        oldValue .Float i64 cast ConstValue .int return
+        oldValue .Float i64 cast.s ConstValue .int return
       end
     end
     ## XXX? zero/sign extend small types
     oldValue .int ?? if
       oldValue .int i64 =: mut: intVal
-      targetType typeContext types.isUnsignedInt =:: unsignedTarget
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
-          U8  case intVal u8  cast intVal = break
-          U16 case intVal u16 cast intVal = break
-          U32 case intVal u32 cast intVal = break
-          I8  case intVal unsignedTarget if u8  cast else i8  cast end intVal = break
-          I16 case intVal unsignedTarget if u16 cast else i16 cast end intVal = break
-          I32 case intVal unsignedTarget if u32 cast else i32 cast end intVal = break
+          U8  case intVal i8  cast.u i64 cast.u intVal = break
+          U16 case intVal i16 cast.u i64 cast.u intVal = break
+          U32 case intVal i32 cast.u i64 cast.u intVal = break
+          I8  case intVal i8 cast
+            unsignedTarget if i64 cast.u else i64 cast.s end intVal = break
+          I16 case intVal i16 cast
+            unsignedTarget if i64 cast.u else i64 cast.s end intVal = break
+          I32 case intVal i32 cast
+            unsignedTarget if i64 cast.u else i64 cast.s end intVal = break
           F32 F64 case break ## XXX? handle precission loss due to representing int as float
           I64 U64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
         end
       end
       ## uint -> float
-      srcType typeContext types.isUnsignedInt and targetType typeContext types.isFloat if
-        intVal u64 cast f64 cast ConstValue .Float return
+      targetType typeContext types.isFloat and signType .UNSIGNED ?? or srcType typeContext types.isUnsignedInt if
+        intVal f64 cast.u ConstValue .Float return
       else
         intVal ConstValue .int return
       end
@@ -1392,8 +1402,14 @@ proc(
         op [] .pos errors appendError
         true return
       end
+      op [] .val .Cast ?? if
+        op [] .val .Cast .signType
+      else
+        SignType .NONE
+      end =:: signType
       ## castConstant
         valInfo .valueType
+        signType
         oldValue
         targetType
         typeContext
@@ -1501,7 +1517,7 @@ proc(
       valueData @ =:: values
       ValueInfo 2 array new =:: mut: valInfoData
       valInfoData @ =:: valInfos
-      0 =:: mut: nArgs
+      0:i64 =:: mut: nArgs
       0 while ..dup 2 < do 1 +
         op [] .pos context popValue if ..drop.3
           values valInfos nArgs context unpopValues
@@ -1580,7 +1596,7 @@ proc(
   valueData @ =:: values
   ValueInfo 3 array new =:: mut: valInfoData
   valInfoData @ =:: valInfos
-  0 =:: mut: nArgs
+  0:i64 =:: mut: nArgs
   context [] .evalType switch
     INTERPRET GLOBAL case true break
     PARSER FOLD_LOCAL case false break
@@ -1612,7 +1628,7 @@ proc(
   values nArgs array.reverse
   valInfos nArgs array.reverse
   ## XXX ensure type arguments for pointer built-ins are present
-  builtIn values nArgs interpreter.evaluateBuiltIn =:: resultType =:: value
+  builtIn values nArgs i32 cast interpreter.evaluateBuiltIn =:: resultType =:: value
   resultType switch
     success case
       value
@@ -1627,7 +1643,7 @@ proc(
       "invalid arguments for built-in " sb.wrap
         builtIn sb.appendBuiltIn
         ": " sb.appendS
-        0 while ..dup nArgs < do =:: i
+        0:i64 while ..dup nArgs < do =:: i
           values i [] constContext typeContext sb.appendConstant
           i 1 +
         end ..drop
@@ -1651,7 +1667,7 @@ proc(
 ->
   bool
 ) =>: export: evaluateOperations
-  0 =:: mut: offset
+  0:i64 =:: mut: offset
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType
      ..dup .PROCEDURE ?? ..swap .EXPERIMENTAL_PROCEDURE ?? | if
@@ -1689,7 +1705,7 @@ proc(
     true return
   end
   context [] .stack .length elts .length - =:: offset
-  0 while ..dup elts .length < do =:: i
+  0:i64 while ..dup elts .length < do =:: i
     context [] .stackInfo offset i + list.at .data =:: stackInfo
     stackInfo [] .valueType elts i types.compositeElts.get typeContext types.canAutoCast ! if
       "wrong argument for tuple creation expected: " sb.wrap

@@ -11,9 +11,13 @@ namespace: array
   proc( type : T -> T arrayView ) =>: export: empty
     0 T mem.alloc 0 T arrayView new return
   end
-  proc( type : auto: T T _ ptr  i64 -> T arrayView ) =>: export: create
+  proc( type : auto: T T _ ptr  i32 -> T arrayView ) =>: export: create_32
+    i64 cast.s create_64
+  end
+  proc( type : auto: T T _ ptr  i64 -> T arrayView ) =>: export: create_64
     T arrayView new return
   end
+  overload: export: create create_32 create_64 end
   proc(
     type : auto: T
     i64 : auto: k
@@ -22,12 +26,19 @@ namespace: array
     elts k create return
   end
 
-  proc( type : auto: T T arrayView : elts i64 : index -> T ) =>: export: get
+  proc( type : auto: T T arrayView : elts i32 : index -> T ) =>: export: get_32
+    elts index i64 cast.u get_64
+  end
+  proc( type : auto: T T arrayView : elts i64 : index -> T ) =>: export: get_64
     index 0 < index elts .length >= | if
       ## TODO error handling
       ..unreachable
     end
     elts .data index [] return
+  end
+  overload: export: get
+    get_32
+    get_64
   end
   proc(
     type : auto: T
@@ -116,9 +127,9 @@ namespace: array
     C : context
   -> i64 ) =>: export: indexOfArrayStart
     ## TODO? use faster algorithm
-    0 while ..dup a .length <= do =:: i
+    0:i64 while ..dup a .length <= do =:: i
       true =:: mut: match
-      0 while ..dup b .length < do =:: j
+      0:i64 while ..dup b .length < do =:: j
         i j + a .length >= if
           j break
         end

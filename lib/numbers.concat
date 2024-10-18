@@ -27,11 +27,11 @@ namespace: number
   62 =:: export: MAX_BASE
   proc( i8 : chr i32 : base -> i32 ) =>: export: parseDigit
     chr '0' >= chr '9' <= & if
-      chr '0' - return
+      chr '0' - i32 cast.u return
     else chr 'A' >= chr 'Z' <= & _if
-      chr 'A' - 10 + return
+      chr 'A' - i32 cast.u 10 + return
     else chr 'a' >= chr 'z' <= & _if
-      chr 'a' -
+      chr 'a' - i32 cast.u
         base 36 > if 36 else 10 end +
       return
     end
@@ -54,15 +54,15 @@ namespace: number
     ## arbitrary base numbers <BASE>b<NUMBER>
     ..dup 1 string.charAt 'b' ==
         ..over 1 string.charAt 'B' ==  | if
-      ..dup 0 string.charAt '0' - i32 =: mut: b
+      ..dup 0 string.charAt '0' - i32 cast.u =:: mut: b
       b 0 < or b 9 > if
         2 string.tail -1 return ## invalid base
       end
       2 string.tail b return
     end
     ..dup .length 3 > if ..dup 2 string.charAt 'b' == if ## two digits before b
-      ..dup 0 string.charAt '0' - =:: mut: b1
-      ..dup 1 string.charAt '0' - =:: mut: b2
+      ..dup 0 string.charAt '0' - i32 cast.u =:: mut: b1
+      ..dup 1 string.charAt '0' - i32 cast.u =:: mut: b2
       b1 0 < or b1 9 > or b2 0 < or b2 9 > if
         3 string.tail -1 return ## invalid base
       end
@@ -124,12 +124,13 @@ namespace: number
         res maxSafe > if
           true overflow =
         end
+        d i64 cast.u =:: delta
         res
-          mBase *
-          res maxSafe == and ..dup maxVal d - > if
+          mBase i64 cast.u *
+          res maxSafe == and ..dup maxVal delta - > if
             true overflow =
           end
-          d +
+          delta +
         res = ## add digit to number
         i 1 +
       end ..drop
@@ -188,7 +189,7 @@ namespace: number
       else mBase 2 < or mBase 62 > _if ..drop
         f64.NaN ParserError .INVALID_BASE return
       end
-      0 while ..dup ..over.2 .length < do =:: i
+      0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt '.' == if
           i 0 == or hasDot if ..drop ## . cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
@@ -215,7 +216,7 @@ namespace: number
             f64.NaN ParserError .INVALID_CHAR return
           end
           val maxVal < if
-            val mBase * digit + val =
+            val mBase i64 cast.u * digit i64 cast.u + val =
             hasDot if
               c 1 - c =
             end

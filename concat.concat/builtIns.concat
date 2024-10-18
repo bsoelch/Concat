@@ -7,19 +7,20 @@ enum(
  SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
      SUB_PTR SUB_PTR_MUT PTR_DIFF  ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
- DIV_I32 DIV_I64 DIV_F32 DIV_F64                ## /
- REM_I32 REM_I64                                ## %
- UDIV_I32 UDIV_I64                              ## ..udiv
- UMOD_I32 UMOD_I64                              ## ..umod
+ ## XXX? div f64 i32
+ DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64     ## /
+ REM_I32 REM_I64I32 REM_I64                     ## %
+ UDIV_I32 UDIV_I64I32 UDIV_I64                  ## ..udiv
+ UMOD_I32 UMOD_I64I32 UMOD_I64                  ## ..umod
  ## logic
  NOT_BOOL                                       ## !
  FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64             ## ~
  AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64        ## &
  OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64            ## |
  XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64        ## ^
- LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64             ## >>>
- ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64             ## >>
- SHL_I8 SHL_I16 SHL_I32 SHL_I64                 ## <<
+ LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 ## >>>
+ ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 ## >>
+ SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64      ## <<
  ## comparison
  BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
  ## XXX? are the 16bit operations necessary
@@ -49,12 +50,12 @@ namespace: sb
         "-" sb.appendS break
       MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
         "*" sb.appendS break
-      DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+      DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64 case
         "/" sb.appendS break
-      REM_I32 REM_I64 case
+      REM_I32 REM_I64I32 REM_I64 case
         "%" sb.appendS break
-      UDIV_I32 UDIV_I64 case "..udiv" sb.appendS break
-      UMOD_I32 UMOD_I64 case "..umod" sb.appendS break
+      UDIV_I32 UDIV_I64I32 UDIV_I64 case "..udiv" sb.appendS break
+      UMOD_I32 UMOD_I64I32 UMOD_I64 case "..umod" sb.appendS break
       NOT_BOOL case "!" sb.appendS break
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
         "~" sb.appendS break
@@ -64,11 +65,11 @@ namespace: sb
         "|" sb.appendS break
       XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
         "^" sb.appendS break
-      LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+      LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 case
         ">>>" sb.appendS break
-      ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+      ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 case
         ">>" sb.appendS break
-      SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+      SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
         "<<" sb.appendS break
       BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
         "?" sb.appendS break
@@ -411,6 +412,52 @@ proc(
   =:: toBoolOpProc
   binOpProc unOpProc cmpOpProc toBoolOpProc consumeVal return
 end
+proc(
+  Type : t1
+  Type : t2
+  ProgramContext ptr mut : context
+-> Type Type ) =>: mixedProcTypes
+  context [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  LabelId arrayView optional.empty =:: argLabels
+  Type 2 array new =:: mut: args
+  t1 args @ 0 [] =
+  t2 args @ 1 [] =
+  ## newProcArgs
+    args @ 2 array.create
+    argLabels
+    false
+    typeContext
+  types.newProcArgs =:: mut: procIn
+  ## newProcArgs
+    args @ 1 array.create
+    argLabels
+    true
+  typeContext types.newProcArgs =:: mut: procOut
+  ## newProcedure
+    procIn
+    procOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: aba
+  ## newProcArgs
+    args @ 1 [] @ 1 array.create
+    argLabels
+    true
+  typeContext types.newProcArgs procOut =
+  ## newProcedure
+    procIn
+    procOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: abb
+  aba abb return
+end
+## i64 i32 -> i32 mod/rem/and
+## i64 i32 -> i64 div/udiv/shifts
 
 proc(
   FilePosition : pos
@@ -445,6 +492,9 @@ proc(
     context operatorProcTypes
   =:: consume_f64 =:: f64_bool =:: f64f64_bool
       =:: f64_f64 =:: f64f64_f64
+  types.primitive.I64 types.primitive.I32
+    context mixedProcTypes
+  =:: i64i32_i32 =:: i64i32_i64
   pos context ptrSignatures
   =:: consume_ptr =:: ptrCmp =:: ptrDiff =:: ptrAdd =:: ptrMutAdd
   "-_" string.wrap pos context newBuiltInBundle
@@ -607,6 +657,11 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
+  BuiltIn .DIV_I64I32
+    "i64i32" "div" pos labelContext createLabel
+    i64i32_i64
+    bundle
+  pos context addBuiltIn
   BuiltIn .DIV_F32
     "f32" "div" pos labelContext createLabel
     f32f32_f32
@@ -630,6 +685,11 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
+  BuiltIn .REM_I64I32
+    "i64i32" "rem" pos labelContext createLabel
+    i64i32_i32
+    bundle
+  pos context addBuiltIn
   ## float remainder defined in standard library (numbers/float)
   "..udiv" string.wrap pos context newBuiltInBundle
     if ..drop true return end
@@ -644,12 +704,22 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
+  BuiltIn .UDIV_I64I32
+    "i64i32" "udiv" pos labelContext createLabel
+    i64i32_i64
+    bundle
+  pos context addBuiltIn
   "..umod" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
   BuiltIn .UMOD_I32
     "i32" "umod" pos labelContext createLabel
     i32i32_i32
+    bundle
+  pos context addBuiltIn
+  BuiltIn .UMOD_I64I32
+    "i64i32" "umod" pos labelContext createLabel
+    i64i32_i32
     bundle
   pos context addBuiltIn
   BuiltIn .UMOD_I64
@@ -795,6 +865,11 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
+  BuiltIn .LSHR_I64I32
+    "i64i32" "lshr" pos labelContext createLabel
+    i64i32_i64
+    bundle
+  pos context addBuiltIn
   ">>" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -818,6 +893,11 @@ proc(
     i64i64_i64
     bundle
   pos context addBuiltIn
+  BuiltIn .ASHR_I64I32
+    "i64i32" "ashr" pos labelContext createLabel
+    i64i32_i64
+    bundle
+  pos context addBuiltIn
   "<<" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -839,6 +919,11 @@ proc(
   BuiltIn .SHL_I64
     "i64" "shl" pos labelContext createLabel
     i64i64_i64
+    bundle
+  pos context addBuiltIn
+  BuiltIn .SHL_I64I32
+    "i64i32" "shl" pos labelContext createLabel
+    i64i32_i64
     bundle
   pos context addBuiltIn
   "?" string.wrap pos context newBuiltInBundle

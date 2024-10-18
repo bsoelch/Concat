@@ -1082,9 +1082,9 @@ proc(
   opType typeContext types.getProcIn ..drop =:: inType
   inType 0 typeContext types.compositeGetLabel
       labelContext id.labelFlags id.FLAG_STATIC & ? if
-    1
+    1:i64
   else
-    0
+    0:i64
   end =:: firstArg
   inType firstArg typeContext types.compositeGetElement =:: baseType
   builtIn switch
@@ -1098,13 +1098,14 @@ proc(
     ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT PTR_DIFF case break
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
       ops ssa.OperationType .MUL pos context appendBinaryOperator return
-    DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+    ## FIXME handle mixed size division/remainder
+    DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64 case
       ops ssa.OperationType .DIV pos context appendBinaryOperator return
-    REM_I32 REM_I64 case
+    REM_I32 REM_I64I32 REM_I64 case
       ops ssa.OperationType .REM pos context appendBinaryOperator return
-    UDIV_I32 UDIV_I64 case
+    UDIV_I32 UDIV_I64I32 UDIV_I64 case
       ops ssa.OperationType .UDIV pos context appendBinaryOperator return
-    UMOD_I32 UMOD_I64 case
+    UMOD_I32 UMOD_I64I32 UMOD_I64 case
       ops ssa.OperationType .UREM pos context appendBinaryOperator return
     FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
       ops ssa.OperationType .NOT pos context appendUnaryOperator return
@@ -1115,11 +1116,12 @@ proc(
       ops ssa.OperationType .OR pos context appendBinaryOperator return
     XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
       ops ssa.OperationType .XOR pos context appendBinaryOperator return
-    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 case
       ops ssa.OperationType .SHR pos context appendBinaryOperator return
-    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 case
       ops ssa.OperationType .SAR pos context appendBinaryOperator return
-    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+    ## shift truncates second operand, no special handling for mixed size needed
+    SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       ops ssa.OperationType .SHL pos context appendBinaryOperator return
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break ## TODO BOOL <x> -> ne <x> 0
     EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_PTR EQ_F32 EQ_F64 case
@@ -1198,7 +1200,7 @@ proc(
       ops
         ## TODO marker for procedure start
         ## declare local variables
-        0 while ..dup variables .length < do =:: i
+        0:i64 while ..dup variables .length < do =:: i
           variables i list.get =:: varInfo
           varInfo .varType typeContext types.alignOf =:: varAlignment
           varInfo .varType typeContext types.sizeOf =:: varSize
@@ -1224,7 +1226,7 @@ proc(
           i 1 +
         end ..drop
         ## load procedure arguments
-        0 while ..dup argCount < do =:: i
+        0:i64 while ..dup argCount < do =:: i
           inType i typeContext types.compositeGetLabel =:: eltLabel
           inTypes i array.get =:: eltType
           eltType typeContext toValueType =:: valueType
@@ -1948,7 +1950,7 @@ proc(
           end
           newOps
             ## copy values to loop vars
-            0 while ..dup whileData [] .modifiedTypes < do =:: i
+            0:i64 while ..dup whileData [] .modifiedTypes < do =:: i
               context [] .stackInfo @ branchTree.pop .data =:: elt
               ssa.OperationType .COPY
                 whileBlock .loopValOffset i +
@@ -2069,7 +2071,7 @@ proc(
           ops return
         COPY case
           op [] .val .stackMod .n =:: offset
-          context [] .stackInfo branchTree.depth offset <= if
+          context [] .stackInfo branchTree.depth offset i64 cast.u <= if
             "stack underflow" sb.wrap
             op [] .pos errors appendError
             ops return
@@ -2118,7 +2120,7 @@ proc(
   ops 0 array.at .data [] .val .implementProcedure ??
       assert "procedure starts with correct operation"
   ssaOps
-    0 while ..dup ops .length < do =:: j
+    0:i64 while ..dup ops .length < do =:: j
       ops j array.at .data context compileOp
       j 1 +
     end ..drop
@@ -2157,7 +2159,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToS
     ## TODO compile global variables
   end ..drop
   1024 ssa.Atom list.create
-    0 while ..dup prog [] .procedures .length < do =:: i
+    0:i64 while ..dup prog [] .procedures .length < do =:: i
       prog [] .procedures i list.at .data =:: currentProc
       currentProc [] .implementation .code ?? ! if
         i 1 + continue

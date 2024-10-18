@@ -74,7 +74,7 @@ proc(
       =:: args
       args typeContext types.compositeEltCount =:: argCount
       context [] .variables
-        0 while ..dup argCount < do =:: i
+        0:i64 while ..dup argCount < do =:: i
           args i typeContext types.compositeGetLabel =:: label
           label id.LABEL_ID_NONE == if
             i 1 + continue
@@ -254,7 +254,7 @@ proc(
   variables [] context [] .variables =
   newOps []
     ..dup .length codeStart [] =
-    0 while ..dup ops .length < do =:: j
+    0:i64 while ..dup ops .length < do =:: j
       ops j array.at .data [] context compileOp
       j 1 +
     end ..drop
@@ -279,7 +279,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
     f [] .tmpOps list.clear f [] .tmpOps =
     i 1 +
   end ..drop
-  0 while ..dup program [] .procedures .length < do =:: i
+  0:i64 while ..dup program [] .procedures .length < do =:: i
     program [] .procedures i list.at .data =:: currentProc
     currentProc [] .implementation .code ?? ! if
       i 1 + continue
@@ -290,7 +290,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
     list.at .data =:: f
     currentProc [] .implementation .code @ =:: impl
     currentProc [] .hasStaticArg if
-      0 while ..dup impl [] .implementations .length < do =:: implId
+      0:i64 while ..dup impl [] .implementations .length < do =:: implId
         impl [] .implementations implId list.at .data =:: currentImpl
         ## convertProc
           f [] .localOps

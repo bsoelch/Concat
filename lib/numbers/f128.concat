@@ -15,7 +15,7 @@ namespace: f128
   48:u64 =:: EXP_SHIFT_HI
   0x7fff:u64 =:: SHIFTED_EXP_MASK
   0x3fff:u64 =:: EXP_BIAS
-  112 =:: MANTISSA_BITS
+  112:i64 =:: MANTISSA_BITS
   0x7fff'ffff'ffff'ffff:u64 =:: NAN_HI
   0xffff'ffff'ffff'ffff:u64 =:: NAN_LOW
   EXP_MASK_HI =:: INF_HI
@@ -30,6 +30,9 @@ namespace: f128
   end
 
   ## TODO make sure to use unsigned comparisson for comparing parts of f128
+  proc( i32 : n -> f128 ) =>: export: fromI32
+    n i128.fromI32 false fromI128_internal
+  end
   proc( i64 : n -> f128 ) =>: export: fromI64
     n i128.fromI64 false fromI128_internal
   end
@@ -47,7 +50,7 @@ namespace: f128
       0 0 f128 new return
     end
     EXP_SHIFT_HI 64 + =:: mantiassaBits
-    n i128.highestSetBit =:: mut: bitCount
+    n i128.highestSetBit i64 cast.u =:: mut: bitCount
     bitCount mantiassaBits - =:: shift
     signed and n .hi 0 < end =:: sign
     n
@@ -269,7 +272,7 @@ namespace: f128
     false =:: mut: nextBit
     ## exp == expA >= expB
     exp expB > if
-      exp expB - =:: shift
+      exp expB - i32 cast.u =:: shift
       shift 64 >= if
         1:u64 shift 64 1 - - << =:: nextBitMask
         bLow
@@ -365,7 +368,7 @@ namespace: f128
     false =:: mut: nextBit
     ## exp == expA >= expB
     exp expB > if
-      exp expB - =:: shift
+      exp expB - i32 cast.u =:: shift
       shift 64 >= if
         1:u64 shift 64 1 - - << =:: nextBitMask
         bLow
@@ -414,7 +417,7 @@ namespace: f128
       f128 new return
     end
     hiDiff lowDiff f128 new normalizeMantissa =:: delta =:: mag
-    exp delta - exp =
+    exp delta i64 cast.s - exp =
     ## handle subnormal numbers
     ## shifts increased by 1 to undo shifting of top bit into hidden bit
     ## no rounding necessary as total right shift at most left shift from normalization
@@ -452,8 +455,8 @@ namespace: f128
     ## normalizeMantissa is no-op if number is normal
     x normalizeMantissa =:: shiftX =:: x1
     y normalizeMantissa =:: shiftY =:: y1
-    shiftX x1 .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & + =:: expX
-    shiftY y1 .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & + =:: expY
+    shiftX i64 cast.s x1 .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & + =:: expX
+    shiftY i64 cast.s y1 .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & + =:: expY
     x1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | =:: xHi
     y1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | =:: yHi
     xHi x1 .low | ? ! if ## 0 * y
@@ -605,13 +608,13 @@ namespace: f128
       else
         base
       end =:: mut: mBase
-      0 mBase i128 new =:: baseI128
       mBase 0 < if ..drop
         f128.NaN ParserError .INVALID_CHAR return
       else mBase 2 < or mBase 62 > _if ..drop
         f128.NaN ParserError .INVALID_BASE return
       end
-      0 while ..dup ..over.2 .length < do =:: i
+      0 mBase i64 cast.u i128 new =:: baseI128
+      0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt '.' == if
           i 0 == or hasDot if ..drop ## . cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
@@ -638,7 +641,7 @@ namespace: f128
             f128.NaN ParserError .INVALID_CHAR return
           end
           val maxVal < if ## XXX? i128 * i64
-            val baseI128 * 0 digit i128 new + val =
+            val baseI128 * 0 digit i64 cast.u i128 new + val =
             hasDot if
               c 1 - c =
             end
@@ -662,13 +665,13 @@ namespace: f128
     val f128.fromI128
       sign if -_ end
     c 0 >= if
-       mBase f128.fromI64 c powI *
+       mBase f128.fromI32 c powI *
     else c -100 > _if
-       mBase f128.fromI64 c -_ powI /
+       mBase f128.fromI32 c -_ powI /
     else
        ## split of factor of base^64 to prevent underflow of intermediate results
-       mBase f128.fromI64 c 64 + -_ powI /
-       mBase f128.fromI64 64 powI /
+       mBase f128.fromI32 c 64 + -_ powI /
+       mBase f128.fromI32 64 powI /
     end
     hasDot or e 0 > if ParserError .NONE return else ParserError .INT return end
   end
@@ -684,7 +687,7 @@ struct(
   bool : sign
 ) =:: f160
 namespace: f160
-  15 =:: F128_SHIFT
+  15:i64 =:: F128_SHIFT
   proc( f128 : x -> f160 ) =>: fromF128
     x .hi f128.SIGN_FLAG_HI & ? =:: sign
     x .hi f128.EXP_SHIFT_HI >>> f128.SHIFTED_EXP_MASK & f128.EXP_BIAS - =:: exp
@@ -696,7 +699,7 @@ namespace: f160
         x1 .low 64 F128_SHIFT - >>> |
       =:: hi
       x1 .low F128_SHIFT << =:: low
-      hi  low  exp shift - i32 cast  sign f160 new return
+      hi  low  exp shift i64 cast.s - i32 cast  sign f160 new return
     end
     x .hi f128.MANTISSA_MASK_HI & f128.HIDDEN_BIT_HI | F128_SHIFT <<
       x .low 64 F128_SHIFT - >>> |
@@ -705,12 +708,13 @@ namespace: f160
     hi low exp i32 cast sign f160 new return
   end
   proc( f160 : x -> f128 ) =>: toF128
-    x .exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if ## overflow
+    x .exp i64 cast.s =:: exp
+    exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if ## overflow
       x .sign if f128.-Infinity else f128.Infinity end return
     end
     F128_SHIFT
-      x .exp f128.EXP_BIAS -_ <= if ## underflow
-        x .exp f128.EXP_BIAS + -
+      exp f128.EXP_BIAS -_ <= if ## underflow
+        exp f128.EXP_BIAS + -
       end
     =:: shift
     shift 128 >= if
@@ -743,7 +747,7 @@ namespace: f160
     end
     hi f128.HIDDEN_BIT_HI 1 << & ? =:: overflow
     overflow if
-      x .exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if  ## overflows finite number
+      exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if  ## overflows finite number
         x .sign if f128.-Infinity else f128.Infinity end return
       end
       hi 63 << low =
@@ -751,7 +755,7 @@ namespace: f160
     end
     ## f128
       hi f128.MANTISSA_MASK_HI &
-        x .exp f128.EXP_BIAS + overflow if 1 + end f128.EXP_SHIFT_HI << |
+        exp f128.EXP_BIAS + overflow if 1 + end f128.EXP_SHIFT_HI << |
         x .sign if f128.SIGN_FLAG_HI | end
       low
     f128 new return

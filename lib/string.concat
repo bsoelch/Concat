@@ -41,7 +41,7 @@ namespace: string
       while ..dup str .length < do
         ..swap
           31 *
-          ..over str .data ..swap [] +
+          ..over str .data ..swap [] i32 cast.u +
         ..swap
         1 +
       end
@@ -49,9 +49,17 @@ namespace: string
     return
   end
 
-  proc( string : str i64 : index -> i8 ) =>: export: charAt
+  proc( string : str i32 : index -> i8 ) =>: export: charAt_32
     str i8 arrayView cast index array.get return
   end
+  proc( string : str i64 : index -> i8 ) =>: export: charAt_64
+    str i8 arrayView cast index array.get return
+  end
+  overload: export: charAt
+    charAt_32
+    charAt_64
+  end
+
   proc( string : str i8 : chr -> i64 ) =>: export: indexOf
     str i8 arrayView cast chr array.indexOf return
   end
