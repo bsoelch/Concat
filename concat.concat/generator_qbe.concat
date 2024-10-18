@@ -406,7 +406,7 @@ proc(
   toMerge 0 array.get =:: rootValue
   rootValue [] .varId =:: rootId
   true =:: mut: isMerged
-  1 while ..dup toMerge .length < do =:: i
+  1:i64 while ..dup toMerge .length < do =:: i
     toMerge i array.get [] .varId rootId != if
       false isMerged =
       i break
@@ -416,7 +416,7 @@ proc(
   isMerged if
     rootValue [] return
   end
-  1 while ..dup toMerge .length < do =:: i
+  1:i64 while ..dup toMerge .length < do =:: i
     toMerge i array.get [] .valType rootValue [] .valType != if
       "branches of " sb.wrap
          mergePoint .blockName sb.appendStr
@@ -436,7 +436,7 @@ proc(
     " =" sb.appendS
     rootValue [] .valType sb.appendValTypeQBE
     " phi " sb.appendS
-    0 while ..dup toMerge .length < do =:: i
+    0:i64 while ..dup toMerge .length < do =:: i
       i 0 > if
         ", " sb.appendS
       end
@@ -916,7 +916,7 @@ namespace: sb
             base pos context typeSizeInt =:: baseSize
             base pos context typeStrideInt =:: baseStride
             value .arrayConstant constContext constArrayAsArray =:: elts
-            0 while ..dup elts .length < do =:: i
+            0:i64 while ..dup elts .length < do =:: i
               i 0 > if
                 ',' sb.appendC
               end
@@ -1047,7 +1047,7 @@ namespace: sb
   -> stringBuilder ) =>: appendLocalConstants
     context [] .program [] .idContext .typeContext @ =:: typeContext
     sb
-      0 while ..dup context [] .localConstants .length < do =:: i
+      0:i64 while ..dup context [] .localConstants .length < do =:: i
         context [] .localConstants i list.at .data =:: constant
         "data $" sb.appendS
         LOCAL_CONST_NAME sb.appendS
@@ -1130,7 +1130,7 @@ namespace: sb
         t typeContext types.isFixedSize if
       t typeContext types.getArraySize =:: sizes
       1:i64 =:: mut: S
-      0 while ..dup sizes .length < do =:: i
+      0:i64 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
         size .sizeType .int ?? ! if
           sb return ## no declaration for var-size array
@@ -1219,7 +1219,7 @@ namespace: sb
           else
             t pos context startTypeDeclaration
           end
-          0 while ..dup elts .length < do =:: i
+          0:i64 while ..dup elts .length < do =:: i
             elts i types.compositeElts.get =:: elt
             elt typeContext types.isEmpty if
               i 1 + continue
@@ -1263,7 +1263,7 @@ namespace: sb
   end
   proc( stringBuilder : sb string : str -> stringBuilder ) =>: appendEscapedString
     sb
-      0 while ..dup str .length < do =:: i
+      0:i64 while ..dup str .length < do =:: i
           str i string.charAt appendEscapedChrC
         i 1 +
       end ..drop
@@ -1286,7 +1286,7 @@ namespace: sb
 end
 
 proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
-  0 while ..dup prog [] .progFiles .length < do =:: i
+  0:i64 while ..dup prog [] .progFiles .length < do =:: i
     prog [] .progFiles i list.at .data [] .fileName sb.asStr =:: currentName
     fileName currentName string.eq if
       i FileId cast return
@@ -3662,7 +3662,7 @@ proc(
       end ..drop
       argIndices .length =:: outArgOffset
       ## reserve space for out-arguments
-      0 while ..dup outArgs .length < do =:: i
+      0:i64 while ..dup outArgs .length < do =:: i
         outArgs i array.get =:: arg
         arg typeContext types.isEmpty if
           ## skip empty arguments
@@ -3699,7 +3699,7 @@ proc(
       return
     callPtr case
       op [] .val .callPtr TypedValId list.create =:: mut: argIndices
-      0 while ..dup op [] .val .callPtr < do =:: i
+      0:i64 while ..dup op [] .val .callPtr < do =:: i
         argIndices
           ## TypedValId
             Type .undefined
@@ -4156,7 +4156,7 @@ proc(
               op [] .pos errors appendError
               sb return
             end
-            0 while ..dup loopEltCount < do 1 +
+            0:i64 while ..dup loopEltCount < do 1 +
               loopElts
                 context [] .stackInfo @ branchTree.pop .data list.appendP
               loopElts =
@@ -4826,7 +4826,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
   else ..drop end
   1024 sb.create
     program getDeclaredTypes =:: types
-    0 while ..dup types .length < do =:: i
+    0:i64 while ..dup types .length < do =:: i
       types i list.get
         ## TODO? use declaration position of type
         string.empty 0 0 FilePosition new
@@ -4893,7 +4893,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
   end ..drop
   sb
     ## constant references
-    0 while ..dup program [] .constantReferences .length < do =:: i
+    0:i64 while ..dup program [] .constantReferences .length < do =:: i
       program [] .constantReferences i list.at .data =:: constRef
       "data $" sb.appendS
       CONST_REFERENCE_NAME sb.appendS
@@ -4904,7 +4904,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
       i 1 +
     end ..drop
     ## code
-    0 while ..dup program [] .progFiles .length < do =:: i
+    0:i64 while ..dup program [] .progFiles .length < do =:: i
       program [] .progFiles i list.at .data =:: f
         "dbgfile \"" sb.appendS
         f [] .fileName sb.appendSb
@@ -4918,7 +4918,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
             context
           sb.appendStringConstQBE
         "} \n" sb.appendS
-        0 while ..dup f [] .localOps .length < do
+        0:i64 while ..dup f [] .localOps .length < do
           ..swap
           f [] .localOps ..over.2 list.at .data context compileOp
           ..swap 1 +
@@ -4929,7 +4929,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
     end ..drop
     target ..over io.fputSb ..drop
     sb.clear
-    0 while ..dup context [] .stringConstants .length < do =:: i
+    0:i64 while ..dup context [] .stringConstants .length < do =:: i
       context [] .stringConstants i list.get =:: str
       "data $" sb.appendS
       STRING_CONST_NAME sb.appendS

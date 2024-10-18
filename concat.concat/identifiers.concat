@@ -172,7 +172,7 @@ namespace: id
     context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental return
   end
   proc( i8 _ ptr mut list -> i8 _ ptr mut list ) =>: freeScopeStrings
-    0 while ..dup ..over.2 .length < do
+    0:i64 while ..dup ..over.2 .length < do
       ..over ..over list.get mem.free
       1 +
     end ..drop

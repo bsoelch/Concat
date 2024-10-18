@@ -62,7 +62,7 @@ type : export: ConstantContext
 namespace: sb
   proc( stringBuilder string -> stringBuilder ) =>: export: appendAsciified
     =:: str
-    0 while ..dup str .length < do
+    0:i64 while ..dup str .length < do
       ..swap
         str ..over.2 string.charAt =:: c
         c '0' >= c '9' <= & if

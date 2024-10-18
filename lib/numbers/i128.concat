@@ -363,7 +363,7 @@ namespace: i128
       0 0 i128 new =:: mut: res
       0 mBase i64 cast.u i128 new =:: baseI128
       maxVal baseI128 ..udiv =:: maxSafe ## XXX? udiv i128 by i64
-      0 while ..dup ..over.2 .length < do =:: i
+      0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt =:: c
         i 0 > and c '_' == or c '\'' == if
           i 1 + continue ## ignore _ and ' in numbers

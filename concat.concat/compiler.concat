@@ -48,7 +48,7 @@ proc( -> ) =>: parseArgs
   string optional.empty errorFile =
   0 ..getArg string.create =:: path
   ArgParserState .IN =:: mut: state
-  1 while ..dup ..argc < do
+  1:i64 while ..dup ..argc < do
     ..dup ..getArg string.create =:: arg
     arg .length 0 == if
       1 + continue
@@ -190,7 +190,7 @@ proc( CompilerError list ptr mut : errors -> ) =>: checkErrors
   end
   false =:: mut: hasError
   1024 sb.create
-    0 while ..dup errors [] .length < do
+    0:i64 while ..dup errors [] .length < do
       ..swap
         errors [] ..over.2 list.at .data =:: err
         err [] sb.appendCompilerError

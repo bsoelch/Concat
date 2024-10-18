@@ -112,7 +112,7 @@ namespace: number
       end
       unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxVal
       maxVal mBase ..udiv =:: maxSafe
-      0 while ..dup ..over.2 .length < do =:: i
+      0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt =:: c
           i 0 > and c '_' == or c '\'' == if
             i 1 + continue ## ignore _ and ' in numbers

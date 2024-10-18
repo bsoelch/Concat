@@ -125,7 +125,7 @@ proc(
       src typeContext types.getBaseType =:: base
       src typeContext types.getArraySize =:: sizes
       idContext [] .arraySizeBuffer .length =:: sizeOffset
-      0 while ..dup sizes .length < do =:: i
+      0:i64 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
         idContext [] .arraySizeBuffer
           size .sizeType switch
@@ -410,7 +410,7 @@ proc(
       targetFixed and srcSizes .length targetSizes .length != if
         true return ## all target sizes have to be matched
       end
-      0 while ..dup targetSizes .length < do =:: i
+      0:i64 while ..dup targetSizes .length < do =:: i
         srcSizes i array.get =:: srcSize
         targetSizes i array.get =:: targetSize
         targetSize .sizeType switch
@@ -668,7 +668,7 @@ end
 proc(
   CallSignatureInfo list ptr mut : signatures
 -> ) =>: cleanupSignatures
-  0 while ..dup signatures [] .length < do =:: i
+  0:i64 while ..dup signatures [] .length < do =:: i
     signatures [] i list.at .data =:: elt
     elt [] .paramInfo
       list.free
@@ -713,7 +713,7 @@ proc(
     ProcedureCallInfo optional.empty Type .undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
-  0 while ..dup procedureIds .length < do =:: i
+  0:i64 while ..dup procedureIds .length < do =:: i
     procedureIds i array.get =:: procId
     progContext [] .procedures procId i64 cast list.at .data =:: procInfo
     procInfo [] .procType
@@ -950,7 +950,7 @@ proc(
           i 1 -
         end ..drop
         ")\ncandidates: \n" sb.appendS
-        0 while ..dup currentSignatures .length < do =:: i
+        0:i64 while ..dup currentSignatures .length < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -990,7 +990,7 @@ proc(
         end ..drop
         ")\npossible matches: \n" sb.appendS
         true =:: mut: isEquivalent
-        0 while ..dup currentSignatures .length < do =:: i
+        0:i64 while ..dup currentSignatures .length < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data

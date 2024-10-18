@@ -179,7 +179,7 @@ proc(
         outArgs .length op .val .callPtr =
       end
       newOps
-        0 while ..dup outArgs .length < do =:: i
+        0:i64 while ..dup outArgs .length < do =:: i
           outArgs i array.get =:: arg
           arg typeContext types.isEmpty if
             i 1 + continue
@@ -274,7 +274,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
     -1:FileId
   ConverterContext new =:: mut: contextData
   contextData @ =:: context
-  0 while ..dup program [] .progFiles .length < do =:: i
+  0:i64 while ..dup program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
     f [] .tmpOps list.clear f [] .tmpOps =
     i 1 +
@@ -317,7 +317,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
     end
     i 1 +
   end ..drop
-  0 while ..dup program [] .progFiles .length < do =:: i
+  0:i64 while ..dup program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
     f [] .localOps list.clear
       f [] .tmpOps
@@ -326,7 +326,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
     i 1 +
   end ..drop
   ## create implementations for built-in procedure-pointers
-  0 while ..dup program [] .procedures .length < do =:: procId
+  0:i64 while ..dup program [] .procedures .length < do =:: procId
     program [] .procedures procId list.at .data =:: currentProc
     currentProc [] .implementation .builtIn ?? ! if
       procId break ## built-ins at start of procedure list

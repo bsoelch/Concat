@@ -37,15 +37,10 @@ namespace: string
   end
   proc( string : str -> i32 ) =>: export: hash
     0 ## hash
-      0 ## index
-      while ..dup str .length < do
-        ..swap
-          31 *
-          ..over str .data ..swap [] i32 cast.u +
-        ..swap
-        1 +
-      end
-      ..drop
+      0:i64 while ..dup str .length < do =:: i
+        #+hash+# 31 * str .data i [] i32 cast.u +
+        i 1 +
+      end ..drop
     return
   end
 
@@ -71,8 +66,7 @@ namespace: string
       -1 return
     end
     base .length subStr .length - =:: maxOffset
-    0 ## offset
-    while ..dup maxOffset <= do
+    0:i64 while ..dup maxOffset <= do
       base .data ..over + subStr .length create  subStr compare 0 == if
         return
       end

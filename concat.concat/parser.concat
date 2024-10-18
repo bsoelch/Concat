@@ -179,7 +179,7 @@ proc( Operation : op ParserState ptr mut : state -> ) =>: appendOp
   state [] .progContext =:: progContext
   state currentOps =:: ops
   ops []
-    0 while ..dup state [] .constants .length < do =:: i
+    0:i64 while ..dup state [] .constants .length < do =:: i
       state [] .constants i list.get constantToOp list.append
       i 1 +
     end ..drop
@@ -214,7 +214,7 @@ proc( Operation ptr optional : next? ParserState ptr mut : state -> ) =>: resetG
   state [] .globalInterpreters state [] .currentFile i64 cast list.at .data =:: interpreter
   progContext [] .progFiles state [] .currentFile i64 cast list.at .data [] .globalOps @ =:: ops
   ##  -> store computed constants
-  0 while ..dup interpreter [] .context .stack .length < do
+  0:i64 while ..dup interpreter [] .context .stack .length < do
     interpreter [] .context .stack ..over list.at .data =:: constant
     interpreter [] .context .stackInfo ..over list.at .data =:: constInfo
     ops []
@@ -505,7 +505,7 @@ end
 proc( BlockType : mergeWith FilePosition : pos ParserState ptr mut : state -> ) =>: convertAndOrBlock
   state [] .progContext =:: progContext
   state [] .andOrPositions =:: andOrPositions
-  0 while ..dup andOrPositions .length < do =:: i
+  0:i64 while ..dup andOrPositions .length < do =:: i
     andOrPositions i list.get =:: opPos
     opPos 0 <  opPos state currentOps [] .length >= | if
       "operations and blocks are out of sync, could not determine position of and/or" sb.wrap
@@ -2200,7 +2200,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.wrap
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
-          0 while ..dup matches .length < do =:: i
+          0:i64 while ..dup matches .length < do =:: i
             matches i list.at .data =:: match
             match [] .labelId idContext id.getIdentifier
               ! assert "matched identifier exists"
@@ -2274,7 +2274,7 @@ end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state -> ) =>: importFile
   state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut: imported
-  0 while ..dup progContext [] .progFiles .length < do
+  0:i64 while ..dup progContext [] .progFiles .length < do
     progContext [] .progFiles ..over list.get .fileName sb.asStr fileName sb.asStr string.eq if
       ..dup FileId cast imported =
       break
@@ -2327,7 +2327,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
   state .constants list.free ..drop
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
-  0 while ..dup state .globalInterpreters .length < do
+  0:i64 while ..dup state .globalInterpreters .length < do
     state .globalInterpreters
       ..over list.at .data [] .context @
     interpreter.cleanupContext

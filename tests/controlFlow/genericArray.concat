@@ -1,7 +1,7 @@
 import debug
 proc( i64 : auto: D i32 D array : varArray -> i32 ) =>: sum
   0
-    0 while ..dup D < do =:: i
+    0:i64 while ..dup D < do =:: i
       varArray i [] +
       i 1 +
     end ..drop

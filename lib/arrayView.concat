@@ -55,8 +55,7 @@ namespace: array
     T arrayView : elts
     T : elt
   -> i64 ) =>: export: indexOf
-    0 ## index
-    while ..dup elts .length < do
+    0:i64 while ..dup elts .length < do
       elts .data ..over [] elt == if
         return
       end

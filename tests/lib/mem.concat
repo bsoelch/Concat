@@ -30,7 +30,7 @@ proc( -> ) =>: main
   
   i32 16 array new =:: mut: a
   a @ 10 42 mem.fill
-  0 while ..dup a ..length < do
+  0:i64 while ..dup a ..length < do
     a @ ..over [] debug.print
     1 +
   end ..drop

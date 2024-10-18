@@ -78,7 +78,7 @@ proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
   end
 end
 proc( string : code FileState ptr mut : fileState -> string ) =>: skipSpaces
-  0 while ..dup code .length < if code ..over string.charAt char.isWhitespace else false end do
+  0:i64 while ..dup code .length < if code ..over string.charAt char.isWhitespace else false end do
     code ..over string.charAt fileState [] .currentPos @ updateFilePos
     1 +
   end
@@ -97,7 +97,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
       ..dup 0 string.charAt '#' == ..over 1 string.charAt '#' == & if ## line comment
         '#' fileState [] .currentPos @ updateFilePos
         '#' fileState [] .currentPos @ updateFilePos
-        2 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\n' != & do
+        2:i64 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\n' != & do
           ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
         end
@@ -109,7 +109,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
         '#' fileState [] .currentPos @ updateFilePos
         '+' fileState [] .currentPos @ updateFilePos
         1 =:: mut: k
-        2 while ..dup ..over.2 .length < k 0 > & do
+        2:i64 while ..dup ..over.2 .length < k 0 > & do
           ..over ..over string.tail
             ..dup "+#" string.wrap string.startsWith if ..drop
               k 1 - k =
@@ -139,7 +139,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
     ..dup 0 string.charAt fileState [] .currentPos @ updateFilePos
     ..dup 0 string.charAt '"' == if ## string
       1 string.tail
-      0 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '"' != & do
+      0:i64 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '"' != & do
         ..over ..over string.charAt '\\' == if ##escape characters
           ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
@@ -168,7 +168,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
     end
     ..dup 0 string.charAt '\'' == if ## char
       1 string.tail
-      0 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\'' != & do
+      0:i64 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\'' != & do
         ..over ..over string.charAt '\\' == if ##escape characters
           ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
           1 +
@@ -179,7 +179,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       string.splitIndex Token .CHAR return
     end
-    1 while ..dup ..over.2 .length < if ..over ..over string.charAt char.isWhitespace ! else false end do
+    1:i64 while ..dup ..over.2 .length < if ..over ..over string.charAt char.isWhitespace ! else false end do
       ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
       1 +
     end

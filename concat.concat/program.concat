@@ -834,34 +834,34 @@ namespace: sb
   proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export: appendProgram
     =:: prog
       "## errors:\n" sb.appendS
-      0 while ..dup prog [] .errors .length < do
+      0:i64 while ..dup prog [] .errors .length < do
         ..swap
           prog [] .errors ..over.2 list.get sb.appendCompilerError
         ..swap
         1 +
       end ..drop
-      0 while ..dup prog [] .progFiles .length < do
+      0:i64 while ..dup prog [] .progFiles .length < do
         ..swap
           prog [] .progFiles ..over.2 list.get =:: f
           "## "          sb.appendS
           f .fileName    sb.appendSb
           '\n'           sb.appendC
           "## global:\n" sb.appendS
-          0 while ..dup f .globalOps .length < do
+          0:i64 while ..dup f .globalOps .length < do
             ..swap
               f .globalOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
           "## local:\n" sb.appendS
-          0 while ..dup f .localOps .length < do
+          0:i64 while ..dup f .localOps .length < do
             ..swap
               f .localOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
           "## tmp:\n" sb.appendS
-          0 while ..dup f .tmpOps .length < do
+          0:i64 while ..dup f .tmpOps .length < do
             ..swap
               f .tmpOps ..over.2 list.get prog sb.appendOp
             ..swap
@@ -871,7 +871,7 @@ namespace: sb
         1 +
       end ..drop
       "## temporary code:\n" sb.appendS
-      0 while ..dup prog [] .tmpOps .length < do
+      0:i64 while ..dup prog [] .tmpOps .length < do
         ..swap
           prog [] .tmpOps ..over.2 list.get prog sb.appendOp
         ..swap

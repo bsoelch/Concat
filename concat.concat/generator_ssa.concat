@@ -347,7 +347,7 @@ namespace: ssa
       end
       false =:: mut: needComma
       op .operands =:: args
-      0 while ..dup args ..length < do =:: i
+      0:i64 while ..dup args ..length < do =:: i
         args @ i [] =:: arg
         arg .empty ?? if
           i 1 + continue
@@ -547,7 +547,7 @@ proc(
   toMerge 0 array.get =:: rootValue
   rootValue [] .varId =:: rootId
   true =:: mut: isMerged
-  1 while ..dup toMerge .length < do =:: i
+  1:i64 while ..dup toMerge .length < do =:: i
     toMerge i array.get [] .varId rootId ssa.valueEqual if
       false isMerged =
       i break
@@ -557,7 +557,7 @@ proc(
   isMerged if
     rootValue [] return
   end
-  1 while ..dup toMerge .length < do =:: i
+  1:i64 while ..dup toMerge .length < do =:: i
     toMerge i array.get [] .valueType rootValue [] .valueType != if
       "branches of " sb.wrap
          mergePoint .blockName sb.appendStr
@@ -576,7 +576,7 @@ proc(
       newId
       rootValue [] .valueType
     context .ssaContext ssa.phi.create
-      0 while ..dup toMerge .length < do =:: i
+      0:i64 while ..dup toMerge .length < do =:: i
         ## phi.addBranch
           mergePoint .branchLabels i array.get
           toMerge i array.get [] .varId
@@ -1560,7 +1560,7 @@ proc(
             op [] .pos errors appendError
             ops return
           end
-          0 while ..dup loopEltCount < do 1 +
+          0:i64 while ..dup loopEltCount < do 1 +
             loopElts
               context [] .stackInfo @ branchTree.pop .data list.appendP
             loopElts =
@@ -2167,7 +2167,7 @@ proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToS
       prog [] .progFiles currentProc [] .fileId i64 cast list.at .data =:: f
       currentProc [] .implementation .code @ =:: impl
       currentProc [] .hasStaticArg if
-        0 while ..dup impl [] .implementations .length < do =:: implId
+        0:i64 while ..dup impl [] .implementations .length < do =:: implId
           impl [] .implementations implId list.at .data =:: currentImpl
           ## compileProc
             f [] .localOps

@@ -189,7 +189,7 @@ proc( TypeCheckState ptr mut : state -> ) =>: freezeInterpreter
   typeContext [] .labelContext @ =:: labelContext
   state [] .interpreter @ =:: interpreter
   ##  -> store computed constants
-  0 while ..dup interpreter [] .stack .length < do
+  0:i64 while ..dup interpreter [] .stack .length < do
     interpreter [] .stack ..over list.at .data =:: constant
     interpreter [] .stackInfo ..over list.at .data =:: constInfo
     constInfo [] .valueType typeContext types.isReference if
@@ -506,7 +506,7 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr mut : state -> ) =>: dis
   idContext [] .typeContext @ =:: typeContext
   count pos state checkStackSize if return end
   0 =:: mut: toDrop
-  0 while ..dup count < do
+  0:i64 while ..dup count < do
     state [] .stack @ branchTree.pop .data =:: typeInfo
     typeInfo [] .valueType typeContext types.isEmpty if
       1 + continue
@@ -650,7 +650,7 @@ proc(
   state [] .program [] .idContext
     .typeContext @
   =:: typeContext
-  0 while ..dup types .length < do =:: i
+  0:i64 while ..dup types .length < do =:: i
     state [] .stack @
       ## TypeInfo
         types i array.get
@@ -710,7 +710,7 @@ proc(
   argCount i32 cast opInfo [] .childCount =
   argOffset opInfo [] .childOffset =
   true =:: mut: canMoveChildren
-  0 while ..dup argCount < do
+  0:i64 while ..dup argCount < do
     state [] .childIds ..over argOffset + list.get =:: childId
     childId 0 < if
       false canMoveChildren =
@@ -874,6 +874,11 @@ proc(
     clearConst if
       ConstValue .none elt .value =
       id.LABEL_ID_NONE elt .valueId =
+      elt .valueType .intLiteral ?? if
+        elt .valueType .intLiteral
+          types.intLiteralAsInt
+        elt .valueType =
+      end
     end
     OP_UNLINKED elt .opIndex =
     elt .valueType typeContext types.isReference if
@@ -989,7 +994,7 @@ proc(
     i 1 +
   end ..drop
   noError if ## don't try casting values if merging types failed
-    0 while ..dup toMerge .length < do =:: i
+    0:i64 while ..dup toMerge .length < do =:: i
       toMerge i array.get =:: current
         current [] .valueType
           $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
@@ -1110,7 +1115,7 @@ proc(
     pos reserveOp
   mem.fill
   state [] .opInfo
-  0 while ..dup count < do =:: i
+  0:i64 while ..dup count < do =:: i
     ## OpInfo
       0
       0
@@ -1183,11 +1188,11 @@ end
 proc( i64 : index TypeCheckState ptr mut : state -> ) =>: deleteOp
   state [] .opInfo index list.at .data =:: opInfo
   0 =:: mut: toDrop
-  0 while ..dup opInfo [] .childCount < do
-    state [] .childIds ..over opInfo [] .childOffset + list.get state tryDeleteOp if
+  0 while ..dup opInfo [] .childCount < do =:: i
+    state [] .childIds i i64 cast.u opInfo [] .childOffset + list.get state tryDeleteOp if
       toDrop 1 + toDrop =
     end
-    1 +
+    i 1 +
   end ..drop
   toDrop 0 == if
     opValNOP state [] .compiledOps index list.at .data [] .val =
@@ -1201,12 +1206,12 @@ end
 proc( i64 : index TypeCheckState ptr mut : state -> i64 ) =>: copyOp
   state [] .opInfo index list.at .data =:: opInfo
   state [] .childIds .length =:: argOffset
-  0 while ..dup opInfo [] .childCount < do ## copy child operations
-    state [] .childIds ..over opInfo [] .childOffset + list.get =:: childId
+  0 while ..dup opInfo [] .childCount < do =:: i ## copy child operations
+    state [] .childIds i i64 cast.u opInfo [] .childOffset + list.get =:: childId
     state [] .childIds
       childId state copyOp list.append
     state [] .childIds =
-    1 +
+    i 1 +
   end ..drop
   state [] .compiledOps .length =:: copyIndex
   state [] .compiledOps
@@ -1387,7 +1392,7 @@ proc(
   program [] .switchData
     switchId list.at .data
   =:: switchData
-  0 while ..dup switchData [] .labels .length < do =:: i
+  0:i64 while ..dup switchData [] .labels .length < do =:: i
     ## constantEquals
       switchData [] .labels i list.at .data [] .value
       label
@@ -1433,7 +1438,7 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   state [] .interpreter .stack =:: labels
   state [] .interpreter .stackInfo =:: stackInfo
-  0 while ..dup labels .length < do =:: i
+  0:i64 while ..dup labels .length < do =:: i
     labels i list.get =:: mut: label
     stackInfo i list.at .data =:: labelInfo
     ## XXX? less strict condition for types?
@@ -2686,7 +2691,7 @@ proc(
             ## XXX? extract to procedure?
             orBranches [] .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
-              0 while ..dup nodeCount < do =:: i
+              0:i64 while ..dup nodeCount < do =:: i
                 orBranches [] i list.at .data [] .node list.append
                 i 1 +
               end ..drop
@@ -2705,7 +2710,7 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different number of types at the start of if-branch: " sb.wrap
-                0 while ..dup orBranches [] .length < do =:: i
+                0:i64 while ..dup orBranches [] .length < do =:: i
                   "\n  * " sb.appendS
                   orBranches [] i list.at .data =:: branchPoint
                   state [] .stack
@@ -2801,7 +2806,7 @@ proc(
           currentBlock [] .If .andBranches .length 1 >= assert "if has if branch"
           currentBlock [] .If .andBranches .length =:: nodeCount
           nodeCount branchTree.NodeId list.create
-            0 while ..dup nodeCount < do =:: i
+            0:i64 while ..dup nodeCount < do =:: i
               currentBlock [] .If .andBranches i list.at .data [] .node list.append
               i 1 +
             end ..drop
@@ -2820,7 +2825,7 @@ proc(
             MergePoint new
           branchTree.merge .error ?? if
             "different number of types at the start of else-branch: " sb.wrap
-              0 while ..dup currentBlock [] .If .andBranches .length < do =:: i
+              0:i64 while ..dup currentBlock [] .If .andBranches .length < do =:: i
                 "\n  * " sb.appendS
                 currentBlock [] .If .andBranches i list.at .data =:: branchPoint
                 state [] .stack
@@ -3125,7 +3130,7 @@ proc(
             ## XXX? extract to procedure?
             doBranches [] .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
-              0 while ..dup nodeCount < do =:: i
+              0:i64 while ..dup nodeCount < do =:: i
                 doBranches [] i list.at .data [] .node list.append
                 i 1 +
               end ..drop
@@ -3144,7 +3149,7 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different number of types at the start of do-branch: " sb.wrap
-                0 while ..dup doBranches [] .length < do =:: i
+                0:i64 while ..dup doBranches [] .length < do =:: i
                   "\n  * " sb.appendS
                   doBranches [] i list.at .data =:: branchPoint
                   state [] .stack
@@ -3395,7 +3400,7 @@ proc(
           caseBranches .length 1 >= if
             caseBranches .length =:: nodeCount
             nodeCount branchTree.NodeId list.create
-              0 while ..dup nodeCount < do =:: i
+              0:i64 while ..dup nodeCount < do =:: i
                 caseBranches
                   i list.at .data
                 [] .node list.append
@@ -3416,7 +3421,7 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of switch-branches: " sb.wrap
-                0 while ..dup caseBranches .length < do =:: i
+                0:i64 while ..dup caseBranches .length < do =:: i
                   "\n  * " sb.appendS
                   caseBranches i list.at .data =:: branchPoint
                   state [] .stack
@@ -3474,7 +3479,7 @@ proc(
           continueBranches .length 1 >= if
             continueBranches .length =:: nodeCount
             branchPoints
-              0 while ..dup nodeCount < do =:: i
+              0:i64 while ..dup nodeCount < do =:: i
                 continueBranches
                   i list.at .data
                 [] .node list.append
@@ -3495,7 +3500,7 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of continue branches: " sb.wrap
-                0 while ..dup continueBranches .length < do =:: i
+                0:i64 while ..dup continueBranches .length < do =:: i
                   "\n  * " sb.appendS
                   continueBranches i list.at .data =:: branchPoint
                   state [] .stack
@@ -3566,7 +3571,7 @@ proc(
             breakBranches .length =:: nodeCount
             branchPoints
               list.clear
-              0 while ..dup nodeCount < do =:: i
+              0:i64 while ..dup nodeCount < do =:: i
                 breakBranches
                   i list.at .data
                 [] .node list.append
@@ -3587,7 +3592,7 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of while branches: " sb.wrap
-                0 while ..dup breakBranches .length < do =:: i
+                0:i64 while ..dup breakBranches .length < do =:: i
                   "\n  * " sb.appendS
                   breakBranches i list.at .data =:: branchPoint
                   state [] .stack
@@ -3641,7 +3646,7 @@ proc(
           branches =
           branches .length =:: nodeCount
           nodeCount branchTree.NodeId list.create
-            0 while ..dup nodeCount < do =:: i
+            0:i64 while ..dup nodeCount < do =:: i
               branches i list.at .data [] .node list.append
               i 1 +
             end ..drop
@@ -3660,7 +3665,7 @@ proc(
             MergePoint new
           branchTree.merge .error ?? if
             "different number of types at the end or and-or branch: " sb.wrap
-              0 while ..dup branches .length < do =:: i
+              0:i64 while ..dup branches .length < do =:: i
                 "\n  * " sb.appendS
                 branches i list.at .data =:: branchPoint
                 state [] .stack
@@ -3980,13 +3985,13 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   ## global code
-  0 while ..dup program [] .progFiles .length < do =:: fileId
+  0:i64 while ..dup program [] .progFiles .length < do =:: fileId
     fileId FileId cast state .currentFile =
     fileId FileId cast state .interpreter .currentFile =
     program [] .progFiles fileId list.at .data =:: progFile
     state @ clearOps
     state @ resetInterpreter
-    0 while ..dup progFile [] .globalOps .length < do
+    0:i64 while ..dup progFile [] .globalOps .length < do
       progFile [] .globalOps ..over list.get state @ typeCheckOp
       1 +
     end ..drop
@@ -4000,7 +4005,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
   state .compiledOps =:: originalOps
   false state .isGlobal =
   ## procedures
-  0 while ..dup program [] .procedures .length < do =:: procId
+  0:i64 while ..dup program [] .procedures .length < do =:: procId
     program [] .procedures procId i64 cast list.at .data =:: currentProc
     currentProc [] .implementation .code ?? ! if
       procId 1 + continue ## procedure implementation not in code
@@ -4020,7 +4025,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
   false =:: mut: compiledImplementation
   while
     false compiledImplementation =
-    0 while ..dup program [] .procedures .length < do =:: procId
+    0:i64 while ..dup program [] .procedures .length < do =:: procId
       program [] .procedures procId list.at .data =:: currentProc
       currentProc [] .implementation .code ?? ! if
         procId 1 + continue ## procedure implementation not in code

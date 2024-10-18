@@ -706,7 +706,7 @@ namespace: types
     1:i64 =:: mut: alignment
     0:i64 =:: mut: size
     elts .length i64 list.create =:: mut: offsetBuffer ## XXX? store buffer in context
-    0 while ..dup elts .length < do =:: i
+    0:i64 while ..dup elts .length < do =:: i
       elts i compositeElts.get =:: elt
       ## size and alignment
       elt typeContext alignOf =:: eltAlignData
@@ -754,7 +754,7 @@ namespace: types
     t typeContext compositeElts =:: elts
     1:i64 =:: mut: alignment
     0:i64 =:: mut: size
-    0 while ..dup elts .length < do =:: i
+    0:i64 while ..dup elts .length < do =:: i
       elts i compositeElts.get =:: elt
       ## size and alignment
       elt typeContext sizeOf =:: eltSizeData
@@ -876,7 +876,7 @@ namespace: types
           TypeSize .unknown return
         end
         baseSize .fixed =:: mut: size
-        0 while ..dup dims .length < do =:: i
+        0:i64 while ..dup dims .length < do =:: i
           dims i array.get =:: dim
           dim .sizeType .int ?? if
             size dim .value * size =
@@ -1090,7 +1090,7 @@ namespace: types
     a .length b .length != if
       false return
     end
-    0 while ..dup a .length < do
+    0:i64 while ..dup a .length < do
       a ..over array.get .sizeType b ..over.2 array.get .sizeType != if
         ..drop false return
       end
@@ -1127,7 +1127,7 @@ namespace: types
       base =
     end
     context [] .arrayTypes @ =:: arrays
-    0 while ..dup arrays [] .length < do
+    0:i64 while ..dup arrays [] .length < do
       arrays [] ..over list.get
         ..dup .mutable   mutable   != if ..drop
           1 + continue
@@ -1335,16 +1335,16 @@ namespace: types
     Type : union
     Type : elt
     TypeContext ptr : context
-  -> i32 bool ) =>: export: findUnionTypeIndex
+  -> i64 bool ) =>: export: findUnionTypeIndex
     context [] .labelContext @ =:: labelContext
     union context compositeElts =:: elts
-    0 while ..dup elts .length < do
+    0:i64 while ..dup elts .length < do
       elt elts ..over.2 compositeElts.get typeEquals if
         false return
       end
       1 +
     end ..drop
-    0 while ..dup elts .length < do
+    0:i64 while ..dup elts .length < do
       elt elts ..over.2 compositeElts.get context canAutoCast if
         false return
       end
@@ -1481,7 +1481,7 @@ namespace: types
     true =:: mut: emptyData ## composite is empty
     true =:: mut: onlyEmpty ## composite only contains Type .empty
     COMP_FLAG_NONE =:: mut: flags
-    0 while ..dup elts .length < do
+    0:i64 while ..dup elts .length < do
       elts ..over array.get =:: elt
       elt .empty ?? ! if
         false onlyEmpty =
@@ -1540,7 +1540,7 @@ namespace: types
     end
     labels? .data =:: labels
     true =:: mut: unlabled
-    0 while ..dup labels .length < do
+    0:i64 while ..dup labels .length < do
       labels ..over array.get id.LABEL_ID_NONE != if
         false unlabled =
         break
@@ -1576,7 +1576,7 @@ namespace: types
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
     context [] .tupleTypes =:: tuples
-    0 while ..dup tuples .length < do
+    0:i64 while ..dup tuples .length < do
       tuples ..over list.at .data =:: t
       t [] .compositeInfo .eltCount elts .length == and
           t [] .compositeInfo .eltsOffset eltsOffset == and
@@ -1728,7 +1728,7 @@ namespace: sb
     sb
       t context types.compositeData .data =:: comp
       comp [] .labelOffset types.UNLABELED == =:: unlabeled
-      0 while ..dup comp [] .eltCount < do
+      0:i64 while ..dup comp [] .eltCount < do
         ..swap
           t ..over.2 context types.compositeGetElement =:: eltType
           unlabeled if
@@ -1832,7 +1832,7 @@ namespace: types
       Type .undefined true return
     end
     context [] .procTypes @ =:: procs
-    0 while ..dup procs [] .length < do =:: i
+    0:i64 while ..dup procs [] .length < do =:: i
       procs [] i list.at .data =:: elt
       elt [] .in in typeEquals
       elt [] .out out typeEquals &
@@ -1910,7 +1910,7 @@ namespace: types
     i32 : implId
     TypeContext ptr mut : context
   -> types.NamedTypeId ) =>: findNamedType
-    0 while ..dup context [] .namedTypes .length < do =:: i
+    0:i64 while ..dup context [] .namedTypes .length < do =:: i
       context [] .namedTypes i list.at .data =:: elt
       elt [] .name label == and
           elt [] .implId implId == if
@@ -2089,7 +2089,7 @@ namespace: types
   -> Type bool ) =>: export: findGeneratedType
     typeContext [] .labelContext @ =:: labelContext
     typeContext [] .generatedTypes =:: genTypes
-    0 while ..dup genTypes .length < do
+    0:i64 while ..dup genTypes .length < do
       genTypes ..over list.at .data =:: candidate
       candidate [] .generator generator != if
         1 + continue
@@ -2099,7 +2099,7 @@ namespace: types
         1 + continue
       end
       true =:: mut: match
-      0 while ..dup arguments .length < do
+      0:i64 while ..dup arguments .length < do
         ## constantEquals
           candidateArgs ..over array.get
           arguments ..over.2 array.get
@@ -2267,7 +2267,7 @@ namespace: types
           t ..dup .pointer ?? if .pointer else .arrayType end i64 cast
         list.get =:: arrayType
         arrayType .base context containsGeneric =:: mut: isStatic
-        0 while ..dup arrayType .dims < do
+        0:i64 while ..dup arrayType .dims < do
           context [] .arraySizes
              arrayType .sizeOffset ..over.2 +
           list.get .sizeType .staticArg ?? if
@@ -2317,7 +2317,7 @@ namespace: types
     srcSize .length targetSize .length < if srcSize .length else targetSize .length end =:: commonPart
     1 i64 =: mut: srcTotal
     1 i64 =: mut: targetTotal
-    0 while ..dup commonPart < do
+    0:i64 while ..dup commonPart < do
       srcSize ..over array.get .sizeType targetSize ..over.2 array.get .sizeType != if ..drop
         false return
       end
@@ -2676,7 +2676,7 @@ namespace: sb
     LabelContext ptr : labelContext
   -> stringBuilder  ) =>: export: appendArraySizes
     sb
-      0 while ..dup sizes .length < do
+      0:i64 while ..dup sizes .length < do
         ..swap
           sizes ..over.2 array.get labelContext appendArraySize
         ..swap 1 +

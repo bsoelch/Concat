@@ -153,7 +153,7 @@ proc(
     elementCount list.ensureCap
   context [] .labelBuffer =
   false =:: mut: error
-  0 while ..dup elementCount < do
+  0:i64 while ..dup elementCount < do
     context [] .stack
       ..over offset +
     list.at .data =:: stackValue
@@ -232,7 +232,7 @@ proc(
   true =:: mut: hasArrayType
   false =:: mut: hasName
   false =:: mut: error
-  0 while ..dup elementCount < do
+  0:i64 while ..dup elementCount < do
     context [] .stack
       ..over offset +
     list.at .data =:: stackValue
@@ -535,7 +535,7 @@ namespace: interpreter
         end
       else
         idContext [] .argBuffer .length =:: offset
-        0 while ..dup sizes .length < do =:: i
+        0:i64 while ..dup sizes .length < do =:: i
           sizes i array.get =:: current
           idContext [] .argBuffer
             current .sizeType .int ?? if
@@ -665,7 +665,7 @@ namespace: interpreter
       InterpreterType .GLOBAL
     wrapProgram =:: mut: context
       ## push arguments
-      0 while ..dup inTypes .length < do =:: i
+      0:i64 while ..dup inTypes .length < do =:: i
         inTypes i types.compositeElts.get =:: argType
         args i array.get =:: argValue
         argValue argType id.LABEL_ID_NONE pos context @ pushValue
@@ -1223,7 +1223,7 @@ proc(
           false fixedSize =
           offset 1 - offset =
         end
-        0 =:: mut: intArgs
+        0:i64 =:: mut: intArgs
         offset while ..dup minOffset >= do
           context [] .stackInfo ..over list.at .data [] .valueType
               typeContext types.unwrapReference typeContext types.isInt ! if
@@ -1236,7 +1236,7 @@ proc(
           list.clear
           intArgs list.ensureCap
         idContext [] .arraySizeBuffer =
-        1 while ..dup intArgs <= do
+        1:i64 while ..dup intArgs <= do
           context [] .stack offset ..over.2 + list.get =:: intArg
           intArg .int ?? if
             ## TODO ensure array sizes are positive
@@ -1787,7 +1787,7 @@ proc(
   end
   context [] .stack .length =:: stackOffset
   ## process procedure arguments
-  0 while ..dup args .length < do
+  0:i64 while ..dup args .length < do
     context [] .stack ..over argsOffset + list.at .data =:: value
     context [] .stackInfo ..over argsOffset + list.at .data =:: valueInfo
     inType ..over typeContext types.compositeGetLabel =:: label

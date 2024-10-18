@@ -6,12 +6,12 @@ proc( -> ) =>: main
   ..?parser.find.str2
   str3 ..length debug.print
   specialString ..length debug.print
-  0 while ..dup specialString ..length < do
+  0:i64 while ..dup specialString ..length < do
     specialString ..over [] debug.print
     1 +
   end ..drop
   multiLine ..length debug.print
-  0 while ..dup multiLine ..length < do
+  0:i64 while ..dup multiLine ..length < do
     multiLine ..over [] debug.print
     1 +
   end ..drop

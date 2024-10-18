@@ -74,7 +74,7 @@ namespace: id
     =:: mut: context
     context .nameBuffer sb.free context .nameBuffer =
     context .labels           list.free context .labels =
-    0 while ..dup context .namespaces .length < do =:: i
+    0:i64 while ..dup context .namespaces .length < do =:: i
       context .namespaces i list.at .data =:: namespace
       namespace [] .children list.free namespace [] .children =
       i 1 +
@@ -390,7 +390,7 @@ namespace: id
                   "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                 end
               ..swap ## update file position
-                0 while ..dup nChars < do
+                0:i64 while ..dup nChars < do
                   str ..over ..over.2 + string.charAt pos @ updateFilePos
                   ..swap 1 +
                   ..swap 1 +
@@ -429,7 +429,7 @@ namespace: id
       NAMESPACE_ID_NONE return ## id out of range
     end
     context [] .namespaces base i64 cast list.at .data =:: baseSpace
-    0 while ..dup baseSpace [] .children .length < do =:: i
+    0:i64 while ..dup baseSpace [] .children .length < do =:: i
       baseSpace [] .children i list.get i64 cast =:: child
       childName context [] .namespaces child list.get .name context scEqualTo if
         child NamespaceId cast return
