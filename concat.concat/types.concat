@@ -2386,7 +2386,6 @@ namespace: types
     end
     false return
   end
-  ## TODO simplify merge rules to reduce implcit casts
   proc( Type : a Type : b TypeContext ptr mut : context -> Type bool ) =>: export: mergeTypes
     a b types.typeEquals if
       a false return
@@ -2438,9 +2437,6 @@ namespace: types
         context
       newArrayType return
     end
-    a context types.isNumber b context types.isNumber & if
-      a b context commonNumberType return
-    end
     a .intLiteral ?? and b context types.isNumber and
         a b context canAutoCastIntLiteral if
       b false return
@@ -2450,9 +2446,11 @@ namespace: types
       a false return
     end
     a .intLiteral ?? and b .intLiteral ?? if
-        a .intLiteral intLiteralAsInt
-        b .intLiteral intLiteralAsInt
-      context mergeTypes return
+      ## XXX directly merge literal types?
+      a b .intLiteral intLiteralAsInt context mergeTypes if ..drop
+          a .intLiteral intLiteralAsInt b context mergeTypes return
+        end
+      false return
     end
     Type .undefined true return
   end

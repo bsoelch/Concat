@@ -2265,16 +2265,16 @@ proc(
   sb
     srcType switch
       I8  case
-        unsigned if boundType .MIN ?? if 0 else i8.UMAX end
-          else boundType .MIN ?? _if i8.MIN else i8.MAX end
+        unsigned if boundType .MIN ?? if 0 else i8.UMAX i64 cast.u end
+          else boundType .MIN ?? _if i8.MIN i64 cast.s else i8.MAX i64 cast.s end
         break
       I16 case
-        unsigned if boundType .MIN ?? if 0 else i16.UMAX end
-          else boundType .MIN ?? _if i16.MIN else i16.MAX end
+        unsigned if boundType .MIN ?? if 0 else i16.UMAX i64 cast.u end
+          else boundType .MIN ?? _if i16.MIN i64 cast.s else i16.MAX i64 cast.s end
         break
       I32 case
-        unsigned if boundType .MIN ?? if 0 else i32.UMAX end
-          else boundType .MIN ?? _if i32.MIN else i32.MAX end
+        unsigned if boundType .MIN ?? if 0 else i32.UMAX i64 cast.u end
+          else boundType .MIN ?? _if i32.MIN i64 cast.s else i32.MAX i64 cast.s end
         break
       I64 case
         unsigned if boundType .MIN ?? if 0 else i64.UMAX end
