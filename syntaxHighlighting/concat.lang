@@ -125,6 +125,8 @@
           &gt;&gt;&gt;        |
           new                 |
           cast                |
+          cast\.u             |
+          cast\.s             |
           cast!               |
           \.\.bitcast         |
           \.\.argc            |
@@ -210,10 +212,10 @@
     <context id="primitiveType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          bool              |
-          [ius](8|16|32|64) |
-          f32               |
-          f64               |
+          bool           |
+          i(8|16|32|64)  |
+          f32            |
+          f64            |
           type
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
