@@ -11,9 +11,9 @@
 * `f64` 64-bit IEEE binary float
 * `type` a type ( can only exist at compile time )
 
-The integer types can be interpreted as signed (represented as two's complement) or unsigned numbers, for each integer type `iN` there are corresponding explicitly signed types `sN` and `uN` for signed/unsigned value. These explicitly signed types are mainly intended to specify whether to sign or zero extend a smaller value, all built-in operators treat `sN` and `uN` the same way as `iN`.
+The integer types can be interpreted as signed (represented as two's complement) or unsigned numbers.
 Addition, subtraction an multiplication of integers are calculated modulo `2^N` where `N` is the number of bits.
-For operations that have different effects for signed and unsigned numbers there is both a signed and unsigned version, the signedness of the integer type has no effect on the operation
+For operations that have different effects for signed and unsigned numbers (division, remainder, casts, ...) there is both a signed and unsigned version.
 
 ## pointers & arrays
 

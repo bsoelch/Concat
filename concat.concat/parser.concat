@@ -81,13 +81,13 @@ proc(
   i64 : value
   IntLiteralType : literalType
   Type : intType
+  bool : isUnsigned
   FilePosition : pos
   ParserState ptr mut : state
 -> Constant ) =>: newIntConstant
   state .progContext [] .idContext .typeContext@ =:: typeContext
   literalType switch
     FIXED case
-      intType typeContext types.isUnsignedInt =:: isUnsigned
       ## TODO? better way to get bit-size of integer
       intType typeContext types.sizeOf .fixed i32 cast 8 * =:: bitCount
       value isUnsigned bitCount checkIntSize if
@@ -740,17 +740,18 @@ proc(
   string : literal
   IntLiteralType : literalType
   Type : intType
+  bool : unsigned
   FileState ptr mut : fileState
   ParserState ptr mut : state
 -> bool ) =>: tryParseIntConstant
   state .progContext [] .idContext .typeContext@ =:: typeContext
-  literalType .AUTO_UNSIGNED ?? or intType typeContext types.isUnsignedInt if
+  literalType .AUTO_UNSIGNED ?? or unsigned if
     literal 0 number.tryParseUInt
   else
     literal 0 number.tryParseInt
   end switch
     NONE case
-      literalType intType fileState [] .wordStart state newIntConstant  state pushConst
+      literalType intType unsigned fileState [] .wordStart state newIntConstant  state pushConst
       true return
     SIGN case ..drop
       "unsigned value is marked as negative: " sb.wrap
@@ -785,7 +786,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
       false return ## literal cannot contain :
     end
     literalTypeName "u" string.wrap string.eq  if
-      literal IntLiteralType .AUTO_UNSIGNED Type .undefined fileState state tryParseIntConstant ! if
+      literal IntLiteralType .AUTO_UNSIGNED Type .undefined true fileState state tryParseIntConstant ! if
         "invalid integer constant: `" sb.wrap
           literal sb.appendStr
           '`' sb.appendC
@@ -793,13 +794,13 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
       end
       true return
     else literalTypeName "i8"  string.wrap string.eq _if types.primitive.I8
-    else literalTypeName "u8"  string.wrap string.eq _if types.primitive.U8
     else literalTypeName "i16" string.wrap string.eq _if types.primitive.I16
-    else literalTypeName "u16" string.wrap string.eq _if types.primitive.U16
     else literalTypeName "i32" string.wrap string.eq _if types.primitive.I32
-    else literalTypeName "u32" string.wrap string.eq _if types.primitive.U32
     else literalTypeName "i64" string.wrap string.eq _if types.primitive.I64
-    else literalTypeName "u64" string.wrap string.eq _if types.primitive.U64
+    else literalTypeName "u8"  string.wrap string.eq _if true unsigned = types.primitive.I8
+    else literalTypeName "u16" string.wrap string.eq _if true unsigned = types.primitive.I16
+    else literalTypeName "u32" string.wrap string.eq _if true unsigned = types.primitive.I32
+    else literalTypeName "u64" string.wrap string.eq _if true unsigned = types.primitive.I64
     else literalTypeName "f32" string.wrap string.eq _if types.primitive.F32
     else literalTypeName "f64" string.wrap string.eq _if types.primitive.F64
     else literalTypeName state [] .currentFile idContext id.findIdentifierByName
@@ -813,10 +814,9 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
       true return
     end =:: literalType
     literalType typeContext types.isInt if
-      literalType typeContext types.isUnsignedInt unsigned =
       literalType typeContext types.sizeOf .fixed i32 cast 8 * size =
       ## TODO ensure constant has correct type
-      literal IntLiteralType .FIXED literalType fileState state tryParseIntConstant ! if
+      literal IntLiteralType .FIXED literalType unsigned fileState state tryParseIntConstant ! if
         "invalid integer constant: `" sb.wrap
           literal sb.appendStr
           '`' sb.appendC
@@ -841,7 +841,7 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
       true return
     end
   end
-  str IntLiteralType .AUTO Type .undefined fileState state tryParseIntConstant if
+  str IntLiteralType .AUTO Type .undefined unsigned fileState state tryParseIntConstant if
     true return
   end
   str 0 number.tryParseFloat
@@ -929,18 +929,6 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       true return
     else ..dup "i64" string.wrap string.eq _if
       types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "u8" string.wrap string.eq _if
-      types.primitive.U8 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "u16" string.wrap string.eq _if
-      types.primitive.U16 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "u32" string.wrap string.eq _if
-      types.primitive.U32 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "u64" string.wrap string.eq _if
-      types.primitive.U64 fileState [] .wordStart newTypeConst  state pushConst
       true return
     else ..dup "f32" string.wrap string.eq _if
       types.primitive.F32 fileState [] .wordStart newTypeConst  state pushConst

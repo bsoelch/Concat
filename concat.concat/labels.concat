@@ -14,7 +14,7 @@ struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mu
 
 struct( i64 : offset i64 : length ) =:: export: StringConstant
 
-u32 =:: export: LabelFlag
+i32 =:: export: LabelFlag
 namespace: id
   0:LabelFlag   =:: export: FLAG_NONE
   1:LabelFlag   =:: export: FLAG_MUTABLE
@@ -31,13 +31,13 @@ namespace: id
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
 
   proc( LabelFlag : a LabelFlag : b -> LabelFlag ) =>: export: flagAnd
-    a u32 cast b u32 cast i32.and LabelFlag cast
+    a i32 cast b i32 cast i32.and LabelFlag cast
   end
   proc( LabelFlag : a LabelFlag : b -> LabelFlag ) =>: export: flagOr
-    a u32 cast b u32 cast i32.or LabelFlag cast
+    a i32 cast b i32 cast i32.or LabelFlag cast
   end
   proc( LabelFlag -> bool ) =>: export: flagToBool
-    u32 cast i32.toBool
+    i32 cast i32.toBool
   end
   overload: &  flagAnd    end
   overload: |  flagOr     end

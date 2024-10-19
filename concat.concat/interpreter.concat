@@ -695,16 +695,16 @@ namespace: interpreter
     oldValue .Float ?? and targetType typeContext types.isInt if
       targetType typeContext types.unwrapNamed types.isPrimitive if
         targetType typeContext types.primitiveValue switch
-          I8  U8  case
+          I8  case
             oldValue .Float unsignedTarget if i8  cast.u i64 cast.u else i8  cast.s i64 cast.s end
             ConstValue .int return
-          I16 U16 case
+          I16 case
             oldValue .Float unsignedTarget if i16 cast.u i64 cast.u else i16 cast.s i64 cast.s end
             ConstValue .int return
-          I32 U32 case
+          I32 case
             oldValue .Float unsignedTarget if i32 cast.u i64 cast.u else i32 cast.s i64 cast.s end
             ConstValue .int return
-          I64 U64 case
+          I64 case
             oldValue .Float unsignedTarget if i64 cast.u else i64 cast.s end
             ConstValue .int return
           BOOL F32 F64 TYPE case ..unreachable
@@ -720,9 +720,6 @@ namespace: interpreter
       oldValue .int i64 =: mut: intVal
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
-          U8  case intVal i8  cast.u i64 cast.u intVal = break
-          U16 case intVal i16 cast.u i64 cast.u intVal = break
-          U32 case intVal i32 cast.u i64 cast.u intVal = break
           I8  case intVal i8 cast
             unsignedTarget if i64 cast.u else i64 cast.s end intVal = break
           I16 case intVal i16 cast
@@ -730,7 +727,7 @@ namespace: interpreter
           I32 case intVal i32 cast
             unsignedTarget if i64 cast.u else i64 cast.s end intVal = break
           F32 F64 case break ## XXX? handle precission loss due to representing int as float
-          I64 U64 case break ## no change neccessary
+          I64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
         end
       end

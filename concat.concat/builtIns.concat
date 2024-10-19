@@ -23,7 +23,7 @@ enum(
  SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64      ## <<
  ## comparison
  BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
- ## XXX? are the 16bit operations necessary
+ ## TODO? mixed inequalities ( i32 i64 <  is frequent loop condition )
  EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR ## ==
  NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR ## !=
  LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR ## <

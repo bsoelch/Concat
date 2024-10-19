@@ -22,7 +22,7 @@ namespace: i128
   proc( i64 : low -> i128 ) =>: export: fromI64
     low 0 < if -1:i64 else 0:i64 end low i128 new
   end
-  proc( u64 : low -> i128 ) =>: export: fromU64
+  proc( i64 : low -> i128 ) =>: export: fromU64
     0 low i128 new
   end
 

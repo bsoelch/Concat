@@ -5,7 +5,7 @@
 -1 =:: e
 1234:i16 =:: f
 i8 =:: char
-u8 =:: byte
+i8 =:: byte
 -2:char =:: g
 3:byte =:: h
 ..?parser.find.a

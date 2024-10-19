@@ -36,7 +36,7 @@ namespace: f128
   proc( i64 : n -> f128 ) =>: export: fromI64
     n i128.fromI64 false fromI128_internal
   end
-  proc( u64 : n -> f128 ) =>: export: fromU64
+  proc( i64 : n -> f128 ) =>: export: fromU64
     0 n i128 new false fromI128_internal
   end
   proc( i128 -> f128 ) =>: export: fromI128
