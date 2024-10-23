@@ -156,7 +156,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     primitiveType case
       t .primitiveType switch
         TYPE case ValType .EMPTY return
-        BOOL I8 I16 I32 case ValType .I32 return
+        BOOL I8 I16 I32 CHAR8 CHAR16 CHAR32 case ValType .I32 return
         I64 case ValType .I64 return
         F32 case ValType .FLOAT return
         F64 case ValType .DOUBLE return
@@ -624,7 +624,7 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I8 case
+          I8 CHAR8 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sb" sb.appendS return
@@ -632,7 +632,7 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I16 case
+          I16 CHAR16 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb "sh" sb.appendS return
@@ -640,7 +640,7 @@ namespace: sb
               STORE case sb "h" sb.appendS return
             end
             break
-          I32 case sb "w" sb.appendS return
+          I32 CHAR32 case sb "w" sb.appendS return
           I64 case sb "l" sb.appendS return
           F32 case sb "s" sb.appendS return
           F64 case sb "d" sb.appendS return
@@ -835,9 +835,9 @@ namespace: sb
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
-              I8  case value .int 0xff & sb.appendI return
-              I16 case value .int 0xffff & sb.appendI return
-              I32 case value .int i32 cast sb.appendI return
+              I8  CHAR8  case value .int 0xff &   sb.appendI return
+              I16 CHAR16 case value .int 0xffff & sb.appendI return
+              I32 CHAR32 case value .int i32 cast sb.appendI return
               I64 case value .int sb.appendI return
               F32 case value .int f32 cast f32.bits sb.appendI return
               F64 case value .int f64 cast f64.bits sb.appendI return
@@ -2264,15 +2264,15 @@ proc(
 -> stringBuilder ) =>: appendNumberBound
   sb
     srcType switch
-      I8  case
+      I8  CHAR8  case
         unsigned if boundType .MIN ?? if 0 else i8.UMAX i64 cast.u end
           else boundType .MIN ?? _if i8.MIN i64 cast.s else i8.MAX i64 cast.s end
         break
-      I16 case
+      I16 CHAR16 case
         unsigned if boundType .MIN ?? if 0 else i16.UMAX i64 cast.u end
           else boundType .MIN ?? _if i16.MIN i64 cast.s else i16.MAX i64 cast.s end
         break
-      I32 case
+      I32 CHAR32 case
         unsigned if boundType .MIN ?? if 0 else i32.UMAX i64 cast.u end
           else boundType .MIN ?? _if i32.MIN i64 cast.s else i32.MAX i64 cast.s end
         break
@@ -2283,7 +2283,7 @@ proc(
       BOOL case boundType .MIN ?? if 0 else 1 end break
       F32 case
         asType switch
-          I8 I16 I32 I64 case
+          I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
             asType unsigned boundType asType appendNumberBound return
           F32 case
             boundType .MIN ?? if f32.MIN else f32.MAX end f32.bits sb.appendI return
@@ -2294,7 +2294,7 @@ proc(
         break
       F64 case
         asType switch
-          I8 I16 I32 I64 case
+          I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
             asType unsigned boundType asType appendNumberBound return
           F32 case
             boundType .MIN ?? if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
@@ -2306,7 +2306,7 @@ proc(
       TYPE case ..unreachable
     end =:: intVal
   asType switch
-    I8 I16 I32 I64 case
+    I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
       intVal sb.appendI return
     F32 case intVal unsigned if f32 cast.u else f32 cast end f32.bits sb.appendI return
     F64 case intVal unsigned if f64 cast.u else f64 cast end f64.bits sb.appendI return
@@ -2492,9 +2492,9 @@ proc(
           's' sb.appendC
         end
         fromVal switch
-          I8  case "b" sb.appendS break
-          I16 case "h" sb.appendS break
-          I32 case "w" sb.appendS break
+          I8  CHAR8  case "b" sb.appendS break
+          I16 CHAR16 case "h" sb.appendS break
+          I32 CHAR32 case "w" sb.appendS break
           I64 case "l" sb.appendS break
           BOOL TYPE F32 F64 case ..unreachable
         end
@@ -2522,7 +2522,7 @@ proc(
             srcIndex sb.appendI
             '\n' sb.appendC
           return
-        I8 I16 I32 I64 case
+        I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
           sb
             fromVal srcIndex target toVal targetIndex
             signType .UNSIGNED ??
@@ -2539,7 +2539,7 @@ proc(
       signType .UNSIGNED ?? if " u" sb.appendS else " s" sb.appendS end
       fromVal switch
         I64 case "ltof" sb.appendS break
-        I8 I16 I32 case "wtof" sb.appendS break
+        I8 I16 I32 CHAR8 CHAR16 CHAR32 case "wtof" sb.appendS break
         BOOL TYPE F32 F64 case ..unreachable
       end
       " %s" sb.appendS
@@ -2629,9 +2629,9 @@ proc(
       fromSize toSize < if
         fromVal switch
           BOOL TYPE F32 F64 case break
-          I8  case " extub" sb.appendS break
-          I16 case " extuh" sb.appendS break
-          I32 case " extuw" sb.appendS break
+          I8  CHAR8  case " extub" sb.appendS break
+          I16 CHAR16 case " extuh" sb.appendS break
+          I32 CHAR32 case " extuw" sb.appendS break
           I64 case " extul" sb.appendS break
         end
       else

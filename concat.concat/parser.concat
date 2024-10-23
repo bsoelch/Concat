@@ -930,6 +930,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "i64" string.wrap string.eq _if
       types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
       true return
+    else ..dup "char8" string.wrap string.eq _if
+      types.primitive.CHAR8  fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "char16" string.wrap string.eq _if
+      types.primitive.CHAR16 fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "char32" string.wrap string.eq _if
+      types.primitive.CHAR32 fileState [] .wordStart newTypeConst  state pushConst
+      true return
     else ..dup "f32" string.wrap string.eq _if
       types.primitive.F32 fileState [] .wordStart newTypeConst  state pushConst
       true return

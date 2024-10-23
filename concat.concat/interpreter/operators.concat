@@ -325,15 +325,15 @@ namespace: interpreter
           a constAsBool if ..drop false true return end =:: x
           b constAsBool if ..drop false true return end =:: y
           x y == false return
-        I8 case
+        I8 CHAR8 case
           a constAsInt if ..drop false true return end i8 cast =:: x
           b constAsInt if ..drop false true return end i8 cast =:: y
           x y == false return
-        I16 case
+        I16 CHAR16 case
           a constAsInt if ..drop false true return end i16 cast =:: x
           b constAsInt if ..drop false true return end i16 cast =:: y
           x y == false return
-        I32 case
+        I32 CHAR32 case
           a constAsInt if ..drop false true return end i32 cast =:: x
           b constAsInt if ..drop false true return end i32 cast =:: y
           x y == false return

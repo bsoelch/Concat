@@ -596,6 +596,9 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
       F32  case 5 return
       F64  case 6 return
       TYPE case 7 return
+      CHAR8  case  8 return
+      CHAR16 case  9 return
+      CHAR32 case 10 return
     end
   end
   t typeContext types.isPointer if

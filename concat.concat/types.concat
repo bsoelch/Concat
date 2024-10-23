@@ -11,6 +11,7 @@ namespace: types
   enum(
     BOOL
     I8 I16 I32 I64
+    CHAR8 CHAR16 CHAR32
     F32 F64
     TYPE
   ) =:: export: PrimitiveType
@@ -121,9 +122,12 @@ namespace: types
       I16 case 3 return
       I32 case 4 return
       I64 case 5 return
-      F32 case 6 return
-      F64 case 7 return
-      TYPE case 8 return
+      CHAR8 case 6 return
+      CHAR16 case 7 return
+      CHAR32 case 8 return
+      F32 case 9 return
+      F64 case 10 return
+      TYPE case 11 return
     end
   end
   proc( IntLiteral -> i32 ) =>: intLiteralId
@@ -223,6 +227,9 @@ namespace: types
     PrimitiveType .I16  Type .primitiveType Type =: export: I16
     PrimitiveType .I32  Type .primitiveType Type =: export: I32
     PrimitiveType .I64  Type .primitiveType Type =: export: I64
+    PrimitiveType .CHAR8  Type .primitiveType Type =: export: CHAR8
+    PrimitiveType .CHAR16 Type .primitiveType Type =: export: CHAR16
+    PrimitiveType .CHAR32 Type .primitiveType Type =: export: CHAR32
     PrimitiveType .F32  Type .primitiveType Type =: export: F32
     PrimitiveType .F64  Type .primitiveType Type =: export: F64
     PrimitiveType .TYPE Type .primitiveType Type =: export: TYPE
@@ -283,7 +290,7 @@ namespace: types
   end
   proc( PrimitiveType -> bool ) =>: isIntPrimitive
     switch
-      BOOL F32 F64 TYPE case
+      BOOL CHAR8 CHAR16 CHAR32 F32 F64 TYPE case
         false return
       I8 I16 I32 I64 case
         true return
@@ -348,7 +355,7 @@ namespace: types
         false return
       end .primitiveType
       switch
-        BOOL I8 I16 I32 I64 TYPE case
+        BOOL I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 TYPE case
           false return
         F32 F64 case
           true return
@@ -363,7 +370,7 @@ namespace: types
         false return
       end .primitiveType
       switch
-        BOOL TYPE case
+        BOOL TYPE CHAR8 CHAR16 CHAR32 case
           false return
         I8 I16 I32 I64 F32 F64 case
           true return
@@ -395,7 +402,7 @@ namespace: types
         -1 return
       end .primitiveType
       switch
-        BOOL TYPE case
+        BOOL TYPE CHAR8 CHAR16 CHAR32 case
           -1 return
         I8 I16 I32 I64 case
           0 return
@@ -414,7 +421,7 @@ namespace: types
         -1 return
       end .primitiveType
       switch
-        BOOL TYPE case
+        BOOL TYPE CHAR8 CHAR16 CHAR32 case
           -1 return
         I8 case
           8 return
@@ -589,11 +596,11 @@ namespace: types
     switch
       TYPE case
         0 return
-      BOOL I8 case
+      BOOL I8 CHAR8 case
         1 return
-      I16 case
+      I16 CHAR16 case
         2 return
-      I32 F32 case
+      I32 F32 CHAR32 case
         4 return
       I64 F64 case
         8 return
@@ -2508,6 +2515,9 @@ namespace: sb
       I16  case "i16"  appendS return
       I32  case "i32"  appendS return
       I64  case "i64"  appendS return
+      CHAR8  case "char8"  appendS return
+      CHAR16 case "char16" appendS return
+      CHAR32 case "char32" appendS return
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return
       TYPE case "type" appendS return
