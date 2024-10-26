@@ -87,14 +87,14 @@ namespace: id
   proc( LabelContext ptr -> LabelId ) =>: export: labelOffset
     [] .labels .length LabelId cast return
   end
+  proc( StringConstant : const LabelContext ptr : context -> string ) =>: export: scAsStr
+    context [] .nameBuffer .data const .offset + const .length string.create return
+  end
   proc( StringConstant : const i64 : index LabelContext ptr : context -> i8 ) =>: export: scCharAt
-    context [] .nameBuffer .data const .offset + const .length string.create index string.charAt return
+    const context scAsStr index string.charAt return
   end
   proc( string : a StringConstant : b LabelContext ptr : context -> bool ) =>: export: scEqualTo
-    ## string.eq
-      a
-      context [] .nameBuffer .data b .offset + b .length string.create
-    string.eq return
+    a b context scAsStr string.eq return
   end
   proc( StringConstant : a StringConstant : b LabelContext ptr : context -> bool ) =>: export: scEqual
     a .length b .length != if
@@ -103,10 +103,7 @@ namespace: id
     a .offset b .offset == if
       true return
     end
-    ## string.eq
-      context [] .nameBuffer .data a .offset + a .length string.create
-      context [] .nameBuffer .data b .offset + b .length string.create
-    string.eq return
+    a context scAsStr b context scAsStr string.eq return
   end
 
   proc( LabelId : id LabelContext ptr : context -> Label ptr mut optional ) =>: getLabel

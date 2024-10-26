@@ -4,6 +4,8 @@ import "files.concat"
 import "labels.concat"
 import "types.concat"
 
+import debug
+
 i64 =:: export: ProcId
 i64 =:: export: ProcBundleId
 i64 =:: export: ConstantId
@@ -17,6 +19,8 @@ enum(
   i64 : int
   f64 : Float
   StringConstant : str
+  ConstantArray : str16
+  ConstantArray : str32
   ConstantArray : arrayConstant
   Type : typeId
   wildCard
@@ -26,14 +30,35 @@ enum(
   UnionConstant : union
 ) =:: export: ConstValue
 
-struct( ConstValue list : mut: arrayValues ) =:: export: ConstantContext
+struct(
+  i16 list : mut: array16Values
+  i32 list : mut: array32Values
+  ConstValue list : mut: arrayValues
+) =:: export: ConstantContext
 
 proc( -> ConstantContext ) =>: export: newConstContext
- 128 ConstValue list.create
+  ## ConstantContext
+   128 i16 list.create
+   128 i32 list.create
+   128 ConstValue list.create
  ConstantContext new return
 end
 proc( -> ConstantArray ) =>: export: emptyConstArray
   0 0 ConstantArray new
+end
+proc( i16 arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: constArray16
+  context [] .array16Values .length
+    context [] .array16Values
+      elts list.appendArray
+    context [] .array16Values =
+  elts .length ConstantArray new return
+end
+proc( i32 arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: constArray32
+  context [] .array32Values .length
+    context [] .array32Values
+      elts list.appendArray
+    context [] .array32Values =
+  elts .length ConstantArray new return
 end
 proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: export: constArray
   context [] .arrayValues .length
@@ -42,8 +67,28 @@ proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstantA
     context [] .arrayValues =
   elts .length ConstantArray new return
 end
+
 proc( ConstantArray : elts i64 : index ConstantContext ptr : context -> ConstValue ) =>: export: constArrayGet
   context [] .arrayValues elts .offset index + list.get return
+end
+
+proc( ConstantArray : elts ConstantContext ptr : context -> i16 arrayView ) =>: export: sc16AsStr
+  elts .offset 0 < if
+    i16 array.empty return
+  end
+  context [] .array16Values .length elts .offset elts .length + < if
+    i16 array.empty return
+  end
+  context [] .array16Values .data elts .offset + elts .length array.create return
+end
+proc( ConstantArray : elts ConstantContext ptr : context -> i32 arrayView ) =>: export: sc32AsStr
+  elts .offset 0 < if
+    i32 array.empty return
+  end
+  context [] .array32Values .length elts .offset elts .length + < if
+    i32 array.empty return
+  end
+  context [] .array32Values .data elts .offset + elts .length array.create return
 end
 proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView ) =>: export: constArrayAsArray
   elts .offset 0 < if
@@ -55,6 +100,13 @@ proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView
   context [] .arrayValues .data elts .offset + elts .length array.create return
 end
 
+## XXX? use char16/char32 arrayView (? string16/string32 types) for string types
+proc( i16 arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newStr16Const
+  elts context constArray16 ConstValue .str16 return
+end
+proc( i32 arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newStr32Const
+  elts context constArray32 ConstValue .str32 return
+end
 proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newArrayConst
   elts context constArray ConstValue .arrayConstant return
 end
@@ -97,6 +149,24 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
         true return
       end
       a .str b .str labelContext id.scEqual return
+    str16 case
+      a .str16 .length b .str16 .length != if
+        false return
+      end
+      a .str16 .offset b .str16 .offset == if
+        true return
+      end
+      ## TODO str16 equality
+      false return
+    str32 case
+      a .str32 .length b .str32 .length != if
+        false return
+      end
+      a .str32 .offset b .str32 .offset == if
+        true return
+      end
+      ## TODO str32 equality
+      false return
     arrayConstant case
       a .arrayConstant .length b .arrayConstant .length != if
         false return
@@ -209,6 +279,48 @@ namespace: sb
           "string: \"" sb.appendS
           val .str labelContext sb.appendEscapedStr
                  '\"'  sb.appendC
+          break
+        str16 case
+          val .str16 constContext sc16AsStr =:: str
+          "string16: \"" sb.appendS
+            0:i64 while $ str .length < do =:: i
+              str i array.get =:: c
+              c 0x20 < or c 0x7f >= if ## XXX? allow some characters outside ascii
+                "\\u" sb.appendS
+                c 0x1000   ..u< if '0' sb.appendC end
+                c 0x100    ..u< if '0' sb.appendC end
+                c 0x10     ..u< if '0' sb.appendC end
+                c i32 cast.u sb.appendX
+              else
+                c i8 cast sb.appendC
+              end
+              i 1 +
+            end ..drop
+         '\"'  sb.appendC
+          break
+        str32 case
+          val .str32 constContext sc32AsStr =:: str
+          "string32: \"" sb.appendS
+            0:i64 while $ str .length < do =:: i
+              str i array.get =:: cp
+              cp 0 < if
+                "\\x" sb.appendS
+                cp -0x10 > if '0' sb.appendC end
+                cp -_ sb.appendX
+              else cp 0x20 < or cp 0x7f >= _if ## XXX? allow some characters outside ascii
+                "\\U00" sb.appendS
+                cp 0x100000 ..u< if '0' sb.appendC end
+                cp 0x10000  ..u< if '0' sb.appendC end
+                cp 0x1000   ..u< if '0' sb.appendC end
+                cp 0x100    ..u< if '0' sb.appendC end
+                cp 0x10     ..u< if '0' sb.appendC end
+                cp sb.appendX
+              else
+                cp i8 cast sb.appendC
+              end
+              i 1 +
+            end ..drop
+         '\"'  sb.appendC
           break
         chr case
           "char: \'" sb.appendS

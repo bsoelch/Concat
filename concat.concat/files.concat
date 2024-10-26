@@ -6,40 +6,52 @@ import "common.concat"
 
 struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: export: FileState
 
+## XXX? special tokens for keywords
+enum( DEFAULT UTF8 UTF16 UTF32 INT_LITERAL UNKNOWN ) =:: export: StringLiteralType
+struct( string : value StringLiteralType : stringType ) =:: StringToken
 enum(
   EMPTY
+  EOF
   string : IDENTIFIER
-  string : STRING
-  string : RAW_STRING
-  string : CHAR
+  StringToken : STRING
+  StringToken : RAW_STRING
+  StringToken : CHAR
 ) =:: export: Token
+
+enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
 
 namespace: sb
   proc( stringBuilder : sb Token : token -> stringBuilder ) =>: export: appendToken
     token switch
       EMPTY case
         sb "empty" sb.appendS return
+      EOF case
+        sb "unexpected end of file" sb.appendS return
       IDENTIFIER case
         sb
           "identifier \"" sb.appendS
           token .IDENTIFIER sb.appendStr
           '\"' sb.appendC
         return
-      STRING case
+      STRING case ## XXX print string literal types
         sb
+          token .STRING .stringType sb.appendStringType
           "string \"" sb.appendS
-          token .STRING sb.appendStr
+          token .STRING .value sb.appendStr
           '\"' sb.appendC
         return
       RAW_STRING case
         sb
+          token .RAW_STRING .stringType sb.appendStringType
           "raw string `" sb.appendS
-          token .STRING sb.appendStr
+          token .STRING .value sb.appendStr
           '`' sb.appendC
         return
       CHAR case
-        sb "char \"" sb.appendS
-          token .CHAR sb.appendStr
+        sb
+          token .CHAR .stringType sb.appendStringType
+          "char \"" sb.appendS
+          token .CHAR .value sb.appendStr
           '\"' sb.appendC
         return
     end
@@ -52,6 +64,16 @@ namespace: sb
       ':' sb.appendC
       pos .posInLine sb.appendI
     return
+  end
+  proc( stringBuilder : sb StringLiteralType : stringType -> stringBuilder ) =>: export: appendStringType
+    stringType switch
+      DEFAULT case sb return
+      UTF8  case sb "utf8 "  sb.appendS return
+      UTF16 case sb "utf16 " sb.appendS return
+      UTF32 case sb "utf32 " sb.appendS return
+      UNKNOWN case sb "unknown " sb.appendS return
+      INT_LITERAL case sb "int-literal " sb.appendS return
+    end
   end
 end
 
@@ -69,9 +91,6 @@ proc( string -> ) =>: export: printTokens
   do end ..drop
 end
 
-## XXX? special tokens for keywords
-enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
-enum( DEFAULT UTF8 UTF16 UTF32 INT_LITERAL UNKNOWN ) =:: StringType
 
 proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
   chr '\n' == if
@@ -81,23 +100,23 @@ proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
     currentPos [] .posInLine 1 + currentPos [] .posInLine =
   end
 end
-proc( string -> StringType ) =>: checkStringPrefix
+proc( string -> StringLiteralType ) =>: checkStringPrefix
   $ .length 0 == if ..drop
-    StringType .DEFAULT return
+    StringLiteralType .DEFAULT return
   else $ "utf8" string.wrap string.eq _if ..drop
-    StringType .UTF8  return
+    StringLiteralType .UTF8  return
   else $ "utf16" string.wrap string.eq _if ..drop
-    StringType .UTF16 return
+    StringLiteralType .UTF16 return
   else $ "utf32" string.wrap string.eq _if ..drop
-    StringType .UTF32 return
+    StringLiteralType .UTF32 return
   else $ 0 string.charAt '0' >= and $ 0 string.charAt '9' <= _if ..drop
-    StringType .INT_LITERAL return ## first char of prefix is digit -> int-literal
+    StringLiteralType .INT_LITERAL return ## first char of prefix is digit -> int-literal
   else $ 0 string.charAt '-' == and $ .length 1 > and
       $ 1 string.charAt '0' >= and $ 1 string.charAt '9' <= _if ..drop
-    StringType .INT_LITERAL return ## prefix starts with - followed by digit -> int-literal
+    StringLiteralType .INT_LITERAL return ## prefix starts with - followed by digit -> int-literal
   else ..drop
-    StringType .UNKNOWN return
-  end    
+    StringLiteralType .UNKNOWN return
+  end
 end
 proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: nextToken
   code .length 0 <= if
@@ -105,7 +124,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
   end
   ParserState .IDENTIFIER =:: mut: state
   '"' =:: mut: stringStart
-  StringType .DEFAULT =:: mut: stringType
+  StringLiteralType .DEFAULT =:: mut: stringType
   0:i64 while $ code .length < do =:: i ## skip comments and whitespaces
     code i string.charAt =:: c
     ## only update position if char is skipped
@@ -147,7 +166,7 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
         end continue
       end
     end
-    i break ## neither whitespace nor comment 
+    i break ## neither whitespace nor comment
   end
     $ =:: mut: i0
     fileState [] .currentPos fileState [] .wordStart =
@@ -171,14 +190,17 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
           i 2 + continue ## escaped `
         end
         code i0 i i0 - string.slice =:: body
-        code i 1 + string.tail body Token .RAW_STRING return
+        code i 1 + string.tail body stringType StringToken new Token .RAW_STRING return
       end
       i 1 + continue
     end
     state .STRING ?? if
       c stringStart == if
         code i0 i i0 - string.slice =:: body
-        code i 1 + string.tail body stringStart '\'' == if Token .CHAR else Token .STRING end return
+        code i 1 + string.tail
+        body stringType StringToken new
+          stringStart '\'' == if Token .CHAR else Token .STRING end
+        return
       else c '\\' == _if
         ParserState .STRING_ESCAPE state =
       end
@@ -196,6 +218,8 @@ proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: 
   state .IDENTIFIER ?? and i0 code .length < if
     string.empty code i0 string.tail Token .IDENTIFIER return
   end
-  ## TODO handle unexpected end of file
+  i0 code .length < if ## unexpected end of file
+    string.empty Token .EOF return
+  end
   string.empty Token .EMPTY return
 end

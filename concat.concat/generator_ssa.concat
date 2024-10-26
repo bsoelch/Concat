@@ -755,6 +755,8 @@ proc(
     Float case break
     ## TODO store strings globally
     str case break
+    str16 case break
+    str32 case break
     ## TODO create local container value for composite values
     arrayConstant case break
     union case break
