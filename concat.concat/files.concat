@@ -69,6 +69,10 @@ proc( string -> ) =>: export: printTokens
   do end ..drop
 end
 
+## XXX? special tokens for keywords
+enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
+enum( DEFAULT UTF8 UTF16 UTF32 INT_LITERAL UNKNOWN ) =:: StringType
+
 proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
   chr '\n' == if
       currentPos [] .line 1 + currentPos [] .line =
@@ -77,115 +81,121 @@ proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
     currentPos [] .posInLine 1 + currentPos [] .posInLine =
   end
 end
-proc( string : code FileState ptr mut : fileState -> string ) =>: skipSpaces
-  0:i64 while ..dup code .length < if code ..over string.charAt char.isWhitespace else false end do
-    code ..over string.charAt fileState [] .currentPos @ updateFilePos
-    1 +
-  end
-  code ..swap string.tail return
+proc( string -> StringType ) =>: checkStringPrefix
+  $ .length 0 == if ..drop
+    StringType .DEFAULT return
+  else $ "utf8" string.wrap string.eq _if ..drop
+    StringType .UTF8  return
+  else $ "utf16" string.wrap string.eq _if ..drop
+    StringType .UTF16 return
+  else $ "utf32" string.wrap string.eq _if ..drop
+    StringType .UTF32 return
+  else $ 0 string.charAt '0' >= and $ 0 string.charAt '9' <= _if ..drop
+    StringType .INT_LITERAL return ## first char of prefix is digit -> int-literal
+  else $ 0 string.charAt '-' == and $ .length 1 > and
+      $ 1 string.charAt '0' >= and $ 1 string.charAt '9' <= _if ..drop
+    StringType .INT_LITERAL return ## prefix starts with - followed by digit -> int-literal
+  else ..drop
+    StringType .UNKNOWN return
+  end    
 end
 proc( string : code FileState ptr mut : fileState -> string Token ) =>: export: nextToken
   code .length 0 <= if
     string.empty Token .EMPTY return
   end
-  code fileState skipSpaces ## cut of leading white-spaces
-  ..dup .length 0 <= if ..drop
-    string.empty Token .EMPTY return
-  end
-    while
-      ..dup .length 2 < if break end
-      ..dup 0 string.charAt '#' == ..over 1 string.charAt '#' == & if ## line comment
-        '#' fileState [] .currentPos @ updateFilePos
-        '#' fileState [] .currentPos @ updateFilePos
-        2:i64 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\n' != & do
-          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-          1 +
-        end
-        string.tail fileState skipSpaces
-        ..dup .length 2 < if break end
-        true
-      else false end ..swap
-      ..dup 0 string.charAt '#' == ..over 1 string.charAt '+' == & if ## block comment
-        '#' fileState [] .currentPos @ updateFilePos
-        '+' fileState [] .currentPos @ updateFilePos
+  ParserState .IDENTIFIER =:: mut: state
+  '"' =:: mut: stringStart
+  StringType .DEFAULT =:: mut: stringType
+  0:i64 while $ code .length < do =:: i ## skip comments and whitespaces
+    code i string.charAt =:: c
+    ## only update position if char is skipped
+    c char.isWhitespace if
+      c fileState [] .currentPos@ updateFilePos
+      i 1 + continue
+    end
+    c '#' == and i 1 + code .length < if
+      code i 1 + string.charAt =:: nxt
+      nxt '#' == if ## XXX? allow '# ' as line comment
+        c fileState [] .currentPos@ updateFilePos
+        nxt fileState [] .currentPos@ updateFilePos
+        ## line comment
+        i 2 + while $ code .length < do
+          code $1 string.charAt =:: c2
+          1 + ## checked character
+          c2 fileState [] .currentPos@ updateFilePos
+          c2 '\n' == if break end
+        end continue
+      else nxt '+' == _if
+        c fileState [] .currentPos@ updateFilePos
+        nxt fileState [] .currentPos@ updateFilePos
+        ## block-comment
         1 =:: mut: k
-        2:i64 while ..dup ..over.2 .length < k 0 > & do
-          ..over ..over string.tail
-            ..dup "+#" string.wrap string.startsWith if ..drop
-              k 1 - k =
-              '+' fileState [] .currentPos @ updateFilePos
-              '#' fileState [] .currentPos @ updateFilePos
-              2 +
-              continue
-            else "#+" string.wrap string.startsWith _if
-              k 1 + k =
-              '#' fileState [] .currentPos @ updateFilePos
-              '+' fileState [] .currentPos @ updateFilePos
-              2 +
-              continue
-            end
-          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
+        i 2 + while $ code .length 1 - < do
+          code $1 string.charAt =:: c2
+          c2 fileState [] .currentPos@ updateFilePos
+          c2 '+' == and code $1 1 + string.charAt '#' == if
+            '#' fileState [] .currentPos@ updateFilePos
+            k 1 - k =
+            k 0 == if 2 + break end
+            2 + continue
+          else c2 '#' == and code $1 1 + string.charAt '+' == _if
+            '+' fileState [] .currentPos@ updateFilePos
+            k 1 + k =
+            2 + continue
+          end
           1 +
-        end
-        ## TODO error for unfinished comment at end of file
-        string.tail fileState skipSpaces ## length will be checked at start of next loop
-        ..swap ..drop true
-      else ..swap end
-    do end
-    ..dup .length 0 <= if ..drop
-      string.empty Token .EMPTY return
+        end continue
+      end
     end
+    i break ## neither whitespace nor comment 
+  end
+    $ =:: mut: i0
     fileState [] .currentPos fileState [] .wordStart =
-    ..dup 0 string.charAt fileState [] .currentPos @ updateFilePos
-    ..dup 0 string.charAt '"' == if ## string
-      1 string.tail
-      0:i64 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '"' != & do
-        ..over ..over string.charAt '\\' == if ##escape characters
-          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-          1 +
+  while $ code .length < do =:: i
+    code i string.charAt =:: c
+    state .IDENTIFIER ?? and c char.isWhitespace or
+        c '#' == and i 1 + code .length < and "#+" string.wrap code i 1 + string.charAt string.contains if
+      i i0 > assert "identifer contains at least one character"
+      code i0 i i0 - string.slice =:: idName
+      code i string.tail idName Token .IDENTIFIER return
+    end
+    c fileState [] .currentPos@ updateFilePos
+    state .STRING_ESCAPE ?? if
+      ParserState .STRING state =
+      i 1 + continue
+    end
+    state .RAW_STRING ?? if
+      c '`' == if
+        i 1 + code .length < and code i 1 + string.charAt '`' == if
+          '`' fileState [] .currentPos@ updateFilePos
+          i 2 + continue ## escaped `
         end
-        ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-        1 +
+        code i0 i i0 - string.slice =:: body
+        code i 1 + string.tail body Token .RAW_STRING return
       end
-      ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-      string.splitIndex Token .STRING return
+      i 1 + continue
     end
-    ..dup 0 string.charAt '`' == if ## raw-string
-      1 string.tail =:: chars
-      0:i64 while ..dup chars .length < do
-        chars ..over string.charAt '`' == if ##escape characters
-          ..dup 1 + chars .length < and
-               chars ..over 1 + string.charAt '`' == if
-            chars ..over string.charAt fileState [] .currentPos @ updateFilePos
-            1 +
-          else break end
-        end
-        chars ..over string.charAt fileState [] .currentPos @ updateFilePos
-        1 +
+    state .STRING ?? if
+      c stringStart == if
+        code i0 i i0 - string.slice =:: body
+        code i 1 + string.tail body stringStart '\'' == if Token .CHAR else Token .STRING end return
+      else c '\\' == _if
+        ParserState .STRING_ESCAPE state =
       end
-      chars ..over string.charAt fileState [] .currentPos @ updateFilePos
-      chars ..swap string.splitIndex Token .RAW_STRING return
+      i 1 + continue
     end
-    ..dup 0 string.charAt '\'' == if ## char
-      1 string.tail
-      0:i64 while ..dup ..over.2 .length < ..over.2 ..over.2 string.charAt '\'' != & do
-        ..over ..over string.charAt '\\' == if ##escape characters
-          ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-          1 +
-        end
-        ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-        1 +
-      end
-      ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-      string.splitIndex Token .CHAR return
+    c '\'' == or c '"' == or c '`' == if  ## char/string-literal
+      code i0 i i0 - string.slice checkStringPrefix stringType =
+      stringType .INT_LITERAL ?? if i 1 + continue end
+      i 1 + i0 =
+      c stringStart =
+      c '`' == if ParserState .RAW_STRING else ParserState .STRING end state =
     end
-    1:i64 while ..dup ..over.2 .length < if ..over ..over string.charAt char.isWhitespace ! else false end do
-      ..over ..over string.charAt fileState [] .currentPos @ updateFilePos
-      1 +
-    end
-  string.cutIndex
-    ..dup .length 0 == if
-      ..drop Token .EMPTY return
-    end
-  Token .IDENTIFIER return
+    i 1 +
+  end ..drop
+  state .IDENTIFIER ?? and i0 code .length < if
+    string.empty code i0 string.tail Token .IDENTIFIER return
+  end
+  ## TODO handle unexpected end of file
+  string.empty Token .EMPTY return
 end
