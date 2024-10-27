@@ -1,0 +1,18 @@
+import debug
+
+proc( -> ) =>: main
+  "This is a String"
+  utf8"This is an Unicode String👍"
+  utf16"This is an Utf16 String👍"
+  utf32"This is an Utf32 String👍"
+  '\xFE'
+  utf8'a'
+  utf16'ä'
+  utf32'👍'
+  ..?stack ..drop.8
+  utf8'A' i32 cast 65 == assert "ord('A') = 65"
+  utf16'\uFEFF' i32 cast 0xFEFF == assert "ord('\\uFEFF') = 0xFEFF"
+  utf16"Get a chàr from a String" 8 [] utf16'à' == assert "à = à"
+  utf8'5' utf8'0' - 5 == assert " '5' - '0' = 5"
+  utf16'a' utf16'A' > assert "a > A"
+end

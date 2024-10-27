@@ -773,7 +773,6 @@ proc(
         "unexpected end of file in string-literal" sb.wrap fileState [] .wordStart state appendError2
         "" string.wrap true return
       STRING case
-        ## TODO limit \x escape sequence in unicode string to range 0x00-0x7f
         ## newStringConstant
           ## parseStringConstant
             token .STRING .value

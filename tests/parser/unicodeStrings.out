@@ -1,0 +1,11 @@
+stack:
+-----------------
+char32 { integer: 128077 } pushed at unicodeStrings.concat:11:3
+char16 { integer: 228 } pushed at unicodeStrings.concat:10:3
+char8 { integer: 97 } pushed at unicodeStrings.concat:9:3
+i8 { char: '\xFE' } pushed at unicodeStrings.concat:8:3
+char32 24 ptr { string32: "This is an Utf32 String\U0001F44D" } pushed at unicodeStrings.concat:7:3
+char16 25 ptr { string16: "This is an Utf16 String\uD83D\uDC4D" } pushed at unicodeStrings.concat:6:3
+char8 29 ptr { string: "This is an Unicode String\xF0\x9F\x91\x8D" } pushed at unicodeStrings.concat:5:3
+i8 16 ptr { string: "This is a String" } pushed at unicodeStrings.concat:4:3
+-----------------
