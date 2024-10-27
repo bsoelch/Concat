@@ -196,7 +196,7 @@ end
 namespace: sb
   proc( stringBuilder i8 : c -> stringBuilder ) =>: export: appendEscapedChr
     c i32 cast.u =:: chr
-    chr 0x20 < chr 0x7f == | if ## non-printable ASCII-characters + hex-codes for multi-char characters
+    chr 0x20 < or chr 0x7f >= if ## non-printable ASCII-characters + hex-codes for multi-char characters
       "\\x" sb.appendS
       chr 0xff &
         ..dup 0x10 < if ..swap '0' sb.appendC ..swap end
@@ -221,7 +221,7 @@ namespace: sb
   ## C-style string escaping, use octal sequences as hex-sequences may consume following characters
   proc( stringBuilder i8 : c -> stringBuilder ) =>: export: appendEscapedChrC
     c i32 cast.u =:: chr
-    chr 0x20 < chr 0x7f == | if
+    chr 0x20 < or chr 0x7f >= if
       ## non-printable ASCII-characters
       "\\" sb.appendS
       chr 0xff &
