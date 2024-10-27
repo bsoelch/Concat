@@ -1089,7 +1089,8 @@ proc(
       ops ssa.OperationType .NEG pos context appendUnaryOperator return
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
       ops ssa.OperationType .ADD pos context appendBinaryOperator return
-    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+    ## TODO ensure char-diff arguments are zero extended
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF C16_DIFF C32_DIFF case
       ops ssa.OperationType .SUB pos context appendBinaryOperator return
     ## TODO pointer scaling
     ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT PTR_DIFF case break
@@ -1121,9 +1122,9 @@ proc(
     SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       ops ssa.OperationType .SHL pos context appendBinaryOperator return
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break ## TODO BOOL <x> -> ne <x> 0
-    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_PTR EQ_F32 EQ_F64 case
+    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_PTR EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       ops ssa.OperationType .EQ pos context appendComparissonOperator return
-    NE_I8 NE_I16 NE_I32 NE_I64 NE_PTR NE_F32 NE_F64 case
+    NE_I8 NE_I16 NE_I32 NE_I64 NE_PTR NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
       ops ssa.OperationType .NE pos context appendComparissonOperator return
     LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR LT_F32 LT_F64 case
       ops ssa.OperationType .LT pos context appendComparissonOperator return
@@ -1133,13 +1134,13 @@ proc(
       ops ssa.OperationType .GE pos context appendComparissonOperator return
     GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR GT_F32 GT_F64 case
       ops ssa.OperationType .GT pos context appendComparissonOperator return
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 LT_C8 LT_C16 LT_C32 case
       ops ssa.OperationType .ULT pos context appendComparissonOperator return
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 LE_C8 LE_C16 LE_C32 case
       ops ssa.OperationType .ULE pos context appendComparissonOperator return
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 GE_C8 GE_C16 GE_C32 case
       ops ssa.OperationType .UGE pos context appendComparissonOperator return
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 GT_C8 GT_C16 GT_C32 case
       ops ssa.OperationType .UGT pos context appendComparissonOperator return
   end
   "unable to compile built-in: " sb.wrap

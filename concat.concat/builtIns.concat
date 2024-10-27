@@ -1,11 +1,12 @@
 import "program.concat"
 
+## TODO? char+-int
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
  ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ADD_PTR ADD_PTR_MUT ## +
  SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
-     SUB_PTR SUB_PTR_MUT PTR_DIFF  ## -
+     SUB_PTR SUB_PTR_MUT PTR_DIFF C8_DIFF C16_DIFF C32_DIFF ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
  ## XXX? div f64 i32
  DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64     ## /
@@ -24,12 +25,12 @@ enum(
  ## comparison
  BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
  ## TODO? mixed inequalities ( i32 i64 <  is frequent loop condition )
- EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR ## ==
- NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR ## !=
- LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR ## <
- LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR ## <=
- GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR ## >=
- GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR ## >
+ EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR EQ_C8 EQ_C16 EQ_C32 ## ==
+ NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR NE_C8 NE_C16 NE_C32 ## !=
+ LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR LT_C8 LT_C16 LT_C32 ## <
+ LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR LE_C8 LE_C16 LE_C32 ## <=
+ GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR GE_C8 GE_C16 GE_C32 ## >=
+ GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR GT_C8 GT_C16 GT_C32 ## >
  ULT_I8 ULT_I16 ULT_I32 ULT_I64                  ## ..u<
  ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## ..u<=
  UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## ..u>=
@@ -46,7 +47,7 @@ namespace: sb
           ADD_PTR ADD_PTR_MUT case
         "+" sb.appendS break
       SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
-          SUB_PTR SUB_PTR_MUT PTR_DIFF case
+          SUB_PTR SUB_PTR_MUT PTR_DIFF C8_DIFF C16_DIFF C32_DIFF case
         "-" sb.appendS break
       MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
         "*" sb.appendS break
@@ -73,17 +74,17 @@ namespace: sb
         "<<" sb.appendS break
       BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
         "?" sb.appendS break
-      EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR  case
+      EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR EQ_C8 EQ_C16 EQ_C32 case
         "==" sb.appendS break
-      NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR  case
+      NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR NE_C8 NE_C16 NE_C32 case
         "!=" sb.appendS break
-      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR  case
+      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR LT_C8 LT_C16 LT_C32 case
         "<" sb.appendS break
-      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR  case
+      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR LE_C8 LE_C16 LE_C32 case
         "<=" sb.appendS break
-      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR  case
+      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR GE_C8 GE_C16 GE_C32 case
         ">=" sb.appendS break
-      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR  case
+      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR GT_C8 GT_C16 GT_C32 case
         ">" sb.appendS break
       ULT_I8 ULT_I16 ULT_I32 ULT_I64 case "..u<" sb.appendS break
       ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
@@ -460,6 +461,52 @@ end
 ## i64 i32 -> i64 div/udiv/shifts
 
 proc(
+  Type : t1
+  ProgramContext ptr mut : context
+-> Type Type ) =>: charProcTypes ## c?c?_bool c?c?_i32
+  context [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  LabelId arrayView optional.empty =:: argLabels
+  Type 2 array new =:: mut: args
+  t1 args @ 0 [] =
+  t1 args @ 1 [] =
+  ## newProcArgs
+    args @ 2 array.create
+    argLabels
+    false
+    typeContext
+  types.newProcArgs =:: mut: procIn
+  types.primitive.BOOL args@ 0 [] =
+  ## newProcArgs
+    args @ 1 array.create
+    argLabels
+    true
+  typeContext types.newProcArgs =:: mut: procOut
+  ## newProcedure
+    procIn
+    procOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: cc_b
+  types.primitive.I32 args@ 0 [] =
+  ## newProcArgs
+    args@ 1 array.create
+    argLabels
+    true
+  typeContext types.newProcArgs procOut =
+  ## newProcedure
+    procIn
+    procOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: cc_i
+  cc_b cc_i return
+end
+
+proc(
   FilePosition : pos
   ProgramContext ptr mut : context
 -> bool ) =>: export: initBuiltInProcs
@@ -472,6 +519,7 @@ proc(
   types.primitive.I8
     context operatorProcTypes
   =:: consume_i8 =:: i8_bool =:: i8i8_bool =:: i8_i8 =:: i8i8_i8
+  ## TODO initialite char operations c?c?_bool c?c?_i32
   types.primitive.I16
     context operatorProcTypes
   =:: consume_i16 =:: i16_bool =:: i16i16_bool
@@ -497,6 +545,9 @@ proc(
   =:: i64i32_i32 =:: i64i32_i64
   pos context ptrSignatures
   =:: consume_ptr =:: ptrCmp =:: ptrDiff =:: ptrAdd =:: ptrMutAdd
+  types.primitive.CHAR8  context charProcTypes =:: c8c8_i32 =:: c8c8_bool
+  types.primitive.CHAR16 context charProcTypes =:: c16c16_i32 =:: c16c16_bool
+  types.primitive.CHAR32 context charProcTypes =:: c32c32_i32 =:: c32c32_bool
   "-_" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   =:: mut: bundle
@@ -612,7 +663,7 @@ proc(
     bundle
   pos context addGenericBuiltIn
   BuiltIn .SUB_PTR_MUT
-    "ptrMut" "sub" pos labelContext createLabel
+    "ptrMut" "difference" pos labelContext createLabel
     ptrMutAdd
     bundle
   pos context addGenericBuiltIn
@@ -621,6 +672,21 @@ proc(
     ptrDiff
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .C8_DIFF
+    "char8" "difference" pos labelContext createLabel
+    c8c8_i32
+    bundle
+  pos context addBuiltIn
+  BuiltIn .C16_DIFF
+    "char16" "difference" pos labelContext createLabel
+    c16c16_i32
+    bundle
+  pos context addBuiltIn
+  BuiltIn .C32_DIFF
+    "char32" "difference" pos labelContext createLabel
+    c32c32_i32
+    bundle
+  pos context addBuiltIn
   "*" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -997,6 +1063,21 @@ proc(
     ptrCmp
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .EQ_C8
+    "char8"  "eq" pos labelContext createLabel
+    c8c8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_C16
+    "char16" "eq" pos labelContext createLabel
+    c16c16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .EQ_C32
+    "char32" "eq" pos labelContext createLabel
+    c32c32_bool
+    bundle
+  pos context addBuiltIn
   "!=" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -1035,6 +1116,21 @@ proc(
     ptrCmp
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .NE_C8
+    "char8"  "ne" pos labelContext createLabel
+    c8c8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_C16
+    "char16" "ne" pos labelContext createLabel
+    c16c16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .NE_C32
+    "char32" "ne" pos labelContext createLabel
+    c32c32_bool
+    bundle
+  pos context addBuiltIn
   "<" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -1073,6 +1169,21 @@ proc(
     ptrCmp
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .LT_C8
+    "char8"  "lt" pos labelContext createLabel
+    c8c8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .LT_C16
+    "char16" "lt" pos labelContext createLabel
+    c16c16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .LT_C32
+    "char32" "lt" pos labelContext createLabel
+    c32c32_bool
+    bundle
+  pos context addBuiltIn
   "<=" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -1111,6 +1222,21 @@ proc(
     ptrCmp
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .LE_C8
+    "char8"  "le" pos labelContext createLabel
+    c8c8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .LE_C16
+    "char16" "le" pos labelContext createLabel
+    c16c16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .LE_C32
+    "char32" "le" pos labelContext createLabel
+    c32c32_bool
+    bundle
+  pos context addBuiltIn
   ">=" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -1149,6 +1275,21 @@ proc(
     ptrCmp
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .GE_C8
+    "char8"  "ge" pos labelContext createLabel
+    c8c8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .GE_C16
+    "char16" "ge" pos labelContext createLabel
+    c16c16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .GE_C32
+    "char32" "ge" pos labelContext createLabel
+    c32c32_bool
+    bundle
+  pos context addBuiltIn
   ">" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -1187,6 +1328,21 @@ proc(
     ptrCmp
     bundle
   pos context addGenericBuiltIn
+  BuiltIn .GT_C8
+    "char8"  "gt" pos labelContext createLabel
+    c8c8_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .GT_C16
+    "char16" "gt" pos labelContext createLabel
+    c16c16_bool
+    bundle
+  pos context addBuiltIn
+  BuiltIn .GT_C32
+    "char32" "gt" pos labelContext createLabel
+    c32c32_bool
+    bundle
+  pos context addBuiltIn
   "..u<" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
