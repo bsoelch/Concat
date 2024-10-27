@@ -389,6 +389,19 @@ namespace: types
       ..drop
     false return
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isIntOrChar
+    unwrapNamed
+      $ .primitiveType ?? if
+        .primitiveType switch
+          BOOL TYPE F32 F64 case
+            false return
+          I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
+            true return
+        end
+      end
+      ..drop
+    false return
+  end
 
   ## does value fit in 2*64-bit values
   proc( Type TypeContext ptr mut -> bool ) =>: export: isSmallType

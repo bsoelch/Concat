@@ -12,6 +12,7 @@ import "branchTree.concat"
 "cctI_envp" =:: CONCAT_ENVP_NAME
 "cctI_local" =:: LOCAL_CONST_NAME
 "cctI_string" =:: STRING_CONST_NAME
+"cctI_ptr" =:: PTR_CONST_NAME
 "cctI_constRef" =:: CONST_REFERENCE_NAME
 "cctI_checkIndexFormat" =:: CHECK_INDEX_FORMAT
 "cctI_checkEnumFormat" =:: CHECK_ENUM_FORMAT
@@ -114,6 +115,7 @@ struct(
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
   StringConstant list : mut: stringConstants
+  ConstValue list : mut: ptrConstants
   Type : mut: currentProc
   i64 : mut: localConstCount
   i64 : mut: stackCount
@@ -627,7 +629,7 @@ namespace: sb
           I8 CHAR8 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "sb" sb.appendS return
+              LOAD case sb t .primitiveType .I8 ?? if "sb" else "ub" end sb.appendS return
               ULOAD case sb "ub" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
@@ -635,7 +637,7 @@ namespace: sb
           I16 CHAR16 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb "sh" sb.appendS return
+              LOAD case sb t .primitiveType .I16 ?? if "sh" else "uh" end sb.appendS return
               ULOAD case sb "uh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
@@ -800,6 +802,54 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
+    ConstValue : value
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: appendPtrConstQBE
+    sb
+      '$' sb.appendC
+      PTR_CONST_NAME sb.appendS
+      context [] .ptrConstants
+        $ .length =:: ptrId
+        value list.append
+      context [] .ptrConstants =
+      ptrId sb.appendI
+    return
+  end
+  proc(
+    stringBuilder : sb
+    ConstValue : value
+    CompilerContext ptr mut : context
+  -> stringBuilder ) =>: appendPtrConstDataQBE
+    context [] .program =:: prog
+    prog [] .idContext@ =:: idContext
+    idContext .constContext@ =:: constContext
+    idContext .typeContext@ =:: typeContext
+    typeContext .labelContext@ =:: labelContext
+    value .str16 ?? if
+      value .str16 constContext sc16AsStr =:: str16
+      sb
+        0:i64 while ..dup str16 .length < do =:: i
+          "h " sb.appendS
+          str16 i array.get i32 cast.u sb.appendI
+          ',' sb.appendC
+          i 1 +
+        end ..drop
+      return
+    else value .str32 ?? _if
+      value .str32 constContext sc32AsStr =:: str32
+      sb
+        0:i64 while ..dup str32 .length < do =:: i
+          "h " sb.appendS
+          str32 i array.get sb.appendI
+          ',' sb.appendC
+          i 1 +
+        end ..drop
+      return
+    end
+    ..unreachable ## unknown pointer constant type
+  end
+  proc(
+    stringBuilder : sb
     Type : t
     ConstValue : value
     bool : isGlobal
@@ -894,7 +944,11 @@ namespace: sb
           appendStringPtrConstQBE
           return
         str16 str32 case
-          break ## TODO str16/str32 constants
+          ## appendPtrConstQBE
+            value
+            context
+          appendPtrConstQBE
+          return
         arrayConstant case
           isGlobal ! if
             break
@@ -2474,7 +2528,7 @@ proc(
       '\n' sb.appendC
     return
   ## case 1: integer extension/narrowing
-  else src typeContext types.isInt and target typeContext types.isInt _if
+  else src typeContext types.isIntOrChar and target typeContext types.isIntOrChar _if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
     sb
@@ -4800,6 +4854,9 @@ proc( CompilerContext ptr mut : context -> ) =>: cleanupCompilerContext
   context [] .stringConstants
     list.free
   context [] .stringConstants =
+  context [] .ptrConstants
+    list.free
+  context [] .ptrConstants =
 end
 proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compileToQBE
   program [] .idContext @ =:: idContext
@@ -4812,6 +4869,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
     32 BlockInfo list.create
     32 LocalConst list.create
     32 StringConstant list.create
+    32 ConstValue list.create
     Type .undefined
     0
     0
@@ -4941,6 +4999,16 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
       "} ## \"" sb.appendS
       str labelContext sb.appendEscapedStr
       "\"\n" sb.appendS
+      i 1 +
+    end ..drop
+    0:i64 while ..dup context [] .ptrConstants .length < do =:: i
+      context [] .ptrConstants i list.get =:: val
+      "data $" sb.appendS
+      PTR_CONST_NAME sb.appendS
+      i sb.appendI
+      " = {" sb.appendS
+        val context sb.appendPtrConstDataQBE
+      "}\n" sb.appendS ## XXX? append string value of string16/string32 constants
       i 1 +
     end ..drop
     target ..over io.fputSb ..drop
