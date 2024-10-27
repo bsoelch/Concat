@@ -821,7 +821,9 @@ proc(
           end
           =:: codepointLimit =:: charTypeName
           token .CHAR .stringType .DEFAULT ?? ! and cp i32 cast 0 < if
-            "unmatched byte in utf-8 character: 0x" sb.wrap
+            "unmatched byte in " sb.wrap
+              charTypeName sb.appendStr
+              ": 0x" sb.appendS
               cp i32 cast -_ sb.appendX
             fileState [] .wordStart state appendError2
           end

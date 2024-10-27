@@ -283,6 +283,7 @@ namespace: id
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
   proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseStringConstant
+    ## TODO improve readability of stack bases code (?extract loop counter to variable)
     stringStart =:: mut: pos
     '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset
@@ -337,8 +338,13 @@ namespace: id
               '\v' sb.appendC
               break
             'x' 'u' 'U' case =:: c
+              '\\' pos @ updateFilePos
+              c pos @ updateFilePos
+              ..swap
+              1 +
+              ..swap
               c 'x' == if 2:i64 else c 'u' == _if 4:i64 else 8:i64 end =:: nChars
-              ..over nChars + str .length >= if
+              ..over nChars + str .length > if
                 "not enough characters for escape sequence \"\\" sb.wrap
                   c                     sb.appendC
                   "\" need "            sb.appendS
@@ -348,14 +354,8 @@ namespace: id
                 pos errors appendError
                 '\\' pos @ updateFilePos
                 c pos @ updateFilePos
-                ..swap 1 +
-                continue
+                ..swap continue
               end
-              '\\' pos @ updateFilePos
-              c pos @ updateFilePos
-              ..swap
-              1 +
-              ..swap
                 str .data ..over.2 + nChars string.create 16 number.tryParseInt .NONE ?? if
                   ..dup 0 < if ..drop
                     "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
@@ -387,10 +387,10 @@ namespace: id
                   "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                 end
               ..swap ## update file position
-                0:i64 while ..dup nChars < do
-                  str ..over ..over.2 + string.charAt pos @ updateFilePos
-                  ..swap 1 +
-                  ..swap 1 +
+                0:i64 while $ nChars < do =:: j
+                  str $1 string.charAt pos @ updateFilePos
+                  #+i+# 1 +
+                  j 1 +
                 end ..drop
               continue
             default
@@ -561,3 +561,4 @@ namespace: sb
     sb.appendAsciified return
   end
 end
+import debug

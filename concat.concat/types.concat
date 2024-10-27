@@ -290,7 +290,7 @@ namespace: types
   end
   proc( PrimitiveType -> bool ) =>: isIntPrimitive
     switch
-      BOOL CHAR8 CHAR16 CHAR32 F32 F64 TYPE case
+      BOOL F32 F64 TYPE CHAR8 CHAR16 CHAR32 case
         false return
       I8 I16 I32 I64 case
         true return
@@ -376,6 +376,19 @@ namespace: types
           true return
       end
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isChar
+    unwrapNamed
+      $ .primitiveType ?? if
+        .primitiveType switch
+          BOOL TYPE I8 I16 I32 I64 F32 F64 case
+            false return
+          CHAR8 CHAR16 CHAR32 case
+            true return
+        end
+      end
+      ..drop
+    false return
+  end
 
   ## does value fit in 2*64-bit values
   proc( Type TypeContext ptr mut -> bool ) =>: export: isSmallType
@@ -457,39 +470,6 @@ namespace: types
       primitive.F64 false return
     end
     Type .undefined true return
-  end
-  proc( PrimitiveType : a PrimitiveType : b -> Type bool ) =>: commonIntPrimitive
-    a sizeOfPrimitive =:: aBytes
-    b sizeOfPrimitive =:: bBytes
-    aBytes bBytes i64.max switch
-      1 case primitive.I8  false return
-      2 case primitive.I16 false return
-      4 case primitive.I32 false return
-      8 case primitive.I64 false return
-    end
-    Type .undefined true return
-  end
-  proc( Type : a Type : b TypeContext ptr : context -> Type bool ) =>: export: commonNumberType
-    a context types.isNumber ! b context types.isNumber ! | if
-      Type .undefined true return
-    end
-    a context primitiveValue =:: aPrimitive
-    b context primitiveValue =:: bPrimitive
-    aPrimitive isIntPrimitive and bPrimitive isIntPrimitive if
-      ## commonIntPrimitive
-        aPrimitive
-        bPrimitive
-      commonIntPrimitive return
-    end
-    ## max
-      a context types.numberPrecision
-      b context types.numberPrecision
-    i32.max =:: minPrecision
-    ## max
-      a context types.numberSize
-      b context types.numberSize
-    i32.max  =:: minSize
-    minSize minPrecision findNumberType return
   end
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastIntLiteral
     src .intLiteral ?? ! or target context types.isNumber ! if
@@ -2259,8 +2239,8 @@ namespace: types
       end
       reshape if
         srcSize ..over array.get .sizeType .int ?? if
-          srcTotal srcSize ..over array.get .value * srcTotal =
-          targetTotal targetSize ..over array.get .value * targetTotal =
+          srcTotal srcSize ..over.2 array.get .value * srcTotal =
+          targetTotal targetSize ..over.2 array.get .value * targetTotal =
         else srcTotal targetTotal != _if ..drop
           false return
         end
@@ -2284,6 +2264,21 @@ namespace: types
   end
   
   proc(
+    PrimitiveType : a
+    PrimitiveType : b
+  -> bool ) =>: canCastPrimitivePtrArg
+    a ..label b ..label == if true return end
+    a switch
+      I8  case b .CHAR8  ?? return
+      I16 case b .CHAR16 ?? return
+      I32 case b .CHAR32 ?? return
+      CHAR8  case b .I8  ?? return
+      CHAR16 case b .I16 ?? return
+      CHAR32 case b .I32 ?? return
+      BOOL I64 F32 F64 TYPE case false return
+    end
+  end
+  proc(
     Type : src0
     Type : target0
     bool : allowRename
@@ -2297,6 +2292,10 @@ namespace: types
       target context unwrapNamed target =
     end
     src target types.typeEquals if
+      true return
+    end
+    src .primitiveType ?? and target .primitiveType ?? and
+      src .primitiveType target .primitiveType canCastPrimitivePtrArg if
       true return
     end
     src context types.isPointer ! or target context types.isPointer ! if
@@ -2365,6 +2364,13 @@ namespace: types
         src .cType .UNION_PTR  ?? if false return end
       end
       src .cType cTypeAsType target forceCast context canCast return
+    end
+    ## char <-> int
+    src context isChar and target context isInt if
+      true return
+    end
+    src context isInt and target context isChar if
+      true return
     end
     target .arrayIndex ?? and src context types.isInt ! if
       false return ## can only cast integers to index

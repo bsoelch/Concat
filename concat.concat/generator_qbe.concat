@@ -2680,11 +2680,11 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   signType0
     $ .NONE ?? if ..drop
-      src0 typeContext types.isUnsignedInt if
+      src0 typeContext types.isUnsignedInt or src0 typeContext types.isChar if
         SignType .UNSIGNED
       else src0 typeContext types.isSignedInt _if
         SignType .SIGNED
-      else target0 typeContext types.isUnsignedInt _if
+      else target0 typeContext types.isUnsignedInt or target0 typeContext types.isChar _if
         SignType .UNSIGNED
       else target0 typeContext types.isSignedInt _if
         SignType .SIGNED
@@ -2724,7 +2724,7 @@ proc(
     target context toValType context pushValue
   end =:: targetId
   ## TODO? different behavior for bit-casts
-  src typeContext types.isNumber target .arrayIndex ?? & if
+  src typeContext types.isNumber and target .arrayIndex ?? if
     ## isNumber returns true for array index
     ##   -> have to check for cast to array index before checking for cast to number
     sb
@@ -2743,7 +2743,21 @@ proc(
       context appendIndexCheck
     return
   end
-  src typeContext types.isNumber target typeContext types.isNumber & if
+  src typeContext types.isNumber and target typeContext types.isNumber if
+    sb
+      src srcId
+      target targetId
+    pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+    return
+  end
+  src typeContext types.isChar and target typeContext types.isInt if
+    sb
+      src srcId
+      target targetId
+    pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+    return
+  end
+  src typeContext types.isInt and target typeContext types.isChar if
     sb
       src srcId
       target targetId
