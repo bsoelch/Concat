@@ -10,11 +10,23 @@ namespace: string
     "" 0 string new return
   end
 
-  proc( i8 _ ptr  i64 -> string ) =>: export: create
+  proc( char8 _ ptr : p  i64 : n -> string ) =>: export: createC
+    p i8 _ ptr cast n string new return
+  end
+  proc( i64 : auto: k  char8 k ptr : str -> string ) =>: export: wrapC
+    str k createC return
+  end
+  proc( i8 _ ptr  i64 -> string ) =>: export: createI
     string new return
   end
-  proc( i64 : auto: k  i8 k ptr : str -> string ) =>: export: wrap
-    str k create return
+  proc( i64 : auto: k  i8 k ptr : str -> string ) =>: export: wrapI
+    str k createI return
+  end
+  overload: export: create
+    createI createC
+  end
+  overload: export: wrap
+    wrapI wrapC
   end
 
   proc( string : a string : b -> i32 ) =>: export: compare

@@ -2307,7 +2307,7 @@ namespace: types
     src target types.typeEquals if
       true return
     end
-    src .primitiveType ?? and target .primitiveType ?? and
+    allowRename and src .primitiveType ?? and target .primitiveType ?? and
       src .primitiveType target .primitiveType canCastPrimitivePtrArg if
       true return
     end
