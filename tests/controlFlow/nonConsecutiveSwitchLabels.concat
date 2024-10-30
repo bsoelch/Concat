@@ -1,5 +1,5 @@
 import debug
-proc( i8 -> bool ) =>: check
+proc( char8 -> bool ) =>: check
   switch
     'h' case
       break

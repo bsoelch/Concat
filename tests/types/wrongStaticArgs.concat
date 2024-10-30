@@ -1,7 +1,7 @@
 import list
 
 proc( -> ) =>: main
-  16 i8 list.create
+  16 char8 list.create
     "Hello" 3 list.appendP
   list.free
 end

@@ -318,8 +318,8 @@ proc(
 end
 
 proc(
-  i64 : auto: l1 i8 l1 ptr : namespace
-  i64 : auto: l2 i8 l2 ptr : element
+  i64 : auto: l1 char8 l1 ptr : namespace
+  i64 : auto: l2 char8 l2 ptr : element
   FilePosition : pos
   LabelContext ptr mut : labelContext
 -> LabelId ) =>: createLabel

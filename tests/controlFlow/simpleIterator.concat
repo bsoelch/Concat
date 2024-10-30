@@ -1,10 +1,10 @@
 import string
 import debug
 
-proc( i64 : auto: k i8 k ptr : str -> string i64 ) =>: startItr
+proc( i64 : auto: k char8 k ptr : str -> string i64 ) =>: startItr
   str string.wrap 0
 end
-proc( string i64 -> string i64 i8 bool ) =>: nextChar
+proc( string i64 -> string i64 char8 bool ) =>: nextChar
   =:: i
   =:: s
   s
@@ -13,7 +13,7 @@ proc( string i64 -> string i64 i8 bool ) =>: nextChar
     end
     i 1 +  s i string.charAt true return
 end
-proc( string i64 i8 -> ) =>: endItr
+proc( string i64 char8 -> ) =>: endItr
   ..drop ..drop ..drop
 end
 

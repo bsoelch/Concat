@@ -1,7 +1,7 @@
 import debug
-enum( A B i32 : C i8 : D ) =:: anEnum
+enum( A B i32 : C char8 : D ) =:: anEnum
 
-proc( i32 : i anEnum : e i8 : c -> ) =>: switchTest
+proc( i32 : i anEnum : e char8 : c -> ) =>: switchTest
   i switch
     1 2 case
       return ## not needed when branch ends with return

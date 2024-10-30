@@ -13,52 +13,52 @@ namespace: sb
   proc( stringBuilder : sb utf8.Codepoint : cp -> stringBuilder ) =>: export: appendCodepoint
     cp i32 cast 0 < if ## invalid code point
       cp i32 cast -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
-        sb cp i32 cast -_ i8 cast sb.appendC return
+        sb cp i32 cast -_ char8 cast sb.appendC return
       end
       sb return
     end
     cp i32 cast 0x80 < if ## 0*** ****
-      sb cp i8 cast sb.appendC return
+      sb cp char8 cast sb.appendC return
     end
     cp i32 cast 0x800 < if ## 110* **** 10** ****
       sb
-        cp i32 cast 6 >>   0xc0 | i8 cast sb.appendC
-        cp i32 cast 0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 6 >>   0xc0 | char8 cast sb.appendC
+        cp i32 cast 0x3f & 0x80 | char8 cast sb.appendC
       return
     end
     cp i32 cast 0x10000 < if ## 1110 **** 10** **** 10** ****
       sb
-        cp i32 cast 12 >>        0xe0 | i8 cast sb.appendC
-        cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 12 >>        0xe0 | char8 cast sb.appendC
+        cp i32 cast  6 >> 0x3f & 0x80 | char8 cast sb.appendC
+        cp i32 cast       0x3f & 0x80 | char8 cast sb.appendC
       return
     end
     cp i32 cast 0x200000 < if ## 1111 0*** 10** **** 10** **** 10** ****
       sb
-        cp i32 cast 18 >>        0xf0 | i8 cast sb.appendC
-        cp i32 cast 12 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 18 >>        0xf0 | char8 cast sb.appendC
+        cp i32 cast 12 >> 0x3f & 0x80 | char8 cast sb.appendC
+        cp i32 cast  6 >> 0x3f & 0x80 | char8 cast sb.appendC
+        cp i32 cast       0x3f & 0x80 | char8 cast sb.appendC
       return
     end
     ## not valid code-points but still UTF-8 encodable
     cp i32 cast 0x4000000 < if ## 1111 10** 10** **** 10** **** 10** **** 10** ****
       sb
-        cp i32 cast 24 >>        0xf8 | i8 cast sb.appendC
-        cp i32 cast 18 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp i32 cast 12 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-        cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
+        cp i32 cast 24 >>        0xf8 | char8 cast sb.appendC
+        cp i32 cast 18 >> 0x3f & 0x80 | char8 cast sb.appendC
+        cp i32 cast 12 >> 0x3f & 0x80 | char8 cast sb.appendC
+        cp i32 cast  6 >> 0x3f & 0x80 | char8 cast sb.appendC
+        cp i32 cast       0x3f & 0x80 | char8 cast sb.appendC
       return
     end
     ## 1111 110* 10** **** 10** **** 10** **** 10** **** 10** ****
     sb
-      cp i32 cast 30 >>        0xfc | i8 cast sb.appendC
-      cp i32 cast 24 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp i32 cast 18 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp i32 cast 12 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp i32 cast  6 >> 0x3f & 0x80 | i8 cast sb.appendC
-      cp i32 cast       0x3f & 0x80 | i8 cast sb.appendC
+      cp i32 cast 30 >>        0xfc | char8 cast sb.appendC
+      cp i32 cast 24 >> 0x3f & 0x80 | char8 cast sb.appendC
+      cp i32 cast 18 >> 0x3f & 0x80 | char8 cast sb.appendC
+      cp i32 cast 12 >> 0x3f & 0x80 | char8 cast sb.appendC
+      cp i32 cast  6 >> 0x3f & 0x80 | char8 cast sb.appendC
+      cp i32 cast       0x3f & 0x80 | char8 cast sb.appendC
     return
   end
 end

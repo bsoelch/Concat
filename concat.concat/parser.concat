@@ -139,10 +139,10 @@ proc(
 -> Constant ) =>: newCharConstant
   ## newConstant
     stringType switch
-      DEFAULT case types.primitive.I8   char i8 cast ConstValue .chr break
-      UTF8  case types.primitive.CHAR8  char i64 cast.u 0xff & ConstValue .int break
-      UTF16 case types.primitive.CHAR16 char i64 cast.u 0xffff & ConstValue .int break
-      UTF32 case types.primitive.CHAR32 char i64 cast.u ConstValue .int break
+      DEFAULT case types.primitive.CHAR8  char char8 cast ConstValue .chr break
+      UTF8    case types.primitive.CHAR8  char i64 cast.u 0xff & ConstValue .int break
+      UTF16   case types.primitive.CHAR16 char i64 cast.u 0xffff & ConstValue .int break
+      UTF32   case types.primitive.CHAR32 char i64 cast.u ConstValue .int break
       UNKNOWN INT_LITERAL case ..unreachable
     end
   IdentifierInfo optional.empty pos Constant new return
@@ -159,8 +159,8 @@ proc(
   using types
   ## TODO support different string types
   stringType switch
-    DEFAULT case str ConstValue .str str .length types.primitive.I8  break
-    UTF8  case str ConstValue .str str .length types.primitive.CHAR8 break
+    DEFAULT case str ConstValue .str str .length types.primitive.CHAR8 break
+    UTF8    case str ConstValue .str str .length types.primitive.CHAR8 break
     UTF16 case
       str labelContext id.scAsStr utf8.toUTF16 =:: str16
       str16 list.asArray constContext newStr16Const str16 .length types.primitive.CHAR16

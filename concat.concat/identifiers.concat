@@ -86,7 +86,7 @@ namespace: id
   1 =:: export: SCOPE_FLAG_NO_CONST_FOLD
   struct(
     IdentifierName LabelId hashMap : mut: identifierNames
-    i8 _ ptr mut list : mut: scopeStrings ## strings allocated for this scope
+    char8 _ ptr mut list : mut: scopeStrings ## strings allocated for this scope
     bool : isProcScope
     Type : currentProc
     bool : experimental
@@ -96,7 +96,7 @@ namespace: id
   proc( bool : isProc Type : procType bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
      ## Scope
       idHash @ idEq @ 128 LabelId map.create
-      128 i8 _ ptr mut list.create
+      128 char8 _ ptr mut list.create
       isProc
       procType
       experimental
@@ -171,7 +171,7 @@ namespace: id
     end
     context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental return
   end
-  proc( i8 _ ptr mut list -> i8 _ ptr mut list ) =>: freeScopeStrings
+  proc( char8 _ ptr mut list -> char8 _ ptr mut list ) =>: freeScopeStrings
     0:i64 while ..dup ..over.2 .length < do
       ..over ..over list.get mem.free
       1 +

@@ -3,7 +3,7 @@ import numbers/printInt
 import numbers/limits
 import math
 
-proc( i32 -> i8 ) =>: getDigit
+proc( i32 -> char8 ) =>: getDigit
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
 end
 

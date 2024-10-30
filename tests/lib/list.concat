@@ -18,8 +18,8 @@ proc( -> ) =>: main
     6 list.append
   printList
   
-  8 i8 list.create "World" list.appendP =:: l
-  16 i8 list.create
+  8 char8 list.create "World" list.appendP =:: l
+  16 char8 list.create
     "Hello" list.appendP
     ' '     list.append
     l       list.appendAll

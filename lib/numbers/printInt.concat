@@ -8,7 +8,7 @@ namespace: sb
       ## TODO error handling
       buffer return
     end
-    i8 64 array new =:: mut: chrBuff
+    char8 64 array new =:: mut: chrBuff
     buffer
       i
       ..dup 0 < signed & if

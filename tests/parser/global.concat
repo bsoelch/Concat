@@ -8,7 +8,7 @@ proc( -> ) =>: main
   ..?parser.find.y
 end
 
-'A' i8 =: mut: c0
+'A' char8 =: mut: c0
 "This is a string" =:: str1
 1 1 ( i32 i64 ) new =:: x
 1 1 ( i32 i32 ) new 2 ( ( i32 i32 ) i32 ) new =:: y

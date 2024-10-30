@@ -92,7 +92,7 @@ proc( string -> ) =>: export: printTokens
 end
 
 
-proc( i8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
+proc( char8 : chr  FilePosition ptr mut : currentPos -> ) =>: export: updateFilePos
   chr '\n' == if
       currentPos [] .line 1 + currentPos [] .line =
     1 currentPos [] .posInLine =

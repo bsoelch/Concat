@@ -10,7 +10,7 @@ proc( -> ) =>: main
   "This sentence will be split into Worlds!" string.wrap ' ' printSplit
 end
 
-proc( string : str i8 : chr -> ) =>: printSplit
+proc( string : str char8 : chr -> ) =>: printSplit
   0 =:: mut: i
   str 
   while

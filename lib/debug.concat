@@ -4,7 +4,7 @@ import stringBuilder
 import stringIO
 
 namespace: sb
-  proc( stringBuilder : sb i8 : c -> stringBuilder ) =>: export: appendEscapedChar
+  proc( stringBuilder : sb char8 : c -> stringBuilder ) =>: export: appendEscapedChar
     c switch
      '\'' case sb "\\'" sb.appendS return
      '\"' case sb "\\\"" sb.appendS return
@@ -16,7 +16,7 @@ namespace: sb
      '\f' case sb "\\f" sb.appendS return
      '\v' case sb "\\v" sb.appendS return
     end
-    c 0x20 >= c 0x7f < & if
+    c '\x20' >= c '\x7f' < & if
       sb c sb.appendC return
     end
     sb
@@ -34,7 +34,7 @@ namespace: debug
       io.stdOut "false\n" io.fputs ..drop
     end
   end
-  proc( i8 : c -> ) =>: export: printC
+  proc( char8 : c -> ) =>: export: printC
     8 sb.create
       c i64 cast.u sb.appendI
       " ('" sb.appendS
@@ -50,7 +50,7 @@ namespace: debug
       io.stdOut ..over io.fputSb ..drop
     sb.free ..drop
   end
-  ## XXX? rule prioritizing conversion: i32 -> i64 over i32-> f64
+  proc( i8  -> ) =>: export: printI8   i64 cast.s printI  end
   proc( i16 -> ) =>: export: printI16  i64 cast.s printI  end
   proc( i32 -> ) =>: export: printI32  i64 cast.s printI  end
   proc( i64 : i -> ) =>: export: printX
@@ -96,7 +96,7 @@ namespace: debug
       io.stdOut ..over io.fputSb ..drop
     sb.free ..drop
   end
-  proc( i32 : auto: k  i8 k ptr : s -> ) =>: export: printS
+  proc( i32 : auto: k  char8 k ptr : s -> ) =>: export: printS
     8 sb.create
       '"' sb.appendC
       s sb.appendS
@@ -110,6 +110,7 @@ namespace: debug
   overload: export: print
     printB
     printC
+    printI8
     printI16
     printI32
     printI

@@ -78,9 +78,9 @@ namespace: io
     c.concatIOHelper_stderr
   end
 
-  i8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
+  char8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
   proc(
-    i8 _ ptr : fileName
+    char8 _ ptr : fileName
     i64 : nameLength
     OpenMode : mode
   -> FILE IOError ) =>: export: fopen
@@ -96,20 +96,20 @@ namespace: io
         nameLength
       mem.copy ..drop
       '\x00' fileNameBuffer @ nameLength [] =
-      fileNameBuffer @ i8 _ ptr cast
+      fileNameBuffer @ char8 _ ptr cast
     end =:: path
-    "r+b\x00" i8 _ ptr =: mut: openMode
+    "r+b\x00" char8 _ ptr =: mut: openMode
     mode OPEN_READ & ? if
       mode OPEN_APPEND & ? if
         "a+b\x00" openMode =
       else mode OPEN_WRITE & ? ! _if
-        "rb\x00"openMode =
+        "rb\x00" openMode =
       end
     else mode ? _if
       mode OPEN_APPEND & ? if
         "ab\x00" openMode =
       else mode OPEN_WRITE & ? _if
-        "wb\x00"openMode =
+        "wb\x00" openMode =
       end
     end
     c.concatIOHelper_resetErrno
@@ -125,7 +125,7 @@ namespace: io
   end
   proc(
     i64 : auto: k
-    i8 k ptr : fileName
+    char8 k ptr : fileName
     OpenMode : mode
   -> FILE IOError ) =>: export: fopenS
     fileName k mode fopen return
@@ -209,15 +209,15 @@ namespace: io
   ## XXX fseek/ftell
 
 
-  proc( FILE : file i8 : chr -> IOError ) =>: export: fputc
+  proc( FILE : file char8 : chr -> IOError ) =>: export: fputc
     ## TODO? add support for pointers to stack values
     chr =:: tmp
     file tmp @ 0 1 fwrite ..swap ..drop return
   end
-  proc( FILE : file  i64 : k  i8 _ ptr : str -> IOError ) =>: export: fputArray
+  proc( FILE : file  i64 : k  char8 _ ptr : str -> IOError ) =>: export: fputArray
     0 i64 =: mut: off
     k =:: mut: count
-    str i8 _ ptr cast =:: data
+    str char8 _ ptr cast =:: data
     while count 0 > do
       file data off count fwrite
         ..dup FILE_ERROR_NONE != if ## error
@@ -229,11 +229,11 @@ namespace: io
     end
     FILE_ERROR_NONE return
   end
-  proc( FILE : file  i64 : auto: k  i8 k ptr : str -> IOError ) =>: export: fputs
+  proc( FILE : file  i64 : auto: k  char8 k ptr : str -> IOError ) =>: export: fputs
     file k str fputArray
   end
 
-  proc( i64 : auto: k  i8 k ptr : str -> IOError ) =>: export: puts
+  proc( i64 : auto: k  char8 k ptr : str -> IOError ) =>: export: puts
     k 1 + sb.create
       str sb.appendS
       '\n' sb.appendC

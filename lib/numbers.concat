@@ -25,7 +25,7 @@ namespace: number
   end
   2 =:: export: MIN_BASE
   62 =:: export: MAX_BASE
-  proc( i8 : chr i32 : base -> i32 ) =>: export: parseDigit
+  proc( char8 : chr i32 : base -> i32 ) =>: export: parseDigit
     chr '0' >= chr '9' <= & if
       chr '0' - i32 cast.u return
     else chr 'A' >= chr 'Z' <= & _if
@@ -146,7 +146,7 @@ namespace: number
   proc( string : str  i32 : base -> i64 ParserError ) =>: export: tryParseUInt
     str base true tryParseIntInternal
   end
-  proc( i8 : chr i32 : base -> bool ) =>: export: isExpChar
+  proc( char8 : chr i32 : base -> bool ) =>: export: isExpChar
     chr switch
       'e' 'E' case
         base 15 < return

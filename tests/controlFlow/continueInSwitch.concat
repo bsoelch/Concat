@@ -1,5 +1,5 @@
 import debug
-proc( i8 : x -> i8 ) =>: f
+proc( char8 : x -> char8 ) =>: f
   5 while ..dup 0 >= do
     x ..dup switch
       'x' case ..drop 1 - continue

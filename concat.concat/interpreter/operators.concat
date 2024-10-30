@@ -13,7 +13,7 @@ namespace: interpreter
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
     a switch
-      chr case a .chr i64 cast false return
+      chr case a .chr i64 cast.u false return
       int case a .int i64 cast false return
       none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg
         Float procedure procedureBundle union case 0:i64 true return
@@ -21,7 +21,7 @@ namespace: interpreter
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
     a switch
-      chr case a .chr f64 cast false return
+      chr case a .chr i32 cast.u f64 cast false return
       int case a .int f64 cast false return
       Float case a .Float f64 cast false return
       none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg procedure
@@ -31,7 +31,7 @@ namespace: interpreter
   ## backwards compatability
   proc( ConstValue : a -> f32 bool ) =>: constAsF32
     a switch
-      chr case a .chr f32 cast false return
+      chr case a .chr i32 cast.u f32 cast false return
       int case a .int f32 cast false return
       Float case a .Float f32 cast false return
       none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg procedure
@@ -40,7 +40,7 @@ namespace: interpreter
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsF64
     a switch
-      chr case a .chr f64 cast false return
+      chr case a .chr i32 cast.u f64 cast false return
       int case a .int f64 cast false return
       Float case a .Float f64 cast false return
       none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg procedure
@@ -84,7 +84,7 @@ namespace: interpreter
     args 0 [] =:: a
     a switch
       boolean case a OperatorResult .success return
-      chr case a .chr T cast ? ConstValue .boolean OperatorResult .success return
+      chr case a .chr i8 cast ? ConstValue .boolean OperatorResult .success return
       int case a .int T cast ? ConstValue .boolean OperatorResult .success return
       Float case a .Float T cast ? ConstValue .boolean OperatorResult .success return
       none enumLabel str str16 str32 arrayConstant typeId wildCard genericArg

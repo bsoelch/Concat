@@ -1360,7 +1360,7 @@ enum( i64 : constant i64 : stackId i64 : localId i64 : tmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
-  i8 : valStackType
+  char8 : valStackType
   i64 : valId
   string : cmpType
   IntValue : value
@@ -1507,7 +1507,7 @@ end
 proc(
   stringBuilder : sb
   Type : enumType
-  i8  : stackType
+  char8  : stackType
   i64 : valId
   i64 : newLabel
   FilePosition : pos
@@ -1675,7 +1675,7 @@ end
 proc(
   stringBuilder : sb
   Type : tupleType
-  i8 : dataPtrType
+  char8 : dataPtrType
   i64 : dataPtrId
   FilePosition : pos
   CompilerContext ptr mut : context
@@ -1909,7 +1909,7 @@ proc(
         valId
         pos
       context loadEnumLabel valType = tmpId =
-    else switchType typeContext types.isInt _if
+    else switchType typeContext types.isInt or switchType typeContext types.isChar _if
       switchType
         typeContext types.primitiveValue
       types.sizeOfPrimitive =:: numBytes
@@ -2606,7 +2606,7 @@ proc(
 end
 
 
-struct( i8 : varType i64 : varId ) =:: StackVal
+struct( char8 : varType i64 : varId ) =:: StackVal
 namespace: sb
   proc(
     stringBuilder : sb

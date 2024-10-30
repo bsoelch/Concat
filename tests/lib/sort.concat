@@ -1,13 +1,13 @@
 import stringBuilder
 import stringIO
 
-proc( i8 : a i8 : b i32 : C -> i32 ) =>: cmp
+proc( char8 : a char8 : b i32 : C -> i32 ) =>: cmp
   a i32 cast.u b i32 cast.u -
 end
 
 proc( -> ) =>: main
   "Hello, World!" sb.wrap
-     ..dup i8 list cast cmp @ 0 list.sort
+     ..dup char8 list cast cmp @ 0 list.sort
      '\n' sb.appendC
      io.stdOut ..over io.fputSb ..drop
    sb.free ..drop

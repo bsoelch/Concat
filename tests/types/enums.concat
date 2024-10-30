@@ -1,5 +1,5 @@
 import debug
-enum( A B i32 : C  ( i32 i8 ) : mut: D ) type =: anEnum
+enum( A B i32 : C  ( i32 char8 ) : mut: D ) type =: anEnum
 enum( A B C ) type =: labelEnum 
 enum( empty i64 ptr : data ) type =: optionalI64
 
@@ -18,7 +18,7 @@ proc( -> ) =>: main
   l1 .B ?? if
     labelEnum .C l1 =
   end
-  241 'A' ( i32 i8 ) new e .D =
+  241 'A' ( i32 char8 ) new e .D =
   e .D
     2 e .D .0 =
     ..dup .1 debug.print

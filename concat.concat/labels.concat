@@ -90,7 +90,7 @@ namespace: id
   proc( StringConstant : const LabelContext ptr : context -> string ) =>: export: scAsStr
     context [] .nameBuffer .data const .offset + const .length string.create return
   end
-  proc( StringConstant : const i64 : index LabelContext ptr : context -> i8 ) =>: export: scCharAt
+  proc( StringConstant : const i64 : index LabelContext ptr : context -> char8 ) =>: export: scCharAt
     const context scAsStr index string.charAt return
   end
   proc( string : a StringConstant : b LabelContext ptr : context -> bool ) =>: export: scEqualTo
@@ -361,7 +361,7 @@ namespace: id
                     "invalid hex-code for escape sequence: \"\\" sb.wrap c sb.appendC str .data ..over.3 + nChars string.create sb.appendStr '\"' sb.appendC pos errors appendError
                   else
                     c 'x' == if
-                      i8 cast sb.appendC
+                      char8 cast sb.appendC
                     else c 'u' == _if
                       utf8.Codepoint cast sb.appendCodepoint
                     else c 'U' == _if

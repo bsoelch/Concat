@@ -1,12 +1,12 @@
 import debug
 proc(
-  i64 : auto: l i8 l ptr : p
+  i64 : auto: l char8 l ptr : p
 -> i64 ) =>: len
   l return
 end
   
 proc(
-  i32 : auto: l1 i8 l1 ptr : p
+  i32 : auto: l1 char8 l1 ptr : p
 -> i64 ) =>: len2
   p len return
 end

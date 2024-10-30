@@ -2473,7 +2473,7 @@ proc(
       op state appendOp ..drop ## ignore id
       Type 2 array new =:: mut: typeData
       typeData @ =:: outTypes
-      types.primitive.I8
+      types.primitive.CHAR8
         true
         types.ArraySize array.empty
         false
@@ -2851,6 +2851,7 @@ proc(
             typeContext types.unwrapReference
           =:: switchType
           switchType typeContext types.isInt ! and
+          switchType typeContext types.isChar ! and
               switchType typeContext types.isEnum ! if
             "cannot switch values of type " sb.wrap
               switchType typeContext sb.appendType

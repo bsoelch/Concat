@@ -15,7 +15,7 @@ enum(
   none
   bool : boolean
   i64 : enumLabel
-  i8 : chr
+  char8 : chr
   i64 : int
   f64 : Float
   StringConstant : str
@@ -194,7 +194,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
 end
 
 namespace: sb
-  proc( stringBuilder i8 : c -> stringBuilder ) =>: export: appendEscapedChr
+  proc( stringBuilder char8 : c -> stringBuilder ) =>: export: appendEscapedChr
     c i32 cast.u =:: chr
     chr 0x20 < or chr 0x7f >= if ## non-printable ASCII-characters + hex-codes for multi-char characters
       "\\x" sb.appendS
@@ -219,7 +219,7 @@ namespace: sb
     return
   end
   ## C-style string escaping, use octal sequences as hex-sequences may consume following characters
-  proc( stringBuilder i8 : c -> stringBuilder ) =>: export: appendEscapedChrC
+  proc( stringBuilder char8 : c -> stringBuilder ) =>: export: appendEscapedChrC
     c i32 cast.u =:: chr
     chr 0x20 < or chr 0x7f >= if
       ## non-printable ASCII-characters
@@ -292,7 +292,7 @@ namespace: sb
                 c 0x10     ..u< if '0' sb.appendC end
                 c i32 cast.u sb.appendX
               else
-                c i8 cast sb.appendC
+                c char8 cast sb.appendC
               end
               i 1 +
             end ..drop
@@ -316,7 +316,7 @@ namespace: sb
                 cp 0x10     ..u< if '0' sb.appendC end
                 cp sb.appendX
               else
-                cp i8 cast sb.appendC
+                cp char8 cast sb.appendC
               end
               i 1 +
             end ..drop
