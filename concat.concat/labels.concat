@@ -283,7 +283,7 @@ namespace: id
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
   proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseStringConstant
-    ## TODO improve readability of stack bases code (?extract loop counter to variable)
+    ## TODO improve readability of stack based code (?extract loop counter to variable)
     stringStart =:: mut: pos
     '"' pos @ updateFilePos ## string content starts after "
     context [] .nameBuffer .length =:: offset

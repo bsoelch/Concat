@@ -566,7 +566,6 @@ proc(
   types.primitive.I8
     context operatorProcTypes
   =:: consume_i8 =:: i8_bool =:: i8i8_bool =:: i8_i8 =:: i8i8_i8
-  ## TODO initialite char operations c?c?_bool c?c?_i32
   types.primitive.I16
     context operatorProcTypes
   =:: consume_i16 =:: i16_bool =:: i16i16_bool

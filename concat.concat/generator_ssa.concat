@@ -1096,7 +1096,7 @@ proc(
     ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT PTR_DIFF case break
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
       ops ssa.OperationType .MUL pos context appendBinaryOperator return
-    ## FIXME handle mixed size division/remainder
+    ## TODO handle mixed size division/remainder
     DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64 case
       ops ssa.OperationType .DIV pos context appendBinaryOperator return
     REM_I32 REM_I64I32 REM_I64 case

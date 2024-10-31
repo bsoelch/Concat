@@ -88,13 +88,12 @@ proc(
   state .progContext [] .idContext .typeContext@ =:: typeContext
   literalType switch
     FIXED case
-      ## TODO? better way to get bit-size of integer
       intType typeContext types.sizeOf .fixed i32 cast 8 * =:: bitCount
       value isUnsigned bitCount checkIntSize if
         "integer literal overflows maximum size for type " sb.wrap
           intType typeContext sb.appendType
           intType types.isPrimitive ! if
-            isUnsigned if " ( u" sb.appendS else " ( i" sb.appendS end
+            isUnsigned if " ( unsigned i" sb.appendS else " ( i" sb.appendS end
             bitCount sb.appendU
             ')' sb.appendC
           end
@@ -157,7 +156,6 @@ proc(
 -> Constant ) =>: newStringConstant
   context .labelContext =:: labelContext
   using types
-  ## TODO support different string types
   stringType switch
     DEFAULT case str ConstValue .str str .length types.primitive.CHAR8 break
     UTF8    case str ConstValue .str str .length types.primitive.CHAR8 break
@@ -712,7 +710,6 @@ proc( string : str FileState ptr mut : fileState  ParserState ptr mut : state ->
     end =:: literalType
     literalType typeContext types.isInt if
       literalType typeContext types.sizeOf .fixed i32 cast 8 * size =
-      ## TODO ensure constant has correct type
       literal IntLiteralType .FIXED literalType unsigned fileState state tryParseIntConstant ! if
         "invalid integer constant: `" sb.wrap
           literal sb.appendStr
@@ -1664,7 +1661,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       Type .undefined
         SignType .SIGNED
         fileState [] .wordStart
-      opCast state appendOp ## TODO remember signedness
+      opCast state appendOp
       return
     else ..dup "cast.u" string.wrap string.eq _if =:: opName
       Type .undefined

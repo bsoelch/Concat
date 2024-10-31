@@ -452,7 +452,6 @@ proc(
       end ..drop
       false return
     struct union procIn procOut enum case
-      ## TODO? allow matching value to union/enum element
       src typeContext types.unwrapNamed src =
       src ..label target ..label != if
         true return ## src and target have to be same type of composite
@@ -542,8 +541,8 @@ proc(
           map.at =:: prev?
           prev? optional.hasData if
             prev? .data [] switch
-              value case ## XXX allow merging values?
-                ## TODO allow auto-casts type-casts
+              value case
+                ## XXX? allow auto-casts type-casts
                 srcArg prev? .data [] .value labelContext constantEquals if break end
                 true return
               fixed case
