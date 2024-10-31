@@ -278966,1219 +278966,1236 @@ dbgloc 4967,34 ## ./concat.concat/generator_qbe.concat
 %s224 =l copy %s221
 dbgloc 4967,34 ## ./concat.concat/generator_qbe.concat
 %s225 =ub call $cct_types_dtypeEquals (:enum20 %s224,:enum20 %s223)
-dbgloc 4968,5 ## ./concat.concat/generator_qbe.concat
+dbgloc 4967,51 ## ./concat.concat/generator_qbe.concat
+jnz %s225, @if_1976, @next6
+@next6
+dbgloc 4968,9 ## ./concat.concat/generator_qbe.concat
 %s226 =l copy %l17701
-dbgloc 4968,5 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,9 ## ./concat.concat/generator_qbe.concat
 %s227 =l copy %s226
-dbgloc 4968,5 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,9 ## ./concat.concat/generator_qbe.concat
 %tmp23360 =l alloc4 5
 blit %s227,%tmp23360,5
-dbgloc 4968,5 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,9 ## ./concat.concat/generator_qbe.concat
 %s228 =l copy %tmp23360
-dbgloc 4968,13 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,17 ## ./concat.concat/generator_qbe.concat
 %s229 =l copy %l17671
-dbgloc 4968,25 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,29 ## ./concat.concat/generator_qbe.concat
 %s230 =l loadl %s229
 %s231 =l copy %s230
-dbgloc 4968,25 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,29 ## ./concat.concat/generator_qbe.concat
 %s232 =l copy %s228
-dbgloc 4968,25 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,29 ## ./concat.concat/generator_qbe.concat
 %s233 =ub call $cct_types_disEmpty (:enum20 %s232,l %s231)
-dbgloc 4968,39 ## ./concat.concat/generator_qbe.concat
-%s234 =w or %s225, %s233
-dbgloc 4969,5 ## ./concat.concat/generator_qbe.concat
-%s235 =l copy %l17701
-dbgloc 4969,5 ## ./concat.concat/generator_qbe.concat
-%s236 =l copy %s235
-dbgloc 4969,5 ## ./concat.concat/generator_qbe.concat
+dbgloc 4968,43 ## ./concat.concat/generator_qbe.concat
+jnz %s233, @if_1976, @next7
+@next7
+dbgloc 4969,9 ## ./concat.concat/generator_qbe.concat
+%s234 =l copy %l17701
+dbgloc 4969,9 ## ./concat.concat/generator_qbe.concat
+%s235 =l copy %s234
+dbgloc 4969,9 ## ./concat.concat/generator_qbe.concat
 %tmp23361 =l alloc4 5
-blit %s236,%tmp23361,5
-dbgloc 4969,5 ## ./concat.concat/generator_qbe.concat
-%s237 =l copy %tmp23361
-dbgloc 4969,13 ## ./concat.concat/generator_qbe.concat
-%s238 =l copy %l17671
-dbgloc 4969,25 ## ./concat.concat/generator_qbe.concat
-%s239 =l loadl %s238
-%s240 =l copy %s239
-dbgloc 4969,25 ## ./concat.concat/generator_qbe.concat
-%s241 =l copy %s237
-dbgloc 4969,25 ## ./concat.concat/generator_qbe.concat
-%s242 =ub call $cct_types_disProcedure (:enum20 %s241,l %s240)
-dbgloc 4969,43 ## ./concat.concat/generator_qbe.concat
-%s243 =w or %s234, %s242
-dbgloc 4969,45 ## ./concat.concat/generator_qbe.concat
-jnz %s243, @if_1976, @else_1976
+blit %s235,%tmp23361,5
+dbgloc 4969,9 ## ./concat.concat/generator_qbe.concat
+%s236 =l copy %tmp23361
+dbgloc 4969,17 ## ./concat.concat/generator_qbe.concat
+%s237 =l copy %l17671
+dbgloc 4969,29 ## ./concat.concat/generator_qbe.concat
+%s238 =l loadl %s237
+%s239 =l copy %s238
+dbgloc 4969,29 ## ./concat.concat/generator_qbe.concat
+%s240 =l copy %s236
+dbgloc 4969,29 ## ./concat.concat/generator_qbe.concat
+%s241 =ub call $cct_types_disProcedure (:enum20 %s240,l %s239)
+dbgloc 4969,47 ## ./concat.concat/generator_qbe.concat
+jnz %s241, @if_1976, @next8
+@next8
+dbgloc 4970,9 ## ./concat.concat/generator_qbe.concat
+%s242 =l copy %l17702
+dbgloc 4970,20 ## ./concat.concat/generator_qbe.concat
+%s243 =l copy $cct_id_dFLAG__EXTERN
+dbgloc 4970,35 ## ./concat.concat/generator_qbe.concat
+%s244 =w loadw %s243
+dbgloc 4970,35 ## ./concat.concat/generator_qbe.concat
+%s245 =w loadw %s242
+dbgloc 4970,35 ## ./concat.concat/generator_qbe.concat
+%s246 =w call $cct_id_dflagAnd (w %s245,w %s244)
+dbgloc 4970,37 ## ./concat.concat/generator_qbe.concat
+%s247 =ub call $cct_id_dflagToBool (w %s246)
+dbgloc 4970,39 ## ./concat.concat/generator_qbe.concat
+jnz %s247, @if_1976, @else_1976
 @if_1976
-dbgloc 4970,7 ## ./concat.concat/generator_qbe.concat
+dbgloc 4971,7 ## ./concat.concat/generator_qbe.concat
 jmp @continueWhile_236
 @else_1976
 @endIf_1976
-dbgloc 4972,5 ## ./concat.concat/generator_qbe.concat
-%s244 =l copy %l17687
-dbgloc 4972,5 ## ./concat.concat/generator_qbe.concat
-%s245 =l copy %s244
-dbgloc 4972,5 ## ./concat.concat/generator_qbe.concat
+dbgloc 4973,5 ## ./concat.concat/generator_qbe.concat
+%s248 =l copy %l17687
+dbgloc 4973,5 ## ./concat.concat/generator_qbe.concat
+%s249 =l copy %s248
+dbgloc 4973,5 ## ./concat.concat/generator_qbe.concat
 %tmp23362 =l alloc8 24
-blit %s245,%tmp23362,24
-dbgloc 4972,5 ## ./concat.concat/generator_qbe.concat
-%s246 =l copy %tmp23362
-dbgloc 4973,7 ## ./concat.concat/generator_qbe.concat
-%s247 =l copy %l17702
-dbgloc 4973,18 ## ./concat.concat/generator_qbe.concat
-%s248 =l copy $cct_id_dFLAG__EXPORT
-dbgloc 4973,33 ## ./concat.concat/generator_qbe.concat
-%s249 =w loadw %s248
-dbgloc 4973,33 ## ./concat.concat/generator_qbe.concat
-%s250 =w loadw %s247
-dbgloc 4973,33 ## ./concat.concat/generator_qbe.concat
-%s251 =w call $cct_id_dflagAnd (w %s250,w %s249)
-dbgloc 4973,35 ## ./concat.concat/generator_qbe.concat
-%s252 =ub call $cct_id_dflagToBool (w %s251)
-dbgloc 4973,37 ## ./concat.concat/generator_qbe.concat
-%s253 =l copy %s246
-dbgloc 4973,37 ## ./concat.concat/generator_qbe.concat
-jnz %s252, @if_1977, @else_1977
+blit %s249,%tmp23362,24
+dbgloc 4973,5 ## ./concat.concat/generator_qbe.concat
+%s250 =l copy %tmp23362
+dbgloc 4974,7 ## ./concat.concat/generator_qbe.concat
+%s251 =l copy %l17702
+dbgloc 4974,18 ## ./concat.concat/generator_qbe.concat
+%s252 =l copy $cct_id_dFLAG__EXPORT
+dbgloc 4974,33 ## ./concat.concat/generator_qbe.concat
+%s253 =w loadw %s252
+dbgloc 4974,33 ## ./concat.concat/generator_qbe.concat
+%s254 =w loadw %s251
+dbgloc 4974,33 ## ./concat.concat/generator_qbe.concat
+%s255 =w call $cct_id_dflagAnd (w %s254,w %s253)
+dbgloc 4974,35 ## ./concat.concat/generator_qbe.concat
+%s256 =ub call $cct_id_dflagToBool (w %s255)
+dbgloc 4974,37 ## ./concat.concat/generator_qbe.concat
+%s257 =l copy %s250
+dbgloc 4974,37 ## ./concat.concat/generator_qbe.concat
+jnz %s256, @if_1977, @else_1977
 @if_1977
-dbgloc 4974,9 ## ./concat.concat/generator_qbe.concat
-%s254 =l copy $cctI_string2101
-dbgloc 4974,19 ## ./concat.concat/generator_qbe.concat
-dbgloc 4974,19 ## ./concat.concat/generator_qbe.concat
-%s255 =l copy 7
-%s256 =:struct250 call $cct_sb_dappendS (:struct250 %s253,l %s255,l %s254)
+dbgloc 4975,9 ## ./concat.concat/generator_qbe.concat
+%s258 =l copy $cctI_string2101
+dbgloc 4975,19 ## ./concat.concat/generator_qbe.concat
+dbgloc 4975,19 ## ./concat.concat/generator_qbe.concat
+%s259 =l copy 7
+%s260 =:struct250 call $cct_sb_dappendS (:struct250 %s257,l %s259,l %s258)
 jmp @endIf_1977
 @else_1977
 @endIf_1977
-%s257 =l phi @if_1977 %s256, @else_1977 %s253
-dbgloc 4976,7 ## ./concat.concat/generator_qbe.concat
-%s258 =l copy $cctI_string2102
-dbgloc 4976,15 ## ./concat.concat/generator_qbe.concat
-dbgloc 4976,15 ## ./concat.concat/generator_qbe.concat
-%s259 =l copy 5
-%s260 =:struct250 call $cct_sb_dappendS (:struct250 %s257,l %s259,l %s258)
+%s261 =l phi @if_1977 %s260, @else_1977 %s257
 dbgloc 4977,7 ## ./concat.concat/generator_qbe.concat
-%s261 =l copy %l17692
+%s262 =l copy $cctI_string2102
 dbgloc 4977,15 ## ./concat.concat/generator_qbe.concat
-%s262 =l copy -1
-dbgloc 4977,18 ## ./concat.concat/generator_qbe.concat
-%s263 =l copy %l17677
-dbgloc 4977,26 ## ./concat.concat/generator_qbe.concat
-%s264 =l loadl %s263
-dbgloc 4977,26 ## ./concat.concat/generator_qbe.concat
-%s265 =w loadw %s261
-dbgloc 4977,26 ## ./concat.concat/generator_qbe.concat
-%s266 =:struct250 call $cct_39_Fsb_dappendGlobalName (:struct250 %s260,w %s265,l %s262,l %s264)
+dbgloc 4977,15 ## ./concat.concat/generator_qbe.concat
+%s263 =l copy 5
+%s264 =:struct250 call $cct_sb_dappendS (:struct250 %s261,l %s263,l %s262)
 dbgloc 4978,7 ## ./concat.concat/generator_qbe.concat
-%s267 =l copy $cctI_string2103
-dbgloc 4978,19 ## ./concat.concat/generator_qbe.concat
-dbgloc 4978,19 ## ./concat.concat/generator_qbe.concat
-%s268 =l copy 9
-%s269 =:struct250 call $cct_sb_dappendS (:struct250 %s266,l %s268,l %s267)
+%s265 =l copy %l17692
+dbgloc 4978,15 ## ./concat.concat/generator_qbe.concat
+%s266 =l copy -1
+dbgloc 4978,18 ## ./concat.concat/generator_qbe.concat
+%s267 =l copy %l17677
+dbgloc 4978,26 ## ./concat.concat/generator_qbe.concat
+%s268 =l loadl %s267
+dbgloc 4978,26 ## ./concat.concat/generator_qbe.concat
+%s269 =w loadw %s265
+dbgloc 4978,26 ## ./concat.concat/generator_qbe.concat
+%s270 =:struct250 call $cct_39_Fsb_dappendGlobalName (:struct250 %s264,w %s269,l %s266,l %s268)
 dbgloc 4979,7 ## ./concat.concat/generator_qbe.concat
-%s270 =l copy %l17701
-dbgloc 4979,7 ## ./concat.concat/generator_qbe.concat
-%s271 =l copy %s270
-dbgloc 4979,7 ## ./concat.concat/generator_qbe.concat
+%s271 =l copy $cctI_string2103
+dbgloc 4979,19 ## ./concat.concat/generator_qbe.concat
+dbgloc 4979,19 ## ./concat.concat/generator_qbe.concat
+%s272 =l copy 9
+%s273 =:struct250 call $cct_sb_dappendS (:struct250 %s270,l %s272,l %s271)
+dbgloc 4980,7 ## ./concat.concat/generator_qbe.concat
+%s274 =l copy %l17701
+dbgloc 4980,7 ## ./concat.concat/generator_qbe.concat
+%s275 =l copy %s274
+dbgloc 4980,7 ## ./concat.concat/generator_qbe.concat
 %tmp23363 =l alloc4 5
-blit %s271,%tmp23363,5
-dbgloc 4979,7 ## ./concat.concat/generator_qbe.concat
-%s272 =l copy %tmp23363
-dbgloc 4979,15 ## ./concat.concat/generator_qbe.concat
-%s273 =l copy %l17693
-dbgloc 4979,22 ## ./concat.concat/generator_qbe.concat
-%s274 =l loadl %s273
-dbgloc 4979,22 ## ./concat.concat/generator_qbe.concat
+blit %s275,%tmp23363,5
+dbgloc 4980,7 ## ./concat.concat/generator_qbe.concat
+%s276 =l copy %tmp23363
+dbgloc 4980,15 ## ./concat.concat/generator_qbe.concat
+%s277 =l copy %l17693
+dbgloc 4980,22 ## ./concat.concat/generator_qbe.concat
+%s278 =l loadl %s277
+dbgloc 4980,22 ## ./concat.concat/generator_qbe.concat
 %t73 =l copy 0
 %t74 =l mul %t73, 74 ## named[66]( "IdentifierData" )
-%s275 =l add %s274, %t74
-dbgloc 4979,25 ## ./concat.concat/generator_qbe.concat
-%s276 =l add %s275,32
-dbgloc 4979,25 ## ./concat.concat/generator_qbe.concat
-%s277 =l copy %s276
-dbgloc 4979,25 ## ./concat.concat/generator_qbe.concat
+%s279 =l add %s278, %t74
+dbgloc 4980,25 ## ./concat.concat/generator_qbe.concat
+%s280 =l add %s279,32
+dbgloc 4980,25 ## ./concat.concat/generator_qbe.concat
+%s281 =l copy %s280
+dbgloc 4980,25 ## ./concat.concat/generator_qbe.concat
 %tmp23364 =l alloc8 32
-blit %s277,%tmp23364,32
-dbgloc 4979,25 ## ./concat.concat/generator_qbe.concat
-%s278 =l copy %tmp23364
-dbgloc 4979,37 ## ./concat.concat/generator_qbe.concat
-%s279 =l copy %l17677
-dbgloc 4979,45 ## ./concat.concat/generator_qbe.concat
-%s280 =l loadl %s279
-dbgloc 4979,45 ## ./concat.concat/generator_qbe.concat
-%s281 =l copy %s278
-dbgloc 4979,45 ## ./concat.concat/generator_qbe.concat
-%s282 =l copy %s272
-dbgloc 4979,45 ## ./concat.concat/generator_qbe.concat
-%s283 =l call $cct_39_FtypeAlignmentInt (:enum20 %s282,:struct367 %s281,l %s280)
-dbgloc 4979,62 ## ./concat.concat/generator_qbe.concat
-%s284 =:struct250 call $cct_sb_dappendI64 (:struct250 %s269,l %s283)
-dbgloc 4980,7 ## ./concat.concat/generator_qbe.concat
-%s285 =l copy $cctI_string2104
-dbgloc 4980,12 ## ./concat.concat/generator_qbe.concat
-dbgloc 4980,12 ## ./concat.concat/generator_qbe.concat
-%s286 =l copy 2
-%s287 =:struct250 call $cct_sb_dappendS (:struct250 %s284,l %s286,l %s285)
+blit %s281,%tmp23364,32
+dbgloc 4980,25 ## ./concat.concat/generator_qbe.concat
+%s282 =l copy %tmp23364
+dbgloc 4980,37 ## ./concat.concat/generator_qbe.concat
+%s283 =l copy %l17677
+dbgloc 4980,45 ## ./concat.concat/generator_qbe.concat
+%s284 =l loadl %s283
+dbgloc 4980,45 ## ./concat.concat/generator_qbe.concat
+%s285 =l copy %s282
+dbgloc 4980,45 ## ./concat.concat/generator_qbe.concat
+%s286 =l copy %s276
+dbgloc 4980,45 ## ./concat.concat/generator_qbe.concat
+%s287 =l call $cct_39_FtypeAlignmentInt (:enum20 %s286,:struct367 %s285,l %s284)
+dbgloc 4980,62 ## ./concat.concat/generator_qbe.concat
+%s288 =:struct250 call $cct_sb_dappendI64 (:struct250 %s273,l %s287)
 dbgloc 4981,7 ## ./concat.concat/generator_qbe.concat
-%s288 =l copy %l17693
-dbgloc 4981,14 ## ./concat.concat/generator_qbe.concat
-%s289 =l loadl %s288
-dbgloc 4981,14 ## ./concat.concat/generator_qbe.concat
+%s289 =l copy $cctI_string2104
+dbgloc 4981,12 ## ./concat.concat/generator_qbe.concat
+dbgloc 4981,12 ## ./concat.concat/generator_qbe.concat
+%s290 =l copy 2
+%s291 =:struct250 call $cct_sb_dappendS (:struct250 %s288,l %s290,l %s289)
+dbgloc 4982,7 ## ./concat.concat/generator_qbe.concat
+%s292 =l copy %l17693
+dbgloc 4982,14 ## ./concat.concat/generator_qbe.concat
+%s293 =l loadl %s292
+dbgloc 4982,14 ## ./concat.concat/generator_qbe.concat
 %t75 =l copy 0
 %t76 =l mul %t75, 74 ## named[66]( "IdentifierData" )
-%s290 =l add %s289, %t76
-dbgloc 4981,17 ## ./concat.concat/generator_qbe.concat
-%s291 =l add %s290,8
-dbgloc 4981,35 ## ./concat.concat/generator_qbe.concat
-%t77 =l add %s291, 16
+%s294 =l add %s293, %t76
+dbgloc 4982,17 ## ./concat.concat/generator_qbe.concat
+%s295 =l add %s294,8
+dbgloc 4982,35 ## ./concat.concat/generator_qbe.concat
+%t77 =l add %s295, 16
 %t78 =w loadub %t77
 %t79 =w extub %t78
 %t80 =w ceqw %t79, 0
-%s292 =w copy %t80
-dbgloc 4981,38 ## ./concat.concat/generator_qbe.concat
-%s293 =w extub %s292
-%s294 =w ceqw 0, %s293
-dbgloc 4981,40 ## ./concat.concat/generator_qbe.concat
-jnz %s294, @if_1978, @else_1978
+%s296 =w copy %t80
+dbgloc 4982,38 ## ./concat.concat/generator_qbe.concat
+%s297 =w extub %s296
+%s298 =w ceqw 0, %s297
+dbgloc 4982,40 ## ./concat.concat/generator_qbe.concat
+jnz %s298, @if_1978, @else_1978
 @if_1978
-dbgloc 4982,9 ## ./concat.concat/generator_qbe.concat
-%s295 =l copy %l17701
-dbgloc 4982,9 ## ./concat.concat/generator_qbe.concat
-%s296 =l copy %s295
-dbgloc 4982,9 ## ./concat.concat/generator_qbe.concat
+dbgloc 4983,9 ## ./concat.concat/generator_qbe.concat
+%s299 =l copy %l17701
+dbgloc 4983,9 ## ./concat.concat/generator_qbe.concat
+%s300 =l copy %s299
+dbgloc 4983,9 ## ./concat.concat/generator_qbe.concat
 %tmp23365 =l alloc4 5
-blit %s296,%tmp23365,5
-dbgloc 4982,9 ## ./concat.concat/generator_qbe.concat
-%s297 =l copy %tmp23365
-dbgloc 4982,17 ## ./concat.concat/generator_qbe.concat
-%s298 =l copy %l17693
-dbgloc 4982,24 ## ./concat.concat/generator_qbe.concat
-%s299 =l loadl %s298
-dbgloc 4982,24 ## ./concat.concat/generator_qbe.concat
+blit %s300,%tmp23365,5
+dbgloc 4983,9 ## ./concat.concat/generator_qbe.concat
+%s301 =l copy %tmp23365
+dbgloc 4983,17 ## ./concat.concat/generator_qbe.concat
+%s302 =l copy %l17693
+dbgloc 4983,24 ## ./concat.concat/generator_qbe.concat
+%s303 =l loadl %s302
+dbgloc 4983,24 ## ./concat.concat/generator_qbe.concat
 %t81 =l copy 0
 %t82 =l mul %t81, 74 ## named[66]( "IdentifierData" )
-%s300 =l add %s299, %t82
-dbgloc 4982,27 ## ./concat.concat/generator_qbe.concat
-%s301 =l add %s300,8
-dbgloc 4982,27 ## ./concat.concat/generator_qbe.concat
-%s302 =l copy %s301
-dbgloc 4982,27 ## ./concat.concat/generator_qbe.concat
+%s304 =l add %s303, %t82
+dbgloc 4983,27 ## ./concat.concat/generator_qbe.concat
+%s305 =l add %s304,8
+dbgloc 4983,27 ## ./concat.concat/generator_qbe.concat
+%s306 =l copy %s305
+dbgloc 4983,27 ## ./concat.concat/generator_qbe.concat
 %tmp23366 =l alloc8 17
-blit %s302,%tmp23366,17
-dbgloc 4982,27 ## ./concat.concat/generator_qbe.concat
-%s303 =l copy %tmp23366
-dbgloc 4982,39 ## ./concat.concat/generator_qbe.concat
-%s304 =w copy 1
-dbgloc 4982,44 ## ./concat.concat/generator_qbe.concat
-%s305 =l copy %l17693
-dbgloc 4982,51 ## ./concat.concat/generator_qbe.concat
-%s306 =l loadl %s305
-dbgloc 4982,51 ## ./concat.concat/generator_qbe.concat
+blit %s306,%tmp23366,17
+dbgloc 4983,27 ## ./concat.concat/generator_qbe.concat
+%s307 =l copy %tmp23366
+dbgloc 4983,39 ## ./concat.concat/generator_qbe.concat
+%s308 =w copy 1
+dbgloc 4983,44 ## ./concat.concat/generator_qbe.concat
+%s309 =l copy %l17693
+dbgloc 4983,51 ## ./concat.concat/generator_qbe.concat
+%s310 =l loadl %s309
+dbgloc 4983,51 ## ./concat.concat/generator_qbe.concat
 %t83 =l copy 0
 %t84 =l mul %t83, 74 ## named[66]( "IdentifierData" )
-%s307 =l add %s306, %t84
-dbgloc 4982,54 ## ./concat.concat/generator_qbe.concat
-%s308 =l add %s307,32
-dbgloc 4982,54 ## ./concat.concat/generator_qbe.concat
-%s309 =l copy %s308
-dbgloc 4982,54 ## ./concat.concat/generator_qbe.concat
+%s311 =l add %s310, %t84
+dbgloc 4983,54 ## ./concat.concat/generator_qbe.concat
+%s312 =l add %s311,32
+dbgloc 4983,54 ## ./concat.concat/generator_qbe.concat
+%s313 =l copy %s312
+dbgloc 4983,54 ## ./concat.concat/generator_qbe.concat
 %tmp23367 =l alloc8 32
-blit %s309,%tmp23367,32
-dbgloc 4982,54 ## ./concat.concat/generator_qbe.concat
-%s310 =l copy %tmp23367
-dbgloc 4982,66 ## ./concat.concat/generator_qbe.concat
-%s311 =l copy %l17677
-dbgloc 4982,74 ## ./concat.concat/generator_qbe.concat
-%s312 =l loadl %s311
-dbgloc 4982,74 ## ./concat.concat/generator_qbe.concat
-%s313 =l copy %s310
-dbgloc 4982,74 ## ./concat.concat/generator_qbe.concat
-%s314 =l copy %s303
-dbgloc 4982,74 ## ./concat.concat/generator_qbe.concat
-%s315 =l copy %s297
-dbgloc 4982,74 ## ./concat.concat/generator_qbe.concat
-%s316 =:struct250 call $cct_39_Fsb_dappendConstQBE (:struct250 %s287,:enum20 %s315,:enum26 %s314,ub %s304,:struct367 %s313,l %s312)
+blit %s313,%tmp23367,32
+dbgloc 4983,54 ## ./concat.concat/generator_qbe.concat
+%s314 =l copy %tmp23367
+dbgloc 4983,66 ## ./concat.concat/generator_qbe.concat
+%s315 =l copy %l17677
+dbgloc 4983,74 ## ./concat.concat/generator_qbe.concat
+%s316 =l loadl %s315
+dbgloc 4983,74 ## ./concat.concat/generator_qbe.concat
+%s317 =l copy %s314
+dbgloc 4983,74 ## ./concat.concat/generator_qbe.concat
+%s318 =l copy %s307
+dbgloc 4983,74 ## ./concat.concat/generator_qbe.concat
+%s319 =l copy %s301
+dbgloc 4983,74 ## ./concat.concat/generator_qbe.concat
+%s320 =:struct250 call $cct_39_Fsb_dappendConstQBE (:struct250 %s291,:enum20 %s319,:enum26 %s318,ub %s308,:struct367 %s317,l %s316)
 jmp @endIf_1978
 @else_1978
-dbgloc 4984,9 ## ./concat.concat/generator_qbe.concat
-%s317 =l copy $cctI_string2105
-dbgloc 4984,14 ## ./concat.concat/generator_qbe.concat
-dbgloc 4984,14 ## ./concat.concat/generator_qbe.concat
-%s318 =l copy 2
-%s319 =:struct250 call $cct_sb_dappendS (:struct250 %s287,l %s318,l %s317)
 dbgloc 4985,9 ## ./concat.concat/generator_qbe.concat
-%s320 =l copy %l17701
-dbgloc 4985,9 ## ./concat.concat/generator_qbe.concat
-%s321 =l copy %s320
-dbgloc 4985,9 ## ./concat.concat/generator_qbe.concat
+%s321 =l copy $cctI_string2105
+dbgloc 4985,14 ## ./concat.concat/generator_qbe.concat
+dbgloc 4985,14 ## ./concat.concat/generator_qbe.concat
+%s322 =l copy 2
+%s323 =:struct250 call $cct_sb_dappendS (:struct250 %s291,l %s322,l %s321)
+dbgloc 4986,9 ## ./concat.concat/generator_qbe.concat
+%s324 =l copy %l17701
+dbgloc 4986,9 ## ./concat.concat/generator_qbe.concat
+%s325 =l copy %s324
+dbgloc 4986,9 ## ./concat.concat/generator_qbe.concat
 %tmp23368 =l alloc4 5
-blit %s321,%tmp23368,5
-dbgloc 4985,9 ## ./concat.concat/generator_qbe.concat
-%s322 =l copy %tmp23368
-dbgloc 4985,17 ## ./concat.concat/generator_qbe.concat
-%s323 =l copy %l17693
-dbgloc 4985,24 ## ./concat.concat/generator_qbe.concat
-%s324 =l loadl %s323
-dbgloc 4985,24 ## ./concat.concat/generator_qbe.concat
+blit %s325,%tmp23368,5
+dbgloc 4986,9 ## ./concat.concat/generator_qbe.concat
+%s326 =l copy %tmp23368
+dbgloc 4986,17 ## ./concat.concat/generator_qbe.concat
+%s327 =l copy %l17693
+dbgloc 4986,24 ## ./concat.concat/generator_qbe.concat
+%s328 =l loadl %s327
+dbgloc 4986,24 ## ./concat.concat/generator_qbe.concat
 %t85 =l copy 0
 %t86 =l mul %t85, 74 ## named[66]( "IdentifierData" )
-%s325 =l add %s324, %t86
-dbgloc 4985,27 ## ./concat.concat/generator_qbe.concat
-%s326 =l add %s325,32
-dbgloc 4985,27 ## ./concat.concat/generator_qbe.concat
-%s327 =l copy %s326
-dbgloc 4985,27 ## ./concat.concat/generator_qbe.concat
+%s329 =l add %s328, %t86
+dbgloc 4986,27 ## ./concat.concat/generator_qbe.concat
+%s330 =l add %s329,32
+dbgloc 4986,27 ## ./concat.concat/generator_qbe.concat
+%s331 =l copy %s330
+dbgloc 4986,27 ## ./concat.concat/generator_qbe.concat
 %tmp23369 =l alloc8 32
-blit %s327,%tmp23369,32
-dbgloc 4985,27 ## ./concat.concat/generator_qbe.concat
-%s328 =l copy %tmp23369
-dbgloc 4985,39 ## ./concat.concat/generator_qbe.concat
-%s329 =l copy %l17677
-dbgloc 4985,47 ## ./concat.concat/generator_qbe.concat
-%s330 =l loadl %s329
-dbgloc 4985,47 ## ./concat.concat/generator_qbe.concat
-%s331 =l copy %s328
-dbgloc 4985,47 ## ./concat.concat/generator_qbe.concat
-%s332 =l copy %s322
-dbgloc 4985,47 ## ./concat.concat/generator_qbe.concat
-%s333 =l call $cct_39_FtypeSizeInt (:enum20 %s332,:struct367 %s331,l %s330)
-dbgloc 4985,59 ## ./concat.concat/generator_qbe.concat
-%s334 =:struct250 call $cct_sb_dappendI64 (:struct250 %s319,l %s333)
+blit %s331,%tmp23369,32
+dbgloc 4986,27 ## ./concat.concat/generator_qbe.concat
+%s332 =l copy %tmp23369
+dbgloc 4986,39 ## ./concat.concat/generator_qbe.concat
+%s333 =l copy %l17677
+dbgloc 4986,47 ## ./concat.concat/generator_qbe.concat
+%s334 =l loadl %s333
+dbgloc 4986,47 ## ./concat.concat/generator_qbe.concat
+%s335 =l copy %s332
+dbgloc 4986,47 ## ./concat.concat/generator_qbe.concat
+%s336 =l copy %s326
+dbgloc 4986,47 ## ./concat.concat/generator_qbe.concat
+%s337 =l call $cct_39_FtypeSizeInt (:enum20 %s336,:struct367 %s335,l %s334)
+dbgloc 4986,59 ## ./concat.concat/generator_qbe.concat
+%s338 =:struct250 call $cct_sb_dappendI64 (:struct250 %s323,l %s337)
 @endIf_1978
-%s335 =l phi @if_1978 %s316, @else_1978 %s334
-dbgloc 4987,7 ## ./concat.concat/generator_qbe.concat
-%s336 =l copy $cctI_string2106
-dbgloc 4987,13 ## ./concat.concat/generator_qbe.concat
-dbgloc 4987,13 ## ./concat.concat/generator_qbe.concat
-%s337 =l copy 2
-%s338 =:struct250 call $cct_sb_dappendS (:struct250 %s335,l %s337,l %s336)
+%s339 =l phi @if_1978 %s320, @else_1978 %s338
 dbgloc 4988,7 ## ./concat.concat/generator_qbe.concat
-%s339 =l copy %a0
-dbgloc 4988,21 ## ./concat.concat/generator_qbe.concat
-%s340 =w call $cct_io_dfputSb (l %s339,:struct250 %s338)
+%s340 =l copy $cctI_string2106
+dbgloc 4988,13 ## ./concat.concat/generator_qbe.concat
+dbgloc 4988,13 ## ./concat.concat/generator_qbe.concat
+%s341 =l copy 2
+%s342 =:struct250 call $cct_sb_dappendS (:struct250 %s339,l %s341,l %s340)
 dbgloc 4989,7 ## ./concat.concat/generator_qbe.concat
-%s341 =:struct250 call $cct_sb_dclear (:struct250 %s338)
-dbgloc 4990,5 ## ./concat.concat/generator_qbe.concat
-%s342 =l copy %l17687
-dbgloc 4990,8 ## ./concat.concat/generator_qbe.concat
-blit %s341, %s342,24
+%s343 =l copy %a0
+dbgloc 4989,21 ## ./concat.concat/generator_qbe.concat
+%s344 =w call $cct_io_dfputSb (l %s343,:struct250 %s342)
+dbgloc 4990,7 ## ./concat.concat/generator_qbe.concat
+%s345 =:struct250 call $cct_sb_dclear (:struct250 %s342)
+dbgloc 4991,5 ## ./concat.concat/generator_qbe.concat
+%s346 =l copy %l17687
+dbgloc 4991,8 ## ./concat.concat/generator_qbe.concat
+blit %s345, %s346,24
 @continueWhile_236
 %t42 =l copy %s148
 jmp @while_236
 @endWhile_236
-dbgloc 4992,3 ## ./concat.concat/generator_qbe.concat
-%s343 =l copy %l17687
-dbgloc 4992,3 ## ./concat.concat/generator_qbe.concat
-%s344 =l copy %s343
-dbgloc 4992,3 ## ./concat.concat/generator_qbe.concat
+dbgloc 4993,3 ## ./concat.concat/generator_qbe.concat
+%s347 =l copy %l17687
+dbgloc 4993,3 ## ./concat.concat/generator_qbe.concat
+%s348 =l copy %s347
+dbgloc 4993,3 ## ./concat.concat/generator_qbe.concat
 %tmp23370 =l alloc8 24
-blit %s344,%tmp23370,24
-dbgloc 4992,3 ## ./concat.concat/generator_qbe.concat
-%s345 =l copy %tmp23370
-dbgloc 4994,5 ## ./concat.concat/generator_qbe.concat
-%s346 =l copy 0
-dbgloc 4994,11 ## ./concat.concat/generator_qbe.concat
-%s347 =l copy %s345
+blit %s348,%tmp23370,24
+dbgloc 4993,3 ## ./concat.concat/generator_qbe.concat
+%s349 =l copy %tmp23370
+dbgloc 4995,5 ## ./concat.concat/generator_qbe.concat
+%s350 =l copy 0
+dbgloc 4995,11 ## ./concat.concat/generator_qbe.concat
+%s351 =l copy %s349
 jmp @while_237
 @while_237
-%s348 =l phi @endWhile_236 %s347,@continueWhile_237 %t88
-%s349 =l phi @endWhile_236 %s346,@continueWhile_237 %t87
-dbgloc 4994,23 ## ./concat.concat/generator_qbe.concat
-%s350 =l copy %a1
-dbgloc 4994,31 ## ./concat.concat/generator_qbe.concat
+%s352 =l phi @endWhile_236 %s351,@continueWhile_237 %t88
+%s353 =l phi @endWhile_236 %s350,@continueWhile_237 %t87
+dbgloc 4995,23 ## ./concat.concat/generator_qbe.concat
+%s354 =l copy %a1
+dbgloc 4995,31 ## ./concat.concat/generator_qbe.concat
 %t89 =l copy 0
 %t90 =l mul %t89, 915 ## named[101]( "ProgramContext" )
-%s351 =l add %s350, %t90
-dbgloc 4994,34 ## ./concat.concat/generator_qbe.concat
-%s352 =l add %s351,864
-dbgloc 4994,54 ## ./concat.concat/generator_qbe.concat
-%s353 =l add %s352,8
-dbgloc 4994,54 ## ./concat.concat/generator_qbe.concat
-%s354 =l loadl %s353
-dbgloc 4994,62 ## ./concat.concat/generator_qbe.concat
-%s355 =l copy %s354
-dbgloc 4994,62 ## ./concat.concat/generator_qbe.concat
-%s356 =w csltl %s349, %s355
-dbgloc 4994,64 ## ./concat.concat/generator_qbe.concat
-jnz %s356, @do_237, @endWhile_237
+%s355 =l add %s354, %t90
+dbgloc 4995,34 ## ./concat.concat/generator_qbe.concat
+%s356 =l add %s355,864
+dbgloc 4995,54 ## ./concat.concat/generator_qbe.concat
+%s357 =l add %s356,8
+dbgloc 4995,54 ## ./concat.concat/generator_qbe.concat
+%s358 =l loadl %s357
+dbgloc 4995,62 ## ./concat.concat/generator_qbe.concat
+%s359 =l copy %s358
+dbgloc 4995,62 ## ./concat.concat/generator_qbe.concat
+%s360 =w csltl %s353, %s359
+dbgloc 4995,64 ## ./concat.concat/generator_qbe.concat
+jnz %s360, @do_237, @endWhile_237
 @do_237
-dbgloc 4994,71 ## ./concat.concat/generator_qbe.concat
+dbgloc 4995,71 ## ./concat.concat/generator_qbe.concat
 %l17713 =l alloc8 8
-storel %s349,%l17713
-dbgloc 4995,7 ## ./concat.concat/generator_qbe.concat
-%s357 =l copy %a1
-dbgloc 4995,15 ## ./concat.concat/generator_qbe.concat
+storel %s353,%l17713
+dbgloc 4996,7 ## ./concat.concat/generator_qbe.concat
+%s361 =l copy %a1
+dbgloc 4996,15 ## ./concat.concat/generator_qbe.concat
 %t91 =l copy 0
 %t92 =l mul %t91, 915 ## named[101]( "ProgramContext" )
-%s358 =l add %s357, %t92
-dbgloc 4995,18 ## ./concat.concat/generator_qbe.concat
-%s359 =l add %s358,864
-dbgloc 4995,18 ## ./concat.concat/generator_qbe.concat
-%s360 =l copy %s359
-dbgloc 4995,18 ## ./concat.concat/generator_qbe.concat
+%s362 =l add %s361, %t92
+dbgloc 4996,18 ## ./concat.concat/generator_qbe.concat
+%s363 =l add %s362,864
+dbgloc 4996,18 ## ./concat.concat/generator_qbe.concat
+%s364 =l copy %s363
+dbgloc 4996,18 ## ./concat.concat/generator_qbe.concat
 %tmp23371 =l alloc8 24
-blit %s360,%tmp23371,24
-dbgloc 4995,18 ## ./concat.concat/generator_qbe.concat
-%s361 =l copy %tmp23371
-dbgloc 4995,38 ## ./concat.concat/generator_qbe.concat
-%s362 =l copy %l17713
-dbgloc 4995,40 ## ./concat.concat/generator_qbe.concat
-%s363 =l loadl %s362
-dbgloc 4995,40 ## ./concat.concat/generator_qbe.concat
-%s364 =l copy %s361
-dbgloc 4995,40 ## ./concat.concat/generator_qbe.concat
-%s365 =:enum96 call $cct_list_dat__64_I11 (:struct829 %s364,l %s363)
-dbgloc 4995,48 ## ./concat.concat/generator_qbe.concat
+blit %s364,%tmp23371,24
+dbgloc 4996,18 ## ./concat.concat/generator_qbe.concat
+%s365 =l copy %tmp23371
+dbgloc 4996,38 ## ./concat.concat/generator_qbe.concat
+%s366 =l copy %l17713
+dbgloc 4996,40 ## ./concat.concat/generator_qbe.concat
+%s367 =l loadl %s366
+dbgloc 4996,40 ## ./concat.concat/generator_qbe.concat
+%s368 =l copy %s365
+dbgloc 4996,40 ## ./concat.concat/generator_qbe.concat
+%s369 =:enum96 call $cct_list_dat__64_I11 (:struct829 %s368,l %s367)
+dbgloc 4996,48 ## ./concat.concat/generator_qbe.concat
 ## check enum 
-%t93 =l add %s365, 8
+%t93 =l add %s369, 8
 %t94 =w loadub %t93
 %t95 =w extub %t94
 %t96 =w ceqw %t95, 1
-jnz %t96, @next7, @error6
-@error6
-call $printf (l $cctI_checkEnumFormat, ...,w %t95,w 1,l 36,l $fileName39,w 4995,w 48)
+jnz %t96, @next10, @error9
+@error9
+call $printf (l $cctI_checkEnumFormat, ...,w %t95,w 1,l 36,l $fileName39,w 4996,w 48)
 call $exit (w 1)
-@next7
-dbgloc 4995,48 ## ./concat.concat/generator_qbe.concat
-%s366 =l loadl %s365
-dbgloc 4995,58 ## ./concat.concat/generator_qbe.concat
+@next10
+dbgloc 4996,48 ## ./concat.concat/generator_qbe.concat
+%s370 =l loadl %s369
+dbgloc 4996,58 ## ./concat.concat/generator_qbe.concat
 %l17716 =l alloc8 8
-storel %s366,%l17716
-dbgloc 4996,7 ## ./concat.concat/generator_qbe.concat
-%s367 =l copy $cctI_string2107
-dbgloc 4996,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 4996,16 ## ./concat.concat/generator_qbe.concat
-%s368 =l copy 6
-%s369 =:struct250 call $cct_sb_dappendS (:struct250 %s348,l %s368,l %s367)
+storel %s370,%l17716
 dbgloc 4997,7 ## ./concat.concat/generator_qbe.concat
-%s370 =l copy $cct_39_FCONST__REFERENCE__NAME
-dbgloc 4997,28 ## ./concat.concat/generator_qbe.concat
-%s371 =l loadl %s370
-dbgloc 4997,28 ## ./concat.concat/generator_qbe.concat
-dbgloc 4997,28 ## ./concat.concat/generator_qbe.concat
-%s372 =l copy 13
-%s373 =:struct250 call $cct_sb_dappendS (:struct250 %s369,l %s372,l %s371)
+%s371 =l copy $cctI_string2107
+dbgloc 4997,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 4997,16 ## ./concat.concat/generator_qbe.concat
+%s372 =l copy 6
+%s373 =:struct250 call $cct_sb_dappendS (:struct250 %s352,l %s372,l %s371)
 dbgloc 4998,7 ## ./concat.concat/generator_qbe.concat
-%s374 =l copy %l17713
-dbgloc 4998,9 ## ./concat.concat/generator_qbe.concat
+%s374 =l copy $cct_39_FCONST__REFERENCE__NAME
+dbgloc 4998,28 ## ./concat.concat/generator_qbe.concat
 %s375 =l loadl %s374
-dbgloc 4998,9 ## ./concat.concat/generator_qbe.concat
-%s376 =:struct250 call $cct_sb_dappendI64 (:struct250 %s373,l %s375)
+dbgloc 4998,28 ## ./concat.concat/generator_qbe.concat
+dbgloc 4998,28 ## ./concat.concat/generator_qbe.concat
+%s376 =l copy 13
+%s377 =:struct250 call $cct_sb_dappendS (:struct250 %s373,l %s376,l %s375)
 dbgloc 4999,7 ## ./concat.concat/generator_qbe.concat
-%s377 =l copy $cctI_string2108
-dbgloc 4999,14 ## ./concat.concat/generator_qbe.concat
-dbgloc 4999,14 ## ./concat.concat/generator_qbe.concat
-%s378 =l copy 4
-%s379 =:struct250 call $cct_sb_dappendS (:struct250 %s376,l %s378,l %s377)
-dbgloc 5000,9 ## ./concat.concat/generator_qbe.concat
-%s380 =l copy %l17716
-dbgloc 5000,18 ## ./concat.concat/generator_qbe.concat
-%s381 =l loadl %s380
-dbgloc 5000,18 ## ./concat.concat/generator_qbe.concat
+%s378 =l copy %l17713
+dbgloc 4999,9 ## ./concat.concat/generator_qbe.concat
+%s379 =l loadl %s378
+dbgloc 4999,9 ## ./concat.concat/generator_qbe.concat
+%s380 =:struct250 call $cct_sb_dappendI64 (:struct250 %s377,l %s379)
+dbgloc 5000,7 ## ./concat.concat/generator_qbe.concat
+%s381 =l copy $cctI_string2108
+dbgloc 5000,14 ## ./concat.concat/generator_qbe.concat
+dbgloc 5000,14 ## ./concat.concat/generator_qbe.concat
+%s382 =l copy 4
+%s383 =:struct250 call $cct_sb_dappendS (:struct250 %s380,l %s382,l %s381)
+dbgloc 5001,9 ## ./concat.concat/generator_qbe.concat
+%s384 =l copy %l17716
+dbgloc 5001,18 ## ./concat.concat/generator_qbe.concat
+%s385 =l loadl %s384
+dbgloc 5001,18 ## ./concat.concat/generator_qbe.concat
 %t97 =l copy 0
 %t98 =l mul %t97, 64 ## named[100]( "TypedConstant" )
-%s382 =l add %s381, %t98
-dbgloc 5000,21 ## ./concat.concat/generator_qbe.concat
-%s383 =l add %s382,0
-dbgloc 5000,21 ## ./concat.concat/generator_qbe.concat
-%s384 =l copy %s383
-dbgloc 5000,21 ## ./concat.concat/generator_qbe.concat
+%s386 =l add %s385, %t98
+dbgloc 5001,21 ## ./concat.concat/generator_qbe.concat
+%s387 =l add %s386,0
+dbgloc 5001,21 ## ./concat.concat/generator_qbe.concat
+%s388 =l copy %s387
+dbgloc 5001,21 ## ./concat.concat/generator_qbe.concat
 %tmp23372 =l alloc4 5
-blit %s384,%tmp23372,5
-dbgloc 5000,21 ## ./concat.concat/generator_qbe.concat
-%s385 =l copy %tmp23372
-dbgloc 5000,32 ## ./concat.concat/generator_qbe.concat
-%s386 =l copy %l17716
-dbgloc 5000,41 ## ./concat.concat/generator_qbe.concat
-%s387 =l loadl %s386
-dbgloc 5000,41 ## ./concat.concat/generator_qbe.concat
+blit %s388,%tmp23372,5
+dbgloc 5001,21 ## ./concat.concat/generator_qbe.concat
+%s389 =l copy %tmp23372
+dbgloc 5001,32 ## ./concat.concat/generator_qbe.concat
+%s390 =l copy %l17716
+dbgloc 5001,41 ## ./concat.concat/generator_qbe.concat
+%s391 =l loadl %s390
+dbgloc 5001,41 ## ./concat.concat/generator_qbe.concat
 %t99 =l copy 0
 %t100 =l mul %t99, 64 ## named[100]( "TypedConstant" )
-%s388 =l add %s387, %t100
-dbgloc 5000,44 ## ./concat.concat/generator_qbe.concat
-%s389 =l add %s388,8
-dbgloc 5000,44 ## ./concat.concat/generator_qbe.concat
-%s390 =l copy %s389
-dbgloc 5000,44 ## ./concat.concat/generator_qbe.concat
+%s392 =l add %s391, %t100
+dbgloc 5001,44 ## ./concat.concat/generator_qbe.concat
+%s393 =l add %s392,8
+dbgloc 5001,44 ## ./concat.concat/generator_qbe.concat
+%s394 =l copy %s393
+dbgloc 5001,44 ## ./concat.concat/generator_qbe.concat
 %tmp23373 =l alloc8 17
-blit %s390,%tmp23373,17
-dbgloc 5000,44 ## ./concat.concat/generator_qbe.concat
-%s391 =l copy %tmp23373
-dbgloc 5000,51 ## ./concat.concat/generator_qbe.concat
-%s392 =w copy 1
-dbgloc 5000,56 ## ./concat.concat/generator_qbe.concat
-%s393 =l copy %l17716
-dbgloc 5000,65 ## ./concat.concat/generator_qbe.concat
-%s394 =l loadl %s393
-dbgloc 5000,65 ## ./concat.concat/generator_qbe.concat
+blit %s394,%tmp23373,17
+dbgloc 5001,44 ## ./concat.concat/generator_qbe.concat
+%s395 =l copy %tmp23373
+dbgloc 5001,51 ## ./concat.concat/generator_qbe.concat
+%s396 =w copy 1
+dbgloc 5001,56 ## ./concat.concat/generator_qbe.concat
+%s397 =l copy %l17716
+dbgloc 5001,65 ## ./concat.concat/generator_qbe.concat
+%s398 =l loadl %s397
+dbgloc 5001,65 ## ./concat.concat/generator_qbe.concat
 %t101 =l copy 0
 %t102 =l mul %t101, 64 ## named[100]( "TypedConstant" )
-%s395 =l add %s394, %t102
-dbgloc 5000,68 ## ./concat.concat/generator_qbe.concat
-%s396 =l add %s395,32
-dbgloc 5000,68 ## ./concat.concat/generator_qbe.concat
-%s397 =l copy %s396
-dbgloc 5000,68 ## ./concat.concat/generator_qbe.concat
+%s399 =l add %s398, %t102
+dbgloc 5001,68 ## ./concat.concat/generator_qbe.concat
+%s400 =l add %s399,32
+dbgloc 5001,68 ## ./concat.concat/generator_qbe.concat
+%s401 =l copy %s400
+dbgloc 5001,68 ## ./concat.concat/generator_qbe.concat
 %tmp23374 =l alloc8 32
-blit %s397,%tmp23374,32
-dbgloc 5000,68 ## ./concat.concat/generator_qbe.concat
-%s398 =l copy %tmp23374
-dbgloc 5000,73 ## ./concat.concat/generator_qbe.concat
-%s399 =l copy %l17677
-dbgloc 5000,81 ## ./concat.concat/generator_qbe.concat
-%s400 =l loadl %s399
-dbgloc 5000,81 ## ./concat.concat/generator_qbe.concat
-%s401 =l copy %s398
-dbgloc 5000,81 ## ./concat.concat/generator_qbe.concat
-%s402 =l copy %s391
-dbgloc 5000,81 ## ./concat.concat/generator_qbe.concat
-%s403 =l copy %s385
-dbgloc 5000,81 ## ./concat.concat/generator_qbe.concat
-%s404 =:struct250 call $cct_39_Fsb_dappendConstQBE (:struct250 %s379,:enum20 %s403,:enum26 %s402,ub %s392,:struct367 %s401,l %s400)
-dbgloc 5001,7 ## ./concat.concat/generator_qbe.concat
-%s405 =l copy $cctI_string2109
-dbgloc 5001,14 ## ./concat.concat/generator_qbe.concat
-dbgloc 5001,14 ## ./concat.concat/generator_qbe.concat
-%s406 =l copy 3
-%s407 =:struct250 call $cct_sb_dappendS (:struct250 %s404,l %s406,l %s405)
+blit %s401,%tmp23374,32
+dbgloc 5001,68 ## ./concat.concat/generator_qbe.concat
+%s402 =l copy %tmp23374
+dbgloc 5001,73 ## ./concat.concat/generator_qbe.concat
+%s403 =l copy %l17677
+dbgloc 5001,81 ## ./concat.concat/generator_qbe.concat
+%s404 =l loadl %s403
+dbgloc 5001,81 ## ./concat.concat/generator_qbe.concat
+%s405 =l copy %s402
+dbgloc 5001,81 ## ./concat.concat/generator_qbe.concat
+%s406 =l copy %s395
+dbgloc 5001,81 ## ./concat.concat/generator_qbe.concat
+%s407 =l copy %s389
+dbgloc 5001,81 ## ./concat.concat/generator_qbe.concat
+%s408 =:struct250 call $cct_39_Fsb_dappendConstQBE (:struct250 %s383,:enum20 %s407,:enum26 %s406,ub %s396,:struct367 %s405,l %s404)
 dbgloc 5002,7 ## ./concat.concat/generator_qbe.concat
-%s408 =l copy %l17713
-dbgloc 5002,9 ## ./concat.concat/generator_qbe.concat
-%s409 =l copy 1
-dbgloc 5002,11 ## ./concat.concat/generator_qbe.concat
-%s410 =l loadl %s408
-dbgloc 5002,11 ## ./concat.concat/generator_qbe.concat
-%s411 =l add %s410, %s409
+%s409 =l copy $cctI_string2109
+dbgloc 5002,14 ## ./concat.concat/generator_qbe.concat
+dbgloc 5002,14 ## ./concat.concat/generator_qbe.concat
+%s410 =l copy 3
+%s411 =:struct250 call $cct_sb_dappendS (:struct250 %s408,l %s410,l %s409)
+dbgloc 5003,7 ## ./concat.concat/generator_qbe.concat
+%s412 =l copy %l17713
+dbgloc 5003,9 ## ./concat.concat/generator_qbe.concat
+%s413 =l copy 1
+dbgloc 5003,11 ## ./concat.concat/generator_qbe.concat
+%s414 =l loadl %s412
+dbgloc 5003,11 ## ./concat.concat/generator_qbe.concat
+%s415 =l add %s414, %s413
 @continueWhile_237
-%t87 =l copy %s411
-%t88 =l copy %s407
+%t87 =l copy %s415
+%t88 =l copy %s411
 jmp @while_237
 @endWhile_237
-dbgloc 5005,5 ## ./concat.concat/generator_qbe.concat
-%s412 =l copy 0
+dbgloc 5006,5 ## ./concat.concat/generator_qbe.concat
+%s416 =l copy 0
 jmp @while_238
 @while_238
-%s413 =l phi @endWhile_237 %s348,@continueWhile_238 %t104
-%s414 =l phi @endWhile_237 %s412,@continueWhile_238 %t103
-dbgloc 5005,23 ## ./concat.concat/generator_qbe.concat
-%s415 =l copy %a1
-dbgloc 5005,31 ## ./concat.concat/generator_qbe.concat
+%s417 =l phi @endWhile_237 %s352,@continueWhile_238 %t104
+%s418 =l phi @endWhile_237 %s416,@continueWhile_238 %t103
+dbgloc 5006,23 ## ./concat.concat/generator_qbe.concat
+%s419 =l copy %a1
+dbgloc 5006,31 ## ./concat.concat/generator_qbe.concat
 %t105 =l copy 0
 %t106 =l mul %t105, 915 ## named[101]( "ProgramContext" )
-%s416 =l add %s415, %t106
-dbgloc 5005,34 ## ./concat.concat/generator_qbe.concat
-%s417 =l add %s416,696
-dbgloc 5005,45 ## ./concat.concat/generator_qbe.concat
-%s418 =l add %s417,8
-dbgloc 5005,45 ## ./concat.concat/generator_qbe.concat
-%s419 =l loadl %s418
-dbgloc 5005,53 ## ./concat.concat/generator_qbe.concat
-%s420 =l copy %s419
-dbgloc 5005,53 ## ./concat.concat/generator_qbe.concat
-%s421 =w csltl %s414, %s420
-dbgloc 5005,55 ## ./concat.concat/generator_qbe.concat
-jnz %s421, @do_238, @endWhile_238
+%s420 =l add %s419, %t106
+dbgloc 5006,34 ## ./concat.concat/generator_qbe.concat
+%s421 =l add %s420,696
+dbgloc 5006,45 ## ./concat.concat/generator_qbe.concat
+%s422 =l add %s421,8
+dbgloc 5006,45 ## ./concat.concat/generator_qbe.concat
+%s423 =l loadl %s422
+dbgloc 5006,53 ## ./concat.concat/generator_qbe.concat
+%s424 =l copy %s423
+dbgloc 5006,53 ## ./concat.concat/generator_qbe.concat
+%s425 =w csltl %s418, %s424
+dbgloc 5006,55 ## ./concat.concat/generator_qbe.concat
+jnz %s425, @do_238, @endWhile_238
 @do_238
-dbgloc 5005,62 ## ./concat.concat/generator_qbe.concat
+dbgloc 5006,62 ## ./concat.concat/generator_qbe.concat
 %l17722 =l alloc8 8
-storel %s414,%l17722
-dbgloc 5006,7 ## ./concat.concat/generator_qbe.concat
-%s422 =l copy %a1
-dbgloc 5006,15 ## ./concat.concat/generator_qbe.concat
+storel %s418,%l17722
+dbgloc 5007,7 ## ./concat.concat/generator_qbe.concat
+%s426 =l copy %a1
+dbgloc 5007,15 ## ./concat.concat/generator_qbe.concat
 %t107 =l copy 0
 %t108 =l mul %t107, 915 ## named[101]( "ProgramContext" )
-%s423 =l add %s422, %t108
-dbgloc 5006,18 ## ./concat.concat/generator_qbe.concat
-%s424 =l add %s423,696
-dbgloc 5006,18 ## ./concat.concat/generator_qbe.concat
-%s425 =l copy %s424
-dbgloc 5006,18 ## ./concat.concat/generator_qbe.concat
+%s427 =l add %s426, %t108
+dbgloc 5007,18 ## ./concat.concat/generator_qbe.concat
+%s428 =l add %s427,696
+dbgloc 5007,18 ## ./concat.concat/generator_qbe.concat
+%s429 =l copy %s428
+dbgloc 5007,18 ## ./concat.concat/generator_qbe.concat
 %tmp23375 =l alloc8 24
-blit %s425,%tmp23375,24
-dbgloc 5006,18 ## ./concat.concat/generator_qbe.concat
-%s426 =l copy %tmp23375
-dbgloc 5006,29 ## ./concat.concat/generator_qbe.concat
-%s427 =l copy %l17722
-dbgloc 5006,31 ## ./concat.concat/generator_qbe.concat
-%s428 =l loadl %s427
-dbgloc 5006,31 ## ./concat.concat/generator_qbe.concat
-%s429 =l copy %s426
-dbgloc 5006,31 ## ./concat.concat/generator_qbe.concat
-%s430 =:enum101 call $cct_list_dat__64_I17 (:struct824 %s429,l %s428)
-dbgloc 5006,39 ## ./concat.concat/generator_qbe.concat
+blit %s429,%tmp23375,24
+dbgloc 5007,18 ## ./concat.concat/generator_qbe.concat
+%s430 =l copy %tmp23375
+dbgloc 5007,29 ## ./concat.concat/generator_qbe.concat
+%s431 =l copy %l17722
+dbgloc 5007,31 ## ./concat.concat/generator_qbe.concat
+%s432 =l loadl %s431
+dbgloc 5007,31 ## ./concat.concat/generator_qbe.concat
+%s433 =l copy %s430
+dbgloc 5007,31 ## ./concat.concat/generator_qbe.concat
+%s434 =:enum101 call $cct_list_dat__64_I17 (:struct824 %s433,l %s432)
+dbgloc 5007,39 ## ./concat.concat/generator_qbe.concat
 ## check enum 
-%t109 =l add %s430, 8
+%t109 =l add %s434, 8
 %t110 =w loadub %t109
 %t111 =w extub %t110
 %t112 =w ceqw %t111, 1
-jnz %t112, @next9, @error8
-@error8
-call $printf (l $cctI_checkEnumFormat, ...,w %t111,w 1,l 36,l $fileName39,w 5006,w 39)
+jnz %t112, @next12, @error11
+@error11
+call $printf (l $cctI_checkEnumFormat, ...,w %t111,w 1,l 36,l $fileName39,w 5007,w 39)
 call $exit (w 1)
-@next9
-dbgloc 5006,39 ## ./concat.concat/generator_qbe.concat
-%s431 =l loadl %s430
-dbgloc 5006,49 ## ./concat.concat/generator_qbe.concat
+@next12
+dbgloc 5007,39 ## ./concat.concat/generator_qbe.concat
+%s435 =l loadl %s434
+dbgloc 5007,49 ## ./concat.concat/generator_qbe.concat
 %l17725 =l alloc8 8
-storel %s431,%l17725
-dbgloc 5007,9 ## ./concat.concat/generator_qbe.concat
-%s432 =l copy $cctI_string2110
-dbgloc 5007,22 ## ./concat.concat/generator_qbe.concat
-dbgloc 5007,22 ## ./concat.concat/generator_qbe.concat
-%s433 =l copy 9
-%s434 =:struct250 call $cct_sb_dappendS (:struct250 %s413,l %s433,l %s432)
+storel %s435,%l17725
 dbgloc 5008,9 ## ./concat.concat/generator_qbe.concat
-%s435 =l copy %l17725
-dbgloc 5008,11 ## ./concat.concat/generator_qbe.concat
-%s436 =l loadl %s435
-dbgloc 5008,11 ## ./concat.concat/generator_qbe.concat
+%s436 =l copy $cctI_string2110
+dbgloc 5008,22 ## ./concat.concat/generator_qbe.concat
+dbgloc 5008,22 ## ./concat.concat/generator_qbe.concat
+%s437 =l copy 9
+%s438 =:struct250 call $cct_sb_dappendS (:struct250 %s417,l %s437,l %s436)
+dbgloc 5009,9 ## ./concat.concat/generator_qbe.concat
+%s439 =l copy %l17725
+dbgloc 5009,11 ## ./concat.concat/generator_qbe.concat
+%s440 =l loadl %s439
+dbgloc 5009,11 ## ./concat.concat/generator_qbe.concat
 %t113 =l copy 0
 %t114 =l mul %t113, 124 ## named[95]( "ProgramFile" )
-%s437 =l add %s436, %t114
-dbgloc 5008,14 ## ./concat.concat/generator_qbe.concat
-%s438 =l add %s437,96
-dbgloc 5008,14 ## ./concat.concat/generator_qbe.concat
-%s439 =l copy %s438
-dbgloc 5008,14 ## ./concat.concat/generator_qbe.concat
+%s441 =l add %s440, %t114
+dbgloc 5009,14 ## ./concat.concat/generator_qbe.concat
+%s442 =l add %s441,96
+dbgloc 5009,14 ## ./concat.concat/generator_qbe.concat
+%s443 =l copy %s442
+dbgloc 5009,14 ## ./concat.concat/generator_qbe.concat
 %tmp23376 =l alloc8 24
-blit %s439,%tmp23376,24
-dbgloc 5008,14 ## ./concat.concat/generator_qbe.concat
-%s440 =l copy %tmp23376
-dbgloc 5008,24 ## ./concat.concat/generator_qbe.concat
-%s441 =l copy %s440
-dbgloc 5008,24 ## ./concat.concat/generator_qbe.concat
-%s442 =:struct250 call $cct_sb_dappendSb (:struct250 %s434,:struct250 %s441)
-dbgloc 5009,9 ## ./concat.concat/generator_qbe.concat
-%s443 =l copy $cctI_string2111
-dbgloc 5009,19 ## ./concat.concat/generator_qbe.concat
-dbgloc 5009,19 ## ./concat.concat/generator_qbe.concat
-%s444 =l copy 2
-%s445 =:struct250 call $cct_sb_dappendS (:struct250 %s442,l %s444,l %s443)
+blit %s443,%tmp23376,24
+dbgloc 5009,14 ## ./concat.concat/generator_qbe.concat
+%s444 =l copy %tmp23376
+dbgloc 5009,24 ## ./concat.concat/generator_qbe.concat
+%s445 =l copy %s444
+dbgloc 5009,24 ## ./concat.concat/generator_qbe.concat
+%s446 =:struct250 call $cct_sb_dappendSb (:struct250 %s438,:struct250 %s445)
 dbgloc 5010,9 ## ./concat.concat/generator_qbe.concat
-%s446 =l copy $cctI_string2112
-dbgloc 5010,18 ## ./concat.concat/generator_qbe.concat
-dbgloc 5010,18 ## ./concat.concat/generator_qbe.concat
-%s447 =l copy 6
-%s448 =:struct250 call $cct_sb_dappendS (:struct250 %s445,l %s447,l %s446)
+%s447 =l copy $cctI_string2111
+dbgloc 5010,19 ## ./concat.concat/generator_qbe.concat
+dbgloc 5010,19 ## ./concat.concat/generator_qbe.concat
+%s448 =l copy 2
+%s449 =:struct250 call $cct_sb_dappendS (:struct250 %s446,l %s448,l %s447)
 dbgloc 5011,9 ## ./concat.concat/generator_qbe.concat
-%s449 =l copy $cct_39_FFILE__NAME__NAME
-dbgloc 5011,24 ## ./concat.concat/generator_qbe.concat
-%s450 =l loadl %s449
-dbgloc 5011,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5011,24 ## ./concat.concat/generator_qbe.concat
-%s451 =l copy 8
-%s452 =:struct250 call $cct_sb_dappendS (:struct250 %s448,l %s451,l %s450)
+%s450 =l copy $cctI_string2112
+dbgloc 5011,18 ## ./concat.concat/generator_qbe.concat
+dbgloc 5011,18 ## ./concat.concat/generator_qbe.concat
+%s451 =l copy 6
+%s452 =:struct250 call $cct_sb_dappendS (:struct250 %s449,l %s451,l %s450)
 dbgloc 5012,9 ## ./concat.concat/generator_qbe.concat
-%s453 =l copy %l17722
-dbgloc 5012,11 ## ./concat.concat/generator_qbe.concat
+%s453 =l copy $cct_39_FFILE__NAME__NAME
+dbgloc 5012,24 ## ./concat.concat/generator_qbe.concat
 %s454 =l loadl %s453
-dbgloc 5012,11 ## ./concat.concat/generator_qbe.concat
-%s455 =:struct250 call $cct_sb_dappendI64 (:struct250 %s452,l %s454)
+dbgloc 5012,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5012,24 ## ./concat.concat/generator_qbe.concat
+%s455 =l copy 8
+%s456 =:struct250 call $cct_sb_dappendS (:struct250 %s452,l %s455,l %s454)
 dbgloc 5013,9 ## ./concat.concat/generator_qbe.concat
-%s456 =l copy $cctI_string2113
-dbgloc 5013,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5013,16 ## ./concat.concat/generator_qbe.concat
-%s457 =l copy 4
-%s458 =:struct250 call $cct_sb_dappendS (:struct250 %s455,l %s457,l %s456)
-dbgloc 5014,11 ## ./concat.concat/generator_qbe.concat
-%s459 =l copy %l17725
-dbgloc 5014,13 ## ./concat.concat/generator_qbe.concat
-%s460 =l loadl %s459
-dbgloc 5014,13 ## ./concat.concat/generator_qbe.concat
+%s457 =l copy %l17722
+dbgloc 5013,11 ## ./concat.concat/generator_qbe.concat
+%s458 =l loadl %s457
+dbgloc 5013,11 ## ./concat.concat/generator_qbe.concat
+%s459 =:struct250 call $cct_sb_dappendI64 (:struct250 %s456,l %s458)
+dbgloc 5014,9 ## ./concat.concat/generator_qbe.concat
+%s460 =l copy $cctI_string2113
+dbgloc 5014,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5014,16 ## ./concat.concat/generator_qbe.concat
+%s461 =l copy 4
+%s462 =:struct250 call $cct_sb_dappendS (:struct250 %s459,l %s461,l %s460)
+dbgloc 5015,11 ## ./concat.concat/generator_qbe.concat
+%s463 =l copy %l17725
+dbgloc 5015,13 ## ./concat.concat/generator_qbe.concat
+%s464 =l loadl %s463
+dbgloc 5015,13 ## ./concat.concat/generator_qbe.concat
 %t115 =l copy 0
 %t116 =l mul %t115, 124 ## named[95]( "ProgramFile" )
-%s461 =l add %s460, %t116
-dbgloc 5014,16 ## ./concat.concat/generator_qbe.concat
-%s462 =l add %s461,96
-dbgloc 5014,16 ## ./concat.concat/generator_qbe.concat
-%s463 =l copy %s462
-dbgloc 5014,16 ## ./concat.concat/generator_qbe.concat
+%s465 =l add %s464, %t116
+dbgloc 5015,16 ## ./concat.concat/generator_qbe.concat
+%s466 =l add %s465,96
+dbgloc 5015,16 ## ./concat.concat/generator_qbe.concat
+%s467 =l copy %s466
+dbgloc 5015,16 ## ./concat.concat/generator_qbe.concat
 %tmp23377 =l alloc8 24
-blit %s463,%tmp23377,24
-dbgloc 5014,16 ## ./concat.concat/generator_qbe.concat
-%s464 =l copy %tmp23377
-dbgloc 5015,13 ## ./concat.concat/generator_qbe.concat
-%s465 =l copy %s464
-dbgloc 5015,13 ## ./concat.concat/generator_qbe.concat
-%s466 =:struct226 call $cct_sb_dasStr (:struct250 %s465)
-dbgloc 5015,22 ## ./concat.concat/generator_qbe.concat
-%s467 =l copy %l17673
-dbgloc 5015,35 ## ./concat.concat/generator_qbe.concat
-%s468 =l loadl %s467
-dbgloc 5015,35 ## ./concat.concat/generator_qbe.concat
-%s469 =:struct395 call $cct_id_dwrapStringConstant (:struct226 %s466,l %s468)
+blit %s467,%tmp23377,24
+dbgloc 5015,16 ## ./concat.concat/generator_qbe.concat
+%s468 =l copy %tmp23377
 dbgloc 5016,13 ## ./concat.concat/generator_qbe.concat
-%s470 =l copy %l17677
-dbgloc 5017,11 ## ./concat.concat/generator_qbe.concat
-%s471 =l loadl %s470
-dbgloc 5017,11 ## ./concat.concat/generator_qbe.concat
-%s472 =:struct250 call $cct_39_Fsb_dappendStringConstQBE (:struct250 %s458,:struct395 %s469,l %s471)
-dbgloc 5018,9 ## ./concat.concat/generator_qbe.concat
-%s473 =l copy $cctI_string2114
-dbgloc 5018,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5018,16 ## ./concat.concat/generator_qbe.concat
-%s474 =l copy 3
-%s475 =:struct250 call $cct_sb_dappendS (:struct250 %s472,l %s474,l %s473)
+%s469 =l copy %s468
+dbgloc 5016,13 ## ./concat.concat/generator_qbe.concat
+%s470 =:struct226 call $cct_sb_dasStr (:struct250 %s469)
+dbgloc 5016,22 ## ./concat.concat/generator_qbe.concat
+%s471 =l copy %l17673
+dbgloc 5016,35 ## ./concat.concat/generator_qbe.concat
+%s472 =l loadl %s471
+dbgloc 5016,35 ## ./concat.concat/generator_qbe.concat
+%s473 =:struct395 call $cct_id_dwrapStringConstant (:struct226 %s470,l %s472)
+dbgloc 5017,13 ## ./concat.concat/generator_qbe.concat
+%s474 =l copy %l17677
+dbgloc 5018,11 ## ./concat.concat/generator_qbe.concat
+%s475 =l loadl %s474
+dbgloc 5018,11 ## ./concat.concat/generator_qbe.concat
+%s476 =:struct250 call $cct_39_Fsb_dappendStringConstQBE (:struct250 %s462,:struct395 %s473,l %s475)
 dbgloc 5019,9 ## ./concat.concat/generator_qbe.concat
-%s476 =l copy 0
+%s477 =l copy $cctI_string2114
+dbgloc 5019,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5019,16 ## ./concat.concat/generator_qbe.concat
+%s478 =l copy 3
+%s479 =:struct250 call $cct_sb_dappendS (:struct250 %s476,l %s478,l %s477)
+dbgloc 5020,9 ## ./concat.concat/generator_qbe.concat
+%s480 =l copy 0
 jmp @while_239
 @while_239
-%s477 =l phi @next9 %s475,@continueWhile_239 %t118
-%s478 =l phi @next9 %s476,@continueWhile_239 %t117
-dbgloc 5019,27 ## ./concat.concat/generator_qbe.concat
-%s479 =l copy %l17725
-dbgloc 5019,29 ## ./concat.concat/generator_qbe.concat
-%s480 =l loadl %s479
-dbgloc 5019,29 ## ./concat.concat/generator_qbe.concat
+%s481 =l phi @next12 %s479,@continueWhile_239 %t118
+%s482 =l phi @next12 %s480,@continueWhile_239 %t117
+dbgloc 5020,27 ## ./concat.concat/generator_qbe.concat
+%s483 =l copy %l17725
+dbgloc 5020,29 ## ./concat.concat/generator_qbe.concat
+%s484 =l loadl %s483
+dbgloc 5020,29 ## ./concat.concat/generator_qbe.concat
 %t119 =l copy 0
 %t120 =l mul %t119, 124 ## named[95]( "ProgramFile" )
-%s481 =l add %s480, %t120
-dbgloc 5019,32 ## ./concat.concat/generator_qbe.concat
-%s482 =l add %s481,24
-dbgloc 5019,42 ## ./concat.concat/generator_qbe.concat
-%s483 =l add %s482,8
-dbgloc 5019,42 ## ./concat.concat/generator_qbe.concat
-%s484 =l loadl %s483
-dbgloc 5019,50 ## ./concat.concat/generator_qbe.concat
-%s485 =l copy %s484
-dbgloc 5019,50 ## ./concat.concat/generator_qbe.concat
-%s486 =w csltl %s478, %s485
-dbgloc 5019,52 ## ./concat.concat/generator_qbe.concat
-jnz %s486, @do_239, @endWhile_239
-@do_239
-dbgloc 5021,11 ## ./concat.concat/generator_qbe.concat
-%s487 =l copy %l17725
-dbgloc 5021,13 ## ./concat.concat/generator_qbe.concat
+%s485 =l add %s484, %t120
+dbgloc 5020,32 ## ./concat.concat/generator_qbe.concat
+%s486 =l add %s485,24
+dbgloc 5020,42 ## ./concat.concat/generator_qbe.concat
+%s487 =l add %s486,8
+dbgloc 5020,42 ## ./concat.concat/generator_qbe.concat
 %s488 =l loadl %s487
-dbgloc 5021,13 ## ./concat.concat/generator_qbe.concat
+dbgloc 5020,50 ## ./concat.concat/generator_qbe.concat
+%s489 =l copy %s488
+dbgloc 5020,50 ## ./concat.concat/generator_qbe.concat
+%s490 =w csltl %s482, %s489
+dbgloc 5020,52 ## ./concat.concat/generator_qbe.concat
+jnz %s490, @do_239, @endWhile_239
+@do_239
+dbgloc 5022,11 ## ./concat.concat/generator_qbe.concat
+%s491 =l copy %l17725
+dbgloc 5022,13 ## ./concat.concat/generator_qbe.concat
+%s492 =l loadl %s491
+dbgloc 5022,13 ## ./concat.concat/generator_qbe.concat
 %t121 =l copy 0
 %t122 =l mul %t121, 124 ## named[95]( "ProgramFile" )
-%s489 =l add %s488, %t122
-dbgloc 5021,16 ## ./concat.concat/generator_qbe.concat
-%s490 =l add %s489,24
-dbgloc 5021,16 ## ./concat.concat/generator_qbe.concat
-%s491 =l copy %s490
-dbgloc 5021,16 ## ./concat.concat/generator_qbe.concat
+%s493 =l add %s492, %t122
+dbgloc 5022,16 ## ./concat.concat/generator_qbe.concat
+%s494 =l add %s493,24
+dbgloc 5022,16 ## ./concat.concat/generator_qbe.concat
+%s495 =l copy %s494
+dbgloc 5022,16 ## ./concat.concat/generator_qbe.concat
 %tmp23378 =l alloc8 24
-blit %s491,%tmp23378,24
-dbgloc 5021,16 ## ./concat.concat/generator_qbe.concat
-%s492 =l copy %tmp23378
-dbgloc 5021,35 ## ./concat.concat/generator_qbe.concat
-%s493 =l copy %s492
-dbgloc 5021,35 ## ./concat.concat/generator_qbe.concat
-%s494 =:enum49 call $cct_list_dat__64_I19 (:struct813 %s493,l %s478)
-dbgloc 5021,43 ## ./concat.concat/generator_qbe.concat
+blit %s495,%tmp23378,24
+dbgloc 5022,16 ## ./concat.concat/generator_qbe.concat
+%s496 =l copy %tmp23378
+dbgloc 5022,35 ## ./concat.concat/generator_qbe.concat
+%s497 =l copy %s496
+dbgloc 5022,35 ## ./concat.concat/generator_qbe.concat
+%s498 =:enum49 call $cct_list_dat__64_I19 (:struct813 %s497,l %s482)
+dbgloc 5022,43 ## ./concat.concat/generator_qbe.concat
 ## check enum 
-%t123 =l add %s494, 8
+%t123 =l add %s498, 8
 %t124 =w loadub %t123
 %t125 =w extub %t124
 %t126 =w ceqw %t125, 1
-jnz %t126, @next11, @error10
-@error10
-call $printf (l $cctI_checkEnumFormat, ...,w %t125,w 1,l 36,l $fileName39,w 5021,w 43)
+jnz %t126, @next14, @error13
+@error13
+call $printf (l $cctI_checkEnumFormat, ...,w %t125,w 1,l 36,l $fileName39,w 5022,w 43)
 call $exit (w 1)
-@next11
-dbgloc 5021,43 ## ./concat.concat/generator_qbe.concat
-%s495 =l loadl %s494
-dbgloc 5021,49 ## ./concat.concat/generator_qbe.concat
-%s496 =l copy %l17677
-dbgloc 5021,57 ## ./concat.concat/generator_qbe.concat
-%s497 =l loadl %s496
-dbgloc 5021,57 ## ./concat.concat/generator_qbe.concat
-%s498 =l copy %s495
-dbgloc 5021,57 ## ./concat.concat/generator_qbe.concat
-%s499 =:struct250 call $cct_39_FcompileOp (:struct250 %s477,l %s498,l %s497)
-dbgloc 5022,18 ## ./concat.concat/generator_qbe.concat
-%s500 =l copy 1
-dbgloc 5022,20 ## ./concat.concat/generator_qbe.concat
-%s501 =l add %s478, %s500
+@next14
+dbgloc 5022,43 ## ./concat.concat/generator_qbe.concat
+%s499 =l loadl %s498
+dbgloc 5022,49 ## ./concat.concat/generator_qbe.concat
+%s500 =l copy %l17677
+dbgloc 5022,57 ## ./concat.concat/generator_qbe.concat
+%s501 =l loadl %s500
+dbgloc 5022,57 ## ./concat.concat/generator_qbe.concat
+%s502 =l copy %s499
+dbgloc 5022,57 ## ./concat.concat/generator_qbe.concat
+%s503 =:struct250 call $cct_39_FcompileOp (:struct250 %s481,l %s502,l %s501)
+dbgloc 5023,18 ## ./concat.concat/generator_qbe.concat
+%s504 =l copy 1
+dbgloc 5023,20 ## ./concat.concat/generator_qbe.concat
+%s505 =l add %s482, %s504
 @continueWhile_239
-%t117 =l copy %s501
-%t118 =l copy %s499
+%t117 =l copy %s505
+%t118 =l copy %s503
 jmp @while_239
 @endWhile_239
-dbgloc 5024,9 ## ./concat.concat/generator_qbe.concat
-%s502 =l copy %a0
-dbgloc 5024,23 ## ./concat.concat/generator_qbe.concat
-%s503 =w call $cct_io_dfputSb (l %s502,:struct250 %s477)
 dbgloc 5025,9 ## ./concat.concat/generator_qbe.concat
-%s504 =:struct250 call $cct_sb_dclear (:struct250 %s477)
-dbgloc 5026,7 ## ./concat.concat/generator_qbe.concat
-%s505 =l copy %l17722
+%s506 =l copy %a0
+dbgloc 5025,23 ## ./concat.concat/generator_qbe.concat
+%s507 =w call $cct_io_dfputSb (l %s506,:struct250 %s481)
 dbgloc 5026,9 ## ./concat.concat/generator_qbe.concat
-%s506 =l copy 1
-dbgloc 5026,11 ## ./concat.concat/generator_qbe.concat
-%s507 =l loadl %s505
-dbgloc 5026,11 ## ./concat.concat/generator_qbe.concat
-%s508 =l add %s507, %s506
+%s508 =:struct250 call $cct_sb_dclear (:struct250 %s481)
+dbgloc 5027,7 ## ./concat.concat/generator_qbe.concat
+%s509 =l copy %l17722
+dbgloc 5027,9 ## ./concat.concat/generator_qbe.concat
+%s510 =l copy 1
+dbgloc 5027,11 ## ./concat.concat/generator_qbe.concat
+%s511 =l loadl %s509
+dbgloc 5027,11 ## ./concat.concat/generator_qbe.concat
+%s512 =l add %s511, %s510
 @continueWhile_238
-%t103 =l copy %s508
-%t104 =l copy %s504
+%t103 =l copy %s512
+%t104 =l copy %s508
 jmp @while_238
 @endWhile_238
-dbgloc 5028,5 ## ./concat.concat/generator_qbe.concat
-%s509 =l copy %a0
-dbgloc 5028,19 ## ./concat.concat/generator_qbe.concat
-%s510 =w call $cct_io_dfputSb (l %s509,:struct250 %s413)
 dbgloc 5029,5 ## ./concat.concat/generator_qbe.concat
-%s511 =:struct250 call $cct_sb_dclear (:struct250 %s413)
+%s513 =l copy %a0
+dbgloc 5029,19 ## ./concat.concat/generator_qbe.concat
+%s514 =w call $cct_io_dfputSb (l %s513,:struct250 %s417)
 dbgloc 5030,5 ## ./concat.concat/generator_qbe.concat
-%s512 =l copy 0
+%s515 =:struct250 call $cct_sb_dclear (:struct250 %s417)
+dbgloc 5031,5 ## ./concat.concat/generator_qbe.concat
+%s516 =l copy 0
 jmp @while_240
 @while_240
-%s513 =l phi @endWhile_238 %s511,@continueWhile_240 %t128
-%s514 =l phi @endWhile_238 %s512,@continueWhile_240 %t127
-dbgloc 5030,23 ## ./concat.concat/generator_qbe.concat
-%s515 =l copy %l17677
-dbgloc 5030,31 ## ./concat.concat/generator_qbe.concat
-%s516 =l loadl %s515
-dbgloc 5030,31 ## ./concat.concat/generator_qbe.concat
+%s517 =l phi @endWhile_238 %s515,@continueWhile_240 %t128
+%s518 =l phi @endWhile_238 %s516,@continueWhile_240 %t127
+dbgloc 5031,23 ## ./concat.concat/generator_qbe.concat
+%s519 =l copy %l17677
+dbgloc 5031,31 ## ./concat.concat/generator_qbe.concat
+%s520 =l loadl %s519
+dbgloc 5031,31 ## ./concat.concat/generator_qbe.concat
 %t129 =l copy 0
 %t130 =l mul %t129, 189 ## named[145]( "CompilerContext" )
-%s517 =l add %s516, %t130
-dbgloc 5030,34 ## ./concat.concat/generator_qbe.concat
-%s518 =l add %s517,104
-dbgloc 5030,51 ## ./concat.concat/generator_qbe.concat
-%s519 =l add %s518,8
-dbgloc 5030,51 ## ./concat.concat/generator_qbe.concat
-%s520 =l loadl %s519
-dbgloc 5030,59 ## ./concat.concat/generator_qbe.concat
-%s521 =l copy %s520
-dbgloc 5030,59 ## ./concat.concat/generator_qbe.concat
-%s522 =w csltl %s514, %s521
-dbgloc 5030,61 ## ./concat.concat/generator_qbe.concat
-jnz %s522, @do_240, @endWhile_240
-@do_240
-dbgloc 5030,68 ## ./concat.concat/generator_qbe.concat
-%l17734 =l alloc8 8
-storel %s514,%l17734
-dbgloc 5031,7 ## ./concat.concat/generator_qbe.concat
-%s523 =l copy %l17677
-dbgloc 5031,15 ## ./concat.concat/generator_qbe.concat
+%s521 =l add %s520, %t130
+dbgloc 5031,34 ## ./concat.concat/generator_qbe.concat
+%s522 =l add %s521,104
+dbgloc 5031,51 ## ./concat.concat/generator_qbe.concat
+%s523 =l add %s522,8
+dbgloc 5031,51 ## ./concat.concat/generator_qbe.concat
 %s524 =l loadl %s523
-dbgloc 5031,15 ## ./concat.concat/generator_qbe.concat
+dbgloc 5031,59 ## ./concat.concat/generator_qbe.concat
+%s525 =l copy %s524
+dbgloc 5031,59 ## ./concat.concat/generator_qbe.concat
+%s526 =w csltl %s518, %s525
+dbgloc 5031,61 ## ./concat.concat/generator_qbe.concat
+jnz %s526, @do_240, @endWhile_240
+@do_240
+dbgloc 5031,68 ## ./concat.concat/generator_qbe.concat
+%l17734 =l alloc8 8
+storel %s518,%l17734
+dbgloc 5032,7 ## ./concat.concat/generator_qbe.concat
+%s527 =l copy %l17677
+dbgloc 5032,15 ## ./concat.concat/generator_qbe.concat
+%s528 =l loadl %s527
+dbgloc 5032,15 ## ./concat.concat/generator_qbe.concat
 %t131 =l copy 0
 %t132 =l mul %t131, 189 ## named[145]( "CompilerContext" )
-%s525 =l add %s524, %t132
-dbgloc 5031,18 ## ./concat.concat/generator_qbe.concat
-%s526 =l add %s525,104
-dbgloc 5031,18 ## ./concat.concat/generator_qbe.concat
-%s527 =l copy %s526
-dbgloc 5031,18 ## ./concat.concat/generator_qbe.concat
+%s529 =l add %s528, %t132
+dbgloc 5032,18 ## ./concat.concat/generator_qbe.concat
+%s530 =l add %s529,104
+dbgloc 5032,18 ## ./concat.concat/generator_qbe.concat
+%s531 =l copy %s530
+dbgloc 5032,18 ## ./concat.concat/generator_qbe.concat
 %tmp23379 =l alloc8 24
-blit %s527,%tmp23379,24
-dbgloc 5031,18 ## ./concat.concat/generator_qbe.concat
-%s528 =l copy %tmp23379
-dbgloc 5031,35 ## ./concat.concat/generator_qbe.concat
-%s529 =l copy %l17734
-dbgloc 5031,37 ## ./concat.concat/generator_qbe.concat
-%s530 =l loadl %s529
-dbgloc 5031,37 ## ./concat.concat/generator_qbe.concat
-%s531 =l copy %s528
-dbgloc 5031,37 ## ./concat.concat/generator_qbe.concat
-%s532 =:struct395 call $cct_list_dget__64_I19 (:struct1250 %s531,l %s530)
-dbgloc 5031,50 ## ./concat.concat/generator_qbe.concat
+blit %s531,%tmp23379,24
+dbgloc 5032,18 ## ./concat.concat/generator_qbe.concat
+%s532 =l copy %tmp23379
+dbgloc 5032,35 ## ./concat.concat/generator_qbe.concat
+%s533 =l copy %l17734
+dbgloc 5032,37 ## ./concat.concat/generator_qbe.concat
+%s534 =l loadl %s533
+dbgloc 5032,37 ## ./concat.concat/generator_qbe.concat
+%s535 =l copy %s532
+dbgloc 5032,37 ## ./concat.concat/generator_qbe.concat
+%s536 =:struct395 call $cct_list_dget__64_I19 (:struct1250 %s535,l %s534)
+dbgloc 5032,50 ## ./concat.concat/generator_qbe.concat
 %l17736 =l alloc8 16
-blit %s532,%l17736,16
-dbgloc 5032,7 ## ./concat.concat/generator_qbe.concat
-%s533 =l copy $cctI_string2115
-dbgloc 5032,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5032,16 ## ./concat.concat/generator_qbe.concat
-%s534 =l copy 6
-%s535 =:struct250 call $cct_sb_dappendS (:struct250 %s513,l %s534,l %s533)
+blit %s536,%l17736,16
 dbgloc 5033,7 ## ./concat.concat/generator_qbe.concat
-%s536 =l copy $cct_39_FSTRING__CONST__NAME
-dbgloc 5033,25 ## ./concat.concat/generator_qbe.concat
-%s537 =l loadl %s536
-dbgloc 5033,25 ## ./concat.concat/generator_qbe.concat
-dbgloc 5033,25 ## ./concat.concat/generator_qbe.concat
-%s538 =l copy 11
-%s539 =:struct250 call $cct_sb_dappendS (:struct250 %s535,l %s538,l %s537)
+%s537 =l copy $cctI_string2115
+dbgloc 5033,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5033,16 ## ./concat.concat/generator_qbe.concat
+%s538 =l copy 6
+%s539 =:struct250 call $cct_sb_dappendS (:struct250 %s517,l %s538,l %s537)
 dbgloc 5034,7 ## ./concat.concat/generator_qbe.concat
-%s540 =l copy %l17734
-dbgloc 5034,9 ## ./concat.concat/generator_qbe.concat
+%s540 =l copy $cct_39_FSTRING__CONST__NAME
+dbgloc 5034,25 ## ./concat.concat/generator_qbe.concat
 %s541 =l loadl %s540
-dbgloc 5034,9 ## ./concat.concat/generator_qbe.concat
-%s542 =:struct250 call $cct_sb_dappendI64 (:struct250 %s539,l %s541)
+dbgloc 5034,25 ## ./concat.concat/generator_qbe.concat
+dbgloc 5034,25 ## ./concat.concat/generator_qbe.concat
+%s542 =l copy 11
+%s543 =:struct250 call $cct_sb_dappendS (:struct250 %s539,l %s542,l %s541)
 dbgloc 5035,7 ## ./concat.concat/generator_qbe.concat
-%s543 =l copy $cctI_string2116
-dbgloc 5035,14 ## ./concat.concat/generator_qbe.concat
-dbgloc 5035,14 ## ./concat.concat/generator_qbe.concat
-%s544 =l copy 4
-%s545 =:struct250 call $cct_sb_dappendS (:struct250 %s542,l %s544,l %s543)
-dbgloc 5036,9 ## ./concat.concat/generator_qbe.concat
-%s546 =l copy %l17736
-dbgloc 5036,13 ## ./concat.concat/generator_qbe.concat
-%s547 =l copy %l17677
-dbgloc 5036,21 ## ./concat.concat/generator_qbe.concat
-%s548 =l loadl %s547
-dbgloc 5036,21 ## ./concat.concat/generator_qbe.concat
-%s549 =l copy %s546
-dbgloc 5036,21 ## ./concat.concat/generator_qbe.concat
-%s550 =:struct250 call $cct_39_Fsb_dappendStringConstQBE (:struct250 %s545,:struct395 %s549,l %s548)
-dbgloc 5037,7 ## ./concat.concat/generator_qbe.concat
-%s551 =l copy $cctI_string2117
-dbgloc 5037,17 ## ./concat.concat/generator_qbe.concat
-dbgloc 5037,17 ## ./concat.concat/generator_qbe.concat
-%s552 =l copy 6
-%s553 =:struct250 call $cct_sb_dappendS (:struct250 %s550,l %s552,l %s551)
+%s544 =l copy %l17734
+dbgloc 5035,9 ## ./concat.concat/generator_qbe.concat
+%s545 =l loadl %s544
+dbgloc 5035,9 ## ./concat.concat/generator_qbe.concat
+%s546 =:struct250 call $cct_sb_dappendI64 (:struct250 %s543,l %s545)
+dbgloc 5036,7 ## ./concat.concat/generator_qbe.concat
+%s547 =l copy $cctI_string2116
+dbgloc 5036,14 ## ./concat.concat/generator_qbe.concat
+dbgloc 5036,14 ## ./concat.concat/generator_qbe.concat
+%s548 =l copy 4
+%s549 =:struct250 call $cct_sb_dappendS (:struct250 %s546,l %s548,l %s547)
+dbgloc 5037,9 ## ./concat.concat/generator_qbe.concat
+%s550 =l copy %l17736
+dbgloc 5037,13 ## ./concat.concat/generator_qbe.concat
+%s551 =l copy %l17677
+dbgloc 5037,21 ## ./concat.concat/generator_qbe.concat
+%s552 =l loadl %s551
+dbgloc 5037,21 ## ./concat.concat/generator_qbe.concat
+%s553 =l copy %s550
+dbgloc 5037,21 ## ./concat.concat/generator_qbe.concat
+%s554 =:struct250 call $cct_39_Fsb_dappendStringConstQBE (:struct250 %s549,:struct395 %s553,l %s552)
 dbgloc 5038,7 ## ./concat.concat/generator_qbe.concat
-%s554 =l copy %l17736
-dbgloc 5038,11 ## ./concat.concat/generator_qbe.concat
-%s555 =l copy %l17673
-dbgloc 5038,24 ## ./concat.concat/generator_qbe.concat
-%s556 =l loadl %s555
-%s557 =l copy %s556
-dbgloc 5038,24 ## ./concat.concat/generator_qbe.concat
-%s558 =l copy %s554
-dbgloc 5038,24 ## ./concat.concat/generator_qbe.concat
-%s559 =:struct250 call $cct_sb_dappendEscapedStr (:struct250 %s553,:struct395 %s558,l %s557)
+%s555 =l copy $cctI_string2117
+dbgloc 5038,17 ## ./concat.concat/generator_qbe.concat
+dbgloc 5038,17 ## ./concat.concat/generator_qbe.concat
+%s556 =l copy 6
+%s557 =:struct250 call $cct_sb_dappendS (:struct250 %s554,l %s556,l %s555)
 dbgloc 5039,7 ## ./concat.concat/generator_qbe.concat
-%s560 =l copy $cctI_string2118
-dbgloc 5039,14 ## ./concat.concat/generator_qbe.concat
-dbgloc 5039,14 ## ./concat.concat/generator_qbe.concat
-%s561 =l copy 2
-%s562 =:struct250 call $cct_sb_dappendS (:struct250 %s559,l %s561,l %s560)
+%s558 =l copy %l17736
+dbgloc 5039,11 ## ./concat.concat/generator_qbe.concat
+%s559 =l copy %l17673
+dbgloc 5039,24 ## ./concat.concat/generator_qbe.concat
+%s560 =l loadl %s559
+%s561 =l copy %s560
+dbgloc 5039,24 ## ./concat.concat/generator_qbe.concat
+%s562 =l copy %s558
+dbgloc 5039,24 ## ./concat.concat/generator_qbe.concat
+%s563 =:struct250 call $cct_sb_dappendEscapedStr (:struct250 %s557,:struct395 %s562,l %s561)
 dbgloc 5040,7 ## ./concat.concat/generator_qbe.concat
-%s563 =l copy %l17734
-dbgloc 5040,9 ## ./concat.concat/generator_qbe.concat
-%s564 =l copy 1
-dbgloc 5040,11 ## ./concat.concat/generator_qbe.concat
-%s565 =l loadl %s563
-dbgloc 5040,11 ## ./concat.concat/generator_qbe.concat
-%s566 =l add %s565, %s564
+%s564 =l copy $cctI_string2118
+dbgloc 5040,14 ## ./concat.concat/generator_qbe.concat
+dbgloc 5040,14 ## ./concat.concat/generator_qbe.concat
+%s565 =l copy 2
+%s566 =:struct250 call $cct_sb_dappendS (:struct250 %s563,l %s565,l %s564)
+dbgloc 5041,7 ## ./concat.concat/generator_qbe.concat
+%s567 =l copy %l17734
+dbgloc 5041,9 ## ./concat.concat/generator_qbe.concat
+%s568 =l copy 1
+dbgloc 5041,11 ## ./concat.concat/generator_qbe.concat
+%s569 =l loadl %s567
+dbgloc 5041,11 ## ./concat.concat/generator_qbe.concat
+%s570 =l add %s569, %s568
 @continueWhile_240
-%t127 =l copy %s566
-%t128 =l copy %s562
+%t127 =l copy %s570
+%t128 =l copy %s566
 jmp @while_240
 @endWhile_240
-dbgloc 5042,5 ## ./concat.concat/generator_qbe.concat
-%s567 =l copy 0
+dbgloc 5043,5 ## ./concat.concat/generator_qbe.concat
+%s571 =l copy 0
 jmp @while_241
 @while_241
-%s568 =l phi @endWhile_240 %s513,@continueWhile_241 %t134
-%s569 =l phi @endWhile_240 %s567,@continueWhile_241 %t133
-dbgloc 5042,23 ## ./concat.concat/generator_qbe.concat
-%s570 =l copy %l17677
-dbgloc 5042,31 ## ./concat.concat/generator_qbe.concat
-%s571 =l loadl %s570
-dbgloc 5042,31 ## ./concat.concat/generator_qbe.concat
+%s572 =l phi @endWhile_240 %s517,@continueWhile_241 %t134
+%s573 =l phi @endWhile_240 %s571,@continueWhile_241 %t133
+dbgloc 5043,23 ## ./concat.concat/generator_qbe.concat
+%s574 =l copy %l17677
+dbgloc 5043,31 ## ./concat.concat/generator_qbe.concat
+%s575 =l loadl %s574
+dbgloc 5043,31 ## ./concat.concat/generator_qbe.concat
 %t135 =l copy 0
 %t136 =l mul %t135, 189 ## named[145]( "CompilerContext" )
-%s572 =l add %s571, %t136
-dbgloc 5042,34 ## ./concat.concat/generator_qbe.concat
-%s573 =l add %s572,128
-dbgloc 5042,48 ## ./concat.concat/generator_qbe.concat
-%s574 =l add %s573,8
-dbgloc 5042,48 ## ./concat.concat/generator_qbe.concat
-%s575 =l loadl %s574
-dbgloc 5042,56 ## ./concat.concat/generator_qbe.concat
-%s576 =l copy %s575
-dbgloc 5042,56 ## ./concat.concat/generator_qbe.concat
-%s577 =w csltl %s569, %s576
-dbgloc 5042,58 ## ./concat.concat/generator_qbe.concat
-jnz %s577, @do_241, @endWhile_241
-@do_241
-dbgloc 5042,65 ## ./concat.concat/generator_qbe.concat
-%l17739 =l alloc8 8
-storel %s569,%l17739
-dbgloc 5043,7 ## ./concat.concat/generator_qbe.concat
-%s578 =l copy %l17677
-dbgloc 5043,15 ## ./concat.concat/generator_qbe.concat
+%s576 =l add %s575, %t136
+dbgloc 5043,34 ## ./concat.concat/generator_qbe.concat
+%s577 =l add %s576,128
+dbgloc 5043,48 ## ./concat.concat/generator_qbe.concat
+%s578 =l add %s577,8
+dbgloc 5043,48 ## ./concat.concat/generator_qbe.concat
 %s579 =l loadl %s578
-dbgloc 5043,15 ## ./concat.concat/generator_qbe.concat
+dbgloc 5043,56 ## ./concat.concat/generator_qbe.concat
+%s580 =l copy %s579
+dbgloc 5043,56 ## ./concat.concat/generator_qbe.concat
+%s581 =w csltl %s573, %s580
+dbgloc 5043,58 ## ./concat.concat/generator_qbe.concat
+jnz %s581, @do_241, @endWhile_241
+@do_241
+dbgloc 5043,65 ## ./concat.concat/generator_qbe.concat
+%l17739 =l alloc8 8
+storel %s573,%l17739
+dbgloc 5044,7 ## ./concat.concat/generator_qbe.concat
+%s582 =l copy %l17677
+dbgloc 5044,15 ## ./concat.concat/generator_qbe.concat
+%s583 =l loadl %s582
+dbgloc 5044,15 ## ./concat.concat/generator_qbe.concat
 %t137 =l copy 0
 %t138 =l mul %t137, 189 ## named[145]( "CompilerContext" )
-%s580 =l add %s579, %t138
-dbgloc 5043,18 ## ./concat.concat/generator_qbe.concat
-%s581 =l add %s580,128
-dbgloc 5043,18 ## ./concat.concat/generator_qbe.concat
-%s582 =l copy %s581
-dbgloc 5043,18 ## ./concat.concat/generator_qbe.concat
+%s584 =l add %s583, %t138
+dbgloc 5044,18 ## ./concat.concat/generator_qbe.concat
+%s585 =l add %s584,128
+dbgloc 5044,18 ## ./concat.concat/generator_qbe.concat
+%s586 =l copy %s585
+dbgloc 5044,18 ## ./concat.concat/generator_qbe.concat
 %tmp23380 =l alloc8 24
-blit %s582,%tmp23380,24
-dbgloc 5043,18 ## ./concat.concat/generator_qbe.concat
-%s583 =l copy %tmp23380
-dbgloc 5043,32 ## ./concat.concat/generator_qbe.concat
-%s584 =l copy %l17739
-dbgloc 5043,34 ## ./concat.concat/generator_qbe.concat
-%s585 =l loadl %s584
-dbgloc 5043,34 ## ./concat.concat/generator_qbe.concat
-%s586 =l copy %s583
-dbgloc 5043,34 ## ./concat.concat/generator_qbe.concat
-%s587 =:enum26 call $cct_list_dget__64_I11 (:struct600 %s586,l %s585)
-dbgloc 5043,47 ## ./concat.concat/generator_qbe.concat
+blit %s586,%tmp23380,24
+dbgloc 5044,18 ## ./concat.concat/generator_qbe.concat
+%s587 =l copy %tmp23380
+dbgloc 5044,32 ## ./concat.concat/generator_qbe.concat
+%s588 =l copy %l17739
+dbgloc 5044,34 ## ./concat.concat/generator_qbe.concat
+%s589 =l loadl %s588
+dbgloc 5044,34 ## ./concat.concat/generator_qbe.concat
+%s590 =l copy %s587
+dbgloc 5044,34 ## ./concat.concat/generator_qbe.concat
+%s591 =:enum26 call $cct_list_dget__64_I11 (:struct600 %s590,l %s589)
+dbgloc 5044,47 ## ./concat.concat/generator_qbe.concat
 %l17741 =l alloc8 17
-blit %s587,%l17741,17
-dbgloc 5044,7 ## ./concat.concat/generator_qbe.concat
-%s588 =l copy $cctI_string2119
-dbgloc 5044,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5044,16 ## ./concat.concat/generator_qbe.concat
-%s589 =l copy 6
-%s590 =:struct250 call $cct_sb_dappendS (:struct250 %s568,l %s589,l %s588)
+blit %s591,%l17741,17
 dbgloc 5045,7 ## ./concat.concat/generator_qbe.concat
-%s591 =l copy $cct_39_FPTR__CONST__NAME
-dbgloc 5045,22 ## ./concat.concat/generator_qbe.concat
-%s592 =l loadl %s591
-dbgloc 5045,22 ## ./concat.concat/generator_qbe.concat
-dbgloc 5045,22 ## ./concat.concat/generator_qbe.concat
-%s593 =l copy 8
-%s594 =:struct250 call $cct_sb_dappendS (:struct250 %s590,l %s593,l %s592)
+%s592 =l copy $cctI_string2119
+dbgloc 5045,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5045,16 ## ./concat.concat/generator_qbe.concat
+%s593 =l copy 6
+%s594 =:struct250 call $cct_sb_dappendS (:struct250 %s572,l %s593,l %s592)
 dbgloc 5046,7 ## ./concat.concat/generator_qbe.concat
-%s595 =l copy %l17739
-dbgloc 5046,9 ## ./concat.concat/generator_qbe.concat
+%s595 =l copy $cct_39_FPTR__CONST__NAME
+dbgloc 5046,22 ## ./concat.concat/generator_qbe.concat
 %s596 =l loadl %s595
-dbgloc 5046,9 ## ./concat.concat/generator_qbe.concat
-%s597 =:struct250 call $cct_sb_dappendI64 (:struct250 %s594,l %s596)
+dbgloc 5046,22 ## ./concat.concat/generator_qbe.concat
+dbgloc 5046,22 ## ./concat.concat/generator_qbe.concat
+%s597 =l copy 8
+%s598 =:struct250 call $cct_sb_dappendS (:struct250 %s594,l %s597,l %s596)
 dbgloc 5047,7 ## ./concat.concat/generator_qbe.concat
-%s598 =l copy $cctI_string2120
-dbgloc 5047,14 ## ./concat.concat/generator_qbe.concat
-dbgloc 5047,14 ## ./concat.concat/generator_qbe.concat
-%s599 =l copy 4
-%s600 =:struct250 call $cct_sb_dappendS (:struct250 %s597,l %s599,l %s598)
-dbgloc 5048,9 ## ./concat.concat/generator_qbe.concat
-%s601 =l copy %l17741
-dbgloc 5048,13 ## ./concat.concat/generator_qbe.concat
-%s602 =l copy %l17677
-dbgloc 5048,21 ## ./concat.concat/generator_qbe.concat
-%s603 =l loadl %s602
-dbgloc 5048,21 ## ./concat.concat/generator_qbe.concat
-%s604 =l copy %s601
-dbgloc 5048,21 ## ./concat.concat/generator_qbe.concat
-%s605 =:struct250 call $cct_39_Fsb_dappendPtrConstDataQBE (:struct250 %s600,:enum26 %s604,l %s603)
-dbgloc 5049,7 ## ./concat.concat/generator_qbe.concat
-%s606 =l copy $cctI_string2121
+%s599 =l copy %l17739
+dbgloc 5047,9 ## ./concat.concat/generator_qbe.concat
+%s600 =l loadl %s599
+dbgloc 5047,9 ## ./concat.concat/generator_qbe.concat
+%s601 =:struct250 call $cct_sb_dappendI64 (:struct250 %s598,l %s600)
+dbgloc 5048,7 ## ./concat.concat/generator_qbe.concat
+%s602 =l copy $cctI_string2120
+dbgloc 5048,14 ## ./concat.concat/generator_qbe.concat
+dbgloc 5048,14 ## ./concat.concat/generator_qbe.concat
+%s603 =l copy 4
+%s604 =:struct250 call $cct_sb_dappendS (:struct250 %s601,l %s603,l %s602)
+dbgloc 5049,9 ## ./concat.concat/generator_qbe.concat
+%s605 =l copy %l17741
 dbgloc 5049,13 ## ./concat.concat/generator_qbe.concat
-dbgloc 5049,13 ## ./concat.concat/generator_qbe.concat
-%s607 =l copy 2
-%s608 =:struct250 call $cct_sb_dappendS (:struct250 %s605,l %s607,l %s606)
+%s606 =l copy %l17677
+dbgloc 5049,21 ## ./concat.concat/generator_qbe.concat
+%s607 =l loadl %s606
+dbgloc 5049,21 ## ./concat.concat/generator_qbe.concat
+%s608 =l copy %s605
+dbgloc 5049,21 ## ./concat.concat/generator_qbe.concat
+%s609 =:struct250 call $cct_39_Fsb_dappendPtrConstDataQBE (:struct250 %s604,:enum26 %s608,l %s607)
 dbgloc 5050,7 ## ./concat.concat/generator_qbe.concat
-%s609 =l copy %l17739
-dbgloc 5050,9 ## ./concat.concat/generator_qbe.concat
-%s610 =l copy 1
-dbgloc 5050,11 ## ./concat.concat/generator_qbe.concat
-%s611 =l loadl %s609
-dbgloc 5050,11 ## ./concat.concat/generator_qbe.concat
-%s612 =l add %s611, %s610
+%s610 =l copy $cctI_string2121
+dbgloc 5050,13 ## ./concat.concat/generator_qbe.concat
+dbgloc 5050,13 ## ./concat.concat/generator_qbe.concat
+%s611 =l copy 2
+%s612 =:struct250 call $cct_sb_dappendS (:struct250 %s609,l %s611,l %s610)
+dbgloc 5051,7 ## ./concat.concat/generator_qbe.concat
+%s613 =l copy %l17739
+dbgloc 5051,9 ## ./concat.concat/generator_qbe.concat
+%s614 =l copy 1
+dbgloc 5051,11 ## ./concat.concat/generator_qbe.concat
+%s615 =l loadl %s613
+dbgloc 5051,11 ## ./concat.concat/generator_qbe.concat
+%s616 =l add %s615, %s614
 @continueWhile_241
-%t133 =l copy %s612
-%t134 =l copy %s608
+%t133 =l copy %s616
+%t134 =l copy %s612
 jmp @while_241
 @endWhile_241
-dbgloc 5052,5 ## ./concat.concat/generator_qbe.concat
-%s613 =l copy %a0
-dbgloc 5052,19 ## ./concat.concat/generator_qbe.concat
-%s614 =w call $cct_io_dfputSb (l %s613,:struct250 %s568)
 dbgloc 5053,5 ## ./concat.concat/generator_qbe.concat
-%s615 =:struct250 call $cct_sb_dclear (:struct250 %s568)
+%s617 =l copy %a0
+dbgloc 5053,19 ## ./concat.concat/generator_qbe.concat
+%s618 =w call $cct_io_dfputSb (l %s617,:struct250 %s572)
 dbgloc 5054,5 ## ./concat.concat/generator_qbe.concat
-%s616 =l copy %l17678
-dbgloc 5054,5 ## ./concat.concat/generator_qbe.concat
-%s617 =w loadw %s616
-dbgloc 5054,12 ## ./concat.concat/generator_qbe.concat
-%s618 =l copy $cct_id_dLABEL__ID__NONE
-dbgloc 5054,29 ## ./concat.concat/generator_qbe.concat
-%s619 =w loadw %s618
-dbgloc 5054,29 ## ./concat.concat/generator_qbe.concat
-%s620 =w copy %s617
-%s621 =w ceqw %s620, %s619
-dbgloc 5054,32 ## ./concat.concat/generator_qbe.concat
-jnz %s621, @if_1979, @else_1979
+%s619 =:struct250 call $cct_sb_dclear (:struct250 %s572)
+dbgloc 5055,5 ## ./concat.concat/generator_qbe.concat
+%s620 =l copy %l17678
+dbgloc 5055,5 ## ./concat.concat/generator_qbe.concat
+%s621 =w loadw %s620
+dbgloc 5055,12 ## ./concat.concat/generator_qbe.concat
+%s622 =l copy $cct_id_dLABEL__ID__NONE
+dbgloc 5055,29 ## ./concat.concat/generator_qbe.concat
+%s623 =w loadw %s622
+dbgloc 5055,29 ## ./concat.concat/generator_qbe.concat
+%s624 =w copy %s621
+%s625 =w ceqw %s624, %s623
+dbgloc 5055,32 ## ./concat.concat/generator_qbe.concat
+jnz %s625, @if_1979, @else_1979
 @if_1979
-dbgloc 5055,7 ## ./concat.concat/generator_qbe.concat
-%s622 =:struct250 call $cct_sb_dfree (:struct250 %s615)
 dbgloc 5056,7 ## ./concat.concat/generator_qbe.concat
-%s623 =l copy %l17677
-dbgloc 5056,15 ## ./concat.concat/generator_qbe.concat
-%s624 =l loadl %s623
-dbgloc 5056,15 ## ./concat.concat/generator_qbe.concat
-call $cct_39_FcleanupCompilerContext (l %s624)
+%s626 =:struct250 call $cct_sb_dfree (:struct250 %s619)
 dbgloc 5057,7 ## ./concat.concat/generator_qbe.concat
+%s627 =l copy %l17677
+dbgloc 5057,15 ## ./concat.concat/generator_qbe.concat
+%s628 =l loadl %s627
+dbgloc 5057,15 ## ./concat.concat/generator_qbe.concat
+call $cct_39_FcleanupCompilerContext (l %s628)
+dbgloc 5058,7 ## ./concat.concat/generator_qbe.concat
 ret
 @else_1979
 @endIf_1979
-dbgloc 5059,5 ## ./concat.concat/generator_qbe.concat
-%s625 =l copy %a1
-dbgloc 5059,13 ## ./concat.concat/generator_qbe.concat
+dbgloc 5060,5 ## ./concat.concat/generator_qbe.concat
+%s629 =l copy %a1
+dbgloc 5060,13 ## ./concat.concat/generator_qbe.concat
 %t139 =l copy 0
 %t140 =l mul %t139, 915 ## named[101]( "ProgramContext" )
-%s626 =l add %s625, %t140
-dbgloc 5059,16 ## ./concat.concat/generator_qbe.concat
-%s627 =l add %s626,914
-dbgloc 5059,16 ## ./concat.concat/generator_qbe.concat
-%s628 =w loadub %s627
-dbgloc 5059,28 ## ./concat.concat/generator_qbe.concat
-%s629 =w copy %s628
-dbgloc 5059,28 ## ./concat.concat/generator_qbe.concat
-jnz %s629, @if_1980, @else_1980
+%s630 =l add %s629, %t140
+dbgloc 5060,16 ## ./concat.concat/generator_qbe.concat
+%s631 =l add %s630,914
+dbgloc 5060,16 ## ./concat.concat/generator_qbe.concat
+%s632 =w loadub %s631
+dbgloc 5060,28 ## ./concat.concat/generator_qbe.concat
+%s633 =w copy %s632
+dbgloc 5060,28 ## ./concat.concat/generator_qbe.concat
+jnz %s633, @if_1980, @else_1980
 @if_1980
-dbgloc 5060,7 ## ./concat.concat/generator_qbe.concat
-%s630 =l copy $cctI_string2122
-dbgloc 5060,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5060,16 ## ./concat.concat/generator_qbe.concat
-%s631 =l copy 6
-%s632 =:struct250 call $cct_sb_dappendS (:struct250 %s615,l %s631,l %s630)
 dbgloc 5061,7 ## ./concat.concat/generator_qbe.concat
-%s633 =l copy $cct_39_FCONCAT__ARGC__NAME
-dbgloc 5061,24 ## ./concat.concat/generator_qbe.concat
-%s634 =l loadl %s633
-dbgloc 5061,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5061,24 ## ./concat.concat/generator_qbe.concat
-%s635 =l copy 9
-%s636 =:struct250 call $cct_sb_dappendS (:struct250 %s632,l %s635,l %s634)
+%s634 =l copy $cctI_string2122
+dbgloc 5061,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5061,16 ## ./concat.concat/generator_qbe.concat
+%s635 =l copy 6
+%s636 =:struct250 call $cct_sb_dappendS (:struct250 %s619,l %s635,l %s634)
 dbgloc 5062,7 ## ./concat.concat/generator_qbe.concat
-%s637 =l copy $cctI_string2123
-dbgloc 5062,22 ## ./concat.concat/generator_qbe.concat
-dbgloc 5062,22 ## ./concat.concat/generator_qbe.concat
-%s638 =l copy 11
-%s639 =:struct250 call $cct_sb_dappendS (:struct250 %s636,l %s638,l %s637)
+%s637 =l copy $cct_39_FCONCAT__ARGC__NAME
+dbgloc 5062,24 ## ./concat.concat/generator_qbe.concat
+%s638 =l loadl %s637
+dbgloc 5062,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5062,24 ## ./concat.concat/generator_qbe.concat
+%s639 =l copy 9
+%s640 =:struct250 call $cct_sb_dappendS (:struct250 %s636,l %s639,l %s638)
 dbgloc 5063,7 ## ./concat.concat/generator_qbe.concat
-%s640 =l copy $cctI_string2124
-dbgloc 5063,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5063,16 ## ./concat.concat/generator_qbe.concat
-%s641 =l copy 6
-%s642 =:struct250 call $cct_sb_dappendS (:struct250 %s639,l %s641,l %s640)
+%s641 =l copy $cctI_string2123
+dbgloc 5063,22 ## ./concat.concat/generator_qbe.concat
+dbgloc 5063,22 ## ./concat.concat/generator_qbe.concat
+%s642 =l copy 11
+%s643 =:struct250 call $cct_sb_dappendS (:struct250 %s640,l %s642,l %s641)
 dbgloc 5064,7 ## ./concat.concat/generator_qbe.concat
-%s643 =l copy $cct_39_FCONCAT__ARGV__NAME
-dbgloc 5064,24 ## ./concat.concat/generator_qbe.concat
-%s644 =l loadl %s643
-dbgloc 5064,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5064,24 ## ./concat.concat/generator_qbe.concat
-%s645 =l copy 9
-%s646 =:struct250 call $cct_sb_dappendS (:struct250 %s642,l %s645,l %s644)
+%s644 =l copy $cctI_string2124
+dbgloc 5064,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5064,16 ## ./concat.concat/generator_qbe.concat
+%s645 =l copy 6
+%s646 =:struct250 call $cct_sb_dappendS (:struct250 %s643,l %s645,l %s644)
 dbgloc 5065,7 ## ./concat.concat/generator_qbe.concat
-%s647 =l copy $cctI_string2125
-dbgloc 5065,22 ## ./concat.concat/generator_qbe.concat
-dbgloc 5065,22 ## ./concat.concat/generator_qbe.concat
-%s648 =l copy 11
-%s649 =:struct250 call $cct_sb_dappendS (:struct250 %s646,l %s648,l %s647)
+%s647 =l copy $cct_39_FCONCAT__ARGV__NAME
+dbgloc 5065,24 ## ./concat.concat/generator_qbe.concat
+%s648 =l loadl %s647
+dbgloc 5065,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5065,24 ## ./concat.concat/generator_qbe.concat
+%s649 =l copy 9
+%s650 =:struct250 call $cct_sb_dappendS (:struct250 %s646,l %s649,l %s648)
 dbgloc 5066,7 ## ./concat.concat/generator_qbe.concat
-%s650 =l copy $cctI_string2126
-dbgloc 5066,16 ## ./concat.concat/generator_qbe.concat
-dbgloc 5066,16 ## ./concat.concat/generator_qbe.concat
-%s651 =l copy 6
-%s652 =:struct250 call $cct_sb_dappendS (:struct250 %s649,l %s651,l %s650)
+%s651 =l copy $cctI_string2125
+dbgloc 5066,22 ## ./concat.concat/generator_qbe.concat
+dbgloc 5066,22 ## ./concat.concat/generator_qbe.concat
+%s652 =l copy 11
+%s653 =:struct250 call $cct_sb_dappendS (:struct250 %s650,l %s652,l %s651)
 dbgloc 5067,7 ## ./concat.concat/generator_qbe.concat
-%s653 =l copy $cct_39_FCONCAT__ENVP__NAME
-dbgloc 5067,24 ## ./concat.concat/generator_qbe.concat
-%s654 =l loadl %s653
-dbgloc 5067,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5067,24 ## ./concat.concat/generator_qbe.concat
-%s655 =l copy 9
-%s656 =:struct250 call $cct_sb_dappendS (:struct250 %s652,l %s655,l %s654)
+%s654 =l copy $cctI_string2126
+dbgloc 5067,16 ## ./concat.concat/generator_qbe.concat
+dbgloc 5067,16 ## ./concat.concat/generator_qbe.concat
+%s655 =l copy 6
+%s656 =:struct250 call $cct_sb_dappendS (:struct250 %s653,l %s655,l %s654)
 dbgloc 5068,7 ## ./concat.concat/generator_qbe.concat
-%s657 =l copy $cctI_string2127
-dbgloc 5068,22 ## ./concat.concat/generator_qbe.concat
-dbgloc 5068,22 ## ./concat.concat/generator_qbe.concat
-%s658 =l copy 11
-%s659 =:struct250 call $cct_sb_dappendS (:struct250 %s656,l %s658,l %s657)
+%s657 =l copy $cct_39_FCONCAT__ENVP__NAME
+dbgloc 5068,24 ## ./concat.concat/generator_qbe.concat
+%s658 =l loadl %s657
+dbgloc 5068,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5068,24 ## ./concat.concat/generator_qbe.concat
+%s659 =l copy 9
+%s660 =:struct250 call $cct_sb_dappendS (:struct250 %s656,l %s659,l %s658)
 dbgloc 5069,7 ## ./concat.concat/generator_qbe.concat
-%s660 =l copy $cctI_string2128
-dbgloc 5069,69 ## ./concat.concat/generator_qbe.concat
-dbgloc 5069,69 ## ./concat.concat/generator_qbe.concat
-%s661 =l copy 57
-%s662 =:struct250 call $cct_sb_dappendS (:struct250 %s659,l %s661,l %s660)
+%s661 =l copy $cctI_string2127
+dbgloc 5069,22 ## ./concat.concat/generator_qbe.concat
+dbgloc 5069,22 ## ./concat.concat/generator_qbe.concat
+%s662 =l copy 11
+%s663 =:struct250 call $cct_sb_dappendS (:struct250 %s660,l %s662,l %s661)
 dbgloc 5070,7 ## ./concat.concat/generator_qbe.concat
-%s663 =l copy $cctI_string2129
-dbgloc 5070,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5070,24 ## ./concat.concat/generator_qbe.concat
-%s664 =l copy 14
-%s665 =:struct250 call $cct_sb_dappendS (:struct250 %s662,l %s664,l %s663)
+%s664 =l copy $cctI_string2128
+dbgloc 5070,69 ## ./concat.concat/generator_qbe.concat
+dbgloc 5070,69 ## ./concat.concat/generator_qbe.concat
+%s665 =l copy 57
+%s666 =:struct250 call $cct_sb_dappendS (:struct250 %s663,l %s665,l %s664)
 dbgloc 5071,7 ## ./concat.concat/generator_qbe.concat
-%s666 =l copy $cct_39_FCONCAT__ARGC__NAME
-dbgloc 5071,24 ## ./concat.concat/generator_qbe.concat
-%s667 =l loadl %s666
+%s667 =l copy $cctI_string2129
 dbgloc 5071,24 ## ./concat.concat/generator_qbe.concat
 dbgloc 5071,24 ## ./concat.concat/generator_qbe.concat
-%s668 =l copy 9
-%s669 =:struct250 call $cct_sb_dappendS (:struct250 %s665,l %s668,l %s667)
+%s668 =l copy 14
+%s669 =:struct250 call $cct_sb_dappendS (:struct250 %s666,l %s668,l %s667)
 dbgloc 5072,7 ## ./concat.concat/generator_qbe.concat
-%s670 =w copy 10
-dbgloc 5072,12 ## ./concat.concat/generator_qbe.concat
-%s671 =:struct250 call $cct_sb_dappendC (:struct250 %s669,ub %s670)
+%s670 =l copy $cct_39_FCONCAT__ARGC__NAME
+dbgloc 5072,24 ## ./concat.concat/generator_qbe.concat
+%s671 =l loadl %s670
+dbgloc 5072,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5072,24 ## ./concat.concat/generator_qbe.concat
+%s672 =l copy 9
+%s673 =:struct250 call $cct_sb_dappendS (:struct250 %s669,l %s672,l %s671)
 dbgloc 5073,7 ## ./concat.concat/generator_qbe.concat
-%s672 =l copy $cctI_string2130
-dbgloc 5073,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5073,24 ## ./concat.concat/generator_qbe.concat
-%s673 =l copy 14
-%s674 =:struct250 call $cct_sb_dappendS (:struct250 %s671,l %s673,l %s672)
+%s674 =w copy 10
+dbgloc 5073,12 ## ./concat.concat/generator_qbe.concat
+%s675 =:struct250 call $cct_sb_dappendC (:struct250 %s673,ub %s674)
 dbgloc 5074,7 ## ./concat.concat/generator_qbe.concat
-%s675 =l copy $cct_39_FCONCAT__ARGV__NAME
-dbgloc 5074,24 ## ./concat.concat/generator_qbe.concat
-%s676 =l loadl %s675
+%s676 =l copy $cctI_string2130
 dbgloc 5074,24 ## ./concat.concat/generator_qbe.concat
 dbgloc 5074,24 ## ./concat.concat/generator_qbe.concat
-%s677 =l copy 9
-%s678 =:struct250 call $cct_sb_dappendS (:struct250 %s674,l %s677,l %s676)
+%s677 =l copy 14
+%s678 =:struct250 call $cct_sb_dappendS (:struct250 %s675,l %s677,l %s676)
 dbgloc 5075,7 ## ./concat.concat/generator_qbe.concat
-%s679 =w copy 10
-dbgloc 5075,12 ## ./concat.concat/generator_qbe.concat
-%s680 =:struct250 call $cct_sb_dappendC (:struct250 %s678,ub %s679)
+%s679 =l copy $cct_39_FCONCAT__ARGV__NAME
+dbgloc 5075,24 ## ./concat.concat/generator_qbe.concat
+%s680 =l loadl %s679
+dbgloc 5075,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5075,24 ## ./concat.concat/generator_qbe.concat
+%s681 =l copy 9
+%s682 =:struct250 call $cct_sb_dappendS (:struct250 %s678,l %s681,l %s680)
 dbgloc 5076,7 ## ./concat.concat/generator_qbe.concat
-%s681 =l copy $cctI_string2131
-dbgloc 5076,24 ## ./concat.concat/generator_qbe.concat
-dbgloc 5076,24 ## ./concat.concat/generator_qbe.concat
-%s682 =l copy 14
-%s683 =:struct250 call $cct_sb_dappendS (:struct250 %s680,l %s682,l %s681)
+%s683 =w copy 10
+dbgloc 5076,12 ## ./concat.concat/generator_qbe.concat
+%s684 =:struct250 call $cct_sb_dappendC (:struct250 %s682,ub %s683)
 dbgloc 5077,7 ## ./concat.concat/generator_qbe.concat
-%s684 =l copy $cct_39_FCONCAT__ENVP__NAME
-dbgloc 5077,24 ## ./concat.concat/generator_qbe.concat
-%s685 =l loadl %s684
+%s685 =l copy $cctI_string2131
 dbgloc 5077,24 ## ./concat.concat/generator_qbe.concat
 dbgloc 5077,24 ## ./concat.concat/generator_qbe.concat
-%s686 =l copy 9
-%s687 =:struct250 call $cct_sb_dappendS (:struct250 %s683,l %s686,l %s685)
+%s686 =l copy 14
+%s687 =:struct250 call $cct_sb_dappendS (:struct250 %s684,l %s686,l %s685)
 dbgloc 5078,7 ## ./concat.concat/generator_qbe.concat
-%s688 =w copy 10
-dbgloc 5078,12 ## ./concat.concat/generator_qbe.concat
-%s689 =:struct250 call $cct_sb_dappendC (:struct250 %s687,ub %s688)
+%s688 =l copy $cct_39_FCONCAT__ENVP__NAME
+dbgloc 5078,24 ## ./concat.concat/generator_qbe.concat
+%s689 =l loadl %s688
+dbgloc 5078,24 ## ./concat.concat/generator_qbe.concat
+dbgloc 5078,24 ## ./concat.concat/generator_qbe.concat
+%s690 =l copy 9
+%s691 =:struct250 call $cct_sb_dappendS (:struct250 %s687,l %s690,l %s689)
 dbgloc 5079,7 ## ./concat.concat/generator_qbe.concat
-%s690 =l copy $cctI_string2132
-dbgloc 5079,15 ## ./concat.concat/generator_qbe.concat
-dbgloc 5079,15 ## ./concat.concat/generator_qbe.concat
-%s691 =l copy 5
-%s692 =:struct250 call $cct_sb_dappendS (:struct250 %s689,l %s691,l %s690)
+%s692 =w copy 10
+dbgloc 5079,12 ## ./concat.concat/generator_qbe.concat
+%s693 =:struct250 call $cct_sb_dappendC (:struct250 %s691,ub %s692)
+dbgloc 5080,7 ## ./concat.concat/generator_qbe.concat
+%s694 =l copy $cctI_string2132
+dbgloc 5080,15 ## ./concat.concat/generator_qbe.concat
+dbgloc 5080,15 ## ./concat.concat/generator_qbe.concat
+%s695 =l copy 5
+%s696 =:struct250 call $cct_sb_dappendS (:struct250 %s693,l %s695,l %s694)
 jmp @endIf_1980
 @else_1980
-dbgloc 5081,7 ## ./concat.concat/generator_qbe.concat
-%s693 =l copy $cctI_string2133
-dbgloc 5081,51 ## ./concat.concat/generator_qbe.concat
-dbgloc 5081,51 ## ./concat.concat/generator_qbe.concat
-%s694 =l copy 39
-%s695 =:struct250 call $cct_sb_dappendS (:struct250 %s615,l %s694,l %s693)
+dbgloc 5082,7 ## ./concat.concat/generator_qbe.concat
+%s697 =l copy $cctI_string2133
+dbgloc 5082,51 ## ./concat.concat/generator_qbe.concat
+dbgloc 5082,51 ## ./concat.concat/generator_qbe.concat
+%s698 =l copy 39
+%s699 =:struct250 call $cct_sb_dappendS (:struct250 %s619,l %s698,l %s697)
 @endIf_1980
-%s696 =l phi @if_1980 %s692, @else_1980 %s695
-dbgloc 5083,5 ## ./concat.concat/generator_qbe.concat
-%s697 =l copy %l17678
-dbgloc 5083,5 ## ./concat.concat/generator_qbe.concat
-%s698 =w loadw %s697
-dbgloc 5083,12 ## ./concat.concat/generator_qbe.concat
-%s699 =l copy -1
-dbgloc 5083,15 ## ./concat.concat/generator_qbe.concat
-%s700 =l copy %l17677
-dbgloc 5083,23 ## ./concat.concat/generator_qbe.concat
-%s701 =l loadl %s700
-dbgloc 5083,23 ## ./concat.concat/generator_qbe.concat
-%s702 =w copy %s698
-dbgloc 5083,23 ## ./concat.concat/generator_qbe.concat
-%s703 =:struct250 call $cct_39_Fsb_dappendGlobalName (:struct250 %s696,w %s702,l %s699,l %s701)
+%s700 =l phi @if_1980 %s696, @else_1980 %s699
 dbgloc 5084,5 ## ./concat.concat/generator_qbe.concat
-%s704 =l copy $cctI_string2134
-dbgloc 5084,22 ## ./concat.concat/generator_qbe.concat
-dbgloc 5084,22 ## ./concat.concat/generator_qbe.concat
-%s705 =l copy 11
-%s706 =:struct250 call $cct_sb_dappendS (:struct250 %s703,l %s705,l %s704)
+%s701 =l copy %l17678
+dbgloc 5084,5 ## ./concat.concat/generator_qbe.concat
+%s702 =w loadw %s701
+dbgloc 5084,12 ## ./concat.concat/generator_qbe.concat
+%s703 =l copy -1
+dbgloc 5084,15 ## ./concat.concat/generator_qbe.concat
+%s704 =l copy %l17677
+dbgloc 5084,23 ## ./concat.concat/generator_qbe.concat
+%s705 =l loadl %s704
+dbgloc 5084,23 ## ./concat.concat/generator_qbe.concat
+%s706 =w copy %s702
+dbgloc 5084,23 ## ./concat.concat/generator_qbe.concat
+%s707 =:struct250 call $cct_39_Fsb_dappendGlobalName (:struct250 %s700,w %s706,l %s703,l %s705)
 dbgloc 5085,5 ## ./concat.concat/generator_qbe.concat
-%s707 =l copy %a0
-dbgloc 5085,19 ## ./concat.concat/generator_qbe.concat
-%s708 =w call $cct_io_dfputSb (l %s707,:struct250 %s706)
-dbgloc 5086,3 ## ./concat.concat/generator_qbe.concat
-%s709 =:struct250 call $cct_sb_dfree (:struct250 %s706)
+%s708 =l copy $cctI_string2134
+dbgloc 5085,22 ## ./concat.concat/generator_qbe.concat
+dbgloc 5085,22 ## ./concat.concat/generator_qbe.concat
+%s709 =l copy 11
+%s710 =:struct250 call $cct_sb_dappendS (:struct250 %s707,l %s709,l %s708)
+dbgloc 5086,5 ## ./concat.concat/generator_qbe.concat
+%s711 =l copy %a0
+dbgloc 5086,19 ## ./concat.concat/generator_qbe.concat
+%s712 =w call $cct_io_dfputSb (l %s711,:struct250 %s710)
 dbgloc 5087,3 ## ./concat.concat/generator_qbe.concat
-%s710 =l copy %l17677
-dbgloc 5087,11 ## ./concat.concat/generator_qbe.concat
-%s711 =l loadl %s710
-dbgloc 5087,11 ## ./concat.concat/generator_qbe.concat
-call $cct_39_FcleanupCompilerContext (l %s711)
-dbgloc 5088,1 ## ./concat.concat/generator_qbe.concat
+%s713 =:struct250 call $cct_sb_dfree (:struct250 %s710)
+dbgloc 5088,3 ## ./concat.concat/generator_qbe.concat
+%s714 =l copy %l17677
+dbgloc 5088,11 ## ./concat.concat/generator_qbe.concat
+%s715 =l loadl %s714
+dbgloc 5088,11 ## ./concat.concat/generator_qbe.concat
+call $cct_39_FcleanupCompilerContext (l %s715)
+dbgloc 5089,1 ## ./concat.concat/generator_qbe.concat
 ret
 @end
 hlt
