@@ -4964,9 +4964,10 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
       list.at .data []
       valType =
     end
-    valType types.primitive.TYPE types.typeEquals
-    valType typeContext types.isEmpty |
-    valType typeContext types.isProcedure | if
+    valType types.primitive.TYPE types.typeEquals or
+        valType typeContext types.isEmpty or
+        valType typeContext types.isProcedure or
+        labelFlags id.FLAG_EXTERN & ? if
       continue
     end
     sb
