@@ -626,11 +626,13 @@ proc(
     a .argsMatch if -1  else 1 end return
   end
   a .argsMatch ! if
-    ## no-match -> only compare number of matched parameters
+    ## TODO? check if later arguments match to give better feedback
+    ## no-match -> compare number of matched parameters
     a .paramInfo .length b .paramInfo .length == if
-      0 return
+      ## sort non-matching signatures by declaration order
+      a .procId i64 cast b .procId i64 cast < if -1 else a .procId b .procId == _if 0 else 1 end return
     end
-    a .paramInfo .length b .paramInfo .length < if
+    a .paramInfo .length b .paramInfo .length > if
       -1
     else
       1
@@ -700,6 +702,8 @@ proc(
   end
 end
 
+5:i64 =:: MAX_DISPLAY_ARGS_DEFAULT
+5:i64 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
 proc(
   ProcId arrayView : procedureIds
@@ -716,12 +720,14 @@ proc(
     ProcedureCallInfo optional.empty Type .undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
+  MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
   0:i64 while ..dup procedureIds .length < do =:: i
     procedureIds i array.get =:: procId
     progContext [] .procedures procId i64 cast list.at .data =:: procInfo
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
     =:: argCount
+    maxArgs argCount i64.max maxArgs =
     currentSignatures
       ## CallSignatureInfo
         procId
@@ -748,7 +754,7 @@ proc(
     end =:: stackType
     0:i64 while ..dup currentSignatures .length < do =:: i
       currentSignatures i list.at .data =:: mut: current
-      current [] .argsMatch ! current [] .needsParam ! | if
+      current [] .argsMatch ! or current [] .needsParam ! if
         ## don't continue checking if first arguments were no match / all params matched
         i 1 + continue
       end
@@ -941,7 +947,8 @@ proc(
     errorMessage optional.hasData if
       errorMessage .data []
         "no matching signature for arguments ( " sb.appendS
-        stackValues .length 1 - while ..dup 0 >= do =:: i
+        stackValues .length maxArgs > if "... " sb.appendS end
+        stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
           stackValues i array.at .data =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .none ?? ! if
@@ -953,7 +960,8 @@ proc(
           i 1 -
         end ..drop
         ")\ncandidates: \n" sb.appendS
-        0:i64 while ..dup currentSignatures .length < do =:: i
+        MAX_DISPLAY_SIGNATURES currentSignatures .length i64.min =:: maxSignatures
+        0:i64 while ..dup maxSignatures < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -965,6 +973,7 @@ proc(
           '\n' sb.appendC
           i 1 +
         end ..drop
+        currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
       errorMessage .data [] =
     end
     currentSignatures @ cleanupSignatures
@@ -980,7 +989,8 @@ proc(
     errorMessage optional.hasData if
       errorMessage .data []
         "multiple matching signature for arguments ( " sb.appendS
-        stackValues .length 1 - while ..dup 0 >= do =:: i
+        stackValues .length maxArgs > if "... " sb.appendS end
+        stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
           stackValues i array.at .data =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .none ?? ! if
@@ -993,7 +1003,8 @@ proc(
         end ..drop
         ")\npossible matches: \n" sb.appendS
         true =:: mut: isEquivalent
-        0:i64 while ..dup currentSignatures .length < do =:: i
+        MAX_DISPLAY_SIGNATURES currentSignatures .length i64.min =:: maxSignatures
+        0:i64 while ..dup maxSignatures < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -1010,6 +1021,7 @@ proc(
           '\n' sb.appendC
           i 1 +
         end ..drop
+        currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
       errorMessage .data [] =
     end
     currentSignatures @ cleanupSignatures
