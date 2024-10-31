@@ -129,8 +129,6 @@
           cast\.s             |
           cast!               |
           \.\.bitcast         |
-          \.\.argc            |
-          \.\.getArg          |
           \.\.length          |
           \.\.size            |
           \.\.label           |

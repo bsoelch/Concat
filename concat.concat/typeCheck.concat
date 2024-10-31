@@ -1750,8 +1750,11 @@ proc(
               calledProc OpValue .call op .val =
             break
             builtIn case
-              calledProcData [] .implementation .builtIn .builtIn
-                OpValue .builtIn op .val =
+              calledProcData [] .implementation .builtIn .builtIn =:: builtInId
+              builtInId .SYS_ARGC ?? or builtInId .SYS_ARGC ?? or builtInId .SYS_ARGC ?? if
+                true program [] .hasGetArgs =
+              end
+              builtInId OpValue .builtIn op .val =
             break
           end
           calledType typeContext types.getProcIn ..drop =:: inTypes

@@ -1,7 +1,14 @@
 namespace: c
   proc( ..ctype.int -> ) : extern: noReturn: exit
+  proc( char8 _ ptr -> i64 ) : extern: strlen
 end
 namespace: sys
+  proc( i64 : i -> char8 _ ptr i64 ) =>: export: getArg
+    ## XXX? check index
+    sys.argv i [] =:: arg
+    arg c.isNull if arg 0 return end
+    arg arg c.strlen return
+  end
   proc( i32 -> ) =>: export: noReturn: exit
     ..ctype.int cast c.exit
   end

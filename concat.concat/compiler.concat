@@ -46,10 +46,10 @@ proc( -> ) =>: parseArgs
   string optional.empty parserTokensFile =
   string optional.empty compilerTokensFile =
   string optional.empty errorFile =
-  0 ..getArg string.create =:: path
+  0 sys.getArg string.create =:: path
   ArgParserState .IN =:: mut: state
-  1:i64 while ..dup ..argc < do
-    ..dup ..getArg string.create =:: arg
+  1:i64 while ..dup sys.argc < do
+    ..dup sys.getArg string.create =:: arg
     arg .length 0 == if
       1 + continue
     end

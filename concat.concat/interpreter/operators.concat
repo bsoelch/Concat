@@ -315,6 +315,7 @@ namespace: interpreter
       UGT_I16 GT_C16 case args k i16.ugt @ cmpOperatorInt return
       UGT_I32 GT_C32 case args k i32.ugt @ cmpOperatorInt return
       UGT_I64 case args k i64.ugt @ cmpOperatorInt return
+      SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
     end
     ConstValue .none  OperatorResult .unimplemented return
   end

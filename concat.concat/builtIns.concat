@@ -35,6 +35,7 @@ enum(
  ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## ..u<=
  UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## ..u>=
  UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## ..u>
+ SYS_ARGC SYS_ARGV SYS_ENVP
  ## XXX? more built-in operations
 ) =:: export: BuiltIn
 
@@ -90,6 +91,9 @@ namespace: sb
       ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
       UGE_I8 UGE_I16 UGE_I32 UGE_I64 case "..u>=" sb.appendS break
       UGT_I8 UGT_I16 UGT_I32 UGT_I64 case "..u>" sb.appendS break
+      SYS_ARGC case "sys.argc" sb.appendS break
+      SYS_ARGV case "sys.argv" sb.appendS break
+      SYS_ENVP case "sys.envp" sb.appendS break
     end
   end
 end
@@ -254,6 +258,7 @@ proc(
   id.declareIdentifier =:: isError ..drop.2
   bundleId isError return
 end
+-1:ProcBundleId =:: NO_BUNDLE
 proc(
   BuiltIn : buildIn
   LabelId : procLabel
@@ -291,10 +296,12 @@ proc(
     idContext
     context [] .errors @
   id.declareIdentifier =:: isError ..drop.2
-  context [] .procBundles bundleId i64 cast list.at .data =:: bundle
-  bundle [] .procedures
-    procId list.append
-  bundle [] .procedures =
+  bundleId NO_BUNDLE != if
+    context [] .procBundles bundleId i64 cast list.at .data =:: bundle
+    bundle [] .procedures
+      procId list.append
+    bundle [] .procedures =
+  end
 end
 proc(
   BuiltIn : buildIn
@@ -504,6 +511,46 @@ proc(
     ! assert "can create procedure"
   =:: cc_i
   cc_b cc_i return
+end
+proc(
+  ProgramContext ptr mut : context
+-> Type Type ) =>: sysProcTypes
+  context [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  LabelId arrayView optional.empty =:: argLabels
+  ## newProcArgs
+    Type array.empty
+    argLabels
+    false
+    typeContext
+  types.newProcArgs =:: mut: procIn
+  ## newProcArgs
+    types.primitive.I64@ 1 array.create
+    argLabels
+    true
+  typeContext types.newProcArgs =:: mut: toI64
+  types.primitive.CHAR8 false typeContext wrapPtr false typeContext wrapPtr =:: c8pp
+  ## newProcArgs
+    c8pp@ 1 array.create
+    argLabels
+    true
+  typeContext types.newProcArgs =:: mut: toC8PP
+  ## newProcedure
+    procIn
+    toI64
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: v_i64
+  ## newProcedure
+    procIn
+    toC8PP
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: v_c8pp
+  v_c8pp v_i64 return
 end
 
 proc(
@@ -1434,6 +1481,22 @@ proc(
     "i64" "ugt" pos labelContext createLabel
     i64i64_bool
     bundle
+  pos context addBuiltIn
+  context sysProcTypes =:: v_i64 =:: v_c8pp
+  BuiltIn .SYS_ARGC
+    "sys" "argc" pos labelContext createLabel
+    v_i64
+    NO_BUNDLE
+  pos context addBuiltIn
+  BuiltIn .SYS_ARGV
+    "sys" "argv" pos labelContext createLabel
+    v_c8pp
+    NO_BUNDLE
+  pos context addBuiltIn
+  BuiltIn .SYS_ARGC
+    "sys" "envp" pos labelContext createLabel
+    v_c8pp
+    NO_BUNDLE
   pos context addBuiltIn
   labelContext id.resetNamespace
   false return

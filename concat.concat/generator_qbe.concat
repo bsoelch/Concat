@@ -2113,13 +2113,21 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
   opType typeContext types.getProcIn ..drop =:: inType
-  inType 0 typeContext types.compositeGetLabel
-      labelContext id.labelFlags id.FLAG_STATIC & ? if
-    1:i64
+  inType typeContext types.compositeEltCount 0 > if
+    inType 0 typeContext types.compositeGetLabel
+        labelContext id.labelFlags id.FLAG_STATIC & ? if
+      1:i64
+    else
+      0:i64
+    end =:: firstArg
+    inType firstArg typeContext types.compositeGetElement
   else
-    0:i64
-  end =:: firstArg
-  inType firstArg typeContext types.compositeGetElement =:: baseType
+      opType typeContext types.getProcOut ..drop =:: outType
+      outType typeContext types.compositeEltCount 0 > _if
+    outType 0 typeContext types.compositeGetElement
+  else
+    Type .undefined
+  end =:: baseType
   baseType context toValType =:: baseVal
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
@@ -2306,6 +2314,36 @@ proc(
       sb
         baseType false pos context extendArguments
         "ugt" string.wrap baseVal pos context appendComparisonOperator
+      return
+    SYS_ARGC case
+      sb
+        "%s" sb.appendS
+        baseVal context pushValue sb.appendI
+        " =" sb.appendS
+        baseVal sb.appendValTypeQBE
+        " load $" sb.appendS
+        CONCAT_ARGC_NAME sb.appendS
+        '\n' sb.appendC
+      return
+    SYS_ARGV case
+      sb
+        "%s" sb.appendS
+        baseVal context pushValue sb.appendI
+        " =" sb.appendS
+        baseVal sb.appendValTypeQBE
+        " load $" sb.appendS
+        CONCAT_ARGV_NAME sb.appendS
+        '\n' sb.appendC
+      return
+    SYS_ENVP case
+      sb
+        "%s" sb.appendS
+        baseVal context pushValue sb.appendI
+        " =" sb.appendS
+        baseVal sb.appendValTypeQBE
+        " load $" sb.appendS
+        CONCAT_ENVP_NAME sb.appendS
+        '\n' sb.appendC
       return
   end
 end

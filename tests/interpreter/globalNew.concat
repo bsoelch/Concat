@@ -8,7 +8,7 @@ struct( i32 : x i32 : y ) =:: Point
 proc( -> ) =>: main
   p .x debug.print
   p .y debug.print
-  ..argc i32 cast 5 Point new =:: dynamicPoint
+  sys.argc i32 cast 5 Point new =:: dynamicPoint
   dynamicPoint .x debug.print
   dynamicPoint .y debug.print
   sizedPointer .data debug.print
