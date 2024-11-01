@@ -83,14 +83,14 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
   end ..drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =>: inEnumOrUnion
+proc( InterpreterContext ptr mut : context -> bool ) =>: inUnion
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType switch
-      TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION case
+      TYPE_UNION TYPE_UNTAGGED_UNION case
          ..drop true return
       PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
         ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
        SWITCH BREAK_SWITCH CASE DEFAULT
@@ -220,7 +220,6 @@ proc(
   context [] .stackInfo =
   error return
 end
-
 
 proc(
   Operation ptr : op
@@ -779,6 +778,27 @@ proc(
     NOP case
       false return
     Constant case
+      context inEnum if
+        op [] .val .Constant  =:: constVal
+        constVal .typeId ?? ! or constVal .typeId types.isNamedType ! if
+          "unexpected constant in enum declaration expected identifier got " sb.wrap
+            constVal constContext typeContext sb.appendConstant
+          op [] .pos errors appendError
+          true return
+        end
+        context [] .stack
+          Type .empty ConstValue .typeId list.append
+        context [] .stack =
+        context [] .stackInfo
+          ## ValueInfo
+            types.primitive.TYPE
+            id.LABEL_ID_NONE
+            constVal .typeId typeContext types.namedTypeName
+            op [] .pos
+          ValueInfo new list.append
+        context [] .stackInfo =
+        false return
+      end
       ## pushValue
         op [] .val .Constant
         op [] .dataType
@@ -1036,7 +1056,7 @@ proc(
       context [] .stack list.peek .data =:: value
       op [] .val .declareId .labelId =:: labelId
       labelId valInfo [] .valueName =
-      value [] .wildCard ?? and context inEnumOrUnion if
+      value [] .wildCard ?? and context inUnion if
         types.primitive.TYPE valInfo [] .valueType =
         Type .empty ConstValue .typeId value [] =
       end
@@ -1099,6 +1119,20 @@ proc(
     getId case
       op [] .val .getId @ =:: idInfo
       idInfo [] .labelId =:: label
+      context inEnum if
+        context [] .stack
+          Type .empty ConstValue .typeId list.append
+        context [] .stack =
+        context [] .stackInfo
+          ## ValueInfo
+            types.primitive.TYPE
+            id.LABEL_ID_NONE
+            label
+            op [] .pos
+          ValueInfo new list.append
+        context [] .stackInfo =
+        false return
+      end
       idInfo [] .idType switch
         PROCEDURE case
           idInfo [] .constValue .procedure ?? ! if
