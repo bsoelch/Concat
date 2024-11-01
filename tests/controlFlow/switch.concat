@@ -1,7 +1,7 @@
 import debug
-enum( A B i32 : C char8 : D ) =:: anEnum
+union( _ : A _ : B i32 : C char8 : D ) =:: anUnion
 
-proc( i32 : i anEnum : e char8 : c -> ) =>: switchTest
+proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest
   i switch
     1 2 case
       return ## not needed when branch ends with return
@@ -36,7 +36,7 @@ proc( i32 : i anEnum : e char8 : c -> ) =>: switchTest
 end
 
 proc( -> ) =>: main
- 0 anEnum .A 'A' switchTest
- 1 'A' anEnum .D  '\n' switchTest
- 0xabcdef  0x12345678 anEnum .C  ' ' switchTest
+ 0 anUnion .A 'A' switchTest
+ 1 'A' anUnion .D  '\n' switchTest
+ 0xabcdef  0x12345678 anUnion .C  ' ' switchTest
 end

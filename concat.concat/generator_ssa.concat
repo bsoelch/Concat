@@ -47,8 +47,8 @@ namespace: ssa
 
   i64 =:: VariableId
   i64 =:: ArgumentId
-  enum(
-    empty
+  union(
+    _ : empty
     i64 : value
     VariableId : variable
     ArgumentId : argument
@@ -185,8 +185,8 @@ namespace: ssa
   end
 
   i64 =:: BranchId
-  enum(
-    empty
+  union(
+    _ : empty
     SSAOperation : operation
     BranchLabel : branchLabel
     Call : call
@@ -452,7 +452,7 @@ struct(
   i32 : blockId
 ) =:: AndOrBlockInfo
 
-enum(
+union(
   IfBlockInfo : mut: If
   SwitchBlockInfo : mut: Switch
   WhileBlockInfo : mut: While
@@ -1795,7 +1795,7 @@ proc(
             nextBranch context startBranch
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
         TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
@@ -2053,7 +2053,7 @@ proc(
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
         AND_IF OR_IF AND_DO OR_DO
         UNKNOWN INITIALIZER NAMESPACE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           ## XXX error message
           break

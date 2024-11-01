@@ -18,10 +18,10 @@ struct(
   MatchType : matchType
 ) =:: ParameterInfo
 
-enum(
+union(
   ConstValue : value
   ConstValue : fixed  ## value of generic cannot be changed
-               nonEmpty
+           _ : nonEmpty
 ) =:: GenericArg
 
 struct(
@@ -190,7 +190,7 @@ proc(
         typeContext
         src switch
           struct case types.newTuple break
-          union case types.newUnion break
+          union case true ..swap types.newUnion break
           enum case types.newEnum break
           procIn procOut case src .procOut ?? ..swap types.newProcArgs false break
           default ..unreachable

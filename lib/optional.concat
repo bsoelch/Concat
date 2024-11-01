@@ -1,5 +1,5 @@
 ( type : V -> type ) =>: export: optional
-  enum( empty V : data )
+  union( _ : empty V : data )
 end
 namespace: optional
   proc( type : auto: V V optional -> bool ) =>: export: isEmpty

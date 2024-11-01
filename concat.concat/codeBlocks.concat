@@ -28,6 +28,7 @@ enum(
   TYPE_STRUCT
   TYPE_ENUM
   TYPE_UNION
+  TYPE_UNTAGGED_UNION
   TYPE_PROC_IN
   TYPE_PROC_OUT
   TYPE_COMPOSITE
@@ -118,6 +119,9 @@ namespace: sb
         "enum( )" sb.appendS
         return
       TYPE_UNION case
+        "union( )" sb.appendS
+        return
+      TYPE_UNTAGGED_UNION case
         "union( )" sb.appendS
         return
       TYPE_PROC_IN case

@@ -1,1 +1,1 @@
-enum-type named[0]( "e" ) does not have a label "D" at missingEnumElement.concat:5:11
+enum named[0]( "e" ) does not have a label "D" at missingEnumElement.concat:5:11

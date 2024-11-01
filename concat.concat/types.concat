@@ -45,9 +45,9 @@ namespace: types
   ) =:: IntLiteral
 end
 
-enum(
-                        undefined
-                        empty
+union(
+                    _ : undefined
+                    _ : empty
   types.PrimitiveType : primitiveType
      types.IntLiteral : intLiteral
         types.ArrayId : pointer
@@ -580,7 +580,7 @@ namespace: types
   end
 
   ## size and alignment
-  enum( unknown i64 : fixed i64 : dynamicArray ) =:: export: TypeSize
+  union( _ : unknown i64 : fixed i64 : dynamicArray ) =:: export: TypeSize
   8:i64 =:: PTR_SIZE
   8:i64 =:: PTR_ALIGN
   8:i64 =:: I_SIZE_SIZE
@@ -1100,8 +1100,8 @@ namespace: types
     3:CompositeFlags =:: export: COMP_MASK_ONLY_EMPTY
     4:CompositeFlags =:: export: COMP_FLAG_STATIC_ARGS
    12:CompositeFlags =:: export: COMP_GENERIC_MASK
+   15:CompositeFlags =:: export: COMP_MASK_CONTENT_FLAGS
    16:CompositeFlags =:: export: COMP_SIZE_KNOWN
-   31:CompositeFlags =:: export: COMP_MASK_COMMON_FLAGS
    32:CompositeFlags =:: export: TUPLE_FLAG_IS_STRUCT
    64:CompositeFlags =:: export: TUPLE_FLAG_IS_PROC_IN
   128:CompositeFlags =:: export: TUPLE_FLAG_IS_PROC_OUT
@@ -1152,6 +1152,20 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isEnum
     unwrapNamed .enum ?? return
+  end
+  proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isTaggedUnion
+    typeContext unwrapNamed ..dup switch
+      enum case
+        .enum break
+      union case
+        .union break
+      struct procIn procOut undefined empty primitiveType pointer arrayType procedure
+       namedType autoType genericType generatedType intLiteral
+        reference mutableReference arrayIndex cType case ..drop
+         false return
+    end =:: unionId
+    typeContext [] .unionTypes unionId i64 cast list.at .data =:: unionInfo
+    unionInfo [] .labelType .empty ?? ! ## enum or tagged union
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isUnion
     unwrapNamed .union ?? return
@@ -1510,8 +1524,8 @@ namespace: types
       t [] .compositeInfo .eltCount elts .length == and
           t [] .compositeInfo .eltsOffset eltsOffset == and
           t [] .compositeInfo .labelOffset labelOffset == and
-          t [] .compositeInfo .flags COMP_MASK_COMMON_FLAGS &
-            flags COMP_MASK_COMMON_FLAGS &
+          t [] .compositeInfo .flags COMP_MASK_CONTENT_FLAGS &
+            flags COMP_MASK_CONTENT_FLAGS &
           == if
         t [] .compositeInfo .flags flags | t [] .compositeInfo .flags =
         TupleId cast return
@@ -1632,6 +1646,7 @@ namespace: types
   proc(
     Type arrayView : elts
     LabelId arrayView optional : labels
+    bool : isTagged
     TypeContext ptr mut : context
   -> Type bool ) =>: export: newUnion
     elts .length 0 == labels optional.isEmpty | if
@@ -1641,7 +1656,7 @@ namespace: types
       elts
       labels
       context
-      false
+      isTagged
     findEnumOrUnion Type .union false return
   end
 end
@@ -2780,6 +2795,6 @@ namespace: sb
     end
   end
   proc( stringBuilder Type TypeContext ptr -> stringBuilder ) =>: export: appendType
-    0 appendTypeRecursive return
+    0 appendTypeRecursive return ## XXX? change default value to 1
   end
 end

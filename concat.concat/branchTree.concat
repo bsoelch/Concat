@@ -329,7 +329,7 @@ namespace: branchTree
     tree check
   end
 
-  enum( error i32 : success ) =:: MergeResult
+  union( _ : error i32 : success ) =:: MergeResult
   proc(
     type : auto: T
     type : auto: C

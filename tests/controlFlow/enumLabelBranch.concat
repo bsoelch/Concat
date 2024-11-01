@@ -1,4 +1,4 @@
-enum( A B i32 : C ) =:: anEnum
+enum( A B C ) =:: anEnum
 
 proc( -> ) =>: main
   false if

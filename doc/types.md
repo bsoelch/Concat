@@ -64,9 +64,11 @@ If no label is given the element is labeled with its index (starting from 0).
 
 Union declarations start with `union(` and end with `)`
 Union elements are declared as a type followed by a name using the same syntax as labeled structure elements.
+By default Unions remember which value is currently stored, the `??` operator can be used to check if a given value is currently stored in the union.
+The `union.raw(` types, can be used to store multiple values in the same memory location without remembering the stored value.
 
 Enum declarations start with `enum(` and end with `)`
-Enum elements can be declared either as labeled structure elements or identifiers without a corresponding type declaration. If no label type is given the type of the enum elements is the empty type.
+An Enum is a list of labels, that acts like a restricted set of integers
 
 Grammar:
 

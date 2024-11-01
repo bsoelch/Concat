@@ -59,17 +59,17 @@ proc( i32 : i f32 : f i64 : i2 f64 : f2 ->
 end
 
 enum( A B C D E ) =:: enum1
-enum( i32 : A f32 : B i64 : C f64 : D ) =:: enum2
-enum( ( i32 f32 ) : A ( i32 i32 ) : B ( f32 f32 ) : C ( i8 _ ptr i64 ) : D ) =:: enum3
-enum( i64 5 array : A i8 32 array : B i64 : C ) =:: enum4
+union( i32 : A f32 : B i64 : C f64 : D ) =:: union1
+union( ( i32 f32 ) : A ( i32 i32 ) : B ( f32 f32 ) : C ( i8 _ ptr i64 ) : D ) =:: union2
+union( i64 5 array : A i8 32 array : B i64 : C ) =:: union3
 
-proc( -> enum1 enum2 ) =>: testEnum12
+proc( -> enum1 union1 ) =>: testEnum12
   enum1 .A
-  3.75:f32 enum2 .B
+  3.75:f32 union1 .B
 end
-proc( -> enum4 enum3  ) =>: testEnum43
-  5 enum4 .C
-  1 1.5:f32 ( i32 f32 ) new enum3 .A
+proc( -> union3 union2  ) =>: testUnion43
+  5 union3 .C
+  1 1.5:f32 ( i32 f32 ) new union2 .A
 end
 
 proc( -> ) =>: main end

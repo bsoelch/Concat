@@ -1,4 +1,4 @@
-enum( A i32 : B i64 : ERROR ) =:: e
+enum( A B ERROR ) =:: e
 
 ( i32 i64 ) =:: ERROR
 

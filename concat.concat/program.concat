@@ -9,7 +9,7 @@ enum( EQ NEQ ) =:: export: EqualityOperator
 enum( COPY SWAP DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
-enum( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
+union( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
 enum( PTR ARRAY PTR_MUT ) =:: export: TypeModifier
 struct( Type : src i32 : mut: offset ) =:: export: AutoCastInfo ## offset: zero-indexed from top of stack
 enum( SIGNED NONE UNSIGNED ) =:: export: SignType
@@ -42,7 +42,7 @@ struct(
   BuiltIn : builtIn
   bool : mut: hasPtr
 ) =:: export: BuiltInData
-enum(
+union(
   BuiltInData : mut: builtIn
   CodeProcData : mut: code
 ) =:: export: ProcImplType
@@ -64,7 +64,7 @@ struct(
   i64 : implementationId
 ) =:: export: ProcedureImpl
 
-enum(
+union(
             NopType : NOP
          ConstValue : mut: Constant
    ConstReferenceId : mut: ConstantReference
@@ -85,28 +85,28 @@ enum(
                 i64 : mut: hasElement
                 i64 : mut: getArrayElement
                 i64 : mut: atArrayElement
-                      setValue
-                      Return
-                      New
-                      NewReference
+                  _ : setValue
+                  _ : Return
+                  _ : New
+                  _ : NewReference
                 i64 : NewEnum
                 i64 : NewEnumReference
   ProcedureCallInfo : call
             BuiltIn : builtIn
                 i64 : mut: callPtr
-                      argc
-                      getArg
-                      length
-                      size
+                  _ : argc
+                  _ : getArg
+                  _ : length
+                  _ : size
        AutoCastInfo : mut: autoCast
            CastInfo : mut: Cast
                Type : mut: Cast!
                Type : mut: bitCast
    EqualityOperator : equalityOperator
-                      getEnumLabel
+                  _ : getEnumLabel
                 i64 : checkEnumLabel
                 i64 : mut: setEnumLabel
-                      copy
+                  _ : copy
   StackModification : stackMod
             LabelId : getName
             LabelId : mut: atName
@@ -114,7 +114,7 @@ enum(
        TypeModifier : mut: typeModifier
      StringConstant : Assert
      TypeMemoryInfo : typeInfo
-                      unreachable
+                  _ : unreachable
        CompilerInfo : compilerInfo
 ) =:: export: OpValue
 struct( OpValue : mut: val Type : mut: dataType FilePosition : mut: pos ) =:: export: Operation

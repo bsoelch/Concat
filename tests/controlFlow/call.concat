@@ -44,9 +44,9 @@ proc( String i64 char8 -> ) =>: #:experimental: endItr
   ..drop ..drop ..drop
 end
 
-enum( i32 : a i32 : b ) =:: E
-proc( i32 -> E ) =>: #:experimental: enumCreate
-  E .a return
+union( i32 : a i32 : b ) =:: U
+proc( i32 -> U ) =>: #:experimental: unionCreate
+  U .a return
 end
 
 proc( -> ) =>: main
@@ -64,5 +64,5 @@ proc( -> ) =>: main
   "Hello" startItr while nextChar do
     #+char+# debug.print
   end endItr
-  42 enumCreate .a debug.print
+  42 unionCreate .a debug.print
 end

@@ -1792,6 +1792,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state [] .constantBlocks =
       BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
       return
+    else ..dup "union.raw(" string.wrap string.eq _if ..drop
+      BlockType .TYPE_UNTAGGED_UNION state openBlockScope
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
+      BlockType .TYPE_UNTAGGED_UNION fileState [] .wordStart opBlock state appendOp
+      return
     else ..dup "enum(" string.wrap string.eq _if ..drop
       BlockType .TYPE_ENUM state openBlockScope
       state [] .constantBlocks
@@ -1863,7 +1873,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state [] .constantBlocks =
       blockType fileState [] .wordStart opEndBlock state appendOp
       blockType switch
-        TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_ENUM case
+        TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION TYPE_ENUM case
           break
         TYPE_PROC_OUT case
           state closeBlock  =:: isError .blockType =:: outerType

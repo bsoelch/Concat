@@ -65,8 +65,8 @@ struct(
   BranchPoint list : mut: branches
   i32 : blockId
 ) =:: AndOrBlockInfo
-enum(
-  Unknown
+union(
+  _ : Unknown
   Type : Procedure
   IfBlockInfo : mut: If
   SwitchBlockInfo : mut: Switch
@@ -1400,7 +1400,7 @@ proc(
     constantEquals if
       "duplicate label " sb.wrap
         ## TODO? print position of previous occurrence
-        switchData [] .switchType typeContext types.isEnum if
+        switchData [] .switchType typeContext types.isTaggedUnion if
           ## appendLabelName
             switchData [] .switchType
             label .enumLabel i64 cast typeContext types.compositeGetLabel
@@ -1497,7 +1497,7 @@ proc(
   end
   ## operation after switch -> don't allow break statement
   false switchBlock [] .allowBreak =
-  switchType typeContext types.isEnum ! if
+  switchType typeContext types.isTaggedUnion ! if
     op state [] .interpreter @ evaluateOperation if
       "unsupported operation in switch label:\n " sb.wrap
         op [] program sb.appendOp
@@ -1751,7 +1751,7 @@ proc(
             break
             builtIn case
               calledProcData [] .implementation .builtIn .builtIn =:: builtInId
-              builtInId .SYS_ARGC ?? or builtInId .SYS_ARGC ?? or builtInId .SYS_ARGC ?? if
+              builtInId .SYS_ARGC ?? or builtInId .SYS_ARGV ?? or builtInId .SYS_ENVP ?? if
                 true program [] .hasGetArgs =
               end
               builtInId OpValue .builtIn op .val =
@@ -2115,8 +2115,12 @@ proc(
       types.compositeFindLabel i64 cast =:: elementIndex
       elementIndex 0 < if
         checkOnly if
-          containerType typeContext types.isEnum if
-            "enum-type " sb.wrap
+          containerType typeContext types.isTaggedUnion if
+            containerType typeContext types.isEnum if
+              "enum " sb.wrap
+            else
+              "tagged union " sb.wrap
+            end
               containerType typeContext sb.appendType
               " does not have a label \"" sb.appendS
               labelId labelContext sb.appendLabelName
@@ -2139,7 +2143,7 @@ proc(
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
       checkOnly if
-        isType containerType typeContext types.isEnum ! | if
+        isType or containerType typeContext types.isTaggedUnion ! if
           ## label always exists
           1 op .pos state discardValues ## remove container
           true ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
@@ -2169,6 +2173,13 @@ proc(
           labelId labelContext sb.appendLabelName
           "\" in " sb.appendS
           containerType typeContext sb.appendType
+          op .pos errors appendError
+          return
+        else containerType typeContext types.isEnum ! and
+            containerType typeContext types.isUnion ! _if
+          256 sb.create
+          containerType typeContext sb.appendType
+          " is not an enum or union " sb.appendS
           op .pos errors appendError
           return
         end
@@ -2229,7 +2240,7 @@ proc(
             op .pos
           opAutoCast state appendOp list.append
         end
-        containerType typeContext types.isEnum if
+        containerType typeContext types.isTaggedUnion if
           containerType elementIndex op .pos opCheckEnum state appendOp onRead =
           true true 0 0 state updateOpInfo_noStack
           onRead list.append
@@ -2302,7 +2313,7 @@ proc(
       label [] .valueType
         typeContext types.unwrapReference
       =:: enumType
-      enumType typeContext types.isEnum ! if
+      enumType typeContext types.isTaggedUnion ! if
         "wrong argument type for getEnumLabel expected enum got " sb.wrap
           enumType typeContext sb.appendType
         op .pos errors appendError
@@ -2576,7 +2587,7 @@ proc(
         op .pos errors appendError
         return
       end =:: argType
-      argType typeContext types.isEnum and
+      argType typeContext types.isTaggedUnion and
           argType typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
         "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.wrap
         op .pos errors appendWarning
@@ -2603,6 +2614,7 @@ proc(
         TYPE_STRUCT
         TYPE_ENUM
         TYPE_UNION
+        TYPE_UNTAGGED_UNION
         TYPE_PROC_IN
         TYPE_PROC_OUT
         TYPE_COMPOSITE
@@ -2855,7 +2867,7 @@ proc(
           =:: switchType
           switchType typeContext types.isInt ! and
           switchType typeContext types.isChar ! and
-              switchType typeContext types.isEnum ! if
+              switchType typeContext types.isTaggedUnion ! if
             "cannot switch values of type " sb.wrap
               switchType typeContext sb.appendType
             op .pos errors appendError
@@ -3215,6 +3227,7 @@ proc(
         TYPE_STRUCT
         TYPE_ENUM
         TYPE_UNION
+        TYPE_UNTAGGED_UNION
         TYPE_PROC_IN
         TYPE_PROC_OUT
         TYPE_COMPOSITE
@@ -3348,7 +3361,7 @@ proc(
             BlockType .DEFAULT op .pos opBlock =:: mut: tmp
             switchBlock [] .blockId tmp .val .block .blockId =
             tmp state appendOp ..drop
-            switchBlock [] .switchType typeContext types.isEnum if
+            switchBlock [] .switchType typeContext types.isTaggedUnion if
               switchBlock [] .switchType
                 typeContext
               types.compositeEltCount =:: eltCount

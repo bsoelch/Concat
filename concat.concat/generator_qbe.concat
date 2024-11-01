@@ -90,7 +90,7 @@ struct(
   i32 : blockId
 ) =:: AndOrBlockInfo
 
-enum(
+union(
   IfBlockInfo : mut: If
   SwitchBlockInfo : mut: Switch
   WhileBlockInfo : mut: While
@@ -1010,8 +1010,7 @@ namespace: sb
           isGlobal ! if
             break ## XXX? support small unions as local constants
           end
-          t typeContext types.isEnum ! and
-              t typeContext types.isUnion ! if
+          t typeContext types.isEnum ! and t typeContext types.isUnion ! if
             "unsupported type for union constant: " sb.wrap
               t typeContext sb.appendType
               " expected enum or union" sb.appendS
@@ -1248,9 +1247,8 @@ namespace: sb
         end
       endTypeDeclaration return
     end
-    t typeContext types.isUnion
-    t typeContext types.isEnum | if
-      t typeContext types.isEnum =:: isTagged
+    t typeContext types.isUnion or t typeContext types.isEnum if
+      t typeContext types.isTaggedUnion =:: isTagged
       t typeContext types.compositeElts =:: elts
       false =:: mut: hasElt
       0:i64 =:: mut: bodySize
@@ -1356,7 +1354,7 @@ proc(
   return
 end
 
-enum( i64 : constant i64 : stackId i64 : localId i64 : tmpId ) =:: IntValue
+union( i64 : constant i64 : stackId i64 : localId i64 : tmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
@@ -1518,6 +1516,7 @@ proc(
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
+  labelType .empty ?? if sb return end
   context nextTmpId =:: labelPtr
   sb
     "%t" sb.appendS
@@ -1903,7 +1902,7 @@ proc(
   labels labelCmp @ context list.sort
   sb
     "## switch\n" sb.appendS
-    switchType typeContext types.isEnum if
+    switchType typeContext types.isTaggedUnion if
       ## loadEnumLabel
         switchType
         valId
@@ -3487,8 +3486,7 @@ proc(
           "," sb.appendS
           containerType index op [] .pos context tupleEltOffsetInt sb.appendI
           '\n' sb.appendC
-      else containerType typeContext types.isUnion or
-          containerType typeContext types.isEnum _if
+      else containerType typeContext types.isUnion or containerType typeContext types.isEnum _if
         sb ## not change to pointer necessary
       else
         break ## unsupported type
@@ -3646,7 +3644,7 @@ proc(
            typeContext types.getBaseType
         end
       =:: containerType
-      containerType typeContext types.isEnum ! if
+      containerType typeContext types.isTaggedUnion ! if
         break
       end
       op [] .pos context popValue =:: srcId
@@ -4473,7 +4471,7 @@ proc(
             nextBranch context startBranch
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
         TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
@@ -4733,7 +4731,7 @@ proc(
           newSb return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
         AND_IF OR_IF AND_DO OR_DO INITIALIZER NAMESPACE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
         TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break

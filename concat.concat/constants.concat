@@ -11,8 +11,8 @@ i64 =:: export: ProcBundleId
 i64 =:: export: ConstantId
 struct( i64 : offset i64 : length ) =:: export: ConstantArray
 struct( ConstantId : value i64 : eltIndex ) =:: export: UnionConstant
-enum(
-  none
+union(
+  _ : none
   bool : boolean
   i64 : enumLabel
   char8 : chr
@@ -23,7 +23,7 @@ enum(
   ConstantArray : str32
   ConstantArray : arrayConstant
   Type : typeId
-  wildCard
+  _ : wildCard
   LabelId : genericArg
   ProcId : procedure
   ProcBundleId : procedureBundle

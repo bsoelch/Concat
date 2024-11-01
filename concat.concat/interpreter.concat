@@ -5,7 +5,7 @@ import "identifiers.concat"
 import "program.concat"
 
 struct(
-  Type : valueType
+  Type : mut: valueType
   LabelId : valueId
   LabelId : mut: valueName
   FilePosition : mut: pushedAt
@@ -83,11 +83,29 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
   end ..drop
   false return
 end
+proc( InterpreterContext ptr mut : context -> bool ) =>: inEnumOrUnion
+  ## XXX cache/precompute result
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType switch
+      TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION case
+         ..drop true return
+      PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        ..drop false return
+      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
+       SWITCH BREAK_SWITCH CASE DEFAULT
+       AND OR AND_IF OR_IF AND_DO OR_DO
+       NAMESPACE case break
+    end
+    1 -
+  end ..drop
+  false return
+end
 proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType switch
-      INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+      INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
          ..drop true return
       PROCEDURE EXPERIMENTAL_PROCEDURE case
@@ -107,7 +125,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inInitializer
     context [] .openBlocks ..over list.at .data [] .blockType switch
       INITIALIZER case
          ..drop true return
-      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
        PROCEDURE EXPERIMENTAL_PROCEDURE case
          ..drop false return
@@ -789,7 +807,7 @@ proc(
       true return
     block case
       op [] .val .block .blockType switch
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         INITIALIZER case
           op [] .val .block .blockType context openBlock
@@ -872,11 +890,12 @@ proc(
             op [] .pos
           context pushValue
           false return
-        TYPE_UNION case
+        TYPE_UNION TYPE_UNTAGGED_UNION case
           op closedBlock @ false true context closedTypeBlock if true return end
           ## newUnion
             context [] .typeBuffer list.asArray
             context [] .labelBuffer list.asArray optional.wrap
+            blockType .TYPE_UNION ??
           typeContext types.newUnion if ..drop
             "could not create union-type" sb.wrap op [] .pos errors appendError
             true return
@@ -996,6 +1015,10 @@ proc(
       end
       break
     declareId case
+      context inEnum if
+        "typed enums are deprecated, use tagged unions instead " sb.wrap
+        op [] .pos errors appendError
+      end
       context inTypeOrInitializer ! if
         context [] .evalType switch
           INTERPRET GLOBAL case
@@ -1010,38 +1033,41 @@ proc(
         true return
       end
       context [] .stackInfo list.peek .data =:: valInfo
-      context inInitializer ! if
-        valInfo [] .valueType types.primitive.TYPE types.typeEquals ! if
-          "wrong argument type for declaration expected type got " sb.wrap
-            valInfo [] .valueType typeContext sb.appendType
-          op [] .pos errors appendError
-          true return
-        end
-      end
       context [] .stack list.peek .data =:: value
-      value [] .typeId =:: valType
-      valType
-        typeContext types.unwrapNamed
-      types.primitive.TYPE types.typeEquals =:: isType
       op [] .val .declareId .labelId =:: labelId
       labelId valInfo [] .valueName =
-      ## map.put
+      value [] .wildCard ?? and context inEnumOrUnion if
+        types.primitive.TYPE valInfo [] .valueType =
+        Type .empty ConstValue .typeId value [] =
+      end
+      valInfo [] .valueType types.primitive.TYPE types.typeEquals if
+        value [] .typeId =:: typeValue
+        typeValue
+          typeContext types.unwrapNamed
+        types.primitive.TYPE types.typeEquals =:: isType
+        ## map.put
         context [] .variables @
-        labelId
-        ## Constant
-          isType if
-            labelId types.newGenericType ConstValue .typeId
-          else
-            labelId ConstValue .genericArg
-          end
-          ## ValueInfo
-            valType
-            labelId
-            labelId
-            valInfo [] .pushedAt
-          ValueInfo new
-        Constant new
-      map.put ..drop
+          labelId
+          ## Constant
+            isType if
+              labelId types.newGenericType ConstValue .typeId
+            else
+              labelId ConstValue .genericArg
+            end
+            ## ValueInfo
+              typeValue
+              labelId
+              labelId
+              valInfo [] .pushedAt
+            ValueInfo new
+          Constant new
+        map.put ..drop
+      else context inInitializer ! _if
+        "wrong argument type for declaration expected type got " sb.wrap
+          valInfo [] .valueType typeContext sb.appendType
+        op [] .pos errors appendError
+        true return
+      end
       false return
     getName case
       context inEnum if

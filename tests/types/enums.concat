@@ -1,15 +1,15 @@
 import debug
-enum( A B i32 : C  ( i32 char8 ) : mut: D ) type =: anEnum
+union( _ : A _ : B i32 : C  ( i32 char8 ) : mut: D ) type =: anUnion
 enum( A B C ) type =: labelEnum 
-enum( empty i64 ptr : data ) type =: optionalI64
+union( _ : empty i64 ptr : data ) type =: optionalI64
 
-anEnum .A =:: e1
-anEnum .B =:: e2
-2 anEnum .C =:: e3
+anUnion .A =:: e1
+anUnion .B =:: e2
+2 anUnion .C =:: e3
 
 proc( -> ) =>: main
-  -32141 anEnum .C =:: mut: e
-  anEnum .A anEnum =: f
+  -32141 anUnion .C =:: mut: e
+  anUnion .A anUnion =: f
   e .A ?? debug.print
   e .C ?? debug.print
   e .C debug.print

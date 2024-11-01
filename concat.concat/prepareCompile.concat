@@ -210,7 +210,8 @@ proc(
             op list.append ## nothing to change
           return
         UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
       end
       break
     blockEnd case
@@ -224,7 +225,8 @@ proc(
           newOps
             op list.append
           return
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
       end
       break
     autoTypedInitializeId ConstantReference NewReference
