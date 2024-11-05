@@ -137,12 +137,19 @@ end
 syntax:
 
 ```
+  while
+    <while-body>
+    <condition>
+  end
+
   while <while-body> <condition> do
      <do-body>
   end
-  
-  while <defered-code> defer <while-body> <condition> do
+
+  while <while-body> <condition> do
      <do-body>
+  finally
+    <finally-body>
   end
 ```
 
@@ -152,19 +159,20 @@ Within the loop `break` can be used to break out of the loop ( jump to the posit
 The types at the end of all `break` branches have to be equal ( implicitly convertible to ) the types on the stack when reaching `do` ( after popping the condition ).
 The types obtained by merging the `continue` branches have to be equal to the types at the start of the loop.
 
-Optionally a while loop can contain a `defer` statement, the code between `while`  and `defer` will be executed after each iteration of the loop, if a `defer` statement is present the `continue` branches will jump to the start of the `defered` code.
-( `defer` has not been implemented )
+
+Optionally a while loop can contain a `finally` statement, the code between `finally`  and `end` will be executed after each iteration of the loop.
+If a `finally` statement is present the `continue` branches will jump to `finally` instead of `end`, it is not possible to continue the loop after reaching `finally`.
 
 ## and / or
 
 syntax (examples, number and type of and/or can be chosen arbitrarily ):
 ```
   <condition> and <condition> or <condition> or <condition> end
-  
+
   <condition> and <condition> or <condition> if
      ...
   end
-  
+
   while <condition> and <condition> or <condition> do
     ...
   end

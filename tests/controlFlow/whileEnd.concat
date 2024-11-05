@@ -1,0 +1,8 @@
+import debug
+
+proc( -> ) =>: main
+  0 while
+    $ debug.print
+    1 +
+  $ 5 < end ..drop
+end

@@ -93,7 +93,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inUnion
           TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
         ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT
+       SWITCH BREAK_SWITCH CASE DEFAULT FOR FINALLY
        AND OR AND_IF OR_IF AND_DO OR_DO
        NAMESPACE case break
     end
@@ -111,7 +111,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
       PROCEDURE EXPERIMENTAL_PROCEDURE case
         ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT
+       SWITCH BREAK_SWITCH CASE DEFAULT FOR FINALLY
        AND OR AND_IF OR_IF AND_DO OR_DO
        NAMESPACE case break
     end
@@ -130,7 +130,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inInitializer
        PROCEDURE EXPERIMENTAL_PROCEDURE case
          ..drop false return
       UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT
+       SWITCH BREAK_SWITCH CASE DEFAULT FOR FINALLY
        AND OR AND_IF OR_IF AND_DO OR_DO
        NAMESPACE case break
     end
@@ -832,7 +832,7 @@ proc(
         INITIALIZER case
           op [] .val .block .blockType context openBlock
           false return
-        PROCEDURE EXPERIMENTAL_PROCEDURE
+        PROCEDURE EXPERIMENTAL_PROCEDURE FOR FINALLY
         IF IFIF ELSE WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
@@ -1023,7 +1023,7 @@ proc(
         IF IFIF ELSE WHILE DO BREAK CONTINUE
         SWITCH CASE BREAK_SWITCH DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
-        UNKNOWN NAMESPACE case
+        UNKNOWN NAMESPACE FOR FINALLY case
           context [] .evalType switch
             INTERPRET GLOBAL case break
             PARSER FOLD_LOCAL case true return

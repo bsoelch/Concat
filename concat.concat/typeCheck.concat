@@ -60,6 +60,7 @@ struct(
   i64 : mut: doBranchIndex ## index of do-branch in break branches
   LabelId : blockLabel
   i32 : blockId
+  bool : mut: hasFinally
 ) =:: WhileBlockInfo
 struct(
   BranchPoint list : mut: branches
@@ -122,6 +123,7 @@ proc(
     -1
     blockLabel
     blockId
+    false
   WhileBlockInfo new BlockInfo .While return
 end
 proc( branchTree.NodeId : branchRoot i32 : blockId FilePosition : pos -> BlockInfo ) =>: newAndOrBlock
@@ -1047,7 +1049,7 @@ proc(
   op [] .val switch
     block case
       op [] .val .block .blockType switch
-        ELSE CASE DEFAULT case
+        ELSE CASE DEFAULT FINALLY case
           return
         BREAK BREAK_SWITCH case
           state [] .openBlocks .length 0 > and
@@ -3011,6 +3013,16 @@ proc(
           else breakBlock [] .While ?? _if
             breakBlock [] .While @ =:: whileBlock
             blockType .CONTINUE ?? if
+              whileBlock .hasFinally [] if
+                "unexpected " sb.wrap
+                  blockType sb.appendBlockType
+                  "-statement, " sb.appendS
+                  blockType sb.appendBlockType
+                  " can not appear after " sb.appendS
+                  BlockType .FINALLY sb.appendBlockType
+                op .pos errors appendError
+                return
+              end
               whileBlock [] .continueCastOffsets @
               whileBlock [] .continueBranches @
             else
@@ -3105,7 +3117,9 @@ proc(
               currentBlock [] .While ?? ! if
             "unexpected " sb.wrap
               BlockType .DO sb.appendBlockType
-              "-statement, do can only appear in " sb.appendS
+              "-statement, " sb.appendS
+              BlockType .DO sb.appendBlockType
+              " can only appear in " sb.appendS
               WHILE_BLOCK_INFO_NAME sb.appendS
               "-blocks" sb.appendS
             op .pos errors appendError
@@ -3181,6 +3195,92 @@ proc(
             branchPoints list.free ..drop
           end
           op state appendOp ..drop
+          return
+        FOR case break
+        FINALLY case
+          state peekBlock =:: currentBlock?
+          currentBlock? optional.isEmpty or
+              currentBlock? .data =:: currentBlock
+              currentBlock [] .While ?? ! if
+            "unexpected " sb.wrap
+              BlockType .FINALLY sb.appendBlockType
+              "-statement, '" sb.appendS
+              BlockType .FINALLY sb.appendBlockType
+              "' can only appear in " sb.appendS
+              WHILE_BLOCK_INFO_NAME sb.appendS
+              "-blocks" sb.appendS
+            op .pos errors appendError
+            return
+          end
+          currentBlock? .data =:: currentBlock
+          false 1 op .pos state clearReferences
+          currentBlock [] .While@ =:: whileBlock
+          true whileBlock [] .hasFinally =
+          whileBlock [] .blockId op .val .block .blockId =
+          whileBlock [] .continueBranches =:: mut: continueBranches
+          state [] .reachable if
+            whileBlock [] .continueCastOffsets
+              ## reserveOps
+                state [] .stack branchTree.depth
+                op .pos
+              state reserveOps list.append
+            whileBlock [] .continueCastOffsets =
+            continueBranches
+              ## BranchPoint
+                state [] .stack @ branchTree.startBranch
+                op .pos
+              BranchPoint new list.append
+            continueBranches =
+          end
+          ## merge continue branches
+          continueBranches .length 1 >= if
+            continueBranches .length branchTree.NodeId list.create =:: mut: branchPoints
+            continueBranches .length =:: nodeCount
+            branchPoints
+              0:i64 while ..dup nodeCount < do =:: i
+                continueBranches
+                  i list.at .data
+                [] .node list.append
+                i 1 +
+              end ..drop
+            branchPoints =
+            ## mergeValues
+              state [] .stack @
+              branchPoints list.asArray
+              mergeBranches @
+              ## MergePoint
+                "while block" string.wrap
+                op .pos
+                whileBlock [] .continueCastOffsets list.asArray
+                state
+                0
+                MergeType .MERGE
+              MergePoint new
+            branchTree.merge .error ?? if
+              "different numbers of types at the end of continue branches: " sb.wrap
+                0:i64 while ..dup continueBranches .length < do =:: i
+                  "\n  * " sb.appendS
+                  continueBranches i list.at .data =:: branchPoint
+                  state [] .stack
+                     branchPoint [] .node
+                  branchTree.depthFrom sb.appendI
+                  " in branch at " sb.appendS
+                  branchPoint [] .pos sb.appendPos
+                  i 1 +
+                end ..drop
+                '\n' sb.appendC
+              op .pos errors appendError
+            end
+            branchPoints
+              list.free
+            branchPoints =
+          else
+            "while-loop does not loop: " sb.wrap
+            op .pos errors appendError
+            return
+          end
+          op state appendOp ..drop
+          ## TODO is this enough
           return
         AND OR case
           false 1 op .pos state clearReferences
@@ -3460,7 +3560,7 @@ proc(
           return
         SWITCH case ## end-switch should not be created by parser
           break
-        DO case
+        FINALLY case
           op .pos state closeBlock =:: mut: closed
           closed .While ?? ! if
             "unexpected end of " sb.wrap
@@ -3473,77 +3573,11 @@ proc(
           end
           closed .While @ =:: whileBlock
           whileBlock [] .breakBranches =:: breakBranches
-          whileBlock [] .continueBranches =:: mut: continueBranches
-          state [] .reachable if
-            whileBlock [] .continueCastOffsets
-              ## reserveOps
-                state [] .stack branchTree.depth
-                op .pos
-              state reserveOps list.append
-            whileBlock [] .continueCastOffsets =
-            continueBranches
-              ## BranchPoint
-                state [] .stack @ branchTree.startBranch
-                op .pos
-              BranchPoint new list.append
-            continueBranches =
-          end
-          ## max
-            continueBranches .length
-            breakBranches .length
-          i64.max branchTree.NodeId list.create =:: mut: branchPoints
-          ## merge continue branches
-          continueBranches .length 1 >= if
-            continueBranches .length =:: nodeCount
-            branchPoints
-              0:i64 while ..dup nodeCount < do =:: i
-                continueBranches
-                  i list.at .data
-                [] .node list.append
-                i 1 +
-              end ..drop
-            branchPoints =
-            ## mergeValues
-              state [] .stack @
-              branchPoints list.asArray
-              mergeBranches @
-              ## MergePoint
-                "while block" string.wrap
-                op .pos
-                whileBlock [] .continueCastOffsets list.asArray
-                state
-                0
-                MergeType .MERGE
-              MergePoint new
-            branchTree.merge .error ?? if
-              "different numbers of types at the end of continue branches: " sb.wrap
-                0:i64 while ..dup continueBranches .length < do =:: i
-                  "\n  * " sb.appendS
-                  continueBranches i list.at .data =:: branchPoint
-                  state [] .stack
-                     branchPoint [] .node
-                  branchTree.depthFrom sb.appendI
-                  " in branch at " sb.appendS
-                  branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
-                '\n' sb.appendC
-              op .pos errors appendError
-            end
-            branchPoints
-              list.clear
-            branchPoints =
-          else
-            "while-loop does not loop: " sb.wrap
-            op .pos errors appendError
-            return
-          end
-          ## XXX? insert "continue-loop" operation
-          ## XXX insert deferred code ( recursively run interpreter )
-          branchPoints
+          ## XXX? avoid allocation if it si not neccessary
+          breakBranches .length branchTree.NodeId list.create
             whileBlock [] .branchRoot .node list.append
             state [] .stack @ branchTree.startBranch list.append
-          branchPoints =
+          =:: mut: branchPoints
           i64 2 array new =:: mut: castOffsets
           OP_UNLINKED castOffsets @ 0 [] =
           ## reserveOps
@@ -3635,7 +3669,7 @@ proc(
           whileBlock [] .blockId tmp .val .blockEnd .blockId =
           tmp state appendOp ..drop
           return
-        WHILE case ## end-while should not be created by parser
+        WHILE DO FOR case ## end-while/end-do should not be created by parser
           break
         AND OR case
           op .pos state closeBlock =:: mut: closed

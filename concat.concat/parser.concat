@@ -1489,6 +1489,24 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       BlockType .WHILE  state openBlockScope
       return
+    else ..dup "for" string.wrap string.eq or
+        ..dup "for:" string.wrap string.eq _if =:: opName
+      opName "for:" string.wrap string.eq if
+        fileState nextToken
+          ..dup .IDENTIFIER ?? ! if ## XXX? print type of actual token
+            "expected identifier" sb.wrap fileState [] .wordStart state appendError2
+          end
+          .IDENTIFIER
+          id.FLAG_NONE
+          fileState [] .wordStart
+          state [] .currentFile
+        labelContext id.newLabel
+      else
+        id.LABEL_ID_NONE
+      end =:: blockLabel
+      BlockType .FOR blockLabel fileState [] .wordStart opLabeledBlock state appendOp
+      BlockType .FOR  state openBlockScope
+      return
     else ..dup "do" string.wrap string.eq _if ..drop
       state currentBlockType =:: currentBlock
       currentBlock .AND ?? currentBlock .OR ?? | if
@@ -1503,6 +1521,15 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BlockType .DO  current? .data [] .blockType =
       BlockType .DO  fileState [] .wordStart opBlock  state appendOp
+      return
+    else ..dup "finally" string.wrap string.eq _if =:: opName
+      state [] .openBlocks list.peek =:: current?
+      current? optional.isEmpty if true else current? .data [] .blockType .DO ?? ! end if
+        "'finally' is only allowed after 'do' in while-blocks" sb.wrap fileState [] .wordStart state appendError2
+        return
+      end
+      BlockType .FINALLY  current? .data [] .blockType =
+      BlockType .FINALLY  fileState [] .wordStart opBlock  state appendOp
       return
     else ..dup "break" string.wrap string.eq or
         ..dup "break." string.wrap string.startsWith _if =:: opName
@@ -1586,6 +1613,13 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         currentBlock .IF ?? if
           BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
           BlockType .ELSE fileState [] .wordStart opEndBlock  state appendOp
+        else currentBlock .WHILE ?? _if
+          BlockType .DO fileState [] .wordStart opBlock  state appendOp
+          BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
+          BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
+        else currentBlock .DO ?? or currentBlock .FOR ?? _if
+          BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
+          BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
         else currentBlock .NAMESPACE ?? ! _if
           currentBlock fileState [] .wordStart opEndBlock  state appendOp
         end
@@ -1897,7 +1931,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
         IF IFIF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
-        AND OR AND_IF OR_IF AND_DO OR_DO
+        AND OR AND_IF OR_IF AND_DO OR_DO FOR FINALLY
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
             opName sb.appendStr

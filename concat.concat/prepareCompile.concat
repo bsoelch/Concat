@@ -204,7 +204,7 @@ proc(
       op .val .block .blockType switch
         IF IFIF ELSE SWITCH CASE
         DEFAULT BREAK_SWITCH WHILE
-        DO BREAK CONTINUE
+        DO BREAK CONTINUE FOR FINALLY
         AND OR AND_IF OR_IF AND_DO OR_DO case
           newOps
             op list.append ## nothing to change
@@ -216,14 +216,11 @@ proc(
       break
     blockEnd case
       op .val .blockEnd .blockType switch
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
-          newOps
-            op list.append ## nothing to change
-          return
-        ELSE IFIF AND OR AND_IF OR_IF AND_DO OR_DO
+        PROCEDURE EXPERIMENTAL_PROCEDURE
+        ELSE IFIF AND OR AND_IF OR_IF AND_DO OR_DO FOR FINALLY
         SWITCH WHILE UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE case
           newOps
-            op list.append
+            op list.append ## nothing to change
           return
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break

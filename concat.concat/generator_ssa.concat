@@ -1700,6 +1700,7 @@ proc(
           newOps
             doBranch context startBranch
           return
+        FOR case break
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
@@ -1751,6 +1752,50 @@ proc(
             ssa.Jump new ssa.Atom .jump list.append
             false context [] .reachable =
           return
+        FINALLY case
+          context [] .openBlocks list.peek
+            .data .While
+          =:: mut: whileBlock
+          whileBlock .continueBranches =:: mut: continueBranches
+          context [] .reachable if
+            whileBlock .continueBranchLabels []
+              context [] .currentBranch list.append
+            whileBlock .continueBranchLabels [] =
+            continueBranches []
+              context [] .stackInfo @ branchTree.startBranch list.append
+            continueBranches [] =
+          end
+          ops
+            ## don't add position for labels
+            ## startBranch
+              ## BranchLabel
+                ssa.BranchType .CONTINUE_WHILE
+                op [] .val .block .blockId
+                0
+              ssa.BranchLabel new
+              context
+            startBranch
+          =:: mut: newOps
+          continueBranches .length [] 1 >= if
+            continueBranches .length [] =:: nodeCount
+            ## mergeValues
+              context [] .stackInfo @
+              continueBranches [] list.asArray
+              mergeBranches @
+              ## MergePoint
+                "while" string.wrap
+                whileBlock .blockId []
+                whileBlock .continueBranchLabels [] list.asArray
+                op [] .pos
+                context
+                newOps @
+              MergePoint new
+            branchTree.merge .error ?? if
+              "could not merge continue branches of while block" sb.wrap
+              op [] .pos errors appendError
+            end
+          end
+          newOps return
         AND OR case
           op [] .val .block .blockType .OR ?? =:: isOr
           context [] .openBlocks list.peek =:: currentBlock?
@@ -1902,52 +1947,13 @@ proc(
           context [] .openBlocks
             list.pop .While =:: mut: whileBlock
           context [] .openBlocks =
-          whileBlock .continueBranches =:: mut: continueBranches
-          context [] .reachable if
-            whileBlock .continueBranchLabels
-              context [] .currentBranch list.append
-            whileBlock .continueBranchLabels =
-            continueBranches
-              context [] .stackInfo @ branchTree.startBranch list.append
-            continueBranches =
-          end
-          ops
-            ## don't add position for labels
-            ## startBranch
-              ## BranchLabel
-                ssa.BranchType .CONTINUE_WHILE
-                op [] .val .blockEnd .blockId
-                0
-              ssa.BranchLabel new
-              context
-            startBranch
-          =:: mut: newOps
-          continueBranches .length 1 >= if
-            continueBranches .length =:: nodeCount
-            ## mergeValues
-              context [] .stackInfo @
-              continueBranches list.asArray
-              mergeBranches @
-              ## MergePoint
-                "while" string.wrap
-                whileBlock .blockId
-                whileBlock .continueBranchLabels list.asArray
-                op [] .pos
-                context
-                newOps @
-              MergePoint new
-            branchTree.merge .error ?? if
-              "could not merge continue branches of while block" sb.wrap
-              op [] .pos errors appendError
-            end
-          end
           prog [] .whileData whileBlock .blockId list.at .data =:: whileData
           context [] .stackInfo branchTree.depth whileData [] .modifiedTypes < if
             "stack underflow" sb.wrap
             op [] .pos errors appendError
-            newOps return
+            ops return
           end
-          newOps
+          ops
             ## copy values to loop vars
             0:i64 while ..dup whileData [] .modifiedTypes < do =:: i
               context [] .stackInfo @ branchTree.pop .data =:: elt
@@ -1971,9 +1977,7 @@ proc(
                 loopStart
               ssa.JumpType .ANY
             ssa.Jump new ssa.Atom .jump list.append
-          newOps =
-          continueBranches list.free ..drop
-          whileBlock .continueBranchLabels list.free ..drop
+          =:: mut: newOps
           newOps
             ## don't add position for labels
             ## startBranch
@@ -2008,6 +2012,8 @@ proc(
           breakBranches .length 0 > context [] .reachable =
           breakBranches list.free ..drop
           whileBlock .breakBranchLabels list.free ..drop
+          whileBlock .continueBranches list.free ..drop
+          whileBlock .continueBranchLabels list.free ..drop
           whileBlock .doBranches list.free ..drop
           whileBlock .doBranchLabels list.free ..drop
           newOps return
@@ -2051,7 +2057,7 @@ proc(
           andOrBlock .branchLabels list.free ..drop
           newOps return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
-        AND_IF OR_IF AND_DO OR_DO
+        AND_IF OR_IF AND_DO OR_DO FOR FINALLY
         UNKNOWN INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
