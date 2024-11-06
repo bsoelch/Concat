@@ -371,6 +371,9 @@ proc(
           src typeContext types.isArray ! if
         true return
       end
+      target typeContext types.isPointer src typeContext types.isPointer != if
+        true return ## no implicit casts array <-> pointer
+      end
       src typeContext types.isMutable =:: srcMutable
       target typeContext types.isMutable =:: targetMutable
       targetMutable and srcMutable ! if
@@ -716,6 +719,11 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   idContext [] .constContext @ =:: constContext
   procedureIds .length 0 == if
+    errorMessage optional.hasData if
+      errorMessage .data []
+        "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
+      errorMessage .data [] =
+    end
     ProcedureCallInfo optional.empty Type .undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures

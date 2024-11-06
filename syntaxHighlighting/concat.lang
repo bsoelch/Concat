@@ -60,6 +60,8 @@
           end             |
           while           |
           while\:         |
+          for             |
+          for\:           |
           do              |
           break           |
           continue        |

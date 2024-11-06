@@ -1644,7 +1644,7 @@ proc(
         idInfo .constValue
       end =:: constValue
       idInfo .idType switch
-        GLOBAL_VAR LOCAL_VAR TMP_VAR case
+        GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           ## pushValue
             op .dataType
               mutable
@@ -1857,7 +1857,7 @@ proc(
       return
     atId case
       op .val .atId .idType switch
-        GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE case
+        GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR case
           op .val .atId .labelId =:: labelId
           labelId
             labelContext id.labelFlags
@@ -1908,7 +1908,7 @@ proc(
     declareId case
       op @ false state resolveAutoType
       op .val .declareId .idType switch
-        GLOBAL_VAR LOCAL_VAR TMP_VAR case
+        GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           op state appendOp ..drop
           return
         PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
@@ -1932,7 +1932,7 @@ proc(
       op @ autoTyped state resolveAutoType
       idInfo op .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
-        GLOBAL_VAR LOCAL_VAR case
+        GLOBAL_VAR LOCAL_VAR ITR_VAR case
           state [] .stack @ branchTree.peek =:: constVal?
           constVal? optional.hasData if
             constVal? .data [] .value
@@ -3134,6 +3134,7 @@ proc(
           state requireTypes if
             ..drop return
           end ..drop
+          ## TODO push current value if in for-loop
           ## passing a offset of 1 ensures that cast-offsets consider do-condition
           false 1 op .pos state clearReferences
           currentBlock [] .While@ =:: whileBlock
@@ -3196,7 +3197,6 @@ proc(
           end
           op state appendOp ..drop
           return
-        FOR case break
         FINALLY case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty or
@@ -3669,7 +3669,7 @@ proc(
           whileBlock [] .blockId tmp .val .blockEnd .blockId =
           tmp state appendOp ..drop
           return
-        WHILE DO FOR case ## end-while/end-do should not be created by parser
+        WHILE DO case ## end-while/end-do should not be created by parser
           break
         AND OR case
           op .pos state closeBlock =:: mut: closed

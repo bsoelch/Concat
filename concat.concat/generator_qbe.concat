@@ -3161,7 +3161,7 @@ proc(
             sb return ## ignore procedure declarations
           end
           break
-        LOCAL_VAR TMP_VAR case
+        LOCAL_VAR TMP_VAR ITR_VAR case
           op [] .dataType =:: valType
           ## use pointers as stack representation of arrays and composites
           valType context referenceOnly ! =:: isValue
@@ -3170,6 +3170,9 @@ proc(
             idInfo .idType .LOCAL_VAR ?? if
               "%l" sb.appendS
               idInfo .labelId i64 cast sb.appendI
+            else idInfo .idType .ITR_VAR ?? _if
+              "%itr" sb.appendS
+              idInfo .id i64 cast sb.appendI
             else
               "%tmp" sb.appendS
               idInfo .labelId i64 cast sb.appendI
@@ -3188,6 +3191,9 @@ proc(
               idInfo .idType .LOCAL_VAR ?? if
                 "%l" sb.appendS
                 idInfo .labelId i64 cast sb.appendI
+              else idInfo .idType .ITR_VAR ?? _if
+                "%itr" sb.appendS
+                idInfo .id i64 cast sb.appendI
               else
                 "%tmp" sb.appendS
                 idInfo .labelId i64 cast sb.appendI
@@ -3274,35 +3280,33 @@ proc(
       end =:: idInfo
       op [] .val .atId ?? =:: isAddr
       idInfo .idType switch
-        PROCEDURE GLOBAL_VAR case
-          idInfo .idType .PROCEDURE ?? if
-            ## procedures are handled by call & procPtr instructions
-            break
-          end
+        PROCEDURE  case
+          ## procedures are handled by call & procPtr instructions
+          break
+        GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-            " =l copy " sb.appendS
-            idInfo .labelId -1 context sb.appendGlobalName
-            "\n" sb.appendS
-          return
-        LOCAL_VAR case
-          sb
-            op [] .pos sb.appendPosQBE
-            "%s" sb.appendS
-            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-            " =l copy %l" sb.appendS
-            idInfo .labelId i64 cast sb.appendI
-            '\n' sb.appendC
-          return
-        TMP_VAR case
-          sb
-            op [] .pos sb.appendPosQBE
-            "%s" sb.appendS
-            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-            " =l copy %tmp" sb.appendS
-            idInfo .labelId i64 cast sb.appendI
+            idInfo .idType switch
+              GLOBAL_VAR case
+                " =l copy " sb.appendS
+                idInfo .labelId -1 context sb.appendGlobalName
+                break
+              LOCAL_VAR case
+                " =l copy %l" sb.appendS
+                idInfo .labelId i64 cast sb.appendI
+                break
+             ITR_VAR case
+                " =l copy %itr" sb.appendS
+                idInfo .id i64 cast sb.appendI
+                break
+              TMP_VAR case
+                " =l copy %tmp" sb.appendS
+                idInfo .labelId i64 cast sb.appendI
+                break
+              PROCEDURE ARGUMENT TYPE LABEL PROCEDURE_BUNDLE case ..unreachable
+            end
             '\n' sb.appendC
           return
        ARGUMENT case
@@ -4383,7 +4387,6 @@ proc(
           newSb
             doBranch context startBranch
           return
-        FOR case break
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
@@ -4736,7 +4739,7 @@ proc(
           andOrBlock .branchIds list.free ..drop
           newSb return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
-        AND_IF OR_IF AND_DO OR_DO INITIALIZER NAMESPACE FOR FINALLY
+        AND_IF OR_IF AND_DO OR_DO INITIALIZER NAMESPACE FINALLY
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
         TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message

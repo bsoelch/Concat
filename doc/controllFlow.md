@@ -163,6 +163,38 @@ The types obtained by merging the `continue` branches have to be equal to the ty
 Optionally a while loop can contain a `finally` statement, the code between `finally`  and `end` will be executed after each iteration of the loop.
 If a `finally` statement is present the `continue` branches will jump to `finally` instead of `end`, it is not possible to continue the loop after reaching `finally`.
 
+## for-loop
+
+syntax:
+
+```
+  <iterable> for
+    <body>
+  end
+
+  <iterable> for
+    <body>
+  finally
+    <finaly-body>
+  end
+```
+
+For-loops are syntactic suggar for easily iterating over a range or collection.
+
+If the iterable is a fixed sized array or pointer the loop will iterate over the elements of that array, if the iterable is an integer the loop will iterate over the range from zero (inclusive) to the signed interpretation that integer (exclusive).
+Each iteration the current value will be pushed onto the stack.
+
+It is possible to iterate over user defined types by overriding the `..itr.{}` procedure.
+A `for` loop behaves identical to the following code
+```
+  <iterable> ..itr.prepare =:: mut: tmp while tmp ..itr.check do
+    ..itr.get
+    <body>
+  finally tmp ..itr.step tmp =
+    <finaly-body>
+  end ..itr.end
+```
+
 ## and / or
 
 syntax (examples, number and type of and/or can be chosen arbitrarily ):

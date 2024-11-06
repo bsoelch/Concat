@@ -15,7 +15,6 @@ enum(
   DO
   AND_DO
   OR_DO
-  FOR
   BREAK
   CONTINUE
   FINALLY
@@ -68,9 +67,6 @@ namespace: sb
         return
       DO case
         "do" sb.appendS
-        return
-      FOR case
-        "for" sb.appendS
         return
       BREAK case
         "break" sb.appendS

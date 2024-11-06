@@ -1700,7 +1700,6 @@ proc(
           newOps
             doBranch context startBranch
           return
-        FOR case break
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
@@ -2057,7 +2056,7 @@ proc(
           andOrBlock .branchLabels list.free ..drop
           newOps return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
-        AND_IF OR_IF AND_DO OR_DO FOR FINALLY
+        AND_IF OR_IF AND_DO OR_DO FINALLY
         UNKNOWN INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case

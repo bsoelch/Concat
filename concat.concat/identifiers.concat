@@ -17,6 +17,7 @@ enum(
   LOCAL_VAR
   ARGUMENT
   TMP_VAR
+  ITR_VAR
 ) =:: export: IdentifierType
 
 struct(
@@ -114,6 +115,7 @@ end
     types.ArraySize list : mut: arraySizeBuffer
     stringBuilder : mut: nameBuffer
     NamespaceImportId list : mut: prevImports
+    IdentifierInfo list : mut: itrVariables
     i32 : mut: localVarCount
   ) =:: export: IdentifierContext
 namespace: id
@@ -128,10 +130,12 @@ namespace: id
     128 types.ArraySize   list.create
     128                     sb.create
     32  NamespaceImportId list.create
+    32 IdentifierInfo     list.create
     0
     IdentifierContext new =:: mut: newContext
     newContext return
   end
+  ## XXX? free IdentifierContext
 
   proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export: asIdInfo
     idData [] .idType
@@ -560,6 +564,33 @@ namespace: id
     context [] .nameBuffer sb.clear context [] .nameBuffer =
     label idData false return
   end
+  proc(
+    FilePosition : pos
+    FileId : currentFile
+    IdentifierContext ptr mut : context
+  -> IdentifierInfo ) =>: export: newItrVar
+    ## IdentifierInfo
+      IdentifierType .ITR_VAR
+      ## newLabel
+        "" string.wrap
+        id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
+        pos
+        currentFile
+      context .typeContext .labelContext newLabel
+      ConstValue .none
+      context .itrVariables .length [] i32 cast
+    IdentifierInfo new =:: idInfo
+    context .itrVariables []
+      idInfo list.append
+    context .itrVariables [] =
+    idInfo return
+  end
+  proc(
+    IdentifierContext ptr mut : context
+    i32 : id
+  -> IdentifierInfo ) =>: export: getItrVar
+    context .itrVariables [] id list.get return
+  end
 end
 namespace: sb
   proc( stringBuilder : sb IdentifierType : idType -> stringBuilder ) =>: export: appendIdType
@@ -588,6 +619,9 @@ namespace: sb
         return
       TMP_VAR case
         "temporary variable" sb.appendS
+        return
+      ITR_VAR case
+        "iterator variable" sb.appendS
         return
     end
   end
@@ -654,6 +688,11 @@ namespace: sb
           ") \"" sb.appendS
           id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
+          return
+        ITR_VAR case
+          "iterator variable (" sb.appendS
+          id .id sb.appendI
+          ")" sb.appendS
           return
       end
   end

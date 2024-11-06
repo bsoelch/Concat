@@ -1497,6 +1497,21 @@ proc(
     v_c8pp
     NO_BUNDLE
   pos context addBuiltIn
+  "..itr.prepare" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
+  "..itr.check" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
+  "..itr.get" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
+  "..itr.step" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
+  "..itr.end" string.wrap pos context newBuiltInBundle
+    if ..drop true return end
+  bundle =
   labelContext id.resetNamespace
   false return
 end

@@ -20,6 +20,11 @@ struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
 struct( InterpreterContext : mut: context i64 : mut: offset ) =:: InterpreterInfo
 
 struct(
+  IdentifierInfo : itrVar
+  Type : itrType
+) =:: ItrVarInfo
+struct(
+  ItrVarInfo optional : itrVarInfo
   BlockType : mut: blockType
   i64  : mut: blockStart
   bool : mut: autoClose
@@ -470,13 +475,19 @@ end
 
 proc( BlockType : blockType ParserState ptr mut : state -> ) =>: openBlock
   state [] .openBlocks
-    blockType -1 false false BlockInfo new list.append
+    ItrVarInfo optional.empty blockType -1 false false BlockInfo new list.append
   state [] .openBlocks =
 end
 proc( BlockType : blockType ParserState ptr mut : state -> ) =>: openBlockScope
   state [] .progContext [] .idContext @ id.openScope
   state [] .openBlocks
-    blockType -1 false true BlockInfo new list.append
+    ItrVarInfo optional.empty blockType -1 false true BlockInfo new list.append
+  state [] .openBlocks =
+end
+proc( ItrVarInfo : itrVarInfo ParserState ptr mut : state -> ) =>: openForBlock
+  state [] .progContext [] .idContext @ id.openScope
+  state [] .openBlocks
+    itrVarInfo optional.wrap BlockType .DO -1 false true BlockInfo new list.append
   state [] .openBlocks =
 end
 proc( Type : valType bool : experimental ParserState ptr mut : state -> ) =>: openProcBlock
@@ -486,6 +497,7 @@ proc( Type : valType bool : experimental ParserState ptr mut : state -> ) =>: op
   state [] .progContext [] .idContext @ id.openProcScope
   state [] .openBlocks
     ## BlockInfo
+      ItrVarInfo optional.empty
       experimental if
         BlockType .EXPERIMENTAL_PROCEDURE
       else
@@ -517,7 +529,7 @@ proc(
   bool #+isError+#
 ) =>: closeBlock
   state [] .openBlocks .length 0 == if
-    BlockType .UNKNOWN -1 false false BlockInfo new true return
+    ItrVarInfo optional.empty BlockType .UNKNOWN -1 false false BlockInfo new true return
   end
   state [] .openBlocks
     list.pop =:: closed
@@ -969,6 +981,31 @@ proc( string #+size+# string #+opName+# FilePosition ParserState ptr mut -> i32 
   end
   return
 end
+proc( ProgramContext ptr mut : progContext -> Type ) =>: newAutoType
+  progContext [] .autoTypes .length i32 cast types.newAutoType
+  progContext [] .autoTypes
+    Type .undefined list.append
+  progContext [] .autoTypes =
+end
+proc( ItrVarInfo : varInfo ParserState ptr mut : state FilePosition : pos -> ) =>: appendItrStep
+  state [] .progContext [] .idContext@ =:: idContext
+  varInfo .itrType varInfo .itrVar pos opGetId =:: getItr
+  getItr state appendOp
+  "..itr.step" string.wrap state [] .currentFile idContext id.findIdentifierByName
+    ! assert "..itr.step"
+  =:: itrStep
+  itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
+  getItr state appendOp
+  pos opSetValue state appendOp
+end
+proc( ItrVarInfo : varInfo ParserState ptr mut : state FilePosition : pos -> ) =>: appendItrEnd
+  state [] .progContext [] .idContext@ =:: idContext
+  varInfo .itrType varInfo .itrVar pos opGetId state appendOp
+  "..itr.end" string.wrap state [] .currentFile idContext id.findIdentifierByName
+    ! assert "..itr.end"
+  =:: itrEnd
+  itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
+end
 
 proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr mut : state -> string ) =>: parseOperation
   state [] .progContext =:: progContext
@@ -1007,10 +1044,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState state popTypeConstant ..drop
       else
         ## correct type will be resolved in type-check phase
-        progContext [] .autoTypes .length i32 cast types.newAutoType
-        progContext [] .autoTypes
-          Type .undefined list.append
-        progContext [] .autoTypes =
+        progContext newAutoType
         true localDeclaration =
       end =:: mut: valType
       isProc localDeclaration & if
@@ -1255,10 +1289,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         end
         value .data []
       else
-        progContext [] .autoTypes .length i32 cast types.newAutoType
-        progContext [] .autoTypes
-          Type .undefined list.append
-        progContext [] .autoTypes =
+        progContext newAutoType
         ConstValue .none
       end =:: constValue =:: constType
       constType typeContext types.isProcedure if
@@ -1504,8 +1535,26 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       else
         id.LABEL_ID_NONE
       end =:: blockLabel
-      BlockType .FOR blockLabel fileState [] .wordStart opLabeledBlock state appendOp
-      BlockType .FOR  state openBlockScope
+      "..itr.prepare" string.wrap state [] .currentFile idContext id.findIdentifierByName
+        ! assert "..itr.prepare"
+      =:: itrPrepare
+      itrPrepare [] .valueType itrPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      progContext newAutoType =:: itrType
+      fileState [] .wordStart state [] .currentFile idContext id.newItrVar =:: itrVar
+      itrType itrVar fileState [] .wordStart opAutoTypedInitializeId state appendOp
+      BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
+      itrType itrVar fileState [] .wordStart opGetId state appendOp
+      "..itr.check" string.wrap state [] .currentFile idContext id.findIdentifierByName
+        ! assert "..itr.check"
+      =:: itrCheck
+      itrCheck [] .valueType itrCheck id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      BlockType .DO fileState [] .wordStart opBlock  state appendOp
+      itrType itrVar fileState [] .wordStart opGetId state appendOp
+      "..itr.get" string.wrap state [] .currentFile idContext id.findIdentifierByName
+        ! assert "..itr.get"
+      =:: itrGet
+      itrGet [] .valueType itrGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      itrVar itrType ItrVarInfo new state openForBlock
       return
     else ..dup "do" string.wrap string.eq _if ..drop
       state currentBlockType =:: currentBlock
@@ -1530,6 +1579,10 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       end
       BlockType .FINALLY  current? .data [] .blockType =
       BlockType .FINALLY  fileState [] .wordStart opBlock  state appendOp
+      current? .data .itrVarInfo [] optional.hasData if ## update iterator in for-loop
+        current? .data .itrVarInfo [] .data =:: varInfo
+        varInfo state fileState [] .wordStart appendItrStep
+      end
       return
     else ..dup "break" string.wrap string.eq or
         ..dup "break." string.wrap string.startsWith _if =:: opName
@@ -1617,9 +1670,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           BlockType .DO fileState [] .wordStart opBlock  state appendOp
           BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
           BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
-        else currentBlock .DO ?? or currentBlock .FOR ?? _if
-          BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
-          BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
+        else currentBlock .DO ?? _if
+          ## code for closing of DO blocks is handled after closing the block
         else currentBlock .NAMESPACE ?? ! _if
           currentBlock fileState [] .wordStart opEndBlock  state appendOp
         end
@@ -1628,7 +1680,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         end =:: closedBlock
         closedBlock .blockType =:: closedType
-        closedType .PROCEDURE ?? closedType .EXPERIMENTAL_PROCEDURE ?? | if
+        closedType .PROCEDURE ?? or closedType .EXPERIMENTAL_PROCEDURE ?? if
           state [] .currentProc optional.isEmpty if
             "unexpected end of procedure" sb.wrap fileState [] .wordStart state appendError2
             return
@@ -1643,6 +1695,17 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           currentProc [] .implementation .code .codeLength =
         else closedType .AND ?? or closedType .OR ?? _if
           state [] .andOrPositions list.clear state [] .andOrPositions =
+        else closedType .DO ?? _if
+          BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
+          closedBlock .itrVarInfo optional.hasData if
+            closedBlock .itrVarInfo .data state fileState [] .wordStart appendItrStep
+          end
+          BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
+          closedBlock .itrVarInfo optional.hasData if
+            closedBlock .itrVarInfo .data state fileState [] .wordStart appendItrEnd
+          end
+        else closedType .FINALLY ?? and closedBlock .itrVarInfo optional.hasData _if ## end iterator in for-loop
+          closedBlock .itrVarInfo .data state fileState [] .wordStart appendItrEnd
         end
         closedType .NAMESPACE ?? and idContext id.endNamespace if
           "unexpected end of namespace" sb.wrap fileState [] .wordStart state appendError2
@@ -1931,7 +1994,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           return
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
         IF IFIF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
-        AND OR AND_IF OR_IF AND_DO OR_DO FOR FINALLY
+        AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
             opName sb.appendStr
