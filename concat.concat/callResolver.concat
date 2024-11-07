@@ -304,6 +304,9 @@ proc(
             end
             src break
           fixed case
+            oldValue .fixed .typeId ?? ! if
+              false return
+            end
             exactMatch if ## XXX? allow unwrapping named types for exact match
               src oldValue .fixed .typeId types.typeEquals ! if
                 true return
@@ -314,6 +317,9 @@ proc(
             end
             oldValue .fixed .typeId break
           value case
+            oldValue .value .typeId ?? ! if
+              false return
+            end
             exactMatch if
               oldValue .value .typeId src typeContext types.canAutoCast ! if
                 true return

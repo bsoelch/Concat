@@ -1772,15 +1772,15 @@ namespace: types
     end
   end
   proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mut : context -> Type bool ) =>: export: newProcedure
-    in .undefined ?? out .undefined ?? | if
+    in .undefined ?? or out .undefined ?? if
       Type .undefined true return
     end
     context [] .procTypes @ =:: procs
     0:i64 while ..dup procs [] .length < do =:: i
       procs [] i list.at .data =:: elt
-      elt [] .in in typeEquals
-      elt [] .out out typeEquals &
-      elt [] .callingConvention callConvention == & if
+      elt [] .callingConvention callConvention == and
+      elt [] .in in typeEquals and
+      elt [] .out out typeEquals if
         i ProcId cast Type .procedure false return
       end
       i 1 +
