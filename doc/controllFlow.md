@@ -188,11 +188,11 @@ It is possible to iterate over user defined types by overriding the `..itr.{}` p
 A `for` loop behaves identical to the following code
 ```
   <iterable> ..itr.prepare =:: mut: tmp while tmp ..itr.check do
-    ..itr.get
+    tmp ..itr.get
     <body>
   finally tmp ..itr.step tmp =
-    <finaly-body>
-  end ..itr.end
+    <finally-body>
+  end tmp ..itr.end
 ```
 
 ## and / or
