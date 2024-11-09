@@ -68,6 +68,7 @@ proc(
   Type list ptr mut : typeBuffer
   LabelId list ptr mut : labelBuffer
   LabelId GenericArg hashMap ptr mut : genericValues
+  bool : replaceAutoArgs
   FilePosition : pos
   ProgramContext ptr mut : progContext
 -> Type ) =>: replaceGenerics
@@ -102,6 +103,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          replaceAutoArgs
           pos
           progContext
         replaceGenerics
@@ -115,6 +117,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          replaceAutoArgs
           pos
           progContext
         replaceGenerics
@@ -125,6 +128,7 @@ proc(
       src typeContext types.getBaseType =:: base
       src typeContext types.getArraySize =:: sizes
       idContext [] .arraySizeBuffer .length =:: sizeOffset
+      false =:: mut: genericSize
       0:i64 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
         idContext [] .arraySizeBuffer
@@ -133,8 +137,18 @@ proc(
               size list.append break
             staticArg case
               size .value LabelId cast =:: genericId
-              genericValues genericId map.at .data =:: val
-              val [] .fixed constAsSize list.append
+              genericId labelContext id.labelFlags id.FLAG_STATIC & ? ! if
+                replaceAutoArgs ! if
+                  size list.append break
+                end
+                true genericSize =
+              end
+              genericValues genericId map.at =:: newValue
+              newValue optional.hasData if
+                newValue .data [] .fixed constAsSize list.append
+              else
+                size list.append
+              end
               break
           end
         idContext [] .arraySizeBuffer =
@@ -146,10 +160,11 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          replaceAutoArgs
           pos
           progContext
         replaceGenerics
-        src .pointer ??
+        src .pointer ?? if types.ArrayType .POINTER else types.ArrayType .ARRAY end
         idContext [] .arraySizeBuffer list.asArray
           sizeOffset
         array.tail
@@ -161,6 +176,9 @@ proc(
           sizeOffset list.setLength
         idContext [] .arraySizeBuffer =
         ! assert "can create array"
+      src .arrayType ?? and genericSize if ## wrap generic array parameters in reference
+        false typeContext types.newReferenceType
+      end
       return
     struct union procIn procOut enum case
       typeBuffer [] .length =:: typeOffset
@@ -172,6 +190,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
+          replaceAutoArgs
           pos
           progContext
         replaceGenerics =:: newElt
@@ -205,10 +224,10 @@ proc(
       src typeContext types.getProcOut ..drop =:: outTypes
       ## newProcedure
         inTypes
-          typeBuffer labelBuffer genericValues pos progContext
+          typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
         replaceGenerics
         outTypes
-          typeBuffer labelBuffer genericValues pos progContext
+          typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
         replaceGenerics
         src typeContext types.getCallConvention ..drop
         typeContext
@@ -228,7 +247,7 @@ proc(
               arg break ## argument not generic
             typeId case
               arg .typeId
-                typeBuffer labelBuffer genericValues pos progContext
+                typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
               replaceGenerics ConstValue .typeId
               break
             genericArg case
@@ -1087,7 +1106,7 @@ proc(
       end
       i 1 +
     end ..drop
-    isMatch ! if
+    isMatch ! if ## no matching implementation -> create new one
       impls []
         ..dup .length implId =
         ## ProcImplementation
@@ -1096,6 +1115,7 @@ proc(
             typeBuffer @
             labelBuffer @
             candidate [] .genericValues @
+            false
             pos
             progContext
           replaceGenerics
@@ -1140,6 +1160,7 @@ proc(
         typeBuffer @
         labelBuffer @
         candidate [] .genericValues @
+        true
         pos
         progContext
       replaceGenerics =:: newElt
@@ -1166,6 +1187,7 @@ proc(
     typeBuffer @
     labelBuffer @
     candidate [] .genericValues @
+    true
     pos
     progContext
   replaceGenerics =:: newOut

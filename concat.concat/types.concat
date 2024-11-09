@@ -6,7 +6,6 @@ import stringBuilder
 import "labels.concat"
 import "constants.concat"
 
-
 namespace: types
   enum(
     BOOL
@@ -844,7 +843,7 @@ namespace: types
   ## TODO? merge size and sizeType ?
   enum( int staticArg ) =:: export: ArraySizeType
   struct( i64 : value ArraySizeType : sizeType ) =:: export: ArraySize
-  struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut: ptrOnly bool : mutable ) =:: ArrayType
+  struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut: ptrOnly bool : mutable ) =:: ArrayData
 
   proc( Type TypeContext ptr -> bool ) =>: export: isPointer
     unwrapNamed .pointer ?? return
@@ -998,7 +997,7 @@ namespace: types
       context [] .arrayTypes t [] .pointer i64 cast list.get =:: arrayType
       ## newArrayType
         t [] context getBaseType
-        true
+        ArrayType .POINTER
         arrayType .fixedSize if
           context [] .arraySizes arrayType .sizeOffset arrayType .dims list.slice
           true
@@ -1030,23 +1029,24 @@ namespace: types
     end ..drop
     true return
   end
+  enum( POINTER ARRAY ) =:: export: ArrayType
   proc(
     Type : target
-    bool : isPtr
+    ArrayType : arrayType
     ArraySize arrayView : sizes
     bool : fixedSize
     bool : makeMutable
     TypeContext ptr mut : context
   -> Type bool ) =>: export: newArrayType
     context [] .labelContext @ =:: labelContext
-    isPtr if makeMutable else false end =:: mutable
+    arrayType .POINTER ?? if makeMutable else false end =:: mutable
     target =:: mut: base
     base .undefined ?? if
       Type .undefined true return
     end
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
-      isPtr ! sizes .length 0 > | if
+      arrayType .POINTER ?? ! or sizes .length 0 > if
         Type .undefined true return
       end
       base
@@ -1073,18 +1073,29 @@ namespace: types
         context [] .arraySizes ..over .sizeOffset ..over.2 .dims list.slice sizes arraySizeEqual ! if ..drop
           1 + continue
         end
-      .ptrOnly isPtr & arrays [] ..over.2 list.at .data [] .ptrOnly = ## update ptrOnly flag
+      .ptrOnly
+        arrayType .ARRAY ?? ! &
+      arrays [] ..over.2 list.at .data [] .ptrOnly = ## update ptrOnly flag
       ## found match
-      isPtr if ArrayId cast Type .pointer else ArrayId cast Type .arrayType end false return
+      ArrayId cast
+        arrayType switch
+          POINTER case Type .pointer break
+          ARRAY case Type .arrayType break
+        end
+      false return
     end ..drop
     context [] .arraySizes
       ..dup .length =:: sizeOffset
       sizes list.appendArray
     context [] .arraySizes =
     arrays []
-      base sizeOffset sizes .length fixedSize isPtr mutable ArrayType new list.append
+      base sizeOffset sizes .length fixedSize arrayType .ARRAY ?? ! mutable ArrayData new list.append
     arrays [] =
-    arrays [] .length 1 - isPtr if ArrayId cast Type .pointer else ArrayId cast Type .arrayType end
+    arrays [] .length 1 - ArrayId cast
+      arrayType switch
+        POINTER case Type .pointer break
+        ARRAY case Type .arrayType break
+      end
     false return
   end
 
@@ -1821,7 +1832,7 @@ namespace: types
     newProcArgs
     procData .out procData .callingConvention context newProcedure if ..drop proc true return end
     isPtr if
-      true ArraySize array.empty true false context newArrayType return
+      ArrayType .POINTER ArraySize array.empty true false context newArrayType return
     end
     false return
   end
@@ -1842,7 +1853,7 @@ namespace: types
     end
     procData .in procData .out callConvention context newProcedure if ..drop proc true return end
     isPtr if
-      true ArraySize array.empty true false context newArrayType return
+      ArrayType .POINTER ArraySize array.empty true false context newArrayType return
     end
     false return
   end
@@ -2238,14 +2249,19 @@ namespace: types
   proc( Type : src bool : mutable TypeContext ptr mut : context -> Type ) =>: export: getAddressType
     src context isArray if
       src context unwrapNamed =:: unwraped
-      unwraped context getBaseType true unwraped context getArraySize true mutable context newArrayType ..drop return
+      unwraped context getBaseType
+        ArrayType .POINTER
+        unwraped context getArraySize
+        true
+        mutable
+      context newArrayType ..drop return
     end
     src context isProcedure if
       src context asUnlabeledProc ..drop
     else
       src
     end
-    true ArraySize array.empty true mutable context newArrayType ..drop return
+    ArrayType .POINTER ArraySize array.empty true mutable context newArrayType ..drop return
   end
 
   proc( Type : src Type : target bool : reshape TypeContext ptr : context -> bool ) =>: sizeCompatible
@@ -2346,12 +2362,14 @@ namespace: types
     context canCastPtr return
   end
 
-  proc( Type : src Type : to TypeContext ptr : context -> bool ) =>: export: canAutoCast
-    to =:: mut: target
+  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canAutoCast
     src target types.typeEquals if
       true return
     end
-    src context types.isReference and src context getBaseType to context canAutoCast if
+    src context types.isReference and src context getBaseType target context canAutoCast if
+      true return
+    end
+    target context types.isReference and src target context getBaseType context canAutoCast if
       true return
     end
     src .namedType ?? or target .namedType ?? if
@@ -2471,7 +2489,7 @@ namespace: types
       end
       ## newArrayType
         a context types.getBaseType
-        true
+        ArrayType .POINTER
         aSizes commonPrefix array.head
         fixedSize
         mutable
@@ -2499,7 +2517,7 @@ end
 ## type context
 struct(
   LabelContext             : mut: labelContext
-  types.ArrayType     list : mut: arrayTypes
+  types.ArrayData     list : mut: arrayTypes
   types.ArraySize     list : mut: arraySizes
   types.TupleInfo     list : mut: tupleTypes
   types.UnionInfo     list : mut: unionTypes
@@ -2514,7 +2532,7 @@ namespace: types
   proc( -> TypeContext ) =>: export: newTypeContext
     ## TypeContext
       id.newLabelContext
-      128 ArrayType     list.create ## arrayTypes
+      128 ArrayData     list.create ## arrayTypes
       128 ArraySize     list.create ## arraySizes
       128 TupleInfo     list.create ## tupleTypes
       128 UnionInfo     list.create ## unionTypes

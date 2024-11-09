@@ -181,7 +181,7 @@ syntax:
 
 For-loops are syntactic suggar for easily iterating over a range or collection.
 
-If the iterable is a fixed sized array or pointer the loop will iterate over the elements of that array, if the iterable is an integer the loop will iterate over the range from zero (inclusive) to the signed interpretation that integer (exclusive).
+If the iterable is a fixed sized pointer the loop will iterate over the elements of the array at the pointer location, if the iterable is an integer the loop will iterate over the range from zero (inclusive) to the signed interpretation that integer (exclusive).
 Each iteration the current value will be pushed onto the stack.
 
 It is possible to iterate over user defined types by overriding the `..itr.{}` procedure.

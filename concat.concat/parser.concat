@@ -180,7 +180,7 @@ proc(
   end =:: charType =:: strLength =:: strValue
   strLength ArraySizeType .int ArraySize new =:: size
   ## Constant
-    charType true size @ 1 array.create true false context newArrayType ..drop
+    charType types.ArrayType .POINTER size @ 1 array.create true false context newArrayType ..drop
     strValue
     IdentifierInfo optional.empty
   pos Constant new return

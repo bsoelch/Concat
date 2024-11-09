@@ -722,12 +722,12 @@ namespace: sb
     sb
       "(" sb.appendS
       0:i64 while ..dup args .length < do =:: i
-        args i types.compositeElts.get =:: arg
+        args i types.compositeElts.get =:: mut: arg
         arg typeContext types.containsGeneric if
-          arg typeContext types.isArray if
-            "generic arrays are not supported: " sb.wrap
-              arg typeContext sb.appendType
-            pos errors appendError
+          arg typeContext types.unwrapReference typeContext types.isArray if
+            arg
+              false typeContext types.newReferenceType
+            arg =
           else arg typeContext types.isPointer ! _if
             "unexpected generic argument: " sb.wrap
               arg typeContext sb.appendType
@@ -922,21 +922,7 @@ namespace: sb
           return
         enumLabel case break
         genericArg case
-          context [] .currentProc
-            typeContext types.getProcIn ..drop
-          =:: progIn
-          progIn
-            value .genericArg
-            typeContext
-          types.compositeFindLabel =:: index
-          index -1 != if
-            ## appendArgName
-              index
-              value .genericArg
-              context
-            appendArgName return
-          end
-          break
+          value .genericArg pos context appendGenericArg return
         str case
           ## appendStringPtrConstQBE
             value .str
@@ -1354,7 +1340,37 @@ proc(
   return
 end
 
-union( i64 : constant i64 : stackId i64 : localId i64 : tmpId ) =:: IntValue
+proc(
+  stringBuilder
+  LabelId  : labelId
+  FilePosition : pos
+  CompilerContext ptr mut : context
+-> stringBuilder ) =>: appendGenericArg
+  context .program =:: prog
+  prog [] .errors@ =:: errors
+  prog [] .idContext@ =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  context [] .currentProc
+    typeContext types.getProcIn ..drop
+  =:: progIn
+  progIn
+    labelId
+    typeContext
+  types.compositeFindLabel =:: index
+  index -1 != if
+    ## appendArgName
+      index
+      labelId
+      context
+    sb.appendArgName return
+  end
+  "cannot find generic argument: " sb.wrap
+    labelId labelContext sb.appendLabelName
+  pos errors appendError
+end
+
+union( i64 : constant i64 : stackId LabelId : autoArg i64 : localId i64 : tmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
@@ -1364,6 +1380,7 @@ proc(
   IntValue : value
   BranchId : ifBranch
   BranchId : elseBranch
+  FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: appendCmpInt
   context nextTmpId =:: tmpId
@@ -1382,6 +1399,7 @@ proc(
       stackId case "%s" sb.appendS value .stackId sb.appendI break
       localId case "%l" sb.appendS value .localId sb.appendI break
       tmpId case "%t" sb.appendS value .tmpId sb.appendI break
+      autoArg case value .autoArg pos context appendGenericArg break
     end
     "\njnz %t" sb.appendS
     tmpId sb.appendI
@@ -1431,7 +1449,7 @@ proc(
       0 IntValue .constant
       errorBranch
       check1Branch
-    context appendCmpInt
+    pos context appendCmpInt
     check1Branch sb.appendBranchId
     "\n" sb.appendS
     ## cmp int
@@ -1441,7 +1459,7 @@ proc(
       size
       errorBranch
       okBranch
-    context appendCmpInt
+    pos context appendCmpInt
     errorBranch sb.appendBranchId
     "\ncall $printf (l $" sb.appendS
     CHECK_INDEX_FORMAT sb.appendS
@@ -1453,6 +1471,7 @@ proc(
       stackId case "%s" sb.appendS size .stackId sb.appendI break
       localId case "%l" sb.appendS size .localId sb.appendI break
       tmpId case "%t" sb.appendS size .tmpId sb.appendI break
+      autoArg case size .autoArg pos context appendGenericArg break
     end
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
@@ -1763,6 +1782,7 @@ proc(
   LabelData arrayView : labels
   i64 optional : lower
   i64 optional : upper
+  FilePosition : pos
   CompilerContext ptr mut : context
 -> stringBuilder ) =>: appendSwitchJumpTree
   labels .length 3 <= if
@@ -1793,7 +1813,7 @@ proc(
           cmpVal IntValue .constant
           caseBranch
           nextBranch
-        context appendCmpInt
+        pos context appendCmpInt
         nextBranch sb.appendBranchId
         '\n' sb.appendC
         i 1 +
@@ -1837,7 +1857,7 @@ proc(
       cmpVal IntValue .constant
       ltBranch
       geBranch
-    context appendCmpInt
+    pos context appendCmpInt
     ltBranch sb.appendBranchId
     '\n' sb.appendC
     ## appendSwitchJumpTree
@@ -1851,7 +1871,7 @@ proc(
       else
         upper .data cmpVal i64.min optional.wrap
       end
-      context
+      pos context
     appendSwitchJumpTree
     geBranch sb.appendBranchId
     '\n' sb.appendC
@@ -1866,7 +1886,7 @@ proc(
         lower .data cmpVal i64.max optional.wrap
       end
       upper
-      context
+      pos context
     appendSwitchJumpTree
   return
 end
@@ -1942,7 +1962,7 @@ proc(
       labels list.asArray
       i64 optional.empty
       i64 optional.empty
-      context
+      pos context
     appendSwitchJumpTree
   return
 end
@@ -2827,7 +2847,7 @@ proc(
       ## appendIndexCheck
         size .sizeType switch
           int case size .value IntValue .constant break
-          staticArg case size .value IntValue .localId break
+          staticArg case size .value LabelId cast IntValue .autoArg break
         end
         targetId
         pos
@@ -2913,26 +2933,37 @@ proc(
       end
     return
   end
-  target typeContext types.isUnion if
-    ## TODO check if source is subset of union
+  target typeContext types.isReference and src typeContext types.isReference ! if
+    target typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
     sb
+      ## cast value
+      src baseType types.typeEquals ! if
+        ## compileCast
+          castType
+          signType
+          src
+          offset
+          baseType
+          pos
+          context
+        compileCast
+      end
       "%s" sb.appendS
       targetId sb.appendI
-      target pos context false appendAlloc ..drop
-      src context referenceOnly if
-        "blit %s" sb.appendS
-      else
-        "store" sb.appendS
-        src StorageType .STORE pos context sb.appendTypeNameQBE
-        " %s" sb.appendS
+      " =" sb.appendS
+      baseType context referenceOnly or valType .REFERENCE ?? ! if ## value is already reference
+        baseType StorageType .STACK pos context sb.appendTypeNameQBE
+        " copy" sb.appendS
+      else ## TODO convert value type to pointe
+        "casting from " sb.wrap
+          src typeContext sb.appendType
+          " to " sb.appendS
+          target typeContext sb.appendType
+          " is not implemented" sb.appendS
+        pos errors appendError
       end
+      " %s" sb.appendS
       srcId sb.appendI
-      ", %s" sb.appendS
-      targetId sb.appendI
-      src context referenceOnly if
-        ", " sb.appendS
-        src pos context typeSizeInt sb.appendI
-      end
       '\n' sb.appendC
     return
   end
@@ -3730,7 +3761,7 @@ proc(
       ## index of current auto-argument
       0:i64 =:: mut: argIndex
       0:i64 while ..dup argCount < do =:: i
-        inTypes i typeContext types.compositeGetElement =:: arg
+        inTypes i typeContext types.compositeGetElement =:: mut: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
         arg typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
@@ -3750,6 +3781,9 @@ proc(
             argIndices =
             i 1 + continue
           end
+        end
+        arg typeContext types.isArray and arg typeContext types.containsGeneric if
+          arg false typeContext types.newReferenceType arg =
         end
         argIndices
           arg -1 TypedValId new list.append
@@ -3836,6 +3870,9 @@ proc(
       argCount 1 - while ..dup 0 >= do =:: i
         inTypes
           i typeContext types.compositeGetElement
+          $ typeContext types.isArray and $ typeContext types.containsGeneric if
+            false typeContext types.newReferenceType
+          end
         =:: arg
         arg typeContext types.isEmpty if
           i 1 - continue ## skip empty arguments

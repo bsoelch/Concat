@@ -2430,7 +2430,7 @@ proc(
         freeDimensions 0 > if
           ## newArrayType
             #+baseType+#
-            isAddr
+            isAddr if types.ArrayType .POINTER else types.ArrayType .ARRAY end
             size freeDimensions array.head
             true ## remaining dimensions always fixed size
             mutable
@@ -2490,7 +2490,7 @@ proc(
       Type 2 array new =:: mut: typeData
       typeData @ =:: outTypes
       types.primitive.CHAR8
-        true
+        types.ArrayType .POINTER
         types.ArraySize array.empty
         false
         false

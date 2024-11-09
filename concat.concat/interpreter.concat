@@ -575,7 +575,7 @@ namespace: interpreter
         ## return
           ## newArrayType
             types.primitive.I_SIZE
-            false
+            types.ArrayType .ARRAY
             sizeLength @
             array.wrap
             true false
@@ -1004,10 +1004,10 @@ proc(
               types.ArraySizeType .int
             types.ArraySize new =:: mSize
             arrayType
-             false
-             mSize @ array.wrap
-             true
-             false
+              types.ArrayType .ARRAY
+              mSize @ array.wrap
+              true
+              false
             typeContext types.newArrayType if
               "could not create type of array-constant " sb.wrap
               op [] .pos errors appendError
@@ -1340,7 +1340,7 @@ proc(
         end
         ## newArrayType
           typeConstant .typeId
-          isPtr
+          isPtr if types.ArrayType .POINTER else types.ArrayType .ARRAY end
           idContext [] .arraySizeBuffer list.asArray
           fixedSize
           op [] .val .typeModifier .PTR_MUT ??
