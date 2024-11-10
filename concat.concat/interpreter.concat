@@ -1699,14 +1699,16 @@ proc(
       pushValue
       false return
     argumentError case
-      "invalid arguments for built-in " sb.wrap
-        builtIn sb.appendBuiltIn
-        ": " sb.appendS
-        0:i64 while ..dup nArgs < do =:: i
-          values i [] constContext typeContext sb.appendConstant
-          i 1 +
-        end ..drop
-      pos errors appendError
+      showErrors if
+        "invalid arguments for built-in " sb.wrap
+          builtIn sb.appendBuiltIn
+          ": " sb.appendS
+          0:i64 while ..dup nArgs < do =:: i
+            values i [] constContext typeContext sb.appendConstant
+            i 1 +
+          end ..drop
+        pos errors appendError
+      end
       values valInfos nArgs context unpopValues
       true return
     unimplemented case

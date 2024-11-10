@@ -2281,6 +2281,16 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
   idName
     state [] .currentFile
   idContext id.findIdentifierByName ! if ## try parsing as identifier
+    isAddr ! and $ [] .idType .ARGUMENT ?? and
+        $ [] .labelId labelContext id.labelFlags =:: flags
+        flags id.FLAG_AUTO & ? and flags id.FLAG_STATIC & ? ! if
+      ## opConst
+        $ [] .labelId ConstValue .genericArg
+        ..swap [] .valueType
+        fileState [] .wordStart
+      opConst state appendOp
+      return
+    end
     ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart
       isAddr if opAtId else opGetId end
     state appendOp
