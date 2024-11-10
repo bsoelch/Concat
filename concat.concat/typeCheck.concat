@@ -266,7 +266,6 @@ proc( TypeCheckState ptr mut : state -> ) =>: unfreezeInterpreter
       ## ValueInfo
         typeInfo [] .valueType
         typeInfo [] .valueId
-        id.LABEL_ID_NONE
         typeInfo [] .pushedAt
       ValueInfo new list.append
     interpreter [] .stackInfo =

@@ -1,0 +1,7 @@
+proc( type : auto: T ptr : itr -> ) =>: thisShouldNotCompile
+
+end
+
+proc( -> ) =>: main
+  
+end

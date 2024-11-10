@@ -1,0 +1,4 @@
+missing type parameter for type-modifier ptr at typeArgConsumesNamedTypeField.concat:1:22
+missing type constant at typeArgConsumesNamedTypeField.concat:1:37
+unexpected type for "=>:" expected procedure got: undefined at typeArgConsumesNamedTypeField.concat:1:37
+unexpected 'end' at typeArgConsumesNamedTypeField.concat:3:1
