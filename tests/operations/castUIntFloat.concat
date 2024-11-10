@@ -1,10 +1,10 @@
 import debug
 
 proc( -> ) =>: main
-  10'000'000'000'000'000'000:u64 =:: x
+  10'000'000'000'000'000'000:i64 =:: x
   x f32 cast.s debug.print
   x f32 cast.u debug.print
-  10'000'000'000'000'000'000:u64 f64 cast.u debug.print
+  10'000'000'000'000'000'000:i64 f64 cast.u debug.print
   1e19 i64 cast.s debug.print
   1e19 i64 cast.u debug.print
 end

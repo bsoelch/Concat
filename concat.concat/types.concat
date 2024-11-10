@@ -418,6 +418,7 @@ namespace: types
   end
 
   64 =:: export: MAX_INT_WIDTH
+  i64.MAX =:: export: MAX_SIGNED_INT
   #+largest integer k s.t. 1+2^-k > 1+#
   proc( Type TypeContext ptr -> i32 ) =>: numberPrecision
     unwrapNamed

@@ -4,7 +4,7 @@ identifier "a":
 -----------------
 -----------------
 identifier "b":
- - global variable "b" ( i64 [ integer: -1 ] ) declared at fixedIntLiterals.concat:2:29
+ - global variable "b" ( i64 [ integer: -1 ] ) declared at fixedIntLiterals.concat:2:31
 -----------------
 -----------------
 identifier "c":
@@ -12,7 +12,7 @@ identifier "c":
 -----------------
 -----------------
 identifier "d":
- - global variable "d" ( i32 [ integer: 4294967295 ] ) declared at fixedIntLiterals.concat:4:19
+ - global variable "d" ( i32 [ integer: 4294967295 ] ) declared at fixedIntLiterals.concat:4:21
 -----------------
 -----------------
 identifier "e":

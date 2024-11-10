@@ -1,18 +1,16 @@
 proc( i64 -> bool ) =>: isZeroExtened
-  0xffff'ffff:u64 ==
+  0xffff'ffff:i64 ==
 end
 proc( i64 -> bool ) =>: isSignExtened
   -1:i64 ==
 end
 
 proc( bool : c -> ) =>: checkSignMerge
-  c if 0xffff_ffff:u ..?types else -1 ..?types end ..?types ..drop
-  c if 0x7fff_ffff:u ..?types else -1 ..?types end ..?types ..drop
+  c if 0x7fff_ffff ..?types else -1 ..?types end ..?types ..drop
   c if 0xffff_ffff ..?types else -1 ..?types end ..?types ..drop
 end
 
 proc( -> ) =>: main
-  0xffff_ffff:u ..?types isZeroExtened assert "..u32 is zero extended"
   -1 ..?types isSignExtened assert "..s32 is sign extended"
   true checkSignMerge
 end

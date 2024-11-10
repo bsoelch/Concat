@@ -8,18 +8,18 @@ struct(
 ) =:: export: f128
 
 namespace: f128
-  0x8000'0000'0000'0000:u64 =:: SIGN_FLAG_HI
-  0x7fff'0000'0000'0000:u64 =:: EXP_MASK_HI
-  0x0001'0000'0000'0000:u64 =:: HIDDEN_BIT_HI
-  0x0000'ffff'ffff'ffff:u64 =:: MANTISSA_MASK_HI
-  48:u64 =:: EXP_SHIFT_HI
-  0x7fff:u64 =:: SHIFTED_EXP_MASK
-  0x3fff:u64 =:: EXP_BIAS
+  0x8000'0000'0000'0000:i64 =:: SIGN_FLAG_HI
+  0x7fff'0000'0000'0000:i64 =:: EXP_MASK_HI
+  0x0001'0000'0000'0000:i64 =:: HIDDEN_BIT_HI
+  0x0000'ffff'ffff'ffff:i64 =:: MANTISSA_MASK_HI
+  48:i64 =:: EXP_SHIFT_HI
+  0x7fff:i64 =:: SHIFTED_EXP_MASK
+  0x3fff:i64 =:: EXP_BIAS
   112:i64 =:: MANTISSA_BITS
-  0x7fff'ffff'ffff'ffff:u64 =:: NAN_HI
-  0xffff'ffff'ffff'ffff:u64 =:: NAN_LOW
+  0x7fff'ffff'ffff'ffff:i64 =:: NAN_HI
+  0xffff'ffff'ffff'ffff:i64 =:: NAN_LOW
   EXP_MASK_HI =:: INF_HI
-  0:u64 =:: INF_LOW
+  0:i64 =:: INF_LOW
 
   ## XXX? constants
   proc( -> f128 ) =>: export: ZERO
@@ -58,11 +58,11 @@ namespace: f128
       shift 0 > if
         ..dup .low 1 shift << 1 - & =:: lowBits
         shift >>>
-        1:u64 shift 1 - << =:: half
+        1:i64 shift 1 - << =:: half
         lowBits half ..u> or lowBits half == and ..dup .low 1 & ? if
           i128.ONE + ## round up
         end
-        ..dup .hi 1:u64 EXP_SHIFT_HI 1 + << & ? if
+        ..dup .hi 1:i64 EXP_SHIFT_HI 1 + << & ? if
           1 >>>
           bitCount 1 + bitCount =
         end
@@ -274,7 +274,7 @@ namespace: f128
     exp expB > if
       exp expB - i32 cast.u =:: shift
       shift 64 >= if
-        1:u64 shift 64 1 - - << =:: nextBitMask
+        1:i64 shift 64 1 - - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
         ? nz =
@@ -282,7 +282,7 @@ namespace: f128
         bHi shift 64 - >>> bLow =
         0 bHi =
       else
-        1:u64 shift 1 - << =:: nextBitMask
+        1:i64 shift 1 - << =:: nextBitMask
         bLow nextBitMask 1 - & ? nz =
         bLow nextBitMask & ? nextBit =
         bLow shift >>>
@@ -370,7 +370,7 @@ namespace: f128
     exp expB > if
       exp expB - i32 cast.u =:: shift
       shift 64 >= if
-        1:u64 shift 64 1 - - << =:: nextBitMask
+        1:i64 shift 64 1 - - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
         ? nz =
@@ -378,7 +378,7 @@ namespace: f128
         bHi shift 64 - >>> bLow =
         0 bHi =
       else
-        1:u64 shift 1 - << =:: nextBitMask
+        1:i64 shift 1 - << =:: nextBitMask
         bLow nextBitMask 1 - & ? nz =
         bLow nextBitMask & ? nextBit =
         bLow shift >>>
@@ -479,7 +479,7 @@ namespace: f128
     ## shift number such that top 113 bits are in hi:low
     resHi .hi  shiftR << resHi  .low 64 shiftR - >>> | =:: mut: hi
     resHi .low shiftR << resLow .hi  64 shiftR - >>> | =:: mut: low
-    1:u64 64 shiftR - 1 - << =:: nextBitMask0
+    1:i64 64 shiftR - 1 - << =:: nextBitMask0
     resLow .low
       resLow .hi nextBitMask0 1 - & |
     ? =:: mut: nz
@@ -493,7 +493,7 @@ namespace: f128
       shift 112 > if
         sign 0 f128 new return
       else shift 64 > _if
-        1:u64 shift 64 - 1 - << =:: nextBitMask
+        1:i64 shift 64 - 1 - << =:: nextBitMask
         nz
           nextBit |
           low ? |
@@ -505,13 +505,13 @@ namespace: f128
       else shift 64 == _if
         nz
           nextBit |
-          low 1:u64 63 << 1 - & ? |
+          low 1:i64 63 << 1 - & ? |
         nz =
-        low 1:u64 63 << & ? nextBit =
+        low 1:i64 63 << & ? nextBit =
         hi low =
         0 hi =
       else
-        1:u64 shift 1 - << =:: nextBitMask
+        1:i64 shift 1 - << =:: nextBitMask
         nz
           nextBit |
           low nextBitMask 1 - & ? |
@@ -588,7 +588,7 @@ namespace: f128
     false bool =: mut: hasDot
     0:i64 =:: mut: e
     0 0 i128 new =:: mut: val
-    1:u64 56 << 0 i128 new =:: mut: maxVal ## higher precision than f128, no overflow in base 62
+    1:i64 56 << 0 i128 new =:: mut: maxVal ## higher precision than f128, no overflow in base 62
     false =:: mut: cStyleHex
     str
       ..dup .length 0 == if
@@ -725,7 +725,7 @@ namespace: f160
     shift 64 >= if
       x .hi shift 64 - >>>
       0
-      1:u64 shift 64 - 1 - << =:: nextBitMask
+      1:i64 shift 64 - 1 - << =:: nextBitMask
       x .low
         x .hi nextBitMask 1 - & |
       ? nz =
@@ -733,7 +733,7 @@ namespace: f160
     else
       x .low shift >>> x .hi 64 shift - << |
       x .hi shift >>>
-      1:u64 shift 1 - << =:: nextBitMask
+      1:i64 shift 1 - << =:: nextBitMask
       x .low nextBitMask 1 - & ? nz =
       x .low nextBitMask & ? nextBit =
     end =:: mut: hi =:: mut: low
@@ -779,7 +779,7 @@ namespace: f160
     resHi .hi 63 >>> ? =:: highBit
     highBit if
       resLow .hi 63 >>> ?
-      resLow .hi 1:u64 63 << 1 - & resLow .low | ?
+      resLow .hi 1:i64 63 << 1 - & resLow .low | ?
     else
       hi 1 <<
         low 63 >>> |
@@ -787,7 +787,7 @@ namespace: f160
       low 1 <<
         resLow .hi 63 >>> |
       low =
-      1:u64 62 << =:: nextBitMask
+      1:i64 62 << =:: nextBitMask
       resLow .hi nextBitMask & ?
       resLow .hi nextBitMask 1 - & resLow .low | ?
     end =:: nz =:: nextBit
@@ -800,7 +800,7 @@ namespace: f160
         hi 1 + hi =
         hi 0 == if
           true overflow =
-          1:u64 63 << hi =
+          1:i64 63 << hi =
         end
       end
     end
@@ -848,13 +848,13 @@ namespace: f160
       end
       shift 128 == if
         bLow
-          bHi 1:u64 63 << 1 - & |
+          bHi 1:i64 63 << 1 - & |
         ? nz =
         bHi 63 >>> ? nextBit =
         0 bHi =
         0 bLow =
       else shift 64 >= _if
-        1:u64 shift 64 1 - - << =:: nextBitMask
+        1:i64 shift 64 1 - - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
         ? nz =
@@ -862,7 +862,7 @@ namespace: f160
         bHi shift 64 - >>> bLow =
         0 bHi =
       else
-        1:u64 shift 1 - << =:: nextBitMask
+        1:i64 shift 1 - << =:: nextBitMask
         bLow nextBitMask 1 - & ? nz =
         bLow nextBitMask & ? nextBit =
         bLow shift >>>
@@ -882,7 +882,7 @@ namespace: f160
         hi 63 << |
       low =
       hi 1 >>>
-        1:u64 63 << |
+        1:i64 63 << |
       hi =
     end
     ## rounding
@@ -892,7 +892,7 @@ namespace: f160
         hi 1 + hi =
         hi 0 == if
           true carry =
-          1:u64 63 << hi =
+          1:i64 63 << hi =
         end
       end
     end
@@ -933,13 +933,13 @@ namespace: f160
       end
       shift 128 == if
         bLow
-          bHi 1:u64 63 << 1 - & |
+          bHi 1:i64 63 << 1 - & |
         ? nz =
         bHi 63 >>> ? nextBit =
         0 bHi =
         0 bLow =
       else shift 64 >= _if
-        1:u64 shift 64 - 1 - << =:: nextBitMask
+        1:i64 shift 64 - 1 - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
         ? nz =
@@ -947,7 +947,7 @@ namespace: f160
         bHi shift 64 - >>> bLow =
         0 bHi =
       else
-        1:u64 shift 1 - << =:: nextBitMask
+        1:i64 shift 1 - << =:: nextBitMask
         bLow nextBitMask 1 - & ? nz =
         bLow nextBitMask & ? nextBit =
         bLow shift >>>
@@ -983,7 +983,7 @@ namespace: f160
         a .sign
       f160 new return
     end
-    hi 0x8000'0000'0000'0000:u64 & ? if
+    hi 0x8000'0000'0000'0000:i64 & ? if
       0
     else hi 0 == _if
       63 low i64.highestSetBit - =:: shift
@@ -1017,9 +1017,9 @@ namespace: f160
     uses Newton-Raphson-Division (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
   +#
   proc( f160 : x  -> f160 ) =>: normalized_inv ## TODO check constants
-    0xb4b4'b4b4'b4b4'b4b4:u64 0xb4b4'b4b4'b4b4'b4b5:u64 1 false f160 new =:: p ## 48/17
-    0xf0f0'f0f0'f0f0'f0f0:u64 0xf0f0'f0f0'f0f0'f0f1:u64 0 false f160 new =:: q ## 32/17
-    0x8000'0000'0000'0000:u64 0:u64                     1 false f160 new =:: two ## 2
+    0xb4b4'b4b4'b4b4'b4b4:i64 0xb4b4'b4b4'b4b4'b4b5:i64 1 false f160 new =:: p ## 48/17
+    0xf0f0'f0f0'f0f0'f0f0:i64 0xf0f0'f0f0'f0f0'f0f1:i64 0 false f160 new =:: q ## 32/17
+    0x8000'0000'0000'0000:i64 0:i64                     1 false f160 new =:: two ## 2
     ## 1. estimate 1/x as 48/17 - 32/17 * x
     p x q * -
       ## 2. iteratate: y2 = y1(2 - y1 *x)

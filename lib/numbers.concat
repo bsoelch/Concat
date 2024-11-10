@@ -71,7 +71,7 @@ namespace: number
     end end
     10 return
   end
-  enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR OVERFLOW ) =:: export: ParserError
+  enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR UNSIGNED OVERFLOW ) =:: export: ParserError
   proc( ParserError -> string ) =>: export: errorString
     switch
       NONE case "" string.wrap return
@@ -80,6 +80,7 @@ namespace: number
       INVALID_BASE case "invalid base" string.wrap return
       EMPTY case "empty" string.wrap return
       INVALID_CHAR case "invalid character" string.wrap return
+      UNSIGNED case "signed overflow" string.wrap return
       OVERFLOW case "overflow" string.wrap return
     end
   end
@@ -87,6 +88,7 @@ namespace: number
     false =:: mut: sign
     0 i64 =: mut: res
     false =:: mut: overflow
+    false =:: mut: signedOverflow
     str
       ..dup .length 0 == if
         ..drop 0 ParserError .EMPTY return
@@ -110,8 +112,11 @@ namespace: number
       else mBase 2 < or mBase 62 > _if ..drop
         0 ParserError .INVALID_BASE return
       end
-      unsigned if -1 i64 cast else sign _if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxVal
+      -1:i64 =:: maxUnsignedVal
+      sign if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxSignedVal
+      unsigned if maxUnsignedVal else maxSignedVal end =:: maxVal
       maxVal mBase ..udiv =:: maxSafe
+      maxUnsignedVal mBase ..udiv =:: maxSafeUnsigned
       0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt =:: c
           i 0 > and c '_' == or c '\'' == if
@@ -121,14 +126,18 @@ namespace: number
           d 0 < or d mBase >= if
             ..drop 0 ParserError .INVALID_CHAR return
           end
-        res maxSafe > if
+        res maxSafeUnsigned > if
           true overflow =
+        else res maxSafe > _if
+          true signedOverflow =
         end
         d i64 cast.u =:: delta
         res
           mBase i64 cast.u *
-          res maxSafe == and ..dup maxVal delta - > if
+          res maxSafeUnsigned == and ..dup maxUnsignedVal delta - > if
             true overflow =
+          else res maxSafe == and ..dup maxVal delta - > _if
+            true signedOverflow =
           end
           delta +
         res = ## add digit to number
@@ -137,6 +146,7 @@ namespace: number
     ..drop
     res
       sign and -_ unsigned if ParserError .SIGN return end
+      signedOverflow if ParserError .UNSIGNED return end
     overflow if ParserError .OVERFLOW return end
     ParserError .NONE return
   end

@@ -22,8 +22,7 @@ while `A` to `Z` preserve their previous values
 integer sizes:
 By default integer literals are parsed as `i32`, or `i64` if the number does not fit in a signed 32-bit integer.
 
-To declare an integer literal as unsigned append `:u` at the end of the literal, the compiler will then automatically pick a matching unsigned integer type (at least `u32`).
-To specify a concrete type for a literal append a `:` followed by the name of the type
+To specify a concrete type for a literal append a `:` followed by the name of the type, both unsigned and signed integer literals fitting in that type will be accepted
 
 floating point literals:
 `.` is used to separate the integer part of the number form its fractional part.
@@ -40,7 +39,7 @@ Examples:
 1            ## the integer 1 as i32
 1.0          ## 1 as (64-bit) float
 -12:i8       ## -12 as 8-bit integer
-0xffff:u16   ## a 16-bit integer with all bits set to 1
+0xffff:i16   ## a 16-bit integer with all bits set to 1
 12345678987654321 ## a decimal 64-bit integer
 4b100        ## 16 in base 4
 05           ## decimal 5, leading zeros are allowed
@@ -51,7 +50,7 @@ Examples:
 0x1E2        ## 482 as base-16 integer
 0x1X2        ## 256 as base-16 float
 0xffffffff   ## 4294967295 as i64
-0xffffffff:u ## -1 (4294967295u) as i32
+0xffffffff:i32 ## -1 (4294967295) as i32
 0x3          ## 3
 1x3          ## -> not a number
 ```
@@ -59,8 +58,8 @@ Examples:
 edge cases:
 ```
 0x0x0       ## 0 as float
-62b1:u32     ## 1 as 32-bit integer
-62b1u32     ## 453780 as 32-bit integer
+62b1:i32     ## 1 as 32-bit integer
+62b1i32     ## 407652 as (32-bit) integer
 ```
 
 
