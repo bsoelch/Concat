@@ -713,7 +713,7 @@ proc(
       ValueType .I64 return
     pointer case
       ValueType .PTR return
-    arrayType struct union enum case
+    arrayType struct union enum initializer case
       t typeContext types.sizeOf =:: size
       size .fixed ?? if ## TODO detect floats
         size .fixed 4 <= if

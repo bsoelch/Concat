@@ -340,40 +340,13 @@ proc(
   context [] .labelBuffer .length labelOffset - =:: elementCount
   context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
   context [] .valueBuffer .length valueOffset - elementCount == assert "value count == label count"
-  Type .undefined =:: mut: arrayType
-  true =:: mut: hasArrayType
-  false =:: mut: hasName
-  0:i64 while $ elementCount < do =:: i
-    context [] .typeBuffer typeOffset i + list.at .data =:: eltType
-    context [] .valueBuffer valueOffset i + list.at .data [] =:: eltValue
-    context [] .labelBuffer labelOffset i + list.at .data [] =:: eltLabel
-    eltLabel id.LABEL_ID_NONE != if
-      true hasName =
-      ## if there is a labeled element the initializer is not an array
-      false hasArrayType =
-      Type .undefined arrayType =
-    end
-    hasArrayType if
-      arrayType Type .undefined types.typeEquals if
-       eltType [] arrayType =
-      else arrayType eltType [] typeContext types.mergeTypes ! _if
-        #+mergedType+# arrayType =
-      else ..drop
-        false hasArrayType =
-        Type .undefined arrayType =
-      end
-    end
-    ## decompose int-literals to integers
-    ## XXX ? keep literal type on array & allow cast from int literal array to int array
-    eltType [] .intLiteral ?? if
-      eltType [] .intLiteral types.intLiteralAsInt eltType [] =
-    end
-  finally i 1 + end ..drop
-  arrayType .intLiteral ?? if
-    arrayType .intLiteral types.intLiteralAsInt arrayType =
-  end
+  ## newInitializerType
+    context [] .typeBuffer list.asArray typeOffset array.tail
+    context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+    typeContext
+  types.newInitializerType =:: initializerType
   ## return
-    arrayType
+    initializerType
     false
   return
 end
@@ -1108,7 +1081,7 @@ proc(
         INITIALIZER case
           op closedBlock @ op [] .pos context closedInitializer if
             ..drop true return
-          end =:: arrayType
+          end =:: initializerType
           closedBlock .labelOffset =:: labelOffset
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
@@ -1117,40 +1090,12 @@ proc(
             values
             idContext [] .constContext@
           newArrayConst =:: value
-          arrayType Type .undefined types.typeEquals if
-            context [] .typeBuffer .length 0 == if
-              Type .empty
-            else
-              ## newTuple
-                context [] .typeBuffer list.asArray
-                context [] .labelBuffer list.asArray optional.wrap
-                typeContext
-              types.newTuple if
-                "could not create type of structure-constant" sb.wrap
-                op [] .pos errors appendError
-              end
-            end
-          else ## TODO array of arrays -> 2D array
-            ## ArraySize
-              values .length
-              types.ArraySizeType .int
-            types.ArraySize new =:: mSize
-            arrayType
-              types.ArrayType .ARRAY
-              mSize @ array.wrap
-              true
-              false
-            typeContext types.newArrayType if
-              "could not create type of array-constant " sb.wrap
-              op [] .pos errors appendError
-            end
-          end =:: mType
           context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
           context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
           context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
           ## pushValue
             value
-            mType
+            initializerType
             id.LABEL_ID_NONE
             op [] .pos
           context pushValue

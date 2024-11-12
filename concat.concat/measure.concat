@@ -42,7 +42,7 @@ proc(
         declared list.append
       types [] =
       break
-    struct union procIn procOut enum case
+    struct union procIn procOut enum initializer case
       declared typeContext types.compositeElts =:: elts
       0:i64 while ..dup elts .length < do
         elts ..over types.compositeElts.get ptrLevel pos prog visited types declaredType
@@ -51,7 +51,7 @@ proc(
       declared .procIn ?? if
         break ## don't add proc-in to list of declared types
       end
-      declared .procOut ?? elts .length 2 < & if
+      declared .procOut ?? elts .length 2 < & if ## TODO is this up to date
         break ## don't add single element proc-out to list of declared types
       end
       declared .enum  ?? ! if

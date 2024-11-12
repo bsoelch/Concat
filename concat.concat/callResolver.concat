@@ -180,7 +180,7 @@ proc(
         false typeContext types.newReferenceType
       end
       return
-    struct union procIn procOut enum case
+    struct union procIn procOut enum initializer case
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
@@ -212,6 +212,8 @@ proc(
           union case true ..swap types.newUnion break
           enum case types.newEnum break
           procIn procOut case src .procOut ?? ..swap types.newProcArgs false break
+          ## TODO update initializer type
+          initializer case ..drop.3 Type .undefined true break
           default ..unreachable
         end
         ## reset buffer
@@ -479,7 +481,7 @@ proc(
         i 1 +
       end ..drop
       false return
-    struct union procIn procOut enum case
+    struct union procIn procOut enum initializer case
       src typeContext types.unwrapNamed src =
       src ..label target ..label != if
         true return ## src and target have to be same type of composite
