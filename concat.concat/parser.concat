@@ -1256,8 +1256,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       state hasConst if
         state peekConst =:: info =:: value
         info .data [] .valueType
-        $ .intLiteral ?? if
-          .intLiteral types.intLiteralAsInt
+        $ types.isLiteral if
+          typeContext types.literalToType
         end
         value .data []
       else

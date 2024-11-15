@@ -404,6 +404,11 @@ proc(
     target srcOp [] .dataType =
     false return
   end
+  src .valueType types.isLiteral if
+    src .valueType SignType .NONE src .value target typeContext interpreter.castConstant srcOp [] .val .Constant =
+    target srcOp [] .dataType =
+    false return
+  end
   true return
 end
 proc(
@@ -875,9 +880,9 @@ proc(
     clearConst if
       ConstValue .none elt .value =
       id.LABEL_ID_NONE elt .valueId =
-      elt .valueType .intLiteral ?? if
-        elt .valueType .intLiteral
-          types.intLiteralAsInt
+      elt .valueType types.isLiteral if
+        elt .valueType
+          typeContext types.literalToType
         elt .valueType =
       end
     end
@@ -929,11 +934,11 @@ proc(
   end
   toMerge mergePoint .rootBranch array.get =:: root
   root [] .valueType =:: mut: mergedType
-  mergedType .intLiteral ?? if
+  mergedType types.isLiteral if
     mergePoint .mergeType switch
       MERGE case break
       MERGE_ROOT NO_CAST case
-        mergedType .intLiteral types.intLiteralAsInt mergedType =
+        mergedType typeContext types.literalToType mergedType =
       break
     end
   end
@@ -944,8 +949,8 @@ proc(
     end
     toMerge i array.get =:: current
     current [] .valueType
-      $ .intLiteral ?? and mergePoint .mergeType .NO_CAST ?? if
-        .intLiteral types.intLiteralAsInt
+      $ types.isLiteral and mergePoint .mergeType .NO_CAST ?? if
+        typeContext types.literalToType
       end
     =:: currentType
     mergePoint .mergeType switch
@@ -998,7 +1003,7 @@ proc(
     0:i64 while ..dup toMerge .length < do =:: i
       toMerge i array.get =:: current
         current [] .valueType
-          $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
+          $ types.isLiteral if typeContext types.literalToType end
         =:: currentType
         currentType mergedType types.typeEquals ! if
           mergePoint .castPointOffsets i array.get =:: castRoot
@@ -1301,8 +1306,8 @@ proc(
         value? .data [] .valueType
           typeContext
         types.unwrapReference
-        $ .intLiteral ?? if
-          .intLiteral types.intLiteralAsInt
+        $ types.isLiteral if
+          typeContext types.literalToType
         end
       else
         "missing type for declaration" sb.wrap op [] .pos errors appendError
@@ -2107,6 +2112,10 @@ proc(
            true isPtr =
            ..dup typeContext types.isMutable mutable =
            typeContext types.getBaseType
+        else $ types.isLiteral _if
+          typeContext types.literalToType
+            $ srcType =
+          container $1 op .pos state tryCastConstant ! assert "can convert literal to type"
         end
       =:: mut: containerType
       ## compositeFindLabel
@@ -2344,6 +2353,9 @@ proc(
         baseType typeContext types.isArray if
           break
         end
+        baseType typeContext types.isArrayLiteral if
+          break
+        end
         baseType typeContext types.isInt ! if ..drop
           "invalid type for operation " sb.wrap
             op program sb.appendOp
@@ -2364,7 +2376,12 @@ proc(
           return
         end
         branchTree.itr.next =:: srcArray
-        srcArray [] .valueType =:: srcType
+        srcArray [] .valueType
+          $ types.isLiteral if
+            typeContext types.literalToType
+            srcArray [] $1 op .pos state tryCastConstant ! assert "can convert literal to type"
+          end
+        =:: srcType
         srcArray [] .copyMutableIndex =:: srcCopyMutIndex
         srcCopyMutIndex
           state [] .compiledOps .length 1 - ==

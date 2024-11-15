@@ -862,9 +862,9 @@ namespace: sb
     typeContext [] .labelContext @ =:: labelContext
     prog [] .idContext .constContext @ =:: constContext
     sb
-      isGlobal and
+      isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
-          t typeContext types.isPointer if
+          t .intLiteral ?? if
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
@@ -989,6 +989,12 @@ namespace: sb
               ",z " sb.appendS
               size offset - sb.appendI
             end
+            return
+          else
+            "unsupported type for array constant: " sb.wrap
+              t typeContext sb.appendType
+              " expected array or tuple" sb.appendS
+            pos errors appendError
             return
           end
         break

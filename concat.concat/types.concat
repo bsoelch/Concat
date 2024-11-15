@@ -407,6 +407,72 @@ namespace: types
       ..drop
     false return
   end
+  proc( Type -> bool ) =>: export: isLiteral
+    switch
+       intLiteral initializer case true return
+       empty arrayType reference mutableReference
+           undefined primitiveType procedure cType pointer
+           namedType autoType genericType
+           generatedType arrayIndex enum
+           procIn procOut struct union case
+         false return
+    end
+  end
+  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: literalToType
+    t switch
+       intLiteral case t .intLiteral intLiteralAsInt return
+       initializer case
+        context [] .initializerTypes
+          t .initializer i64 cast list.at .data =:: initInfo
+        context [] .tupleTypes
+          initInfo [] .asTuple i64 cast list.at .data =:: tupleInfo
+        tupleInfo .compositeInfo .eltCount [] =:: eltCount
+        initInfo .arrayType .undefined ?? ! if
+          initInfo [] .arrayType context literalToType =:: baseType
+          eltCount ArraySizeType .int ArraySize new =:: size
+          ## newArrayType
+            baseType
+            ArrayType .ARRAY
+            size@ array.wrap ## size
+            true  ## fixed-size
+            false ## mutable
+          context newArrayType
+            ! assert "can create array"
+          return
+        end
+        tupleInfo .compositeInfo .flags [] COMP_FLAG_CONTAINS_LITERAL & ? if
+          eltCount Type list.create =:: mut: newElements ## XXX? reuse type-buffer
+          context [] .compositeData tupleInfo .compositeInfo .eltsOffset [] eltCount list.slice =:: oldElts
+          newElements
+            0:i64 while $ eltCount < do =:: i
+              oldElts i array.get context literalToType list.append
+            finally i 1 + end ..drop
+          newElements =
+          tupleInfo .compositeInfo .labelOffset [] =:: labelOffset
+          ## gohere
+            newElements list.asArray
+            labelOffset UNLABELED == if
+              LabelId arrayView optional.empty
+            else
+              context [] .elementLabels labelOffset i64 cast eltCount list.slice optional.wrap
+            end
+            context
+          newTuple
+            ! assert "can create tuple"
+            newElements list.free newElements =
+          return
+          ## TODO correctly convert element types if elements are literals
+        end
+        initInfo .asTuple [] Type .struct return
+       empty arrayType reference mutableReference
+           undefined primitiveType procedure cType pointer
+           namedType autoType genericType
+           generatedType arrayIndex enum
+           procIn procOut struct union case
+         t return
+    end
+  end
+
 
   ## does value fit in 2*64-bit values
   proc( Type TypeContext ptr mut -> bool ) =>: export: isSmallType
@@ -741,8 +807,12 @@ namespace: types
       union case
         composite composite .union typeContext tryComputeUnionSize return
       initializer case
-        ## XXX? allow computing size/allignment of initializers in special cases
-        true return
+        ## tryComputeUnionSize
+          composite
+          typeContext [] .initializerTypes
+            composite .initializer i64 cast
+          list.at .data [] .asTuple
+        typeContext tryComputeTupleSize return
       undefined empty autoType genericType
       primitiveType intLiteral cType arrayIndex arrayType
       pointer reference mutableReference procedure
@@ -860,6 +930,15 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isArray
     unwrapNamed .arrayType ?? return
+  end
+  proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayLiteral
+    t context unwrapNamed =:: base
+    base .initializer ?? ! if
+      false return
+    end
+    context [] .initializerTypes
+      base .initializer i64 cast list.at .data []
+    .arrayType .undefined ?? ! return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isReference
     unwrapNamed
@@ -1122,9 +1201,10 @@ namespace: types
    12:CompositeFlags =:: COMP_GENERIC_MASK
    15:CompositeFlags =:: COMP_MASK_CONTENT_FLAGS
    16:CompositeFlags =:: COMP_SIZE_KNOWN
-   32:CompositeFlags =:: TUPLE_FLAG_IS_STRUCT
-   64:CompositeFlags =:: TUPLE_FLAG_IS_PROC_IN
-  128:CompositeFlags =:: TUPLE_FLAG_IS_PROC_OUT
+   32:CompositeFlags =:: COMP_FLAG_CONTAINS_LITERAL
+   64:CompositeFlags =:: TUPLE_FLAG_IS_STRUCT
+  128:CompositeFlags =:: TUPLE_FLAG_IS_PROC_IN
+  256:CompositeFlags =:: TUPLE_FLAG_IS_PROC_OUT
   namespace: CompositeFlags
     proc( CompositeFlags : a CompositeFlags : b -> CompositeFlags ) =>: and
       a i32 cast b i32 cast i32.and CompositeFlags cast
@@ -1468,6 +1548,9 @@ namespace: types
       elt context containsGeneric if
         flags COMP_FLAG_STATIC_ARGS | flags =
       end
+      elt isLiteral if
+        flags COMP_FLAG_CONTAINS_LITERAL | flags =
+      end
       1 +
     end ..drop
     onlyEmpty if
@@ -1621,7 +1704,7 @@ namespace: types
     elts .length 0 > if
       elts 0 array.get
     else ## TODO? special type for empty array?
-      Type .empty
+      primitive.I32 ## TODO? better default type for empty array
     end =:: mut: arrayType
     0:i64 while $ elts .length < do =:: i
       elts i array.get =:: eltType
@@ -1631,9 +1714,7 @@ namespace: types
         Type .undefined arrayType =
         i break
       end
-      arrayType .undefined ?? if
-       eltType arrayType =
-      else arrayType eltType context mergeTypes ! _if
+      arrayType eltType context mergeTypes ! if
         #+mergedType+# arrayType =
       else ..drop
         Type .undefined arrayType =
@@ -2462,6 +2543,18 @@ namespace: types
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
     end
+    ## TODO better algorithm
+    src .initializer ?? and target context types.isArray if
+      context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
+      target context getBaseType =:: baseType
+      initInfo .arrayType [] baseType context canAutoCast and
+        src context compositeEltCount =:: srcSize
+        target context getArraySize =:: targetSizes
+        targetSizes .length 1 == and targetSizes 0 array.get .sizeType .int ??
+            and targetSizes 0 array.get .value srcSize == if
+          true return
+      end
+    end
     false return
   end
   proc( Type : a Type : b bool : forceCast TypeContext ptr : context -> bool ) =>: export: canCast
@@ -2585,6 +2678,7 @@ namespace: types
         end
       false return
     end
+    ## TODO handle initializer types
     Type .undefined true return
   end
 end

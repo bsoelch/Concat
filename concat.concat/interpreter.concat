@@ -557,6 +557,7 @@ namespace: interpreter
     FilePosition : pos
     ProgramContext ptr mut : program
   -> Type ConstValue bool ) =>: export: sizeOfValue
+    ## TODO support length of initializers
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
     idContext [] .typeContext @ =:: typeContext
@@ -573,8 +574,7 @@ namespace: interpreter
       value .typeId valType =
       true isType =
     end
-    valType typeContext types.isPointer
-        valType typeContext types.isArray | if
+    valType typeContext types.isPointer or valType typeContext types.isArray if
       valType typeContext types.isFixedSize ! if
         "cannot get the " sb.wrap
           isLength if
@@ -662,8 +662,8 @@ namespace: interpreter
           false
         return
       end
-    else isLength and isType and
-        valType typeContext types.isComposite _if
+    else isLength and valType typeContext types.isComposite
+        and isType or valType .initializer ?? #+XXX? check if initializer is array+# _if
       ## return
         types.primitive.I_SIZE
         valType

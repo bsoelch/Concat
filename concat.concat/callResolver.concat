@@ -820,11 +820,11 @@ proc(
             value case autoValue .data [] .value@ break
             nonEmpty case ..unreachable
           end =:: value
-          ## convert intLiteral types to corresponding int-types
-          value [] .typeId ?? and value [] .typeId .intLiteral ?? if
+          ## convert literal types to corresponding base types
+          value [] .typeId ?? and value [] .typeId types.isLiteral if
             current [] .genericValues @
               paramLabel
-              value [] .typeId .intLiteral types.intLiteralAsInt ConstValue .typeId GenericArg .fixed
+              value [] .typeId typeContext types.literalToType ConstValue .typeId GenericArg .fixed
             map.put ..drop
           end
           current [] .paramInfo
@@ -941,6 +941,7 @@ proc(
           stackType typeContext types.getBaseType fromType =
           current [] .nCasts 1 + current [] .nCasts =
         end
+        ## TODO extra casts for move complicated literal conversion
         fromType paramType types.typeEquals ! if
           fromType .intLiteral ?? and
               fromType .intLiteral types.intLiteralAsInt 
@@ -1142,11 +1143,11 @@ proc(
       value .none ?? ! if
         false needArg =
       end
-      ## convert intLiteral types to corresponding int-type
-      value .typeId ?? and value .typeId .intLiteral ?? if
+      ## convert literal types to corresponding types
+      value .typeId ?? and value .typeId types.isLiteral if
         candidate [] .genericValues @
           eltLabel
-          value .typeId .intLiteral types.intLiteralAsInt ConstValue .typeId GenericArg .fixed
+          value .typeId typeContext types.literalToType ConstValue .typeId GenericArg .fixed
         map.put ..drop
       end
       flags id.FLAG_STATIC & ? ! if
