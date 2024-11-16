@@ -473,7 +473,6 @@ namespace: types
     end
   end
 
-
   ## does value fit in 2*64-bit values
   proc( Type TypeContext ptr mut -> bool ) =>: export: isSmallType
     sizeOf =:: size
@@ -931,6 +930,16 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isArray
     unwrapNamed .arrayType ?? return
   end
+  ## pointer to array-type ( fixed size and not 0D )
+  proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayPointer
+    t context unwrapNamed =:: base
+    base .pointer ?? ! if false return end
+    context [] .arrayTypes base .pointer i64 cast list.get =:: pointerData
+    pointerData .fixedSize and pointerData .dims 0 > if
+      true return
+    end
+    false return
+  end
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayLiteral
     t context unwrapNamed =:: base
     base .initializer ?? ! if
@@ -1186,6 +1195,39 @@ namespace: types
         ARRAY case Type .arrayType break
       end
     false return
+  end
+
+  ## initializer type as array/tuple, without chainging element types
+  ## used for correctly resolving procedure signatures
+  proc( Type : t TypeContext ptr mut : context ArrayType : arrayType -> Type ) =>: initializerAsArrayOrPtr
+    t .initializer ?? ! if Type .undefined return end
+    context [] .initializerTypes
+      t .initializer i64 cast list.at .data =:: initInfo
+    context [] .tupleTypes
+      initInfo [] .asTuple i64 cast list.at .data =:: tupleInfo
+    tupleInfo .compositeInfo .eltCount [] =:: eltCount
+    eltCount ArraySizeType .int ArraySize new =:: size
+    ## newArrayType
+      initInfo [] .arrayType
+      arrayType
+      size@ array.wrap ## size
+      true  ## fixed-size
+      false ## mutable
+    context newArrayType
+      ! assert "can create array"
+    return
+  end
+  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: initializerAsArray
+    t context ArrayType .ARRAY initializerAsArrayOrPtr
+  end
+  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: initializerAsPointer
+    t context ArrayType .POINTER initializerAsArrayOrPtr
+  end
+  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: initializerAsTuple
+    t .initializer ?? ! if Type .undefined return end
+    context [] .initializerTypes
+      t .initializer i64 cast list.at .data =:: initInfo
+    initInfo [] .asTuple Type .struct return
   end
 
   i32 =:: LabelOffset
@@ -2418,6 +2460,21 @@ namespace: types
     end
     ArrayType .POINTER ArraySize array.empty true mutable context newArrayType ..drop return
   end
+  proc( Type : src TypeContext ptr mut : context -> Type ) =>: export: ptrTarget
+    src context isPointer ! if
+      Type .undefined return
+    end
+    src context isArrayPointer if
+      src context unwrapNamed =:: unwraped
+      unwraped context getBaseType
+        ArrayType .ARRAY
+        unwraped context getArraySize
+        true  ## fixed-size
+        false ## mutable
+      context newArrayType ..drop return
+    end
+    src context getBaseType return
+  end
 
   proc( Type : src Type : target bool : reshape TypeContext ptr : context -> bool ) =>: sizeCompatible
     using types
@@ -2544,7 +2601,7 @@ namespace: types
       src target false false context canCastPtr return
     end
     ## TODO better algorithm
-    src .initializer ?? and target context types.isArray if
+    src .initializer ?? and target context types.isArray or target context types.isArrayPointer if
       context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
       target context getBaseType =:: baseType
       initInfo .arrayType [] baseType context canAutoCast and

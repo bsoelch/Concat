@@ -49,6 +49,12 @@ struct(
 ) =:: TypedValId
 
 struct(
+  ConstValue   : value
+  Type         : valType
+  FilePosition : pos
+) =:: PtrConstant
+
+struct(
   Type       : valType
   ConstValue : value
   FilePosition : pos
@@ -115,7 +121,7 @@ struct(
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
   StringConstant list : mut: stringConstants
-  ConstValue list : mut: ptrConstants
+  PtrConstant list : mut: ptrConstants
   Type : mut: currentProc
   i64 : mut: localConstCount
   i64 : mut: stackCount
@@ -803,6 +809,8 @@ namespace: sb
   proc(
     stringBuilder : sb
     ConstValue : value
+    Type : valueType
+    FilePosition : pos
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendPtrConstQBE
     sb
@@ -810,21 +818,27 @@ namespace: sb
       PTR_CONST_NAME sb.appendS
       context [] .ptrConstants
         $ .length =:: ptrId
-        value list.append
+        ## GlobalConst
+          value
+          valueType
+          pos
+        PtrConstant new list.append
       context [] .ptrConstants =
       ptrId sb.appendI
     return
   end
   proc(
     stringBuilder : sb
-    ConstValue : value
+    PtrConstant ptr : constant
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendPtrConstDataQBE
     context [] .program =:: prog
     prog [] .idContext@ =:: idContext
+    prog [] .errors@ =:: errors
     idContext .constContext@ =:: constContext
     idContext .typeContext@ =:: typeContext
     typeContext .labelContext@ =:: labelContext
+    constant [] .value =:: value
     value .str16 ?? if
       value .str16 constContext sc16AsStr =:: str16
       sb
@@ -845,8 +859,18 @@ namespace: sb
           i 1 +
         end ..drop
       return
+    else value .arrayConstant ?? _if
+      sb
+        constant [] .valType
+        value
+        true
+        constant [] .pos
+      context appendConstQBE return
     end
-    ..unreachable ## unknown pointer constant type
+    "unsupported pointer constant: " sb.wrap
+      value constContext typeContext sb.appendConstant
+    constant [] .pos errors appendError
+    sb return
   end
   proc(
     stringBuilder : sb
@@ -932,6 +956,8 @@ namespace: sb
         str16 str32 case
           ## appendPtrConstQBE
             value
+            t typeContext types.ptrTarget
+            pos
             context
           appendPtrConstQBE
           return
@@ -939,8 +965,20 @@ namespace: sb
           isGlobal ! if
             break
           end
-          t typeContext types.isArray if
-            t typeContext types.getBaseType =:: base
+          t typeContext types.isPointer if
+            ## appendPtrConstQBE
+              value
+              t typeContext types.ptrTarget
+              pos
+              context
+            appendPtrConstQBE
+            return
+          end
+          t
+            typeContext types.unwrapReference
+          =:: containerType
+          containerType typeContext types.isArray if
+            containerType typeContext types.getBaseType =:: base
             base pos context typeSizeInt =:: baseSize
             base pos context typeStrideInt =:: baseStride
             value .arrayConstant constContext constArrayAsArray =:: elts
@@ -956,14 +994,14 @@ namespace: sb
               i 1 +
             end ..drop
             return
-          else t typeContext types.isTuple _if
+          else containerType typeContext types.isTuple _if
             ## TODO ensure elements are ordered by memory location
-            t typeContext types.compositeElts =:: types
+            containerType typeContext types.compositeElts =:: types
             value .arrayConstant constContext constArrayAsArray =:: elts
             0:i64 =:: mut: offset
             0:i64 while ..dup elts .length < do =:: i
               types i types.compositeElts.get =:: elt
-              t i pos context tupleEltOffsetInt =:: eltOffset
+              containerType i pos context tupleEltOffsetInt =:: eltOffset
               i 0 > if
                 ',' sb.appendC
               end
@@ -984,7 +1022,7 @@ namespace: sb
               offset =
               i 1 +
             end ..drop
-            t pos context typeSizeInt =:: size
+            containerType pos context typeSizeInt =:: size
             offset size < if
               ",z " sb.appendS
               size offset - sb.appendI
@@ -4957,7 +4995,7 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
     32 BlockInfo list.create
     32 LocalConst list.create
     32 StringConstant list.create
-    32 ConstValue list.create
+    32 PtrConstant list.create
     Type .undefined
     0
     0
@@ -5091,13 +5129,14 @@ proc( io.FILE : target ProgramContext ptr mut : program -> ) =>: export: compile
       i 1 +
     end ..drop
     0:i64 while ..dup context [] .ptrConstants .length < do =:: i
-      context [] .ptrConstants i list.get =:: val
+      context [] .ptrConstants i list.at .data =:: val
       "data $" sb.appendS
       PTR_CONST_NAME sb.appendS
       i sb.appendI
       " = {" sb.appendS
         val context sb.appendPtrConstDataQBE
       "}\n" sb.appendS ## XXX? append string value of string16/string32 constants
+      ## XXX? check if nested pointer constants do work correctly
       i 1 +
     end ..drop
     target ..over io.fputSb ..drop

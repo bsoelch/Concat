@@ -312,6 +312,15 @@ proc(
       target typeContext types.isReference ! if
     src typeContext types.getBaseType src =
   end
+  src .initializer ?? if
+    target typeContext types.isArray and src typeContext types.isArrayLiteral if
+      src typeContext types.initializerAsArray src =
+    else src typeContext types.isArrayLiteral and target typeContext types.isArrayPointer _if
+      src typeContext types.initializerAsPointer src =
+    else
+      src typeContext types.initializerAsTuple src =
+    end
+  end
   target switch
     genericType case
       target types.getTypeId LabelId cast =:: genericId
