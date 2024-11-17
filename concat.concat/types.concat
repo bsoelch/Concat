@@ -1,3 +1,4 @@
+import core
 import list
 import arrayView
 import string
@@ -2573,6 +2574,89 @@ namespace: types
       mutableParent mutableTarget |
     context canCastPtr return
   end
+  ## XXX? allow reordering fields
+  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canCastTuple
+    context .labelContext =:: labelContext
+    src context unwrapNamed =:: srcBase
+    target context unwrapNamed =:: targetBase
+    srcBase .struct ?? if
+      srcBase .struct
+    else srcBase .initializer ?? _if
+      context [] .initializerTypes
+        srcBase .initializer i64 cast list.at .data
+      .asTuple []
+    else
+      false return
+    end =:: srcId
+    targetBase .struct ?? ! if false return end
+    targetBase .struct =:: targetId
+    srcId targetId == if
+      true return
+    end
+    context [] .tupleTypes srcId i64 cast list.at .data =:: srcInfo
+    context [] .tupleTypes targetId i64 cast list.at .data =:: targetInfo
+    srcInfo .compositeInfo [] .eltCount targetInfo .compositeInfo [] .eltCount != if
+      false return
+    end
+    srcInfo .compositeInfo .labelOffset [] =:: srcLabels
+    targetInfo .compositeInfo .labelOffset [] =:: targetLabels
+    srcLabels UNLABELED == targetLabels UNLABELED == != if
+      false return ## eigther both labeled or both unlabled
+    end
+    ## XXX? wrapper function for getting tuple elements/labels from id
+    srcLabels UNLABELED != =:: labeled
+    srcInfo .compositeInfo .eltCount [] =:: eltCount
+    context [] .compositeData
+      srcInfo .compositeInfo .eltsOffset []
+      srcInfo .compositeInfo .eltCount []
+    list.slice =:: srcElts
+    context [] .compositeData
+      targetInfo .compositeInfo .eltsOffset []
+      targetInfo .compositeInfo .eltCount []
+    list.slice =:: targetElts
+    eltCount for =:: i
+      srcElts i array.get targetElts i array.get context canAutoCast ! if
+        false return
+      end
+      labeled and
+          ## labelNamesEq
+            context [] .elementLabels srcLabels i64 cast i + list.get
+            context [] .elementLabels targetLabels i64 cast i + list.get
+            labelContext
+          id.labelNamesEq ! if
+        false return
+      end
+    end
+    true return
+  end
+  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canAutoCastInitializer
+    target context unwrapNamed =:: targetBase
+    targetBase context types.isArray or targetBase context types.isArrayPointer if
+      context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
+      targetBase context getBaseType =:: baseType
+      initInfo .arrayType [] baseType context canAutoCast and
+        src context compositeEltCount =:: srcSize
+        targetBase context getArraySize =:: targetSizes
+        targetSizes .length 1 == and targetSizes 0 array.get .sizeType .int ??
+            and targetSizes 0 array.get .value srcSize == if
+          true return
+      end
+    end
+    targetBase context types.isRawPointer and targetBase context types.getArrayDims 1 ==
+        and src context compositeEltCount 0 == if
+      ## TODO? allow cast from array initializer to var-size pointer?
+      true return ## empty initializer to var-size pointer
+    end
+    targetBase context types.isTuple if
+      src targetBase context canCastTuple return
+    else targetBase context types.isPointer
+        and targetBase context getArrayDims 0 ==
+        and targetBase context getBaseType context unwrapNamed =:: baseType
+        baseType context types.isTuple _if
+      src baseType context canCastTuple return
+    end
+    false return
+  end
 
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canAutoCast
     src target types.typeEquals if
@@ -2583,6 +2667,9 @@ namespace: types
     end
     target context types.isReference and src target context getBaseType context canAutoCast if
       true return
+    end
+    src .initializer ?? if
+      src target context canAutoCastInitializer return
     end
     src .namedType ?? or target .namedType ?? if
       false return
@@ -2599,18 +2686,6 @@ namespace: types
     end
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
-    end
-    ## TODO better algorithm
-    src .initializer ?? and target context types.isArray or target context types.isArrayPointer if
-      context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
-      target context getBaseType =:: baseType
-      initInfo .arrayType [] baseType context canAutoCast and
-        src context compositeEltCount =:: srcSize
-        target context getArraySize =:: targetSizes
-        targetSizes .length 1 == and targetSizes 0 array.get .sizeType .int ??
-            and targetSizes 0 array.get .value srcSize == if
-          true return
-      end
     end
     false return
   end

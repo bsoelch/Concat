@@ -1,0 +1,22 @@
+( type : T -> type ) =>: arrayView
+  struct(
+    T _ ptr : data
+    i64 : length
+  )
+end
+namespace: array
+  ( type : T -> T arrayView ) =>: empty
+    { { } : data 0 : length }
+  end
+end
+
+char8 arrayView =:: string
+
+namespace: string
+  { "" : data 0 : length } string =: empty
+end
+
+proc( -> ) =>: main
+  string.empty ..?stack .length 0 == assert ""
+  i32 array.empty ..?stack .length 0 == assert ""
+end

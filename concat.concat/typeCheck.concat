@@ -1946,7 +1946,7 @@ proc(
             "initialization" string.wrap
             0
             op .pos
-          state requireTypes if
+          state requireTypes if ## TODO? can requireTypes change constVal
             ..drop return
           end ..drop
           ## update constant value in identifier if stack-value is constant

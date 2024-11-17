@@ -813,6 +813,9 @@ namespace: sb
     FilePosition : pos
     CompilerContext ptr mut : context
   -> stringBuilder ) =>: appendPtrConstQBE
+    value .arrayConstant ?? and value .arrayConstant .length 0 == if
+      sb 0 sb.appendI return ## pointer to zero length array -> NULL-pointer
+    end
     sb
       '$' sb.appendC
       PTR_CONST_NAME sb.appendS
