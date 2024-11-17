@@ -157,6 +157,11 @@
                   stack(\.[0-9]+)?            |
                   ops(\.[0-9]+)?              |
                   parser\.ops(\.[0-9]+)?
+                ) |
+                \!(
+                  error   |
+                  warning |
+                  info
                 )
              )
            )
