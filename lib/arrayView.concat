@@ -9,7 +9,7 @@ end
 
 namespace: array
   proc( type : T -> T arrayView ) =>: export: empty
-    0 T mem.alloc 0 T arrayView new return
+    { { } : data 0 : length } return
   end
   proc( type : auto: T T _ ptr  i32 -> T arrayView ) =>: export: create_32
     i64 cast.s create_64

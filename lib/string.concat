@@ -4,11 +4,7 @@ import mem
 char8 arrayView =:: export: string
 
 namespace: string
-  ## TODO use constant initializer (when fully implemented)
-  ## { "" : data 0 : length } string =: empty
-  proc( -> string ) =>: export: empty
-    "" 0 string new return
-  end
+  { "" : data 0 : length } string =: export: empty
 
   proc( char8 _ ptr  i64 -> string ) =>: export: create
     string new return
