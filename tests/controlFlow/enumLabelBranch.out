@@ -1,4 +1,4 @@
 types:
 -----------------
-named[0]( "anEnum" [ enum[0]( A B C ) ] ) reference
+named[2]( "anEnum" [ enum[0]( A B C ) ] ) reference
 -----------------

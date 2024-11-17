@@ -2017,11 +2017,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart state importFile
         return
       else ..dup .IDENTIFIER ?? _if .IDENTIFIER ## library file
-        state [] .libPath .length ..over .length + ".concat" ..length + sb.create
-          state [] .libPath sb.appendStr
-          ..swap sb.appendStr ".concat" sb.appendS
-        fileState [] .wordStart state importFile
-        return
+        fileState [] .wordStart state importLibraryFile return
       end
       64 sb.create
         "invalid parameter for " sb.appendS
@@ -2289,6 +2285,13 @@ proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState p
       return
   end
 end
+
+proc( string FilePosition : pos ParserState ptr mut : state -> ) =>: importLibraryFile
+  state [] .libPath .length $1 .length + ".concat" ..length + sb.create
+    state [] .libPath sb.appendStr
+    ..swap sb.appendStr ".concat" sb.appendS
+  pos state importFile
+end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr mut : state -> ) =>: importFile
   state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut: imported
@@ -2394,6 +2397,9 @@ proc( stringBuilder : fileName ParserState ptr mut : state -> FileId io.IOError 
       end
     end ..drop
     state [] .openBlocks .length =:: blockCount
+    _INCLUDE_CORE_ if
+      "core" string.wrap fileState .currentPos state importLibraryFile
+    end
     fileState @
       fileBody sb.asStr while
         ..over nextToken ..over.2 state parseOperation

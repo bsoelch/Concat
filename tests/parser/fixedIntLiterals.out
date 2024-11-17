@@ -24,9 +24,9 @@ identifier "f":
 -----------------
 -----------------
 identifier "g":
- - global variable "g" ( named[0]( "char" ) [ integer: -2 ] ) declared at fixedIntLiterals.concat:9:13
+ - global variable "g" ( named[2]( "char" ) [ integer: -2 ] ) declared at fixedIntLiterals.concat:9:13
 -----------------
 -----------------
 identifier "h":
- - global variable "h" ( named[1]( "byte" ) [ integer: 3 ] ) declared at fixedIntLiterals.concat:10:12
+ - global variable "h" ( named[3]( "byte" ) [ integer: 3 ] ) declared at fixedIntLiterals.concat:10:12
 -----------------

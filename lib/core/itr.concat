@@ -47,14 +47,6 @@ namespace: ptr
         p T _ ptr cast k +
       T ptrItr new return
     end
-    #+
-    proc( type : auto: T i64 : auto: k  T k array : a -> T ptrItr ) =>: prepareArray
-      ## ptrItr
-        a@
-        a@ T _ ptr cast k +
-      T ptrItr new return
-    end
-    +#
     proc( type : auto: T T ptrItr : itr -> bool ) =>: check
       itr .current itr .tail <
     end

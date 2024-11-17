@@ -17,6 +17,7 @@ false =:: mut: wError
 ## enable constant-folding
 true =:: mut: export: _FOLD_CONSTANTS_
 false =:: mut: export: _EXPERIMENTAL_
+true =:: mut: export: _INCLUDE_CORE_
 BackEnd .QBE =:: mut: export: _BACKEND_
 
 proc( string : path -> ) =>: printUsage
@@ -32,6 +33,7 @@ proc( string : path -> ) =>: printUsage
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
     "  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\n" sb.appendS
+    "  --no-core: don't include libray core by default \n" sb.appendS
     io.stdOut ..over io.fputSb ..drop
   sb.free ..drop
 end
@@ -89,6 +91,16 @@ proc( -> ) =>: parseArgs
           BackEnd .SSA _BACKEND_ =
           break
         'q' case
+          break
+        '-' case
+          arg "--no-core" string.wrap string.eq if
+            false _INCLUDE_CORE_ = break
+          end
+          "unknown compiler option: \"" sb.wrap
+            arg sb.appendStr
+            "\"\n" sb.appendS
+            io.stdErr ..over io.fputSb ..drop
+          sb.free ..drop
           break
         default
           "unknown compiler option: \"" sb.wrap
