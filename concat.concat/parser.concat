@@ -2074,6 +2074,33 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         fileState [] .wordStart
       opAssert state appendOp
       return
+    else $ "..!error" string.wrap string.eq
+        or $ "..!warning" string.wrap string.eq
+        or $ "..!info" string.wrap string.eq _if =:: opName
+      ## create error/warning/info if operation is reachable
+      fileState nextToken ## XXX? handle different string types?
+      ..dup .STRING ?? ! if ..drop
+        "error message has to be a string constant" sb.wrap fileState [] .wordStart state appendError2
+        return
+      end .STRING .value =:: message
+      opName "..!error" string.wrap string.eq if
+        ErrorType .ERROR
+      else opName "..!warning" string.wrap string.eq _if
+        ErrorType .WARNING
+      else opName "..!info" string.wrap string.eq _if
+        ErrorType .INFO
+      else
+        "unexpected error type: " sb.wrap
+          opName sb.appendStr
+        fileState [] .wordStart state appendError2
+        ErrorType .ERROR
+      end =:: errorType
+      ## opAssert
+        message labelContext id.wrapStringConstant
+        errorType
+        fileState [] .wordStart
+      opError state appendOp
+      return
     else ..dup "overload:" string.wrap string.eq _if =:: opName
       fileState state nextWord fileState state readLabel =:: mut: labelId
       labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop

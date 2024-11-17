@@ -1,0 +1,1 @@
+iteration over pointer to single value ( caused by initializing code at ../../lib/core/itr.concat:45:18 ) at for0Dptr.concat:3:6

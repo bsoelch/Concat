@@ -2098,6 +2098,18 @@ proc(
           ops return
       end
       break
+    Error case
+      ## appendError
+        op [] .val .Error .message .length sb.create
+        op [] .val .Error .message labelContext sb.appendStringConst
+        op [] .pos
+        errors
+      op [] .val .Error .errorType switch
+        ERROR case appendError break
+        WARNING case appendWarning break
+        INFO case appendInfo break
+      end
+      ops return
     Assert unreachable
     autoTypedInitializeId
     ConstantReference NewReference

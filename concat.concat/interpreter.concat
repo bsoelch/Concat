@@ -1562,6 +1562,22 @@ proc(
         op [] .pos errors appendError
       end
       false return
+    Error case
+      context [] .evalType switch
+        FOLD_LOCAL case true return ## error is handled by type-checker
+        INTERPRET GLOBAL PARSER case break
+      end
+      ## appendError
+        op [] .val .Error .message .length sb.create
+        op [] .val .Error .message labelContext sb.appendStringConst
+        op [] .pos
+        errors
+      op [] .val .Error .errorType switch
+        ERROR case appendError break
+        WARNING case appendWarning break
+        INFO case appendInfo break
+      end
+      false return
     length size case
       op [] .pos context popValue if ..drop.2
         true return

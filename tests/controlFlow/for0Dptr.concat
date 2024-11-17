@@ -1,0 +1,5 @@
+proc( -> ) =>: main
+  5 =:: x
+  x@ for =:: i
+  end
+end

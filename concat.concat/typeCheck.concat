@@ -169,6 +169,7 @@ struct(
   OpInfo list : mut: opInfo
   i64 list : mut: childIds
   FileId : mut: currentFile
+  FilePosition optional : mut: expandedAt
   bool : mut: reachable
   bool : mut: isGlobal
   ## TODO flags:
@@ -3770,6 +3771,25 @@ proc(
       end ..drop
       op state appendOp ..drop
       return
+    Error case
+      ## appendError
+        op .val .Error .message .length sb.create
+        op .val .Error .message labelContext sb.appendStringConst
+        state [] .expandedAt optional.hasData if
+          " ( caused by initializing code at " sb.appendS
+          op .pos sb.appendPos
+          " )" sb.appendS
+          state [] .expandedAt .data
+        else
+          op .pos
+        end
+        errors
+      op .val .Error .errorType switch
+        ERROR case appendError break
+        WARNING case appendWarning break
+        INFO case appendInfo break
+      end
+      return
     length size case
       state [] .stack @ branchTree.peek =:: value?
       value? optional.isEmpty if
@@ -3966,6 +3986,7 @@ end
 proc(
   ProcId : procId
   i64 : implId
+  FilePosition optional : expandedAt
   TypeCheckState ptr mut : state
 -> ) =>: typeCheckProcedure
   state [] .program [] .autoTypes list.copy =:: globalAutoTypes
@@ -3973,6 +3994,7 @@ proc(
   program [] .procedures procId i64 cast list.at .data =:: currentProc
   ## compile procedures to local code of given file
   currentProc [] .fileId state [] .currentFile =
+  expandedAt state [] .expandedAt =
   currentProc [] .fileId state [] .interpreter .currentFile =
   program [] .progFiles
     currentProc [] .fileId i64 cast
@@ -4043,6 +4065,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
     128 OpInfo    list.create
     128 i64       list.create
     FILE_ID_NONE
+    FilePosition optional.empty
     true
     true
   TypeCheckState new =:: mut: state
@@ -4084,7 +4107,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
     currentProc [] .hasStaticArg if
       procId 1 + continue
     end
-    procId ProcId cast -1 state @ typeCheckProcedure
+    procId ProcId cast -1 FilePosition optional.empty state@ typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures
@@ -4142,7 +4165,7 @@ proc( ProgramContext ptr mut : program -> ) =>: export: typeCheckProgram2
           end
           i 1 +
         end ..drop
-        procId ProcId cast implId state @ typeCheckProcedure
+        procId ProcId cast implId implData [] .firstUse optional.wrap state@ typeCheckProcedure
         implId 1 +
       end ..drop
       procId 1 +

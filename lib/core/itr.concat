@@ -41,6 +41,13 @@ namespace: ptr
     struct( T _ ptr : current T _ ptr : tail )
   end
   namespace: itr
+    proc( type : auto: T T ptr : p -> T ptrItr ) =>: prepare0D
+      ..!warning "iteration over pointer to single value"
+      ## ptrItr
+        p
+        p T _ ptr cast 1 +
+      T ptrItr new return
+    end
     proc( type : auto: T i64 : auto: k  T k ptr : p -> T ptrItr ) =>: prepare
       ## ptrItr
         p
@@ -63,6 +70,7 @@ overload: ..itr.prepare
   i32.itr.prepare
   i64.itr.prepare
   ptr.itr.prepare
+  ptr.itr.prepare0D
 end
 overload: ..itr.check
   i32.itr.check

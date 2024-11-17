@@ -63,7 +63,7 @@ proc(
       newOps return ## ignore nops
     builtIn equalityOperator argc getArg unreachable procPtr
     checkEnumLabel hasElement getId atId setValue getEnumLabel
-    atArrayElement atElement Assert stackMod getArrayElement getElement setEnumLabel
+    atArrayElement atElement Assert Error stackMod getArrayElement getElement setEnumLabel
     autoCast Cast Cast! bitCast Return case
       newOps
         op list.append ## nothing to change

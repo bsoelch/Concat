@@ -915,10 +915,16 @@ proc(
           map.put ..drop
         end
       end
-      paramType typeContext types.isPointer paramType typeContext types.isArray | if
+      paramType typeContext types.isPointer or paramType typeContext types.isArray if
         current [] .arraySizeArguments
           paramType typeContext types.getArrayDims i32 cast +
         current [] .arraySizeArguments =
+      end
+      stackType typeContext types.getArrayDims 0 == and paramType typeContext types.getArrayDims 0 > if
+        ## count conversion from 0D ptr to 1D ptr as cast
+        current [] .nCasts
+          1 +
+        current [] .nCasts =
       end
       current [] .signatureWeigth
         paramType typeContext computeTypeWeigth +
