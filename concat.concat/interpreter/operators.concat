@@ -208,13 +208,10 @@ namespace: interpreter
         args k i64.add @ binaryOperatorInt return
       ADD_F32 case args k f32.add @ binaryOperatorFloat return
       ADD_F64 case args k f64.add @ binaryOperatorFloat return
-      ADD_PTR ADD_PTR_MUT case break
       SUB_I8 SUB_I16 SUB_I32 SUB_I64 C8_DIFF C16_DIFF C32_DIFF case
         args k i64.sub @ binaryOperatorInt return
       SUB_F32 case args k f32.sub @ binaryOperatorFloat return
       SUB_F64 case  args k f64.sub @ binaryOperatorFloat return
-      SUB_PTR SUB_PTR_MUT case break
-      PTR_DIFF case break
       MUL_I32 MUL_I64 case args k i64.mul @ binaryOperatorInt return
       MUL_F32 case args k f32.mul @ binaryOperatorFloat return
       MUL_F64 case args k f64.mul @ binaryOperatorFloat return
@@ -263,42 +260,36 @@ namespace: interpreter
       EQ_I64 case args k i64.eq @ cmpOperatorInt return
       EQ_F32 case args k f32.eq @ cmpOperatorFloat return
       EQ_F64 case args k f64.eq @ cmpOperatorFloat return
-      EQ_PTR case break
       NE_I8  NE_C8  case args k i8.ne @ cmpOperatorInt return
       NE_I16 NE_C16 case args k i16.ne @ cmpOperatorInt return
       NE_I32 NE_C32 case args k i32.ne @ cmpOperatorInt return
       NE_I64 case args k i64.ne @ cmpOperatorInt return
       NE_F32 case args k f32.ne @ cmpOperatorFloat return
       NE_F64 case args k f64.ne @ cmpOperatorFloat return
-      NE_PTR case break
       LT_I8 case args k i8.lt @ cmpOperatorInt return
       LT_I16 case args k i16.lt @ cmpOperatorInt return
       LT_I32 case args k i32.lt @ cmpOperatorInt return
       LT_I64 case args k i64.lt @ cmpOperatorInt return
       LT_F32 case args k f32.lt @ cmpOperatorFloat return
       LT_F64 case args k f64.lt @ cmpOperatorFloat return
-      LT_PTR case break
       LE_I8 case args k i8.le @ cmpOperatorInt return
       LE_I16 case args k i16.le @ cmpOperatorInt return
       LE_I32 case args k i32.le @ cmpOperatorInt return
       LE_I64 case args k i64.le @ cmpOperatorInt return
       LE_F32 case args k f32.le @ cmpOperatorFloat return
       LE_F64 case args k f64.le @ cmpOperatorFloat return
-      LE_PTR case break
       GE_I8 case args k i8.ge @ cmpOperatorInt return
       GE_I16 case args k i16.ge @ cmpOperatorInt return
       GE_I32 case args k i32.ge @ cmpOperatorInt return
       GE_I64 case args k i64.ge @ cmpOperatorInt return
       GE_F32 case args k f32.ge @ cmpOperatorFloat return
       GE_F64 case args k f64.ge @ cmpOperatorFloat return
-      GE_PTR case break
       GT_I8 case args k i8.gt @ cmpOperatorInt return
       GT_I16 case args k i16.gt @ cmpOperatorInt return
       GT_I32 case args k i32.gt @ cmpOperatorInt return
       GT_I64 case args k i64.gt @ cmpOperatorInt return
       GT_F32 case args k f32.gt @ cmpOperatorFloat return
       GT_F64 case args k f64.gt @ cmpOperatorFloat return
-      GT_PTR case break
       ULT_I8  LT_C8  case args k i8.ult @ cmpOperatorInt return
       ULT_I16 LT_C16 case args k i16.ult @ cmpOperatorInt return
       ULT_I32 LT_C32 case args k i32.ult @ cmpOperatorInt return

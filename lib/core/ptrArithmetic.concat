@@ -1,0 +1,130 @@
+
+namespace: ptr
+  namespace: mut
+    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: add
+      p i64 cast! offset T ..type.size * + T _ ptr mut cast!
+    end
+    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: sub
+      p i64 cast! offset T ..type.size * - T _ ptr mut cast!
+    end
+    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: add0D
+      ..!error "pointer arithmetic of value pointers is not supported"
+      ..unreachable
+    end
+    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: sub0D
+      ..!error "pointer arithmetic of value pointers is not supported"
+      ..unreachable
+    end
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: cmp
+    p i64 cast! q i64 cast! i64.ucmp
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: lt
+    p i64 cast! q i64 cast! i64.ult
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: le
+    p i64 cast! q i64 cast! i64.ule
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: eq
+    p i64 cast! q i64 cast! i64.eq
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: ne
+    p i64 cast! q i64 cast! i64.ne
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: ge
+    p i64 cast! q i64 cast! i64.uge
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: gt
+    p i64 cast! q i64 cast! i64.ugt
+  end
+
+  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: add
+    p i64 cast! offset T ..type.size * + T _ ptr cast!
+  end
+  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: sub
+    p i64 cast! offset T ..type.size * - T _ ptr cast!
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: diff
+    p i64 cast! q i64 cast! - T ..type.size ..udiv
+  end
+
+  proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D
+    ..!error "comparisson of value pointers is not supported"
+    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: lt0D
+    ..!error "comparisson of value pointers is not supported"
+    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: le0D
+    ..!error "comparisson of value pointers is not supported"
+    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: ge0D
+    ..!error "comparisson of value pointers is not supported"
+    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: gt0D
+    ..!error "comparisson of value pointers is not supported"
+    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..unreachable
+  end
+
+  proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: add0D
+    ..!error "pointer arithmetic on value pointers is not supported"
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: sub0D
+    ..!error "pointer arithmetic on value pointers is not supported"
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> i64 ) =>: diff0D
+    ..!error "pointer arithmetic on value pointers is not supported"
+    ..unreachable
+  end
+  ## XXX? prohibit arithmetic on array pointers
+end
+overload: +
+  ptr.add
+  ptr.add0D
+  ptr.mut.add
+  ptr.mut.add0D
+end
+overload: -
+  ptr.sub
+  ptr.sub0D
+  ptr.mut.sub
+  ptr.mut.sub0D
+  ptr.diff
+  ptr.diff0D
+end
+overload: <
+  ptr.lt
+  ptr.lt0D
+end
+overload: <=
+  ptr.le
+  ptr.le0D
+end
+overload: ==
+  ptr.eq
+end
+overload: !=
+  ptr.ne
+end
+overload: >=
+  ptr.ge
+  ptr.ge0D
+end
+overload: >
+  ptr.gt
+  ptr.gt0D
+end
+overload: <=>
+  ptr.cmp
+  ptr.cmp0D
+end

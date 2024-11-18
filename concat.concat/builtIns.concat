@@ -4,9 +4,9 @@ import "program.concat"
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
- ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ADD_PTR ADD_PTR_MUT ## +
+ ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ## +
  SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
-     SUB_PTR SUB_PTR_MUT PTR_DIFF C8_DIFF C16_DIFF C32_DIFF ## -
+     C8_DIFF C16_DIFF C32_DIFF ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
  ## XXX? div f64 i32
  DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64     ## /
@@ -25,12 +25,12 @@ enum(
  ## comparison
  BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
  ## TODO? mixed inequalities ( i32 i64 <  is frequent loop condition )
- EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR EQ_C8 EQ_C16 EQ_C32 ## ==
- NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR NE_C8 NE_C16 NE_C32 ## !=
- LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR LT_C8 LT_C16 LT_C32 ## <
- LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR LE_C8 LE_C16 LE_C32 ## <=
- GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR GE_C8 GE_C16 GE_C32 ## >=
- GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR GT_C8 GT_C16 GT_C32 ## >
+ EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 ## ==
+ NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 ## !=
+ LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 LT_C16 LT_C32 ## <
+ LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 LE_C16 LE_C32 ## <=
+ GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 GE_C16 GE_C32 ## >=
+ GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 GT_C16 GT_C32 ## >
  ULT_I8 ULT_I16 ULT_I32 ULT_I64                  ## ..u<
  ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## ..u<=
  UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## ..u>=
@@ -44,11 +44,10 @@ namespace: sb
     switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
         "-_" sb.appendS break
-      ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64
-          ADD_PTR ADD_PTR_MUT case
+      ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
         "+" sb.appendS break
       SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
-          SUB_PTR SUB_PTR_MUT PTR_DIFF C8_DIFF C16_DIFF C32_DIFF case
+          C8_DIFF C16_DIFF C32_DIFF case
         "-" sb.appendS break
       MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
         "*" sb.appendS break
@@ -75,17 +74,17 @@ namespace: sb
         "<<" sb.appendS break
       BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
         "?" sb.appendS break
-      EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR EQ_C8 EQ_C16 EQ_C32 case
+      EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
         "==" sb.appendS break
-      NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR NE_C8 NE_C16 NE_C32 case
+      NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
         "!=" sb.appendS break
-      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_PTR LT_C8 LT_C16 LT_C32 case
+      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 LT_C16 LT_C32 case
         "<" sb.appendS break
-      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_PTR LE_C8 LE_C16 LE_C32 case
+      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 LE_C16 LE_C32 case
         "<=" sb.appendS break
-      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_PTR GE_C8 GE_C16 GE_C32 case
+      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 GE_C16 GE_C32 case
         ">=" sb.appendS break
-      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_PTR GT_C8 GT_C16 GT_C32 case
+      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 GT_C16 GT_C32 case
         ">" sb.appendS break
       ULT_I8 ULT_I16 ULT_I32 ULT_I64 case "..u<" sb.appendS break
       ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
@@ -112,118 +111,6 @@ proc(
   types.newArrayType
     ! assert "can wrap pointer"
   return
-end
-proc(
-  FilePosition : pos
-  ProgramContext ptr mut : context
--> Type Type Type Type Type ) =>: ptrSignatures
-  context [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  ## newLabel
-    "T" string.wrap
-    id.FLAG_AUTO id.FLAG_STATIC | id.FLAG_BUILT_IN |
-    pos
-    FILE_ID_BUILT_IN
-  labelContext id.newLabel =:: genericLabel
-  genericLabel types.newGenericType =:: genericType
-  genericType false typeContext wrapPtr =:: genericPtr
-  genericType true  typeContext wrapPtr =:: genericPtrMut
-  Type 3 array new =:: mut: typeArray
-  typeArray @ =:: types
-  LabelId 3 array new =:: mut: labelArray
-  labelArray @ =:: labels
-  genericLabel labels 0 [] =
-  id.LABEL_ID_NONE labels 1 [] =
-  id.LABEL_ID_NONE labels 2 [] =
-  labels array.wrap optional.wrap =:: labelData
-  types.primitive.TYPE types 0 [] =
-  types.primitive.I_PTR types 2 [] =
-  genericPtrMut types 1 [] =
-  ## newProcArgs
-    types array.wrap ## type : T , T ptr mut , iPtr
-    labelData
-    false
-  typeContext types.newProcArgs =:: ptrMutAddIn
-  ## newProcArgs
-    types 1 [] @ array.wrap ## T ptr mut
-    LabelId arrayView optional.empty
-    true
-  typeContext types.newProcArgs =:: ptrMutAddOut
-  genericPtr types 1 [] =
-  ## newProcArgs
-    types array.wrap ## type : T , T ptr , iPtr
-    labelData
-    false
-  typeContext types.newProcArgs =:: ptrAddIn
-  ## newProcArgs
-    types 1 [] @ array.wrap ## T ptr
-    LabelId arrayView optional.empty
-    true
-  typeContext types.newProcArgs =:: ptrAddOut
-  ## newProcArgs
-    types 2 [] @ array.wrap ## iPtr
-    LabelId arrayView optional.empty
-    true
-  typeContext types.newProcArgs =:: ptrDiffOut
-  genericPtr types 2 [] =
-  ## newProcArgs
-    types array.wrap  ## type : T  T ptr  T ptr
-    labelData
-    false
-  typeContext types.newProcArgs =:: ptrCmpIn
-  types.primitive.BOOL types 2 [] =
-  ## newProcArgs
-    types 2 [] @ array.wrap
-    LabelId arrayView optional.empty
-    true
-  typeContext types.newProcArgs =:: ptrCmpOut
-  ## newProcArgs
-    types array.wrap 2 array.head  ## type : T  T ptr
-    labelData
-    false
-  typeContext types.newProcArgs =:: ptrConsumeIn
-  ## newProcArgs
-    Type array.empty
-    LabelId arrayView optional.empty
-    false
-  typeContext types.newProcArgs =:: ptrConsumeOut
-  ## newProcedure
-    ptrMutAddIn
-    ptrMutAddOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! assert "can create procedure"
-  =:: ptrMutAdd
-  ## newProcedure
-    ptrAddIn
-    ptrAddOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! assert "can create procedure"
-  =:: ptrAdd
-  ## newProcedure
-    ptrCmpIn
-    ptrDiffOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! assert "can create procedure"
-  =:: ptrDiff
-  ## newProcedure
-    ptrCmpIn
-    ptrCmpOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! assert "can create procedure"
-  =:: ptrCmp
-  ## newProcedure
-    ptrConsumeIn
-    ptrConsumeOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! assert "can create procedure"
-  =:: ptrConsume
-  ptrMutAdd ptrAdd ptrDiff ptrCmp ptrConsume
 end
 
 proc(
@@ -589,8 +476,6 @@ proc(
   types.primitive.I64 types.primitive.I32
     context mixedProcTypes
   =:: i64i32_i32 =:: i64i32_i64
-  pos context ptrSignatures
-  =:: consume_ptr =:: ptrCmp =:: ptrDiff =:: ptrAdd =:: ptrMutAdd
   types.primitive.CHAR8  context charProcTypes =:: c8c8_i32 =:: c8c8_bool
   types.primitive.CHAR16 context charProcTypes =:: c16c16_i32 =:: c16c16_bool
   types.primitive.CHAR32 context charProcTypes =:: c32c32_i32 =:: c32c32_bool
@@ -660,16 +545,6 @@ proc(
     f64f64_f64
     bundle
   pos context addBuiltIn
-  BuiltIn .ADD_PTR
-    "ptr" "add" pos labelContext createLabel
-    ptrAdd
-    bundle
-  pos context addGenericBuiltIn
-  BuiltIn .ADD_PTR_MUT
-    "ptrMut" "add" pos labelContext createLabel
-    ptrMutAdd
-    bundle
-  pos context addGenericBuiltIn
   "-" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =
@@ -703,21 +578,6 @@ proc(
     f64f64_f64
     bundle
   pos context addBuiltIn
-  BuiltIn .SUB_PTR
-  "ptr" "sub" pos labelContext createLabel
-    ptrAdd
-    bundle
-  pos context addGenericBuiltIn
-  BuiltIn .SUB_PTR_MUT
-    "ptrMut" "difference" pos labelContext createLabel
-    ptrMutAdd
-    bundle
-  pos context addGenericBuiltIn
-    BuiltIn .PTR_DIFF
-    "ptr" "difference" pos labelContext createLabel
-    ptrDiff
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .C8_DIFF
     "char8" "difference" pos labelContext createLabel
     c8c8_i32
@@ -1104,11 +964,6 @@ proc(
     f64f64_bool
     bundle
   pos context addBuiltIn
-  BuiltIn .EQ_PTR
-    "ptr" "eq" pos labelContext createLabel
-    ptrCmp
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .EQ_C8
     "char8"  "eq" pos labelContext createLabel
     c8c8_bool
@@ -1157,11 +1012,6 @@ proc(
     f64f64_bool
     bundle
   pos context addBuiltIn
-  BuiltIn .NE_PTR
-    "ptr" "ne" pos labelContext createLabel
-    ptrCmp
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .NE_C8
     "char8"  "ne" pos labelContext createLabel
     c8c8_bool
@@ -1210,11 +1060,6 @@ proc(
     f64f64_bool
     bundle
   pos context addBuiltIn
-  BuiltIn .LT_PTR
-    "ptr" "lt" pos labelContext createLabel
-    ptrCmp
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .LT_C8
     "char8"  "lt" pos labelContext createLabel
     c8c8_bool
@@ -1263,11 +1108,6 @@ proc(
     f64f64_bool
     bundle
   pos context addBuiltIn
-  BuiltIn .LE_PTR
-    "ptr" "le" pos labelContext createLabel
-    ptrCmp
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .LE_C8
     "char8"  "le" pos labelContext createLabel
     c8c8_bool
@@ -1316,11 +1156,6 @@ proc(
     f64f64_bool
     bundle
   pos context addBuiltIn
-  BuiltIn .GE_PTR
-    "ptr" "ge" pos labelContext createLabel
-    ptrCmp
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .GE_C8
     "char8"  "ge" pos labelContext createLabel
     c8c8_bool
@@ -1369,11 +1204,6 @@ proc(
     f64f64_bool
     bundle
   pos context addBuiltIn
-  BuiltIn .GT_PTR
-    "ptr" "gt" pos labelContext createLabel
-    ptrCmp
-    bundle
-  pos context addGenericBuiltIn
   BuiltIn .GT_C8
     "char8"  "gt" pos labelContext createLabel
     c8c8_bool

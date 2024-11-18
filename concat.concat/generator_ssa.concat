@@ -1092,8 +1092,6 @@ proc(
     ## TODO ensure char-diff arguments are zero extended
     SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF C16_DIFF C32_DIFF case
       ops ssa.OperationType .SUB pos context appendBinaryOperator return
-    ## TODO pointer scaling
-    ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT PTR_DIFF case break
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
       ops ssa.OperationType .MUL pos context appendBinaryOperator return
     ## TODO handle mixed size division/remainder
@@ -1122,17 +1120,17 @@ proc(
     SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       ops ssa.OperationType .SHL pos context appendBinaryOperator return
     BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break ## TODO BOOL <x> -> ne <x> 0
-    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_PTR EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
+    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       ops ssa.OperationType .EQ pos context appendComparissonOperator return
-    NE_I8 NE_I16 NE_I32 NE_I64 NE_PTR NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
+    NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
       ops ssa.OperationType .NE pos context appendComparissonOperator return
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR LT_F32 LT_F64 case
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
       ops ssa.OperationType .LT pos context appendComparissonOperator return
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_PTR LE_F32 LE_F64 case
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
       ops ssa.OperationType .LE pos context appendComparissonOperator return
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_PTR GE_F32 GE_F64 case
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
       ops ssa.OperationType .GE pos context appendComparissonOperator return
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR GT_F32 GT_F64 case
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
       ops ssa.OperationType .GT pos context appendComparissonOperator return
     ULT_I8 ULT_I16 ULT_I32 ULT_I64 LT_C8 LT_C16 LT_C32 case
       ops ssa.OperationType .ULT pos context appendComparissonOperator return

@@ -2202,41 +2202,9 @@ proc(
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
       sb "add" string.wrap baseVal pos context appendBinaryOperator
       return
-    ADD_PTR ADD_PTR_MUT SUB_PTR SUB_PTR_MUT case
-      baseType typeContext types.getBaseType =:: valueType
-      pos context popValue =:: offsetId
-      sb
-        ## correctly scale offset
-        "%s" sb.appendS
-        ValType .I64 context pushValue sb.appendI
-        " =l mul %s" sb.appendS
-        offsetId sb.appendI
-        ", " sb.appendS
-        valueType pos context typeSizeInt sb.appendI
-        '\n' sb.appendC
-        builtIn .SUB_PTR ?? builtIn .SUB_PTR_MUT ?? | if
-         "sub" string.wrap
-        else
-         "add" string.wrap
-        end ValType .PTR pos context appendBinaryOperator
-      return
     SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF C16_DIFF C32_DIFF case
       sb "sub" string.wrap baseVal pos context appendBinaryOperator
       return ## TODO ensure char-diff arguments are zero extended
-    PTR_DIFF case
-      baseType typeContext types.getBaseType =:: valueType
-      sb
-        "sub" string.wrap baseVal pos context appendBinaryOperator
-        pos context popValue =:: resId
-        ## correctly scale offset
-        "%s" sb.appendS
-        ValType .I64 context pushValue sb.appendI
-        " =l udiv %s" sb.appendS
-        resId sb.appendI
-        ", " sb.appendS
-        valueType pos context typeSizeInt sb.appendI
-        '\n' sb.appendC
-      return
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
       sb "mul" string.wrap baseVal pos context appendBinaryOperator
       return
@@ -2311,32 +2279,32 @@ proc(
         baseType false pos context extendArguments
         "ne" string.wrap baseVal pos context appendComparisonOperator
       return
-    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_PTR EQ_C8 EQ_C16 EQ_C32 case
+    EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       sb
         baseType true pos context extendArguments
         "eq" string.wrap baseVal pos context appendComparisonOperator
       return
-    NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_PTR NE_C8 NE_C16 NE_C32 case
+    NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
       sb
         baseType true pos context extendArguments
         "ne" string.wrap baseVal pos context appendComparisonOperator
       return
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_PTR case
+    LT_I8 LT_I16 LT_I32 LT_I64 case
       sb
         baseType true pos context extendArguments
         "slt" string.wrap baseVal pos context appendComparisonOperator
       return
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_PTR case
+    LE_I8 LE_I16 LE_I32 LE_I64 case
       sb
         baseType true pos context extendArguments
         "sle" string.wrap baseVal pos context appendComparisonOperator
       return
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_PTR case
+    GE_I8 GE_I16 GE_I32 GE_I64 case
       sb
         baseType true pos context extendArguments
         "sge" string.wrap baseVal pos context appendComparisonOperator
       return
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_PTR case
+    GT_I8 GT_I16 GT_I32 GT_I64 case
       sb
         baseType true pos context extendArguments
         "sgt" string.wrap baseVal pos context appendComparisonOperator
