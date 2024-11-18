@@ -183,6 +183,9 @@ proc( i64 FilePosition  -> Operation ) =>: export: opArrayGet
   =:: pos
   OpValue .getArrayElement Type .undefined pos Operation new return
 end
+proc( i64 FilePosition : pos -> Operation ) =>: export: opArrayAt
+  OpValue .atArrayElement Type .undefined pos Operation new return
+end
 proc( i64 FilePosition  -> Operation ) =>: export: opTupleGet
   =:: pos
   OpValue .getElement Type .undefined pos Operation new return

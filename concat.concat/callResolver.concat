@@ -418,16 +418,6 @@ proc(
       srcMutable and targetMutable ! if
         true needCast [] =
       end
-      ## resolveGenerics
-        src typeContext types.getBaseType
-        target typeContext types.getBaseType
-        true
-        needCast
-        genericValues
-        progContext
-      resolveGenerics if
-        true return
-      end
       src typeContext types.isFixedSize =:: srcFixed
       target typeContext types.isFixedSize =:: targetFixed
       targetFixed and srcFixed ! if
@@ -438,19 +428,22 @@ proc(
       ## treat 0D fixed arrays as 1D array of length 1
       1:i64 types.ArraySizeType .int types.ArraySize new =:: one
       srcFixed and srcSizes .length 0 == if
-        one @ array.wrap srcSizes =
+        one@ array.wrap srcSizes =
       end
       targetFixed and targetSizes .length 0 == if
-        one @ array.wrap targetSizes =
+        one@ array.wrap targetSizes =
+      end
+      targetFixed ! if
+        srcSizes $ .length 1 - array.head srcSizes =
       end
       srcSizes .length targetSizes .length < if
         true return ## target sizes have to be matched
       end
-      targetFixed and srcSizes .length targetSizes .length != if
-        true return ## all target sizes have to be matched
-      end
+      srcSizes
+        srcSizes .length targetSizes .length -
+      array.cutIndex =:: newSrcSizes =:: matchedSizes
       0:i64 while ..dup targetSizes .length < do =:: i
-        srcSizes i array.get =:: srcSize
+        matchedSizes i array.get =:: srcSize
         targetSizes i array.get =:: targetSize
         targetSize .sizeType switch
           int case
@@ -489,7 +482,26 @@ proc(
         end
         i 1 +
       end ..drop
-      false return
+      newSrcSizes .length 0 > if
+        ## newArrayType
+          src typeContext types.getBaseType
+          types.ArrayType .ARRAY
+          newSrcSizes
+          srcFixed
+          srcMutable
+          typeContext
+        types.newArrayType ! assert "can create array"
+      else
+        src typeContext types.getBaseType
+      end =:: srcBase
+      ## resolveGenerics
+        srcBase
+        target typeContext types.getBaseType
+        true
+        needCast
+        genericValues
+        progContext
+      resolveGenerics return
     struct union procIn procOut enum initializer case
       src typeContext types.unwrapNamed src =
       src ..label target ..label != if

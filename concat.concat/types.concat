@@ -1018,6 +1018,32 @@ namespace: types
     ..drop
     Type .undefined return
   end
+  ## unwrap a single array level
+  proc( Type : box TypeContext ptr mut : context -> Type ) =>: export: getElementType
+    box context unwrapNamed
+      $ context getArrayDims 1 <= if
+        context getBaseType return
+      end
+      $ context getArraySize =:: size
+      $ context isFixedSize =:: fixedSize
+      $ context isMutable =:: mutable
+      $ context getBaseType =:: base
+    context isPointer if
+      ArrayType .POINTER
+    else
+      ArrayType .ARRAY
+    end =:: arrayType
+    ## newArrayType
+      base
+      arrayType
+      size fixedSize if size .length 1 - array.head end
+      fixedSize
+      mutable
+      context
+    newArrayType
+      ! assert "can create array"
+    return
+  end
   proc( Type : box TypeContext ptr : context -> i64 ) =>: export: getArrayDims
     box context unwrapNamed
       ..dup context isPointer if
@@ -1139,6 +1165,23 @@ namespace: types
   -> Type bool ) =>: export: newArrayType
     context [] .labelContext @ =:: labelContext
     arrayType .POINTER ?? if makeMutable else false end =:: mutable
+    target .arrayType ?? if ## merge array/pointer of arrays to single pointer/array
+      target context getArraySize =:: targetSize
+      sizes .length targetSize .length + ArraySize list.create
+        targetSize list.appendArray
+        sizes list.appendArray
+      =:: newSizes
+      target context getBaseType
+        arrayType
+        newSizes list.asArray
+        fixedSize
+        makeMutable
+        context
+      newArrayType
+        newSizes list.free ..drop
+      return
+    end
+    ## XXX? error on var-size array
     target =:: mut: base
     base .undefined ?? if
       Type .undefined true return
@@ -1433,7 +1476,7 @@ namespace: types
   proc(
     Type : union
     Type : elt
-    TypeContext ptr : context
+    TypeContext ptr mut : context
   -> i64 bool ) =>: export: findUnionTypeIndex
     context [] .labelContext @ =:: labelContext
     union context compositeElts =:: elts
@@ -2575,7 +2618,7 @@ namespace: types
     context canCastPtr return
   end
   ## XXX? allow reordering fields
-  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canCastTuple
+  proc( Type : src Type : target TypeContext ptr mut : context -> bool ) =>: export: canCastTuple
     context .labelContext =:: labelContext
     src context unwrapNamed =:: srcBase
     target context unwrapNamed =:: targetBase
@@ -2629,16 +2672,16 @@ namespace: types
     end
     true return
   end
-  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canAutoCastInitializer
+  proc( Type : src Type : target TypeContext ptr mut : context -> bool ) =>: export: canAutoCastInitializer
     target context unwrapNamed =:: targetBase
     targetBase context types.isArray or targetBase context types.isArrayPointer if
       context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
-      targetBase context getBaseType =:: baseType
-      initInfo .arrayType [] baseType context canAutoCast and
+      targetBase context getElementType =:: eltType
+      initInfo .arrayType [] eltType context canAutoCast and
         src context compositeEltCount =:: srcSize
         targetBase context getArraySize =:: targetSizes
-        targetSizes .length 1 == and targetSizes 0 array.get .sizeType .int ??
-            and targetSizes 0 array.get .value srcSize == if
+        targetSizes $ .length 1 - array.get =:: outerSize
+        outerSize .sizeType .int ?? and outerSize .value srcSize == if
           true return
       end
     end
@@ -2658,7 +2701,7 @@ namespace: types
     false return
   end
 
-  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: export: canAutoCast
+  proc( Type : src Type : target TypeContext ptr mut : context -> bool ) =>: export: canAutoCast
     src target types.typeEquals if
       true return
     end
@@ -2689,7 +2732,7 @@ namespace: types
     end
     false return
   end
-  proc( Type : a Type : b bool : forceCast TypeContext ptr : context -> bool ) =>: export: canCast
+  proc( Type : a Type : b bool : forceCast TypeContext ptr mut : context -> bool ) =>: export: canCast
     a context types.unwrapNamed =:: mut: src
     b context types.unwrapNamed =:: mut: target
     src target context canAutoCast if

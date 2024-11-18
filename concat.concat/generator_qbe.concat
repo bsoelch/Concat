@@ -981,18 +981,18 @@ namespace: sb
             typeContext types.unwrapReference
           =:: containerType
           containerType typeContext types.isArray if
-            containerType typeContext types.getBaseType =:: base
-            base pos context typeSizeInt =:: baseSize
-            base pos context typeStrideInt =:: baseStride
+            containerType typeContext types.getElementType =:: eltType
+            eltType pos context typeSizeInt =:: eltSize
+            eltType pos context typeStrideInt =:: eltStride
             value .arrayConstant constContext constArrayAsArray =:: elts
             0:i64 while ..dup elts .length < do =:: i
               i 0 > if
                 ',' sb.appendC
               end
-              base elts i array.get true pos context appendConstQBE
-              baseSize baseStride < if
+              eltType elts i array.get true pos context appendConstQBE
+              eltSize eltStride < if
                 ",z " sb.appendS
-                baseStride baseSize - sb.appendI
+                eltStride eltSize - sb.appendI
               end
               i 1 +
             end ..drop
@@ -3485,11 +3485,6 @@ proc(
         while sizeOffset 0 >= do
           sizes sizeOffset array.get =:: size
           sizeOffset 1 - sizeOffset =
-          size .sizeType .int ?? ! if
-            "unsupported size type for array element" sb.wrap
-              size labelContext sb.appendArraySize
-            op [] .pos errors appendError
-          end
           offsetId prevId =
           context nextTmpId offsetId =
           "%t" sb.appendS
@@ -3497,7 +3492,11 @@ proc(
           " =l mul %t" sb.appendS
           prevId sb.appendI
           ", " sb.appendS
-          size .value sb.appendI
+          size .sizeType switch
+            int case size .value sb.appendI break
+            staticArg case
+              size .value LabelId cast op [] .pos context appendGenericArg break
+          end
           '\n' sb.appendC
           argCount 0 > if
             offsetId prevId =

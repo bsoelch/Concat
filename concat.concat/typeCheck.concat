@@ -2443,6 +2443,7 @@ proc(
         dimensions indexCount -
       end =:: freeDimensions
       opType typeContext types.isMutable =:: mutable
+      ## XXX? merge with types.getElementType (add parameter for numebr of indices)
       arrayType typeContext types.getBaseType
         freeDimensions 0 > if
           ## newArrayType

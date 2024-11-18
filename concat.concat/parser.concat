@@ -1700,6 +1700,9 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
     else ..dup "[]" string.wrap string.eq _if ..drop
       -1 fileState [] .wordStart opArrayGet state appendOp
       return
+    else ..dup "[]@" string.wrap string.eq _if ..drop
+      -1 fileState [] .wordStart opArrayAt state appendOp
+      return
     else ..dup "()" string.wrap string.eq _if ..drop
       fileState [] .wordStart opCallPtr state appendOp
       return
