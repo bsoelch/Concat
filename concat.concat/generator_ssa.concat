@@ -2,7 +2,6 @@
 compile concat to intermediate SSA language
 +#
 import stringIO
-import numbers/floats
 
 import "program.concat"
 import "measure.concat"

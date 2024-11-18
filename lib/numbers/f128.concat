@@ -1,5 +1,6 @@
+import core/integers
+
 import numbers
-import numbers/integers
 import numbers/i128
 
 struct(

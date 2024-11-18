@@ -1,6 +1,8 @@
+import core/integers
+import core/floats
+
 import numbers/printFloat
 import numbers/printInt
-import numbers/limits
 import string
 
 namespace: number

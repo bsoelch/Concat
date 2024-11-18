@@ -1,5 +1,3 @@
-import numbers/integers
-import numbers/floats
 import debug
 
 proc( -> ) =>: main

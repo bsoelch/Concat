@@ -1,5 +1,4 @@
 import stringIO
-import numbers/floats
 
 import "program.concat"
 import "measure.concat"

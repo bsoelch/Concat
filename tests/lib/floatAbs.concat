@@ -1,5 +1,3 @@
-import numbers/floats
-
 proc( -> ) =>: main
   -0.0 f64.abs 0.0 == assert "|-0|==0"
   -5e-324 f64.abs 5e-324 == assert "|-5e-324|==5e-324"

@@ -5,7 +5,6 @@ common first step for all compiler back-ends:
 * explicitly create temporary variables for copy/output arguments
 +#
 import stringIO
-import numbers/floats
 
 import "program.concat"
 import "measure.concat"

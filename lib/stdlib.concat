@@ -9,10 +9,7 @@ import map
 import math
 import mem
 import numbers/f128
-import numbers/floats
 import numbers/i128
-import numbers/integers
-import numbers/limits
 import numbers/printFloat
 import numbers/printInt
 import numbers

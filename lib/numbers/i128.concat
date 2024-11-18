@@ -1,4 +1,4 @@
-import numbers/integers
+import core/integers
 import numbers
 
 struct(
