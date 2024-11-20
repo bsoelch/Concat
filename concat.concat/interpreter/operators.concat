@@ -227,12 +227,6 @@ namespace: interpreter
          args k bool.not @ unaryOperatorBool return
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
          args k i64.flip @ unaryOperatorInt return
-      BOOL_I8 case args k i8 unaryOperatorToBool return
-      BOOL_I16 case args k i16 unaryOperatorToBool return
-      BOOL_I32 case args k i32 unaryOperatorToBool return
-      BOOL_I64 case args k i64 unaryOperatorToBool return
-      BOOL_F32 case args k f32 unaryOperatorToBool return
-      BOOL_F64 case args k f64 unaryOperatorToBool return
       AND_BOOL case args k bool.and @ binaryOperatorBool return
       AND_I8 AND_I16 AND_I32 AND_I64 case
         args k i64.and @ binaryOperatorInt return

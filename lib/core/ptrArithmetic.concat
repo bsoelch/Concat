@@ -1,50 +1,34 @@
 
 namespace: ptr
-  namespace: mut
-    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: add
-      p i64 cast! offset T ..type.size * + T _ ptr mut cast!
-    end
-    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: sub
-      p i64 cast! offset T ..type.size * - T _ ptr mut cast!
-    end
-    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: add0D
-      ..!error "pointer arithmetic of value pointers is not supported"
-      ..unreachable
-    end
-    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: sub0D
-      ..!error "pointer arithmetic of value pointers is not supported"
-      ..unreachable
-    end
-  end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: cmp
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: export: cmp
     p i64 cast! q i64 cast! i64.ucmp
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: lt
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: lt
     p i64 cast! q i64 cast! i64.ult
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: le
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: le
     p i64 cast! q i64 cast! i64.ule
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: eq
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: eq
     p i64 cast! q i64 cast! i64.eq
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: ne
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ne
     p i64 cast! q i64 cast! i64.ne
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: ge
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ge
     p i64 cast! q i64 cast! i64.uge
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: gt
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: gt
     p i64 cast! q i64 cast! i64.ugt
   end
 
-  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: add
+  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: add
     p i64 cast! offset T ..type.size * + T _ ptr cast!
   end
-  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: sub
+  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: sub
     p i64 cast! offset T ..type.size * - T _ ptr cast!
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: diff
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: export: diff
     p i64 cast! q i64 cast! - T ..type.size ..udiv
   end
 
@@ -87,14 +71,30 @@ namespace: ptr
     ..unreachable
   end
   ## XXX? prohibit arithmetic on array pointers
+  namespace: mut
+    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: shaddow: export: add
+      p i64 cast! offset T ..type.size * + T _ ptr mut cast!
+    end
+    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: shaddow: export: sub
+      p i64 cast! offset T ..type.size * - T _ ptr mut cast!
+    end
+    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: shaddow: add0D
+      ..!error "pointer arithmetic of value pointers is not supported"
+      ..unreachable
+    end
+    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: shaddow: sub0D
+      ..!error "pointer arithmetic of value pointers is not supported"
+      ..unreachable
+    end
+  end
 end
-overload: +
+overload: export: +
   ptr.add
   ptr.add0D
   ptr.mut.add
   ptr.mut.add0D
 end
-overload: -
+overload: export: -
   ptr.sub
   ptr.sub0D
   ptr.mut.sub
@@ -102,29 +102,29 @@ overload: -
   ptr.diff
   ptr.diff0D
 end
-overload: <
+overload: export: <
   ptr.lt
   ptr.lt0D
 end
-overload: <=
+overload: export: <=
   ptr.le
   ptr.le0D
 end
-overload: ==
+overload: export: ==
   ptr.eq
 end
-overload: !=
+overload: export: !=
   ptr.ne
 end
-overload: >=
+overload: export: >=
   ptr.ge
   ptr.ge0D
 end
-overload: >
+overload: export: >
   ptr.gt
   ptr.gt0D
 end
-overload: <=>
+overload: export: <=>
   ptr.cmp
   ptr.cmp0D
 end

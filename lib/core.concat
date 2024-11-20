@@ -1,6 +1,7 @@
 #+
 core library files, included by default
 +#
+import core/boolOps
 import core/itr
 import core/ptrArithmetic
 import core/integers

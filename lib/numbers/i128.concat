@@ -411,6 +411,7 @@ overload: ^ i128.xor end
 overload: << i128.shl i128.shl_i64 i128.shl_i32 end
 overload: >>> i128.lshr i128.lshr_i64 i128.lshr_i32 end
 overload: >> i128.ashr i128.ashr_i64 i128.ashr_i32 end
+overload: <=> i128.cmp end
 overload: ..u< i128.ult end
 overload: ..u<= i128.ule end
 overload: ..u>= i128.uge end

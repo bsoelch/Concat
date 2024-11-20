@@ -1118,7 +1118,6 @@ proc(
     ## shift truncates second operand, no special handling for mixed size needed
     SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       ops ssa.OperationType .SHL pos context appendBinaryOperator return
-    BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case break ## TODO BOOL <x> -> ne <x> 0
     EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       ops ssa.OperationType .EQ pos context appendComparissonOperator return
     NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case

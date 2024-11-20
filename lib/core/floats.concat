@@ -1,3 +1,4 @@
+import core/boolOps
 ## XXX? bit-cast operation
 
 ## TODO include floating point limits
@@ -113,11 +114,17 @@ namespace: f32
   proc( f32 : a -> f32 ) =>: export: abs
     a bits SIGN_FLAG ~ & fromBits return
   end
+  proc( f32 -> bool ) =>: export: toBool
+    0 !=
+  end
   proc( f32 : a f32 : b -> f32 ) =>: export: min
     a b < if a else b end
   end
   proc( f32 : a f32 : b -> f32 ) =>: export: max
     a b > if a else b end
+  end
+  proc( f32 : a f32 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
   end
 
   proc( f32 : a f32 : b -> f32 ) =>: export: rem
@@ -244,11 +251,17 @@ namespace: f64
   proc( f64 : a -> f64 ) =>: export: abs
     a bits SIGN_FLAG ~ & fromBits return
   end
+  proc( f64 -> bool ) =>: export: toBool
+    0 !=
+  end
   proc( f64 : a f64 : b -> f64 ) =>: export: min
     a b < if a else b end
   end
   proc( f64 : a f64 : b -> f64 ) =>: export: max
     a b > if a else b end
+  end
+  proc( f64 : a f64 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
   end
 
   proc( f64 : a f64 : b -> f64 ) =>: export: rem
@@ -275,4 +288,12 @@ end
 overload: export: %%
   f32.mod
   f64.mod
+end
+overload: export: <=>
+  f32.cmp
+  f64.cmp
+end
+overload: export: ?
+  f32.toBool
+  f64.toBool
 end

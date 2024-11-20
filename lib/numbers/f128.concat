@@ -1051,8 +1051,9 @@ overload: - f128.sub f160.sub end
 overload: * f128.mul f160.mul end
 overload: / f128.div end
 ## overload: % f128.rem end
-## verload: // f128.floorDiv end
+## overload: // f128.floorDiv end
 ## overload: %% f128.mod end
+overload: <=> f128.compare end
 overload: < f128.lt end
 overload: <= f128.le end
 overload: >= f128.ge end

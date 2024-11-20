@@ -1,0 +1,8 @@
+namespace: bool
+  proc( bool -> i32 ) =>: export: asInt
+    if 1 else 0 end
+  end
+end
+overload: export: ?1
+  bool.asInt
+end

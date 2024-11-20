@@ -1,3 +1,4 @@
+import core/boolOps
 namespace: i8
   -0x80:i8 i8 =: export: MIN
    0x7f:i8 i8 =: export: MAX
@@ -11,6 +12,12 @@ namespace: i8
   end
   proc( i8 : a -> i8 ) =>: export: abs
     a 0 < if a -_ else a end
+  end
+  proc( i8 : a i8 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
+  end
+  proc( i8 -> bool ) =>: export: toBool
+    0 !=
   end
 end
 namespace: i16
@@ -27,6 +34,12 @@ namespace: i16
   proc( i16 : a -> i16 ) =>: export: abs
     a 0 < if a -_ else a end
   end
+  proc( i16 : a i16 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
+  end
+  proc( i16 -> bool ) =>: export: toBool
+    0 !=
+  end
 end
 namespace: i32
   -0x8000_0000 i32 =: export: MIN
@@ -41,6 +54,12 @@ namespace: i32
   end
   proc( i32 : a -> i32 ) =>: export: abs
     a 0 < if a -_ else a end
+  end
+  proc( i32 -> bool ) =>: export: toBool
+    0 !=
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
   end
   proc( i32 : a i32 : b -> i32 ) =>: export: floorDiv
     a b /
@@ -100,6 +119,12 @@ namespace: i64
   end
   proc( i64 : a -> i64 ) =>: export: abs
     a 0 < if a -_ else a end
+  end
+  proc( i64 -> bool ) =>: export: toBool
+    0 !=
+  end
+  proc( i64 : a i64 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
   end
   proc( i64 : a i64 : b -> i64 ) =>: export: floorDiv
     a b /
@@ -195,4 +220,16 @@ end
 overload: export: %%
   i32.mod
   i64.mod
+end
+overload: export: <=>
+  i8.cmp
+  i16.cmp
+  i32.cmp
+  i64.cmp
+end
+overload: export: ?
+  i8.toBool
+  i16.toBool
+  i32.toBool
+  i64.toBool
 end

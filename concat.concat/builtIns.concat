@@ -23,7 +23,6 @@ enum(
  ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 ## >>
  SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64      ## <<
  ## comparison
- BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 ## ?
  ## TODO? mixed inequalities ( i32 i64 <  is frequent loop condition )
  EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 ## ==
  NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 ## !=
@@ -72,8 +71,6 @@ namespace: sb
         ">>" sb.appendS break
       SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
         "<<" sb.appendS break
-      BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
-        "?" sb.appendS break
       EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
         "==" sb.appendS break
       NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
@@ -896,39 +893,6 @@ proc(
   BuiltIn .SHL_I64I32
     "i64i32" "shl" pos labelContext createLabel
     i64i32_i64
-    bundle
-  pos context addBuiltIn
-  "?" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
-  BuiltIn .BOOL_I8
-    "i8"  "toBool" pos labelContext createLabel
-    i8_bool
-    bundle
-  pos context addBuiltIn
-  BuiltIn .BOOL_I16
-    "i16" "toBool" pos labelContext createLabel
-    i16_bool
-    bundle
-  pos context addBuiltIn
-  BuiltIn .BOOL_I32
-    "i32" "toBool" pos labelContext createLabel
-    i32_bool
-    bundle
-  pos context addBuiltIn
-  BuiltIn .BOOL_I64
-    "i64" "toBool" pos labelContext createLabel
-    i64_bool
-    bundle
-  pos context addBuiltIn
-  BuiltIn .BOOL_F32
-    "f32" "toBool" pos labelContext createLabel
-    f32_bool
-    bundle
-  pos context addBuiltIn
-  BuiltIn .BOOL_F64
-    "f64" "toBool" pos labelContext createLabel
-    f64_bool
     bundle
   pos context addBuiltIn
   "==" string.wrap pos context newBuiltInBundle

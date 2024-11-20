@@ -2268,16 +2268,6 @@ proc(
     SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       sb "shl" string.wrap baseVal pos context appendBinaryOperator
       return
-    BOOL_I8 BOOL_I16 BOOL_I32 BOOL_I64 BOOL_F32 BOOL_F64 case
-      sb
-        "%s" sb.appendS
-        baseVal context pushValue sb.appendI
-        " =" sb.appendS
-        baseVal sb.appendValTypeQBE
-        " copy 0\n" sb.appendS
-        baseType false pos context extendArguments
-        "ne" string.wrap baseVal pos context appendComparisonOperator
-      return
     EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       sb
         baseType true pos context extendArguments
