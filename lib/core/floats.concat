@@ -123,7 +123,17 @@ namespace: f32
   proc( f32 : a f32 : b -> f32 ) =>: export: max
     a b > if a else b end
   end
+  #+ strict comparison of floats
+    -NaN < -Infinity < ... < -0 < 0 < ... < Infinity < NaN +#
   proc( f32 : a f32 : b -> i32 ) =>: export: cmp
+    a bits SIGN_FLAG & b bits SIGN_FLAG & i32.cmp =:: c0
+    c0 ? if c0 return end
+    a isNaN if
+      b isNaN if 0 return end
+      a bits 0 i32.cmp return
+    else b isNaN _if
+      0 b bits i32.cmp return
+    end
     b a lt ?1 a b lt ?1 -
   end
 
@@ -260,7 +270,17 @@ namespace: f64
   proc( f64 : a f64 : b -> f64 ) =>: export: max
     a b > if a else b end
   end
+  #+ strict comparison of floats
+    -NaN < -Infinity < ... < -0 < 0 < ... < Infinity < NaN +#
   proc( f64 : a f64 : b -> i32 ) =>: export: cmp
+    a bits SIGN_FLAG & b bits SIGN_FLAG & i64.cmp =:: c0
+    c0 ? if c0 return end
+    a isNaN if
+      b isNaN if 0 return end
+      a bits 0 i64.cmp return
+    else b isNaN _if
+      0 b bits i64.cmp return
+    end
     b a lt ?1 a b lt ?1 -
   end
 
