@@ -597,6 +597,9 @@ proc(
       else ..dup "#:experimental:" string.wrap string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags =
         true isModifier =
+      else ..dup "shaddow:" string.wrap string.eq _if
+        id.FLAG_SHADDOW flags | flags =
+        true isModifier =
       else ..dup ":" string.wrap string.endsWith _if
         true isModifier =
       end

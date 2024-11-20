@@ -532,13 +532,15 @@ namespace: id
       context [] .nameBuffer sb.clear context [] .nameBuffer =
       LABEL_ID_NONE ID_NONE_DATA true return
     end
-    name fileId context findIdentifierByName ! if
-      "declaration of identifier \"" sb.wrap
-        label labelContext sb.appendLabelName
-        '\"' sb.appendC
-      declaredAt errors appendWarning
-      "shadows previous declaration " sb.wrap ..over [] .declaredAt errors appendInfo
-    end ..drop
+    flags FLAG_SHADDOW & ? ! if
+      name fileId context findIdentifierByName ! if
+        "declaration of identifier \"" sb.wrap
+          label labelContext sb.appendLabelName
+          '\"' sb.appendC
+        declaredAt errors appendWarning
+        "shadows previous declaration " sb.wrap ..over [] .declaredAt errors appendInfo
+      end ..drop
+    end
     mScope [] .identifierNames @
       idName
       label
