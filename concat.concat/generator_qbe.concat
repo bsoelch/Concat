@@ -4082,14 +4082,12 @@ proc(
           newSb
             ifBranch context startBranch
           return
-        IFIF AND_IF OR_IF case
+        AND_IF OR_IF case
           context [] .openBlocks list.peek =:: ifBlock?
-          op [] .val .block .blockType .IFIF ?? if
-            ifBlock? .data [] .If@
-          else ifBlock? optional.hasData and
+          ifBlock? optional.hasData and
               ifBlock? .data =:: ifBlock
               ifBlock [] .If ?? and
-              ifBlock [] .If .hasIf ! _if
+              ifBlock [] .If .hasIf ! if
             ifBlock [] .If@
           else ## start if block if not already open
             op [] .val .block .blockId context openIfBlock
@@ -4627,7 +4625,6 @@ proc(
           ifBlock .orBranches list.free ..drop
           ifBlock .orBranchIds list.free ..drop
           newSb return
-        IFIF case sb return ## no-op
         SWITCH case
           context [] .openBlocks
             list.pop .Switch =:: switchBlock

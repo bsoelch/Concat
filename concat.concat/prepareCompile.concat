@@ -201,7 +201,7 @@ proc(
     ## XXX merge identical variables on independent branches
     block case
       op .val .block .blockType switch
-        IF IFIF ELSE SWITCH CASE
+        IF ELSE SWITCH CASE
         DEFAULT BREAK_SWITCH WHILE
         DO BREAK CONTINUE FINALLY
         AND OR AND_IF OR_IF AND_DO OR_DO case
@@ -216,7 +216,7 @@ proc(
     blockEnd case
       op .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE
-        ELSE IFIF AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
+        ELSE AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
         SWITCH WHILE UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE case
           newOps
             op list.append ## nothing to change

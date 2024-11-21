@@ -7,7 +7,6 @@ enum(
   PROCEDURE
   EXPERIMENTAL_PROCEDURE
   IF
-  IFIF
   AND_IF
   OR_IF
   ELSE
@@ -55,9 +54,6 @@ namespace: sb
         return
       IF case
         "if" sb.appendS
-        return
-      IFIF case
-        "if _if" sb.appendS
         return
       ELSE case
         "else" sb.appendS

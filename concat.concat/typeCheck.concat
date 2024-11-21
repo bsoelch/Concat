@@ -2761,36 +2761,6 @@ proc(
             branchPoints list.free ..drop
           end
           return
-        IFIF case
-          state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty ! and
-            currentBlock? .data =:: currentBlock
-            currentBlock [] .If ?? and
-            currentBlock [] .If .hasElse ! if
-          else
-            "unexpected if_if-statement, if_if can only appear in if-blocks" sb.wrap
-            op .pos errors appendError
-            return
-          end
-          currentBlock? .data =:: currentBlock
-          ## requireTypes
-            types.primitive.BOOL @ array.wrap
-            "if-condition" string.wrap
-            0
-            op .pos
-          state requireTypes if
-            ..drop return
-          end ..drop
-          false 1 op .pos state clearReferences
-          currentBlock [] .If .andBranches
-            ## BranchPoint
-              state [] .stack @ branchTree.startBranch
-              op .pos
-            BranchPoint new list.append
-          currentBlock [] .If .andBranches =
-          currentBlock [] .If .blockId op .val .block .blockId =
-          op state appendOp ..drop
-          return
         ELSE case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty if
@@ -3440,25 +3410,6 @@ proc(
           nBranches 0 > state [] .reachable =
           return
         IF case break ## end-if should not be created by parser
-        IFIF case
-          state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty if true else
-            currentBlock? .data [] .If ?? !
-          end if
-            "unexpected end of " sb.wrap
-              BlockType .IFIF sb.appendBlockType
-              "-statement, " sb.appendS
-              BlockType .IFIF sb.appendBlockType
-              " can only appear in " sb.appendS
-              BlockType .IF sb.appendBlockType
-              "-blocks" sb.appendS
-            op .pos errors appendError
-            return
-          end
-          currentBlock? .data =:: currentBlock
-          currentBlock [] .If .blockId op .val .blockEnd .blockId =
-          op state appendOp ..drop
-          return
         CASE DEFAULT case
           ## break current branch
           op .pos state endSwitchBranch

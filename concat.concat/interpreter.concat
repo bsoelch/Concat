@@ -85,7 +85,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
       PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
           TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION case
         ..drop false return
-      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
+      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
        AND OR AND_IF OR_IF AND_DO OR_DO
        NAMESPACE case break
@@ -103,7 +103,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inUnion
       PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
           TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
         ..drop false return
-      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
+      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
@@ -121,7 +121,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
         ..drop true return
       PROCEDURE EXPERIMENTAL_PROCEDURE case
         ..drop false return
-      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
+      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
@@ -159,7 +159,7 @@ proc( InterpreterContext ptr mut : context -> LabeledValueContext ) =>: getLabel
       TYPE_PROC_IN TYPE_PROC_OUT case
          LabeledValueContext .TYPE_PROC return
       PROCEDURE EXPERIMENTAL_PROCEDURE
-      UNKNOWN IF IFIF ELSE WHILE DO BREAK CONTINUE
+      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
        AND OR AND_IF OR_IF AND_DO OR_DO
        NAMESPACE case break
@@ -897,7 +897,7 @@ proc(
           op [] .val .block .blockType context openBlock
           false return
         PROCEDURE EXPERIMENTAL_PROCEDURE FINALLY
-        IF IFIF ELSE WHILE DO BREAK CONTINUE
+        IF ELSE WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
         UNKNOWN NAMESPACE case
@@ -1100,7 +1100,7 @@ proc(
             op [] .pos
           context pushValue
           false return
-        IF IFIF ELSE WHILE DO BREAK CONTINUE
+        IF ELSE WHILE DO BREAK CONTINUE
         SWITCH CASE BREAK_SWITCH DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
         UNKNOWN NAMESPACE FINALLY case

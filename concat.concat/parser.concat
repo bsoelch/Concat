@@ -1437,36 +1437,22 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           state currentBlockType ## get new enclosing block
         end
       =:: currentType
-      currentType .IF ?? ! currentType .ELSE ?? ! &
-          currentType .IFIF ?? ! & currentType .AND ?? ! & if
-        "'_if' is only allowed in if-else-blocks" sb.wrap fileState [] .wordStart state appendError2
+      currentType .ELSE ?? ! and currentType .AND ?? ! if
+        "'_if' is only allowed in else-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
       end
-      currentType .ELSE ?? currentType .AND ?? | if
-        BlockType .IF
-      else
-        "if _if is deprecated use and if instead" sb.wrap
-        fileState [] .wordStart state appendWarning2
-        BlockType .IFIF
-      end =:: blockType
+      BlockType .IF =:: blockType
       blockType fileState [] .wordStart opBlock  state appendOp
-      blockType .IFIF ?? if ## use same scope as for if-branch
-        blockType state openBlock
-      else currentType .AND ?? ! _if ## no new scope for and .. _if
+      currentType .AND ?? ! if ## no new scope for and .. _if
         blockType state openBlockScope
       end
       state autoCloseCurrentBlock
       return
     else ..dup "else" string.wrap string.eq _if ..drop
-      BlockInfo : closed
-      while
-        state closeBlock if ..drop
-          "'else' statements can not appear at top level" sb.wrap fileState [] .wordStart state appendError2
-          return
-        end closed =
-      closed .blockType .IFIF ?? do
-        BlockType .IFIF  fileState [] .wordStart opEndBlock  state appendOp
-      end
+      state closeBlock if ..drop
+        "'else' statements can not appear at top level" sb.wrap fileState [] .wordStart state appendError2
+        return
+      end =:: closed
       closed .blockType .IF ?? ! if
         "'else' is only allowed in if-blocks" sb.wrap fileState [] .wordStart state appendError2
         return
@@ -1971,7 +1957,7 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
           fileState [] .wordStart state appendError2
           return
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
-        IF IFIF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
+        IF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
         AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
