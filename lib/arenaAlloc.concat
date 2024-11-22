@@ -1,0 +1,271 @@
+import core/itr
+import core/integers
+import core/ptrArithmetic
+
+import mem
+import arrayView
+import optional
+import list
+
+## XXX allow auto-cast from list -> arrayView
+#+
+arena allocator
+  * allows to allocate memory in mostly linear
+  * can allocate single elements or arrays of a given type
+  * all elements allocated after a specific point can be freed at once
+  * if strictOrder is false some elements may be freed out of order
++#
+namespace: arenaAlloc
+  enum( CONTINUE ALLOC ) =:: SliceType
+  ( type : T -> type ) =>: ArenaSlice
+    struct(
+      T _ ptr mut : data
+      i32 : mut: eltCount
+      SliceType : sliceType
+    )
+  end
+end
+( type : T -> type ) =>: export: ArenaAllocator
+  struct(
+    T arenaAlloc.ArenaSlice list : mut: slices
+    ( T ptr -> ) ptr optional : freeElt
+    i64 : mut: eltCount
+    i32 : sliceSizeShift
+    bool : strictOrder
+  )
+end
+
+namespace: arenaAlloc
+  proc(
+    type : auto: T
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+    ( T ptr -> ) ptr optional : freeElt
+    ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
+    bool : strictLinear
+  -> T ArenaAllocator ) =>: create_internal
+    ## XXX? nearest of next largest power of 2
+    ## XXX? find better way to convert slice size to power of 2
+    8 =:: mut: sizeBits ## 2**8= 256
+    sliceSize 8 >>> while $ 1 > do
+      sizeBits 1 + sizeBits =
+      1 >>>
+    end ..drop
+    ## ArenaAllocator
+      16 T ArenaSlice list.create
+      freeElt
+      0
+      sizeBits
+      strictLinear
+    T ArenaAllocator new
+  end
+  proc(
+    type : auto: T
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+    ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
+    bool : strictLinear
+    ( T ptr -> ) ptr : freeElt
+  -> T ArenaAllocator ) =>: create_FS
+    sliceSize freeElt optional.wrap strictLinear create_internal
+  end
+  proc(
+    type : auto: T
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+    ( T ptr -> ) ptr : freeElt
+  -> T ArenaAllocator ) =>: create_F
+    sliceSize freeElt optional.wrap false create_internal
+  end
+  proc(
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+    ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
+    bool : strictLinear
+    type : T
+  -> T ArenaAllocator ) =>: create_S
+    sliceSize ( T ptr -> ) ptr optional.empty strictLinear create_internal
+  end
+  proc(
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+    type : T
+  -> T ArenaAllocator ) =>: create_0
+    sliceSize ( T ptr -> ) ptr optional.empty false create_internal
+  end
+  overload: export: create
+    create_0
+    create_F
+    create_S
+    create_FS
+  end
+  
+  proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: currentCap
+    arena .slices .length arena .sliceSizeShift << return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena0
+    i64 : newCap
+  -> T ArenaAllocator ) =>: export: ensureCap
+    newCap arena0 currentCap <= if arena0 return end
+    1 arena0 .sliceSizeShift << =:: sliceSize
+    newCap
+      sliceSize 1 - i64 cast.u +
+      arena0 .sliceSizeShift >>>
+    =:: minSlices
+    arena0 .slices .length minSlices >= if  arena0 return end
+    arena0 =:: mut: arena
+    arena .slices
+      minSlices list.ensureCap
+      minSlices $1 .length - for ..drop
+        sliceSize i64 cast.u T mem.alloc 0 SliceType .ALLOC T ArenaSlice new list.append
+      end
+    arena .slices =
+    arena return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena0
+    i32 : count
+  -> T ArenaAllocator T _ ptr mut ) =>: alloc
+    1 arena0 .sliceSizeShift << =:: sliceSize
+    arena0 .strictOrder ! and arena0 currentCap arena0 .eltCount == if
+      ## no space at end of last slice -> search for gaps in previous slices
+      arena0 .eltCount for =:: i
+        arena0 .slices i list.at .data =:: slice
+        slice [] .eltCount count + sliceSize ..u<= if
+          arena0 slice [] .data slice [] .eltCount i64 cast.u +
+            slice [] .eltCount count + slice [] .eltCount =
+          return
+        end
+      end
+    end
+    arena0
+      arena0 .eltCount count i64 cast.u + ensureCap
+    =:: mut: arena
+    arena .slices $ .length 1 - list.at .data =:: lastSlice
+    lastSlice [] .eltCount count + sliceSize ..u<= if
+      arena .eltCount count i64 cast.u + arena .eltCount =
+      ## return
+        arena
+        lastSlice [] .data lastSlice [] .eltCount i64 cast.u +
+          lastSlice [] .eltCount count + lastSlice [] .eltCount =
+      return
+    end
+    ## new data does not fit into last slice
+    count i64 cast.u sliceSize i64 cast.u + 1 - arena0 .sliceSizeShift >>> =:: newSlices
+    newSlices arena0 .sliceSizeShift << T mem.alloc =:: sliceData
+    arena .slices
+      sliceData count sliceSize i32.umin SliceType .ALLOC T ArenaSlice new list.append
+      count sliceSize - =:: mut: newCount
+      sliceData sliceSize i64 cast.u + =:: mut: newOffset
+      newSlices 1 - for ..drop
+        newCount 0 > assert "remaining count >0"
+        ## ArenaSlice
+          newOffset
+          newCount sliceSize i32.umin
+        SliceType .CONTINUE T ArenaSlice new list.append
+        newOffset sliceSize i64 cast.u + newOffset =
+        newCount sliceSize - newCount =
+      end
+    arena .slices =
+    arena sliceData return
+  end
+
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T : value
+  -> T ArenaAllocator T ptr mut ) =>: export: pushValue
+    value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
+    arena 1 alloc
+      valData@ 1 mem.copy T ptr mut cast!
+    return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T ptr : value
+  -> T ArenaAllocator T ptr mut ) =>: export: pushPtr
+    arena 1 alloc
+      value 1 mem.copy T ptr mut cast!
+    return
+  end
+  proc(
+    type : auto: T
+    i32 : auto: k
+    T ArenaAllocator : arena
+    T k ptr : values
+  -> T ArenaAllocator T k ptr mut ) =>: export: pushPtrs
+    arena k alloc
+      values k i64 cast.u mem.copy T k ptr mut cast!
+    return
+  end
+  ## TODO pushArray
+
+  ## TODO get value(s) at offset
+
+  proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: offset
+    arena .eltCount return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena0
+    i64 : newLength
+  -> T ArenaAllocator ) =>: export: reset
+    newLength arena0 .eltCount <= assert "reset point inside allocated area"
+    arena0 =:: mut: arena ## XXX? prevent copy of old slice data
+    1 arena .sliceSizeShift << 1 - =:: sliceSize
+    newLength
+      sliceSize i64 cast.u 1 - +
+    arena .sliceSizeShift >>> =:: newSliceCount
+    arena .slices =:: mut: slices
+    arena .freeElt =:: freeElt
+    0 =:: mut: continueChunkCount ## continue chunks after last chunk
+    slices .length 1 - while $ newSliceCount >= do =:: i
+      slices i list.at .data =:: slice
+      freeElt optional.hasData if
+        slice [] .eltCount 1 - while $ 0 >= do =:: j
+          slice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+        finally j 1 - end ..drop
+      end
+      slice [] .sliceType switch
+        ALLOC case
+          0 continueChunkCount =
+          slice [] .data mem.free
+          break
+        CONTINUE case
+          continueChunkCount 1 + continueChunkCount = break
+      end
+    finally i 1 - end ..drop
+    slices
+      newSliceCount continueChunkCount i64 cast.u + list.setLength
+    slices =
+    newSliceCount 0 > if
+      ## shrink last slice if neccessary
+      newSliceCount 1 - arena .sliceSizeShift << =:: sliceStart
+      sliceStart newLength <= assert "slice start < new length"
+      newLength sliceStart - i32 cast =:: newSliceElts
+      slices newSliceCount 1 - list.at .data =:: lastSlice
+      freeElt optional.hasData if
+        lastSlice [] .eltCount 1 - while $ newSliceElts >= do =:: j
+          lastSlice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+        finally j 1 - end ..drop
+      end
+      lastSlice [] .eltCount newSliceElts > if
+        newSliceElts lastSlice [] .eltCount =
+      end
+    end
+    slices arena .slices =
+    arena return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena0
+  -> T ArenaAllocator ) =>: export: free
+    arena0 0 reset =:: mut: arena
+    arena .slices list.free arena .slices =
+    arena return
+  end
+end
