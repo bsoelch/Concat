@@ -1,43 +1,43 @@
 namespace: i32
-  struct( i32 : i i32 : limit ) =:: i32Itr
+  struct( i32 : i i32 : limit ) =:: export: i32Itr
   namespace: itr
-    proc( i32 : n -> i32Itr ) =>: prepare
+    proc( i32 : n -> i32Itr ) =>: export: prepare
       0 n i32Itr new return
     end
-    proc( i32Itr : itr -> bool ) =>: check
+    proc( i32Itr : itr -> bool ) =>: export: check
       itr .i itr .limit <
     end
-    proc( i32Itr : itr -> i32 ) =>: get
+    proc( i32Itr : itr -> i32 ) =>: export: get
       itr .i
     end
-    proc( i32Itr : itr -> i32Itr ) =>: step
+    proc( i32Itr : itr -> i32Itr ) =>: export: step
       itr .i 1 + itr .limit i32Itr new
     end
-    proc( i32Itr : itr -> ) =>: endItr end
+    proc( i32Itr : itr -> ) =>: export: endItr end
   end
 end
 
 namespace: i64
-  struct( i64 : i i64 : limit ) =:: i64Itr
+  struct( i64 : i i64 : limit ) =:: export: i64Itr
   namespace: itr
-    proc( i64 : n -> i64Itr ) =>: prepare
+    proc( i64 : n -> i64Itr ) =>: export: prepare
       0 n i64Itr new return
     end
-    proc( i64Itr : itr -> bool ) =>: check
+    proc( i64Itr : itr -> bool ) =>: export: check
       itr .i itr .limit <
     end
-    proc( i64Itr : itr -> i64 ) =>: get
+    proc( i64Itr : itr -> i64 ) =>: export: get
       itr .i
     end
-    proc( i64Itr : itr -> i64Itr ) =>: step
+    proc( i64Itr : itr -> i64Itr ) =>: export: step
       itr .i 1 + itr .limit i64Itr new
     end
-    proc( i64Itr : itr -> ) =>: endItr end
+    proc( i64Itr : itr -> ) =>: export: endItr end
   end
 end
 
 namespace: ptr
-  ( type : T -> type ) =>: ptrItr
+  ( type : T -> type ) =>: export: ptrItr
     struct( T _ ptr : current T _ ptr : tail )
   end
   namespace: itr
@@ -48,46 +48,46 @@ namespace: ptr
         p T _ ptr cast 1 +
       T ptrItr new return
     end
-    proc( type : auto: T i64 : auto: k  T k ptr : p -> T ptrItr ) =>: prepare
+    proc( type : auto: T i64 : auto: k  T k ptr : p -> T ptrItr ) =>: export: prepare
       ## ptrItr
         p
         p T _ ptr cast k +
       T ptrItr new return
     end
-    proc( type : auto: T T ptrItr : itr -> bool ) =>: check
+    proc( type : auto: T T ptrItr : itr -> bool ) =>: export: check
       itr .current itr .tail <
     end
-    proc( type : auto: T T ptrItr : itr -> T ) =>: get
+    proc( type : auto: T T ptrItr : itr -> T ) =>: export: get
       itr .current []
     end
-    proc( type : auto: T T ptrItr : itr -> T ptrItr ) =>: step
+    proc( type : auto: T T ptrItr : itr -> T ptrItr ) =>: export: step
       itr .current 1 + itr .tail T ptrItr new
     end
-    proc( type : auto: T T ptrItr : itr -> ) =>: endItr end
+    proc( type : auto: T T ptrItr : itr -> ) =>: export: endItr end
   end
 end
-overload: ..itr.prepare
+overload: export: ..itr.prepare
   i32.itr.prepare
   i64.itr.prepare
   ptr.itr.prepare
   ptr.itr.prepare0D
 end
-overload: ..itr.check
+overload: export: ..itr.check
   i32.itr.check
   i64.itr.check
   ptr.itr.check
 end
-overload: ..itr.get
+overload: export: ..itr.get
   i32.itr.get
   i64.itr.get
   ptr.itr.get
 end
-overload: ..itr.step
+overload: export: ..itr.step
   i32.itr.step
   i64.itr.step
   ptr.itr.step
 end
-overload: ..itr.end
+overload: export: ..itr.end
   i32.itr.endItr
   i64.itr.endItr
   ptr.itr.endItr
