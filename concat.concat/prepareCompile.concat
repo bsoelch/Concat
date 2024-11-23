@@ -232,7 +232,7 @@ proc(
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference
     compilerInfo getName atName getLabel
-    atLabel length size typeModifier hasLabel hasName case
+    atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
   "unsupported operation " sb.wrap

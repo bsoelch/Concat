@@ -84,6 +84,7 @@ union(
             LabelId : getLabel
             LabelId : mut: atLabel
             LabelId : mut: hasLabel
+            LabelId : mut: existsLabel
                 i64 : mut: getElement
                 i64 : mut: atElement
                 i64 : mut: hasElement
@@ -114,7 +115,7 @@ union(
   StackModification : stackMod
             LabelId : getName
             LabelId : mut: atName
-            LabelId : mut: hasName
+            LabelId : mut: existsName
        TypeModifier : mut: typeModifier
      StringConstant : Assert
           ErrorInfo : Error
@@ -610,6 +611,12 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .hasLabel labelContext sb.appendLabelName
           break
+        existsLabel case
+          "exists label ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .existsLabel labelContext sb.appendLabelName
+          break
         typeModifier case
           "typeModifier \"" sb.appendS
           ..over .val .typeModifier sb.appendTypeModifier
@@ -783,9 +790,9 @@ namespace: sb
           "address of: " sb.appendS
           ..over .val .atName labelContext sb.appendLabelName
           break
-        hasName case
+        existsName case
           "has name: " sb.appendS
-          ..over .val .hasName labelContext sb.appendLabelName
+          ..over .val .existsName labelContext sb.appendLabelName
           break
         Assert case
           "assert \"" sb.appendS

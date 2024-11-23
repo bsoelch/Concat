@@ -25,6 +25,8 @@ struct(
 -1:i64 =:: OP_UNLINKED
 -2:i64 =:: OP_EMPTY
 
+enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
+
 struct(
   branchTree.NodeId : node
   FilePosition : pos
@@ -1603,6 +1605,15 @@ proc(
     ..dup optional.hasData if
       .data op .val .atId =
     else ..drop end
+  else op .val .existsName ?? _if
+    types.primitive.BOOL op .dataType =
+    op .val .existsName
+      op@ state resolveIdentifer
+    optional.hasData if
+      true ConstValue .boolean op .val .Constant =
+    else
+      false ConstValue .boolean op .val .Constant =
+    end
   else op .val .getId ?? and ## convert static arguments to constants
       op .val .getId .labelId =:: label
       label labelContext id.labelFlags id.FLAG_STATIC & ? and
@@ -2081,11 +2092,14 @@ proc(
       end ..drop
       op state appendOp ..drop
       return
-    getLabel atLabel hasLabel case
-      false =:: mut: checkOnly
+    getLabel atLabel hasLabel existsLabel case
+      LabelAccessType .GET =:: mut: accessType
       op .val .hasLabel ?? if
-        true checkOnly =
+        LabelAccessType .CHECK_ENUM accessType =
         op .val .hasLabel false
+      else op .val .existsLabel ?? _if
+        LabelAccessType .CHECK accessType =
+        op .val .existsLabel false
       else op .val .getLabel ?? _if
         op .val .getLabel false
       else
@@ -2125,19 +2139,7 @@ proc(
         typeContext
       types.compositeFindLabel i64 cast =:: elementIndex
       elementIndex 0 < if
-        checkOnly if
-          containerType typeContext types.isTaggedUnion if
-            containerType typeContext types.isEnum if
-              "enum " sb.wrap
-            else
-              "tagged union " sb.wrap
-            end
-              containerType typeContext sb.appendType
-              " does not have a label \"" sb.appendS
-              labelId labelContext sb.appendLabelName
-              '"' sb.appendC
-            op .pos errors appendWarning
-          end
+        accessType .CHECK ?? if
           ## label does not exists
           1 op .pos state discardValues ## remove container
           false ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
@@ -2153,12 +2155,17 @@ proc(
       end
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
-      checkOnly if
+      accessType .CHECK ?? if
+        ## label exists
+        1 op .pos state discardValues ## remove container
+        true ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
+        return
+      else accessType .CHECK_ENUM ?? _if
         isType or containerType typeContext types.isTaggedUnion ! if
-          ## label always exists
-          1 op .pos state discardValues ## remove container
-          true ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
-          return
+          "type " sb.wrap
+            containerType typeContext sb.appendType
+            " is not an enum or union" sb.appendS
+          op .pos errors appendError
         end
         state [] .stack @ branchTree.pop ..drop ## remove container from stack
         container .copyMutableIndex state removeCopy
@@ -3772,7 +3779,7 @@ proc(
       return
     procPtr builtIn
     NewEnum call checkEnumLabel setEnumLabel
-    hasName hasElement case
+    existsName hasElement case
       break
     unreachable case
       false state [] .reachable =

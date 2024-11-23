@@ -2112,7 +2112,7 @@ proc(
     ConstantReference NewReference
     typeInfo NewEnumReference getEnumLabel
     compilerInfo getName atName getLabel
-    atLabel length size typeModifier hasLabel hasName case
+    atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap

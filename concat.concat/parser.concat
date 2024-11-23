@@ -1387,14 +1387,16 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
         return
       end
-    else ..dup "??" string.wrap string.eq _if =:: opName
+    else ..dup "??" string.wrap string.eq or
+         ..dup "???" string.wrap string.eq _if =:: opName
       state peekOp ..dup optional.isEmpty if ..drop
         "unexpected \"" sb.wrap
           opName sb.appendStr
         '"' sb.appendC fileState [] .wordStart errors appendError
         return
       end .data =:: prevOp
-      prevOp [] .val .getId ?? if
+      opName "???" string.wrap string.eq =:: checkExists
+      checkExists and prevOp [] .val .getId ?? if
         ## identifier for getId always exists
         ## opConst
           true ConstValue .boolean
@@ -1402,12 +1404,16 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart
         opConst prevOp [] =
         return
-      else prevOp [] .val .getLabel ?? _if
-        prevOp [] .val .getLabel prevOp [] .val .hasLabel =
+      else checkExists and prevOp [] .val .getName ?? _if
+        prevOp [] .val .getName prevOp [] .val .existsName =
         fileState [] .wordStart prevOp [] .pos =
         return
-      else prevOp [] .val .getName ?? _if
-        prevOp [] .val .getName prevOp [] .val .hasName =
+      else prevOp [] .val .getLabel ?? _if
+        checkExists if
+          prevOp [] .val .getLabel prevOp [] .val .existsLabel =
+        else
+          prevOp [] .val .getLabel prevOp [] .val .hasLabel =
+        end
         fileState [] .wordStart prevOp [] .pos =
         return
       else

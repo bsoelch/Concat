@@ -1559,7 +1559,7 @@ proc(
           context
         pushValue
         false return
-    getLabel atLabel atName hasLabel hasName case
+    getLabel atLabel atName hasLabel existsLabel existsName case
       context [] .evalType switch
         INTERPRET case break
         PARSER FOLD_LOCAL GLOBAL case
