@@ -12,7 +12,7 @@ end
 ( type : K type : V -> type ) =>: export: hashMap
   struct(
     K V map.Node list : mut: nodeBuffer
-    map.NodeId _ ptr mut : mut: data
+    map.NodeId _ ptr.mut : mut: data
     i64 : mut: cap
     proc( K -> i32 ) ptr : hash
     proc( K K -> bool ) ptr : eq
@@ -54,7 +54,7 @@ namespace: map
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr mut : data
+    K V hashMap ptr.mut : data
   -> ) =>: export: free
     data [] .nodeBuffer
       list.free
@@ -67,7 +67,7 @@ namespace: map
     type : auto: V
     proc( K -> ) ptr : freeKey
     proc( V -> ) ptr : freeValue
-    K V hashMap ptr mut : data
+    K V hashMap ptr.mut : data
   -> ) =>: export: freeAll
     data [] .nodeBuffer
       0 while ..dup ..over.2 .length < do
@@ -85,7 +85,7 @@ namespace: map
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr mut : data
+    K V hashMap ptr.mut : data
     K : key
     bool : newNode
   -> NodeId ) =>: find
@@ -122,7 +122,7 @@ namespace: map
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr mut : data
+    K V hashMap ptr.mut : data
     K : key
   -> V optional ) =>: export: get
     data key false find
@@ -134,22 +134,22 @@ namespace: map
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr mut : data
+    K V hashMap ptr.mut : data
     K : key
-  -> V ptr mut optional ) =>: export: at
+  -> V ptr.mut optional ) =>: export: at
     data key false find
       ..dup 0:NodeId == if ..drop
-        V ptr mut optional.empty return
+        V ptr.mut optional.empty return
       end
     data [] .nodeBuffer ..swap i64 cast 1 - list.at ..dup optional.isEmpty if ..drop
-      V ptr mut optional.empty return
+      V ptr.mut optional.empty return
     end
     .data [] .value @ optional.wrap return
   end
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr mut : data
+    K V hashMap ptr.mut : data
     K : key
     V : value
   -> V optional ) =>: export: put
@@ -173,7 +173,7 @@ namespace: map
     proc(
       type : auto: K
       type : auto: V
-      K V hashMap ptr mut : map
+      K V hashMap ptr.mut : map
     -> K V Iterator ) =>: export: start
       0:i64 while ..dup map [] .cap < do =:: i
         map [] .data i [] 0:NodeId != if
@@ -194,7 +194,7 @@ namespace: map
       type : auto: K
       type : auto: V
       K V Iterator
-    -> K V Iterator ( K ptr V ptr mut ) ) =>: export: next
+    -> K V Iterator ( K ptr V ptr.mut ) ) =>: export: next
       =:: mut: itr
       itr .map [] .nodeBuffer
         itr .next i64 cast 1 -
@@ -210,7 +210,7 @@ namespace: map
           itr .index 1 + itr .index =
         end
       end
-      itr res [] .key @ res [] .value @ ( K ptr V ptr mut ) new return
+      itr res [] .key @ res [] .value @ ( K ptr V ptr.mut ) new return
     end
   end
 end

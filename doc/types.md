@@ -21,7 +21,7 @@ Syntax:
 
 A pointer type, consists of a base-type and a possibly empty list of dimensions,
 with an optional `_` at the end of the dimension list signaling an unknown number of elements.
-The pointer type end with `ptr` followed by an optional `mut` signaling that the targeted value can be modified through the pointer.
+The pointer type end with `ptr` followed by an optional `.mut` signaling that the targeted value can be modified through the pointer.
 Array types follow the same syntax, but without the option to signal mutability or unknown size.
 0-dimensional arrays are not supported,  <!-- XXX? support 0-D arrays ?-->
 
@@ -30,7 +30,7 @@ The array/pointer dimension can be either (expressions that evaluate to) integer
 Grammar:
 
 ```
-<pointer-type> := <type> (<dimension>)* `_` ? `ptr` `mut`?
+<pointer-type> := <type> (<dimension>)* `_` ? `ptr`(.`mut`)?
 <array-type> := <type> (<dimension>)+ `_` ? `array`
 <dimension> := <int> | <int-const-expr> | <auto-argument>
 ```
@@ -150,7 +150,7 @@ explicit casts allowed between any two named types with same source type
             <composite-type> | <procedure-type> | <named-type>
             <empty-type> | <genrated-type> | <C-type> 
 
-<pointer-type> := <type> (<dimension>)* `_` ? `ptr` `mut`?
+<pointer-type> := <type> (<dimension>)* `_` ? `ptr`(`.mut`?)
 <array-type> := <type> (<dimension>)+ `_` ? `array`
 <dimension> := <int> | <int-const-expr> | <auto-argument>
 

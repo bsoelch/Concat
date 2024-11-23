@@ -65,12 +65,12 @@ end
 
 proc(
   Type : src
-  Type list ptr mut : typeBuffer
-  LabelId list ptr mut : labelBuffer
-  LabelId GenericArg hashMap ptr mut : genericValues
+  Type list ptr.mut : typeBuffer
+  LabelId list ptr.mut : labelBuffer
+  LabelId GenericArg hashMap ptr.mut : genericValues
   bool : replaceAutoArgs
   FilePosition : pos
-  ProgramContext ptr mut : progContext
+  ProgramContext ptr.mut : progContext
 -> Type ) =>: replaceGenerics
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -295,9 +295,9 @@ proc(
   Type : src0
   Type : target
   bool : exactMatch
-  bool ptr mut : needCast
-  LabelId GenericArg hashMap ptr mut : genericValues
-  ProgramContext ptr mut : progContext
+  bool ptr.mut : needCast
+  LabelId GenericArg hashMap ptr.mut : genericValues
+  ProgramContext ptr.mut : progContext
 -> bool ) =>: resolveGenerics
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -617,8 +617,8 @@ end
 
 proc(
   CallSignatureInfo ptr : src
-  CallSignatureInfo list ptr mut : elts
--> CallSignatureInfo ptr mut ) =>: appendCopy
+  CallSignatureInfo list ptr.mut : elts
+-> CallSignatureInfo ptr.mut ) =>: appendCopy
   elts []
     src list.appendP
   elts [] =
@@ -665,7 +665,7 @@ end
 proc(
   CallSignatureInfo : a
   CallSignatureInfo : b
-  ProgramContext ptr mut : progContext
+  ProgramContext ptr.mut : progContext
 -> i32 ) =>: cmpSignatures
   a .needsParam b .needsParam != if
     ## fully matched before non-match
@@ -721,7 +721,7 @@ proc(
 end
 
 proc(
-  CallSignatureInfo list ptr mut : signatures
+  CallSignatureInfo list ptr.mut : signatures
 -> ) =>: cleanupSignatures
   0:i64 while ..dup signatures [] .length < do =:: i
     signatures [] i list.at .data =:: elt
@@ -737,7 +737,7 @@ proc(
 end
 
 proc(
-  LabelId GenericArg hashMap ptr mut : genericValues
+  LabelId GenericArg hashMap ptr.mut : genericValues
   LabelId : key
 -> ConstValue ) =>: getValueOrNone
   genericValues key map.at =:: eltValue?
@@ -758,9 +758,9 @@ end
 proc(
   ProcId arrayView : procedureIds
   StackValue arrayView : stackValues
-  stringBuilder ptr mut optional : errorMessage
+  stringBuilder ptr.mut optional : errorMessage
   FilePosition : pos
-  ProgramContext ptr mut : progContext
+  ProgramContext ptr.mut : progContext
 -> ProcedureCallInfo optional Type ) =>: export: resolveCall
   progContext [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -954,7 +954,7 @@ proc(
           resolveGenerics ! if
         MatchType .GENERIC matchType =
         current [] .nGenerics 1 + current [] .nGenerics =
-        needCast if ## ptr mut -> ptr
+        needCast if ## ptr.mut -> ptr
           current [] .nCasts 1 + current [] .nCasts =
         end
       else stackType paramType types.typeEquals _if

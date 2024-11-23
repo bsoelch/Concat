@@ -6,7 +6,7 @@ import array
 ## XXX allow auto-cast from list -> arrayView
 
 ( type : T -> type ) =>: export: list
-  struct( T _ ptr mut : mut: data i64 : mut: length i64 : mut: cap )
+  struct( T _ ptr.mut : mut: data i64 : mut: length i64 : mut: cap )
 end
 
 namespace: list
@@ -137,18 +137,18 @@ namespace: list
     type : auto: T
     T list : elts
     i32 : index
-  -> T ptr mut optional ) =>: export: at_32
+  -> T ptr.mut optional ) =>: export: at_32
     elts index i64 cast.s at_64
   end
   proc(
     type : auto: T
     T list : elts
     i64 : index
-  -> T ptr mut optional ) =>: export: at_64
+  -> T ptr.mut optional ) =>: export: at_64
     index 0 < index elts .length >= | if
-      T ptr mut optional.empty return
+      T ptr.mut optional.empty return
     end
-    elts .data index + T ptr mut cast! optional.wrap return
+    elts .data index + T ptr.mut cast! optional.wrap return
   end
   overload: export: at
     at_32 at_64
@@ -299,11 +299,11 @@ namespace: list
   proc(
     type : auto: T
     T list : elts
-  -> T ptr mut optional ) =>: export: peek
+  -> T ptr.mut optional ) =>: export: peek
     elts .length 0 <= if
-      T ptr mut optional.empty return
+      T ptr.mut optional.empty return
     end
-    elts .data elts .length 1 - + T ptr mut cast! optional.wrap return
+    elts .data elts .length 1 - + T ptr.mut cast! optional.wrap return
   end
   proc(
     type : auto: T

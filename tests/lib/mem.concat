@@ -2,14 +2,14 @@ import mem
 import debug
 
 proc( -> ) =>: main
-  1024 i32 mem.alloc i32 _ ptr mut =: mut: dynamicArray
+  1024 i32 mem.alloc i32 _ ptr.mut =: mut: dynamicArray
   1 dynamicArray 0 [] =
   2 dynamicArray 1023 [] =
   dynamicArray 0 [] debug.print
   dynamicArray 2048 mem.realloc dynamicArray =
   dynamicArray 1023 [] debug.print
   3 dynamicArray 2047 [] =
-  128 i32 mem.calloc i32 _ ptr mut =: mut: dynamicArray2
+  128 i32 mem.calloc i32 _ ptr.mut =: mut: dynamicArray2
   dynamicArray2 dynamicArray 128 mem.copy dynamicArray2 = 
   dynamicArray 16 mem.clear dynamicArray =
   dynamicArray 0 [] debug.print

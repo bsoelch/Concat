@@ -87,7 +87,7 @@ namespace: id
   1 =:: export: SCOPE_FLAG_NO_CONST_FOLD
   struct(
     IdentifierName LabelId hashMap : mut: identifierNames
-    char8 _ ptr mut list : mut: scopeStrings ## strings allocated for this scope
+    char8 _ ptr.mut list : mut: scopeStrings ## strings allocated for this scope
     bool : isProcScope
     Type : currentProc
     bool : experimental
@@ -97,7 +97,7 @@ namespace: id
   proc( bool : isProc Type : procType bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
      ## Scope
       idHash @ idEq @ 128 LabelId map.create
-      128 char8 _ ptr mut list.create
+      128 char8 _ ptr.mut list.create
       isProc
       procType
       experimental
@@ -145,10 +145,10 @@ namespace: id
     IdentifierInfo new return
   end
 
-  proc( IdentifierContext ptr mut : context -> bool ) =>: isTopLevel
+  proc( IdentifierContext ptr.mut : context -> bool ) =>: isTopLevel
     context [] .openScopes .length 0 == return
   end
-  proc( Type : procType bool : experimental IdentifierContext ptr mut : context -> ) =>: export: openProcScope
+  proc( Type : procType bool : experimental IdentifierContext ptr.mut : context -> ) =>: export: openProcScope
     context [] .openScopes
        ## newScope
          true
@@ -158,7 +158,7 @@ namespace: id
        newScope list.append
     context [] .openScopes =
   end
-  proc( IdentifierContext ptr mut : context -> ) =>: export: openScope
+  proc( IdentifierContext ptr.mut : context -> ) =>: export: openScope
     context [] .openScopes .length 0 == if
       Type .undefined false
     else
@@ -169,13 +169,13 @@ namespace: id
        list.append
     context [] .openScopes =
   end
-  proc( IdentifierContext ptr mut : context -> Type bool ) =>: export: currentScopeProc
+  proc( IdentifierContext ptr.mut : context -> Type bool ) =>: export: currentScopeProc
     context [] .openScopes .length 0 == if
       Type .undefined false return
     end
     context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental return
   end
-  proc( char8 _ ptr mut list -> char8 _ ptr mut list ) =>: freeScopeStrings
+  proc( char8 _ ptr.mut list -> char8 _ ptr.mut list ) =>: freeScopeStrings
     0:i64 while ..dup ..over.2 .length < do
       ..over ..over list.get mem.free
       1 +
@@ -183,7 +183,7 @@ namespace: id
     list.free
   end
   proc(
-    IdentifierContext ptr mut : context
+    IdentifierContext ptr.mut : context
   ->
     bool #+isError+#
   ) =>: export: closeScope
@@ -202,7 +202,7 @@ namespace: id
     false return
   end
 
-  proc( string : id FileId : fileId IdentifierContext ptr mut : context IdentifierMatch list ptr mut optional : matches -> IdentifierName LabelId bool ) =>: export: searchIdentifier
+  proc( string : id FileId : fileId IdentifierContext ptr.mut : context IdentifierMatch list ptr.mut optional : matches -> IdentifierName LabelId bool ) =>: export: searchIdentifier
     context [] .typeContext .labelContext .namespaceInfo .current =:: mut: mNamespace
     NamespaceId : mut: relSpace
     mNamespace NAMESPACE_ID_NONE == if
@@ -329,7 +329,7 @@ namespace: id
     "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
   end
 
-  proc( LabelId : nameId IdentifierContext ptr mut : context -> IdentifierData ptr mut bool ) =>: export: getIdentifier
+  proc( LabelId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut bool ) =>: export: getIdentifier
     nameId LABEL_ID_TMP == if
       ID_TMP_DATA @ false return
     end
@@ -344,8 +344,8 @@ namespace: id
   proc(
     LabelId : nameId
     FileId : fileId
-    IdentifierContext ptr mut : context
-  -> IdentifierData ptr mut bool ) =>: export: findIdentifierByLabel
+    IdentifierContext ptr.mut : context
+  -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByLabel
     context [] .nameBuffer
       ..dup .length 0 == assert "name buffer is empty"
       nameId context [] .typeContext  .labelContext @ sb.appendLabelName
@@ -355,7 +355,7 @@ namespace: id
       name
       fileId
       context
-      IdentifierMatch list ptr mut optional.empty
+      IdentifierMatch list ptr.mut optional.empty
     searchIdentifier =:: isError =:: label ..drop
     context [] .nameBuffer
       sb.clear
@@ -365,17 +365,17 @@ namespace: id
   proc(
     string : name
     FileId : fileId
-    IdentifierContext ptr mut : context
-  -> IdentifierData ptr mut bool ) =>: export: findIdentifierByName
+    IdentifierContext ptr.mut : context
+  -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName
     ## searchIdentifier
       name
       fileId
       context
-      IdentifierMatch list ptr mut optional.empty
+      IdentifierMatch list ptr.mut optional.empty
     searchIdentifier =:: isError =:: label =:: idName
     label context getIdentifier isError | return
   end
-  proc( string : id FilePosition : pos CompilerError list ptr mut : errors -> bool ) =>: export: checkIdentifier
+  proc( string : id FilePosition : pos CompilerError list ptr.mut : errors -> bool ) =>: export: checkIdentifier
     id .length 0 == if
       "identifier names have to be non-empty" sb.wrap pos errors appendError
       true return
@@ -411,8 +411,8 @@ namespace: id
     bool : isInit
     FilePosition : declaredAt
     FileId : currentFile
-    IdentifierContext ptr mut : context
-    CompilerError list ptr mut : errors
+    IdentifierContext ptr.mut : context
+    CompilerError list ptr.mut : errors
   ->  LabelId IdentifierData bool ) =>: export: declareIdentifier
     context [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
@@ -569,7 +569,7 @@ namespace: id
   proc(
     FilePosition : pos
     FileId : currentFile
-    IdentifierContext ptr mut : context
+    IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newItrVar
     ## IdentifierInfo
       IdentifierType .ITR_VAR
@@ -588,7 +588,7 @@ namespace: id
     idInfo return
   end
   proc(
-    IdentifierContext ptr mut : context
+    IdentifierContext ptr.mut : context
     i32 : id
   -> IdentifierInfo ) =>: export: getItrVar
     context .itrVariables [] id list.get return
@@ -700,7 +700,7 @@ namespace: sb
   end
 end
 namespace: id
-  proc( LabelId : name IdentifierContext ptr mut : context -> ) =>: export: beginNamespace
+  proc( LabelId : name IdentifierContext ptr.mut : context -> ) =>: export: beginNamespace
     context [] .prevImports
       context [] .typeContext  .labelContext .namespaceInfo .imports list.append
     context [] .prevImports =
@@ -714,7 +714,7 @@ namespace: id
     context [] .typeContext  .labelContext .namespaceInfo .current =
     context [] .nameBuffer sb.clear context [] .nameBuffer =
   end
-  proc( LabelId : name IdentifierContext ptr mut : context -> bool ) =>: export: importNamespace
+  proc( LabelId : name IdentifierContext ptr.mut : context -> bool ) =>: export: importNamespace
     context [] .nameBuffer
        ..dup .length 0 == assert "name buffer empty"
        name context [] .typeContext  .labelContext @ sb.appendLabelName
@@ -730,7 +730,7 @@ namespace: id
     context [] .typeContext  .labelContext .namespaceInfo .imports =
     false return
   end
-  proc( IdentifierContext ptr mut : context -> bool ) =>: export: endNamespace
+  proc( IdentifierContext ptr.mut : context -> bool ) =>: export: endNamespace
     context [] .typeContext  .labelContext .namespaceInfo .current 0:NamespaceId == if
       true return
     end

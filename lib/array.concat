@@ -4,8 +4,8 @@ namespace: array
   proc(
     type : auto: T
     type : auto: C
-    T _ ptr mut : src
-    T _ ptr mut : buff
+    T _ ptr.mut : src
+    T _ ptr.mut : buff
     i64 : offset
     i64 : size
     proc( T T C -> i32 ) ptr : cmp
@@ -60,7 +60,7 @@ namespace: array
   proc(
     type : auto: T
     type : auto: C
-    T _ ptr mut : data
+    T _ ptr.mut : data
     i64 : size
     proc( T T C -> i32 ) ptr : cmp
     C : context
@@ -71,7 +71,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    T _ ptr mut : data
+    T _ ptr.mut : data
     i64 : size
   -> ) =>: export: reverse
     size 1 - =:: last

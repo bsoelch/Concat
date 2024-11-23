@@ -2,7 +2,7 @@ import debug
 union( i32 : mut: x i32 : y ) =:: anUnion
 struct( anUnion : mut: a i32 : mut: b ) =:: aStruct
 
-proc( aStruct ptr mut : p -> i32 ptr mut ) =>: test
+proc( aStruct ptr.mut : p -> i32 ptr.mut ) =>: test
   p [] .a .x @ =:: e
   e return
 end

@@ -97,7 +97,7 @@ end
 proc(
   Type : base
   bool : mutable
-  TypeContext ptr mut : typeContext
+  TypeContext ptr.mut : typeContext
 -> Type ) =>: wrapPtr
   base
     types.ArrayType .POINTER
@@ -113,7 +113,7 @@ end
 proc(
   string : name
   FilePosition : pos
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> ProcBundleId bool ) =>: newBuiltInBundle
   context [] .idContext @ =:: idContext
   idContext [] .typeContext .labelContext @ =:: labelContext
@@ -149,7 +149,7 @@ proc(
   Type : procType
   ProcBundleId : bundleId
   FilePosition : pos
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
   bool : hasStaticArgs
   bool : isStatic
 -> ) =>: addBuiltIn_internal
@@ -193,7 +193,7 @@ proc(
   Type : procType
   ProcBundleId : bundleId
   FilePosition : pos
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> ) =>: addBuiltIn
   buildIn procLabel procType bundleId pos context false false addBuiltIn_internal
 end
@@ -203,7 +203,7 @@ proc(
   Type : procType
   ProcBundleId : bundleId
   FilePosition : pos
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> ) =>: addGenericBuiltIn
   buildIn procLabel procType bundleId pos context true false addBuiltIn_internal
 end
@@ -212,7 +212,7 @@ proc(
   i64 : auto: l1 char8 l1 ptr : namespace
   i64 : auto: l2 char8 l2 ptr : element
   FilePosition : pos
-  LabelContext ptr mut : labelContext
+  LabelContext ptr.mut : labelContext
 -> LabelId ) =>: createLabel
   ## newLabel
     namespace string.wrap
@@ -225,7 +225,7 @@ end
 
 proc(
   Type : t
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> Type Type Type Type Type ) =>: operatorProcTypes
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -307,7 +307,7 @@ end
 proc(
   Type : t1
   Type : t2
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> Type Type ) =>: mixedProcTypes
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -353,7 +353,7 @@ end
 
 proc(
   Type : t1
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> Type Type ) =>: charProcTypes ## c?c?_bool c?c?_i32
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -397,7 +397,7 @@ proc(
   cc_b cc_i return
 end
 proc(
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> Type Type ) =>: sysProcTypes
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
@@ -439,7 +439,7 @@ end
 
 proc(
   FilePosition : pos
-  ProgramContext ptr mut : context
+  ProgramContext ptr.mut : context
 -> bool ) =>: export: initBuiltInProcs
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext

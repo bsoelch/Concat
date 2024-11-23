@@ -72,17 +72,17 @@ namespace: ptr
   end
   ## XXX? prohibit arithmetic on array pointers
   namespace: mut
-    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: shaddow: export: add
-      p i64 cast! offset T ..type.size * + T _ ptr mut cast!
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: add
+      p i64 cast! offset T ..type.size * + T _ ptr.mut cast!
     end
-    proc( type : auto: T T _ ptr mut : p i64 : offset -> T _ ptr mut ) =>: shaddow: export: sub
-      p i64 cast! offset T ..type.size * - T _ ptr mut cast!
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: sub
+      p i64 cast! offset T ..type.size * - T _ ptr.mut cast!
     end
-    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: shaddow: add0D
+    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: add0D
       ..!error "pointer arithmetic of value pointers is not supported"
       ..unreachable
     end
-    proc( type : auto: T T ptr mut : p i64 : offset -> T ptr mut ) =>: shaddow: sub0D
+    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: sub0D
       ..!error "pointer arithmetic of value pointers is not supported"
       ..unreachable
     end

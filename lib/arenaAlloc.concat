@@ -19,7 +19,7 @@ namespace: arenaAlloc
   enum( CONTINUE ALLOC ) =:: SliceType
   ( type : T -> type ) =>: ArenaSlice
     struct(
-      T _ ptr mut : data
+      T _ ptr.mut : data
       i32 : mut: eltCount
       SliceType : sliceType
     )
@@ -128,7 +128,7 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena0
     i32 : count
-  -> T ArenaAllocator T _ ptr mut ) =>: alloc
+  -> T ArenaAllocator T _ ptr.mut ) =>: alloc
     1 arena0 .sliceSizeShift << =:: sliceSize
     arena0 .strictOrder ! and arena0 currentCap arena0 .eltCount == if
       ## no space at end of last slice -> search for gaps in previous slices
@@ -177,19 +177,19 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena
     T : value
-  -> T ArenaAllocator T ptr mut ) =>: export: pushValue
+  -> T ArenaAllocator T ptr.mut ) =>: export: pushValue
     value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
     arena 1 alloc
-      valData@ 1 mem.copy T ptr mut cast!
+      valData@ 1 mem.copy T ptr.mut cast!
     return
   end
   proc(
     type : auto: T
     T ArenaAllocator : arena
     T ptr : value
-  -> T ArenaAllocator T ptr mut ) =>: export: pushPtr
+  -> T ArenaAllocator T ptr.mut ) =>: export: pushPtr
     arena 1 alloc
-      value 1 mem.copy T ptr mut cast!
+      value 1 mem.copy T ptr.mut cast!
     return
   end
   proc(
@@ -197,9 +197,9 @@ namespace: arenaAlloc
     i32 : auto: k
     T ArenaAllocator : arena
     T k ptr : values
-  -> T ArenaAllocator T k ptr mut ) =>: export: pushPtrs
+  -> T ArenaAllocator T k ptr.mut ) =>: export: pushPtrs
     arena k alloc
-      values k i64 cast.u mem.copy T k ptr mut cast!
+      values k i64 cast.u mem.copy T k ptr.mut cast!
     return
   end
   ## TODO pushArray

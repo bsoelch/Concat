@@ -108,32 +108,32 @@ namespace: id
     a context scAsStr b context scAsStr string.eq return
   end
 
-  proc( LabelId : id LabelContext ptr : context -> Label ptr mut optional ) =>: getLabel
+  proc( LabelId : id LabelContext ptr : context -> Label ptr.mut optional ) =>: getLabel
     ## index check done by list.at
     context [] .labels id i64 cast list.at return
   end
-  proc( LabelId : id LabelContext ptr mut : context -> NamespaceId ) =>: export: getLabelNamespace
+  proc( LabelId : id LabelContext ptr.mut : context -> NamespaceId ) =>: export: getLabelNamespace
     id context getLabel =:: label?
     label? optional.isEmpty if
       NAMESPACE_ID_NONE return
     end
     label? .data [] .namespaceInfo .current return
   end
-  proc( LabelId : id LabelContext ptr mut : context -> FileId ) =>: export: getLabelFile
+  proc( LabelId : id LabelContext ptr.mut : context -> FileId ) =>: export: getLabelFile
     id context getLabel =:: label?
     label? optional.isEmpty if
       FILE_ID_NONE return
     end
     label? .data [] .srcFile return
   end
-  proc( LabelId : id LabelContext ptr mut : context -> ) =>: export: inLabelNamespace
+  proc( LabelId : id LabelContext ptr.mut : context -> ) =>: export: inLabelNamespace
     id context getLabel =:: label?
     label? optional.isEmpty if
        return
     end
     label? .data [] .namespaceInfo context [] .namespaceInfo =
   end
-  proc( LabelContext ptr mut : context -> ) =>: export: resetNamespace
+  proc( LabelContext ptr.mut : context -> ) =>: export: resetNamespace
     0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context [] .namespaceInfo =
   end
   proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
@@ -197,7 +197,7 @@ namespace: id
     end
     label? .data [] .pos optional.wrap return
   end
-  proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export: newLabel
+  proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer str sb.appendStr context [] .nameBuffer =
     context [] .labels
@@ -217,7 +217,7 @@ namespace: id
     LabelFlag : flags
     FilePosition : pos
     FileId : srcFile
-    LabelContext ptr mut : context
+    LabelContext ptr.mut : context
   -> LabelId ) =>: export: newLabelInNamespace
     0:NamespaceId namespaceName context createNamespace =:: namespaceId
     context [] .nameBuffer .length =:: offset
@@ -235,7 +235,7 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr mut : context -> LabelId ) =>: export: newDummyLabel
+  proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newDummyLabel
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       id sb.appendI
@@ -252,14 +252,14 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  proc( string : str LabelContext ptr mut : context -> StringConstant ) =>: export: wrapStringConstant
+  proc( string : str LabelContext ptr.mut : context -> StringConstant ) =>: export: wrapStringConstant
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       str sb.appendStr
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
-  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseRawStringConstant
+  proc( string : str FilePosition : stringStart CompilerError list ptr.mut : errors LabelContext ptr.mut : context -> StringConstant ) =>: export: parseRawStringConstant
     stringStart =:: mut: pos
     '`' pos @ updateFilePos ## string content starts after `
     context [] .nameBuffer .length =:: offset
@@ -284,7 +284,7 @@ namespace: id
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
-  proc( string : str FilePosition : stringStart CompilerError list ptr mut : errors LabelContext ptr mut : context -> StringConstant ) =>: export: parseStringConstant
+  proc( string : str FilePosition : stringStart CompilerError list ptr.mut : errors LabelContext ptr.mut : context -> StringConstant ) =>: export: parseStringConstant
     ## TODO improve readability of stack based code (?extract loop counter to variable)
     stringStart =:: mut: pos
     '"' pos @ updateFilePos ## string content starts after "
@@ -406,7 +406,7 @@ namespace: id
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
-  proc( NamespaceId : parent string : name  LabelContext ptr mut : context -> NamespaceId ) =>: newNamespace
+  proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
     context [] .nameBuffer .length =:: offset
     context [] .nameBuffer
       name sb.appendStr
@@ -420,7 +420,7 @@ namespace: id
     context [] .namespaces =
     id NamespaceId cast return
   end
-  proc( NamespaceId : base string : childName bool : create  LabelContext ptr mut : context  -> NamespaceId ) =>: export: childId
+  proc( NamespaceId : base string : childName bool : create  LabelContext ptr.mut : context  -> NamespaceId ) =>: export: childId
     base NAMESPACE_ID_NONE == childName .length 0 == | if
       NAMESPACE_ID_NONE return
     end
@@ -448,7 +448,7 @@ namespace: id
   proc(
     NamespaceId : base
     string : path
-    LabelContext ptr mut : context
+    LabelContext ptr.mut : context
     bool : create
   -> NamespaceId ) =>: export: findNamespace_internal
     base NamespaceId =: mut: id
@@ -466,30 +466,30 @@ namespace: id
   proc(
     NamespaceId : base
     string : path
-    LabelContext ptr mut : context
+    LabelContext ptr.mut : context
   -> NamespaceId ) =>: export: findNamespace
     base path context false findNamespace_internal
   end
   proc(
     NamespaceId : base
     string : path
-    LabelContext ptr mut : context
+    LabelContext ptr.mut : context
   -> NamespaceId ) =>: export: createNamespace
     base path context true findNamespace_internal
   end
-  proc( NamespaceId : id LabelContext ptr mut : context -> StringConstant ) =>: export: namespaceName
+  proc( NamespaceId : id LabelContext ptr.mut : context -> StringConstant ) =>: export: namespaceName
     id NAMESPACE_ID_NONE == if
       0 0 StringConstant new return
     end
     context [] .namespaces id i64 cast list.get .name return
   end
-  proc( NamespaceId : id LabelContext ptr mut : context -> NamespaceId ) =>: export: parentNamespace
+  proc( NamespaceId : id LabelContext ptr.mut : context -> NamespaceId ) =>: export: parentNamespace
     id NAMESPACE_ID_NONE == if
       NAMESPACE_ID_NONE return
     end
     context [] .namespaces id i64 cast list.get .parent return
   end
-  proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr mut : context -> NamespaceImportId ) =>: export: getNamespaceImportId
+  proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr.mut : context -> NamespaceImportId ) =>: export: getNamespaceImportId
     context [] .namespaceImports .length 0 > if
       parent NAMESPACE_IMPORT_NONE == if
         0:NamespaceImportId

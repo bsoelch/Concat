@@ -41,13 +41,13 @@ namespace: branchTree
       32 T branchTree.Node list.create
     T BranchTree new
   end
-  proc( type : auto: T T BranchTree ptr mut : tree -> ) =>: export: clear
+  proc( type : auto: T T BranchTree ptr.mut : tree -> ) =>: export: clear
     -1:NodeId tree [] .branchHead =
     tree [] .nodes
       list.clear
     tree [] .nodes =
   end
-  proc( type : auto: T T BranchTree ptr mut : tree -> ) =>: export: free
+  proc( type : auto: T T BranchTree ptr.mut : tree -> ) =>: export: free
     -1:NodeId tree [] .branchHead =
     tree [] .nodes
       list.free
@@ -56,13 +56,13 @@ namespace: branchTree
 
   ( type : T -> type ) =>: export: BranchItr
     struct(
-      T BranchTree ptr mut : tree
+      T BranchTree ptr.mut : tree
       NodeId : id
     )
   end
 
   namespace: itr
-    proc( type : auto: T T BranchTree ptr mut : tree -> T BranchItr ) =>: export: start
+    proc( type : auto: T T BranchTree ptr.mut : tree -> T BranchItr ) =>: export: start
       tree tree [] .branchHead T BranchItr new
     end
     proc( type : auto: T T BranchItr : itr -> T BranchItr bool ) =>: export: hasNext
@@ -89,7 +89,7 @@ namespace: branchTree
 
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     NodeId : id
   -> ) =>: export: unlinkNode
     tree [] .nodes id i64 cast list.at .data =:: node
@@ -132,7 +132,7 @@ namespace: branchTree
   end
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
   -> NodeId ) =>: export: startBranch
     tree check
     tree [] .branchHead -1:NodeId != if
@@ -146,14 +146,14 @@ namespace: branchTree
   ## remove all nodes from current branch
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
   -> ) =>: export: prune
     tree tree [] .branchHead endBranch
     -1:NodeId tree [] .branchHead =
   end
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     NodeId : id
   -> ) =>: export: endBranch
     id i64 cast =:: mut: nodeId
@@ -168,7 +168,7 @@ namespace: branchTree
   end
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     NodeId : branchPoint
   -> NodeId ) =>: export: reset
     tree check
@@ -185,7 +185,7 @@ namespace: branchTree
   end
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     T : value
   -> ) =>: export: push
     tree [] .branchHead -1:NodeId == if
@@ -206,14 +206,14 @@ namespace: branchTree
 
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
   -> T ptr optional ) =>: export: peek
     tree 0 at return
   end
   ## returns a pointer to the stack element at the given index (0-indexed from top)
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     i32 : index
   -> T ptr optional ) =>: export: at
     tree [] .branchHead i64 cast =:: mut: nodeId
@@ -232,14 +232,14 @@ namespace: branchTree
   ## returns a mutable pointer to the stack element at the given index (0-indexed from top), writing to the returned pointer will only modify the current branch
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     i32 : index
-  -> T ptr mut optional ) =>: export: replaceAt
+  -> T ptr.mut optional ) =>: export: replaceAt
     tree [] .branchHead i64 cast =:: mut: nodeId
     false =:: mut: needCopy
     index while
       nodeId 0 < or nodeId tree [] .nodes .length >= if ..drop
-        T ptr mut optional.empty return
+        T ptr.mut optional.empty return
       end
     ..dup 0 > do
       tree [] .nodes nodeId list.at .data =:: nodeData
@@ -296,7 +296,7 @@ namespace: branchTree
   end
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
   -> T ptr optional ) =>: export: pop
     tree [] .branchHead i64 cast =:: nodeId
     tree check
@@ -319,7 +319,7 @@ namespace: branchTree
   end
   proc(
     type : auto: T
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
   -> ) =>: export: swap
     tree check
     tree pop .data [] =:: upper
@@ -333,7 +333,7 @@ namespace: branchTree
   proc(
     type : auto: T
     type : auto: C
-    T BranchTree ptr mut : tree
+    T BranchTree ptr.mut : tree
     NodeId arrayView : branchHeads ## should be non-empty
     proc( T ptr arrayView : types i64 : offset C : context -> T ) ptr : mergeValues
     C : context

@@ -403,7 +403,7 @@ proc( -> ProgramContext ) =>: export: newProgramContext
 end
 ## TODO free Program context
 
-proc( stringBuilder : fileName FileId : id IdentifierContext ptr mut : idContext -> ProgramFile ) =>: export: newProgFile
+proc( stringBuilder : fileName FileId : id IdentifierContext ptr.mut : idContext -> ProgramFile ) =>: export: newProgFile
   128 Operation list.create
   128 Operation list.create
   128 Operation list.create
@@ -418,7 +418,7 @@ proc(
   ConstValue : constValue
   Type : constType
   FilePosition : pos
-  ProgramContext ptr mut : program
+  ProgramContext ptr.mut : program
 -> Operation ) =>: export: opConstReference
   program [] .constantReferences
     ..dup .length ConstReferenceId cast =:: refId
@@ -463,7 +463,7 @@ namespace: sb
         "array" sb.appendS
         break
       PTR_MUT case
-        "ptr mut" sb.appendS
+        "ptr.mut" sb.appendS
         break
     end
   end

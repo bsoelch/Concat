@@ -2,7 +2,7 @@ import debug
 proc( i32 3 ptr : in  i64 2 3 array : multi -> ) =>: arrayTest
   i32 3 ptr : a
   i64 2 4 6 8 10 array : b
-  i32 ptr 2 ptr mut : c
+  i32 ptr 2 ptr.mut : c
   in ..length debug.print
   multi ..size =:: arraySize
   arraySize @ 0 [] debug.print

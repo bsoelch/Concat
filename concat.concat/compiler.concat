@@ -196,7 +196,7 @@ proc( -> ) =>: parseArgs
   ## XXX check if libPath exists
 end
 
-proc( CompilerError list ptr mut : errors -> ) =>: checkErrors
+proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
   errors [] .length 0 == if
     return
   end

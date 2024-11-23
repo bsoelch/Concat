@@ -163,7 +163,7 @@ namespace: ssa
       Phi : base
       BranchLabel : label
       Operand : value
-      SSAContext ptr mut : context
+      SSAContext ptr.mut : context
     -> Phi ) =>: addBranch
       base .offset base .argCount +
           context .phiData .length []
@@ -483,7 +483,7 @@ struct(
 
 struct(
   ssa.SSAContext : mut: ssaContext
-  ProgramContext ptr mut : program
+  ProgramContext ptr.mut : program
   StackElement BranchTree : mut: stackInfo
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
@@ -499,7 +499,7 @@ struct(
 proc(
   ssa.Atom list : ops
   ssa.BranchLabel : branch
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: startBranch
   branch context [] .currentBranch =
   ops
@@ -507,19 +507,19 @@ proc(
   return
 end
 proc(
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> i32 ) =>: nextJumpLabelId
   ..unreachable ## TODO nextJumpLabelId
 end
 
 ## TODO stack management
-proc( FilePosition CompilerContext ptr mut -> ssa.ValueType ssa.Operand ) =>: popValue
+proc( FilePosition CompilerContext ptr.mut -> ssa.ValueType ssa.Operand ) =>: popValue
   ..unreachable
 end
-proc( ssa.ValueType FilePosition CompilerContext ptr mut -> ssa.Operand ) =>: pushValue
+proc( ssa.ValueType FilePosition CompilerContext ptr.mut -> ssa.Operand ) =>: pushValue
   ..unreachable
 end
-proc( CompilerContext ptr mut -> ssa.Operand ) =>: nextValueId
+proc( CompilerContext ptr.mut -> ssa.Operand ) =>: nextValueId
   ..unreachable
 end
 
@@ -528,8 +528,8 @@ struct(
   i32 : blockId
   ssa.BranchLabel arrayView : branchLabels
   FilePosition : pos
-  CompilerContext ptr mut : context
-  ssa.Atom list ptr mut : out
+  CompilerContext ptr.mut : context
+  ssa.Atom list ptr.mut : out
 ) =:: MergePoint
 proc(
   StackElement ptr arrayView : toMerge
@@ -590,14 +590,14 @@ proc(
   StackElement new return
 end
 
-proc( BlockInfo : block CompilerContext ptr mut : context -> ) =>: openBlock
+proc( BlockInfo : block CompilerContext ptr.mut : context -> ) =>: openBlock
   context [] .openBlocks
     block list.append
   context [] .openBlocks =
 end
 proc(
   i32 : blockId
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ) =>: openIfBlock
   ## IfBlockInfo
     8 branchTree.NodeId list.create
@@ -614,7 +614,7 @@ proc(
 end
 proc(
   i32 : blockId
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ) =>: openSwitchBlock
   ## SwitchBlockInfo
     16 branchTree.NodeId list.create
@@ -625,7 +625,7 @@ proc(
 end
 proc(
   i32 : blockId
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ) =>: openWhileBlock
   ## WhileBlockInfo
     8 branchTree.NodeId  list.create
@@ -644,7 +644,7 @@ proc(
 end
 proc(
   i32 : blockId
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ) =>: openAndOrBlock
   ## SwitchBlockInfo
     16 branchTree.NodeId list.create
@@ -656,8 +656,8 @@ end
 proc(
   i32 : blockId
   FilePosition : pos
-  CompilerContext ptr mut : context
--> BlockInfo ptr mut optional ) =>: findBreakableBlock
+  CompilerContext ptr.mut : context
+-> BlockInfo ptr.mut optional ) =>: findBreakableBlock
   context [] .program =:: program
   program [] .errors @ =:: errors
   context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
@@ -672,12 +672,12 @@ proc(
   end ..drop
   "could not find target of break/continue " sb.wrap
   pos errors appendError
-  BlockInfo ptr mut optional.empty return
+  BlockInfo ptr.mut optional.empty return
 end
 
 proc(
   Type : t
-  TypeContext ptr mut : typeContext
+  TypeContext ptr.mut : typeContext
 -> ssa.ValueType ) =>: toValueType
   using ssa
   t switch
@@ -738,7 +738,7 @@ proc(
   Type : constType
   ConstValue : value
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: pushConstant
   context [] .program =:: prog
   prog [] .errors @ =:: errors
@@ -771,7 +771,7 @@ proc(
   Type : target
   ## TODO pass source/target registers
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: castNumbers
   context [] .program =:: prog
   prog [] .errors @ =:: errors
@@ -845,7 +845,7 @@ proc(
   Type : target
   ## TODO source/target register
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 ->  ssa.Atom list ) =>: bitcastNumbers
   context [] .program =:: prog
   prog [] .errors @ =:: errors
@@ -884,7 +884,7 @@ proc(
   i32 : offset
   Type : target0
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 ->  ssa.Atom list ) =>: compileCast
   context [] .program =:: prog
   prog [] .errors @ =:: errors
@@ -982,7 +982,7 @@ proc(
   ssa.Atom list : ops
   ssa.OperationType : opType
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 ->  ssa.Atom list ) =>: appendUnaryOperator
   context [] .stackInfo branchTree.depth 1 < if
     "stack underflow" sb.wrap
@@ -1003,7 +1003,7 @@ proc(
   ssa.Atom list : ops
   ssa.OperationType : opType
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: appendBinaryOperator
   context [] .program [] .errors @ =:: errors
   context [] .stackInfo branchTree.depth 2 < if
@@ -1036,7 +1036,7 @@ proc(
   ssa.Atom list : ops
   ssa.OperationType : compType
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: appendComparissonOperator
   context [] .program .errors =:: errors
   context [] .stackInfo branchTree.depth 2 < if
@@ -1067,7 +1067,7 @@ proc(
   BuiltIn : builtIn
   Type : opType
   FilePosition : pos
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: appendBuiltIn
   context [] .program =:: prog
   prog [] .errors @ =:: errors
@@ -1149,7 +1149,7 @@ end
 proc(
   ssa.Atom list : ops
   Operation ptr : op
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: compileOp
   context [] .program =:: prog
   context .ssaContext =:: ssaContext
@@ -2124,7 +2124,7 @@ end
 proc(
   ssa.Atom list : ssaOps
   Operation arrayView : ops
-  CompilerContext ptr mut : context
+  CompilerContext ptr.mut : context
 -> ssa.Atom list ) =>: compileProc
   context [] .program =:: prog
   prog [] .idContext @ =:: idContext
@@ -2142,7 +2142,7 @@ proc(
 end
 
 
-proc( io.FILE : target ProgramContext ptr mut : prog -> ) =>: export: compileToSSA
+proc( io.FILE : target ProgramContext ptr.mut : prog -> ) =>: export: compileToSSA
   prog [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext

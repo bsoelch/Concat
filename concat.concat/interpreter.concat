@@ -27,7 +27,7 @@ struct(
 enum( PARSER GLOBAL FOLD_LOCAL INTERPRET ) =:: export: InterpreterType
 
 struct(
-  ProgramContext ptr mut : program
+  ProgramContext ptr.mut : program
   LabelId Constant hashMap : mut: variables
   ConstValue list : mut: stack
   ValueInfo  list : mut: stackInfo
@@ -44,7 +44,7 @@ proc(
   string : name
   bool : canIgnoreErrorMessage
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> bool ) =>: checkStack
   context [] .openBlocks .length 0 > if
     context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
@@ -68,7 +68,7 @@ proc(
   end
   false return
 end
-proc( InterpreterContext ptr mut : context -> i64 ) =>: minStackOffset
+proc( InterpreterContext ptr.mut : context -> i64 ) =>: minStackOffset
   context [] .openBlocks .length 0 > if
     context [] .openBlocks
       context [] .openBlocks .length 1 - list.at .data []
@@ -77,7 +77,7 @@ proc( InterpreterContext ptr mut : context -> i64 ) =>: minStackOffset
   0 return
 end
 
-proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
+proc( InterpreterContext ptr.mut : context -> bool ) =>: inEnum
   ## XXX cache number of open enum blocks
   context [] .openBlocks .length 1 - while $ 0 >= do
     context [] .openBlocks $1 list.at .data [] .blockType switch
@@ -97,7 +97,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
   end ..drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =>: inUnion
+proc( InterpreterContext ptr.mut : context -> bool ) =>: inUnion
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType switch
@@ -117,7 +117,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inUnion
   end ..drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
+proc( InterpreterContext ptr.mut : context -> bool ) =>: inTypeOrInitializer
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType switch
@@ -137,7 +137,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
   end ..drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =>: export: inTypeBlock
+proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeBlock
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType switch
@@ -157,7 +157,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: export: inTypeBlock
   end ..drop
   false return
 end
-proc( InterpreterContext ptr mut : context -> bool ) =>: export: inGlobalBlock
+proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while ..dup 0 >= do
     context [] .openBlocks ..over list.at .data [] .blockType switch
@@ -178,7 +178,7 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: export: inGlobalBlock
   true return
 end
 
-proc( BlockType : blockType InterpreterContext ptr mut : context -> ) =>: openBlock
+proc( BlockType : blockType InterpreterContext ptr.mut : context -> ) =>: openBlock
   context [] .openBlocks
     ## BlockInfo
       blockType
@@ -191,7 +191,7 @@ proc( BlockType : blockType InterpreterContext ptr mut : context -> ) =>: openBl
 end
 
 enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
-proc( InterpreterContext ptr mut : context -> LabeledValueContext ) =>: getLabeledValueContext
+proc( InterpreterContext ptr.mut : context -> LabeledValueContext ) =>: getLabeledValueContext
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while $ 0 >= do =:: i
     context [] .openBlocks i list.at .data [] .blockType switch
@@ -223,7 +223,7 @@ proc(
   Type : valueType
   LabeledValueContext : valueContext
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> bool ) =>: addLabeledValue
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext @ =:: idContext
@@ -286,7 +286,7 @@ proc(
   i64 : stackOffset
   LabeledValueContext : valueContext
   FilePosition : pos
-  InterpreterContext  ptr mut : context
+  InterpreterContext  ptr.mut : context
 -> bool ) =>: finishLabledValues
   context [] .program [] .errors@ =:: errors
   context [] .program [] .idContext@ =:: idContext
@@ -340,7 +340,7 @@ proc(
   BlockInfo ptr : closedBlock
   LabeledValueContext : closedType
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> bool ) =>: closedTypeBlock
   ## XXX? use different contexts for different types of type-containers
   closedBlock [] .stackOffset closedType pos context finishLabledValues if
@@ -370,7 +370,7 @@ proc(
   Operation ptr : op
   BlockInfo ptr : closedBlock
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 ->
   Type
   bool
@@ -405,7 +405,7 @@ proc(
   Type : valType
   LabelId : id
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> ) =>: pushValue
   context [] .stack
     value list.append
@@ -420,7 +420,7 @@ proc(
 end
 proc(
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> ValueInfo ConstValue bool ) =>: popValue
   context [] .stack .length 0 == if
     context [] .evalType switch
@@ -450,7 +450,7 @@ end
 proc(
   ConstValue : value
   ValueInfo : valInfo
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 ->  ) =>: unpopValue
   context [] .stack
      value list.append
@@ -463,7 +463,7 @@ proc(
   ConstValue _ ptr : values
   ValueInfo _ ptr : valInfos
   i64 : count
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 ->  ) =>: unpopValues
   count 1 - while ..dup 0 >= do =:: i
     ## unpopValue
@@ -476,7 +476,7 @@ proc(
 end
 proc(
   i64 : newLength
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> ) =>: truncateStack
   context [] .stack .length context [] .stackInfo .length == assert "len(stack)=len(stackInfo)"
   context [] .stack .length newLength >= assert "newLength<length"
@@ -490,7 +490,7 @@ end
 
 proc(
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> ValueInfo Type bool ) =>: popType
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
@@ -520,7 +520,7 @@ end
 
 namespace: interpreter
   proc(
-    ProgramContext ptr mut : progContext
+    ProgramContext ptr.mut : progContext
     FileId : fileId
     InterpreterType : evalType
   ->
@@ -541,7 +541,7 @@ namespace: interpreter
   end
 
   proc(
-    InterpreterContext ptr mut : context
+    InterpreterContext ptr.mut : context
     InterpreterType : evalType
   -> ) =>: export: resetContext
     ## TODO? clear local variables in map
@@ -555,7 +555,7 @@ namespace: interpreter
   end
 
   proc(
-    InterpreterContext ptr mut : context
+    InterpreterContext ptr.mut : context
   -> ) =>: export: cleanupContext
     context [] .variables @ map.free
     context [] .stackInfo   list.free context [] .stackInfo =
@@ -569,7 +569,7 @@ namespace: interpreter
   proc(
     Type : t
     TypeMemoryInfo : infoType
-    ProgramContext ptr mut : program
+    ProgramContext ptr.mut : program
   -> ConstValue bool ) =>: export: computeTypeInfo
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
@@ -604,7 +604,7 @@ namespace: interpreter
     ConstValue : value
     bool : isLength
     FilePosition : pos
-    ProgramContext ptr mut : program
+    ProgramContext ptr.mut : program
   -> Type ConstValue bool ) =>: export: sizeOfValue
     ## TODO support length of initializers
     program [] .errors @ =:: errors
@@ -737,7 +737,7 @@ namespace: interpreter
     ProcId : generatorProc
     ConstValue arrayView : args
     FilePosition : pos
-    InterpreterContext ptr mut : context
+    InterpreterContext ptr.mut : context
   -> bool ) =>: evalGeneratedType
     context [] .program =:: program
     program [] .errors @ =:: errors
@@ -769,7 +769,7 @@ namespace: interpreter
     LabelId : generatorName
     ConstValue arrayView : args
     FilePosition : pos
-    ProgramContext ptr mut : program
+    ProgramContext ptr.mut : program
   -> bool ) =>: export: initializeGeneratedType
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
@@ -881,7 +881,7 @@ end
 
 proc(
   Operation ptr : op
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 ->
   bool
 ) =>: export: evaluateOperation
@@ -1847,7 +1847,7 @@ proc(
   Type : calledType
   BuiltIn : builtIn
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> bool ) =>: tryEvaluateBuiltIn
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
@@ -1932,7 +1932,7 @@ end
 
 proc(
   Operation arrayView : ops
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 ->
   bool
 ) =>: export: evaluateOperations
@@ -1961,7 +1961,7 @@ end
 proc(
   Type : tupleType
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 -> bool ) =>: newTuple
   context [] .program [] .errors @ =:: errors
   context [] .program =:: program
@@ -2008,7 +2008,7 @@ end
 proc(
   ProcId : procId
   FilePosition : pos
-  InterpreterContext ptr mut : context
+  InterpreterContext ptr.mut : context
 ->
   bool
 ) =>: export: evaluateCall

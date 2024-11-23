@@ -11,7 +11,7 @@ import "measure.concat"
 import "branchTree.concat"
 
 struct(
-  ProgramContext ptr mut : program
+  ProgramContext ptr.mut : program
   VariableInfo list : mut: variables
   FileId : mut: currentFile
 ) =:: ConverterContext
@@ -20,7 +20,7 @@ proc(
   Type : varType
   bool : mutable
   FilePosition : pos
-  ConverterContext ptr mut : context
+  ConverterContext ptr.mut : context
 -> IdentifierInfo ) =>: newTmpVar
   context [] .program [] .idContext @ =:: idContext
   idContext [] .typeContext .labelContext @ =:: labelContext
@@ -48,7 +48,7 @@ end
 proc(
   Operation list : newOps
   Operation : op0
-  ConverterContext ptr mut : context
+  ConverterContext ptr.mut : context
 -> Operation list ) =>: compileOp
   op0 =:: mut: op
   context [] .program =:: program
@@ -243,11 +243,11 @@ end
 
 proc(
   Operation arrayView : ops
-  Operation list ptr mut : newOps
-  VariableInfo list ptr mut : variables
-  i64 ptr mut : codeStart
-  i64 ptr mut : codeLength
-  ConverterContext ptr mut : context
+  Operation list ptr.mut : newOps
+  VariableInfo list ptr.mut : variables
+  i64 ptr.mut : codeStart
+  i64 ptr.mut : codeLength
+  ConverterContext ptr.mut : context
 -> ) =>: convertProc
   context [] .program =:: program
   program [] .idContext @ =:: idContext
@@ -266,7 +266,7 @@ proc(
 end
 
 ## TODO better name for file&procedure, find good description of compilation-step
-proc( ProgramContext ptr mut : program -> ) =>: export: prepareCompile
+proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   program [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext

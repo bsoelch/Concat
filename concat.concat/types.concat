@@ -419,7 +419,7 @@ namespace: types
          false return
     end
   end
-  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: literalToType
+  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: literalToType
     t switch
        intLiteral case t .intLiteral intLiteralAsInt return
        initializer case
@@ -475,7 +475,7 @@ namespace: types
   end
 
   ## does value fit in 2*64-bit values
-  proc( Type TypeContext ptr mut -> bool ) =>: export: isSmallType
+  proc( Type TypeContext ptr.mut -> bool ) =>: export: isSmallType
     sizeOf =:: size
     size switch
       fixed case
@@ -485,7 +485,7 @@ namespace: types
     end
   end
   ## can value be pushed onto stack
-  proc( Type TypeContext ptr mut -> bool ) =>: export: referenceOnly
+  proc( Type TypeContext ptr.mut -> bool ) =>: export: referenceOnly
     isSmallType ! return ## XXX ? allow larger stack values
   end
 
@@ -694,7 +694,7 @@ namespace: types
   proc(
     Type : t
     TupleId : tupleId
-    TypeContext ptr mut : typeContext
+    TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeTupleSize
     typeContext [] .tupleTypes
       tupleId i64 cast
@@ -744,7 +744,7 @@ namespace: types
   proc(
     Type : t
     UnionId : unionId
-    TypeContext ptr mut : typeContext
+    TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeUnionSize
     typeContext [] .unionTypes
       unionId i64 cast
@@ -793,7 +793,7 @@ namespace: types
   end
   proc(
     Type : composite
-    TypeContext ptr mut : typeContext
+    TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeSize
     composite switch
       struct case
@@ -820,7 +820,7 @@ namespace: types
     end
   end
   ## alignment of type in bytes, will be a power of two
-  proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export: alignOf
+  proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
       undefined autoType genericType case
         TypeSize .unknown return
@@ -860,7 +860,7 @@ namespace: types
   proc(
     Type : t
     bool : aligned
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> TypeSize ) =>: computeSize
     t switch
       undefined autoType genericType case
@@ -911,11 +911,11 @@ namespace: types
     end
   end
   ## size of value in bytes
-  proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export: sizeOf
+  proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: sizeOf
     t false context computeSize ## TODO? should size be smaller than stride
   end
   ## size padded to next multiple of alignment
-  proc( Type : t TypeContext ptr mut : context -> TypeSize ) =>: export: strideOf
+  proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: strideOf
     t true context computeSize
   end
 
@@ -1019,7 +1019,7 @@ namespace: types
     Type .undefined return
   end
   ## unwrap a single array level
-  proc( Type : box TypeContext ptr mut : context -> Type ) =>: export: getElementType
+  proc( Type : box TypeContext ptr.mut : context -> Type ) =>: export: getElementType
     box context unwrapNamed
       $ context getArrayDims 1 <= if
         context getBaseType return
@@ -1114,7 +1114,7 @@ namespace: types
       end
     .mutableReference ?? return
   end
-  proc( Type ptr mut : t bool : mutable TypeContext ptr mut : context -> bool ) =>: export: setMutability
+  proc( Type ptr.mut : t bool : mutable TypeContext ptr.mut : context -> bool ) =>: export: setMutability
     t [] context isMutable  mutable == if
       false return
     end
@@ -1161,7 +1161,7 @@ namespace: types
     ArraySize arrayView : sizes
     bool : fixedSize
     bool : makeMutable
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type bool ) =>: export: newArrayType
     context [] .labelContext @ =:: labelContext
     arrayType .POINTER ?? if makeMutable else false end =:: mutable
@@ -1243,7 +1243,7 @@ namespace: types
 
   ## initializer type as array/tuple, without chainging element types
   ## used for correctly resolving procedure signatures
-  proc( Type : t TypeContext ptr mut : context ArrayType : arrayType -> Type ) =>: initializerAsArrayOrPtr
+  proc( Type : t TypeContext ptr.mut : context ArrayType : arrayType -> Type ) =>: initializerAsArrayOrPtr
     t .initializer ?? ! if Type .undefined return end
     context [] .initializerTypes
       t .initializer i64 cast list.at .data =:: initInfo
@@ -1261,13 +1261,13 @@ namespace: types
       ! assert "can create array"
     return
   end
-  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: initializerAsArray
+  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsArray
     t context ArrayType .ARRAY initializerAsArrayOrPtr
   end
-  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: initializerAsPointer
+  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsPointer
     t context ArrayType .POINTER initializerAsArrayOrPtr
   end
-  proc( Type : t TypeContext ptr mut : context -> Type ) =>: export: initializerAsTuple
+  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsTuple
     t .initializer ?? ! if Type .undefined return end
     context [] .initializerTypes
       t .initializer i64 cast list.at .data =:: initInfo
@@ -1476,7 +1476,7 @@ namespace: types
   proc(
     Type : union
     Type : elt
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> i64 bool ) =>: export: findUnionTypeIndex
     context [] .labelContext @ =:: labelContext
     union context compositeElts =:: elts
@@ -1497,7 +1497,7 @@ namespace: types
   proc(
     Type : tuple
     i64 : index
-    TypeContext ptr mut : typeContext
+    TypeContext ptr.mut : typeContext
   -> i64 optional ) =>: export: tupleElementOffset
     tuple typeContext unwrapNamed ..dup switch
       struct case
@@ -1524,7 +1524,7 @@ namespace: types
   end
   proc(
     Type : enum
-    TypeContext ptr mut : typeContext
+    TypeContext ptr.mut : typeContext
   -> Type i64 optional ) =>: export: enumLabelInfo
     enum typeContext unwrapNamed ..dup switch
       enum case
@@ -1584,7 +1584,7 @@ namespace: types
     end
     overload: export: get get_32 get_64 end
   end
-  0 Type ptr mut cast! 0 0 Type list new =:: mut: emptyTypeBuffer ## XXX find better way to initialize empty list
+  0 Type ptr.mut cast! 0 0 Type list new =:: mut: emptyTypeBuffer ## XXX find better way to initialize empty list
   proc( Type : composite TypeContext ptr : context -> Type arrayView ) =>: export: compositeEltArray
     composite context compositeData =:: compData?
     compData? optional.isEmpty if
@@ -1618,7 +1618,7 @@ namespace: types
   end
   proc(
     Type arrayView : elts
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> i64 CompositeFlags ) =>: computeEltsOffset
     true =:: mut: emptyData ## composite is empty
     true =:: mut: onlyEmpty ## composite only contains Type .empty
@@ -1662,7 +1662,7 @@ namespace: types
   proc(
     LabelId ptr : a
     LabelId ptr : b
-    LabelContext ptr mut : labelContext
+    LabelContext ptr.mut : labelContext
   -> bool ) =>: labelPtrEq
     ## XXX? treat labels with same name and flags as equal
     a [] b [] == if
@@ -1677,7 +1677,7 @@ namespace: types
   end
   proc(
     LabelId arrayView optional : labels?
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> LabelOffset ) =>: computeLabelOffset
     context [] .labelContext @ =:: labelContext
     labels? optional.isEmpty if
@@ -1715,7 +1715,7 @@ namespace: types
     Type arrayView : elts
     LabelId arrayView optional : labels
     CompositeFlags : flags0
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> TupleId ) =>: findTupleInfo
     context [] .labelContext @ =:: labelContext
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
@@ -1754,7 +1754,7 @@ namespace: types
   proc(
     Type arrayView : elts
     LabelId arrayView optional : labels
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type bool ) =>: export: newTuple
     elts .length 0 == if
       ## empty tuple -> empty type handled by parser
@@ -1770,7 +1770,7 @@ namespace: types
   proc(
     Type arrayView : elts
     LabelId arrayView optional : labels
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type ) =>: export: newInitializerType
     ## findTupleInfo
       elts
@@ -1820,7 +1820,7 @@ namespace: types
     Type arrayView : elts
     LabelId arrayView optional : labels
     bool : isOut
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type ) =>: export: newProcArgs
     ## findTupleInfo
       elts
@@ -1834,7 +1834,7 @@ namespace: types
   proc(
     Type arrayView : elts
     LabelId arrayView optional : labels
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
     bool : isTagged
   -> UnionId ) =>: export: findEnumOrUnion
     elts context computeEltsOffset =:: flags =:: eltsOffset
@@ -1882,7 +1882,7 @@ namespace: types
   proc(
     Type arrayView : elts
     LabelId arrayView optional : labels
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type bool ) =>: export: newEnum
     elts .length 0 ==  labels optional.isEmpty | if
       Type .undefined true return
@@ -1898,7 +1898,7 @@ namespace: types
     Type arrayView : elts
     LabelId arrayView optional : labels
     bool : isTagged
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type bool ) =>: export: newUnion
     elts .length 0 == labels optional.isEmpty | if
       Type .undefined true return
@@ -2022,7 +2022,7 @@ namespace: types
         elts elts .length 1 - array.head false return
     end
   end
-  proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr mut : context -> Type bool ) =>: export: newProcedure
+  proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr.mut : context -> Type bool ) =>: export: newProcedure
     in .undefined ?? or out .undefined ?? if
       Type .undefined true return
     end
@@ -2044,7 +2044,7 @@ namespace: types
   end
   proc(
     Type : proc
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type bool ) =>: export: asUnlabeledProc
     proc context unwrapNamed
       ..dup context isCallable ! if ..drop
@@ -2076,7 +2076,7 @@ namespace: types
     end
     false return
   end
-  proc( Type : proc CallingConvention : callConvention TypeContext ptr mut : context -> Type bool ) =>: export: withCallConvention
+  proc( Type : proc CallingConvention : callConvention TypeContext ptr.mut : context -> Type bool ) =>: export: withCallConvention
     proc context unwrapNamed
       ..dup context isCallable ! if ..drop
         proc true return
@@ -2103,7 +2103,7 @@ namespace: types
   proc(
     LabelId : label
     i32 : implId
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> types.NamedTypeId ) =>: findNamedType
     0:i64 while ..dup context [] .namedTypes .length < do =:: i
       context [] .namedTypes i list.at .data =:: elt
@@ -2124,21 +2124,21 @@ namespace: types
   end
   proc(
     LabelId : label
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type ) =>: export: declareNamedType
     label -1 context findNamedType Type .namedType return
   end
   proc(
     LabelId : label
     i32 : implId
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type ) =>: export: declareNamedTypeImpl
     label implId context findNamedType Type .namedType return
   end
   proc(
     Type : value
     LabelId : label
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type bool ) =>: export: initializeNamedType
     label -1 context findNamedType =:: id
     context [] .namedTypes id i64 cast list.at .data =:: named
@@ -2151,7 +2151,7 @@ namespace: types
   proc(
     Type : value
     LabelId : label
-    TypeContext ptr mut : context
+    TypeContext ptr.mut : context
   -> Type ) =>: export: newNamedType
     ## TODO? find better way to handle generic named types in new compiler
     context [] .namedTypes
@@ -2224,7 +2224,7 @@ namespace: types
     end
     ..drop -1 return
   end
-  proc( Type : named Type : value TypeContext ptr mut : context -> bool ) =>: export: setNamedType
+  proc( Type : named Type : value TypeContext ptr.mut : context -> bool ) =>: export: setNamedType
     named .namedType ?? if
       context [] .namedTypes named .namedType i64 cast list.at .data =:: elt
       elt [] .data Type .undefined typeEquals if
@@ -2279,8 +2279,8 @@ namespace: types
   proc(
     LabelId : generator
     ConstValue arrayView : arguments
-    TypeContext ptr mut : typeContext
-    ConstantContext ptr mut : constContext
+    TypeContext ptr.mut : typeContext
+    ConstantContext ptr.mut : constContext
   -> Type bool ) =>: export: findGeneratedType
     typeContext [] .labelContext @ =:: labelContext
     typeContext [] .generatedTypes =:: genTypes
@@ -2325,8 +2325,8 @@ namespace: types
     LabelId : base
     ConstValue arrayView : arguments
     Type : value
-    TypeContext ptr mut : typeContext
-    ConstantContext ptr mut : constContext
+    TypeContext ptr.mut : typeContext
+    ConstantContext ptr.mut : constContext
   -> bool ) =>: export: initializeGeneratedType
     ## findGeneratedType
       base
@@ -2377,7 +2377,7 @@ namespace: types
     genData [] .arguments return
   end
 
-  proc( Type : base bool : mutable TypeContext ptr mut : context -> Type ) =>: export: newReferenceType
+  proc( Type : base bool : mutable TypeContext ptr.mut : context -> Type ) =>: export: newReferenceType
     0:i64 while ..dup context [] .compositeData .length < do
       context [] .compositeData ..over list.get =:: typeData
       base typeData typeEquals if
@@ -2487,7 +2487,7 @@ namespace: types
     end
   end
 
-  proc( Type : src bool : mutable TypeContext ptr mut : context -> Type ) =>: export: getAddressType
+  proc( Type : src bool : mutable TypeContext ptr.mut : context -> Type ) =>: export: getAddressType
     src context isArray if
       src context unwrapNamed =:: unwraped
       unwraped context getBaseType
@@ -2504,7 +2504,7 @@ namespace: types
     end
     ArrayType .POINTER ArraySize array.empty true mutable context newArrayType ..drop return
   end
-  proc( Type : src TypeContext ptr mut : context -> Type ) =>: export: ptrTarget
+  proc( Type : src TypeContext ptr.mut : context -> Type ) =>: export: ptrTarget
     src context isPointer ! if
       Type .undefined return
     end
@@ -2618,7 +2618,7 @@ namespace: types
     context canCastPtr return
   end
   ## XXX? allow reordering fields
-  proc( Type : src Type : target TypeContext ptr mut : context -> bool ) =>: export: canCastTuple
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canCastTuple
     context .labelContext =:: labelContext
     src context unwrapNamed =:: srcBase
     target context unwrapNamed =:: targetBase
@@ -2672,7 +2672,7 @@ namespace: types
     end
     true return
   end
-  proc( Type : src Type : target TypeContext ptr mut : context -> bool ) =>: export: canAutoCastInitializer
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCastInitializer
     target context unwrapNamed =:: targetBase
     targetBase context types.isArray or targetBase context types.isArrayPointer if
       context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
@@ -2701,7 +2701,7 @@ namespace: types
     false return
   end
 
-  proc( Type : src Type : target TypeContext ptr mut : context -> bool ) =>: export: canAutoCast
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCast
     src target types.typeEquals if
       true return
     end
@@ -2732,7 +2732,7 @@ namespace: types
     end
     false return
   end
-  proc( Type : a Type : b bool : forceCast TypeContext ptr mut : context -> bool ) =>: export: canCast
+  proc( Type : a Type : b bool : forceCast TypeContext ptr.mut : context -> bool ) =>: export: canCast
     a context types.unwrapNamed =:: mut: src
     b context types.unwrapNamed =:: mut: target
     src target context canAutoCast if
@@ -2787,7 +2787,7 @@ namespace: types
     end
     false return
   end
-  proc( Type : a Type : b TypeContext ptr mut : context -> Type bool ) =>: export: mergeTypes
+  proc( Type : a Type : b TypeContext ptr.mut : context -> Type bool ) =>: export: mergeTypes
     a b types.typeEquals if
       a false return
     end
@@ -3054,7 +3054,7 @@ namespace: sb
             " _ ptr" appendS
           end
           t context types.isMutable if
-            " mut" appendS
+            ".mut" appendS
           end
         return
       arrayType case
@@ -3156,7 +3156,7 @@ namespace: sb
             context
             depth
           appendTypeRecursive
-        " reference mut" appendS
+        " reference.mut" appendS
         return
     end
   end

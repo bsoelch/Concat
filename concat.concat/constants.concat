@@ -46,21 +46,21 @@ end
 proc( -> ConstantArray ) =>: export: emptyConstArray
   0 0 ConstantArray new
 end
-proc( i16 arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: constArray16
+proc( i16 arrayView : elts ConstantContext ptr.mut : context -> ConstantArray ) =>: constArray16
   context [] .array16Values .length
     context [] .array16Values
       elts list.appendArray
     context [] .array16Values =
   elts .length ConstantArray new return
 end
-proc( i32 arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: constArray32
+proc( i32 arrayView : elts ConstantContext ptr.mut : context -> ConstantArray ) =>: constArray32
   context [] .array32Values .length
     context [] .array32Values
       elts list.appendArray
     context [] .array32Values =
   elts .length ConstantArray new return
 end
-proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstantArray ) =>: export: constArray
+proc( ConstValue arrayView : elts ConstantContext ptr.mut : context -> ConstantArray ) =>: export: constArray
   context [] .arrayValues .length
     context [] .arrayValues
       elts list.appendArray
@@ -101,17 +101,17 @@ proc( ConstantArray : elts ConstantContext ptr : context -> ConstValue arrayView
 end
 
 ## XXX? use char16/char32 arrayView (? string16/string32 types) for string types
-proc( i16 arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newStr16Const
+proc( i16 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStr16Const
   elts context constArray16 ConstValue .str16 return
 end
-proc( i32 arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newStr32Const
+proc( i32 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStr32Const
   elts context constArray32 ConstValue .str32 return
 end
-proc( ConstValue arrayView : elts ConstantContext ptr mut : context -> ConstValue ) =>: export: newArrayConst
+proc( ConstValue arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArrayConst
   elts context constArray ConstValue .arrayConstant return
 end
 
-proc( ConstValue : value i64 : index ConstantContext ptr mut : context -> ConstValue ) =>: export: newUnionConst
+proc( ConstValue : value i64 : index ConstantContext ptr.mut : context -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
     ..dup .length ConstantId cast =:: valueId
     value list.append

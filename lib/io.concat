@@ -52,7 +52,7 @@ namespace: c
   proc( io.FILE -> ..ctype.int ) : extern: feof
   proc( io.FILE -> ..ctype.int ) : extern: ferror
   proc(
-    ..ctype.void _ ptr mut : buffer
+    ..ctype.void _ ptr.mut : buffer
     ..ctype.size : eltSize
     ..ctype.size : eltCount
     io.FILE : file
@@ -133,7 +133,7 @@ namespace: io
   proc(
     type : auto: T
     FILE : file
-    T _ ptr mut : buffer
+    T _ ptr.mut : buffer
     i64 : off
     i64 : count
   -> i64 IOError ) =>: export: fread
@@ -143,7 +143,7 @@ namespace: io
     file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
-      buffer off + ..ctype.void ptr mut cast!
+      buffer off + ..ctype.void ptr.mut cast!
       count 1 == if T ..type.size else T ..type.stride end  ..ctype.size cast
       count  ..ctype.size cast
       file

@@ -131,7 +131,7 @@ namespace: sb
           j 1 - j =
         end
         inc if
-          buff @ i32 _ ptr mut cast 1 + buff @ n i64 cast.u mem.move ..drop
+          buff @ i32 _ ptr.mut cast 1 + buff @ n i64 cast.u mem.move ..drop
           1 buff @ 0 [] =
           n 1 + n =
           e_max 1 + e_max =

@@ -17,7 +17,7 @@ proc( i32 ( ) -> ( ) ) =>: f2 ..swap ..drop end
 
 struct( ( ) : mut: empty i32 : nonEmpty ) =:: testStruct 
 
-proc( ( ) : v testStruct ptr mut : S -> ( ( ) ) ( ) ) =>: assignEmpty
+proc( ( ) : v testStruct ptr.mut : S -> ( ( ) ) ( ) ) =>: assignEmpty
   S [] .empty =:: p
     v S [] .empty =
   p ( ( ) ) new 0 f2 @ p test return
