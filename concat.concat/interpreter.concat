@@ -4,6 +4,7 @@ import "interpreter/operators.concat"
 import "identifiers.concat"
 import "program.concat"
 
+## TODO wrap in namespace
 struct(
   Type : mut: valueType
   LabelId : valueId
@@ -86,9 +87,11 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inEnum
           TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION case
         ..drop false return
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-       AND OR AND_IF OR_IF AND_DO OR_DO
-       NAMESPACE case break
+        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        NAMESPACE case break
     end
     1 -
   end ..drop
@@ -106,6 +109,8 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inUnion
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE case break
     end
     1 -
@@ -124,11 +129,53 @@ proc( InterpreterContext ptr mut : context -> bool ) =>: inTypeOrInitializer
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE case break
     end
     1 -
   end ..drop
   false return
+end
+proc( InterpreterContext ptr mut : context -> bool ) =>: export: inTypeBlock
+  ## XXX cache/precompute result
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType switch
+      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        ..drop true return
+      PROCEDURE EXPERIMENTAL_PROCEDURE case
+        ..drop false return
+      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          AND OR AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+          NAMESPACE INITIALIZER case break
+    end
+    1 -
+  end ..drop
+  false return
+end
+proc( InterpreterContext ptr mut : context -> bool ) =>: export: inGlobalBlock
+  ## XXX cache/precompute result
+  context [] .openBlocks .length 1 - while ..dup 0 >= do
+    context [] .openBlocks ..over list.at .data [] .blockType switch
+      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+        ..drop true return
+      PROCEDURE EXPERIMENTAL_PROCEDURE case
+        ..drop false return
+      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          AND OR AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+          NAMESPACE INITIALIZER case break
+    end
+    1 -
+  end ..drop
+  true return
 end
 
 proc( BlockType : blockType InterpreterContext ptr mut : context -> ) =>: openBlock
@@ -160,9 +207,11 @@ proc( InterpreterContext ptr mut : context -> LabeledValueContext ) =>: getLabel
          LabeledValueContext .TYPE_PROC return
       PROCEDURE EXPERIMENTAL_PROCEDURE
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-       SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-       AND OR AND_IF OR_IF AND_DO OR_DO
-       NAMESPACE case break
+        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        NAMESPACE case break
     end
   finally i 1 - end ..drop
   ## TODO? better default value/error condition
@@ -896,14 +945,92 @@ proc(
         INITIALIZER case
           op [] .val .block .blockType context openBlock
           false return
-        PROCEDURE EXPERIMENTAL_PROCEDURE FINALLY
-        IF ELSE WHILE DO BREAK CONTINUE
-        SWITCH BREAK_SWITCH CASE DEFAULT
-        AND OR AND_IF OR_IF AND_DO OR_DO
-        UNKNOWN NAMESPACE case
+        PROCEDURE EXPERIMENTAL_PROCEDURE NAMESPACE case
           context [] .evalType switch
             INTERPRET GLOBAL case break
             PARSER FOLD_LOCAL case true return
+          end
+          "unsupported block-type in constant evaluation: " sb.wrap
+            op [] .val .block .blockType sb.appendBlockType
+          op [] .pos errors appendError
+          true return
+        IF case
+          ## XXX? detect if global (or in type declaration)
+          ##  disable local if-folding by default (enable with optimizations)
+          context [] .evalType switch
+            INTERPRET GLOBAL PARSER case break
+            FOLD_LOCAL case true return
+          end
+          op [] .pos context popValue if ..drop.2
+            context [] .evalType .PARSER ?? and context inTypeOrInitializer ! if
+              true return
+            end
+            "missing condition for if-statement: " sb.wrap
+              op [] .val .block .blockType sb.appendBlockType
+            op [] .pos errors appendError
+            true return
+          end =:: val =:: valInfo
+          val .boolean ?? ! or valInfo .valueType types.primitive.BOOL types.typeEquals ! if
+            val valInfo context unpopValue
+            "unexpected value for if-condition, expected boolean got " sb.wrap
+              valInfo .valueType typeContext sb.appendType
+              " [ " sb.appendS
+              val constContext typeContext sb.appendConstant
+              " ]" sb.appendS
+            op [] .pos errors appendError
+            true return
+          end
+          val .boolean
+            if BlockType .IF_TRUE else BlockType .IF_FALSE end
+          context openBlock
+          val .boolean ! if
+            ## TODO try to skip until next else/end
+          end
+          false return
+        ELSE case
+          context [] .openBlocks list.peek =:: currentBlock
+          currentBlock optional.isEmpty or currentBlock .data .blockType .IF ?? !
+              and currentBlock .data .blockType .IF_TRUE ?? !
+              and currentBlock .data .blockType .IF_FALSE ?? ! if
+            context [] .evalType switch ## XXX remove once blocks are synchronized with parser
+              INTERPRET GLOBAL case break
+              PARSER case context inGlobalBlock if true return end break
+              FOLD_LOCAL case true return
+            end
+            "unexpected else statement, else can only appear in if-blocks" sb.wrap
+            op [] .pos errors appendError
+            true return
+          end
+          context [] .evalType switch
+            INTERPRET GLOBAL PARSER case break
+            FOLD_LOCAL case
+              currentBlock .data .blockType .IF ?? if true return end
+              break
+          end
+          context [] .openBlocks
+            list.pop =:: closedBlock
+          context [] .openBlocks =
+          closedBlock .blockType .IF_TRUE ?? if
+            BlockType .ELSE_FALSE
+            ## TODO skip until end of block
+          else closedBlock .blockType .IF_FALSE ?? _if
+            BlockType .ELSE_TRUE
+          else
+            BlockType .ELSE
+          end context openBlock
+          false return
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        FINALLY WHILE DO BREAK CONTINUE
+        SWITCH BREAK_SWITCH CASE DEFAULT
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        UNKNOWN case
+          context [] .evalType switch
+            INTERPRET GLOBAL PARSER case break
+            FOLD_LOCAL case true return
+          end
+          context [] .evalType .PARSER ?? and context [] .openBlocks .length 0 == if
+            true return
           end
           "unsupported block-type in constant evaluation: " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
@@ -928,6 +1055,13 @@ proc(
       context [] .openBlocks
         list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
       context [] .openBlocks =
+      closedBlock .blockType switch
+        IF_TRUE IF_FALSE case
+          blockType .IF ?? if false return end break
+        ELSE_TRUE ELSE_FALSE case
+          blockType .ELSE ?? if false return end break
+        default break
+      end
       closedBlock .blockType blockType != if
         "unexpected end of " sb.wrap
          blockType sb.appendBlockType
@@ -1103,6 +1237,8 @@ proc(
         IF ELSE WHILE DO BREAK CONTINUE
         SWITCH CASE BREAK_SWITCH DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN NAMESPACE FINALLY case
           context [] .evalType switch
             INTERPRET GLOBAL case break

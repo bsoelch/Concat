@@ -204,6 +204,8 @@ proc(
         IF ELSE SWITCH CASE
         DEFAULT BREAK_SWITCH WHILE
         DO BREAK CONTINUE FINALLY
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         AND OR AND_IF OR_IF AND_DO OR_DO case
           newOps
             op list.append ## nothing to change
@@ -217,6 +219,8 @@ proc(
       op .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE
         ELSE AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         SWITCH WHILE UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE case
           newOps
             op list.append ## nothing to change

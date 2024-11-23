@@ -1281,7 +1281,7 @@ proc(
     argc getArg case break
     block case
       op [] .val .block .blockType switch
-        IF case
+        IF IF_TRUE IF_FALSE case
           ## BranchLabel
             ssa.BranchType .IF
             op [] .val .block .blockId
@@ -1346,7 +1346,7 @@ proc(
           newOps ## XXX? remember current branch
             ifBranch context startBranch
           return
-        AND_IF OR_IF case
+        AND_IF OR_IF AND_IF_TRUE AND_IF_FALSE OR_IF_TRUE OR_IF_FALSE case
           context [] .openBlocks list.peek =:: ifBlock?
           ifBlock? optional.hasData and
               ifBlock? .data =:: ifBlock
@@ -1357,7 +1357,9 @@ proc(
             op [] .val .block .blockId context openIfBlock
             context [] .openBlocks list.peek .data [] .If@
           end =:: ifBlock
-          op [] .val .block .blockType .OR_IF ?? =:: isOr
+          op [] .val .block .blockType .OR_IF ?? or
+            op [] .val .block .blockType .OR_IF_TRUE ?? or
+            op [] .val .block .blockType .OR_IF_FALSE ?? end =:: isOr
           ## appendBranchId
             ssa.BranchType .NEXT
             context nextJumpLabelId
@@ -1405,7 +1407,7 @@ proc(
             end
             nextBranch context startBranch
           return
-        ELSE case
+        ELSE ELSE_TRUE ELSE_FALSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
           context [] .reachable ifBlock [] .If .ifBranchTerminates =
@@ -2050,6 +2052,8 @@ proc(
           newOps return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
         AND_IF OR_IF AND_DO OR_DO FINALLY
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case

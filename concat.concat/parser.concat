@@ -251,20 +251,26 @@ proc( Operation ptr optional : next? ParserState ptr mut : state -> ) =>: resetG
   interpreter [] .context @ InterpreterType .PARSER interpreter.resetContext
 end
 proc( ParserState ptr mut : state -> ) =>: tryInterpretGlobal
-  ## TODO only interpret code after start of current block
+  ## TODO sync open blocks with interpreter
   ##   preserve positions of unclosed code-blocks
   state [] .progContext =:: progContext
   state [] .currentProc optional.hasData if
     return ## don't interpret inside procedure
   end
   state [] .constantBlocks .length 0 > if
-    return ## don't interpret inside constant blocks
+    return ## don't interpret unfinished constant blocks
   end
   state [] .globalInterpreters state [] .currentFile i64 cast list.at .data =:: interpreter
   interpreter [] .offset =:: offset
   offset while ..dup state [] .globalOpBuffer .length < do
     state [] .globalOpBuffer ..over list.at .data =:: op
-    op interpreter [] .context @ evaluateOperation if
+    op interpreter [] .context@ evaluateOperation if
+      interpreter [] .context@ inTypeBlock if
+        "unexpected operation in type-constant: " sb.wrap
+          op [] progContext sb.appendOp
+        op [] .pos state appendError2
+      end
+      ## TODO remember opened blocks
       ## interpreter failed
       op Operation ptr cast optional.wrap state resetGlobalInterpreter
     end
@@ -1622,19 +1628,38 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
       opReturn state appendOp
       return
     else ..dup "end" string.wrap string.eq _if ..drop
+      ## TODO correctly handle top-level blocks
       while
         state currentBlockType =:: currentBlock
-        currentBlock .IF ?? if
-          BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
-          BlockType .ELSE fileState [] .wordStart opEndBlock  state appendOp
-        else currentBlock .WHILE ?? _if
-          BlockType .DO fileState [] .wordStart opBlock  state appendOp
-          BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
-          BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
-        else currentBlock .DO ?? _if
-          ## code for closing of DO blocks is handled after closing the block
-        else currentBlock .NAMESPACE ?? ! _if
-          currentBlock fileState [] .wordStart opEndBlock  state appendOp
+        currentBlock switch
+          IF case
+            BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
+            BlockType .ELSE fileState [] .wordStart opEndBlock  state appendOp
+            break
+          WHILE case
+            BlockType .DO fileState [] .wordStart opBlock  state appendOp
+            BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
+            BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
+            break
+          DO case break ## code for closing of DO blocks is handled after closing the block
+          NAMESPACE case break ## nothing to do
+          PROCEDURE EXPERIMENTAL_PROCEDURE ELSE AND OR SWITCH CASE DEFAULT FINALLY case
+            currentBlock fileState [] .wordStart opEndBlock  state appendOp
+            break
+          TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
+          TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN INITIALIZER case
+            "unexpected 'end' statement in " sb.wrap
+              currentBlock sb.appendBlockType
+              "-block" sb.appendS
+            fileState [] .wordStart state appendError2
+            break
+          UNKNOWN BREAK BREAK_SWITCH CONTINUE AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE case
+            "unexpected block type in 'end' statement: " sb.wrap
+              currentBlock sb.appendBlockType
+            fileState [] .wordStart state appendError2
+            break
         end
         state closeBlock if #+scope data+# ..drop
           "unexpected 'end'" sb.wrap fileState [] .wordStart state appendError2
@@ -1959,6 +1984,8 @@ proc( string : code Token : token FileState ptr mut : fileState  ParserState ptr
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
         IF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
         AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
             opName sb.appendStr

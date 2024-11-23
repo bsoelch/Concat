@@ -3304,6 +3304,8 @@ proc(
           op state appendOp ..drop
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE BREAK_SWITCH
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN NAMESPACE case
           break
       end
@@ -3703,6 +3705,8 @@ proc(
           return
         AND_IF OR_IF AND_DO OR_DO
         BREAK CONTINUE BREAK_SWITCH
+        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
+        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN NAMESPACE case
           break
       end
