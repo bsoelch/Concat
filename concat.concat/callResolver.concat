@@ -1021,7 +1021,7 @@ proc(
           "  " sb.appendS
           i 1 -
         end ..drop
-        ")\ncandidates: \n" sb.appendS
+        ")\ncandidates:\n" sb.appendS
         MAX_DISPLAY_SIGNATURES currentSignatures .length i64.min =:: maxSignatures
         0:i64 while ..dup maxSignatures < do =:: i
           currentSignatures i list.at .data =:: mut: current
