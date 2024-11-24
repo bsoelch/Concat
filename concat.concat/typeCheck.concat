@@ -25,8 +25,6 @@ struct(
 -1:i64 =:: OP_UNLINKED
 -2:i64 =:: OP_EMPTY
 
-enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
-
 struct(
   branchTree.NodeId : node
   FilePosition : pos
@@ -1657,7 +1655,25 @@ proc(
       mutable if
         ConstValue .none
       else
-        idInfo .constValue
+        idInfo .idType switch
+          TYPE PROCEDURE PROCEDURE_BUNDLE GLOBAL_VAR LOCAL_VAR case
+            true break ## can hold identifer
+          ARGUMENT LABEL TMP_VAR ITR_VAR case
+            false break
+        end if
+          ## getIdentifierByLabel
+            idInfo .labelId
+            idContext
+          id.getIdentifier if ..drop
+            "could not find " sb.wrap
+              idInfo labelContext sb.appendIdInfo
+            op .pos errors appendError
+            return
+          end =:: idData
+          idData [] .constValue
+        else
+          ConstValue .none
+        end
       end =:: constValue
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
@@ -1692,17 +1708,8 @@ proc(
           true true 0 0 state updateOpInfo
           return
         PROCEDURE PROCEDURE_BUNDLE case
-          ## getIdentifierByLabel
-            idInfo .labelId
-            idContext
-          id.getIdentifier if ..drop
-            "could not find " sb.wrap
-              idInfo labelContext sb.appendIdInfo
-            op .pos errors appendError
-            return
-          end =:: idData
           idInfo .idType .PROCEDURE ?? if
-            idData [] .constValue .procedure@ =:: procId
+            constValue .procedure@ =:: procId
             program [] .procedures
               procId [] i64 cast list.at .data
             =:: procData
@@ -1717,7 +1724,7 @@ proc(
             end
             procId array.wrap
           else  ## PROCEDURE_BUNDLE
-            idData [] .constValue .procedureBundle =:: bundleId
+            constValue .procedureBundle =:: bundleId
             program [] .procBundles
               bundleId i64 cast list.at .data [] .procedures
             list.asArray
@@ -1872,14 +1879,24 @@ proc(
       pushTypes
       return
     atId case
-      op .val .atId .idType switch
+      op .val .atId =:: idInfo
+      idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR case
-          op .val .atId .labelId =:: labelId
+          idInfo .labelId =:: labelId
           labelId
             labelContext id.labelFlags
           id.FLAG_MUTABLE & ? =:: mutable
-          op .val .atId .idType .PROCEDURE ?? if
-            op .val .atId .constValue .procedure =:: procId
+          idInfo .idType .PROCEDURE ?? if
+            ## getIdentifierByLabel
+              idInfo .labelId
+              idContext
+            id.getIdentifier if ..drop
+              "could not find " sb.wrap
+                idInfo labelContext sb.appendIdInfo
+              op .pos errors appendError
+              return
+            end =:: idData
+            idData [] .constValue .procedure =:: procId
             program [] .procedures
               procId i64 cast list.at .data
             =:: procData
@@ -1915,7 +1932,7 @@ proc(
           return
         TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.wrap
-            op .val .atId labelContext sb.appendIdInfo
+            idInfo labelContext sb.appendIdInfo
             " is not supported" sb.appendS
           op .pos errors appendError
           return
@@ -1927,7 +1944,7 @@ proc(
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           op state appendOp ..drop
           return
-        PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
+        PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
           "unexpected declaration of identifier " sb.wrap
             op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
@@ -1953,17 +1970,24 @@ proc(
           constVal? optional.hasData if
             constVal? .data [] .value
           else ConstValue .none end =:: constVal
-          ## requireTypes
-            op .dataType @ array.wrap
-            "initialization" string.wrap
-            0
-            op .pos
-          state requireTypes if ## TODO? can requireTypes change constVal
-            ..drop return
-          end ..drop
+          constVal .typeId ?? if
+            ## remove type-constant from code
+            1 op .pos state discardValues
+          else
+            ## requireTypes
+              op .dataType @ array.wrap
+              "initialization" string.wrap
+              0
+              op .pos
+            state requireTypes if ## TODO? can requireTypes change constVal
+              ..drop return
+            end ..drop
+          end
           ## update constant value in identifier if stack-value is constant
-          idInfo .idType .GLOBAL_VAR ?? and
-              constVal .none ?? ! if
+          ##   don't update mutable local variables
+          constVal .typeId ?? or
+              constVal .none ?? ! and idInfo .idType .GLOBAL_VAR ?? or
+              idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
             ## getIdentifier
               idInfo .labelId
               idContext
@@ -1974,6 +1998,8 @@ proc(
             else =:: idData
               constVal idData [] .constValue =
             end
+            ## don't create code for declaration of type-constant
+            constVal .typeId ?? if return end
           end
           op state appendOp ..drop
           return
@@ -2093,6 +2119,7 @@ proc(
       op state appendOp ..drop
       return
     getLabel atLabel hasLabel existsLabel case
+      enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType
       op .val .hasLabel ?? if
         LabelAccessType .CHECK_ENUM accessType =
