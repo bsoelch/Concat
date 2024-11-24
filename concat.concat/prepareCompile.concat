@@ -40,7 +40,6 @@ proc(
   ## IdInfo
     IdentifierType .TMP_VAR
     label
-    ConstValue .none
     -1
   IdentifierInfo new return
 end

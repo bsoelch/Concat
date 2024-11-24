@@ -1392,16 +1392,22 @@ proc(
       end
       idInfo [] .idType switch
         PROCEDURE case
-          idInfo [] .constValue .procedure ?? ! if
+          label idContext id.getIdentifier if ..drop
+            "could not find " sb.wrap
+              idInfo [] labelContext sb.appendIdInfo
+            op [] .pos errors appendError
+            true return
+          end =:: idData
+          idData [] .constValue .procedure ?? ! if
             "unexpected value for procedure constant: " sb.wrap
-              idInfo [] .constValue
+              idData [] .constValue
                 constContext
                 typeContext
               sb.appendConstant
             op [] .pos errors appendError
             true return
           end
-          idInfo [] .constValue .procedure =:: procId
+          idData [] .constValue .procedure =:: procId
           program [] .procedures procId i64 cast list.at .data =:: procData
           procData [] .isStatic ! if
             true return ## only evaluate static procedures in interpreter
@@ -1457,7 +1463,7 @@ proc(
             pushValue
             false return
           end
-          idInfo [] .constValue .procedure op [] .pos context evaluateCall return
+          procId op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if

@@ -32,7 +32,6 @@ struct(
 struct(
   IdentifierType : idType
   LabelId : labelId
-  ConstValue : constValue
   i32 : mut: id
 ) =:: export: IdentifierInfo
 
@@ -140,7 +139,6 @@ namespace: id
   proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export: asIdInfo
     idData [] .idType
     idData [] .labelId
-    idData [] .constValue
     idData [] .id
     IdentifierInfo new return
   end
@@ -579,7 +577,6 @@ namespace: id
         pos
         currentFile
       context .typeContext .labelContext newLabel
-      ConstValue .none
       context .itrVariables .length [] i32 cast
     IdentifierInfo new =:: idInfo
     context .itrVariables []
