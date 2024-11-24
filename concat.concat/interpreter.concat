@@ -191,20 +191,21 @@ proc( BlockType : blockType InterpreterContext ptr.mut : context -> ) =>: openBl
 end
 
 enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
-proc( InterpreterContext ptr.mut : context -> LabeledValueContext ) =>: getLabeledValueContext
+proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getLabeledValueContext
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while $ 0 >= do =:: i
-    context [] .openBlocks i list.at .data [] .blockType switch
+    context [] .openBlocks i list.at .data =:: block
+    block [] .blockType switch
       INITIALIZER case
-         LabeledValueContext .INITIALIZER return
+         block [] .labelOffset LabeledValueContext .INITIALIZER return
       TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case
-         LabeledValueContext .TYPE_STRUCT return
+         block [] .labelOffset LabeledValueContext .TYPE_STRUCT return
       TYPE_UNION TYPE_UNTAGGED_UNION case
-         LabeledValueContext .TYPE_UNION return
+         block [] .labelOffset LabeledValueContext .TYPE_UNION return
       TYPE_ENUM case
-         LabeledValueContext .TYPE_ENUM return
+         block [] .labelOffset LabeledValueContext .TYPE_ENUM return
       TYPE_PROC_IN TYPE_PROC_OUT case
-         LabeledValueContext .TYPE_PROC return
+         block [] .labelOffset LabeledValueContext .TYPE_PROC return
       PROCEDURE EXPERIMENTAL_PROCEDURE
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
@@ -219,12 +220,50 @@ proc( InterpreterContext ptr.mut : context -> LabeledValueContext ) =>: getLabel
 end
 proc(
   LabelId : label
+  i64 : initialLabelOffset
+  LabeledValueContext : valueContext
+  FilePosition : pos
+  InterpreterContext ptr.mut : context
+-> ) =>: checkDuplicateLabel
+  label id.LABEL_ID_NONE == if return end
+  context [] .program [] .errors @ =:: errors
+  context [] .program [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  context [] .labelBuffer@ =:: labels
+  initialLabelOffset while $ labels [] .length < do =:: i
+    labels [] i list.get =:: prevLabel
+    prevLabel label labelContext id.labelNamesEq if
+      "duplicate label \"" sb.wrap
+      label labelContext sb.appendLabelName
+      "\" in " sb.appendS
+      valueContext switch
+        TYPE_STRUCT case "struct" sb.appendS break
+        TYPE_UNION case "union" sb.appendS break
+        TYPE_ENUM case "enum" sb.appendS break
+        TYPE_PROC case "procedure" sb.appendS break
+        INITIALIZER case "initializer" sb.appendS break
+      end
+      prevLabel labelContext id.labelPos =:: prevPos
+      prevPos optional.hasData if
+        " ( previous declaration at " sb.appendS
+        prevPos .data sb.appendPos
+        " )" sb.appendS
+      end
+      pos errors appendError
+    end
+  finally i 1 + end ..drop
+end
+proc(
+  LabelId : label
   ConstValue : value
   Type : valueType
+  i64 : initialLabelOffset
   LabeledValueContext : valueContext
   FilePosition : pos
   InterpreterContext ptr.mut : context
 -> bool ) =>: addLabeledValue
+  label initialLabelOffset valueContext pos context checkDuplicateLabel
   context [] .program [] .errors @ =:: errors
   context [] .program [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
@@ -284,6 +323,7 @@ end
 
 proc(
   i64 : stackOffset
+  i64 : initialLabelOffset
   LabeledValueContext : valueContext
   FilePosition : pos
   InterpreterContext  ptr.mut : context
@@ -324,6 +364,7 @@ proc(
         eltLabel
         eltVal []
         eltInfo [] .valueType
+        initialLabelOffset
         valueContext
         eltInfo [] .pushedAt
       context addLabeledValue if
@@ -343,7 +384,11 @@ proc(
   InterpreterContext ptr.mut : context
 -> bool ) =>: closedTypeBlock
   ## XXX? use different contexts for different types of type-containers
-  closedBlock [] .stackOffset closedType pos context finishLabledValues if
+  ## finishLabledValues
+    closedBlock [] .stackOffset
+    closedBlock [] .labelOffset
+    closedType
+  pos context finishLabledValues if
     true return
   end
   context [] .program [] .errors @ =:: errors
@@ -375,7 +420,11 @@ proc(
   Type
   bool
 ) =>: closedInitializer
-  closedBlock [] .stackOffset LabeledValueContext .INITIALIZER pos context finishLabledValues if
+  ## finishLabledValues
+    closedBlock [] .stackOffset
+    closedBlock [] .labelOffset
+    LabeledValueContext .INITIALIZER
+  pos context finishLabledValues if
     Type .undefined true return
   end
   context [] .program [] .errors @ =:: errors
@@ -904,11 +953,13 @@ proc(
           op [] .pos errors appendError
           true return
         end
+        constVal .typeId typeContext types.namedTypeName =:: eltLabel
+        eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
         context [] .typeBuffer =
         context [] .labelBuffer
-          constVal .typeId typeContext types.namedTypeName list.append
+          eltLabel list.append
         context [] .labelBuffer =
         false return
       end
@@ -1265,7 +1316,7 @@ proc(
         end
         true return
       end
-      context getLabeledValueContext =:: valueContext
+      context getLabeledValueContext =:: valueContext =:: initialLabelOffset
       1 "field-declaration" string.wrap false op [] .pos context checkStack if
         true return
       end
@@ -1281,7 +1332,7 @@ proc(
         Type .empty ConstValue .typeId value =
       end
       context [] .openBlocks list.peek .data [] .stackOffset =:: stackOffset
-      stackOffset valueContext op [] .pos context finishLabledValues if
+      stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
         ## unpopValue
           value
           valInfo
@@ -1292,6 +1343,7 @@ proc(
         labelId
         value
         valInfo .valueType
+        initialLabelOffset
         valueContext
       op [] .pos context addLabeledValue
         $ if
@@ -1303,11 +1355,13 @@ proc(
       return
     getName case
       context inEnum if
+        op [] .val .getName =:: eltLabel
+        eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
         context [] .typeBuffer =
         context [] .labelBuffer
-          op [] .val .getName list.append
+          eltLabel list.append
         context [] .labelBuffer =
         false return
       end
@@ -1327,6 +1381,7 @@ proc(
       op [] .val .getId @ =:: idInfo
       idInfo [] .labelId =:: label
       context inEnum if
+        label context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
         context [] .typeBuffer =
