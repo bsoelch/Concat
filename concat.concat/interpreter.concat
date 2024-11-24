@@ -177,6 +177,24 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
   end ..drop
   true return
 end
+proc( InterpreterContext ptr.mut : context -> bool ) =>: skipCurrentBlock
+  ## XXX cache/precompute result
+  context [] .openBlocks .length 1 - while $ 0 >= do
+    context [] .openBlocks $1 list.at .data [] .blockType switch
+      IF_FALSE AND_IF_FALSE OR_IF_TRUE ELSE_TRUE case
+         ..drop true return
+      IF_TRUE AND_IF_TRUE OR_IF_FALSE ELSE_FALSE
+        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
+        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+        AND OR AND_IF OR_IF AND_DO OR_DO
+        NAMESPACE case break
+    end
+    1 -
+  end ..drop
+  false return
+end
 
 proc( BlockType : blockType InterpreterContext ptr.mut : context -> ) =>: openBlock
   context [] .openBlocks
@@ -941,6 +959,9 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
+  op [] .val .block ?? ! and op [] .val .blockEnd ?? ! and context skipCurrentBlock if
+    false return ## skip operation
+  end
   op [] .val switch
     NOP case
       false return
@@ -1062,10 +1083,10 @@ proc(
             list.pop =:: closedBlock
           context [] .openBlocks =
           closedBlock .blockType .IF_TRUE ?? if
-            BlockType .ELSE_FALSE
+            BlockType .ELSE_TRUE
             ## TODO skip until end of block
           else closedBlock .blockType .IF_FALSE ?? _if
-            BlockType .ELSE_TRUE
+            BlockType .ELSE_FALSE
           else
             BlockType .ELSE
           end context openBlock
