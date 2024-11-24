@@ -1,0 +1,14 @@
+enum( A B C ) =:: E
+
+proc( -> ) =>: main
+  E .A .A ?? assert "E .A .A ??"
+  E .A .C ?? ! assert "E .A .C ?? !"
+  E .A .A ??? assert "E .A .A exists"
+  E .A .C ??? assert "E .A .C exists"
+  E .A .D ??? ! assert "E .A .D does not exist"
+  E .A ??? assert "E .A exists"
+  E .D ??? ! assert "E .D does not exist"
+  E ??? assert "E exists"
+  ThisDoesNotExist ??? ! assert "ThisDoesNotExist"
+  i32.i32Itr ??? assert "i32 iterator exists"
+end

@@ -1,0 +1,5 @@
+proc( -> ) =>: main
+  enum( A B C ) =:: localEnum
+  localEnum .A =:: e
+  e .A ?? assert "correctly created local enum constant"
+end
