@@ -169,7 +169,7 @@ struct(
   OpInfo list : mut: opInfo
   i64 list : mut: childIds
   FileId : mut: currentFile
-  FilePosition optional : mut: expandedAt
+  FilePosition list : mut: initializationStack
   bool : mut: reachable
   bool : mut: isGlobal
   ## TODO flags:
@@ -3765,11 +3765,19 @@ proc(
       ## appendError
         op .val .Error .message .length sb.create
         op .val .Error .message labelContext sb.appendStringConst
-        state [] .expandedAt optional.hasData if
-          " ( caused by initializing code at " sb.appendS
+        ## TODO? append initialization stack for all error messages
+        state [] .initializationStack .length 0 > if
+          "\n  caused by initializing code at " sb.appendS
           op .pos sb.appendPos
-          " )" sb.appendS
-          state [] .expandedAt .data
+          '\n' sb.appendC
+          state [] .initializationStack .length 1 - while
+            $ 0 >
+          do =:: i
+            "  caused by initializing code at " sb.appendS
+            state [] .initializationStack i list.at .data [] sb.appendPos
+            '\n' sb.appendC
+          finally i 1 - end ..drop
+          state [] .initializationStack 0 list.at .data []
         else
           op .pos
         end
@@ -3984,7 +3992,12 @@ proc(
   program [] .procedures procId i64 cast list.at .data =:: currentProc
   ## compile procedures to local code of given file
   currentProc [] .fileId state [] .currentFile =
-  expandedAt state [] .expandedAt =
+  state [] .initializationStack .length =:: offset
+  expandedAt ? if
+    state [] .initializationStack
+      expandedAt .data list.append
+    state [] .initializationStack =
+  end
   currentProc [] .fileId state [] .interpreter .currentFile =
   program [] .progFiles
     currentProc [] .fileId i64 cast
@@ -4032,9 +4045,12 @@ proc(
     state [] .compiledOps list.appendAll
   procFile [] .localOps =
   state [] .program [] .autoTypes
-    list.free ..drop
+    list.free ..drop ## XXX? can free+reassign be replaced by clear+append
     globalAutoTypes ## reset local auto-types
   state [] .program [] .autoTypes =
+  state [] .initializationStack
+    offset list.setLength
+  state [] .initializationStack =
   state [] .stack @ branchTree.clear ## TODO error on unhandled values
 end
 
@@ -4055,7 +4071,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     128 OpInfo    list.create
     128 i64       list.create
     FILE_ID_NONE
-    FilePosition optional.empty
+    16 FilePosition list.create
     true
     true
   TypeCheckState new =:: mut: state
@@ -4173,8 +4189,10 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
   program [] .tmpOps
     list.clear ## operations have been compiled
   program [] .tmpOps =
-  state @ freeOps
-  state .stack @ branchTree.free
-  state .interpreter @ interpreter.cleanupContext
-  state .argData @ map.free
+  ## TODO? put state cleanup into procedure
+  state@ freeOps
+  state .stack@ branchTree.free
+  state .interpreter@ interpreter.cleanupContext
+  state .argData@ map.free
+  state .initializationStack list.free ..drop
 end
