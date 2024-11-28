@@ -93,7 +93,7 @@ namespace: i32
       return
     else
       a b %
-        ..dup 0 > if b + end
+        ..dup 0 > if b + end ## b = -|b|
       return
     end
   end
@@ -164,7 +164,7 @@ namespace: i64
       return
     else
       a b %
-        ..dup 0 > if b + end
+        ..dup 0 > if b + end ## b = -|b|
       return
     end
   end
