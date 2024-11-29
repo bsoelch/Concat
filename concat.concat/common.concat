@@ -1,6 +1,7 @@
 ## collection of basic declarations used by all compiler files
-import stringBuilder
 import list
+import stringBuilder
+import numbers
 
 "main" =:: export: MAIN_NAME ## name of main procedure
 
