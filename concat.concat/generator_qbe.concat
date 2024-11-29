@@ -946,7 +946,6 @@ namespace: sb
             pos errors appendError
           end
           return
-        enumLabel case break
         genericArg case
           value .genericArg pos context appendGenericArg return
         str case
@@ -1037,8 +1036,8 @@ namespace: sb
             pos errors appendError
             return
           end
-        break
-        union case
+          break
+        enumLabel union case
           isGlobal ! if
             break ## XXX? support small unions as local constants
           end
@@ -1050,7 +1049,11 @@ namespace: sb
             return
           end
           t pos context enumLabelInfoInt =:: labelOffset =:: labelType
-          value .union .eltIndex =:: eltIndex
+          value .enumLabel ?? if
+            value .enumLabel
+          else
+            value .union .eltIndex
+          end =:: eltIndex
           eltIndex 0 < if break end
           eltIndex t typeContext types.compositeEltCount >= if
             break
@@ -1059,17 +1062,22 @@ namespace: sb
           0:i64 =:: mut: offset
           false =:: mut: needComma
           eltType typeContext types.isEmpty ! if
-            ## appendConstQBE
-              eltType
-              value constContext constUnionElement
-              isGlobal
-              pos
-              context
-            appendConstQBE
-            offset
-              eltType pos context typeSizeInt +
-            offset =
-            true needComma =
+            value .union ?? ! if
+              "missing element value for union constant" sb.wrap
+              pos errors appendError
+            else
+              ## appendConstQBE
+                eltType
+                value constContext constUnionElement
+                isGlobal
+                pos
+                context
+              appendConstQBE
+              offset
+                eltType pos context typeSizeInt +
+              offset =
+              true needComma =
+            end
           end
           t pos context typeSizeInt =:: size
           offset labelOffset < if

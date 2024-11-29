@@ -1641,7 +1641,89 @@ proc(
           context
         pushValue
         false return
-    getLabel atLabel atName hasLabel existsLabel existsName case
+    getLabel case
+      context [] .evalType switch
+        FOLD_LOCAL case true return ## XXX? partially allow enum-label resolving in local code
+        PARSER INTERPRET GLOBAL case break
+      end
+      op [] .val .getLabel =:: labelId
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.wrap
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+        true return
+      end =:: value =:: valInfo
+      value .typeId ??
+          and value .typeId typeContext types.isEnum
+          or value .typeId typeContext types.isTaggedUnion if
+        ## enum/union element initializer
+        value .typeId =:: containerType
+        containerType
+          labelId
+        typeContext types.compositeFindLabel i64 cast =:: elementIndex
+        elementIndex 0 < if
+          "type " sb.wrap
+            containerType typeContext sb.appendType
+            " does not have a label \"" sb.appendS
+            labelId labelContext sb.appendLabelName
+            '"' sb.appendC
+          op [] .pos errors appendError
+        end
+        containerType elementIndex typeContext types.compositeGetElement =:: eltType
+        eltType .empty ?? if
+          ## pushValue
+            containerType typeContext types.isEnum if
+              elementIndex ConstValue .enumLabel
+            else
+              ConstValue .none elementIndex constContext newUnionConst
+            end
+            containerType
+            id.LABEL_ID_NONE ## XXX? remember label
+            op [] .pos
+          context pushValue
+          false return
+        end
+        op [] .pos context popValue if ..drop.2
+          "stack underflow while evaluating operation: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendError
+          true return
+        end =:: eltValue =:: eltValInfo
+        eltValInfo .valueType eltType typeContext types.canAutoCast if
+          ## pushValue
+            eltValue elementIndex constContext newUnionConst
+            containerType
+            id.LABEL_ID_NONE ## XXX? remember label
+            op [] .pos
+          context pushValue
+          false return
+        end
+        ## unpopValue
+          eltValue
+          eltValInfo
+        context unpopValue
+        "wrong value for union element, expected " sb.wrap
+          eltType typeContext sb.appendType
+          " got " sb.appendS
+          eltValInfo .valueType typeContext sb.appendType
+        op [] .pos errors appendError
+      end
+      ## unpopValue
+        value
+        valInfo
+      context unpopValue
+      context [] .evalType switch
+        INTERPRET case break
+        PARSER FOLD_LOCAL GLOBAL case
+          ## label/name resolving handled by type-checker
+          true return
+      end
+      ## label/name should have been resolved in type-checker
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] program sb.appendOp
+      op [] .pos errors appendError
+      true return
+    atLabel atName hasLabel existsLabel existsName case
       context [] .evalType switch
         INTERPRET case break
         PARSER FOLD_LOCAL GLOBAL case
