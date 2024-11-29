@@ -17,3 +17,4 @@ featureMap.concat
 lib/future/*
 !lib/future/math.concat
 !bootstrap/latest.ssa
+global_log.txt

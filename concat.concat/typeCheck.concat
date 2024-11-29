@@ -4087,6 +4087,18 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     program [] .progFiles fileId list.at .data =:: progFile
     state @ clearOps
     state @ resetInterpreter
+    ## log unhandled global operations in code
+    ## temporary addition for improving constant folding in parser
+    _EXPERIMENTAL_ and progFile [] .globalOps .length 0 > if
+      "global_log.txt" io.OPEN_APPEND io.fopenS ..drop =:: globalLog
+        "global code in file: " sb.wrap
+          progFile [] .fileName sb.appendSb
+          '\n' sb.appendC
+          progFile [] .globalOps 0 list.get program sb.appendOp
+          globalLog $1 io.fputSb ..drop
+        sb.free ..drop
+      globalLog io.fclose ..drop
+    end
     0:i64 while ..dup progFile [] .globalOps .length < do
       progFile [] .globalOps ..over list.get state @ typeCheckOp
       1 +
